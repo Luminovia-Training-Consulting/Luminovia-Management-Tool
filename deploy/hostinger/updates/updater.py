@@ -724,7 +724,9 @@ class Updater:
                 private_directory(rollback)
                 runtime_mutated = True
                 self.copy_runtime(stage, manifest, rollback, original)
-                self.compose("backend", ["up", "-d", "--wait", "db"])
+                # Reconcile both services that remained running while writers
+                # stopped; normal up preserves unchanged containers.
+                self.compose("backend", ["up", "-d", "--wait", "db", "mailpit"])
                 # Inspect actual catalog versions, not filesystem ICU guesses or image tags.
                 self.collation_guard(manifest)
                 for version, name, source in pending:

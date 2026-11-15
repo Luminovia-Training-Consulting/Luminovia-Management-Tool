@@ -1,7 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  notifyManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AccountsPage } from "./accounts";
 const fake = vi.hoisted(() => ({
@@ -15,25 +19,23 @@ vi.mock("../auth/auth-context", () => ({
 vi.mock("../../lib/supabase", () => ({
   db: () => ({ rpc: fake.rpc, functions: { invoke: fake.invoke } }),
 }));
+let client: QueryClient;
 function page() {
   render(
     <MemoryRouter>
-      <QueryClientProvider
-        client={
-          new QueryClient({
-            defaultOptions: {
-              queries: { retry: false },
-              mutations: { retry: false },
-            },
-          })
-        }
-      >
+      <QueryClientProvider client={client}>
         <AccountsPage />
       </QueryClientProvider>
     </MemoryRouter>,
   );
 }
 beforeEach(() => {
+  client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
   fake.capabilities = [];
   fake.invoke.mockReset();
   fake.rpc.mockReset();
@@ -62,6 +64,22 @@ beforeEach(() => {
       },
       error: null,
     };
+  });
+});
+afterEach(async () => {
+  // Detach React observers before cancelling pending search requests.
+  cleanup();
+  await client.cancelQueries();
+  client.clear();
+  // The mocked transport ignores cancellation; let its real promises finish.
+  await Promise.all(
+    [...fake.rpc.mock.results, ...fake.invoke.mock.results]
+      .filter((result) => result.type === "return")
+      .map((result) => result.value),
+  );
+  // Flush already-queued query notifications while jsdom still owns window.
+  await act(async () => {
+    await new Promise<void>((resolve) => notifyManager.schedule(resolve));
   });
 });
 describe("Account administration", () => {
