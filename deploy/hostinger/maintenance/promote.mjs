@@ -330,8 +330,8 @@ export async function promote(patch, { root = ROOT, api = github } = {}) {
     "chore: apply verified daily stable component updates",
     api,
   );
-  // GITHUB_TOKEN pushes intentionally do not recursively trigger push workflows.
-  // Explicit dispatch checks the exact signed main revision again before release.
+  // The scoped App also triggers push CI. Explicit dispatch binds the exact
+  // signed revision; the existing main concurrency group coalesces duplicate runs.
   await api("/repos/" + REPOSITORY + "/actions/workflows/ci.yml/dispatches", {
     method: "POST",
     body: { ref: "main", inputs: { expected_commit: commit } },
