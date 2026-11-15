@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import "../availability/i18n";
 import { runsQuery, templatesQuery } from "../operations/data";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -189,6 +191,7 @@ function EventForm({
 }
 export function CalendarPage() {
   const { t, i18n } = useTranslation();
+  const availabilityText = useTranslation("availability").t;
   const { session } = useAuth();
   const profile = useQuery(profileQuery(session!.user.id));
   const claims = useQuery(claimsQuery(session!.user.id));
@@ -320,6 +323,9 @@ export function CalendarPage() {
           </Button>
         }
       />
+      <Button asChild variant="secondary">
+        <Link to="/availability">{availabilityText("title")}</Link>
+      </Button>
       <div className="calendar-controls">
         <div className="segmented">
           <Button

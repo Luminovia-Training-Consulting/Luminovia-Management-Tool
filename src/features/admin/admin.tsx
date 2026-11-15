@@ -15,16 +15,20 @@ import {
 } from "../commercial/commission-api";
 import "../commercial/platform-i18n";
 import { InviteForm } from "./invite";
+import { OfferBoard } from "../jobs/board";
 import { BuildingBlockReference } from "../operations/building-blocks";
 import {
   courseRunJobDefaultsQuery,
   type CourseRunJobDefaults,
 } from "../operations/building-blocks-api";
 import "./course-i18n";
+import "../jobs/lifecycle-i18n";
+import "../taxonomy/i18n";
+import { selectableTopics } from "../taxonomy/selection";
 import { useAuth } from "../auth/auth-context";
-import { jobsQuery, permissionsQuery, topicsQuery } from "../../lib/queries";
+import { permissionsQuery, topicsQuery } from "../../lib/queries";
 import { db } from "../../lib/supabase";
-import { dateTime, validZone, zonedInstant } from "../../lib/dates";
+import { dateTime, money, validZone, zonedInstant } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import {
@@ -55,6 +59,8 @@ const schema = z.object({
   terms: z.string().min(1).max(10000),
   publish: z.boolean(),
   requires_contract: z.boolean(),
+  claim_deadline: z.string(),
+  capacity: z.number().int().min(1).max(20),
   topic_ids: z.array(z.string()),
   sessions: z
     .array(
@@ -74,6 +80,7 @@ function JobForm({
   const [courseRun] = useState(initialSource);
   const { t, i18n } = useTranslation();
   const courseText = useTranslation("courseOffer").t;
+  const lifeText = useTranslation("jobLifecycle").t;
   const { t: priceText } = useTranslation("platform");
   const { session } = useAuth();
   const actor = session!.user.id;
@@ -116,6 +123,8 @@ function JobForm({
       terms: "",
       publish: false,
       requires_contract: false,
+      claim_deadline: "",
+      capacity: 1,
       topic_ids: courseRun?.topic_ids ?? [],
       sessions: courseRun
         ? courseRun.sessions.map((session) => ({
@@ -144,6 +153,9 @@ function JobForm({
   const watchedTotal = useWatch({ control, name: "total_amount" });
   const watchedPercent = useWatch({ control, name: "platform_percent" });
   const watchedCurrency = useWatch({ control, name: "currency" });
+  const watchedCapacity = useWatch({ control, name: "capacity" });
+  const selectedTopicIds = useWatch({ control, name: "topic_ids" });
+  const valuesTimeZone = useWatch({ control, name: "time_zone" });
   const selectedOrganisation = useWatch({ control, name: "organisation" });
   const { fields, append, remove } = useFieldArray({
     control,
@@ -176,15 +188,32 @@ function JobForm({
           });
       const {
         publish,
+        claim_deadline,
+        capacity,
         organisation,
         platform_percent,
         amount,
         total_amount,
         ...rest
       } = values;
+      const deadline = claim_deadline
+        ? zonedInstant(claim_deadline, values.time_zone)
+        : null;
+      if (
+        claim_deadline &&
+        (!deadline ||
+          Date.parse(deadline) <= Date.now() ||
+          sessions.some(
+            (session) => Date.parse(deadline) > Date.parse(session.starts_at),
+          ))
+      ) {
+        setInvalidTime(true);
+        throw new Error("invalid_time");
+      }
       const base = {
         ...rest,
         sessions,
+        claim_deadline: deadline,
         status: publish ? "published" : "draft",
       };
       if (courseRun) {
@@ -194,6 +223,7 @@ function JobForm({
           rate_unit: values.rate_unit,
           terms: values.terms,
           requires_contract: values.requires_contract,
+          claim_deadline: deadline,
           status: base.status,
           ...(gross
             ? { gross_amount: amount, gross_total_amount: total_amount }
@@ -215,38 +245,32 @@ function JobForm({
         if (error || !data) throw error ?? new Error("unconfirmed");
         return data as string;
       }
-      if (gross) {
-        const payload = {
-          ...base,
-          gross_amount: amount,
-          gross_total_amount: total_amount,
-        };
-        const signature = JSON.stringify([
-          organisation,
-          platform_percent,
-          payload,
-        ]);
-        if (!retry.current || retry.current.signature !== signature)
-          retry.current = { signature, key: crypto.randomUUID() };
-        const { data, error } = await db().rpc("create_commission_job", {
-          p_organisation_id: organisation || null,
-          p_payload: payload,
-          p_platform_percent: platform_percent,
-          p_client_id: retry.current.key,
-        });
-        if (error || !data) throw error ?? new Error("unconfirmed");
-        return data as string;
-      } else {
-        const { data, error } = await db().rpc("create_job", {
-          p_payload: { ...base, amount, total_amount },
-        });
-        if (error || !data) throw error ?? new Error("unconfirmed");
-        return data as string;
-      }
+      const payload = gross
+        ? { ...base, gross_amount: amount, gross_total_amount: total_amount }
+        : { ...base, amount, total_amount };
+      const signature = JSON.stringify([
+        organisation,
+        platform_percent,
+        capacity,
+        payload,
+      ]);
+      if (!retry.current || retry.current.signature !== signature)
+        retry.current = { signature, key: crypto.randomUUID() };
+      const { data, error } = await db().rpc("create_capacity_job", {
+        p_payload: payload,
+        p_capacity: capacity,
+        p_request_id: retry.current.key,
+        p_organisation_id: gross ? organisation || null : null,
+        p_platform_percent: gross ? platform_percent : 50,
+      });
+      if (error || !data) throw error ?? new Error("unconfirmed");
+      return data as string;
     },
     onSuccess: async (jobId, values) => {
       await Promise.all([
         client.invalidateQueries({ queryKey: ["jobs"] }),
+        client.invalidateQueries({ queryKey: ["job-board"] }),
+        client.invalidateQueries({ queryKey: ["job-lifecycle"] }),
         client.invalidateQueries({ queryKey: ["operations"] }),
         client.invalidateQueries({ queryKey: commissionKeys.spend(actor) }),
         client.invalidateQueries({ queryKey: commissionKeys.report(actor) }),
@@ -451,6 +475,24 @@ function JobForm({
           </fieldset>
         </>
       )}
+      {!courseRun && (
+        <Field
+          id="job-capacity"
+          label={lifeText("positions")}
+          hint={lifeText("perPositionHint")}
+          error={Boolean(errors.capacity)}
+        >
+          <input
+            id="job-capacity"
+            type="number"
+            min="1"
+            max="20"
+            step="1"
+            {...register("capacity", { valueAsNumber: true })}
+          />
+        </Field>
+      )}
+      <p className="muted">{lifeText("perPositionHint")}</p>
       <div className="form-row">
         <Field
           id="job-amount"
@@ -516,6 +558,22 @@ function JobForm({
           />
         </Field>
       </div>
+      {Number.isFinite(Number(watchedCapacity)) &&
+        Number(watchedCapacity) >= 1 &&
+        Number.isFinite(Number(watchedTotal)) && (
+          <p className="job-life-budget">
+            <strong>
+              {lifeText(gross ? "maxGrossBudget" : "maxNetBudget")}:{" "}
+              {money(
+                (Math.round(Number(watchedTotal) * 100) *
+                  Number(watchedCapacity)) /
+                  100,
+                watchedCurrency,
+                i18n.language,
+              )}
+            </strong>
+          </p>
+        )}
       {gross && (
         <>
           <Field
@@ -554,19 +612,35 @@ function JobForm({
         <fieldset>
           <legend>{t("requirements")}</legend>
           <div className="tags">
-            {topics.data?.map((topic) => (
-              <label key={topic.id} className="checkbox-label">
-                <input
-                  type="checkbox"
-                  value={topic.id}
-                  {...register("topic_ids")}
-                />
-                {i18n.language === "de" ? topic.label_de : topic.label_en}
-              </label>
-            ))}
+            {selectableTopics(topics.data ?? [], selectedTopicIds).map(
+              (topic) => (
+                <label key={topic.id} className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    value={topic.id}
+                    {...register("topic_ids")}
+                  />
+                  {i18n.language === "de" ? topic.label_de : topic.label_en}
+                  {topic.archived_at &&
+                    ` (${i18n.getFixedT(i18n.language, "taxonomy")("archived")})`}
+                </label>
+              ),
+            )}
           </div>
         </fieldset>
       )}
+      <Field
+        id="job-claim-deadline"
+        label={`${lifeText("deadline")} · ${valuesTimeZone}`}
+        hint={lifeText("deadlineZone")}
+        error={Boolean(errors.claim_deadline)}
+      >
+        <input
+          id="job-claim-deadline"
+          type="datetime-local"
+          {...register("claim_deadline")}
+        />
+      </Field>
       <label className="checkbox-label">
         <input type="checkbox" {...register("requires_contract")} />
         {t("contractRequired")}
@@ -623,20 +697,6 @@ export function AdminPage() {
       permissions.data.includes("courses.manage"),
     ),
   });
-  const jobs = useQuery(jobsQuery);
-  const client = useQueryClient();
-  const online = useOnline();
-  const status = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      requireOnline();
-      const { error } = await db().rpc("set_job_status", {
-        p_job_id: id,
-        p_status: status,
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => client.invalidateQueries({ queryKey: ["jobs"] }),
-  });
   if (permissions.isPending) return <Loading />;
   if (permissions.isError)
     return <ErrorState retry={() => void permissions.refetch()} />;
@@ -670,33 +730,7 @@ export function AdminPage() {
       )}
       {(permissions.data.includes("users.manage") ||
         permissions.data.includes("users.invite")) && <InviteForm />}
-      <section className="panel admin-job-list">
-        <h2>{t("jobs")}</h2>
-        {jobs.data?.map((job) => (
-          <div className="admin-job-row" key={job.id}>
-            <Link to={`/jobs/${job.id}`}>{job.title}</Link>
-            {job.status === "filled" ? (
-              <span className="badge">{t("filled")}</span>
-            ) : (
-              <select
-                aria-label={`${t("status")}: ${job.title}`}
-                value={job.status}
-                disabled={!online || status.isPending}
-                onChange={(e) =>
-                  status.mutate({ id: job.id, status: e.target.value })
-                }
-              >
-                {["draft", "published", "archived"].map((s) => (
-                  <option key={s} value={s}>
-                    {t(s)}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-        ))}
-        {status.isError && <Notice kind="error">{t("error")}</Notice>}
-      </section>
+      <OfferBoard />
     </>
   );
 }

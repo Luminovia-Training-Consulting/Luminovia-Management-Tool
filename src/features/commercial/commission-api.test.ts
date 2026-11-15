@@ -28,6 +28,24 @@ function record(overrides: Partial<CommissionRecord> = {}): CommissionRecord {
   };
 }
 describe("commission previews and truthful original-currency reporting", () => {
+  it("counts a three-position quote once while summing only actual accepted positions", () => {
+    const first = record({
+      job_id: "shared-course",
+      claim_id: "first",
+      capacity: 3,
+    });
+    const second = record({
+      job_id: "shared-course",
+      claim_id: "second",
+      capacity: 3,
+    });
+    const totals = revenueTotals([first, second])[0];
+    expect(totals.offered).toBe(1209.03);
+    expect(totals.accepted).toBe(806.02);
+    expect(totals.lecturer).toBe(403);
+    expect(totals.platform).toBe(403.02);
+    expect(totals.count).toBe(2);
+  });
   it("rounds the platform share first and gives the lecturer the exact remainder", () => {
     expect(splitFee(403.01, 50)).toEqual({
       gross: 403.01,

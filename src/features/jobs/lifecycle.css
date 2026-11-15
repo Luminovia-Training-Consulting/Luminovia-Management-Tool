@@ -1,0 +1,53 @@
+.job-lifecycle {
+  margin-block: 1.5rem;
+}
+.job-life-actions,
+.job-life-history-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+.job-life-capacity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  padding: 0.85rem;
+  border-radius: 1rem;
+  background: var(--blue-soft);
+  color: var(--ink);
+}
+.job-life-actions {
+  margin-block: 1rem;
+}
+.job-life-form {
+  display: grid;
+  gap: 1rem;
+  margin-block: 1rem;
+}
+.job-life-form > button {
+  justify-self: start;
+}
+.job-life-history {
+  display: grid;
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+}
+.job-life-history > li {
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1rem;
+  min-width: 0;
+}
+.job-life-history ul {
+  padding-inline-start: 1.1rem;
+  overflow-wrap: anywhere;
+}
+.job-life-history .badge {
+  margin-inline-start: 0.4rem;
+}
+.job-life-history p {
+  overflow-wrap: anywhere;
+}

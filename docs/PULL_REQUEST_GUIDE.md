@@ -4,6 +4,8 @@
 
 Dieser Leitfaden beschreibt die Abnahme einer Änderung. Einrichtung und lokale Entwicklung stehen in [CONTRIBUTING](../CONTRIBUTING.md) und [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); Meldungen beginnen mit dem [Issue-Leitfaden](ISSUE_GUIDE.md).
 
+Die Beitragsunterlagen wurden mit [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`) geliefert, der getrennte lokale GitHub-Vorschaustarter mit [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). Diese Merges aktivieren die oben genannten noch offenen serverseitigen Reviewregeln nicht. Der Quellenkatalog [labels.json](../.github/labels.json) enthält inzwischen 30 verwaltete Labels; neun ursprüngliche GitHub-Labels bleiben zusätzlich erhalten.
+
 ## Branch und Titel
 
 Erstelle einen eigenen Branch vom aktuellen `main`; externe Beitragende verwenden einen Fork. Ein PR löst ein zusammenhängendes Problem. Agentenbranches beginnen mit `codex/`. Ein früher Draft ist sinnvoll, wenn du fachliches Feedback brauchst, bevor die Umsetzung prüfbereit ist.
@@ -33,7 +35,22 @@ Jeder PR braucht **genau ein Typ-Label**, **mindestens ein Bereichslabel** und *
 | `type:security`     | Abgestimmte Sicherheitskorrektur; keine öffentliche Erstmeldung |
 | `type:dependencies` | Geprüfte Abhängigkeitsaktualisierung                            |
 
-Verfügbare Bereiche sind `area:frontend`, `area:backend`, `area:database`, `area:auth`, `area:files`, `area:finance`, `area:courses`, `area:devops` und `area:github`. Wähle alle tatsächlich wesentlich betroffenen Bereiche; für eine reine Dokumentationsänderung den dokumentierten Fachbereich, bei allgemeinen Beitragsregeln `area:github`.
+Wähle alle tatsächlich wesentlich betroffenen Bereiche. Die ursprünglichen Bereichslabels bleiben erhalten: `area:frontend`, `area:backend`, `area:database`, `area:auth`, `area:files`, `area:finance`, `area:courses`, `area:devops` und `area:github`. Zehn weitere Bereiche ergänzen die Einordnung:
+
+| Bereich | Verwendung |
+| --- | --- |
+| `area:chat` | Nachrichten, Kurs-/Interessengruppen und Realtime |
+| `area:knowledge` | Wiki, Forum und Wissensverwaltung |
+| `area:calendar` | Termine, Verfügbarkeit, Sperrzeiten und Zeitzonen |
+| `area:notifications` | Posteingang, Meldungen und Zustellpräferenzen |
+| `area:profiles` | Profile, Qualifikationen und Dozierendenverzeichnis |
+| `area:clients` | Auftraggeberkonten, Organisationen und Geschäftskontakte |
+| `area:pwa` | Installation, Service Worker, Offlinezustand und Updates |
+| `area:testing` | QA, Regressionen, Browser- und Berechtigungsprüfungen |
+| `area:docs` | Anleitungen, API-Referenzen und Betriebsdokumentation |
+| `area:taxonomy` | Themen, Werkzeuge, Programmiersprachen und Hierarchien |
+
+Eine Dokumentationsänderung erhält `area:docs` und gegebenenfalls den dokumentierten Fachbereich; allgemeine Beitragsregeln zusätzlich `area:github`. Ein Test allein erfordert nicht jedes vom Gesamtsystem verwendete Label. Umgekehrt braucht eine Funktionsänderung mit Migration die tatsächlich betroffenen Fach- und Technikbereiche. Die 30 verwalteten Labels ergeben sich aus acht Typen, 19 Bereichen und drei Risikostufen; zusätzliche ursprüngliche GitHub-Labels ersetzen keine Pflichtkategorie.
 
 | Risiko        | Einordnung                                                                                                             |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -58,6 +75,8 @@ Externe Autorinnen und Autoren haben meist keine Labelrechte. Schlage die passen
 | Dokumentation        | Auflösbare Links, zutreffende Befehle und klare Trennung von geprüftem und offenem Stand                                |
 
 Führe während der Entwicklung passende gezielte Prüfungen aus. Der vollständige lokale Abnahmebefehl ist `./portal test`. Die CI verlangt zusätzlich den separaten nativen Supabase-Nachweis. Verwende fiktive Daten und veröffentliche keine unbearbeiteten Traces, Zugangsdaten oder privaten Datenbank-/Dateisicherungen.
+
+Für einen unabhängigen Test des aktuellen Hauptzweigs gibt es `./portal github test`. `./portal github` startet stattdessen eine eigene persistente Vorschau auf `5373`/`563xx`; sie verändert weder die normale Entwicklung noch den PR-Branch. Eine erfolgreiche Prüfung von `main` beweist nicht die Abnahme eines abweichenden PR-Heads. [Vorschau, Datenhaltung und Migrationsplan](GITHUB_LOCAL_PREVIEW.md).
 
 ## Review-Regeln für `main`
 

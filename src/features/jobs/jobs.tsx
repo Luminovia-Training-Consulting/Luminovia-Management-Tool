@@ -1,4 +1,6 @@
 import { JobPricingPanel } from "../commercial/pricing";
+import { JobLifecyclePanel } from "./lifecycle";
+import { refreshJobState } from "./lifecycle-api";
 import { ResourceComments } from "../comments/comments";
 import { JobBuildingBlockReference } from "../operations/building-blocks";
 import "../commercial/platform-i18n";
@@ -40,6 +42,7 @@ import {
 import { BackLink } from "../../app/shell";
 export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
   const { t, i18n } = useTranslation();
+  const lifeText = useTranslation("jobLifecycle").t;
   const priceText = useTranslation("platform").t;
   const first = [...job.job_sessions].sort((a, b) =>
     a.starts_at.localeCompare(b.starts_at),
@@ -76,8 +79,10 @@ export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
             {money(job.total_amount, job.currency, i18n.language)}
           </strong>
           <small>
-            {priceText("lecturerShare")} ·{" "}
+            {priceText("lecturerShare")} · {lifeText("perPosition")} ·{" "}
             {t("sessionCount", { count: job.job_sessions.length })}
+            {(job.capacity ?? 1) > 1 &&
+              ` · ${job.capacity} ${lifeText("positions")}`}
           </small>
         </div>
         <Link
@@ -243,6 +248,7 @@ export function Jobs() {
 export function JobDetail() {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
+  const lifeText = useTranslation("jobLifecycle").t;
   const { session } = useAuth();
   const online = useOnline();
   const client = useQueryClient();
@@ -267,7 +273,12 @@ export function JobDetail() {
       if (error) throw error;
       return data as { status: string; claim_id?: string };
     },
-    onSuccess: () => client.invalidateQueries(),
+    onSuccess: async (result) => {
+      await refreshJobState(client);
+      // A later, explicitly reopened assignment is a new operation. Failed
+      // requests retain their key; confirmed responses can safely retire it.
+      if (result.status === "confirmed") key.current = crypto.randomUUID();
+    },
   });
   if (jobs.isPending) return <Loading />;
   if (jobs.isError) return <ErrorState retry={() => void jobs.refetch()} />;
@@ -313,6 +324,7 @@ export function JobDetail() {
       {permissions.data?.includes("jobs.manage") && (
         <JobPricingPanel job={job} />
       )}
+      <JobLifecyclePanel job={job} />
       <div className="detail-layout">
         <div>
           <section className="panel">
@@ -387,7 +399,7 @@ export function JobDetail() {
             {money(terms.amount, terms.currency, i18n.language)}{" "}
             {t(terms.rate_unit)}
           </p>
-          <small>{t("totalHint")}</small>
+          <small>{lifeText("positionFeeHint")}</small>
           <hr />
           <h2>{t(ownClaim ? "termsSnapshot" : "terms")}</h2>
           <p className="preserve-text">{terms.terms}</p>
@@ -400,7 +412,7 @@ export function JobDetail() {
               {dateTime(job.claim_deadline, i18n.language, zone)}
             </p>
           )}
-          {ownClaim || result === "confirmed" ? (
+          {ownClaim ? (
             <Notice>
               <CheckCircle2 size={20} />
               {t("confirmed")}
@@ -434,7 +446,11 @@ export function JobDetail() {
           )}
           {claim.isError && <Notice kind="error">{t("error")}</Notice>}
           {result && result !== "confirmed" && (
-            <Notice kind="error">{t(resultKey)}</Notice>
+            <Notice kind="error">
+              {result === "already_assigned"
+                ? lifeText("alreadyAssigned")
+                : t(resultKey)}
+            </Notice>
           )}
           {ownClaim && (
             <Button variant="secondary" asChild>

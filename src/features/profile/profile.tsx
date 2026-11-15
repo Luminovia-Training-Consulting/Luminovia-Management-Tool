@@ -1,3 +1,5 @@
+import { selectableTopics } from "../taxonomy/selection";
+import "../taxonomy/i18n";
 import { AvatarEditor } from "./avatar";
 import { OwnProfileDetails } from "../people/profile-details";
 import { ProfileEvidence } from "../files/profile-evidence";
@@ -157,7 +159,10 @@ export function ProfilePage() {
           <h2>{t("expertise")}</h2>
           <p>{t("expertiseHelp")}</p>
           <div className="expertise-list">
-            {topics.data.map((topic) => {
+            {selectableTopics(
+              topics.data,
+              expertise.data.map((entry) => entry.topic_id),
+            ).map((topic) => {
               const selected = expertise.data.find(
                 (e) => e.topic_id === topic.id,
               );
@@ -178,6 +183,7 @@ export function ProfilePage() {
                   <span>
                     <strong>
                       {i18n.language === "de" ? topic.label_de : topic.label_en}
+                      {topic.archived_at && <> ({t("taxonomy:archived")})</>}
                     </strong>
                     {selected && (
                       <small>

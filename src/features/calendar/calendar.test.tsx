@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 import { CalendarPage } from "./calendar";
 import "../../lib/i18n";
 vi.mock("../auth/auth-context", () => ({
@@ -69,7 +70,9 @@ it("global published session links open the precise authorised course detail rat
   });
   render(
     <QueryClientProvider client={client}>
-      <CalendarPage />
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
   const user = userEvent.setup();

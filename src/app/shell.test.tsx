@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import type { InboxPage } from "../features/notifications/api";
 import { Shell } from "./shell";
 import "../lib/i18n";
 const { signOut } = vi.hoisted(() => ({ signOut: vi.fn() }));
@@ -25,7 +26,14 @@ vi.mock("@tanstack/react-query", async (original) => {
               display_name: "Fictional User",
               time_zone: "Europe/Berlin",
             }
-          : [],
+          : options.queryKey[0] === "notifications" &&
+              options.queryKey[2] === "preview"
+            ? ({
+                items: [],
+                unread_count: 0,
+                as_of: "2026-11-15T12:00:00Z",
+              } satisfies InboxPage)
+            : [],
       isPending: false,
       isError: false,
     }),

@@ -1,0 +1,113 @@
+.notification-count {
+  display: inline-grid;
+  min-width: 1.25rem;
+  min-height: 1.25rem;
+  place-items: center;
+  padding: 0.1rem 0.3rem;
+  border-radius: 1rem;
+  background: var(--brand);
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.inbox-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.inbox-toolbar select {
+  width: auto;
+  min-width: 10rem;
+}
+.inbox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.notification-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.notification-row:last-child {
+  border-bottom: 0;
+}
+.notification-row strong,
+.notification-row p {
+  flex-basis: 100%;
+  margin: 0;
+}
+.notification-row small {
+  color: var(--muted);
+}
+.notification-row.notification-unread {
+  border-inline-start: 3px solid var(--brand);
+  background: var(--blue-soft);
+}
+.notification-row a {
+  font-weight: 600;
+}
+.inbox-reminders {
+  margin-bottom: 1rem;
+}
+.inbox-reminders p,
+.notification-preferences p {
+  max-width: 70ch;
+  line-height: 1.6;
+}
+.notification-preferences fieldset {
+  border: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.8rem;
+}
+.notification-preferences legend {
+  font-weight: 700;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+.notification-preference {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 2.75rem;
+}
+.notification-preference input {
+  width: 1.2rem;
+  height: 1.2rem;
+  accent-color: var(--brand);
+}
+.notification-preferences > .notice {
+  margin-block: 1rem;
+}
+@media (max-width: 600px) {
+  .inbox-toolbar {
+    align-items: stretch;
+  }
+  .inbox-toolbar > * {
+    max-width: 100%;
+  }
+  .inbox-toolbar button {
+    white-space: normal;
+  }
+  .notification-row {
+    padding: 0.85rem;
+  }
+  .notification-popover .notification-row {
+    padding: 0.6rem;
+  }
+  .notification-row button {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+
+:root[data-theme="dark"] .notification-count {
+  color: #102755;
+}

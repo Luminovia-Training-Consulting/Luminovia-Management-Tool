@@ -22,6 +22,9 @@ export function AdminNavigation() {
         {permissions.data?.includes("users.manage") && (
           <NavLink to="/admin/accounts">{t("accounts")}</NavLink>
         )}
+        {permissions.data?.includes("audit.read") && (
+          <NavLink to="/admin/audit">{t("auditLog")}</NavLink>
+        )}
       </nav>
       <Outlet />
     </>

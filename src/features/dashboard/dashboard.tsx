@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { FinancialSummaryCards } from "../commercial/revenue";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -20,9 +21,13 @@ import {
 import { JobCard } from "../jobs/jobs";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Loading, TextLink } from "../../components/common";
-import { dateTime } from "../../lib/dates";
+import { validZone } from "../../lib/dates";
+import { DashboardCalendarPreview, DashboardWidgets } from "./widgets";
+import "./i18n";
 export function Dashboard() {
   const { t, i18n } = useTranslation();
+  const [openedAt] = useState(() => Date.now());
+  const dashboard = useTranslation("dashboard").t;
   const { session } = useAuth();
   const profile = useQuery(profileQuery(session!.user.id));
   const roles = useQuery(userRolesQuery(session!.user.id));
@@ -34,11 +39,15 @@ export function Dashboard() {
     ) ?? false;
   const clientAccount = Boolean(roles.data?.includes("client")) && !staff;
   const destination = staff ? "/jobs" : clientAccount ? "/client" : "/courses";
-  const jobs = useQuery(jobsQuery);
-  const claims = useQuery(claimsQuery(session!.user.id));
-  const expertise = useQuery(expertiseQuery(session!.user.id));
-  if (roles.isPending || jobs.isPending || claims.isPending) return <Loading />;
-  if (roles.isError || jobs.isError || claims.isError)
+  const jobs = useQuery({ ...jobsQuery, enabled: staff });
+  const claims = useQuery({ ...claimsQuery(session!.user.id), enabled: staff });
+  const expertise = useQuery({
+    ...expertiseQuery(session!.user.id),
+    enabled: staff,
+  });
+  if (roles.isPending || (staff && (jobs.isPending || claims.isPending)))
+    return <Loading />;
+  if (roles.isError || (staff && (jobs.isError || claims.isError)))
     return (
       <ErrorState
         retry={() => {
@@ -48,17 +57,44 @@ export function Dashboard() {
         }}
       />
     );
-  const open = jobs.data.filter((j) => j.status === "published");
-  const next = claims.data
+  const availableJobs = jobs.data ?? [];
+  const ownClaims = claims.data ?? [];
+  const now = Math.max(openedAt, jobs.dataUpdatedAt, expertise.dataUpdatedAt);
+  const open = availableJobs.filter(
+    (j) =>
+      j.status === "published" &&
+      (!j.claim_deadline || Date.parse(j.claim_deadline) > now),
+  );
+  const verified = new Set(
+    (expertise.data ?? [])
+      .filter(
+        (item) =>
+          item.verified &&
+          (!item.valid_until || Date.parse(item.valid_until) > now),
+      )
+      .map((item) => item.topic_id),
+  );
+  const matching = open.filter(
+    (job) =>
+      job.job_requirements.length > 0 &&
+      job.job_requirements.every((requirement) =>
+        verified.has(requirement.topic_id),
+      ),
+  );
+  const suggested = matching.length ? matching : open;
+  const next = ownClaims
     .flatMap((c) =>
       c.assignment_sessions.map((s) => ({
         ...s,
-        job: jobs.data.find((j) => j.id === c.job_id),
+        job: availableJobs.find((j) => j.id === c.job_id),
       })),
     )
     .filter((s) => new Date(s.ends_at) > new Date())
     .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
-  const zone = profile.data?.time_zone ?? "Europe/Berlin";
+  const zone =
+    profile.data?.time_zone && validZone(profile.data.time_zone)
+      ? profile.data.time_zone
+      : "Europe/Berlin";
   return (
     <>
       <div className="dashboard-heading">
@@ -117,7 +153,7 @@ export function Dashboard() {
             },
             {
               label: "myAssignments",
-              number: claims.data.length,
+              number: ownClaims.length,
               icon: GraduationCap,
               color: "peach",
               to: "/calendar",
@@ -153,12 +189,17 @@ export function Dashboard() {
         <div className="dashboard-lower">
           <section>
             <div className="section-heading">
-              <h2>{t("openJobs")}</h2>
+              <h2>{matching.length ? dashboard("matches") : t("openJobs")}</h2>
               <TextLink to="/jobs">{t("all")}</TextLink>
             </div>
-            {open.length ? (
+            {matching.length > 0 && (
+              <p className="dashboard-matching-hint">
+                {dashboard("matchingHint")}
+              </p>
+            )}
+            {suggested.length ? (
               <div className="dashboard-jobs">
-                {open.slice(0, 2).map((job, index) => (
+                {suggested.slice(0, 2).map((job, index) => (
                   <JobCard key={job.id} job={job} index={index} />
                 ))}
               </div>
@@ -169,45 +210,11 @@ export function Dashboard() {
               </div>
             )}
           </section>
-          <section className="upcoming-panel panel">
-            <div className="section-heading">
-              <h2>{t("nextSessions")}</h2>
-              <CalendarDays size={21} />
-            </div>
-            {next.length ? (
-              <ol className="upcoming-list">
-                {next.slice(0, 4).map((s) => (
-                  <li key={s.id}>
-                    <div className="date-block">
-                      <strong>
-                        {new Intl.DateTimeFormat(i18n.language, {
-                          day: "2-digit",
-                          timeZone: zone,
-                        }).format(new Date(s.starts_at))}
-                      </strong>
-                      <small>
-                        {new Intl.DateTimeFormat(i18n.language, {
-                          month: "short",
-                          timeZone: zone,
-                        }).format(new Date(s.starts_at))}
-                      </small>
-                    </div>
-                    <div>
-                      <Link to={`/jobs/${s.job?.id ?? ""}`}>
-                        {s.job?.title ?? t("assignment")}
-                      </Link>
-                      <small>
-                        {dateTime(s.starts_at, i18n.language, zone)}
-                      </small>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p>{t("noSessions")}</p>
-            )}
-            <TextLink to="/calendar">{t("viewCalendar")}</TextLink>
-          </section>
+          <DashboardCalendarPreview
+            actor={session!.user.id}
+            zone={zone}
+            assignments={next}
+          />
         </div>
       ) : (
         <section className="panel">
@@ -217,6 +224,21 @@ export function Dashboard() {
           </TextLink>
         </section>
       )}
+      {!staff && (
+        <DashboardCalendarPreview
+          actor={session!.user.id}
+          zone={zone}
+          assignments={[]}
+        />
+      )}
+      <DashboardWidgets
+        actor={session!.user.id}
+        zone={zone}
+        staff={staff}
+        clientAccount={clientAccount}
+        jobs={availableJobs}
+        jobsAsOf={jobs.dataUpdatedAt}
+      />
     </>
   );
 }
