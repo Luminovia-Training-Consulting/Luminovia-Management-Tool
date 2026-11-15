@@ -1,0 +1,55 @@
+name: Portal checks
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: portal-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26.13.1'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run format:check
+      - run: npm test
+      - run: npm audit --omit=dev --audit-level=low
+      - run: npx --no-install deno test supabase/functions/invite-lecturer/handler_test.ts
+      - run: npx --no-install deno check supabase/functions/invite-lecturer/index.ts
+      - name: Start isolated Supabase and fictional fixtures
+        run: |
+          bash scripts/local-start.sh
+          node scripts/local-seed.mjs
+      - run: npm run test:db
+      - run: node scripts/local-api-check.mjs
+      - name: Start local invitation runtime
+        run: |
+          bash scripts/local-functions.sh > .local/functions-ci.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --silent --fail -X OPTIONS -H 'Origin: http://127.0.0.1:5173' http://127.0.0.1:54321/functions/v1/invite-lecturer > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - run: node scripts/local-invite-check.mjs
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - run: npm run build
+      - name: Verify built PWA shell
+        run: |
+          npm run preview -- --port 4173 --strictPort > .local/preview-ci.log 2>&1 &
+          E2E_PWA=1 E2E_BASE_URL=http://127.0.0.1:4173 npx playwright test tests/e2e/pwa.spec.ts
+      - name: Stop owned local stack
+        if: always()
+        run: npx --no-install supabase stop --no-backup

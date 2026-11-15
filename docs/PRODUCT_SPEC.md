@@ -1,0 +1,51 @@
+# Luminovia Portal — product specification
+
+Authority: [Universal Master Prompt](UNIVERSAL_MASTER_PROMPT.txt), preserved verbatim from the user's attachment on 15 November 2026 (Australia/Brisbane). This document is its implementation map; it does not reduce the requested product scope. See [implementation plan](IMPLEMENTATION_PLAN.md) for actual completion status.
+
+## Product and operating model
+
+A private, bilingual German/English, responsive PWA for approximately eleven freelance lecturers, administrators/management and restricted course participants. Management publishes teaching jobs. An authenticated, eligible lecturer may claim an entire job immediately; the first committed database transaction wins. The claim requires no routine approval queue. Customer/employer organisations are directory records, not automatically login accounts.
+
+Production target is `portal.luminovia.org` on compatible existing Hostinger static hosting with managed Supabase. No production deployment is authorised by the development task. The public marketing site is a read-only brand source.
+
+## Roles and privacy boundaries
+
+Users may hold several of `admin`, `management`, `senior_lecturer`, `lecturer`, `participant`. Permissions are granular capabilities checked in the database/API. Senior lecturer status alone confers no access to other lecturers' contracts/rates. A standard administrator cannot read private DMs or private personal calendar events through a blanket role bypass. Sensitive documents require explicit resource-level authorisation. Deactivation must revoke access even while an existing token is still valid.
+
+## Complete module scope
+
+| ID | Module and required flow | Acceptance boundary |
+| --- | --- | --- |
+| A | Role-adapted dashboard, greeting, matching jobs, upcoming assignments, unread messages, contracts, calendar, recent files, alerts, shortcuts and authorised global search | Every count/result comes from records the actor can access. Sensitive business KPIs appear only with explicit permission. |
+| B | Invitation-only Auth, email/password and recovery, optional avatar/biography, bilingual profile, phone/email visibility, country/time zone/languages, CV, qualifications/expiry/evidence, experience, expertise, verified eligibility, contract status and authorised preferred rates; deactivate/invite/verify | No self-assigned role or verification. User can edit their own profile but cannot forge identity or access someone else's private evidence. Privileged users require MFA. |
+| C | Hierarchical topic/tool/programming-language taxonomy with aliases, DE/EN labels and course links; lecturer expertise and management verification | Catalogues are data, not an exhaustive hard-coded example list; aliases and combined filters work. Restricted job eligibility uses verified requirements. |
+| D | Customer/employer directory, type, industry/topic tags, contacts, locations/time zones, internal notes, files, course/job links and appropriate contact actions | Contacts and private business notes are not visible to all lecturers. Search/filter respects authorisation. |
+| E | Reusable course templates, actual runs and precise dated sessions; syllabus, expertise, mode, prerequisites, customer, venue/link, groups, lecturers, files/chat; split runs into independently claimable jobs or one whole block | Template duplication does not copy personal data or contracts. Every session has start/end instants and intended IANA zone. |
+| F | Job publishing/editing/unpublishing/duplication/archive, sessions, capacity, requirements, contract terms, attachments/visibility, price/currency/unit/estimated total, deadlines; combined search/filter/sort/saved filters; list, detail and permissioned Kanban | Atomic claim validates actor, live job/version, capacity, qualification, contract, deadline and all session conflicts. Exactly one winner per slot; immutable price/currency/terms; audited idempotent retries and no partial allocation. Confirmation creates allocations, permitted chat/resource membership and notifications in the committed workflow. Cancellation/reopening/substitutes are explicit audited flows. |
+| G | Private personal calendar, availability/blocked dates, confirmed allocations, explicitly published global events; month/week/day/agenda, date/zone navigation, quick-add/edit, details/files/links/reminders | Personal appointments never become global by default. Correct Berlin DST and Brisbane display; conflicts use canonical instants. ICS/subscription may follow main implementation. |
+| H | 1:1 DMs, lecturer general chat, interest groups, lecturer course chat and separate participant channels; history/read states/unread, mentions/reactions, search, edit/delete policy, mute, moderated memberships, attachments and realtime | Revoked membership removes database, realtime and storage access. Admin status alone cannot read private DMs. Presence/typing are optional where practical. |
+| I | File/document centre, classifications/tags/categories, resource links, preview/download/version/rename/sharing/expiry; private storage, short-lived authorised access, safe types/names/size, upload limits, quarantine/malware scanning and retention/audit | Guessing IDs or object paths never grants access. Sensitive files are not cached offline. Database backups include a separate plan for actual storage binaries. Large video hosting is separate. |
+| J | Personal executed master contracts, addenda and confirmations; authorised management status/dates/versions/reminders; hashed versions, acceptance timestamps, job terms linked to proper contract version; configurable legal/privacy documents | Existing executed contracts initially; no claim that a checkbox or signature image provides a legally sufficient signature. Legal review/e-sign provider when required. |
+| K | Multilingual wiki categories, authoritative articles, rich text, safely preserved code blocks, attachments, revisions, role edits and course links; forum categories/threads/replies, pinned/accepted answers, report/moderation/lock/archive/subscriptions | Search and revision access respect permissions. Authoritative wiki and discussion forum remain distinct. Rich content is sanitised. |
+| L | Personal expected/completed/invoiced/paid earnings and statements; authorised client/course fees and lecturer costs, invoice PDF/number/due date/payment status/date, CSV/reporting | EUR/AUD preserved in original currency with no hidden conversion. Accepted fee snapshots survive later job edits. No accounting, payroll, tax or banking engine. |
+| M | In-app inbox/counts, matching jobs, committed claims/cancellations/changes, messages, contracts and session reminders; email templates/preferences/quiet hours | Committed events only; retry-safe deduplication; no secrets or sensitive document text in email/push. Universal web push is not required for initial PWA. |
+| N | User/permission administration, qualification verification, directory/catalogues, course/job publishing, documents/wiki/chat moderation under disclosed policy, contracts/invoices, audit/export, announcements, branding/DE/EN settings, retention, backup and diagnostic status; safe bulk operations | Least privilege, auditable authority, recoverable mistakes and explicit confirmation for irreversible destructive actions. |
+
+## Critical user journeys
+
+1. Management invites a fictional staging lecturer; lecturer signs in, edits profile/expertise and uploads permitted evidence; forged document/profile requests are denied.
+2. Management creates customer, course template/run, five sessions and an offered job with tags/rate/attachments; eligible lecturer combines filters and sees accurate local time and compensation.
+3. Fifty simultaneous single-slot claims produce one committed winner, one complete allocation, one event/notification set; winner retries are idempotent. Expired contracts, missing eligibility and conflicting appointments reject clearly.
+4. A lecturer creates a private event; peers and ordinary admins cannot read it. Published global events appear only to their intended audience. Berlin and Brisbane DST cases are correct.
+5. DMs, lecturer course discussion and participant discussion each enforce distinct membership; attachments and realtime revoke with membership.
+6. Authorised materials download/preview works; guessed file paths cannot reveal another lecturer's CV, contract or invoice.
+7. Wiki/forum authoring, search, revision and moderation obey permissions and preserve code safely.
+8. Accepted price/currency/terms do not change with job template edits. Finance records and exports follow resource permissions.
+9. German/English, light/dark/system, desktop/mobile and supported PWA installation work. Offline writes reject without false success and sensitive caches remain empty.
+10. Unit/component/browser, migration, database/RLS, concurrency, accessibility and adversarial tests run with recorded evidence. Untested features stay labelled untested.
+
+## Quality and release acceptance
+
+WCAG 2.2 AA target, keyboard-operable workflows, visible focus, meaningful empty/loading/error/offline states, no horizontal mobile overflow; server-enforced least privilege and sensitive-data isolation; version-pinned dependencies/lockfile; reproducible migrations and rollback; separate staging/production; database plus storage backups and restore drill; configured transactional email/SMTP; privacy purposes, processors/locations, retention and user-rights procedures reviewed before production. Do not assert legal/GDPR compliance without review.
+
+The first milestone prioritises the authentic design system, actual Auth/session handling, secure profile/expertise, job publishing/search/detail, transactional claims and private calendar. Other modules remain required and tracked, without decorative screens presented as functioning features.

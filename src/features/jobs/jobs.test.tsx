@@ -1,0 +1,112 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import "../../lib/i18n";
+import { JobDetail, Jobs } from "./jobs";
+import type { Job } from "../../lib/types";
+vi.mock("../auth/auth-context", () => ({
+  useAuth: () => ({ session: { user: { id: "lecturer-a" } } }),
+}));
+const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
+vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc }) }));
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
+const job: Job = {
+  id: "job-a",
+  title: "Python Block",
+  description: "Example",
+  customer_name: "Example Academy",
+  delivery_type: "online",
+  location: "Online",
+  time_zone: "Europe/Berlin",
+  status: "published",
+  amount: 400,
+  total_amount: 2000,
+  currency: "EUR",
+  rate_unit: "per_day",
+  terms: "Version one",
+  terms_version: 1,
+  requires_contract: false,
+  claim_deadline: null,
+  job_sessions: [
+    {
+      id: "session1",
+      job_id: "job-a",
+      starts_at: "2027-01-01T08:00:00Z",
+      ends_at: "2027-01-01T14:00:00Z",
+    },
+    {
+      id: "session2",
+      job_id: "job-a",
+      starts_at: "2027-01-10T08:00:00Z",
+      ends_at: "2027-01-10T14:00:00Z",
+    },
+  ],
+  job_requirements: [],
+};
+function setup(route = "/jobs/job-a", list = false) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
+  client.setQueryData(["jobs"], [job]);
+  client.setQueryData(["topics"], []);
+  client.setQueryData(["claims", "lecturer-a"], []);
+  client.setQueryData(["profile", "lecturer-a"], {
+    time_zone: "Europe/Berlin",
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[route]}>
+        <Routes>
+          <Route
+            path={list ? "/jobs" : "/jobs/:id"}
+            element={list ? <Jobs /> : <JobDetail />}
+          />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  return client;
+}
+describe("safe marketplace interactions", () => {
+  it("requires new consent when an offer version changes during a refetch", async () => {
+    const user = userEvent.setup();
+    const client = setup();
+    await user.click(
+      screen.getByRole("checkbox", { name: "Konditionen akzeptieren" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Auftrag übernehmen" }),
+    ).toBeEnabled();
+    await act(async () => {
+      client.setQueryData(
+        ["jobs"],
+        [{ ...job, terms_version: 2, terms: "Updated terms" }],
+      );
+    });
+    await waitFor(() => expect(screen.getByRole("checkbox")).not.toBeChecked());
+    expect(
+      screen.getByRole("button", { name: "Auftrag übernehmen" }),
+    ).toBeDisabled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it("does not match a date range falling entirely between two teaching sessions", () => {
+    setup("/jobs?from=2027-01-05&to=2027-01-06", true);
+    expect(
+      screen.getByText("Hier ist Raum für neue Möglichkeiten."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /Python Block/ }),
+    ).not.toBeInTheDocument();
+  });
+  it("finds a job with combined text, currency and delivery filters", () => {
+    setup("/jobs?q=python&currency=EUR&delivery=online", true);
+    expect(
+      screen.getByRole("link", { name: "Python Block" }),
+    ).toBeInTheDocument();
+  });
+});

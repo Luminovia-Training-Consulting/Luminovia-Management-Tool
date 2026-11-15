@@ -1,0 +1,322 @@
+import { useEffect, useState } from "react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import {
+  Bell,
+  BriefcaseBusiness,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Home,
+  LogOut,
+  Search,
+  Settings2,
+  ShieldCheck,
+  UserRound,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
+import { useAuth } from "../features/auth/auth-context";
+import { db } from "../lib/supabase";
+import { permissionsQuery, profileQuery } from "../lib/queries";
+import { Button } from "../components/ui/button";
+import { ErrorState, Loading, Notice } from "../components/common";
+import { useOnline } from "../lib/online";
+import { dateTime } from "../lib/dates";
+export function Preferences() {
+  const { t, i18n } = useTranslation();
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("luminovia.theme") ?? "system",
+  );
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      document.documentElement.dataset.theme =
+        theme === "system" ? (media.matches ? "dark" : "light") : theme;
+    };
+    apply();
+    localStorage.setItem("luminovia.theme", theme);
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, [theme]);
+  return (
+    <div className="preferences">
+      <label className="sr-only" htmlFor="language">
+        {t("language")}
+      </label>
+      <select
+        id="language"
+        aria-label={t("language")}
+        value={i18n.language}
+        onChange={(e) => void i18n.changeLanguage(e.target.value)}
+      >
+        <option value="de">DE</option>
+        <option value="en">EN</option>
+      </select>
+      <label className="sr-only" htmlFor="theme">
+        {t("theme")}
+      </label>
+      <select
+        id="theme"
+        aria-label={t("theme")}
+        value={theme}
+        onChange={(e) => setTheme(e.target.value)}
+      >
+        <option value="system">◐ {t("system")}</option>
+        <option value="light">☀ {t("light")}</option>
+        <option value="dark">☾ {t("dark")}</option>
+      </select>
+    </div>
+  );
+}
+function Notifications({ id, zone }: { id: string; zone: string }) {
+  const { t, i18n } = useTranslation();
+  const client = useQueryClient();
+  const online = useOnline();
+  const query = useQuery({
+    queryKey: ["notifications", id],
+    queryFn: async () => {
+      const { data, error } = await db()
+        .from("notifications")
+        .select("*")
+        .eq("user_id", id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data as {
+        id: string;
+        kind: string;
+        resource_id: string;
+        read_at: string | null;
+        created_at: string;
+      }[];
+    },
+    refetchInterval: 30000,
+  });
+  const mark = useMutation({
+    mutationFn: async (notificationId: string) => {
+      const { error } = await db()
+        .from("notifications")
+        .update({ read_at: new Date().toISOString() })
+        .eq("id", notificationId)
+        .eq("user_id", id);
+      if (error) throw error;
+    },
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: ["notifications", id] }),
+  });
+  const count = query.data?.filter((n) => !n.read_at).length ?? 0;
+  return (
+    <details className="notification-menu">
+      <summary aria-label={t("notifications")}>
+        <Bell size={21} />
+        {count > 0 && <span className="notification-dot" />}
+      </summary>
+      <div className="notification-popover">
+        <h2>{t("notifications")}</h2>
+        {query.isPending ? (
+          <Loading />
+        ) : query.isError ? (
+          <ErrorState retry={() => void query.refetch()} />
+        ) : query.data.length === 0 ? (
+          <p>{t("noneNotifications")}</p>
+        ) : (
+          <ul>
+            {query.data.map((n) => (
+              <li key={n.id}>
+                <strong>
+                  {t(
+                    n.kind === "claim_confirmed" ? "notificationClaim" : n.kind,
+                    { defaultValue: t("notificationClaim") },
+                  )}
+                </strong>
+                <small>{dateTime(n.created_at, i18n.language, zone)}</small>
+                {!n.read_at && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={!online || mark.isPending}
+                    onClick={() => mark.mutate(n.id)}
+                  >
+                    {t("markRead")}
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {mark.isError && <Notice kind="error">{t("error")}</Notice>}
+      </div>
+    </details>
+  );
+}
+export function Shell() {
+  const { t } = useTranslation();
+  const { session } = useAuth();
+  const navigate = useNavigate();
+  const client = useQueryClient();
+  const [collapsed, setCollapsed] = useState(false);
+  const [search, setSearch] = useState("");
+  const [signoutFailed, setSignoutFailed] = useState(false);
+  const profile = useQuery(profileQuery(session!.user.id));
+  const permissions = useQuery(permissionsQuery(session!.user.id));
+  const manage = permissions.data?.includes("jobs.manage") ?? false;
+  const navigation = [
+    { to: "/", icon: Home, label: "home" },
+    { to: "/jobs", icon: BriefcaseBusiness, label: "jobs" },
+    { to: "/calendar", icon: CalendarDays, label: "calendar" },
+    { to: "/profile", icon: UserRound, label: "profile" },
+    { to: "/security", icon: ShieldCheck, label: "security" },
+    ...(manage ? [{ to: "/admin", icon: Settings2, label: "admin" }] : []),
+  ];
+  async function logout() {
+    const { error } = await db().auth.signOut();
+    if (error) {
+      setSignoutFailed(true);
+      return;
+    }
+    client.clear();
+    navigate("/login", { replace: true });
+  }
+  return (
+    <div className={`app-shell ${collapsed ? "is-collapsed" : ""}`}>
+      <a className="skip-link" href="#main">
+        {t("skip")}
+      </a>
+      <aside className="sidebar">
+        <NavLink className="sidebar-brand" to="/">
+          <img src="/brand/luminovia-logo-mark-160.webp" alt="" />
+          <span>
+            Luminovia <small>PORTAL</small>
+          </span>
+        </NavLink>
+        <div className="rainbow" />
+        <p className="sidebar-kicker">{t("workspace")}</p>
+        <nav aria-label={t("menu")}>
+          {navigation.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === "/"}
+              title={collapsed ? t(label) : undefined}
+            >
+              <Icon size={21} />
+              <span>{t(label)}</span>
+            </NavLink>
+          ))}
+        </nav>
+        <div className="sidebar-bottom">
+          <div className="sidebar-note">
+            <span className="little-star">✳</span>
+            <p>{t("tagline")}</p>
+          </div>
+          <Button
+            variant="ghost"
+            className="collapse-button"
+            aria-label={t(collapsed ? "expand" : "collapse")}
+            onClick={() => setCollapsed(!collapsed)}
+          >
+            {collapsed ? (
+              <PanelLeftOpen size={20} />
+            ) : (
+              <PanelLeftClose size={20} />
+            )}
+            <span>{t("collapse")}</span>
+          </Button>
+        </div>
+      </aside>
+      <div className="workspace">
+        <header className="topbar">
+          <div className="breadcrumb">
+            <span>Luminovia</span>
+            <ChevronRight size={14} />
+            <strong>Portal</strong>
+          </div>
+          <form
+            className="global-search"
+            role="search"
+            onSubmit={(e) => {
+              e.preventDefault();
+              navigate(`/jobs?q=${encodeURIComponent(search)}`);
+            }}
+          >
+            <Search size={18} />
+            <label htmlFor="global-search" className="sr-only">
+              {t("search")}
+            </label>
+            <input
+              id="global-search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("search")}
+            />
+          </form>
+          <div className="topbar-actions">
+            {profile.data && (
+              <Notifications
+                id={session!.user.id}
+                zone={profile.data.time_zone}
+              />
+            )}
+            <Preferences />
+            <NavLink to="/profile" className="avatar" aria-label={t("profile")}>
+              {(profile.data?.display_name || session!.user.email || "L")
+                .slice(0, 1)
+                .toUpperCase()}
+            </NavLink>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => void logout()}
+              aria-label={t("logout")}
+            >
+              <LogOut size={18} />
+            </Button>
+          </div>
+        </header>
+        <main id="main" className="main-content" tabIndex={-1}>
+          {signoutFailed && <Notice kind="error">{t("error")}</Notice>}
+          {profile.isPending ? (
+            <Loading />
+          ) : profile.isError ? (
+            <ErrorState retry={() => void profile.refetch()} />
+          ) : !profile.data?.active ? (
+            <Notice kind="error">{t("profileMissing")}</Notice>
+          ) : (
+            <Outlet />
+          )}
+        </main>
+        <footer className="workspace-footer">
+          <span>
+            © {new Date().getFullYear()} Luminovia Training & Consulting
+          </span>
+          <span>IT · AI · BUSINESS</span>
+        </footer>
+      </div>
+      <nav className="mobile-nav" aria-label={t("menu")}>
+        {navigation.slice(0, 4).map(({ to, icon: Icon, label }) => (
+          <NavLink key={to} to={to} end={to === "/"}>
+            <Icon size={20} />
+            <span>{t(label)}</span>
+          </NavLink>
+        ))}
+        <NavLink to="/security">
+          <ShieldCheck size={20} />
+          <span>{t("security")}</span>
+        </NavLink>
+      </nav>
+    </div>
+  );
+}
+export function BackLink() {
+  const { t } = useTranslation();
+  return (
+    <Button variant="ghost" asChild>
+      <NavLink to="/jobs">
+        <ChevronLeft size={18} />
+        {t("back")}
+      </NavLink>
+    </Button>
+  );
+}
