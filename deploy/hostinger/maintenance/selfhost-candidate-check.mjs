@@ -142,6 +142,69 @@ function copySource(source, target) {
   }
 }
 
+export function stageCandidateSource(sourceRoot, scratch) {
+  for (const item of [
+    "scripts",
+    "supabase/functions",
+    "supabase/templates",
+    "supabase/migrations",
+    "deploy/hostinger/selfhost",
+    "deploy/hostinger/supabase/upstream/volumes",
+  ]) {
+    rmSync(join(scratch, item), { recursive: true, force: true });
+    copySource(join(sourceRoot, item), join(scratch, item));
+  }
+  // Public versioned fixture/catalogue data belongs to the matching source
+  // phase. An older baseline may have no data directory at all.
+  rmSync(join(scratch, "data"), { recursive: true, force: true });
+  if (existsSync(join(sourceRoot, "data")))
+    copySource(join(sourceRoot, "data"), join(scratch, "data"));
+  mkdirSync(join(scratch, "deploy/hostinger"), { recursive: true });
+  for (const name of ["compose.yml", "Caddyfile", "clamd.conf"])
+    copyFileSync(
+      join(sourceRoot, "deploy/hostinger", name),
+      join(scratch, "deploy/hostinger", name),
+    );
+  copyFileSync(
+    join(root, "deploy/hostinger/maintenance/candidate-scanner-control.mjs"),
+    join(scratch, "scripts/local-scanner.mjs"),
+  );
+}
+
+export function candidateApiSuites(sourceRoot) {
+  const scripts = join(sourceRoot, "scripts");
+  return [
+    ...readdirSync(scripts)
+      .filter((name) => name.endsWith("-api-check.mjs"))
+      .sort(),
+    "local-invite-check.mjs",
+  ].map((name) => {
+    assert(lstatSync(join(scripts, name)).isFile());
+    return name;
+  });
+}
+
+export function adaptCandidateApiFixture(source, { project, apiPort }) {
+  assert.match(project, /^luminovia-portal-test-[a-f0-9]{24}$/);
+  assert(Number.isInteger(apiPort) && apiPort > 1024 && apiPort <= 65535);
+  const port = '    "55321",\n    "Dedicated canonical API port required.",';
+  const client = "  const make = (key) =>";
+  assert.equal(source.split(port).length, 2, "Unknown API fixture port guard.");
+  assert.equal(source.split(client).length, 2, "Unknown API fixture boundary.");
+  // This scratch-only adapter preserves the original loopback/test guards and
+  // binds the random port to this exact labelled project before any API client.
+  const identity = `  assert.equal(project, ${JSON.stringify(project)}, "Candidate fixture project mismatch.");
+  assert.equal(process.env.PORTAL_CANDIDATE_OWNER, project);
+  assert.equal(new URL(url).origin, ${JSON.stringify("https://127.0.0.1:" + apiPort)}, "Candidate fixture API mismatch.");
+  const { execFileSync } = await import("node:child_process");
+  const labels = JSON.parse(execFileSync("docker", ["inspect", "--format", "{{json .Config.Labels}}", "supabase_db_" + project], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 10000 }));
+  assert.equal(labels[${JSON.stringify(ownershipLabel)}], project, "Candidate fixture database ownership mismatch.");
+`;
+  return source
+    .replace(port, port.replace('"55321"', JSON.stringify(String(apiPort))))
+    .replace(client, identity + client);
+}
+
 async function availablePort() {
   const server = createServer();
   await new Promise((done, fail) =>
@@ -349,32 +412,8 @@ export async function checkCandidate({
     console.log(
       "Candidate: preparing fictional isolated ten-service topology.",
     );
-    const stageSource = (sourceRoot) => {
-      for (const item of [
-        "scripts",
-        "supabase/functions",
-        "supabase/templates",
-        "supabase/migrations",
-        "deploy/hostinger/selfhost",
-        "deploy/hostinger/supabase/upstream/volumes",
-      ]) {
-        rmSync(join(scratch, item), { recursive: true, force: true });
-        copySource(join(sourceRoot, item), join(scratch, item));
-      }
-      mkdirSync(join(scratch, "deploy/hostinger"), { recursive: true });
-      for (const name of ["compose.yml", "Caddyfile", "clamd.conf"])
-        copyFileSync(
-          join(sourceRoot, "deploy/hostinger", name),
-          join(scratch, "deploy/hostinger", name),
-        );
-      copyFileSync(
-        join(
-          root,
-          "deploy/hostinger/maintenance/candidate-scanner-control.mjs",
-        ),
-        join(scratch, "scripts/local-scanner.mjs"),
-      );
-    };
+    const stageSource = (sourceRoot) =>
+      stageCandidateSource(sourceRoot, scratch);
     stageSource(baselineRoot);
     symlinkSync(join(root, "node_modules"), join(scratch, "node_modules"));
     writeFileSync(join(scratch, "package.json"), '{"type":"module"}\n');
@@ -392,7 +431,7 @@ export async function checkCandidate({
     const generated = createConfiguration({
       portalOrigin: origin,
       apiOrigin: origin + "/backend",
-      dataDirectory: join(scratch, "data"),
+      dataDirectory: join(scratch, "runtime-data"),
       network: scope.network,
     });
     generated.server.PORTAL_DOMAIN = "candidate.invalid";
@@ -529,7 +568,10 @@ export async function checkCandidate({
     );
     await compose(["pull", "--quiet"], { timeout: 600000 });
     for (const name of ["postgres", "storage", "mailpit"])
-      mkdirSync(join(scratch, "data", name), { recursive: true, mode: 0o700 });
+      mkdirSync(join(scratch, "runtime-data", name), {
+        recursive: true,
+        mode: 0o700,
+      });
     const storageImage = configuration.services.storage.image;
     const identity = (
       await docker([
@@ -559,7 +601,9 @@ export async function checkCandidate({
       "--label",
       ownershipLabel + "=" + project,
       "--mount",
-      "type=bind,src=" + join(scratch, "data/storage") + ",dst=/candidate-data",
+      "type=bind,src=" +
+        join(scratch, "runtime-data/storage") +
+        ",dst=/candidate-data",
       "--entrypoint",
       "/bin/sh",
       configuration.services.web.image,
@@ -795,12 +839,16 @@ export async function checkCandidate({
     console.log(
       "Candidate: TLS/public boundaries and complete migration replay passed; running actual API suites.",
     );
-    const suites = [
-      ...readdirSync(join(scratch, "scripts"))
-        .filter((name) => name.endsWith("-api-check.mjs"))
-        .sort(),
-      "local-invite-check.mjs",
-    ];
+    const apiFixture = join(scratch, "scripts/testing/api.mjs");
+    if (existsSync(apiFixture))
+      writeFileSync(
+        apiFixture,
+        adaptCandidateApiFixture(readFileSync(apiFixture, "utf8"), {
+          project,
+          apiPort: ports.api,
+        }),
+      );
+    const suites = candidateApiSuites(scratch);
     for (const suite of suites) {
       await owned("supabase_db_" + project);
       await owned("portal_scanner_" + project);
@@ -892,7 +940,7 @@ export async function checkCandidate({
         assert.equal(Object.keys(metadata.Containers).length, 0);
         await docker(["network", "rm", scope.network]);
       }
-      if (configuration && existsSync(join(scratch, "data")))
+      if (configuration && existsSync(join(scratch, "runtime-data")))
         await docker([
           "run",
           "--rm",
@@ -908,7 +956,7 @@ export async function checkCandidate({
           "/bin/sh",
           configuration.services.web.image,
           "-c",
-          "rm -rf /candidate/data",
+          "rm -rf /candidate/runtime-data",
         ]);
       rmSync(scratch, { recursive: true, force: true });
       console.log(

@@ -44,6 +44,10 @@ class UpdateError(Exception):
     """A stable, non-sensitive operator reason code."""
 
 
+class RuntimeImagePullError(UpdateError):
+    """A registry pull failed before application or persistent-data mutation."""
+
+
 def now():
     return dt.datetime.now(dt.timezone.utc).isoformat()
 
@@ -340,6 +344,15 @@ class Updater:
         directory = tree / "deploy/hostinger" / ("selfhost" if kind == "backend" else "")
         env = self.private / ("selfhost.env" if kind == "backend" else "web.env")
         return self.command(["docker", "compose", "--project-directory", str(directory), "--env-file", str(env), "-f", str(directory / "compose.yml"), *arguments], timeout=600)
+
+    def pull_runtime_images(self, tree):
+        # Configuration/manifest validation happens separately before this narrow
+        # wrapper. No stop, backup, file promotion or data mutation belongs here.
+        try:
+            self.compose("backend", ["pull", "--quiet"], tree=tree)
+            self.compose("web", ["pull", "--quiet"], tree=tree)
+        except UpdateError as error:
+            raise RuntimeImagePullError("runtime_image_pull_failed") from error
 
     def api(self, path, *, missing_ok=False):
         request = urllib.request.Request(API + path, headers={"Accept": "application/vnd.github+json", "User-Agent": "Luminovia-Development-Updater/1", "X-GitHub-Api-Version": "2026-03-10"})
@@ -758,8 +771,7 @@ class Updater:
             mode = "full" if changed or pending or runtime_changed or not old_target else "site_controller"
             if mode == "full":
                 self.preflight_space(stage)
-                self.compose("backend", ["pull", "--quiet"], tree=stage)
-                self.compose("web", ["pull", "--quiet"], tree=stage)
+                self.pull_runtime_images(stage)
                 self.preflight_space(stage)
             self.prepare_site(stage, commit)
             if mode == "full":
@@ -849,6 +861,8 @@ class Updater:
             self.state.update({"status": "failed", "failedCommit": commit, "failureCode": code, "lastFailureAt": now(), "manualRecoveryRequired": not recovered, "lastAttemptMode": mode})
             self.state["automaticRollbackCompleted"] = bool(recovered and checkpoint is not None and not public_unblocked)
             atomic_json(self.state_file, self.state)
+            if isinstance(error, RuntimeImagePullError) and not stopped and not runtime_mutated and not promoted:
+                raise RuntimeImagePullError(code) from error
             raise UpdateError(code) from error
         finally:
             # The staged directory is unique and owned; application data are elsewhere.
@@ -916,7 +930,7 @@ class Updater:
                     return self.apply(archive, manifest)
             except Exception as error:
                 code = str(error) if isinstance(error, UpdateError) else "invalid_release_download"
-                if code in {"release_download_failed", "incomplete_release_metadata_download", "archive_hash_or_size_mismatch"} and not self.state.get("manualRecoveryRequired"):
+                if (code in {"release_download_failed", "incomplete_release_metadata_download", "archive_hash_or_size_mismatch"} or isinstance(error, RuntimeImagePullError)) and not self.state.get("manualRecoveryRequired"):
                     return self.defer_network_retry(code, candidate["commit"])
                 if self.state.get("failedCommit") != candidate["commit"]:
                     self.state.update({"status": "failed", "failedCommit": candidate["commit"], "failureCode": code, "lastFailureAt": now()})

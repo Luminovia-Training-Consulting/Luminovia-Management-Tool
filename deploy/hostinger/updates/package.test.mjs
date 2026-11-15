@@ -22,6 +22,7 @@ const postgres = image("supabase/postgres:17.12.0.000");
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const pgProofPath = "deploy/hostinger/selfhost/postgres-candidate-proof.json";
 const newRuntimeFiles = [
+  "deploy/hostinger/updates/luminovia-update.service",
   "deploy/hostinger/maintenance/pg_preflight.py",
   "deploy/hostinger/maintenance/atomic_recovery.py",
   "deploy/hostinger/maintenance/configure-os-daily.sh",

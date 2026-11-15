@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createIsolatedDatabase } from "../restore-check.mjs";
 import { collectCommand } from "../backup.mjs";
 import { restoreComplete } from "./restore_complete.mjs";
+import { installExtensionRecovery } from "./extension_recovery.mjs";
+import { verifiesScram } from "./credential_recovery.mjs";
 const here = dirname(fileURLToPath(import.meta.url));
 const image =
   "supabase/postgres:17.12.0.000@sha256:8630950b489ecc70563300180287a98c192a4a48f5ae00b4febdaeea1abe85de";
@@ -21,9 +23,29 @@ try {
   const recipientFile = resolve(temporary, "recipient.txt");
   await writeFile(recipientFile, recipient + "\n", { mode: 0o600 });
   source = await createIsolatedDatabase(image);
+  await source.sql("create role postgres; create role service_role;");
+  const recovery = JSON.parse(
+    await readFile(resolve(here, "extension-recovery.json"), "utf8"),
+  );
+  await installExtensionRecovery(
+    source,
+    recovery.versions,
+    recovery,
+    temporary,
+  );
+  await source.sql(
+    "create schema extensions; create extension pgcrypto with schema extensions; create extension btree_gist with schema extensions; create extension pg_net; create extension supabase_vault; alter function net.http_get(text,jsonb,jsonb,integer) set search_path=net; alter function vault.create_secret(text,text,text,uuid) set search_path='';",
+  );
   await source.sql(
     "create role fictional_reader; create role fictional_login login password 'Fictional-only-never-a-user-password!'; grant fictional_reader to fictional_login with inherit false, set true, admin false; create table public.fixture(id integer primary key, body text not null); alter table public.fixture enable row level security; create policy fixture_scope on public.fixture for select using(current_user='fictional_login'); insert into public.fixture values(1,'Fictional complete encrypted recovery'); grant select on public.fixture to fictional_reader; create database _supabase;",
   );
+  const capturedPassword = await source.sql(
+    "select rolpassword from pg_authid where rolname='fictional_login';",
+  );
+  assert(
+    verifiesScram("Fictional-only-never-a-user-password!", capturedPassword),
+  );
+  assert(!verifiesScram("Wrong-fictional-password!", capturedPassword));
   await collectCommand(
     "docker",
     [
@@ -63,6 +85,13 @@ try {
     backup: generated.backup,
     identity,
     age,
+    inspectRestored: async ({ database, baseline }) => {
+      assert.equal(baseline.status, "passed");
+      assert.equal(
+        await database.sql("select count(*) from public.fixture;"),
+        "1",
+      );
+    },
   });
   assert.equal(result.databases, 3);
   assert.equal(
@@ -74,6 +103,7 @@ try {
     true,
   );
   assert.equal(result.privateFileBytesAndSecretConfigurationHashesExact, true);
+  assert.equal(result.extensionRecoveryEmbedded, true);
   console.log(
     "PASS real complete encrypted fixture:3 PostgreSQL databases, password-bearing roles/grantors, RLS/data counts, secret config/TLS/key/mail/object hashes; only networkless owned containers/volumes/private extraction used.",
   );

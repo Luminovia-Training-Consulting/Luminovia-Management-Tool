@@ -4,17 +4,22 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import {
+  adaptCandidateApiFixture,
   assertCandidateConfiguration,
+  candidateApiSuites,
   checkCandidate,
   migrationWithHistory,
   ownershipLabel,
+  stageCandidateSource,
 } from "./selfhost-candidate-check.mjs";
 
 const project = "luminovia-portal-test-" + "a".repeat(24);
@@ -131,6 +136,110 @@ test("migration replay preserves every original SQL dollar and exact history sou
     ["20261115111133_fixture.sql", source + delimiter],
   ])
     assert.throws(() => migrationWithHistory(name, sql));
+});
+
+test("M4 candidate source stages all discovered API suites and exact catalogue assets without replacing retained runtime data", (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "candidate-source-fixture-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const source = resolve("."),
+    baseline = join(directory, "baseline"),
+    scratch = join(directory, "scratch");
+  stageCandidateSource(source, baseline);
+  rmSync(join(baseline, "data"), { recursive: true });
+  mkdirSync(join(scratch, "runtime-data"), { recursive: true });
+  writeFileSync(join(scratch, "runtime-data/retained-fixture"), "keep bytes");
+  stageCandidateSource(source, scratch);
+  const suites = candidateApiSuites(scratch);
+  for (const name of [
+    "avatars-api-check.mjs",
+    "cbw-api-check.mjs",
+    "comments-api-check.mjs",
+    "local-invite-check.mjs",
+  ])
+    assert(suites.includes(name));
+  assert.deepEqual(
+    readFileSync(join(scratch, "data/cbw-building-blocks.json")),
+    readFileSync(join(source, "data/cbw-building-blocks.json")),
+  );
+  stageCandidateSource(baseline, scratch);
+  assert(!existsSync(join(scratch, "data")));
+  assert.equal(
+    readFileSync(join(scratch, "runtime-data/retained-fixture"), "utf8"),
+    "keep bytes",
+    "Source fixture data must never overlap the retained database/storage bind root.",
+  );
+});
+
+test("M4 scratch API adapter preserves loopback guards and requires exact candidate project, endpoint and database label before fixtures", (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "candidate-api-fixture-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const source = readFileSync(resolve("scripts/testing/api.mjs"), "utf8");
+  const adapted = adaptCandidateApiFixture(source, { project, apiPort: 44777 });
+  for (const options of [
+    { project: "luminovia-portal", apiPort: 44777 },
+    { project, apiPort: 443 },
+    { project, apiPort: 65536 },
+  ])
+    assert.throws(() => adaptCandidateApiFixture(source, options));
+  assert.throws(() =>
+    adaptCandidateApiFixture("", { project, apiPort: 44777 }),
+  );
+  mkdirSync(join(directory, "supabase"));
+  mkdirSync(join(directory, "bin"));
+  symlinkSync(resolve("node_modules"), join(directory, "node_modules"));
+  writeFileSync(join(directory, "api.mjs"), adapted);
+  writeFileSync(
+    join(directory, "supabase/config.toml"),
+    'project_id = "' + project + '"\n',
+  );
+  const marker = join(directory, "fixture-ran");
+  const execute = (label, url) => {
+    rmSync(marker, { force: true });
+    writeFileSync(
+      join(directory, "bin/docker"),
+      "#!/bin/sh\nprintf '%s\\n' '" +
+        JSON.stringify({ [ownershipLabel]: label }) +
+        "'\n",
+      { mode: 0o755 },
+    );
+    writeFileSync(
+      join(directory, ".env.test.local"),
+      "SUPABASE_URL=" + url + "\nSUPABASE_SERVICE_ROLE_KEY=fictional-key\n",
+    );
+    return spawnSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        'import {withApiFixture} from "./api.mjs"; import {writeFileSync} from "node:fs"; await withApiFixture(()=>writeFileSync(' +
+          JSON.stringify(marker) +
+          ', "owned fixture"));',
+      ],
+      {
+        cwd: directory,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          PORTAL_TEST_MODE: "1",
+          PORTAL_CANDIDATE_OWNER: project,
+          SUPABASE_URL: url,
+          SUPABASE_SERVICE_ROLE_KEY: "fictional-key",
+          PATH: join(directory, "bin") + ":/usr/bin:/bin",
+        },
+      },
+    );
+  };
+  const accepted = execute(project, "https://127.0.0.1:44777");
+  assert.equal(accepted.status, 0, accepted.stderr);
+  assert(existsSync(marker));
+  for (const [label, url] of [
+    ["unrelated", "https://127.0.0.1:44777"],
+    [project, "https://127.0.0.1:55321"],
+    [project, "https://cms.luminovia.org:44777"],
+  ]) {
+    assert.notEqual(execute(label, url).status, 0);
+    assert(!existsSync(marker));
+  }
 });
 
 test("default CLI remains read-only even without a Docker executable", () => {

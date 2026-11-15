@@ -20,6 +20,8 @@ All noncache persistent Docker volumes from the reviewed two Compose projects ar
 
 A private catalog records operating system package versions/manual packages, installed units, actual immutable image identities and PostgreSQL configuration. These inventories support reconstruction; they are not a claim that deleted upstream packages/images can always be re-downloaded. Keep the provider full-disk recovery option separate and explicit.
 
+The catalog also embeds the public, checksummed installation SQL/control files in `extension-recovery.json`, with original-image provenance and upstream licenses. The current PostgreSQL 17.12 binary image retains extension versions originally installed by the reviewed 17.6 image: notably `pg_net` 0.20.3 and `supabase_vault` 0.3.1. Recreating extensions from the newer image's defaults would change these versions and even some same-version function definitions. Recovery installs the original captured installer bytes only in the owned isolated container and replays captured extension-member function settings omitted by `pg_dump`; it does not upgrade or change live extensions. Every restored extension version, function setting and permission must still match the source.
+
 ## Encryption key boundary
 
 Generate the identity once **on the desktop**, into an ignored private directory:
@@ -37,7 +39,7 @@ Daily VPS verification checks successful age producer exits, ciphertext headers,
 
 ## Install and first actual acceptance
 
-Install the distribution's official `age` package during coordinated maintenance. Install the reviewed Python controller and `database-summary.sql` together in the source location used below. Before activating the strict systemd sandbox, create the root-owned 0700 directories:
+Install the distribution's official `age` package during coordinated maintenance. Install the reviewed Python controller, `database-summary.sql` and required public `extension-recovery.json` together in the source location used below. Before activating the strict systemd sandbox, create the root-owned 0700 directories:
 
 ```bash
 install -d -m0700 \
@@ -68,6 +70,8 @@ The desktop needs age, Docker and the exact recorded reviewed PostgreSQL image. 
 
 Filesystem contents are actually extracted to private 0700/0600 desktop scratch storage and hash-checked. Original archive owners/groups/modes/links/ACL/xattrs are captured and verified; privileged host ownership/ACLs and absolute symlinks are intentionally not applied on the desktop. No Auth/HTTP services are started against the restored copy. Original runtime secret files and signing/Vault/TLS key bytes are verified without printing them. Owned extraction/container/volume resources are removed after the drill; a private `desktop-restore-result.json` records the result. This is not an automatic live disaster restore or an approval to overwrite the VPS.
 
+The recovered private environment's database password is checked against all five runtime roles' actual restored SCRAM hashes. A trusted desktop caller may pass the ignored saved fictional-account ledger to verify the three existing Auth bcrypt passwords as well. An imported `inspectRestored` callback can run a reviewed migration rehearsal only after the independent native baseline passes and its result is saved. There is deliberately no CLI arbitrary SQL/apply mode; callback results do not replace baseline recovery evidence.
+
 After the first actual backup/decrypt/restore acceptance, enable the timer:
 
 ```bash
@@ -88,13 +92,19 @@ python3 /opt/luminovia-portal/source/deploy/hostinger/backups/complete_backup.py
 
 An OS maintenance `ExecStartPre` can call `--ensure-fresh --max-age-hours 26` **before** obtaining its own global lock. A recent complete, hash-verified set passes; otherwise the backup controller takes its own locks and creates one. Failure blocks dependent maintenance. Status is `/opt/luminovia-portal/private/backups/state.json`; it contains no secret values. Inspect the service journal/status and the private manifest, without printing environment or role files.
 
+After obtaining both locks, a new backup refuses with `reboot_pending` if `/run/luminovia-reboot-pending` exists. This keeps an approved pending reboot from racing with a new quiescence window; read-only freshness checks remain available.
+
 Retention keeps **up to three** verified complete local sets, adapting to disk use. Before a new capture, the oldest may be pruned only when at least two verified complete sets exist, preserving at least one valid set. Capture also reserves at least **5 GiB** for the operating system/runtime and fails safely when estimated space or the live reserve is insufficient. Unknown/corrupt/partial/external evidence is not silently deleted. This does not make three 10 GiB backups fit a 50 GB VPS. The future 100 GB document capacity and production retention/off-site recovery plan remain separate sizing work.
 
 A local VPS recovery set is not off-site retention. A manually downloaded desktop set is an off-server copy at that point; this module does not promise recurring desktop uploads while the desktop is offline. Configure provider/off-site retention only through the separately authorised service.
 
 ## Executed implementation checks
 
-The implementation passed 21 safety/native-age tests, including authenticated tamper rejection, private extraction/traversal guards, no plaintext dump artifacts, adaptive retention, both lock contention paths, preserving existing maintenance and resuming only previously running services. A real disposable encrypted fixture passed a complete three-database restore, password-bearing roles/grantors and nondefault database ACL/settings/comment, RLS/table counts, secret configuration/key/TLS/mail/object hashes. The fixture contains fictional data and does not replace the first actual VPS backup/restore drill.
+The implementation passed 22 safety/native-age tests, including authenticated tamper rejection, private extraction/traversal guards, no plaintext dump artifacts, adaptive retention, both lock contention paths, the pending-reboot guard, preserving existing maintenance and resuming only previously running services. A real disposable encrypted fixture passed a complete three-database restore, password-bearing roles/grantors and nondefault database ACL/settings/comment, RLS/table counts, secret configuration/key/TLS/mail/object hashes. It also uses genuine legacy extension installers/settings, checks the saved fixture SCRAM password and rejects a wrong password. The fixture contains fictional data and does not replace the actual VPS backup/restore drill.
+
+Actual VPS acceptance on 15 November 2026: the self-contained encrypted set completed at **18:41:10 UTC** (20,979,948 ciphertext bytes, 45.8 seconds for the service). Its isolated desktop restore passed at **18:42:32 UTC**, covering three databases, 1,817 physical files/38,090,950 bytes, exact source globals/permissions/settings/extension versions, the embedded original installers, all five runtime database credentials and all three saved fictional Auth passwords. The separate earlier first set also passed recovery after the legacy-extension gap was identified and fixed. No live database was restored.
+
+The daily timer was then read back as **enabled and active**, next run **16 November at 02:00 UTC**, with successful service exit and the 26-hour freshness gate passing. Daily server verification remains ciphertext-only. Subsequent canonical HTTPS saved-password/account/private-file/admin-denial and WSS revocation checks passed; three existing users/profiles, 14 migrations, one stored private document/object and the 10 GiB/1 GiB quotas were preserved. Detailed encrypted artifacts and safe result records are retained only in ignored private desktop storage.
 
 ```bash
 python3 -m unittest discover -s deploy/hostinger/backups -p 'test_*.py'

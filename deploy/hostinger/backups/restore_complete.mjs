@@ -5,6 +5,12 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createIsolatedDatabase } from "../restore-check.mjs";
 import { collectCommand } from "../backup.mjs";
+import {
+  installExtensionRecovery,
+  canonicalizePrivileges,
+  restoreExtensionFunctionSettings,
+} from "./extension_recovery.mjs";
+import { verifyRecoveredCredentials } from "./credential_recovery.mjs";
 const here = dirname(fileURLToPath(import.meta.url));
 const identifier = (s) => '"' + s.replaceAll('"', '""') + '"';
 const literal = (s) => "'" + s.replaceAll("'", "''") + "'";
@@ -27,6 +33,8 @@ export async function restoreComplete({
   identity,
   age = "age",
   image,
+  credentialLedger,
+  inspectRestored,
 }) {
   const privateRoot = resolve(here, "../../../.local/hostinger");
   await mkdir(privateRoot, { recursive: true, mode: 0o700 });
@@ -59,6 +67,21 @@ export async function restoreComplete({
       "Complete recovery must first prove the original immutable image. Candidate testing is a separate reviewed procedure.",
     );
     database = await createIsolatedDatabase(expectedImage);
+    const recovery =
+      catalog.extensionRecovery ??
+      JSON.parse(
+        await readFile(resolve(here, "extension-recovery.json"), "utf8"),
+      );
+    const sourceVersions = Object.assign(
+      {},
+      ...catalog.databases.map((d) => d.summary.extensions),
+    );
+    const extensionRecovery = await installExtensionRecovery(
+      database,
+      sourceVersions,
+      recovery,
+      temporary,
+    );
     const globals = await readFile(resolve(temporary, "globals.sql"), "utf8");
     assert(
       globals.length < 8 * 1024 * 1024,
@@ -131,6 +154,8 @@ export async function restoreComplete({
           "pg_restore",
           "-U",
           database.operator,
+          "--role",
+          "supabase_admin",
           "--dbname",
           source.name,
           "--clean",
@@ -186,6 +211,11 @@ export async function restoreComplete({
           );
         }
       }
+      await restoreExtensionFunctionSettings(
+        database,
+        source.summary,
+        source.name,
+      );
       const restored = JSON.parse(
         await collectCommand(
           "docker",
@@ -195,7 +225,7 @@ export async function restoreComplete({
             database.name,
             "psql",
             "-U",
-            database.operator,
+            "supabase_admin",
             "-d",
             source.name,
             "-X",
@@ -206,9 +236,11 @@ export async function restoreComplete({
           { input: summarySQL },
         ),
       );
+      const expectedSummary = structuredClone(source.summary);
+      await canonicalizePrivileges(database, restored, expectedSummary);
       assert.deepEqual(
         restored,
-        source.summary,
+        expectedSummary,
         "Restored all-database table counts/RLS/policies/function permissions/database settings/extensions differ.",
       );
     }
@@ -232,10 +264,19 @@ export async function restoreComplete({
       ),
     );
     assert.equal(files.status, "passed");
+    const credentials = await verifyRecoveredCredentials(
+      database,
+      temporary,
+      catalog,
+      credentialLedger,
+    );
     const result = {
       status: "passed",
       checkedAt: new Date().toISOString(),
       image: expectedImage,
+      extensionRecovery,
+      extensionRecoveryEmbedded: Boolean(catalog.extensionRecovery),
+      credentials,
       databases: catalog.databases.length,
       sourceRolePasswordsAttributesMembershipsAndGrantorsExact: true,
       allDatabaseCountsRlsPoliciesAndFunctionPermissionsExact: true,
@@ -255,12 +296,22 @@ export async function restoreComplete({
       JSON.stringify(result, null, 2) + "\n",
       { mode: 0o600 },
     );
+    // An imported trusted operator can inspect/rehearse against this already
+    // verified native baseline. There is intentionally no CLI arbitrary SQL
+    // or apply mode, and the independent baseline result is written first.
+    if (inspectRestored) {
+      assert.equal(typeof inspectRestored, "function");
+      await inspectRestored({ database, catalog, temporary, baseline: result });
+    }
     passed = true;
     return result;
   } finally {
-    if (database) await database.cleanup();
-    await rm(temporary, { recursive: true, force: true });
-    if (passed) await rm(diagnostic, { force: true });
+    try {
+      if (database) await database.cleanup();
+    } finally {
+      await rm(temporary, { recursive: true, force: true });
+      if (passed) await rm(diagnostic, { force: true });
+    }
   }
 }
 if (

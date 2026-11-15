@@ -78,6 +78,17 @@ def installed_runtime(root, files):
         destination.write_bytes(contents)
 
 
+def network_candidate(updater, archive, manifest):
+    u.atomic_json(updater.state_file, {"bootstrapApproved": True})
+    updater.candidate = lambda: {"status": "candidate", "commit": COMMIT, "assets": {"cms-release.json": "manifest", "cms-release.tar.gz": "archive"}}
+    def download(url, destination, limit):
+        if url == "manifest":
+            Path(destination).write_text(json.dumps(manifest))
+        else:
+            shutil.copy2(archive, destination)
+    updater.download = download
+
+
 class FakeUpdater(u.Updater):
     def __init__(self, root):
         super().__init__(root)
@@ -323,6 +334,83 @@ class ReleaseTests(unittest.TestCase):
 
 
 class InstallationTests(unittest.TestCase):
+    def test_registry_pull_outage_backs_off_before_mutation_then_installs_after_deadline(self):
+        for failed_kind in ("backend", "web"):
+            with self.subTest(failed_kind=failed_kind), tempfile.TemporaryDirectory() as directory:
+                archive, manifest, _ = fixture(directory)
+                updater = FakeUpdater(instance(directory))
+                network_candidate(updater, archive, manifest)
+                original_compose = updater.compose
+                unavailable = True
+                def compose(kind, arguments, *, tree=None):
+                    nonlocal unavailable
+                    result = original_compose(kind, arguments, tree=tree)
+                    if unavailable and kind == failed_kind and arguments[0] == "pull":
+                        unavailable = False
+                        raise u.UpdateError("subprocess_docker_failed")
+                    return result
+                updater.compose = compose
+                with patch.object(updater, "prepare_site", wraps=updater.prepare_site) as prepare:
+                    self.assertEqual(updater.once()["status"], "waiting_for_network_retry")
+                    state = json.loads(updater.state_file.read_text())
+                    self.assertIsNone(state.get("failedCommit"))
+                    self.assertFalse(state["manualRecoveryRequired"])
+                    self.assertEqual(state["lastTransientFailureCode"], "runtime_image_pull_failed")
+                    self.assertEqual(state["networkRetryAttempts"], 1)
+                    self.assertNotIn("backup", updater.calls)
+                    self.assertNotIn("checkpoint", updater.calls)
+                    self.assertFalse(any(isinstance(call, tuple) and call[1][0] != "pull" for call in updater.calls))
+                    prepare.assert_not_called()
+                    self.assertFalse(updater.maintenance.exists())
+                    self.assertEqual(os.readlink(updater.www / "current"), "releases/bootstrap")
+                    self.assertFalse((updater.www / "releases" / COMMIT).exists())
+                    self.assertEqual(list((updater.control / "staging").iterdir()), [])
+                    count = len(updater.calls)
+                    self.assertEqual(updater.once()["status"], "waiting_for_network_retry")
+                    self.assertEqual(len(updater.calls), count)
+                    state["nextNetworkRetryAt"] = "2000-01-01T00:00:00+00:00"
+                    u.atomic_json(updater.state_file, state)
+                    self.assertEqual(updater.once()["status"], "updated")
+                    prepare.assert_called_once()
+                state = json.loads(updater.state_file.read_text())
+                self.assertEqual(state["currentCommit"], COMMIT)
+                self.assertEqual(state["networkRetryAttempts"], 0)
+                self.assertIsNone(state["nextNetworkRetryAt"])
+
+    def test_config_failure_and_post_mutation_pull_error_never_become_registry_retries(self):
+        for failure in ("config", "after_mutation"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
+                archive, manifest, _ = fixture(directory)
+                updater = FakeUpdater(instance(directory))
+                network_candidate(updater, archive, manifest)
+                if failure == "config":
+                    def bad_config(tree, candidate):
+                        raise u.UpdateError("subprocess_docker_failed")
+                    updater.verify_runtime = bad_config
+                else:
+                    original_health = updater.health
+                    unavailable = True
+                    def late_failure(env, expected_index=None, *, private_api=False):
+                        nonlocal unavailable
+                        if unavailable:
+                            unavailable = False
+                            raise u.RuntimeImagePullError("runtime_image_pull_failed")
+                        return original_health(env, expected_index, private_api=private_api)
+                    updater.health = late_failure
+                with self.assertRaises(u.UpdateError) as error:
+                    updater.once()
+                self.assertNotIsInstance(error.exception, u.RuntimeImagePullError)
+                state = json.loads(updater.state_file.read_text())
+                self.assertEqual(state["failedCommit"], COMMIT)
+                self.assertFalse(state.get("nextNetworkRetryAt"))
+                self.assertFalse(state.get("networkRetryAttempts"))
+                if failure == "config":
+                    self.assertNotIn("backup", updater.calls)
+                    self.assertFalse(any(isinstance(call, tuple) for call in updater.calls))
+                else:
+                    self.assertIn("restore-checkpoint", updater.calls)
+                    self.assertFalse(state["manualRecoveryRequired"])
+
     def test_transient_network_failure_backs_off_then_recovers_without_suppressing_commit(self):
         with tempfile.TemporaryDirectory() as directory:
             archive, manifest, _ = fixture(directory)

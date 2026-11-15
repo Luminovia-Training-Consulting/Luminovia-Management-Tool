@@ -465,7 +465,15 @@ class CompleteBackup:
         final = self.destination / name
         private_dir(partial)
         self.started = utc()
-        catalog = {"format": FORMAT, "startedAt": self.started, "image": image, "databases": databases, "volumes": volumes, "excludedReconstructibleVolumes": excluded, "parts": {}}
+        extension_recovery = json.loads(Path(__file__).with_name("extension-recovery.json").read_text())
+        if extension_recovery.get("format") != "luminovia-extension-recovery-v1":
+            raise BackupError("invalid_extension_recovery_baseline")
+        for filename, item in extension_recovery["files"].items():
+            import base64
+            content = base64.b64decode(item["base64"], validate=True)
+            if hashlib.sha256(content).hexdigest() != item["sha256"] or len(content) != item["bytes"]:
+                raise BackupError("extension_recovery_baseline_checksum_differs")
+        catalog = {"extensionRecovery": extension_recovery, "format": FORMAT, "startedAt": self.started, "image": image, "databases": databases, "volumes": volumes, "excludedReconstructibleVolumes": excluded, "parts": {}}
         parts = {}
         error = None
         try:
