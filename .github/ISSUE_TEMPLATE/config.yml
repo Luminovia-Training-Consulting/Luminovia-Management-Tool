@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Beitragen und lokal entwickeln
+    url: https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/CONTRIBUTING.md
+    about: Einstieg, lokale Befehle, Branches, Tests und Ablauf bis zum Merge.
+  - name: Fragen und Unterstützung
+    url: https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/ISSUE_GUIDE.md
+    about: Den Issue-Leitfaden für Fragen, Einordnung und hilfreiche Nachweise lesen.
+  - name: Sicherheitslücke privat melden
+    url: https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/security/advisories/new
+    about: Sicherheitsdetails über GitHubs private Meldung senden; kein öffentliches Issue erstellen.

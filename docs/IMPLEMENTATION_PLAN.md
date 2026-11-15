@@ -2,6 +2,10 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## GitHub contribution and governance continuation
+
+Requested: require independent review for other contributors while allowing `CarinaSchoppe` to merge through a personal PR-only exception; supply useful labels/tags, issue/PR templates and a GitHub-discoverable contribution guide. The isolated branch is `codex/contribution-guides-and-rules`. [GitHub administration](GITHUB_WORKFLOW.md) records the split history/review/check policies, precise human and maintenance-bot identities, metadata validation and historical milestone tag targets. Apply and read back actual server rules, prove the existing bot path under equivalent temporary rules, run exact PR checks, then preserve the final delivery record. No production or public-website change belongs to this task.
+
 ## M5 local acceptance passed — system functionality and performance audit
 
 Requested after PR #4: inspect the delivered code for concrete defects, disconnected code, unnecessary request/render loops, UI/accessibility gaps and missing regression coverage. Baseline is merged main `b9cdcc8`; this work is isolated on `codex/system-functionality-performance-audit`. Concurrent daily-maintenance/backup work and normal/hosted instances remain outside this audit's mutations.
@@ -12,7 +16,7 @@ Requested after PR #4: inspect the delivered code for concrete defects, disconne
 - [x] Update developer/test/security documentation with examined scope, measured results and remaining gates.
 - [x] Complete the local command and signed push. Exact combined/native CI and the authorised merge are recorded on [PR #5](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/5); inspect that durable record on continuation.
 
-Local frozen `7abad7e` passed117source/33runtime/42Edge/174SQL/12API/54browser/2PWA plus build/persistence/cleanup. New main `11448e4` maintenance/backup source is preserved; combined offline guards76Python/60Node and Edge lint passed. Exact combined/native CI and authorised Git merge remain the final delivery gate. [Evidence](QA_RESULTS.md).
+Local frozen `7abad7e` passed 117 source, 33 runtime, 42 Edge, 174 SQL, 12 API, 54 browser and 2 PWA checks plus build/persistence/cleanup. Main `11448e4` maintenance/backup source was preserved, with 76 Python and 60 Node guards. Exact combined/native CI43752233890 passed and PR #5 merged as `bb32274`; its tree matched the tested head. [Evidence](QA_RESULTS.md).
 
 ## Daily maintenance and complete recovery continuation
 

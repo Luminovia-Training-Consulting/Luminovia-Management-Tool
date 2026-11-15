@@ -583,3 +583,15 @@ Signed audit commits and merged maintenance baseline `e2acef6` are pushed on `co
 ### M5 current runtime-pin/recovery-witness integration
 
 While exact CI was running, main advanced to signed `11448e4`: compatible Realtime/Storage/Edge/Envoy/Mailpit pins, pinned router JOSE dependency, future PostgreSQL recovery witness binding and narrower forum E2E selectors. Preserved all changes; no application migration or feature-TS logic is replaced. Resolved the CI conflict by keeping the single canonical offline step and adding backup/*.test.mjs discovery, while preserving separate native compatibility and both release needs. New targeted backup Python25 and combined Node60 pass without skips; updater38 and maintenance13 are unchanged/passed. Updated totals are76Python/60Node. Exact CI must rerun on this merged head; no assertion, migration guard or live-data approval was weakened.
+
+### M5 final exact acceptance and merge
+
+CI43752233890 passed both required jobs for signed `a0da8ef`: complete canonical acceptance and actual ten-service selfhost compatibility. The native job replayed 18 migrations, preserved password/MFA/roles/private event/scanned object bytes and migration history, passed 13 actual API/invitation suites and checked cleanup. PR #5 merged at 2026-11-15T19:42:23Z as verified `bb322746d3cf18b1a0f1eae0eaa96450d26e26cd`; fetched main had exactly the tested tree. No hosted M5 installation was performed by this audit.
+
+### GitHub contribution and governance setup
+
+Requested 16 November: external independent reviews with a personal Carina merge exception; PR labels, meaningful Git tags and readable contributor/issue/PR documentation. Work is isolated in `codex/contribution-guides-and-rules`; original worktrees and hosted systems are untouched.
+
+Inspected actual repository administration, existing ruleset27315671, GitHub Actions identities and daily promotion source. The existing broad role bypass had no review requirement. Added root CONTRIBUTING/SECURITY, issue forms, PR template, guides, a 20-label source catalogue and separate desired history/review/CI rules. All nine existing labels remain; the 20 new labels were created. Native private vulnerability reporting was enabled and read back as true.
+
+The current API accepted direct User29256704 PR-only bypass; no extra team or contributor rights were created. Generic Integration15368 bypass was rejected; exact Bot User41898282 was accepted in disabled policies. A temporary ruleset tests only `codex/maintenance-signature-probe-*`, requiring a PR and deliberately absent check so bot success cannot come from an unprotected branch. The first queued probe was cancelled because it waited behind an unrelated daily run; signature-only concurrency is now separate. Main rules stay unchanged until the equivalent bot behavior is proved. Current focused metadata/documentation checks pass 9/9; the gate includes eight regression cases, actual malicious-text/no-execution and failure-exit fixtures. Exact CI and final server readback remain the delivery gates; their durable record belongs to the resulting PR.

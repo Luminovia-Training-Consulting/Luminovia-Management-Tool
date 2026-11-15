@@ -1,0 +1,102 @@
+[
+  {
+    "name": "type:fix",
+    "color": "d73a4a",
+    "description": "Korrigiert fehlerhaftes bestehendes Verhalten."
+  },
+  {
+    "name": "type:feature",
+    "color": "a2eeef",
+    "description": "Ergänzt eine nutzbare Funktion."
+  },
+  {
+    "name": "type:docs",
+    "color": "0075ca",
+    "description": "Ändert Dokumentation und Beitragsleitfäden."
+  },
+  {
+    "name": "type:refactor",
+    "color": "5319e7",
+    "description": "Verbessert die Struktur ohne beabsichtigte Verhaltensänderung."
+  },
+  {
+    "name": "type:tests",
+    "color": "bfd4f2",
+    "description": "Ergänzt oder verbessert aussagekräftige Prüfungen."
+  },
+  {
+    "name": "type:maintenance",
+    "color": "ededed",
+    "description": "Pflegt Werkzeuge, Konfiguration und Repository-Abläufe."
+  },
+  {
+    "name": "type:security",
+    "color": "b60205",
+    "description": "Behebt eine abgestimmt veröffentlichbare Sicherheitsänderung."
+  },
+  {
+    "name": "type:dependencies",
+    "color": "0366d6",
+    "description": "Aktualisiert überprüfte Abhängigkeiten oder Laufzeit-Images."
+  },
+  {
+    "name": "area:frontend",
+    "color": "1d76db",
+    "description": "React, Bedienung, Darstellung und Barrierefreiheit."
+  },
+  {
+    "name": "area:backend",
+    "color": "0e8a16",
+    "description": "Edge Functions und serverseitige APIs."
+  },
+  {
+    "name": "area:database",
+    "color": "006b75",
+    "description": "PostgreSQL, Migrationen, RLS und Transaktionen."
+  },
+  {
+    "name": "area:auth",
+    "color": "b60205",
+    "description": "Anmeldung, Konten, Rollen, MFA und Sitzungen."
+  },
+  {
+    "name": "area:files",
+    "color": "c2e0c6",
+    "description": "Storage, Scanning, Versionen und Profilbilder."
+  },
+  {
+    "name": "area:finance",
+    "color": "fbca04",
+    "description": "Honorare, Umsatzteilung, Rechnungen und Zahlungen."
+  },
+  {
+    "name": "area:courses",
+    "color": "d4c5f9",
+    "description": "Bausteine, Vorlagen, Kurse, Aufträge und Termine."
+  },
+  {
+    "name": "area:devops",
+    "color": "0052cc",
+    "description": "Lokaler Betrieb, CI, Wartung, Backups und Releases."
+  },
+  {
+    "name": "area:github",
+    "color": "24292f",
+    "description": "Repository-Regeln, Labels und Beitragsabläufe."
+  },
+  {
+    "name": "risk:low",
+    "color": "c2e0c6",
+    "description": "Begrenzte Änderung ohne neue Daten- oder Berechtigungsrisiken."
+  },
+  {
+    "name": "risk:medium",
+    "color": "fbca04",
+    "description": "Verhaltensänderung mit gezielt zu prüfenden Auswirkungen."
+  },
+  {
+    "name": "risk:high",
+    "color": "b60205",
+    "description": "Betrifft sensible Daten, Rechte, Geld, Migrationen oder Betrieb."
+  }
+]

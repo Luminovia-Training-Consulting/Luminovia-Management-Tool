@@ -4,7 +4,7 @@ import { readFile, readdir, access } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
 test("repository documentation links resolve to delivered local files", async () => {
-  const files = ["README.md", "AGENTS.md"];
+  const files = ["README.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md"];
   async function walk(directory) {
     for (const item of await readdir(directory, { withFileTypes: true })) {
       const path = `${directory}/${item.name}`;
@@ -13,6 +13,7 @@ test("repository documentation links resolve to delivered local files", async ()
     }
   }
   await walk("docs");
+  await walk(".github");
   const broken = [];
   let links = 0;
   for (const file of files) {
