@@ -10,6 +10,50 @@
   text-align: center;
   margin-bottom: 18px;
 }
+.file-discovery-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: end;
+  margin: 18px 0;
+}
+.file-discovery-pages {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+.file-organisation-form {
+  display: grid;
+  gap: 16px;
+}
+.file-organisation-form textarea {
+  min-height: 120px;
+}
+.file-personal-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.file-personal-folder {
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.file-personal-tags span {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 2px 7px;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  font-size: 0.85rem;
+}
+@media (max-width: 760px) {
+  .file-discovery-filters {
+    grid-template-columns: 1fr;
+  }
+}
 .file-drop label {
   font-weight: 650;
   font-size: 13px;

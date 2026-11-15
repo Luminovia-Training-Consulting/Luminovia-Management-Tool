@@ -1,4 +1,4 @@
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useRef, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,7 +11,8 @@ import { Field, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import { chatKeys } from "./api";
-import type { ChatMessage } from "./types";
+import { MentionPicker } from "./mentions";
+import type { ChatMessage, ChatMention } from "./types";
 import "./i18n";
 const editSchema = z.object({ body: z.string().max(8000) });
 const quickReactions = ["👍", "❤️", "🎉", "💡", "👀", "✅"];
@@ -61,7 +62,14 @@ export function MessageBubble({
   const client = useQueryClient();
   const online = useOnline();
   const [editing, setEditing] = useState(false);
+  const [editingVersion, setEditingVersion] = useState(
+    message.content_version ?? 1,
+  );
   const [deleting, setDeleting] = useState(false);
+  const [mentions, setMentions] = useState<ChatMention[]>(
+    message.mentions ?? [],
+  );
+  const editRequest = useRef<{ signature: string; key: string } | null>(null);
   const own = message.sender_id === actor;
   const canEdit =
     own &&
@@ -83,13 +91,26 @@ export function MessageBubble({
       requireOnline();
       if (!values.body.trim() && !message.document_id)
         throw new Error("empty_message");
-      const { error } = await db().rpc("edit_message", {
+      const ids = mentions.map((person) => person.user_id).sort();
+      const signature = JSON.stringify([
+        message.id,
+        editingVersion,
+        values.body.trim(),
+        ids,
+      ]);
+      if (!editRequest.current || editRequest.current.signature !== signature)
+        editRequest.current = { signature, key: crypto.randomUUID() };
+      const { error } = await db().rpc("edit_message_with_mentions", {
         p_message_id: message.id,
         p_body: values.body.trim(),
+        p_expected_version: editingVersion,
+        p_client_id: editRequest.current.key,
+        p_mention_ids: ids,
       });
       if (error) throw error;
     },
     onSuccess: async () => {
+      editRequest.current = null;
       await invalidate();
       setEditing(false);
     },
@@ -158,6 +179,16 @@ export function MessageBubble({
             <p className="chat-message-body">
               <MessageText body={message.body} />
             </p>
+            {Boolean(message.mentions?.length) && (
+              <ul
+                className="chat-mention-selection"
+                aria-label={t("mentionedPeople")}
+              >
+                {message.mentions!.map((person) => (
+                  <li key={person.user_id}>@{person.display_name}</li>
+                ))}
+              </ul>
+            )}
             {attachment}
             <div className="chat-message-footer">
               <div
@@ -224,6 +255,9 @@ export function MessageBubble({
                     aria-label={t("edit")}
                     onClick={() => {
                       form.reset({ body: message.body });
+                      setMentions(message.mentions ?? []);
+                      setEditingVersion(message.content_version ?? 1);
+                      editRequest.current = null;
                       edit.reset();
                       setEditing(true);
                     }}
@@ -232,11 +266,11 @@ export function MessageBubble({
                     <Pencil size={15} />
                   </Button>
                 )}
-                {own && (
+                {(own || message.can_moderate) && (
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label={t("delete")}
+                    aria-label={t(own ? "delete" : "moderateDelete")}
                     onClick={() => {
                       remove.reset();
                       setDeleting(true);
@@ -275,15 +309,33 @@ export function MessageBubble({
               disabled={edit.isPending}
             />
           </Field>
+          <MentionPicker
+            actor={actor}
+            room={message.room_id}
+            value={mentions}
+            onChange={setMentions}
+            disabled={edit.isPending}
+          />
           <Button disabled={!online || edit.isPending}>{common("save")}</Button>
-          {edit.isError && <Notice kind="error">{t("actionError")}</Notice>}
+          {edit.isError && (
+            <Notice kind="error">
+              {t(
+                edit.error &&
+                  typeof edit.error === "object" &&
+                  "code" in edit.error &&
+                  edit.error.code === "40001"
+                  ? "editConflict"
+                  : "actionError",
+              )}
+            </Notice>
+          )}
         </form>
       </Dialog>
       <Dialog
         open={deleting}
         onOpenChange={setDeleting}
         title={t("deleteConfirm")}
-        description={t("deleteHint")}
+        description={t(own ? "deleteHint" : "moderationHint")}
       >
         <p className="chat-delete-preview">{message.body}</p>
         <div className="form-actions">

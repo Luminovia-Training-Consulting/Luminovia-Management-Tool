@@ -7,7 +7,7 @@ import {
   FolderOpen,
   History,
   Image,
-  Search,
+  Tags,
   Trash2,
 } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
@@ -36,6 +36,7 @@ import {
 } from "./api";
 import "./i18n";
 import "./files.css";
+import { DocumentExplorer, DocumentOrganiser } from "./discovery";
 function fileError(error: unknown) {
   const code = error instanceof Error ? error.message : "";
   return [
@@ -267,6 +268,7 @@ function DocumentList({ files }: { files: PortalDocument[] }) {
   const [name, setName] = useState("");
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [organising, setOrganising] = useState<PortalDocument | null>(null);
   const change = useMutation({
     mutationFn: async () => {
       requireOnline();
@@ -316,8 +318,31 @@ function DocumentList({ files }: { files: PortalDocument[] }) {
               <span className={`file-status status-${file.status}`}>
                 {t(file.status)}
               </span>
+              {file.personal_folder && (
+                <small className="file-personal-folder">
+                  {t("ownFolder")}: {file.personal_folder}
+                </small>
+              )}
+              {Boolean(file.personal_tags?.length) && (
+                <div className="file-personal-tags">
+                  {file.personal_tags!.map((tag) => (
+                    <span key={tag}>{tag}</span>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="file-actions">
+              {file.personal_version !== undefined && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`${t("organise")}: ${file.original_name}`}
+                  disabled={!online}
+                  onClick={() => setOrganising(file)}
+                >
+                  <Tags size={18} />
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -398,6 +423,13 @@ function DocumentList({ files }: { files: PortalDocument[] }) {
         ))}
       </ul>
       {failed && <Notice kind="error">{t("error")}</Notice>}
+      {organising && (
+        <DocumentOrganiser
+          key={`${organising.id}:${organising.personal_version}`}
+          file={organising}
+          onClose={() => setOrganising(null)}
+        />
+      )}
       <Dialog
         open={selected !== null}
         onOpenChange={(open) => {
@@ -534,20 +566,18 @@ export function JobDocuments({
 export function FilesPage() {
   const { t } = useTranslation("files");
   const { session } = useAuth();
-  const files = useQuery(documentsQuery(session!.user.id));
   const permissions = useQuery(permissionsQuery(session!.user.id));
-  const jobs = useQuery(jobsQuery);
-  const [search, setSearch] = useState(
-    () => new URLSearchParams(window.location.search).get("q") ?? "",
-  );
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState("material");
   const [scope, setScope] = useState<UploadContext["scope"]>("personal");
   const [job, setJob] = useState("");
-  const filtered =
-    files.data?.filter((f) =>
-      f.original_name.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
-    ) ?? [];
+  const jobs = useQuery({
+    ...jobsQuery,
+    enabled:
+      open &&
+      scope !== "personal" &&
+      Boolean(permissions.data?.includes("jobs.manage")),
+  });
   return (
     <>
       <PageHeading
@@ -561,26 +591,9 @@ export function FilesPage() {
         }
       />
       <section className="panel">
-        <div className="search-field">
-          <Search size={19} />
-          <label htmlFor="file-search" className="sr-only">
-            {t("search")}
-          </label>
-          <input
-            id="file-search"
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("search")}
-          />
-        </div>
-        {files.isPending ? (
-          <Loading />
-        ) : files.isError ? (
-          <ErrorState retry={() => void files.refetch()} />
-        ) : (
-          <DocumentList files={filtered} />
-        )}
+        <DocumentExplorer key={session!.user.id} actor={session!.user.id}>
+          {(rows) => <DocumentList files={rows} />}
+        </DocumentExplorer>
       </section>
       <Dialog
         open={open}

@@ -56,7 +56,7 @@ export const chatMessagesQuery = (
     queryKey: [...chatKeys.messages(actor, room), search],
     initialPageParam: null as MessageCursor | null,
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await db().rpc("chat_messages", {
+      const { data, error } = await db().rpc("chat_messages_with_mentions", {
         p_room_id: room,
         p_before_at: pageParam?.at ?? null,
         p_before_id: pageParam?.id ?? null,

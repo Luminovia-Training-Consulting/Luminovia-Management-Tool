@@ -13,9 +13,12 @@ export interface PortalDocument {
   mime_type: string;
   size_bytes: number;
   status: string;
-  current_version_id: string;
+  current_version_id: string | null;
   created_at: string;
   deleted_at: string | null;
+  personal_tags?: string[];
+  personal_folder?: string;
+  personal_version?: number;
 }
 export interface UploadContext {
   scope: PortalDocument["scope"];
@@ -92,7 +95,7 @@ export async function uploadDocument(
 }
 export async function downloadDocument(
   id: string,
-  versionId?: string,
+  versionId?: string | null,
 ): Promise<Blob> {
   const response = await fetch(endpoint(), {
     method: "POST",
@@ -114,7 +117,7 @@ export async function downloadDocument(
 export async function saveDownload(
   id: string,
   name: string,
-  versionId?: string,
+  versionId?: string | null,
 ) {
   const blob = await downloadDocument(id, versionId);
   const url = URL.createObjectURL(blob);
@@ -158,7 +161,7 @@ function documentRefreshInterval(
   }
   const signature = JSON.stringify(
     pending
-      .map((file) => [file.id, file.status, file.current_version_id])
+      .map((file) => [file.id, file.status, file.current_version_id] as const)
       .sort((a, b) => a[0].localeCompare(b[0])),
   );
   let window = scanWindows.get(query);

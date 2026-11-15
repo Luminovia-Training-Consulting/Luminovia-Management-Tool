@@ -23,6 +23,10 @@ export interface ChatReaction {
   count: number;
   mine: boolean;
 }
+export interface ChatMention {
+  user_id: string;
+  display_name: string;
+}
 export interface ChatMessage {
   id: string;
   room_id: string;
@@ -34,6 +38,9 @@ export interface ChatMessage {
   deleted_at: string | null;
   document_id: string | null;
   reactions: ChatReaction[];
+  content_version?: number;
+  mentions?: ChatMention[];
+  can_moderate?: boolean;
 }
 export interface MessageCursor {
   at: string;

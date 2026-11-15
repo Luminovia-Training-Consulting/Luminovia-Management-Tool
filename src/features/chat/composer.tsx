@@ -11,6 +11,8 @@ import { Field, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { uploadDocument } from "../files/api";
 import { chatKeys } from "./api";
+import { MentionPicker } from "./mentions";
+import type { ChatMention } from "./types";
 import "./i18n";
 const messageSchema = z.object({ body: z.string().max(8000) });
 const acceptedFiles = ".pdf,.png,.jpg,.jpeg,.webp,.txt,.docx,.xlsx,.pptx";
@@ -32,6 +34,9 @@ export function MessageComposer({
     name: string;
   } | null>(null);
   const [progress, setProgress] = useState(0);
+  const [mentions, setMentions] = useState<ChatMention[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const [badDrop, setBadDrop] = useState(false);
   const [empty, setEmpty] = useState(false);
   const form = useForm<z.infer<typeof messageSchema>>({
     resolver: zodResolver(messageSchema),
@@ -69,14 +74,21 @@ export function MessageComposer({
         setEmpty(true);
         throw new Error("empty_message");
       }
-      const signature = JSON.stringify([room, body, attachment?.id ?? null]);
+      const ids = mentions.map((person) => person.user_id).sort();
+      const signature = JSON.stringify([
+        room,
+        body,
+        attachment?.id ?? null,
+        ids,
+      ]);
       if (!retry.current || retry.current.signature !== signature)
         retry.current = { signature, key: crypto.randomUUID() };
-      const { data, error } = await db().rpc("send_message", {
+      const { data, error } = await db().rpc("send_message_with_mentions", {
         p_room_id: room,
         p_body: body,
         p_client_id: retry.current.key,
         p_document_id: attachment?.id ?? null,
+        p_mention_ids: ids,
       });
       if (error || !data) throw error ?? new Error("unconfirmed");
       return data;
@@ -85,6 +97,7 @@ export function MessageComposer({
       retry.current = null;
       form.reset();
       setAttachment(null);
+      setMentions([]);
       upload.reset();
       await Promise.all([
         client.invalidateQueries({ queryKey: chatKeys.messages(actor, room) }),
@@ -95,7 +108,31 @@ export function MessageComposer({
   const busy = send.isPending || upload.isPending;
   return (
     <form
-      className="chat-composer"
+      className={`chat-composer ${dragging ? "is-dragging" : ""}`}
+      onDragOver={(event) => {
+        event.preventDefault();
+        if (online && !busy && !attachment) setDragging(true);
+      }}
+      onDragLeave={(event) => {
+        if (
+          !(event.relatedTarget instanceof Node) ||
+          !event.currentTarget.contains(event.relatedTarget)
+        )
+          setDragging(false);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        setDragging(false);
+        if (!online || busy || attachment) return;
+        const files = Array.from(event.dataTransfer.files);
+        if (files.length !== 1) {
+          setBadDrop(true);
+          return;
+        }
+        setBadDrop(false);
+        send.reset();
+        upload.mutate(files[0]);
+      }}
       noValidate
       onSubmit={form.handleSubmit((values) => send.mutate(values))}
     >
@@ -114,6 +151,13 @@ export function MessageComposer({
           placeholder={t("message")}
         />
       </Field>
+      <MentionPicker
+        actor={actor}
+        room={room}
+        value={mentions}
+        onChange={setMentions}
+        disabled={busy}
+      />
       {attachment && (
         <div className="chat-draft-attachment">
           <Paperclip size={16} />
@@ -151,6 +195,7 @@ export function MessageComposer({
             const file = event.target.files?.[0];
             event.target.value = "";
             if (file) {
+              setBadDrop(false);
               send.reset();
               upload.mutate(file);
             }
@@ -171,6 +216,8 @@ export function MessageComposer({
           {t(send.isPending ? "sending" : "send")}
         </Button>
       </div>
+      <small>{t("dropHint")}</small>
+      {badDrop && <Notice kind="error">{t("oneFileDrop")}</Notice>}
       {send.isSuccess && <Notice>{t("sent")}</Notice>}
       {send.isError && !empty && <Notice kind="error">{t("sendError")}</Notice>}
       {upload.isError && <Notice kind="error">{t("attachmentFailed")}</Notice>}
