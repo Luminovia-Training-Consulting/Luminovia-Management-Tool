@@ -293,7 +293,10 @@ it("the newest fetched copy wins if notification cursor pages overlap", () => {
 
 it("opening the inbox closes the native notification popover", async () => {
   view(<NotificationsMenu id="actor-a" zone="UTC" />);
-  const summary = screen.getByLabelText("Benachrichtigungen");
+  const summary = await screen.findByLabelText(
+    "Benachrichtigungen: 45 ungelesen",
+  );
+  expect(summary).toHaveAccessibleName("Benachrichtigungen: 45 ungelesen");
   await userEvent.click(summary);
   const menu = summary.closest("details")!;
   expect(menu).toHaveAttribute("open");

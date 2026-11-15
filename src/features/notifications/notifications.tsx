@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   useInfiniteQuery,
@@ -111,7 +111,6 @@ export function NotificationsMenu({ id, zone }: { id: string; zone: string }) {
   const online = useOnline();
   const query = useQuery(notificationPreviewQuery(id));
   const mark = useReadState(id);
-  const countId = useId();
   const count = query.isError ? 0 : (query.data?.unread_count ?? 0);
   const menu = useRef<HTMLDetailsElement>(null);
   const location = useLocation();
@@ -120,7 +119,9 @@ export function NotificationsMenu({ id, zone }: { id: string; zone: string }) {
   }, [location.pathname, location.search]);
   return (
     <details className="notification-menu" ref={menu}>
-      <summary aria-label={t("title")} aria-describedby={countId}>
+      <summary
+        aria-label={`${t("title")}: ${query.isError ? t("unavailable") : t("count", { count })}`}
+      >
         <Bell aria-hidden="true" size={21} />
         {count > 0 && (
           <span className="notification-count" aria-hidden="true">
@@ -128,9 +129,6 @@ export function NotificationsMenu({ id, zone }: { id: string; zone: string }) {
           </span>
         )}
       </summary>
-      <span className="sr-only" id={countId}>
-        {query.isError ? t("unavailable") : t("count", { count })}
-      </span>
       <div className="notification-popover">
         <h2>{t("title")}</h2>
         {query.isPending ? (

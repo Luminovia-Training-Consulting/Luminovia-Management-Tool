@@ -234,6 +234,108 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
     },
   );
   await check(
+    "Every genuine reopening renews its optional notice; exact retries and disabled preferences do not",
+    async () => {
+      const job = await create();
+      const notice = async () =>
+        JSON.parse(
+          await sql(
+            `select to_jsonb(n) from public.notifications n where user_id='${teacher}' and kind='job_reopened' and resource_id='${job}'`,
+          ),
+        );
+      const markRead = async () =>
+        actor(
+          teacher,
+          `select public.mark_notifications(array['${(await notice()).id}'::uuid],null,true)`,
+        );
+      const originalPreferences = JSON.parse(
+        await actor(teacher, "select public.notification_preferences()"),
+      );
+      const setUpdates = async (enabled) => {
+        const current = JSON.parse(
+          await actor(teacher, "select public.notification_preferences()"),
+        );
+        const { version, ...values } = current;
+        return actor(
+          teacher,
+          `select public.save_notification_preferences(${quoteSql(JSON.stringify({ ...values, job_updates: enabled }))}::jsonb,${version})`,
+        );
+      };
+      try {
+        await cancel((await claim(job)).claim_id);
+        await action(job, "reopen", { reason: "Fictional first reopening" });
+        await markRead();
+        const first = await notice();
+        assert.ok(first.read_at);
+        await cancel((await claim(job)).claim_id);
+        const key = randomUUID(),
+          version = (await state(job)).version,
+          values = { reason: "Fictional second reopening" };
+        await action(job, "reopen", values, key, version);
+        const renewed = await notice();
+        assert.equal(
+          renewed.id,
+          first.id,
+          "One notice row is reused, rather than duplicated",
+        );
+        assert.equal(renewed.read_at, null);
+        assert.ok(
+          Date.parse(renewed.created_at) > Date.parse(first.created_at),
+        );
+        assert.equal(
+          await sql(
+            `select count(*) from public.audit_events where action='job.lifecycle.reopen' and resource_id='${job}'`,
+          ),
+          "2",
+        );
+        await markRead();
+        const readAgain = await notice();
+        await action(job, "reopen", values, key, version);
+        assert.deepEqual(
+          await notice(),
+          readAgain,
+          "A successful-operation retry cannot mark the notice unread again or move its time",
+        );
+        assert.equal(
+          await sql(
+            `select count(*) from public.audit_events where action='job.lifecycle.reopen' and resource_id='${job}'`,
+          ),
+          "2",
+        );
+        await cancel((await claim(job)).claim_id);
+        await setUpdates(false);
+        await action(job, "reopen", {
+          reason: "Fictional optional notices disabled",
+        });
+        assert.deepEqual(
+          await notice(),
+          readAgain,
+          "Disabled optional updates do not renew an existing receipt",
+        );
+        assert.equal(
+          await sql(
+            `select count(*) from public.audit_events where action='job.lifecycle.reopen' and resource_id='${job}'`,
+          ),
+          "3",
+        );
+        assert.equal(
+          await sql(
+            `select count(*) from public.job_claims where job_id='${job}' and status='cancelled'`,
+          ),
+          "3",
+        );
+        assert.equal(
+          await sql(
+            `select count(*) from public.assignment_sessions s join public.job_claims c on c.id=s.claim_id where c.job_id='${job}' and s.released_at is not null`,
+          ),
+          "6",
+        );
+      } finally {
+        await setUpdates(originalPreferences.job_updates);
+      }
+    },
+  );
+  await check(
     "Fifty competing reopened claims still yield one winner and an entire two-session block",
     async () => {
       const job = await create(),

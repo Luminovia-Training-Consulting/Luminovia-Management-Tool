@@ -4,6 +4,7 @@ import { readPreference, writePreference } from "./preferences";
 const pairs: Record<string, [string, string]> = {
   auditLog: ["Administrationsprotokoll", "Administration log"],
   availability: ["Verfügbarkeit", "Availability"],
+  topics: ["Themen & Tools", "Topics & tools"],
   requestCourses: ["Kurse beauftragen", "Commission courses"],
   myCourses: ["Meine Kurse", "My courses"],
   accounts: ["Konten", "Accounts"],

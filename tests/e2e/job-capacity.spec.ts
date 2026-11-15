@@ -180,7 +180,12 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
-    await board.screenshot({
+    const englishBoard = page.getByRole("region", {
+      name: "Offer board",
+      exact: true,
+    });
+    await expect(englishBoard).toBeVisible();
+    await englishBoard.screenshot({
       path: `docs/screenshots/${testInfo.project.name}-job-board.png`,
     });
   } finally {

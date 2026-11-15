@@ -235,7 +235,7 @@ test('admin verifies a real TOTP factor and publishes a five-session job through
   }
   await page.getByLabel('Sofort veröffentlichen', { exact: true }).check();
   await page.getByRole('button', { name: 'Stelle speichern', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText(/Stelle gespeichert/);
+  await expect(page.locator('.notice[role="status"]').filter({ hasText: /^Stelle gespeichert\.$/ })).toBeVisible();
   const { data: job, error: jobError } = await service().from('jobs').select('id,status,job_sessions(*)').eq('title', title).single();
   expect(jobError).toBeNull();
   expect(job!.status).toBe('published');

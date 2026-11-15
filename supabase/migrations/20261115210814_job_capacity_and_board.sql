@@ -128,7 +128,9 @@ begin
   result=j.id;
  end if;
  insert into public.audit_events(actor_id,action,resource_id,details) values(auth.uid(),'job.lifecycle.'||p_action,result,jsonb_build_object('source_job_id',j.id,'reason',reason,'prior_version',j.lifecycle_version));
- if p_action='reopen' then insert into public.notifications(user_id,kind,resource_id) select distinct lecturer_id,'job_reopened',j.id from public.job_claims where job_id=j.id and status='cancelled' on conflict do nothing;end if;
+ -- Each genuine audited reopening renews the one optional notice per recipient
+ -- and job. Exact request retries returned before this point and cannot reset it.
+ if p_action='reopen' then insert into public.notifications(user_id,kind,resource_id) select distinct lecturer_id,'job_reopened',j.id from public.job_claims where job_id=j.id and status='cancelled' on conflict(user_id,kind,resource_id) do update set read_at=null,created_at=clock_timestamp();end if;
  insert into private.job_lifecycle_requests(actor_id,request_id,payload,result) values(auth.uid(),p_request_id,payload,result);return result;
 end;$$;
 

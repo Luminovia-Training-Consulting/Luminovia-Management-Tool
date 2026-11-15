@@ -171,18 +171,41 @@ test("reasoned cancellation, explicit reopening, same-page reclaim and safe copy
     // lecturer page: its retired claim key and confirmed-result state must stay safe.
     await lecturerPage.waitForTimeout(16000);
     await lecturerPage.bringToFront();
-    await lecturerPage.evaluate(() =>
-      document.dispatchEvent(new Event("visibilitychange")),
+    const refreshedJobs = lecturerPage.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname.endsWith("/rest/v1/jobs") &&
+        response.request().method() === "GET" &&
+        response.status() === 200,
     );
+    // TanStack's browser focus manager listens on window. A non-bubbling
+    // document event does not reach it and would leave this page on the draft.
+    await lecturerPage.evaluate(() =>
+      window.dispatchEvent(new Event("visibilitychange")),
+    );
+    await refreshedJobs;
+    await expect(lecturerPage.locator(".status-published")).toHaveText("Offen");
+    await expect(
+      lecturerPage.getByText("1 Platz zur Übernahme offen", { exact: true }),
+    ).toBeVisible();
+    const currentTerms = lecturerPage.getByLabel("Konditionen akzeptieren", {
+      exact: true,
+    });
+    // Reopening retains the accepted terms version. Explicitly review consent
+    // for this new operation and prove it still gates the actual claim button.
+    await currentTerms.uncheck();
+    await expect(
+      lecturerPage.getByRole("button", {
+        name: "Auftrag übernehmen",
+        exact: true,
+      }),
+    ).toBeDisabled();
+    await currentTerms.check();
     await expect(
       lecturerPage.getByRole("button", {
         name: "Auftrag übernehmen",
         exact: true,
       }),
     ).toBeEnabled();
-    await lecturerPage
-      .getByLabel("Konditionen akzeptieren", { exact: true })
-      .check();
     await lecturerPage
       .getByRole("button", { name: "Auftrag übernehmen", exact: true })
       .click();

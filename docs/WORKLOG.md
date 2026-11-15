@@ -2,6 +2,14 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — M6 run03 reached all native APIs and both browser projects
+
+Frozen signed `4e077b765bd8cb19808c161132ec14d66baad351` passed source/runtime/Edge/operating checks, all24migrations and SQL suites, all18actual Auth/REST/Storage/WebSocket business API suites and the real Edge/Mailpit invitation. The browser stage completed **48 passed /22 failed /zero skipped** out of70desktop/mobile workflows in9.6minutes. Complete command returned **exit1**; report `.local/tests/240bbb48/RESULT.txt`. Build/PWA was not reached; owned cleanup completed.
+
+Four shared causes were identified from actual failure traces, without removing tests: the notification control's accessible name omitted the visible unread counter; the new board screenshot retained a German region locator after switching to English; one older success assertion also selected the board's legitimate screen-reader live region; and the new same-page lifecycle fixture dispatched a non-bubbling focus event on document while the actual query manager listens on window. The trace proved no refreshed jobsGET occurred. Fixes retain the same mounted page, await a real successful jobsGET, verify actual published/free-position state, explicitly recheck consent and preserve distinct operation-key/history assertions. Source also adds the missing DE/EN topics navigation label and correct singular/plural position text.
+
+Independent real RPC regression during that run reproduced a second genuine reopening leaving its old notice read. Both owning pre-release lifecycle functions now renew the one optional notice only for a new audited reopen. A three-cycle PostgreSQL check proves fresh unread/time, same-request retry preserving read/time/auditcount, optional preference suppression, and retained historical claims/released intervals. Lifecycle12andcapacity8focusedgroups pass. Current notification13component/DTO cases pass; a complete fresh run04 is required for these combined corrections.
+
 ## 16 November 2026 — M6 run02, corrected closed-capacity API expectation
 
 Frozen signed `68493cc5fe05d882736e6ca261e8c032a36b6e3a` passed all current SQL suites and reached actual business HTTP/Auth tests in `.local/tests/d1cf07cc/RESULT.txt`. The complete command then returned **exit1** because the newly authored capacity API test expected `filled` after cancellation. Both owning migrations and the documented workflow explicitly put the offer into `draft` after cancellation: two remaining accepted places out of three do not make a filled offer, and no replacement is allowed before explicit reopening. Actual exact response `{status:'unavailable'}` was therefore correct.

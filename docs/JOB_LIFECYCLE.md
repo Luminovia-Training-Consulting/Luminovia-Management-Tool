@@ -94,7 +94,10 @@ Cancellation:
 
 Management explicitly reopens the remaining future position(s) with a reason and,
 if needed, a refreshed/cleared deadline. A qualified replacement must claim online
-under the same all-or-none checks. There is no automatic substitute selection or
+under the same all-or-none checks. Each genuine audited reopening renews the single
+optional in-app notice for previously cancelled lecturers: it becomes unread with a
+fresh timestamp. Retrying that same completed request does not renew it again;
+disabling optional job updates suppresses renewal. There is no automatic substitute selection or
 administrator drag-to-confirm shortcut. Accepted resource/history read access
 remains according to existing job policies; cancellation is not a general erasure
 of legitimately accepted records. Private contracts/messages/calendar entries do
@@ -148,7 +151,8 @@ or hosted configuration was changed by this implementation.
 Focused checks actually passed in a disposable PostgreSQL 17 database:
 
 - `PORTAL_DB_CONTAINER=<owned-test-container> node scripts/jobs-lifecycle-db-tests.mjs`:
-  11 groups, including a 50-way reopened single-position race, immutable accepted
+  12 groups, including repeated-reopening notification renewal/retry/preferences,
+  a 50-way reopened single-position race, immutable accepted
   snapshots, exact idempotency, resource release, deadline/CAS and controlled
   invoice-vs-cancellation interleavings in both orders.
 - `PORTAL_DB_CONTAINER=<owned-test-container> node scripts/jobs-capacity-db-tests.mjs`:

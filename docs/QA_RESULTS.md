@@ -2,6 +2,10 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## M6 third combined checkpoint — APIs passed, browser corrections required
+
+Run `.local/tests/240bbb48/RESULT.txt` on `4e077b7` passed all18actual business API suites plus real Edge/Mailpit, after the complete source/Edge/SQL/restart checks. Chromium desktop/mobile completed **48 passed /22 failed /zero skipped** in9.6minutes. Shared actual causes were notification accessible-name mismatch and three precise browser-fixture errors (translated region, live-status ambiguity, incorrect focus-event target). Build/PWA was not reached. Corrections plus the independently reproduced repeated-reopening notification regression require a fresh complete run04; this checkpoint is not final acceptance.
+
 ## M6 second combined checkpoint — closed-offer test expectation corrected
 
 Run `.local/tests/d1cf07cc/RESULT.txt` on `68493cc` passed every SQL suite and the first ten actual Auth/API suites. The new capacity API assertion then expected `filled` although the established cancellation contract moves the offer to draft; exact `unavailable` was correct. Only the test was corrected and strengthened with unchanged-state assertions. Complete rerun remains pending; browser/build acceptance was not reached.
