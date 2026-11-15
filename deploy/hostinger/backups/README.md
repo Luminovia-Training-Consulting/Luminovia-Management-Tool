@@ -108,6 +108,8 @@ Actual VPS acceptance on 15 November 2026: the self-contained encrypted set comp
 
 The daily timer was then read back as **enabled and active**, next run **16 November at 02:00 UTC**, with successful service exit and the 26-hour freshness gate passing. Daily server verification remains ciphertext-only. Subsequent canonical HTTPS saved-password/account/private-file/admin-denial and WSS revocation checks passed; three existing users/profiles, 14 migrations, one stored private document/object and the 10 GiB/1 GiB quotas were preserved. Detailed encrypted artifacts and safe result records are retained only in ignored private desktop storage.
 
+The final post-automatic-update schema18set `20261115T201015Z-566a76ede5b4` completed20:10:56.676307UTC,24,991,480 ciphertext bytes / six parts. Its actual native desktop recovery passed20:13:18.322UTC:all 3 databases,1,990 files/48,121,876 bytes, all 5 runtime / 3 saved Auth credentials, exact permissions/function settings/extensions and configuration/keys. All18restored SQLsources and captured deployed files match main bb322746. Original 3 users/profiles/roles,1 private 114-byte object/document,10/1GiBquotas and22blocks/24sources/22templates remain. Final inspection was SELECT-only; owned container/volume/plaintext cleanup completed. No live restore, Auth/HTTP recovery stack or post-boot disaster reconstruction is claimed by this native drill. The02UTC daily timer remains enabled/active; recurring off-site service remains separate and unpurchased.
+
 ```bash
 python3 -m unittest discover -s deploy/hostinger/backups -p 'test_*.py'
 node --test deploy/hostinger/backups/*.test.mjs
