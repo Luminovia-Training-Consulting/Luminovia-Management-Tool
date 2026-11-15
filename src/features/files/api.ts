@@ -1,5 +1,6 @@
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
+import { queryOptions } from "@tanstack/react-query";
 export interface PortalDocument {
   id: string;
   owner_id: string;
@@ -125,25 +126,97 @@ export async function saveDownload(
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function documentAccessDenied(error: unknown) {
+  return Boolean(
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    error.code === "42501",
+  );
+}
+// Scan progress is temporary; settled metadata does not need a request for every
+// attachment every five seconds. Focus/reconnect and mutation invalidation still
+// revalidate immediately, and every byte download keeps its server access check.
+const scanWindows = new WeakMap<
+  object,
+  { signature: string; started: number }
+>();
+function documentRefreshInterval(
+  query: object,
+  files:
+    | readonly Pick<PortalDocument, "id" | "status" | "current_version_id">[]
+    | undefined,
+  error: unknown,
+) {
+  if (documentAccessDenied(error)) return false;
+  const pending = !error
+    ? files?.filter((file) => ["quarantined", "scanning"].includes(file.status))
+    : undefined;
+  if (!pending?.length) {
+    scanWindows.delete(query);
+    return 60000;
+  }
+  const signature = JSON.stringify(
+    pending
+      .map((file) => [file.id, file.status, file.current_version_id])
+      .sort((a, b) => a[0].localeCompare(b[0])),
+  );
+  let window = scanWindows.get(query);
+  if (window?.signature !== signature) {
+    window = { signature, started: Date.now() };
+    scanWindows.set(query, window);
+  }
+  // An interrupted worker can leave a pending row behind. Bound fast polling
+  // to two minutes per observed scan state, then retain the normal slow check.
+  // The weak key follows the real query lifecycle, without a second data cache.
+  return Date.now() - window.started < 120000 ? 3000 : 60000;
+}
+export const documentQuery = (actor: string, id: string) =>
+  queryOptions({
+    queryKey: ["document", actor, id],
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .from("documents")
+        .select("*")
+        .eq("id", id)
+        .abortSignal(signal)
+        .maybeSingle();
+      if (error) throw error;
+      return data as PortalDocument | null;
+    },
+    staleTime: 15000,
+    retry: (attempt, error) => !documentAccessDenied(error) && attempt < 1,
+    refetchInterval: (query) =>
+      query.state.data === null
+        ? false
+        : documentRefreshInterval(
+            query,
+            query.state.data ? [query.state.data] : undefined,
+            query.state.error,
+          ),
+  });
 export const documentsQuery = (
   actor: string,
   owner?: string,
   kind?: string,
   job?: string,
-) => ({
-  queryKey: ["documents", actor, owner ?? "", kind ?? "", job ?? ""],
-  queryFn: async () => {
-    let query = db()
-      .from("documents")
-      .select("*")
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
-    if (owner) query = query.eq("owner_id", owner);
-    if (kind) query = query.eq("kind", kind);
-    if (job) query = query.eq("job_id", job);
-    const { data, error } = await query;
-    if (error) throw error;
-    return data as PortalDocument[];
-  },
-  refetchInterval: 10000,
-});
+) =>
+  queryOptions({
+    queryKey: ["documents", actor, owner ?? "", kind ?? "", job ?? ""],
+    queryFn: async ({ signal }) => {
+      let query = db()
+        .from("documents")
+        .select("*")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false });
+      if (owner) query = query.eq("owner_id", owner);
+      if (kind) query = query.eq("kind", kind);
+      if (job) query = query.eq("job_id", job);
+      const { data, error } = await query.abortSignal(signal);
+      if (error) throw error;
+      return data as PortalDocument[];
+    },
+    retry: (attempt, error) => !documentAccessDenied(error) && attempt < 1,
+    refetchInterval: (query) =>
+      documentRefreshInterval(query, query.state.data, query.state.error),
+  });

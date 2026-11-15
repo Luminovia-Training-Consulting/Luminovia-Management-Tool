@@ -41,7 +41,10 @@ export function Avatar({
     enabled: Boolean(actor && version) && online,
     retry: false,
     gcTime: 0,
-    staleTime: 30000,
+    // Bytes are immutable for this exact actor/target/version key. The separate
+    // selection query revalidates access/version on focus and reconnect; avoid
+    // fetching the same image again merely because the window regained focus.
+    staleTime: Infinity,
   });
   const blob = online && !image.isError && version ? image.data : undefined;
   const imageElement = useRef<HTMLImageElement>(null);

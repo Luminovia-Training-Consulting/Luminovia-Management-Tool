@@ -15,7 +15,7 @@ import { setTimeout as delay } from "node:timers/promises";
 export const root = resolve(import.meta.dirname, "..");
 export const runtimeDir = join(root, ".local");
 export const stateFile = join(runtimeDir, "runtime.json");
-export const runtimeVersion = 2;
+export const runtimeVersion = 3;
 export function privateDirectory(path = runtimeDir) {
   mkdirSync(path, { recursive: true, mode: 0o700 });
   chmodSync(path, 0o700);
@@ -120,61 +120,75 @@ export async function command(
     quiet = false,
     log,
     timeoutMs = 300000,
+    killGraceMs = 5000,
     signal,
   } = {},
 ) {
+  if (signal?.aborted) throw new Error("Command cancelled before start.");
   return await new Promise((resolve, reject) => {
     const child = spawn(file, args, {
       cwd,
       env,
       stdio: ["ignore", "pipe", "pipe"],
       detached: process.platform !== "win32",
-      signal,
     });
     let output = "";
     let finished = false;
-    const terminate = () => {
+    let termination;
+    let forceTimer;
+    let spawnError;
+    const kill = (signal) => {
       if (finished) return;
       try {
-        if (process.platform !== "win32") process.kill(-child.pid, "SIGTERM");
-        else child.kill("SIGTERM");
+        if (process.platform !== "win32") process.kill(-child.pid, signal);
+        else child.kill(signal);
       } catch {
         /* already exited */
       }
     };
-    const timer = setTimeout(terminate, timeoutMs);
-    signal?.addEventListener("abort", terminate, { once: true });
+    const terminate = (cause) => {
+      if (finished || termination) return;
+      termination = cause;
+      kill("SIGTERM");
+      // Wait for real process/pipe closure, then escalate the owned group if a
+      // tool ignores SIGTERM. An AbortError alone is not proof of termination.
+      forceTimer = setTimeout(() => kill("SIGKILL"), killGraceMs);
+    };
+    const cancel = () => terminate("cancelled");
+    const timer = setTimeout(() => terminate("timed out"), timeoutMs);
+    signal?.addEventListener("abort", cancel, { once: true });
     const receive = (data) => {
       output = (output + data.toString()).slice(-1000000);
     };
     child.stdout.on("data", receive);
     child.stderr.on("data", receive);
     child.on("error", (error) => {
-      terminate();
-      finished = true;
-      clearTimeout(timer);
-      signal?.removeEventListener("abort", terminate);
-      reject(
-        new Error(
-          `Programm ${file} konnte nicht gestartet werden. Prüfe Installation und Ausführungsrechte.`,
-          { cause: error },
-        ),
-      );
+      // Node emits close after a spawn error too; use one settlement/cleanup
+      // path so no cancellation timer is cleared while a child is still live.
+      spawnError = error;
     });
     // `exit` can precede the final stdout chunks; JSON-producing Docker probes
     // must wait until both pipes have closed before consuming their output.
     child.on("close", (code, exitSignal) => {
       finished = true;
       clearTimeout(timer);
-      signal?.removeEventListener("abort", terminate);
+      clearTimeout(forceTimer);
+      signal?.removeEventListener("abort", cancel);
       const safe = redact(output);
       if (log) log(safe);
       if (!quiet) process.stdout.write(safe);
-      if (code === 0) resolve(safe);
+      if (spawnError)
+        reject(
+          new Error(
+            `Programm ${file} konnte nicht gestartet werden. Prüfe Installation und Ausführungsrechte.`,
+            { cause: spawnError },
+          ),
+        );
+      else if (code === 0 && !termination) resolve(safe);
       else
         reject(
           new Error(
-            `${file} ${args.slice(0, 3).join(" ")} failed (${exitSignal ?? code}). ${log ? "Siehe .local/runtime.log." : safe.trim().slice(-1500)}`,
+            `${file} ${args.slice(0, 3).join(" ")} ${termination ?? "failed"} (${exitSignal ?? code}). ${log ? "Siehe .local/runtime.log." : safe.trim().slice(-1500)}`,
           ),
         );
     });

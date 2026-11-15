@@ -76,6 +76,7 @@ export function FileUpload({
     onSuccess: async (document) => {
       await client.invalidateQueries({ queryKey: ["documents"] });
       await client.invalidateQueries({ queryKey: ["document"] });
+      await client.invalidateQueries({ queryKey: ["document-versions"] });
       setFile(null);
       clientId.current = crypto.randomUUID();
       if (input.current) input.current.value = "";
@@ -162,7 +163,9 @@ function Preview({ file }: { file: PortalDocument }) {
   useEffect(() => {
     let alive = true;
     let object = "";
-    void downloadDocument(file.id)
+    // A row's name/MIME and bytes must describe the same reviewed version,
+    // even if another client replaces the document during this download.
+    void downloadDocument(file.id, file.current_version_id)
       .then((blob) => {
         object = URL.createObjectURL(blob);
         if (alive) setUrl(object);
@@ -175,7 +178,7 @@ function Preview({ file }: { file: PortalDocument }) {
       alive = false;
       if (object) URL.revokeObjectURL(object);
     };
-  }, [file.id]);
+  }, [file.id, file.current_version_id]);
   if (failed) return <Notice kind="error">{t("error")}</Notice>;
   if (!url) return <Loading />;
   return file.mime_type.startsWith("image/") ? (
@@ -324,7 +327,11 @@ function DocumentList({ files }: { files: PortalDocument[] }) {
                   setBusy(true);
                   setFailed(false);
                   try {
-                    await saveDownload(file.id, file.original_name);
+                    await saveDownload(
+                      file.id,
+                      file.original_name,
+                      file.current_version_id,
+                    );
                   } catch {
                     setFailed(true);
                   } finally {
@@ -416,7 +423,10 @@ function DocumentList({ files }: { files: PortalDocument[] }) {
         {selected && (
           <>
             {mode === "preview" ? (
-              <Preview file={selected} />
+              <Preview
+                key={`${selected.id}:${selected.current_version_id}`}
+                file={selected}
+              />
             ) : mode === "versions" ? (
               <Versions file={selected} />
             ) : mode === "replace" ? (

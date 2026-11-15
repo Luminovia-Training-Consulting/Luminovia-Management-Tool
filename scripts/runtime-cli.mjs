@@ -183,6 +183,17 @@ async function stop() {
       throw new Error(
         "Datenerhaltender Stopp dauert zu lange; .local/runtime.log prüfen.",
       );
+    const stopped = readState();
+    // A vanished PID alone does not prove that container/network cleanup ran.
+    // Preserve an explicit supervisor failure instead of printing success.
+    if (
+      stopped?.pid !== state.pid ||
+      stopped?.session !== state.session ||
+      stopped?.phase !== "stopped"
+    )
+      throw new Error(
+        "Datenerhaltender Stopp wurde nicht bestätigt; .local/runtime.log prüfen.",
+      );
   } else {
     await ensureDependencies();
     if (existsSync(join(root, "scripts/local-scanner.mjs")))

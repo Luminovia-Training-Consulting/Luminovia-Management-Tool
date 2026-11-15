@@ -12,6 +12,38 @@ export function useChatRealtime(actor: string, room: string | undefined) {
   const [revoked, setRevoked] = useState(false);
   useEffect(() => {
     if (!room) return;
+    let active = true;
+    let accessRevoked = false;
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    let messagesPending = false;
+    let roomsPending = false;
+    const cancelRefresh = () => {
+      if (refreshTimer !== undefined) clearTimeout(refreshTimer);
+      refreshTimer = undefined;
+      messagesPending = false;
+      roomsPending = false;
+    };
+    // The first notification sets a short, fixed deadline. Later events share
+    // that refresh, so a busy stream neither restarts every history-page request
+    // nor postpones authorised revalidation indefinitely.
+    const refresh = (messages: boolean, rooms: boolean) => {
+      if (!active || accessRevoked) return;
+      messagesPending ||= messages;
+      roomsPending ||= rooms;
+      if (refreshTimer !== undefined) return;
+      refreshTimer = setTimeout(() => {
+        const messageRefresh = messagesPending;
+        const roomRefresh = roomsPending;
+        cancelRefresh();
+        if (!active || accessRevoked) return;
+        if (messageRefresh)
+          void client.invalidateQueries({
+            queryKey: chatKeys.messages(actor, room),
+          });
+        if (roomRefresh)
+          void client.invalidateQueries({ queryKey: chatKeys.rooms(actor) });
+      }, 150);
+    };
     const channel = db()
       .channel(`portal-room-${room}-${actor}`, {
         config: { postgres_changes_options: { wait: true, timeout: 15000 } },
@@ -24,12 +56,7 @@ export function useChatRealtime(actor: string, room: string | undefined) {
           table: "messages",
           filter: `room_id=eq.${room}`,
         },
-        () => {
-          void client.invalidateQueries({
-            queryKey: chatKeys.messages(actor, room),
-          });
-          void client.invalidateQueries({ queryKey: chatKeys.rooms(actor) });
-        },
+        () => refresh(true, true),
       )
       .on(
         "postgres_changes",
@@ -39,11 +66,7 @@ export function useChatRealtime(actor: string, room: string | undefined) {
           table: "messages",
           filter: `room_id=eq.${room}`,
         },
-        () => {
-          void client.invalidateQueries({
-            queryKey: chatKeys.messages(actor, room),
-          });
-        },
+        () => refresh(true, false),
       )
       .on(
         "postgres_changes",
@@ -54,17 +77,23 @@ export function useChatRealtime(actor: string, room: string | undefined) {
           filter: `user_id=eq.${actor}`,
         },
         (payload) => {
+          if (!active) return;
           // Only this actor's own membership row is visible. Drop removed-room data
           // before revalidating the room list; never place realtime bodies in cache.
           if (payload.new.room_id === room && payload.new.removed_at) {
+            accessRevoked = true;
+            cancelRefresh();
             setRevoked(true);
             client.removeQueries({ queryKey: chatKeys.messages(actor, room) });
             client.removeQueries({ queryKey: chatKeys.members(actor, room) });
+            void client.invalidateQueries({ queryKey: chatKeys.rooms(actor) });
+            return;
           }
-          void client.invalidateQueries({ queryKey: chatKeys.rooms(actor) });
+          refresh(false, true);
         },
       )
       .subscribe((next) => {
+        if (!active) return;
         const value = next === "SUBSCRIBED" ? "connected" : "retrying";
         if (value !== statusRef.current) {
           statusRef.current = value;
@@ -72,6 +101,8 @@ export function useChatRealtime(actor: string, room: string | undefined) {
         }
       });
     return () => {
+      active = false;
+      cancelRefresh();
       void db().removeChannel(channel);
     };
   }, [actor, room, client]);

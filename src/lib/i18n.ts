@@ -1,5 +1,6 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
+import { readPreference, writePreference } from "./preferences";
 const pairs: Record<string, [string, string]> = {
   requestCourses: ["Kurse beauftragen", "Commission courses"],
   myCourses: ["Meine Kurse", "My courses"],
@@ -476,7 +477,7 @@ const pairs: Record<string, [string, string]> = {
 };
 const de = Object.fromEntries(Object.entries(pairs).map(([k, v]) => [k, v[0]]));
 const en = Object.fromEntries(Object.entries(pairs).map(([k, v]) => [k, v[1]]));
-const saved = localStorage.getItem("luminovia.language");
+const saved = readPreference("language");
 document.documentElement.lang = saved === "en" ? "en" : "de";
 void i18n.use(initReactI18next).init({
   resources: { de: { translation: de }, en: { translation: en } },
@@ -485,7 +486,7 @@ void i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 });
 i18n.on("languageChanged", (language) => {
-  localStorage.setItem("luminovia.language", language);
+  writePreference("language", language);
   document.documentElement.lang = language;
 });
 export default i18n;

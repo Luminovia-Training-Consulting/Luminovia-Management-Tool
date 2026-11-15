@@ -2,6 +2,16 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## M5 in progress — system functionality and performance audit
+
+Requested after PR #4: inspect the delivered code for concrete defects, disconnected code, unnecessary request/render loops, UI/accessibility gaps and missing regression coverage. Baseline is merged main `b9cdcc8`; this work is isolated on `codex/system-functionality-performance-audit`. Concurrent daily-maintenance/backup work and normal/hosted instances remain outside this audit's mutations.
+
+- [ ] Inspect current frontend, SQL/Edge/API, local runtime and release interfaces, preserving legitimate headless/vendor/migration entry points.
+- [ ] Reproduce and fix concrete failure/performance paths with meaningful request-count, lifecycle, timeout and permission regressions.
+- [ ] Exercise actual desktop/mobile/DE/EN/theme journeys and bounded network activity; inspect current screenshots.
+- [ ] Update developer/test/security documentation with examined scope, measured results and remaining gates.
+- [ ] Run the complete isolated command, sign/push the audit branch, observe exact CI and merge as already authorised.
+
 ## M4 local acceptance passed — functional audit and reusable CBW content
 
 Requested 16 November: source-grounded functional/dead-code/connection audit; meaningful failed-path tests and developer docs; CBW building blocks as reusable provenance-linked templates; profile pictures; and resource-specific comments. M3 is merged through PR #3. Work is isolated in `codex/functional-qa-building-blocks`; original concurrent hosting edits and normal persistent data remain untouched.

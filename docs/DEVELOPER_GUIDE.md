@@ -96,6 +96,12 @@ Kommentiere den Grund einer Sperre, eine wichtige Reihenfolge, den Autorisierung
 
 Erzeuge additive Migrationen mit der tatsächlich installierten CLI (`npx --no-install supabase migration new NAME`). Bearbeite bereits ausgelieferte Migrationen nicht nachträglich. Prüfe neue Tabellen, Indizes, Constraints, RLS und Grants zusammen mit der UI/API. Vermeide eine zweite Quelle für akzeptierte Honorare, bestätigte Termine oder Autoridentitäten.
 
+## Ladeverhalten und robuste Laufzeit
+
+Der [Systemprüfbericht](SYSTEM_AUDIT.md) dokumentiert Status-abhängige Metadatenintervalle, das zweiminütige Limit für schnelle Scan-Abfragen, unveränderliche versionsbezogene Bildbytes und gebündelte Chat-Revalidierungen. Er enthält echte Vorher-/Nachher-Messungen und Grenzen. Sprach-/Theme-Persistenz ist best effort; eine blockierte lokale Ablage darf die aktive Oberfläche nicht abbrechen. Die native Auth-Speicherung behält ihren separaten SDK-Vertrag.
+
+Terminintervalle müssen auf Datenbankebene endlich sein. Die neue Migration validiert Altdaten und stoppt bei einem ungültigen Bestand; vorhandene angenommene Vereinbarungen werden nicht still geändert. Prozess-Timeouts und Abbruch benötigen die tatsächliche Beendigung und eine ehrliche Cleanup-Bestätigung.
+
 ## Teststrategie und Fehleranalyse
 
 | Ebene               | Was sie beweist                                                                                                      | Ausführung                                                                          |

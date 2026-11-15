@@ -82,20 +82,30 @@ export function ChatThread({
     },
     onSuccess: () =>
       client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
+    onError: (_error, messageId) => {
+      // The guard prevents duplicate in-flight receipts, not a permanent local
+      // acknowledgement. An uncertain request must remain retryable.
+      if (marked.current === messageId) marked.current = "";
+    },
   });
   const mark = read.mutate;
   useEffect(() => {
-    if (
-      !latest ||
-      search ||
-      revoked ||
-      !online ||
-      document.visibilityState !== "visible" ||
-      marked.current === latest.id
-    )
-      return;
-    marked.current = latest.id;
-    mark(latest.id);
+    const observeRead = () => {
+      if (
+        !latest ||
+        search ||
+        revoked ||
+        !online ||
+        document.visibilityState !== "visible" ||
+        marked.current === latest.id
+      )
+        return;
+      marked.current = latest.id;
+      mark(latest.id);
+    };
+    observeRead();
+    document.addEventListener("visibilitychange", observeRead);
+    return () => document.removeEventListener("visibilitychange", observeRead);
   }, [latest, search, revoked, online, mark]);
   const previousLatest = useRef("");
   useEffect(() => {
@@ -279,7 +289,18 @@ export function ChatThread({
         )}
       </div>
       {mute.isError && <Notice kind="error">{t("actionError")}</Notice>}
-      {read.isError && <Notice kind="error">{t("actionError")}</Notice>}
+      {read.isError && (
+        <ErrorState
+          retry={
+            online && latest
+              ? () => {
+                  marked.current = latest.id;
+                  mark(latest.id);
+                }
+              : undefined
+          }
+        />
+      )}
       {status === "retrying" && online && (
         <div className="chat-reconnect" role="status">
           {t("reconnecting")}

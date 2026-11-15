@@ -43,7 +43,37 @@ await withTestDatabase("api_surface", async ({ sql }) => {
     "0",
   );
   console.log("PASS Every current exposed application table enforces RLS");
+  assert.equal(
+    await sql(
+      "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='private' and c.relkind='r' and not c.relrowsecurity",
+    ),
+    "0",
+    "Private application ledgers also require RLS as defense in depth",
+  );
   console.log(
-    "\n3 API-surface PostgreSQL checks passed (source binding, function boundary and RLS).",
+    "PASS Every private application table retains RLS defense in depth",
+  );
+  assert.equal(
+    await sql(
+      "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private') and has_function_privilege('anon',p.oid,'EXECUTE')",
+    ),
+    "0",
+    "Anonymous actors cannot execute the invitation-only application API or its private implementations",
+  );
+  console.log(
+    "PASS Anonymous execution is denied for all application API/private functions",
+  );
+  assert.equal(
+    await sql(
+      `select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private') and p.prosecdef and not exists(select 1 from unnest(p.proconfig) setting where setting='search_path=""')`,
+    ),
+    "0",
+    "Every privileged implementation must fix its search path explicitly",
+  );
+  console.log(
+    "PASS Every privileged application implementation has an explicitly empty search path",
+  );
+  console.log(
+    "\n6 API-surface PostgreSQL checks passed (source binding, invoker boundary, public/private RLS, anonymous grants and definer search paths).",
   );
 });

@@ -6,6 +6,24 @@ const supported:Record<string,string[]>={
  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['xlsx'],
  'application/vnd.openxmlformats-officedocument.presentationml.presentation':['pptx'],
 };
+const macroProjectName = new TextEncoder().encode('vbaproject.bin');
+
+/** Preserve the case-insensitive VBA marker deny rule without turning an entire
+ * allowed 100 MiB ZIP into two large Unicode strings. ASCII filenames can be
+ * compared directly in the existing byte buffer with constant extra memory. */
+function containsMacroProject(bytes:Uint8Array):boolean {
+ for(let at=0;at<=bytes.length-macroProjectName.length;at++){
+  if(bytes[at]!==0x76&&bytes[at]!==0x56)continue;
+  let matched=true;
+  for(let part=1;part<macroProjectName.length;part++){
+   const actual=bytes[at+part];
+   const folded=actual>=0x41&&actual<=0x5a?actual+0x20:actual;
+   if(folded!==macroProjectName[part]){matched=false;break;}
+  }
+  if(matched)return true;
+ }
+ return false;
+}
 export function safeName(name:string){return name.normalize('NFC').split(/[\\/]/).pop()!.replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,200);}
 export async function validateFile(bytes:Uint8Array,name:string,declared:string):Promise<string>{
  if(bytes.length<1||bytes.length>MAX_FILE_SIZE)throw new Error('file_size');
@@ -17,7 +35,7 @@ export async function validateFile(bytes:Uint8Array,name:string,declared:string)
   actual='text/plain';
  }
  if(!actual||!supported[actual]?.includes(extension)||(declared&&declared!==actual))throw new Error('unsupported_type');
- if(['docx','xlsx','pptx'].includes(extension)&&new TextDecoder('iso-8859-1').decode(bytes).toLowerCase().includes('vbaproject.bin'))throw new Error('unsupported_type');
+ if(['docx','xlsx','pptx'].includes(extension)&&containsMacroProject(bytes))throw new Error('unsupported_type');
  return actual;
 }
 export function downloadDisposition(name:string){return `attachment; filename*=UTF-8''${encodeURIComponent(safeName(name)).replace(/['()*]/g,char=>`%${char.charCodeAt(0).toString(16).toUpperCase()}`)}`;}
