@@ -1,0 +1,466 @@
+import { useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { Search, UserPlus, UsersRound, X } from "lucide-react";
+import { db } from "../../lib/supabase";
+import { requireOnline, useOnline } from "../../lib/online";
+import { jobsQuery } from "../../lib/queries";
+import { Button } from "../../components/ui/button";
+import { Dialog } from "../../components/ui/dialog";
+import { ErrorState, Field, Loading, Notice } from "../../components/common";
+import { chatContactsQuery, chatKeys, chatMembersQuery } from "./api";
+import type { ChatContact, ChatRoom } from "./types";
+import "./i18n";
+const contactName = (
+  contact: Pick<ChatContact, "display_name">,
+  fallback: string,
+) => contact.display_name || fallback;
+export function ContactPicker({
+  actor,
+  open,
+  onOpenChange,
+  onRoom,
+}: {
+  actor: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onRoom: (room: string) => void;
+}) {
+  const { t } = useTranslation("chat");
+  const client = useQueryClient();
+  const contacts = useQuery({ ...chatContactsQuery(actor), enabled: open });
+  const [search, setSearch] = useState("");
+  const online = useOnline();
+  const start = useMutation({
+    mutationFn: async (person: string) => {
+      requireOnline();
+      const { data, error } = await db().rpc("create_dm", {
+        p_user_id: person,
+      });
+      if (error) throw error;
+      return data as string;
+    },
+    onSuccess: async (room) => {
+      await client.invalidateQueries({ queryKey: chatKeys.rooms(actor) });
+      onOpenChange(false);
+      onRoom(room);
+    },
+  });
+  const filtered =
+    contacts.data?.filter(
+      (contact) =>
+        contact.id !== actor &&
+        contact.display_name
+          .toLocaleLowerCase()
+          .includes(search.toLocaleLowerCase()),
+    ) ?? [];
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("contactTitle")}
+      description={t("contactHint")}
+    >
+      <Field id="chat-contact-search" label={t("searchPeople")}>
+        <input
+          id="chat-contact-search"
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+      </Field>
+      {contacts.isPending ? (
+        <Loading />
+      ) : contacts.isError ? (
+        <ErrorState retry={() => void contacts.refetch()} />
+      ) : (
+        <ul className="chat-contact-list">
+          {filtered.map((contact, index) => (
+            <li key={contact.id}>
+              <button
+                type="button"
+                className="chat-contact-button"
+                aria-label={t("startDm", {
+                  name: contactName(contact, t("unnamed")),
+                })}
+                onClick={() => start.mutate(contact.id)}
+                disabled={!online || start.isPending}
+              >
+                <span
+                  className={`chat-contact-avatar chat-avatar-${index % 4}`}
+                  aria-hidden="true"
+                >
+                  {contactName(contact, "?").slice(0, 1).toUpperCase()}
+                </span>
+                <span>{contactName(contact, t("unnamed"))}</span>
+                <UserPlus size={17} />
+              </button>
+            </li>
+          ))}
+          {filtered.length === 0 && (
+            <li className="chat-list-empty">{t("noContacts")}</li>
+          )}
+        </ul>
+      )}
+      {start.isError && <Notice kind="error">{t("actionError")}</Notice>}
+    </Dialog>
+  );
+}
+const groupSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+  kind: z.enum(["topic", "participant_course"]),
+  job: z.string(),
+  members: z.array(z.string()).max(60),
+});
+export function CreateGroup({
+  actor,
+  canManageCourses,
+  open,
+  onOpenChange,
+  onRoom,
+}: {
+  actor: string;
+  canManageCourses: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onRoom: (room: string) => void;
+}) {
+  const { t } = useTranslation("chat");
+  const online = useOnline();
+  const client = useQueryClient();
+  const contacts = useQuery({ ...chatContactsQuery(actor), enabled: open });
+  const jobs = useQuery({ ...jobsQuery, enabled: open && canManageCourses });
+  const form = useForm<z.infer<typeof groupSchema>>({
+    resolver: zodResolver(groupSchema),
+    defaultValues: { title: "", kind: "topic", job: "", members: [] },
+  });
+  const kind = useWatch({ control: form.control, name: "kind" });
+  const create = useMutation({
+    mutationFn: async (values: z.infer<typeof groupSchema>) => {
+      requireOnline();
+      if (
+        values.kind === "participant_course" &&
+        (!canManageCourses || !values.job)
+      )
+        throw new Error("missing_course");
+      const { data, error } = await db().rpc("create_chat_group", {
+        p_title: values.title,
+        p_member_ids: values.members,
+        p_kind: values.kind,
+        p_job_id: values.kind === "participant_course" ? values.job : null,
+      });
+      if (error) throw error;
+      return data as string;
+    },
+    onSuccess: async (room) => {
+      await client.invalidateQueries({ queryKey: chatKeys.rooms(actor) });
+      form.reset();
+      onOpenChange(false);
+      onRoom(room);
+    },
+  });
+  const available =
+    contacts.data?.filter(
+      (contact) =>
+        contact.id !== actor &&
+        (kind === "participant_course" ||
+          contact.roles.some((role) =>
+            ["admin", "management", "lecturer", "senior_lecturer"].includes(
+              role,
+            ),
+          )),
+    ) ?? [];
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t("groupTitle")}
+      description={t("groupHint")}
+    >
+      <form
+        noValidate
+        onSubmit={form.handleSubmit((values) => create.mutate(values))}
+      >
+        <Field
+          id="chat-group-title"
+          label={t("groupName")}
+          error={Boolean(form.formState.errors.title)}
+        >
+          <input
+            id="chat-group-title"
+            {...form.register("title")}
+            maxLength={120}
+            disabled={create.isPending}
+          />
+        </Field>
+        {canManageCourses && (
+          <Field id="chat-group-kind" label={t("groupKind")}>
+            <select
+              id="chat-group-kind"
+              {...form.register("kind", {
+                onChange: () => form.setValue("members", []),
+              })}
+              disabled={create.isPending}
+            >
+              <option value="topic">{t("kind_topic")}</option>
+              <option value="participant_course">
+                {t("kind_participant_course")}
+              </option>
+            </select>
+          </Field>
+        )}
+        {kind === "participant_course" && (
+          <Field id="chat-group-job" label={t("groupJob")}>
+            <select
+              id="chat-group-job"
+              {...form.register("job")}
+              disabled={create.isPending}
+            >
+              <option value="">{t("selectJob")}</option>
+              {jobs.data
+                ?.filter(
+                  (job) => "course_run_id" in job && Boolean(job.course_run_id),
+                )
+                .map((job) => (
+                  <option key={job.id} value={job.id}>
+                    {job.title}
+                  </option>
+                ))}
+            </select>
+          </Field>
+        )}
+        <fieldset className="chat-member-fieldset">
+          <legend>{t("selectMembers")}</legend>
+          {contacts.isPending ? (
+            <Loading />
+          ) : contacts.isError ? (
+            <ErrorState retry={() => void contacts.refetch()} />
+          ) : (
+            available.map((contact) => (
+              <label className="checkbox-label" key={contact.id}>
+                <input
+                  type="checkbox"
+                  value={contact.id}
+                  {...form.register("members")}
+                  disabled={create.isPending}
+                />
+                {contactName(contact, t("unnamed"))}
+              </label>
+            ))
+          )}
+        </fieldset>
+        <Button
+          disabled={
+            !online ||
+            create.isPending ||
+            contacts.isPending ||
+            contacts.isError ||
+            (kind === "participant_course" && (jobs.isPending || jobs.isError))
+          }
+        >
+          {t("groupCreate")}
+        </Button>
+        {create.isError && <Notice kind="error">{t("groupError")}</Notice>}
+      </form>
+    </Dialog>
+  );
+}
+export function MembersPanel({
+  actor,
+  room,
+  canManage,
+  open,
+  onOpenChange,
+}: {
+  actor: string;
+  room: ChatRoom;
+  canManage: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { t } = useTranslation("chat");
+  const common = useTranslation().t;
+  const online = useOnline();
+  const client = useQueryClient();
+  const members = useQuery({
+    ...chatMembersQuery(actor, room.id),
+    enabled: open,
+  });
+  const contacts = useQuery({
+    ...chatContactsQuery(actor),
+    enabled: open && canManage,
+  });
+  const [person, setPerson] = useState("");
+  const [remove, setRemove] = useState<{ id: string; name: string } | null>(
+    null,
+  );
+  const [saved, setSaved] = useState(false);
+  const change = useMutation({
+    mutationFn: async ({ id, remove }: { id: string; remove: boolean }) => {
+      requireOnline();
+      setSaved(false);
+      const { error } = await db().rpc("manage_chat_member", {
+        p_room_id: room.id,
+        p_user_id: id,
+        p_remove: remove,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: chatKeys.members(actor, room.id),
+        }),
+        client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
+      ]);
+      setRemove(null);
+      setPerson("");
+      setSaved(true);
+    },
+  });
+  const available =
+    contacts.data?.filter(
+      (contact) =>
+        !members.data?.some((member) => member.user_id === contact.id) &&
+        (room.kind === "participant_course" ||
+          contact.roles.some((role) =>
+            ["admin", "management", "lecturer", "senior_lecturer"].includes(
+              role,
+            ),
+          )),
+    ) ?? [];
+  return (
+    <>
+      <Dialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title={canManage ? t("manageMembers") : t("members")}
+        description={t("membersHint")}
+      >
+        {members.isPending ? (
+          <Loading />
+        ) : members.isError ? (
+          <ErrorState retry={() => void members.refetch()} />
+        ) : (
+          <ul className="chat-members-list">
+            {members.data.map((member) => (
+              <li key={member.user_id}>
+                <span>
+                  <strong>{member.display_name || t("unnamed")}</strong>
+                  {room.owner_id === member.user_id && (
+                    <small>{t("owner")}</small>
+                  )}
+                </span>
+                {canManage &&
+                  member.user_id !== room.owner_id &&
+                  member.user_id !== actor && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t("removeMember", {
+                        name: member.display_name || t("unnamed"),
+                      })}
+                      disabled={!online || change.isPending}
+                      onClick={() => {
+                        change.reset();
+                        setRemove({
+                          id: member.user_id,
+                          name: member.display_name || t("unnamed"),
+                        });
+                      }}
+                    >
+                      <X size={17} />
+                    </Button>
+                  )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {canManage && (
+          <form
+            className="chat-member-add"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (person) change.mutate({ id: person, remove: false });
+            }}
+          >
+            <Field id="chat-add-member" label={t("memberToAdd")}>
+              <select
+                id="chat-add-member"
+                value={person}
+                onChange={(event) => setPerson(event.target.value)}
+                disabled={change.isPending}
+              >
+                <option value="">{t("memberToAdd")}</option>
+                {available.map((contact) => (
+                  <option key={contact.id} value={contact.id}>
+                    {contactName(contact, t("unnamed"))}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Button
+              disabled={
+                !person || !online || change.isPending || contacts.isError
+              }
+            >
+              <UserPlus size={16} />
+              {t("addMember")}
+            </Button>
+            {contacts.isError && (
+              <Notice kind="error">{common("error")}</Notice>
+            )}
+          </form>
+        )}
+        {saved && <Notice>{t("membershipSaved")}</Notice>}
+        {change.isError && <Notice kind="error">{t("actionError")}</Notice>}
+      </Dialog>
+      <Dialog
+        open={remove !== null}
+        onOpenChange={(next) => {
+          if (!next && !change.isPending) setRemove(null);
+        }}
+        title={t("removeConfirm")}
+        description={t("removeDescription", { name: remove?.name ?? "" })}
+      >
+        <div className="form-actions">
+          <Button
+            variant="secondary"
+            disabled={change.isPending}
+            onClick={() => setRemove(null)}
+          >
+            {common("cancel")}
+          </Button>
+          <Button
+            variant="danger"
+            disabled={!online || change.isPending}
+            onClick={() => {
+              if (remove) change.mutate({ id: remove.id, remove: true });
+            }}
+          >
+            {t("remove")}
+          </Button>
+        </div>
+        {change.isError && <Notice kind="error">{t("actionError")}</Notice>}
+      </Dialog>
+    </>
+  );
+}
+export function RoomIcon({
+  kind,
+  size = 20,
+}: {
+  kind: ChatRoom["kind"];
+  size?: number;
+}) {
+  return kind === "dm" ? (
+    <UserPlus size={size} />
+  ) : kind === "topic" ? (
+    <Search size={size} />
+  ) : (
+    <UsersRound size={size} />
+  );
+}

@@ -1,0 +1,292 @@
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+  symlinkSync,
+  readdirSync,
+  rmSync,
+  existsSync,
+} from "node:fs";
+import { join, basename } from "node:path";
+import { tmpdir } from "node:os";
+import { randomBytes } from "node:crypto";
+import {
+  root,
+  runtimeDir,
+  privateDirectory,
+  privateWrite,
+  command,
+  cleanEnvironment,
+  assertLocalDocker,
+} from "./runtime-lib.mjs";
+
+const run = randomBytes(4).toString("hex");
+const project = `luminovia-portal-test-${run}`;
+const scratch = mkdtempSync(join(tmpdir(), "luminovia-portal-test-"));
+const artifacts = join(runtimeDir, "tests", run);
+privateDirectory(artifacts);
+const lock = join(runtimeDir, "test.lock");
+try {
+  mkdirSync(lock, { mode: 0o700 });
+  privateWrite(join(lock, "pid"), String(process.pid));
+} catch {
+  throw new Error(
+    "Ein isolierter Testlauf läuft bereits. Prüfe .local/test.lock; Entwicklungsdaten werden nicht angefasst.",
+  );
+}
+const env = cleanEnvironment({
+  PORTAL_TEST_MODE: "1",
+  PORTAL_DB_CONTAINER: `supabase_db_${project}`,
+  E2E_BASE_URL: "http://127.0.0.1:5273",
+  E2E_MAILPIT_URL: "http://127.0.0.1:55324",
+  PORTAL_APP_ORIGIN: "http://127.0.0.1:5273",
+});
+let failure;
+let localDockerReady = false;
+const cancellation = new AbortController();
+const cancel = () => {
+  console.log("Test wird abgebrochen; isolierte Dienste werden aufgeräumt …");
+  cancellation.abort();
+};
+process.once("SIGINT", cancel);
+process.once("SIGTERM", cancel);
+try {
+  env.DOCKER_HOST = await assertLocalDocker();
+  delete env.DOCKER_CONTEXT;
+  localDockerReady = true;
+  console.log(
+    `Isolierte Testumgebung ${project}. Entwicklungsdaten bleiben unverändert.`,
+  );
+  cpSync(root, scratch, {
+    recursive: true,
+    filter: (source) => {
+      if (source === root) return true;
+      const relative = source.slice(root.length + 1);
+      const first = relative.split("/")[0];
+      return (
+        ![
+          ".git",
+          ".local",
+          "node_modules",
+          "dist",
+          "coverage",
+          "test-results",
+          "playwright-report",
+        ].includes(first) &&
+        (!first.startsWith(".env") || first === ".env.example") &&
+        !first.endsWith(".tsbuildinfo")
+      );
+    },
+  });
+  // Independent cache directories; only immutable package contents are shared.
+  mkdirSync(join(scratch, "node_modules"));
+  for (const entry of readdirSync(join(root, "node_modules"), {
+    withFileTypes: true,
+  })) {
+    if (entry.name.startsWith(".vite") || entry.name.startsWith(".cache"))
+      continue;
+    symlinkSync(
+      join(root, "node_modules", entry.name),
+      join(scratch, "node_modules", entry.name),
+      entry.isDirectory() ? "dir" : "file",
+    );
+  }
+  const configPath = join(scratch, "supabase/config.toml");
+  let config = readFileSync(configPath, "utf8");
+  config = config
+    .replace(/^project_id\s*=\s*"[^"]+"/m, `project_id = "${project}"`)
+    .replaceAll("543", "553")
+    .replaceAll(":5173", ":5273");
+  writeFileSync(configPath, config);
+  const step = async (label, file, args, extra = {}) => {
+    console.log(`\n[TEST] ${label}`);
+    return await command(file, args, {
+      cwd: scratch,
+      env: { ...env, ...extra },
+      timeoutMs: 1200000,
+      signal: cancellation.signal,
+    });
+  };
+  await step("Lint", "npm", ["run", "lint"]);
+  await step("TypeScript", "npm", ["run", "typecheck"]);
+  await step("Formatierung", "npm", ["run", "format:check"]);
+  const runtimeTests = readdirSync(join(scratch, "scripts"))
+    .filter((name) => name.startsWith("runtime-") && name.endsWith(".test.mjs"))
+    .map((name) => `scripts/${name}`);
+  if (runtimeTests.length)
+    await step("Laufzeit-Sicherheitsprüfungen", process.execPath, [
+      "--test",
+      ...runtimeTests,
+    ]);
+  await step("Unit- und Komponententests", "npm", ["test"]);
+  await step("Produktionsabhängigkeiten", "npm", [
+    "audit",
+    "--omit=dev",
+    "--audit-level=low",
+  ]);
+  const functions = join(scratch, "supabase/functions");
+  const handlerTests = [];
+  const entries = [];
+  function find(path) {
+    for (const entry of readdirSync(path, { withFileTypes: true })) {
+      const child = join(path, entry.name);
+      if (entry.isDirectory()) find(child);
+      else if (entry.name.endsWith("_test.ts")) handlerTests.push(child);
+      else if (entry.name === "index.ts") entries.push(child);
+    }
+  }
+  if (existsSync(functions)) find(functions);
+  if (handlerTests.length)
+    await step("Edge-Unit-Tests", process.execPath, [
+      join(scratch, "node_modules/deno/bin.cjs"),
+      "test",
+      "--allow-env",
+      ...handlerTests,
+    ]);
+  for (const entry of entries)
+    await step(
+      `Edge-Typprüfung ${basename(join(entry, ".."))}`,
+      process.execPath,
+      [join(scratch, "node_modules/deno/bin.cjs"), "check", entry],
+    );
+  await step("Vollständige isolierte Dienste starten", process.execPath, [
+    "scripts/runtime-cli.mjs",
+    "start",
+  ]);
+  const localEnv = Object.fromEntries(
+    readFileSync(join(scratch, ".env.test.local"), "utf8")
+      .split("\n")
+      .filter((line) => line.includes("="))
+      .map((line) => {
+        const index = line.indexOf("=");
+        return [line.slice(0, index), line.slice(index + 1)];
+      }),
+  );
+  Object.assign(env, localEnv, {
+    E2E_BASE_URL: "http://127.0.0.1:5273",
+    E2E_MAILPIT_URL: "http://127.0.0.1:55324",
+    PORTAL_APP_ORIGIN: "http://127.0.0.1:5273",
+    PORTAL_DB_CONTAINER: `supabase_db_${project}`,
+  });
+  await step(
+    "Echte Stop/Start-Persistenz einschließlich Auth/MFA/Storage",
+    process.execPath,
+    ["scripts/runtime-persistence-check.mjs"],
+  );
+  await step("PostgreSQL, RLS und 50-fache Nebenläufigkeit", "npm", [
+    "run",
+    "test:db",
+  ]);
+  for (const script of readdirSync(join(scratch, "scripts"))
+    .filter((name) => name.endsWith("-db-tests.mjs"))
+    .sort())
+    await step(`Weitere SQL-Sicherheitsfälle ${script}`, process.execPath, [
+      `scripts/${script}`,
+    ]);
+  for (const script of readdirSync(join(scratch, "scripts"))
+    .filter((name) => name.endsWith("-api-check.mjs"))
+    .sort())
+    await step(`Echte API ${script}`, process.execPath, [`scripts/${script}`]);
+  await step("Echte Edge-Einladung und Mailpit", process.execPath, [
+    "scripts/local-invite-check.mjs",
+  ]);
+  await step("Chromium bereitstellen", "npx", [
+    "--no-install",
+    "playwright",
+    "install",
+    ...(process.env.CI === "true" ? ["--with-deps"] : []),
+    "chromium",
+  ]);
+  await step("Desktop- und Mobilbrowser", "npm", [
+    "run",
+    "test:e2e",
+    "--",
+    "--grep-invert",
+    "built PWA",
+  ]);
+  await step("Produktions-Build", "npm", ["run", "build"]);
+  // The test supervisor serves the built artifact from a separate, owned preview.
+  await step("Gebautes PWA starten", process.execPath, [
+    "scripts/runtime-test-preview.mjs",
+    "start",
+  ]);
+  await step(
+    "PWA, Offline-Shell und keine privaten Caches",
+    "npx",
+    ["--no-install", "playwright", "test", "tests/e2e/pwa.spec.ts"],
+    { E2E_PWA: "1", E2E_BASE_URL: "http://127.0.0.1:4273" },
+  );
+} catch (error) {
+  failure = error;
+  privateWrite(join(artifacts, "RESULT.txt"), `FAIL\n${error.message}\n`);
+} finally {
+  if (localDockerReady) {
+    try {
+      await command(
+        process.execPath,
+        ["scripts/runtime-test-preview.mjs", "stop"],
+        { cwd: scratch, env, quiet: true, timeoutMs: 20000 },
+      );
+    } catch {
+      /* not started */
+    }
+    try {
+      await command(process.execPath, ["scripts/runtime-cli.mjs", "stop"], {
+        cwd: scratch,
+        env,
+        quiet: true,
+        timeoutMs: 180000,
+      });
+    } catch (error) {
+      failure ??= error;
+    }
+    // This specific randomly-named test stack is disposable. No dev or unrelated project is stopped.
+    try {
+      await command(
+        join(root, "node_modules/.bin/supabase"),
+        ["stop", "--project-id", project, "--no-backup"],
+        { cwd: scratch, env, quiet: true, timeoutMs: 180000 },
+      );
+    } catch (error) {
+      failure ??= error;
+    }
+    try {
+      await command("docker", ["volume", "rm", `portal_clamav_${project}`], {
+        env,
+        quiet: true,
+        timeoutMs: 20000,
+      });
+    } catch {
+      /* scanner may not have started */
+    }
+  }
+  for (const name of ["playwright-report", "test-results"])
+    if (existsSync(join(scratch, name)))
+      cpSync(join(scratch, name), join(artifacts, name), { recursive: true });
+  if (existsSync(join(scratch, "docs/screenshots")))
+    cpSync(join(scratch, "docs/screenshots"), join(artifacts, "screenshots"), {
+      recursive: true,
+    });
+  if (existsSync(join(scratch, ".local/runtime.log")))
+    cpSync(join(scratch, ".local/runtime.log"), join(artifacts, "runtime.log"));
+  rmSync(scratch, { recursive: true, force: true });
+  rmSync(lock, { recursive: true, force: true });
+  process.removeListener("SIGINT", cancel);
+  process.removeListener("SIGTERM", cancel);
+}
+if (failure) {
+  privateWrite(join(artifacts, "RESULT.txt"), `FAIL\n${failure.message}\n`);
+  console.error(
+    `Isolierter Test fehlgeschlagen. Bericht: .local/tests/${run}/RESULT.txt`,
+  );
+  throw failure;
+}
+privateWrite(
+  join(artifacts, "RESULT.txt"),
+  `PASS\nProject: ${project}\nCompleted: ${new Date().toISOString()}\nDevelopment database and object volumes were not targeted.\n`,
+);
+console.log(
+  `\nAlle isolierten Prüfungen und Aufräumen bestanden. Bericht: .local/tests/${run}/RESULT.txt`,
+);

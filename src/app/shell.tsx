@@ -4,6 +4,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
   Bell,
+  MessagesSquare,
+  FolderOpen,
+  BookOpen,
+  GraduationCap,
+  Building2,
+  FileCheck2,
+  Wallet,
+  MessageCircle,
+  Menu,
   BriefcaseBusiness,
   CalendarDays,
   ChevronLeft,
@@ -127,7 +136,13 @@ function Notifications({ id, zone }: { id: string; zone: string }) {
               <li key={n.id}>
                 <strong>
                   {t(
-                    n.kind === "claim_confirmed" ? "notificationClaim" : n.kind,
+                    n.kind === "claim_confirmed"
+                      ? "notificationClaim"
+                      : n.kind === "chat_message"
+                        ? "notificationChat"
+                        : n.kind === "forum_reply"
+                          ? "notificationForum"
+                          : "notificationActivity",
                     { defaultValue: t("notificationClaim") },
                   )}
                 </strong>
@@ -166,6 +181,17 @@ export function Shell() {
     { to: "/", icon: Home, label: "home" },
     { to: "/jobs", icon: BriefcaseBusiness, label: "jobs" },
     { to: "/calendar", icon: CalendarDays, label: "calendar" },
+    { to: "/chats", icon: MessagesSquare, label: "chats" },
+    { to: "/files", icon: FolderOpen, label: "files" },
+    { to: "/search", icon: Search, label: "portalSearch" },
+    { to: "/courses", icon: GraduationCap, label: "courses" },
+    { to: "/contracts", icon: FileCheck2, label: "contracts" },
+    { to: "/finance", icon: Wallet, label: "finance" },
+    ...(permissions.data?.includes("organisations.manage")
+      ? [{ to: "/clients", icon: Building2, label: "clients" }]
+      : []),
+    { to: "/wiki", icon: BookOpen, label: "wiki" },
+    { to: "/forum", icon: MessageCircle, label: "forum" },
     { to: "/profile", icon: UserRound, label: "profile" },
     { to: "/security", icon: ShieldCheck, label: "security" },
     ...(manage ? [{ to: "/admin", icon: Settings2, label: "admin" }] : []),
@@ -238,7 +264,7 @@ export function Shell() {
             role="search"
             onSubmit={(e) => {
               e.preventDefault();
-              navigate(`/jobs?q=${encodeURIComponent(search)}`);
+              navigate(`/search?q=${encodeURIComponent(search)}`);
             }}
           >
             <Search size={18} />
@@ -249,7 +275,7 @@ export function Shell() {
               id="global-search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("search")}
+              placeholder={t("portalSearch")}
             />
           </form>
           <div className="topbar-actions">
@@ -260,6 +286,29 @@ export function Shell() {
               />
             )}
             <Preferences />
+            <details className="mobile-more">
+              <summary aria-label={t("more")}>
+                <Menu size={20} />
+              </summary>
+              <nav>
+                {navigation
+                  .filter(
+                    (n) =>
+                      ![
+                        "/",
+                        "/jobs",
+                        "/calendar",
+                        "/chats",
+                        "/profile",
+                      ].includes(n.to),
+                  )
+                  .map(({ to, label }) => (
+                    <NavLink key={to} to={to}>
+                      {t(label)}
+                    </NavLink>
+                  ))}
+              </nav>
+            </details>
             <NavLink to="/profile" className="avatar" aria-label={t("profile")}>
               {(profile.data?.display_name || session!.user.email || "L")
                 .slice(0, 1)
@@ -301,9 +350,9 @@ export function Shell() {
             <span>{t(label)}</span>
           </NavLink>
         ))}
-        <NavLink to="/security">
-          <ShieldCheck size={20} />
-          <span>{t("security")}</span>
+        <NavLink to="/profile">
+          <UserRound size={20} />
+          <span>{t("profile")}</span>
         </NavLink>
       </nav>
     </div>

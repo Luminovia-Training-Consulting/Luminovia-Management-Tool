@@ -1,0 +1,774 @@
+import { useState } from "react";
+import { useForm, useFieldArray } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { Plus, CalendarDays, Copy, BookOpen, Trash2 } from "lucide-react";
+import { DateTime } from "luxon";
+import "./i18n";
+import "./styles.css";
+import { useAuth } from "../auth/auth-context";
+import { permissionsQuery, topicsQuery } from "../../lib/queries";
+import { db } from "../../lib/supabase";
+import { dateTime, validZone, zonedInstant } from "../../lib/dates";
+import { requireOnline, useOnline } from "../../lib/online";
+import { Button } from "../../components/ui/button";
+import { Dialog } from "../../components/ui/dialog";
+import {
+  Field,
+  Notice,
+  PageHeading,
+  Loading,
+  ErrorState,
+} from "../../components/common";
+import {
+  orgQuery,
+  templatesQuery,
+  runsQuery,
+  type Template,
+  type CourseRun,
+  type Organisation,
+} from "./data";
+const templateSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  description: z.string().max(12000),
+  syllabus: z.string().max(30000),
+  prerequisites: z.string().max(8000),
+  topic_ids: z.array(z.string()),
+  archived: z.boolean(),
+});
+const runSchema = z.object({
+  template_id: z.uuid(),
+  organisation_id: z.string(),
+  time_zone: z.string().refine(validZone),
+  delivery_type: z.enum(["online", "onsite"]),
+  venue: z.string().max(500),
+  published: z.boolean(),
+  archived: z.boolean(),
+  sessions: z
+    .array(
+      z.object({ starts_at: z.string().min(1), ends_at: z.string().min(1) }),
+    )
+    .min(1)
+    .max(60),
+});
+function TemplateForm({
+  original,
+  onDone,
+}: {
+  original?: Template;
+  onDone: () => void;
+}) {
+  const { t, i18n } = useTranslation("operations");
+  const client = useQueryClient();
+  const online = useOnline();
+  const topics = useQuery(topicsQuery);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<z.infer<typeof templateSchema>>({
+    resolver: zodResolver(templateSchema),
+    defaultValues: {
+      title: original?.title ?? "",
+      description: original?.description ?? "",
+      syllabus: original?.syllabus ?? "",
+      prerequisites: original?.prerequisites ?? "",
+      topic_ids:
+        original?.course_template_topics.map((topic) => topic.topic_id) ?? [],
+      archived: Boolean(original?.archived_at),
+    },
+  });
+  const save = useMutation({
+    mutationFn: async (values: z.infer<typeof templateSchema>) => {
+      requireOnline();
+      const { error } = await db().rpc("save_course_template", {
+        p_id: original?.id ?? null,
+        p_payload: values,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ["operations"] });
+      onDone();
+    },
+  });
+  if (topics.isPending) return <Loading />;
+  if (topics.isError) return <ErrorState retry={() => void topics.refetch()} />;
+  return (
+    <form noValidate onSubmit={handleSubmit((v) => save.mutate(v))}>
+      <Field
+        id="template-title"
+        label={t("title")}
+        error={Boolean(errors.title)}
+      >
+        <input id="template-title" {...register("title")} />
+      </Field>
+      {(["description", "syllabus", "prerequisites"] as const).map((key) => (
+        <Field
+          key={key}
+          id={`template-${key}`}
+          label={t(key)}
+          error={Boolean(errors[key])}
+        >
+          <textarea
+            id={`template-${key}`}
+            rows={key === "syllabus" ? 6 : 3}
+            {...register(key)}
+          />
+        </Field>
+      ))}
+      <fieldset className="operations-topic-field">
+        <legend>{t("topics")}</legend>
+        {topics.data.map((topic) => (
+          <label className="checkbox-label" key={topic.id}>
+            <input
+              type="checkbox"
+              value={topic.id}
+              {...register("topic_ids")}
+            />
+            {i18n.language === "de" ? topic.label_de : topic.label_en}
+          </label>
+        ))}
+      </fieldset>
+      <label className="checkbox-label">
+        <input type="checkbox" {...register("archived")} />
+        {t("archive")}
+      </label>
+      <Button disabled={!online || save.isPending}>{t("save")}</Button>
+      {save.isError && (
+        <Notice kind="error">
+          {t(save.error.message === "course_locked" ? "locked" : "error")}
+        </Notice>
+      )}
+    </form>
+  );
+}
+function RunForm({
+  original,
+  templates,
+  organisations,
+  onDone,
+}: {
+  original?: CourseRun;
+  templates: Template[];
+  organisations: Organisation[];
+  onDone: () => void;
+}) {
+  const { t } = useTranslation("operations");
+  const online = useOnline();
+  const client = useQueryClient();
+  const [timeError, setTimeError] = useState(false);
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<z.infer<typeof runSchema>>({
+    resolver: zodResolver(runSchema),
+    defaultValues: {
+      template_id: original?.template_id ?? templates[0]?.id ?? "",
+      organisation_id: original?.organisation_id ?? "",
+      time_zone: original?.time_zone ?? "Europe/Berlin",
+      delivery_type: original?.delivery_type ?? "online",
+      venue: original?.venue ?? "",
+      published: original?.published ?? false,
+      archived: Boolean(original?.archived_at),
+      sessions: original
+        ? [...original.course_sessions]
+            .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+            .map((s) => ({
+              starts_at: DateTime.fromISO(s.starts_at)
+                .setZone(original.time_zone)
+                .toFormat("yyyy-MM-dd'T'HH:mm"),
+              ends_at: DateTime.fromISO(s.ends_at)
+                .setZone(original.time_zone)
+                .toFormat("yyyy-MM-dd'T'HH:mm"),
+            }))
+        : [{ starts_at: "", ends_at: "" }],
+    },
+  });
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "sessions",
+  });
+  const save = useMutation({
+    mutationFn: async (values: z.infer<typeof runSchema>) => {
+      requireOnline();
+      setTimeError(false);
+      const sessions = values.sessions.map((s) => {
+        const start = zonedInstant(s.starts_at, values.time_zone);
+        const end = zonedInstant(s.ends_at, values.time_zone);
+        if (!start || !end || end <= start) {
+          setTimeError(true);
+          throw new Error("time");
+        }
+        return { starts_at: start, ends_at: end };
+      });
+      const { error } = await db().rpc("save_course_run", {
+        p_id: original?.id ?? null,
+        p_payload: { ...values, sessions },
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ["operations"] });
+      onDone();
+    },
+  });
+  return (
+    <form noValidate onSubmit={handleSubmit((v) => save.mutate(v))}>
+      <Field
+        id="run-template"
+        label={t("template")}
+        error={Boolean(errors.template_id)}
+      >
+        <select id="run-template" {...register("template_id")}>
+          <option value="">—</option>
+          {templates
+            .filter(
+              (template) =>
+                !template.archived_at || template.id === original?.template_id,
+            )
+            .map((template) => (
+              <option value={template.id} key={template.id}>
+                {template.title}
+              </option>
+            ))}
+        </select>
+      </Field>
+      <Field id="run-org" label={t("organisation")}>
+        <select id="run-org" {...register("organisation_id")}>
+          <option value="">{t("none")}</option>
+          {organisations.map((org) => (
+            <option value={org.id} key={org.id}>
+              {org.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <div className="form-row">
+        <Field
+          id="run-zone"
+          label={t("timezone")}
+          error={Boolean(errors.time_zone)}
+        >
+          <input id="run-zone" {...register("time_zone")} />
+        </Field>
+        <Field id="run-delivery" label={t("delivery")}>
+          <select id="run-delivery" {...register("delivery_type")}>
+            <option value="online">{t("online")}</option>
+            <option value="onsite">{t("onsite")}</option>
+          </select>
+        </Field>
+      </div>
+      <Field id="run-venue" label={t("venue")} error={Boolean(errors.venue)}>
+        <input id="run-venue" {...register("venue")} />
+      </Field>
+      <fieldset className="operations-topic-field">
+        <legend>{t("sessions")}</legend>
+        {fields.map((field, index) => (
+          <div className="session-form-row" key={field.id}>
+            <Field
+              id={`run-start-${index}`}
+              label={`${t("start")} ${index + 1}`}
+              error={Boolean(errors.sessions?.[index]?.starts_at)}
+            >
+              <input
+                id={`run-start-${index}`}
+                type="datetime-local"
+                {...register(`sessions.${index}.starts_at`)}
+              />
+            </Field>
+            <Field
+              id={`run-end-${index}`}
+              label={`${t("end")} ${index + 1}`}
+              error={Boolean(errors.sessions?.[index]?.ends_at)}
+            >
+              <input
+                id={`run-end-${index}`}
+                type="datetime-local"
+                {...register(`sessions.${index}.ends_at`)}
+              />
+            </Field>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              aria-label={`${t("remove")} ${index + 1}`}
+              disabled={fields.length < 2}
+              onClick={() => remove(index)}
+            >
+              <Trash2 size={18} />
+            </Button>
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={fields.length >= 60}
+          onClick={() => append({ starts_at: "", ends_at: "" })}
+        >
+          {t("addSession")}
+        </Button>
+      </fieldset>
+      <label className="checkbox-label">
+        <input type="checkbox" {...register("published")} />
+        {t("published")}
+      </label>
+      <label className="checkbox-label">
+        <input type="checkbox" {...register("archived")} />
+        {t("archive")}
+      </label>
+      <Button disabled={!online || save.isPending}>{t("save")}</Button>
+      {save.isError && (
+        <Notice kind="error">
+          {t(
+            timeError
+              ? "timeInvalid"
+              : save.error.message === "course_locked"
+                ? "locked"
+                : "error",
+          )}
+        </Notice>
+      )}
+    </form>
+  );
+}
+export function CoursesPage() {
+  const { t, i18n } = useTranslation("operations");
+  const { session } = useAuth();
+  const actor = session!.user.id;
+  const permissions = useQuery(permissionsQuery(actor));
+  const templates = useQuery(templatesQuery(actor));
+  const runs = useQuery(runsQuery(actor));
+  const orgs = useQuery(orgQuery(actor));
+  const topics = useQuery(topicsQuery);
+  const client = useQueryClient();
+  const online = useOnline();
+  const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"runs" | "templates">("runs");
+  const [templateEdit, setTemplateEdit] = useState<
+    Template | null | undefined
+  >();
+  const [runEdit, setRunEdit] = useState<CourseRun | null | undefined>();
+  const [detail, setDetail] = useState<CourseRun>();
+  const [copy, setCopy] = useState<{
+    type: "template" | "run";
+    id: string;
+    title: string;
+  }>();
+  const [copyTitle, setCopyTitle] = useState("");
+  const [message, setMessage] = useState("");
+  const manage = permissions.data?.includes("courses.manage") ?? false;
+  const visibility = useMutation({
+    mutationFn: async ({
+      run,
+      published,
+      archived,
+    }: {
+      run: CourseRun;
+      published: boolean;
+      archived: boolean;
+    }) => {
+      requireOnline();
+      const { error } = await db().rpc("set_course_visibility", {
+        p_id: run.id,
+        p_published: published,
+        p_archived: archived,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ["operations"] });
+      setMessage(t("visibilitySaved"));
+    },
+  });
+  const duplicate = useMutation({
+    mutationFn: async () => {
+      requireOnline();
+      if (!copy) throw new Error("missing");
+      const { error } = await db().rpc(
+        copy.type === "template"
+          ? "duplicate_course_template"
+          : "duplicate_course_run",
+        copy.type === "template"
+          ? { p_id: copy.id, p_title: copyTitle.trim() }
+          : { p_id: copy.id },
+      );
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ["operations"] });
+      setCopy(undefined);
+      setMessage(t("copied"));
+    },
+  });
+  if (
+    templates.isPending ||
+    runs.isPending ||
+    orgs.isPending ||
+    topics.isPending ||
+    permissions.isPending
+  )
+    return <Loading />;
+  if (
+    templates.isError ||
+    runs.isError ||
+    orgs.isError ||
+    topics.isError ||
+    permissions.isError
+  )
+    return (
+      <ErrorState
+        retry={() => {
+          void templates.refetch();
+          void runs.refetch();
+          void orgs.refetch();
+          void topics.refetch();
+          void permissions.refetch();
+        }}
+      />
+    );
+  const findTemplate = (run: CourseRun) =>
+    templates.data.find((template) => template.id === run.template_id);
+  const filteredRuns = runs.data.filter((run) =>
+    [
+      findTemplate(run)?.title,
+      findTemplate(run)?.description,
+      orgs.data.find((org) => org.id === run.organisation_id)?.name,
+      run.venue,
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(search.toLowerCase()),
+  );
+  const filteredTemplates = templates.data.filter((template) =>
+    [template.title, template.description, template.syllabus]
+      .join(" ")
+      .toLowerCase()
+      .includes(search.toLowerCase()),
+  );
+  return (
+    <>
+      <PageHeading
+        title={t("courses")}
+        description={t("coursesIntro")}
+        action={
+          manage && (
+            <div className="operations-actions">
+              <Button
+                variant="secondary"
+                disabled={!online}
+                onClick={() => setTemplateEdit(null)}
+              >
+                <Plus size={17} />
+                {t("newTemplate")}
+              </Button>
+              <Button
+                disabled={!online || !templates.data.length}
+                onClick={() => setRunEdit(null)}
+              >
+                <Plus size={17} />
+                {t("newRun")}
+              </Button>
+            </div>
+          )
+        }
+      />
+      <section className="panel operations-toolbar">
+        <Field id="course-search" label={t("search")}>
+          <input
+            id="course-search"
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </Field>
+        {manage && (
+          <div className="segmented">
+            <Button
+              variant={tab === "runs" ? "default" : "ghost"}
+              onClick={() => setTab("runs")}
+            >
+              {t("runs")}
+            </Button>
+            <Button
+              variant={tab === "templates" ? "default" : "ghost"}
+              onClick={() => setTab("templates")}
+            >
+              {t("templates")}
+            </Button>
+          </div>
+        )}
+        <p className="muted">{t("publishedHint")}</p>
+      </section>
+      {message && <Notice>{message}</Notice>}
+      {visibility.isError && (
+        <Notice kind="error">
+          {t(visibility.error.message === "course_locked" ? "locked" : "error")}
+        </Notice>
+      )}
+      {tab === "runs" ? (
+        <div className="operations-courses-grid">
+          {filteredRuns.map((run) => {
+            const template = findTemplate(run);
+            return (
+              <article className="panel operations-course" key={run.id}>
+                <div className="section-heading">
+                  <BookOpen className="blue" />
+                  <span className="badge">
+                    {t(
+                      run.archived_at
+                        ? "archive"
+                        : run.published
+                          ? "published"
+                          : "draft",
+                    )}
+                  </span>
+                </div>
+                <h2>{template?.title ?? t("template")}</h2>
+                <p className="muted">
+                  {orgs.data.find((org) => org.id === run.organisation_id)
+                    ?.name ?? t("noCustomer")}{" "}
+                  · {t(run.delivery_type)}
+                </p>
+                <p>{template?.description}</p>
+                <div className="tags">
+                  {template?.course_template_topics.map((item) => {
+                    const topic = topics.data.find(
+                      (topic) => topic.id === item.topic_id,
+                    );
+                    return topic ? (
+                      <span className="badge" key={topic.id}>
+                        {i18n.language === "de"
+                          ? topic.label_de
+                          : topic.label_en}
+                      </span>
+                    ) : null;
+                  })}
+                </div>
+                <p className="operations-session-summary">
+                  <CalendarDays size={17} />
+                  {run.course_sessions.length} · {run.time_zone}
+                </p>
+                <Button variant="secondary" onClick={() => setDetail(run)}>
+                  {t("view")}
+                </Button>
+                {manage && (
+                  <div className="operations-actions">
+                    <Button
+                      variant="ghost"
+                      disabled={!online}
+                      onClick={() => setRunEdit(run)}
+                    >
+                      {t("edit")}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      disabled={!online || visibility.isPending}
+                      onClick={() =>
+                        visibility.mutate({
+                          run,
+                          published: !run.published,
+                          archived: Boolean(run.archived_at),
+                        })
+                      }
+                    >
+                      {t(run.published ? "unpublish" : "publish")}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      disabled={!online || visibility.isPending}
+                      onClick={() =>
+                        visibility.mutate({
+                          run,
+                          published: run.published,
+                          archived: !run.archived_at,
+                        })
+                      }
+                    >
+                      {t(run.archived_at ? "restore" : "archive")}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      disabled={!online}
+                      onClick={() => {
+                        duplicate.reset();
+                        setCopy({
+                          type: "run",
+                          id: run.id,
+                          title: template?.title ?? "",
+                        });
+                      }}
+                    >
+                      <Copy size={15} />
+                      {t("duplicate")}
+                    </Button>
+                  </div>
+                )}
+              </article>
+            );
+          })}
+          {!filteredRuns.length && (
+            <div className="panel empty-state">
+              <BookOpen />
+              <p>{t("empty")}</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="operations-courses-grid">
+          {filteredTemplates.map((template) => (
+            <article className="panel operations-course" key={template.id}>
+              <h2>{template.title}</h2>
+              {template.archived_at && (
+                <span className="badge">{t("archive")}</span>
+              )}
+              <p>{template.description}</p>
+              <div className="operations-actions">
+                <Button
+                  variant="secondary"
+                  disabled={!online}
+                  onClick={() => setTemplateEdit(template)}
+                >
+                  {t("edit")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={!online}
+                  onClick={() => {
+                    duplicate.reset();
+                    setCopy({
+                      type: "template",
+                      id: template.id,
+                      title: template.title,
+                    });
+                    setCopyTitle(`${template.title} · ${t("copySuffix")}`);
+                  }}
+                >
+                  <Copy size={16} />
+                  {t("duplicate")}
+                </Button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+      <Dialog
+        open={templateEdit !== undefined}
+        onOpenChange={(open) => {
+          if (!open) setTemplateEdit(undefined);
+        }}
+        title={t(templateEdit ? "edit" : "newTemplate")}
+        description={t("template")}
+      >
+        <TemplateForm
+          key={templateEdit?.id ?? "new"}
+          original={templateEdit ?? undefined}
+          onDone={() => {
+            setTemplateEdit(undefined);
+            setMessage(t("saved"));
+          }}
+        />
+      </Dialog>
+      <Dialog
+        open={runEdit !== undefined}
+        onOpenChange={(open) => {
+          if (!open) setRunEdit(undefined);
+        }}
+        title={t(runEdit ? "edit" : "newRun")}
+        description={t("publishedHint")}
+      >
+        <RunForm
+          key={runEdit?.id ?? "new"}
+          original={runEdit ?? undefined}
+          templates={templates.data}
+          organisations={orgs.data}
+          onDone={() => {
+            setRunEdit(undefined);
+            setMessage(t("saved"));
+          }}
+        />
+      </Dialog>
+      <Dialog
+        open={Boolean(copy)}
+        onOpenChange={(open) => {
+          if (!open) setCopy(undefined);
+        }}
+        title={t("duplicate")}
+        description={t(
+          copy?.type === "template" ? "templateCopyHint" : "copyHint",
+        )}
+      >
+        <p>{copy?.title}</p>
+        {copy?.type === "template" && (
+          <Field id="copy-title" label={t("copyTitle")}>
+            <input
+              id="copy-title"
+              value={copyTitle}
+              onChange={(e) => setCopyTitle(e.target.value)}
+              maxLength={200}
+            />
+          </Field>
+        )}
+        <Button
+          disabled={
+            !online ||
+            duplicate.isPending ||
+            (copy?.type === "template" && !copyTitle.trim())
+          }
+          onClick={() => duplicate.mutate()}
+        >
+          {t("duplicate")}
+        </Button>
+        {duplicate.isError && <Notice kind="error">{t("error")}</Notice>}
+      </Dialog>
+      <Dialog
+        open={Boolean(detail)}
+        onOpenChange={(open) => {
+          if (!open) setDetail(undefined);
+        }}
+        title={
+          detail ? (findTemplate(detail)?.title ?? t("courses")) : t("courses")
+        }
+        description={t("readOnly")}
+      >
+        {detail && (
+          <>
+            <h3>{t("syllabus")}</h3>
+            <p className="preserve-text">
+              {findTemplate(detail)?.syllabus || "—"}
+            </p>
+            <h3>{t("prerequisites")}</h3>
+            <p className="preserve-text">
+              {findTemplate(detail)?.prerequisites || "—"}
+            </p>
+            <h3>{t("sessions")}</h3>
+            <ol className="session-list">
+              {[...detail.course_sessions]
+                .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
+                .map((s) => (
+                  <li key={s.id}>
+                    <CalendarDays size={18} />
+                    <div>
+                      <strong>
+                        {dateTime(s.starts_at, i18n.language, detail.time_zone)}
+                      </strong>
+                      <span>
+                        {dateTime(s.ends_at, i18n.language, detail.time_zone)}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+            </ol>
+            <p>
+              {detail.time_zone} · {detail.venue}
+            </p>
+          </>
+        )}
+      </Dialog>
+    </>
+  );
+}

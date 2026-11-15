@@ -92,7 +92,9 @@ describe("safe marketplace interactions", () => {
     expect(
       screen.getByRole("button", { name: "Auftrag übernehmen" }),
     ).toBeDisabled();
-    expect(rpc).not.toHaveBeenCalled();
+    expect(
+      rpc.mock.calls.filter(([name]) => name === "claim_job"),
+    ).toHaveLength(0);
   });
   it("does not match a date range falling entirely between two teaching sessions", () => {
     setup("/jobs?from=2027-01-05&to=2027-01-06", true);

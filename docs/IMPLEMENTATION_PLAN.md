@@ -1,26 +1,24 @@
 # Persistent implementation plan
 
-Updated: 15 November 2026 (Australia/Brisbane). Read [WORKLOG.md](WORKLOG.md) first on continuation, then the complete [master specification](UNIVERSAL_MASTER_PROMPT.txt). Status labels describe evidence, not aspiration. The full target remains required after the first usable milestone.
+Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A local working slice is not production approval.
 
-## Current milestone — M1: secure teaching-job allocation
+## Current checkpoint — persistent full local system and M2
 
-**M1 is complete and verified as a local development milestone. The complete production product remains unfinished.** Includes the authentic responsive DE/EN shell and PWA foundation, actual Supabase Auth/session handling, own profile/expertise, permissioned customer/course/job creation and publication, combined job search/detail, atomic whole-job claiming with immutable terms, private calendar/confirmed allocations, invitations/MFA, managerial expertise attestation and account suspension/reactivation. Capacity one is the first testable slice; multi-slot jobs, cancellation and substitutes remain explicit follow-ups. No browser fake-login path in delivered application.
+M1 is locally verified and was merged by Carina in PR #1. This continuation is on `codex/local-system-and-collaboration` for a separate review. This continuation adds a single-command persistent local runtime and complete isolated verification command, followed by actual collaboration, documents, knowledge, directory/course and commercial slices. The complete isolated command passed: 42 source, 7 runtime, 11 Edge, 78 SQL, all actual API/Mailpit suites, 40 browser workflows and 2 built-PWA checks. A later visual hidden-input overflow correction has a separate targeted acceptance record; exact submitted source is verified by CI. See WORKLOG/QA_RESULTS. No mocked authentication or decorative module placeholders are used.
 
-| Work item | Status | Exit evidence |
+| Work item | Implemented slice | Acceptance source |
 | --- | --- | --- |
-| Inspect repository/environment and preserve original work | Complete | Existing management repository selected; original `main` commit `1a61cb0`; work on `codex/portal-foundation`. |
-| Preserve authoritative prompt and continuation instructions | Complete | Verbatim prompt plus root `AGENTS.md`. |
-| Verify actual brand/assets without modifying marketing site | Complete | Remote `Website` main SHA and file hashes in brand guide. |
-| Foundation app, localised shell, forms, theme and PWA | Verified locally | 22 source tests, 20 desktop/mobile workflows and 2 current-build PWA checks passed; scanned screens had no axe violations. Native installation remains unverified. |
-| Actual Auth/session/recovery/invitation consumption | Verified locally | Actual Edge delivery/deduplication, custom token-hash invitation acceptance/password/new login and bilingual PKCE recovery passed. Hosted SMTP/template setup pending. |
-| Profiles, roles/capabilities and expertise | Verified locally within M1 scope | Own bilingual profile persistence and declared/verified expertise; capability/MFA and forged-role/metadata checks passed at SQL/API/browser layers. Evidence uploads/full profile scope pending. |
-| Customer/course/session/job creation and publication | Verified locally within M1 scope | Real administrator TOTP + five-session publishing UI passed; atomic related-record creation and denied lecturer writes tested. Independent full CRUD remains pending. |
-| Atomic single-slot claim, retries, complete allocations and snapshots | Verified locally | 25 SQL tests, 50 distinct concurrent SQL actors/one winner; real 50-request Auth/REST race and desktop/mobile complete-block UI journey passed. |
-| Own events, confirmed assignment calendar and timezone formatting | Verified locally within M1 scope | Real private-calendar browser path; admin/peer denial and races at DB/API; six time/DST/money tests passed. |
-| Managerial verification and account lifecycle | Verified locally | Real desktop/mobile verification→suspend→existing-session denial→reactivate passed; 25 SQL tests include self/last-admin/race protection; 5 focused UI tests passed. |
-| CI, security validation and deployment preparation | Local checks and GitHub application CI verified | Full-stack reset and disposable harness replay all three migrations; 25 SQL + 7 Edge + 22 source + 20 UI + 2 PWA checks passed. CI includes source/backend/browser with no deploy action; application CI passed for `6d0bbf2` and `22dc052`; final workflow-trigger cleanup is checked on PR #1. |
-| Managed staging Supabase/environment | Blocked on configuration | Connected project inventory returned no projects. No hosted project provisioned. Local development can continue independently. |
-| Production deployment | Not authorised | Requires completed release gates and explicit production approval. |
+| Persistent local runtime | `./portal start/up/status/stop/restart/credentials`; real PostgreSQL/Auth/Storage/Realtime/Edge/Mailpit/ClamAV/Vite, no startup reset | Actual password/MFA/profile/private-event/object-byte restart probe; runtime safety tests |
+| Isolated complete verification | `./portal test`, random project, separate credentials/ports/volumes, scoped cleanup; CI same command | Complete invocation result in latest work log |
+| Core M1 | Auth/invites/MFA, roles, profiles/expertise, managerial verification/suspension, single-slot atomic jobs, private calendar | Original 22 source / 25 SQL / 7 Edge / 20 browser / 2 PWA checks; regressions retained |
+| Private documents | Actual scan/quarantine, limits, live-authorised download, preview, immutable version history, replace/rename/archive, profile evidence and job/chat attachments | Real Auth/Storage/ClamAV API, SQL and browser checks; scanner outage included in isolated suite |
+| Realtime chats | DMs, groups/general/separate course rooms, membership, persisted messages/reactions/history/search/read/mute, files | 17 real SQL cases, actual WebSocket positive/revocation/suspension tests, component/browser flows |
+| Wiki/forum | Safe rich-text/code editor, draft/publish/history, categories, threads/replies/accept/report/lock/pin/archive/subscriptions | 14 real SQL cases, Auth/MFA API, content-boundary and browser checks |
+| Customers/courses | Private directory/contacts/notes/tags/archive; reusable templates, real runs/sessions/publication/safe copy | 11 real Auth/MFA API cases, component/privacy/read-only checks plus isolated browser journeys |
+| Contracts/finance | Executed PDF/version/hash/receipt/addenda, applicable-contract prerequisite, immutable earnings/invoice/payment records and scoped CSV | Commercial SQL/API/component and isolated browser checks recorded in latest work log |
+| Global search/calendar | Permission-filtered jobs/files/messages/safe wiki/forum/contacts; explicitly published course sessions in global calendar | Real API boundaries plus desktop/mobile journeys; no search over private draft bodies |
+| Managed staging | No connected project available at reconnaissance | Configuration/access pending; local work proceeds independently |
+| Production | No deployment performed or authorised | Requires complete release gates and explicit approval |
 
 ## Full phase board
 
@@ -32,28 +30,28 @@ Updated: 15 November 2026 (Australia/Brisbane). Read [WORKLOG.md](WORKLOG.md) fi
 - [ ] Phase 4: executed contracts/versioned acceptance, compensation/invoices/payment/export workflows, administration/audit/bulk recovery/retention and verification.
 - [ ] Phase 5: full end-to-end/adversarial/accessibility/platform sweep, monitored staging acceptance, backups of DB and storage plus restore drill/rollback, operational handoff and separately approved production release.
 
-## Module completeness ledger
+## Module completeness ledger — full remaining scope
 
-| Module | First slice | Remaining required scope |
+| Module | Current functioning slice | Required follow-up |
 | --- | --- | --- |
-| A Dashboard/navigation | Real local dashboard and core routes | Real chat/file/contract alerts, richer matching, admin KPI authorisation, global resource search. |
-| B Users/Auth/profiles | Local own profile, Auth/MFA/invitation and suspend/reactivate slice | Production invites/SMTP, complete profile/evidence/preferences, admin lifecycle and security hardening. |
-| C Taxonomy | Data-backed expertise selection and management attestation | Taxonomy CRUD/hierarchy/alias UI, uploaded evidence and evidence review lifecycle. |
-| D Organisations | Customer records created with job blocks | Contact people/private notes/files/tags and full search/contact actions. |
-| E Courses | Atomic template/run/session creation with job blocks | Full syllabus/content/groups/assignment UI and safe duplication. |
-| F Jobs/claims | Locally verified single-slot whole-block flow | Multi-capacity allocation, advanced/saved filters, Kanban, attachment phases, cancellation/reopening/substitutes and complete audit workflows. |
-| G Calendar | Own events, allocations and published-global-event read | Availability editor, published global events, rich event links/files, invitations/reminders and all views; ICS later. |
-| H Chat | Pending | All messaging, membership/realtime isolation and revocation, attachments and moderation. |
-| I Files | Pending | Private authorised storage, quarantine/scan limits, previews/versioning/expiry and retention. |
-| J Contracts | Verified prerequisite/version metadata reference | Personal downloads, executed document/version/acceptance lifecycle and reminders. |
-| K Wiki/forum | Pending | Authoring/revisions/search/code safety and permissioned moderation. |
-| L Finance | Immutable accepted compensation snapshot | Earnings states, invoices/PDF/payment records and authorised CSV/reporting. |
-| M Notifications | Committed-claim in-app notification/read state | Inbox/preferences/quiet hours, matching/session/email notifications and delivery retries. |
-| N Administration | Job publishing, lecturer invitations, expertise attestation and account status | Role/capability editor, catalogue/moderation/report/retention/export, operational audit UI, backups and broader recovery tools. |
+| A Dashboard/navigation | Authenticated branded responsive shell, core metrics, all module routes, permission-filtered search, mobile More | Rich personalised matching, pending-contract/recent-file/calendar/chat widgets; authorised management availability/cost overview; extend resource search |
+| B Users/Auth/profiles | Invites/recovery/MFA, roles, suspend/reactivate, bilingual profile/timezone/phone, expertise attestation, scanned CV/certificates | Avatar, detailed education/experience/country/languages/rate and visibility preferences; evidence-linked verification/expiry; role editor; full lifecycle/recovery hardening |
+| C Taxonomy | Data-backed topic labels and selection, protected verification/expiry | Hierarchy/aliases/tools/languages/catalogue CRUD and related-course management UI |
+| D Organisations | Search/edit/archive, types/industry/location/timezone/tags, permissioned contacts and private notes, linked course runs | Organisation-scoped files and richer topic/filter/contact actions; no automatic customer user accounts |
+| E Courses | Reusable descriptions/syllabus/prerequisites/topics; actual customer/delivery/venue/precise sessions; safe duplicate and publication | Standalone participant-group administration, lecturer assignment/resource links, document/course navigation; independent split-job editor |
+| F Jobs/claims | Combined list filters, details/current consent, single-slot whole-block transaction, immutable snapshot, pre/post-claim documents | Capacity >1, editing/duplication/deadlines UI, saved/advanced filters/sorting, accessible dnd-kit Kanban, audited cancellation/reopen/substitutes without changing accepted terms |
+| G Calendar | Private event CRUD, confirmed jobs, explicit published courses/global data, month/week/day/agenda/timezone handling | Availability/block-out model/editor, global-event management, richer files/links, invitations/reminders and drag/edit as appropriate; ICS later |
+| H Chat | Private DMs/groups/staff general and separate course participant rooms; persisted realtime/history/search/reactions/edit/delete/read/mute/files; immediate future-event revocation | Profile click-to-DM, mentions and corresponding deduplicated alerts; presence/typing if practical; disclosed moderation and richer group administration |
+| I Files | Authenticated private scope, actual scanner/quarantine, validated PDF/Office/images/text, limits/progress, preview/download/version/hash/rename/archive, evidence/chat/job contexts | Course/organisation-specific resource UX, tags/folders/classification, sharing/expiry links, approved restricted archives, retention/purge tools; large videos stay external |
+| J Contracts | Personal/master/addenda/version PDF/hash, immutable receipt (no signature claim), effective/expiry/revocation and claim prerequisites | Renewal reminders, assignment-confirmation documents, configurable privacy/legal/retention documents, approved legal/e-sign review if needed |
+| K Wiki/forum | Safe Tiptap content/code language labels, DE/EN categories, wiki revisions/draft/publish, forum acceptance/subscriptions/moderation | Authorised attachments and course-template links, finer editorial workflow and richer search/presentation |
+| L Finance | Original-currency expected/completed/invoiced/paid earnings; claim-derived invoice PDFs, review/reject, partial/full payments/void, scoped formula-safe CSV | Richer management client/course reports and downloadable statements; no payroll/accounting/tax/bank claims |
+| M Notifications | Committed claim/chat/forum in-app records, unread/read and chat mute state | Full inbox links/preferences/quiet hours; matching/cancellation/contract/session alerts and announcement banners; durable approved email delivery/retry; web push later |
+| N Administration | Invites/MFA/suspension/verification, customers/courses/job publication, knowledge/group owners, contracts/invoices/payments | Roles/capability/taxonomy/brand settings, audit/report/retention/bulk/recovery/status UI, operational backups and restore workflow |
 
 ## Next continuation actions
 
-1. Read the latest work-log entry and run the exact recorded verification commands against unchanged source to establish current health only when needed.
-2. Check the actual GitHub branch/CI outcome if the latest work log has not yet recorded it. Local M1 source/browser/PWA and all-three-migration replay are verified; preserve these tests and fixes. Fresh fixtures are available without test claims/invitations/MFA factors.
-3. Configure a separate managed staging Supabase project and transactional SMTP only with appropriate authorisation/access; apply versioned migrations, keep real data out of fixtures.
-4. Extend the next complete vertical slice, preserving all outstanding scope above. Record exact tests and limitations. Do not call the entire product production-ready until Phase 5 acceptance is evidenced.
+1. Complete the final GitHub verification checkpoint. The full local command and subsequent six targeted mobile/desktop attachment/overflow cases passed; preserve this milestone and the development records.
+2. Reconcile docs, visually review current fictional screenshots, verify no server credentials in source/build, signed commit/push existing branch and observe the exact PR CI result. Never merge or deploy production implicitly.
+3. Continue the outstanding vertical slices above, prioritising audited job lifecycle/capacity, availability, taxonomy/profile completeness and notification preferences over cosmetic additions.
+4. Configure separate approved managed staging/SMTP only when access and ownership are available. Complete hosted/manual/cross-browser/physical-PWA, privacy, monitoring, DB + actual Storage restore and rollback acceptance before a concrete production approval request.

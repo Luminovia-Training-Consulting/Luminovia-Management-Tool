@@ -1,15 +1,15 @@
 # Security and privacy checklist
 
-Checked items are evidenced **within the local M1 scope**, not a production certification. Unticked items remain pending, broader than the delivered slice, or require hosted/manual acceptance. Actual commands and limitations are in [WORKLOG.md](WORKLOG.md), [QA_RESULTS.md](QA_RESULTS.md) and [BACKEND_SECURITY_REVIEW.md](BACKEND_SECURITY_REVIEW.md).
+Checked items describe evidenced local controls, not a production certification. The expanded M2 full-command result is recorded in the latest WORKLOG/QA_RESULTS checkpoint; historical M1 counts below are labelled. Unticked items remain pending, broader than the delivered slice, or require hosted/manual acceptance. Actual commands and limitations are in [WORKLOG.md](WORKLOG.md), [QA_RESULTS.md](QA_RESULTS.md) and [BACKEND_SECURITY_REVIEW.md](BACKEND_SECURITY_REVIEW.md).
 
 ## Current evidence
 
 | Boundary | Local result | Remaining acceptance |
 | --- | --- | --- |
-| Schema/permissions | All three migrations replayed in real PostgreSQL and the full local stack; 23 public tables; warning-level lint/advisors clean | Managed-stage configuration/advisors and later modules |
-| Allocation/privacy | 25 PostgreSQL tests plus actual fifty-request Auth/HTTP race: one winner, five allocations, one notification | Multi-slot/lifecycle and production operational review |
-| Auth/invitations | 7 Edge handler tests, Deno check, actual AAL2 Edge/Mailpit delivery, deduplication/origin checks and browser onboarding/recovery | Hosted templates/CORS/SMTP and approved real invitations |
-| Frontend | 22 source tests, 20 desktop/mobile browser workflows and 2 built-PWA checks passed; scanned screens had no axe violations | Manual/cross-browser/physical installation and full product scope |
+| Schema/permissions | Ten migrations replayed by the fresh complete local command; 43 public tables, none without RLS; SQL lint/advisors clean | Managed-stage configuration/advisors and load review |
+| Allocation/privacy | 25 original plus 53 chat/knowledge/commercial/document SQL checks; actual fifty-request Auth race, WebSocket revocation and Storage IDOR checks pass | Multi-slot/lifecycle and production operational review |
+| Auth/invitations | 11 Edge tests across invitation/files; actual AAL2, Edge/Mailpit, scanned uploads and isolated scanner-outage fail-closed checks pass | Hosted templates/CORS/SMTP and approved real invitations |
+| Frontend | 42 source tests pass; historical M1 20 browser +2 PWA passed; expanded browser/PWA result in latest QA record | Manual/cross-browser/physical installation and full product scope |
 
 ## Scope and authority
 
@@ -34,14 +34,14 @@ Checked items are evidenced **within the local M1 scope**, not a production cert
 
 ## Database/API
 
-- [x] All 23 exposed application tables enable RLS with explicit table/column/function grants; anonymous private data access denied.
+- [x] All 43 current exposed application tables enable RLS with explicit table/column/function grants; anonymous private data access denied.
 - [x] Own/foreign profiles, private events, claims and implemented commercial snapshots tested through actual Auth/Data API; ordinary admins cannot read private appointments.
 - [x] Ownership updates include `USING` and `WITH CHECK`; safe column grants exclude identity, activation, verification and accepted deals from self-service writes.
 - [x] Exposed RPC wrappers use SECURITY INVOKER; no application views or blanket administrator privacy bypass introduced.
 - [x] Privileged implementations reviewed in an unexposed private schema, empty search path, fully qualified relations, restricted execution and actor/activity checks for actor-driven actions. Trusted Auth provisioning triggers remain unexposed.
 - [x] Local database lint and security/performance advisors passed at warning/error threshold after findings were fixed.
 - [ ] Repeat advisors and permission tests on the actual approved managed staging configuration.
-- [ ] Broaden contract/CV/invoice/document privacy tests as those full modules land; M1 contract rows are prerequisite metadata, not file-lifecycle acceptance.
+- [x] Actual Auth/Storage and SQL tests cover private contract/CV/certificate/invoice metadata, exact PDF versions, other-lecturer/senior denial and appropriate AAL2 management capability; general private material has no admin bypass.
 - [ ] Review query plans/load for the actual permission-sensitive search/scheduling workload; initial indexes are implemented.
 
 ## Transactional allocation
@@ -54,16 +54,17 @@ Checked items are evidenced **within the local M1 scope**, not a production cert
 - [x] M1 calendar allocations, claim event, notification and lecturer-course room membership commit with the successful claim.
 - [x] Filled jobs refuse silent reopening through management status changes.
 - [ ] Implement audited cancellation/reopening/substitution, multi-slot capacity and full accepted-work change workflows before enabling them.
-- [ ] Complete executed-contract document hashes/versioned acceptance and future file/resource grants; these are not implied by M1 metadata.
+- [x] Executed contract document/version/hash, immutable receipt history, applicable-version expiry/ancestor revocation and accepted-deal preservation tested. Receipt is not asserted to be a signature.
 
-## Collaboration and uploads — future modules
+## Collaboration and uploads — current local slices
 
-- [ ] Private DMs authorise by room membership, with no implicit admin access and separate participant channels.
-- [ ] Membership removal revokes database/realtime/storage access, with explicit signed-URL expiry semantics.
-- [ ] Private buckets, authorised metadata and short-lived signed downloads deny guessed object paths.
-- [ ] Content/type/size/rate limits, safe names, quarantine/malware scanning, preview/versioning and retention tested.
-- [ ] Actual contracts, CVs, qualification evidence, invoice PDFs and chat files have horizontal-access tests.
-- [ ] Rich wiki/forum content is sanitised, code remains text and unsafe URLs/executable previews are denied.
+- [x] Private DMs authorise by active room membership, with no implicit admin access and separate participant channels; SQL/actual Auth/WebSocket tests pass.
+- [x] Removal denies history/sending/files and future real Realtime INSERT delivery; no signed download URL is issued. Already delivered content cannot be recalled.
+- [x] Private quarantine/clean buckets deny direct read/signing, even for owners; authenticated Edge streams recheck live metadata authorisation before/after loading bytes.
+- [x] Content magic/type/size/rate/quota, safe names, quarantine, real ClamAV/EICAR and outage denial, immutable version hashes/exact bytes tested locally. Previews implemented; exhaustive format rendering remains pending.
+- [ ] Complete configurable classification/expiry/sharing/retention/purge and operational scan monitoring.
+- [x] Actual private documents, commercial PDFs and chat files have horizontal/revocation/direct-Storage bypass tests.
+- [x] Wiki/forum validate strict rich JSON and URL allowlists; unsupported HTML/attributes reject, code remains text, private draft revisions stay isolated from published content.
 
 ## Frontend/PWA and supply chain
 
@@ -73,9 +74,10 @@ Checked items are evidenced **within the local M1 scope**, not a production cert
 - [x] Offline deep-link shell and connection notice verified; mutations require online server confirmation and show no fabricated success.
 - [x] Explicit sign-out and authenticated actor changes clear private query state; protected route and account-denial paths tested.
 - [x] Exact lockfile, dependency audit and patch overrides reviewed. Production audit has zero findings; full audit has four acknowledged low build-tool findings below.
-- [x] Local typecheck, lint, formatting, 22 source tests and production build passed after final UI corrections.
+- [x] Local typecheck, lint, formatting and 42 source tests pass; full current build/browser/PWA acceptance is recorded in latest QA results.
 - [x] DE/EN, language-switch form preservation, light/dark/system, desktop/Pixel 7 emulation and scanned control/error labels passed browser checks; axe found no violations on scanned screens.
-- [ ] GitHub CI run acceptance remains pending until an actual remote result is recorded.
+- [x] M1 signed head `b05f4b1` passed GitHub CI.
+- [ ] Record actual remote CI for the expanded current revision; do not infer it from prior CI.
 - [ ] Verify HTTPS/CSP/security/cache headers and SPA deep links on the actual approved Hostinger portal root.
 - [ ] Complete manual keyboard/screen-reader/zoom assessment, broader narrow-width sweep, Safari/Firefox/iOS and physical PWA installation. Automated local axe is not a full WCAG certification.
 - [ ] Review strict remote-suspension cache eviction, session expiry and all later private-data flows during release hardening.
@@ -88,7 +90,7 @@ Checked items are evidenced **within the local M1 scope**, not a production cert
 - [ ] Have Carina review operational onboarding, permission administration and support guidance.
 - [ ] Receive explicit approval for the concrete production release and its DNS/hosting/data changes.
 
-The delivered M1 remains a local development milestone. No legal/GDPR, e-signature, hosted or production acceptance is inferred from these checks.
+The delivered system remains a local development milestone with explicit outstanding full-product scope. No legal/GDPR, e-signature, hosted or production acceptance is inferred from these checks.
 
 ## Dependency scan checkpoint
 

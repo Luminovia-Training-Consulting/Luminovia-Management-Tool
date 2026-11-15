@@ -1,0 +1,101 @@
+import { queryOptions } from "@tanstack/react-query";
+import { db } from "../../lib/supabase";
+export interface Organisation {
+  id: string;
+  name: string;
+  country: string | null;
+  time_zone: string;
+  industry: string;
+  city: string;
+  tags: string[];
+  archived_at: string | null;
+}
+export interface Contact {
+  id: string;
+  organisation_id: string;
+  name: string;
+  position: string;
+  email: string;
+  phone: string;
+  notes: string;
+  archived_at: string | null;
+}
+export interface Template {
+  id: string;
+  title: string;
+  description: string;
+  syllabus: string;
+  prerequisites: string;
+  archived_at: string | null;
+  course_template_topics: { topic_id: string }[];
+}
+export interface CourseRun {
+  id: string;
+  template_id: string;
+  organisation_id: string | null;
+  time_zone: string;
+  delivery_type: "online" | "onsite";
+  venue: string;
+  published: boolean;
+  archived_at: string | null;
+  course_sessions: { id: string; starts_at: string; ends_at: string }[];
+}
+export const orgQuery = (actor: string) =>
+  queryOptions({
+    queryKey: ["operations", "organisations", actor],
+    queryFn: async () => {
+      const { data, error } = await db()
+        .from("organisations")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return data as Organisation[];
+    },
+  });
+export const contactsQuery = (actor: string) =>
+  queryOptions({
+    queryKey: ["operations", "contacts", actor],
+    queryFn: async () => {
+      const { data, error } = await db()
+        .from("organisation_contacts")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return data as Contact[];
+    },
+  });
+export const notesQuery = (actor: string) =>
+  queryOptions({
+    queryKey: ["operations", "notes", actor],
+    queryFn: async () => {
+      const { data, error } = await db()
+        .from("organisation_private_details")
+        .select("*");
+      if (error) throw error;
+      return data as { organisation_id: string; private_notes: string }[];
+    },
+  });
+export const templatesQuery = (actor: string) =>
+  queryOptions({
+    queryKey: ["operations", "templates", actor],
+    queryFn: async () => {
+      const { data, error } = await db()
+        .from("course_templates")
+        .select("*,course_template_topics(topic_id)")
+        .order("title");
+      if (error) throw error;
+      return data as Template[];
+    },
+  });
+export const runsQuery = (actor: string) =>
+  queryOptions({
+    queryKey: ["operations", "runs", actor],
+    queryFn: async () => {
+      const { data, error } = await db()
+        .from("course_runs")
+        .select("*,course_sessions(*)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as CourseRun[];
+    },
+  });

@@ -1,5 +1,36 @@
 # QA evidence — 2026-11-15
 
+The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
+
+## Expanded local system — complete local command passed
+
+`./portal test` completed successfully on **2026-11-15 at 13:53:47 UTC**, isolated project `luminovia-portal-test-999c091e`. The ignored private report is `.local/tests/999c091e/RESULT.txt`.
+
+| Check | Actual result |
+| --- | --- |
+| Source | Lint, TypeScript, formatting; 42 Vitest tests across 12 files passed |
+| Runtime | 7 ownership/redaction/environment/network safeguards passed |
+| Edge | 11 tests across invitation/files and both Deno typechecks passed |
+| Fresh database | All 10 migrations replayed; 43 public tables, all RLS-enabled; lint/security/performance advisors passed |
+| SQL | 78 real PostgreSQL checks: core 25, chat 17, knowledge 14, commercial 14, document quotas/retries 8 |
+| Actual services | Auth/TOTP, REST/RPC, WebSockets, private Storage/ClamAV and captured-mail invitation suites passed |
+| Persistence | Actual stop/start retained original password, verified MFA factor, edited profile/timezone, private appointment and exact private object bytes; checked probe cleanup passed |
+| Browsers | 40/40 desktop/mobile Chromium workflows, zero skipped, 2.7 minutes; scanned pages passed axe |
+| Built PWA | Build passed; 46 static precache entries (~2.3 MiB);2/2 checks passed in 2.2 seconds for real SW control, offline deep links and no private API caches |
+| Cleanup | Only the random test stack/network/volumes removed; normal development untouched |
+
+Real API cases include fifty simultaneous claims/one winner/five allocations, immutable accepted fees, personal-event privacy even against ordinary admins, forged roles/metadata denial and suspension; actual message delivery then removal/suspension revocation; safe published wiki snapshots independent of newer private drafts; original-currency invoices, partial/full payment and audited corrections; customer-contact isolation and protected accepted course schedules. Document tests use actual ClamAV clean/EICAR results, type/magic limits, exact version hashes/bytes, owner/peer/administrator/anonymous denial, direct Storage/signing bypass denial, changed-byte/target retry conflicts, concurrent owner quota locks and a real scanner outage followed by a genuinely clean recovered upload.
+
+Browser coverage includes onboarding/recovery/MFA, profile/evidence, allocation/calendar, chat/group revocation, actual image Blob preview and private file version/rename/archive/search, reusable courses/directory contacts, wiki/code/publication/history, moderated forum and executed contract/invoice/payment tracking. These are actual local services, not intercepted API success responses.
+
+The complete passing command was followed by visual review. A hidden attachment input caused a 33px mobile-chat overflow; native hidden inputs preserve the accessible trigger and remove the inherited full-width rule. A separate real isolated chat/commercial rerun passed all six desktop/mobile cases in 1.1 minutes, including actual picker/scanning/recipient-download bytes and no overflow. Measured viewport/scrollWidth returned to 412/412; restoring the old input reproduced 445px width. Its evidence is recorded in WORKLOG. GitHub runs the canonical full command again for the submitted revision. Current root build also passed and a scan found no actual local server credentials/passwords in repository source.
+
+Earlier integration failures and fixes are retained in WORKLOG: first browser 26/38, second 34/40, third 39/40, then 40/40. Code entry asserts exact text before/after persistence, using desktop Enter and the explicitly reproduced Android-UA-emulation Shift+Enter path. Physical Android virtual-keyboard Enter, Safari/Firefox/iOS and native PWA installation remain manual/platform gates. Automated axe is not full WCAG certification.
+
+No hosted Supabase, Hostinger/DNS, public website, real emails, real contracts/invoices or money transfers were changed. The entire target product remains incomplete; see the complete module ledger. Database/Storage persistence is proven locally, while production backups/restore/retention, privacy/legal, monitored staging and production approval remain pending.
+
+## Historical M1 evidence
+
 This file records executed checks, not target-product acceptance. All backend mutations described here used disposable fictional data in local Docker Supabase. No hosted Supabase project or production website was changed; no messages were delivered to real email addresses.
 
 ## Environment
@@ -73,4 +104,4 @@ The owned preview server and Edge process were stopped. `supabase stop --project
 
 Hosted Auth/SMTP configuration, actual Hostinger headers/SPA deployment, Safari/Firefox/iOS, physical PWA installation, manual accessibility assessment, production observability/restore drills and legal/privacy review remain separate acceptance gates. Phase 3–5 target-product modules are not accepted by these M1 checks.
 
-Minor copy polish: a one-session job card currently uses the generic German plural (`1 Termine`). This does not affect allocation or amounts.
+Historical singular/plural copy issue was subsequently corrected and the M1 CI passed.

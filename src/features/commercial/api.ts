@@ -1,0 +1,127 @@
+import { queryOptions } from "@tanstack/react-query";
+import { db } from "../../lib/supabase";
+import type {
+  CommercialAccess,
+  CommercialPerson,
+  ContractRecord,
+  EarningRecord,
+  InvoicePayment,
+  InvoiceRecord,
+} from "./types";
+export const commercialKeys = {
+  access: (actor: string) => ["commercial-access", actor] as const,
+  contracts: (actor: string) => ["contracts", actor] as const,
+  finance: (actor: string) => ["finance", actor] as const,
+};
+export const commercialAccessQuery = (actor: string) =>
+  queryOptions({
+    queryKey: commercialKeys.access(actor),
+    queryFn: async () => {
+      const { data, error } = await db().rpc("commercial_access");
+      if (error) throw error;
+      return data as CommercialAccess;
+    },
+    staleTime: 1000,
+  });
+export const commercialPeopleQuery = (actor: string) =>
+  queryOptions({
+    queryKey: ["commercial-people", actor],
+    queryFn: async () => {
+      const { data, error } = await db().rpc("commercial_people");
+      if (error) throw error;
+      return (data ?? []) as CommercialPerson[];
+    },
+  });
+export const contractsQuery = (actor: string, all: boolean) =>
+  queryOptions({
+    queryKey: [...commercialKeys.contracts(actor), all],
+    queryFn: async () => {
+      const { data, error } = await db().rpc("contract_records", {
+        p_all: all,
+      });
+      if (error) throw error;
+      return (data ?? []) as ContractRecord[];
+    },
+  });
+export const earningsQuery = (actor: string, all: boolean) =>
+  queryOptions({
+    queryKey: [...commercialKeys.finance(actor), "earnings", all],
+    queryFn: async () => {
+      const { data, error } = await db().rpc("finance_earnings", {
+        p_all: all,
+      });
+      if (error) throw error;
+      return (data ?? []) as EarningRecord[];
+    },
+  });
+export const invoicesQuery = (actor: string, all: boolean) =>
+  queryOptions({
+    queryKey: [...commercialKeys.finance(actor), "invoices", all],
+    queryFn: async () => {
+      const { data, error } = await db().rpc("invoice_records", { p_all: all });
+      if (error) throw error;
+      return (data ?? []) as InvoiceRecord[];
+    },
+  });
+export const paymentsQuery = (actor: string, invoice: string) =>
+  queryOptions({
+    queryKey: [...commercialKeys.finance(actor), "payments", invoice],
+    queryFn: async () => {
+      const { data, error } = await db().rpc("invoice_payments", {
+        p_invoice_id: invoice,
+      });
+      if (error) throw error;
+      return (data ?? []) as InvoicePayment[];
+    },
+  });
+/** Protect exported user-authored text from spreadsheet formula interpretation. */
+export function csvCell(value: unknown) {
+  let text = String(value ?? "").replace(/[\r\n\t]/g, " ");
+  if (/^\s*[=+\-@]/.test(text)) text = `'${text}`;
+  return `"${text.replaceAll('"', '""')}"`;
+}
+export function csvText(rows: unknown[][]) {
+  return "\uFEFF" + rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+}
+export function downloadCsv(filename: string, rows: unknown[][]) {
+  const url = URL.createObjectURL(
+    new Blob([csvText(rows)], { type: "text/csv;charset=utf-8" }),
+  );
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+export function groupedEarnings(rows: EarningRecord[]) {
+  const groups = new Map<
+    string,
+    {
+      currency: "EUR" | "AUD";
+      expected: number;
+      completed: number;
+      invoiced: number;
+      paid: number;
+    }
+  >();
+  for (const row of rows) {
+    const group = groups.get(row.currency) ?? {
+      currency: row.currency,
+      expected: 0,
+      completed: 0,
+      invoiced: 0,
+      paid: 0,
+    };
+    group[row.stage] += Math.round(Number(row.total_amount) * 100);
+    groups.set(row.currency, group);
+  }
+  return [...groups.values()].map((group) => ({
+    currency: group.currency,
+    expected: group.expected / 100,
+    completed: group.completed / 100,
+    invoiced: group.invoiced / 100,
+    paid: group.paid / 100,
+  }));
+}

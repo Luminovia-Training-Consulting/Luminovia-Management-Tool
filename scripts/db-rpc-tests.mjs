@@ -6,7 +6,8 @@ import { spawn } from 'node:child_process';
 import { readFile, readdir } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
-const container = 'supabase_db_luminovia-portal';
+const container = process.env.PORTAL_DB_CONTAINER ?? 'supabase_db_luminovia-portal';
+if(!/^supabase_db_luminovia-portal(?:-test-[a-f0-9]+|-test)?$/.test(container))throw new Error('Only this project or its isolated test container is allowed.');
 const database = `portal_test_${randomUUID().replaceAll('-', '')}`;
 function command(args, input='') {
  return new Promise((resolve,reject)=>{

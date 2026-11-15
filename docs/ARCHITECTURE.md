@@ -1,6 +1,6 @@
 # Architecture and decisions
 
-Status: first milestone under implementation. The complete product is specified in [PRODUCT_SPEC.md](PRODUCT_SPEC.md). Current primary documentation/version checks are in [REFERENCE_SOURCES.md](REFERENCE_SOURCES.md). Database-specific API/security notes are maintained in `BACKEND*.md` where present; migration SQL and actual tests own the schema truth.
+Status: M1 locally accepted; expanded local M2 integration under full-stack verification. The complete product is specified in [PRODUCT_SPEC.md](PRODUCT_SPEC.md). Current primary documentation/version checks are in [REFERENCE_SOURCES.md](REFERENCE_SOURCES.md). Database-specific API/security notes are maintained in `BACKEND*.md` where present; migration SQL and actual tests own the schema truth.
 
 ## ADR-001 — separate private portal and static frontend
 
@@ -8,11 +8,11 @@ Use the existing `Luminovia-Training-Consulting/Luminovia-Management-Tool` repos
 
 ## ADR-002 — source-of-truth and feature boundaries
 
-TanStack Query manages remote state through `@supabase/supabase-js`; no duplicated browser database or fake-auth runtime. React Router protects private screens and preserves deep links, while RLS/API checks remain authoritative. React Hook Form and Zod validate forms accessibly; database constraints revalidate security-critical data. i18next/react-i18next provide German/English text; browser locale/theme preferences may be persisted, private records may not. Tailwind/shadcn primitives and Lucide icons use verified brand tokens. FullCalendar owns calendar rendering; future permissioned Kanban uses dnd-kit and wiki/forum use a safe Tiptap-class editor.
+TanStack Query manages remote state through `@supabase/supabase-js`; no duplicated browser database or fake-auth runtime. React Router protects private screens and preserves deep links, while RLS/API checks remain authoritative. React Hook Form and Zod validate forms accessibly; database constraints revalidate security-critical data. i18next/react-i18next provide German/English text; browser locale/theme preferences may be persisted, private records may not. Tailwind/shadcn primitives and Lucide icons use verified brand tokens. FullCalendar owns calendar rendering; future permissioned Kanban uses dnd-kit. Wiki/forum use Tiptap with a strict stored/rendered JSON whitelist and code-block language highlighting.
 
 M1 public API contract (subject to migration ownership): `get_my_permissions()` returns capability names; own `profiles` uses `id`, `display_name`, `bio_de`, `bio_en`, `phone`, `time_zone`, `locale`, `active` with restricted self-edit fields. `topics` and `lecturer_topics` distinguish self-selected expertise from protected verification. Jobs expose nested `job_sessions`/`job_requirements`. `set_job_status(p_job_id, p_status)` allows audited draft/published/archived transitions and refuses silent changes to filled work. `claim_job(p_job_id, p_idempotency_key, p_terms_version)` returns a truthful status and optional claim ID. `create_job(p_payload jsonb)` requires `jobs.manage` and AAL2 and creates the complete supported block atomically. Private events stay owner-only. Check backend notes for the final full payload, validation and result codes before adding callers.
 
-M1 routes: `/login`, `/auth/callback`, `/auth/password`, `/`, `/jobs`, `/jobs/:id`, `/calendar`, `/profile`, `/security`, `/admin`, `/admin/people`. Other modules remain required in the plan; absent modules are not represented by decorative working-looking routes.
+Current routes: `/login`, `/auth/callback`, `/auth/password`, `/`, `/jobs`, `/jobs/:id`, `/calendar`, `/profile`, `/security`, `/admin`, `/admin/people`, `/chats`, `/files`, `/wiki`, `/forum`, `/clients`, `/courses`, `/contracts`, `/finance`, `/search`. The plan distinguishes their implemented slices from outstanding target requirements.
 
 Feature flow: component → validated form/query/mutation → Supabase Auth/data API/RPC → permission/RLS + constraints → committed database records → query invalidation/refetch. Claims, messages and uploads show success only after server confirmation. A failed write never becomes a local confirmed allocation.
 
@@ -42,9 +42,9 @@ A third migration adds `verify_lecturer_topic(p_user_id, p_topic_id, p_verified,
 
 ## ADR-005 — resource-level privacy and files
 
-Every exposed table has RLS plus explicit table/column/function grants. Profiles, role assignments, verification, jobs, claims and private events use distinct policies. Private events are owner-only even for an ordinary admin. DMs will use membership, not admin status. Course lecturer discussion and participant discussion are separate rooms. Search, realtime and storage must apply equivalent resource authorisation, including after revocation.
+Every exposed table has RLS plus explicit table/column/function grants. Profiles, role assignments, verification, jobs, claims and private events use distinct policies. Private events are owner-only even for an ordinary admin. DMs use active membership, not admin status. Course lecturer discussion and participant discussion are separate rooms. Search, realtime and storage must apply equivalent resource authorisation, including after revocation.
 
-Storage is private by default. Authorised metadata precedes access; sensitive downloads require short-lived URLs and reviewed revocation semantics. Uploaded content stays quarantined until scanning succeeds. No uploads are considered production-complete until type/size/rate limits, scan processing, audit, retention and cross-user denial are tested. Database backups alone do not include Storage binaries.
+Storage is private by default. Authorised metadata precedes access; sensitive downloads pass through the authenticated Edge Function with a fresh metadata permission check before and after fetching bytes; the client receives no reusable signed Storage URL. Uploaded content stays quarantined until scanning succeeds. No uploads are considered production-complete until type/size/rate limits, scan processing, audit, retention and cross-user denial are tested. Database backups alone do not include Storage binaries.
 
 ## ADR-006 — time, money and content
 
@@ -61,3 +61,21 @@ GitHub CI validates source and migrations; it does not automatically publish to 
 ## External configuration and present limits
 
 The connected Supabase project inventory returned no projects on 15 November 2026. No hosted project, real user invitation, production deployment or Hostinger change has been made by this milestone's reconnaissance. Local Supabase/test infrastructure can validate the usable slice independently; local validation is not managed-staging, SMTP or production acceptance.
+
+## ADR-008 — persistent local orchestration and disposable verification
+
+The executable `./portal` is the sole complete local entry point. `start` supervises loopback Vite, local Supabase, Edge Functions, Mailpit and internal-network ClamAV. Locked migrations apply incrementally; insert-only fictional bootstrap never resets existing passwords, MFA, profiles or business data. Database/Auth/Storage and scanner signatures persist in Docker volumes through `stop`/`restart`. Local credentials and process state are private ignored files; PID/session ownership prevents stopping unrelated processes. See [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md).
+
+`./portal test` copies source without development credentials into a random disposable project, uses separate ports/volumes, and runs actual Auth/MFA/Storage persistence, SQL/RLS/concurrency, WebSocket/HTTP, Mailpit and browser/PWA checks. Cleanup targets only that random test project. CI runs the same command and has no deployment action.
+
+## ADR-009 — collaboration and rich-content boundaries
+
+Chat membership is the common authorisation predicate for room metadata, messages, reactions and room-scoped files. A removed member can observe only their own removal tombstone so the client clears the room, while Postgres Realtime rechecks message access for future events. Staff/lecturer and participant course rooms are distinct; administration grants no DM membership. Message idempotency prevents duplicate uncertain retries. See [CHAT_SECURITY](CHAT_SECURITY.md).
+
+Wiki public snapshots are separate from private newer drafts; lists/search never expose unpublished revision bodies to other staff. Allowed editor JSON nodes/attributes/links are validated on both boundaries, with React rendering rather than authored HTML. Forum moderation requires its explicit capability/MFA; authors retain scoped edit rights. See [KNOWLEDGE_SECURITY](KNOWLEDGE_SECURITY.md).
+
+## ADR-010 — immutable documents and commercial tracking
+
+Uploads reserve immutable version metadata, undergo bounded MIME/magic validation and private quarantine, then actual ClamAV INSTREAM scanning. Only clean bytes are copied into the clean private bucket. Failure/outage remains unavailable. Old versions keep their hashes and exact bytes. A restrictive Storage policy blocks direct download/signing, including by an authenticated owner; Edge performs live authorisation. Each scope has its own predicate; room removal removes the uploader's access too. Course/job materials use room or pre/post-claim job scope. Archives, expiry links and wiki attachments remain pending, rather than weakening private-file access.
+
+Commercial records link exact clean PDF versions/hashes. Externally executed contracts and addenda are registered by an AAL2-capable manager; lecturer receipt is an immutable acknowledgement, never asserted to be a legal signature. Claim prerequisites serialize on the lecturer lock and select the applicable contract chain. Accepted terms stay immutable. Invoices derive amounts from owned accepted claims, retain original currencies, and support audited review/payment corrections. Linked legal/financial versions cannot be silently removed. This is compensation/invoice tracking, not accounting, payroll, tax or a bank integration.

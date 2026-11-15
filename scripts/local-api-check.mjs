@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
+if(process.env.PORTAL_TEST_MODE!=='1')throw new Error('Run destructive fixture acceptance only through isolated ./portal test.');
 process.loadEnvFile('.env.test.local');
 const url = process.env.SUPABASE_URL;
 assert.ok(url && ['127.0.0.1', 'localhost', '[::1]'].includes(new URL(url).hostname), 'Only loopback test projects are permitted');
