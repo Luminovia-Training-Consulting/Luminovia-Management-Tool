@@ -227,10 +227,10 @@ class ReleaseTests(unittest.TestCase):
             release = {"tag_name": tag, "immutable": True, "assets": [{"name": name, "state": "uploaded", "browser_download_url": "https://github.com/" + u.REPOSITORY + "/releases/download/" + tag + "/" + name} for name in ("cms-release.tar.gz", "cms-release.json")]}
             run = {"head_sha": COMMIT, "head_branch": "main", "event": "push", "status": "completed", "conclusion": "success", "path": ".github/workflows/ci.yml"}
             calls = []
-            def api(path):
+            def api(path, *, missing_ok=False):
                 calls.append(path)
-                if path.startswith("/releases"):
-                    return [release]
+                if path.startswith("/releases/tags/"):
+                    return release
                 if path == "/branches/main":
                     return {"commit": {"sha": COMMIT}}
                 if path.startswith("/git/ref"):
@@ -239,6 +239,7 @@ class ReleaseTests(unittest.TestCase):
             updater.api = api
             self.assertEqual(updater.candidate()["status"], "candidate")
             self.assertEqual(len(calls), 4)
+            self.assertEqual(calls[:2], ["/branches/main", "/releases/tags/" + tag])
             run["event"] = "pull_request"
             self.assertEqual(updater.candidate()["status"], "waiting_for_successful_main_checks")
             release["immutable"] = False
@@ -249,12 +250,51 @@ class ReleaseTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             updater = u.Updater(instance(directory))
             calls = []
-            updater.api = lambda path: calls.append(path) or [{"tag_name": "cms-dev-" + COMMIT, "immutable": True}]
+            updater.api = lambda path: calls.append(path) or {"commit": {"sha": COMMIT}}
             updater.state = {"currentCommit": COMMIT}
             self.assertEqual(updater.candidate()["status"], "current")
             updater.state = {"failedCommit": COMMIT}
             self.assertEqual(updater.candidate()["status"], "failed_release_suppressed")
             self.assertEqual(len(calls), 2)
+            self.assertEqual(calls, ["/branches/main", "/branches/main"])
+
+    def test_reordered_release_list_cannot_hide_exact_current_main_release(self):
+        with tempfile.TemporaryDirectory() as directory:
+            updater = u.Updater(instance(directory))
+            releases = [{"tag_name": "cms-dev-" + OLD, "immutable": True}, {"tag_name": "cms-dev-" + COMMIT, "immutable": True}]
+            current = releases[1]
+            current["assets"] = [{"name": name, "state": "uploaded", "browser_download_url": "https://github.com/" + u.REPOSITORY + "/releases/download/" + current["tag_name"] + "/" + name} for name in ("cms-release.tar.gz", "cms-release.json")]
+            calls = []
+            def api(path, *, missing_ok=False):
+                calls.append(path)
+                if path == "/branches/main":
+                    return {"commit": {"sha": COMMIT}}
+                if path == "/releases?per_page=5":
+                    return releases  # The live failure's older-first ordering.
+                if path.startswith("/releases/tags/"):
+                    return next((item for item in releases if path.endswith(item["tag_name"])), None)
+                if path.startswith("/git/ref"):
+                    return {"object": {"type": "commit", "sha": COMMIT}}
+                return {"workflow_runs": [{"head_sha": COMMIT, "head_branch": "main", "event": "push", "status": "completed", "conclusion": "success", "path": ".github/workflows/ci.yml"}]}
+            updater.api = api
+            self.assertEqual(updater.candidate()["commit"], COMMIT)
+            self.assertNotIn("/releases?per_page=5", calls)
+            self.assertEqual(len(calls), 4)
+
+    def test_missing_exact_release_404_is_normal_waiting_but_other_errors_fail(self):
+        with tempfile.TemporaryDirectory() as directory:
+            updater = u.Updater(instance(directory))
+            missing = u.urllib.error.HTTPError(u.API + "/releases/tags/cms-dev-" + COMMIT, 404, "Not Found", {}, None)
+            main = io.BytesIO(json.dumps({"commit": {"sha": COMMIT}}).encode())
+            with patch.object(updater.opener, "open", side_effect=[main, missing]):
+                self.assertEqual(updater.candidate(), {"status": "waiting_for_main_release", "commit": COMMIT})
+            forbidden = u.urllib.error.HTTPError(u.API + "/releases/tags/cms-dev-" + COMMIT, 403, "Forbidden", {}, None)
+            with patch.object(updater.opener, "open", side_effect=forbidden):
+                with self.assertRaisesRegex(u.UpdateError, "github_request_failed"):
+                    updater.api("/releases/tags/cms-dev-" + COMMIT, missing_ok=True)
+            with patch.object(updater.opener, "open", side_effect=missing):
+                with self.assertRaisesRegex(u.UpdateError, "github_request_failed"):
+                    updater.api("/branches/main")
 
 
 class InstallationTests(unittest.TestCase):

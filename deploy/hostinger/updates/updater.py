@@ -337,7 +337,7 @@ class Updater:
         env = self.private / ("selfhost.env" if kind == "backend" else "web.env")
         return self.command(["docker", "compose", "--project-directory", str(directory), "--env-file", str(env), "-f", str(directory / "compose.yml"), *arguments], timeout=600)
 
-    def api(self, path):
+    def api(self, path, *, missing_ok=False):
         request = urllib.request.Request(API + path, headers={"Accept": "application/vnd.github+json", "User-Agent": "Luminovia-Development-Updater/1", "X-GitHub-Api-Version": "2026-03-10"})
         try:
             with self.opener.open(request, timeout=20) as response:
@@ -347,27 +347,33 @@ class Updater:
                 return json.loads(data)
         except UpdateError:
             raise
+        except urllib.error.HTTPError as error:
+            if missing_ok and error.code == 404:
+                return None
+            raise UpdateError("github_request_failed") from error
         except (OSError, ValueError, urllib.error.URLError) as error:
             raise UpdateError("github_request_failed") from error
 
     def candidate(self):
-        releases = self.api("/releases?per_page=5")
-        if not isinstance(releases, list):
-            raise UpdateError("invalid_github_release_response")
-        release = next((item for item in releases if isinstance(item, dict) and not item.get("draft") and re.fullmatch(r"cms-dev-[a-f0-9]{40}", str(item.get("tag_name", "")))), None)
-        if release is None:
-            return {"status": "no_published_release"}
-        commit = release["tag_name"][8:]
-        if release.get("immutable") is not True:
-            raise UpdateError("automatic_release_must_be_immutable")
+        # GitHub's release list order is not a deployment ordering guarantee.
+        # Read current main first, then resolve that commit's exact release tag.
+        branch = self.api("/branches/main")
+        commit = branch.get("commit", {}).get("sha") if isinstance(branch, dict) else None
+        if not isinstance(commit, str) or not SHA.fullmatch(commit):
+            raise UpdateError("invalid_github_main_response")
         if commit == self.state.get("currentCommit"):
             return {"status": "current", "commit": commit}
         if commit == self.state.get("failedCommit"):
             return {"status": "failed_release_suppressed", "commit": commit}
         # Four API calls only for a new release; normal polls use one.
-        branch = self.api("/branches/main")
-        if branch.get("commit", {}).get("sha") != commit:
-            return {"status": "release_not_current_main", "commit": commit}
+        tag_name = "cms-dev-" + commit
+        release = self.api("/releases/tags/" + tag_name, missing_ok=True)
+        if release is None or isinstance(release, dict) and release.get("draft"):
+            return {"status": "waiting_for_main_release", "commit": commit}
+        if not isinstance(release, dict) or release.get("tag_name") != tag_name:
+            raise UpdateError("release_tag_identity_mismatch")
+        if release.get("immutable") is not True:
+            raise UpdateError("automatic_release_must_be_immutable")
         tag = self.api("/git/ref/tags/" + release["tag_name"])
         if tag.get("object", {}).get("type") != "commit" or tag.get("object", {}).get("sha") != commit:
             raise UpdateError("release_tag_commit_mismatch")
