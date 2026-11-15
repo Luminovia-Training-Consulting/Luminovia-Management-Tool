@@ -2,6 +2,12 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## M6 continuation — complete operations and latest-source local preview
+
+The current attached master prompt is unchanged. The complete module ledger below remains required; accepted client accounts, 50/50 default and selfhost development continue. Independent runtime delivery adds `./portal github` with exact-main retrieval, an isolated persistent preview and separate latest-source QA. Focused real-Git/process, ownership, symlink, migration and stop checks pass; native preview startup is still pending installation of the helper in main. The runtime-only PR must pass exact application/native CI before the authorised merge and actual preview rehearsal.
+
+Taxonomy management, safe audited job lifecycle and notification preferences/inbox are being implemented as connected database/API/UI slices in the isolated M6 worktree. Their tests and completeness remain pending combined acceptance, not implied by the independent runtime delivery. No production or public-website deployment is included.
+
 ## GitHub contribution and governance continuation
 
 Requested: require independent review for other contributors while allowing `CarinaSchoppe` to merge through a personal PR-only exception; supply useful labels/tags, issue/PR templates and a GitHub-discoverable contribution guide. The isolated branch is `codex/contribution-guides-and-rules`. [GitHub administration](GITHUB_WORKFLOW.md) records the split history/review/check policies, precise human and maintenance-bot identities, metadata validation and historical milestone tag targets. The standard-bot bypass failed the actual protected-branch proof. Live review/check rules remain disabled; a repository-scoped App-token patch is signed and pushed separately, awaiting user approval and GitHub passkey authentication. Finish the documented App setup/proof before activating rules. Run exact contributor-source PR checks and preserve the final delivery record. No production or public-website change belongs to this task.

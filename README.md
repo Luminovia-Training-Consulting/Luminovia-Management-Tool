@@ -77,6 +77,16 @@ React + TypeScript + Vite, Tailwind v4, shadcn-style Radix/CVA primitives, Lucid
 
 Dependencies are exact-pinned with `package-lock.json`. All FullCalendar packages use matching version 6.1.22. Security overrides pin patched `glob` and `minimatch`; see [security checklist](docs/SECURITY_PRIVACY_CHECKLIST.md) for remaining build-tool advisories. Use `npm ci`, not an unreviewed blanket `audit fix --force`.
 
+## Den neuesten GitHub-Stand separat ausprobieren
+
+```bash
+./portal github
+```
+
+Der Starter holt den aktuellen Hauptzweig in eine eigene verwaltete Arbeitskopie und startet ihn unter **http://127.0.0.1:5373**. Die normale Entwicklungsumgebung und ihre Daten bleiben erhalten. Auch die Vorschau behält ihre eigenen Konten, Passwörter, MFA und Dateien bei Stop/Start und zulässigen Vorwärtsupdates.
+
+`./portal github test` prüft den neuesten Commit separat, ohne eine laufende Vorschau zu aktualisieren. Weitere Befehle, Voraussetzungen und der konkrete Umgang mit prüfbedürftigen Migrationen stehen im [GitHub-Testleitfaden](docs/GITHUB_LOCAL_PREVIEW.md).
+
 ## Mit einem Befehl vollständig testen
 
 ```bash

@@ -83,7 +83,7 @@ async function locked(operation) {
 }
 function help() {
   console.log(
-    `Luminovia Portal – lokale vollständige Laufzeit\n\n  ./portal start        Alle lokalen Dienste starten (Hintergrund)\n  ./portal up           Starten; Ctrl+C stoppt datenerhaltend\n  ./portal restart      Datenerhaltend neu starten\n  ./portal status       Dienststatus und lokale URLs\n  ./portal stop         Eigene Dienste stoppen; Daten bleiben erhalten\n  ./portal test         Vollständige Tests in isolierter Umgebung\n  ./portal credentials  Lokales ursprüngliches Testpasswort anzeigen\n\nNode.js >=22.12, npm und laufendes Docker werden benötigt.\nKeine Produktion, keine echten E-Mails, kein Reset beim Start.`,
+    `Luminovia Portal – lokale vollständige Laufzeit\n\n  ./portal start        Alle lokalen Dienste starten (Hintergrund)\n  ./portal up           Starten; Ctrl+C stoppt datenerhaltend\n  ./portal restart      Datenerhaltend neu starten\n  ./portal status       Dienststatus und lokale URLs\n  ./portal stop         Eigene Dienste stoppen; Daten bleiben erhalten\n  ./portal test         Vollständige Tests in isolierter Umgebung\n  ./portal credentials  Lokales ursprüngliches Testpasswort anzeigen\n  ./portal github       Neuesten GitHub-main separat lokal ausprobieren\n  ./portal github test  Neuesten GitHub-main vollständig isoliert testen\n\nNode.js >=22.12, npm und laufendes Docker werden benötigt.\nKeine Produktion, keine echten E-Mails, kein Reset beim Start.`,
   );
 }
 function printStatus(state = readState()) {
@@ -213,6 +213,11 @@ async function stop() {
 }
 try {
   switch (action) {
+    case "github":
+      await (
+        await import("./runtime-github.mjs")
+      ).githubPreviewCommand(process.argv.slice(3));
+      break;
     case "start":
       await locked(start);
       break;
