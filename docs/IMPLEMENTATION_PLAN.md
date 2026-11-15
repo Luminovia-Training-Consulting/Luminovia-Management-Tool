@@ -4,7 +4,7 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 ## Current checkpoint — persistent full local system and M2
 
-M1 is locally verified and was merged by Carina in PR #1. This continuation is on `codex/local-system-and-collaboration` for a separate review. This continuation adds a single-command persistent local runtime and complete isolated verification command, followed by actual collaboration, documents, knowledge, directory/course and commercial slices. The complete isolated command passed: 42 source, 7 runtime, 11 Edge, 78 SQL, all actual API/Mailpit suites, 40 browser workflows and 2 built-PWA checks. A later visual hidden-input overflow correction has a separate targeted acceptance record; exact submitted source is verified by CI. See WORKLOG/QA_RESULTS. No mocked authentication or decorative module placeholders are used.
+M1 is locally verified and was merged by Carina in PR #1. This continuation is on `codex/local-system-and-collaboration` in [draft PR #2](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/2). This continuation adds a single-command persistent local runtime and complete isolated verification command, followed by actual collaboration, documents, knowledge, directory/course and commercial slices. The complete isolated command passed: 42 source, 7 runtime, 11 Edge, 78 SQL, all actual API/Mailpit suites, 40 browser workflows and 2 built-PWA checks. A later visual hidden-input overflow correction has a separate targeted acceptance record; exact submitted source is verified by CI. See WORKLOG/QA_RESULTS. No mocked authentication or decorative module placeholders are used.
 
 | Work item | Implemented slice | Acceptance source |
 | --- | --- | --- |
@@ -51,7 +51,7 @@ M1 is locally verified and was merged by Carina in PR #1. This continuation is o
 
 ## Next continuation actions
 
-1. Complete the final GitHub verification checkpoint. The full local command and subsequent six targeted mobile/desktop attachment/overflow cases passed; preserve this milestone and the development records.
+1. Check the exact latest [PR #2 CI](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/2) status when continuing; its run was pending at the signed documentation checkpoint. The complete local command and six later targeted attachment/overflow cases passed. Preserve the normal development records.
 2. Reconcile docs, visually review current fictional screenshots, verify no server credentials in source/build, signed commit/push existing branch and observe the exact PR CI result. Never merge or deploy production implicitly.
 3. Continue the outstanding vertical slices above, prioritising audited job lifecycle/capacity, availability, taxonomy/profile completeness and notification preferences over cosmetic additions.
 4. Configure separate approved managed staging/SMTP only when access and ownership are available. Complete hosted/manual/cross-browser/physical-PWA, privacy, monitoring, DB + actual Storage restore and rollback acceptance before a concrete production approval request.
