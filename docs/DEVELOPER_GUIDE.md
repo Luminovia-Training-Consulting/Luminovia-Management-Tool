@@ -32,6 +32,8 @@ Die normale Umgebung enthält ausschließlich fiktive Entwicklungsdaten, sofern 
 | `supabase/functions`                        | Authentifizierte Datei-/Avatar-Gateway und secretsführende Account-/Einladungsoperationen.                                  |
 | `scripts/runtime-*`                         | Überwachung lokaler Prozesse, Besitzprüfung, Umgebungsbereinigung, Datenpersistenz und isolierter Gesamtprüflauf.           |
 
+Der geschützte Router-Outlet ist zusätzlich nach Benutzer-ID gekeyt: Ein direkter Kontowechsel entfernt lokale Shell-/Formzustände. Tokenrefresh derselben Person erhält sie. Der öffentliche Einladungs-/Recovery-Callback gehört nicht zu dieser Remount-Grenze.
+
 Auth-Ereignisse können früher eintreffen als der erste `getSession()`-Aufruf. Der Auth-Provider schützt deshalb die Reihenfolge und leert private Queries vor einem Identitätswechsel. Formulare halten Entwürfe lokal; bestätigte Fachzustände entstehen nach einer erfolgreichen Serverantwort. Fehlgeschlagene oder abgelehnte SDK-Promises müssen einen sichtbaren, wiederholbaren Zustand hinterlassen. Auch Tastatur-Submit, Sprachwechsel und parallel laufende Requests gehören zum jeweiligen Formularvertrag.
 
 ## Datenfluss und Berechtigungen
@@ -95,6 +97,12 @@ Halte Komponenten, DTOs und Queries im zuständigen Fachmodul. Teile echte fachl
 Kommentiere den Grund einer Sperre, eine wichtige Reihenfolge, den Autorisierungsvertrag, einen Versions-/Wiederholungsfall oder eine Speicherfreigabe direkt am Code. Typen und klare Namen beschreiben die Daten; die Sicherheits-/Architekturdateien beschreiben die übergreifende Entscheidung. Passe Kommentare bei einer Verhaltensänderung an. Dokumentiere bekannte Grenzen, statt unimplementierte Zweige als Erfolg zurückzugeben.
 
 Erzeuge additive Migrationen mit der tatsächlich installierten CLI (`npx --no-install supabase migration new NAME`). Bearbeite bereits ausgelieferte Migrationen nicht nachträglich. Prüfe neue Tabellen, Indizes, Constraints, RLS und Grants zusammen mit der UI/API. Vermeide eine zweite Quelle für akzeptierte Honorare, bestätigte Termine oder Autoridentitäten.
+
+## Ladeverhalten und robuste Laufzeit
+
+Der [Systemprüfbericht](SYSTEM_AUDIT.md) dokumentiert Status-abhängige Metadatenintervalle, das zweiminütige Limit für schnelle Scan-Abfragen, unveränderliche versionsbezogene Bildbytes und gebündelte Chat-Revalidierungen. Er enthält echte Vorher-/Nachher-Messungen und Grenzen. Sprach-/Theme-Persistenz ist best effort; eine blockierte lokale Ablage darf die aktive Oberfläche nicht abbrechen. Die native Auth-Speicherung behält ihren separaten SDK-Vertrag.
+
+Terminintervalle müssen auf Datenbankebene endlich sein. Die neue Migration validiert Altdaten und stoppt bei einem ungültigen Bestand; vorhandene angenommene Vereinbarungen werden nicht still geändert. Prozess-Timeouts und Abbruch benötigen die tatsächliche Beendigung und eine ehrliche Cleanup-Bestätigung.
 
 ## Teststrategie und Fehleranalyse
 

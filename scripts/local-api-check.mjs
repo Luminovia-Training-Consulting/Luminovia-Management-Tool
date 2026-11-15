@@ -70,6 +70,23 @@ const ownEvent = await checked(users[0].client.from('personal_events').insert({
   title: 'Private QA appointment', user_id: users[0].user.id, starts_at: '2030-01-01T08:00:00Z',
   ends_at: '2030-01-01T09:00:00Z', time_zone: 'Europe/Berlin',
 }).select().single(), 'Create private calendar event');
+// The race winner is intentionally random. Probe beyond this actor's latest
+// assignment so the finite-time CHECK, rather than the earlier conflict trigger,
+// is what rejects Infinity in both the winner and loser cases.
+const lastAssignment = await checked(service.from('assignment_sessions').select('ends_at').eq('lecturer_id', users[0].user.id).order('ends_at', { ascending: false }).limit(1), 'Find an uncontested finite-time probe');
+const probeStart = new Date(Math.max(Date.parse(ownEvent.ends_at), lastAssignment[0] ? Date.parse(lastAssignment[0].ends_at) : 0) + 86_400_000).toISOString();
+const nonfiniteInsert = await users[0].client.from('personal_events').insert({
+  title: 'Fictional infinite blocker rejected by the API', user_id: users[0].user.id,
+  starts_at: probeStart, ends_at: 'infinity', time_zone: 'Europe/Berlin',
+});
+assert.equal(nonfiniteInsert.error?.code, '23514', 'Real HTTP rejects an infinite private interval');
+const nonfiniteUpdate = await users[0].client.from('personal_events').update({
+  starts_at: probeStart, ends_at: 'infinity',
+}).eq('id', ownEvent.id);
+assert.equal(nonfiniteUpdate.error?.code, '23514', 'Real HTTP rejects an infinite interval update');
+const preservedEvent = await checked(users[0].client.from('personal_events').select('starts_at,ends_at').eq('id', ownEvent.id).single(), 'Finite event remains unchanged');
+assert.equal(Date.parse(preservedEvent.starts_at), Date.parse(ownEvent.starts_at));
+assert.equal(Date.parse(preservedEvent.ends_at), Date.parse(ownEvent.ends_at));
 for (const actor of [users[1], admin]) {
   const otherEvents = await checked(actor.client.from('personal_events').select('id').eq('id', ownEvent.id), 'Private calendar RLS');
   assert.deepEqual(otherEvents, [], 'Neither another lecturer nor admin can read private appointments');

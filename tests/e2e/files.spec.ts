@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Request } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -20,6 +20,7 @@ async function login(page: import("@playwright/test").Page) {
 test("real private upload is scanned, downloaded, versioned and archived through the file centre", async ({
   page,
 }, testInfo) => {
+  test.setTimeout(65_000);
   await login(page);
   await page.goto("/files");
   const name = `Material-${randomUUID().slice(0, 8)}.txt`;
@@ -83,6 +84,32 @@ test("real private upload is scanned, downloaded, versioned and archived through
   ).toBeVisible();
   await page.goto("/files");
   await expect(page.getByText(renamed, { exact: true })).toBeVisible();
+  // Observe a real settled list beyond its former ten-second polling period.
+  // Preference-only renders must neither reload the document nor refetch files.
+  await page.waitForLoadState("networkidle");
+  const idleReads: string[] = [];
+  const navigations: string[] = [];
+  const countReads = (request: Request) => {
+    if (
+      request.method() === "GET" &&
+      new URL(request.url()).pathname === "/rest/v1/documents"
+    )
+      idleReads.push(request.url());
+    if (request.isNavigationRequest() && request.frame() === page.mainFrame())
+      navigations.push(request.url());
+  };
+  page.on("request", countReads);
+  await page.getByLabel("Sprache", { exact: true }).selectOption("en");
+  await page.getByLabel("Theme", { exact: true }).selectOption("dark");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await expect(page.getByText(renamed, { exact: true })).toBeVisible();
+  await page.waitForTimeout(12_000);
+  expect(idleReads).toEqual([]);
+  expect(navigations).toEqual([]);
+  page.off("request", countReads);
+  await page.getByLabel("Language", { exact: true }).selectOption("de");
+  await page.getByLabel("Farbschema", { exact: true }).selectOption("system");
   const scan = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
     .analyze();

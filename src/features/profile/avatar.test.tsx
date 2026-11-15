@@ -1,9 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  focusManager,
+  onlineManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { Avatar, AvatarEditor } from "./avatar";
 const { state, readAvatar } = vi.hoisted(() => ({
-  state: { actor: "actor-a", online: true },
+  state: { actor: "actor-a", online: true, canView: true, selection: vi.fn() },
   readAvatar: vi.fn(),
 }));
 vi.mock("../auth/auth-context", () => ({
@@ -16,7 +21,10 @@ vi.mock("../../lib/online", () => ({
 vi.mock("./avatar-api", () => ({
   avatarQuery: (actor: string, target: string) => ({
     queryKey: ["avatar", actor, target],
-    queryFn: async () => ({ version_id: actor }),
+    queryFn: async () => {
+      state.selection();
+      return state.canView ? { version_id: actor } : null;
+    },
     gcTime: 0,
   }),
   readAvatar,
@@ -29,6 +37,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
   state.actor = "actor-a";
   state.online = true;
+  state.canView = true;
+  vi.useRealTimers();
+  focusManager.setFocused(undefined);
+  onlineManager.setOnline(true);
 });
 function setup() {
   const create = vi
@@ -116,5 +128,45 @@ describe("private avatar Blob lifecycle", () => {
     expect(screen.getByRole("img")).toHaveAttribute("src", "blob:avatar-a");
     view.unmount();
     expect(view.revoke).toHaveBeenCalledWith("blob:avatar-a");
+  });
+  it("revalidates selection on focus without downloading the same immutable avatar again", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    readAvatar.mockResolvedValue(new Blob(["same exact clean version"]));
+    const view = setup();
+    await waitFor(() => expect(view.create).toHaveBeenCalledTimes(1));
+    focusManager.setFocused(false);
+    vi.setSystemTime(Date.now() + 31000);
+    await act(async () => focusManager.setFocused(true));
+    await waitFor(() => expect(state.selection).toHaveBeenCalledTimes(2));
+    expect(readAvatar).toHaveBeenCalledTimes(1);
+    state.canView = false;
+    focusManager.setFocused(false);
+    vi.setSystemTime(Date.now() + 31000);
+    await act(async () => focusManager.setFocused(true));
+    await waitFor(() =>
+      expect(view.revoke).toHaveBeenCalledWith("blob:avatar-a"),
+    );
+    expect(screen.getByRole("img")).not.toHaveAttribute("src");
+    expect(readAvatar).toHaveBeenCalledTimes(1);
+  });
+  it("revalidates revoked selection on reconnect while retaining the no-private-offline-URL guard", async () => {
+    readAvatar.mockResolvedValue(new Blob(["same exact clean version"]));
+    const view = setup();
+    await waitFor(() => expect(view.create).toHaveBeenCalledTimes(1));
+    state.online = false;
+    onlineManager.setOnline(false);
+    view.update();
+    expect(screen.getByRole("img")).not.toHaveAttribute("src");
+    state.canView = false;
+    state.online = true;
+    await act(async () => {
+      view.update();
+      onlineManager.setOnline(true);
+    });
+    await waitFor(() =>
+      expect(state.selection.mock.calls.length).toBeGreaterThan(1),
+    );
+    expect(screen.getByRole("img")).not.toHaveAttribute("src");
+    expect(readAvatar).toHaveBeenCalledTimes(1);
   });
 });

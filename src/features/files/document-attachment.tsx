@@ -2,32 +2,31 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { FileDown, FileText } from "lucide-react";
-import { db } from "../../lib/supabase";
+import { useAuth } from "../auth/auth-context";
 import { useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { Notice } from "../../components/common";
-import { saveDownload, type PortalDocument } from "./api";
+import { documentQuery, saveDownload } from "./api";
 import "./i18n";
 export function DocumentAttachment({ documentId }: { documentId: string }) {
   const { t } = useTranslation("files");
   const online = useOnline();
+  const { session } = useAuth();
+  const actor = session?.user.id ?? "";
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const file = useQuery({
-    queryKey: ["document", documentId],
-    queryFn: async () => {
-      const { data, error } = await db()
-        .from("documents")
-        .select("*")
-        .eq("id", documentId)
-        .maybeSingle();
-      if (error) throw error;
-      return data as PortalDocument | null;
-    },
-    staleTime: 0,
-    refetchInterval: 5000,
+    ...documentQuery(actor, documentId),
+    enabled: Boolean(actor) && online,
   });
-  if (!file.data) return <span className="muted">{t("error")}</span>;
+  if (file.isPending)
+    return (
+      <span className="muted" role="status">
+        {t("loading", { ns: "translation" })}
+      </span>
+    );
+  if (file.isError || !file.data)
+    return <span className="muted">{t("error")}</span>;
   return (
     <div className="document-attachment">
       <FileText size={18} />
@@ -47,7 +46,11 @@ export function DocumentAttachment({ documentId }: { documentId: string }) {
           setFailed(false);
           setBusy(true);
           try {
-            await saveDownload(documentId, file.data!.original_name);
+            await saveDownload(
+              documentId,
+              file.data!.original_name,
+              file.data!.current_version_id,
+            );
           } catch {
             setFailed(true);
           } finally {

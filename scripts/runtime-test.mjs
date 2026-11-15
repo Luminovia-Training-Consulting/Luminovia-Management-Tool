@@ -14,6 +14,10 @@ import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
 import { runtimeSnapshotSource } from "./runtime-snapshot.mjs";
 import {
+  acquireTestLock,
+  assertTestPortsAvailable,
+} from "./runtime-test-lock.mjs";
+import {
   root,
   runtimeDir,
   privateDirectory,
@@ -25,17 +29,34 @@ import {
 
 const run = randomBytes(4).toString("hex");
 const project = `luminovia-portal-test-${run}`;
-const scratch = mkdtempSync(join(tmpdir(), "luminovia-portal-test-"));
 const artifacts = join(runtimeDir, "tests", run);
-privateDirectory(artifacts);
 const lock = join(runtimeDir, "test.lock");
+const releaseSharedLock = acquireTestLock({ checkout: root });
+let scratch;
+let localLockHeld = false;
 try {
-  mkdirSync(lock, { mode: 0o700 });
+  // Fail before creating a snapshot or starting even proxy fixtures. The
+  // shared lock serialises updated checkouts; the port probe catches old ones.
+  await assertTestPortsAvailable();
+  privateDirectory();
+  try {
+    mkdirSync(lock, { mode: 0o700 });
+    localLockHeld = true;
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+    throw new Error(
+      "Ein isolierter Testlauf läuft bereits. Prüfe .local/test.lock; Entwicklungsdaten werden nicht angefasst.",
+      { cause: error },
+    );
+  }
   privateWrite(join(lock, "pid"), String(process.pid));
-} catch {
-  throw new Error(
-    "Ein isolierter Testlauf läuft bereits. Prüfe .local/test.lock; Entwicklungsdaten werden nicht angefasst.",
-  );
+  scratch = mkdtempSync(join(tmpdir(), "luminovia-portal-test-"));
+  privateDirectory(artifacts);
+} catch (error) {
+  if (scratch) rmSync(scratch, { recursive: true, force: true });
+  if (localLockHeld) rmSync(lock, { recursive: true, force: true });
+  releaseSharedLock();
+  throw error;
 }
 const env = cleanEnvironment({
   PORTAL_TEST_MODE: "1",
@@ -122,13 +143,31 @@ try {
     }
   }
   if (existsSync(functions)) find(functions);
-  if (handlerTests.length)
+  // Pinned npm: imports and control-character rejection are intentional here.
+  // Promise-shaped test doubles may be async without awaiting real I/O; keep
+  // require-await active on production Edge source and relax it only in tests.
+  if (entries.length)
+    await step("Edge-Quellcode-Lint", process.execPath, [
+      join(scratch, "node_modules/deno/bin.cjs"),
+      "lint",
+      "--rules-exclude=no-import-prefix,no-control-regex",
+      "--ignore=**/*_test.ts",
+      functions,
+    ]);
+  if (handlerTests.length) {
+    await step("Edge-Test-Lint", process.execPath, [
+      join(scratch, "node_modules/deno/bin.cjs"),
+      "lint",
+      "--rules-exclude=no-import-prefix,no-control-regex,require-await",
+      ...handlerTests,
+    ]);
     await step("Edge-Unit-Tests", process.execPath, [
       join(scratch, "node_modules/deno/bin.cjs"),
       "test",
       "--allow-env",
       ...handlerTests,
     ]);
+  }
   for (const entry of entries)
     await step(
       `Edge-Typprüfung ${basename(join(entry, ".."))}`,
@@ -139,15 +178,31 @@ try {
   // These checks use fixtures and owned proxy containers, never the hosted VM.
   const hosting = join(scratch, "deploy/hostinger");
   if (existsSync(hosting)) {
-    await step("Update- und Wiederherstellungsschutz", "python3", [
-      "-m",
-      "unittest",
-      "discover",
-      "-s",
-      "deploy/hostinger/updates",
-      "-p",
-      "test_*.py",
-    ]);
+    if (existsSync(join(hosting, "backups"))) {
+      // The crypto fixtures otherwise skip successfully when their tools are
+      // absent. Require real age binaries before claiming complete local QA.
+      for (const [label, binary] of [
+        ["age-Verschlüsselungswerkzeug", env.AGE_TEST_BINARY || "age"],
+        ["age-Schlüsselwerkzeug", env.AGE_KEYGEN_TEST_BINARY || "age-keygen"],
+      ]) {
+        const version = await step(label, binary, ["--version"]);
+        if (!/^v?1\.\d+\.\d+$/.test(version.trim()))
+          throw new Error(
+            "The encrypted-backup fixtures require a stable age 1.x tool version; verification stopped before crypto tests.",
+          );
+      }
+    }
+    for (const area of ["updates", "maintenance", "backups"])
+      if (existsSync(join(hosting, area)))
+        await step(`Update-/Wiederherstellungsschutz ${area}`, "python3", [
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          `deploy/hostinger/${area}`,
+          "-p",
+          "test_*.py",
+        ]);
     const releaseTests = [
       ...readdirSync(hosting)
         .filter((name) => /^reviewed-.*\.test\.mjs$/.test(name))
@@ -158,6 +213,16 @@ try {
       ...readdirSync(join(hosting, "scanner"))
         .filter((name) => name.endsWith(".test.mjs"))
         .map((name) => `deploy/hostinger/scanner/${name}`),
+      ...(existsSync(join(hosting, "backups"))
+        ? readdirSync(join(hosting, "backups"))
+            .filter((name) => name.endsWith(".test.mjs"))
+            .map((name) => `deploy/hostinger/backups/${name}`)
+        : []),
+      ...(existsSync(join(hosting, "maintenance"))
+        ? readdirSync(join(hosting, "maintenance"))
+            .filter((name) => name.endsWith(".test.mjs"))
+            .map((name) => `deploy/hostinger/maintenance/${name}`)
+        : []),
     ].sort();
     await step(
       "Release-Pakete und geprüfte Migrationspläne",
@@ -294,6 +359,7 @@ try {
     cpSync(join(scratch, ".local/runtime.log"), join(artifacts, "runtime.log"));
   rmSync(scratch, { recursive: true, force: true });
   rmSync(lock, { recursive: true, force: true });
+  releaseSharedLock();
   process.removeListener("SIGINT", cancel);
   process.removeListener("SIGTERM", cancel);
 }

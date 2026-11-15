@@ -80,3 +80,7 @@ Executed counts and exact pass/fail checkpoints belong in QA_RESULTS/WORKLOG, no
 - Local/release boundaries: copy a synthetic tree and assert nested real env/private/site paths stay outside the scratch snapshot while source/example configuration remains. Discover scanner HTTP/TCP, package/review and Python updater tests, then run actual isolated Envoy/Caddy checks in the same canonical command. The exact M4 history/source review and disposable rollback/old-row preservation probe are documented in [REVIEWED_M4_MIGRATIONS](REVIEWED_M4_MIGRATIONS.md); neither authorises a hosted installation.
 
 Run counts and failures remain in QA_RESULTS/WORKLOG. The combined full command and exact PR CI are required after integrating concurrent hosting source; the earlier isolated application run alone does not accept that integration.
+
+## M5 system and performance regressions
+
+Check blocked/full preference storage during actual boot and language/theme changes; bounded idle/scan/stuck-scan metadata loads; actor/abort/revocation and exact document-version bytes; immutable avatar focus/reconnect behavior; failed chat receipts and bounded realtime bursts without delayed old callbacks. Exercise finite schedules at SQL and actual HTTP boundaries with complete rollback and preserved accepted work. Validate Office files with real ZIP cases and label synthetic resource measurements honestly. Real child-process timeout/cancellation and stop-acknowledgement fixtures must be discovered by the same complete command. [System audit and evidence scope](SYSTEM_AUDIT.md).

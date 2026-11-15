@@ -36,11 +36,15 @@ import { Button } from "../components/ui/button";
 import { ErrorState, Loading, Notice } from "../components/common";
 import { useOnline } from "../lib/online";
 import { dateTime } from "../lib/dates";
+import { readPreference, writePreference } from "../lib/preferences";
 export function Preferences() {
   const { t, i18n } = useTranslation();
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem("luminovia.theme") ?? "system",
-  );
+  const [theme, setTheme] = useState(() => {
+    const saved = readPreference("theme");
+    return saved && ["light", "dark", "system"].includes(saved)
+      ? saved
+      : "system";
+  });
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const apply = () => {
@@ -48,7 +52,7 @@ export function Preferences() {
         theme === "system" ? (media.matches ? "dark" : "light") : theme;
     };
     apply();
-    localStorage.setItem("luminovia.theme", theme);
+    writePreference("theme", theme);
     media.addEventListener("change", apply);
     return () => media.removeEventListener("change", apply);
   }, [theme]);
