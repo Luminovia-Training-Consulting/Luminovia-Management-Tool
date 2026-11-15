@@ -1,4 +1,4 @@
-import * as jose from 'jsr:@panva/jose@6'
+import * as jose from 'jsr:@panva/jose@6.2.17'
 import { startMemoryPressureLoop } from './memory-pressure.ts'
 
 console.log('main function started')

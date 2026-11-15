@@ -28,17 +28,20 @@ import {
   startCommand,
   summarySQL,
 } from "./backup.mjs";
+import { validateRecoveryImageWitness } from "./backups/postgres_recovery_witness.mjs";
 
 const originalDatabaseImage =
   "supabase/postgres:17.6.1.136@sha256:f371b5f3f2ac0a05703f33d6e6134515fb2498cab708fb948a0aeb7481467c00";
 export const candidateDatabaseImage =
   "supabase/postgres:17.12.0.000@sha256:8630950b489ecc70563300180287a98c192a4a48f5ae00b4febdaeea1abe85de";
 const approvedDatabaseImages = reviewedDatabaseImages;
-function checkedDatabaseImage(image) {
-  if (!approvedDatabaseImages.has(image))
+export function checkedDatabaseImage(image, { recoveryEvidence } = {}) {
+  if (!approvedDatabaseImages.has(image) && !recoveryEvidence)
     throw new Error(
       "PostgreSQL recovery accepts only explicitly reviewed immutable images.",
     );
+  if (!approvedDatabaseImages.has(image))
+    validateRecoveryImageWitness(image, recoveryEvidence);
   return image;
 }
 
@@ -75,8 +78,11 @@ rm /tmp/restore-password
 exec "$drop_privileges" postgres postgres -D "$PGDATA" -c config_file=/etc/postgresql/postgresql.conf -c data_directory="$PGDATA" -c hba_file="$PGDATA/pg_hba.conf" -c ident_file="$PGDATA/pg_ident.conf" -c listen_addresses= -c shared_buffers=64MB -c max_connections=20 -c log_min_messages=fatal -c log_min_error_statement=fatal -c log_statement=none
 `;
 
-export async function createIsolatedDatabase(image = databaseImage) {
-  checkedDatabaseImage(image);
+export async function createIsolatedDatabase(
+  image = databaseImage,
+  options = {},
+) {
+  checkedDatabaseImage(image, options);
   const ownership = randomUUID();
   const operator = "portal_restore_" + ownership.replaceAll("-", "");
   const name = "portal-restore-" + ownership;

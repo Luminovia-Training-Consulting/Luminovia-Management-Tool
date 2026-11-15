@@ -11,6 +11,7 @@ import {
   restoreExtensionFunctionSettings,
 } from "./extension_recovery.mjs";
 import { verifyRecoveredCredentials } from "./credential_recovery.mjs";
+import { verifyRestoredRecoveryInventory } from "./postgres_recovery_witness.mjs";
 const here = dirname(fileURLToPath(import.meta.url));
 const identifier = (s) => '"' + s.replaceAll('"', '""') + '"';
 const literal = (s) => "'" + s.replaceAll("'", "''") + "'";
@@ -66,7 +67,9 @@ export async function restoreComplete({
       catalog.image,
       "Complete recovery must first prove the original immutable image. Candidate testing is a separate reviewed procedure.",
     );
-    database = await createIsolatedDatabase(expectedImage);
+    database = await createIsolatedDatabase(expectedImage, {
+      recoveryEvidence: catalog,
+    });
     const recovery =
       catalog.extensionRecovery ??
       JSON.parse(
@@ -257,6 +260,8 @@ export async function restoreComplete({
       normalize(globals),
       "Restored password-bearing role attributes/memberships/grantors/options differ.",
     );
+    const reviewedImageWitnessBoundToRestoredMigrationSources =
+      await verifyRestoredRecoveryInventory(database, catalog);
     const files = JSON.parse(
       await readFile(
         resolve(temporary, "filesystem-verification.json"),
@@ -276,6 +281,7 @@ export async function restoreComplete({
       image: expectedImage,
       extensionRecovery,
       extensionRecoveryEmbedded: Boolean(catalog.extensionRecovery),
+      reviewedImageWitnessBoundToRestoredMigrationSources,
       credentials,
       databases: catalog.databases.length,
       sourceRolePasswordsAttributesMembershipsAndGrantorsExact: true,

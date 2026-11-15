@@ -273,7 +273,9 @@ test("forum supports real rich-text discussion, accepted answers, reports and MF
     await responder
       .getByRole("button", { name: "Antwort veröffentlichen", exact: true })
       .click();
-    await expect(responder.getByText(answer, { exact: true })).toBeVisible();
+    await expect(
+      responder.locator(".forum-post").getByText(answer, { exact: true }),
+    ).toBeVisible();
     await page.reload();
     const answerPost = page.locator(".forum-post").filter({ hasText: answer });
     await answerPost
@@ -343,7 +345,8 @@ test("forum supports real rich-text discussion, accepted answers, reports and MF
       .click();
     const report = moderator
       .locator(".forum-reports-list>li")
-      .filter({ hasText: "Fiktive Testmeldung zur Moderationsprüfung." });
+      .filter({ hasText: "Fiktive Testmeldung zur Moderationsprüfung." })
+      .filter({ has: moderator.getByText(owner.name, { exact: true }) });
     await report
       .getByRole("button", { name: "Als bearbeitet markieren", exact: true })
       .click();

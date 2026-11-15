@@ -37,6 +37,7 @@ jobs:
         run: |
           python3 -m unittest discover -s deploy/hostinger/maintenance -p 'test_*.py'
           python3 -m unittest discover -s deploy/hostinger/backups -p 'test_*.py'
+          node --test deploy/hostinger/backups/*.test.mjs
           node --test deploy/hostinger/maintenance/*.test.mjs
       - name: Complete isolated local verification
         run: ./portal test
