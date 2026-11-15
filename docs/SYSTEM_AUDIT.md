@@ -56,6 +56,14 @@ Ein Unterprozess konnte SIGTERM ignorieren und über den Timeout hinaus weiterla
 
 Die neuen Tests werden automatisch durch `./portal test` entdeckt. Abgedeckt werden Quelle/Graph, Komponenten, Edge, echte PostgreSQL-Transaktionen, native Auth/MFA/REST/Storage/Realtime/ClamAV/Mailpit, Browser/axe und die gebaute PWA. Ein verfasster Test oder eine lokale synthetische Messung ersetzt kein vollständig bestandenes Protokoll.
 
+## Gleichzeitige Checkouts und unbeabsichtigte Entwicklungs-Reloads
+
+Eine zweite Gesamtabnahme traf auf belegte Testports. PID, Session, Arbeitsverzeichnis und Paket-Symlinks belegten, dass dort eine laufende Prüfung aus dem ursprünglichen täglichen Wartungs-Worktree arbeitete. Es war kein nachgewiesener liegen gebliebener Audit-Prozess; er wurde nicht beendet. Die bisherige Sperre je Checkout konnte diesen Konflikt nicht verhindern.
+
+Der Starter erwirbt jetzt vor Snapshot oder Proxy-/Datenbankaktionen eine gemeinsame Kernel-Sperre mittels Linux util-linux `flock` und prüft anschließend die festen Testports. Die private persistente Sperrdatei wird nicht gelöscht; der Kernel hält beziehungsweise löst ihre Besitznahme. Veraltete PID-Notizen können die Sperre nicht übernehmen. Vier echte Prozess-/Netzwerkfälle prüfen konkurrierende Checkouts, Freigabe nach SIGKILL, Symlink-Schutz und einen unverändert weiterlaufenden fremden Listener. Ältere bereits laufende Versionen nehmen noch nicht am neuen Protokoll teil; ihr natürliches Ende wird abgewartet. Nach gewaltsamem Abbruch können Testdienste oder der lokale Recovery-Marker weiterhin eine kontrollierte Prüfung erfordern.
+
+Das Vite-Protokoll zeigte außerdem volle Seitenreloads beim Erzeugen von `playwright-report/*.html`. Ein echter Dateiwächtertest reproduzierte Ereignisse für Berichts-/private HTML-Dateien. Die Serverkonfiguration ignoriert jetzt Berichte, `.local`, Coverage und Dokumentation, während der Test anhand einer echten `index.html`-Änderung bestätigt, dass Anwendungsquellen weiter beobachtet werden. Diese Korrektur gilt der Entwicklungs-HMR, nicht einer behaupteten Produktionsnetzwerk-Messung.
+
 ## Betriebsgrenzen
 
 Dieses Audit verändert weder den normalen Datenbestand noch Hosting, DNS, echte E-Mails oder Bankaufträge. Die M4-Operatorprüfung bleibt bestehen. Der [historische M4-Prüfer](REVIEWED_M4_MIGRATIONS.md) ist absichtlich auf 14→17 Quellen beschränkt und lehnt ein 18-Migrationen-Manifest ab; er ist kein Installer für diese neuere Fassung. Eine spätere gehostete Freigabe muss die vollständigen vier ausstehenden Quellen und die neue Vorbedingung endlicher Altdaten prüfen, Datenbank plus tatsächliche Objekte sichern und die echte Instanz separat abnehmen. Es gibt keinen neuen Apply-/Bypass-Pfad.

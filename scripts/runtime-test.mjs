@@ -14,6 +14,10 @@ import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
 import { runtimeSnapshotSource } from "./runtime-snapshot.mjs";
 import {
+  acquireTestLock,
+  assertTestPortsAvailable,
+} from "./runtime-test-lock.mjs";
+import {
   root,
   runtimeDir,
   privateDirectory,
@@ -25,17 +29,34 @@ import {
 
 const run = randomBytes(4).toString("hex");
 const project = `luminovia-portal-test-${run}`;
-const scratch = mkdtempSync(join(tmpdir(), "luminovia-portal-test-"));
 const artifacts = join(runtimeDir, "tests", run);
-privateDirectory(artifacts);
 const lock = join(runtimeDir, "test.lock");
+const releaseSharedLock = acquireTestLock({ checkout: root });
+let scratch;
+let localLockHeld = false;
 try {
-  mkdirSync(lock, { mode: 0o700 });
+  // Fail before creating a snapshot or starting even proxy fixtures. The
+  // shared lock serialises updated checkouts; the port probe catches old ones.
+  await assertTestPortsAvailable();
+  privateDirectory();
+  try {
+    mkdirSync(lock, { mode: 0o700 });
+    localLockHeld = true;
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+    throw new Error(
+      "Ein isolierter Testlauf läuft bereits. Prüfe .local/test.lock; Entwicklungsdaten werden nicht angefasst.",
+      { cause: error },
+    );
+  }
   privateWrite(join(lock, "pid"), String(process.pid));
-} catch {
-  throw new Error(
-    "Ein isolierter Testlauf läuft bereits. Prüfe .local/test.lock; Entwicklungsdaten werden nicht angefasst.",
-  );
+  scratch = mkdtempSync(join(tmpdir(), "luminovia-portal-test-"));
+  privateDirectory(artifacts);
+} catch (error) {
+  if (scratch) rmSync(scratch, { recursive: true, force: true });
+  if (localLockHeld) rmSync(lock, { recursive: true, force: true });
+  releaseSharedLock();
+  throw error;
 }
 const env = cleanEnvironment({
   PORTAL_TEST_MODE: "1",
@@ -294,6 +315,7 @@ try {
     cpSync(join(scratch, ".local/runtime.log"), join(artifacts, "runtime.log"));
   rmSync(scratch, { recursive: true, force: true });
   rmSync(lock, { recursive: true, force: true });
+  releaseSharedLock();
   process.removeListener("SIGINT", cancel);
   process.removeListener("SIGTERM", cancel);
 }

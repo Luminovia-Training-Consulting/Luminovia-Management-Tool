@@ -48,6 +48,19 @@ export default defineConfig(({ mode }) => {
         },
       }),
     ],
+    // Generated report HTML otherwise triggers full-page reloads despite having
+    // no application import. Keep private diagnostics and QA output out of HMR.
+    server: {
+      watch: {
+        ignored: [
+          "**/.local/**",
+          "**/docs/**",
+          "**/playwright-report/**",
+          "**/test-results/**",
+          "**/coverage/**",
+        ],
+      },
+    },
     test: {
       environment: "jsdom",
       setupFiles: "./src/test/setup.ts",
