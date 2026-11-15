@@ -6,7 +6,7 @@ import { networkName } from "./runtime-network.mjs";
 const image =
   "clamav/clamav@sha256:2a9be29239aea6c6fe17da9625f3c192f91974e61059d364e293f20277f931a3";
 // Version the owned container configuration so fixes also reach an existing local stack.
-const configVersion = "3";
+const configVersion = "4";
 const configLabel = "org.luminovia.portal.scanner-config";
 const healthCommand = "clamdscan --config-file=/etc/clamav/clamd.conf --ping=1";
 const project = /^project_id\s*=\s*"([a-zA-Z0-9_-]+)"/m.exec(
@@ -75,7 +75,7 @@ if (action === "status") {
       throw new Error("Start the local Supabase stack before the scanner.");
     // Foreground output goes to Docker logs. A log file survives a same-container
     // restart with entrypoint-dependent ownership and can prevent clamd startup.
-    const config = `Foreground yes\nUser clamav\nLocalSocket /tmp/clamd.sock\nTCPSocket 3310\nTCPAddr 0.0.0.0\nDatabaseDirectory /var/lib/clamav\nLogTime yes\nStreamMaxLength 10M\nMaxScanSize 30M\nMaxFileSize 10M\nMaxRecursion 10\nMaxFiles 1000\nAlertExceedsMax yes\nAlertEncryptedArchive yes\nAlertEncryptedDoc yes\nHeuristicAlerts yes\nScanArchive yes\nScanPDF yes\nScanOLE2 yes\nScanXMLDOCS yes\n`;
+    const config = `Foreground yes\nUser clamav\nLocalSocket /tmp/clamd.sock\nTCPSocket 3310\nTCPAddr 0.0.0.0\nDatabaseDirectory /var/lib/clamav\nLogTime yes\nStreamMaxLength 100M\nMaxScanSize 300M\nMaxFileSize 100M\nMaxRecursion 10\nMaxFiles 1000\nAlertExceedsMax yes\nAlertEncryptedArchive yes\nAlertEncryptedDoc yes\nHeuristicAlerts yes\nScanArchive yes\nScanPDF yes\nScanOLE2 yes\nScanXMLDOCS yes\n`;
     writeFileSync(".local/clamd.conf", config, { mode: 0o644 });
     docker(["volume", "create", `portal_clamav_${project}`]);
     console.log(

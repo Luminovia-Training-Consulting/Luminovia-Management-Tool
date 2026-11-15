@@ -1,0 +1,52 @@
+name: luminovia-portal
+services:
+  web:
+    image: caddy:2-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      PORTAL_DOMAIN: ${PORTAL_DOMAIN:?Set the approved portal domain}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${PORTAL_WWW_DIR:-/opt/luminovia-portal/www}:/srv:ro
+      - ./mail-templates:/mail-templates:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [backend]
+    mem_limit: 128m
+    pids_limit: 100
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "2" }
+  clamav:
+    image: clamav/clamav@sha256:2a9be29239aea6c6fe17da9625f3c192f91974e61059d364e293f20277f931a3
+    restart: unless-stopped
+    environment:
+      CLAMD_STARTUP_TIMEOUT: "180"
+    volumes:
+      - clamav_signatures:/var/lib/clamav
+      - ./clamd.conf:/etc/clamav/clamd.conf:ro
+    networks: [backend]
+    # Private TCP only. No Docker/host port is published for ClamAV.
+    mem_limit: 3g
+    pids_limit: 100
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: [CMD, clamdscan, --config-file=/etc/clamav/clamd.conf, --ping=1]
+      interval: 30s
+      timeout: 5s
+      start_period: 180s
+      start_interval: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "2" }
+networks:
+  backend:
+    external: true
+    name: luminovia-portal-backend
+volumes:
+  caddy_data:
+  caddy_config:
+  clamav_signatures:

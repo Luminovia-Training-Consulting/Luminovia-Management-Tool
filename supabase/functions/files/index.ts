@@ -71,7 +71,7 @@ Deno.serve(async(request:Request)=>{
    await service.from('document_versions').update({status:'scanning'}).eq('id',reservation.version_id);
    await service.from('documents').update({status:'scanning'}).eq('id',doc.id).eq('current_version_id',reservation.version_id);
    let verdict:{clean:boolean;version:string};
-   try{verdict=await scan(storedBytes,Deno.env.get('PORTAL_CLAMAV_HOST')??'',Number(Deno.env.get('PORTAL_CLAMAV_PORT')??3310));}
+   try{verdict=await scan(storedBytes,Deno.env.get('PORTAL_CLAMAV_HOST')??'',Number(Deno.env.get('PORTAL_CLAMAV_PORT')??3310),{url:Deno.env.get('PORTAL_SCANNER_URL'),token:Deno.env.get('PORTAL_SCANNER_TOKEN')});}
    catch{
     await service.from('document_versions').update({status:'scan_error'}).eq('id',reservation.version_id);
     await service.from('documents').update({status:'scan_error'}).eq('id',doc.id).eq('current_version_id',reservation.version_id);

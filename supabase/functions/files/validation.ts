@@ -1,5 +1,5 @@
 import {fileTypeFromBuffer} from 'npm:file-type@22.3.0';
-export const MAX_FILE_SIZE=10*1024*1024;
+export const MAX_FILE_SIZE=100*1024*1024;
 const supported:Record<string,string[]>={
  'application/pdf':['pdf'],'image/png':['png'],'image/jpeg':['jpg','jpeg'],'image/webp':['webp'],'text/plain':['txt'],
  'application/vnd.openxmlformats-officedocument.wordprocessingml.document':['docx'],

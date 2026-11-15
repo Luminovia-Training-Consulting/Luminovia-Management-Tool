@@ -1,0 +1,80 @@
+{
+	admin off
+	# No access log: invitation/recovery query strings must never enter logs.
+}
+{$PORTAL_DOMAIN} {
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		X-Robots-Tag "noindex, nofollow"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' wss://{$PORTAL_DOMAIN}; worker-src 'self'; frame-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
+	}
+	route {
+		handle_path /backend/* {
+			route {
+				header >Cache-Control "no-store, private"
+				request_body {
+					max_size 104873984
+				}
+				@authAdmin path /auth/v1/admin /auth/v1/admin/*
+				respond @authAdmin 404
+				@maintenance {
+					file {
+						root /srv
+						try_files maintenance.enabled
+					}
+				}
+				header @maintenance Retry-After "60"
+				respond @maintenance "Kurze Wartung. Bitte gleich erneut versuchen. / Brief maintenance. Please try again shortly." 503
+				@publicApi path /auth/v1/* /rest/v1/* /realtime/v1/* /storage/v1/* /functions/v1/*
+				reverse_proxy @publicApi api:8000 {
+					header_up -Referer
+					transport http {
+						dial_timeout 5s
+						response_header_timeout 150s
+					}
+				}
+				respond 404
+			}
+		}
+		handle_path /mail-templates/* {
+			route {
+				root * /mail-templates
+				header Cache-Control no-store
+				@templates path /invite.html /recovery.html
+				file_server @templates
+				respond 404
+			}
+		}
+		handle /assets/* {
+			route {
+				root * /srv
+				header >Cache-Control "public, max-age=31536000, immutable"
+				file_server
+			}
+		}
+		handle /workbox-*.js {
+			route {
+				root * /srv
+				header >Cache-Control "public, max-age=31536000, immutable"
+				file_server
+			}
+		}
+		handle {
+			route {
+				root * /srv/current
+				@private path /.env* /.git/* /supabase/* /deploy/* /private/*
+				respond @private 404
+				try_files {path} /index.html
+				@shell path /index.html /sw.js /registerSW.js /manifest.webmanifest
+				header @shell Cache-Control "no-cache, no-store, must-revalidate"
+				@hashed path /assets/*
+				header @hashed Cache-Control "public, max-age=31536000, immutable"
+				file_server
+			}
+		}
+	}
+}

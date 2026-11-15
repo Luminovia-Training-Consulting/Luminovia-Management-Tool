@@ -48,8 +48,8 @@ const pairs: Record<string, [string, string]> = {
   zone: ["Zeitzone", "Time zone"],
   contractPdf: ["Ausgeführter Vertrag als PDF", "Executed contract PDF"],
   pdfHint: [
-    "PDF · maximal 10 MB · Freigabe nach Sicherheitsprüfung",
-    "PDF · up to 10 MB · available after security scanning",
+    "PDF · maximal 100 MiB · Freigabe nach Sicherheitsprüfung",
+    "PDF · up to 100 MiB · available after security scanning",
   ],
   uploading: [
     "PDF wird hochgeladen und geprüft … {{progress}} %",
