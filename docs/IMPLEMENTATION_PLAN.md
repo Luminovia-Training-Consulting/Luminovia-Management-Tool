@@ -2,17 +2,19 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
-## M4 in progress — functional audit and reusable CBW content
+## M4 local acceptance passed — functional audit and reusable CBW content
 
 Requested 16 November: source-grounded functional/dead-code/connection audit; meaningful failed-path tests and developer docs; CBW building blocks as reusable provenance-linked templates; profile pictures; and resource-specific comments. M3 is merged through PR #3. Work is isolated in `codex/functional-qa-building-blocks`; original concurrent hosting edits and normal persistent data remain untouched.
 
-- [ ] Import all 24 PDF source references into 22 canonical CBW building blocks/templates, retaining both LPC3/LPC4 revisions. Provide readable searchable content and safe template/run duplication.
-- [ ] Create real offers from an existing course run with exact template/session/source references, authoritative server defaults, gross/net separation and idempotency; change only scheduling/financial/delivery details as needed.
-- [ ] Secure scanned profile avatars with own upload/remove/replace, scoped authenticated viewing and no private-file bypass or offline caches.
-- [ ] Staff comments under templates and jobs, with access checks, bounded text, actual persistence, idempotency, cursor pagination, edits/withdrawals and reasoned MFA moderation.
-- [ ] Reproduce and fix functional gaps in Auth/search and any other actual findings; verify import/export/RPC connections; document legitimate runtime-only entry points.
-- [ ] Update README, developer/feature/API documentation, test inventory and exact acceptance evidence; review readable desktop/mobile/DE/EN/theme screens.
+- [x] Import all 24 PDF source references into 22 canonical CBW building blocks/templates, retaining both LPC3/LPC4 revisions. Provide readable searchable content and safe template/run duplication.
+- [x] Create real offers from an existing course run with exact template/session/source references, authoritative server defaults, gross/net separation and idempotency; change only scheduling/financial/delivery details as needed.
+- [x] Secure scanned profile avatars with own upload/remove/replace, scoped authenticated viewing and no private-file bypass or offline caches.
+- [x] Staff comments under templates and jobs, with access checks, bounded text, actual persistence, idempotency, cursor pagination, edits/withdrawals and reasoned MFA moderation.
+- [x] Reproduce and fix functional gaps in Auth/search and any other actual findings; verify import/export/RPC connections; document legitimate runtime-only entry points.
+- [x] Update README, developer/feature/API documentation, test inventory and exact acceptance evidence; review readable desktop/mobile/DE/EN/theme screens.
 - [ ] Pass complete isolated command, signed push/exact PR CI and authorised merge, without production publishing.
+
+Combined frozen source `4c7c897` passed the full command with exit 0:91 source, 21 runtime, 37 Edge, 165 SQL, 12 real API suites/Mailpit, 52 browser and 2 PWA cases; release controls 28 Python/ 35 Node/ 11 Envoy/ 10 Caddy. [Exact evidence](QA_RESULTS.md). Hosted M4 is separately operator-gated; no installation is claimed.
 
 ## M3 and self-hosted development accepted — account, profile and commission extension
 
@@ -24,7 +26,7 @@ M1 is locally verified and was merged by Carina in PR #1. The previous continuat
 
 ## Current self-hosted development and automatic updates
 
-**M4 hosted status:** the new templates, avatars and comments are locally verified source. The ordinary updater requires operator review for two of their three migrations; this continuation does not apply them on the hosted development instance. The bounded [M4 review plan](REVIEWED_M4_MIGRATIONS.md) retains that guard and documents the exact14→17 preservation rehearsal.
+**M4 hosted status:** the new templates, avatars and comments are locally verified source. The ordinary updater requires operator review for two of their three migrations; this continuation does not apply them on the hosted development instance. The bounded [M4 review plan](REVIEWED_M4_MIGRATIONS.md) retains that guard and documents the exact 14→17 preservation rehearsal.
 
 **Current authorised hosting:** the user declined an upgrade and retained **KVM 1 for development/setup**. The portal and complete Supabase backend/files run together at **https://cms.luminovia.org**. Approximately 100 GB is a future end state. The running PostgreSQL engine is 17.12 with a reviewed immutable digest, fourteen migrations, private services and internal Mailpit. Eight actual hosted API suites, fifty concurrent HTTP claims from two lecturers, captured invitation/PKCE recovery, real WSS delivery/revocation, persistent restart and browser login passed. A real off-site database/object backup restored successfully both to the original image and to the17.12 candidate, including exact role/membership/RLS/source history and physical private file bytes. KVM 4 remains future capacity advice only; no purchase/upgrade is pending or authorised.
 
@@ -45,7 +47,7 @@ M1 is locally verified and was merged by Carina in PR #1. The previous continuat
 | Global search/calendar         | Permission-filtered jobs/files/messages/safe wiki/forum/contacts; explicitly published course sessions in global calendar                                       | Real API boundaries plus desktop/mobile journeys; no search over private draft bodies                                             |
 | M3 extension                   | Scoped accounts/client commission/profile/review functions merged in PR3 and integrated into the hosted development release                                     | Combined acceptance: 59 source, 31 Edge, 124 SQL, 46 browser and 2 PWA checks; hosted accounts/privacy/revocation passed          |
 | Hosted development             | Actual self-hosted KVM 1 at cms.luminovia.org; private Supabase services, internal Mailpit, 14 migrations                                                       | Eight hosted API suites, fifty requests/two actors, restart persistence and browser login; see current WORKLOG                    |
-| Automatic updates              | Immutable GitHub package/CI, actual successful network installation, guarded VPS updater and active Ubuntu security timers                                      | 19 updater/7 package/5 backfill tests, 10 Caddy/11 Envoy checks; green main CI and actual VPS installation/post-checks in WORKLOG |
+| Automatic updates              | Immutable GitHub package/CI, actual successful network installation, guarded VPS updater and active Ubuntu security timers                                      | 19 updater/7 package/5 backfill tests, 10 Caddy/ 11 Envoy checks; green main CI and actual VPS installation/post-checks in WORKLOG |
 | Managed Cloud                  | Initial approved free project exists but is unused after explicit self-hosting direction                                                                        | No deployed functions, users, files or mail; no application dependency                                                            |
 | Production                     | No deployment performed or authorised                                                                                                                           | Requires complete release gates and explicit approval                                                                             |
 
