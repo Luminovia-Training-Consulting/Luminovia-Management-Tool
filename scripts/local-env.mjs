@@ -1,31 +1,80 @@
-import { execFileSync } from 'node:child_process';
-import { chmodSync, mkdirSync, writeFileSync } from 'node:fs';
-import { randomBytes } from 'node:crypto';
+import { execFileSync } from "node:child_process";
+import { join } from "node:path";
+import { randomBytes } from "node:crypto";
+import {
+  privateDirectory,
+  privateWrite,
+  readEnvFile,
+  projectConfig,
+} from "./runtime-lib.mjs";
 
-// Local development only: never writes service credentials to a browser env file.
-const raw = execFileSync('npm', ['exec', '--yes', '--package=supabase@3.1.0', '--', 'supabase', 'status', '-o', 'json'], {
-  encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
-});
-const status = JSON.parse(raw.slice(raw.indexOf('{')));
+// This command reads only this checkout's LOCAL stack; no hosted target is accepted.
+const raw = execFileSync(
+  join(process.cwd(), "node_modules/.bin/supabase"),
+  ["status", "-o", "json"],
+  { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+);
+const status = JSON.parse(raw.slice(raw.indexOf("{")));
 const apiUrl = status.API_URL ?? status.api?.url;
 const anonKey = status.ANON_KEY ?? status.api?.anon_key;
 const publishableKey = status.PUBLISHABLE_KEY ?? anonKey;
 const serviceKey = status.SERVICE_ROLE_KEY ?? status.api?.service_role_key;
 const dbUrl = status.DB_URL ?? status.db?.url;
-if (!apiUrl || !anonKey || !serviceKey || !dbUrl) throw new Error('Local Supabase status lacks required credentials.');
-const allowed = new Set(['127.0.0.1', 'localhost', '[::1]']);
-if (!allowed.has(new URL(apiUrl).hostname) || !allowed.has(new URL(dbUrl).hostname)) {
-  throw new Error('Refusing to create local test credentials for a remote project.');
+const config = projectConfig(process.cwd());
+if (!apiUrl || !anonKey || !serviceKey || !dbUrl)
+  throw new Error("Local Supabase status lacks required credentials.");
+const allowed = new Set(["127.0.0.1", "localhost", "[::1]"]);
+if (
+  !allowed.has(new URL(apiUrl).hostname) ||
+  !allowed.has(new URL(dbUrl).hostname) ||
+  Number(new URL(apiUrl).port) !== config.api ||
+  Number(new URL(dbUrl).port) !== config.database
+)
+  throw new Error(
+    "Refusing environment generation for another or remote Supabase project.",
+  );
+privateDirectory();
+const old = readEnvFile(".env.test.local");
+if (old.SUPABASE_URL && old.SUPABASE_URL !== apiUrl)
+  throw new Error(
+    "Existing environment belongs to another local stack; resolve it explicitly before restarting.",
+  );
+let password = old.E2E_PASSWORD;
+if (!password) {
+  const response = await fetch(
+    `${apiUrl}/auth/v1/admin/users?page=1&per_page=1`,
+    { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } },
+  );
+  if (!response.ok)
+    throw new Error("Could not inspect local Auth initialization.");
+  const existing = await response.json();
+  // Losing a credentials file must never reset existing account passwords.
+  if (existing.users?.length === 0)
+    password = `Local!${randomBytes(20).toString("hex")}Aa9`;
 }
-mkdirSync('.local', { recursive: true, mode: 0o700 });
-writeFileSync('.env.local', `VITE_SUPABASE_URL=${apiUrl}\nVITE_SUPABASE_PUBLISHABLE_KEY=${publishableKey}\n`, { mode: 0o600 });
-chmodSync('.env.local', 0o600);
-const password = `Local!${randomBytes(20).toString('hex')}Aa9`;
-writeFileSync('.env.test.local', [
-  `SUPABASE_URL=${apiUrl}`, `SUPABASE_ANON_KEY=${anonKey}`,
-  `SUPABASE_SERVICE_ROLE_KEY=${serviceKey}`, `DATABASE_URL=${dbUrl}`,
-  'E2E_LECTURER_EMAIL=lecturer01@example.invalid', 'E2E_OTHER_EMAIL=lecturer02@example.invalid',
-  'E2E_ADMIN_EMAIL=admin@example.invalid', `E2E_PASSWORD=${password}`,
-].join('\n') + '\n', { mode: 0o600 });
-chmodSync('.env.test.local', 0o600);
-console.log('Created ignored local frontend and test environment files (credentials withheld).');
+privateWrite(
+  ".env.local",
+  `VITE_SUPABASE_URL=${apiUrl}\nVITE_SUPABASE_PUBLISHABLE_KEY=${publishableKey}\n`,
+);
+privateWrite(
+  ".env.test.local",
+  [
+    `SUPABASE_URL=${apiUrl}`,
+    `SUPABASE_ANON_KEY=${anonKey}`,
+    `SUPABASE_SERVICE_ROLE_KEY=${serviceKey}`,
+    `DATABASE_URL=${dbUrl}`,
+    "E2E_LECTURER_EMAIL=lecturer01@example.invalid",
+    "E2E_OTHER_EMAIL=lecturer02@example.invalid",
+    "E2E_ADMIN_EMAIL=admin@example.invalid",
+    `E2E_PASSWORD=${password ?? ""}`,
+    `E2E_MAILPIT_URL=http://127.0.0.1:${config.mail}`,
+    `PORTAL_APP_ORIGIN=${config.site}`,
+  ].join("\n") + "\n",
+);
+privateWrite(
+  ".local/ACCOUNTS.txt",
+  `Lokale Luminovia-Testkonten – vertraulich, nicht teilen oder in Git speichern.\n\nAdmin: admin@example.invalid\nDozierende: lecturer01@example.invalid bis lecturer11@example.invalid\nTeilnahme: participant@example.invalid\n\n${password ? `Ursprüngliches lokales Testpasswort: ${password}\nEigene später geänderte Passwörter und MFA bleiben bei jedem Neustart erhalten.\n` : "Die frühere Passwortdatei fehlt. Vorhandene Passwörter wurden NICHT verändert. Verwende dein bekanntes Passwort oder die lokale Mailpit-Wiederherstellung.\n"}\nMailpit: http://127.0.0.1:${config.mail}\n`,
+);
+console.log(
+  "Lokale Konfiguration aktualisiert; vorhandene Passwörter bleiben erhalten. Zugangsdaten: .local/ACCOUNTS.txt",
+);

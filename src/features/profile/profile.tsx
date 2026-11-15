@@ -1,3 +1,4 @@
+import { ProfileEvidence } from "../files/profile-evidence";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -195,6 +196,7 @@ export function ProfilePage() {
           {edit.isError && <Notice kind="error">{t("error")}</Notice>}
         </section>
       </div>
+      <ProfileEvidence ownerId={session!.user.id} />
       <datalist id="time-zones">
         <option>Europe/Berlin</option>
         <option>Australia/Brisbane</option>

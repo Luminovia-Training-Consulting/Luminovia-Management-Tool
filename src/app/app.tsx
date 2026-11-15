@@ -16,6 +16,51 @@ import { Button } from "../components/ui/button";
 import { Dashboard } from "../features/dashboard/dashboard";
 import { Jobs, JobDetail } from "../features/jobs/jobs";
 import { ProfilePage } from "../features/profile/profile";
+const ContractsPage = lazy(() =>
+  import("../features/commercial/contracts").then((module) => ({
+    default: module.ContractsPage,
+  })),
+);
+const FinancePage = lazy(() =>
+  import("../features/commercial/finance").then((module) => ({
+    default: module.FinancePage,
+  })),
+);
+const ClientsPage = lazy(() =>
+  import("../features/operations/clients").then((module) => ({
+    default: module.ClientsPage,
+  })),
+);
+const CoursesPage = lazy(() =>
+  import("../features/operations/courses").then((module) => ({
+    default: module.CoursesPage,
+  })),
+);
+const PortalSearch = lazy(() =>
+  import("../features/search/search").then((module) => ({
+    default: module.PortalSearch,
+  })),
+);
+const WikiPage = lazy(() =>
+  import("../features/knowledge/wiki").then((module) => ({
+    default: module.WikiPage,
+  })),
+);
+const ForumPage = lazy(() =>
+  import("../features/knowledge/forum").then((module) => ({
+    default: module.ForumPage,
+  })),
+);
+const ChatPage = lazy(() =>
+  import("../features/chat/chat").then((module) => ({
+    default: module.ChatPage,
+  })),
+);
+const FilesPage = lazy(() =>
+  import("../features/files/files").then((module) => ({
+    default: module.FilesPage,
+  })),
+);
 const CalendarPage = lazy(() =>
   import("../features/calendar/calendar").then((module) => ({
     default: module.CalendarPage,
@@ -93,6 +138,15 @@ export function App() {
               <Route path="jobs" element={<Jobs />} />
               <Route path="jobs/:id" element={<JobDetailRoute />} />
               <Route path="calendar" element={<CalendarPage />} />
+              <Route path="chats" element={<ChatPage />} />
+              <Route path="search" element={<PortalSearch />} />
+              <Route path="clients" element={<ClientsPage />} />
+              <Route path="courses" element={<CoursesPage />} />
+              <Route path="contracts" element={<ContractsPage />} />
+              <Route path="finance" element={<FinancePage />} />
+              <Route path="wiki" element={<WikiPage />} />
+              <Route path="forum" element={<ForumPage />} />
+              <Route path="files" element={<FilesPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="security" element={<Security />} />
               <Route path="auth/password" element={<Password />} />

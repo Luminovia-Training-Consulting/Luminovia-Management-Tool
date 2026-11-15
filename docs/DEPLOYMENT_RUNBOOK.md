@@ -10,9 +10,9 @@ Staging and production use separate Supabase projects, keys, Auth redirect allow
 
 ## Local operation
 
-Follow README and the repository scripts for dependency installation, local Supabase start, environment generation and fictional seeding. Inspect evolving CLI help rather than guessing flags. Bind previews to loopback. Local Auth emails are captured by the local test mail service, not sent to real people. Generated local accounts are test accounts, not real invitations. Never run a local reset/seed harness against hosted data.
+Run `./portal start` for complete persistent local operation and `./portal test` for complete isolated verification. The launcher handles lockfile dependencies, migrations, insert-only fictional bootstrap and real service readiness; see [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md). Inspect evolving CLI help rather than guessing flags. Bind previews to loopback. Local Auth emails are captured by the local test mail service, not sent to real people. Generated local accounts are test accounts, not real invitations. Never run a local reset/seed harness against hosted data.
 
-Stop the owned preview and local stack when no longer required. Preserve source/migrations/plan/log, not running-process promises. Do not remove an existing unrelated stack or delete stored data as cleanup.
+Use `./portal stop` when the local background system is no longer required; the command preserves Auth/database/Storage data. `./portal start` resumes that data. Preserve source/migrations/plan/log, not running-process promises. Do not remove an existing unrelated stack or delete stored data as cleanup.
 
 ## Pinned CLI semantics
 

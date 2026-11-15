@@ -2,6 +2,12 @@
 
 Run the checks relevant to the changed slice, fix observed failures, then record exact commands/results in [WORKLOG.md](WORKLOG.md). A planned test is not a passed test. Use the lockfile and actual package scripts; inspect `--help` before using evolving Supabase CLI commands. No real customer/person records or production endpoints in tests.
 
+## Canonical complete command
+
+Run `./portal test` for all mutating integration/browser verification. It creates a sanitized temporary checkout with a random independent Supabase project, separate ports/volumes and scoped cleanup, preserving the normal local development instance. It includes actual restart persistence, all `*-db-tests.mjs` / `*-api-check.mjs`, all Edge tests, browser/axe and a separate built-PWA stage. Reports stay in ignored `.local/tests/<run>/`. CI uses the same command.
+
+Individual `npm run test:e2e` and legacy broad API checks are guarded against accidental normal-development mutation. Use isolated mode through the canonical runner. `./portal start` / `stop` are persistent development operations, never test reset commands.
+
 ## Automated source checks
 
 ```sh
@@ -27,7 +33,7 @@ Required database/API cases:
 5. Run one lecturer's parallel claims across overlapping jobs. Assert at most one succeeds; adjacent non-overlapping sessions may succeed. Reject overlaps with own private events, missing/expired verification, expired contracts and stale terms version.
 6. Attempt direct changes to accepted terms, claim actor and allocation records; deny. Edit future job data and prove accepted monetary/currency/terms snapshot does not change.
 7. Lecturer and admin cannot read or mutate another lecturer's private event. Published global events never derive from private events. Deactivated users are denied with existing JWTs.
-8. Invitation handler/unit/type checks: `npx --yes deno test supabase/functions/invite-lecturer/handler_test.ts` and `npx --yes deno check supabase/functions/invite-lecturer/index.ts`. Add actual Edge HTTP tests for approved/forged origins and preflight, disabled configuration, current Auth+AAL2 capability, fixed lecturer role, durable deduplication/throttling, local captured email, implemented redirect, password setup and subsequent login. Mocked handler dependencies do not replace this journey.
+8. Invitation handler/unit/type checks: `npx --no-install deno test --allow-env supabase/functions/invite-lecturer/handler_test.ts supabase/functions/files/handler_test.ts` and Deno checks for both entry points. Add actual Edge HTTP tests for approved/forged origins and preflight, disabled configuration, current Auth+AAL2 capability, fixed lecturer role, durable deduplication/throttling, local captured email, implemented redirect, password setup and subsequent login. Mocked handler dependencies do not replace this journey.
 9. As later modules land, add contract/CV/invoice/file guessed-path tests, DM/course participant membership/realtime revocation, rich-content XSS tests and permission-aware search.
 
 Real PostgreSQL locking tests are required; a mocked reducer or sequential loop does not establish concurrency. A local stack result does not establish hosted SMTP, managed configuration or production acceptance.
@@ -40,7 +46,7 @@ Test server-result mapping and rejected claim UX, schema validation, bilingual k
 
 ## Browser/E2E and accessibility
 
-Entry point: `npm run test:e2e`. Use actual Supabase Auth and Data API for the principal journeys; mocks may isolate error rendering but must be labelled. Store screenshots of fictional data only. Verify:
+Entry point: `./portal test`; its isolated browser stage invokes `npm run test:e2e`. Use actual Supabase Auth and Data API for the principal journeys; mocks may isolate error rendering but must be labelled. Store screenshots of fictional data only. Verify:
 
 - Invitation/recovery → sign-in → own profile/expertise save → reload persistence → sign-out/private deep link.
 - Admin MFA enrollment/challenge → create offered job → lecturer combined search/detail → accept current terms/claim → confirmed calendar → repeat/conflict error.

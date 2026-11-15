@@ -1,3 +1,4 @@
+import { ProfileEvidence } from "../files/profile-evidence";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -364,6 +365,7 @@ function PeopleDirectory({ actorId }: { actorId: string }) {
               </Button>
             )}
             <hr />
+            <ProfileEvidence ownerId={selected.id} readOnly />
             <h3>{t("peopleExpertiseTitle")}</h3>
             <p>{t("peopleVerificationHint")}</p>
             <div className="people-expertise-list">

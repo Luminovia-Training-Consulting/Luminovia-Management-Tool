@@ -7,6 +7,7 @@ export default tseslint.config(
   {
     ignores: [
       "dist",
+      ".local",
       "node_modules",
       "supabase/functions",
       "playwright-report",

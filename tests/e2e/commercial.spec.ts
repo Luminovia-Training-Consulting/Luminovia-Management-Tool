@@ -1,0 +1,437 @@
+import { test, expect, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
+import { createClient } from "@supabase/supabase-js";
+import { createHmac, randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
+
+test.skip(
+  process.env.PORTAL_TEST_MODE !== "1",
+  "Commercial writes run only in the isolated ./portal test stack.",
+);
+function client(key: string) {
+  const url = process.env.SUPABASE_URL!;
+  if (!["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname))
+    throw new Error("Commercial fixtures require loopback isolation.");
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+const service = () => client(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+interface Account {
+  id: string;
+  email: string;
+  name: string;
+}
+async function account(
+  role: "lecturer" | "admin",
+  label: string,
+): Promise<Account> {
+  const tag = randomUUID().slice(0, 8);
+  const email = `commercial-${label}-${tag}@example.invalid`;
+  const name = `Commercial QA ${label} ${tag}`;
+  const result = await service().auth.admin.createUser({
+    email,
+    password: process.env.E2E_PASSWORD!,
+    email_confirm: true,
+  });
+  expect(result.error).toBeNull();
+  const id = result.data.user!.id;
+  expect(
+    (
+      await service()
+        .from("profiles")
+        .update({ display_name: name })
+        .eq("id", id)
+    ).error,
+  ).toBeNull();
+  expect(
+    (await service().from("user_roles").insert({ user_id: id, role })).error,
+  ).toBeNull();
+  return { id, email, name };
+}
+async function login(page: Page, user: Account) {
+  await page.goto("/login");
+  await page.getByLabel("E-Mail", { exact: true }).fill(user.email);
+  await page
+    .getByLabel("Passwort", { exact: true })
+    .fill(process.env.E2E_PASSWORD!);
+  await page.getByRole("button", { name: "Anmelden", exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+}
+function totp(secret: string) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  const bits = [...secret.replace(/=+$/, "").toUpperCase()]
+    .map((char) => alphabet.indexOf(char).toString(2).padStart(5, "0"))
+    .join("");
+  const key = Buffer.from(
+    bits.match(/.{8}/g)!.map((byte) => Number.parseInt(byte, 2)),
+  );
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000)));
+  const digest = createHmac("sha1", key).update(counter).digest();
+  return (
+    (digest.readUInt32BE(digest[digest.length - 1] & 15) & 0x7fffffff) %
+    1_000_000
+  )
+    .toString()
+    .padStart(6, "0");
+}
+async function adminMfa(page: Page, user: Account) {
+  await login(page, user);
+  await page.goto("/security");
+  const response = page.waitForResponse(
+    (item) =>
+      item.request().method() === "POST" &&
+      new URL(item.url()).pathname.endsWith("/auth/v1/factors"),
+  );
+  await page
+    .getByRole("button", { name: "Authenticator einrichten", exact: true })
+    .click();
+  const data = await (await response).json();
+  await page
+    .getByLabel("Sechsstelliger Code", { exact: true })
+    .fill(totp(data.totp.secret));
+  await page
+    .getByRole("button", { name: "Code bestätigen", exact: true })
+    .click();
+  await expect(
+    page.getByText("Dein Konto ist mit zwei Faktoren bestätigt.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+}
+async function a11y(page: Page) {
+  await page.evaluate(() => document.fonts.ready);
+  const result = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(
+    result.violations.map((item) => ({
+      id: item.id,
+      nodes: item.nodes.map((node) => ({
+        target: node.target,
+        summary: node.failureSummary,
+      })),
+    })),
+  ).toEqual([]);
+}
+
+/** Small actual PDF with a valid xref, not renamed plain text. */
+function fictionalPdf() {
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 400 200] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+    "<< /Length 67 >>\nstream\nBT /F1 12 Tf 30 100 Td (Fictional local commercial QA only.) Tj ET\nendstream",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+  ];
+  let pdf = "%PDF-1.7\n";
+  const offsets = [0];
+  objects.forEach((object, index) => {
+    offsets.push(Buffer.byteLength(pdf));
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xref = Buffer.byteLength(pdf);
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets
+    .slice(1)
+    .map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`)
+    .join(
+      "",
+    )}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(pdf);
+}
+async function actor(user: Account) {
+  const api = client(process.env.SUPABASE_ANON_KEY!);
+  expect(
+    (
+      await api.auth.signInWithPassword({
+        email: user.email,
+        password: process.env.E2E_PASSWORD!,
+      })
+    ).error,
+  ).toBeNull();
+  return api;
+}
+async function acceptedJob(
+  user: Account,
+  currency: "EUR" | "AUD",
+  total: number,
+  day: number,
+) {
+  const id = randomUUID();
+  const title = `QA ${currency} ${id.slice(0, 8)}`;
+  expect(
+    (
+      await service().from("jobs").insert({
+        id,
+        title,
+        description: "Fictional commercial QA.",
+        customer_name: "Fictional QA Academy",
+        delivery_type: "online",
+        location: "Online",
+        time_zone: "Europe/Berlin",
+        status: "published",
+        amount: total,
+        currency,
+        rate_unit: "fixed_total",
+        total_amount: total,
+        terms: "Fictional accepted terms.",
+        requires_contract: true,
+      })
+    ).error,
+  ).toBeNull();
+  expect(
+    (
+      await service()
+        .from("job_sessions")
+        .insert({
+          job_id: id,
+          starts_at: `2035-05-${String(day).padStart(2, "0")}T08:00:00Z`,
+          ends_at: `2035-05-${String(day).padStart(2, "0")}T10:00:00Z`,
+        })
+    ).error,
+  ).toBeNull();
+  const api = await actor(user);
+  const result = await api.rpc("claim_job", {
+    p_job_id: id,
+    p_idempotency_key: randomUUID(),
+    p_terms_version: 1,
+  });
+  expect(result.error).toBeNull();
+  expect(result.data.status).toBe("confirmed");
+  return { title, id, claimId: result.data.claim_id };
+}
+
+test("executed PDF receipt, original-currency earnings, invoice review and recorded payment corrections work through the UI", async ({
+  page,
+  browser,
+}, testInfo) => {
+  test.setTimeout(160_000);
+  const lecturer = await account("lecturer", "Lecturer");
+  const administrator = await account("admin", "Commercial");
+  const stranger = await account("lecturer", "Other");
+  const adminContext = await browser.newContext({
+    baseURL: process.env.E2E_BASE_URL,
+    viewport: testInfo.project.use.viewport,
+    isMobile: testInfo.project.use.isMobile,
+    hasTouch: testInfo.project.use.hasTouch,
+    deviceScaleFactor: testInfo.project.use.deviceScaleFactor,
+  });
+  const adminPage = await adminContext.newPage();
+  const pdf = fictionalPdf();
+  await adminMfa(adminPage, administrator);
+  await adminPage.goto("/contracts");
+  await adminPage
+    .getByRole("button", {
+      name: "Ausgeführten Vertrag hinterlegen",
+      exact: true,
+    })
+    .click();
+  let dialog = adminPage.getByRole("dialog");
+  const title = `Rahmenvertrag QA ${randomUUID().slice(0, 8)}`;
+  await dialog
+    .getByLabel("Dozent:in", { exact: true })
+    .selectOption(lecturer.id);
+  await dialog.getByLabel("Titel", { exact: true }).fill(title);
+  await dialog.getByLabel(/Gültig ab/).fill("2026-01-01T00:00");
+  await dialog
+    .getByLabel("Ausgeführter Vertrag als PDF", { exact: true })
+    .setInputFiles({
+      name: "fictional-contract.pdf",
+      mimeType: "application/pdf",
+      buffer: pdf,
+    });
+  await expect(dialog.getByText(/PDF geprüft und bereit/)).toBeVisible({
+    timeout: 45_000,
+  });
+  await dialog
+    .getByRole("button", { name: "Vertrag speichern", exact: true })
+    .click();
+  await expect(dialog).not.toBeVisible();
+  await adminPage
+    .getByLabel("Alle Dozierenden anzeigen", { exact: true })
+    .check();
+  await expect(
+    adminPage.getByRole("heading", { name: title, exact: true }),
+  ).toBeVisible();
+  await login(page, lecturer);
+  await page.goto("/contracts");
+  const contract = page
+    .locator("article")
+    .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
+  await expect(
+    contract.getByText("SHA-256-Prüfsumme", { exact: true }),
+  ).toBeVisible();
+  const download = page.waitForEvent("download");
+  await contract
+    .getByRole("button", { name: "Dokument herunterladen", exact: true })
+    .click();
+  const saved = await download;
+  expect(await saved.failure()).toBeNull();
+  expect(await readFile((await saved.path())!)).toEqual(pdf);
+  await expect(
+    contract.getByRole("button", { name: "Empfang bestätigen", exact: true }),
+  ).toBeDisabled();
+  await contract
+    .getByLabel(
+      "Ich habe diese Vertragsfassung erhalten und zur Kenntnis genommen.",
+      { exact: true },
+    )
+    .check();
+  await contract
+    .getByRole("button", { name: "Empfang bestätigen", exact: true })
+    .click();
+  await expect(contract.getByText(/Empfang bestätigt am/)).toBeVisible();
+  await page.reload();
+  await expect(page.getByText(/Empfang bestätigt am/)).toBeVisible();
+  await a11y(page);
+  const otherApi = await actor(stranger);
+  const others = await otherApi.rpc("contract_records", { p_all: false });
+  expect(others.error).toBeNull();
+  expect(
+    others.data.some((record: { title: string }) => record.title === title),
+  ).toBe(false);
+  const eur = await acceptedJob(lecturer, "EUR", 123.45, 2);
+  const aud = await acceptedJob(lecturer, "AUD", 456.78, 3);
+  await page.goto("/finance");
+  await expect(
+    page.getByRole("heading", { name: "EUR", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "AUD", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Rechnung einreichen", exact: true })
+    .click();
+  dialog = page.getByRole("dialog");
+  const number = `=QA-${randomUUID().slice(0, 8)}`;
+  await dialog.getByLabel("Rechnungsnummer", { exact: true }).fill(number);
+  await dialog.getByRole("checkbox", { name: new RegExp(eur.title) }).check();
+  await expect(
+    dialog.getByRole("checkbox", { name: new RegExp(aud.title) }),
+  ).toBeDisabled();
+  await dialog.getByLabel("Rechnung als PDF", { exact: true }).setInputFiles({
+    name: "fictional-invoice.pdf",
+    mimeType: "application/pdf",
+    buffer: pdf,
+  });
+  await expect(dialog.getByText(/PDF geprüft und bereit/)).toBeVisible({
+    timeout: 45_000,
+  });
+  await dialog
+    .getByRole("button", { name: "Rechnung einreichen", exact: true })
+    .click();
+  await expect(dialog).not.toBeVisible();
+  const invoice = page
+    .locator("article")
+    .filter({ has: page.getByRole("heading", { name: number, exact: true }) });
+  await expect(invoice.getByText("Eingereicht", { exact: true })).toBeVisible();
+  const csvDownload = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Rechnungen als CSV", exact: true })
+    .click();
+  const csv = await csvDownload;
+  expect((await readFile((await csv.path())!)).toString("utf8")).toContain(
+    `"'${number}"`,
+  );
+  await a11y(page);
+  await page.screenshot({
+    path: `docs/screenshots/${testInfo.project.name}-finance.png`,
+    fullPage: true,
+  });
+  await adminPage.goto("/finance");
+  await adminPage
+    .getByLabel("Alle Dozierenden anzeigen", { exact: true })
+    .check();
+  const reviewCard = adminPage.locator("article").filter({
+    has: adminPage.getByRole("heading", { name: number, exact: true }),
+  });
+  await reviewCard
+    .getByRole("button", { name: "Rechnung prüfen", exact: true })
+    .click();
+  await adminPage
+    .getByRole("dialog")
+    .getByLabel("Notiz zur Prüfung", { exact: true })
+    .fill("Fictional QA review.");
+  await adminPage
+    .getByRole("dialog")
+    .getByRole("button", { name: "Rechnung freigeben", exact: true })
+    .click();
+  await expect(adminPage.getByRole("dialog")).not.toBeVisible();
+  await expect(
+    reviewCard.getByText("Freigegeben", { exact: true }),
+  ).toBeVisible();
+  await reviewCard
+    .getByRole("button", { name: "Zahlung eintragen", exact: true })
+    .click();
+  await adminPage
+    .getByRole("dialog")
+    .getByLabel("Zahlungsbetrag (EUR)", { exact: true })
+    .fill("50.00");
+  await adminPage
+    .getByRole("dialog")
+    .getByLabel("Verwendungszweck / Referenz", { exact: true })
+    .fill("QA partial payment");
+  await adminPage
+    .getByRole("dialog")
+    .getByRole("button", { name: "Zahlung speichern", exact: true })
+    .click();
+  await expect(adminPage.getByRole("dialog")).not.toBeVisible();
+  await expect(
+    reviewCard.getByText("Freigegeben", { exact: true }),
+  ).toBeVisible();
+  await reviewCard
+    .getByRole("button", { name: "Zahlungsverlauf", exact: true })
+    .click();
+  await expect(
+    reviewCard.getByText("QA partial payment", { exact: true }),
+  ).toBeVisible();
+  await reviewCard
+    .getByRole("button", { name: "Zahlungseintrag stornieren", exact: true })
+    .click();
+  await adminPage
+    .getByRole("dialog")
+    .getByLabel("Grund der Stornierung", { exact: true })
+    .fill("Fictional mistaken record corrected in QA.");
+  await adminPage
+    .getByRole("dialog")
+    .getByRole("button", { name: "Zahlungseintrag stornieren", exact: true })
+    .click();
+  await expect(adminPage.getByRole("dialog")).not.toBeVisible();
+  await expect(
+    reviewCard.getByText(/Fictional mistaken record corrected/),
+  ).toBeVisible();
+  await reviewCard
+    .getByRole("button", { name: "Zahlung eintragen", exact: true })
+    .click();
+  await expect(
+    adminPage
+      .getByRole("dialog")
+      .getByLabel("Zahlungsbetrag (EUR)", { exact: true }),
+  ).toHaveValue("123.45");
+  await adminPage
+    .getByRole("dialog")
+    .getByRole("button", { name: "Zahlung speichern", exact: true })
+    .click();
+  await expect(adminPage.getByRole("dialog")).not.toBeVisible();
+  await expect(reviewCard.getByText("Bezahlt", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(
+    page
+      .locator("article")
+      .filter({ has: page.getByRole("heading", { name: number, exact: true }) })
+      .getByText("Bezahlt", { exact: true }),
+  ).toBeVisible();
+  const api = await actor(lecturer);
+  const records = await api.rpc("invoice_records", { p_all: false });
+  expect(records.error).toBeNull();
+  const record = records.data.find(
+    (item: { number: string }) => item.number === number,
+  );
+  expect(Number(record.total_amount)).toBe(123.45);
+  expect(Number(record.paid_amount)).toBe(123.45);
+  expect(record.currency).toBe("EUR");
+  expect(record.claim_ids).toEqual([eur.claimId]);
+  await a11y(adminPage);
+  await adminContext.close();
+});

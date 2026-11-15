@@ -1,6 +1,28 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 const pairs: Record<string, [string, string]> = {
+  courses: ["Kurse", "Courses"],
+  clients: ["Kunden", "Clients"],
+  contracts: ["Verträge", "Contracts"],
+  finance: ["Finanzen", "Finance"],
+  portalSearch: ["Im Portal suchen", "Search the portal"],
+  searchAction: ["Suchen", "Search"],
+  searchHint: [
+    "Durchsuche die für dich freigegebenen Aufträge, Dateien, Nachrichten und Wissensbeiträge. Mindestens zwei Zeichen.",
+    "Search jobs, files, messages and knowledge you are permitted to access. At least two characters.",
+  ],
+  searchEmpty: [
+    "Keine freigegebenen Treffer gefunden.",
+    "No permitted results found.",
+  ],
+  notificationForum: ["Neue Forum-Antwort", "New forum reply"],
+  chats: ["Chats", "Chats"],
+  files: ["Dateien", "Files"],
+  more: ["Mehr", "More"],
+  wiki: ["Wiki", "Wiki"],
+  forum: ["Forum", "Forum"],
+  notificationChat: ["Neue Chat-Nachricht", "New chat message"],
+  notificationActivity: ["Neue Aktivität", "New activity"],
   sessionCount_one: ["{{count}} Termin", "{{count}} session"],
   sessionCount_other: ["{{count}} Termine", "{{count}} sessions"],
   people: ["Personen & Expertise", "People & expertise"],

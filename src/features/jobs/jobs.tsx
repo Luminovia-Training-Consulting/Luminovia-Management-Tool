@@ -1,3 +1,5 @@
+import { JobDocuments } from "../files/files";
+import { permissionsQuery } from "../../lib/queries";
 import { useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -241,6 +243,7 @@ export function JobDetail() {
   const client = useQueryClient();
   const [accepted, setAccepted] = useState<number | null>(null);
   const key = useRef(crypto.randomUUID());
+  const permissions = useQuery(permissionsQuery(session!.user.id));
   const jobs = useQuery(jobsQuery);
   const topics = useQuery(topicsQuery);
   const claims = useQuery(claimsQuery(session!.user.id));
@@ -357,6 +360,10 @@ export function JobDetail() {
             )}
             {job.requires_contract && <p>{t("contractRequired")}</p>}
           </section>
+          <JobDocuments
+            jobId={job.id}
+            canManage={permissions.data?.includes("jobs.manage") ?? false}
+          />
         </div>
         <aside className="claim-panel panel">
           <p className="eyebrow">{t("total")}</p>

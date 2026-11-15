@@ -3,6 +3,11 @@ import { existsSync } from "node:fs";
 
 if (existsSync(".env.test.local")) process.loadEnvFile(".env.test.local");
 
+if (process.env.PORTAL_TEST_MODE !== "1")
+  throw new Error(
+    "Browser integration tests require the isolated ./portal test command; development data are preserved.",
+  );
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,

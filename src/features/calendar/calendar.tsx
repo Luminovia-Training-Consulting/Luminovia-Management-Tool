@@ -1,3 +1,4 @@
+import { runsQuery, templatesQuery } from "../operations/data";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -193,6 +194,15 @@ export function CalendarPage() {
   const claims = useQuery(claimsQuery(session!.user.id));
   const personal = useQuery(eventsQuery(session!.user.id));
   const jobs = useQuery(jobsQuery);
+  const [global, setGlobal] = useState(false);
+  const publicRuns = useQuery({
+    ...runsQuery(session!.user.id),
+    enabled: global,
+  });
+  const templates = useQuery({
+    ...templatesQuery(session!.user.id),
+    enabled: global,
+  });
   const globals = useQuery({
     queryKey: ["global-events"],
     queryFn: async () => {
@@ -211,7 +221,6 @@ export function CalendarPage() {
   });
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<PersonalEvent | undefined>();
-  const [global, setGlobal] = useState(false);
   const [message, setMessage] = useState("");
   const online = useOnline();
   const zone = profile.data?.time_zone ?? "Europe/Berlin";
@@ -219,10 +228,17 @@ export function CalendarPage() {
     claims.isPending ||
     personal.isPending ||
     jobs.isPending ||
-    globals.isPending
+    globals.isPending ||
+    (global && (publicRuns.isPending || templates.isPending))
   )
     return <Loading />;
-  if (claims.isError || personal.isError || jobs.isError || globals.isError)
+  if (
+    claims.isError ||
+    personal.isError ||
+    jobs.isError ||
+    globals.isError ||
+    (global && (publicRuns.isError || templates.isError))
+  )
     return (
       <ErrorState
         retry={() => {
@@ -230,18 +246,39 @@ export function CalendarPage() {
           void personal.refetch();
           void jobs.refetch();
           void globals.refetch();
+          if (global) {
+            void publicRuns.refetch();
+            void templates.refetch();
+          }
         }}
       />
     );
   const events = global
-    ? globals.data.map((e) => ({
-        id: e.id,
-        title: e.title,
-        start: e.starts_at,
-        end: e.ends_at,
-        color: "#1749b5",
-        extendedProps: { kind: "global" },
-      }))
+    ? [
+        ...globals.data.map((e) => ({
+          id: e.id,
+          title: e.title,
+          start: e.starts_at,
+          end: e.ends_at,
+          color: "#1749b5",
+          extendedProps: { kind: "global" },
+        })),
+        ...(publicRuns.data ?? [])
+          .filter((run) => run.published && !run.archived_at)
+          .flatMap((run) =>
+            run.course_sessions.map((s) => ({
+              id: `course-${s.id}`,
+              title:
+                templates.data?.find((t) => t.id === run.template_id)?.title ??
+                t("courses"),
+              start: s.starts_at,
+              end: s.ends_at,
+              color: "#326c58",
+              url: "/courses",
+              extendedProps: { kind: "course" },
+            })),
+          ),
+      ]
     : [
         ...personal.data.map((e) => ({
           id: e.id,
