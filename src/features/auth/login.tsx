@@ -16,10 +16,12 @@ export function Login() {
   const { session, loading } = useAuth();
   const online = useOnline();
   const [recover, setRecover] = useState(false);
+  const [recovering, setRecovering] = useState(false);
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
   const {
     register,
+    getValues,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema) });
@@ -29,26 +31,38 @@ export function Login() {
     setMessage("");
     setFailed(false);
     if (!online) return;
-    const { error } = await db().auth.signInWithPassword(values);
-    if (error) {
-      setFailed(true);
-      setMessage(t("loginFailed"));
+    try {
+      const { error } = await db().auth.signInWithPassword(values);
+      if (!error) return;
+    } catch {
+      // Transport/storage failures may reject instead of returning an Auth error.
     }
+    setFailed(true);
+    setMessage("loginFailed");
   }
   async function recovery() {
+    if (!online || recovering) return;
     setMessage("");
     setFailed(false);
-    const email = (document.getElementById("email") as HTMLInputElement).value;
+    const email = getValues("email");
     if (!z.email().safeParse(email).success) {
       setFailed(true);
-      setMessage(t("validation"));
+      setMessage("validation");
       return;
     }
-    const { error } = await db().auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback`,
-    });
-    setFailed(Boolean(error));
-    setMessage(t(error ? "error" : "recoverSent"));
+    setRecovering(true);
+    try {
+      const { error } = await db().auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      });
+      setFailed(Boolean(error));
+      setMessage(error ? "error" : "recoverSent");
+    } catch {
+      setFailed(true);
+      setMessage("error");
+    } finally {
+      setRecovering(false);
+    }
   }
   return (
     <div className="login-layout">
@@ -82,7 +96,17 @@ export function Login() {
               <p>{t("setupHint")}</p>
             </Notice>
           ) : (
-            <form onSubmit={handleSubmit(submit)} noValidate>
+            <form
+              onSubmit={
+                recover
+                  ? (event) => {
+                      event.preventDefault();
+                      void recovery();
+                    }
+                  : handleSubmit(submit)
+              }
+              noValidate
+            >
               <Field
                 id="email"
                 label={t("email")}
@@ -112,14 +136,12 @@ export function Login() {
                 </Field>
               )}
               {message && (
-                <Notice kind={failed ? "error" : "success"}>{message}</Notice>
+                <Notice kind={failed ? "error" : "success"}>
+                  {t(message)}
+                </Notice>
               )}
               {recover ? (
-                <Button
-                  type="button"
-                  onClick={() => void recovery()}
-                  disabled={!online}
-                >
+                <Button type="submit" disabled={!online || recovering}>
                   {t("recover")}
                   <ArrowRight size={18} />
                 </Button>
@@ -132,6 +154,7 @@ export function Login() {
               <Button
                 type="button"
                 variant="ghost"
+                disabled={recovering || isSubmitting}
                 onClick={() => {
                   setRecover(!recover);
                   setMessage("");

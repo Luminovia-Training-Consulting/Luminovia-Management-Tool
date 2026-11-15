@@ -1,5 +1,49 @@
 import i18n from "../../lib/i18n";
 const pairs: Record<string, [string, string]> = {
+  buildingBlocks: ["CBW-Bausteine", "CBW building blocks"],
+  blockDetails: ["Bausteindetails", "Building-block details"],
+  planRun: ["Durchführung planen", "Plan course run"],
+  createRunOffer: ["Auftrag daraus erstellen", "Create teaching offer"],
+  reusableBlock: [
+    "Inhalte und Quellenbezug wiederverwenden; Kundenzuordnung, Termine und Honorar für jede Durchführung festlegen.",
+    "Reuse content and source references; set the customer, sessions and fee for each run.",
+  ],
+  sourceReference: ["CBW-Quellenreferenz", "CBW source reference"],
+  sourceDuration: [
+    "{{days}} Tage · {{hours}} Std. laut Quelle",
+    "{{days}} days · {{hours}} hours according to source",
+  ],
+  sourcePrivacy: [
+    "Die Referenz identifiziert die Originalbeschreibung. Die PDF-Dateien werden nicht öffentlich bereitgestellt.",
+    "The reference identifies the original description. Original PDFs are not publicly hosted.",
+  ],
+  sourceRevision: ["Dokumentstand", "Document revision"],
+  sourceCreated: ["Erstellt", "Created"],
+  primarySource: ["Katalogquelle", "Catalogue source"],
+  referencedSource: ["Verknüpfte Quelle", "Linked source"],
+  sourceVariant: ["Weitere Quellenfassung", "Additional source version"],
+  contentPages: ["Inhaltsseiten", "Content pages"],
+  sourcePageCount: ["{{count}} Seiten gesamt", "{{count}} pages in total"],
+  sourceHash: ["SHA-256-Prüfsumme anzeigen", "Show SHA-256 checksum"],
+  blockSchedule: [
+    "Terminplanung für {{code}}",
+    "Session planning for {{code}}",
+  ],
+  scheduleHelp: [
+    "Vorschlag für {{days}} Werktage aus {{hours}} Quellenstunden. Wochenenden werden ausgelassen; Feiertage, Pausen und individuelle Unterrichtszeiten bitte prüfen. Die Termine lassen sich anschließend einzeln bearbeiten.",
+    "Suggest {{days}} weekdays from {{hours}} source hours. Weekends are skipped; review holidays, breaks and individual teaching times. Every suggested session remains editable.",
+  ],
+  firstDate: ["Erster Unterrichtstag", "First teaching date"],
+  dailyStart: ["Täglicher Beginn", "Daily start"],
+  dailyEnd: ["Tägliches Ende", "Daily end"],
+  generateSchedule: [
+    "{{count}} Werktagstermine erzeugen",
+    "Generate {{count}} weekday sessions",
+  ],
+  scheduleInvalid: [
+    "Bitte prüfe Startdatum, tägliche Uhrzeiten und Dauer. Das Ende muss nach dem Beginn liegen.",
+    "Check the start date, daily times and duration. End must follow start.",
+  ],
   clients: ["Kunden & Kontakte", "Clients & contacts"],
   clientsIntro: [
     "Organisationen, geschäftliche Kontakte und interne Notizen verwalten.",

@@ -28,6 +28,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
+import { Avatar } from "../features/profile/avatar";
 import { useAuth } from "../features/auth/auth-context";
 import { db } from "../lib/supabase";
 import { permissionsQuery, profileQuery, userRolesQuery } from "../lib/queries";
@@ -176,6 +177,7 @@ export function Shell() {
   const [collapsed, setCollapsed] = useState(false);
   const [search, setSearch] = useState("");
   const [signoutFailed, setSignoutFailed] = useState(false);
+  const [signoutPending, setSignoutPending] = useState(false);
   const profile = useQuery(profileQuery(session!.user.id));
   const permissions = useQuery(permissionsQuery(session!.user.id));
   const roles = useQuery(userRolesQuery(session!.user.id));
@@ -230,13 +232,20 @@ export function Shell() {
     return item ? [item] : [];
   });
   async function logout() {
-    const { error } = await db().auth.signOut();
-    if (error) {
+    setSignoutFailed(false);
+    setSignoutPending(true);
+    try {
+      const { error } = await db().auth.signOut();
+      if (error) throw error;
+      client.clear();
+      navigate("/login", { replace: true });
+    } catch {
+      // A rejected SDK/network promise is not a confirmed sign-out. Keep the
+      // current screen and private queries available for an explicit retry.
       setSignoutFailed(true);
-      return;
+    } finally {
+      setSignoutPending(false);
     }
-    client.clear();
-    navigate("/login", { replace: true });
   }
   return (
     <div className={`app-shell ${collapsed ? "is-collapsed" : ""}`}>
@@ -338,15 +347,18 @@ export function Shell() {
               </nav>
             </details>
             <NavLink to="/profile" className="avatar" aria-label={t("profile")}>
-              {(profile.data?.display_name || session!.user.email || "L")
-                .slice(0, 1)
-                .toUpperCase()}
+              <Avatar
+                userId={session!.user.id}
+                name={profile.data?.display_name || session!.user.email || "L"}
+                decorative
+              />
             </NavLink>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => void logout()}
               aria-label={t("logout")}
+              disabled={signoutPending}
             >
               <LogOut size={18} />
             </Button>

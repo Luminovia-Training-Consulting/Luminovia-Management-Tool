@@ -4,7 +4,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Plus, Trash2 } from "lucide-react";
 import { DateTime } from "luxon";
 import { FeeSplitPreview } from "../commercial/pricing";
@@ -15,10 +15,16 @@ import {
 } from "../commercial/commission-api";
 import "../commercial/platform-i18n";
 import { InviteForm } from "./invite";
+import { BuildingBlockReference } from "../operations/building-blocks";
+import {
+  courseRunJobDefaultsQuery,
+  type CourseRunJobDefaults,
+} from "../operations/building-blocks-api";
+import "./course-i18n";
 import { useAuth } from "../auth/auth-context";
 import { jobsQuery, permissionsQuery, topicsQuery } from "../../lib/queries";
 import { db } from "../../lib/supabase";
-import { validZone, zonedInstant } from "../../lib/dates";
+import { dateTime, validZone, zonedInstant } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import {
@@ -58,8 +64,16 @@ const schema = z.object({
     .max(60),
 });
 type Values = z.infer<typeof schema>;
-function JobForm() {
+function JobForm({
+  courseRun: initialSource,
+}: {
+  courseRun?: CourseRunJobDefaults;
+}) {
+  // Keep the reviewed source stable while editing money. A background refetch
+  // must not silently replace the schedule or bypass the server revision check.
+  const [courseRun] = useState(initialSource);
   const { t, i18n } = useTranslation();
+  const courseText = useTranslation("courseOffer").t;
   const { t: priceText } = useTranslation("platform");
   const { session } = useAuth();
   const actor = session!.user.id;
@@ -67,7 +81,7 @@ function JobForm() {
   const gross = Boolean(pricing.data?.can_manage_gross);
   const organisations = useQuery({
     ...clientOrganisationsQuery(actor),
-    enabled: gross,
+    enabled: gross && !courseRun,
   });
   const retry = useRef<{ signature: string; key: string } | null>(null);
   const online = useOnline();
@@ -75,6 +89,7 @@ function JobForm() {
   const client = useQueryClient();
   const [invalidTime, setInvalidTime] = useState(false);
   const [done, setDone] = useState(false);
+  const [createdId, setCreatedId] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -86,35 +101,44 @@ function JobForm() {
   } = useForm<Values>({
     resolver: zodResolver(schema),
     defaultValues: {
-      title: "",
-      description: "",
-      customer_name: "",
-      organisation: "",
+      title: courseRun?.title ?? "",
+      description: courseRun?.description ?? "",
+      customer_name: courseRun?.customer_name ?? "",
+      organisation: courseRun?.organisation_id ?? "",
       platform_percent: 50,
-      delivery_type: "online",
-      location: "",
-      time_zone: "Europe/Berlin",
+      delivery_type: courseRun?.delivery_type ?? "online",
+      location: courseRun?.location ?? "",
+      time_zone: courseRun?.time_zone ?? "Europe/Berlin",
       amount: 400,
-      total_amount: 2000,
+      total_amount: 400 * (courseRun?.sessions.length ?? 5),
       currency: "EUR",
       rate_unit: "per_day",
       terms: "",
       publish: false,
       requires_contract: false,
-      topic_ids: [],
-      sessions: Array.from({ length: 5 }, (_, i) => {
-        const d = DateTime.now()
-          .setZone("Europe/Berlin")
-          .plus({ days: i + 7 });
-        return {
-          starts_at: d
-            .set({ hour: 9, minute: 0 })
-            .toFormat("yyyy-MM-dd'T'HH:mm"),
-          ends_at: d
-            .set({ hour: 15, minute: 0 })
-            .toFormat("yyyy-MM-dd'T'HH:mm"),
-        };
-      }),
+      topic_ids: courseRun?.topic_ids ?? [],
+      sessions: courseRun
+        ? courseRun.sessions.map((session) => ({
+            starts_at: DateTime.fromISO(session.starts_at)
+              .setZone(courseRun.time_zone)
+              .toFormat("yyyy-MM-dd'T'HH:mm"),
+            ends_at: DateTime.fromISO(session.ends_at)
+              .setZone(courseRun.time_zone)
+              .toFormat("yyyy-MM-dd'T'HH:mm"),
+          }))
+        : Array.from({ length: 5 }, (_, i) => {
+            const d = DateTime.now()
+              .setZone("Europe/Berlin")
+              .plus({ days: i + 7 });
+            return {
+              starts_at: d
+                .set({ hour: 9, minute: 0 })
+                .toFormat("yyyy-MM-dd'T'HH:mm"),
+              ends_at: d
+                .set({ hour: 15, minute: 0 })
+                .toFormat("yyyy-MM-dd'T'HH:mm"),
+            };
+          }),
     },
   });
   const watchedTotal = useWatch({ control, name: "total_amount" });
@@ -129,21 +153,27 @@ function JobForm() {
     mutationFn: async (values: Values) => {
       requireOnline();
       setDone(false);
+      setCreatedId(null);
       setInvalidTime(false);
-      const sessions = values.sessions.map((s) => {
-        const starts = zonedInstant(s.starts_at, values.time_zone);
-        const ends = zonedInstant(s.ends_at, values.time_zone);
-        if (
-          !starts ||
-          !ends ||
-          ends <= starts ||
-          new Date(starts) <= new Date()
-        ) {
-          setInvalidTime(true);
-          throw new Error("invalid_time");
-        }
-        return { starts_at: starts, ends_at: ends };
-      });
+      const sessions = courseRun
+        ? courseRun.sessions.map(({ starts_at, ends_at }) => ({
+            starts_at,
+            ends_at,
+          }))
+        : values.sessions.map((s) => {
+            const starts = zonedInstant(s.starts_at, values.time_zone);
+            const ends = zonedInstant(s.ends_at, values.time_zone);
+            if (
+              !starts ||
+              !ends ||
+              ends <= starts ||
+              new Date(starts) <= new Date()
+            ) {
+              setInvalidTime(true);
+              throw new Error("invalid_time");
+            }
+            return { starts_at: starts, ends_at: ends };
+          });
       const {
         publish,
         organisation,
@@ -157,6 +187,34 @@ function JobForm() {
         sessions,
         status: publish ? "published" : "draft",
       };
+      if (courseRun) {
+        const payload = {
+          source_revision: courseRun.source_revision,
+          currency: values.currency,
+          rate_unit: values.rate_unit,
+          terms: values.terms,
+          requires_contract: values.requires_contract,
+          status: base.status,
+          ...(gross
+            ? { gross_amount: amount, gross_total_amount: total_amount }
+            : { amount, total_amount }),
+        };
+        const signature = JSON.stringify([
+          courseRun.course_run_id,
+          payload,
+          platform_percent,
+        ]);
+        if (!retry.current || retry.current.signature !== signature)
+          retry.current = { signature, key: crypto.randomUUID() };
+        const { data, error } = await db().rpc("create_course_run_job", {
+          p_course_run_id: courseRun.course_run_id,
+          p_payload: payload,
+          p_platform_percent: gross ? platform_percent : 50,
+          p_client_id: retry.current.key,
+        });
+        if (error || !data) throw error ?? new Error("unconfirmed");
+        return data as string;
+      }
       if (gross) {
         const payload = {
           ...base,
@@ -177,16 +235,20 @@ function JobForm() {
           p_client_id: retry.current.key,
         });
         if (error || !data) throw error ?? new Error("unconfirmed");
+        return data as string;
       } else {
         const { data, error } = await db().rpc("create_job", {
           p_payload: { ...base, amount, total_amount },
         });
         if (error || !data) throw error ?? new Error("unconfirmed");
+        return data as string;
       }
     },
-    onSuccess: async (_data, values) => {
+    onSuccess: async (jobId, values) => {
       await Promise.all([
         client.invalidateQueries({ queryKey: ["jobs"] }),
+        client.invalidateQueries({ queryKey: ["operations"] }),
+        client.invalidateQueries({ queryKey: commissionKeys.spend(actor) }),
         client.invalidateQueries({ queryKey: commissionKeys.report(actor) }),
         client.invalidateQueries({ queryKey: commissionKeys.requests(actor) }),
         client.invalidateQueries({
@@ -195,15 +257,20 @@ function JobForm() {
       ]);
       reset(values);
       setDone(true);
+      setCreatedId(jobId);
     },
   });
   if (
     topics.isPending ||
     pricing.isPending ||
-    (gross && organisations.isPending)
+    (gross && !courseRun && organisations.isPending)
   )
     return <Loading />;
-  if (topics.isError || pricing.isError || (gross && organisations.isError))
+  if (
+    topics.isError ||
+    pricing.isError ||
+    (gross && !courseRun && organisations.isError)
+  )
     return (
       <ErrorState
         retry={() => {
@@ -219,124 +286,171 @@ function JobForm() {
       noValidate
       onSubmit={handleSubmit((values) => create.mutate(values))}
     >
-      <h2>{t("createJob")}</h2>
-      {gross && (
-        <Field id="job-organisation" label={priceText("existingCustomer")}>
-          <select
-            id="job-organisation"
-            {...register("organisation", {
-              onChange: (event) => {
-                const selected = organisations.data?.find(
-                  (org) => org.id === event.target.value,
-                );
-                if (selected)
-                  setValue("customer_name", selected.name, {
-                    shouldDirty: true,
-                  });
-              },
-            })}
-          >
-            <option value="">{priceText("newCustomer")}</option>
-            {organisations.data?.map((org) => (
-              <option key={org.id} value={org.id}>
-                {org.name}
-              </option>
+      <h2>{courseRun ? courseText("fromCourse") : t("createJob")}</h2>
+      {courseRun && (
+        <>
+          <p>{courseText("sourceHelp")}</p>
+          <h3>{courseRun.title}</h3>
+          <p className="preserve-text">{courseRun.description}</p>
+          <p>
+            {courseRun.customer_name} · {t(courseRun.delivery_type)} ·{" "}
+            {courseRun.location} · {courseRun.time_zone}
+          </p>
+          <ol className="session-list">
+            {courseRun.sessions.map((row) => (
+              <li key={row.source_course_session_id}>
+                <div>
+                  <strong>
+                    {dateTime(
+                      row.starts_at,
+                      i18n.language,
+                      courseRun.time_zone,
+                    )}
+                  </strong>
+                  <span>
+                    {dateTime(row.ends_at, i18n.language, courseRun.time_zone)}
+                  </span>
+                </div>
+              </li>
             ))}
-          </select>
-        </Field>
+          </ol>
+          <Button asChild variant="secondary">
+            <Link to={`/courses?run=${courseRun.course_run_id}`}>
+              {courseText("plan")}
+            </Link>
+          </Button>
+          <BuildingBlockReference templateId={courseRun.template_id} />
+        </>
       )}
-      <div className="form-row">
-        <Field id="job-title" label={t("title")} error={Boolean(errors.title)}>
-          <input id="job-title" {...register("title")} />
-        </Field>
-        <Field
-          id="job-customer"
-          label={t("customer")}
-          error={Boolean(errors.customer_name)}
-        >
-          <input
-            id="job-customer"
-            {...register("customer_name")}
-            readOnly={Boolean(selectedOrganisation)}
-          />
-        </Field>
-      </div>
-      <Field
-        id="job-description"
-        label={t("description")}
-        error={Boolean(errors.description)}
-      >
-        <textarea id="job-description" rows={4} {...register("description")} />
-      </Field>
-      <div className="form-row">
-        <Field id="job-delivery" label={t("delivery")}>
-          <select id="job-delivery" {...register("delivery_type")}>
-            <option value="online">{t("online")}</option>
-            <option value="onsite">{t("onsite")}</option>
-          </select>
-        </Field>
-        <Field
-          id="job-location"
-          label={i18n.language === "de" ? "Ort / Link" : "Location / link"}
-        >
-          <input id="job-location" {...register("location")} />
-        </Field>
-        <Field
-          id="job-zone"
-          label={t("timezone")}
-          error={Boolean(errors.time_zone)}
-        >
-          <input id="job-zone" {...register("time_zone")} />
-        </Field>
-      </div>
-      <fieldset>
-        <legend>{t("sessions")}</legend>
-        {fields.map((field, index) => (
-          <div className="session-form-row" key={field.id}>
+      {!courseRun && (
+        <>
+          {gross && (
+            <Field id="job-organisation" label={priceText("existingCustomer")}>
+              <select
+                id="job-organisation"
+                {...register("organisation", {
+                  onChange: (event) => {
+                    const selected = organisations.data?.find(
+                      (org) => org.id === event.target.value,
+                    );
+                    if (selected)
+                      setValue("customer_name", selected.name, {
+                        shouldDirty: true,
+                      });
+                  },
+                })}
+              >
+                <option value="">{priceText("newCustomer")}</option>
+                {organisations.data?.map((org) => (
+                  <option key={org.id} value={org.id}>
+                    {org.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+          <div className="form-row">
             <Field
-              id={`session-start-${index}`}
-              label={`${t("start")} ${index + 1}`}
-              error={Boolean(errors.sessions?.[index]?.starts_at)}
+              id="job-title"
+              label={t("title")}
+              error={Boolean(errors.title)}
             >
-              <input
-                id={`session-start-${index}`}
-                type="datetime-local"
-                {...register(`sessions.${index}.starts_at`)}
-              />
+              <input id="job-title" {...register("title")} />
             </Field>
             <Field
-              id={`session-end-${index}`}
-              label={`${t("end")} ${index + 1}`}
-              error={Boolean(errors.sessions?.[index]?.ends_at)}
+              id="job-customer"
+              label={t("customer")}
+              error={Boolean(errors.customer_name)}
             >
               <input
-                id={`session-end-${index}`}
-                type="datetime-local"
-                {...register(`sessions.${index}.ends_at`)}
+                id="job-customer"
+                {...register("customer_name")}
+                readOnly={Boolean(selectedOrganisation)}
               />
             </Field>
+          </div>
+          <Field
+            id="job-description"
+            label={t("description")}
+            error={Boolean(errors.description)}
+          >
+            <textarea
+              id="job-description"
+              rows={4}
+              {...register("description")}
+            />
+          </Field>
+          <div className="form-row">
+            <Field id="job-delivery" label={t("delivery")}>
+              <select id="job-delivery" {...register("delivery_type")}>
+                <option value="online">{t("online")}</option>
+                <option value="onsite">{t("onsite")}</option>
+              </select>
+            </Field>
+            <Field
+              id="job-location"
+              label={i18n.language === "de" ? "Ort / Link" : "Location / link"}
+            >
+              <input id="job-location" {...register("location")} />
+            </Field>
+            <Field
+              id="job-zone"
+              label={t("timezone")}
+              error={Boolean(errors.time_zone)}
+            >
+              <input id="job-zone" {...register("time_zone")} />
+            </Field>
+          </div>
+          <fieldset>
+            <legend>{t("sessions")}</legend>
+            {fields.map((field, index) => (
+              <div className="session-form-row" key={field.id}>
+                <Field
+                  id={`session-start-${index}`}
+                  label={`${t("start")} ${index + 1}`}
+                  error={Boolean(errors.sessions?.[index]?.starts_at)}
+                >
+                  <input
+                    id={`session-start-${index}`}
+                    type="datetime-local"
+                    {...register(`sessions.${index}.starts_at`)}
+                  />
+                </Field>
+                <Field
+                  id={`session-end-${index}`}
+                  label={`${t("end")} ${index + 1}`}
+                  error={Boolean(errors.sessions?.[index]?.ends_at)}
+                >
+                  <input
+                    id={`session-end-${index}`}
+                    type="datetime-local"
+                    {...register(`sessions.${index}.ends_at`)}
+                  />
+                </Field>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  disabled={fields.length < 2}
+                  aria-label={`${t("remove")} ${index + 1}`}
+                  onClick={() => remove(index)}
+                >
+                  <Trash2 size={18} />
+                </Button>
+              </div>
+            ))}
             <Button
               type="button"
-              variant="ghost"
-              size="icon"
-              disabled={fields.length < 2}
-              aria-label={`${t("remove")} ${index + 1}`}
-              onClick={() => remove(index)}
+              variant="secondary"
+              disabled={fields.length >= 60}
+              onClick={() => append({ starts_at: "", ends_at: "" })}
             >
-              <Trash2 size={18} />
+              <Plus size={17} />
+              {t("newSession")}
             </Button>
-          </div>
-        ))}
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={fields.length >= 60}
-          onClick={() => append({ starts_at: "", ends_at: "" })}
-        >
-          <Plus size={17} />
-          {t("newSession")}
-        </Button>
-      </fieldset>
+          </fieldset>
+        </>
+      )}
       <div className="form-row">
         <Field
           id="job-amount"
@@ -351,7 +465,7 @@ function JobForm() {
             {...register("amount", {
               valueAsNumber: true,
               onChange: (event) => {
-                if (gross && getValues("rate_unit") === "fixed_total")
+                if (getValues("rate_unit") === "fixed_total")
                   setValue("total_amount", Number(event.target.value));
               },
             })}
@@ -368,7 +482,7 @@ function JobForm() {
             id="job-unit"
             {...register("rate_unit", {
               onChange: (event) => {
-                if (gross && event.target.value === "fixed_total")
+                if (event.target.value === "fixed_total")
                   setValue("amount", getValues("total_amount"));
               },
             })}
@@ -395,7 +509,7 @@ function JobForm() {
             {...register("total_amount", {
               valueAsNumber: true,
               onChange: (event) => {
-                if (gross && getValues("rate_unit") === "fixed_total")
+                if (getValues("rate_unit") === "fixed_total")
                   setValue("amount", Number(event.target.value));
               },
             })}
@@ -436,21 +550,23 @@ function JobForm() {
       >
         <textarea id="job-terms" rows={4} {...register("terms")} />
       </Field>
-      <fieldset>
-        <legend>{t("requirements")}</legend>
-        <div className="tags">
-          {topics.data?.map((topic) => (
-            <label key={topic.id} className="checkbox-label">
-              <input
-                type="checkbox"
-                value={topic.id}
-                {...register("topic_ids")}
-              />
-              {i18n.language === "de" ? topic.label_de : topic.label_en}
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      {!courseRun && (
+        <fieldset>
+          <legend>{t("requirements")}</legend>
+          <div className="tags">
+            {topics.data?.map((topic) => (
+              <label key={topic.id} className="checkbox-label">
+                <input
+                  type="checkbox"
+                  value={topic.id}
+                  {...register("topic_ids")}
+                />
+                {i18n.language === "de" ? topic.label_de : topic.label_en}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
       <label className="checkbox-label">
         <input type="checkbox" {...register("requires_contract")} />
         {t("contractRequired")}
@@ -459,23 +575,54 @@ function JobForm() {
         <input type="checkbox" {...register("publish")} />
         {t("publish")}
       </label>
-      <Button disabled={!online || create.isPending || (done && !isDirty)}>
+      <Button
+        disabled={
+          !online ||
+          create.isPending ||
+          (done && (!isDirty || Boolean(courseRun)))
+        }
+      >
         {t(create.isPending ? "saving" : "saveJob")}
       </Button>
       {Object.keys(errors).length > 0 && (
         <Notice kind="error">{t("invalidForm")}</Notice>
       )}
       {create.isError && (
-        <Notice kind="error">{t(invalidTime ? "invalidTime" : "error")}</Notice>
+        <Notice kind="error">
+          {courseRun && create.error.message === "course_run_source_changed"
+            ? courseText("sourceChanged")
+            : courseRun && create.error.message === "course_run_offer_exists"
+              ? courseText("exists")
+              : courseRun &&
+                  create.error.message === "course_run_customer_required"
+                ? courseText("customerRequired")
+                : t(invalidTime ? "invalidTime" : "error")}
+        </Notice>
       )}
       {done && <Notice>{t("jobSaved")}</Notice>}
+      {createdId && (
+        <Button asChild variant="secondary">
+          <Link to={`/jobs/${createdId}`}>{courseText("openJob")}</Link>
+        </Button>
+      )}
     </form>
   );
 }
 export function AdminPage() {
   const { t } = useTranslation();
+  const courseText = useTranslation("courseOffer").t;
   const { session } = useAuth();
   const permissions = useQuery(permissionsQuery(session!.user.id));
+  const [params] = useSearchParams();
+  const runId = params.get("courseRun") ?? "";
+  const course = useQuery({
+    ...courseRunJobDefaultsQuery(session!.user.id, runId),
+    enabled: Boolean(
+      runId &&
+      permissions.data?.includes("jobs.manage") &&
+      permissions.data.includes("courses.manage"),
+    ),
+  });
   const jobs = useQuery(jobsQuery);
   const client = useQueryClient();
   const online = useOnline();
@@ -506,7 +653,21 @@ export function AdminPage() {
   return (
     <>
       <PageHeading title={t("admin")} description={t("adminIntro")} />
-      <JobForm />
+      {runId ? (
+        !permissions.data.includes("courses.manage") ? (
+          <Notice kind="error">{t("noAccess")}</Notice>
+        ) : course.isPending ? (
+          <Loading />
+        ) : course.isError ? (
+          <ErrorState retry={() => void course.refetch()} />
+        ) : !course.data.organisation_id ? (
+          <Notice kind="error">{courseText("customerRequired")}</Notice>
+        ) : (
+          <JobForm key={runId} courseRun={course.data} />
+        )
+      ) : (
+        <JobForm key="standalone" />
+      )}
       {(permissions.data.includes("users.manage") ||
         permissions.data.includes("users.invite")) && <InviteForm />}
       <section className="panel admin-job-list">

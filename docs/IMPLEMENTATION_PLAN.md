@@ -2,6 +2,18 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A local working slice is not production approval.
 
+## M4 in progress — functional audit and reusable CBW content
+
+Requested 16 November: source-grounded functional/dead-code/connection audit; meaningful failed-path tests and developer docs; CBW building blocks as reusable provenance-linked templates; profile pictures; and resource-specific comments. M3 is merged through PR #3. Work is isolated in `codex/functional-qa-building-blocks`; original concurrent hosting edits and normal persistent data remain untouched.
+
+- [ ] Import all 24 PDF source references into 22 canonical CBW building blocks/templates, retaining both LPC3/LPC4 revisions. Provide readable searchable content and safe template/run duplication.
+- [ ] Create real offers from an existing course run with exact template/session/source references, authoritative server defaults, gross/net separation and idempotency; change only scheduling/financial/delivery details as needed.
+- [ ] Secure scanned profile avatars with own upload/remove/replace, scoped authenticated viewing and no private-file bypass or offline caches.
+- [ ] Staff comments under templates and jobs, with access checks, bounded text, actual persistence, idempotency, cursor pagination, edits/withdrawals and reasoned MFA moderation.
+- [ ] Reproduce and fix functional gaps in Auth/search and any other actual findings; verify import/export/RPC connections; document legitimate runtime-only entry points.
+- [ ] Update README, developer/feature/API documentation, test inventory and exact acceptance evidence; review readable desktop/mobile/DE/EN/theme screens.
+- [ ] Pass complete isolated command, signed push/exact PR CI and authorised merge, without production publishing.
+
 ## M3 locally accepted — requested account, profile and commission extension
 
 The user authorised direct pushes/merges on 16 November and approved 50/50 default, client accounts, role-specific financial views and optional managed learners/reviews. [Exact extension](ACCOUNTS_REVENUE_SPEC.md). PR #2 was verified and merged; M3 is developed separately in `codex/accounts-profiles-commission`, preserving unrelated original hosting edits. Full isolated acceptance passed in `.local/tests/b1c83645/`: 59 source, 7 runtime, 22 Edge, 120 SQL, all 9 actual API suites plus Mailpit, 46 browser workflows, build and 2 PWA checks. Exact GitHub/main integration is recorded on [PR #3](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/3). Remaining original modules below are still required.

@@ -252,7 +252,7 @@ function Versions({ file }: { file: PortalDocument }) {
     </>
   );
 }
-export function DocumentList({ files }: { files: PortalDocument[] }) {
+function DocumentList({ files }: { files: PortalDocument[] }) {
   const { t, i18n } = useTranslation("files");
   const { session } = useAuth();
   const client = useQueryClient();

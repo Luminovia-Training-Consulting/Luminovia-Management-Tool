@@ -171,6 +171,29 @@ erDiagram
 
 `profile_details` separates the new authored country/languages/experience/labels from private contacts/evidence. `course_enrolments` keeps current membership/completion/removal, while `course_reviews` carries course/actual lecturer/author, versioned text/rating and moderation/withdrawal state. Direct review table reads are denied; identity-safe RPCs project each reader's authorised view. Existing `invitation_requests` now binds the requested role/organisation/display name; both invitation handlers use this single lifecycle. Exact schema/arguments are in [API_REFERENCE](API_REFERENCE.md) and the three additive M3 migrations.
 
+## Implemented M4 source catalogue, avatars and discussions
+
+```mermaid
+erDiagram
+  BUILDING_BLOCKS ||--|{ BUILDING_BLOCK_SOURCES : records_exact_versions
+  BUILDING_BLOCKS ||--o{ COURSE_TEMPLATES : underlies
+  BUILDING_BLOCK_SOURCES ||--o{ COURSE_TEMPLATES : fixes_provenance
+  COURSE_TEMPLATES ||--o{ COURSE_RUNS : plans
+  COURSE_RUNS ||--o{ JOBS : offers_existing_sessions
+  PROFILES ||--o{ PRIVATE_COURSE_RUN_JOB_REQUESTS : retries_safely
+  JOBS ||--o| PRIVATE_COURSE_RUN_JOB_REQUESTS : binds_result
+  PROFILES ||--o| PROFILE_AVATARS : selects
+  DOCUMENT_VERSIONS ||--o{ PROFILE_AVATARS : fixes_clean_png
+  JOBS o|--o{ PRIVATE_RESOURCE_COMMENTS : discusses
+  COURSE_TEMPLATES o|--o{ PRIVATE_RESOURCE_COMMENTS : discusses
+  PROFILES ||--o{ PRIVATE_RESOURCE_COMMENTS : authors
+  PRIVATE_RESOURCE_COMMENTS ||--o{ PRIVATE_RESOURCE_COMMENT_REVISIONS : audits_changes
+```
+
+A comment references exactly one job or template, enforced by a database constraint. Cursor indexes order each resource; actor request UUIDs deduplicate concurrent submissions and actor locks serialize rate checks. Private revisions are not ordinary reader data. A profile avatar selects an exact immutable clean image version; its owner-only metadata table does not grant peers the underlying personal document. Peer display uses the separate current-profile projection and authenticated gateway.
+
+Source versions have stable provider/code/file/hash identity. LPC3/LPC4 each retain two real PDF variants under one block. Template/run provenance freezes when a linked job exists. The private course-offer request ledger binds the original financial request and resulting existing-run job; client full-fee requests remain in the existing client ledger when actually known. No new duplicate source columns are added to job/claim snapshots. See [CBW_TEMPLATES](CBW_TEMPLATES.md), [RESOURCE_COMMENTS](RESOURCE_COMMENTS.md) and [PROFILE_AVATARS](PROFILE_AVATARS.md).
+
 ## Required constraints and ownership
 
 - Stable UUID foreign keys with explicit deletion behaviour; no accidental cascading deletion of executed contracts or accepted assignments. Unique role/permission/expertise and room membership joins. Verification is server-managed independently of lecturer self-selected expertise.

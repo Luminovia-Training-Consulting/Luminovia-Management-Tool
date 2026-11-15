@@ -27,19 +27,21 @@ export function AuthCallback() {
     if (invite) window.history.replaceState(null, "", window.location.pathname);
   }, [invite]);
   async function accept() {
-    if (!invite || !online) return;
+    if (!invite || !online || busy) return;
     setBusy(true);
     setFailed(false);
-    const { error } = await db().auth.verifyOtp({
-      token_hash: invite,
-      type: "invite",
-    });
-    if (error) {
+    try {
+      const { error } = await db().auth.verifyOtp({
+        token_hash: invite,
+        type: "invite",
+      });
+      if (error) setFailed(true);
+      else navigate("/auth/password", { replace: true });
+    } catch {
       setFailed(true);
+    } finally {
       setBusy(false);
-      return;
     }
-    navigate("/auth/password", { replace: true });
   }
   if (!invite && loading) return <Loading />;
   if (!invite && session) return <Navigate to="/auth/password" replace />;
