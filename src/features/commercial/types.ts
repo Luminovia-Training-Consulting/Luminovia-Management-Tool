@@ -41,6 +41,7 @@ export interface EarningRecord {
   invoice_id: string | null;
 }
 export interface InvoiceRecord {
+  labels: string[];
   id: string;
   user_id: string;
   user_name: string;

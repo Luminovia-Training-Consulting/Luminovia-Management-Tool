@@ -39,7 +39,10 @@ import {
 } from "./api";
 import type { EarningRecord, InvoicePayment, InvoiceRecord } from "./types";
 import { CommercialPdfUpload } from "./pdf-upload";
+import { InvoiceLabels } from "./invoice-labels";
+import { RevenuePanel } from "./revenue";
 import "./i18n";
+import "./platform-i18n";
 import "./commercial.css";
 const invoiceSchema = z.object({
   number: z.string().trim().min(1).max(80),
@@ -635,6 +638,11 @@ function InvoiceCard({
         </dd>
       </dl>
       {invoice.note && <p className="commercial-note">{invoice.note}</p>}
+      <InvoiceLabels
+        actor={actor}
+        invoice={invoice}
+        canEdit={manager || invoice.user_id === actor}
+      />
       <div className="form-actions">
         <Button
           variant="secondary"
@@ -778,6 +786,7 @@ function EarningsTable({
 }
 export function FinancePage() {
   const { t, i18n } = useTranslation("commercial");
+  const platformText = useTranslation("platform").t;
   const { session } = useAuth();
   const actor = session!.user.id;
   const online = useOnline();
@@ -795,6 +804,22 @@ export function FinancePage() {
     enabled: !access.isPending,
   });
   const [submitting, setSubmitting] = useState(false);
+  const [invoiceSearch, setInvoiceSearch] = useState("");
+  const [invoiceStatus, setInvoiceStatus] = useState("");
+  const [invoiceCurrency, setInvoiceCurrency] = useState("");
+  const [invoiceLabel, setInvoiceLabel] = useState("");
+  const invoiceLabels = [
+    ...new Set((invoices.data ?? []).flatMap((row) => row.labels ?? [])),
+  ].sort((a, b) => a.localeCompare(b, i18n.language));
+  const visibleInvoices = (invoices.data ?? []).filter(
+    (row) =>
+      (!invoiceStatus || row.status === invoiceStatus) &&
+      (!invoiceLabel || (row.labels ?? []).includes(invoiceLabel)) &&
+      (!invoiceCurrency || row.currency === invoiceCurrency) &&
+      `${row.number} ${row.user_name} ${row.note ?? ""}`
+        .toLocaleLowerCase(i18n.language)
+        .includes(invoiceSearch.toLocaleLowerCase(i18n.language)),
+  );
   const zone = profile.data?.time_zone ?? "Europe/Berlin";
   const summaries = groupedEarnings(earnings.data ?? []);
   return (
@@ -811,6 +836,7 @@ export function FinancePage() {
           )
         }
       />
+      <RevenuePanel />
       {manager && (
         <label className="checkbox-label">
           <input
@@ -919,7 +945,7 @@ export function FinancePage() {
               </h2>
               <Button
                 variant="ghost"
-                disabled={!invoices.data.length}
+                disabled={!visibleInvoices.length}
                 onClick={() =>
                   downloadCsv("luminovia-invoices.csv", [
                     [
@@ -931,8 +957,9 @@ export function FinancePage() {
                       t("received"),
                       "ISO 4217",
                       t("status"),
+                      platformText("invoiceLabels"),
                     ],
-                    ...invoices.data.map((row) => [
+                    ...visibleInvoices.map((row) => [
                       row.number,
                       row.user_name,
                       row.issued_on,
@@ -941,6 +968,7 @@ export function FinancePage() {
                       row.paid_amount,
                       row.currency,
                       t(row.status),
+                      (row.labels ?? []).join(" | "),
                     ]),
                   ])
                 }
@@ -949,9 +977,73 @@ export function FinancePage() {
                 {t("exportInvoices")}
               </Button>
             </div>
-            {invoices.data.length ? (
+            <div className="panel platform-filters">
+              <Field id="invoice-search" label={platformText("invoiceSearch")}>
+                <input
+                  id="invoice-search"
+                  type="search"
+                  value={invoiceSearch}
+                  onChange={(event) => setInvoiceSearch(event.target.value)}
+                />
+              </Field>
+              <Field
+                id="invoice-status-filter"
+                label={platformText("invoiceStatus")}
+              >
+                <select
+                  id="invoice-status-filter"
+                  value={invoiceStatus}
+                  onChange={(event) => setInvoiceStatus(event.target.value)}
+                >
+                  <option value="">{platformText("allStatuses")}</option>
+                  {[
+                    "submitted",
+                    "approved",
+                    "paid",
+                    "rejected",
+                    "cancelled",
+                  ].map((status) => (
+                    <option key={status} value={status}>
+                      {t(status)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field
+                id="invoice-label-filter"
+                label={platformText("invoiceLabels")}
+              >
+                <select
+                  id="invoice-label-filter"
+                  value={invoiceLabel}
+                  onChange={(event) => setInvoiceLabel(event.target.value)}
+                >
+                  <option value="">{platformText("allLabels")}</option>
+                  {invoiceLabels.map((label) => (
+                    <option key={label} value={label}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field
+                id="invoice-currency-filter"
+                label={i18n.getFixedT(i18n.language)("currency")}
+              >
+                <select
+                  id="invoice-currency-filter"
+                  value={invoiceCurrency}
+                  onChange={(event) => setInvoiceCurrency(event.target.value)}
+                >
+                  <option value="">{platformText("allCurrencies")}</option>
+                  <option>EUR</option>
+                  <option>AUD</option>
+                </select>
+              </Field>
+            </div>
+            {visibleInvoices.length ? (
               <div className="commercial-contract-grid">
-                {invoices.data.map((invoice) => (
+                {visibleInvoices.map((invoice) => (
                   <InvoiceCard
                     key={invoice.id}
                     actor={actor}

@@ -1,3 +1,5 @@
+import { JobPricingPanel } from "../commercial/pricing";
+import "../commercial/platform-i18n";
 import { JobDocuments } from "../files/files";
 import { permissionsQuery } from "../../lib/queries";
 import { useRef, useState } from "react";
@@ -36,6 +38,7 @@ import {
 import { BackLink } from "../../app/shell";
 export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
   const { t, i18n } = useTranslation();
+  const priceText = useTranslation("platform").t;
   const first = [...job.job_sessions].sort((a, b) =>
     a.starts_at.localeCompare(b.starts_at),
   )[0];
@@ -71,7 +74,7 @@ export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
             {money(job.total_amount, job.currency, i18n.language)}
           </strong>
           <small>
-            {t("total")} ·{" "}
+            {priceText("lecturerShare")} ·{" "}
             {t("sessionCount", { count: job.job_sessions.length })}
           </small>
         </div>
@@ -305,6 +308,9 @@ export function JobDetail() {
           <span className={`status status-${job.status}`}>{t(job.status)}</span>
         }
       />
+      {permissions.data?.includes("jobs.manage") && (
+        <JobPricingPanel job={job} />
+      )}
       <div className="detail-layout">
         <div>
           <section className="panel">
@@ -366,7 +372,9 @@ export function JobDetail() {
           />
         </div>
         <aside className="claim-panel panel">
-          <p className="eyebrow">{t("total")}</p>
+          <p className="eyebrow">
+            {i18n.getFixedT(i18n.language, "platform")("lecturerShare")}
+          </p>
           <div className="amount">
             {money(terms.total_amount, terms.currency, i18n.language)}
           </div>

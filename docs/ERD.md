@@ -150,6 +150,27 @@ Wiki/forum categories share one `knowledge_categories` table with a kind discrim
 
 Executed contract rows fix a `document_versions.id` and SHA-256, with optional same-owner parent addendum. Legacy fictional contract metadata can have no PDF and cannot receive a file receipt. `contract_acceptances.kind` is explicitly `receipt_acknowledgement`, not a legal electronic signature. Accepted claims keep their immutable contract reference and original amount/currency/terms. Invoices join claims through `invoice_items`, with a unique active invoice per claim. Payment rows track the original currency; corrections void entries with audit rather than overwrite amounts. Referenced commercial file versions and agreement/invoice snapshots are immutable, and linked documents cannot be hidden through ordinary soft deletion.
 
+## Implemented M3 account, profile and financial extension
+
+```mermaid
+erDiagram
+  PROFILES ||--o| PROFILE_DETAILS : owns_authored_fields
+  PROFILES ||--o{ CLIENT_ORGANISATION_MEMBERSHIPS : receives_explicit_scope
+  ORGANISATIONS ||--o{ CLIENT_ORGANISATION_MEMBERSHIPS : restricts
+  ORGANISATIONS ||--o{ PRIVATE_CLIENT_COURSE_REQUESTS : receives
+  PRIVATE_CLIENT_COURSE_REQUESTS o|--o| JOBS : publishes_once
+  JOBS ||--o| PRIVATE_JOB_COMMISSION_OFFERS : defines_gross_platform_net
+  JOB_CLAIMS ||--o| PRIVATE_CLAIM_REVENUE_LEDGER : freezes_accepted_split
+  PROFILES ||--o{ COURSE_ENROLMENTS : attends
+  COURSE_RUNS ||--o{ COURSE_ENROLMENTS : enrols
+  COURSE_RUNS ||--o{ COURSE_REVIEWS : contextualises
+  PROFILES ||--o{ COURSE_REVIEWS : teaches
+```
+
+`PRIVATE_*` entities in this diagram name actual `private.client_course_requests`, `private.job_commission_offers` and `private.claim_revenue_ledger`; they are not public REST tables. Only authorised security-invoker wrappers call the private implementations. The accepted ledger is one snapshot per claim. A client request may create a draft or published job; reports count publication from the actual job state. Invoice labels change metadata only; PDF versions, accepted compensation and payment history keep their original invariants.
+
+`profile_details` separates the new authored country/languages/experience/labels from private contacts/evidence. `course_enrolments` keeps current membership/completion/removal, while `course_reviews` carries course/actual lecturer/author, versioned text/rating and moderation/withdrawal state. Direct review table reads are denied; identity-safe RPCs project each reader's authorised view. Existing `invitation_requests` now binds the requested role/organisation/display name; both invitation handlers use this single lifecycle. Exact schema/arguments are in [API_REFERENCE](API_REFERENCE.md) and the three additive M3 migrations.
+
 ## Required constraints and ownership
 
 - Stable UUID foreign keys with explicit deletion behaviour; no accidental cascading deletion of executed contracts or accepted assignments. Unique role/permission/expertise and room membership joins. Verification is server-managed independently of lecturer self-selected expertise.
@@ -162,21 +183,21 @@ Executed contract rows fix a `document_versions.id` and SHA-256, with optional s
 
 ## Implemented permission matrix
 
-| Resource/action | Owner / eligible lecturer | Ordinary peer | Privileged management |
-| --- | --- | --- | --- |
-| Own profile self-service fields | Read/edit | Only intentionally public fields, when implemented | Explicit management capability where needed |
-| Roles and verification | Read own applicable grants; no self-promotion | No mutation | Explicit capability plus MFA; audited |
-| Published jobs | Read when authorised/eligible; claim through RPC | Same permission-based rules | Manage with `jobs.manage` and MFA |
-| Accepted assignment snapshot | Read own | No | Explicit commercial/resource permission |
-| Private calendar event | Read/edit own | Denied | Denied unless actual owner |
-| Executed contract/file/receipt | Read own; receipt own exact hash | Denied | Specific `contracts.read`/`contracts.manage` plus MFA; receipt cannot impersonate owner |
-| Private DM/messages/revisions | Current room member only | Denied | No implicit access; DM membership is not administratively editable |
-| Group/channel and room files | Current nonremoved membership plus current role constraints | Denied outside membership | Owner or explicit capability within accessible room; no room bypass |
-| Personal files | Owner; clean bytes only | Denied | CV/certificate/contract/invoice each require their separate capability plus MFA |
-| Customer contacts/private notes | No implicit lecturer access | Denied | `organisations.manage` plus MFA |
-| Course catalogue | Published/assigned; participants explicitly enrolled through course-channel membership | Denied otherwise | `courses.manage` plus MFA for changes |
-| Wiki drafts/history | Author and current wiki managers | Published revisions only for staff | `wiki.manage` plus MFA for publish/archive |
-| Forum/report/revision | Staff; own reports, own post revisions | Staff discussion only | `forum.moderate` plus MFA for moderation/reports |
-| Earnings/invoice/payment history | Own original-currency records | Denied | `finance.manage` plus MFA; mutations audited |
+| Resource/action                  | Owner / eligible lecturer                                                                                   | Ordinary peer                                      | Privileged management                                                                   |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Own profile self-service fields  | Read/edit                                                                                                   | Only intentionally public fields, when implemented | Explicit management capability where needed                                             |
+| Roles and verification           | Read own applicable grants; no self-promotion                                                               | No mutation                                        | Explicit capability plus MFA; audited                                                   |
+| Published jobs                   | Read when authorised/eligible; claim through RPC                                                            | Same permission-based rules                        | Manage with `jobs.manage` and MFA                                                       |
+| Accepted assignment snapshot     | Read own                                                                                                    | No                                                 | Explicit commercial/resource permission                                                 |
+| Private calendar event           | Read/edit own                                                                                               | Denied                                             | Denied unless actual owner                                                              |
+| Executed contract/file/receipt   | Read own; receipt own exact hash                                                                            | Denied                                             | Specific `contracts.read`/`contracts.manage` plus MFA; receipt cannot impersonate owner |
+| Private DM/messages/revisions    | Current room member only                                                                                    | Denied                                             | No implicit access; DM membership is not administratively editable                      |
+| Group/channel and room files     | Current nonremoved membership plus current role constraints                                                 | Denied outside membership                          | Owner or explicit capability within accessible room; no room bypass                     |
+| Personal files                   | Owner; clean bytes only                                                                                     | Denied                                             | CV/certificate/contract/invoice each require their separate capability plus MFA         |
+| Customer contacts/private notes  | No implicit lecturer access                                                                                 | Denied                                             | `organisations.manage` plus MFA                                                         |
+| Course catalogue                 | Published/assigned; participants explicitly enrolled through managed enrolment or course-channel membership | Denied otherwise                                   | `courses.manage` plus MFA for changes                                                   |
+| Wiki drafts/history              | Author and current wiki managers                                                                            | Published revisions only for staff                 | `wiki.manage` plus MFA for publish/archive                                              |
+| Forum/report/revision            | Staff; own reports, own post revisions                                                                      | Staff discussion only                              | `forum.moderate` plus MFA for moderation/reports                                        |
+| Earnings/invoice/payment history | Own original-currency records                                                                               | Denied                                             | `finance.manage` plus MFA; mutations audited                                            |
 
 See `CHAT_SECURITY.md`, `KNOWLEDGE_SECURITY.md`, `COMMERCIAL_SECURITY.md`, `OPERATIONS.md` and `BACKEND_SECURITY_REVIEW.md` for actual tested boundaries and outstanding acceptance. Tombstones, archives and audit revisions preserve data; none is a production legal-erasure or retention-policy guarantee.

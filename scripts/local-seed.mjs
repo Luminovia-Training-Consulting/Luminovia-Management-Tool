@@ -67,6 +67,38 @@ const admin = await user(
   "Luminovia Testverwaltung",
   "admin",
 );
+await user(
+  "carina@example.invalid",
+  "Plattformleitung (lokales Demo-Konto)",
+  "owner",
+);
+const demoClient = await user(
+  "client@example.invalid",
+  "Fiktiver Auftraggeber",
+  "client",
+);
+const demoOrganisation = stableId("client-demo-organisation");
+await checked(
+  service
+    .from("organisations")
+    .upsert(
+      {
+        id: demoOrganisation,
+        name: "Fiktiver Auftraggeber (Demo)",
+        country: "DE",
+        time_zone: "Europe/Berlin",
+      },
+      { onConflict: "id", ignoreDuplicates: true },
+    ),
+  "Seed missing fictional client organisation",
+);
+if (demoClient.created)
+  await checked(
+    service
+      .from("client_organisation_memberships")
+      .insert({ user_id: demoClient.id, organisation_id: demoOrganisation }),
+    "Link newly created client fixture only",
+  );
 const names = [
   "Mara Winter",
   "Jonas Lind",
@@ -203,16 +235,14 @@ for (const [index, job] of jobs.entries()) {
   const templateId = stableId(`${job.id}-template`);
   const runId = stableId(`${job.id}-run`);
   await checked(
-    service
-      .from("organisations")
-      .upsert(
-        {
-          id: organisationId,
-          name: job.customer_name,
-          time_zone: job.time_zone,
-        },
-        { onConflict: "id", ignoreDuplicates: true },
-      ),
+    service.from("organisations").upsert(
+      {
+        id: organisationId,
+        name: job.customer_name,
+        time_zone: job.time_zone,
+      },
+      { onConflict: "id", ignoreDuplicates: true },
+    ),
     "Seed missing fictional customer",
   );
   await checked(
@@ -225,17 +255,15 @@ for (const [index, job] of jobs.entries()) {
     "Seed missing course template",
   );
   await checked(
-    service
-      .from("course_runs")
-      .upsert(
-        {
-          id: runId,
-          template_id: templateId,
-          organisation_id: organisationId,
-          time_zone: job.time_zone,
-        },
-        { onConflict: "id", ignoreDuplicates: true },
-      ),
+    service.from("course_runs").upsert(
+      {
+        id: runId,
+        template_id: templateId,
+        organisation_id: organisationId,
+        time_zone: job.time_zone,
+      },
+      { onConflict: "id", ignoreDuplicates: true },
+    ),
     "Seed missing course run",
   );
   const count = index === 0 ? 5 : 1;
@@ -258,15 +286,13 @@ for (const [index, job] of jobs.entries()) {
     "Seed published linked job",
   );
   await checked(
-    service
-      .from("job_sessions")
-      .insert(
-        sessions.map((session) => ({
-          ...session,
-          job_id: job.id,
-          course_session_id: session.id,
-        })),
-      ),
+    service.from("job_sessions").insert(
+      sessions.map((session) => ({
+        ...session,
+        job_id: job.id,
+        course_session_id: session.id,
+      })),
+    ),
     "Seed job sessions",
   );
   await checked(

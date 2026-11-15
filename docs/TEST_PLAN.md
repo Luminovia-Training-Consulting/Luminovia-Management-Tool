@@ -22,7 +22,7 @@ Use `npm run format:check` for formatting validation where configured. Do not re
 
 ## Local backend setup and data tests
 
-The development scripts and README own exact current setup. Use local Supabase/Docker, isolated fictional fixtures, local keys and a generated ignored credential file. `npm run test:db` is the database test entry point when the harness is implemented. Never repoint a destructive local reset/seed/test operation at a hosted project.
+The development scripts and README own exact current setup. Use local Supabase/Docker, isolated fictional fixtures, local keys and a generated ignored credential file. `npm run test:db` checks core invariants and SQL/advisors; the canonical runner additionally discovers every domain `*-db-tests.mjs`. Never repoint a destructive local reset/seed/test operation at a hosted project.
 
 Required database/API cases:
 
@@ -33,7 +33,7 @@ Required database/API cases:
 5. Run one lecturer's parallel claims across overlapping jobs. Assert at most one succeeds; adjacent non-overlapping sessions may succeed. Reject overlaps with own private events, missing/expired verification, expired contracts and stale terms version.
 6. Attempt direct changes to accepted terms, claim actor and allocation records; deny. Edit future job data and prove accepted monetary/currency/terms snapshot does not change.
 7. Lecturer and admin cannot read or mutate another lecturer's private event. Published global events never derive from private events. Deactivated users are denied with existing JWTs.
-8. Invitation handler/unit/type checks: `npx --no-install deno test --allow-env supabase/functions/invite-lecturer/handler_test.ts supabase/functions/files/handler_test.ts` and Deno checks for both entry points. Add actual Edge HTTP tests for approved/forged origins and preflight, disabled configuration, current Auth+AAL2 capability, fixed lecturer role, durable deduplication/throttling, local captured email, implemented redirect, password setup and subsequent login. Mocked handler dependencies do not replace this journey.
+8. Invitation handler/unit/type checks: `npx --no-install deno test --allow-env supabase/functions/invite-lecturer/handler_test.ts supabase/functions/files/handler_test.ts` and Deno checks for all invitation/files/accounts entry points (automatically discovered by the canonical runner). Add actual Edge HTTP tests for approved/forged origins and preflight, disabled configuration, current Auth+AAL2 capability, fixed lecturer role, durable deduplication/throttling, local captured email, implemented redirect, password setup and subsequent login. Mocked handler dependencies do not replace this journey.
 9. As later modules land, add contract/CV/invoice/file guessed-path tests, DM/course participant membership/realtime revocation, rich-content XSS tests and permission-aware search.
 
 Real PostgreSQL locking tests are required; a mocked reducer or sequential loop does not establish concurrency. A local stack result does not establish hosted SMTP, managed configuration or production acceptance.
@@ -60,3 +60,13 @@ Cross-browser smoke tests and real mobile/installed PWA acceptance remain releas
 ## Evidence ledger
 
 Record date, source commit (when available), exact command, environment, counts/result and limitations in WORKLOG. Do not mark all modules complete because M1 checks pass. Production gates include staging demo, security/privacy review, real SMTP, DB+storage restore drill and reviewed rollback.
+
+## Approved M3 account/profile/commission acceptance
+
+- Accounts: actual Auth-issued JWTs, closed own-profile payload, native timezone validation, bounded directory including explicit NULL RPC inputs, current roles/MFA, self/last-admin protection under concurrent role/activation edits, scoped organisation links/revocation, invitation role/org/idempotency binding and inviter-authority recheck. Exercise both the new HTTP façade and direct RPC paths; legacy invitation compatibility uses the same ledger.
+- Financial tenancy: client A/B separation, revoked memberships/current roles, default/custom split and cent rounding, distinct EUR/AUD, private gross absent from lecturer REST/RPC/UI and unexposed private tables, atomic accepted revenue with concurrent claims/rollback. Legacy net-only snapshots stay unchanged with unknown gross. Draft offers cannot inflate published spend.
+- Documents/invoices: real clean/quarantine ClamAV PDF path, net-only immutable invoice from the accepted claim, bounded labels, combined search/status/currency/label filters and formula-safe filtered CSV, MFA review/manual payment tracking. No real bank transfer or tax computation.
+- Profiles/reviews: authored labels/languages/experience validation and intentional safe projections; actual current/upcoming/past assignment instants; viewer-authorised course links; manager enrolment; only completed real attendance/assigned lecturer can review; no self review or ordinary reviewer-identity disclosure; optimistic edits/withdrawals and reasoned MFA moderation; immediate revocation/suspension.
+- Integration/audit: delivered literal frontend RPC names resolve to executable migrated invoker APIs; all public tables retain RLS; new owner/admin functional roles preserve private DM/calendar boundaries. Late initial Auth lookup cannot restore a signed-out/prior actor. Real desktop/mobile browser actors use separate BrowserContexts to avoid sharing Supabase login storage.
+
+Executed counts and exact pass/fail checkpoints belong in QA_RESULTS/WORKLOG, not this plan. `scripts/generate-api-reference.mjs` derives the API inventory from a disposable database; it is an explicit documentation task, not a mutating implicit test step.

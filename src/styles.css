@@ -2410,3 +2410,42 @@ legend {
     padding: 18px;
   }
 }
+
+.account-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.account-list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+  padding: 16px 0;
+}
+.account-list small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.account-list li > div {
+  min-width: 0;
+}
+.account-roles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  border: 1px solid var(--line);
+  padding: 16px;
+  margin: 16px 0;
+}
+.account-roles label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.account-roles input {
+  width: auto;
+}

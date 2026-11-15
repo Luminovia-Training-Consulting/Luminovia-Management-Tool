@@ -81,9 +81,9 @@ try {
   const data=(await rows(b,'chat_messages',[dm])).find(x=>x.id===first);assert.equal(data.body,'');assert.equal(data.document_id,null);assert.ok(data.deleted_at);
   await assert.rejects(value(b,'react_to_message',[first,'👍',false]),/access denied/);
  });
- await check('General room accepts lecturers only and is globally singleton',async()=>{
+ await check('General room accepts lecturers and functional admins, excludes participants and is singleton',async()=>{
   const ids=await Promise.all([value(a,'ensure_general_chat'),value(b,'ensure_general_chat')]);assert.equal(ids[0],ids[1]);
-  await assert.rejects(value(admin,'ensure_general_chat',[],'aal2'),/Lecturer role required/);await assert.rejects(value(participant,'ensure_general_chat'),/Lecturer role required/);
+  assert.equal(await value(admin,'ensure_general_chat',[],'aal2'),ids[0]);await assert.rejects(value(participant,'ensure_general_chat'),/Lecturer role required/);
   await sql(`delete from public.user_roles where user_id='${b}';insert into public.user_roles(user_id,role) values('${b}','participant')`);
   await assert.rejects(rows(b,'chat_messages',[ids[0]]),/access denied/);assert.ok(!(await rows(b,'chat_rooms_list')).some(x=>x.id===ids[0]));
   await sql(`delete from public.user_roles where user_id='${b}';insert into public.user_roles(user_id,role) values('${b}','lecturer')`);

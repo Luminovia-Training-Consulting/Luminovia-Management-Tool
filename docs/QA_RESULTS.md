@@ -1,23 +1,53 @@
-# QA evidence — 2026-11-15
+# QA evidence — 2026-11-16
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
+
+## M3 accounts, profile courses/reviews and commission — complete command passed
+
+`./portal test` completed successfully on **2026-11-15 at 15:27:43 UTC (16 November Australia/Brisbane)**, isolated project `luminovia-portal-test-b1c83645`. Private report: `.local/tests/b1c83645/RESULT.txt`. Source was frozen throughout the passing invocation; subsequent edits are documentation and the actual fictional screenshots only. Exact submitted-revision acceptance additionally comes from GitHub CI.
+
+| Check          | Actual result                                                                                                                                                                       |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Source         | Lint, strict TypeScript/no-unused checks and formatting; 59 Vitest tests across 19 files passed                                                                                     |
+| Runtime        | All 7 environment/redaction/ownership/network safeguards passed                                                                                                                     |
+| Edge           | All 22 handler tests and all 3 entry-point typechecks passed                                                                                                                        |
+| Fresh database | All 13 migrations replayed; SQL lint and security/performance advisors passed with no warning/error                                                                                 |
+| SQL            | All 120 real PostgreSQL checks: core 25, accounts 11, API surface 3, chat 17, commercial 14, commission 14, document 8, knowledge 14, profiles 14                                   |
+| Actual APIs    | All 9 suites passed: accounts, chat, commercial, commission, documents, knowledge, core, operations, profiles; real Auth/TOTP/REST/RPC/WebSockets/Storage/ClamAV                    |
+| Invitations    | Actual Edge delivery into Mailpit; durable role/org-bound idempotency and exactly one captured email; no real recipient                                                             |
+| Persistence    | Actual stop/start preserved password, verified MFA, profile/timezone, private event and exact Storage bytes; checked probe cleanup passed                                           |
+| Browsers       | 46/46 desktop/mobile Chromium workflows, zero skipped, 3.8 minutes; new account/client/net-invoice/profile/enrolment/review/moderation journeys and all existing regressions passed |
+| Built PWA      | Production build passed; 50 public static precache entries (2379.73 KiB); 2/2 real SW/offline deep-link/no-private-cache checks passed in 2.2 seconds                               |
+| Cleanup        | Owned random test project, network and volumes removed; normal development data not targeted                                                                                        |
+
+New financial proof includes deterministic 50/50 cent rounding, configurable unaccepted offers, hidden customer gross/platform share in lecturer API/UI, client A/B isolation and membership revocation, immutable accepted revenue, legacy net compatibility, exact net invoice PDFs through actual ClamAV, labels/combined filters/CSV and tracked payment. No exchange conversion, tax recognition or bank transfer is asserted.
+
+Account proof covers the façade and direct RPCs, explicit NULL pagination rejection, own-field whitelist/timezones, current role/MFA checks, simultaneous role/suspension protection for the last active administrator, durable generic/legacy invitation compatibility and immediate old-token suspension. A migrated source/API inventory bound all 88 delivered literal frontend RPC references to 95 executable public functions; public functions remain invoker wrappers and exposed tables have RLS.
+
+Profile proof covers self-authored labels/search, real past/current/upcoming assignment phases and authorised course links, optional management enrolment, completed attendance before reviewing the actual lecturer, anonymous ordinary review projections, versioned edits/withdrawal, reasoned MFA moderation and immediate revocation. New desktop/mobile fictional screenshots were visually reviewed for labels, course context, escaped literal authored text, private money and readable responsive layout. Automated axe and horizontal-overflow checks passed on the new settled screens; physical-device/manual acceptance remains separate.
+
+Earlier M3 failures and corrections remain in WORKLOG: unsupported unit-test selector, explicit JSONB default caught by SQL lint, and shared manager/learner browser session fixture. Canonical03 passed 44/46 browser cases; canonical04 with independent actor contexts passed 46/46 without relaxed app permissions. Concrete audit fixes include the real NULL limit bypass, draft-publication spend counts, duplicate time-zone validation and stale initial Auth actor race. This is scoped code/API integration verification, not a bug-free certification of every line or production release.
+
+The original worktree's concurrent hosting/scanner changes and running persistent development instance were left untouched. New source is isolated on `codex/accounts-profiles-commission`. Full remaining master-prompt scope, hosted/manual/cross-browser/physical-PWA, DB+Storage disaster recovery, privacy/legal and separate production approval remain in IMPLEMENTATION_PLAN. No public marketing site, hosted data, real invitation or payment was changed by this work. A separate configured root build passed using only public frontend variables; scanning 47 emitted files against two actual normal local server-credential/password values found no matches.
+
+## Historical M2 acceptance
 
 ## Expanded local system — complete local command passed
 
 `./portal test` completed successfully on **2026-11-15 at 13:53:47 UTC**, isolated project `luminovia-portal-test-999c091e`. The ignored private report is `.local/tests/999c091e/RESULT.txt`.
 
-| Check | Actual result |
-| --- | --- |
-| Source | Lint, TypeScript, formatting; 42 Vitest tests across 12 files passed |
-| Runtime | 7 ownership/redaction/environment/network safeguards passed |
-| Edge | 11 tests across invitation/files and both Deno typechecks passed |
-| Fresh database | All 10 migrations replayed; 43 public tables, all RLS-enabled; lint/security/performance advisors passed |
-| SQL | 78 real PostgreSQL checks: core 25, chat 17, knowledge 14, commercial 14, document quotas/retries 8 |
-| Actual services | Auth/TOTP, REST/RPC, WebSockets, private Storage/ClamAV and captured-mail invitation suites passed |
-| Persistence | Actual stop/start retained original password, verified MFA factor, edited profile/timezone, private appointment and exact private object bytes; checked probe cleanup passed |
-| Browsers | 40/40 desktop/mobile Chromium workflows, zero skipped, 2.7 minutes; scanned pages passed axe |
-| Built PWA | Build passed; 46 static precache entries (~2.3 MiB);2/2 checks passed in 2.2 seconds for real SW control, offline deep links and no private API caches |
-| Cleanup | Only the random test stack/network/volumes removed; normal development untouched |
+| Check           | Actual result                                                                                                                                                                |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Source          | Lint, TypeScript, formatting; 42 Vitest tests across 12 files passed                                                                                                         |
+| Runtime         | 7 ownership/redaction/environment/network safeguards passed                                                                                                                  |
+| Edge            | 11 tests across invitation/files and both Deno typechecks passed                                                                                                             |
+| Fresh database  | All 10 migrations replayed; 43 public tables, all RLS-enabled; lint/security/performance advisors passed                                                                     |
+| SQL             | 78 real PostgreSQL checks: core 25, chat 17, knowledge 14, commercial 14, document quotas/retries 8                                                                          |
+| Actual services | Auth/TOTP, REST/RPC, WebSockets, private Storage/ClamAV and captured-mail invitation suites passed                                                                           |
+| Persistence     | Actual stop/start retained original password, verified MFA factor, edited profile/timezone, private appointment and exact private object bytes; checked probe cleanup passed |
+| Browsers        | 40/40 desktop/mobile Chromium workflows, zero skipped, 2.7 minutes; scanned pages passed axe                                                                                 |
+| Built PWA       | Build passed; 46 static precache entries (~2.3 MiB);2/2 checks passed in 2.2 seconds for real SW control, offline deep links and no private API caches                       |
+| Cleanup         | Only the random test stack/network/volumes removed; normal development untouched                                                                                             |
 
 Real API cases include fifty simultaneous claims/one winner/five allocations, immutable accepted fees, personal-event privacy even against ordinary admins, forged roles/metadata denial and suspension; actual message delivery then removal/suspension revocation; safe published wiki snapshots independent of newer private drafts; original-currency invoices, partial/full payment and audited corrections; customer-contact isolation and protected accepted course schedules. Document tests use actual ClamAV clean/EICAR results, type/magic limits, exact version hashes/bytes, owner/peer/administrator/anonymous denial, direct Storage/signing bypass denial, changed-byte/target retry conflicts, concurrent owner quota locks and a real scanner outage followed by a genuinely clean recovered upload.
 

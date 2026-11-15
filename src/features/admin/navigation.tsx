@@ -19,6 +19,9 @@ export function AdminNavigation() {
           permissions.data.includes("qualifications.verify") && (
             <NavLink to="/admin/people">{t("people")}</NavLink>
           )}
+        {permissions.data?.includes("users.manage") && (
+          <NavLink to="/admin/accounts">{t("accounts")}</NavLink>
+        )}
       </nav>
       <Outlet />
     </>

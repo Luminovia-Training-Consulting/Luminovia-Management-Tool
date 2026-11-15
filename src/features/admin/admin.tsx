@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useRef, useState } from "react";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,6 +7,13 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { Plus, Trash2 } from "lucide-react";
 import { DateTime } from "luxon";
+import { FeeSplitPreview } from "../commercial/pricing";
+import {
+  commissionAccessQuery,
+  clientOrganisationsQuery,
+  commissionKeys,
+} from "../commercial/commission-api";
+import "../commercial/platform-i18n";
 import { InviteForm } from "./invite";
 import { useAuth } from "../auth/auth-context";
 import { jobsQuery, permissionsQuery, topicsQuery } from "../../lib/queries";
@@ -25,6 +32,8 @@ const schema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().max(10000),
   customer_name: z.string().trim().min(1).max(200),
+  organisation: z.union([z.string().uuid(), z.literal("")]),
+  platform_percent: z.number().min(0).max(100),
   delivery_type: z.enum(["online", "onsite"]),
   location: z.string().max(500),
   time_zone: z.string().refine(validZone),
@@ -51,6 +60,16 @@ const schema = z.object({
 type Values = z.infer<typeof schema>;
 function JobForm() {
   const { t, i18n } = useTranslation();
+  const { t: priceText } = useTranslation("platform");
+  const { session } = useAuth();
+  const actor = session!.user.id;
+  const pricing = useQuery(commissionAccessQuery(actor));
+  const gross = Boolean(pricing.data?.can_manage_gross);
+  const organisations = useQuery({
+    ...clientOrganisationsQuery(actor),
+    enabled: gross,
+  });
+  const retry = useRef<{ signature: string; key: string } | null>(null);
   const online = useOnline();
   const topics = useQuery(topicsQuery);
   const client = useQueryClient();
@@ -61,6 +80,8 @@ function JobForm() {
     handleSubmit,
     control,
     reset,
+    setValue,
+    getValues,
     formState: { errors, isDirty },
   } = useForm<Values>({
     resolver: zodResolver(schema),
@@ -68,6 +89,8 @@ function JobForm() {
       title: "",
       description: "",
       customer_name: "",
+      organisation: "",
+      platform_percent: 50,
       delivery_type: "online",
       location: "",
       time_zone: "Europe/Berlin",
@@ -94,6 +117,10 @@ function JobForm() {
       }),
     },
   });
+  const watchedTotal = useWatch({ control, name: "total_amount" });
+  const watchedPercent = useWatch({ control, name: "platform_percent" });
+  const watchedCurrency = useWatch({ control, name: "currency" });
+  const selectedOrganisation = useWatch({ control, name: "organisation" });
   const { fields, append, remove } = useFieldArray({
     control,
     name: "sessions",
@@ -117,24 +144,75 @@ function JobForm() {
         }
         return { starts_at: starts, ends_at: ends };
       });
-      const { publish, ...rest } = values;
-      const { error } = await db().rpc("create_job", {
-        p_payload: {
-          ...rest,
-          sessions,
-          status: publish ? "published" : "draft",
-        },
-      });
-      if (error) throw error;
+      const {
+        publish,
+        organisation,
+        platform_percent,
+        amount,
+        total_amount,
+        ...rest
+      } = values;
+      const base = {
+        ...rest,
+        sessions,
+        status: publish ? "published" : "draft",
+      };
+      if (gross) {
+        const payload = {
+          ...base,
+          gross_amount: amount,
+          gross_total_amount: total_amount,
+        };
+        const signature = JSON.stringify([
+          organisation,
+          platform_percent,
+          payload,
+        ]);
+        if (!retry.current || retry.current.signature !== signature)
+          retry.current = { signature, key: crypto.randomUUID() };
+        const { data, error } = await db().rpc("create_commission_job", {
+          p_organisation_id: organisation || null,
+          p_payload: payload,
+          p_platform_percent: platform_percent,
+          p_client_id: retry.current.key,
+        });
+        if (error || !data) throw error ?? new Error("unconfirmed");
+      } else {
+        const { data, error } = await db().rpc("create_job", {
+          p_payload: { ...base, amount, total_amount },
+        });
+        if (error || !data) throw error ?? new Error("unconfirmed");
+      }
     },
     onSuccess: async (_data, values) => {
-      await client.invalidateQueries({ queryKey: ["jobs"] });
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["jobs"] }),
+        client.invalidateQueries({ queryKey: commissionKeys.report(actor) }),
+        client.invalidateQueries({ queryKey: commissionKeys.requests(actor) }),
+        client.invalidateQueries({
+          queryKey: commissionKeys.organisations(actor),
+        }),
+      ]);
       reset(values);
       setDone(true);
     },
   });
-  if (topics.isPending) return <Loading />;
-  if (topics.isError) return <ErrorState retry={() => void topics.refetch()} />;
+  if (
+    topics.isPending ||
+    pricing.isPending ||
+    (gross && organisations.isPending)
+  )
+    return <Loading />;
+  if (topics.isError || pricing.isError || (gross && organisations.isError))
+    return (
+      <ErrorState
+        retry={() => {
+          void topics.refetch();
+          void pricing.refetch();
+          if (gross) void organisations.refetch();
+        }}
+      />
+    );
   return (
     <form
       className="panel admin-form"
@@ -142,6 +220,31 @@ function JobForm() {
       onSubmit={handleSubmit((values) => create.mutate(values))}
     >
       <h2>{t("createJob")}</h2>
+      {gross && (
+        <Field id="job-organisation" label={priceText("existingCustomer")}>
+          <select
+            id="job-organisation"
+            {...register("organisation", {
+              onChange: (event) => {
+                const selected = organisations.data?.find(
+                  (org) => org.id === event.target.value,
+                );
+                if (selected)
+                  setValue("customer_name", selected.name, {
+                    shouldDirty: true,
+                  });
+              },
+            })}
+          >
+            <option value="">{priceText("newCustomer")}</option>
+            {organisations.data?.map((org) => (
+              <option key={org.id} value={org.id}>
+                {org.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
       <div className="form-row">
         <Field id="job-title" label={t("title")} error={Boolean(errors.title)}>
           <input id="job-title" {...register("title")} />
@@ -151,7 +254,11 @@ function JobForm() {
           label={t("customer")}
           error={Boolean(errors.customer_name)}
         >
-          <input id="job-customer" {...register("customer_name")} />
+          <input
+            id="job-customer"
+            {...register("customer_name")}
+            readOnly={Boolean(selectedOrganisation)}
+          />
         </Field>
       </div>
       <Field
@@ -233,7 +340,7 @@ function JobForm() {
       <div className="form-row">
         <Field
           id="job-amount"
-          label={t("amount")}
+          label={gross ? priceText("grossRate") : t("amount")}
           error={Boolean(errors.amount)}
         >
           <input
@@ -241,7 +348,13 @@ function JobForm() {
             type="number"
             min="0"
             step="0.01"
-            {...register("amount", { valueAsNumber: true })}
+            {...register("amount", {
+              valueAsNumber: true,
+              onChange: (event) => {
+                if (gross && getValues("rate_unit") === "fixed_total")
+                  setValue("total_amount", Number(event.target.value));
+              },
+            })}
           />
         </Field>
         <Field id="job-currency" label={t("currency")}>
@@ -251,7 +364,15 @@ function JobForm() {
           </select>
         </Field>
         <Field id="job-unit" label={t("unit")}>
-          <select id="job-unit" {...register("rate_unit")}>
+          <select
+            id="job-unit"
+            {...register("rate_unit", {
+              onChange: (event) => {
+                if (gross && event.target.value === "fixed_total")
+                  setValue("amount", getValues("total_amount"));
+              },
+            })}
+          >
             {["per_day", "per_teaching_unit", "per_hour", "fixed_total"].map(
               (unit) => (
                 <option key={unit} value={unit}>
@@ -263,7 +384,7 @@ function JobForm() {
         </Field>
         <Field
           id="job-total"
-          label={t("total")}
+          label={gross ? priceText("grossTotal") : t("total")}
           error={Boolean(errors.total_amount)}
         >
           <input
@@ -271,10 +392,42 @@ function JobForm() {
             type="number"
             min="0"
             step="0.01"
-            {...register("total_amount", { valueAsNumber: true })}
+            {...register("total_amount", {
+              valueAsNumber: true,
+              onChange: (event) => {
+                if (gross && getValues("rate_unit") === "fixed_total")
+                  setValue("amount", Number(event.target.value));
+              },
+            })}
           />
         </Field>
       </div>
+      {gross && (
+        <>
+          <Field
+            id="job-platform-percent"
+            label={priceText("platformPercent")}
+            error={Boolean(errors.platform_percent)}
+          >
+            <input
+              id="job-platform-percent"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              {...register("platform_percent", { valueAsNumber: true })}
+            />
+          </Field>
+          <FeeSplitPreview
+            gross={Number(watchedTotal)}
+            percent={Number(watchedPercent)}
+            currency={watchedCurrency}
+          />
+          <p className="muted commercial-small">
+            {priceText("splitHint")} {priceText("feeBasis")}
+          </p>
+        </>
+      )}
       <Field
         id="job-terms"
         label={t("terms")}

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { CheckCircle2, ShieldCheck, UserRound } from "lucide-react";
 import { DateTime } from "luxon";
 import { useAuth } from "../auth/auth-context";
@@ -182,7 +182,8 @@ function PeopleDirectory({ actorId }: { actorId: string }) {
   const online = useOnline();
   const client = useQueryClient();
   const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [params, setParams] = useSearchParams();
+  const selectedId = params.get("user");
   const [confirmation, setConfirmation] = useState<AccountChange | null>(null);
   const [updated, setUpdated] = useState<AccountChange | null>(null);
   const profiles = useQuery({
@@ -250,9 +251,9 @@ function PeopleDirectory({ actorId }: { actorId: string }) {
     ].some((value) => value.toLocaleLowerCase(i18n.language).includes(needle)),
   );
   const selected =
-    profiles.data.find((profile) => profile.id === selectedId) ??
-    filtered[0] ??
-    null;
+    (selectedId
+      ? profiles.data.find((profile) => profile.id === selectedId)
+      : filtered[0]) ?? null;
   const name = (profile: Profile) => profile.display_name || t("peopleUnnamed");
   const selectedExpertise = selected
     ? expertise.data.filter((item) => item.user_id === selected.id)
@@ -293,7 +294,7 @@ function PeopleDirectory({ actorId }: { actorId: string }) {
                     className="people-person-button"
                     aria-pressed={selected?.id === profile.id}
                     onClick={() => {
-                      setSelectedId(profile.id);
+                      setParams({ user: profile.id });
                       setUpdated(null);
                     }}
                   >

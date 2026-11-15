@@ -16,6 +16,31 @@ import { Button } from "../components/ui/button";
 import { Dashboard } from "../features/dashboard/dashboard";
 import { Jobs, JobDetail } from "../features/jobs/jobs";
 import { ProfilePage } from "../features/profile/profile";
+const AccountsPage = lazy(() =>
+  import("../features/accounts/accounts").then((module) => ({
+    default: module.AccountsPage,
+  })),
+);
+const ClientPortalPage = lazy(() =>
+  import("../features/commercial/client-portal").then((module) => ({
+    default: module.ClientPortalPage,
+  })),
+);
+const PeopleDirectory = lazy(() =>
+  import("../features/people/people").then((module) => ({
+    default: module.PeopleDirectory,
+  })),
+);
+const PersonProfile = lazy(() =>
+  import("../features/people/people").then((module) => ({
+    default: module.PersonProfile,
+  })),
+);
+const MyCourseReviews = lazy(() =>
+  import("../features/people/reviews").then((module) => ({
+    default: module.MyCourseReviews,
+  })),
+);
 const ContractsPage = lazy(() =>
   import("../features/commercial/contracts").then((module) => ({
     default: module.ContractsPage,
@@ -141,6 +166,10 @@ export function App() {
               <Route path="chats" element={<ChatPage />} />
               <Route path="search" element={<PortalSearch />} />
               <Route path="clients" element={<ClientsPage />} />
+              <Route path="client" element={<ClientPortalPage />} />
+              <Route path="people" element={<PeopleDirectory />} />
+              <Route path="people/:id" element={<PersonProfile />} />
+              <Route path="my-reviews" element={<MyCourseReviews />} />
               <Route path="courses" element={<CoursesPage />} />
               <Route path="contracts" element={<ContractsPage />} />
               <Route path="finance" element={<FinancePage />} />
@@ -153,6 +182,7 @@ export function App() {
               <Route path="admin" element={<AdminNavigation />}>
                 <Route index element={<AdminPage />} />
                 <Route path="people" element={<PeopleAdminPage />} />
+                <Route path="accounts" element={<AccountsPage />} />
               </Route>
             </Route>
           </Route>

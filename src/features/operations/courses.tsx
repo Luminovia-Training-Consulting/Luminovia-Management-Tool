@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { EnrolmentManager } from "../people/enrolments";
 import { useForm, useFieldArray } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -353,7 +355,8 @@ export function CoursesPage() {
     Template | null | undefined
   >();
   const [runEdit, setRunEdit] = useState<CourseRun | null | undefined>();
-  const [detail, setDetail] = useState<CourseRun>();
+  const [params, setParams] = useSearchParams();
+  const detail = runs.data?.find((run) => run.id === params.get("run"));
   const [copy, setCopy] = useState<{
     type: "template" | "run";
     id: string;
@@ -553,7 +556,10 @@ export function CoursesPage() {
                   <CalendarDays size={17} />
                   {run.course_sessions.length} · {run.time_zone}
                 </p>
-                <Button variant="secondary" onClick={() => setDetail(run)}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setParams({ run: run.id })}
+                >
                   {t("view")}
                 </Button>
                 {manage && (
@@ -728,12 +734,14 @@ export function CoursesPage() {
       <Dialog
         open={Boolean(detail)}
         onOpenChange={(open) => {
-          if (!open) setDetail(undefined);
+          if (!open) setParams({}, { replace: true });
         }}
         title={
           detail ? (findTemplate(detail)?.title ?? t("courses")) : t("courses")
         }
-        description={t("readOnly")}
+        description={
+          manage ? t("enrolmentHelp", { ns: "people" }) : t("readOnly")
+        }
       >
         {detail && (
           <>
@@ -766,6 +774,9 @@ export function CoursesPage() {
             <p>
               {detail.time_zone} · {detail.venue}
             </p>
+            {manage && (
+              <EnrolmentManager key={detail.id} courseRunId={detail.id} />
+            )}
           </>
         )}
       </Dialog>

@@ -1,0 +1,189 @@
+.platform-split {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 1.1rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  margin: 1rem 0;
+}
+.platform-split span {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.platform-split strong {
+  display: block;
+  font-size: 1.15rem;
+  margin-top: 0.3rem;
+  font-variant-numeric: tabular-nums;
+}
+.platform-pricing {
+  margin-top: 1.2rem;
+}
+.platform-pricing h2 {
+  font-size: 1.2rem;
+}
+.platform-spend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 1rem;
+  margin: 1.2rem 0;
+}
+.platform-spend-card {
+  padding: 1.25rem;
+  min-width: 0;
+}
+.platform-spend-card dl {
+  margin: 1rem 0;
+}
+.platform-spend-card dt {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.8rem;
+}
+.platform-spend-card dd {
+  margin: 0.25rem 0;
+  font-weight: 650;
+  font-size: 1.35rem;
+}
+.platform-filters {
+  display: flex;
+  align-items: end;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem;
+  margin: 1.1rem 0;
+}
+.platform-filters .field {
+  flex: 1;
+  min-width: min(100%, 12rem);
+  margin: 0;
+}
+.platform-revenue {
+  margin: 1.6rem 0 2rem;
+}
+.platform-request-card {
+  padding: 1.3rem;
+  min-width: 0;
+}
+.platform-request-card h2 {
+  font-size: 1.25rem;
+}
+.platform-request-card > .preserve-text {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin: 1rem 0;
+  overflow-wrap: anywhere;
+}
+.platform-session-list {
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin: 1rem 0;
+}
+.platform-session-list li {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  font-size: 0.82rem;
+}
+.platform-session-list small {
+  display: block;
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+.platform-teacher {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+  margin-top: 1rem;
+  font-size: 0.86rem;
+}
+.platform-sessions,
+.platform-topics {
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+.platform-topics {
+  max-height: 14rem;
+  overflow: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+.platform-summary {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.2rem;
+  min-width: 0;
+}
+.platform-summary > svg {
+  color: var(--brand);
+}
+.platform-summary span,
+.platform-summary small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+.platform-summary strong {
+  display: block;
+  font-size: 1.5rem;
+  margin: 0.3rem 0;
+}
+.platform-request-form .form-row {
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .platform-split {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+  }
+  .platform-split > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.7rem;
+    align-items: baseline;
+  }
+  .platform-split strong {
+    white-space: nowrap;
+    font-size: 1rem;
+  }
+  .platform-request-card {
+    padding: 1rem;
+  }
+  .platform-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .platform-filters > .field {
+    min-width: 0;
+    width: 100%;
+  }
+  .platform-summary strong {
+    font-size: 1.25rem;
+  }
+}
+
+.platform-invoice-labels {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+.platform-invoice-labels .badge {
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}

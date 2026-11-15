@@ -221,8 +221,8 @@ test('admin verifies a real TOTP factor and publishes a five-session job through
   await page.getByLabel('Titel', { exact: true }).fill(title);
   await page.getByLabel('Beschreibung', { exact: true }).fill('Fiktiver über die echte Adminoberfläche angelegter Testauftrag.');
   await page.getByLabel('Kunde', { exact: true }).fill('QA Beispielkunde');
-  await page.getByLabel('Honorar', { exact: true }).fill('450');
-  await page.getByLabel('Gesamtvergütung', { exact: true }).fill('2250');
+  await page.getByLabel('Voller Auftragspreis je Einheit', { exact: true }).fill('450');
+  await page.getByLabel('Voller Auftragspreis gesamt', { exact: true }).fill('2250');
   await page.getByLabel('Währung', { exact: true }).selectOption('EUR');
   await page.getByLabel('Einheit', { exact: true }).selectOption('per_day');
   await page.getByLabel('Konditionen', { exact: true }).fill('Fiktive lokale QA-Konditionen.');
