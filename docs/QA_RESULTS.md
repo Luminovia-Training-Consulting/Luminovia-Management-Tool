@@ -2,9 +2,29 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## M6 application acceptance — passed on exact signed source
+
+Source `9d9bc567e70cdb3100a7ea6d78920d90a735cbba`: local runner report `.local/tests/977d0761/RESULT.txt` PASS at 2026-11-15T22:49:34.605Z; independent exact-source [CI43770187739](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43770187739) application `verify` succeeded at 22:53:22Z. The separate retained-image compatibility job also succeeded at 22:59:09Z; [PR8](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/8) merged at 23:05:43Z as `dc8e9a7e65c96076038bf7067791676578d121d4`.
+
+| Check | Actual result |
+| --- | --- |
+| Source and graph | Lint/type/format;177 Vitest/45 files;105reachable modules/30routes; zero unused runtime exports, broken imports/routes/assets |
+| Runtime/Edge |52 runtime,42 Edge tests and3 entry-point typechecks |
+| Operating guards |76 Python,60 Node, real Envoy/Caddy boundaries; real age encryption fixtures |
+| Database |24migrations, lint/security/performance advisors and234 PostgreSQL cases |
+| Business interfaces |18 actual Auth/MFA/REST/Storage/WebSocket suites plus real idempotent Edge/Mailpit invitation |
+| Persistence | Actual password/MFA/profile/private-event/object bytes survived stop/start |
+| Browsers |70/70 desktop/mobile Chromium workflows, zero skipped;6.6 minutes; DE/EN/dark/offline/axe and real DnD/claim/storno/reopen |
+| Build/PWA |56 public precache entries/2600.83 KiB;2/2 built-PWA checks in2.2 seconds |
+| Cleanup | Owned random stack/network/volumes/markers removed; normal development records not targeted |
+
+Actual inspected fictional screenshots: [desktop dashboard](screenshots/m6-desktop-dashboard.png), [mobile dashboard](screenshots/m6-mobile-dashboard.png), [desktop board](screenshots/m6-desktop-job-board.png), [mobile board](screenshots/m6-mobile-job-board.png).
+
+The local outer tool shell reported143 after the runner's final PASS and did not save its extra `.exit` file. This is recorded rather than labelled exit 0; the independent complete CI application job exited successfully. No source fix is inferred from an unexplained outer-shell signal. Actual desktop/mobile screenshots were inspected; physical iOS/Safari, hosted SMTP, legal/retention and full remaining product scope are not covered by this Chromium/local acceptance.
+
 ## M6 third combined checkpoint — APIs passed, browser corrections required
 
-Run `.local/tests/240bbb48/RESULT.txt` on `4e077b7` passed all18actual business API suites plus real Edge/Mailpit, after the complete source/Edge/SQL/restart checks. Chromium desktop/mobile completed **48 passed /22 failed /zero skipped** in9.6minutes. Shared actual causes were notification accessible-name mismatch and three precise browser-fixture errors (translated region, live-status ambiguity, incorrect focus-event target). Build/PWA was not reached. Corrections plus the independently reproduced repeated-reopening notification regression require a fresh complete run04; this checkpoint is not final acceptance.
+Run `.local/tests/240bbb48/RESULT.txt` on `4e077b7` passed all18 actual business API suites plus real Edge/Mailpit, after the complete source/Edge/SQL/restart checks. Chromium desktop/mobile completed **48 passed /22 failed /zero skipped** in9.6minutes. Shared actual causes were notification accessible-name mismatch and three precise browser-fixture errors (translated region, live-status ambiguity, incorrect focus-event target). Build/PWA was not reached. Corrections plus the independently reproduced repeated-reopening notification regression require a fresh complete run04; this checkpoint is not final acceptance.
 
 ## M6 second combined checkpoint — closed-offer test expectation corrected
 
