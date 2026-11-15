@@ -107,6 +107,9 @@ begin
  insert into public.audit_events(actor_id,action,resource_id) values(auth.uid(),'availability.removed',p_id);
 end;$$;
 create function public.remove_lecturer_availability(p_id uuid,p_version integer) returns void language sql security invoker set search_path='' as $$select private.remove_lecturer_availability(p_id,p_version);$$;
+-- The trigger/range helpers are reached only by engine-owned triggers or the
+-- scoped definer implementations; no application actor needs direct execution.
+revoke all on function private.check_availability_window(),private.check_assignment_availability(),private.validate_availability_range(timestamptz,timestamptz,integer) from public,anon,authenticated;
 revoke all on function private.my_availability(timestamptz,timestamptz),public.my_availability(timestamptz,timestamptz),private.shared_availability(timestamptz,timestamptz),public.shared_availability(timestamptz,timestamptz),private.save_lecturer_availability(uuid,jsonb,integer),public.save_lecturer_availability(uuid,jsonb,integer),private.remove_lecturer_availability(uuid,integer),public.remove_lecturer_availability(uuid,integer) from public,anon,authenticated;
 grant execute on function private.my_availability(timestamptz,timestamptz),public.my_availability(timestamptz,timestamptz),private.shared_availability(timestamptz,timestamptz),public.shared_availability(timestamptz,timestamptz),private.save_lecturer_availability(uuid,jsonb,integer),public.save_lecturer_availability(uuid,jsonb,integer),private.remove_lecturer_availability(uuid,integer),public.remove_lecturer_availability(uuid,integer) to authenticated;
 commit;

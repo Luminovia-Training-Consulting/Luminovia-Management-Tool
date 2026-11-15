@@ -47,6 +47,18 @@ await withTestDatabase(
     await check(
       "Only current active management capability with AAL2 can mutate taxonomy",
       async () => {
+        for (const role of ["anon", "authenticated"])
+          for (const signature of [
+            "private.validate_taxonomy_hierarchy()",
+            "private.require_active_topic_reference()",
+          ])
+            assert.equal(
+              await sql(
+                `select has_function_privilege(${q(role)},${q(signature)},'execute')`,
+              ),
+              "f",
+              `${role} must not execute internal taxonomy helpers`,
+            );
         for (const [who, aal] of [
           [admin, "aal1"],
           [lecturer, "aal2"],

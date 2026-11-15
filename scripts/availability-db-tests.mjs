@@ -74,6 +74,26 @@ await withTestDatabase(
     await check(
       "Own windows are private by default, exact-ID retries are idempotent and direct writes denied",
       async () => {
+        for (const role of ["anon", "authenticated"])
+          for (const signature of [
+            "private.check_availability_window()",
+            "private.check_assignment_availability()",
+            "private.validate_availability_range(timestamp with time zone,timestamp with time zone,integer)",
+          ])
+            assert.equal(
+              await sql(
+                `select has_function_privilege(${q(role)},${q(signature)},'execute')`,
+              ),
+              "f",
+              `${role} must not execute internal availability helpers`,
+            );
+        await assert.rejects(
+          actor(
+            teacher,
+            "select private.validate_availability_range(now(),now()+interval '1 hour',1)",
+          ),
+          /permission denied/,
+        );
         assert.equal(await save(id, first), id);
         assert.equal(await save(id, first), id);
         assert.equal(

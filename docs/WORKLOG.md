@@ -2,6 +2,14 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — M6 complete-command run01 stopped on default helper grants
+
+Frozen signed source `e024558c6ccac6e7550a7c0d3759c1907cb7ae52` was pushed as [PR #8](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/8). `./portal test` returned **exit1**, private run `.local/tests/ba7f328e/RESULT.txt` and `.local/m6-test-01.exit`. The central API-surface guard found five newly created internal taxonomy/availability helpers retaining PostgreSQL's default EXECUTE ACL. No assertion was relaxed. Their owning pre-release migrations are being corrected to revoke PUBLIC/anon/authenticated; focused ACL regressions and a complete rerun are required.
+
+Before that rejection, actual checks passed: source lint/type/format, 177 Vitest cases, 52 runtime Node cases, 42 Edge cases and three Edge entry-point typechecks, production dependency audit, 76 Python operating guards, 60 release/package/scanner Node guards, real Envoy/Caddy boundaries, fresh 24-migration startup, genuine Auth/MFA/profile/private-event/Storage-byte stop/start persistence, core 25 PostgreSQL cases including 50-way concurrency, account and audit SQL suites. Native business API/browser/build acceptance was **not reached**. Owned random services/volumes/locks were cleaned; normal development records were not targeted.
+
+Notifications also passed 15 focused SQL groups before freeze: mandatory available-contract link/title plus foreign isolation, and a real BEFORE INSERT attempt counter proving partial capacity claims and semantically unchanged job/requirement updates no longer fan out matching alerts. Meaningful deadline/requirement changes still evaluate the final committed set. Root added response-schema/internal-link validation, including browser backslash URL normalization; all 13 focused notification component/DTO cases passed.
+
 ## 16 November 2026 — M6 connected operations source, final acceptance pending
 
 Continue from `codex/complete-operations-and-local-preview`, preserving all earlier ledgers below. The supplied latest master-prompt attachment remains byte-identical to `docs/UNIVERSAL_MASTER_PROMPT.txt`; accepted client accounts, default50/50, optional managed learners and selfhost development remain in scope. This checkpoint records implemented source and individually executed focused checks, **not a passed combined M6/native/browser run or a production-complete system**. Root QA_RESULTS and exact-source CI must record final acceptance after freeze and corrections.

@@ -113,6 +113,8 @@ begin
 end;$$;
 create function public.set_taxonomy_topic_archived(p_id uuid,p_archived boolean,p_version integer) returns void language sql security invoker set search_path='' as $$select private.set_taxonomy_topic_archived(p_id,p_archived,p_version);$$;
 
+-- Trigger entry points are server-internal, not client RPC implementations.
+revoke all on function private.validate_taxonomy_hierarchy(),private.require_active_topic_reference() from public,anon,authenticated;
 revoke all on function private.taxonomy_catalogue(text,text,boolean),public.taxonomy_catalogue(text,text,boolean),private.save_taxonomy_topic(uuid,jsonb,integer),public.save_taxonomy_topic(uuid,jsonb,integer),private.set_taxonomy_topic_archived(uuid,boolean,integer),public.set_taxonomy_topic_archived(uuid,boolean,integer) from public,anon,authenticated;
 grant execute on function private.taxonomy_catalogue(text,text,boolean),public.taxonomy_catalogue(text,text,boolean),private.save_taxonomy_topic(uuid,jsonb,integer),public.save_taxonomy_topic(uuid,jsonb,integer),private.set_taxonomy_topic_archived(uuid,boolean,integer),public.set_taxonomy_topic_archived(uuid,boolean,integer) to authenticated;
 commit;
