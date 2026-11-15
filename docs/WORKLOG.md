@@ -154,3 +154,23 @@ Security checklist checkboxes now distinguish evidenced local M1 controls from p
 ### Final documentation and minor copy/logging correction
 
 Documentation is reconciled to the final local acceptance above; actual GitHub status is the remaining checkpoint to record after push. The parent is correcting the minor singular/plural “1 Termin” copy and suppressing credential-bearing local-start success output, then rerunning source checks/build. These do not broaden product scope. The exact final committed revision must pass its configured CI; no remote pass is claimed before it is observed.
+
+## 15 November 2026 — GitHub preservation checkpoint
+
+- Created source commit `6d0bbf2ae87eb61f2c1d073c786e45682800fd29` on `codex/portal-foundation`. Its SSH signature was verified locally against the existing configured public signing key; no global signing configuration was changed.
+- The HTTPS OAuth push was rejected because the token lacks GitHub's `workflow` scope. The existing authorised SSH account authenticated successfully, so only this repository's push URL was set to SSH; HTTPS fetch remains intact. The complete branch, including CI, was then pushed successfully.
+- The GitHub connector could not create a PR (`Resource not accessible by integration`). The existing GitHub CLI access created [draft PR #1](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/1). It remains unmerged.
+- GitHub Actions began actual isolated verification for that exact source commit. Local passes are recorded above; remote CI completion is being monitored separately. The workflow never deploys to production.
+- A real cold-start observation identified that the local gateway may answer preflight before an Edge handler exists. A narrow CI readiness improvement is being verified against the real local runtime; it must wait for a non-writing handler rejection rather than gateway OPTIONS success.
+- After final small localisation correction (`1 Termin` / `1 session`) and startup-log credential-output removal, lint, typecheck, 22 source tests, formatting and production build all passed again. Fresh clean-fixture screenshots were refreshed against that build. Local Vite/preview/functions/Supabase were stopped with database backups preserved; the clean fictional accounts remain available for documented local restart.
+
+### Remote CI baseline verified
+
+[GitHub Actions run 43711315201](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43711315201) completed **successfully** for the exact signed application commit `6d0bbf2ae87eb61f2c1d073c786e45682800fd29`. Clean dependency installation, source checks, Deno checks, actual isolated Supabase startup, PostgreSQL/advisors, real HTTP/Edge/Mailpit, browser workflows, production build and built-PWA checks all passed remotely. This is CI/local-service evidence, not hosted staging or production acceptance. A final workflow-only readiness/concurrency improvement is being checked separately.
+
+### Cold Edge readiness verified
+
+- Both the [push run](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43711315201) and [PR run](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43711410829) passed for `6d0bbf2`.
+- Added `scripts/local-functions-ready.mjs` and replaced the workflow's preflight probe. Against a real cold local runtime it stayed pending while only the gateway existed, then exited successfully only on the actual handler's anonymous `403 permission_or_mfa_required` JSON. Anonymous credentials, an empty body and the permission rejection prevent reservation or sending. Non-loopback targets are rejected before requesting.
+- The probe preserved all clean fixture counts: 13 accounts, 11 lecturers, zero invitations, claims and MFA factors. Syntax and ESLint passed. Shared branch concurrency now coalesces push/PR runs.
+- These are CI reliability changes; application behavior is unchanged. The final revision is signed/pushed after this checkpoint and its actual CI result is available on draft PR #1.

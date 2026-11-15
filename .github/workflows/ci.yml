@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: portal-${{ github.workflow }}-${{ github.ref }}
+  group: portal-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 jobs:
   verify:
@@ -37,11 +37,7 @@ jobs:
       - name: Start local invitation runtime
         run: |
           bash scripts/local-functions.sh > .local/functions-ci.log 2>&1 &
-          for attempt in {1..30}; do
-            if curl --silent --fail -X OPTIONS -H 'Origin: http://127.0.0.1:5173' http://127.0.0.1:54321/functions/v1/invite-lecturer > /dev/null; then exit 0; fi
-            sleep 1
-          done
-          exit 1
+          node scripts/local-functions-ready.mjs
       - run: node scripts/local-invite-check.mjs
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
