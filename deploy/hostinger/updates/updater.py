@@ -33,6 +33,7 @@ MAX_ARCHIVE = 64 * 1024 * 1024
 MAX_UNPACKED = 512 * 1024 * 1024
 MAX_FILE = 64 * 1024 * 1024
 MIN_FREE = 2 * 1024 * 1024 * 1024
+CONTROLLER = "deploy/hostinger/updates/updater.py"
 
 
 class UpdateError(Exception):
@@ -456,6 +457,58 @@ class Updater:
             raise UpdateError("runtime_change_requires_reviewed_bundle")
         return changed, images.get("db") != current.get("db")
 
+    def release_changes(self, manifest):
+        changed = set()
+        runtime_files = set()
+        controller_changed = False
+        for item in manifest["files"]:
+            name = item["path"]
+            if name.startswith("site/"):
+                continue
+            controller = name == CONTROLLER
+            target = self.root / "control/updater.py" if controller else self.source / name
+            if target.is_symlink() or any(parent.is_symlink() for parent in target.parents):
+                raise UpdateError("unsafe_existing_source_path")
+            matches = target.is_file() and target.stat().st_size == item["size"] and digest(target) == item["sha256"]
+            if controller:
+                controller_changed = not matches
+            else:
+                runtime_files.add(name)
+                if not matches:
+                    changed.add(name)
+        previous_files = self.state.get("installedRuntimeFiles", [])
+        if not isinstance(previous_files, list) or any(not isinstance(name, str) or not allowed_path(name) or name.startswith("site/") or name == CONTROLLER for name in previous_files):
+            raise UpdateError("invalid_installed_runtime_inventory")
+        # A known removal never qualifies for a site-only update. Runtime
+        # deletion/reconciliation remains an operator-reviewed full deployment.
+        changed.update(set(previous_files) - runtime_files)
+        return changed, controller_changed, sorted(runtime_files)
+
+    def activate_web(self, changed):
+        forced = []
+        if "deploy/hostinger/Caddyfile" in changed:
+            forced.append("web")
+        if "deploy/hostinger/clamd.conf" in changed:
+            forced.append("clamav")
+        normal = [service for service in ("web", "clamav") if service not in forced]
+        if normal:
+            self.compose("web", ["up", "-d", "--wait", *normal])
+        if forced:
+            # File bind mounts keep their old inode after atomic source copying.
+            self.compose("web", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *forced])
+
+    def install_controller(self, tree):
+        updater = Path(tree) / CONTROLLER
+        if updater.exists():
+            destination = self.root / "control/updater.py"
+            if destination.is_symlink() or any(parent.is_symlink() for parent in destination.parents):
+                raise UpdateError("unsafe_existing_controller_path")
+            private_directory(destination.parent)
+            temporary = destination.with_name(".updater-" + uuid.uuid4().hex + ".py")
+            shutil.copy2(updater, temporary)
+            temporary.chmod(0o700)
+            os.replace(temporary, destination)
+
     def preflight_space(self, tree):
         data = self.root / "data/storage"
         object_bytes = 0
@@ -523,7 +576,7 @@ class Updater:
         replacements = []
         for item in manifest["files"]:
             name = item["path"]
-            if name.startswith("site/") or name == "deploy/hostinger/updates/updater.py":
+            if name.startswith("site/") or name == CONTROLLER:
                 continue
             source, target = Path(tree) / name, self.source / name
             if target.is_symlink() or any(parent.is_symlink() for parent in target.parents if parent != self.source.parent):
@@ -633,65 +686,69 @@ class Updater:
         runtime_mutated = False
         stopped = False
         promoted = False
+        mode = "validation"
+        changed = set()
         old_target = os.readlink(self.www / "current") if (self.www / "current").is_symlink() else None
         if old_target and (PurePosixPath(old_target).is_absolute() or ".." in PurePosixPath(old_target).parts or not old_target.startswith("releases/")):
             raise UpdateError("unsafe_previous_release_target")
         try:
             unpack_verified(archive, manifest, stage)
             pending = self.plan_migrations(stage, manifest)
+            changed, controller_changed, runtime_files = self.release_changes(manifest)
             runtime_changed, _database_changed = self.verify_runtime(stage, manifest)
-            self.preflight_space(stage)
             if (self.www / "current").exists() and not (self.www / "current").is_symlink():
                 raise UpdateError("static_current_must_be_release_symlink")
-            self.compose("backend", ["pull", "--quiet"], tree=stage)
-            self.compose("web", ["pull", "--quiet"], tree=stage)
-            self.preflight_space(stage)
+            mode = "full" if changed or pending or runtime_changed or not old_target else "site_controller"
+            if mode == "full":
+                self.preflight_space(stage)
+                self.compose("backend", ["pull", "--quiet"], tree=stage)
+                self.compose("web", ["pull", "--quiet"], tree=stage)
+                self.preflight_space(stage)
             self.prepare_site(stage, commit)
-            self.www.mkdir(parents=True, exist_ok=True, mode=0o755)
-            self.maintenance.write_text("Development update in progress.\n", encoding="utf-8")
-            self.maintenance.chmod(0o644)
-            stopped = True
-            self.compose("backend", ["stop", *WRITERS])
-            backup = self.backup(commit)
-            self.state["lastBackup"] = str(backup)
-            atomic_json(self.state_file, self.state)
-            rollback = backup / "runtime-before"
-            private_directory(rollback)
-            runtime_mutated = True
-            self.copy_runtime(stage, manifest, rollback, original)
-            self.compose("backend", ["up", "-d", "--wait", "db"])
-            # Inspect actual catalog versions, not filesystem ICU guesses or image tags.
-            self.collation_guard(manifest)
-            for version, name, source in pending:
-                self.sql(migration_sql(source, version, name))
-            self.sql("NOTIFY pgrst, 'reload schema';")
-            self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *WRITERS])
-            self.compose("web", ["up", "-d", "--wait", "--force-recreate"])
+            if mode == "full":
+                self.www.mkdir(parents=True, exist_ok=True, mode=0o755)
+                self.maintenance.write_text("Development update in progress.\n", encoding="utf-8")
+                self.maintenance.chmod(0o644)
+                stopped = True
+                self.compose("backend", ["stop", *WRITERS])
+                backup = self.backup(commit)
+                self.state["lastBackup"] = str(backup)
+                atomic_json(self.state_file, self.state)
+                rollback = backup / "runtime-before"
+                private_directory(rollback)
+                runtime_mutated = True
+                self.copy_runtime(stage, manifest, rollback, original)
+                self.compose("backend", ["up", "-d", "--wait", "db"])
+                # Inspect actual catalog versions, not filesystem ICU guesses or image tags.
+                self.collation_guard(manifest)
+                for version, name, source in pending:
+                    self.sql(migration_sql(source, version, name))
+                self.sql("NOTIFY pgrst, 'reload schema';")
+                self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *WRITERS])
+                self.activate_web(changed)
             self.promote("releases/" + commit)
             promoted = True
-            self.maintenance.unlink(missing_ok=True)
+            if mode == "full":
+                self.maintenance.unlink(missing_ok=True)
             self.health(env, (stage / "site/index.html").read_bytes())
-            updater = stage / "deploy/hostinger/updates/updater.py"
-            if updater.exists():
-                destination = self.root / "control/updater.py"
-                destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-                temporary = destination.with_suffix(".py.new")
-                shutil.copy2(updater, temporary)
-                temporary.chmod(0o700)
-                os.replace(temporary, destination)
-            self.state.update({"status": "updated", "currentCommit": commit, "previousCommit": self.state.get("currentCommit"), "lastSuccessAt": now(), "failedCommit": None, "failureCode": None, "manualRecoveryRequired": False, "bootstrapApproved": False, "appliedMigrationVersions": [item[0] for item in pending]})
+            if controller_changed:
+                self.install_controller(stage)
+            self.state.update({"status": "updated", "currentCommit": commit, "previousCommit": self.state.get("currentCommit"), "lastSuccessAt": now(), "failedCommit": None, "failureCode": None, "manualRecoveryRequired": False, "bootstrapApproved": False, "appliedMigrationVersions": [item[0] for item in pending], "lastUpdateMode": mode, "lastAttemptMode": mode, "backupCreatedForCurrentUpdate": mode == "full", "installedRuntimeFiles": runtime_files})
             atomic_json(self.state_file, self.state)
-            return {"status": "updated", "commit": commit}
+            return {"status": "updated", "commit": commit, "mode": mode}
         except Exception as error:
             code = str(error) if isinstance(error, UpdateError) else "unexpected_update_failure"
             recovered = not stopped
             if promoted and old_target:
-                self.promote(old_target)
+                try:
+                    self.promote(old_target)
+                except Exception:
+                    recovered = False
             if stopped and (not runtime_changed or not runtime_mutated):
                 try:
                     self.rollback_runtime(original, rollback)
                     self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *WRITERS])
-                    self.compose("web", ["up", "-d", "--wait", "--force-recreate"])
+                    self.activate_web(changed)
                     self.maintenance.unlink(missing_ok=True)
                     self.health(env)
                     recovered = True
@@ -700,7 +757,7 @@ class Updater:
             if not recovered:
                 self.maintenance.write_text("Operator recovery required.\n", encoding="utf-8")
                 self.maintenance.chmod(0o644)
-            self.state.update({"status": "failed", "failedCommit": commit, "failureCode": code, "lastFailureAt": now(), "manualRecoveryRequired": not recovered})
+            self.state.update({"status": "failed", "failedCommit": commit, "failureCode": code, "lastFailureAt": now(), "manualRecoveryRequired": not recovered, "lastAttemptMode": mode})
             atomic_json(self.state_file, self.state)
             raise UpdateError(code) from error
         finally:

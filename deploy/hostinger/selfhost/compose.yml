@@ -23,10 +23,11 @@ services:
       - postgres
       - -h
       - localhost
-      interval: 5s
+      interval: 30s
       timeout: 5s
-      retries: 12
+      retries: 3
       start_period: 60s
+      start_interval: 5s
     environment:
       POSTGRES_HOST: /var/run/postgresql
       PGPORT: ${POSTGRES_PORT}
@@ -73,9 +74,10 @@ services:
       - --spider
       - http://localhost:9999/health
       timeout: 5s
-      interval: 5s
-      retries: 12
+      interval: 30s
+      retries: 3
       start_period: 60s
+      start_interval: 5s
     depends_on:
       db:
         condition: service_healthy
@@ -151,10 +153,11 @@ services:
       - CMD
       - postgrest
       - --ready
-      interval: 5s
+      interval: 30s
       timeout: 5s
-      retries: 12
+      retries: 3
       start_period: 60s
+      start_interval: 5s
     environment:
       PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
       PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
@@ -193,8 +196,9 @@ services:
       - 'curl -sSfL --head -o /dev/null -H "Authorization: Bearer ${ANON_KEY}" http://localhost:4000/api/tenants/realtime-dev/health'
       timeout: 5s
       interval: 30s
-      retries: 12
+      retries: 3
       start_period: 60s
+      start_interval: 5s
     environment:
       PORT: 4000
       DB_HOST: ${POSTGRES_HOST}
@@ -249,9 +253,10 @@ services:
       - --spider
       - http://storage:5000/status
       timeout: 5s
-      interval: 5s
-      retries: 12
+      interval: 30s
+      retries: 3
       start_period: 60s
+      start_interval: 5s
     environment:
       ANON_KEY: ${ANON_KEY}
       SERVICE_KEY: ${SERVICE_ROLE_KEY}
@@ -302,10 +307,11 @@ services:
       test:
       - CMD-SHELL
       - timeout 1 bash -c '</dev/tcp/127.0.0.1/9000'
-      interval: 5s
+      interval: 30s
       timeout: 5s
-      retries: 12
+      retries: 3
       start_period: 60s
+      start_interval: 5s
     environment:
       JWT_SECRET: ${JWT_SECRET}
       SUPABASE_URL: http://api-gw:8000
@@ -354,10 +360,11 @@ services:
       test:
       - CMD-SHELL
       - timeout 1 bash -c '</dev/tcp/127.0.0.1/8000'
-      interval: 10s
+      interval: 30s
       timeout: 5s
-      retries: 12
+      retries: 3
       start_period: 60s
+      start_interval: 5s
     depends_on:
       auth:
         condition: service_healthy
@@ -411,9 +418,11 @@ services:
       - CMD
       - /mailpit
       - readyz
-      interval: 10s
+      interval: 30s
       timeout: 5s
-      retries: 6
+      retries: 3
+      start_period: 30s
+      start_interval: 5s
     mem_limit: 64m
     pids_limit: 64
     security_opt:

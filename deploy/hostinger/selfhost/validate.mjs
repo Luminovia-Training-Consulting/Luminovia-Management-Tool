@@ -166,6 +166,14 @@ try {
   ]);
   for (const [name, service] of Object.entries(compose.services)) {
     assert(/@sha256:[a-f0-9]{64}$/.test(service.image));
+    assert.equal(service.healthcheck.interval, "30s");
+    assert.equal(service.healthcheck.start_interval, "5s");
+    assert.equal(
+      service.healthcheck.start_period,
+      name === "mailpit" ? "30s" : "1m0s",
+    );
+    assert.equal(service.healthcheck.timeout, "5s");
+    assert.equal(service.healthcheck.retries, 3);
     if (name === "mailpit") {
       assert.equal(service.ports.length, 1);
       assert.equal(service.ports[0].host_ip, "127.0.0.1");
@@ -244,8 +252,34 @@ try {
     compose.services.storage.environment.ENABLE_IMAGE_TRANSFORMATION,
     "false",
   );
+  const webResult = spawnSync(
+    "docker",
+    [
+      "compose",
+      "--project-directory",
+      resolve(here, ".."),
+      "-f",
+      resolve(here, "../compose.yml"),
+      "config",
+      "--format",
+      "json",
+    ],
+    {
+      encoding: "utf8",
+      maxBuffer: 8 * 1024 * 1024,
+      env: { ...process.env, PORTAL_DOMAIN: "portal.example.invalid" },
+    },
+  );
+  if (webResult.status !== 0)
+    throw new Error("Web Docker Compose validation failed.");
+  const clamav = JSON.parse(webResult.stdout).services.clamav;
+  assert.equal(clamav.healthcheck.interval, "30s");
+  assert.equal(clamav.healthcheck.start_interval, "5s");
+  assert.equal(clamav.healthcheck.start_period, "3m0s");
+  assert.equal(clamav.healthcheck.timeout, "5s");
+  assert.equal(clamav.healthcheck.retries, 3);
   console.log(
-    "PASS: legacy/asymmetric key signatures, opaque-key checksums, prefix URLs, public-key separation, 0600/non-overwrite files, Compose mounts and private network/Auth boundaries.",
+    "PASS: legacy/asymmetric key signatures, opaque-key checksums, prefix URLs, public-key separation, 0600/non-overwrite files, Compose mounts, private network/Auth boundaries and fast-start/30s healthchecks.",
   );
 } finally {
   rmSync(directory, { recursive: true, force: true });

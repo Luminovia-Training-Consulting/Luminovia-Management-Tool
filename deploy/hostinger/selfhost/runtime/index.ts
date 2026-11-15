@@ -337,7 +337,6 @@ Deno.serve({ onError }, async (req: Request) => {
   }
 
   const servicePath = `/home/deno/functions/${service_name}`
-  console.error(`serving the request with ${servicePath}`)
 
   try {
     const serviceInfo = await Deno.stat(servicePath)

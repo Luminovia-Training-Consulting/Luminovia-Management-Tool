@@ -69,6 +69,15 @@ def instance(directory):
     return root
 
 
+def installed_runtime(root, files):
+    for name, contents in files.items():
+        if name.startswith("site/"):
+            continue
+        destination = root / "control/updater.py" if name == u.CONTROLLER else root / "source" / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(contents)
+
+
 class FakeUpdater(u.Updater):
     def __init__(self, root):
         super().__init__(root)
@@ -77,13 +86,14 @@ class FakeUpdater(u.Updater):
         self.image_change = False
         self.busy = False
         self.collations = []
+        self.pending = []
 
     def os_updates_busy(self):
         return self.busy
 
     def plan_migrations(self, tree, manifest):
         self.calls.append("migration-plan")
-        return []
+        return self.pending
 
     def verify_runtime(self, tree, manifest):
         return self.image_change, self.image_change
@@ -248,6 +258,143 @@ class ReleaseTests(unittest.TestCase):
 
 
 class InstallationTests(unittest.TestCase):
+    def test_site_and_controller_only_update_has_no_container_or_backup_mutation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            archive, manifest, files = fixture(directory, extra={u.CONTROLLER: b"# reviewed new controller\n"})
+            root = instance(directory)
+            installed_runtime(root, files)
+            (root / "control/updater.py").write_bytes(b"# previous actual controller\n")
+            # The source copy is deliberately already current: classification
+            # must compare the executable in control/, not this inactive copy.
+            source_copy = root / "source" / u.CONTROLLER
+            source_copy.parent.mkdir(parents=True, exist_ok=True)
+            source_copy.write_bytes(files[u.CONTROLLER])
+            original_env = (root / "private/selfhost.env").read_bytes()
+            updater = FakeUpdater(root)
+            updater.state = {"currentCommit": OLD, "lastBackup": "previous-private-backup"}
+            # Real runtime consistency checks remain enabled on the fast path.
+            image = manifest["runtime"]["images"][0]["image"]
+            def images(tree):
+                updater.calls.append(("backend", ("config", "--format", "json")))
+                return {"db": image}
+            updater.rendered_images = images
+            updater.verify_runtime = lambda tree, value: u.Updater.verify_runtime(updater, tree, value)
+            result = updater.apply(archive, manifest)
+            self.assertEqual(result["mode"], "site_controller")
+            self.assertEqual((root / "control/updater.py").read_bytes(), files[u.CONTROLLER])
+            self.assertEqual((root / "control/updater.py").stat().st_mode & 0o777, 0o700)
+            self.assertEqual((root / "private/selfhost.env").read_bytes(), original_env)
+            self.assertEqual((root / "www/current/index.html").read_bytes(), files["site/index.html"])
+            self.assertTrue(all(call[1][0] == "config" for call in updater.calls if isinstance(call, tuple)))
+            self.assertFalse(any(call in updater.calls for call in ("backup", "space-check", "sql", "collation-check")))
+            self.assertFalse(updater.maintenance.exists())
+            state = json.loads(updater.state_file.read_text())
+            self.assertEqual(state["lastUpdateMode"], "site_controller")
+            self.assertFalse(state["backupCreatedForCurrentUpdate"])
+            self.assertEqual(state["lastBackup"], "previous-private-backup")
+
+    def test_fast_path_still_rejects_wrong_declared_runtime_images(self):
+        with tempfile.TemporaryDirectory() as directory:
+            archive, manifest, files = fixture(directory)
+            root = instance(directory)
+            installed_runtime(root, files)
+            updater = FakeUpdater(root)
+            updater.rendered_images = lambda tree: {"db": "supabase/postgres:17.12.0@sha256:" + "e" * 64}
+            updater.verify_runtime = lambda tree, value: u.Updater.verify_runtime(updater, tree, value)
+            with self.assertRaisesRegex(u.UpdateError, "runtime_image_manifest_mismatch"):
+                updater.apply(archive, manifest)
+            self.assertEqual(os.readlink(root / "www/current"), "releases/bootstrap")
+            self.assertNotIn("backup", updater.calls)
+
+    def test_site_only_health_failure_rolls_back_without_touching_backend_or_controller(self):
+        with tempfile.TemporaryDirectory() as directory:
+            archive, manifest, files = fixture(directory, extra={u.CONTROLLER: b"# new controller\n"})
+            root = instance(directory)
+            installed_runtime(root, files)
+            previous_controller = b"# keep previous controller\n"
+            (root / "control/updater.py").write_bytes(previous_controller)
+            updater = FakeUpdater(root)
+            updater.fail_health_once = True
+            with self.assertRaisesRegex(u.UpdateError, "health_failed"):
+                updater.apply(archive, manifest)
+            self.assertEqual(os.readlink(root / "www/current"), "releases/bootstrap")
+            self.assertEqual((root / "control/updater.py").read_bytes(), previous_controller)
+            self.assertFalse(any(isinstance(call, tuple) for call in updater.calls))
+            self.assertNotIn("backup", updater.calls)
+            self.assertFalse(updater.maintenance.exists())
+            state = json.loads(updater.state_file.read_text())
+            self.assertEqual(state["lastAttemptMode"], "site_controller")
+            self.assertFalse(state["manualRecoveryRequired"])
+
+    def test_corrupt_shared_asset_blocks_site_only_promotion_without_backend_changes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            archive, manifest, files = fixture(directory)
+            root = instance(directory)
+            installed_runtime(root, files)
+            asset = root / "www/assets/app-abc123.js"
+            asset.parent.mkdir()
+            asset.write_bytes(b"older incompatible bytes")
+            updater = FakeUpdater(root)
+            with self.assertRaisesRegex(u.UpdateError, "immutable_asset_collision"):
+                updater.apply(archive, manifest)
+            self.assertEqual(os.readlink(root / "www/current"), "releases/bootstrap")
+            self.assertEqual(asset.read_bytes(), b"older incompatible bytes")
+            self.assertFalse(any(isinstance(call, tuple) for call in updater.calls))
+            self.assertNotIn("backup", updater.calls)
+
+    def test_changed_missing_or_removed_runtime_and_pending_sql_require_full_update(self):
+        for reason in ("changed", "missing", "removed", "pending"):
+            with self.subTest(reason=reason), tempfile.TemporaryDirectory() as directory:
+                archive, manifest, files = fixture(directory)
+                root = instance(directory)
+                installed_runtime(root, files)
+                updater = FakeUpdater(root)
+                if reason == "changed":
+                    (root / "source/deploy/hostinger/Caddyfile").write_bytes(b"old Caddy configuration")
+                elif reason == "missing":
+                    (root / "source/deploy/hostinger/selfhost/compose.yml").unlink()
+                elif reason == "removed":
+                    updater.state = {"installedRuntimeFiles": ["supabase/functions/legacy/index.ts"]}
+                else:
+                    item = manifest["migrations"][0]
+                    updater.pending = [(item["version"], "add_example", files[item["path"]].decode())]
+                result = updater.apply(archive, manifest)
+                self.assertEqual(result["mode"], "full")
+                self.assertIn("backup", updater.calls)
+                self.assertIn(("backend", ("stop", *u.WRITERS)), updater.calls)
+                self.assertTrue(json.loads(updater.state_file.read_text())["backupCreatedForCurrentUpdate"])
+                web_calls = [call[1] for call in updater.calls if isinstance(call, tuple) and call[0] == "web"]
+                self.assertFalse(any("--force-recreate" in args and "clamav" in args for args in web_calls))
+                if reason == "changed":
+                    self.assertTrue(any("--force-recreate" in args and args[-1] == "web" for args in web_calls))
+
+    def test_only_changed_clamd_bind_requires_targeted_scanner_recreation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            archive, manifest, files = fixture(directory, extra={"deploy/hostinger/clamd.conf": b"MaxThreads 1\n"})
+            root = instance(directory)
+            installed_runtime(root, files)
+            (root / "source/deploy/hostinger/clamd.conf").write_bytes(b"MaxThreads 4\n")
+            updater = FakeUpdater(root)
+            self.assertEqual(updater.apply(archive, manifest)["mode"], "full")
+            self.assertIn(("web", ("up", "-d", "--wait", "--force-recreate", "--no-deps", "clamav")), updater.calls)
+            self.assertIn(("web", ("up", "-d", "--wait", "web")), updater.calls)
+
+    def test_existing_runtime_symlink_cannot_qualify_for_site_only_update(self):
+        with tempfile.TemporaryDirectory() as directory:
+            archive, manifest, files = fixture(directory)
+            root = instance(directory)
+            installed_runtime(root, files)
+            target = root / "source/deploy/hostinger/Caddyfile"
+            target.unlink()
+            external = Path(directory) / "outside-Caddyfile"
+            external.write_bytes(files["deploy/hostinger/Caddyfile"])
+            target.symlink_to(external)
+            updater = FakeUpdater(root)
+            with self.assertRaisesRegex(u.UpdateError, "unsafe_existing_source_path"):
+                updater.apply(archive, manifest)
+            self.assertEqual(os.readlink(root / "www/current"), "releases/bootstrap")
+            self.assertNotIn("backup", updater.calls)
+
     def test_success_promotes_complete_site_and_preserves_private_configuration(self):
         with tempfile.TemporaryDirectory() as directory:
             archive, manifest, files = fixture(directory, extra={"site/workbox-abc123.js": b"old service worker imports remain reachable"})
