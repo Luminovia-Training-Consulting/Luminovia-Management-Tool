@@ -111,6 +111,10 @@ Stoppe verwaltete lokale Dienste mit `./portal stop`; Datenbank und tatsächlich
 
 [System audit](docs/SYSTEM_AUDIT.md) · [Developer guide](docs/DEVELOPER_GUIDE.md) · [Functional audit](docs/FUNCTIONAL_CODE_AUDIT.md) · [CBW templates](docs/CBW_TEMPLATES.md) · [Profile pictures](docs/PROFILE_AVATARS.md) · [Comments](docs/RESOURCE_COMMENTS.md) · [Product scope](docs/PRODUCT_SPEC.md) · [Architecture](docs/ARCHITECTURE.md) · [ERD](docs/ERD.md) · [Brand](docs/BRAND_DESIGN_SYSTEM.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [Security review](docs/BACKEND_SECURITY_REVIEW.md) · [Test plan](docs/TEST_PLAN.md) · [User guide](docs/USER_GUIDE.md)
 
+## Mitwirken auf GitHub
+
+Der [Beitragsleitfaden](CONTRIBUTING.md) erklärt Einrichtung, Branches, Tests und den Weg bis zum Merge. Der [Issue-Leitfaden](docs/ISSUE_GUIDE.md) hilft bei Fehlern und Vorschlägen; der [PR-Leitfaden](docs/PULL_REQUEST_GUIDE.md) beschreibt Pflichtlabels, Review und CI. Deutsch und Englisch sind willkommen. Sicherheitslücken werden über einen privaten Meldeweg behandelt.
+
 Repository license: GNU GPLv3; the authentic Space Grotesk font retains its included OFL notice. Brand assets remain Luminovia assets.
 
 ## Account and revenue APIs

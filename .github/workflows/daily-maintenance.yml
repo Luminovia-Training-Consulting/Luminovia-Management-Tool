@@ -12,7 +12,8 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: daily-component-maintenance
+  # The read-only-main signature probe must not queue behind a full daily run.
+  group: daily-component-maintenance${{ inputs.signature_probe_only && '-signature-probe' || '' }}
   cancel-in-progress: false
 jobs:
   signature-probe:

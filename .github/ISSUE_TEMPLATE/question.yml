@@ -1,0 +1,40 @@
+name: Frage stellen
+description: Eine konkrete Frage zu Entwicklung, Bedienung oder Dokumentation stellen.
+title: "[Frage]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Lies zuerst [CONTRIBUTING](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/CONTRIBUTING.md)
+        und den [Issue-Leitfaden](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/ISSUE_GUIDE.md).
+        Poste keine Zugangsdaten, Tokens, MFA-Codes, privaten Dokumente oder realen Personen- und Kundendaten.
+        Vermutete Sicherheitslücken gehören in [GitHubs private Sicherheitsmeldung](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/security/advisories/new).
+  - type: textarea
+    id: question
+    attributes:
+      label: Deine Frage
+      description: Welche konkrete Information fehlt dir? Beschreibe das gewünschte Ergebnis.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Kontext und bereits geprüfte Informationen
+      description: Verlinke die betroffene Anleitung oder Funktion und beschreibe, was du bereits nachgelesen oder ausprobiert hast. Verwende nur fiktive oder bereinigte Beispiele.
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: Version oder Umgebung (optional)
+      description: Falls relevant, Commit, Entwicklungsrelease, Browser oder lokale Umgebung angeben; keine Zugangsdaten.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Vor dem Absenden
+      options:
+        - label: Ich habe in der vorhandenen Dokumentation und in bestehenden Issues nach einer Antwort gesucht.
+          required: true
+        - label: Meine Angaben und Anhänge enthalten keine Geheimnisse, privaten Dokumente oder personenbezogenen Daten.
+          required: true

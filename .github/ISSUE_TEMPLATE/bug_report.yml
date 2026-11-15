@@ -1,0 +1,78 @@
+name: Fehler melden
+description: Einen reproduzierbaren Fehler im Luminovia Portal beschreiben.
+title: "[Bug]: "
+labels: ["type:fix"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke für deine Meldung. Prüfe zuerst, ob bereits ein passendes Issue existiert.
+        Nutze ausschließlich fiktive oder geschwärzte Beispiele. Poste keine Passwörter,
+        Tokens, MFA-Codes, privaten Dokumente oder personenbezogenen Kundendaten.
+        Für Sicherheitslücken gilt der [private Meldeweg im Issue-Leitfaden](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/ISSUE_GUIDE.md#sicherheitsprobleme-melden).
+  - type: input
+    id: revision
+    attributes:
+      label: Version oder Commit
+      description: Commit-SHA, Release-Tag oder Datum des beobachteten Stands. Falls unbekannt, bitte ausdrücklich „unbekannt“ schreiben.
+      placeholder: "Zum Beispiel: Commit abc1234, lokaler Branch codex/beispiel"
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Umgebung
+      options:
+        - Lokale Entwicklung mit ./portal start
+        - Isolierter Test mit ./portal test
+        - Selbst gehostete Entwicklungsinstanz
+        - Andere oder unbekannte Umgebung
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: Betriebssystem und Browser
+      description: Bei Browserfehlern Browsername, Version und Gerät angeben; bei reinen API-/CLI-Fehlern die verwendeten Werkzeuge.
+      placeholder: "Zum Beispiel: Linux, Chromium 140, Desktop; Sprache DE, Theme dunkel"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Schritte zur Reproduktion
+      description: Beschreibe Ausgangszustand, betroffene Seite oder API, benötigte Rolle und genaue Schritte. Keine Zugangsdaten angeben.
+      placeholder: |
+        1. Mit einem fiktiven Dozierendenkonto anmelden.
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartetes Verhalten
+      description: Was sollte nach diesen Schritten passieren?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Tatsächliches Verhalten
+      description: Was passiert stattdessen? Ist der Fehler wiederholbar oder nur gelegentlich aufgetreten?
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Bereinigte Nachweise und weitere Hinweise
+      description: Optional Screenshots, genaue Fehlermeldung oder kurze bereinigte Logs. Bei Kalenderfehlern Datum und IANA-Zeitzone nennen. Keine vollständigen privaten Netzwerkprotokolle hochladen.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Vor dem Absenden
+      options:
+        - label: Ich habe nach bestehenden Issues gesucht.
+          required: true
+        - label: Die Meldung enthält keine Zugangsdaten, privaten Dokumente oder personenbezogenen Daten; eine Sicherheitslücke melde ich über den beschriebenen privaten Weg.
+          required: true
