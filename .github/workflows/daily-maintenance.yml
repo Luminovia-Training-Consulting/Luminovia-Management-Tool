@@ -18,6 +18,9 @@ concurrency:
 jobs:
   signature-probe:
     if: github.event_name == 'workflow_dispatch' && inputs.signature_probe_only
+    # Keep the App key in this main-only environment: checkout.ref alone cannot
+    # stop a modified branch workflow from stealing a repository-level secret.
+    environment: maintenance-signing
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -258,6 +261,8 @@ jobs:
   promote:
     needs: [discover, combined, fallback]
     if: always() && needs.discover.result == 'success' && (needs.combined.result == 'success' || needs.fallback.result == 'success')
+    # The same environment boundary protects automatic direct-main promotion.
+    environment: maintenance-signing
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
