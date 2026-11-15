@@ -32,6 +32,10 @@ RETAIN = 3
 DB = "luminovia-supabase-db-1"
 SERVICES = {"luminovia-supabase": {"db", "auth", "rest", "realtime", "storage", "functions", "api-gw", "mailpit"}, "luminovia-portal": {"web", "clamav"}}
 REBUILDABLE_VOLUMES = {"/root/.cache/deno", "/var/lib/clamav"}
+LEGACY_IMAGES = {
+    "supabase/postgres:17.6.1.136@sha256:f371b5f3f2ac0a05703f33d6e6134515fb2498cab708fb948a0aeb7481467c00",
+    "supabase/postgres:17.12.0.000@sha256:8630950b489ecc70563300180287a98c192a4a48f5ae00b4febdaeea1abe85de",
+}
 SUMMARY_SQL = Path(__file__).with_name("database-summary.sql").read_text()
 
 
@@ -285,6 +289,43 @@ class CompleteBackup:
             raise BackupError("database_not_running_on_immutable_image")
         return image
 
+    def recovery_image_evidence(self, image):
+        if image in LEGACY_IMAGES:
+            return None  # Preserve the original explicitly reviewed recovery path.
+        proof_path = self.root / "source/deploy/hostinger/selfhost/postgres-candidate-proof.json"
+        if not proof_path.exists():
+            raise BackupError("missing_installed_postgres_recovery_proof")
+        if proof_path.is_symlink() or not proof_path.is_file() or proof_path.stat().st_size > 1024 ** 2:
+            raise BackupError("unsafe_installed_postgres_recovery_proof")
+        proof_text = proof_path.read_text()
+        proof = json.loads(proof_text)
+        image_pattern = r"supabase/postgres:17\.\d+\.\d+\.\d+@sha256:[a-f0-9]{64}"
+        flags = ["passed", "migrationSourcesExact", "existingCredentialsAndFileExact", "roleAndMembershipExact"]
+        if not (proof.get("schemaVersion") == 1 and proof.get("postgresMajor") == 17 and proof.get("requiresLiveDataPreflight") is True
+                and re.fullmatch(r"[a-f0-9]{40}", str(proof.get("sourceCommit", "")))
+                and all(re.fullmatch(image_pattern, str(proof.get(k, ""))) for k in ["sourceImage", "targetImage"])
+                and proof["sourceImage"] != proof["targetImage"] and proof["targetImage"] == image
+                and proof.get("validation", {}).get("kind") == "isolated-selfhost-upgrade-fixture"
+                and all(proof["validation"].get(k) is True for k in flags)):
+            raise BackupError("invalid_installed_postgres_recovery_proof")
+        history = json.loads(self.sql("select json_agg(json_build_object('version',version,'source',statements[1],'statementCount',cardinality(statements)) order by version) from supabase_migrations.schema_migrations;"))
+        inventory = []
+        for entry in history or []:
+            if not re.fullmatch(r"\d{14}", str(entry.get("version", ""))) or entry.get("statementCount") != 1 or not isinstance(entry.get("source"), str):
+                raise BackupError("invalid_live_migration_recovery_inventory")
+            matches = list((self.root / "source/supabase/migrations").glob(entry["version"] + "_*.sql"))
+            if len(matches) != 1 or matches[0].is_symlink() or not matches[0].is_file() or matches[0].read_bytes() != entry["source"].encode():
+                raise BackupError("live_migration_recovery_source_differs")
+            inventory.append({"path": "supabase/migrations/" + matches[0].name, "sha256": hashlib.sha256(entry["source"].encode()).hexdigest()})
+        proven = proof.get("migrationInventory")
+        if not isinstance(proven, list) or not 0 < len(proven) <= len(inventory) or proven != inventory[:len(proven)] or any(set(e) != {"path", "sha256"} for e in proven):
+            raise BackupError("postgres_recovery_proof_history_differs")
+        if proof.get("migrationInventorySha256") != hashlib.sha256(json.dumps(proven, separators=(",", ":"), ensure_ascii=False).encode()).hexdigest():
+            raise BackupError("postgres_recovery_proof_inventory_digest_differs")
+        return {"format": "luminovia-installed-postgres-recovery-proof-v1", "proofText": proof_text,
+                "proofPath": proof_path.relative_to(self.host_root).as_posix(), "proofSha256": digest(proof_path),
+                "appliedMigrationInventory": inventory}
+
     def paths(self):
         paths = [self.root / name for name in ["source", "www", "private", "control", "data/storage", "data/mailpit"]]
         # Restore-critical configuration is captured separately; live PGDATA
@@ -451,6 +492,7 @@ class CompleteBackup:
         if not re.fullmatch(r"age1[0-9a-z]{58}", recipient):
             raise BackupError("invalid_public_age_recipient")
         image = self.inspect()
+        recovery_evidence = self.recovery_image_evidence(image)
         roots, volumes, excluded = self.paths()
         databases = json.loads(self.sql("select json_agg(json_build_object('name',datname,'owner',pg_get_userbyid(datdba),'template',datistemplate,'encoding',pg_encoding_to_char(encoding),'localeProvider',datlocprovider,'locale',to_jsonb(d)->>'datlocale','collate',datcollate,'ctype',datctype,'collationVersion',datcollversion) order by datname) from pg_database d where datallowconn;"))
         if not {"postgres", "_supabase", "template1"}.issubset({d["name"] for d in databases}):
@@ -473,7 +515,7 @@ class CompleteBackup:
             content = base64.b64decode(item["base64"], validate=True)
             if hashlib.sha256(content).hexdigest() != item["sha256"] or len(content) != item["bytes"]:
                 raise BackupError("extension_recovery_baseline_checksum_differs")
-        catalog = {"extensionRecovery": extension_recovery, "format": FORMAT, "startedAt": self.started, "image": image, "databases": databases, "volumes": volumes, "excludedReconstructibleVolumes": excluded, "parts": {}}
+        catalog = {"extensionRecovery": extension_recovery, "postgresRecoveryEvidence": recovery_evidence, "format": FORMAT, "startedAt": self.started, "image": image, "databases": databases, "volumes": volumes, "excludedReconstructibleVolumes": excluded, "parts": {}}
         parts = {}
         error = None
         try:

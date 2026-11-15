@@ -52,6 +52,60 @@ class BackupSafetyTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def postgres_proof_fixture(self):
+        # Fictional guard inputs: never a claim that a future engine was tested.
+        self.backup.host_root = self.root / "host"
+        self.backup.root = self.backup.host_root / "opt/luminovia-portal"
+        source = self.backup.root / "source"
+        directory = source / "supabase/migrations"
+        directory.mkdir(parents=True)
+        history = []
+        for version, title in [("20260101000000", "first"), ("20260102000000", "second")]:
+            text = "-- Fictional " + title + " SQL\n"
+            (directory / (version + "_" + title + ".sql")).write_text(text)
+            history.append({"version": version, "source": text, "statementCount": 1})
+        inventory = [{"path": "supabase/migrations/20260101000000_first.sql", "sha256": hashlib.sha256(history[0]["source"].encode()).hexdigest()}]
+        target = "supabase/postgres:17.13.0.000@sha256:" + "a" * 64
+        proof = {"schemaVersion": 1, "postgresMajor": 17, "requiresLiveDataPreflight": True, "sourceCommit": "b" * 40,
+                 "sourceImage": "supabase/postgres:17.12.0.000@sha256:" + "c" * 64, "targetImage": target,
+                 "migrationInventory": inventory, "migrationInventorySha256": hashlib.sha256(json.dumps(inventory, separators=(",", ":")).encode()).hexdigest(),
+                 "validation": {"kind": "isolated-selfhost-upgrade-fixture", "passed": True, "migrationSourcesExact": True, "existingCredentialsAndFileExact": True, "roleAndMembershipExact": True}}
+        path = source / "deploy/hostinger/selfhost/postgres-candidate-proof.json"
+        path.parent.mkdir(parents=True)
+        path.write_text(json.dumps(proof))
+        return target, proof, path, history
+
+    def test_future_image_requires_installed_completed_proof_and_exact_live_sources(self):
+        target, proof, path, history = self.postgres_proof_fixture()
+        with patch.object(self.backup, "sql", return_value=json.dumps(history)):
+            witness = self.backup.recovery_image_evidence(target)
+            self.assertEqual(len(witness["appliedMigrationInventory"]), 2)
+            self.assertEqual(witness["proofSha256"], b.digest(path))
+            self.assertEqual(witness["proofPath"], "opt/luminovia-portal/source/deploy/hostinger/selfhost/postgres-candidate-proof.json")
+            history[1]["source"] += "changed"
+            with patch.object(self.backup, "sql", return_value=json.dumps(history)):
+                with self.assertRaisesRegex(b.BackupError, "live_migration_recovery_source_differs"):
+                    self.backup.recovery_image_evidence(target)
+
+    def test_future_image_rejects_incomplete_or_rewritten_historical_proof(self):
+        target, proof, path, history = self.postgres_proof_fixture()
+        proof["validation"]["passed"] = False
+        path.write_text(json.dumps(proof))
+        with self.assertRaisesRegex(b.BackupError, "invalid_installed_postgres_recovery_proof"):
+            self.backup.recovery_image_evidence(target)
+        proof["validation"]["passed"] = True
+        proof["migrationInventory"][0]["sha256"] = "d" * 64
+        path.write_text(json.dumps(proof))
+        with patch.object(self.backup, "sql", return_value=json.dumps(history)):
+            with self.assertRaisesRegex(b.BackupError, "postgres_recovery_proof_history_differs"):
+                self.backup.recovery_image_evidence(target)
+
+    def test_missing_future_proof_rejects_while_original_images_remain_supported(self):
+        target = "supabase/postgres:17.13.0.000@sha256:" + "a" * 64
+        with self.assertRaisesRegex(b.BackupError, "missing_installed_postgres_recovery_proof"):
+            self.backup.recovery_image_evidence(target)
+        self.assertIsNone(self.backup.recovery_image_evidence(next(iter(b.LEGACY_IMAGES))))
+
     def test_ciphertext_set_checksums_and_file_modes(self):
         directory = synthetic_set(self.destination, 1)
         self.assertEqual(b.verify_complete(directory)["databaseCount"], 2)
@@ -218,7 +272,7 @@ class BackupSafetyTests(unittest.TestCase):
             if "json_agg(json_build_object('name'" in query:
                 return json.dumps([{"name": n} for n in ["postgres", "_supabase", "template1"]])
             return "0"
-        with patch.object(self.backup, "inspect", return_value="image"), patch.object(self.backup, "paths", return_value=([], [], [])), patch.object(self.backup, "sql", fake_sql), patch.object(self.backup, "quiesce", side_effect=b.BackupError("controlled_failure")), patch.object(self.backup, "resume", side_effect=lambda: resumed.append(True)):
+        with patch.object(self.backup, "inspect", return_value=next(iter(b.LEGACY_IMAGES))), patch.object(self.backup, "paths", return_value=([], [], [])), patch.object(self.backup, "sql", fake_sql), patch.object(self.backup, "quiesce", side_effect=b.BackupError("controlled_failure")), patch.object(self.backup, "resume", side_effect=lambda: resumed.append(True)):
             with self.assertRaisesRegex(b.BackupError, "controlled_failure"):
                 self.backup.create()
         self.assertEqual(resumed, [True])

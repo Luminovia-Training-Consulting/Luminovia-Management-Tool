@@ -12,7 +12,7 @@ Requested after PR #4: inspect the delivered code for concrete defects, disconne
 - [x] Update developer/test/security documentation with examined scope, measured results and remaining gates.
 - [x] Complete the local command and signed push. Exact combined/native CI and the authorised merge are recorded on [PR #5](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/5); inspect that durable record on continuation.
 
-Local frozen `7abad7e` passed117source/33runtime/42Edge/174SQL/12API/54browser/2PWA plus build/persistence/cleanup. New main `e2acef6` maintenance/backup source is preserved; combined offline guards73Python/57Node and Edge lint passed. Exact combined/native CI and authorised Git merge remain the final delivery gate. [Evidence](QA_RESULTS.md).
+Local frozen `7abad7e` passed117source/33runtime/42Edge/174SQL/12API/54browser/2PWA plus build/persistence/cleanup. New main `11448e4` maintenance/backup source is preserved; combined offline guards76Python/60Node and Edge lint passed. Exact combined/native CI and authorised Git merge remain the final delivery gate. [Evidence](QA_RESULTS.md).
 
 ## Daily maintenance and complete recovery continuation
 

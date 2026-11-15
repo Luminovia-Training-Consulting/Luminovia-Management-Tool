@@ -213,6 +213,11 @@ try {
       ...readdirSync(join(hosting, "scanner"))
         .filter((name) => name.endsWith(".test.mjs"))
         .map((name) => `deploy/hostinger/scanner/${name}`),
+      ...(existsSync(join(hosting, "backups"))
+        ? readdirSync(join(hosting, "backups"))
+            .filter((name) => name.endsWith(".test.mjs"))
+            .map((name) => `deploy/hostinger/backups/${name}`)
+        : []),
       ...(existsSync(join(hosting, "maintenance"))
         ? readdirSync(join(hosting, "maintenance"))
             .filter((name) => name.endsWith(".test.mjs"))

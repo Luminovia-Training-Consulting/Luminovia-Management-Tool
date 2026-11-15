@@ -22,6 +22,8 @@ A private catalog records operating system package versions/manual packages, ins
 
 The catalog also embeds the public, checksummed installation SQL/control files in `extension-recovery.json`, with original-image provenance and upstream licenses. The current PostgreSQL 17.12 binary image retains extension versions originally installed by the reviewed 17.6 image: notably `pg_net` 0.20.3 and `supabase_vault` 0.3.1. Recreating extensions from the newer image's defaults would change these versions and even some same-version function definitions. Recovery installs the original captured installer bytes only in the owned isolated container and replays captured extension-member function settings omitted by `pg_dump`; it does not upgrade or change live extensions. Every restored extension version, function setting and permission must still match the source.
 
+For a future approved PostgreSQL 17 patch image, the encrypted catalog must also embed the actual installed candidate-proof document and exact currently applied migration-source inventory. The explicit desktop recovery witness binds that completed proof to the captured proof/source file hashes, current immutable database pin, container content ID and image RepoDigest. Later application migrations may append to the unchanged proven prefix; every restored current migration source is checked again. Missing/incomplete evidence, changed history, arbitrary tags and other major versions fail closed. The original explicitly reviewed 17.6/17.12 recovery paths remain supported. These guards do not claim that any future image has already passed a real upgrade test.
+
 ## Encryption key boundary
 
 Generate the identity once **on the desktop**, into an ignored private directory:
@@ -100,7 +102,7 @@ A local VPS recovery set is not off-site retention. A manually downloaded deskto
 
 ## Executed implementation checks
 
-The implementation passed 22 safety/native-age tests, including authenticated tamper rejection, private extraction/traversal guards, no plaintext dump artifacts, adaptive retention, both lock contention paths, the pending-reboot guard, preserving existing maintenance and resuming only previously running services. A real disposable encrypted fixture passed a complete three-database restore, password-bearing roles/grantors and nondefault database ACL/settings/comment, RLS/table counts, secret configuration/key/TLS/mail/object hashes. It also uses genuine legacy extension installers/settings, checks the saved fixture SCRAM password and rejects a wrong password. The fixture contains fictional data and does not replace the actual VPS backup/restore drill.
+The implementation passed 25 safety/native-age tests, including authenticated tamper rejection, private extraction/traversal guards, no plaintext dump artifacts, adaptive retention, both lock contention paths, the pending-reboot guard, future-image proof/source binding, preserving existing maintenance and resuming only previously running services. Three additional desktop witness tests exercise unchanged-prefix acceptance and rejection of altered/incomplete/mismatched proofs, current files, restored ledger, container identities, tags and major versions. A real disposable encrypted fixture passed a complete three-database restore, password-bearing roles/grantors and nondefault database ACL/settings/comment, RLS/table counts, secret configuration/key/TLS/mail/object hashes. It also uses genuine legacy extension installers/settings, checks the saved fixture SCRAM password and rejects a wrong password. The fixture contains fictional data and does not replace the actual VPS backup/restore drill.
 
 Actual VPS acceptance on 15 November 2026: the self-contained encrypted set completed at **18:41:10 UTC** (20,979,948 ciphertext bytes, 45.8 seconds for the service). Its isolated desktop restore passed at **18:42:32 UTC**, covering three databases, 1,817 physical files/38,090,950 bytes, exact source globals/permissions/settings/extension versions, the embedded original installers, all five runtime database credentials and all three saved fictional Auth passwords. The separate earlier first set also passed recovery after the legacy-extension gap was identified and fixed. No live database was restored.
 
@@ -108,6 +110,7 @@ The daily timer was then read back as **enabled and active**, next run **16 Nove
 
 ```bash
 python3 -m unittest discover -s deploy/hostinger/backups -p 'test_*.py'
+node --test deploy/hostinger/backups/*.test.mjs
 node deploy/hostinger/backups/test_complete_restore.mjs
 ```
 
