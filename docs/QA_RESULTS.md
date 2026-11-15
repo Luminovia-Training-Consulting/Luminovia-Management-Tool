@@ -22,6 +22,10 @@ Actual inspected fictional screenshots: [desktop dashboard](screenshots/m6-deskt
 
 The local outer tool shell reported143 after the runner's final PASS and did not save its extra `.exit` file. This is recorded rather than labelled exit 0; the independent complete CI application job exited successfully. No source fix is inferred from an unexplained outer-shell signal. Actual desktop/mobile screenshots were inspected; physical iOS/Safari, hosted SMTP, legal/retention and full remaining product scope are not covered by this Chromium/local acceptance.
 
+## Latest GitHub command — actual retained preview acceptance
+
+The official preview actually upgraded5f89986→dc8e9a7,18→24migrations, after accepting its exact reviewed plan. Update returned exit0. A separate genuine post-upgrade stop/start persistence probe also returned exit0 and preserved Auth/password/MFA/profile/private-event/object bytes. Exact SHA/status/history were independently checked; the probe was cleaned. The preview is available at5373 with its own563xx backend. [Commands and review boundary](GITHUB_LOCAL_PREVIEW.md).
+
 ## M6 third combined checkpoint — APIs passed, browser corrections required
 
 Run `.local/tests/240bbb48/RESULT.txt` on `4e077b7` passed all18 actual business API suites plus real Edge/Mailpit, after the complete source/Edge/SQL/restart checks. Chromium desktop/mobile completed **48 passed /22 failed /zero skipped** in9.6minutes. Shared actual causes were notification accessible-name mismatch and three precise browser-fixture errors (translated region, live-status ambiguity, incorrect focus-event target). Build/PWA was not reached. Corrections plus the independently reproduced repeated-reopening notification regression require a fresh complete run04; this checkpoint is not final acceptance.

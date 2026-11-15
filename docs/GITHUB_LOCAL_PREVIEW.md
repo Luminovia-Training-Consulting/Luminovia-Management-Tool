@@ -62,3 +62,7 @@ node --test scripts/runtime-github.test.mjs
 ```
 
 Der reguläre Gesamtbefehl entdeckt diese Fälle automatisch. Tatsächlich ausgeführte Gesamt- und native Prüfungen sowie der reale Vorschau-Neustart werden im [Arbeitsprotokoll](WORKLOG.md) und in [QA_RESULTS](QA_RESULTS.md) getrennt festgehalten.
+
+## Executed M6 upgrade checkpoint — 16 November 2026
+
+The official preview was actually upgraded from main5f89986 with18migrations to the accepted main merge dc8e9a7 with24migrations. The six new migration sources were reviewed and their exact plan digest accepted; the update returned exit0. Status and database history independently confirmed that SHA and24migrations on the separate5373/563xx project. A subsequent real stop/start probe returned exit0 and preserved password, verified MFA, edited profile/timezone, private event and exact private Storage bytes; only its fictional probe records/bucket were removed. Normal5173/543xx and hosted databases were not targeted. These historical values are evidence, not a digest to reuse for a later update: always review the newly displayed plan.
