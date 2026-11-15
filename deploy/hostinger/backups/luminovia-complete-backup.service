@@ -1,0 +1,23 @@
+[Unit]
+Description=Luminovia complete encrypted recovery backup
+Requires=docker.service
+After=docker.service network-online.target
+RequiresMountsFor=/opt/luminovia-portal /var/backups
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+ExecStart=/usr/bin/python3 /opt/luminovia-portal/source/deploy/hostinger/backups/complete_backup.py --run
+TimeoutStartSec=45min
+TimeoutStopSec=6min
+KillMode=process
+Nice=10
+IOSchedulingClass=idle
+CPUWeight=25
+MemoryMax=512M
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/run/lock /var/backups/luminovia-complete /opt/luminovia-portal/private/backups /opt/luminovia-portal/private/updates /opt/luminovia-portal/www

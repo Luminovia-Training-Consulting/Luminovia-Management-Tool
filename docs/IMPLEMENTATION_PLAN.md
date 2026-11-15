@@ -2,6 +2,10 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Daily maintenance and complete recovery continuation
+
+The daily-update/full-backup request is active for the authorised KVM1 development setup. Implementation and focused guards exist for independent stable candidates, signed exact-main CI/release promotion, pre-unblock physical rollback, same-major real-data PostgreSQL preflight and encrypted all-database/configuration recovery sets. First real encrypted set succeeded; actual desktop restore, enabled daily timers, effective OS/reboot policy, exact final CI/daily workflow and live deployment evidence remain to be recorded. Paid provider daily off-site full-VM backup requires the pending exact-price approval. Full target product and future100GB/15–25-member capacity acceptance remain outstanding below.
+
 ## M3 and self-hosted development accepted — account, profile and commission extension
 
 The user authorised direct pushes/merges on 16 November and approved 50/50 default, client accounts, role-specific financial views and optional managed learners/reviews. [Exact extension](ACCOUNTS_REVENUE_SPEC.md). PR #2 was verified and merged; M3 was delivered separately from `codex/accounts-profiles-commission`, preserving unrelated original hosting edits. Full isolated acceptance passed in `.local/tests/b1c83645/`: 59 source, 7 runtime, 22 Edge, 120 SQL, all 9 actual API suites plus Mailpit, 46 browser workflows, build and 2 PWA checks. Exact GitHub/main integration is recorded on [PR #3](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/3). Remaining original modules below are still required.

@@ -20,6 +20,15 @@ const publicKey = "sb_publishable_" + "ExamplePublicBuildValue".repeat(2);
 const image = (repository) => repository + "@sha256:" + "a".repeat(64);
 const postgres = image("supabase/postgres:17.12.0.000");
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
+const pgProofPath = "deploy/hostinger/selfhost/postgres-candidate-proof.json";
+const newRuntimeFiles = [
+  "deploy/hostinger/maintenance/pg_preflight.py",
+  "deploy/hostinger/maintenance/atomic_recovery.py",
+  "deploy/hostinger/maintenance/configure-os-daily.sh",
+  "deploy/hostinger/backups/complete_backup.py",
+  "deploy/hostinger/backups/database-summary.sql",
+  "deploy/hostinger/backups/extension-recovery.json",
+];
 
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), "portal-package-test-"));
@@ -130,6 +139,26 @@ function fixture(t) {
     "#!/bin/sh\nexec envoy\n",
   );
   put("deploy/hostinger/updates/updater.py", "print('fixture updater')\n");
+  for (const name of newRuntimeFiles)
+    put(name, "# fictional selected runtime fixture\n");
+  for (const name of ["service", "timer"])
+    put(
+      "deploy/hostinger/backups/luminovia-complete-backup." + name,
+      "# fictional backup unit\n",
+    );
+  for (const name of [
+    "maintenance/promote.mjs",
+    "maintenance/selfhost-candidate-check.mjs",
+    "maintenance/daily-updates.test.mjs",
+    "backups/create_recovery_key.py",
+    "backups/make_fixture.py",
+    "backups/test_complete_backup.py",
+    "backups/keys/recovery.pem",
+  ])
+    put(
+      "deploy/hostinger/" + name,
+      "sb_secret_FictionalExcludedSourceNeverPackaged123456789",
+    );
   // Normal local runtime credentials may exist outside the explicit source set.
   put(".env.local", "JWT_SECRET=FictionalLocalSecretNeverPackaged");
   put(
@@ -189,6 +218,22 @@ test("real archive and manifest contain only runtime files with exact byte hashe
     ),
   );
   assert(names.includes("deploy/hostinger/mail-templates/invite.html"));
+  for (const name of newRuntimeFiles) assert(names.includes(name));
+  assert(
+    names.includes(
+      "deploy/hostinger/backups/luminovia-complete-backup.service",
+    ),
+  );
+  assert(
+    names.includes("deploy/hostinger/backups/luminovia-complete-backup.timer"),
+  );
+  assert(
+    !names.some((name) =>
+      /promote|selfhost-candidate-check|daily-updates|create_recovery_key|make_fixture|test_complete|recovery\.pem/.test(
+        name,
+      ),
+    ),
+  );
   for (const file of result.manifest.files) {
     const bytes = execFileSync("tar", [
       "-xOzf",
@@ -334,6 +379,234 @@ test("mutable image tags, different major versions and untested provenance block
       /immutable|major upgrades|compatibility evidence/,
     );
   }
+});
+
+function generatedProof(
+  root,
+  targetImage = image("supabase/postgres:17.13.0.000"),
+) {
+  const path = "supabase/migrations/20261115111133_fixture.sql";
+  const migrationInventory = [
+    { path, sha256: digest(readFileSync(join(root, path))) },
+  ];
+  return {
+    schemaVersion: 1,
+    sourceImage: postgres,
+    targetImage,
+    postgresMajor: 17,
+    sourceCommit: "b".repeat(40),
+    migrationInventory,
+    migrationInventorySha256: digest(JSON.stringify(migrationInventory)),
+    validation: {
+      kind: "isolated-selfhost-upgrade-fixture",
+      passed: true,
+      migrationSourcesExact: true,
+      existingCredentialsAndFileExact: true,
+      roleAndMembershipExact: true,
+    },
+    requiresLiveDataPreflight: true,
+  };
+}
+
+function withGeneratedProof(t) {
+  const context = fixture(t);
+  const proof = generatedProof(context.root);
+  const compose = "deploy/hostinger/selfhost/compose.yml";
+  context.put(
+    compose,
+    readFileSync(join(context.root, compose), "utf8").replace(
+      postgres,
+      proof.targetImage,
+    ),
+  );
+  context.put(pgProofPath, JSON.stringify(proof));
+  return { ...context, proof };
+}
+
+test("fixture-only generated same-major proof can replace historical manual evidence and remains live-gated", (t) => {
+  const context = withGeneratedProof(t);
+  const historical = readFileSync(
+    join(
+      context.root,
+      "deploy/hostinger/selfhost/postgres-upgrade-provenance.json",
+    ),
+  );
+  const result = context.release();
+  assert.equal(result.manifest.runtime.requiresLiveDataPreflight, true);
+  assert.equal(result.manifest.runtime.postgresCandidateProof, pgProofPath);
+  assert.equal(
+    result.manifest.runtime.images.find((entry) => entry.service === "db")
+      .image,
+    context.proof.targetImage,
+  );
+  const archived = execFileSync("tar", [
+    "-xOzf",
+    result.archivePath,
+    "--",
+    pgProofPath,
+  ]);
+  assert.deepEqual(JSON.parse(archived), context.proof);
+  assert.equal(
+    result.manifest.files.find((entry) => entry.path === pgProofPath).sha256,
+    digest(archived),
+  );
+  assert.deepEqual(
+    readFileSync(
+      join(
+        context.root,
+        "deploy/hostinger/selfhost/postgres-upgrade-provenance.json",
+      ),
+    ),
+    historical,
+    "Historical17.12 evidence must not be rewritten as future acceptance.",
+  );
+});
+
+test("fictional completed PG proof permits later appended migrations without changing its historical evidence", (t) => {
+  const context = withGeneratedProof(t);
+  context.put(
+    "supabase/migrations/20261116111133_appended_fixture.sql",
+    "begin;\ncreate table public.appended_fixture(id uuid);\ncommit;\n",
+  );
+  const result = context.release();
+  assert.equal(result.manifest.migrations.length, 2);
+  assert.equal(result.manifest.runtime.requiresLiveDataPreflight, true);
+  assert.deepEqual(
+    JSON.parse(
+      execFileSync("tar", ["-xOzf", result.archivePath, "--", pgProofPath]),
+    ),
+    context.proof,
+    "Appending application migrations must not forge a new image-upgrade proof.",
+  );
+});
+
+test("incomplete, mismatched or migration-stale generated proofs never produce an artifact", (t) => {
+  const variants = [
+    (proof) => {
+      proof.schemaVersion = 2;
+    },
+    (proof) => {
+      proof.postgresMajor = 18;
+    },
+    (proof) => {
+      proof.sourceCommit = "A".repeat(40);
+    },
+    (proof) => {
+      proof.sourceCommit = "b".repeat(39);
+    },
+    (proof) => {
+      proof.sourceImage = "supabase/postgres:17-latest";
+    },
+    (proof) => {
+      proof.sourceImage = image("supabase/postgres:18.0.0.000");
+    },
+    (proof) => {
+      proof.sourceImage = proof.targetImage;
+    },
+    (proof) => {
+      proof.targetImage = image("supabase/postgres:17.13.0.001");
+    },
+    (proof) => {
+      proof.targetImage = proof.targetImage.slice(0, -1) + "b";
+    },
+    (proof) => {
+      proof.requiresLiveDataPreflight = false;
+    },
+    (proof) => {
+      proof.validation.kind = "fresh-install-only";
+    },
+    (proof) => {
+      proof.validation.passed = false;
+    },
+    (proof) => {
+      proof.validation.migrationSourcesExact = false;
+    },
+    (proof) => {
+      proof.validation.existingCredentialsAndFileExact = false;
+    },
+    (proof) => {
+      proof.validation.roleAndMembershipExact = false;
+    },
+    (proof) => {
+      proof.migrationInventorySha256 = "e".repeat(64);
+    },
+    (proof) => {
+      delete proof.migrationInventory;
+    },
+    (proof) => {
+      proof.migrationInventory = [];
+      proof.migrationInventorySha256 = digest("[]");
+    },
+    (proof) => {
+      proof.migrationInventory[0].extra = "unbound metadata";
+      proof.migrationInventorySha256 = digest(
+        JSON.stringify(proof.migrationInventory),
+      );
+    },
+    (proof) => {
+      proof.migrationInventory[0].path = "../private.sql";
+      proof.migrationInventorySha256 = digest(
+        JSON.stringify(proof.migrationInventory),
+      );
+    },
+  ];
+  for (const alter of variants) {
+    const context = withGeneratedProof(t);
+    alter(context.proof);
+    context.put(pgProofPath, JSON.stringify(context.proof));
+    assert.throws(() => context.release(), /compatibility evidence/);
+    assert(!existsSync(join(context.root, "out/cms-release.tar.gz")));
+    assert(!existsSync(join(context.root, "out/cms-release.json")));
+  }
+  const stale = withGeneratedProof(t);
+  stale.put(
+    "supabase/migrations/20261115111133_fixture.sql",
+    "begin;\ncreate table public.changed(id uuid);\ncommit;\n",
+  );
+  assert.throws(() => stale.release(), /compatibility evidence/);
+  for (const kind of ["delete", "backdate", "reorder"]) {
+    const context = withGeneratedProof(t);
+    if (kind === "delete")
+      rmSync(
+        join(context.root, "supabase/migrations/20261115111133_fixture.sql"),
+      );
+    else if (kind === "backdate")
+      context.put(
+        "supabase/migrations/20261114111133_backdated_fixture.sql",
+        "begin;\nselect 1;\ncommit;\n",
+      );
+    else {
+      const appended = {
+        path: "supabase/migrations/20261116111133_appended_fixture.sql",
+        sha256: digest("begin;\nselect 1;\ncommit;\n"),
+      };
+      context.put(appended.path, "begin;\nselect 1;\ncommit;\n");
+      context.proof.migrationInventory.unshift(appended);
+      context.proof.migrationInventorySha256 = digest(
+        JSON.stringify(context.proof.migrationInventory),
+      );
+      context.put(pgProofPath, JSON.stringify(context.proof));
+    }
+    assert.throws(
+      () => context.release(),
+      /compatibility evidence|Invalid migration inventory/,
+      kind + " must not preserve a proof of different migration history.",
+    );
+    assert(!existsSync(join(context.root, "out/cms-release.tar.gz")));
+  }
+  const manual = fixture(t);
+  manual.put(
+    pgProofPath,
+    JSON.stringify({
+      ...generatedProof(manual.root),
+      migrationInventorySha256: "e".repeat(64),
+    }),
+  );
+  assert.throws(
+    () => manual.release(),
+    /compatibility evidence/,
+    "An invalid present proof cannot be silently shipped beside valid manual evidence.",
+  );
 });
 
 test("CLI rejects source-commit mismatch and dirty tracked code without a bypass flag", (t) => {

@@ -7,6 +7,9 @@ import argparse
 import datetime as dt
 import fcntl
 import hashlib
+import http.client
+import importlib.util
+import ipaddress
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -34,6 +37,7 @@ MAX_UNPACKED = 512 * 1024 * 1024
 MAX_FILE = 64 * 1024 * 1024
 MIN_FREE = 2 * 1024 * 1024 * 1024
 CONTROLLER = "deploy/hostinger/updates/updater.py"
+REBOOT_PENDING = Path("/run/luminovia-reboot-pending")
 
 
 class UpdateError(Exception):
@@ -377,8 +381,8 @@ class Updater:
         tag = self.api("/git/ref/tags/" + release["tag_name"])
         if tag.get("object", {}).get("type") != "commit" or tag.get("object", {}).get("sha") != commit:
             raise UpdateError("release_tag_commit_mismatch")
-        runs = self.api("/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&head_sha=" + commit + "&per_page=5")
-        if not any(run.get("head_sha") == commit and run.get("head_branch") == BRANCH and run.get("event") == "push" and run.get("status") == "completed" and run.get("conclusion") == "success" and run.get("path", "").split("@")[0] == ".github/workflows/ci.yml" for run in runs.get("workflow_runs", [])):
+        runs = self.api("/actions/workflows/ci.yml/runs?branch=main&status=success&head_sha=" + commit + "&per_page=10")
+        if not any(run.get("head_sha") == commit and run.get("head_branch") == BRANCH and run.get("event") in {"push", "workflow_dispatch"} and run.get("status") == "completed" and run.get("conclusion") == "success" and run.get("path", "").split("@")[0] == ".github/workflows/ci.yml" for run in runs.get("workflow_runs", [])):
             return {"status": "waiting_for_successful_main_checks", "commit": commit}
         assets = {}
         prefix = "https://github.com/" + REPOSITORY + "/releases/download/" + release["tag_name"] + "/"
@@ -402,8 +406,17 @@ class Updater:
                     output.write(chunk)
         except UpdateError:
             raise
-        except (OSError, urllib.error.URLError) as error:
+        except (OSError, urllib.error.URLError, http.client.HTTPException) as error:
             raise UpdateError("release_download_failed") from error
+
+    def defer_network_retry(self, code, commit=None):
+        attempts = min(int(self.state.get("networkRetryAttempts", 0)) + 1, 10)
+        deadline = dt.datetime.now(dt.timezone.utc) + dt.timedelta(seconds=min(3600, 300 * 2 ** (attempts - 1)))
+        if commit and self.state.get("failedCommit") == commit:
+            self.state["failedCommit"] = None
+        self.state.update({"status": "waiting_for_network_retry", "networkRetryAttempts": attempts, "nextNetworkRetryAt": deadline.isoformat(), "lastTransientFailureCode": code, "lastTransientFailureAt": now()})
+        atomic_json(self.state_file, self.state)
+        return {"status": "waiting_for_network_retry", "commit": commit, "retryAt": deadline.isoformat()}
 
     def verify_public_build(self, manifest):
         env = read_environment(self.private / "selfhost.env")
@@ -459,6 +472,7 @@ class Updater:
             raise UpdateError("postgres_major_requires_manual_migration")
         current = self.rendered_images(self.source)
         changed = images != current
+        self.changed_image_services = {service for service in images if images[service] != current.get(service)}
         if changed and manifest["runtime"].get("reviewed") is not True:
             raise UpdateError("runtime_change_requires_reviewed_bundle")
         return changed, images.get("db") != current.get("db")
@@ -649,9 +663,44 @@ class Updater:
         os.symlink(target, temporary)
         os.replace(temporary, self.www / "current")
 
-    def health(self, env, expected_index=None):
+    def runtime_helper(self, tree, name):
+        path = Path(tree) / "deploy/hostinger/maintenance" / (name + ".py")
+        specification = importlib.util.spec_from_file_location("luminovia_" + name, path)
+        if specification is None or specification.loader is None:
+            raise UpdateError("missing_verified_runtime_helper")
+        module = importlib.util.module_from_spec(specification)
+        specification.loader.exec_module(module)
+        return module
+
+    def create_checkpoint(self, tree, *, include_clamav):
+        return self.runtime_helper(tree, "atomic_recovery").create_checkpoint(self, include_clamav=include_clamav)
+
+    def restore_checkpoint(self, tree, checkpoint, *, public_unblocked, restart_old_runtime, verify_health):
+        return self.runtime_helper(tree, "atomic_recovery").restore_checkpoint(self, checkpoint, public_unblocked=public_unblocked, restart_old_runtime=restart_old_runtime, verify_health=verify_health)
+
+    def postgres_preflight(self, tree, manifest):
+        image = next(item["image"] for item in manifest["runtime"]["images"] if item["service"] == "db")
+        return self.runtime_helper(tree, "pg_preflight").run_preflight(self, tree, image)
+
+    def health(self, env, expected_index=None, *, private_api=False):
+        for project, services in (("luminovia-supabase", (*WRITERS, "db", "mailpit")), ("luminovia-portal", ("web", "clamav"))):
+            for service in services:
+                state = json.loads(self.command(["docker", "inspect", "--format", "{{json .State}}", project + "-" + service + "-1"]))
+                if state.get("Running") is not True or state.get("Paused") is True or state.get("OOMKilled") is True or (service != "web" and state.get("Health", {}).get("Status") != "healthy"):
+                    raise UpdateError("runtime_container_health_failed")
+        api_url = env["SUPABASE_PUBLIC_URL"]
+        if private_api:
+            network = json.loads(self.command(["docker", "inspect", "--format", "{{json .NetworkSettings.Networks}}", "luminovia-supabase-api-gw-1"]))
+            address = network.get("luminovia-portal-backend", {}).get("IPAddress", "")
+            try:
+                parsed = ipaddress.ip_address(address)
+                if parsed.version != 4 or not parsed.is_private:
+                    raise ValueError()
+            except ValueError as error:
+                raise UpdateError("unsafe_private_gateway_address") from error
+            api_url = "http://" + address + ":8000"
         for endpoint in ("/auth/v1/health", "/auth/v1/.well-known/jwks.json"):
-            request = urllib.request.Request(env["SUPABASE_PUBLIC_URL"] + endpoint, headers={"apikey": env["SUPABASE_PUBLISHABLE_KEY"], "Cache-Control": "no-cache"})
+            request = urllib.request.Request(api_url + endpoint, headers={"apikey": env["SUPABASE_PUBLISHABLE_KEY"], "Cache-Control": "no-cache"})
             try:
                 with urllib.request.urlopen(request, timeout=20) as response:
                     body = response.read(2 * 1024 * 1024)
@@ -692,6 +741,8 @@ class Updater:
         runtime_mutated = False
         stopped = False
         promoted = False
+        checkpoint = None
+        public_unblocked = False
         mode = "validation"
         changed = set()
         old_target = os.readlink(self.www / "current") if (self.www / "current").is_symlink() else None
@@ -701,7 +752,7 @@ class Updater:
             unpack_verified(archive, manifest, stage)
             pending = self.plan_migrations(stage, manifest)
             changed, controller_changed, runtime_files = self.release_changes(manifest)
-            runtime_changed, _database_changed = self.verify_runtime(stage, manifest)
+            runtime_changed, database_changed = self.verify_runtime(stage, manifest)
             if (self.www / "current").exists() and not (self.www / "current").is_symlink():
                 raise UpdateError("static_current_must_be_release_symlink")
             mode = "full" if changed or pending or runtime_changed or not old_target else "site_controller"
@@ -722,6 +773,10 @@ class Updater:
                 atomic_json(self.state_file, self.state)
                 rollback = backup / "runtime-before"
                 private_directory(rollback)
+                checkpoint = self.create_checkpoint(stage, include_clamav="deploy/hostinger/clamd.conf" in changed or "clamav" in getattr(self, "changed_image_services", set()))
+                if database_changed:
+                    self.state["lastPostgresPreflight"] = self.postgres_preflight(stage, manifest)
+                    atomic_json(self.state_file, self.state)
                 runtime_mutated = True
                 self.copy_runtime(stage, manifest, rollback, original)
                 # Reconcile both services that remained running while writers
@@ -737,26 +792,52 @@ class Updater:
             self.promote("releases/" + commit)
             promoted = True
             if mode == "full":
+                # Keep all external writers fenced until candidate checks pass.
+                self.health(env, (stage / "site/index.html").read_bytes(), private_api=True)
+                public_unblocked = True
                 self.maintenance.unlink(missing_ok=True)
             self.health(env, (stage / "site/index.html").read_bytes())
             if controller_changed:
                 self.install_controller(stage)
-            self.state.update({"status": "updated", "currentCommit": commit, "previousCommit": self.state.get("currentCommit"), "lastSuccessAt": now(), "failedCommit": None, "failureCode": None, "manualRecoveryRequired": False, "bootstrapApproved": False, "appliedMigrationVersions": [item[0] for item in pending], "lastUpdateMode": mode, "lastAttemptMode": mode, "backupCreatedForCurrentUpdate": mode == "full", "installedRuntimeFiles": runtime_files})
+            self.state.update({"status": "updated", "currentCommit": commit, "previousCommit": self.state.get("currentCommit"), "lastSuccessAt": now(), "failedCommit": None, "failureCode": None, "manualRecoveryRequired": False, "bootstrapApproved": False, "appliedMigrationVersions": [item[0] for item in pending], "lastUpdateMode": mode, "lastAttemptMode": mode, "backupCreatedForCurrentUpdate": mode == "full", "installedRuntimeFiles": runtime_files, "networkRetryAttempts": 0, "nextNetworkRetryAt": None})
             atomic_json(self.state_file, self.state)
             return {"status": "updated", "commit": commit, "mode": mode}
         except Exception as error:
             code = str(error) if isinstance(error, UpdateError) else "unexpected_update_failure"
+            if stopped and public_unblocked:
+                # Fence new writes immediately. No physical data rollback is
+                # allowed once the candidate has admitted external requests.
+                self.maintenance.write_text("Operator recovery required.\n", encoding="utf-8")
+                self.maintenance.chmod(0o644)
             recovered = not stopped
             if promoted and old_target:
                 try:
                     self.promote(old_target)
                 except Exception:
                     recovered = False
-            if stopped and (not runtime_changed or not runtime_mutated):
+            if stopped and checkpoint is not None and not public_unblocked:
                 try:
                     self.rollback_runtime(original, rollback)
+                    def restart_old_runtime():
+                        self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "db", "mailpit"])
+                        self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *WRITERS])
+                        self.compose("web", ["up", "-d", "--wait", "--force-recreate", "--no-deps", "web", *(("clamav",) if "clamav" in getattr(self, "changed_image_services", set()) or "deploy/hostinger/clamd.conf" in changed else ())])
+                    self.restore_checkpoint(stage, checkpoint, public_unblocked=False, restart_old_runtime=restart_old_runtime, verify_health=lambda: self.health(env, private_api=True))
+                    self.maintenance.unlink(missing_ok=True)
+                    self.health(env)
+                    recovered = True
+                except Exception:
+                    recovered = False
+            elif stopped and not runtime_mutated:
+                try:
+                    self.rollback_runtime(original, rollback)
+                    # A checkpoint/preflight failure can leave db/mailpit
+                    # stopped or the web/scanner paused, even before copying
+                    # source. Reconcile these before restarting API writers.
+                    self.compose("backend", ["up", "-d", "--wait", "db", "mailpit"])
                     self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *WRITERS])
-                    self.activate_web(changed)
+                    self.compose("web", ["up", "-d", "--wait", "--force-recreate", "--no-deps", "web", *(("clamav",) if "clamav" in getattr(self, "changed_image_services", set()) or "deploy/hostinger/clamd.conf" in changed else ())])
+                    self.health(env, private_api=True)
                     self.maintenance.unlink(missing_ok=True)
                     self.health(env)
                     recovered = True
@@ -766,6 +847,7 @@ class Updater:
                 self.maintenance.write_text("Operator recovery required.\n", encoding="utf-8")
                 self.maintenance.chmod(0o644)
             self.state.update({"status": "failed", "failedCommit": commit, "failureCode": code, "lastFailureAt": now(), "manualRecoveryRequired": not recovered, "lastAttemptMode": mode})
+            self.state["automaticRollbackCompleted"] = bool(recovered and checkpoint is not None and not public_unblocked)
             atomic_json(self.state_file, self.state)
             raise UpdateError(code) from error
         finally:
@@ -781,6 +863,8 @@ class Updater:
             except BlockingIOError:
                 return {"status": "another_update_running"}
             self.state = json.loads(self.state_file.read_text()) if self.state_file.exists() else {}
+            if REBOOT_PENDING.exists():
+                return {"status": "operating_system_reboot_pending"}
             if self.state.get("manualRecoveryRequired") and not retry_failed:
                 return {"status": "operator_recovery_required", "commit": self.state.get("failedCommit")}
             if self.os_updates_busy():
@@ -789,6 +873,12 @@ class Updater:
                 return {"status": "maintenance_already_active"}
             if retry_failed:
                 self.state["failedCommit"] = None
+            elif self.state.get("nextNetworkRetryAt"):
+                try:
+                    if dt.datetime.fromisoformat(self.state["nextNetworkRetryAt"]) > dt.datetime.now(dt.timezone.utc):
+                        return {"status": "waiting_for_network_retry", "retryAt": self.state["nextNetworkRetryAt"]}
+                except (ValueError, TypeError):
+                    raise UpdateError("invalid_network_retry_state")
             if package is not None:
                 manifest = json.loads(Path(manifest_path).read_text())
                 validate_manifest(manifest)
@@ -799,7 +889,12 @@ class Updater:
                 return self.apply(Path(package), manifest)
             if not self.state.get("currentCommit") and self.state.get("bootstrapApproved") is not True:
                 return {"status": "not_initialized"}
-            candidate = self.candidate()
+            try:
+                candidate = self.candidate()
+            except UpdateError as error:
+                if str(error) == "github_request_failed":
+                    return self.defer_network_retry(str(error))
+                raise
             if candidate["status"] != "candidate":
                 return candidate
             downloads = self.control / "downloads"
@@ -810,15 +905,20 @@ class Updater:
                 with tempfile.TemporaryDirectory(prefix=candidate["commit"] + "-", dir=downloads) as directory:
                     manifest_file, archive = Path(directory) / "manifest.json", Path(directory) / "release.tar.gz"
                     self.download(candidate["assets"]["cms-release.json"], manifest_file, 4 * 1024 * 1024)
-                    manifest = json.loads(manifest_file.read_text())
+                    try:
+                        manifest = json.loads(manifest_file.read_text())
+                    except (ValueError, UnicodeError) as error:
+                        raise UpdateError("incomplete_release_metadata_download") from error
                     validate_manifest(manifest)
                     if manifest["commit"] != candidate["commit"]:
                         raise UpdateError("release_manifest_commit_mismatch")
                     self.download(candidate["assets"]["cms-release.tar.gz"], archive, MAX_ARCHIVE)
                     return self.apply(archive, manifest)
             except Exception as error:
+                code = str(error) if isinstance(error, UpdateError) else "invalid_release_download"
+                if code in {"release_download_failed", "incomplete_release_metadata_download", "archive_hash_or_size_mismatch"} and not self.state.get("manualRecoveryRequired"):
+                    return self.defer_network_retry(code, candidate["commit"])
                 if self.state.get("failedCommit") != candidate["commit"]:
-                    code = str(error) if isinstance(error, UpdateError) else "invalid_release_download"
                     self.state.update({"status": "failed", "failedCommit": candidate["commit"], "failureCode": code, "lastFailureAt": now()})
                     atomic_json(self.state_file, self.state)
                 raise

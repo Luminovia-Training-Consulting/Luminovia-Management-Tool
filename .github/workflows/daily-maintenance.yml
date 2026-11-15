@@ -1,0 +1,275 @@
+name: Daily verified component maintenance
+on:
+  schedule:
+    - cron: "41 2 * * *"
+  workflow_dispatch:
+    inputs:
+      signature_probe_only:
+        description: Verify GitHub Actions signed promotion without changing main
+        required: false
+        default: false
+        type: boolean
+permissions:
+  contents: read
+concurrency:
+  group: daily-component-maintenance
+  cancel-in-progress: false
+jobs:
+  signature-probe:
+    if: github.event_name == 'workflow_dispatch' && inputs.signature_probe_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: ".node-version"
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: node deploy/hostinger/maintenance/promote.mjs signature-probe
+  discover:
+    if: inputs.signature_probe_only != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      base: ${{ steps.scan.outputs.base }}
+      matrix: ${{ steps.scan.outputs.matrix }}
+      has_candidates: ${{ steps.scan.outputs.has_candidates }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: ".node-version"
+      - id: scan
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node deploy/hostinger/maintenance/daily-updates.mjs scan --output "$RUNNER_TEMP/maintenance-plan/plan.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: maintenance-plan
+          path: ${{ runner.temp }}/maintenance-plan/plan.json
+          retention-days: 14
+          if-no-files-found: error
+  candidates:
+    needs: discover
+    if: needs.discover.outputs.has_candidates == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.discover.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.discover.outputs.base }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: ".node-version"
+          cache: npm
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: maintenance-plan
+          path: ${{ runner.temp }}/maintenance-plan
+      - id: apply
+        # The baseline archive is created before applying this component.
+        # It contains tracked public source only, never VPS keys or data.
+        name: Apply independent component candidate
+        env:
+          COMPONENT_ID: ${{ matrix.id }}
+        run: |
+          mkdir -m 700 "$RUNNER_TEMP/selfhost-baseline"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/selfhost-baseline"
+          node deploy/hostinger/maintenance/daily-updates.mjs apply --plan "$RUNNER_TEMP/maintenance-plan/plan.json" --component "$COMPONENT_ID"
+      - if: steps.apply.outputs.changed == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: ".node-version"
+          cache: npm
+      - if: steps.apply.outputs.changed == 'true'
+        id: dependencies
+        run: npm ci
+      - if: steps.apply.outputs.changed == 'true'
+        id: application
+        name: Complete candidate application verification
+        run: ./portal test
+      - if: steps.apply.outputs.changed == 'true'
+        id: selfhost
+        name: Run actual candidate selfhost images
+        env:
+          BASELINE_COMMIT: ${{ needs.discover.outputs.base }}
+        run: |
+          node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run --baseline-root "$RUNNER_TEMP/selfhost-baseline" --baseline-commit "$BASELINE_COMMIT" --proof-output "$RUNNER_TEMP/postgres-candidate-proof.json"
+          node deploy/hostinger/maintenance/daily-updates.mjs capture-proof --plan "$RUNNER_TEMP/maintenance-plan/plan.json" --input "$RUNNER_TEMP/postgres-candidate-proof.json"
+      - if: always()
+        name: Record only explicit component outcome
+        env:
+          COMPONENT_ID: ${{ matrix.id }}
+          CANDIDATE_STATUS: ${{ steps.apply.outcome == 'success' && (steps.apply.outputs.changed != 'true' || (steps.dependencies.outcome == 'success' && steps.application.outcome == 'success' && steps.selfhost.outcome == 'success')) && 'passed' || 'failed' }}
+        run: node deploy/hostinger/maintenance/daily-updates.mjs export --plan "$RUNNER_TEMP/maintenance-plan/plan.json" --component "$COMPONENT_ID" --status "$CANDIDATE_STATUS" --output "$RUNNER_TEMP/maintenance-result/result.json"
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: maintenance-component-${{ matrix.id }}
+          path: ${{ runner.temp }}/maintenance-result/result.json
+          retention-days: 14
+          if-no-files-found: error
+  combined:
+    if: always() && needs.discover.result == 'success'
+    needs: [discover, candidates]
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    outputs:
+      changed: ${{ steps.assemble.outputs.changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.discover.outputs.base }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: ".node-version"
+          cache: npm
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: maintenance-plan
+          path: ${{ runner.temp }}/maintenance-plan
+      - if: needs.discover.outputs.has_candidates == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          pattern: maintenance-component-*
+          path: ${{ runner.temp }}/maintenance-components
+      - id: assemble
+        run: |
+          mkdir -m 700 "$RUNNER_TEMP/selfhost-baseline"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/selfhost-baseline"
+          node deploy/hostinger/maintenance/daily-updates.mjs assemble --plan "$RUNNER_TEMP/maintenance-plan/plan.json" --results "$RUNNER_TEMP/maintenance-components"
+      - if: steps.assemble.outputs.changed == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: ".node-version"
+          cache: npm
+      - if: steps.assemble.outputs.changed == 'true'
+        run: npm ci
+      - if: steps.assemble.outputs.changed == 'true'
+        name: Verify assembled application combination
+        run: ./portal test
+      - if: steps.assemble.outputs.changed == 'true'
+        name: Verify assembled actual selfhost image combination
+        env:
+          BASELINE_COMMIT: ${{ needs.discover.outputs.base }}
+        run: |
+          node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run --baseline-root "$RUNNER_TEMP/selfhost-baseline" --baseline-commit "$BASELINE_COMMIT" --proof-output "$RUNNER_TEMP/postgres-candidate-proof.json"
+          node deploy/hostinger/maintenance/daily-updates.mjs capture-proof --plan "$RUNNER_TEMP/maintenance-plan/plan.json" --input "$RUNNER_TEMP/postgres-candidate-proof.json"
+      - if: steps.assemble.outputs.changed == 'true'
+        run: node deploy/hostinger/maintenance/daily-updates.mjs export --plan "$RUNNER_TEMP/maintenance-plan/plan.json" --component combined --output "$RUNNER_TEMP/maintenance-combined/result.json"
+      - if: steps.assemble.outputs.changed == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: maintenance-combined
+          path: ${{ runner.temp }}/maintenance-combined/result.json
+          retention-days: 14
+          if-no-files-found: error
+  fallback:
+    if: always() && needs.discover.result == 'success' && needs.combined.result == 'failure'
+    needs: [discover, candidates, combined]
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    outputs:
+      changed: ${{ steps.assemble.outputs.changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.discover.outputs.base }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: ".node-version"
+          cache: npm
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: maintenance-plan
+          path: ${{ runner.temp }}/maintenance-plan
+      - if: needs.discover.outputs.has_candidates == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          pattern: maintenance-component-*
+          path: ${{ runner.temp }}/maintenance-components
+      - id: assemble
+        name: Select only the first individually passed changed component
+        run: |
+          mkdir -m 700 "$RUNNER_TEMP/selfhost-baseline"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/selfhost-baseline"
+          node deploy/hostinger/maintenance/daily-updates.mjs assemble --plan "$RUNNER_TEMP/maintenance-plan/plan.json" --results "$RUNNER_TEMP/maintenance-components" --selection first
+      - if: steps.assemble.outputs.changed == 'true'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: ".node-version"
+          cache: npm
+      - if: steps.assemble.outputs.changed == 'true'
+        run: npm ci
+      - if: steps.assemble.outputs.changed == 'true'
+        name: Verify the isolated fallback application
+        run: ./portal test
+      - if: steps.assemble.outputs.changed == 'true'
+        name: Verify the isolated fallback retained-data selfhost upgrade
+        env:
+          BASELINE_COMMIT: ${{ needs.discover.outputs.base }}
+        run: |
+          node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run --baseline-root "$RUNNER_TEMP/selfhost-baseline" --baseline-commit "$BASELINE_COMMIT" --proof-output "$RUNNER_TEMP/postgres-candidate-proof.json"
+          node deploy/hostinger/maintenance/daily-updates.mjs capture-proof --plan "$RUNNER_TEMP/maintenance-plan/plan.json" --input "$RUNNER_TEMP/postgres-candidate-proof.json"
+      - if: steps.assemble.outputs.changed == 'true'
+        run: node deploy/hostinger/maintenance/daily-updates.mjs export --plan "$RUNNER_TEMP/maintenance-plan/plan.json" --component combined --output "$RUNNER_TEMP/maintenance-fallback/result.json"
+      - if: steps.assemble.outputs.changed == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: maintenance-fallback
+          path: ${{ runner.temp }}/maintenance-fallback/result.json
+          retention-days: 14
+          if-no-files-found: error
+  promote:
+    needs: [discover, combined, fallback]
+    if: always() && needs.discover.result == 'success' && (needs.combined.result == 'success' || needs.fallback.result == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.discover.outputs.base }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: ".node-version"
+      - if: needs.combined.result == 'success' && needs.combined.outputs.changed == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: maintenance-combined
+          path: ${{ runner.temp }}/maintenance-selected
+      - if: needs.combined.result == 'failure' && needs.fallback.result == 'success' && needs.fallback.outputs.changed == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: maintenance-fallback
+          path: ${{ runner.temp }}/maintenance-selected
+      - name: Sign tested main change and dispatch exact-revision CI
+        if: (needs.combined.result == 'success' && needs.combined.outputs.changed == 'true') || (needs.combined.result == 'failure' && needs.fallback.result == 'success' && needs.fallback.outputs.changed == 'true')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node deploy/hostinger/maintenance/promote.mjs promote "$RUNNER_TEMP/maintenance-selected/result.json"
+      - name: Retry an unreleased main revision after earlier transient CI failure
+        if: needs.combined.outputs.changed != 'true' && needs.fallback.outputs.changed != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node deploy/hostinger/maintenance/promote.mjs retry-main

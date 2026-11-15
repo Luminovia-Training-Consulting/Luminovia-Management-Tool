@@ -2,6 +2,12 @@
 
 This policy applies only to the authorised self-hosted development instance at <https://cms.luminovia.org>. It does not upgrade the Hostinger plan or declare production acceptance.
 
+## Daily dependency, OS and complete-backup maintenance
+
+The newer daily request extends this original application-release mechanism. See [daily verified maintenance](../deploy/hostinger/maintenance/README.md) and [complete encrypted recovery](../deploy/hostinger/backups/README.md). Stable npm/Node/JSR and active selfhost images receive independent full-test gates, signed fixed-file promotion and exact-main CI. Full updates now keep public access closed through private health and can restore a validated physical checkpoint before public writes resume; a database rewind after public activation remains forbidden. Transient network retries do not permanently suppress a release. The existing static/controller-only zero-restart path remains.
+
+The new complete backup includes all connectable databases, role passwords and server/TLS/Vault/JWT configuration missing from the older update-only backup. Its age identity stays off-server. Native daily timers coordinate complete backup, official OS packages and necessary reboots under the same host lock. Installation/first-live acceptance is recorded in WORKLOG; source implementation alone is not proof that a timer or purchase is active. Paid Hostinger off-site full-VM backup is separate and awaits its specific approval. Older sections below retain historical acceptance and their original narrower scope.
+
 ## What is updated
 
 The GitHub `Portal checks` workflow runs the complete isolated application verification plus release/updater/proxy checks. A successful push to `main` then builds the CMS frontend with the two public repository variables `CMS_SUPABASE_URL` and `CMS_SUPABASE_PUBLISHABLE_KEY`. It packages the frontend, application Edge Functions, complete migration history and reviewed, digest-pinned runtime configuration. No server environment, SSH key, database password or service-role key is sent to GitHub.
