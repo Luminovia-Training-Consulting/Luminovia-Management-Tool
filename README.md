@@ -1,2 +1,2 @@
-# Luminovia-Management-Tool1
+# Luminovia-Management-Tool
 General Luminovia Web Management Tool
