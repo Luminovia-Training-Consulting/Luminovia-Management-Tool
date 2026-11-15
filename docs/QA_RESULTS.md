@@ -4,7 +4,7 @@ The latest continuation evidence is first. Older M1 results below remain histori
 
 ## M4 combined functional acceptance — complete command passed
 
-`./portal test` passed on **2026-11-15 at 17:31:03.771UTC (16 November 03:31 Australia/Brisbane)** against frozen signed source `4c7c897`, including concurrent main through `1f9a114`. Project `luminovia-portal-test-7c2dd978`; private report `.local/tests/7c2dd978/RESULT.txt`. The wrapper explicitly captured **exit 0** in `.local/m4-test-04.exit`, and the execution session also returned 0. Subsequent local changes are documentation and actual fictional screenshots; exact submitted-source CI remains the final Git acceptance.
+`./portal test` passed on **2026-11-15 at 17:31:03.771UTC (16 November 03:31 Australia/Brisbane)** against frozen signed source `4c7c897`, including concurrent main through `1f9a114`. Project `luminovia-portal-test-7c2dd978`; private report `.local/tests/7c2dd978/RESULT.txt`. The wrapper explicitly captured **exit 0** in `.local/m4-test-04.exit`, and the execution session also returned 0. Subsequent local changes are documentation and actual fictional screenshots; exact submitted-source CI and the final merge are recorded on [PR #4](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/4).
 
 | Check | Actual combined result |
 | --- | --- |

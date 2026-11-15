@@ -12,7 +12,7 @@ Requested 16 November: source-grounded functional/dead-code/connection audit; me
 - [x] Staff comments under templates and jobs, with access checks, bounded text, actual persistence, idempotency, cursor pagination, edits/withdrawals and reasoned MFA moderation.
 - [x] Reproduce and fix functional gaps in Auth/search and any other actual findings; verify import/export/RPC connections; document legitimate runtime-only entry points.
 - [x] Update README, developer/feature/API documentation, test inventory and exact acceptance evidence; review readable desktop/mobile/DE/EN/theme screens.
-- [ ] Pass complete isolated command, signed push/exact PR CI and authorised merge, without production publishing.
+- [x] Pass the complete isolated command and push signed source. Exact CI and the authorised merge are recorded on [PR #4](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/4); check its current state on continuation. Production publishing remains separate.
 
 Combined frozen source `4c7c897` passed the full command with exit 0:91 source, 21 runtime, 37 Edge, 165 SQL, 12 real API suites/Mailpit, 52 browser and 2 PWA cases; release controls 28 Python/ 35 Node/ 11 Envoy/ 10 Caddy. [Exact evidence](QA_RESULTS.md). Hosted M4 is separately operator-gated; no installation is claimed.
 
