@@ -1,0 +1,190 @@
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import {
+  ArrowUpRight,
+  BriefcaseBusiness,
+  CalendarDays,
+  GraduationCap,
+  Sparkles,
+} from "lucide-react";
+import { useAuth } from "../auth/auth-context";
+import {
+  claimsQuery,
+  expertiseQuery,
+  jobsQuery,
+  profileQuery,
+} from "../../lib/queries";
+import { JobCard } from "../jobs/jobs";
+import { Button } from "../../components/ui/button";
+import { ErrorState, Loading, TextLink } from "../../components/common";
+import { dateTime } from "../../lib/dates";
+export function Dashboard() {
+  const { t, i18n } = useTranslation();
+  const { session } = useAuth();
+  const profile = useQuery(profileQuery(session!.user.id));
+  const jobs = useQuery(jobsQuery);
+  const claims = useQuery(claimsQuery(session!.user.id));
+  const expertise = useQuery(expertiseQuery(session!.user.id));
+  if (jobs.isPending || claims.isPending) return <Loading />;
+  if (jobs.isError || claims.isError)
+    return (
+      <ErrorState
+        retry={() => {
+          void jobs.refetch();
+          void claims.refetch();
+        }}
+      />
+    );
+  const open = jobs.data.filter((j) => j.status === "published");
+  const next = claims.data
+    .flatMap((c) =>
+      c.assignment_sessions.map((s) => ({
+        ...s,
+        job: jobs.data.find((j) => j.id === c.job_id),
+      })),
+    )
+    .filter((s) => new Date(s.ends_at) > new Date())
+    .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  const zone = profile.data?.time_zone ?? "Europe/Berlin";
+  return (
+    <>
+      <div className="dashboard-heading">
+        <div>
+          <p className="eyebrow">{t("workspace")}</p>
+          <h1>
+            {t("greeting", {
+              name: profile.data?.display_name.split(" ")[0] || "Luminovia",
+            })}
+          </h1>
+        </div>
+        <span className="date-chip">
+          {new Intl.DateTimeFormat(i18n.language, {
+            dateStyle: "full",
+            timeZone: zone,
+          }).format(new Date())}
+        </span>
+      </div>
+      <section className="hero">
+        <div className="hero-copy">
+          <span className="hero-label">
+            <span className="little-star">✳</span> TRAINING & CONSULTING
+          </span>
+          <h2>{t("portal")}</h2>
+          <p>{t("heroText")}</p>
+          <Button asChild>
+            <Link to="/jobs">
+              {t("explore")}
+              <ArrowUpRight size={19} />
+            </Link>
+          </Button>
+        </div>
+        <div className="hero-art" aria-hidden="true">
+          <div className="arc arc-one" />
+          <div className="arc arc-two" />
+          <div className="arc arc-three" />
+          <span className="hero-orbit">✳</span>
+          <span className="hero-art-caption">{t("connect")}</span>
+        </div>
+      </section>
+      <div className="kpi-grid">
+        {[
+          {
+            label: "openJobs",
+            number: open.length,
+            icon: BriefcaseBusiness,
+            color: "mint",
+            to: "/jobs",
+          },
+          {
+            label: "myAssignments",
+            number: claims.data.length,
+            icon: GraduationCap,
+            color: "peach",
+            to: "/calendar",
+          },
+          {
+            label: "nextSessions",
+            number: next.length,
+            icon: CalendarDays,
+            color: "yellow",
+            to: "/calendar",
+          },
+          {
+            label: "expertise",
+            number: expertise.data?.length ?? 0,
+            icon: Sparkles,
+            color: "lilac",
+            to: "/profile",
+          },
+        ].map(({ label, number, icon: Icon, color, to }) => (
+          <Link key={label} className={`kpi-tile ${color}`} to={to}>
+            <div>
+              <span>{t(label)}</span>
+              <strong>{number}</strong>
+            </div>
+            <Icon size={25} />
+            <ArrowUpRight size={16} className="kpi-arrow" />
+          </Link>
+        ))}
+      </div>
+      <div className="dashboard-lower">
+        <section>
+          <div className="section-heading">
+            <h2>{t("openJobs")}</h2>
+            <TextLink to="/jobs">{t("all")}</TextLink>
+          </div>
+          {open.length ? (
+            <div className="dashboard-jobs">
+              {open.slice(0, 2).map((job, index) => (
+                <JobCard key={job.id} job={job} index={index} />
+              ))}
+            </div>
+          ) : (
+            <div className="panel empty-state">
+              <BriefcaseBusiness />
+              <p>{t("noJobs")}</p>
+            </div>
+          )}
+        </section>
+        <section className="upcoming-panel panel">
+          <div className="section-heading">
+            <h2>{t("nextSessions")}</h2>
+            <CalendarDays size={21} />
+          </div>
+          {next.length ? (
+            <ol className="upcoming-list">
+              {next.slice(0, 4).map((s) => (
+                <li key={s.id}>
+                  <div className="date-block">
+                    <strong>
+                      {new Intl.DateTimeFormat(i18n.language, {
+                        day: "2-digit",
+                        timeZone: zone,
+                      }).format(new Date(s.starts_at))}
+                    </strong>
+                    <small>
+                      {new Intl.DateTimeFormat(i18n.language, {
+                        month: "short",
+                        timeZone: zone,
+                      }).format(new Date(s.starts_at))}
+                    </small>
+                  </div>
+                  <div>
+                    <Link to={`/jobs/${s.job?.id ?? ""}`}>
+                      {s.job?.title ?? t("assignment")}
+                    </Link>
+                    <small>{dateTime(s.starts_at, i18n.language, zone)}</small>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p>{t("noSessions")}</p>
+          )}
+          <TextLink to="/calendar">{t("viewCalendar")}</TextLink>
+        </section>
+      </div>
+    </>
+  );
+}
