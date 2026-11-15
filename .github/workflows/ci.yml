@@ -21,13 +21,6 @@ jobs:
           node-version: "26.13.1"
           cache: npm
       - run: npm ci
-      - name: Automatic update and release guards
-        run: |
-          python3 -m unittest discover -s deploy/hostinger/updates -p 'test_*.py'
-          node --test deploy/hostinger/updates/package.test.mjs
-          node --test deploy/hostinger/reviewed-m3-backfill.test.mjs
-          node deploy/hostinger/selfhost/validate.mjs --gateway-routing
-          node scripts/hostinger-caddy-check.mjs
       - name: Complete isolated local verification
         run: ./portal test
   release-cms:

@@ -452,6 +452,9 @@ class InstallationTests(unittest.TestCase):
             state = json.loads(updater.state_file.read_text())
             self.assertEqual(state["currentCommit"], COMMIT)
             self.assertLess(updater.calls.index("backup"), updater.calls.index("sql"))
+            reconcile_mailpit = ("backend", ("up", "-d", "--wait", "db", "mailpit"))
+            restart_writers = ("backend", ("up", "-d", "--wait", "--force-recreate", "--no-deps", *u.WRITERS))
+            self.assertLess(updater.calls.index(reconcile_mailpit), updater.calls.index(restart_writers))
 
     def test_first_automatic_install_requires_explicit_private_bootstrap_approval(self):
         with tempfile.TemporaryDirectory() as directory:

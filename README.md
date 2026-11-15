@@ -6,7 +6,7 @@ The user's [Universal Master Prompt](docs/UNIVERSAL_MASTER_PROMPT.txt) is preser
 
 ## Requirements
 
-- Linux (CachyOS locally, Ubuntu in CI), Node.js 26 LTS (tested with 26.13.1), npm and Docker Engine.
+- Linux (CachyOS locally, Ubuntu in CI), Node.js 26 LTS (tested with 26.13.1), npm, Docker Engine and the Docker Compose plugin supporting [healthcheck `start_interval`](https://docs.docker.com/reference/compose-file/services/#healthcheck) (Compose 2.20.2 or later). Python 3 is additionally required by the complete local release/update verification.
 - Loopback ports 5173, 54321, 54322 and 54324 available. Local Docker services require several GB of disk space.
 - Supabase CLI 3.1.0 and Deno 2.9.6 are pinned development dependencies; inspect their `--help` before database/remote operations.
 
@@ -132,4 +132,4 @@ node scripts/code-integrity.mjs --exports
 ./portal test
 ```
 
-The compiler-based inventory detects disconnected frontend modules, genuinely unused runtime exports, unresolved relative imports, invalid literal routes/assets and transitive RPC wrappers. The complete command also checks delivered documentation links, real database/API bindings, Auth/MFA errors and actual desktop/mobile business journeys. These checks describe executed coverage; the outstanding complete product and hosted/manual gates remain in the plan.
+The compiler-based inventory detects disconnected frontend modules, genuinely unused runtime exports, unresolved relative imports, invalid literal routes/assets and transitive RPC wrappers. The complete command also checks delivered documentation links, real database/API bindings, Auth/MFA errors, actual desktop/mobile business journeys and the inherited offline updater/release/Caddy/Envoy guards. CI invokes this same command rather than a separate smaller local test subset. The [M4 migration review](docs/REVIEWED_M4_MIGRATIONS.md) describes the hosted operator gate; a merged source release does not assert those migrations are installed. These checks describe executed coverage; the outstanding complete product and hosted/manual gates remain in the plan.

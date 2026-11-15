@@ -1,6 +1,6 @@
 # Entwicklerhandbuch
 
-Dieses Dokument erklärt den tatsächlich vorhandenen Code und die fachlichen Grenzen. Der vollständige Zielumfang steht im [Produktplan](IMPLEMENTATION_PLAN.md); ausgeführte Prüfungen stehen in [QA_RESULTS](QA_RESULTS.md). Eine dort offene Funktion ist kein stillschweigend fertiger Teil der Anwendung.
+Dieses Dokument erklärt den tatsächlich vorhandenen Code und die fachlichen Grenzen. Der vollständige Zielumfang steht im [Produktplan](IMPLEMENTATION_PLAN.md); ausgeführte Prüfungen stehen in [QA_RESULTS](QA_RESULTS.md). Eine dort offene Funktion ist kein stillschweigend fertiger Teil der Anwendung. Die inzwischen separat eingerichtete selbst gehostete CMS-Entwicklung und ihre Freigabeautomatik sind in [HOSTINGER_DEVELOPMENT](HOSTINGER_DEVELOPMENT.md) und [HOSTINGER_AUTOMATIC_UPDATES](HOSTINGER_AUTOMATIC_UPDATES.md) dokumentiert.
 
 ## Einstieg und lokale Arbeit
 
@@ -110,6 +110,8 @@ Erzeuge additive Migrationen mit der tatsächlich installierten CLI (`npx --no-i
 `scripts/testing/api.mjs` bündelt die neuen API-Fixtures: streng zufälliges kanonisches Projekt, lokale Testports, echte getrennte Accounts/MFA und geprüfte Aufräumaktionen. Registriere eigene Ressourcen über `defer`; Ressourcen werden vor den jeweiligen Testkonten entfernt. Fehler beim Aufräumen lassen die Prüfung fehlschlagen und werden zusammen mit dem ursprünglichen Fehler erhalten. `scripts/testing/database.mjs` erzeugt und entfernt eigene temporäre Datenbanken.
 
 Reproduziere zuerst einen tatsächlichen Fehler, ergänze eine aussagekräftige fehlgeschlagene Prüfung und korrigiere den zuständigen Vertrag. Simulierte SDK-Fehler sind für die Fehlerdarstellung sinnvoll; sie ersetzen keine echte Auth-/Server-Abnahme. Gleichzeitige PostgreSQL-Aufrufe müssen echte Nebenläufigkeit prüfen. Verwende unabhängige BrowserContexts für unterschiedliche Personen, damit deren Auth-Storage nicht geteilt wird.
+
+Der Gesamtbefehl umfasst auch die offline ausführbaren Update-/Release-/Proxy-Prüfungen. Dafür wird zusätzlich Python3 benötigt; der Testlauf verändert weder den gehosteten Server noch dessen Konfiguration. Bewusste Operator-Prüfpunkte für Migrationen bleiben bestehen. Eine Paketfreigabe ist keine Bestätigung, dass eine Migration auf der Entwicklungsinstanz bereits angewendet wurde.
 
 Der Gesamtbefehl schreibt geschützte Berichte unter `.local/tests/<run>/`. Prüfe zuerst den ersten fehlgeschlagenen Schritt und dessen konkreten Trace/Fehlerkontext. Prüfe anschließend die notwendige Korrektur und führe die vollständige Abnahme vor Lieferung erneut aus. Private Traces, Tokens, QR-Codes und Zugangsdaten gehören nicht in Git oder Screenshots.
 
