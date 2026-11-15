@@ -1,7 +1,7 @@
 name: Portal checks
 on:
   push:
-    branches: [main, 'codex/**']
+    branches: [main]
   pull_request:
 permissions:
   contents: read

@@ -174,3 +174,9 @@ Documentation is reconciled to the final local acceptance above; actual GitHub s
 - Added `scripts/local-functions-ready.mjs` and replaced the workflow's preflight probe. Against a real cold local runtime it stayed pending while only the gateway existed, then exited successfully only on the actual handler's anonymous `403 permission_or_mfa_required` JSON. Anonymous credentials, an empty body and the permission rejection prevent reservation or sending. Non-loopback targets are rejected before requesting.
 - The probe preserved all clean fixture counts: 13 accounts, 11 lecturers, zero invitations, claims and MFA factors. Syntax and ESLint passed. Shared branch concurrency now coalesces push/PR runs.
 - These are CI reliability changes; application behavior is unchanged. The final revision is signed/pushed after this checkpoint and its actual CI result is available on draft PR #1.
+
+### Final CI result and unambiguous PR check cleanup
+
+The final full [PR CI run 43711811112](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43711811112) passed every step for signed head `22dc052`, including the new readiness probe, 22 source tests, 25 SQL tests, seven Edge tests, actual HTTP/Edge/Mailpit checks, 20 browser workflows and the separate two built-PWA checks. The two PWA tests in the main browser selection were intentionally skipped and then passed in the dedicated built-artifact stage.
+
+`gh pr checks` also exposed the deliberately cancelled duplicate push job as a failed bucket for that same SHA. To keep the PR check set unambiguous, the final workflow triggers on PRs and pushes to `main`; feature-branch pushes use their PR run instead of starting a duplicate. Shared concurrency still cancels obsolete runs on older commits. No application code changed. The final trigger-only revision is checked again before handoff, with the live result on PR #1.
