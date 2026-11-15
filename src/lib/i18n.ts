@@ -1,6 +1,12 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 const pairs: Record<string, [string, string]> = {
+  requestCourses: ["Kurse beauftragen", "Commission courses"],
+  myCourses: ["Meine Kurse", "My courses"],
+  accounts: ["Konten", "Accounts"],
+  staffDirectory: ["Dozierende", "Lecturers"],
+  clientPortal: ["Auftraggeber", "Client portal"],
+  myReviews: ["Kursbewertungen", "Course reviews"],
   courses: ["Kurse", "Courses"],
   clients: ["Kunden", "Clients"],
   contracts: ["Verträge", "Contracts"],

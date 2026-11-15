@@ -1,6 +1,6 @@
 # Luminovia Portal
 
-A real React/TypeScript Progressive Web App for Luminovia Training & Consulting. The local system connects invitation-only Supabase Auth, administrator MFA, bilingual profiles/evidence, teaching jobs and atomic allocation, calendar, private realtime chat, scanned files, wiki/forum, customers/courses and contract/invoice tracking. It is **not the complete production product yet**. See the [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the entire outstanding scope.
+A real React/TypeScript Progressive Web App for Luminovia Training & Consulting. The local system connects invitation-only Supabase Auth, administrator MFA, bilingual profiles/evidence, teaching jobs and atomic allocation, calendar, private realtime chat, scanned files, wiki/forum, customers/courses and contract/invoice tracking. Individual client accounts, optional enrolled learners, safe course ratings, profile/invoice labels and a server-enforced default 50/50 commission model extend these workflows. It is **not the complete production product yet**. See the [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the entire outstanding scope.
 
 The user's [Universal Master Prompt](docs/UNIVERSAL_MASTER_PROMPT.txt) is preserved verbatim and is the authoritative project specification. On continuation, read [WORKLOG](docs/WORKLOG.md) first, then [AGENTS.md](AGENTS.md) and the plan. The public Website repository is a read-only brand reference; it has not been changed.
 
@@ -18,7 +18,7 @@ The user's [Universal Master Prompt](docs/UNIVERSAL_MASTER_PROMPT.txt) is preser
 
 Der Befehl installiert bei Bedarf die gesperrten npm-Abhängigkeiten und startet das vollständige lokale System: PostgreSQL, Supabase Auth/Storage/Realtime, Edge Functions, Malware-Scanner, Mailpit und React/Vite. Neue Migrationen werden ohne Daten-Reset angewendet. Fiktive Beispieldaten werden nur bei der ersten leeren Initialisierung erzeugt.
 
-Öffne <http://127.0.0.1:5173>. Lokale E-Mails werden ausschließlich in [Mailpit](http://127.0.0.1:54324) abgefangen. Die elf fiktiven Dozierenden heißen `lecturer01@example.invalid` bis `lecturer11@example.invalid`; zusätzlich gibt es `admin@example.invalid` und `participant@example.invalid`.
+Öffne <http://127.0.0.1:5173>. Lokale E-Mails werden ausschließlich in [Mailpit](http://127.0.0.1:54324) abgefangen. Die elf fiktiven Dozierenden heißen `lecturer01@example.invalid` bis `lecturer11@example.invalid`; zusätzlich gibt es `admin@example.invalid`, `participant@example.invalid`, `carina@example.invalid` (Plattformleitungs-Demo) und `client@example.invalid` (Auftraggeber-Demo). Das sind getrennte fiktive Auth-Konten; echte Einladungen vergeben eigene Passwörter.
 
 ```bash
 ./portal credentials   # ursprüngliches lokales Testpasswort bewusst anzeigen
@@ -35,26 +35,30 @@ Die vollständigen Betriebsdetails, Fehlerbehebung und Persistenzgrenzen stehen 
 
 ## Implemented routes
 
-| Route | Function |
-| --- | --- |
-| `/login` | Real email/password sign-in and password recovery; no public signup. |
-| `/auth/callback` | Explicit one-time invitation acceptance; PKCE recovery callback. |
-| `/auth/password` | Set a password after an authenticated invite/recovery. |
-| `/` | Real open jobs, personal assignment counts and upcoming sessions. |
-| `/jobs`, `/jobs/:id` | Combined filters, localised sessions/fees, exact-version terms acceptance and atomic allocation. |
-| `/calendar` | Private appointments, confirmed assignments, published global events and month/week/day/agenda views. |
-| `/profile` | Persisted DE/EN biography, contact/timezone, expertise and private CV/certificate uploads. |
-| `/chats` | Private DMs, staff/group and separate lecturer/participant course rooms; realtime messages, files, membership and read/mute state. |
-| `/files` | Quarantined/scanned private files, upload progress, authorised download/preview, history, replace, rename and archive. |
-| `/wiki`, `/forum` | Safe rich text/code, drafts/publication/revisions; threads, replies, accepted answers, subscriptions and moderation. |
-| `/clients` | MFA/capability-protected customer records, private contacts/notes, tags and archive. |
-| `/courses` | Reusable templates, actual runs/sessions, safe duplication and explicit publication. |
-| `/contracts` | Executed PDF versions/hashes, master/addendum chain, private downloads and receipt history. A receipt is not an e-signature. |
-| `/finance` | Accepted-assignment earnings, scanned invoice PDFs, review, partial/full payments and authorised CSV with separate currencies. |
-| `/search` | Permission-aware jobs, documents, messages, safe wiki/forum results and minimal chat contacts. |
-| `/security` | Real Auth TOTP enrollment/challenge; administrative actions require AAL2 at the database. |
-| `/admin` | Atomic course/job creation, publication/archive, lecturer invitations. |
-| `/admin/people` | Search people, attest declared expertise with UTC expiry, suspend/reactivate accounts with named confirmation. |
+| Route                    | Function                                                                                                                            |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `/login`                 | Real email/password sign-in and password recovery; no public signup.                                                                |
+| `/auth/callback`         | Explicit one-time invitation acceptance; PKCE recovery callback.                                                                    |
+| `/auth/password`         | Set a password after an authenticated invite/recovery.                                                                              |
+| `/`                      | Real open jobs, personal assignment counts and upcoming sessions.                                                                   |
+| `/jobs`, `/jobs/:id`     | Combined filters, localised sessions/fees, exact-version terms acceptance and atomic allocation.                                    |
+| `/calendar`              | Private appointments, confirmed assignments, published global events and month/week/day/agenda views.                               |
+| `/profile`               | Persisted DE/EN biography, contact/timezone, expertise and private CV/certificate uploads.                                          |
+| `/chats`                 | Private DMs, staff/group and separate lecturer/participant course rooms; realtime messages, files, membership and read/mute state.  |
+| `/files`                 | Quarantined/scanned private files, upload progress, authorised download/preview, history, replace, rename and archive.              |
+| `/wiki`, `/forum`        | Safe rich text/code, drafts/publication/revisions; threads, replies, accepted answers, subscriptions and moderation.                |
+| `/clients`               | MFA/capability-protected customer records, private contacts/notes, tags and archive.                                                |
+| `/courses`               | Reusable templates, actual runs/sessions, safe duplication and explicit publication.                                                |
+| `/contracts`             | Executed PDF versions/hashes, master/addendum chain, private downloads and receipt history. A receipt is not an e-signature.        |
+| `/finance`               | Accepted-assignment earnings, scanned invoice PDFs, review, partial/full payments and authorised CSV with separate currencies.      |
+| `/search`                | Permission-aware jobs, documents, messages, safe wiki/forum results and minimal chat contacts.                                      |
+| `/security`              | Real Auth TOTP enrollment/challenge; administrative actions require AAL2 at the database.                                           |
+| `/admin`                 | Atomic course/job creation, publication/archive, lecturer invitations.                                                              |
+| `/people`, `/people/:id` | Safe lecturer directory, own labels/expertise, actual upcoming/current/past courses and authorised anonymised ratings.              |
+| `/my-reviews`            | Optional learners review actual completed enrolled courses; management enrols and moderates with MFA.                               |
+| `/client`                | Own-organisation course requests/full fee, commissioned spend and assigned lecturers.                                               |
+| `/admin/accounts`        | Versioned account API-backed role assignment, separate invitations, scoped client memberships and linked profile/status management. |
+| `/admin/people`          | Search people, attest declared expertise with UTC expiry, suspend/reactivate accounts with named confirmation.                      |
 
 Single-slot jobs are supported in this milestone. Every session in a multi-day job is reserved in one PostgreSQL transaction. Qualification validity, executed-contract prerequisites, job/deadline/terms status and private/confirmed calendar conflicts are checked server-side. Accepted rates/currency/terms are immutable snapshots. Requests are idempotent and competing jobs for the same lecturer are serialised. Admins cannot read private calendar entries merely because they are admins.
 
@@ -100,3 +104,11 @@ Stoppe verwaltete lokale Dienste mit `./portal stop`; Datenbank und tatsächlich
 [Product scope](docs/PRODUCT_SPEC.md) · [Architecture](docs/ARCHITECTURE.md) · [ERD](docs/ERD.md) · [Brand](docs/BRAND_DESIGN_SYSTEM.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [Security review](docs/BACKEND_SECURITY_REVIEW.md) · [Test plan](docs/TEST_PLAN.md) · [User guide](docs/USER_GUIDE.md)
 
 Repository license: GNU GPLv3; the authentic Space Grotesk font retains its included OFL notice. Brand assets remain Luminovia assets.
+
+## Account and revenue APIs
+
+[Account/revenue specification](docs/ACCOUNTS_REVENUE_SPEC.md) · [Generated platform API reference](docs/API_REFERENCE.md) · [Server audit](docs/ACCOUNTS_PLATFORM_AUDIT.md).
+
+New commission offers default to 50% platform / 50% lecturer; only admin/owner can change the percentage. Customer total and platform amounts remain in private tables and never appear in lecturer job/claim/invoice responses. Legacy accepted net fees stay unchanged, and unknown historical customer totals remain unknown. Income/payment status is tracking data; no bank transfer or tax calculation is initiated.
+
+The account facade `/functions/v1/accounts/v1/` supports own profile, bounded administrative account search, roles, activation, organisation grants and idempotent invitations. Its OpenAPI is `/functions/v1/accounts/openapi.json`; all existing domain features remain accessible through the same JWT's documented Supabase RPCs and document gateway. Administrative actions require current database capabilities and MFA. New fixtures are insert-only and are created automatically only in an empty local bootstrap; existing populated instances are never silently reseeded.

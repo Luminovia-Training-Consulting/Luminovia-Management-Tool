@@ -12,7 +12,7 @@ import {
 import { useAuth } from "../auth/auth-context";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
-import { permissionsQuery } from "../../lib/queries";
+import { permissionsQuery, userRolesQuery } from "../../lib/queries";
 import { Button } from "../../components/ui/button";
 import {
   ErrorState,
@@ -35,17 +35,7 @@ export function ChatPage() {
   const selectedId = params.get("room");
   const rooms = useQuery(chatRoomsQuery(actor));
   const permissions = useQuery(permissionsQuery(actor));
-  const roles = useQuery({
-    queryKey: ["chat-own-roles", actor],
-    queryFn: async () => {
-      const { data, error } = await db()
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", actor);
-      if (error) throw error;
-      return (data ?? []).map((row) => row.role as string);
-    },
-  });
+  const roles = useQuery(userRolesQuery(actor));
   const [search, setSearch] = useState("");
   const [contactsOpen, setContactsOpen] = useState(false);
   const [groupOpen, setGroupOpen] = useState(false);
@@ -55,11 +45,13 @@ export function ChatPage() {
     permissions.data?.includes("courses.manage") ?? false;
   const staff =
     roles.data?.some((role) =>
-      ["admin", "management", "lecturer", "senior_lecturer"].includes(role),
+      ["owner", "admin", "management", "lecturer", "senior_lecturer"].includes(
+        role,
+      ),
     ) ?? false;
   const lecturer =
     roles.data?.some((role) =>
-      ["lecturer", "senior_lecturer"].includes(role),
+      ["owner", "admin", "lecturer", "senior_lecturer"].includes(role),
     ) ?? false;
   const selectRoom = (room: string | null) => {
     const next = new URLSearchParams(params);

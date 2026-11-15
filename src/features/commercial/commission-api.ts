@@ -1,0 +1,195 @@
+import { queryOptions } from "@tanstack/react-query";
+import { db } from "../../lib/supabase";
+export interface CommissionAccess {
+  can_manage_gross: boolean;
+  can_manage_client_memberships: boolean;
+  can_request: boolean;
+}
+export interface ClientOrganisation {
+  id: string;
+  name: string;
+}
+export interface ClientRequest {
+  id: string;
+  organisation_id: string;
+  organisation_name: string;
+  title: string;
+  description: string;
+  delivery_type: "online" | "onsite";
+  location: string;
+  time_zone: string;
+  gross_amount: number;
+  gross_total_amount: number;
+  currency: "EUR" | "AUD";
+  rate_unit: string;
+  sessions: { starts_at: string; ends_at: string }[];
+  topic_ids: string[];
+  status: "submitted" | "published" | "assigned" | "cancelled";
+  job_id: string | null;
+  assigned_lecturer_id: string | null;
+  assigned_lecturer_name: string | null;
+  created_at: string;
+}
+export interface CommissionRecord {
+  job_id: string;
+  claim_id: string | null;
+  organisation_id: string | null;
+  organisation_name: string;
+  title: string;
+  status: string;
+  pricing_model: "commission" | "legacy_net";
+  currency: "EUR" | "AUD";
+  gross_amount: number | null;
+  gross_total_amount: number | null;
+  platform_percent: number | null;
+  platform_total_amount: number | null;
+  lecturer_net_amount: number;
+  lecturer_net_total_amount: number;
+  lecturer_id: string | null;
+  lecturer_name: string | null;
+  accepted_at: string | null;
+}
+export interface ClientSpend {
+  organisation_id: string;
+  organisation_name: string;
+  currency: "EUR" | "AUD";
+  request_count: number;
+  published_count: number;
+  assigned_count: number;
+  gross_total_amount: number;
+  gross_assigned_amount: number;
+  teachers: { id: string; display_name: string }[];
+}
+export const commissionKeys = {
+  access: (actor: string) => ["commission-access", actor] as const,
+  organisations: (actor: string) => ["client-organisations", actor] as const,
+  requests: (actor: string) => ["client-requests", actor] as const,
+  report: (actor: string) => ["commission-report", actor] as const,
+  spend: (actor: string) => ["client-spend", actor] as const,
+};
+export const commissionAccessQuery = (actor: string) =>
+  queryOptions({
+    queryKey: commissionKeys.access(actor),
+    queryFn: async () => {
+      const { data, error } = await db().rpc("commission_access");
+      if (error) throw error;
+      return data as CommissionAccess;
+    },
+    staleTime: 1000,
+  });
+export const clientOrganisationsQuery = (actor: string) =>
+  queryOptions({
+    queryKey: commissionKeys.organisations(actor),
+    queryFn: async () => {
+      const { data, error } = await db().rpc("client_organisations");
+      if (error) throw error;
+      return (data ?? []) as ClientOrganisation[];
+    },
+  });
+export const clientRequestsQuery = (
+  actor: string,
+  organisation: string | null = null,
+) =>
+  queryOptions({
+    queryKey: [...commissionKeys.requests(actor), organisation],
+    queryFn: async () => {
+      const { data, error } = await db().rpc("client_requests", {
+        p_organisation_id: organisation,
+      });
+      if (error) throw error;
+      return (data ?? []) as ClientRequest[];
+    },
+    refetchInterval: 10000,
+  });
+export const commissionReportQuery = (
+  actor: string,
+  organisation: string | null = null,
+) =>
+  queryOptions({
+    queryKey: [...commissionKeys.report(actor), organisation],
+    queryFn: async () => {
+      const { data, error } = await db().rpc("commission_report", {
+        p_organisation_id: organisation,
+      });
+      if (error) throw error;
+      return (data ?? []) as CommissionRecord[];
+    },
+  });
+export const clientSpendQuery = (actor: string) =>
+  queryOptions({
+    queryKey: commissionKeys.spend(actor),
+    queryFn: async () => {
+      const { data, error } = await db().rpc("client_spend_summary");
+      if (error) throw error;
+      return (data ?? []) as ClientSpend[];
+    },
+  });
+/** Platform share rounds to cents first; the lecturer receives the exact remainder. */
+export function splitFee(gross: number, percent: number) {
+  const cents = Math.round(gross * 100);
+  const bps = Math.round(percent * 100);
+  if (
+    !Number.isSafeInteger(cents) ||
+    cents < 0 ||
+    bps < 0 ||
+    bps > 10000 ||
+    !Number.isFinite(bps) ||
+    percent < 0 ||
+    percent > 100
+  )
+    throw new Error("invalid_price");
+  const platform = Math.round((cents * bps) / 10000);
+  return {
+    gross: cents / 100,
+    platform: platform / 100,
+    lecturer: (cents - platform) / 100,
+  };
+}
+export function revenueTotals(rows: CommissionRecord[]) {
+  const groups = new Map<
+    string,
+    {
+      currency: "EUR" | "AUD";
+      offered: number;
+      accepted: number;
+      lecturer: number;
+      platform: number;
+      count: number;
+      unknown: number;
+    }
+  >();
+  for (const row of rows) {
+    const group = groups.get(row.currency) ?? {
+      currency: row.currency,
+      offered: 0,
+      accepted: 0,
+      lecturer: 0,
+      platform: 0,
+      count: 0,
+      unknown: 0,
+    };
+    if (
+      (row.status !== "archived" || row.claim_id) &&
+      row.gross_total_amount !== null
+    )
+      group.offered += Math.round(Number(row.gross_total_amount) * 100);
+    if (row.claim_id) {
+      group.lecturer += Math.round(Number(row.lecturer_net_total_amount) * 100);
+      group.count++;
+      if (row.gross_total_amount === null || row.platform_total_amount === null)
+        group.unknown++;
+      else {
+        group.accepted += Math.round(Number(row.gross_total_amount) * 100);
+        group.platform += Math.round(Number(row.platform_total_amount) * 100);
+      }
+    }
+    groups.set(row.currency, group);
+  }
+  return [...groups.values()].map((group) => ({
+    ...group,
+    offered: group.offered / 100,
+    accepted: group.accepted / 100,
+    lecturer: group.lecturer / 100,
+    platform: group.platform / 100,
+  }));
+}

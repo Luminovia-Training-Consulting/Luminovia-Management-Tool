@@ -23,12 +23,14 @@ import {
   Settings2,
   ShieldCheck,
   UserRound,
+  Users,
+  Star,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
 import { useAuth } from "../features/auth/auth-context";
 import { db } from "../lib/supabase";
-import { permissionsQuery, profileQuery } from "../lib/queries";
+import { permissionsQuery, profileQuery, userRolesQuery } from "../lib/queries";
 import { Button } from "../components/ui/button";
 import { ErrorState, Loading, Notice } from "../components/common";
 import { useOnline } from "../lib/online";
@@ -176,26 +178,57 @@ export function Shell() {
   const [signoutFailed, setSignoutFailed] = useState(false);
   const profile = useQuery(profileQuery(session!.user.id));
   const permissions = useQuery(permissionsQuery(session!.user.id));
+  const roles = useQuery(userRolesQuery(session!.user.id));
+  const teaching =
+    roles.data?.some((role) =>
+      ["owner", "admin", "lecturer", "senior_lecturer"].includes(role),
+    ) ?? false;
+  const staff = teaching || Boolean(roles.data?.includes("management"));
+  const clientPortalAccess =
+    roles.data?.some((role) => ["owner", "admin", "client"].includes(role)) ??
+    false;
+  const reviews =
+    roles.data?.some((role) =>
+      ["owner", "admin", "participant"].includes(role),
+    ) ?? false;
   const manage = permissions.data?.includes("jobs.manage") ?? false;
   const navigation = [
     { to: "/", icon: Home, label: "home" },
-    { to: "/jobs", icon: BriefcaseBusiness, label: "jobs" },
+    ...(staff ? [{ to: "/jobs", icon: BriefcaseBusiness, label: "jobs" }] : []),
     { to: "/calendar", icon: CalendarDays, label: "calendar" },
     { to: "/chats", icon: MessagesSquare, label: "chats" },
     { to: "/files", icon: FolderOpen, label: "files" },
     { to: "/search", icon: Search, label: "portalSearch" },
     { to: "/courses", icon: GraduationCap, label: "courses" },
-    { to: "/contracts", icon: FileCheck2, label: "contracts" },
-    { to: "/finance", icon: Wallet, label: "finance" },
+    { to: "/people", icon: Users, label: "staffDirectory" },
+    ...(clientPortalAccess
+      ? [{ to: "/client", icon: Building2, label: "clientPortal" }]
+      : []),
+    ...(reviews ? [{ to: "/my-reviews", icon: Star, label: "myReviews" }] : []),
+    ...(teaching || permissions.data?.includes("contracts.read")
+      ? [{ to: "/contracts", icon: FileCheck2, label: "contracts" }]
+      : []),
+    ...(teaching || permissions.data?.includes("finance.manage")
+      ? [{ to: "/finance", icon: Wallet, label: "finance" }]
+      : []),
     ...(permissions.data?.includes("organisations.manage")
       ? [{ to: "/clients", icon: Building2, label: "clients" }]
       : []),
-    { to: "/wiki", icon: BookOpen, label: "wiki" },
-    { to: "/forum", icon: MessageCircle, label: "forum" },
+    ...(staff ? [{ to: "/wiki", icon: BookOpen, label: "wiki" }] : []),
+    ...(staff ? [{ to: "/forum", icon: MessageCircle, label: "forum" }] : []),
     { to: "/profile", icon: UserRound, label: "profile" },
     { to: "/security", icon: ShieldCheck, label: "security" },
     ...(manage ? [{ to: "/admin", icon: Settings2, label: "admin" }] : []),
   ];
+  const mobilePrimary = [
+    "/",
+    staff ? "/jobs" : clientPortalAccess ? "/client" : "/courses",
+    "/calendar",
+    "/chats",
+  ].flatMap((path) => {
+    const item = navigation.find((link) => link.to === path);
+    return item ? [item] : [];
+  });
   async function logout() {
     const { error } = await db().auth.signOut();
     if (error) {
@@ -293,14 +326,9 @@ export function Shell() {
               <nav>
                 {navigation
                   .filter(
-                    (n) =>
-                      ![
-                        "/",
-                        "/jobs",
-                        "/calendar",
-                        "/chats",
-                        "/profile",
-                      ].includes(n.to),
+                    (item) =>
+                      item.to !== "/profile" &&
+                      !mobilePrimary.some((primary) => primary.to === item.to),
                   )
                   .map(({ to, label }) => (
                     <NavLink key={to} to={to}>
@@ -344,7 +372,7 @@ export function Shell() {
         </footer>
       </div>
       <nav className="mobile-nav" aria-label={t("menu")}>
-        {navigation.slice(0, 4).map(({ to, icon: Icon, label }) => (
+        {mobilePrimary.map(({ to, icon: Icon, label }) => (
           <NavLink key={to} to={to} end={to === "/"}>
             <Icon size={20} />
             <span>{t(label)}</span>

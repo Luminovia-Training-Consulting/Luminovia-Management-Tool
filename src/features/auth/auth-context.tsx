@@ -31,29 +31,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!supabase) return;
     let alive = true;
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!alive) return;
+    let revision = 0;
+    const applySession = (session: Session | null, error = false) => {
       if (actor.current !== (session?.user.id ?? null)) {
         client.clear();
         actor.current = session?.user.id ?? null;
       }
-      setState({ session, loading: false, error: false });
+      setState({ session, loading: false, error });
+    };
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!alive) return;
+      revision++;
+      applySession(session);
       if (event === "SIGNED_OUT") {
         client.clear();
       }
       if (event === "TOKEN_REFRESHED")
         void client.invalidateQueries({ queryKey: ["permissions"] });
     });
-    void supabase.auth.getSession().then(({ data, error }) => {
-      if (alive)
-        setState({
-          session: data.session,
-          loading: false,
-          error: Boolean(error),
-        });
-    });
+    const initialRevision = revision;
+    // The initial read is only a fallback. A later sign-out/actor switch is
+    // authoritative even when storage or token refresh resolves out of order.
+    void supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (alive && revision === initialRevision)
+          applySession(data.session, Boolean(error));
+      })
+      .catch(() => {
+        if (alive && revision === initialRevision) applySession(null, true);
+      });
     return () => {
       alive = false;
       subscription.unsubscribe();

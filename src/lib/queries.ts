@@ -91,3 +91,17 @@ export const eventsQuery = (id: string) =>
       return data as PersonalEvent[];
     },
   });
+
+export const userRolesQuery = (id: string) =>
+  queryOptions({
+    queryKey: ["user-roles", id],
+    queryFn: async () => {
+      const result = await db()
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", id);
+      if (result.error) throw result.error;
+      return (result.data ?? []).map((row) => row.role as string);
+    },
+    refetchInterval: 30000,
+  });

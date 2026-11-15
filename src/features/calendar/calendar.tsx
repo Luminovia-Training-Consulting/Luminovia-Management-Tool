@@ -274,7 +274,7 @@ export function CalendarPage() {
               start: s.starts_at,
               end: s.ends_at,
               color: "#326c58",
-              url: "/courses",
+              url: `/courses?run=${run.id}`,
               extendedProps: { kind: "course" },
             })),
           ),

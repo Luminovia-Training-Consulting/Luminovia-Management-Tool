@@ -4,13 +4,13 @@ Authority: [Universal Master Prompt](UNIVERSAL_MASTER_PROMPT.txt), preserved ver
 
 ## Product and operating model
 
-A private, bilingual German/English, responsive PWA for approximately eleven freelance lecturers, administrators/management and restricted course participants. Management publishes teaching jobs. An authenticated, eligible lecturer may claim an entire job immediately; the first committed database transaction wins. The claim requires no routine approval queue. Customer/employer organisations are directory records, not automatically login accounts.
+A private, bilingual German/English, responsive PWA for approximately eleven freelance lecturers, administrators/management and restricted course participants. Management publishes teaching jobs. An authenticated, eligible lecturer may claim an entire job immediately; the first committed database transaction wins. The claim requires no routine approval queue. Client/employer organisations have explicit individual client accounts and scoped memberships as approved on 16 November 2026; see [Accounts and commission extension](ACCOUNTS_REVENUE_SPEC.md).
 
 Production target is `portal.luminovia.org` on compatible existing Hostinger static hosting with managed Supabase. No production deployment is authorised by the development task. The public marketing site is a read-only brand source.
 
 ## Roles and privacy boundaries
 
-Users may hold several of `admin`, `management`, `senior_lecturer`, `lecturer`, `participant`. Permissions are granular capabilities checked in the database/API. Senior lecturer status alone confers no access to other lecturers' contracts/rates. A standard administrator cannot read private DMs or private personal calendar events through a blanket role bypass. Sensitive documents require explicit resource-level authorisation. Deactivation must revoke access even while an existing token is still valid.
+Users may hold several of `owner`, `admin`, `management`, `senior_lecturer`, `lecturer`, `client`, `participant`. Admin/owner can perform every business role function while sensitive capabilities require MFA and private resource boundaries remain intact. Permissions are granular capabilities checked in the database/API. Senior lecturer status alone confers no access to other lecturers' contracts/rates. A standard administrator cannot read private DMs or private personal calendar events through a blanket role bypass. Sensitive documents require explicit resource-level authorisation. Deactivation must revoke access even while an existing token is still valid.
 
 ## Complete module scope
 

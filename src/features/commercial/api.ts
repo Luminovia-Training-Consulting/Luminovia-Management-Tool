@@ -125,3 +125,26 @@ export function groupedEarnings(rows: EarningRecord[]) {
     paid: group.paid / 100,
   }));
 }
+
+export function parseInvoiceLabels(value: string) {
+  const labels = [
+    ...new Set(
+      value
+        .split(",")
+        .map((label) => label.trim())
+        .filter(Boolean),
+    ),
+  ];
+  if (
+    labels.length > 10 ||
+    labels.some(
+      (label) =>
+        label.length > 50 ||
+        Array.from(label).some(
+          (char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127,
+        ),
+    )
+  )
+    throw new Error("labels_invalid");
+  return labels;
+}

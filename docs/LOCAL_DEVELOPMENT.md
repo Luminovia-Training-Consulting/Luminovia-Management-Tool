@@ -13,7 +13,7 @@ Requirements: a Linux host (CachyOS locally / Ubuntu CI), Node.js >=22.12 (26 LT
 - Portal: <http://127.0.0.1:5173>
 - Supabase API: <http://127.0.0.1:54321>
 - Local email capture: <http://127.0.0.1:54324>
-- Accounts: `admin@example.invalid`, `lecturer01@example.invalid` through `lecturer11@example.invalid`, `participant@example.invalid`.
+- Fresh bootstrap accounts: `admin@example.invalid`, `carina@example.invalid` (owner demonstration), `client@example.invalid` (fictional organisation), `lecturer01@example.invalid` through `lecturer11@example.invalid`, `participant@example.invalid` — 15 distinct Auth identities. Populated instances retain existing records and are never automatically reseeded.
 
 The first start needs Docker image downloads and may take several minutes. The scanner needs additional RAM for signature loading; see the scanner documentation. Ports must be free; the launcher does not kill an unrelated process occupying a port.
 
@@ -51,13 +51,13 @@ Do not manually delete Docker volumes or `.local` credentials if their data are 
 
 This command creates a sanitized temporary checkout with its own random Supabase project ID and its own ports. It never resets or mutates the normal development database:
 
-| Service | Development | Isolated tests |
-| --- | --- | --- |
-| Frontend | 5173 | 5273 |
-| Built preview | — | 4273 |
-| Supabase API | 54321 | 55321 |
-| PostgreSQL | 54322 | 55322 |
-| Mailpit | 54324 | 55324 |
+| Service       | Development | Isolated tests |
+| ------------- | ----------- | -------------- |
+| Frontend      | 5173        | 5273           |
+| Built preview | —           | 4273           |
+| Supabase API  | 54321       | 55321          |
+| PostgreSQL    | 54322       | 55322          |
+| Mailpit       | 54324       | 55324          |
 
 Tests use separate PostgreSQL/Auth/Storage and scanner volumes. Package files are reused, while Vite caches, `.env` files, credentials, reports, build output and process state are independent. Inherited Supabase/E2E/Vite environment values are stripped before test subprocess configuration, and all mutating harnesses restrict targets to loopback. Only one test run at a time can hold the local test lock.
 
