@@ -1,6 +1,6 @@
 {
   "target": "branch",
-  "enforcement": "active",
+  "enforcement": "disabled",
   "conditions": {
     "ref_name": {
       "include": ["~DEFAULT_BRANCH"],
@@ -8,13 +8,7 @@
     }
   },
   "name": "Main verified checks",
-  "bypass_actors": [
-    {
-      "actor_id": 41898282,
-      "actor_type": "User",
-      "bypass_mode": "always"
-    }
-  ],
+  "bypass_actors": [],
   "rules": [
     {
       "type": "required_status_checks",

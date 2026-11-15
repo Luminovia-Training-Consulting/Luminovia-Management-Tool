@@ -1,6 +1,6 @@
 {
   "target": "branch",
-  "enforcement": "active",
+  "enforcement": "disabled",
   "conditions": {
     "ref_name": {
       "include": ["~DEFAULT_BRANCH"],
@@ -13,11 +13,6 @@
       "actor_id": 29256704,
       "actor_type": "User",
       "bypass_mode": "pull_request"
-    },
-    {
-      "actor_id": 41898282,
-      "actor_type": "User",
-      "bypass_mode": "always"
     }
   ],
   "rules": [

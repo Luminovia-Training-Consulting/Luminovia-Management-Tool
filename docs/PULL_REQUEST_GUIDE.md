@@ -1,5 +1,7 @@
 # Pull Requests erstellen, prüfen und mergen
 
+> Stand 16. November 2026: Das Review-/Merge-Regelwerk unten ist vorbereitet. Seine serverseitige Aktivierung wartet auf die Freigabe einer beschränkten Wartungs-App; die bisherigen Hauptzweig-Regeln bleiben bis dahin wirksam. [Aktueller Aktivierungsstand](GITHUB_WORKFLOW.md#aktivierung-noch-ausstehend).
+
 Dieser Leitfaden beschreibt die Abnahme einer Änderung. Einrichtung und lokale Entwicklung stehen in [CONTRIBUTING](../CONTRIBUTING.md) und [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); Meldungen beginnen mit dem [Issue-Leitfaden](ISSUE_GUIDE.md).
 
 ## Branch und Titel
