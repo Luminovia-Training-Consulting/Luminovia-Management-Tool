@@ -1,6 +1,6 @@
 # Luminovia Portal
 
-A real React/TypeScript Progressive Web App for Luminovia Training & Consulting. The local system connects invitation-only Supabase Auth, administrator MFA, bilingual profiles/evidence, teaching jobs and atomic allocation, calendar, private realtime chat, scanned files, wiki/forum, customers/courses and contract/invoice tracking. Individual client accounts, optional enrolled learners, safe course ratings, profile/invoice labels and a server-enforced default 50/50 commission model extend these workflows. CBW building blocks become provenance-linked course templates and referenced teaching offers; secure scanned profile pictures and staff comments connect the same application. It is **not the complete production product yet**. See the [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the entire outstanding scope.
+A real React/TypeScript Progressive Web App for Luminovia Training & Consulting. The local system connects invitation-only Supabase Auth, administrator MFA, bilingual profiles/evidence, teaching jobs and atomic allocation, calendar, private realtime chat, scanned files, wiki/forum, customers/courses and contract/invoice tracking. Individual client accounts, optional enrolled learners, safe course ratings, profile/invoice labels and a server-enforced default 50/50 commission model extend these workflows. CBW building blocks become provenance-linked course templates and referenced teaching offers; secure scanned profile pictures and staff comments connect the same application. The M6 source adds taxonomy administration, private availability, audited job lifecycle and explicit lecturer positions, personal dashboard previews, notification preferences/inbox and a reduced administrative audit reader. It is **not the complete production product yet**. See the [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the entire outstanding scope.
 
 The user's [Universal Master Prompt](docs/UNIVERSAL_MASTER_PROMPT.txt) is preserved verbatim and is the authoritative project specification. On continuation, read [WORKLOG](docs/WORKLOG.md) first, then [AGENTS.md](AGENTS.md) and the plan. The public Website repository is a read-only brand reference; it has not been changed.
 
@@ -33,6 +33,12 @@ Passwörter, MFA, Profiländerungen, Verifizierungen, Sperren, Aufträge, Kalend
 
 Die vollständigen Betriebsdetails, Fehlerbehebung und Persistenzgrenzen stehen in [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md). Ein Docker-Volume ist dauerhafte lokale Speicherung, jedoch kein externes Backup.
 
+## Aktueller Entwicklungs- und Abnahmestand
+
+Die neuen M6-Funktionen verbinden Datenbank, API und Oberfläche. Gezielte Komponenten-, Datenbank-, Berechtigungs- und Nebenläufigkeitsprüfungen sind in den jeweiligen Modulunterlagen dokumentiert. **Die vollständige kombinierte native M6-Abnahme mit tatsächlicher Auth, Storage, Browsern, Persistenz und exaktem CI-Stand steht noch aus.** Geschriebene API-/Browserfälle zählen erst nach ihrem tatsächlichen Lauf als bestanden; frühere M3–M5-Ergebnisse ersetzen diese neue Abnahme nicht. Maßgeblich bleiben [QA_RESULTS](docs/QA_RESULTS.md) und [WORKLOG](docs/WORKLOG.md).
+
+Die Beitragsunterlagen wurden mit [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`) und der unabhängige GitHub-Vorschaustarter mit [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`) gemergt. Diese Lieferungen bestätigen nicht die noch offene M6-Produktabnahme. Der Labelkatalog umfasst 30 verwaltete Labels; die neun ursprünglichen GitHub-Labels bleiben erhalten. Die gesonderte Aktivierung der Review-/Merge-Regeln ist im [GitHub-Betriebsleitfaden](docs/GITHUB_WORKFLOW.md) dokumentiert.
+
 ## Implemented routes
 
 | Route                    | Function                                                                                                                            |
@@ -40,7 +46,7 @@ Die vollständigen Betriebsdetails, Fehlerbehebung und Persistenzgrenzen stehen 
 | `/login`                 | Real email/password sign-in and password recovery; no public signup.                                                                |
 | `/auth/callback`         | Explicit one-time invitation acceptance; PKCE recovery callback.                                                                    |
 | `/auth/password`         | Set a password after an authenticated invite/recovery.                                                                              |
-| `/`                      | Real open jobs, personal assignment counts and upcoming sessions.                                                                   |
+| `/`                      | Personal job suggestions, calendar/chat/notification/file previews, own contract receipts and capability-scoped management follow-ups. |
 | `/jobs`, `/jobs/:id`     | Combined filters, localised sessions/fees, exact-version terms acceptance and atomic allocation.                                    |
 | `/calendar`              | Private appointments, confirmed assignments, published global events and month/week/day/agenda views.                               |
 | `/profile`               | Persisted DE/EN biography, contact/timezone, expertise and private CV/certificate uploads.                                          |
@@ -59,8 +65,15 @@ Die vollständigen Betriebsdetails, Fehlerbehebung und Persistenzgrenzen stehen 
 | `/client`                | Own-organisation course requests/full fee, commissioned spend and assigned lecturers.                                               |
 | `/admin/accounts`        | Versioned account API-backed role assignment, separate invitations, scoped client memberships and linked profile/status management. |
 | `/admin/people`          | Search people, attest declared expertise with UTC expiry, suspend/reactivate accounts with named confirmation.                      |
+| `/topics`               | DE/EN topic/tool/programming-language hierarchy, aliases, authorized related templates and MFA-protected versioned CRUD/archive. |
+| `/availability`         | Own private available/unavailable windows; explicit reduced sharing with MFA management and transaction-safe assignment conflict checks. |
+| `/notifications`        | Own cursor-paged inbox, current-authorized links, read/unread state and explicit due-reminder refresh. |
+| `/settings`             | Own versioned notification preferences; optional categories never disable committed-work receipts. |
+| `/admin/audit`          | MFA/current `audit.read` capability, bounded metadata search/filter/cursor pages and an exact reviewed action allowlist. |
 
-Single-slot jobs are supported in this milestone. Every session in a multi-day job is reserved in one PostgreSQL transaction. Qualification validity, executed-contract prerequisites, job/deadline/terms status and private/confirmed calendar conflicts are checked server-side. Accepted rates/currency/terms are immutable snapshots. Requests are idempotent and competing jobs for the same lecturer are serialised. Admins cannot read private calendar entries merely because they are admins.
+New standalone administrative offers support 1–20 explicitly priced lecturer positions. Each position covers the whole offered block; existing, client-originated and CBW/course-originated offers retain their original single-position budget. Every session is reserved in one PostgreSQL transaction. Qualification validity, executed-contract prerequisites, remaining capacity, job/deadline/terms status and private calendar/unavailable-window/confirmed-assignment conflicts are checked server-side. Accepted rates/currency/terms remain immutable snapshots. Requests are idempotent and competing jobs for the same lecturer are serialised. Future uninvoiced assignments can be cancelled as a whole block, preserving history; an audited explicit reopening permits a replacement to claim. Started or invoiced work requires separate review. The management Kanban cannot drag a lecturer into confirmation. See [JOB_LIFECYCLE](docs/JOB_LIFECYCLE.md).
+
+Admins gain no access to others' private appointments, availability notes, DMs or contract documents through these additions. Shared availability is explicitly opt-in; the audit view excludes private action families and all detail payloads. Contract/session reminders are generated by the user's explicit refresh, without a claimed background email or push service.
 
 German/English and light/dark/system preferences persist locally. Server data are held only in memory; the service worker caches static application assets only. Claims, messages, file operations and all other mutations require online server confirmation. The PWA provides an offline shell and explicit connection state; it does not pretend offline actions succeeded.
 
@@ -83,7 +96,7 @@ Dependencies are exact-pinned with `package-lock.json`. All FullCalendar package
 ./portal github
 ```
 
-Der Starter holt den aktuellen Hauptzweig in eine eigene verwaltete Arbeitskopie und startet ihn unter **http://127.0.0.1:5373**. Die normale Entwicklungsumgebung und ihre Daten bleiben erhalten. Auch die Vorschau behält ihre eigenen Konten, Passwörter, MFA und Dateien bei Stop/Start und zulässigen Vorwärtsupdates.
+Der Starter holt den aktuellen Hauptzweig in eine eigene verwaltete Arbeitskopie und startet ihn unter **http://127.0.0.1:5373** mit eigener Supabase-API `56321`, PostgreSQL `56322` und Mailpit `56324`. Die normale Entwicklung auf `5173`/`543xx` und ihre Daten bleiben erhalten. Auch die Vorschau behält ihre eigenen Konten, Passwörter, MFA und Dateien bei Stop/Start und zulässigen Vorwärtsupdates. Geänderte historische oder prüfbedürftige Migrationen werden vor einer unbeabsichtigten Übernahme angehalten; der Leitfaden erklärt den konkreten lokalen Migrationsplan.
 
 `./portal github test` prüft den neuesten Commit separat, ohne eine laufende Vorschau zu aktualisieren. Weitere Befehle, Voraussetzungen und der konkrete Umgang mit prüfbedürftigen Migrationen stehen im [GitHub-Testleitfaden](docs/GITHUB_LOCAL_PREVIEW.md).
 
@@ -119,7 +132,7 @@ Stoppe verwaltete lokale Dienste mit `./portal stop`; Datenbank und tatsächlich
 
 ## Documentation
 
-[System audit](docs/SYSTEM_AUDIT.md) · [Developer guide](docs/DEVELOPER_GUIDE.md) · [Functional audit](docs/FUNCTIONAL_CODE_AUDIT.md) · [CBW templates](docs/CBW_TEMPLATES.md) · [Profile pictures](docs/PROFILE_AVATARS.md) · [Comments](docs/RESOURCE_COMMENTS.md) · [Product scope](docs/PRODUCT_SPEC.md) · [Architecture](docs/ARCHITECTURE.md) · [ERD](docs/ERD.md) · [Brand](docs/BRAND_DESIGN_SYSTEM.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [Security review](docs/BACKEND_SECURITY_REVIEW.md) · [Test plan](docs/TEST_PLAN.md) · [User guide](docs/USER_GUIDE.md)
+[System audit](docs/SYSTEM_AUDIT.md) · [Developer guide](docs/DEVELOPER_GUIDE.md) · [Functional audit](docs/FUNCTIONAL_CODE_AUDIT.md) · [CBW templates](docs/CBW_TEMPLATES.md) · [Profile pictures](docs/PROFILE_AVATARS.md) · [Comments](docs/RESOURCE_COMMENTS.md) · [Taxonomy](docs/TAXONOMY.md) · [Availability](docs/AVAILABILITY.md) · [Job lifecycle/capacity](docs/JOB_LIFECYCLE.md) · [Dashboard](docs/DASHBOARD.md) · [Notifications](docs/NOTIFICATIONS.md) · [Administration audit](docs/ADMIN_AUDIT.md) · [GitHub preview](docs/GITHUB_LOCAL_PREVIEW.md) · [Product scope](docs/PRODUCT_SPEC.md) · [Architecture](docs/ARCHITECTURE.md) · [ERD](docs/ERD.md) · [Brand](docs/BRAND_DESIGN_SYSTEM.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [Security review](docs/BACKEND_SECURITY_REVIEW.md) · [Test plan](docs/TEST_PLAN.md) · [User guide](docs/USER_GUIDE.md)
 
 ## Mitwirken auf GitHub
 
@@ -129,7 +142,7 @@ Repository license: GNU GPLv3; the authentic Space Grotesk font retains its incl
 
 ## Account and revenue APIs
 
-[Account/revenue specification](docs/ACCOUNTS_REVENUE_SPEC.md) · [Generated platform API reference](docs/API_REFERENCE.md) · [Server audit](docs/ACCOUNTS_PLATFORM_AUDIT.md).
+[Account/revenue specification](docs/ACCOUNTS_REVENUE_SPEC.md) · [Generated platform API reference](docs/API_REFERENCE.md) · [Server audit](docs/ACCOUNTS_PLATFORM_AUDIT.md). The current source reference inventories 125 public RPCs from an actual disposable migration replay; an inventory proves the interface exists, not that every branch has passed native end-to-end acceptance.
 
 New commission offers default to 50% platform / 50% lecturer; only admin/owner can change the percentage. Customer total and platform amounts remain in private tables and never appear in lecturer job/claim/invoice responses. Legacy accepted net fees stay unchanged, and unknown historical customer totals remain unknown. Income/payment status is tracking data; no bank transfer or tax calculation is initiated.
 

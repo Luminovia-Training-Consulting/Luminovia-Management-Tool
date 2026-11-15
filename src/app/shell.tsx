@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
-  Bell,
   MessagesSquare,
   FolderOpen,
   BookOpen,
@@ -28,14 +27,13 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
+import { NotificationsMenu } from "../features/notifications/notifications";
 import { Avatar } from "../features/profile/avatar";
 import { useAuth } from "../features/auth/auth-context";
 import { db } from "../lib/supabase";
 import { permissionsQuery, profileQuery, userRolesQuery } from "../lib/queries";
 import { Button } from "../components/ui/button";
 import { ErrorState, Loading, Notice } from "../components/common";
-import { useOnline } from "../lib/online";
-import { dateTime } from "../lib/dates";
 import { readPreference, writePreference } from "../lib/preferences";
 export function Preferences() {
   const { t, i18n } = useTranslation();
@@ -84,93 +82,6 @@ export function Preferences() {
         <option value="dark">☾ {t("dark")}</option>
       </select>
     </div>
-  );
-}
-function Notifications({ id, zone }: { id: string; zone: string }) {
-  const { t, i18n } = useTranslation();
-  const client = useQueryClient();
-  const online = useOnline();
-  const query = useQuery({
-    queryKey: ["notifications", id],
-    queryFn: async () => {
-      const { data, error } = await db()
-        .from("notifications")
-        .select("*")
-        .eq("user_id", id)
-        .order("created_at", { ascending: false })
-        .limit(20);
-      if (error) throw error;
-      return data as {
-        id: string;
-        kind: string;
-        resource_id: string;
-        read_at: string | null;
-        created_at: string;
-      }[];
-    },
-    refetchInterval: 30000,
-  });
-  const mark = useMutation({
-    mutationFn: async (notificationId: string) => {
-      const { error } = await db()
-        .from("notifications")
-        .update({ read_at: new Date().toISOString() })
-        .eq("id", notificationId)
-        .eq("user_id", id);
-      if (error) throw error;
-    },
-    onSuccess: () =>
-      client.invalidateQueries({ queryKey: ["notifications", id] }),
-  });
-  const count = query.data?.filter((n) => !n.read_at).length ?? 0;
-  return (
-    <details className="notification-menu">
-      <summary aria-label={t("notifications")}>
-        <Bell size={21} />
-        {count > 0 && <span className="notification-dot" />}
-      </summary>
-      <div className="notification-popover">
-        <h2>{t("notifications")}</h2>
-        {query.isPending ? (
-          <Loading />
-        ) : query.isError ? (
-          <ErrorState retry={() => void query.refetch()} />
-        ) : query.data.length === 0 ? (
-          <p>{t("noneNotifications")}</p>
-        ) : (
-          <ul>
-            {query.data.map((n) => (
-              <li key={n.id}>
-                <strong>
-                  {t(
-                    n.kind === "claim_confirmed"
-                      ? "notificationClaim"
-                      : n.kind === "chat_message"
-                        ? "notificationChat"
-                        : n.kind === "forum_reply"
-                          ? "notificationForum"
-                          : "notificationActivity",
-                    { defaultValue: t("notificationClaim") },
-                  )}
-                </strong>
-                <small>{dateTime(n.created_at, i18n.language, zone)}</small>
-                {!n.read_at && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={!online || mark.isPending}
-                    onClick={() => mark.mutate(n.id)}
-                  >
-                    {t("markRead")}
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-        {mark.isError && <Notice kind="error">{t("error")}</Notice>}
-      </div>
-    </details>
   );
 }
 export function Shell() {
@@ -222,6 +133,12 @@ export function Shell() {
       : []),
     ...(staff ? [{ to: "/wiki", icon: BookOpen, label: "wiki" }] : []),
     ...(staff ? [{ to: "/forum", icon: MessageCircle, label: "forum" }] : []),
+    { to: "/notifications", icon: MessageCircle, label: "notifications" },
+    { to: "/topics", icon: BookOpen, label: "topics" },
+    ...(staff
+      ? [{ to: "/availability", icon: CalendarDays, label: "availability" }]
+      : []),
+    { to: "/settings", icon: Settings2, label: "settings" },
     { to: "/profile", icon: UserRound, label: "profile" },
     { to: "/security", icon: ShieldCheck, label: "security" },
     ...(manage ? [{ to: "/admin", icon: Settings2, label: "admin" }] : []),
@@ -326,7 +243,7 @@ export function Shell() {
           </form>
           <div className="topbar-actions">
             {profile.data && (
-              <Notifications
+              <NotificationsMenu
                 id={session!.user.id}
                 zone={profile.data.time_zone}
               />

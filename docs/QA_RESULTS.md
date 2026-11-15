@@ -2,6 +2,18 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## M6 third combined checkpoint — APIs passed, browser corrections required
+
+Run `.local/tests/240bbb48/RESULT.txt` on `4e077b7` passed all18actual business API suites plus real Edge/Mailpit, after the complete source/Edge/SQL/restart checks. Chromium desktop/mobile completed **48 passed /22 failed /zero skipped** in9.6minutes. Shared actual causes were notification accessible-name mismatch and three precise browser-fixture errors (translated region, live-status ambiguity, incorrect focus-event target). Build/PWA was not reached. Corrections plus the independently reproduced repeated-reopening notification regression require a fresh complete run04; this checkpoint is not final acceptance.
+
+## M6 second combined checkpoint — closed-offer test expectation corrected
+
+Run `.local/tests/d1cf07cc/RESULT.txt` on `68493cc` passed every SQL suite and the first ten actual Auth/API suites. The new capacity API assertion then expected `filled` although the established cancellation contract moves the offer to draft; exact `unavailable` was correct. Only the test was corrected and strengthened with unchanged-state assertions. Complete rerun remains pending; browser/build acceptance was not reached.
+
+## M6 first combined checkpoint — failed safely, not final acceptance
+
+Actual frozen-source `./portal test` run `.local/tests/ba7f328e/RESULT.txt` returned exit1 on `e024558`. The generic API permission inventory rejected five default EXECUTE grants on internal taxonomy/availability helpers. Correction and complete rerun are required. No native business API, desktop/mobile or build/PWA acceptance is claimed from this failed run. Source 177 Vitest / 52 runtime / 42 Edge cases, operating guards, real fresh 24-migration startup and Auth/MFA/Storage restart preservation had already passed; full details and owned cleanup are in [WORKLOG](WORKLOG.md).
+
 ## M5 system audit — complete local acceptance passed
 
 `./portal test` passed on **2026-11-15 at 19:02:50.239UTC (16 November 05:02 Australia/Brisbane)** on frozen signed source `7abad7e`, baseline main `b9cdcc8`. Private report `.local/tests/d1953a8c/RESULT.txt`; launcher `.local/system-audit-test-04.exit` and execution session both returned **0**. The later integration of main `11448e4` changes deployment/backup/maintenance source and offline guard discovery, with no incoming application TS/SQL difference. Its targeted results are recorded separately; exact combined/native CI and merge are recorded on [PR #5](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/5).

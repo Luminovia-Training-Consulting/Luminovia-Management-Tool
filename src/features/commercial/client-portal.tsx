@@ -482,8 +482,8 @@ function RequestCard({
       <div className="platform-teacher">
         <UserRound size={18} />
         <span>
-          {request.assigned_lecturer_name
-            ? `${t("assignedTeacher")}: ${request.assigned_lecturer_name}`
+          {request.assigned_lecturers?.length || request.assigned_lecturer_name
+            ? `${t("assignedTeacher")}: ${request.assigned_lecturers?.length ? request.assigned_lecturers.map((person) => person.display_name).join(", ") : request.assigned_lecturer_name}`
             : t("unassigned")}
         </span>
       </div>
@@ -580,7 +580,7 @@ export function ClientPortalPage() {
     requests.data?.filter(
       (row) =>
         (!status || row.status === status) &&
-        `${row.title} ${row.organisation_name} ${row.assigned_lecturer_name ?? ""}`
+        `${row.title} ${row.organisation_name} ${row.assigned_lecturer_name ?? ""} ${row.assigned_lecturers?.map((person) => person.display_name).join(" ") ?? ""}`
           .toLocaleLowerCase(i18n.language)
           .includes(search.toLocaleLowerCase(i18n.language)),
     ) ?? [];

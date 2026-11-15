@@ -19,6 +19,25 @@ import { ProfilePage } from "../features/profile/profile";
 // Job/profile widgets already load this module; another lazy wrapper only adds
 // a loading boundary and cannot produce an independent route chunk.
 import { FilesPage } from "../features/files/files";
+import {
+  NotificationsPage,
+  SettingsPage,
+} from "../features/notifications/notifications";
+const AdminAuditPage = lazy(() =>
+  import("../features/audit/audit").then((module) => ({
+    default: module.AdminAuditPage,
+  })),
+);
+const AvailabilityPage = lazy(() =>
+  import("../features/availability/availability").then((module) => ({
+    default: module.AvailabilityPage,
+  })),
+);
+const TaxonomyPage = lazy(() =>
+  import("../features/taxonomy/taxonomy").then((module) => ({
+    default: module.TaxonomyPage,
+  })),
+);
 const AccountsPage = lazy(() =>
   import("../features/accounts/accounts").then((module) => ({
     default: module.AccountsPage,
@@ -177,12 +196,17 @@ export function App() {
               <Route path="forum" element={<ForumPage />} />
               <Route path="files" element={<FilesPage />} />
               <Route path="profile" element={<ProfilePage />} />
+              <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="topics" element={<TaxonomyPage />} />
+              <Route path="availability" element={<AvailabilityPage />} />
               <Route path="security" element={<Security />} />
               <Route path="auth/password" element={<Password />} />
               <Route path="admin" element={<AdminNavigation />}>
                 <Route index element={<AdminPage />} />
                 <Route path="people" element={<PeopleAdminPage />} />
                 <Route path="accounts" element={<AccountsPage />} />
+                <Route path="audit" element={<AdminAuditPage />} />
               </Route>
             </Route>
           </Route>

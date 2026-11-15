@@ -1,3 +1,5 @@
+import { selectableTopics } from "../taxonomy/selection";
+import "../taxonomy/i18n";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { EnrolmentManager } from "../people/enrolments";
@@ -78,6 +80,7 @@ function TemplateForm({
   const topics = useQuery(topicsQuery);
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<z.infer<typeof templateSchema>>({
@@ -92,6 +95,7 @@ function TemplateForm({
       archived: Boolean(original?.archived_at),
     },
   });
+  const selectedTopicIds = useWatch({ control, name: "topic_ids" }) ?? [];
   const save = useMutation({
     mutationFn: async (values: z.infer<typeof templateSchema>) => {
       requireOnline();
@@ -133,7 +137,7 @@ function TemplateForm({
       ))}
       <fieldset className="operations-topic-field">
         <legend>{t("topics")}</legend>
-        {topics.data.map((topic) => (
+        {selectableTopics(topics.data, selectedTopicIds).map((topic) => (
           <label className="checkbox-label" key={topic.id}>
             <input
               type="checkbox"
@@ -141,6 +145,7 @@ function TemplateForm({
               {...register("topic_ids")}
             />
             {i18n.language === "de" ? topic.label_de : topic.label_en}
+            {topic.archived_at && <> ({t("taxonomy:archived")})</>}
           </label>
         ))}
       </fieldset>
