@@ -143,13 +143,31 @@ try {
     }
   }
   if (existsSync(functions)) find(functions);
-  if (handlerTests.length)
+  // Pinned npm: imports and control-character rejection are intentional here.
+  // Promise-shaped test doubles may be async without awaiting real I/O; keep
+  // require-await active on production Edge source and relax it only in tests.
+  if (entries.length)
+    await step("Edge-Quellcode-Lint", process.execPath, [
+      join(scratch, "node_modules/deno/bin.cjs"),
+      "lint",
+      "--rules-exclude=no-import-prefix,no-control-regex",
+      "--ignore=**/*_test.ts",
+      functions,
+    ]);
+  if (handlerTests.length) {
+    await step("Edge-Test-Lint", process.execPath, [
+      join(scratch, "node_modules/deno/bin.cjs"),
+      "lint",
+      "--rules-exclude=no-import-prefix,no-control-regex,require-await",
+      ...handlerTests,
+    ]);
     await step("Edge-Unit-Tests", process.execPath, [
       join(scratch, "node_modules/deno/bin.cjs"),
       "test",
       "--allow-env",
       ...handlerTests,
     ]);
+  }
   for (const entry of entries)
     await step(
       `Edge-Typprüfung ${basename(join(entry, ".."))}`,
@@ -160,15 +178,31 @@ try {
   // These checks use fixtures and owned proxy containers, never the hosted VM.
   const hosting = join(scratch, "deploy/hostinger");
   if (existsSync(hosting)) {
-    await step("Update- und Wiederherstellungsschutz", "python3", [
-      "-m",
-      "unittest",
-      "discover",
-      "-s",
-      "deploy/hostinger/updates",
-      "-p",
-      "test_*.py",
-    ]);
+    if (existsSync(join(hosting, "backups"))) {
+      // The crypto fixtures otherwise skip successfully when their tools are
+      // absent. Require real age binaries before claiming complete local QA.
+      for (const [label, binary] of [
+        ["age-Verschlüsselungswerkzeug", env.AGE_TEST_BINARY || "age"],
+        ["age-Schlüsselwerkzeug", env.AGE_KEYGEN_TEST_BINARY || "age-keygen"],
+      ]) {
+        const version = await step(label, binary, ["--version"]);
+        if (!/^v?1\.\d+\.\d+$/.test(version.trim()))
+          throw new Error(
+            "The encrypted-backup fixtures require a stable age 1.x tool version; verification stopped before crypto tests.",
+          );
+      }
+    }
+    for (const area of ["updates", "maintenance", "backups"])
+      if (existsSync(join(hosting, area)))
+        await step(`Update-/Wiederherstellungsschutz ${area}`, "python3", [
+          "-m",
+          "unittest",
+          "discover",
+          "-s",
+          `deploy/hostinger/${area}`,
+          "-p",
+          "test_*.py",
+        ]);
     const releaseTests = [
       ...readdirSync(hosting)
         .filter((name) => /^reviewed-.*\.test\.mjs$/.test(name))
@@ -179,6 +213,11 @@ try {
       ...readdirSync(join(hosting, "scanner"))
         .filter((name) => name.endsWith(".test.mjs"))
         .map((name) => `deploy/hostinger/scanner/${name}`),
+      ...(existsSync(join(hosting, "maintenance"))
+        ? readdirSync(join(hosting, "maintenance"))
+            .filter((name) => name.endsWith(".test.mjs"))
+            .map((name) => `deploy/hostinger/maintenance/${name}`)
+        : []),
     ].sort();
     await step(
       "Release-Pakete und geprüfte Migrationspläne",

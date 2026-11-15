@@ -2,6 +2,31 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## M5 system audit — complete local acceptance passed
+
+`./portal test` passed on **2026-11-15 at19:02:50.239UTC (16 November05:02 Australia/Brisbane)** on frozen signed source `7abad7e`, baseline main `b9cdcc8`. Private report `.local/tests/d1953a8c/RESULT.txt`; launcher `.local/system-audit-test-04.exit` and execution session both returned **0**. The later integration of main `e2acef6` changes deployment/backup/maintenance source and offline guard discovery, with no incoming application TS/SQL difference. Its targeted results are recorded separately; exact combined/native CI is required before merge.
+
+| Check | Actual result |
+| --- | --- |
+| Source | Lint, TypeScript, formatting; **117 Vitest cases /34 files** |
+| Connections | **85 modules /25 routes /175 runtime exports**, no unreachable module, unused runtime export, broken relative import/literal route/static asset |
+| Runtime | **33 Node cases**, including real child timeout/abort, stop acknowledgement, kernel QA contention/crash release, busy legacy listener and actual Vite watcher |
+| Edge | **42 tests /3 entry-point typechecks**; updated Office validation plus all invitation/account/avatar/TCP/HTTPS regressions |
+| Schema/SQL | All **18 migrations**, lint/security/performance advisors; **174 real PostgreSQL cases** including six finite-schedule and six API/security inventory cases |
+| APIs | All **12 actual suites** plus Edge/Mailpit invitation; the corrected native HTTP test retains exact `23514` and unchanged old event instants |
+| Restart | Actual password/MFA/profile/private-event/object bytes preserved across stop/start; probe cleanup passed |
+| Browser | **54/54 desktop/mobile Chromium cases**, zero skipped,4.8minutes; 12-second actual idle-file/no-reload budget and blocked-storage DE/EN/dark/retained-draft cases passed |
+| Build/PWA | Build; **47 public precache entries /2415.14KiB**; **2/2 built-PWA** registration/offline/private-cache checks,2.2seconds |
+| Cleanup | Owned services/network/volumes/markers cleaned; normal development data not targeted |
+
+Reproduced/fixed behavior and measurements are in [SYSTEM_AUDIT](SYSTEM_AUDIT.md): unbounded timestamps, excessive settled metadata requests, stuck scan polls, stale/cross-actor attachment metadata, version-history/download consistency, failed read receipt retries, duplicate immutable-avatar bytes, realtime burst invalidations, blocked preference storage, private local drafts across account switches, dishonest timeout/stop success, cross-checkout QA collisions and generated-HTML HMR reloads. Timing/memory and invalidation measurements retain their exact synthetic/component scope; they are not whole-platform hosted-throughput claims.
+
+Earlier failed checkpoints remain in WORKLOG: run01 server acceptance with53/54 browsers and actual startup `ERR_NETWORK_CHANGED`; run02 stopped before services on a legitimately occupied legacy-test port; run03 reached174SQL and failed a nondeterministic new HTTP fixture because the existing conflict trigger ran before the desired CHECK. No ordinary business assertion or retry was weakened. Run04 corrected the fixture and passed fully.
+
+After the incoming daily-maintenance merge, actual targeted guards passed **38 updater +13 maintenance +22 backup Python tests**, no crypto skips, and **57 Node release/review/package/scanner/maintenance tests**. Real local `age`/`age-keygen`1.3.2 tools were made available in the user's bin without changing existing files or copying any recovery identity. Production Edge source lint passed ten files with require-await active; seven fixture files passed with Promise-shaped async doubles allowed. Those checks now join `./portal test`. Native selfhost image/retained-data compatibility remains a separate required CI job; its final result belongs to the exact PR record.
+
+No M5 hosted installation or production publication was performed. The historical bounded M4 review tool remains14→17 and deliberately refuses an18-migration manifest. Actual installed history must be inspected before a separately authorised deployment. Physical mobile/other browsers/manual accessibility, real hosted maximum-load/capacity/SMTP, legal retention and full remaining product scope stay in the plan.
+
 ## M4 combined functional acceptance — complete command passed
 
 `./portal test` passed on **2026-11-15 at 17:31:03.771UTC (16 November 03:31 Australia/Brisbane)** against frozen signed source `4c7c897`, including concurrent main through `1f9a114`. Project `luminovia-portal-test-7c2dd978`; private report `.local/tests/7c2dd978/RESULT.txt`. The wrapper explicitly captured **exit 0** in `.local/m4-test-04.exit`, and the execution session also returned 0. Subsequent local changes are documentation and actual fictional screenshots; exact submitted-source CI and the final merge are recorded on [PR #4](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/4).

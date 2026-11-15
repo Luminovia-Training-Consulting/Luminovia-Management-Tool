@@ -2,6 +2,8 @@
 
 The authorised instance is **https://cms.luminovia.org**, fully self-hosted on the existing **KVM 1**. No paid upgrade is authorised. See [the instance guide](../../docs/HOSTINGER_DEVELOPMENT.md) for architecture, private credentials, limits and actual checks.
 
+- `maintenance/`: daily stable dependency/image candidates, exact signed CI promotion, live-data PostgreSQL preflight and pre-unblock physical recovery.
+- `backups/`: coordinated daily encrypted all-database/data/secret/configuration recovery sets and authenticated desktop restore drills.
 - `selfhost/compose.yml`: private official Supabase services and development Mailpit; active PostgreSQL 17.12 is pinned by immutable digest.
 - `selfhost/postgres-upgrade-provenance.json`: official patch sources, exact pins and successful candidate/live 17.12 acceptance.
 - `compose.yml` / `Caddyfile` / `clamd.conf`: static frontend, HTTPS/API allowlist and private scanner.

@@ -2,15 +2,21 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
-## M5 in progress — system functionality and performance audit
+## M5 local acceptance passed — system functionality and performance audit
 
 Requested after PR #4: inspect the delivered code for concrete defects, disconnected code, unnecessary request/render loops, UI/accessibility gaps and missing regression coverage. Baseline is merged main `b9cdcc8`; this work is isolated on `codex/system-functionality-performance-audit`. Concurrent daily-maintenance/backup work and normal/hosted instances remain outside this audit's mutations.
 
-- [ ] Inspect current frontend, SQL/Edge/API, local runtime and release interfaces, preserving legitimate headless/vendor/migration entry points.
-- [ ] Reproduce and fix concrete failure/performance paths with meaningful request-count, lifecycle, timeout and permission regressions.
-- [ ] Exercise actual desktop/mobile/DE/EN/theme journeys and bounded network activity; inspect current screenshots.
-- [ ] Update developer/test/security documentation with examined scope, measured results and remaining gates.
+- [x] Inspect current frontend, SQL/Edge/API, local runtime and release interfaces, preserving legitimate headless/vendor/migration entry points.
+- [x] Reproduce and fix concrete failure/performance paths with meaningful request-count, lifecycle, timeout and permission regressions.
+- [x] Exercise actual desktop/mobile/DE/EN/theme journeys and bounded network activity; inspect current screenshots.
+- [x] Update developer/test/security documentation with examined scope, measured results and remaining gates.
 - [ ] Run the complete isolated command, sign/push the audit branch, observe exact CI and merge as already authorised.
+
+Local frozen `7abad7e` passed117source/33runtime/42Edge/174SQL/12API/54browser/2PWA plus build/persistence/cleanup. New main `e2acef6` maintenance/backup source is preserved; combined offline guards73Python/57Node and Edge lint passed. Exact combined/native CI and authorised Git merge remain the final delivery gate. [Evidence](QA_RESULTS.md).
+
+## Daily maintenance and complete recovery continuation
+
+The daily-update/full-backup request is active for the authorised KVM1 development setup. Implementation and focused guards exist for independent stable candidates, signed exact-main CI/release promotion, pre-unblock physical rollback, same-major real-data PostgreSQL preflight and encrypted all-database/configuration recovery sets. Self-contained actual3DB/1,817file/native-credential restore and M4 original-data poison/success rehearsal passed;02UTCbackup,03UTCofficialOS and03:30UTCrequired-reboot timers are enabled with freshness/global-lock fencing. Exact final main CI/daily workflow, physical VM recovery drill, live M4/REST16.5 deployment and first activation evidence remain to be recorded. Paid provider daily off-site full-VM backup requires the pending exact-price approval. Full target product and future100GB/15–25-member capacity acceptance remain outstanding below.
 
 ## M4 local acceptance passed — functional audit and reusable CBW content
 

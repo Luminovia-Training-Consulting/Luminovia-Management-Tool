@@ -23,6 +23,8 @@ const SHA = /^[0-9a-f]{40}$/;
 const IMMUTABLE_IMAGE = /^[a-z0-9][a-z0-9._/:+-]*@sha256:[0-9a-f]{64}$/;
 const MAX_FILE_BYTES = 64 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 512 * 1024 * 1024;
+const PG_PROOF = "deploy/hostinger/selfhost/postgres-candidate-proof.json";
+const PG_IMAGE = /^supabase\/postgres:17\.\d+\.\d+\.\d+@sha256:[a-f0-9]{64}$/;
 const SKIP_SOURCE =
   /(?:^|\/)(?:tests?|__tests__|fixtures|node_modules|\.git|\.local|private)(?:\/|$)|(?:_test\.ts|\.test\.[cm]?[jt]sx?)$/;
 const REQUIRED_FILES = [
@@ -37,6 +39,18 @@ const REQUIRED_FILES = [
   "deploy/hostinger/supabase/UPSTREAM_LICENSE",
   "deploy/hostinger/supabase/upstream/volumes/functions/deno.jsonc",
   "deploy/hostinger/updates/updater.py",
+  "deploy/hostinger/updates/luminovia-update.service",
+  "deploy/hostinger/maintenance/pg_preflight.py",
+  "deploy/hostinger/maintenance/atomic_recovery.py",
+  "deploy/hostinger/maintenance/configure-os-daily.sh",
+  "deploy/hostinger/backups/complete_backup.py",
+  "deploy/hostinger/backups/database-summary.sql",
+  "deploy/hostinger/backups/extension-recovery.json",
+];
+const OPTIONAL_FILES = [
+  PG_PROOF,
+  "deploy/hostinger/backups/luminovia-complete-backup.service",
+  "deploy/hostinger/backups/luminovia-complete-backup.timer",
 ];
 
 const hash = (data) => createHash("sha256").update(data).digest("hex");
@@ -130,7 +144,7 @@ function serviceImages(text) {
   return result;
 }
 
-function runtimeMetadata(sourceRoot) {
+function runtimeMetadata(sourceRoot, migrations) {
   const images = [
     ...serviceImages(
       readFileSync(
@@ -181,17 +195,71 @@ function runtimeMetadata(sourceRoot) {
     "roleAndMembershipExact",
     "persistentFilesExact",
   ];
-  if (
-    provenance.schemaVersion !== 1 ||
-    provenance.reviewed !== true ||
-    provenance.targetImage !== database ||
-    provenance.validation?.helperSelfTestPassed !== true ||
-    required.some((field) => provenance[field] !== true)
-  )
+  const manual =
+    provenance.schemaVersion === 1 &&
+    provenance.reviewed === true &&
+    provenance.targetImage === database &&
+    provenance.validation?.helperSelfTestPassed === true &&
+    required.every((field) => provenance[field] === true);
+  let generated = false;
+  if (existsSync(join(sourceRoot, PG_PROOF))) {
+    const proof = JSON.parse(readFileSync(join(sourceRoot, PG_PROOF), "utf8"));
+    const inventory = migrations
+      .map(({ path, sha256 }) => ({ path, sha256 }))
+      .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+    // A completed image-upgrade proof remains valid when later application
+    // migrations append to its byte-exact history. Fresh image promotion still
+    // requires a proof of the complete candidate inventory.
+    const proven = proof.migrationInventory;
+    const unchangedPrefix =
+      Array.isArray(proven) &&
+      proven.length > 0 &&
+      proven.length <= inventory.length &&
+      proven.every(
+        (entry, index) =>
+          entry !== null &&
+          typeof entry === "object" &&
+          JSON.stringify(Object.keys(entry).sort()) ===
+            JSON.stringify(["path", "sha256"]) &&
+          entry.path === inventory[index].path &&
+          entry.sha256 === inventory[index].sha256,
+      );
+    generated =
+      proof.schemaVersion === 1 &&
+      proof.postgresMajor === 17 &&
+      proof.requiresLiveDataPreflight === true &&
+      typeof proof.sourceCommit === "string" &&
+      SHA.test(proof.sourceCommit) &&
+      PG_IMAGE.test(proof.sourceImage ?? "") &&
+      PG_IMAGE.test(proof.targetImage ?? "") &&
+      proof.sourceImage !== proof.targetImage &&
+      proof.targetImage === database &&
+      unchangedPrefix &&
+      proof.migrationInventorySha256 === hash(JSON.stringify(proven)) &&
+      proof.validation?.kind === "isolated-selfhost-upgrade-fixture" &&
+      [
+        "passed",
+        "migrationSourcesExact",
+        "existingCredentialsAndFileExact",
+        "roleAndMembershipExact",
+      ].every((field) => proof.validation[field] === true);
+    if (!generated)
+      throw new Error(
+        "PostgreSQL candidate proof lacks exact completed compatibility evidence.",
+      );
+  }
+  if (!manual && !generated)
     throw new Error(
       "Database image lacks matching completed compatibility evidence.",
     );
-  return { postgresMajor: 17, reviewed: true, images };
+  return {
+    postgresMajor: 17,
+    reviewed: true,
+    images,
+    ...(generated
+      ? { requiresLiveDataPreflight: true, postgresCandidateProof: PG_PROOF }
+      : {}),
+  };
 }
 
 function assertNoCredentials(data, source, publicKey, forbiddenValues) {
@@ -327,12 +395,17 @@ export function createRelease(options) {
     safePath(file);
     collected.set(file, join(sourceRoot, file));
   }
+  for (const file of OPTIONAL_FILES) {
+    if (!existsSync(join(sourceRoot, file))) continue;
+    plainFile(join(sourceRoot, file), sourceRoot);
+    safePath(file);
+    collected.set(file, join(sourceRoot, file));
+  }
   for (const kind of ["invite", "recovery"]) {
     const source = join(sourceRoot, "supabase/templates/" + kind + ".html");
     plainFile(source, sourceRoot);
     collected.set("deploy/hostinger/mail-templates/" + kind + ".html", source);
   }
-  const runtime = runtimeMetadata(sourceRoot);
   const forbiddenValues = options.forbiddenValues ?? [];
   if (
     !Array.isArray(forbiddenValues) ||
@@ -409,6 +482,8 @@ export function createRelease(options) {
       new Set(migrations.map((item) => item.version)).size !== migrations.length
     )
       throw new Error("Invalid migration inventory.");
+    // Verify proof inventories against the exact staged bytes entering the tar.
+    const runtime = runtimeMetadata(stage, migrations);
     const list = join(stage, "release-files.list");
     writeFileSync(list, files.map((file) => file.path).join("\0") + "\0", {
       mode: 0o600,

@@ -15,8 +15,10 @@ UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectHome=true
-ProtectSystem=strict
-ReadWritePaths=/opt/luminovia-portal /run/lock
+# Keep /usr, /boot and /etc read-only. Separate ReadWritePaths bind mounts
+# would make the verified same-device /opt↔Docker-volume recovery rename EXDEV.
+# This trusted controller already has host-root authority through Docker.
+ProtectSystem=full
 RestrictSUIDSGID=true
 StandardOutput=journal
 StandardError=journal

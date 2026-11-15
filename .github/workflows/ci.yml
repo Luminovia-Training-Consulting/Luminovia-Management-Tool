@@ -3,6 +3,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      expected_commit:
+        description: Exact main revision promoted by daily maintenance
+        required: false
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -13,20 +19,46 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - name: Verify explicitly requested revision
+        env:
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+        run: test -z "$EXPECTED_COMMIT" || test "$EXPECTED_COMMIT" = "$GITHUB_SHA"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "26.13.1"
+          node-version-file: ".node-version"
           cache: npm
       - run: npm ci
+      - name: Install official backup encryption test dependency
+        run: sudo apt-get update -qq && sudo apt-get install -y age
       - name: Complete isolated local verification
         run: ./portal test
+  verify-selfhost:
+    name: Actual isolated selfhost image compatibility
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: ".node-version"
+          cache: npm
+      - run: npm ci
+      - name: Archive previous committed runtime for retained-data upgrade check
+        run: |
+          mkdir -m 700 "$RUNNER_TEMP/selfhost-baseline"
+          git archive HEAD^ | tar -x -C "$RUNNER_TEMP/selfhost-baseline"
+      - run: node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run --baseline-root "$RUNNER_TEMP/selfhost-baseline" --baseline-commit "$(git rev-parse HEAD^)" --proof-output "$RUNNER_TEMP/postgres-candidate-proof.json"
   release-cms:
     name: Publish tested CMS update
-    needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [verify, verify-selfhost]
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -37,7 +69,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "26.13.1"
+          node-version-file: ".node-version"
           cache: npm
       - run: npm ci
       - name: Build public frontend and verified release package

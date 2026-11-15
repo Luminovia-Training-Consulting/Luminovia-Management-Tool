@@ -8,7 +8,7 @@ The supported entry point is the executable `./portal` in the repository root. I
 ./portal start
 ```
 
-Requirements: a Linux host (CachyOS locally / Ubuntu CI), Node.js >=22.12 (26 LTS tested), npm, a running Docker Engine and Docker Compose 2.20.2 or later with healthcheck `start_interval` support. Full verification additionally needs Python 3 for the updater fixtures and util-linux `flock` for the shared host/user QA lock. The launcher installs exact lockfile dependencies when required, starts the local services, applies new migrations without resetting tables, initializes fictional fixtures only for an empty first bootstrap, waits for the actual invitation handler and frontend to be ready, and prints the local URLs.
+Requirements: a Linux host (CachyOS locally / Ubuntu CI), Node.js >=22.12 (26 LTS tested), npm, a running Docker Engine and Docker Compose 2.20.2 or later with healthcheck `start_interval` support. Full verification additionally needs Python 3 for the updater fixtures and util-linux `flock` for the shared host/user QA lock. Complete encrypted-backup guards require official `age`/`age-keygen`1.x (tested1.3.2) on PATH, or the explicit `AGE_TEST_BINARY`/`AGE_KEYGEN_TEST_BINARY` fixture paths; missing tools fail before crypto tests can skip. The launcher installs exact lockfile dependencies when required, starts the local services, applies new migrations without resetting tables, initializes fictional fixtures only for an empty first bootstrap, waits for the actual invitation handler and frontend to be ready, and prints the local URLs.
 
 - Portal: <http://127.0.0.1:5173>
 - Supabase API: <http://127.0.0.1:54321>
@@ -90,3 +90,5 @@ The complete isolated `./portal test` invocation is executed after concurrent SQ
 The complete command passed on 2026-11-15 at 13:53:47 UTC, report `.local/tests/999c091e/RESULT.txt`: 42 source, 7 runtime, 11 Edge, 78 SQL, all actual API/Mailpit suites, 40 desktop/mobile workflows, current build and 2 built-PWA checks, followed by successful owned cleanup. Temporary persistence records are removed with checked results. A targeted later mobile-input visual correction and exact GitHub revision status are recorded in WORKLOG/QA_RESULTS.
 
 Development HMR ignores generated QA reports, private `.local` state, coverage and documentation. A real filesystem-watcher regression keeps actual source changes watched while report HTML no longer triggers application reloads.
+
+The inherited actual selfhost image/retained-data compatibility gate remains a separate CI job after the same complete application command. It is required before a development release is published. Offline maintenance/backup guards belong to `./portal test`; separately running a native encrypted three-database restore remains an explicit operation.

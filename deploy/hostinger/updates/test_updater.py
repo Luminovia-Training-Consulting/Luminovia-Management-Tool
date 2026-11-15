@@ -78,6 +78,17 @@ def installed_runtime(root, files):
         destination.write_bytes(contents)
 
 
+def network_candidate(updater, archive, manifest):
+    u.atomic_json(updater.state_file, {"bootstrapApproved": True})
+    updater.candidate = lambda: {"status": "candidate", "commit": COMMIT, "assets": {"cms-release.json": "manifest", "cms-release.tar.gz": "archive"}}
+    def download(url, destination, limit):
+        if url == "manifest":
+            Path(destination).write_text(json.dumps(manifest))
+        else:
+            shutil.copy2(archive, destination)
+    updater.download = download
+
+
 class FakeUpdater(u.Updater):
     def __init__(self, root):
         super().__init__(root)
@@ -87,6 +98,8 @@ class FakeUpdater(u.Updater):
         self.busy = False
         self.collations = []
         self.pending = []
+        self.fail_checkpoint_restore = False
+        self.fail_public_health = False
 
     def os_updates_busy(self):
         return self.busy
@@ -116,8 +129,27 @@ class FakeUpdater(u.Updater):
     def collation_guard(self, manifest):
         self.calls.append("collation-check")
 
-    def health(self, env, expected_index=None):
+    def create_checkpoint(self, tree, *, include_clamav):
+        self.calls.append("checkpoint")
+        self.assert_maintenance = self.maintenance.exists()
+        return {"fixture": True}
+
+    def restore_checkpoint(self, tree, checkpoint, *, public_unblocked, restart_old_runtime, verify_health):
+        self.calls.append("restore-checkpoint")
+        if public_unblocked or not self.maintenance.exists() or self.fail_checkpoint_restore:
+            raise u.UpdateError("checkpoint_restore_failed")
+        restart_old_runtime()
+        verify_health()
+
+    def postgres_preflight(self, tree, manifest):
+        self.calls.append("postgres-preflight")
+        return {"status": "passed"}
+
+    def health(self, env, expected_index=None, *, private_api=False):
         self.calls.append("health")
+        self.calls.append("private-health" if private_api else "public-health")
+        if self.fail_public_health and not private_api:
+            raise u.UpdateError("public_api_health_failed")
         if self.fail_health_once:
             self.fail_health_once = False
             raise u.UpdateError("static_release_health_failed")
@@ -242,6 +274,10 @@ class ReleaseTests(unittest.TestCase):
             self.assertEqual(calls[:2], ["/branches/main", "/releases/tags/" + tag])
             run["event"] = "pull_request"
             self.assertEqual(updater.candidate()["status"], "waiting_for_successful_main_checks")
+            run["event"] = "workflow_dispatch"
+            self.assertEqual(updater.candidate()["status"], "candidate")
+            run["event"] = "repository_dispatch"
+            self.assertEqual(updater.candidate()["status"], "waiting_for_successful_main_checks")
             release["immutable"] = False
             with self.assertRaisesRegex(u.UpdateError, "immutable"):
                 updater.candidate()
@@ -298,6 +334,135 @@ class ReleaseTests(unittest.TestCase):
 
 
 class InstallationTests(unittest.TestCase):
+    def test_registry_pull_outage_backs_off_before_mutation_then_installs_after_deadline(self):
+        for failed_kind in ("backend", "web"):
+            with self.subTest(failed_kind=failed_kind), tempfile.TemporaryDirectory() as directory:
+                archive, manifest, _ = fixture(directory)
+                updater = FakeUpdater(instance(directory))
+                network_candidate(updater, archive, manifest)
+                original_compose = updater.compose
+                unavailable = True
+                def compose(kind, arguments, *, tree=None):
+                    nonlocal unavailable
+                    result = original_compose(kind, arguments, tree=tree)
+                    if unavailable and kind == failed_kind and arguments[0] == "pull":
+                        unavailable = False
+                        raise u.UpdateError("subprocess_docker_failed")
+                    return result
+                updater.compose = compose
+                with patch.object(updater, "prepare_site", wraps=updater.prepare_site) as prepare:
+                    self.assertEqual(updater.once()["status"], "waiting_for_network_retry")
+                    state = json.loads(updater.state_file.read_text())
+                    self.assertIsNone(state.get("failedCommit"))
+                    self.assertFalse(state["manualRecoveryRequired"])
+                    self.assertEqual(state["lastTransientFailureCode"], "runtime_image_pull_failed")
+                    self.assertEqual(state["networkRetryAttempts"], 1)
+                    self.assertNotIn("backup", updater.calls)
+                    self.assertNotIn("checkpoint", updater.calls)
+                    self.assertFalse(any(isinstance(call, tuple) and call[1][0] != "pull" for call in updater.calls))
+                    prepare.assert_not_called()
+                    self.assertFalse(updater.maintenance.exists())
+                    self.assertEqual(os.readlink(updater.www / "current"), "releases/bootstrap")
+                    self.assertFalse((updater.www / "releases" / COMMIT).exists())
+                    self.assertEqual(list((updater.control / "staging").iterdir()), [])
+                    count = len(updater.calls)
+                    self.assertEqual(updater.once()["status"], "waiting_for_network_retry")
+                    self.assertEqual(len(updater.calls), count)
+                    state["nextNetworkRetryAt"] = "2000-01-01T00:00:00+00:00"
+                    u.atomic_json(updater.state_file, state)
+                    self.assertEqual(updater.once()["status"], "updated")
+                    prepare.assert_called_once()
+                state = json.loads(updater.state_file.read_text())
+                self.assertEqual(state["currentCommit"], COMMIT)
+                self.assertEqual(state["networkRetryAttempts"], 0)
+                self.assertIsNone(state["nextNetworkRetryAt"])
+
+    def test_config_failure_and_post_mutation_pull_error_never_become_registry_retries(self):
+        for failure in ("config", "after_mutation"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
+                archive, manifest, _ = fixture(directory)
+                updater = FakeUpdater(instance(directory))
+                network_candidate(updater, archive, manifest)
+                if failure == "config":
+                    def bad_config(tree, candidate):
+                        raise u.UpdateError("subprocess_docker_failed")
+                    updater.verify_runtime = bad_config
+                else:
+                    original_health = updater.health
+                    unavailable = True
+                    def late_failure(env, expected_index=None, *, private_api=False):
+                        nonlocal unavailable
+                        if unavailable:
+                            unavailable = False
+                            raise u.RuntimeImagePullError("runtime_image_pull_failed")
+                        return original_health(env, expected_index, private_api=private_api)
+                    updater.health = late_failure
+                with self.assertRaises(u.UpdateError) as error:
+                    updater.once()
+                self.assertNotIsInstance(error.exception, u.RuntimeImagePullError)
+                state = json.loads(updater.state_file.read_text())
+                self.assertEqual(state["failedCommit"], COMMIT)
+                self.assertFalse(state.get("nextNetworkRetryAt"))
+                self.assertFalse(state.get("networkRetryAttempts"))
+                if failure == "config":
+                    self.assertNotIn("backup", updater.calls)
+                    self.assertFalse(any(isinstance(call, tuple) for call in updater.calls))
+                else:
+                    self.assertIn("restore-checkpoint", updater.calls)
+                    self.assertFalse(state["manualRecoveryRequired"])
+
+    def test_transient_network_failure_backs_off_then_recovers_without_suppressing_commit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            archive, manifest, _ = fixture(directory)
+            updater = FakeUpdater(instance(directory))
+            u.atomic_json(updater.state_file, {"bootstrapApproved": True})
+            updater.candidate = lambda: {"status": "candidate", "commit": COMMIT, "assets": {"cms-release.json": "manifest", "cms-release.tar.gz": "archive"}}
+            downloads = []
+            def unavailable(url, destination, limit):
+                downloads.append(url)
+                raise u.UpdateError("release_download_failed")
+            updater.download = unavailable
+            self.assertEqual(updater.once()["status"], "waiting_for_network_retry")
+            self.assertIsNone(json.loads(updater.state_file.read_text()).get("failedCommit"))
+            self.assertEqual(updater.once()["status"], "waiting_for_network_retry")
+            self.assertEqual(len(downloads), 1)
+            state = json.loads(updater.state_file.read_text())
+            state["nextNetworkRetryAt"] = "2000-01-01T00:00:00+00:00"
+            u.atomic_json(updater.state_file, state)
+            def available(url, destination, limit):
+                if url == "manifest":
+                    Path(destination).write_text(json.dumps(manifest))
+                else:
+                    shutil.copy2(archive, destination)
+            updater.download = available
+            self.assertEqual(updater.once()["status"], "updated")
+            state = json.loads(updater.state_file.read_text())
+            self.assertEqual(state["currentCommit"], COMMIT)
+            self.assertEqual(state["networkRetryAttempts"], 0)
+            self.assertIsNone(state["nextNetworkRetryAt"])
+
+    def test_github_outage_and_corrupt_archive_retry_before_any_backend_mutation(self):
+        for failure in ("github", "corrupt_download"):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
+                _, manifest, _ = fixture(directory)
+                updater = FakeUpdater(instance(directory))
+                u.atomic_json(updater.state_file, {"bootstrapApproved": True})
+                if failure == "github":
+                    def unavailable():
+                        raise u.UpdateError("github_request_failed")
+                    updater.candidate = unavailable
+                else:
+                    updater.candidate = lambda: {"status": "candidate", "commit": COMMIT, "assets": {"cms-release.json": "manifest", "cms-release.tar.gz": "archive"}}
+                    def corrupted(url, destination, limit):
+                        Path(destination).write_text(json.dumps(manifest) if url == "manifest" else "truncated archive")
+                    updater.download = corrupted
+                self.assertEqual(updater.once()["status"], "waiting_for_network_retry")
+                state = json.loads(updater.state_file.read_text())
+                self.assertIsNone(state.get("failedCommit"))
+                self.assertNotIn("backup", updater.calls)
+                self.assertFalse(any(isinstance(call, tuple) for call in updater.calls))
+                self.assertEqual(os.readlink(updater.www / "current"), "releases/bootstrap")
+
     def test_site_and_controller_only_update_has_no_container_or_backup_mutation(self):
         with tempfile.TemporaryDirectory() as directory:
             archive, manifest, files = fixture(directory, extra={u.CONTROLLER: b"# reviewed new controller\n"})
@@ -501,7 +666,7 @@ class InstallationTests(unittest.TestCase):
             self.assertFalse((root / "www/maintenance.enabled").exists())
             self.assertFalse(any("pg_restore" in str(call) for call in updater.calls))
 
-    def test_runtime_failure_retains_maintenance_for_manual_recovery(self):
+    def test_runtime_failure_restores_checkpoint_before_external_writes_resume(self):
         with tempfile.TemporaryDirectory() as directory:
             archive, manifest, _ = fixture(directory)
             root = instance(directory)
@@ -513,9 +678,11 @@ class InstallationTests(unittest.TestCase):
             updater.fail_health_once = True
             with self.assertRaises(u.UpdateError):
                 updater.apply(archive, manifest)
-            self.assertTrue((root / "www/maintenance.enabled").exists())
+            self.assertFalse((root / "www/maintenance.enabled").exists())
             state = json.loads(updater.state_file.read_text())
-            self.assertTrue(state["manualRecoveryRequired"])
+            self.assertFalse(state["manualRecoveryRequired"])
+            self.assertTrue(state["automaticRollbackCompleted"])
+            self.assertIn("restore-checkpoint", updater.calls)
             backup = Path(state["lastBackup"])
             self.assertEqual((backup / "runtime-before/deploy/hostinger/Caddyfile").read_bytes(), b"old recoverable configuration")
             recovery = json.loads((backup / "runtime-original-map.json").read_text())
@@ -524,6 +691,110 @@ class InstallationTests(unittest.TestCase):
             self.assertEqual((backup / "runtime-original-map.json").stat().st_mode & 0o777, 0o600)
             self.assertEqual(list((updater.control / "staging").iterdir()), [])
             self.assertIn("collation-check", updater.calls)
+
+    def test_no_database_rollback_after_external_writes_have_been_unblocked(self):
+        with tempfile.TemporaryDirectory() as directory:
+            archive, manifest, _ = fixture(directory)
+            updater = FakeUpdater(instance(directory))
+            updater.image_change = True
+            updater.fail_public_health = True
+            gate_during_static_rollback = []
+            promote = updater.promote
+            def observed_promotion(target):
+                if target == "releases/bootstrap":
+                    gate_during_static_rollback.append(updater.maintenance.exists())
+                promote(target)
+            updater.promote = observed_promotion
+            with self.assertRaisesRegex(u.UpdateError, "public_api_health_failed"):
+                updater.apply(archive, manifest)
+            self.assertNotIn("restore-checkpoint", updater.calls)
+            self.assertTrue(updater.maintenance.exists())
+            self.assertTrue(json.loads(updater.state_file.read_text())["manualRecoveryRequired"])
+            self.assertEqual(gate_during_static_rollback, [True])
+
+    def test_checkpoint_resume_failure_reconciles_db_mailpit_and_paused_web_before_unblocking(self):
+        with tempfile.TemporaryDirectory() as directory:
+            archive, manifest, files = fixture(directory)
+            root = instance(directory)
+            installed_runtime(root, files)
+            (root / "source/deploy/hostinger/selfhost/compose.yml").write_bytes(b"older backend config")
+            updater = FakeUpdater(root)
+            def failed_checkpoint(tree, *, include_clamav):
+                raise u.UpdateError("recovery_original_services_resume_failed")
+            updater.create_checkpoint = failed_checkpoint
+            with self.assertRaisesRegex(u.UpdateError, "original_services_resume_failed"):
+                updater.apply(archive, manifest)
+            database = ("backend", ("up", "-d", "--wait", "db", "mailpit"))
+            writers = ("backend", ("up", "-d", "--wait", "--force-recreate", "--no-deps", *u.WRITERS))
+            web = ("web", ("up", "-d", "--wait", "--force-recreate", "--no-deps", "web"))
+            self.assertLess(updater.calls.index(database), updater.calls.index(writers))
+            self.assertIn(web, updater.calls)
+            self.assertIn("private-health", updater.calls)
+            self.assertFalse(updater.maintenance.exists())
+            self.assertFalse(json.loads(updater.state_file.read_text())["manualRecoveryRequired"])
+
+    def test_pending_os_reboot_blocks_all_deployment_modes_before_network_or_mutation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            updater = FakeUpdater(instance(directory))
+            marker = Path(directory) / "reboot-pending"
+            marker.touch()
+            with patch.object(u, "REBOOT_PENDING", marker):
+                self.assertEqual(updater.once()["status"], "operating_system_reboot_pending")
+                self.assertEqual(updater.once(retry_failed=True)["status"], "operating_system_reboot_pending")
+            self.assertEqual(updater.calls, [])
+
+    def test_failed_checkpoint_restore_keeps_maintenance_and_recovery_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            archive, manifest, _ = fixture(directory)
+            updater = FakeUpdater(instance(directory))
+            updater.image_change = True
+            updater.fail_health_once = True
+            updater.fail_checkpoint_restore = True
+            with self.assertRaises(u.UpdateError):
+                updater.apply(archive, manifest)
+            self.assertTrue(updater.maintenance.exists())
+            self.assertTrue(json.loads(updater.state_file.read_text())["manualRecoveryRequired"])
+
+    def test_private_health_and_database_gate_precede_public_access(self):
+        with tempfile.TemporaryDirectory() as directory:
+            archive, manifest, _ = fixture(directory)
+            updater = FakeUpdater(instance(directory))
+            updater.image_change = True
+            updater.apply(archive, manifest)
+            self.assertTrue(updater.assert_maintenance)
+            self.assertLess(updater.calls.index("backup"), updater.calls.index("checkpoint"))
+            self.assertLess(updater.calls.index("checkpoint"), updater.calls.index("postgres-preflight"))
+            self.assertLess(updater.calls.index("postgres-preflight"), updater.calls.index("sql"))
+            self.assertLess(updater.calls.index("private-health"), updater.calls.index("public-health"))
+
+    def test_private_health_uses_only_owned_gateway_ip_for_api_and_checks_exact_public_index(self):
+        with tempfile.TemporaryDirectory() as directory:
+            updater = u.Updater(instance(directory))
+            env = {"SUPABASE_PUBLIC_URL": "https://cms.luminovia.org/backend", "SUPABASE_PUBLISHABLE_KEY": KEY, "PORTAL_APP_ORIGIN": "https://cms.luminovia.org"}
+            address = "172.19.0.5"
+            def command(arguments):
+                if arguments[-2] == "{{json .State}}":
+                    return json.dumps({"Running": True, "Paused": False, "OOMKilled": False, "Health": {"Status": "healthy"}}).encode()
+                self.assertEqual(arguments[-1], "luminovia-supabase-api-gw-1")
+                return json.dumps({"luminovia-portal-backend": {"IPAddress": address}}).encode()
+            updater.command = command
+            urls = []
+            def request(value, timeout):
+                urls.append(value.full_url)
+                if value.full_url.endswith("jwks.json"):
+                    response = io.BytesIO(json.dumps({"keys": [{"kty": "EC", "x": "fictional-public-x", "y": "fictional-public-y"}]}).encode())
+                elif value.full_url == env["PORTAL_APP_ORIGIN"]:
+                    response = io.BytesIO(b"exact candidate index")
+                else:
+                    response = io.BytesIO(b"healthy")
+                response.status = 200
+                return response
+            with patch.object(u.urllib.request, "urlopen", side_effect=request):
+                updater.health(env, b"exact candidate index", private_api=True)
+            self.assertEqual(urls, ["http://172.19.0.5:8000/auth/v1/health", "http://172.19.0.5:8000/auth/v1/.well-known/jwks.json", "https://cms.luminovia.org"])
+            address = "8.8.8.8"
+            with self.assertRaisesRegex(u.UpdateError, "unsafe_private_gateway_address"):
+                updater.health(env, private_api=True)
 
     def test_partial_writer_stop_failure_restarts_existing_runtime(self):
         with tempfile.TemporaryDirectory() as directory:
