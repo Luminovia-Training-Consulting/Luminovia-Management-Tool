@@ -32,6 +32,8 @@ Die normale Umgebung enthält ausschließlich fiktive Entwicklungsdaten, sofern 
 | `supabase/functions`                        | Authentifizierte Datei-/Avatar-Gateway und secretsführende Account-/Einladungsoperationen.                                  |
 | `scripts/runtime-*`                         | Überwachung lokaler Prozesse, Besitzprüfung, Umgebungsbereinigung, Datenpersistenz und isolierter Gesamtprüflauf.           |
 
+Der geschützte Router-Outlet ist zusätzlich nach Benutzer-ID gekeyt: Ein direkter Kontowechsel entfernt lokale Shell-/Formzustände. Tokenrefresh derselben Person erhält sie. Der öffentliche Einladungs-/Recovery-Callback gehört nicht zu dieser Remount-Grenze.
+
 Auth-Ereignisse können früher eintreffen als der erste `getSession()`-Aufruf. Der Auth-Provider schützt deshalb die Reihenfolge und leert private Queries vor einem Identitätswechsel. Formulare halten Entwürfe lokal; bestätigte Fachzustände entstehen nach einer erfolgreichen Serverantwort. Fehlgeschlagene oder abgelehnte SDK-Promises müssen einen sichtbaren, wiederholbaren Zustand hinterlassen. Auch Tastatur-Submit, Sprachwechsel und parallel laufende Requests gehören zum jeweiligen Formularvertrag.
 
 ## Datenfluss und Berechtigungen

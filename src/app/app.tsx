@@ -104,7 +104,9 @@ function Protected() {
   if (loading) return <Loading />;
   if (error) return <ErrorState />;
   return isConfigured && session ? (
-    <Outlet />
+    // Auth clears remote queries separately. Remount private local state too
+    // when a different account signs in through another tab/native Auth event.
+    <Outlet key={session.user.id} />
   ) : (
     <Navigate to="/login" replace />
   );

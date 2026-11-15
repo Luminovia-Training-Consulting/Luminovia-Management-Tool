@@ -10,6 +10,7 @@ Die bestehenden 17 Migrationen bleiben unverändert. Headless-APIs, CLI-/Test-Ei
 
 | Bereich | Zuständige Dateien | Neue Prüfung/Korrektur |
 | --- | --- | --- |
+| Kontoidentität | `app/app`, bestehender Auth-Provider | Direkter A→B-Wechsel leert auch den lokalen Shell-Suchentwurf; Tokenrefresh erhält ihn; öffentliche Auth-Callbacks bleiben stabil. |
 | Sprache/Theme | `lib/preferences`, `lib/i18n`, `app/shell` | Gesperrter/voller Browser-Speicher verhindert weder Start noch Änderung; ungültige gespeicherte Themes folgen dem System. |
 | Dateimetadaten | `features/files/api`, `document-attachment` | Actor-Schlüssel, gemeinsame Observer, Abbruchsignal, ehrlicher Ladezustand und ausgeblendete entzogene Daten. |
 | Dateiversionen | `features/files/files` | Ersetzen invalidiert die Versionshistorie; Vorschau/Downloads verwenden die exakt geprüfte Version. |
@@ -21,9 +22,11 @@ Die bestehenden 17 Migrationen bleiben unverändert. Headless-APIs, CLI-/Test-Ei
 
 ## Reproduzierte Fehler und Leistungsbefunde
 
+Ein weiterer Test mit echter App-/Shell-/AuthProvider-Struktur zeigte: Ein direkter nativer Kontowechsel A→B leerte den Query-Cache, erhielt aber den Suchentwurf der Shell. Nur der geschützte Outlet wird jetzt nach Benutzer-ID neu aufgebaut. Drei neue Fälle prüfen außerdem erhaltene Entwürfe bei Tokenrefresh desselben Kontos und einen unverändert gemounteten öffentlichen Einladungs-/Recovery-Callback. Ein Blob-Leck wurde dadurch nicht nachgewiesen.
+
 Die Regressionen wurden zuerst gegen das fehlerhafte Verhalten ausgeführt. Für Browser-Speicher scheiterten vier neue Fälle; zusätzlich bestätigten sieben vorher/nachher ausgeführte Logout-/Preference-Prüfungen den verbundenen UI-Vertrag. Ein fehlerhafter Test verwendete zunächst einen erfundenen Farbschema-Selektor; der Selektor wurde auf die tatsächlich vorhandene Beschriftung korrigiert.
 
-Ein gemeinsames Listen-/Anhangsszenario machte **acht Metadatenabrufe in 20 Sekunden**, obwohl sich nichts änderte. Jetzt benötigt derselbe Komponentenversuch **zwei initiale Abrufe**, einschließlich geteilter Metadaten für doppelte Anhänge. Laufende Scans werden zunächst alle drei Sekunden geprüft. Ein seit zwei Minuten unveränderter Scan sowie abgeschlossene/leere/temporär fehlerhafte Zustände wechseln zu 60 Sekunden; explizit verbotene oder nicht mehr vorhandene Anhangsdaten stoppen den Intervallabruf. Fokus, Reconnect und eigene Mutationen prüfen sofort neu. Externe Umbenennungen können im ununterbrochen ruhenden Tab deshalb bis zu 60 Sekunden später erscheinen. Jeder Byteabruf prüft aktuelle Rechte am Server; diese Sicherheit wurde nicht durch längeres Caching ersetzt.
+Ein gemeinsames Listen-/Anhangsszenario machte **acht Metadatenabrufe in 20 Sekunden**, obwohl sich nichts änderte. Jetzt benötigt derselbe Komponentenversuch **zwei initiale Abrufe**, einschließlich geteilter Metadaten für doppelte Anhänge. Laufende Scans werden zunächst alle drei Sekunden geprüft. Ein seit zwei Minuten unveränderter Scan sowie abgeschlossene/leere/temporär fehlerhafte Zustände wechseln zu 60 Sekunden; explizit verbotene oder nicht mehr vorhandene Anhangsdaten stoppen den Intervallabruf. Fokus und Reconnect behalten die normale Revalidierung veralteter Daten; eigene Mutationen invalidieren sofort. Externe Umbenennungen können im ununterbrochen ruhenden Tab deshalb bis zu 60 Sekunden später erscheinen. Jeder Byteabruf prüft aktuelle Rechte am Server; diese Sicherheit wurde nicht durch längeres Caching ersetzt.
 
 Der Browser-Gesamttest enthält zusätzlich eine echte 12-Sekunden-Beobachtung einer abgeschlossenen Dateiliste über den früheren Zehnsekundentakt hinweg, einschließlich DE/EN-/Theme-Wechsel ohne Dokument-Neuladen. Eine weitere Browserprüfung startet mit einem tatsächlich werfenden `localStorage`-Getter und prüft sichtbare, bedienbare DE/EN-/Dark-Mode-Eingaben und erhaltenen Formularentwurf. Diese Browserfälle sind bis zur Gesamtabnahme geplant, nicht allein durch die Komponentenfälle als bestanden erklärt.
 
