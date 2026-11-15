@@ -26,9 +26,17 @@ export function Password() {
       <form
         className="panel"
         onSubmit={handleSubmit(async (values) => {
-          const { error } = await db().auth.updateUser(values);
-          setFailed(Boolean(error));
-          setMessage(t(error ? "error" : "passwordSaved"));
+          if (!online) return;
+          setMessage("");
+          setFailed(false);
+          try {
+            const { error } = await db().auth.updateUser(values);
+            setFailed(Boolean(error));
+            setMessage(error ? "error" : "passwordSaved");
+          } catch {
+            setFailed(true);
+            setMessage("error");
+          }
         })}
       >
         <Field
@@ -45,7 +53,7 @@ export function Password() {
         </Field>
         <Button disabled={!online || isSubmitting}>{t("setPassword")}</Button>
         {message && (
-          <Notice kind={failed ? "error" : "success"}>{message}</Notice>
+          <Notice kind={failed ? "error" : "success"}>{t(message)}</Notice>
         )}
       </form>
     </div>

@@ -23,7 +23,14 @@ async function history() {
   const files = await readdir(resolve(repository, "supabase/migrations"));
   return Promise.all(
     files
-      .filter((file) => !reviewedMigrations.some((item) => item.file === file))
+      // This helper is a reviewed one-off for the original 11-entry baseline,
+      // not the complete migration history of every future application version.
+      .filter(
+        (file) =>
+          /^\d{14}_[a-z0-9_]+\.sql$/.test(file) &&
+          file.slice(0, 14) <= "20261115142130" &&
+          !reviewedMigrations.some((item) => item.file === file),
+      )
       .map(async (file) => ({
         version: file.slice(0, 14),
         source: await readFile(
@@ -111,6 +118,44 @@ test("already applied exact history is checked without SQL mutation", async () =
   });
   assert.deepEqual(result, { status: "already_applied", migrations: 14 });
   assert.equal(calls, 1);
+});
+
+test("later M4 history does not broaden the original operator-only backfill", async () => {
+  const future = (await readdir(resolve(repository, "supabase/migrations")))
+    .filter(
+      (file) =>
+        /^\d{14}_[a-z0-9_]+\.sql$/.test(file) &&
+        file.slice(0, 14) > "20261115142130",
+    )
+    .sort()[0];
+  assert(
+    future,
+    "This transition test needs the delivered M4 migration history.",
+  );
+  const rows = [
+    ...(await history()),
+    ...(await loadReviewedSources()),
+    {
+      version: future.slice(0, 14),
+      source: await readFile(
+        resolve(repository, "supabase/migrations", future),
+        "utf8",
+      ),
+    },
+  ];
+  let calls = 0;
+  await assert.rejects(
+    applyReviewedBackfill(async () => {
+      calls++;
+      return JSON.stringify(rows);
+    }),
+    /Unexpected migration outside reviewed development baseline/,
+  );
+  assert.equal(
+    calls,
+    1,
+    "A newer schema permits only inspection, never backfill mutation.",
+  );
 });
 
 test("CLI refuses missing development flag before reaching SSH", () => {

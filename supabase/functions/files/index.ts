@@ -1,5 +1,7 @@
 import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {scan} from './clamav.ts';
+import {validateAvatar} from './avatar.ts';
+import {selectedAvatarBytes} from './avatar-download.ts';
 import {downloadDisposition,MAX_FILE_SIZE,safeName,validateFile} from './validation.ts';
 const url=Deno.env.get('SUPABASE_URL')??'';
 const anon=Deno.env.get('SUPABASE_ANON_KEY')??'';
@@ -41,9 +43,11 @@ Deno.serve(async(request:Request)=>{
    const incomingDigest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))).map(b=>b.toString(16).padStart(2,'0')).join('');
    const clientId=form.get('client_id');if(!uuid(clientId))return json(400,{error:'invalid_request'});
    const scope=String(form.get('scope')??'personal');
+   const kind=String(form.get('kind')??(scope==='room'?'chat':'material'));
+   if(kind==='avatar')await validateAvatar(bytes);
    const roomId=form.get('room_id')||null;const jobId=form.get('job_id')||null;const replaceId=form.get('replace_id')||null;const ownerId=form.get('owner_id')||null;
    if((roomId&&!uuid(roomId))||(jobId&&!uuid(jobId))||(replaceId&&!uuid(replaceId))||(ownerId&&!uuid(ownerId)))return json(400,{error:'invalid_request'});
-   const reserved=await user.rpc('reserve_document',{p_name:name,p_mime:mime,p_size:bytes.length,p_scope:scope,p_kind:String(form.get('kind')??(scope==='room'?'chat':'material')),p_room_id:roomId,p_job_id:jobId,p_client_id:clientId,p_replace_id:replaceId,p_owner_id:ownerId});
+   const reserved=await user.rpc('reserve_document',{p_name:name,p_mime:mime,p_size:bytes.length,p_scope:scope,p_kind:kind,p_room_id:roomId,p_job_id:jobId,p_client_id:clientId,p_replace_id:replaceId,p_owner_id:ownerId});
    if(reserved.error)return json(403,{error:'upload_not_allowed'});
    const reservation=reserved.data as {document_id:string;version_id:string;object_path:string;status:string};
    if(!uuid(reservation.document_id)||!uuid(reservation.version_id))return json(503,{error:'upload_failed'});
@@ -63,6 +67,7 @@ Deno.serve(async(request:Request)=>{
    const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',storedBytes))).map(b=>b.toString(16).padStart(2,'0')).join('');
    if(digest!==incomingDigest)return json(409,{error:'idempotency_conflict'});
    await validateFile(storedBytes,name,mime);
+   if(kind==='avatar')await validateAvatar(storedBytes);
    await service.from('document_versions').update({status:'scanning'}).eq('id',reservation.version_id);
    await service.from('documents').update({status:'scanning'}).eq('id',doc.id).eq('current_version_id',reservation.version_id);
    let verdict:{clean:boolean;version:string};
@@ -89,7 +94,33 @@ Deno.serve(async(request:Request)=>{
    await service.storage.from('portal-quarantine').remove([reservation.object_path]);
    return json(200,{document:await visible(doc.id)});
   }
-  const data=JSON.parse(new TextDecoder().decode(await bounded(request,4096))) as {action?:string;id?:string;version_id?:string};
+  const data=JSON.parse(new TextDecoder().decode(await bounded(request,4096))) as {action?:string;id?:string;version_id?:string;user_id?:string};
+  if(data.action==='avatar'){
+   if(!uuid(data.user_id))return json(400,{error:'invalid_request'});
+   const bytes=await selectedAvatarBytes(data.user_id,{
+    selection:async(target)=>{
+     const result=await user.rpc('profile_avatar',{p_user_id:target});
+     if(result.error)throw new Error('access_denied');
+     return result.data;
+    },
+    version:async(id)=>{
+     const result=await service.from('document_versions')
+      .select('id,document_id,object_path,status,mime_type,size_bytes').eq('id',id).maybeSingle();
+     return result.error?null:result.data;
+    },
+    document:async(id)=>{
+     const result=await service.from('documents')
+      .select('owner_id,scope,kind,deleted_at').eq('id',id).maybeSingle();
+     return result.error?null:result.data;
+    },
+    download:async(path)=>{
+     const result=await service.storage.from('portal-clean').download(path);
+     return result.error||!result.data?null:new Uint8Array(await result.data.arrayBuffer());
+    },
+   });
+   return new Response(new Uint8Array(bytes),{headers:{...headers,'Content-Type':'image/png',
+    'Content-Disposition':'inline; filename="avatar.png"','Content-Security-Policy':"default-src 'none'; sandbox"}});
+  }
   if(data.action!=='download'||!uuid(data.id)||(data.version_id&&!uuid(data.version_id)))return json(400,{error:'invalid_request'});
   const doc=await visible(data.id);
   const version=await user.from('document_versions').select('id,object_path,status,original_name,mime_type').eq('id',data.version_id??doc.current_version_id).eq('document_id',doc.id).maybeSingle();
@@ -101,6 +132,6 @@ Deno.serve(async(request:Request)=>{
   return new Response(file.data,{headers:{...headers,'Content-Type':version.data.mime_type,'Content-Disposition':downloadDisposition(version.data.original_name),'Content-Security-Policy':"default-src 'none'; sandbox"}});
  }catch(error){
   const code=error instanceof Error?error.message:'';
-  return json(code==='access_denied'?403:code==='file_size'?413:code==='unsupported_type'?415:400,{error:['access_denied','file_size','unsupported_type'].includes(code)?code:'invalid_request'});
+  return json(code==='access_denied'?403:code==='avatar_unavailable'?404:code==='file_size'?413:code==='unsupported_type'?415:400,{error:['access_denied','avatar_unavailable','file_size','unsupported_type','avatar_image_invalid'].includes(code)?code:'invalid_request'});
  }
 });

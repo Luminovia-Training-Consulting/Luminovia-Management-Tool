@@ -12,6 +12,7 @@ import {
 import { join, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
+import { runtimeSnapshotSource } from "./runtime-snapshot.mjs";
 import {
   root,
   runtimeDir,
@@ -61,24 +62,7 @@ try {
   );
   cpSync(root, scratch, {
     recursive: true,
-    filter: (source) => {
-      if (source === root) return true;
-      const relative = source.slice(root.length + 1);
-      const first = relative.split("/")[0];
-      return (
-        ![
-          ".git",
-          ".local",
-          "node_modules",
-          "dist",
-          "coverage",
-          "test-results",
-          "playwright-report",
-        ].includes(first) &&
-        (!first.startsWith(".env") || first === ".env.example") &&
-        !first.endsWith(".tsbuildinfo")
-      );
-    },
+    filter: (source) => runtimeSnapshotSource(source, root),
   });
   // Independent cache directories; only immutable package contents are shared.
   mkdirSync(join(scratch, "node_modules"));
@@ -151,6 +135,43 @@ try {
       process.execPath,
       [join(scratch, "node_modules/deno/bin.cjs"), "check", entry],
     );
+  // Keep release/update safety in the same local command as application QA.
+  // These checks use fixtures and owned proxy containers, never the hosted VM.
+  const hosting = join(scratch, "deploy/hostinger");
+  if (existsSync(hosting)) {
+    await step("Update- und Wiederherstellungsschutz", "python3", [
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "deploy/hostinger/updates",
+      "-p",
+      "test_*.py",
+    ]);
+    const releaseTests = [
+      ...readdirSync(hosting)
+        .filter((name) => /^reviewed-.*\.test\.mjs$/.test(name))
+        .map((name) => `deploy/hostinger/${name}`),
+      ...readdirSync(join(hosting, "updates"))
+        .filter((name) => name.endsWith(".test.mjs"))
+        .map((name) => `deploy/hostinger/updates/${name}`),
+      ...readdirSync(join(hosting, "scanner"))
+        .filter((name) => name.endsWith(".test.mjs"))
+        .map((name) => `deploy/hostinger/scanner/${name}`),
+    ].sort();
+    await step(
+      "Release-Pakete und geprüfte Migrationspläne",
+      process.execPath,
+      ["--test", ...releaseTests],
+    );
+    await step("Private Selfhost-Gateway-Routen", process.execPath, [
+      "deploy/hostinger/selfhost/validate.mjs",
+      "--gateway-routing",
+    ]);
+    await step("Caddy-Zugriff und private Grenzen", process.execPath, [
+      "scripts/hostinger-caddy-check.mjs",
+    ]);
+  }
   await step("Vollständige isolierte Dienste starten", process.execPath, [
     "scripts/runtime-cli.mjs",
     "start",

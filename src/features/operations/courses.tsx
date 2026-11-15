@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { EnrolmentManager } from "../people/enrolments";
-import { useForm, useFieldArray } from "react-hook-form";
+import { ResourceComments } from "../comments/comments";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -28,10 +29,19 @@ import {
   orgQuery,
   templatesQuery,
   runsQuery,
+  buildingBlocksQuery,
   type Template,
   type CourseRun,
   type Organisation,
+  type BuildingBlock,
 } from "./data";
+import {
+  BuildingBlockCards,
+  BuildingBlockReference,
+  BuildingBlockSources,
+  CourseRunOfferLink,
+} from "./building-blocks";
+import { weekdaySessions } from "./schedule";
 const templateSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().max(12000),
@@ -151,17 +161,25 @@ function RunForm({
   original,
   templates,
   organisations,
+  initialTemplateId,
+  blocks,
   onDone,
 }: {
   original?: CourseRun;
   templates: Template[];
   organisations: Organisation[];
+  initialTemplateId?: string;
+  blocks: BuildingBlock[];
   onDone: () => void;
 }) {
   const { t } = useTranslation("operations");
   const online = useOnline();
   const client = useQueryClient();
   const [timeError, setTimeError] = useState(false);
+  const [planningDate, setPlanningDate] = useState("");
+  const [planningStart, setPlanningStart] = useState("09:00");
+  const [planningEnd, setPlanningEnd] = useState("17:00");
+  const [planningError, setPlanningError] = useState(false);
   const {
     register,
     control,
@@ -170,7 +188,8 @@ function RunForm({
   } = useForm<z.infer<typeof runSchema>>({
     resolver: zodResolver(runSchema),
     defaultValues: {
-      template_id: original?.template_id ?? templates[0]?.id ?? "",
+      template_id:
+        original?.template_id ?? initialTemplateId ?? templates[0]?.id ?? "",
       organisation_id: original?.organisation_id ?? "",
       time_zone: original?.time_zone ?? "Europe/Berlin",
       delivery_type: original?.delivery_type ?? "online",
@@ -191,10 +210,17 @@ function RunForm({
         : [{ starts_at: "", ends_at: "" }],
     },
   });
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control,
     name: "sessions",
   });
+  const selectedTemplateId = useWatch({ control, name: "template_id" });
+  const selectedTemplate = templates.find(
+    (item) => item.id === selectedTemplateId,
+  );
+  const selectedBlock = blocks.find(
+    (item) => item.id === selectedTemplate?.building_block_id,
+  );
   const save = useMutation({
     mutationFn: async (values: z.infer<typeof runSchema>) => {
       requireOnline();
@@ -240,6 +266,67 @@ function RunForm({
             ))}
         </select>
       </Field>
+      {selectedBlock && (
+        <fieldset className="operations-schedule-planner">
+          <legend>{t("blockSchedule", { code: selectedBlock.code })}</legend>
+          <p>
+            {t("scheduleHelp", {
+              days: selectedBlock.duration_days,
+              hours: selectedBlock.duration_hours,
+            })}
+          </p>
+          <Field id="planning-start-date" label={t("firstDate")}>
+            <input
+              id="planning-start-date"
+              type="date"
+              value={planningDate}
+              onChange={(event) => setPlanningDate(event.target.value)}
+            />
+          </Field>
+          <div className="form-row">
+            <Field id="planning-start-time" label={t("dailyStart")}>
+              <input
+                id="planning-start-time"
+                type="time"
+                value={planningStart}
+                onChange={(event) => setPlanningStart(event.target.value)}
+              />
+            </Field>
+            <Field id="planning-end-time" label={t("dailyEnd")}>
+              <input
+                id="planning-end-time"
+                type="time"
+                value={planningEnd}
+                onChange={(event) => setPlanningEnd(event.target.value)}
+              />
+            </Field>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              try {
+                replace(
+                  weekdaySessions(
+                    planningDate,
+                    planningStart,
+                    planningEnd,
+                    selectedBlock.duration_days,
+                  ),
+                );
+                setPlanningError(false);
+              } catch {
+                setPlanningError(true);
+              }
+            }}
+          >
+            {t("generateSchedule", { count: selectedBlock.duration_days })}
+          </Button>
+          {planningError && (
+            <Notice kind="error">{t("scheduleInvalid")}</Notice>
+          )}
+        </fieldset>
+      )}
       <Field id="run-org" label={t("organisation")}>
         <select id="run-org" {...register("organisation_id")}>
           <option value="">{t("none")}</option>
@@ -347,16 +434,29 @@ export function CoursesPage() {
   const runs = useQuery(runsQuery(actor));
   const orgs = useQuery(orgQuery(actor));
   const topics = useQuery(topicsQuery);
+  const blocks = useQuery(buildingBlocksQuery(actor));
   const client = useQueryClient();
   const online = useOnline();
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"runs" | "templates">("runs");
+  const [tab, setTab] = useState<"runs" | "templates" | "blocks">("runs");
+  const [initialTemplateId, setInitialTemplateId] = useState<string>();
   const [templateEdit, setTemplateEdit] = useState<
     Template | null | undefined
   >();
   const [runEdit, setRunEdit] = useState<CourseRun | null | undefined>();
   const [params, setParams] = useSearchParams();
   const detail = runs.data?.find((run) => run.id === params.get("run"));
+  const templateDetail = templates.data?.find(
+    (template) => template.id === params.get("template"),
+  );
+  const blockDetail = blocks.data?.find(
+    (block) => block.id === params.get("block"),
+  );
+  const planRun = (templateId: string) => {
+    setInitialTemplateId(templateId);
+    setParams({});
+    setRunEdit(null);
+  };
   const [copy, setCopy] = useState<{
     type: "template" | "run";
     id: string;
@@ -413,7 +513,8 @@ export function CoursesPage() {
     runs.isPending ||
     orgs.isPending ||
     topics.isPending ||
-    permissions.isPending
+    permissions.isPending ||
+    blocks.isPending
   )
     return <Loading />;
   if (
@@ -421,7 +522,8 @@ export function CoursesPage() {
     runs.isError ||
     orgs.isError ||
     topics.isError ||
-    permissions.isError
+    permissions.isError ||
+    blocks.isError
   )
     return (
       <ErrorState
@@ -431,6 +533,7 @@ export function CoursesPage() {
           void orgs.refetch();
           void topics.refetch();
           void permissions.refetch();
+          void blocks.refetch();
         }}
       />
     );
@@ -453,6 +556,12 @@ export function CoursesPage() {
       .toLowerCase()
       .includes(search.toLowerCase()),
   );
+  const filteredBlocks = blocks.data.filter((block) =>
+    [block.code, block.title, block.syllabus]
+      .join(" ")
+      .toLowerCase()
+      .includes(search.toLowerCase()),
+  );
   return (
     <>
       <PageHeading
@@ -471,7 +580,10 @@ export function CoursesPage() {
               </Button>
               <Button
                 disabled={!online || !templates.data.length}
-                onClick={() => setRunEdit(null)}
+                onClick={() => {
+                  setInitialTemplateId(undefined);
+                  setRunEdit(null);
+                }}
               >
                 <Plus size={17} />
                 {t("newRun")}
@@ -489,22 +601,30 @@ export function CoursesPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </Field>
-        {manage && (
-          <div className="segmented">
-            <Button
-              variant={tab === "runs" ? "default" : "ghost"}
-              onClick={() => setTab("runs")}
-            >
-              {t("runs")}
-            </Button>
+        <div className="segmented" role="group" aria-label={t("catalogue")}>
+          <Button
+            variant={tab === "runs" ? "default" : "ghost"}
+            onClick={() => setTab("runs")}
+          >
+            {t("runs")}
+          </Button>
+          {manage && (
             <Button
               variant={tab === "templates" ? "default" : "ghost"}
               onClick={() => setTab("templates")}
             >
               {t("templates")}
             </Button>
-          </div>
-        )}
+          )}
+          {blocks.data.length > 0 && (
+            <Button
+              variant={tab === "blocks" ? "default" : "ghost"}
+              onClick={() => setTab("blocks")}
+            >
+              {t("buildingBlocks")}
+            </Button>
+          )}
+        </div>
         <p className="muted">{t("publishedHint")}</p>
       </section>
       {message && <Notice>{message}</Notice>}
@@ -513,7 +633,15 @@ export function CoursesPage() {
           {t(visibility.error.message === "course_locked" ? "locked" : "error")}
         </Notice>
       )}
-      {tab === "runs" ? (
+      {tab === "blocks" ? (
+        <BuildingBlockCards
+          blocks={filteredBlocks}
+          canManage={manage}
+          online={online}
+          onView={(id) => setParams({ block: id })}
+          onPlan={planRun}
+        />
+      ) : tab === "runs" ? (
         <div className="operations-courses-grid">
           {filteredRuns.map((run) => {
             const template = findTemplate(run);
@@ -538,6 +666,16 @@ export function CoursesPage() {
                   · {t(run.delivery_type)}
                 </p>
                 <p>{template?.description}</p>
+                {template?.building_block_id && (
+                  <span className="badge">
+                    CBW{" "}
+                    {
+                      blocks.data.find(
+                        (block) => block.id === template.building_block_id,
+                      )?.code
+                    }
+                  </span>
+                )}
                 <div className="tags">
                   {template?.course_template_topics.map((item) => {
                     const topic = topics.data.find(
@@ -564,6 +702,7 @@ export function CoursesPage() {
                 </Button>
                 {manage && (
                   <div className="operations-actions">
+                    {!run.archived_at && <CourseRunOfferLink runId={run.id} />}
                     <Button
                       variant="ghost"
                       disabled={!online}
@@ -636,6 +775,20 @@ export function CoursesPage() {
               <div className="operations-actions">
                 <Button
                   variant="secondary"
+                  onClick={() => setParams({ template: template.id })}
+                >
+                  {t("view")}
+                </Button>
+                {!template.archived_at && (
+                  <Button
+                    disabled={!online}
+                    onClick={() => planRun(template.id)}
+                  >
+                    {t("planRun")}
+                  </Button>
+                )}
+                <Button
+                  variant="secondary"
                   disabled={!online}
                   onClick={() => setTemplateEdit(template)}
                 >
@@ -688,15 +841,77 @@ export function CoursesPage() {
         description={t("publishedHint")}
       >
         <RunForm
-          key={runEdit?.id ?? "new"}
+          key={runEdit?.id ?? `new:${initialTemplateId ?? "default"}`}
           original={runEdit ?? undefined}
           templates={templates.data}
           organisations={orgs.data}
+          initialTemplateId={initialTemplateId}
+          blocks={blocks.data}
           onDone={() => {
             setRunEdit(undefined);
             setMessage(t("saved"));
           }}
         />
+      </Dialog>
+      <Dialog
+        open={Boolean(templateDetail || blockDetail)}
+        onOpenChange={(open) => {
+          if (!open) setParams({}, { replace: true });
+        }}
+        title={
+          templateDetail?.title ??
+          (blockDetail
+            ? `CBW ${blockDetail.code} · ${blockDetail.title}`
+            : t("template"))
+        }
+        description={t("reusableBlock")}
+      >
+        {(templateDetail || blockDetail) && (
+          <>
+            <h3>{t("description")}</h3>
+            <p className="curriculum-syllabus">
+              {templateDetail?.description ?? blockDetail?.description}
+            </p>
+            <h3>{t("syllabus")}</h3>
+            <p className="curriculum-syllabus">
+              {templateDetail?.syllabus ?? blockDetail?.syllabus}
+            </p>
+            {(templateDetail?.prerequisites || blockDetail?.prerequisites) && (
+              <>
+                <h3>{t("prerequisites")}</h3>
+                <p className="curriculum-syllabus">
+                  {templateDetail?.prerequisites ?? blockDetail?.prerequisites}
+                </p>
+              </>
+            )}
+            {templateDetail ? (
+              <BuildingBlockReference
+                buildingBlockId={templateDetail.building_block_id}
+                sourceId={templateDetail.building_block_source_id}
+              />
+            ) : (
+              blockDetail && <BuildingBlockSources block={blockDetail} />
+            )}
+            {manage && (
+              <Button
+                disabled={!online}
+                onClick={() =>
+                  planRun(
+                    templateDetail?.id ?? blockDetail!.default_template_id,
+                  )
+                }
+              >
+                {t("planRun")}
+              </Button>
+            )}
+            <ResourceComments
+              kind="template"
+              resourceId={
+                templateDetail?.id ?? blockDetail!.default_template_id
+              }
+            />
+          </>
+        )}
       </Dialog>
       <Dialog
         open={Boolean(copy)}
@@ -745,6 +960,13 @@ export function CoursesPage() {
       >
         {detail && (
           <>
+            <BuildingBlockReference
+              buildingBlockId={findTemplate(detail)?.building_block_id}
+              sourceId={findTemplate(detail)?.building_block_source_id}
+            />
+            {manage && !detail.archived_at && (
+              <CourseRunOfferLink runId={detail.id} />
+            )}
             <h3>{t("syllabus")}</h3>
             <p className="preserve-text">
               {findTemplate(detail)?.syllabus || "—"}

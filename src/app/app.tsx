@@ -16,6 +16,9 @@ import { Button } from "../components/ui/button";
 import { Dashboard } from "../features/dashboard/dashboard";
 import { Jobs, JobDetail } from "../features/jobs/jobs";
 import { ProfilePage } from "../features/profile/profile";
+// Job/profile widgets already load this module; another lazy wrapper only adds
+// a loading boundary and cannot produce an independent route chunk.
+import { FilesPage } from "../features/files/files";
 const AccountsPage = lazy(() =>
   import("../features/accounts/accounts").then((module) => ({
     default: module.AccountsPage,
@@ -79,11 +82,6 @@ const ForumPage = lazy(() =>
 const ChatPage = lazy(() =>
   import("../features/chat/chat").then((module) => ({
     default: module.ChatPage,
-  })),
-);
-const FilesPage = lazy(() =>
-  import("../features/files/files").then((module) => ({
-    default: module.FilesPage,
   })),
 );
 const CalendarPage = lazy(() =>
