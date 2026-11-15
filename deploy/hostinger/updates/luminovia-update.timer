@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for verified CMS updates every five minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+RandomizedDelaySec=20s
+Unit=luminovia-update.service
+
+[Install]
+WantedBy=timers.target

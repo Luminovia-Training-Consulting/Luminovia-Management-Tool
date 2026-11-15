@@ -8,8 +8,8 @@ const pairs: Record<string, [string, string]> = {
   upload: ["Datei hochladen", "Upload file"],
   choose: ["Datei auswählen", "Choose file"],
   types: [
-    "PDF, Bilder, TXT und Office-Dateien · bis 10 MB. Jede Datei wird vor der Freigabe geprüft.",
-    "PDF, images, TXT and Office files · up to 10 MB. Every file is scanned before release.",
+    "PDF, Bilder, TXT und Office-Dateien · bis 100 MiB. Jede Datei wird vor der Freigabe geprüft.",
+    "PDF, images, TXT and Office files · up to 100 MiB. Every file is scanned before release.",
   ],
   scope: ["Freigabe", "Sharing"],
   personal: ["Nur persönlich", "Personal only"],
@@ -49,8 +49,8 @@ const pairs: Record<string, [string, string]> = {
   ],
   saved: ["Datei gespeichert und geprüft.", "File stored and scanned."],
   file_size: [
-    "Die Datei muss zwischen 1 Byte und 10 MB groß sein.",
-    "Files must be between 1 byte and 10 MB.",
+    "Die Datei muss zwischen 1 Byte und 100 MiB groß sein.",
+    "Files must be between 1 byte and 100 MiB.",
   ],
   unsupported_type: [
     "Dateityp oder Inhalt wird nicht unterstützt.",

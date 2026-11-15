@@ -10,6 +10,7 @@ export default tseslint.config(
       ".local",
       "node_modules",
       "supabase/functions",
+      "deploy/hostinger/supabase/upstream",
       "playwright-report",
       "test-results",
     ],
@@ -17,7 +18,7 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["scripts/**/*.mjs", "*.{js,ts}"],
+    files: ["scripts/**/*.mjs", "deploy/hostinger/**/*.mjs", "*.{js,ts}"],
     languageOptions: { globals: globals.node },
   },
   {

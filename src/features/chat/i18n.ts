@@ -163,8 +163,8 @@ const pairs: Record<string, [string, string]> = {
   yourMessage: ["Du", "You"],
   attachment: ["Datei anhängen", "Attach file"],
   attachmentHint: [
-    "PDF, Bilder, Office oder Text · bis 10 MB",
-    "PDF, images, Office or text · up to 10 MB",
+    "PDF, Bilder, Office oder Text · bis 100 MiB",
+    "PDF, images, Office or text · up to 100 MiB",
   ],
   attachmentScanning: [
     "Datei wird hochgeladen und geprüft … {{progress}} %",

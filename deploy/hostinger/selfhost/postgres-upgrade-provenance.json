@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "reviewed": true,
+  "sourceImage": "supabase/postgres:17.6.1.136@sha256:f371b5f3f2ac0a05703f33d6e6134515fb2498cab708fb948a0aeb7481467c00",
+  "targetImage": "supabase/postgres:17.12.0.000@sha256:8630950b489ecc70563300180287a98c192a4a48f5ae00b4febdaeea1abe85de",
+  "currentPin": "supabase/postgres:17.12.0.000@sha256:8630950b489ecc70563300180287a98c192a4a48f5ae00b4febdaeea1abe85de",
+  "sourcePostgresVersion": "17.6",
+  "targetPostgresVersion": "17.12",
+  "reviewedAt": "2026-11-15T15:24:08.089Z",
+  "scope": "Controlled same-major PostgreSQL patch for the development/setup VPS. The original self-hosted/v0.8.4 vendor snapshot and its provenance remain unchanged.",
+  "officialSources": [
+    {
+      "url": "https://github.com/supabase/postgres/releases/tag/17.12.0.000",
+      "kind": "official stable release",
+      "publishedAt": "2026-11-13"
+    },
+    {
+      "url": "https://hub.docker.com/v2/repositories/supabase/postgres/tags/17.12.0.000",
+      "kind": "official image tag metadata",
+      "digest": "sha256:8630950b489ecc70563300180287a98c192a4a48f5ae00b4febdaeea1abe85de",
+      "lastUpdated": "2026-11-13T21:11:17.161927Z"
+    },
+    {
+      "url": "https://supabase.com/changelog/postgres-15-19-17-11-breaking-changes",
+      "kind": "security and compatibility advisory",
+      "note": "Supabase documents the 17.6 to 17.11 security update and required ltree/float GiST, legacy PGP and estimator checks. The selected stable17.12 image is a later same-major patch."
+    },
+    {
+      "url": "https://supabase.com/docs/guides/self-hosting/updating",
+      "kind": "self-hosted update procedure",
+      "note": "Keep reviewed versioned images, back up data independently, and check breaking changes; do not use floating tags or unattended arbitrary engine upgrades."
+    },
+    {
+      "url": "https://www.postgresql.org/docs/17/sql-altercollation.html",
+      "kind": "collation compatibility requirements",
+      "note": "Compare actual collation versions after an in-place engine update. Rebuild dependent indexes before refreshing a changed version."
+    }
+  ],
+  "compatibilityAudit": {
+    "actualSourceEngine": "PostgreSQL17.6",
+    "sourceSecurityBackportEvidence": "No evidence of backported17.11 fixes was established; the measured source engine reports17.6 and the immutable source image predates the advisory.",
+    "ltreeExtensionInstalled": false,
+    "affectedLtreeIndexes": 0,
+    "affectedFloat4Float8GistIndexes": 0,
+    "customEstimatorOperatorsFound": 0,
+    "applicationLegacyPgpUsageFound": false,
+    "sourceDatabaseCollation": {
+      "provider": "i",
+      "locale": "en-US",
+      "storedVersion": "153.121",
+      "actualVersion": "153.121"
+    },
+    "candidateDatabaseCollation": {
+      "provider": "i",
+      "locale": "en-US",
+      "storedVersion": "153.121",
+      "actualVersion": "153.121"
+    },
+    "collationMismatchObserved": false,
+    "imageBootstrapCompatibility": "The old image has gosu; the new image has su-exec. The isolated recovery helper explicitly supports either reviewed executable. The runtime uses the image-owned entrypoint.",
+    "afterLiveUpgradeRequired": [
+      "Verify exact running image and server version.",
+      "Check stored and actual collation versions in every database. If any differ, rebuild affected database indexes before refreshing that database collation version. Never refresh before rebuilding.",
+      "Run actual Auth/PostgREST/Storage/Realtime/Edge/frontend acceptance and confirm existing account and file persistence."
+    ]
+  },
+  "candidateRestorePassed": true,
+  "migrationSourcesExact": true,
+  "roleAndMembershipExact": true,
+  "persistentFilesExact": true,
+  "validation": {
+    "checkedAt": "2026-11-15T15:24:08.089Z",
+    "method": "isolated local reviewed-image PostgreSQL restore; no network/host ports; every Storage file verified byte-for-byte against source SHA256 inventory",
+    "source": "Latest complete private offsite development VPS backup; archive checksums and safe Storage extraction verified.",
+    "migrations": 11,
+    "storageFiles": 1,
+    "storageBytes": 114,
+    "rlsPermissionsAndCountSummaryExact": true,
+    "helperSelfTestPassed": true,
+    "privateArtifactsExcludedFromGit": true,
+    "limitations": [
+      "No Auth/Storage HTTP services or frontend were started against this restored copy.",
+      "Logical restore rebuilds indexes; an in-place image upgrade must separately reindex all affected databases and refresh collation versions when ICU changes.",
+      "Runtime secrets, role passwords and Vault encryption keys require their separate secure recovery source.",
+      "This development restore does not establish production recovery time or future 100GB restore capacity."
+    ]
+  },
+  "liveUpgradeApplied": true,
+  "automaticUpdatePolicy": "Only immutable engine pins with this reviewed provenance and a successful candidate restore may enter a release. PostgreSQL major upgrades, arbitrary runtime/configuration changes, failed checks or changed collations stop for a separately reviewed upgrade.",
+  "liveValidation": {
+    "checkedAt": "2026-11-15T15:39:29.514Z",
+    "target": "https://cms.luminovia.org",
+    "runningImage": "supabase/postgres:17.12.0.000@sha256:8630950b489ecc70563300180287a98c192a4a48f5ae00b4febdaeea1abe85de",
+    "actualPostgresVersion": "17.12",
+    "backendServicesRunning": 8,
+    "backendServicesHealthy": 8,
+    "authUsersPreserved": 3,
+    "migrationsPreserved": 11,
+    "privateCleanFilesPreserved": 1,
+    "connectableDatabaseCollations": [
+      {
+        "database": "_supabase",
+        "storedVersion": "153.121",
+        "actualVersion": "153.121"
+      },
+      {
+        "database": "postgres",
+        "storedVersion": "153.121",
+        "actualVersion": "153.121"
+      },
+      {
+        "database": "template1",
+        "storedVersion": "153.121",
+        "actualVersion": "153.121"
+      }
+    ],
+    "template0ConnectionsEnabled": false,
+    "explicitCollationMismatches": 0,
+    "collationReindexRequired": false,
+    "existingPasswordAndPrivateFilePersistencePassed": true,
+    "privateFileAdministratorDenialPassed": true,
+    "httpSuitesPassed": 8,
+    "realOnlineClaimAttempts": 50,
+    "claimWinners": 1,
+    "committedAssignmentSessions": 5,
+    "idempotentClaimRetryPassed": true,
+    "actualPrivateMailpitInvitationAndPkceRecoveryPassed": true,
+    "actualCleanAndEicarScanPassed": true,
+    "actualWssDeliveryAndMembershipRevocationPassed": true,
+    "temporaryFixturesAndSessionsCleaned": true,
+    "ownedSshLoopbackForwardsCleaned": true,
+    "existingPasswordsMfaAndProfilesNotReset": true,
+    "limitations": [
+      "Development/setup acceptance only; no future100GB capacity or production availability acceptance.",
+      "Auth invitation and recovery delivery were captured by private Mailpit; no external SMTP delivery was configured or tested."
+    ]
+  }
+}

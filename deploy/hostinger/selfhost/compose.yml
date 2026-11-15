@@ -1,0 +1,432 @@
+# DEVELOPMENT/SETUP ONLY on purchased KVM1: no production or100GB capacity acceptance.
+# Derived from official self-hosted/v0.8.4; digest pinned. Only Mailpit8025 binds host LOOPBACK.
+name: luminovia-supabase
+services:
+  db:
+    image: supabase/postgres:17.12.0.000@sha256:8630950b489ecc70563300180287a98c192a4a48f5ae00b4febdaeea1abe85de
+    restart: unless-stopped
+    volumes:
+    - ../supabase/upstream/volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
+    - ../supabase/upstream/volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:Z
+    - ../supabase/upstream/volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
+    - ../supabase/upstream/volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
+    - ${PORTAL_DATA_DIR:?Set PORTAL_DATA_DIR}/postgres:/var/lib/postgresql/data
+    - ../supabase/upstream/volumes/db/_supabase.sql:/docker-entrypoint-initdb.d/migrations/97-_supabase.sql:Z
+    - ../supabase/upstream/volumes/db/logs.sql:/docker-entrypoint-initdb.d/migrations/99-logs.sql:Z
+    - ../supabase/upstream/volumes/db/pooler.sql:/docker-entrypoint-initdb.d/migrations/99-pooler.sql:Z
+    - db-config:/etc/postgresql-custom
+    healthcheck:
+      test:
+      - CMD
+      - pg_isready
+      - -U
+      - postgres
+      - -h
+      - localhost
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    environment:
+      POSTGRES_HOST: /var/run/postgresql
+      PGPORT: ${POSTGRES_PORT}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      POSTGRES_DB: ${POSTGRES_DB}
+      JWT_EXP: ${JWT_EXPIRY}
+    command:
+    - postgres
+    - -c
+    - config_file=/etc/postgresql/postgresql.conf
+    - -c
+    - log_min_messages=fatal
+    - -c
+    - shared_buffers=128MB
+    - -c
+    - work_mem=4MB
+    - -c
+    - maintenance_work_mem=64MB
+    - -c
+    - max_connections=60
+    networks:
+    - backend
+    mem_limit: 384m
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '2'
+    security_opt:
+    - no-new-privileges:true
+  auth:
+    image: supabase/gotrue:v2.197.0@sha256:1736a63078f5922b198c4cbe50f80ab9a2d3b54fe8b7b6cfb2e9dc5dbbc12c6b
+    restart: unless-stopped
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - --no-verbose
+      - --tries=1
+      - --spider
+      - http://localhost:9999/health
+      timeout: 5s
+      interval: 5s
+      retries: 12
+      start_period: 60s
+    depends_on:
+      db:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      LOG_LEVEL: warn
+      API_EXTERNAL_URL: ${API_EXTERNAL_URL}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      GOTRUE_SITE_URL: ${SITE_URL}
+      GOTRUE_URI_ALLOW_LIST: ${ADDITIONAL_REDIRECT_URLS}
+      GOTRUE_DISABLE_SIGNUP: 'true'
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: ${JWT_EXPIRY}
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_JWT_ISSUER: ${API_EXTERNAL_URL}
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: 'true'
+      GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: 'false'
+      GOTRUE_MAILER_AUTOCONFIRM: 'false'
+      GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL}
+      GOTRUE_SMTP_HOST: ${SMTP_HOST}
+      GOTRUE_SMTP_PORT: ${SMTP_PORT}
+      GOTRUE_SMTP_USER: ${SMTP_USER}
+      GOTRUE_SMTP_PASS: ${SMTP_PASS}
+      GOTRUE_SMTP_SENDER_NAME: ${SMTP_SENDER_NAME}
+      GOTRUE_MAILER_URLPATHS_INVITE: ${MAILER_URLPATHS_INVITE}
+      GOTRUE_MAILER_URLPATHS_CONFIRMATION: ${MAILER_URLPATHS_CONFIRMATION}
+      GOTRUE_MAILER_URLPATHS_RECOVERY: ${MAILER_URLPATHS_RECOVERY}
+      GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: ${MAILER_URLPATHS_EMAIL_CHANGE}
+      GOTRUE_EXTERNAL_PHONE_ENABLED: 'false'
+      GOTRUE_SMS_AUTOCONFIRM: 'false'
+      GOTRUE_MFA_TOTP_ENROLL_ENABLED: 'true'
+      GOTRUE_MFA_TOTP_VERIFY_ENABLED: 'true'
+      GOTRUE_MFA_PHONE_ENROLL_ENABLED: 'false'
+      GOTRUE_MFA_PHONE_VERIFY_ENABLED: 'false'
+      GOTRUE_MFA_MAX_ENROLLED_FACTORS: '10'
+      GOTRUE_JWT_KEYS: ${JWT_KEYS:?Set JWT_KEYS}
+      GOTRUE_DB_MAX_POOL_SIZE: '5'
+      GOTRUE_DB_MAX_IDLE_POOL_SIZE: '2'
+      GOTRUE_MAILER_SECURE_EMAIL_CHANGE_ENABLED: 'true'
+      GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED: 'true'
+      GOTRUE_PASSWORD_MIN_LENGTH: '14'
+      GOTRUE_RATE_LIMIT_EMAIL_SENT: '20'
+      GOTRUE_SMTP_MAX_FREQUENCY: 60s
+      GOTRUE_MAILER_TEMPLATES_INVITE: ${PORTAL_MAIL_TEMPLATE_ORIGIN:?Set PORTAL_MAIL_TEMPLATE_ORIGIN}/mail-templates/invite.html
+      GOTRUE_MAILER_TEMPLATES_RECOVERY: ${PORTAL_MAIL_TEMPLATE_ORIGIN:?Set PORTAL_MAIL_TEMPLATE_ORIGIN}/mail-templates/recovery.html
+      GOTRUE_MAILER_SUBJECTS_INVITE: 'Luminovia Portal: Deine Einladung / Your invitation'
+      GOTRUE_MAILER_SUBJECTS_RECOVERY: "Luminovia Portal: Passwort zur\xFCcksetzen / Reset password"
+    networks:
+    - backend
+    mem_limit: 128m
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '2'
+    security_opt:
+    - no-new-privileges:true
+  rest:
+    image: postgrest/postgrest:v14.18@sha256:c7cd7e265a85b05248abf53f4473fcec7e327c282d0bd0cf60f1551996d09fcf
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD
+      - postgrest
+      - --ready
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
+      PGRST_DB_MAX_ROWS: ${PGRST_DB_MAX_ROWS:-1000}
+      PGRST_DB_EXTRA_SEARCH_PATH: ${PGRST_DB_EXTRA_SEARCH_PATH:-public}
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_ADMIN_SERVER_PORT: 3001
+      PGRST_ADMIN_SERVER_HOST: localhost
+      PGRST_JWT_SECRET: ${JWT_JWKS:-${JWT_SECRET}}
+      PGRST_DB_USE_LEGACY_GUCS: 'false'
+      PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY}
+      PGRST_DB_POOL: '5'
+      PGRST_DB_POOL_ACQUISITION_TIMEOUT: '30'
+    command:
+    - postgrest
+    networks:
+    - backend
+    mem_limit: 128m
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '2'
+    security_opt:
+    - no-new-privileges:true
+  realtime:
+    image: supabase/realtime:v2.148.3@sha256:25cf375b9b7cb71d90cdf6e04a1a30996e39a8df866ebd0525bba1d959edc8d6
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - 'curl -sSfL --head -o /dev/null -H "Authorization: Bearer ${ANON_KEY}" http://localhost:4000/api/tenants/realtime-dev/health'
+      timeout: 5s
+      interval: 30s
+      retries: 12
+      start_period: 60s
+    environment:
+      PORT: 4000
+      DB_HOST: ${POSTGRES_HOST}
+      DB_PORT: ${POSTGRES_PORT}
+      DB_USER: supabase_admin
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+      DB_AFTER_CONNECT_QUERY: SET search_path TO _realtime
+      DB_ENC_KEY: ${REALTIME_DB_ENC_KEY:-supabaserealtime}
+      API_JWT_SECRET: ${JWT_SECRET}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      METRICS_JWT_SECRET: ${JWT_SECRET}
+      ERL_AFLAGS: -proto_dist inet_tcp
+      DNS_NODES: ''''''
+      RLIMIT_NOFILE: '10000'
+      APP_NAME: realtime
+      SEED_SELF_HOST: 'true'
+      RUN_JANITOR: 'true'
+      DISABLE_HEALTHCHECK_LOGGING: 'true'
+      API_JWT_JWKS: ${JWT_JWKS:?Set JWT_JWKS}
+      DB_POOL_SIZE: '2'
+      DB_REPLICA_POOL_SIZE: '2'
+      ERL_FLAGS: +S 1:1
+    networks:
+      backend:
+        aliases:
+        - realtime-dev.supabase-realtime
+    mem_limit: 256m
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '2'
+    security_opt:
+    - no-new-privileges:true
+    hostname: realtime-dev.supabase-realtime
+  storage:
+    image: supabase/storage-api:v1.89.12@sha256:8526956cb462e9f7d392e9848ec77133b2769982ed614e9753cc687e8e4339a6
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      rest:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - --no-verbose
+      - --tries=1
+      - --spider
+      - http://storage:5000/status
+      timeout: 5s
+      interval: 5s
+      retries: 12
+      start_period: 60s
+    environment:
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      POSTGREST_URL: http://rest:3000
+      AUTH_JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      STORAGE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
+      REQUEST_ALLOW_X_FORWARDED_PATH: 'true'
+      FILE_SIZE_LIMIT: '104857600'
+      STORAGE_BACKEND: file
+      GLOBAL_S3_BUCKET: ${GLOBAL_S3_BUCKET}
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: ${STORAGE_TENANT_ID}
+      REGION: ${REGION}
+      ENABLE_IMAGE_TRANSFORMATION: 'false'
+      S3_PROTOCOL_ACCESS_KEY_ID: ${S3_PROTOCOL_ACCESS_KEY_ID}
+      S3_PROTOCOL_ACCESS_KEY_SECRET: ${S3_PROTOCOL_ACCESS_KEY_SECRET}
+      JWT_JWKS: ${JWT_JWKS:?Set JWT_JWKS}
+      DATABASE_MAX_CONNECTIONS: '5'
+    volumes:
+    - ${PORTAL_DATA_DIR:?Set PORTAL_DATA_DIR}/storage:/var/lib/storage
+    networks:
+    - backend
+    mem_limit: 256m
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '2'
+    security_opt:
+    - no-new-privileges:true
+  functions:
+    image: supabase/edge-runtime:v1.77.9@sha256:6b850a2ccf0bf50ecac9accff8098095cd191c389c2a53c59b857aa0f53a8343
+    mem_limit: ${PORTAL_FUNCTIONS_MEMORY_LIMIT:-1280m}
+    restart: unless-stopped
+    volumes:
+    - ./runtime:/home/deno/functions/main:ro
+    - ../supabase/upstream/volumes/functions/deno.jsonc:/home/deno/functions/deno.jsonc:ro
+    - ../../../supabase/functions/files:/home/deno/functions/files:ro
+    - ../../../supabase/functions/invite-lecturer:/home/deno/functions/invite-lecturer:ro
+    - ../../../supabase/functions/accounts:/home/deno/functions/accounts:ro
+    - deno-cache:/root/.cache/deno
+    depends_on:
+      api-gw:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - timeout 1 bash -c '</dev/tcp/127.0.0.1/9000'
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      SUPABASE_URL: http://api-gw:8000
+      SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      SUPABASE_PUBLISHABLE_KEYS: '{"default":"${SUPABASE_PUBLISHABLE_KEY:-}"}'
+      SUPABASE_SECRET_KEYS: '{"default":"${SUPABASE_SECRET_KEY:-}"}'
+      SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+      VERIFY_JWT: 'true'
+      SUPABASE_JWKS: ${JWT_JWKS:?Set JWT_JWKS}
+      PORTAL_APP_ORIGIN: ${PORTAL_APP_ORIGIN:?Set PORTAL_APP_ORIGIN}
+      PORTAL_ALLOWED_ORIGINS: ${PORTAL_APP_ORIGIN:?Set PORTAL_APP_ORIGIN}
+      PORTAL_INVITES_ENABLED: ${PORTAL_INVITES_ENABLED:-false}
+      PORTAL_CLAMAV_HOST: clamav
+      PORTAL_CLAMAV_PORT: '3310'
+      DENO_TLS_CA_STORE: mozilla,system
+      EDGE_RUNTIME_WORKER_POOL_SIZE: '1'
+    command:
+    - start
+    - --user-worker-request-idle-timeout
+    - '150000'
+    - --main-service
+    - /home/deno/functions/main
+    networks:
+    - backend
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '2'
+    security_opt:
+    - no-new-privileges:true
+  api-gw:
+    image: envoyproxy/envoy:v1.39.6@sha256:1fde8efee875e4e4f6a39a90fe49d9338e1caacce5762034ef9fb4bbb9ad6aed
+    restart: unless-stopped
+    networks:
+      backend:
+        aliases:
+        - api-gw
+        - envoy
+        - kong
+        - api
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - timeout 1 bash -c '</dev/tcp/127.0.0.1/8000'
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    depends_on:
+      auth:
+        condition: service_healthy
+      rest:
+        condition: service_healthy
+      storage:
+        condition: service_healthy
+    volumes:
+    - ../supabase/upstream/volumes/api/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+    - ./envoy/cds.yaml:/etc/envoy/cds.yaml:ro
+    - ./envoy/lds.template.yaml:/etc/envoy/lds.template.yaml:ro
+    - ../supabase/upstream/volumes/api/envoy/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+    environment:
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
+      ANON_KEY_ASYMMETRIC: ${ANON_KEY_ASYMMETRIC:-}
+      SERVICE_ROLE_KEY_ASYMMETRIC: ${SERVICE_ROLE_KEY_ASYMMETRIC:-}
+      SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
+      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME}
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
+    entrypoint:
+    - /bin/sh
+    - /docker-entrypoint.sh
+    mem_limit: 128m
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '2'
+    security_opt:
+    - no-new-privileges:true
+  mailpit:
+    image: public.ecr.aws/supabase/mailpit:v1.31.3@sha256:ed9b00c609e77e99c79b93f1178255ebc271868920f2c69a8d166bd5634ed10d
+    restart: unless-stopped
+    networks:
+    - backend
+    environment:
+      MP_DATABASE: /data/mailpit.db
+      MP_MAX_MESSAGES: '100'
+      MP_SMTP_AUTH_ACCEPT_ANY: 'true'
+      MP_SMTP_AUTH_ALLOW_INSECURE: 'true'
+    volumes:
+    - ${PORTAL_DATA_DIR:?Set PORTAL_DATA_DIR}/mailpit:/data
+    ports:
+    - 127.0.0.1:8025:8025
+    healthcheck:
+      test:
+      - CMD
+      - /mailpit
+      - readyz
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    mem_limit: 64m
+    pids_limit: 64
+    security_opt:
+    - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '2'
+networks:
+  backend:
+    external: true
+    name: ${PORTAL_BACKEND_NETWORK:-luminovia-portal-backend}
+volumes:
+  db-config: null
+  deno-cache: null

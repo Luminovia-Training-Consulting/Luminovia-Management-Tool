@@ -21,5 +21,55 @@ jobs:
           node-version: "26.13.1"
           cache: npm
       - run: npm ci
+      - name: Automatic update and release guards
+        run: |
+          python3 -m unittest discover -s deploy/hostinger/updates -p 'test_*.py'
+          node --test deploy/hostinger/updates/package.test.mjs
+          node --test deploy/hostinger/reviewed-m3-backfill.test.mjs
+          node deploy/hostinger/selfhost/validate.mjs --gateway-routing
+          node scripts/hostinger-caddy-check.mjs
       - name: Complete isolated local verification
         run: ./portal test
+  release-cms:
+    name: Publish tested CMS update
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26.13.1"
+          cache: npm
+      - run: npm ci
+      - name: Build public frontend and verified release package
+        env:
+          VITE_SUPABASE_URL: ${{ vars.CMS_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.CMS_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          test -n "$VITE_SUPABASE_URL"
+          test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
+          npm run build
+          node deploy/hostinger/updates/package.mjs --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/cms-release"
+      - name: Publish immutable update after verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: Luminovia-Training-Consulting/Luminovia-Management-Tool
+        run: |
+          set -euo pipefail
+          RELEASE_TAG="cms-dev-$GITHUB_SHA"
+          if gh release view "$RELEASE_TAG" --json isDraft > "$RUNNER_TEMP/cms-existing-release.json" 2>/dev/null; then
+            if test "$(jq -r .isDraft "$RUNNER_TEMP/cms-existing-release.json")" = false; then
+              echo "The immutable release is already published."
+              exit 0
+            fi
+          else
+            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --draft --prerelease --title "CMS development $GITHUB_SHA" --notes "Automatically built from a successfully verified main commit."
+          fi
+          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/cms-release/cms-release.tar.gz" "$RUNNER_TEMP/cms-release/cms-release.json" --clobber
+          gh release edit "$RELEASE_TAG" --draft=false

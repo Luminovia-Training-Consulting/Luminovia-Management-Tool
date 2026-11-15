@@ -1,0 +1,19 @@
+{
+  "environment": "development",
+  "portalOrigin": "https://cms.luminovia.org",
+  "apiBase": "https://cms.luminovia.org/backend",
+  "backend": "self-hosted",
+  "hostingerVirtualMachineId": 2163645,
+  "hostingerPlan": "KVM 1",
+  "serverHostname": "srv2163645.hstgr.cloud",
+  "region": "Frankfurt",
+  "remoteRoot": "/opt/luminovia-portal",
+  "initialDeploymentSourceBaseCommit": "521fd41f921dad99a378fd26264b57f0ff41941a",
+  "deployedSourceIdentity": "/opt/luminovia-portal/private/updates/state.json:currentCommit",
+  "storageAllocationGiB": {
+    "total": 10,
+    "owner": 1
+  },
+  "plannedDocumentCapacityGB": 100,
+  "capacityUpgradeAuthorized": false
+}

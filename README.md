@@ -91,11 +91,19 @@ Ausgeführte Ergebnisse und Grenzen werden in [QA_RESULTS](docs/QA_RESULTS.md) u
 
 ## Staging and production
 
-No hosted Supabase project was available through the connected inventory when development started. No hosted database, Hostinger/DNS, public marketing website or production email was modified. Production publishing requires a concrete reviewed release and separate approval.
+Die tatsächliche **selbst gehostete Entwicklungsinstanz** läuft unter **https://cms.luminovia.org** auf dem vorhandenen Hostinger **KVM 1**. Frontend, Supabase-Datenbank/Auth/Storage/Realtime/Edge und ClamAV liegen auf diesem VPS. Der Nutzer hat ein Upgrade ausdrücklich abgelehnt; ungefähr 100 GB Dokumente sind ein späteres Ausbauziel. Aktuell gelten 10 GiB Gesamt- und 1 GiB Besitzerkontingent. Test-E-Mails werden ausschließlich intern in Mailpit erfasst. [Einrichtung, geschützte Konfiguration, Tests und Betrieb](docs/HOSTINGER_DEVELOPMENT.md).
+
+Der VPS prüft alle fünf Minuten auf erfolgreich getestete, unveränderliche GitHub-Versionen von `main`. Sicherungen, Migrationen, Laufzeitkonfiguration und atomare Web-Umschaltung gehören zum [automatischen Entwicklungsupdate](docs/HOSTINGER_AUTOMATIC_UPDATES.md); Serverzugangsdaten bleiben auf dem VPS. Größere/riskante Datenbankwechsel erfordern eine geprüfte Wartung. Ubuntu-Sicherheitsupdates sind automatisch aktiv.
+
+Auf dem VPS läuft die fest gepinnte PostgreSQL 17.12-Version. Nach dem kontrollierten Patch bestanden erneut alle acht CMS-API-Prüfgruppen, 50 gleichzeitige Buchungsversuche mit genau einem vollständigen Gewinner, die unveränderte private Datei mit bestehendem Passwort sowie tatsächliche WSS-Zustellung und Rechteentzug. Eine externe Datenbank-plus-Datei-Sicherung wurde isoliert sowohl mit dem ursprünglichen Image als auch vorab mit dem 17.12-Kandidaten erfolgreich wiederhergestellt. Die [geprüften Pins und tatsächlichen Ergebnisse](deploy/hostinger/selfhost/postgres-upgrade-provenance.json) sind dokumentiert.
+
+Caddy verwendet das stabile Verzeichnis `/opt/luminovia-portal/www`: `current` zeigt auf die aktive Frontend-Auslieferung, gemeinsam vorgehaltene unveränderliche Assets bleiben für bereits geöffnete Clients erreichbar. Daten und geheime Konfiguration liegen außerhalb dieses Webverzeichnisses.
+
+Die folgenden Hinweise zum früher vorgesehenen verwalteten Backend sind keine Beschreibung dieser selbst gehosteten Instanz. Eine vollständige Produktivfreigabe mit echten Nutzern/SMTP, größerer Kapazität und wiederkehrender externer Sicherung bleibt gesondert erforderlich. Die öffentliche Marketing-Website wurde nicht geändert.
 
 Use separate approved staging and production Supabase projects. Frontend build variables are `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` only. Never use server secret/service-role credentials in a `VITE_` variable. Disable signup, configure exact callback URLs, install the custom invitation template, configure approved SMTP, bootstrap the first admin through a controlled server process and require MFA. See [DEPLOYMENT_RUNBOOK](docs/DEPLOYMENT_RUNBOOK.md) for migration, invitation reconciliation, hosting headers, backups of **database plus Storage objects**, restore/rollback and release gates.
 
-`public/.htaccess` is an un-deployed Apache/LiteSpeed template for the future separate Hostinger portal root. Its SPA rewrite, no-referrer/CSP/security/cache headers must be tested on that actual host; adapt `connect-src` for an approved custom Supabase domain. Redact authentication query strings in hosting/access logs. A local Vite preview does not exercise Apache headers.
+`public/.htaccess` is an un-deployed Apache/LiteSpeed reference template; the current VPS serves the portal through Caddy. Its SPA rewrite, no-referrer/CSP/security/cache headers must be tested on that actual host; adapt `connect-src` for an approved custom Supabase domain. Redact authentication query strings in hosting/access logs. A local Vite preview does not exercise Apache headers.
 
 Stoppe verwaltete lokale Dienste mit `./portal stop`; Datenbank und tatsächliche Storage-Dateien bleiben erhalten. Verwende für Entwicklungsdaten kein `--no-backup`.
 

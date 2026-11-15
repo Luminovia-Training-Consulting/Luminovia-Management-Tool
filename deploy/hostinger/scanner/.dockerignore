@@ -1,0 +1,4 @@
+*.test.mjs
+node_modules
+.env*
+secrets

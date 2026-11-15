@@ -27,7 +27,7 @@ export interface UploadContext {
 }
 export const acceptedFiles =
   ".pdf,.png,.jpg,.jpeg,.webp,.txt,.docx,.xlsx,.pptx";
-export const maximumFileSize = 10 * 1024 * 1024;
+export const maximumFileSize = 100 * 1024 * 1024;
 async function authHeaders() {
   requireOnline();
   const { data, error } = await db().auth.getSession();
