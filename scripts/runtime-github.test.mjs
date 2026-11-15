@@ -19,6 +19,29 @@ import { GitHubPreview } from "./runtime-github.mjs";
 import { githubPreviewConfig } from "./runtime-github-config.mjs";
 import { root } from "./runtime-lib.mjs";
 
+// The surrounding canonical QA run deliberately rewrites its own TOML to
+// 553xx/5273. A fictional upstream must retain the NORMAL upstream layout;
+// copying the runner's already-overlaid config couples independent fixtures.
+const fixtureConfig = `project_id = "luminovia-portal"
+[api]
+port = 54321
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+[db.pooler]
+port = 54329
+[studio]
+port = 54323
+[inbucket]
+port = 54324
+[auth]
+site_url = "http://127.0.0.1:5173"
+additional_redirect_urls = ["http://127.0.0.1:5173/auth/callback"]
+[edge_runtime]
+inspector_port = 8083
+`;
+
 function git(directory, ...args) {
   return execFileSync(
     "git",
@@ -69,10 +92,7 @@ function fixture() {
   writeFileSync(join(seed, "portal"), "#!/bin/sh\nexit 0\n");
   writeFileSync(join(seed, "package.json"), "{}\n");
   writeFileSync(join(seed, "package-lock.json"), "{}\n");
-  copyFileSync(
-    join(root, "supabase/config.toml"),
-    join(seed, "supabase/config.toml"),
-  );
+  writeFileSync(join(seed, "supabase/config.toml"), fixtureConfig);
   copyFileSync(join(root, ".gitignore"), join(seed, ".gitignore"));
   writeFileSync(join(seed, "scripts/runtime-cli.mjs"), fixtureRuntime);
   writeFileSync(
@@ -337,7 +357,7 @@ test("dangling test and private-state symlinks are rejected before Git or runtim
 });
 
 test("preview config has independent loopback identities and fails on incompatible origins", () => {
-  const source = readFileSync(join(root, "supabase/config.toml"), "utf8");
+  const source = fixtureConfig;
   const result = githubPreviewConfig(
     source,
     "luminovia-portal-github-aabbccddeeff",
@@ -425,4 +445,23 @@ await p.locked(async()=>{writeFileSync(${JSON.stringify(ready)},'ready');await n
     await closed;
     f.cleanup();
   }
+});
+
+test("canonical QA and preview overlays cannot be nested", () => {
+  assert.throws(
+    () =>
+      githubPreviewConfig(
+        fixtureConfig.replaceAll("543", "553").replaceAll(":5173", ":5273"),
+        "luminovia-portal-github-abcdef012345",
+      ),
+    /Unknown local port layout/,
+  );
+  const preview = githubPreviewConfig(
+    fixtureConfig,
+    "luminovia-portal-github-abcdef012345",
+  );
+  assert.throws(
+    () => githubPreviewConfig(preview, "luminovia-portal-github-abcdef012345"),
+    /Unknown local port layout/,
+  );
 });

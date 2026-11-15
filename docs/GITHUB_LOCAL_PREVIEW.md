@@ -55,7 +55,7 @@ Eine private Übergangsnotiz ermöglicht es, einen Abbruch genau zwischen Git-Ch
 
 ## Entwicklung und Abnahme des Launchers
 
-Die zehn `runtime-github.test.mjs`-Fälle verwenden echte temporäre Git-Repositories und echte Node-Unterprozesse. Sie prüfen Versionswechsel, erhaltene fiktive Passwort-/Dateibytes, unangetastete Entwicklungsänderungen, Daten-/Historiengrenzen, getrennte Testarbeitskopien, vorhandene und ins Leere zeigende Symlinks, unterbrochene Konfigurationsübergänge und die Freigabe der Kernel-Sperre nach Prozessende. Der dortige Dienstadapter ist ausdrücklich eine Fixture; diese Fälle ersetzen keine echte Supabase-Auth-/Storage-Neustartabnahme.
+Die elf `runtime-github.test.mjs`-Fälle verwenden echte temporäre Git-Repositories und echte Node-Unterprozesse. Sie prüfen Versionswechsel, erhaltene fiktive Passwort-/Dateibytes, unangetastete Entwicklungsänderungen, Daten-/Historiengrenzen, getrennte Testarbeitskopien, vorhandene und ins Leere zeigende Symlinks, unterbrochene Konfigurationsübergänge und die Freigabe der Kernel-Sperre nach Prozessende. Der dortige Dienstadapter ist ausdrücklich eine Fixture; diese Fälle ersetzen keine echte Supabase-Auth-/Storage-Neustartabnahme.
 
 ```bash
 node --test scripts/runtime-github.test.mjs
