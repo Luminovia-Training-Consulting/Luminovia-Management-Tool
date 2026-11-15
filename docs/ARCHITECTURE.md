@@ -1,6 +1,6 @@
 # Architecture and decisions
 
-Status: M1/M2 locally accepted and merged; the approved M3 account/profile/commission extension is under complete isolated verification. See QA_RESULTS for executed evidence. The complete product is specified in [PRODUCT_SPEC.md](PRODUCT_SPEC.md). Current primary documentation/version checks are in [REFERENCE_SOURCES.md](REFERENCE_SOURCES.md). Database-specific API/security notes are maintained in `BACKEND*.md` where present; migration SQL and actual tests own the schema truth.
+Status: M1/M2 locally accepted and merged; the approved M3 account/profile/commission extension passed complete isolated verification and is submitted in PR #3. See QA_RESULTS for executed evidence. The complete product is specified in [PRODUCT_SPEC.md](PRODUCT_SPEC.md). Current primary documentation/version checks are in [REFERENCE_SOURCES.md](REFERENCE_SOURCES.md). Database-specific API/security notes are maintained in `BACKEND*.md` where present; migration SQL and actual tests own the schema truth.
 
 ## ADR-001 — separate private portal and static frontend
 

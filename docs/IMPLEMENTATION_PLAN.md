@@ -4,7 +4,7 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 ## M3 locally accepted — requested account, profile and commission extension
 
-The user authorised direct pushes/merges on 16 November and approved 50/50 default, client accounts, role-specific financial views and optional managed learners/reviews. [Exact extension](ACCOUNTS_REVENUE_SPEC.md). PR #2 was verified and merged; M3 is developed separately in `codex/accounts-profiles-commission`, preserving unrelated original hosting edits. Full isolated acceptance passed in `.local/tests/b1c83645/`: 59 source, 7 runtime, 22 Edge, 120 SQL, all 9 actual API suites plus Mailpit, 46 browser workflows, build and 2 PWA checks. Exact GitHub/main integration remains pending. Remaining original modules below are still required.
+The user authorised direct pushes/merges on 16 November and approved 50/50 default, client accounts, role-specific financial views and optional managed learners/reviews. [Exact extension](ACCOUNTS_REVENUE_SPEC.md). PR #2 was verified and merged; M3 is developed separately in `codex/accounts-profiles-commission`, preserving unrelated original hosting edits. Full isolated acceptance passed in `.local/tests/b1c83645/`: 59 source, 7 runtime, 22 Edge, 120 SQL, all 9 actual API suites plus Mailpit, 46 browser workflows, build and 2 PWA checks. Exact GitHub/main integration is recorded on [PR #3](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/3). Remaining original modules below are still required.
 
 ## Previous accepted checkpoint — persistent local system and M2
 
@@ -56,6 +56,6 @@ M1 is locally verified and was merged by Carina in PR #1. The previous continuat
 ## Current acceptance and next continuation actions
 
 1. M3 complete local acceptance and actual screenshot review are recorded in QA_RESULTS/WORKLOG. Preserve the passing source and all normal persistent records; exact-revision CI is the remaining integration gate.
-2. Commit and push `codex/accounts-profiles-commission`, observe its exact GitHub CI and merge after checks under the user's explicit authorisation. Preserve unrelated hosting edits in the original workspace and all normal persistent records. No production deployment is authorised.
+2. Signed M3 source and its local evidence are preserved on `codex/accounts-profiles-commission` / [PR #3](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/3). Consult its exact latest CI/main state on continuation; the user explicitly authorised merging after checks. Preserve unrelated hosting edits in the original workspace and all normal persistent records. No production deployment is authorised.
 3. Continue the outstanding vertical slices above, prioritising audited job lifecycle/capacity, availability, taxonomy and notification preferences over cosmetic additions.
 4. Configure separate approved managed staging/SMTP only when access and ownership are available. Complete hosted/manual/cross-browser/physical-PWA, privacy, monitoring, DB + actual Storage restore and rollback acceptance before a concrete production approval request.

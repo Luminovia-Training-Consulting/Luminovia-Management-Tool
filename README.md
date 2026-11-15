@@ -18,7 +18,7 @@ The user's [Universal Master Prompt](docs/UNIVERSAL_MASTER_PROMPT.txt) is preser
 
 Der Befehl installiert bei Bedarf die gesperrten npm-Abhängigkeiten und startet das vollständige lokale System: PostgreSQL, Supabase Auth/Storage/Realtime, Edge Functions, Malware-Scanner, Mailpit und React/Vite. Neue Migrationen werden ohne Daten-Reset angewendet. Fiktive Beispieldaten werden nur bei der ersten leeren Initialisierung erzeugt.
 
-Öffne <http://127.0.0.1:5173>. Lokale E-Mails werden ausschließlich in [Mailpit](http://127.0.0.1:54324) abgefangen. Die elf fiktiven Dozierenden heißen `lecturer01@example.invalid` bis `lecturer11@example.invalid`; zusätzlich gibt es `admin@example.invalid`, `participant@example.invalid`, `carina@example.invalid` (Plattformleitungs-Demo) und `client@example.invalid` (Auftraggeber-Demo). Das sind getrennte fiktive Auth-Konten; echte Einladungen vergeben eigene Passwörter.
+Öffne <http://127.0.0.1:5173>. Lokale E-Mails werden ausschließlich in [Mailpit](http://127.0.0.1:54324) abgefangen. Bei einer neuen, leeren Initialisierung heißen die elf fiktiven Dozierenden `lecturer01@example.invalid` bis `lecturer11@example.invalid`; zusätzlich gibt es `admin@example.invalid`, `participant@example.invalid`, `carina@example.invalid` (Plattformleitungs-Demo) und `client@example.invalid` (Auftraggeber-Demo). Das sind getrennte fiktive Auth-Konten; echte Einladungen vergeben eigene Passwörter.
 
 ```bash
 ./portal credentials   # ursprüngliches lokales Testpasswort bewusst anzeigen
