@@ -570,11 +570,40 @@ await withApiFixture(
     assert.equal(
       (
         await checked(
-          substitute.client.rpc("claim_job", substituteArgs),
-          "Unpublished replacement cannot be claimed",
+          admin.client.from("jobs").select("status").eq("id", job).single(),
+          "Cancellation closes the offer pending audited reopening",
         )
       ).status,
-      "filled",
+      "draft",
+    );
+    assert.deepEqual(
+      await checked(
+        substitute.client.rpc("claim_job", substituteArgs),
+        "Unpublished replacement cannot be claimed",
+      ),
+      { status: "unavailable" },
+    );
+    assert.deepEqual(
+      await metadata(job),
+      state,
+      "Denied replacement preserves every existing claim, interval and revision",
+    );
+    assert.deepEqual(
+      await checked(
+        substitute.client.from("job_claims").select("id").eq("job_id", job),
+        "Denied replacement creates no claim for the substitute",
+      ),
+      [],
+    );
+    assert.deepEqual(
+      await checked(
+        substitute.client
+          .from("assignment_sessions")
+          .select("id")
+          .eq("lecturer_id", substitute.id),
+        "Denied replacement reserves no partial interval",
+      ),
+      [],
     );
     const reopen = {
       p_job_id: job,

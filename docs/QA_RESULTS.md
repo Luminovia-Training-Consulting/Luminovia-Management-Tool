@@ -2,6 +2,10 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## M6 second combined checkpoint — closed-offer test expectation corrected
+
+Run `.local/tests/d1cf07cc/RESULT.txt` on `68493cc` passed every SQL suite and the first ten actual Auth/API suites. The new capacity API assertion then expected `filled` although the established cancellation contract moves the offer to draft; exact `unavailable` was correct. Only the test was corrected and strengthened with unchanged-state assertions. Complete rerun remains pending; browser/build acceptance was not reached.
+
 ## M6 first combined checkpoint — failed safely, not final acceptance
 
 Actual frozen-source `./portal test` run `.local/tests/ba7f328e/RESULT.txt` returned exit1 on `e024558`. The generic API permission inventory rejected five default EXECUTE grants on internal taxonomy/availability helpers. Correction and complete rerun are required. No native business API, desktop/mobile or build/PWA acceptance is claimed from this failed run. Source 177 Vitest / 52 runtime / 42 Edge cases, operating guards, real fresh 24-migration startup and Auth/MFA/Storage restart preservation had already passed; full details and owned cleanup are in [WORKLOG](WORKLOG.md).

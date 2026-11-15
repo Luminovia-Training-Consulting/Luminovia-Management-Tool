@@ -2,6 +2,12 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — M6 run02, corrected closed-capacity API expectation
+
+Frozen signed `68493cc5fe05d882736e6ca261e8c032a36b6e3a` passed all current SQL suites and reached actual business HTTP/Auth tests in `.local/tests/d1cf07cc/RESULT.txt`. The complete command then returned **exit1** because the newly authored capacity API test expected `filled` after cancellation. Both owning migrations and the documented workflow explicitly put the offer into `draft` after cancellation: two remaining accepted places out of three do not make a filled offer, and no replacement is allowed before explicit reopening. Actual exact response `{status:'unavailable'}` was therefore correct.
+
+Only that test contract was corrected; additional actual REST assertions now require draft status, identical lifecycle/version/history, no substitute claim and no substitute session. Production SQL/UI behavior is unchanged. Native suites already passed accounts, audit, availability, avatars/scanned Storage, CBW, real chat WebSocket revocation, comments, commercial PDFs/payments and commission privacy before this new fixture failure. Browsers/build were not reached. Owned random stack cleanup completed. A complete rerun remains required; no error-code alternatives or generic pass condition replaced the exact assertion.
+
 ## 16 November 2026 — M6 complete-command run01 stopped on default helper grants
 
 Frozen signed source `e024558c6ccac6e7550a7c0d3759c1907cb7ae52` was pushed as [PR #8](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/8). `./portal test` returned **exit1**, private run `.local/tests/ba7f328e/RESULT.txt` and `.local/m6-test-01.exit`. The central API-surface guard found five newly created internal taxonomy/availability helpers retaining PostgreSQL's default EXECUTE ACL. No assertion was relaxed. Their owning pre-release migrations are being corrected to revoke PUBLIC/anon/authenticated; focused ACL regressions and a complete rerun are required.
