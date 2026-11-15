@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { MessageCircle, Star, UserRound } from "lucide-react";
+import { MessageCircle, Star } from "lucide-react";
+import { Avatar } from "../profile/avatar";
 import { useAuth } from "../auth/auth-context";
 import { topicsQuery } from "../../lib/queries";
 import { dateTime } from "../../lib/dates";
@@ -83,7 +84,11 @@ export function PeopleDirectory() {
         <div className="people-grid">
           {people.data.map((person) => (
             <article key={person.id} className="panel person-card">
-              <UserRound aria-hidden="true" size={28} />
+              <Avatar
+                userId={person.id}
+                name={person.display_name}
+                decorative
+              />
               <h2>
                 <Link to={`/people/${person.id}`}>{person.display_name}</Link>
               </h2>
@@ -216,6 +221,7 @@ export function PersonProfile() {
         title={details.display_name}
         description={details.country || details.time_zone}
       />
+      <Avatar userId={id} name={details.display_name} size="large" />
       <div className="page-actions">
         <Button asChild variant="ghost">
           <Link to="/people">{t("back")}</Link>

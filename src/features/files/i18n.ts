@@ -22,6 +22,7 @@ const pairs: Record<string, [string, string]> = {
   certificate: ["Qualifikationsnachweis", "Qualification evidence"],
   contract: ["Vertrag", "Contract"],
   invoice: ["Rechnung", "Invoice"],
+  avatar: ["Profilbild", "Profile picture"],
   chat: ["Chat-Anhang", "Chat attachment"],
   file: ["Datei", "File"],
   download: ["Herunterladen", "Download"],

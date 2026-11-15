@@ -1,4 +1,6 @@
 import { JobPricingPanel } from "../commercial/pricing";
+import { ResourceComments } from "../comments/comments";
+import { JobBuildingBlockReference } from "../operations/building-blocks";
 import "../commercial/platform-i18n";
 import { JobDocuments } from "../files/files";
 import { permissionsQuery } from "../../lib/queries";
@@ -321,7 +323,9 @@ export function JobDetail() {
               </span>
               <span>{t(job.delivery_type)}</span>
             </div>
+            <h2>{t("description")}</h2>
             <p className="preserve-text">{job.description}</p>
+            <JobBuildingBlockReference jobId={job.id} />
             <h2>{t("sessions")}</h2>
             <p className="muted">
               {t("timezone")}: {zone}
@@ -370,6 +374,7 @@ export function JobDetail() {
             jobId={job.id}
             canManage={permissions.data?.includes("jobs.manage") ?? false}
           />
+          <ResourceComments kind="job" resourceId={job.id} />
         </div>
         <aside className="claim-panel panel">
           <p className="eyebrow">

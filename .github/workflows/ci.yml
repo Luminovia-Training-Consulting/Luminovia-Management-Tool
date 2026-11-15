@@ -33,16 +33,11 @@ jobs:
       - run: npm ci
       - name: Install official backup encryption test dependency
         run: sudo apt-get update -qq && sudo apt-get install -y age
-      - name: Automatic update and release guards
+      - name: Additional daily maintenance and complete-backup guards
         run: |
-          python3 -m unittest discover -s deploy/hostinger/updates -p 'test_*.py'
           python3 -m unittest discover -s deploy/hostinger/maintenance -p 'test_*.py'
           python3 -m unittest discover -s deploy/hostinger/backups -p 'test_*.py'
-          node --test deploy/hostinger/updates/package.test.mjs
-          node --test deploy/hostinger/reviewed-m3-backfill.test.mjs
           node --test deploy/hostinger/maintenance/*.test.mjs
-          node deploy/hostinger/selfhost/validate.mjs --gateway-routing
-          node scripts/hostinger-caddy-check.mjs
       - name: Complete isolated local verification
         run: ./portal test
   verify-selfhost:

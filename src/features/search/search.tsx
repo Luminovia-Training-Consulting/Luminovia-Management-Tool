@@ -14,12 +14,45 @@ interface Result {
   detail: string;
   url: string;
 }
+function SearchForm({
+  query,
+  onSearch,
+}: {
+  query: string;
+  onSearch: (value: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [input, setInput] = useState(query);
+  return (
+    <form
+      className="panel search-page-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSearch(input);
+      }}
+    >
+      <label className="sr-only" htmlFor="portal-query">
+        {t("portalSearch")}
+      </label>
+      <input
+        id="portal-query"
+        type="search"
+        value={input}
+        maxLength={100}
+        onChange={(event) => setInput(event.target.value)}
+      />
+      <Button>
+        <Search size={18} />
+        {t("searchAction")}
+      </Button>
+    </form>
+  );
+}
 export function PortalSearch() {
   const { t } = useTranslation();
   const { session } = useAuth();
   const [params, setParams] = useSearchParams();
   const q = (params.get("q") ?? "").trim().slice(0, 100);
-  const [input, setInput] = useState(q);
   const query = useQuery({
     queryKey: ["portal-search", session!.user.id, q],
     enabled: q.length >= 2,
@@ -125,28 +158,12 @@ export function PortalSearch() {
   return (
     <>
       <PageHeading title={t("portalSearch")} description={t("searchHint")} />
-      <form
-        className="panel search-page-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setParams({ q: input });
-        }}
-      >
-        <label className="sr-only" htmlFor="portal-query">
-          {t("portalSearch")}
-        </label>
-        <input
-          id="portal-query"
-          type="search"
-          value={input}
-          maxLength={100}
-          onChange={(e) => setInput(e.target.value)}
-        />
-        <Button>
-          <Search size={18} />
-          {t("searchAction")}
-        </Button>
-      </form>
+      {/* A linked query starts a new draft; translations/refetches preserve typing. */}
+      <SearchForm
+        key={q}
+        query={q}
+        onSearch={(value) => setParams({ q: value })}
+      />
       {q.length >= 2 &&
         (query.isPending ? (
           <Loading />

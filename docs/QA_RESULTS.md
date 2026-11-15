@@ -2,6 +2,33 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## M4 combined functional acceptance — complete command passed
+
+`./portal test` passed on **2026-11-15 at 17:31:03.771UTC (16 November 03:31 Australia/Brisbane)** against frozen signed source `4c7c897`, including concurrent main through `1f9a114`. Project `luminovia-portal-test-7c2dd978`; private report `.local/tests/7c2dd978/RESULT.txt`. The wrapper explicitly captured **exit 0** in `.local/m4-test-04.exit`, and the execution session also returned 0. Subsequent local changes are documentation and actual fictional screenshots; exact submitted-source CI and the final merge are recorded on [PR #4](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/4).
+
+| Check | Actual combined result |
+| --- | --- |
+| Source | Lint, strict TypeScript and formatting; **91 Vitest cases / 28 files** passed |
+| Connections/runtime | **21 Node cases**: environment/ownership/persistence guards, catalogue delimiters, compiler import/export/route/asset/RPC graph, local documentation links and two actual-copy private snapshot fixtures |
+| Edge | **37 tests**, all three entry-point typechecks passed; avatar PNG/revocation and private HTTPS/TCP scan boundaries retained |
+| Release controls | **28 Python updater +35 Node** cases (M3 review 6, M4 review 8, package 7, scanner HTTP/TCP 14), plus **11 actual Envoy routes / 10 actual Caddy HTTP checks**; fixture-only/owned-resource cleanup |
+| Fresh backend | All **17 migrations** replayed; SQL lint/security/performance advisors passed |
+| SQL | **165 PostgreSQL cases**: core 25, accounts 11, API surface 3, avatars 10, CBW 16, chat 17, comments 11, commercial 14, commission 14, documents 12, knowledge 14, M4 preservation 4, profiles 14 |
+| Actual APIs | All **12 suites** passed, including new avatars/CBW/comments and all earlier Auth/TOTP/REST/RPC/WebSocket/Storage/ClamAV regressions |
+| Mail | Actual Edge invitation, durable retry and exactly one Mailpit delivery; no real recipient |
+| Restart | Actual stop/start retained password, verified MFA, profile/timezone, private appointment and exact private Storage object bytes; probe cleanup passed |
+| Browser | **52/52 desktop/mobile Chromium journeys**, zero skipped,4.3 minutes; new source-link/offer/image/comment workflows and existing regressions passed |
+| Build/PWA | Build passed; **47 public static precache entries / 2413.56 KiB**; **2/2 built-PWA** SW/offline-deep-link/no-private-cache cases,2.2 seconds |
+| Cleanup | Owned random services/network/volumes removed; normal persistent development stack was not targeted |
+
+All 24 original supplied PDF bytes independently matched 22 canonical CBW codes and 24 source revisions. M4 preserves both LPC3/LPC4 variants, exact source/session identity, trusted source fingerprints and financial-only run offers. Real API/browser evidence includes stale preview rejection, concurrent/idempotent offers, actual whole-block allocation, private gross/net and revoked memberships. Raw PDFs/personal source paths are not published. Weekday planning does not decide holiday/break arrangements automatically.
+
+Avatar evidence includes real JPEG-with-metadata conversion to bounded canonical PNG, actual clean scanner/Storage bytes/hash, scoped authenticated viewing, replacement/removal and access changed during download. The invalid-replacement screenshot intentionally retains the previous blue fictional avatar and shows the retry error. Comment evidence uses separate author/peer/moderator contexts and covers persistence, safe literal text, stale edits, MFA hide/restore and author withdrawal. New DE/EN/light/dark screens passed automated axe/overflow checks; actual desktop/mobile screenshots were visually inspected. Mobile full-page captures include the fixed navigation at the viewport position.
+
+The final frontend inventory contains 84 connected modules, 25 registered routes and 172 runtime exports with **no unreachable module, genuinely unused export, unresolved import, invalid literal route or missing literal asset**. The compiler discovers 99 frontend literal RPC references (74 unique names), bound to the migrated API surface; the generated reference documents 106 public functions. Runtime/headless/vendor/migration interfaces remain deliberate and documented. These static checks do not prove every dynamic branch runs or certify a completely bug-free product.
+
+**Hosted boundary:** no M4 installation was performed. The unchanged ordinary updater stops the avatar constraint replacement and CBW procedural import for operator review. The [read-only M4 plan](REVIEWED_M4_MIGRATIONS.md) verifies exact 14/17 history/source/package inventories without an apply mode. Its 4-case disposable preservation rehearsal proves old-row/column/ID/role/quota retention and atomic rollback; Auth is an id/email stub and file metadata only, so it does not establish native password/MFA or physical object preservation on the CMS. The separate restart probe above uses actual local Auth/Storage. Remaining product, physical/mobile/cross-browser/manual/privacy/production gates stay in the plan. No public website, hosted record, real email or bank transfer was changed.
+
 ## M3 accounts, profile courses/reviews and commission — complete command passed
 
 `./portal test` completed successfully on **2026-11-15 at 15:27:43 UTC (16 November Australia/Brisbane)**, isolated project `luminovia-portal-test-b1c83645`. Private report: `.local/tests/b1c83645/RESULT.txt`. Source was frozen throughout the passing invocation; subsequent edits are documentation and the actual fictional screenshots only. Exact submitted-revision acceptance additionally comes from GitHub CI.

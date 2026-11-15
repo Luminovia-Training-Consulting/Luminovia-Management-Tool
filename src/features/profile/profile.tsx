@@ -1,3 +1,4 @@
+import { AvatarEditor } from "./avatar";
 import { OwnProfileDetails } from "../people/profile-details";
 import { ProfileEvidence } from "../files/profile-evidence";
 import { useState } from "react";
@@ -149,6 +150,7 @@ export function ProfilePage() {
   return (
     <>
       <PageHeading title={t("profile")} description={session!.user.email} />
+      <AvatarEditor name={profile.data.display_name} />
       <div className="profile-layout">
         <ProfileForm profile={profile.data} />
         <section className="panel">

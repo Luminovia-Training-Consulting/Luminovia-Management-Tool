@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
 import { db } from "../../lib/supabase";
 import { Button } from "../../components/ui/button";
-import { Field, Notice, PageHeading } from "../../components/common";
+import { Field, Loading, Notice, PageHeading } from "../../components/common";
 import { useOnline } from "../../lib/online";
 export function Security() {
   const { t } = useTranslation();
@@ -21,70 +21,82 @@ export function Security() {
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [checking, setChecking] = useState(true);
   useEffect(() => {
+    let current = true;
     void (async () => {
-      const { data, error } =
-        await db().auth.mfa.getAuthenticatorAssuranceLevel();
-      if (error) {
-        setFailed(true);
-        return;
+      try {
+        const { data, error } =
+          await db().auth.mfa.getAuthenticatorAssuranceLevel();
+        if (error) throw error;
+        if (data.currentLevel === "aal2") {
+          if (current) setReady(true);
+          return;
+        }
+        const factors = await db().auth.mfa.listFactors();
+        if (factors.error) throw factors.error;
+        if (current) {
+          setFactor(
+            factors.data.totp.find((f) => f.status === "verified")?.id ?? "",
+          );
+        }
+      } catch {
+        if (current) setFailed(true);
+      } finally {
+        if (current) setChecking(false);
       }
-      setReady(data.currentLevel === "aal2");
-      const factors = await db().auth.mfa.listFactors();
-      if (factors.error) {
-        setFailed(true);
-        return;
-      }
-      setFactor(
-        factors.data.totp.find((f) => f.status === "verified")?.id ?? "",
-      );
     })();
+    // Do not let an older initial read overwrite a newly enrolled factor or a
+    // remounted actor. Enrolment stays unavailable until this read has settled.
+    return () => {
+      current = false;
+    };
   }, []);
   async function enroll() {
+    if (!online || busy || checking) return;
     setBusy(true);
     setFailed(false);
-    const existing = await db().auth.mfa.listFactors();
-    if (existing.error) {
-      setFailed(true);
-      setBusy(false);
-      return;
-    }
-    for (const f of existing.data.all.filter(
-      (f) => f.status === "unverified",
-    )) {
-      const removed = await db().auth.mfa.unenroll({ factorId: f.id });
-      if (removed.error) {
-        setFailed(true);
-        setBusy(false);
-        return;
+    try {
+      const existing = await db().auth.mfa.listFactors();
+      if (existing.error) throw existing.error;
+      for (const f of existing.data.all.filter(
+        (f) => f.status === "unverified",
+      )) {
+        const removed = await db().auth.mfa.unenroll({ factorId: f.id });
+        if (removed.error) throw removed.error;
       }
-    }
-    const { data, error } = await db().auth.mfa.enroll({
-      factorType: "totp",
-      friendlyName: "Luminovia Portal",
-    });
-    if (error) setFailed(true);
-    else {
+      const { data, error } = await db().auth.mfa.enroll({
+        factorType: "totp",
+        friendlyName: "Luminovia Portal",
+      });
+      if (error) throw error;
       setFactor(data.id);
       setQr(data.totp.qr_code);
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   }
   async function verify() {
+    if (!online || busy || checking || !factor || !/^\d{6}$/.test(code)) return;
     setBusy(true);
     setFailed(false);
-    const { error } = await db().auth.mfa.challengeAndVerify({
-      factorId: factor,
-      code,
-    });
-    if (error) setFailed(true);
-    else {
+    try {
+      const { error } = await db().auth.mfa.challengeAndVerify({
+        factorId: factor,
+        code,
+      });
+      if (error) throw error;
       setReady(true);
       setQr("");
       setCode("");
       await client.invalidateQueries();
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   }
   return (
     <div className="narrow">
@@ -92,7 +104,9 @@ export function Security() {
       <section className="panel security-panel">
         <ShieldCheck size={36} className="blue" />
         <h2>{t("mfaTitle")}</h2>
-        {ready ? (
+        {checking ? (
+          <Loading />
+        ) : ready ? (
           <Notice>{t("mfaReady")}</Notice>
         ) : (
           <>

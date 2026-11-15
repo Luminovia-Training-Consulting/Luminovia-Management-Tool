@@ -27,8 +27,49 @@ export interface Template {
   syllabus: string;
   prerequisites: string;
   archived_at: string | null;
+  building_block_id: string | null;
+  building_block_source_id: string | null;
   course_template_topics: { topic_id: string }[];
 }
+export interface BuildingBlockSource {
+  id: string;
+  building_block_id: string;
+  file_name: string;
+  sha256: string;
+  page_count: number;
+  content_pages: number[];
+  created_on: string;
+  revision_on: string;
+  is_primary: boolean;
+}
+export interface BuildingBlock {
+  id: string;
+  provider: string;
+  code: string;
+  title: string;
+  description: string;
+  syllabus: string;
+  prerequisites: string;
+  duration_days: number;
+  duration_hours: number;
+  theory_percent: number | null;
+  practice_percent: number | null;
+  notes: string;
+  default_template_id: string;
+  building_block_sources: BuildingBlockSource[];
+}
+export const buildingBlocksQuery = (actor: string) =>
+  queryOptions({
+    queryKey: ["operations", "building-blocks", actor],
+    queryFn: async () => {
+      const { data, error } = await db()
+        .from("building_blocks")
+        .select("*,building_block_sources(*)")
+        .order("code");
+      if (error) throw error;
+      return data as BuildingBlock[];
+    },
+  });
 export interface CourseRun {
   id: string;
   template_id: string;

@@ -8,7 +8,7 @@ The supported entry point is the executable `./portal` in the repository root. I
 ./portal start
 ```
 
-Requirements: a Linux host (CachyOS locally / Ubuntu CI), Node.js >=22.12 (26 LTS tested), npm and a running Docker Engine. The launcher installs exact lockfile dependencies when required, starts the local services, applies new migrations without resetting tables, initializes fictional fixtures only for an empty first bootstrap, waits for the actual invitation handler and frontend to be ready, and prints the local URLs.
+Requirements: a Linux host (CachyOS locally / Ubuntu CI), Node.js >=22.12 (26 LTS tested), npm, a running Docker Engine and Docker Compose 2.20.2 or later with healthcheck `start_interval` support. Full verification additionally needs Python 3 for the updater fixtures. The launcher installs exact lockfile dependencies when required, starts the local services, applies new migrations without resetting tables, initializes fictional fixtures only for an empty first bootstrap, waits for the actual invitation handler and frontend to be ready, and prints the local URLs.
 
 - Portal: <http://127.0.0.1:5173>
 - Supabase API: <http://127.0.0.1:54321>
@@ -60,6 +60,8 @@ This command creates a sanitized temporary checkout with its own random Supabase
 | Mailpit       | 54324       | 55324          |
 
 Tests use separate PostgreSQL/Auth/Storage and scanner volumes. Package files are reused, while Vite caches, `.env` files, credentials, reports, build output and process state are independent. Inherited Supabase/E2E/Vite environment values are stripped before test subprocess configuration, and all mutating harnesses restrict targets to loopback. Only one test run at a time can hold the local test lock.
+
+When the hosted-development source is present, the same command also discovers reviewed migration/package Node tests and runs Python updater, private Envoy routing and Caddy ingress checks using only fixtures and owned containers. It never invokes the hosted updater or uses hosted credentials.
 
 The command runs source lint/typecheck/formatting, runtime safety tests, component/unit tests, dependency audit, Edge handler tests/typechecks, real services, actual stop/start persistence with password/MFA/profile/private-event/Storage-byte verification, SQL/RLS/concurrency tests, real HTTP/Edge/Mailpit journeys, desktop/mobile browsers, production build and separate built-PWA checks. The main browser suite excludes the built-PWA cases because those run after the production build against its separate preview.
 

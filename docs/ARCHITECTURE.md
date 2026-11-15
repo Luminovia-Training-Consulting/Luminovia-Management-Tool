@@ -2,7 +2,6 @@
 
 Status: M1/M2 locally accepted and merged; the approved M3 account/profile/commission extension passed complete isolated verification and was merged in PR #3. See QA_RESULTS for executed evidence. The complete product is specified in [PRODUCT_SPEC.md](PRODUCT_SPEC.md). Current primary documentation/version checks are in [REFERENCE_SOURCES.md](REFERENCE_SOURCES.md). Database-specific API/security notes are maintained in `BACKEND*.md` where present; migration SQL and actual tests own the schema truth. The authorised self-hosted KVM1 development instance is online at cms.luminovia.org; the combined M3/hosting source is being validated before automatic adoption. Full product and production acceptance remain outstanding.
 
-
 ## ADR-001 — separate private portal and static frontend
 
 Use the existing `Luminovia-Training-Consulting/Luminovia-Management-Tool` repository. The public `Website` is solely a brand reference. React/TypeScript/Vite supplies the static SPA; no independent Node/Express application service is required. The original 15 November hosting decision used managed Supabase and reserved Docker/Supabase CLI for development. That hosting decision is historical: the user subsequently authorised the official Supabase Docker distribution on the Hostinger VPS as described in ADR-012.
@@ -108,3 +107,13 @@ Separate profile-detail and review projections share only intentional authored b
 ## ADR-013 — verified automatic development releases
 
 The user requested automatic GitHub updates without repeated cloning. Successful exact-main CI builds a public, immutable, content-hashed release; the VPS checks every five minutes and keeps its credentials/data locally. Installation pauses backend writers for a backup, preserves historical migration source and private configuration, applies eligible incremental SQL, and promotes a static release through the stable mounted parent. PostgreSQL major changes and unsafe/out-of-order migrations require operator review. OS security updates share a lock with application deployments. This is an authorised development release path, not automatic production publishing or uncontrolled dependency/engine upgrades. See [automatic update policy](HOSTINGER_AUTOMATIC_UPDATES.md).
+
+## ADR-014 — reusable CBW provenance, teaching discussions and scoped avatars
+
+CBW course content is a versioned source catalogue, not a set of duplicated job drafts. The reviewed JSON represents 24 originals under 22 canonical Kurzzeichen. Each source stores filename/hash/pages/dates; raw PDFs, source authors and machine-local paths are excluded. Course templates reference exact source versions; actual runs keep customer/delivery/session identity. New offers derive from locked existing resources and require the reviewed source revision. Stable source links freeze once a job exists, while a different edition uses a new template. Existing accepted monetary/term snapshots are unchanged.
+
+Staff discussions use one resource-comment implementation for jobs and course templates. Job visibility is shared through private.can_read_job; authorised enrolled/client course access does not grant staff discussion. Text, author/version/idempotency, cursor limits, withdrawals and MFA moderation live in private rows/revisions. React renders literal text; a resource/actor switch resets unsent drafts. No comment rewrites accepted terms.
+
+Profile pictures reuse clean immutable private document versions. The editor rasterises a bounded metadata-free PNG; the server independently validates its structure/dimensions and actual ClamAV result. A separate selected-avatar projection uses current person visibility, and the file gateway rechecks selection/access after retrieving bytes. Generic personal-document ACLs remain unchanged. Actor-bound Blob URLs are memory-only and revoked on identity/version/offline/unmount changes.
+
+[Developer guide](DEVELOPER_GUIDE.md), [CBW details](CBW_TEMPLATES.md), [comment contract](RESOURCE_COMMENTS.md), [avatar boundary](PROFILE_AVATARS.md) and [functional audit](FUNCTIONAL_CODE_AUDIT.md) record the owning implementation and verification. Compiler-based source/export/RPC and documentation-link checks supplement actual SQL/API/browser tests; they do not replace runtime authorisation.
