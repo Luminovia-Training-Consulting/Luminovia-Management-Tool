@@ -1,3 +1,7 @@
+/**
+ * Checks automatic PR events or manual main-branch rechecks against the label catalogue.
+ * Event fields remain data; repository and API targets are not accepted from arbitrary supplied URLs.
+ */
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -5,10 +9,12 @@ import { fileURLToPath } from "node:url";
 const repository = "Luminovia-Training-Consulting/Luminovia-Management-Tool";
 const categories = ["type", "risk", "area"];
 
+/** Rejects an invalid metadata condition with a specific diagnostic. */
 function requireMetadata(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+/** Validates the shared catalogue, including unique names and all required categories. */
 function allowedLabels(catalogue) {
   requireMetadata(
     Array.isArray(catalogue),
@@ -33,6 +39,7 @@ function allowedLabels(catalogue) {
   return names;
 }
 
+/** Binds the PR number, target repository and full commit SHA to the expected identity. */
 function checkIdentity(pullRequest, number) {
   requireMetadata(
     pullRequest &&
@@ -44,6 +51,7 @@ function checkIdentity(pullRequest, number) {
   );
 }
 
+/** Validates repository/event identity and returns a safe canonical PR number before fetching. */
 function checkEventIdentity(event, context) {
   requireMetadata(
     context.repository === repository &&
@@ -51,6 +59,8 @@ function checkEventIdentity(event, context) {
     "This check requires an event from this repository.",
   );
   if (context.eventName === "workflow_dispatch") {
+    // Dispatch must run on main, but its selected PR may be closed or target
+    // another branch. Reject ambiguous numeric forms before building the API URL.
     const input = event.inputs?.pull_request_number;
     requireMetadata(
       context.ref === "refs/heads/main" &&
@@ -72,7 +82,11 @@ function checkEventIdentity(event, context) {
   return event.number;
 }
 
-/** Validate metadata only. PR titles, bodies and label names are never commands. */
+/**
+ * Validates label data without executing PR titles, bodies or label names.
+ * Automatic events bind the fetched head to the event snapshot; manual rechecks
+ * require live metadata because their dispatch payload has no PR snapshot.
+ */
 export function validatePullRequestMetadata(event, catalogue, context = {}) {
   const number = checkEventIdentity(event, context);
   const pullRequest = context.livePullRequest ?? event.pull_request;
@@ -132,6 +146,7 @@ export function validatePullRequestMetadata(event, catalogue, context = {}) {
   };
 }
 
+/** Uses live REST metadata in Actions; tokenless local automatic-event fixtures use their snapshot. */
 async function main() {
   requireMetadata(
     process.env.GITHUB_EVENT_PATH,
@@ -140,6 +155,8 @@ async function main() {
   const event = JSON.parse(
     await readFile(process.env.GITHUB_EVENT_PATH, "utf8"),
   );
+  // The hosted workflow checks out the validator and adjacent catalogue from
+  // trusted main, so an old contribution snapshot cannot supply obsolete labels.
   const catalogue = JSON.parse(
     await readFile(new URL("../.github/labels.json", import.meta.url), "utf8"),
   );

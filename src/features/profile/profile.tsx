@@ -1,3 +1,7 @@
+/**
+ * Own profile fields, time zone and expertise with evidence/avatar controls. Self-declared
+ * expertise is not management verification; mutations invalidate the owning queries.
+ */
 import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
 import { AvatarEditor } from "./avatar";
@@ -24,6 +28,7 @@ import {
   Notice,
   PageHeading,
 } from "../../components/common";
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
   display_name: z.string().trim().min(1).max(120),
   bio_de: z.string().max(4000),
@@ -31,6 +36,7 @@ const schema = z.object({
   phone: z.string().max(50),
   time_zone: z.string().refine(validZone),
 });
+/** Validate own profile fields and IANA zone; confirm only a successful update. */
 function ProfileForm({ profile }: { profile: Profile }) {
   const { t, i18n } = useTranslation();
   const online = useOnline();
@@ -111,6 +117,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
     </form>
   );
 }
+/** Combine own profile, expertise, evidence and avatar under the current session. */
 export function ProfilePage() {
   const { t, i18n } = useTranslation();
   const { session } = useAuth();

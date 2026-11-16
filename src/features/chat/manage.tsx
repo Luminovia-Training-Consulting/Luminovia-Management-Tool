@@ -1,3 +1,7 @@
+/**
+ * Contact selection, group creation and visible membership controls. DMs, the general staff room
+ * and course rooms retain their distinct management rules.
+ */
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -14,10 +18,12 @@ import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { chatContactsQuery, chatKeys, chatMembersQuery } from "./api";
 import type { ChatContact, ChatRoom } from "./types";
 import "./i18n";
+/** Use the permitted display name or translated fallback for unnamed contacts. */
 const contactName = (
   contact: Pick<ChatContact, "display_name">,
   fallback: string,
 ) => contact.display_name || fallback;
+/** Offer a controlled selection from contacts already returned by the authorized query. */
 export function ContactPicker({
   actor,
   open,
@@ -109,12 +115,14 @@ export function ContactPicker({
     </Dialog>
   );
 }
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const groupSchema = z.object({
   title: z.string().trim().min(1).max(120),
   kind: z.enum(["topic", "participant_course"]),
   job: z.string(),
   members: z.array(z.string()).max(60),
 });
+/** Create an explicit group with selected members through the chat server contract. */
 export function CreateGroup({
   actor,
   canManageCourses,
@@ -268,6 +276,7 @@ export function CreateGroup({
     </Dialog>
   );
 }
+/** Display current members and offer applicable management actions that the server independently checks. */
 export function MembersPanel({
   actor,
   room,
@@ -449,6 +458,7 @@ export function MembersPanel({
     </>
   );
 }
+/** Map room type to a presentation-only icon. */
 export function RoomIcon({
   kind,
   size = 20,

@@ -1,3 +1,7 @@
+/**
+ * Public, authored help with URL-selected articles and search across both languages. Reading,
+ * filtering and recovery guidance require no backend data and send no support messages.
+ */
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -103,6 +107,7 @@ const recovery = [
     topic: "settings",
   },
 ];
+/** Search titles, steps and recovery text in both authored languages regardless of the selected UI language. */
 function searchText(module: GuideModule) {
   return [
     module.title.de,
@@ -120,6 +125,7 @@ function searchText(module: GuideModule) {
     .join(" ")
     .toLocaleLowerCase();
 }
+/** Resolve public catalog topics from the URL and keep search/filter state local to this page. */
 export function HelpCenter() {
   const { i18n } = useTranslation();
   const text = <T,>(value: { de: T; en: T }) => guideText(value, i18n.language);

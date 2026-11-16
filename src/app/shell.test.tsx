@@ -1,3 +1,7 @@
+/**
+ * Regressions for navigation, search and confirmed or failed sign-out. SDK/DOM fixtures isolate
+ * the shell; real Auth and permission acceptance remain separate.
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -60,6 +64,7 @@ afterEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
 });
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup() {
   vi.stubGlobal(
     "matchMedia",

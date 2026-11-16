@@ -1,3 +1,7 @@
+/**
+ * Bell counts, inbox rows and personal category selection, using shared brand colours and
+ * surface variables.
+ */
 .notification-count {
   display: inline-grid;
   min-width: 1.25rem;
@@ -26,6 +30,7 @@
   margin: 0;
   padding: 0;
 }
+/* Keep title, date, safe destination and confirmed read action in one notification row. */
 .notification-row {
   display: flex;
   flex-wrap: wrap;
@@ -46,6 +51,7 @@
 .notification-row small {
   color: var(--muted);
 }
+/* Use border/background as well as textual state to distinguish unread items. */
 .notification-row.notification-unread {
   border-inline-start: 3px solid var(--brand);
   background: var(--blue-soft);
@@ -61,6 +67,7 @@
   max-width: 70ch;
   line-height: 1.6;
 }
+/* Present optional categories as a labelled native checkbox group. */
 .notification-preferences fieldset {
   border: 0;
   padding: 0;
@@ -86,6 +93,7 @@
 .notification-preferences > .notice {
   margin-block: 1rem;
 }
+
 @media (max-width: 600px) {
   .inbox-toolbar {
     align-items: stretch;

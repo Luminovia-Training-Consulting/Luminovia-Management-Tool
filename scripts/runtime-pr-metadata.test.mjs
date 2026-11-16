@@ -1,3 +1,8 @@
+/**
+ * Automatic/manual metadata validation and actual CLI execution with fictional inputs.
+ * HTTP is replaced in the manual CLI fixture; workflow checks inspect source text.
+ * Hostile label text must remain data; stale automatic events and foreign identities fail.
+ */
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import {
@@ -17,7 +22,9 @@ const catalogue = JSON.parse(
   readFileSync(new URL("../.github/labels.json", import.meta.url), "utf8"),
 );
 const context = { eventName: "pull_request", repository };
+/** Converts fixture label names into GitHub's actual label-object format. */
 const labels = (names) => names.map((name) => ({ name }));
+/** Creates a controlled PR event with exact target-repository and commit identity. */
 function event(names = ["type:docs", "area:github", "risk:low"]) {
   return {
     number: 23,
@@ -80,6 +87,8 @@ test("unknown prefixed labels fail even beside an otherwise valid selection", ()
     );
 });
 
+// Reproduce the historical-catalogue failure: current labels pass, while the
+// same selection fails when those catalogue entries are deliberately removed.
 test("the current catalogue accepts the five areas missing from historical snapshots", () => {
   const areas = [
     "area:api",
@@ -100,6 +109,8 @@ test("the current catalogue accepts the five areas missing from historical snaps
   );
 });
 
+// Manual checks constrain the workflow ref rather than the selected PR's state
+// or target branch. Current API metadata must still match the requested number.
 test("manual main checks validate current labels on a closed temporary-base PR", () => {
   const payload = {
     repository: { full_name: repository },
@@ -303,6 +314,8 @@ test("actual CLI treats hostile optional labels as data, never shell commands or
   }
 });
 
+// Run the real CLI with a preload that records fetches and supplies fictional
+// responses. This proves URL/input handling without contacting GitHub or using secrets.
 test("manual CLI only fetches the canonical PR and rejects invalid inputs before fetching", () => {
   const directory = mkdtempSync(join(tmpdir(), "luminovia-pr-metadata-api-"));
   try {
@@ -364,6 +377,8 @@ test("manual CLI only fetches the canonical PR and rejects invalid inputs before
     wrong.number = 24;
     writeFileSync(responsePath, JSON.stringify(wrong));
     assert.equal(run().status, 1);
+    // Remove the successful request marker so an invalid input must leave no
+    // evidence of a later fetch, rather than reusing the earlier recorded URL.
     rmSync(requestPath);
     payload.inputs.pull_request_number = "23/../../secrets";
     writeFileSync(eventPath, JSON.stringify(payload));
@@ -374,6 +389,8 @@ test("manual CLI only fetches the canonical PR and rejects invalid inputs before
   }
 });
 
+// Inspect the checked-in workflow contract: fixed main checkout, restricted
+// permissions and manual dispatch. This is not a hosted Actions execution test.
 test("metadata workflow only executes trusted base code with read-only permissions", () => {
   const source = readFileSync(
     new URL("../.github/workflows/pr-metadata.yml", import.meta.url),

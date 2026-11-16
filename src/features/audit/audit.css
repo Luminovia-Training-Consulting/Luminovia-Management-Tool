@@ -1,3 +1,7 @@
+/**
+ * Audit filter, event-list and pagination presentation, using shared brand variables for colours
+ * and surfaces.
+ */
 .audit-filters {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -13,6 +17,7 @@
   gap: 12px;
   flex-wrap: wrap;
 }
+/* Display bounded event results as readable cards with time/resource metadata. */
 .audit-list {
   list-style: none;
   padding: 0;
@@ -56,6 +61,7 @@
   margin: 4px 0 12px;
   overflow-wrap: anywhere;
 }
+/* Explicit page navigation rather than silently loading the entire history. */
 .audit-pages {
   display: flex;
   justify-content: space-between;
@@ -67,6 +73,7 @@
   color: var(--muted);
   font-size: 0.9rem;
 }
+
 @media (max-width: 760px) {
   .audit-filters {
     grid-template-columns: 1fr 1fr;
@@ -78,6 +85,7 @@
     grid-template-columns: 1fr;
   }
 }
+
 @media (max-width: 480px) {
   .audit-filters {
     grid-template-columns: 1fr;

@@ -1,3 +1,7 @@
+/**
+ * Regressions for private windows, explicitly reduced management sharing and versioned edits.
+ * Controlled UI fixtures do not replace real conflict/permission checks.
+ */
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -25,6 +29,7 @@ const row: AvailabilityWindow = {
   share_with_management: false,
   version: 1,
 };
+/** Model an awaitable SDK response with its chain method; this fixture makes no backend request. */
 function response(data: unknown, error: unknown = null) {
   return Object.assign(Promise.resolve({ data, error }), {
     abortSignal() {
@@ -76,6 +81,7 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
+/** Mount the real feature screen with an isolated cache and controlled SDK responses. */
 function mount() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

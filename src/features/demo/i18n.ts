@@ -1,3 +1,7 @@
+/**
+ * DE/EN UI resources for fictional demo interactions. Import registers the demo namespace;
+ * authored guide text is selected separately by the shared catalog helpers.
+ */
 import i18n from "../../lib/i18n";
 const pairs = {
   adminTitle: ["Fiktiver Auftragstitel", "Fictional job title"],

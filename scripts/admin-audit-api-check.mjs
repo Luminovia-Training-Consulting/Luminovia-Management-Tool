@@ -31,6 +31,7 @@ await withApiFixture(async ({ actor, mfa, service, checked, suffix, url }) => {
     (await teacher.client.rpc("admin_audit_events")).error?.code,
     "42501",
   );
+  // Identical timestamps force the second cursor component; private JSON fields are deliberately populated.
   const label = `Fictional audit ${suffix}`,
     at = new Date(Date.now() - 3600000).toISOString(),
     ids = Array.from({ length: 45 }, randomUUID),
@@ -72,6 +73,7 @@ await withApiFixture(async ({ actor, mfa, service, checked, suffix, url }) => {
     ),
     "Seed scoped private/unknown actions",
   );
+  // The allowed projection must restrict both returned fields and the set of permitted actions.
   const first = await checked(
     administrator.client.rpc("admin_audit_events", {
       p_search: label,
@@ -136,6 +138,7 @@ await withApiFixture(async ({ actor, mfa, service, checked, suffix, url }) => {
     ).error?.code,
     "22023",
   );
+  // Read access grants no direct write access; later role revocation must take effect with the old token.
   const rewritten = await administrator.client
     .from("audit_events")
     .update({ action: "taxonomy.archived" })

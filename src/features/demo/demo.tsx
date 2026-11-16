@@ -1,3 +1,7 @@
+/**
+ * Public fictional practice workspace driven by the authored guide catalog. Business inputs and
+ * outcomes live only in this component; the demo imports no backend client or account session.
+ */
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -15,12 +19,13 @@ import { guideModules, guideText } from "../help/catalog";
 import "./i18n";
 import "./demo.css";
 
+/** Change the educational perspective only; this selector never establishes a real role. */
 type DemoRole = "lecturer" | "management" | "client" | "participant";
 type Outcome = "success" | "filled" | "conflict" | "qualification" | "offline";
 const demoPath = (path: string) => `/demo${path === "/" ? "" : path}`;
 const sessions = ["2030-05-06T08:00:00Z", "2030-05-07T08:00:00Z"];
 
-/** An educational sandbox: no API client, session, real record or persistent input. */
+/** Render local practice state; only the shared visual-preference control uses persistent storage. */
 export function DemoPage() {
   const { t, i18n } = useTranslation("demo");
   const location = useLocation();
@@ -28,6 +33,7 @@ export function DemoPage() {
   const heading = useRef<HTMLHeadingElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
   const restoreLauncherFocus = useRef(false);
+  // Resolve URLs only against authored catalog entries; unknown destinations use the first section.
   const queryModule = new URLSearchParams(location.search).get("module");
   const requestedPath = location.pathname.replace(/^\/demo/, "") || "/";
   const selected = guideModules.find((module) =>
@@ -66,6 +72,7 @@ export function DemoPage() {
     key: string;
     path: string;
   } | null>(null);
+  // Scope feedback to its originating section so navigation cannot show an unrelated result.
   const report = (key: string) => setFeedback(key ? { key, path } : null);
   useEffect(() => {
     heading.current?.focus();
@@ -78,11 +85,13 @@ export function DemoPage() {
       launcher.current?.focus();
     }
   }, [tour]);
+  /** Restore launcher focus after pause/finish removes the active tour controls. */
   function stopTour(completed = false) {
     restoreLauncherFocus.current = true;
     setTour(false);
     if (completed) setComplete(true);
   }
+  /** Clear every fictional workflow and tour state while keeping the current route and visual preferences. */
   function reset() {
     setClaimed(false);
     setOutcome("success");
@@ -122,6 +131,7 @@ export function DemoPage() {
   // accepted sessions stay fixed until an explicit reset starts a new round.
   const offerTitle = publishedJob || t("course");
   const publicationLocked = Boolean(publishedJob) || claimed;
+  // These flags describe simulated exercises only, never confirmed portal records or assignments.
   const practiceDone =
     path === "/jobs"
       ? claimed

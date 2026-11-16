@@ -1,3 +1,7 @@
+/**
+ * Extracts CBW building blocks with stable identity and source provenance.
+ * The catalogue stores references and hashes; original teaching documents are not published.
+ */
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve, basename } from "node:path";
@@ -8,16 +12,21 @@ export const cataloguePath = new URL(
   "../data/cbw-building-blocks.json",
   import.meta.url,
 );
+/** Calculates a stable content fingerprint; a hash does not replace resource authorisation. */
 const hash = (value) => createHash("sha256").update(value).digest("hex");
+/** Derives the canonical UUID from the business key so repeated imports retain stable references. */
 export function stableCatalogueId(value) {
   const hex = hash(`luminovia-cbw:${value}`);
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
+/** Normalises the German date read from the source into catalogue form. */
 const isoDate = (value) => value.split(".").reverse().join("-");
+/** Normalises PDF extraction whitespace without changing the source's logical order. */
 const tidy = (value) => value.replace(/\s+/g, " ").trim();
 
 // Only the curriculum section is imported. Names, book prices, ISBNs and room
 // preparation are not course content, and page furniture is not a syllabus item.
+/** Reads one source revision, retaining its filename, hash and business metadata as provenance. */
 export function extractBuildingBlock(text, fileName, sha256) {
   const code = /Kurzzeichen:\s*([A-Z0-9]+)/.exec(text)?.[1];
   const title = tidy(
@@ -98,6 +107,7 @@ export function extractBuildingBlock(text, fileName, sha256) {
   };
 }
 
+/** Groups sources by building block while retaining distinct original revisions separately. */
 export function buildCatalogue(files) {
   const grouped = new Map();
   for (const input of [...files].sort((a, b) =>
@@ -156,6 +166,7 @@ export function buildCatalogue(files) {
   };
 }
 
+/** Renders reproducible SQL catalogue data with quoted literals for the controlled import. */
 export function renderCatalogueSql(catalogue) {
   const json = JSON.stringify(catalogue);
   // Both levels quote generated SQL: source data must not close either the

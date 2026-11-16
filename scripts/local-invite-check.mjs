@@ -1,3 +1,7 @@
+/**
+ * Checks local invitations through real Auth/MFA and a captured Mailpit message.
+ * Delivery stays inside the local test system; real recipients are outside these fixtures.
+ */
 import assert from "node:assert/strict";
 import { createHmac, randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
@@ -9,17 +13,20 @@ assert.ok(
   url && ["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname),
   "Only local disposable projects are permitted",
 );
+/** Creates the business fixture through the data contract under test here. */
 const create = (key) =>
   createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 const service = create(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const admin = create(process.env.SUPABASE_ANON_KEY);
+/** Requires actual SDK success before returning the response data. */
 async function checked(request, label) {
   const { data, error } = await request;
   assert.equal(error, null, `${label}: ${error?.message}`);
   return data;
 }
+/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
 function totp(secret) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "").toUpperCase()]

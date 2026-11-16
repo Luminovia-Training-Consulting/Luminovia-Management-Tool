@@ -1,3 +1,4 @@
+# Physical checkpoint of the known Compose installation before public writes reopen. Verify data, configuration and ownership together; unrelated existing paths are outside this recovery contract.
 """Private, quiescent physical rollback before a deployment opens the API.
 
 This is deliberately limited to the known Compose installation and same-device
@@ -38,10 +39,12 @@ class RecoveryError(Exception):
     """Stable operator reason, without file contents or subprocess output."""
 
 
+# Return UTC for the recorded recovery state.
 def _now():
     return dt.datetime.now(dt.timezone.utc).isoformat()
 
 
+# Reject symlinks in the target and ancestor directories before using a recovery path.
 def _plain_directory(path):
     path = Path(path)
     if path.is_symlink() or not path.is_dir() or any(parent.is_symlink() for parent in path.parents):
@@ -49,6 +52,7 @@ def _plain_directory(path):
     return path
 
 
+# Create and validate a private recovery directory.
 def _private_directory(path):
     path = Path(path)
     path.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -56,6 +60,7 @@ def _private_directory(path):
     path.chmod(0o700)
 
 
+# Accept only private regular recovery metadata owned by the current user.
 def _private_file(path):
     path = Path(path)
     info = path.lstat()
@@ -64,6 +69,7 @@ def _private_file(path):
     return path
 
 
+# Flush and fsync new private metadata before atomically replacing the destination.
 def _json(path, value):
     path = Path(path)
     temporary = path.with_name("." + path.name + "." + uuid.uuid4().hex)
@@ -76,10 +82,12 @@ def _json(path, value):
     os.replace(temporary, path)
 
 
+# Derive the expected container name from the fixed Compose project and service.
 def _container(project, service):
     return project + "-" + service + "-1"
 
 
+# Confirm the actual Compose project label before treating container metadata as ownership evidence.
 def _inspect(updater, project, service, expression):
     name = _container(project, service)
     owner = updater.command(["docker", "inspect", "--format", '{{index .Config.Labels "com.docker.compose.project"}}', name]).decode().strip()
@@ -88,6 +96,7 @@ def _inspect(updater, project, service, expression):
     return updater.command(["docker", "inspect", "--format", expression, name]).decode().strip()
 
 
+# Require the public API fence to be active under the known installation root.
 def _gate(updater):
     root = _plain_directory(Path(updater.root).absolute())
     maintenance = root / "www/maintenance.enabled"
@@ -96,12 +105,14 @@ def _gate(updater):
     return root
 
 
+# Check each backend writer is stopped; issuing a stop command alone does not establish quiescence.
 def _stopped_writers(updater):
     for service in WRITERS:
         if _inspect(updater, BACKEND, service, "{{.State.Running}}") != "false":
             raise RecoveryError("recovery_requires_stopped_backend_writers")
 
 
+# Require a fresh complete private update backup in the expected owned path.
 def _backup(updater, root):
     raw = updater.state.get("lastBackup")
     if not isinstance(raw, str):
@@ -123,6 +134,7 @@ def _backup(updater, root):
     return backup
 
 
+# Verify exact bind/volume paths and Docker labels; reject overlapping recovery sources.
 def _mounts(updater, root, include_clamav):
     docker_root = _plain_directory(Path(updater.command(["docker", "info", "--format", "{{.DockerRootDir}}"]).decode().strip()))
     result = []
@@ -154,6 +166,7 @@ def _mounts(updater, root, include_clamav):
     return result
 
 
+# Inventory bytes, permissions, owners and allowed local links with lstat rather than traversing symlink entries.
 def tree_fingerprint(root):
     """Hash bytes and file metadata without following any symbolic link."""
     root = _plain_directory(root)
@@ -193,6 +206,7 @@ def tree_fingerprint(root):
     return {"sha256": hashlib.sha256(encoded).hexdigest(), "bytes": byte_count, "entries": len(records)}
 
 
+# Estimate copy size from live data; compute the exact fingerprint only after stopping writers.
 def _live_size(root):
     # Do not hash a running PostgreSQL cluster for the free-space estimate.
     # Background checkpoint files can disappear; exact hashing happens stopped.
@@ -209,11 +223,13 @@ def _live_size(root):
     return total
 
 
+# Copy metadata and bytes through a controlled process with a timeout.
 def _copy(updater, source, target):
     target.mkdir(mode=0o700)
     updater.command(["cp", "-a", "--reflink=auto", str(source) + "/.", str(target)], timeout=1800)
 
 
+# Capture hashed physical copies of the approved mounts after ownership, lock and space checks.
 def create_checkpoint(updater, *, include_clamav=False):
     root = _gate(updater)
     _stopped_writers(updater)
@@ -280,6 +296,7 @@ def create_checkpoint(updater, *, include_clamav=False):
             raise RecoveryError("recovery_original_services_resume_failed")
 
 
+# Reject rollback after public access resumes; preserve both data states and recovery evidence during directory swaps.
 def restore_checkpoint(updater, checkpoint, *, public_unblocked, restart_old_runtime, verify_health):
     if public_unblocked is not False:
         raise RecoveryError("automatic_data_restore_forbidden_after_public_unblock")

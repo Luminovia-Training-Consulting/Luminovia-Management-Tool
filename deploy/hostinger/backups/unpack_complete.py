@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Authenticate and decrypt on the desktop into exclusive private destinations. Verify original privileged metadata and absolute links without applying them to the desktop.
 """Desktop-only authenticated decrypt and safe private recovery extraction."""
 import argparse
 import hashlib
@@ -13,6 +14,7 @@ import sys
 from complete_backup import BackupError, FORMAT, digest, private_dir, private_file, verify_complete, write_json
 
 
+# Accept only canonical relative archive paths without NUL or traversal.
 def safe_name(name):
     path = PurePosixPath(name)
     if not name or path.is_absolute() or ".." in path.parts or path.as_posix() != name.rstrip("/") or "\x00" in name:
@@ -20,6 +22,7 @@ def safe_name(name):
     return Path(*path.parts)
 
 
+# Authenticate the catalog/parts and check inventory during exclusive private extraction; failure removes only the new owned destination.
 def unpack(backup, identity, output, *, age="age"):
     import tarfile
     backup, identity, output = Path(backup).absolute(), Path(identity).absolute(), Path(output).absolute()
@@ -65,7 +68,9 @@ def unpack(backup, identity, output, *, age="age"):
         process = subprocess.Popen([age, "--decrypt", "--identity", str(identity), str(backup / "files.tar.gz.age")], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         content_hash = hashlib.sha256()
         plaintext_bytes = 0
+        # Bind the decrypted archive stream to the expected plaintext digest.
         class Reader:
+            # Update the hash/count for decrypted archive bytes actually consumed.
             def read(self, size=-1):
                 nonlocal plaintext_bytes
                 content = process.stdout.read(size)

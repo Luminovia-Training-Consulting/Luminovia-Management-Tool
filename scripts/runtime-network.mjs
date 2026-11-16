@@ -1,9 +1,14 @@
+/**
+ * Ownership-checked Docker network management for the local Supabase runtime.
+ * Published service ports must remain on loopback; unrelated networks are not changed.
+ */
 import { command } from "./runtime-lib.mjs";
 
 const ownerLabel = "org.luminovia.portal";
 const purposeLabel = "org.luminovia.portal.network";
 const bindingOption = "com.docker.network.bridge.host_binding_ipv4";
 
+/** Derives the network name only from a constrained, safe project identifier. */
 export function networkName(project) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,100}$/.test(project ?? ""))
     throw new Error(
@@ -12,6 +17,7 @@ export function networkName(project) {
   return `portal_network_${project}`;
 }
 
+/** Checks ownership labels, bridge driver and loopback-only publishing before changing a network. */
 export function assertNetworkDefinition(network, project) {
   if (
     network.Name !== networkName(project) ||
@@ -29,6 +35,7 @@ export function assertNetworkDefinition(network, project) {
     );
 }
 
+/** Inspects the named network only after matching it against Docker's actual network inventory. */
 async function inspectNetwork(project) {
   const names = (
     await command("docker", ["network", "ls", "--format", "{{.Name}}"], {
@@ -45,6 +52,7 @@ async function inspectNetwork(project) {
   )[0];
 }
 
+/** Creates the owned network when needed and then confirms its actual definition. */
 export async function ensureLoopbackNetwork(project) {
   let network = await inspectNetwork(project);
   if (!network) {
@@ -71,6 +79,7 @@ export async function ensureLoopbackNetwork(project) {
   return network.Name;
 }
 
+/** Removes only a verified, entirely unused owned network; containers are never detached to force removal. */
 export async function removeLoopbackNetwork(project) {
   const network = await inspectNetwork(project);
   if (!network) return;
@@ -82,6 +91,7 @@ export async function removeLoopbackNetwork(project) {
   await command("docker", ["network", "rm", network.Name], { quiet: true });
 }
 
+/** Finds project-labelled containers and reads their bounded network metadata. */
 async function projectContainers(project) {
   const ids = (
     await command(
@@ -103,6 +113,7 @@ async function projectContainers(project) {
   return await Promise.all(ids.map(containerInfo));
 }
 
+/** Reads only network/ownership fields; full container inspection could expose secrets. */
 async function containerInfo(id) {
   // Inspect only networking/ownership fields: a full container inspection includes credentials.
   const format =
@@ -114,6 +125,7 @@ async function containerInfo(id) {
   );
 }
 
+/** Requires exactly one owned network and only permitted host bindings; scanner ports stay internal. */
 export function assertContainerBindings(
   container,
   project,
@@ -137,6 +149,7 @@ export function assertContainerBindings(
   }
 }
 
+/** Recognises stale network bindings as requiring restart without rebuilding unrelated services. */
 export async function stackNeedsNetworkMigration(project) {
   return (await projectContainers(project)).some((container) => {
     try {
@@ -148,6 +161,7 @@ export async function stackNeedsNetworkMigration(project) {
   });
 }
 
+/** Checks actual running services and the required database/gateway/Edge/scanner boundaries. */
 export async function verifyLoopbackBindings(
   project,
   { scanner = false, edge = false } = {},

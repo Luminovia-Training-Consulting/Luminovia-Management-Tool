@@ -1,3 +1,7 @@
+/**
+ * Browser workflows for shared topic hierarchies and lecturer access limited to discovery.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
+ */
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
@@ -13,6 +17,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Taxonomy mutations belong to the disposable canonical stack.",
 );
+/** Checks the rendered state with axe; keyboard interaction and data flows retain separate assertions. */
 async function accessibility(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   const result = await new AxeBuilder({ page })
