@@ -28,6 +28,7 @@ import {
 } from "../operations/building-blocks-api";
 import "./course-i18n";
 import "../jobs/lifecycle-i18n";
+import "../jobs/briefing-i18n";
 import "../taxonomy/i18n";
 import { selectableTopics } from "../taxonomy/selection";
 import { useAuth } from "../auth/auth-context";
@@ -88,6 +89,7 @@ function JobForm({
   const { t, i18n } = useTranslation();
   const courseText = useTranslation("courseOffer").t;
   const lifeText = useTranslation("jobLifecycle").t;
+  const briefingText = useTranslation("jobBriefing").t;
   const { t: priceText } = useTranslation("platform");
   const { session } = useAuth();
   const actor = session!.user.id;
@@ -659,6 +661,13 @@ function JobForm({
       {createdId && (
         <Button asChild variant="secondary">
           <Link to={`/jobs/${createdId}`}>{courseText("openJob")}</Link>
+        </Button>
+      )}
+      {createdId && (
+        <Button asChild variant="secondary">
+          <Link to={`/jobs/${createdId}#job-briefing`}>
+            {briefingText("configureLink")}
+          </Link>
         </Button>
       )}
     </form>
