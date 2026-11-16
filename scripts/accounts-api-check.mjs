@@ -133,7 +133,8 @@ async function request(
 try {
   const admin = await fixture("admin", "admin"),
     teacher = await fixture("teacher", "lecturer"),
-    peer = await fixture("peer", "lecturer");
+    peer = await fixture("peer", "lecturer"),
+    manager = await fixture("manager", "management");
   let own = await request(teacher, "me");
   assert.equal(own.status, 200);
   assert.equal(own.body.profile.id, teacher.id);
@@ -144,7 +145,7 @@ try {
   await mfa(admin);
   const accounts = await request(admin, `users?q=${suffix}&limit=2&offset=0`);
   assert.equal(accounts.status, 200);
-  assert.equal(accounts.body.total, 3);
+  assert.equal(accounts.body.total, 4);
   assert.equal(accounts.body.items.length, 2);
   assert.ok(
     accounts.body.items.every((item) => !("encrypted_password" in item)),
@@ -214,7 +215,7 @@ try {
         roles: ["lecturer"],
       })
     ).status,
-    400,
+    403,
   );
   assert.equal(
     (
@@ -222,7 +223,7 @@ try {
         active: false,
       })
     ).status,
-    400,
+    403,
   );
   const org = await checked(
     admin.client.rpc("save_organisation", {
@@ -285,7 +286,7 @@ try {
     (
       await request(admin, "invitations", "POST", {
         ...body,
-        role: "admin",
+        role: "lecturer",
         organisation_id: null,
       })
     ).status,
@@ -359,6 +360,76 @@ try {
     200,
   );
   assert.equal((await request(teacher, "me")).status, 200);
+  await mfa(manager);
+  const managerCatalog = await request(manager, "roles");
+  assert.equal(managerCatalog.status, 200);
+  assert.ok(
+    managerCatalog.body.some((row) => row.role === "guest" && row.assignable),
+  );
+  assert.ok(
+    managerCatalog.body
+      .filter((row) => ["owner", "admin", "management"].includes(row.role))
+      .every((row) => row.assignable === false),
+  );
+  assert.equal(
+    (
+      await request(manager, `users/${teacher.id}/roles`, "PUT", {
+        roles: ["senior_lecturer"],
+      })
+    ).status,
+    200,
+  );
+  assert.deepEqual((await request(teacher, "me")).body.roles, [
+    "senior_lecturer",
+  ]);
+  for (const target of [admin, manager])
+    assert.equal(
+      (
+        await request(manager, `users/${target.id}/roles`, "PUT", {
+          roles: ["guest"],
+        })
+      ).status,
+      403,
+    );
+  assert.equal(
+    (
+      await request(manager, `users/${teacher.id}/roles`, "PUT", {
+        roles: ["admin"],
+      })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await request(manager, `users/${teacher.id}/roles`, "PUT", {
+        roles: ["guest"],
+      })
+    ).status,
+    200,
+  );
+  assert.deepEqual((await request(teacher, "me")).body.roles, ["guest"]);
+  assert.equal(
+    (
+      await request(manager, `users/${teacher.id}/roles`, "PUT", {
+        roles: ["client", "lecturer"],
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await request(manager, `users/${admin.id}/status`, "PATCH", {
+        active: false,
+      })
+    ).status,
+    403,
+  );
+  const privatePolicy = await checked(
+    manager.client.rpc("commission_access"),
+    "Manager private policy projection",
+  );
+  assert.equal("regular_lecturer_percent" in privatePolicy, false);
+  assert.equal("senior_lecturer_percent" in privatePolicy, false);
   const catalog = await request(admin, "roles");
   assert.equal(catalog.status, 200);
   assert.ok(catalog.body.some((row) => row.role === "owner"));

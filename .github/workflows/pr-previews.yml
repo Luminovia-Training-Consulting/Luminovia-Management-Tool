@@ -1,0 +1,36 @@
+name: PR preview deployments
+on:
+  workflow_run:
+    workflows: [Portal checks]
+    types: [in_progress, completed]
+  pull_request_target:
+    types: [closed]
+  schedule:
+    - cron: "19 5 * * *"
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+  deployments: write
+concurrency:
+  group: pr-preview-record-${{ github.event.workflow_run.id || github.event.number || 'expiry' }}
+  cancel-in-progress: false
+jobs:
+  publish:
+    name: Record local PR preview
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Privileged metadata writer: ALWAYS use the trusted default branch.
+      # Never checkout a PR ref, install packages, restore a PR cache, download
+      # an artifact, execute contributor code or expose hosting credentials.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - name: Publish exact-head artifact status and expire stale previews
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/pr-preview-deployments.mjs

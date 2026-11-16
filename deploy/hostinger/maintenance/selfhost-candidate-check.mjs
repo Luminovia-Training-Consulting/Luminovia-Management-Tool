@@ -848,6 +848,13 @@ export async function checkCandidate({
       await new Promise((done) => setTimeout(done, 200));
     }
     assert(schemaReady, "Candidate REST schema did not finish loading.");
+    // The retained baseline can predate candidate-only commercial settings.
+    // Bootstrap fictional acceptance data only after the upgrade/retention proof,
+    // using the same exact owned project and environment as the API suites.
+    await run(process.execPath, [join(scratch, "scripts/local-seed.mjs")], {
+      env: childEnvironment,
+      timeout: 240000,
+    });
     console.log(
       "Candidate: TLS/public boundaries and complete migration replay passed; running actual API suites.",
     );
