@@ -40,3 +40,5 @@ General project documentation is maintained in English. The application supports
 - [Brand design system](BRAND_DESIGN_SYSTEM.md), [reference sources](REFERENCE_SOURCES.md), [architecture](ARCHITECTURE.md), [ER diagram](ERD.md), [API reference](API_REFERENCE.md), [decision notes](decisions/README.md).
 
 Historical evidence describes its recorded revision and environment. For current status, read the latest work-log entry and exact PR/CI results. Development acceptance does not imply full product completeness or production approval.
+
+[Guided experience audit](GUIDED_EXPERIENCE_AUDIT.md) records the accepted guided-demo/help behavior and its verification.
