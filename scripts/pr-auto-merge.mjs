@@ -250,20 +250,31 @@ export async function inspectPullRequest(request, number, catalogue) {
     if (
       !analysis ||
       analysis.commit_sha !== pr.merge_commit_sha ||
-      analysis.error !== ""
+      analysis.error !== "" ||
+      analysis.results_count !== 0
     )
       return blocked("analysis-provenance");
   }
   const findings = checks
     .filter((item) => item.name === "CodeQL" && item.app?.id === 57789)
     .sort((a, b) => b.id - a.id)[0];
+  // Retrying only Dependency review changes workflow.run_started_at while
+  // retaining successful CodeQL jobs. Their actual starts are authoritative.
+  const codeqlStarts = ["javascript-typescript", "python", "actions"].map(
+    (language) =>
+      Date.parse(
+        checks
+          .filter(
+            (item) =>
+              item.name === `CodeQL (${language})` && item.app?.id === 15368,
+          )
+          .sort((a, b) => b.id - a.id)[0].started_at,
+      ),
+  );
   if (
     !Number.isFinite(Date.parse(findings.started_at)) ||
-    !Number.isFinite(
-      Date.parse(selectedRuns.get("security.yml").run_started_at),
-    ) ||
-    Date.parse(findings.started_at) <
-      Date.parse(selectedRuns.get("security.yml").run_started_at)
+    !codeqlStarts.every(Number.isFinite) ||
+    Date.parse(findings.started_at) < Math.max(...codeqlStarts)
   )
     return blocked("stale-findings");
 

@@ -109,6 +109,7 @@ function analysesFor(sha = merge) {
       analysis_key: ".github/workflows/security.yml:codeql",
       commit_sha: sha,
       error: "",
+      results_count: 0,
     }),
   );
 }
@@ -767,7 +768,7 @@ test("green check names from a different workflow suite cannot satisfy any requi
   assert.deepEqual(source.writes(), []);
 });
 
-test("each CodeQL analysis must match its category, owning workflow and the exact tested merge", async () => {
+test("each CodeQL analysis must match its category, owning workflow and exact tested merge with zero results", async () => {
   for (let language = 0; language < 3; language++) {
     for (const change of [
       (analyses) => analyses.splice(language, 1),
@@ -788,30 +789,63 @@ test("each CodeQL analysis must match its category, owning workflow and the exac
       change(analyses);
       await expectBlocked({ analyses }, "analysis-provenance");
     }
+    for (const results_count of [undefined, "0", -1, 0.5, 1]) {
+      const analyses = analysesFor();
+      analyses[language].results_count = results_count;
+      await expectBlocked({ analyses }, "analysis-provenance");
+    }
     const analyses = analysesFor();
     analyses.push({ ...analyses[language], id: 900, commit_sha: base });
     await expectBlocked({ analyses }, "analysis-provenance");
   }
 });
 
-test("a successful findings check from before the security run cannot approve a newer analysis", async () => {
+test("findings must follow the latest actual CodeQL job and missing job timestamps fail closed", async () => {
   for (const started_at of [undefined, "invalid", "2026-11-16T03:59:59Z"]) {
     const checks = checksFor();
     checks.find((check) => check.name === "CodeQL").started_at = started_at;
     await expectBlocked({ checks }, "stale-findings");
   }
-  await expectBlocked(
-    {
-      runs: {
-        "security.yml": [
-          workflowRun("security.yml", pullRequest(), {
-            run_started_at: "invalid",
-          }),
-        ],
-      },
+  for (const language of ["javascript-typescript", "python", "actions"]) {
+    for (const started_at of [undefined, "invalid"]) {
+      const checks = checksFor();
+      checks.find((check) => check.name === `CodeQL (${language})`).started_at =
+        started_at;
+      await expectBlocked({ checks }, "stale-findings");
+    }
+    const checks = checksFor();
+    const prior = checks.find((check) => check.name === `CodeQL (${language})`);
+    checks.push({ ...prior, id: 900, started_at: "2026-11-16T04:01:00Z" });
+    await expectBlocked({ checks }, "stale-findings");
+    checks.find((check) => check.name === "CodeQL").started_at =
+      "2026-11-16T04:01:00Z";
+    const source = fixture({ checks });
+    assert.equal(
+      (await inspectPullRequest(source.request, 31, catalogue)).eligible,
+      true,
+    );
+  }
+});
+
+test("a targeted Dependency review retry preserves valid findings from retained successful CodeQL jobs", async () => {
+  const checks = checksFor();
+  const dependency = checks.find((check) => check.name === "Dependency review");
+  checks.push({ ...dependency, id: 900, started_at: "2026-11-16T05:00:00Z" });
+  const source = fixture({
+    checks,
+    runs: {
+      "security.yml": [
+        workflowRun("security.yml", pullRequest(), {
+          run_started_at: "2026-11-16T05:00:00Z",
+        }),
+      ],
     },
-    "stale-findings",
+  });
+  assert.equal(
+    (await inspectPullRequest(source.request, 31, catalogue)).eligible,
+    true,
   );
+  assert.deepEqual(source.writes(), []);
 });
 
 test("a combined branch cannot silently consume another open PR, including a draft", async () => {

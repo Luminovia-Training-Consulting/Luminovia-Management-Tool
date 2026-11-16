@@ -9,7 +9,7 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Implement trusted-main workflow, current complete workflow/check/security provenance, draft/hold/review/indirect-PR safeguards, exact signed tested-commit fast-forward and independent missing-main-check reconciliation.
 - [x] Prove signed GitHub promotion and concurrent-target refusal in owned temporary PR14; clean fixture branches; preserve main/application data.
 - [x] Reuse only the existing protected repo-scoped maintenance App for tightly routed promotion writes; preserve currently active server rules and ordinary maintenance paths. Addmerge:hold and precise contribution/operating documentation.
-- [ ] Complete exact-source full application/security/native CI, review results and perform the authorised merge. Workflow-file permissions or native rules must fail closed; do not broaden App rights silently.
+- [ ] Complete exact-source full application/security/native CI, review results and perform the authorised merge on [PR #19](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/19); inspect its durable final checks/merge record on continuation. Workflow-file permissions or native rules must fail closed; do not broaden App rights silently.
 
 Full product/module scope and independently ongoing PR acceptance remain unchanged.
 
