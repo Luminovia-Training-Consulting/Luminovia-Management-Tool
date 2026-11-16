@@ -44,6 +44,28 @@ function assert(condition) {
   if (!condition) throw new Error("Invalid or incomplete GitHub response.");
 }
 
+/** REST account identity is mandatory even when no permission is being granted. */
+function knownIdentity(user) {
+  return (
+    Number.isSafeInteger(user?.id) &&
+    user.id > 0 &&
+    ["User", "Bot"].includes(user.type) &&
+    typeof user.login === "string" &&
+    /^[a-zA-Z0-9-]+(?:\[bot\])?$/.test(user.login)
+  );
+}
+
+/** Both probe and reviewer checks bind the current canonical account to its ID. */
+function currentIdentityMatches(current, expected) {
+  return (
+    knownIdentity(current) &&
+    knownIdentity(expected) &&
+    current.id === expected.id &&
+    current.login.toLowerCase() === expected.login.toLowerCase() &&
+    current.type === expected.type
+  );
+}
+
 /** Recognize only the fixed query and its one bounded opaque data variable. */
 function isPushRead(path, options) {
   return (
@@ -126,7 +148,7 @@ export async function readSourcePusher(request, run, head) {
       run?.head_sha === head &&
       run.repository?.full_name === repository &&
       run.path === ".github/workflows/ci.yml" &&
-      run.event === "pull_request" &&
+      ["pull_request", "push", "workflow_dispatch"].includes(run.event) &&
       Number.isSafeInteger(run.check_suite_id) &&
       run.check_suite_id > 0 &&
       typeof run.check_suite_node_id === "string" &&
@@ -176,6 +198,35 @@ export async function readSourcePusher(request, run, head) {
     id: actor.databaseId,
     login: actor.login.replace(/\[bot\]$/i, "") + "[bot]",
     type: "Bot",
+  };
+}
+
+/** CI metadata-access probe only: fetch one canonical ci.yml run, reuse the
+ * identical sealed suite/push query and validate its current REST identity.
+ * In-progress runs and null pushes are legitimate; neither confers authority.
+ * The caller supplies only a reader, so this path cannot merge or dispatch. */
+export async function probeSource(request, runID) {
+  assert(
+    typeof runID === "string" &&
+      /^[1-9][0-9]{0,15}$/.test(runID) &&
+      Number.isSafeInteger(Number(runID)),
+  );
+  const run = await request(`${prefix}/actions/runs/${runID}`);
+  assert(run?.id === Number(runID) && shaPattern.test(run.head_sha));
+  const pusher = await readSourcePusher(request, run, run.head_sha);
+  if (pusher) {
+    const current = await request(
+      `${prefix}/collaborators/${encodeURIComponent(pusher.login)}/permission`,
+    );
+    assert(currentIdentityMatches(current?.user, pusher));
+  }
+  return {
+    sourceProof: true,
+    runId: run.id,
+    suiteId: run.check_suite_id,
+    head: run.head_sha,
+    pusherKnown: pusher !== null,
+    ...(pusher ? { pusherId: pusher.id } : {}),
   };
 }
 
@@ -456,12 +507,6 @@ export async function inspectPullRequest(request, number, catalogue) {
     )
   )
     return blocked("changes-requested");
-  const knownIdentity = (user) =>
-    Number.isSafeInteger(user?.id) &&
-    user.id > 0 &&
-    ["User", "Bot"].includes(user.type) &&
-    typeof user.login === "string" &&
-    /^[a-zA-Z0-9-]+(?:\[bot\])?$/.test(user.login);
   // Reuse only the same immutable identity within this inspection. The final
   // inspection creates a fresh map and must observe current roles again.
   const permissions = new Map();
@@ -478,13 +523,7 @@ export async function inspectPullRequest(request, number, catalogue) {
     const current = permission?.user;
     // A retained login must not transfer an old actor/reviewer's authority to
     // another account. Require the current canonical ID, login and account type.
-    if (
-      !knownIdentity(current) ||
-      current.id !== user.id ||
-      current.login.toLowerCase() !== user.login.toLowerCase() ||
-      current.type !== user.type
-    )
-      return null;
+    if (!currentIdentityMatches(current, user)) return null;
     return permission;
   };
   assert(knownIdentity(pr.user));
@@ -674,13 +713,22 @@ export function routeRequests(read, write = null) {
  * only. Independent main reconciliation recovers lost post-merge responses. */
 async function main() {
   assert(process.env.GITHUB_REPOSITORY === repository);
+  const args = process.argv.slice(2);
+  // Resolve the isolated mode before constructing or reading any writer token.
+  // Unknown or mixed arguments fail before even the first metadata request.
+  if (args.includes("--probe-source")) {
+    assert(args.length === 2 && args[0] === "--probe-source");
+    const reader = routeRequests(githubClient(process.env.GH_TOKEN));
+    console.log(JSON.stringify(await probeSource(reader, args[1])));
+    return;
+  }
+  assert(args.length === 0 || (args.length === 1 && args[0] === "--apply"));
+  const apply = args[0] === "--apply";
   const request = routeRequests(
     githubClient(process.env.GH_TOKEN),
-    process.argv.includes("--apply")
-      ? githubClient(process.env.PROMOTION_TOKEN)
-      : null,
+    apply ? githubClient(process.env.PROMOTION_TOKEN) : null,
   );
-  if (process.argv.includes("--apply")) await ensureMainVerification(request);
+  if (apply) await ensureMainVerification(request);
   const catalogue = JSON.parse(
     await readFile(new URL("../.github/labels.json", import.meta.url), "utf8"),
   );
@@ -691,7 +739,7 @@ async function main() {
   for (const pr of pulls) {
     try {
       const result = await processPullRequest(request, pr.number, catalogue, {
-        apply: process.argv.includes("--apply"),
+        apply,
       });
       console.log(JSON.stringify({ number: pr.number, ...result }));
       if (result.nativeMerged) break; // Other PRs now need evidence for the new base.

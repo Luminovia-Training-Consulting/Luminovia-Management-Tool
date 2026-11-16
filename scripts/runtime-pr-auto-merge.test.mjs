@@ -13,6 +13,7 @@ import {
   githubClient,
   inspectPullRequest,
   processPullRequest,
+  probeSource,
   pushQuery,
   readSourcePusher,
   repository,
@@ -1134,6 +1135,101 @@ test("dry inspection has no native or dispatch mutation even when all checks and
   );
   assert.deepEqual(source.writes(), []);
 });
+
+// The same production reader/router runs both current-pusher validation and the
+// probe. These fixtures provide no merge, dispatch, labels or permission grant.
+test("the read-only probe binds canonical run identity, source head, suite and current account", async () => {
+  const invalidRuns = [
+    { id: 101 },
+    { repository: { full_name: "foreign/project" } },
+    { path: ".github/workflows/security.yml" },
+    { event: "pull_request_target" },
+    { head_sha: merge },
+    { head_sha: "malformed" },
+    { check_suite_id: 999 },
+    { check_suite_id: 0 },
+    { check_suite_node_id: "CS_other" },
+    { check_suite_node_id: null },
+  ];
+  for (const overrides of [{}, ...invalidRuns]) {
+    const calls = [];
+    const current = run("ci.yml", pull(), {
+      status: "in_progress",
+      conclusion: null,
+      ...overrides,
+    });
+    const request = routeRequests(async (path, options) => {
+      calls.push({ path, options });
+      if (path === `${prefix}/actions/runs/100`) return current;
+      if (path === "/graphql") return pushResponse();
+      if (path === `${prefix}/collaborators/source-writer/permission`)
+        return { permission: "none", user: pusher };
+      assert.fail("Unexpected probe request");
+    });
+    if (Object.keys(overrides).length)
+      await assert.rejects(probeSource(request, "100"));
+    else
+      assert.deepEqual(await probeSource(request, "100"), {
+        sourceProof: true,
+        runId: 100,
+        suiteId: 1000,
+        head,
+        pusherKnown: true,
+        pusherId: pusher.id,
+      });
+    assert.ok(
+      calls.every(
+        (call) =>
+          !call.options?.method ||
+          (call.path === "/graphql" && call.options.method === "POST"),
+      ),
+    );
+  }
+});
+
+test("Code quality continuously probes the canonical run using only six read scopes", async () => {
+  const yaml = await readFile(
+    new URL("../.github/workflows/ci.yml", import.meta.url),
+    "utf8",
+  );
+  const quality = yaml.match(/^ {2}quality:\n[\s\S]*?(?=^ {2}coverage:)/m)?.[0];
+  assert.ok(quality);
+  const permissions = quality.match(
+    /^ {4}permissions:\n((?: {6}[^\n]+\n)+)/m,
+  )?.[1];
+  assert.ok(permissions);
+  assert.deepEqual(
+    permissions
+      .trim()
+      .split("\n")
+      .map((line) => line.trim())
+      .sort(),
+    [
+      "actions: read",
+      "checks: read",
+      "contents: read",
+      "pull-requests: read",
+      "security-events: read",
+      "statuses: read",
+    ],
+  );
+  const probe = quality.match(
+    / {6}- name: Verify read-only source metadata access\n[\s\S]*?(?= {6}- name:)/,
+  )?.[0];
+  assert.ok(probe);
+  assert.match(probe, /if: matrix\.name == 'Code quality'/);
+  assert.match(probe, /GH_TOKEN: \$\{\{ github\.token \}\}/);
+  assert.match(
+    probe,
+    /run: node scripts\/pr-auto-merge\.mjs --probe-source "\$GITHUB_RUN_ID"/,
+  );
+  assert.ok(quality.indexOf("- run: npm ci") < quality.indexOf(probe));
+  assert.doesNotMatch(
+    quality,
+    /PROMOTION_TOKEN|secrets\.|maintenance-signing|permission-.*write/,
+  );
+});
+
 test("only the exact fixed GraphQL read reaches the read credential; arbitrary queries and mutations are rejected", async () => {
   const source = httpFixture();
   await readSourcePusher(source.request, run("ci.yml"), head);

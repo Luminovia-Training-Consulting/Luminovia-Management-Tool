@@ -47,6 +47,12 @@ const preload = String.raw`
 import assert from "node:assert/strict";
 import { appendFileSync, readFileSync } from "node:fs";
 const fixture = JSON.parse(readFileSync(process.env.PR_MERGE_CLI_FIXTURE, "utf8"));
+if (fixture.forbidPromotionEnv) process.env = new Proxy(process.env, {
+  get(target, key) {
+    assert.notEqual(key, "PROMOTION_TOKEN", "The probe cannot even read the writer credential.");
+    return Reflect.get(target, key);
+  },
+});
 let nativeMerged = false;
 globalThis.fetch = async (url, options = {}) => {
   const parsed = new URL(url);
@@ -80,7 +86,15 @@ globalThis.fetch = async (url, options = {}) => {
 };
 `;
 
-function runCli(routes, { apply = false, env: changes = {} } = {}) {
+function runCli(
+  routes,
+  {
+    apply = false,
+    args = [],
+    forbidPromotionEnv = false,
+    env: changes = {},
+  } = {},
+) {
   const directory = mkdtempSync(join(tmpdir(), "luminovia-pr-merge-cli-"));
   chmodSync(directory, 0o700);
   const preloadPath = join(directory, "trusted-preload.mjs");
@@ -90,7 +104,13 @@ function runCli(routes, { apply = false, env: changes = {} } = {}) {
     writeFileSync(preloadPath, preload, { mode: 0o600 });
     writeFileSync(
       fixturePath,
-      JSON.stringify({ routes, readToken, writeToken, pushQuery }),
+      JSON.stringify({
+        routes,
+        readToken,
+        writeToken,
+        pushQuery,
+        forbidPromotionEnv,
+      }),
       { mode: 0o600 },
     );
     writeFileSync(requestsPath, "", { mode: 0o600, flag: "wx" });
@@ -114,6 +134,7 @@ function runCli(routes, { apply = false, env: changes = {} } = {}) {
         preloadPath,
         "scripts/pr-auto-merge.mjs",
         ...(apply ? ["--apply"] : []),
+        ...args,
       ],
       {
         cwd: new URL("..", import.meta.url),
@@ -427,6 +448,144 @@ function botReadyRoutes(login = "dependabot") {
   };
   return routes;
 }
+
+/** Narrow network fixture for the probe: no inventory, writer or dispatch routes
+ * exist. The current run is still executing and GITHUB_SHA need not be its head. */
+function probeRoutes({
+  bot = false,
+  nullPush = false,
+  event = "pull_request",
+} = {}) {
+  const ready = bot ? botReadyRoutes() : readyRoutes();
+  const graphql = ready.find((item) => item.path === "/graphql");
+  if (nullPush) graphql.data.data.node.push = null;
+  return [
+    route(`${prefix}/actions/runs/100`, {
+      id: 100,
+      head_sha: "a".repeat(40),
+      repository: { full_name: repository },
+      path: ".github/workflows/ci.yml",
+      event,
+      check_suite_id: 1000,
+      check_suite_node_id: "CS_1000",
+      status: "in_progress",
+      conclusion: null,
+    }),
+    graphql,
+    ...ready.filter((item) => item.path.includes("/collaborators/")),
+  ];
+}
+
+test("actual probe CLI checks User, real bare Bot and null push with no writer access or PR inventory", () => {
+  for (const options of [
+    {},
+    { bot: true, event: "push" },
+    { nullPush: true, event: "workflow_dispatch" },
+  ]) {
+    const result = runCli(probeRoutes(options), {
+      args: ["--probe-source", "100"],
+      forbidPromotionEnv: true,
+      env: { PROMOTION_TOKEN: undefined, GITHUB_SHA: "f".repeat(40) },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stderr, "");
+    assert.deepEqual(JSON.parse(result.stdout), {
+      sourceProof: true,
+      runId: 100,
+      suiteId: 1000,
+      head: "a".repeat(40),
+      pusherKnown: !options.nullPush,
+      ...(!options.nullPush ? { pusherId: options.bot ? 49699333 : 20 } : {}),
+    });
+    assert.equal(result.calls.length, options.nullPush ? 2 : 3);
+    assert.ok(result.calls.every((call) => call.credential === "read"));
+    assert.ok(
+      result.calls.every(
+        (call) => call.method === "GET" || call.path === "/graphql",
+      ),
+    );
+  }
+});
+
+test("actual probe CLI fails closed on GraphQL, canonical identity and HTTP failures without private output", () => {
+  for (const mutate of [
+    (routes) => {
+      routes[1].data = { errors: [{ message: privateError }] };
+    },
+    (routes) => {
+      routes[2].data.user.id = 900;
+    },
+    (routes) => {
+      routes[2].data.user.login = "recycled-login";
+    },
+    (routes) => {
+      routes[2].data.user.type = "Bot";
+    },
+    (routes) => {
+      delete routes[2].data.user.login;
+    },
+    (routes) => {
+      routes[1].status = 403;
+      routes[1].raw = privateError;
+    },
+  ]) {
+    const routes = probeRoutes();
+    mutate(routes);
+    const result = runCli(routes, {
+      args: ["--probe-source", "100"],
+      forbidPromotionEnv: true,
+    });
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, "");
+    assert.ok(result.calls.length >= 2);
+    assert.ok(result.calls.every((call) => call.credential === "read"));
+    assert.ok(
+      result.calls.every(
+        (call) => call.method === "GET" || call.path === "/graphql",
+      ),
+    );
+  }
+});
+
+test("actual probe CLI rejects invalid IDs, missing reader and mixed or unknown arguments before requests", () => {
+  for (const args of [
+    ["--probe-source"],
+    ...[
+      "0",
+      "00",
+      "-1",
+      "1.5",
+      "100/merge",
+      "100?x=1",
+      "9007199254740992",
+      "1\n",
+    ].map((id) => ["--probe-source", id]),
+    ["--probe-source", "100", "--apply"],
+    ["--apply", "--probe-source", "100"],
+    ["--probe-source", "100", "--unknown"],
+    ["--unknown"],
+    ["--apply", "--apply"],
+  ]) {
+    const result = runCli([], { args, forbidPromotionEnv: true });
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, "");
+    assert.deepEqual(result.calls, []);
+  }
+  for (const env of [
+    { GH_TOKEN: undefined },
+    { GH_TOKEN: "" },
+    { GITHUB_REPOSITORY: "foreign/project" },
+  ]) {
+    const result = runCli([], {
+      args: ["--probe-source", "100"],
+      forbidPromotionEnv: true,
+      env,
+    });
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, "");
+    assert.deepEqual(result.calls, []);
+  }
+});
 
 test("actual default CLI is read-only on an empty PR list without an App credential", () => {
   const result = runCli([route(listPath, [])], {
