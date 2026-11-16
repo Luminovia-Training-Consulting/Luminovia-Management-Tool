@@ -1,5 +1,15 @@
 # Persistent implementation plan
 
+## Exact-source 7daaa7b acceptance and coordinated delivery
+
+The following acceptance belongs to head `7daaa7b557243e6ab8ffc70d372e536158d80a1a` and accepted base `c0622a763127081a7b5be092ce2782253991c6a5`. Earlier checkpoint sections retain their source-bound historical status.
+
+- [x] Observe all 15 required checks passing, with independent review: 529 unit/component cases across 66 files, 116 browser cases and two built-PWA cases; whole-source coverage S65.52/B59.99/F56.66/L67.59%, with separate lifecycle/notification API 100% measurements.
+- [x] Observe actual native 36→36 SQL, 29 API suites, 50-way claims, TLS/WSS and retained private/financial data; both receipts contain two claims and one invoice with equal digest, no changed image and checked cleanup. Observe the separate preview-package success. Exact jobs, timestamps and financial digest are in the newest WORKLOG entry.
+- [ ] Resolve the pending user review-policy clarification; read-only server inspection currently reports review ruleset `27329000` disabled. Preserve PR19 as Draft without auto-merge and respect the reserved PR17→PR24/25 Main/shared-QA sequence.
+- [ ] Batch this prepared documentation descendant with the next actually accepted Main or final evidence update, then run its own applicable exact-source gates. The completed 7daaa7b checkpoint supplies historical evidence for that revision.
+- [ ] Complete the permitted merge and separately observe trusted-Main controller execution and native App merging. Production publication and the full remaining product/operational scope retain their own acceptance and authorization boundaries.
+
 ## Current corrected PR19 gate
 
 - [x] Record actual f0 CodeQL eight-finding and Commission fixture failures; do not substitute successful prior-source or scanner-job results.
