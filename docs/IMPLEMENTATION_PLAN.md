@@ -2,6 +2,15 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Guided experience re-audit
+
+- [x] Independently trace all PR16 modules, routes, handlers, runtime exports and meaningful control-flow/state behavior; preserve legitimate non-frontend entries.
+- [x] Reproduce/fix actual tour-access recovery, same-topic Help focus and demo accepted-offer identity errors; remove confirmed inert copy/metadata/branches/markers.
+- [x] Correct erased-type false positives in the runtime-use guard with adverse fixtures and runtime-class inheritance preservation.
+- [x] Execute current local source/coverage/public-browser/guard/build checks and document actual evidence in [GUIDED_EXPERIENCE_AUDIT](GUIDED_EXPERIENCE_AUDIT.md).
+
+Exact combined/native/security and extended real-account browser acceptance belongs to the follow-up PR. The prior merged PR16 baseline remains preserved; these focused fixes do not mark unrelated product modules complete.
+
 ## Guided exploration and practical help
 
 User requested a complete bilingual guided experience, safe fictional test system, practical problem explanations and a tested PR/merge. Work is isolated on `codex/guided-demo-help`; unrelated original roles/preview/welcome-checklist changes remain outside this PR.

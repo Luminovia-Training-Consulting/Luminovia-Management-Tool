@@ -16,9 +16,7 @@ import "./tour.css";
 const copy = {
   de: {
     title: "Portal-Rundgang",
-    start: "Rundgang starten",
     resume: "Rundgang fortsetzen",
-    restart: "Erneut starten",
     pause: "Pausieren",
     close: "Schließen",
     next: "Weiter",
@@ -31,13 +29,14 @@ const copy = {
     done: "Rundgang abgeschlossen. Du kannst ihn jederzeit neu starten.",
     safe: "Du bist im echten Portal. Der Rundgang erklärt nur und führt keine Aktionen aus. Zum gefahrlosen Ausprobieren öffne die Demo.",
     unavailable: "Der Rundgang wartet auf die aktuellen Zugriffsrechte.",
+    loadError:
+      "Die Zugriffsrechte konnten nicht geladen werden. Lade sie erneut, bevor du den Rundgang startest.",
+    retry: "Zugriffsrechte erneut laden",
     count: "Schritt",
   },
   en: {
     title: "Portal tour",
-    start: "Start tour",
     resume: "Resume tour",
-    restart: "Restart tour",
     pause: "Pause",
     close: "Close",
     next: "Next",
@@ -50,6 +49,9 @@ const copy = {
     done: "Tour completed. You can restart it at any time.",
     safe: "You are in the live portal. The tour only explains and never performs actions. Open the demo to practise safely.",
     unavailable: "The tour is waiting for current access permissions.",
+    loadError:
+      "Access permissions could not be loaded. Reload them before starting the tour.",
+    retry: "Reload access permissions",
     count: "Step",
   },
 };
@@ -59,11 +61,17 @@ export function PortalTour({
   roles,
   permissions,
   ready,
+  failed = false,
+  retrying = false,
+  onRetry,
 }: {
   actor: string;
   roles: readonly string[];
   permissions: readonly string[];
   ready: boolean;
+  failed?: boolean;
+  retrying?: boolean;
+  onRetry?: () => void;
 }) {
   const { i18n } = useTranslation();
   const text = guideText(copy, i18n.language);
@@ -110,10 +118,7 @@ export function PortalTour({
     return () => window.removeEventListener("keydown", onEscape);
   }, [active, actor, state.step]);
   return (
-    <section
-      className={`portal-tour ${active ? "portal-tour-active" : ""}`}
-      aria-label={text.title}
-    >
+    <section className="portal-tour" aria-label={text.title}>
       <div className="portal-tour-entry">
         <Button
           ref={launcher}
@@ -134,7 +139,19 @@ export function PortalTour({
           {text.demo}
         </Link>
       </div>
-      {!ready && <p role="status">{text.unavailable}</p>}
+      {!ready &&
+        (failed ? (
+          <div role="alert">
+            <p>{text.loadError}</p>
+            {onRetry && (
+              <Button variant="secondary" onClick={onRetry} disabled={retrying}>
+                {text.retry}
+              </Button>
+            )}
+          </div>
+        ) : (
+          <p role="status">{text.unavailable}</p>
+        ))}
       {state.status === "completed" && <p role="status">{text.done}</p>}
       {active && step && (
         <div className="portal-tour-content">

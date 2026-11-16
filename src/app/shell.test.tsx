@@ -6,7 +6,14 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { InboxPage } from "../features/notifications/api";
 import { Shell } from "./shell";
 import "../lib/i18n";
-const { signOut } = vi.hoisted(() => ({ signOut: vi.fn() }));
+const { signOut, access, refetchPermissions, refetchRoles } = vi.hoisted(
+  () => ({
+    signOut: vi.fn(),
+    access: { failed: false },
+    refetchPermissions: vi.fn(),
+    refetchRoles: vi.fn(),
+  }),
+);
 vi.mock("../features/auth/auth-context", () => ({
   useAuth: () => ({
     session: { user: { id: "actor", email: "fictional@example.invalid" } },
@@ -35,12 +42,21 @@ vi.mock("@tanstack/react-query", async (original) => {
               } satisfies InboxPage)
             : [],
       isPending: false,
-      isError: false,
+      isSuccess: !access.failed,
+      isError:
+        access.failed &&
+        ["permissions", "user-roles"].includes(options.queryKey[0]),
+      isFetching: false,
+      refetch:
+        options.queryKey[0] === "permissions"
+          ? refetchPermissions
+          : refetchRoles,
     }),
   };
 });
 afterEach(() => {
   cleanup();
+  access.failed = false;
   vi.clearAllMocks();
   vi.unstubAllGlobals();
 });
@@ -107,5 +123,26 @@ describe("server-confirmed logout", () => {
     expect(signOut).toHaveBeenCalledTimes(1);
     complete({ error: null });
     await waitFor(() => expect(screen.getByText("Login screen")).toBeVisible());
+  });
+});
+
+describe("tour access recovery", () => {
+  it("explains an actual permission query failure and retries both owning queries", async () => {
+    access.failed = true;
+    const { user, client } = setup();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Die Zugriffsrechte konnten nicht geladen werden",
+    );
+    expect(
+      screen.getByRole("button", { name: "Portal-Rundgang" }),
+    ).toBeDisabled();
+    await user.click(
+      screen.getByRole("button", { name: "Zugriffsrechte erneut laden" }),
+    );
+    expect(refetchPermissions).toHaveBeenCalledTimes(1);
+    expect(refetchRoles).toHaveBeenCalledTimes(1);
+    expect(client.getQueryData(["private", "actor"])).toBe(
+      "Owned private data",
+    );
   });
 });

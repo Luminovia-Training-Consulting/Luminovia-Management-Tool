@@ -112,6 +112,20 @@ describe("public bilingual help", () => {
     ).toBeVisible();
     expect(screen.getByRole("searchbox")).toHaveValue("");
   });
+  it("restores focus when search reopens the same selected guide", async () => {
+    const router = page("/help?topic=jobs");
+    await userEvent.type(screen.getByRole("searchbox"), "Übernahme");
+    expect(
+      screen.queryByRole("heading", { level: 2, name: "Aufträge übernehmen" }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("link", { name: /^Aufträge übernehmen/ }),
+    );
+    expect(router.state.location.search).toBe("?topic=jobs");
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Aufträge übernehmen" }),
+    ).toHaveFocus();
+  });
   it("keeps complete authored guides and unique routes for every current section", () => {
     expect(new Set(guideModules.map((module) => module.id)).size).toBe(
       guideModules.length,

@@ -2,6 +2,16 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — guided experience functional and dead-code re-audit
+
+Follow-up user request: independently recheck all PR16 changes for genuine functionality, disconnected/dead code and concrete bugs. PR16 is merged as e75f55d after actual CI43793507891/security43793507671,84browsercases,2built-PWAcases and19nativeAPI suites with retained password/MFA/privateevent/file bytes. This new audit is isolated on `codex/guided-demo-audit` from that actual main, preserving other checkouts' unfinished work.
+
+Three functional defects were reproduced before correction: failed access queries left the live tour indefinitely waiting; reopening the same Help topic after search failed to reveal/focus its instructions; custom demo publication was not the actual accepted/calendar identity and could follow an existing accepted block. Current corrections add real query retry, actual-navigation focus and one immutable accepted demo block until reset. A new real-account browser path aborts the permissions RPC then restores it and retries; no fake authentication is introduced. The dead-code detector itself incorrectly counted erased TypeScript type references as runtime use; two real fixtures now prove unused detection and preservation of runtime typeof/calls/class inheritance.
+
+Manual control-flow and object-key review removed4unreachable demo fallback checks,5unused translation keys,5unread catalogue properties plus their constant, and2inert class markers. The stricter actual audit finds112modules/225runtimeexports with zero disconnections or missing links/assets/imports/unused exports. This is paired with behavior tests, not falsely claimed as proof that every control-flow path executes.
+
+Executed local acceptance: npmci, type/lint/sourceformat,231unit/componentcases/49files (S49.69/B44.38/F40.06/L51.49%; thresholds unchanged),10/10actual public desktop/mobile browsers including DE/EN/themes/axe/no-overflow/all25stops/loginentry/same-topicfocus/zerobackendattempts,9integrityguards plus the documentation check and synthetic production/PWA build. [Audit and exact boundaries](GUIDED_EXPERIENCE_AUDIT.md). New exact-head full/native/security CI is tracked on the follow-up PR; the new genuine-account recovery case is not yet claimed run locally. No new dependency, migration, business-policy value, normal/hosted data, production or real mail was changed.
+
 ## 16 November 2026 — bilingual guided demo, live tour and practical help
 
 User-authorised work is isolated on `codex/guided-demo-help` from main1341b16, preserving the original checkout's unrelated unpublished roles/preview/welcome-checklist work. This feature complements that account checklist; it neither incorporates nor replaces those unfinished changes. The public Website and production services are unchanged.
