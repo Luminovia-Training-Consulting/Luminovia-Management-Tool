@@ -16,22 +16,22 @@ The source fingerprint identifies the actual copied bytes, including uncommitted
 
 This maps the authoritative specification A–N to executable evidence. Each row describes the **implemented slice**. The full remaining feature list in [IMPLEMENTATION_PLAN](IMPLEMENTATION_PLAN.md) is still required; these suite associations do not claim that every target feature or every branch already exists or is covered.
 
-| Module | Real API/database suites under `scripts/` | Browser files under `tests/e2e/` |
-| --- | --- | --- |
-| A Dashboard/navigation/search | `local-api`, `notifications-api`, per-domain permission cases | `dashboard`, `search`, `preferences`, `portal` |
-| B Accounts/Auth/profiles | `accounts`, `profiles`, `avatars` API/DB; actual invitation | `accounts`, `onboarding`, `people`, `avatars`, `portal` |
-| C Topic/tool/language catalogue | `taxonomy` API/DB | `taxonomy` |
-| D Customers and contacts | `operations-api`, `commission` API/DB | `operations`, `commission` |
-| E Courses/runs/sessions | `operations-api`, `cbw`, `profiles` API/DB | `operations`, `cbw`, `people`, `calendar` |
-| F Jobs/claims/capacity/lifecycle | core `db-rpc`, `schedule-db`, `local-api`, `jobs-capacity`, `jobs-lifecycle`, `commission` API/DB | `portal`, `job-capacity`, `job-lifecycle`, `cbw`, `commission` |
-| G Personal/global calendar | core `db-rpc`, `schedule-db`, `availability` API/DB | `calendar`, `portal`, `availability`, `dashboard` |
-| H Private/group/course chat | `chat` API/DB with actual WebSockets/revocation | `chat`, `search` |
-| I Private scanned/versioned files | `documents`, `avatars`, `chat`, `commercial` API/DB | `files`, `avatars`, `chat`, `commercial`, `search` |
-| J Personal contracts | `commercial` API/DB; live qualification/contract claim prerequisites | `commercial`, `commission` |
-| K Wiki/forum | `knowledge` API/DB | `knowledge`, `search` |
-| L Compensation/invoices/payments | `commercial`, `commission` API/DB | `commercial`, `commission` |
-| M Inbox/preferences/reminders | `notifications` API/DB; domain deduplication cases | `notifications`, `dashboard`, `job-lifecycle` |
-| N Administration/audit | `accounts`, `admin-audit`, `taxonomy`, `comments` API/DB | `accounts`, `admin-audit`, `taxonomy`, `comments`, `portal` |
+| Module                            | Real API/database suites under `scripts/`                                                         | Browser files under `tests/e2e/`                               |
+| --------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| A Dashboard/navigation/search     | `local-api`, `notifications-api`, per-domain permission cases                                     | `dashboard`, `search`, `preferences`, `portal`                 |
+| B Accounts/Auth/profiles          | `accounts`, `profiles`, `avatars` API/DB; actual invitation                                       | `accounts`, `onboarding`, `people`, `avatars`, `portal`        |
+| C Topic/tool/language catalogue   | `taxonomy` API/DB                                                                                 | `taxonomy`                                                     |
+| D Customers and contacts          | `operations-api`, `commission` API/DB                                                             | `operations`, `commission`                                     |
+| E Courses/runs/sessions           | `operations-api`, `cbw`, `profiles` API/DB                                                        | `operations`, `cbw`, `people`, `calendar`                      |
+| F Jobs/claims/capacity/lifecycle  | core `db-rpc`, `schedule-db`, `local-api`, `jobs-capacity`, `jobs-lifecycle`, `commission` API/DB | `portal`, `job-capacity`, `job-lifecycle`, `cbw`, `commission` |
+| G Personal/global calendar        | core `db-rpc`, `schedule-db`, `availability` API/DB                                               | `calendar`, `portal`, `availability`, `dashboard`              |
+| H Private/group/course chat       | `chat` API/DB with actual WebSockets/revocation                                                   | `chat`, `search`                                               |
+| I Private scanned/versioned files | `documents`, `avatars`, `chat`, `commercial` API/DB                                               | `files`, `avatars`, `chat`, `commercial`, `search`             |
+| J Personal contracts              | `commercial` API/DB; live qualification/contract claim prerequisites                              | `commercial`, `commission`                                     |
+| K Wiki/forum                      | `knowledge` API/DB                                                                                | `knowledge`, `search`                                          |
+| L Compensation/invoices/payments  | `commercial`, `commission` API/DB                                                                 | `commercial`, `commission`                                     |
+| M Inbox/preferences/reminders     | `notifications` API/DB; domain deduplication cases                                                | `notifications`, `dashboard`, `job-lifecycle`                  |
+| N Administration/audit            | `accounts`, `admin-audit`, `taxonomy`, `comments` API/DB                                          | `accounts`, `admin-audit`, `taxonomy`, `comments`, `portal`    |
 
 SQL discovery includes every `*-db-tests.mjs`; API discovery includes every `*-api-check.mjs`. The core database runner and real Edge invitation run separately. HTTP tests use actual Auth-issued identities and genuine MFA, rather than trusting role metadata or faking RPC success.
 
@@ -50,3 +50,5 @@ The browser-evidence guard has adversarial report fixtures and a genuine Playwri
 Current automated browser acceptance is desktop/mobile Chromium emulation. It is not physical Android/iOS installation, Safari/Firefox, complete manual accessibility, production load, real external SMTP, legal/privacy certification or production deployment. A passed existing slice does not implement outstanding saved views, resource models, structured mentions, scheduled delivery, announcements, permission editing, retention or the other full-specification requirements. Every new function must extend its connected database/API/browser journey and pass a new combined run.
 
 Actual counts and pass/fail history belong in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
+
+Local frozen `b93b400` passed the complete command with exit0 on16November2026:78application and2built-PWA cases, all18native business API suites and234SQL cases, with no browser skips/retries. Actual visually inspected examples: [desktop search](screenshots/functional-desktop-search.png), [mobile search](screenshots/functional-mobile-search.png). Remote/remaining platform acceptance is tracked separately in the evidence ledger.

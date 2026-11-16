@@ -2,6 +2,26 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## Functional/integration sweep — complete local acceptance passed
+
+Signed implementation `b93b400bbd3b26fca0d31886c446cf05b35d58bd` passed `./portal test` at **2026-11-16T02:37:51.154Z** (12:37 Australia/Brisbane). Independent detached wrapper `.local/full-functional/run03.exit` records **0**. Private result `.local/tests/3346a7e6/RESULT.txt` is PASS; machine evidence `acceptance.json` identifies sanitized source SHA-256 `19e5bf96ca69f74d148a1c0afb72e288bd5532eebc0eaa2cb8d77fde85a888bf` and all **68 passed stages**. Later changes are evidence documentation and actual fictional screenshots only.
+
+| Check | Actual result |
+| --- | --- |
+| Source | Lint/type/format;197 Vitest cases/46 files |
+| Runtime/Edge |57 runtime cases including real negative Playwright probes;42 Edge cases and3 entry-point typechecks |
+| Operating boundaries |76 Python and61 Node guards;11 real Envoy routes/10 real Caddy HTTP cases |
+| Database |All24 migrations; SQL lint/security/performance advisors;234 PostgreSQL cases including legacy refusal and real50-way concurrency |
+| Native interfaces |All18 real Auth/MFA/REST/Storage/WebSocket business suites, including expanded knowledge/chat/contracts/qualification/cancellation flows; actual idempotent Edge/Mailpit invitation |
+| Persistence |Genuine stop/start retained password, verified MFA, edited profile/timezone, private event and exact private Storage bytes |
+| Browsers |**78/78 passed** across24 application spec files/desktop and mobile Chromium;7.7 minutes;zero skipped/retried cases |
+| Build/PWA |56 public precache entries/2600.81KiB;**2/2** built-PWA cases passed in2.3 seconds;offline shell/no private cache |
+| Cleanup |Final exit0 only after owned stack cleanup; no remaining containers/volumes for3346a7e6; normal development resources not targeted |
+
+Actual application and PWA discovery/execution JSON and HTML remain separately in `browser/application/` and `browser/pwa/`; neither report overwrote the other. Reduced evidence has0600permissions and no environment/credential/raw-log fields. A separate actual passing nested Playwright probe also confirmed the validator accepts first-attempt passes; the negative runtime-skip probe demonstrates that Playwright exit0alone is insufficient.
+
+New real workflows and their limits are in [FUNCTIONAL_ACCEPTANCE](FUNCTIONAL_ACCEPTANCE.md). Actual [desktop search](screenshots/functional-desktop-search.png) and [mobile search](screenshots/functional-mobile-search.png) screenshots were visually inspected. This is acceptance of the implemented slice, not completion of all outstanding master-spec features, physical PWA/platform acceptance or production release. Independent exact-source GitHub/native results remain to be recorded on [PR12](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/12). No hosted/production/public-website or real-mail operation was performed.
+
 ## Subsequent theme regression — actual defect fixed, new CI pending
 
 Repeated documentation CI43774441712 rejected one taxonomy contrast check(69/70passed). Actual served M6markup/styles reproduced first-state button contrast1.841/1.037 during background interpolation; stable themes pass. Removing that interpolation retains transform feedback and gives immediate dark9.104/13.982 on the same actual page. New effect-based desktop/mobile regression samples the first computed theme states; exact new PR9 CI remains required. The historical accepted M6counts below are not rewritten as if this later run passed.
