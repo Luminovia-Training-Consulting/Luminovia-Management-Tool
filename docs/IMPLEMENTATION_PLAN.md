@@ -1,5 +1,13 @@
 # Persistent implementation plan
 
+## Accepted Main36 phase integration — combined gates pending
+
+- [x] Preserve accepted Main36 `7fbdb956a513ca8eec3d0f2404adc213c656af1f`, its separate full-PR system/browser phases, both complete historical ledgers and Draft-only fast/Ready-full routing. Production React/Edge and all 36 released SQL sources remain unchanged.
+- [ ] Adapt the controller's pre-Main36 two-job binding to actual system, browser and native full-acceptance evidence, including the new `Isolated browser acceptance` job/step. Validate skipped/missing/contradictory phase refusal before claiming the adapted guard passed.
+- [ ] Complete the local integration and every applicable fresh exact-head/current-base gate, with actual aggregate system/browser/native acceptance. The 304 combined Node and 90 focused results remain evidence for pre-Main36 `694cc4e` only.
+- [ ] Follow the assigned delivery sequence and current authoritative API readiness without rewriting historical Ready observations. Resolve user review-policy clarification while preserving the dated disabled-review/source-policy distinction.
+- [ ] Observe trusted-Main controller operation and native App merging separately after permitted delivery; preserve the full remaining product and production/operational acceptance scope below.
+
 ## Current combined acceptance-step and Draft-routing follow-up
 
 - [x] Integrate actually accepted Main34 `c5281002` with both complete historical ledgers, parallel quality/application/native jobs and independent SQL workers; preserve all 36 released SQL and production React/Edge bytes.
@@ -111,6 +119,19 @@ Full product/module scope and independently ongoing PR acceptance remain unchang
 - [ ] Coordinate the shared QA lock and run the exact signed candidate against a separately archived actual `1de544d` baseline, with the current 36 migrations and discovered API inventory. Record matching anonymous financial digests, full native Auth/Storage/TLS/50-claim checks and verified owned cleanup before claiming a current pass.
 - [ ] Run complete canonical application acceptance and the final exact-head PR CI gates through the owning quality integration. Keep the historical `5876224`/`e048edb` 26-migration proof source-bound; no deployment or PostgreSQL image upgrade is implied.
 
+## Full PR acceptance critical path — further authorised continuation
+
+- [x] Measure two-worker SQL5m07s, complete native/retained-data success, and historical full browser13.9m versus13s Chromium setup; preserve canonical SQL lint/advisor and native-engine checks.
+- [x] Route sensitive PR system and browser acceptance onto separate owned runners; preserve main/manual/local complete acceptance and all existing required context names.
+- [x] Pass56focused phase/bootstrap/snapshot/safety/worker/scope/preview/policy cases and38actual shell boundary/routing cases; validate launcher normalization, complete stage partition, fresh service/persistence/seed setup and failure/cancellation cleanup. Scoped lint/format/compiler connectivity/actionlint pass; actual Docker/complete child-process evidence remains pending CI.
+- [ ] Publish signed exact source, observe every final-head system/browser/native/security/package gate, measure actual wall time, and complete the user-authorised protected merge.
+
+The complete product scope and earlier actual-source evidence below remain in force.
+
+## Historical pre-Main36 PR34 planning snapshot
+
+This unchanged Root snapshot records its earlier pending publication/merge items. The following Main36 version retains the later branch-reported completion separately.
+
 ## Safe development-speed improvements — explicit continuation
 
 - [x] Observe signed608687f/PR34 Portal43855915270 success in11m36s (approximately59%less than28m),351actual SQL groups and every required context; fix missing metadata labels and observe green43856170205.
@@ -120,6 +141,18 @@ Full product/module scope and independently ongoing PR acceptance remain unchang
 - [x] Pass26focused local scope/worker/routing/preview/governance cases and scoped lint/format/actionlint; record local subprocess/Docker limitations and independent read-only review.
 - [ ] Publish final signed source, verify exact remote bytes, pass actual SQL-worker plus full application/native/security/package CI and measure the new SQL duration.
 - [ ] Perform the expressly authorised protected PR34 merge only when every final-current-head check passes; observe main acceptance separately without dispatching a release.
+
+This continuation preserves the complete remaining product scope and prior source-bound evidence below.
+
+## Safe development-speed improvements — explicit continuation
+
+- [x] Observe signed608687f/PR34 Portal43855915270 success in11m36s (approximately59%less than28m),351actual SQL groups and every required context; fix missing metadata labels and observe green43856170205.
+- [x] Implement two separate pinned networkless SQL workers with exhaustive partition, unchanged real races/durability, bounded cancellation/cleanup and actual per-suite timing reports; disable JIT only in the disposable PR fixture.
+- [x] Add conservative actual-merge docs/standard/full selection, full sensitive/unknown/main/manual acceptance, early independent jobs and required-gate preflights that fail on scope errors or fast non-PR profiles.
+- [x] Preserve source/rules/dependencies/migrations, all15required statuses, coverage/security/release requirements; make preview evidence profile explicit and reject missing CLI profile.
+- [x] Pass26focused local scope/worker/routing/preview/governance cases and scoped lint/format/actionlint; record local subprocess/Docker limitations and independent read-only review.
+- [x] Publish signed8f29147 and verify13exact remote blobs; Portal43860971674 passes complete SQL/native/application/security/package gates in32m35s, including SQL5m07s,114desktop/mobile and2built-PWA cases.
+- [x] Observe the user-performed protected PR34 merge after every final-head check passed: signedmain c528100. Main acceptance is a separate run; no release was dispatched.
 
 This continuation preserves the complete remaining product scope and prior source-bound evidence below.
 
