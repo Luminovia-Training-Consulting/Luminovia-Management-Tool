@@ -36,6 +36,12 @@ const requiredChecks = new Map([
 ]);
 const prefix = `/repos/${repository}`;
 const acceptanceSteps = new Map([
+  // The required preview gate also depends on this split job. Bind its actual
+  // successful browser step, producer and CI suite rather than trusting a name.
+  [
+    "Isolated browser acceptance",
+    new Set(["Complete isolated desktop, mobile and built-PWA acceptance"]),
+  ],
   ["verify", new Set(["Complete isolated local verification"])],
   [
     "Actual isolated selfhost image compatibility",
@@ -376,7 +382,14 @@ function evaluateAcceptanceJobs(jobs, run, head, checks) {
     const check = checks
       .filter((item) => item.name === name && item.app?.id === 15368)
       .sort((a, b) => b.id - a.id)[0];
-    if (!Number.isSafeInteger(check?.id) || check.id <= 0)
+    if (
+      !Number.isSafeInteger(check?.id) ||
+      check.id <= 0 ||
+      check.check_suite?.id !== run.check_suite_id ||
+      check.head_sha !== head ||
+      check.status !== "completed" ||
+      check.conclusion !== "success"
+    )
       return blocked("acceptance-job-provenance");
     const expectedCheck = `https://api.github.com${prefix}/check-runs/${check.id}`;
     const matches = jobs.filter((job) => job?.check_run_url === expectedCheck);

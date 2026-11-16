@@ -13,8 +13,8 @@ invalid paths and unknown source locations conservatively select full.
 | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Verified Draft: documentation/templates only                                                                                  | Runtime/Edge/audit checks; no SQL or native run is claimed.                                                                                                  |
 | Verified Draft: ordinary frontend/static changes                                                                              | Runtime/Edge/audit plus every existing SQL migration/RLS/race suite, split exhaustively between two separate digest-pinned, networkless PostgreSQL clusters. |
-| Backend, Auth, private file/chat access, shared app/cache code, dependencies, test/delivery infrastructure or unknown changes | Complete unchanged `./portal test` and actual native retained-data rehearsal in parallel. PRs also exercise both new SQL workers.                            |
-| Every ready PR, including `ready_for_review`                                                                                  | Complete application and actual native retained-data acceptance in parallel; Draft-only results do not authorize merging.                                    |
+| Backend, Auth, private file/chat access, shared app/cache code, dependencies, test/delivery infrastructure or unknown changes | All system/SQL/API and desktop/mobile/PWA stages on separate isolated runners, plus native retained-data rehearsal and both SQL workers.                     |
+| Every ready PR, including `ready_for_review`                                                                                  | Complete system/browser phases and actual native retained-data acceptance in parallel; Draft-only results do not authorize merging.                          |
 | Every main push or manual run                                                                                                 | Complete unchanged application and native retained-data acceptance in parallel.                                                                              |
 
 The required verification jobs start after the small scope job instead of waiting
@@ -30,6 +30,18 @@ is not full acceptance. The prepared controller additionally requires the actual
 successful application/native steps behind the current canonical check jobs.
 A manual branch run remains available for complete verification.
 
+Sensitive PRs split the complete runner into explicit `--phase system` and
+`--phase browser` invocations. Each owns a fresh random stack, database, test
+snapshot, credentials, ports, lock and cleanup on a separate runner. Both start
+the real services and exercise persistence before seeding fictional commercial
+fixtures. The system phase retains every native SQL, lint/advisor, runtime,
+Edge, backup and real API check; the browser phase retains every desktop/mobile
+journey, production build and built-PWA check. Tests remain sequential inside each
+browser stack with no retries. Neither phase claims complete acceptance alone.
+The required preview gate rejects failure, cancellation, skipping or a missing
+result from either phase. Main/manual/local `./portal test` still executes the
+complete original sequence in one owned stack.
+
 Each SQL worker has its own engine, connection limit, random ownership label and
 UUID databases. No host ports/mounts or network are available. Cancellation stops
 the peer and both owned cleanup paths settle before failure is reported. Only the
@@ -44,7 +56,7 @@ Local complete acceptance, daily maintenance and repository protections remain u
 Npm dependency caching and cancellation of superseded PR runs were already present;
 no credentials, database state or generated QA files are cached.
 
-Actual baseline [43827354265](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43827354265) took about28minutes, including21minutes application then6minutes native upgrade. The first optimized [PR34 run43855915270](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43855915270) on signed608687f passed in **11minutes36seconds**, approximately59%less elapsed time. Quality/coverage took26–48seconds, runtime/Edge/audit39seconds, and the serial SQL job10minutes30seconds with351PASS groups. All15required contexts passed after the missing metadata labels were corrected. The subsequent two-worker/scope/JIT changes need their own exact-head measurement; the11:36result does not accept those later changes.
+Actual baseline [43827354265](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43827354265) took about28minutes, including21minutes application then6minutes native upgrade. The first optimized [PR34 run43855915270](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43855915270) on signed608687f passed in **11minutes36seconds**, approximately59%less elapsed time. Quality/coverage took26–48seconds, runtime/Edge/audit39seconds, and the serial SQL job10minutes30seconds with351PASS groups. All15required contexts passed after the missing metadata labels were corrected. The subsequent signed8f29147 run43860971674 also passed every required check, with two-worker SQL5m07s (about50%less than the earlier10m10.6s), complete native/retained-data acceptance and114desktop/mobile plus2built-PWA cases. Its sensitive-PR full run took32m35s. PR34 merged as signedmain c528100. The separate system/browser follow-up still requires its own exact-head acceptance and timing; these historical results do not accept that new phase split.
 
 Development and testing use the local PC by default. `./portal check` runs fast
 quality, coverage and build checks without starting services; `./portal test`
@@ -55,23 +67,24 @@ verification; a successful check or merge is not a publication request.
 
 ## Visible checks
 
-| Check                                                             | What it verifies                                                                                                                                                                |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Build                                                             | Production compilation and PWA build using only synthetic public Supabase configuration. It does not access a real instance.                                                    |
-| Typecheck                                                         | TypeScript project checks through `npm run typecheck`.                                                                                                                          |
-| Lint                                                              | ESLint with no warnings allowed.                                                                                                                                                |
-| Formatting                                                        | Existing source formatting and GitHub configuration.                                                                                                                            |
-| Code quality                                                      | Existing compiler-based checks for reachable modules, exports and connections.                                                                                                  |
-| Tests and coverage                                                | All Vitest unit/component tests, V8 coverage and enforced thresholds; downloadable HTML/LCOV/JSON artifacts.                                                                    |
-| verify                                                            | Verified Draft docs/ordinary source: runtime guards, Edge lint/types/tests and production audit. Ready/sensitive PR/main/manual: complete `./portal test`.                      |
-| Actual isolated selfhost image compatibility                      | Verified Draft ordinary source: two isolated PostgreSQL workers. Ready/sensitive PR/main/manual: actual native images and retained data; Draft docs records its narrower scope. |
-| PR preview package                                                | Package the committed tested application and upload its real runnable local preview artifact; required before PR merge.                                                         |
-| PR metadata                                                       | Current PR labels and matching repository/commit identity.                                                                                                                      |
-| CodeQL (javascript-typescript), CodeQL (python), CodeQL (actions) | Completion of each configured language analysis.                                                                                                                                |
-| Dependency review                                                 | Newly introduced vulnerable dependencies on the PR.                                                                                                                             |
-| CodeQL                                                            | Generated findings check, separate from successful scanner execution.                                                                                                           |
+| Check                                                             | What it verifies                                                                                                                                                                                            |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build                                                             | Production compilation and PWA build using only synthetic public Supabase configuration. It does not access a real instance.                                                                                |
+| Typecheck                                                         | TypeScript project checks through `npm run typecheck`.                                                                                                                                                      |
+| Lint                                                              | ESLint with no warnings allowed.                                                                                                                                                                            |
+| Formatting                                                        | Existing source formatting and GitHub configuration.                                                                                                                                                        |
+| Code quality                                                      | Existing compiler-based checks for reachable modules, exports and connections.                                                                                                                              |
+| Tests and coverage                                                | All Vitest unit/component tests, V8 coverage and enforced thresholds; downloadable HTML/LCOV/JSON artifacts.                                                                                                |
+| verify                                                            | Verified Draft docs/ordinary source: runtime guards, Edge lint/types/tests and production audit. Ready/sensitive PR: complete system phase and separate browser job. Main/manual: complete `./portal test`. |
+| Actual isolated selfhost image compatibility                      | Verified Draft ordinary source: two isolated PostgreSQL workers. Ready/sensitive PR/main/manual: actual native images and retained data; Draft docs records its narrower scope.                             |
+| Isolated browser acceptance                                       | Ready/sensitive PR: all desktop/mobile/build/PWA checks on a fresh stack, required by the preview gate and native controller.                                                                               |
+| PR preview package                                                | Package the committed tested application and upload its real runnable local preview artifact; required before PR merge.                                                                                     |
+| PR metadata                                                       | Current PR labels and matching repository/commit identity.                                                                                                                                                  |
+| CodeQL (javascript-typescript), CodeQL (python), CodeQL (actions) | Completion of each configured language analysis.                                                                                                                                                            |
+| Dependency review                                                 | Newly introduced vulnerable dependencies on the PR.                                                                                                                                                         |
+| CodeQL                                                            | Generated findings check, separate from successful scanner execution.                                                                                                                                       |
 
-All 15 listed checks are mandatory before a PR can merge. The strict rule also requires the PR to be up to date with `main`. Neither maintainers, administrators nor the maintenance App can bypass these checks.
+All 15 existing server-required contexts remain mandatory before a PR can merge. The additional browser phase is enforced through the required preview gate, which rejects a failed, skipped, cancelled or missing browser result; no repository rule is weakened. The strict rule also requires the PR to be up to date with `main`. Neither maintainers, administrators nor the maintenance App can bypass these checks.
 
 The release job runs only for an authorised manual `Portal checks` dispatch on
 `main` with `publish_release=true` and the exact current `main` SHA supplied as

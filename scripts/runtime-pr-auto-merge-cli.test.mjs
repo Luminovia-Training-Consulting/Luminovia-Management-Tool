@@ -246,16 +246,18 @@ function readyRoutes() {
       name,
     })),
   };
-  const checks = names.map((name, index) => ({
-    id: index + 1,
-    name,
-    status: "completed",
-    conclusion: "success",
-    head_sha: source,
-    app: { id: name === "CodeQL" ? 57789 : 15368 },
-    check_suite: { id: suiteIds[workflowFor(name)] },
-    started_at: "2026-11-16T04:00:00Z",
-  }));
+  const checks = [...names, "Isolated browser acceptance"].map(
+    (name, index) => ({
+      id: index + 1,
+      name,
+      status: "completed",
+      conclusion: "success",
+      head_sha: source,
+      app: { id: name === "CodeQL" ? 57789 : 15368 },
+      check_suite: { id: suiteIds[workflowFor(name)] },
+      started_at: "2026-11-16T04:00:00Z",
+    }),
+  );
   const rules = [
     { type: "deletion" },
     { type: "non_fast_forward" },
@@ -354,12 +356,16 @@ function readyRoutes() {
       ),
     ),
     route(prefix + "/actions/runs/100/jobs?filter=all&per_page=100&page=1", {
-      total_count: 2,
+      total_count: 3,
       jobs: [
         ["verify", "Complete isolated local verification"],
         [
           "Actual isolated selfhost image compatibility",
           "Complete isolated native selfhost verification",
+        ],
+        [
+          "Isolated browser acceptance",
+          "Complete isolated desktop, mobile and built-PWA acceptance",
         ],
       ].map(([name, step], index) => ({
         id: 7001 + index,
@@ -664,7 +670,7 @@ test("the actual ready CLI binds fixed GraphQL reads to the reader and only nati
 });
 
 test("actual CLI refuses green acceptance checks whose mandatory application or native step was skipped", () => {
-  for (const index of [0, 1]) {
+  for (const index of [0, 1, 2]) {
     const routes = readyRoutes();
     const jobs = routes.find((item) => item.path.includes("/jobs?filter=all"))
       .data.jobs;
@@ -734,7 +740,7 @@ test("actual CLI refuses unavailable or malformed Actions job evidence without l
 });
 
 test("actual CLI refuses incomplete, contradictory or missing Actions job cardinality before using the writer", () => {
-  for (const total_count of [undefined, null, "2", -1, 1, 3]) {
+  for (const total_count of [undefined, null, "3", -1, 1, 2, 4]) {
     const routes = readyRoutes();
     routes.find((item) =>
       item.path.includes("/jobs?filter=all"),

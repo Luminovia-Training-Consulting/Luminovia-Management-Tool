@@ -111,8 +111,9 @@ jobs:
           if-no-files-found: error
           retention-days: 14
   verify:
-    # Draft UI/docs may use bounded checks; ready PRs and main/manual retain
-    # complete canonical acceptance, independent of the selector's decision.
+    # Verified Drafts may use bounded checks; ready/sensitive PRs require full acceptance.
+    # Sensitive PRs separate system and browser work across owned stacks.
+    # Main/manual retains the unchanged canonical acceptance and owned cleanup.
     needs: scope
     # A broken scope job must fail this required gate instead of skipping it.
     if: always() && !cancelled()
@@ -156,15 +157,66 @@ jobs:
       - name: Complete isolated local verification
         id: application
         if: needs.scope.outputs.profile == 'full'
-        run: ./portal test
+        run: |
+          if test "$GITHUB_EVENT_NAME" = pull_request; then
+            node scripts/runtime-test.mjs --phase system
+          else
+            ./portal test
+          fi
       - name: Upload fictional course-building-block screenshots
-        if: always() && (steps.application.outcome == 'success' || steps.application.outcome == 'failure')
+        if: always() && github.event_name != 'pull_request' && (steps.application.outcome == 'success' || steps.application.outcome == 'failure')
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: portal-course-building-blocks-${{ github.run_id }}-${{ github.run_attempt }}
           # Exact feature allowlist only: no traces, credentials or other reports.
           path: .local/tests/*/screenshots/*-course-building-blocks-*.png
           # The parent .local directory is hidden; the PNG allowlist remains exact.
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+  verify-browser:
+    name: Isolated browser acceptance
+    needs: scope
+    if: always() && !cancelled() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Require a successful recognized scope
+        env:
+          SCOPE_RESULT: ${{ needs.scope.result }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          PR_ACTION: ${{ github.event.action }}
+          PROFILE: ${{ needs.scope.outputs.profile }}
+        run: |
+          test "$SCOPE_RESULT" = success
+          test "$EVENT_NAME" = pull_request
+          case "$PROFILE" in docs|standard|full) ;; *) exit 1 ;; esac
+          if test "$PR_DRAFT" != true || test "$PR_ACTION" = ready_for_review; then test "$PROFILE" = full; fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: needs.scope.outputs.profile == 'full'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: needs.scope.outputs.profile == 'full'
+        with:
+          node-version-file: ".node-version"
+          cache: npm
+      - if: needs.scope.outputs.profile == 'full'
+        run: npm ci
+      - name: Complete isolated desktop, mobile and built-PWA acceptance
+        id: browser
+        if: needs.scope.outputs.profile == 'full'
+        run: node scripts/runtime-test.mjs --phase browser
+      - name: Explain bounded PR verification
+        if: needs.scope.outputs.profile != 'full'
+        run: echo 'The selected docs/standard profile does not claim browser acceptance; the final gate still requires its applicable checks.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload fictional course-building-block screenshots
+        if: always() && (steps.browser.outcome == 'success' || steps.browser.outcome == 'failure')
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: portal-course-building-blocks-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .local/tests/*/screenshots/*-course-building-blocks-*.png
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
@@ -218,7 +270,7 @@ jobs:
         run: node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run --baseline-root "$RUNNER_TEMP/selfhost-baseline" --baseline-commit "$(git rev-parse HEAD^)" --proof-output "$RUNNER_TEMP/postgres-candidate-proof.json"
   preview-package:
     name: PR preview package
-    needs: [quality, coverage, verify, verify-selfhost, scope]
+    needs: [quality, coverage, verify, verify-selfhost, verify-browser, scope]
     # Required final gate: even a canceled/failed scope or dependency must
     # explicitly fail here, rather than turn every remaining status into skipped.
     if: always() && github.event_name == 'pull_request'
@@ -232,12 +284,14 @@ jobs:
           COVERAGE_RESULT: ${{ needs.coverage.result }}
           APPLICATION_RESULT: ${{ needs.verify.result }}
           NATIVE_RESULT: ${{ needs.verify-selfhost.result }}
+          BROWSER_RESULT: ${{ needs.verify-browser.result }}
         run: |
           test "$SCOPE_RESULT" = success
           test "$QUALITY_RESULT" = success
           test "$COVERAGE_RESULT" = success
           test "$APPLICATION_RESULT" = success
           test "$NATIVE_RESULT" = success
+          test "$BROWSER_RESULT" = success
       # Same read-only job for internal, fork and Dependabot PRs. Generated
       # credentials/reports are never copied from a verification runner.
       # This artifact has passed PR checks, not full Auth/browser/native acceptance.

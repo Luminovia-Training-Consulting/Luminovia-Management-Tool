@@ -1,5 +1,13 @@
 # Persistent implementation plan
 
+## Current all-PR merge continuation — PR19
+
+- [x] Integrate accepted PR36/main `7fbdb956` through normal ancestry, preserving Draft-only fast routing, complete ready/main/manual acceptance and immutable SQL/business source.
+- [x] Bind the split browser job/step to actual current-head producer/suite/check/run evidence; pass source/build, 529 frontend and all 235 runtime cases plus the focused additional controller provenance case.
+- [ ] Require final exact-head system/browser/native/security/package CI and permitted sequential coordinator merge. The actual trusted-Main controller/App merge remains unobserved; no live protection mutation is part of this delivery.
+
+Earlier accepted-source evidence and the complete product scope remain below.
+
 ## Current combined acceptance-step and Draft-routing follow-up
 
 - [x] Integrate actually accepted Main34 `c5281002` with both complete historical ledgers, parallel quality/application/native jobs and independent SQL workers; preserve all 36 released SQL and production React/Edge bytes.
@@ -111,6 +119,15 @@ Full product/module scope and independently ongoing PR acceptance remain unchang
 - [ ] Coordinate the shared QA lock and run the exact signed candidate against a separately archived actual `1de544d` baseline, with the current 36 migrations and discovered API inventory. Record matching anonymous financial digests, full native Auth/Storage/TLS/50-claim checks and verified owned cleanup before claiming a current pass.
 - [ ] Run complete canonical application acceptance and the final exact-head PR CI gates through the owning quality integration. Keep the historical `5876224`/`e048edb` 26-migration proof source-bound; no deployment or PostgreSQL image upgrade is implied.
 
+## Full PR acceptance critical path — further authorised continuation
+
+- [x] Measure two-worker SQL5m07s, complete native/retained-data success, and historical full browser13.9m versus13s Chromium setup; preserve canonical SQL lint/advisor and native-engine checks.
+- [x] Route sensitive PR system and browser acceptance onto separate owned runners; preserve main/manual/local complete acceptance and all existing required context names.
+- [x] Pass56focused phase/bootstrap/snapshot/safety/worker/scope/preview/policy cases and38actual shell boundary/routing cases; validate launcher normalization, complete stage partition, fresh service/persistence/seed setup and failure/cancellation cleanup. Scoped lint/format/compiler connectivity/actionlint pass; actual Docker/complete child-process evidence remains pending CI.
+- [ ] Publish signed exact source, observe every final-head system/browser/native/security/package gate, measure actual wall time, and complete the user-authorised protected merge.
+
+The complete product scope and earlier actual-source evidence below remain in force.
+
 ## Safe development-speed improvements — explicit continuation
 
 - [x] Observe signed608687f/PR34 Portal43855915270 success in11m36s (approximately59%less than28m),351actual SQL groups and every required context; fix missing metadata labels and observe green43856170205.
@@ -118,8 +135,8 @@ Full product/module scope and independently ongoing PR acceptance remain unchang
 - [x] Add conservative actual-merge docs/standard/full selection, full sensitive/unknown/main/manual acceptance, early independent jobs and required-gate preflights that fail on scope errors or fast non-PR profiles.
 - [x] Preserve source/rules/dependencies/migrations, all15required statuses, coverage/security/release requirements; make preview evidence profile explicit and reject missing CLI profile.
 - [x] Pass26focused local scope/worker/routing/preview/governance cases and scoped lint/format/actionlint; record local subprocess/Docker limitations and independent read-only review.
-- [ ] Publish final signed source, verify exact remote bytes, pass actual SQL-worker plus full application/native/security/package CI and measure the new SQL duration.
-- [ ] Perform the expressly authorised protected PR34 merge only when every final-current-head check passes; observe main acceptance separately without dispatching a release.
+- [x] Publish signed8f29147 and verify13exact remote blobs; Portal43860971674 passes complete SQL/native/application/security/package gates in32m35s, including SQL5m07s,114desktop/mobile and2built-PWA cases.
+- [x] Observe the user-performed protected PR34 merge after every final-head check passed: signedmain c528100. Main acceptance is a separate run; no release was dispatched.
 
 This continuation preserves the complete remaining product scope and prior source-bound evidence below.
 

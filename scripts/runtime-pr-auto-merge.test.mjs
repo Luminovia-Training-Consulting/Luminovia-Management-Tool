@@ -99,7 +99,7 @@ function nativeRules() {
   ];
 }
 function checksFor(sha = head) {
-  return names.map((name, index) => ({
+  return [...names, "Isolated browser acceptance"].map((name, index) => ({
     id: index + 1,
     name,
     head_sha: sha,
@@ -226,6 +226,10 @@ function acceptanceJobs(sha = head, runId = 100) {
     [
       "Actual isolated selfhost image compatibility",
       "Complete isolated native selfhost verification",
+    ],
+    [
+      "Isolated browser acceptance",
+      "Complete isolated desktop, mobile and built-PWA acceptance",
     ],
   ].map(([name, step], index) => ({
     id: 7001 + index,
@@ -789,7 +793,7 @@ test("all candidates including admin authors require independent current-head ap
 });
 
 test("green contexts cannot substitute for missing, skipped, failed or ambiguous actual acceptance steps", async () => {
-  for (const index of [0, 1]) {
+  for (const index of [0, 1, 2]) {
     for (const change of [
       (job) => {
         job.steps = [];
@@ -827,7 +831,7 @@ test("green contexts cannot substitute for missing, skipped, failed or ambiguous
 });
 
 test("full acceptance jobs must bind the selected canonical run, head, name and exact check URL", async () => {
-  for (const index of [0, 1]) {
+  for (const index of [0, 1, 2]) {
     for (const change of [
       (job) => {
         job.run_id = 101;
@@ -906,7 +910,7 @@ test("missing, invalid or future acceptance attempts cannot authorize a native m
       "acceptance-job-provenance",
     );
   }
-  for (const index of [0, 1]) {
+  for (const index of [0, 1, 2]) {
     for (const run_attempt of [undefined, null, "1", 0, -1, 1.5, 2]) {
       const jobs = acceptanceJobs();
       jobs[index].run_attempt = run_attempt;
@@ -1586,4 +1590,37 @@ test("HTTP errors, redirects, invalid JSON and hostile paths cannot expose token
   });
   assert.equal(sent[0].options.redirect, "error");
   assert.ok(sent[0].options.signal instanceof AbortSignal);
+});
+
+/** Split PR acceptance must retain exact browser execution provenance even
+ * though the server's unchanged fifteen-context rule delegates it to preview. */
+test("split browser evidence cannot reuse a foreign suite, source, producer or skipped check", async () => {
+  for (const change of [
+    (check) => {
+      check.check_suite.id = 9999;
+    },
+    (check) => {
+      check.head_sha = merge;
+    },
+    (check) => {
+      check.app.id = 9999;
+    },
+    (check) => {
+      check.conclusion = "skipped";
+    },
+  ]) {
+    const checks = checksFor();
+    change(
+      checks.find((check) => check.name === "Isolated browser acceptance"),
+    );
+    const source = httpFixture({ checks });
+    const result = await processPullRequest(source.request, 31, catalogue, {
+      apply: true,
+    });
+    assert.equal(result.eligible, false);
+    assert.equal(
+      source.calls.some((call) => call.method === "PUT"),
+      false,
+    );
+  }
 });
