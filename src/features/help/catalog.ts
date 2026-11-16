@@ -20,9 +20,9 @@ export function guideText<T>(value: { de: T; en: T }, language: string): T {
   return language.toLowerCase().startsWith("de") ? value.de : value.en;
 }
 const staff = ["owner", "admin", "management", "senior_lecturer", "lecturer"];
-const teaching = ["owner", "admin", "senior_lecturer", "lecturer"];
 // Public, authored instructions only. No account records, secrets or access grants.
 // Roles/permissions help the live tour choose relevant stops; the database remains authoritative.
+// Compound commercial/qualification navigation is handled in tour-state.ts.
 export const guideModules: GuideModule[] = [
   {
     id: "home",
@@ -580,8 +580,6 @@ export const guideModules: GuideModule[] = [
   {
     id: "contracts",
     path: "/contracts",
-    roles: teaching,
-    permission: "contracts.read",
     title: { de: "Verträge", en: "Contracts" },
     summary: {
       de: "Prüfe die für dich freigegebenen Vertragsversionen, Laufzeiten und Bestätigungen.",
@@ -625,8 +623,6 @@ export const guideModules: GuideModule[] = [
   {
     id: "finance",
     path: "/finance",
-    roles: teaching,
-    permission: "finance.manage",
     title: { de: "Finanzen & Rechnungen", en: "Finance & invoices" },
     summary: {
       de: "Prüfe bestätigte Honorare und verfolge Rechnungen und Zahlungen im zulässigen Umfang.",
@@ -1033,7 +1029,6 @@ export const guideModules: GuideModule[] = [
   {
     id: "admin-people",
     path: "/admin/people",
-    permission: "qualifications.verify",
     title: {
       de: "Zugänge & Qualifikationsprüfung",
       en: "Access & qualification review",
