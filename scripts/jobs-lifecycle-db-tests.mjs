@@ -12,7 +12,11 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
   await sql(
     `insert into auth.users(id,email) values('${admin}','lifecycle-admin@example.invalid'),('${teacher}','lifecycle-teacher@example.invalid'),('${peer}','lifecycle-peer@example.invalid'),('${participant}','lifecycle-participant@example.invalid');insert into public.user_roles(user_id,role) values('${admin}','admin'),('${teacher}','lecturer'),('${peer}','lecturer'),('${participant}','participant');`,
   );
-  await actor(admin, "select public.configure_compensation_policy(31,73,0)", "aal2");
+  await actor(
+    admin,
+    "select public.configure_compensation_policy(31,73,0)",
+    "aal2",
+  );
   let day = 1;
   /** Creates this module's fictional inputs; authoritative validation remains on the server. */
   const payload = () => ({
@@ -40,10 +44,31 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
     day += 3;
     return result;
   };
-  /** Calls the actual claim RPC; only the database result confirms whole-block allocation. */
-  const claim = async (job, who = teacher, key = randomUUID()) => {
-    const version = await actor(who,
+  /** Capture the actor's real visible quote before submitting or racing its consent. */
+  const quotedVersion = async (job, who) => {
+    const version = await actor(
+      who,
       `select item->>'terms_version' from jsonb_array_elements(public.job_offers()) item where item->>'id'='${job}'`,
+    );
+    assert.match(
+      version,
+      /^[1-9][0-9]*$/,
+      "A visible actor-specific quote token is required before claiming",
+    );
+    return version;
+  };
+  /** Calls the actual claim RPC; only the database result confirms whole-block allocation. */
+  const claim = async (
+    job,
+    who = teacher,
+    key = randomUUID(),
+    observedVersion,
+  ) => {
+    const version = observedVersion ?? (await quotedVersion(job, who));
+    assert.match(
+      version,
+      /^[1-9][0-9]*$/,
+      "Claims must carry a previously observed numeric quote token",
     );
     return JSON.parse(
       await actor(who, `select public.claim_job('${job}','${key}',${version})`),
@@ -355,9 +380,21 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
       await action(job, "reopen", {
         reason: "Fictional concurrency review complete",
       });
+      // Both actors observe the published offer before the first winner can
+      // make it invisible to the other. This is genuine frozen consent, not a
+      // base-version fallback or a quote lookup performed after allocation.
+      const [teacherVersion, peerVersion] = await Promise.all([
+        quotedVersion(job, teacher),
+        quotedVersion(job, peer),
+      ]);
       const results = await Promise.all(
         Array.from({ length: 50 }, (_, i) =>
-          claim(job, i % 2 ? teacher : peer),
+          claim(
+            job,
+            i % 2 ? teacher : peer,
+            randomUUID(),
+            i % 2 ? teacherVersion : peerVersion,
+          ),
         ),
       );
       assert.equal(results.filter((x) => x.status === "confirmed").length, 1);
