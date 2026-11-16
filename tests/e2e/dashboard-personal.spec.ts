@@ -23,48 +23,42 @@ test("personal cards and teaching preparation persist in the real account across
     .startOf("day")
     .plus({ hours: 9 });
   await checked(
-    service
-      .from("jobs")
-      .insert({
-        id: job,
-        title: `Fictional teaching day ${suffix}`,
-        customer_name: "Fictional teaching day academy",
-        delivery_type: "online",
-        status: "filled",
-        location: "https://example.invalid/class",
-        amount: 100,
-        currency: "EUR",
-        rate_unit: "fixed_total",
-        total_amount: 100,
-        terms: "Fictional whole course terms",
-      }),
+    service.from("jobs").insert({
+      id: job,
+      title: `Fictional teaching day ${suffix}`,
+      customer_name: "Fictional teaching day academy",
+      delivery_type: "online",
+      status: "filled",
+      location: "https://example.invalid/class",
+      amount: 100,
+      currency: "EUR",
+      rate_unit: "fixed_total",
+      total_amount: 100,
+      terms: "Fictional whole course terms",
+    }),
   );
   await checked(
-    service
-      .from("job_claims")
-      .insert({
-        id: claim,
-        job_id: job,
-        lecturer_id: teacher.id,
-        idempotency_key: randomUUID(),
-        amount: 100,
-        currency: "EUR",
-        rate_unit: "fixed_total",
-        total_amount: 100,
-        terms: "Fictional whole course terms",
-        terms_version: 1,
-      }),
+    service.from("job_claims").insert({
+      id: claim,
+      job_id: job,
+      lecturer_id: teacher.id,
+      idempotency_key: randomUUID(),
+      amount: 100,
+      currency: "EUR",
+      rate_unit: "fixed_total",
+      total_amount: 100,
+      terms: "Fictional whole course terms",
+      terms_version: 1,
+    }),
   );
   await checked(
-    service
-      .from("assignment_sessions")
-      .insert({
-        id: session,
-        claim_id: claim,
-        lecturer_id: teacher.id,
-        starts_at: starts.toUTC().toISO()!,
-        ends_at: starts.plus({ hours: 1 }).toUTC().toISO()!,
-      }),
+    service.from("assignment_sessions").insert({
+      id: session,
+      claim_id: claim,
+      lecturer_id: teacher.id,
+      starts_at: starts.toUTC().toISO()!,
+      ends_at: starts.plus({ hours: 1 }).toUTC().toISO()!,
+    }),
   );
   await login(page, teacher.email);
   let teaching = page.getByRole("region", {
@@ -84,7 +78,9 @@ test("personal cards and teaching preparation persist in the real account across
     name: "Unterlagen geprüft und vorbereitet",
     exact: true,
   });
-  await ready.check();
+  // The committed checklist changes only after its real save and refetch.
+  // check() requires an immediate DOM toggle; click then await confirmation.
+  await ready.click();
   await expect(ready).toBeEnabled();
   await expect(ready).toBeChecked();
   await page
