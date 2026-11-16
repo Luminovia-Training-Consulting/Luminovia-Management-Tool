@@ -20,7 +20,7 @@ The information is separate from the accepted financial/contractual snapshot. Up
 
 ## Owning data and API
 
-The additive migration `20261116051933_job_briefing_contacts_references.sql` creates `private.job_briefings` and `private.job_briefing_requests`, both with RLS and no direct browser grants. Public wrappers remain security invoker. Their unexposed implementations check current actor/resource authority, lock actor/request/job in a consistent order and use comparison-and-swap versions. Request identity binds actor, job, expected version and the exact original JSON payload. Only safe flags and version enter the ordinary audit event; personal contact values remain in the private rows.
+The additive migration `20261116130626_job_briefing_contacts_references.sql` creates `private.job_briefings` and `private.job_briefing_requests`, both with RLS and no direct browser grants. Public wrappers remain security invoker. Their unexposed implementations check current actor/resource authority, lock actor/request/job in a consistent order and use comparison-and-swap versions. Request identity binds actor, job, expected version and the exact original JSON payload. Only safe flags and version enter the ordinary audit event; personal contact values remain in the private rows.
 
 - `job_briefing(p_job_id)` returns the current authorised projection and write capabilities.
 - `save_job_briefing(p_job_id, p_expected_version, p_request_id, p_payload)` stores an explicit complete set and returns confirmed current state.
@@ -40,7 +40,7 @@ Executed results belong in WORKLOG/QA_RESULTS and the exact PR CI. Physical-devi
 
 Both new browser journeys passed on96c3c5c with fictional data. The complete run still requires correction/repetition for its separate existing mobile-board failure; see QA_RESULTS.
 
-| Layout | Management, German/light | Revoked contact, English/dark |
-| --- | --- | --- |
+| Layout  | Management, German/light                                                                    | Revoked contact, English/dark                                                      |
+| ------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | Desktop | [Saved optional details](screenshots/desktop-chromium-job-briefing-management-de-light.png) | [Contact hidden after cancellation](screenshots/desktop-chromium-job-briefing.png) |
-| Mobile | [Saved optional details](screenshots/mobile-chromium-job-briefing-management-de-light.png) | [Contact hidden after cancellation](screenshots/mobile-chromium-job-briefing.png) |
+| Mobile  | [Saved optional details](screenshots/mobile-chromium-job-briefing-management-de-light.png)  | [Contact hidden after cancellation](screenshots/mobile-chromium-job-briefing.png)  |

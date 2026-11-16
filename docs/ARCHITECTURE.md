@@ -333,6 +333,31 @@ Welcome progress is private presentation state, accessed only by target-free own
 
 PR packaging runs with read-only permissions after complete application/native checks. A separate trusted default-branch metadata writer has deployment write authority and never executes contribution code or artifacts. Its URL links the actual runnable package. The packaged launcher leaves the canonical archive/source intact and creates an owned private runtime with unique database volumes and separate ports. `source_head` and `tested_revision` are distinct manifest fields; a dynamic association with a newer PR head cannot make an old run current. No hosted per-PR backend or production deployment is implied. [Preview contract](PR_PREVIEWS.md).
 
+## Current scope and evidence boundaries
+
+The 26 published baseline migrations remain byte-identical. The incoming M7 additions provide structured chat mentions, private personal file organisation, bounded job discovery and saved views, attention preferences and announcements. Their private tables use RLS and revoke
+direct PUBLIC/anon/authenticated access. Public invoker wrappers call scoped
+private implementations with empty search paths and explicit authenticated
+execution grants; pure internal trigger/filter helpers revoke browser execution. Private routines
+needed by public wrappers retain their own current-actor/resource checks. Service credentials remain server-only. [ERD](ERD.md) records physical
+keys and exceptions rather than inferring grants from schema placement.
+
+The three incoming M8 extensions provide scoped administrative job pickers, explicit global-calendar publications and qualification evidence/attestation history. Their chronological source links are recorded in [MIGRATION_GUIDE](MIGRATION_GUIDE.md). The 35-file candidate keeps the accepted 26-file prefix and appends these eight extensions plus the role-aware discovery correction; the released prefix must not be replaced or interleaved. The picker is a
+projection; calendar extends the existing event table plus one private request
+ledger; qualification adds four private relations. New private tables use RLS and
+revoke direct browser access. See [JOB_PICKERS](JOB_PICKERS.md),
+[CALENDAR](CALENDAR.md) and [QUALIFICATIONS](QUALIFICATIONS.md).
+
+The newest-500 administrative job board remains explicitly bounded. Other course,
+search and resource lists retain their own documented bounds; neither M7 nor M8
+raises the global 1,000-row setting. Automatic substitute orchestration, richer
+resource/knowledge attachments, scheduled publication/delivery, real approved SMTP,
+ICS/invitations, retention/erasure and production-scale/platform acceptance remain
+product work. The next combined native Auth/API/browser/PWA and
+retained-data gate must exercise interactions with the M7 file-dialog correction.
+Focused SQL/component/Edge passes and earlier milestone results do not establish
+that combined result. Current actual outcomes belong in [QA_RESULTS](QA_RESULTS.md) and
+[WORKLOG](WORKLOG.md).
 
 ### Job-specific references and consented contacts
 
