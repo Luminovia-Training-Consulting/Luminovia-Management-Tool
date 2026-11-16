@@ -55,6 +55,35 @@ const immutable = /^[A-Za-z0-9./_-]+(?::[A-Za-z0-9._-]+)?@sha256:[a-f0-9]{64}$/;
 // Compute a stable SHA-256 digest for the source/artifact comparison.
 const hash = (data) => createHash("sha256").update(data).digest("hex");
 
+/** Build the owned one-day loopback HTTPS leaf and private-key arguments.
+ * Explicit CA:FALSE keeps the same trusted fixture valid in OpenSSL and rustls;
+ * trusting this self-signed leaf never disables certificate/hostname checking. */
+export function candidateCertificateArguments(directory) {
+  return [
+    "req",
+    "-x509",
+    "-newkey",
+    "ec",
+    "-pkeyopt",
+    "ec_paramgen_curve:P-256",
+    "-nodes",
+    "-days",
+    "1",
+    "-subj",
+    "/CN=Luminovia Candidate",
+    "-addext",
+    "subjectAltName=IP:127.0.0.1",
+    // This is the HTTPS server leaf, not a certificate authority. rustls
+    // rejects a CA:TRUE end entity even when Node/OpenSSL trusts the file.
+    "-addext",
+    "basicConstraints=critical,CA:FALSE",
+    "-keyout",
+    join(directory, "key.pem"),
+    "-out",
+    join(directory, "cert.pem"),
+  ];
+}
+
 // Verify project name, ports, mounts and private configuration before starting the isolated candidate.
 export function assertCandidateConfiguration(configuration, scope) {
   assert.match(scope.project, /^luminovia-portal-test-[a-f0-9]{24}$/);
@@ -590,25 +619,7 @@ export async function checkCandidate({
     const envFile = join(scratch, "selfhost.env");
     writeConfiguration(envFile, generated);
     mkdirSync(join(scratch, "certs"));
-    await run("openssl", [
-      "req",
-      "-x509",
-      "-newkey",
-      "ec",
-      "-pkeyopt",
-      "ec_paramgen_curve:P-256",
-      "-nodes",
-      "-days",
-      "1",
-      "-subj",
-      "/CN=Luminovia Candidate",
-      "-addext",
-      "subjectAltName=IP:127.0.0.1",
-      "-keyout",
-      join(scratch, "certs/key.pem"),
-      "-out",
-      join(scratch, "certs/cert.pem"),
-    ]);
+    await run("openssl", candidateCertificateArguments(join(scratch, "certs")));
     mkdirSync(join(scratch, "www/releases/candidate"), { recursive: true });
     writeFileSync(
       join(scratch, "www/releases/candidate/index.html"),

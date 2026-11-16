@@ -11,6 +11,7 @@ const sources = [
   "20261116121600_attendance_delivery.sql",
   "20261116121603_operations_notification_integration.sql",
   "20261116121605_operational_module_notification_handover_integration.sql",
+  "20261116143242_website_enquiry_intake.sql",
 ];
 const names = new Set();
 for (const file of sources) {
