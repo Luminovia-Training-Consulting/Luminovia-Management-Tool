@@ -110,6 +110,7 @@ test("personal cards and teaching preparation persist in the real account across
     version,
     resource,
   });
+  // Fix course provenance on initial insertion, before the accepted claim.
   await checked(
     service.from("jobs").insert({
       id: job,
