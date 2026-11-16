@@ -1,10 +1,10 @@
 # Developer guide
 
-This document explains the code that actually exists and its business boundaries. The full target scope is in the [implementation plan](IMPLEMENTATION_PLAN.md); executed checks are recorded in [QA_RESULTS](QA_RESULTS.md). A feature marked as pending there is not an implicitly completed part of the application. The separately configured self-hosted CMS development instance and its release automation are documented in [HOSTINGER_DEVELOPMENT](HOSTINGER_DEVELOPMENT.md) and [HOSTINGER_AUTOMATIC_UPDATES](HOSTINGER_AUTOMATIC_UPDATES.md).
+This document explains the code that actually exists and its business boundaries. The full target scope is in the [roadmap](../ROADMAP.md); executed checks are recorded in [QA_RESULTS](QA_RESULTS.md). A feature marked as pending there is not an implicitly completed part of the application. The separately configured self-hosted CMS development instance and its release automation are documented in [HOSTINGER_DEVELOPMENT](HOSTINGER_DEVELOPMENT.md) and [HOSTINGER_AUTOMATIC_UPDATES](HOSTINGER_AUTOMATIC_UPDATES.md).
 
 ## Getting started and working locally
 
-Read [WORKLOG](WORKLOG.md), [AGENTS](../AGENTS.md), the [master specification](UNIVERSAL_MASTER_PROMPT.txt) and the current Git status first. Preserve working modules, normal database volumes and concurrent changes. Use your own `codex/` branch or a separate worktree when other work is present in the original directory.
+Read [AGENTS](../AGENTS.md), the [documentation index](README.md), [roadmap](../ROADMAP.md), [master specification](UNIVERSAL_MASTER_PROMPT.txt), and the current Git status first. Consult [QA evidence](QA_RESULTS.md) for results tied to a named source revision. Preserve working modules, normal database volumes and concurrent changes. Use your own `codex/` branch or a separate worktree when other work is present in the original directory.
 
 ```bash
 ./portal start
@@ -14,7 +14,7 @@ Read [WORKLOG](WORKLOG.md), [AGENTS](../AGENTS.md), the [master specification](U
 ./portal stop
 ```
 
-`start` installs locked dependencies when needed, migrates without resetting data and starts Vite, PostgreSQL, Auth, Storage, Realtime, Edge, Mailpit and ClamAV. `test` uses its own sanitized copy and random project/volume identities. Details and ports: [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md). Two normal checkouts of the same project share default ports/volumes; stop the previously managed stack in its original checkout before starting it from a new one. The port check never terminates unrelated processes.
+Use the Node version in [`.node-version`](../.node-version) and install the exact lockfile with `npm ci`. `start` installs locked dependencies when needed, migrates without resetting data and starts Vite, PostgreSQL, Auth, Storage, Realtime, Edge, Mailpit and ClamAV. `test` uses its own sanitized copy and random project/volume identities. Details and ports: [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md). Two normal checkouts of the same project share default ports/volumes; stop the previously managed stack in its original checkout before starting it from a new one. The port check never terminates unrelated processes.
 
 Develop and verify on the local PC by default. `./portal check` runs fast local
 quality, coverage and build checks without starting services. Run `./portal test`

@@ -10,20 +10,25 @@ Agent assistance does not transfer that responsibility.
 ## Ground rules
 
 1. Read [WORKLOG](docs/WORKLOG.md) first, then
-   [IMPLEMENTATION_PLAN](docs/IMPLEMENTATION_PLAN.md).
+   [IMPLEMENTATION_PLAN](docs/IMPLEMENTATION_PLAN.md), [README](README.md),
+   the [documentation index](docs/README.md) and [roadmap](ROADMAP.md).
 2. Read [UNIVERSAL_MASTER_PROMPT.txt](docs/UNIVERSAL_MASTER_PROMPT.txt).
    It preserves the complete product specification. Accepted later decisions and
-   their boundaries are recorded in the plan and work log. Do not replace the
+   their boundaries are recorded in the product and feature documentation.
+   Preserve the user-requested persistent implementation plan and work log,
+   recording actual results and immediate next actions. The removed root
+   changelog is not maintained. Do not replace the
    target with an MVP, a design prototype or decorative placeholders.
 3. Inspect `git status --short --branch`, `git remote -v` and `git worktree list`.
-   Read the actual owning source, migrations and tests. A historical work-log
-   entry does not establish current behavior or deployment state.
+   Read the actual owning source, migrations and tests. Historical QA evidence
+   does not establish current behavior or deployment state.
 4. Read [DEVELOPER_GUIDE](docs/DEVELOPER_GUIDE.md),
    [ARCHITECTURE](docs/ARCHITECTURE.md), [ERD](docs/ERD.md) and the relevant feature
    guides in `docs/`. [README](README.md) explains the runnable entry points.
 5. Complete a coherent, reviewable slice. Preserve working code, persistent data
-   and unrelated changes. Update the work log, plan and affected feature/runbook
-   documentation with actual results and immediate next actions.
+   and unrelated changes. Update the affected feature/API/runbook
+   documentation and record relevant actual validation in the PR. Keep remaining
+   product requirements visible in the existing roadmap.
 
 ## Where things are
 
@@ -201,10 +206,6 @@ physical PWA installation, mail delivery or production readiness.
   and release/maintenance gates. [PULL_REQUEST_GUIDE](docs/PULL_REQUEST_GUIDE.md)
   explains labels and PR content; [GITHUB_WORKFLOW](docs/GITHUB_WORKFLOW.md) records
   actual server-side rules. A prepared ruleset is not necessarily active.
-- For requested changes, create signed commits, push the work branch and prepare
-  a pull request. Merge directly after the current CI gates pass, without another
-  confirmation within the authorised scope. Respect explicit coordinated merge
-  pauses until their release; production approval remains separate.
 - Check dependencies and compatible peer families together. Do not add blanket
   `audit fix --force` or version upgrades to an unrelated task.
 - Merging or pushing `main` does not publish a CMS release. An authorised manual
@@ -214,7 +215,7 @@ physical PWA installation, mail delivery or production readiness.
   updater can consume an explicitly published release; claim an installation
   only after observing it. Production approval remains separate.
 - Report concrete changes, executed checks, remaining limits and commit/PR links.
-  Preserve the complete open product scope and honest next actions in the plan/log.
+  Preserve the complete open product scope in the specification and existing roadmap.
 
 ## What is authorized and what needs approval
 
