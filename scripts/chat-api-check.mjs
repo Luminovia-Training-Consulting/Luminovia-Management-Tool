@@ -131,6 +131,23 @@ try {
   ]);
   assert.equal(dms[0], dms[1]);
   rooms.push(dms[0]);
+  // The membership endpoint exposes only current room members and their minimal public labels.
+  const members = await checked(
+    a.client.rpc("chat_room_members", { p_room_id: dms[0] }),
+    "Actual private DM members",
+  );
+  assert.deepEqual(
+    new Set(members.map((m) => m.user_id)),
+    new Set([a.id, b.id]),
+  );
+  assert.ok(
+    members.every((m) =>
+      Object.keys(m).every((k) =>
+        ["user_id", "display_name", "joined_at"].includes(k),
+      ),
+    ),
+    "Membership projection contains no private profile fields",
+  );
   const dm = dms[0],
     key = randomUUID();
   const message = await checked(
@@ -170,6 +187,12 @@ try {
         )
       ).length,
       0,
+    );
+    assert.equal(
+      (await actor.client.rpc("chat_room_members", { p_room_id: dm })).error
+        ?.code,
+      "42501",
+      "Nonmember cannot enumerate private room members",
     );
     assert.ok(
       (await actor.client.rpc("chat_messages", { p_room_id: dm })).error,
@@ -242,6 +265,17 @@ try {
     "Create actual topic group",
   );
   rooms.push(group);
+  assert.deepEqual(
+    new Set(
+      (
+        await checked(
+          b.client.rpc("chat_room_members", { p_room_id: group }),
+          "Actual group membership",
+        )
+      ).map((m) => m.user_id),
+    ),
+    new Set([a.id, b.id]),
+  );
   const ownerEvents = [],
     memberEvents = [],
     outsiderEvents = [];
@@ -293,6 +327,21 @@ try {
     "An already subscribed removed member receives no later message",
   );
   assert.ok((await b.client.rpc("chat_messages", { p_room_id: group })).error);
+  // An existing signed-in session loses membership enumeration immediately after removal.
+  assert.equal(
+    (await b.client.rpc("chat_room_members", { p_room_id: group })).error?.code,
+    "42501",
+    "Already signed-in removed member cannot enumerate membership",
+  );
+  assert.deepEqual(
+    (
+      await checked(
+        a.client.rpc("chat_room_members", { p_room_id: group }),
+        "Removed member disappears from current projection",
+      )
+    ).map((m) => m.user_id),
+    [a.id],
+  );
   assert.ok(
     (
       await b.client.rpc("send_message", {
@@ -343,6 +392,11 @@ try {
   assert.deepEqual(
     await checked(b.client.rpc("chat_rooms_list"), "Suspended room list"),
     [],
+  );
+  assert.equal(
+    (await b.client.rpc("chat_room_members", { p_room_id: group })).error?.code,
+    "42501",
+    "Already signed-in suspended member cannot enumerate membership",
   );
   await checked(
     a.client.rpc("delete_message", { p_message_id: message }),

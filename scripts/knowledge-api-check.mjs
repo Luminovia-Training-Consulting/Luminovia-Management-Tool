@@ -21,7 +21,8 @@ const service = make(process.env.SUPABASE_SERVICE_ROLE_KEY),
   clients = [],
   pages = [],
   threads = [],
-  resources = [];
+  resources = [],
+  categories = [];
 const suffix = randomUUID();
 /** Requires actual SDK success before returning the response data. */
 async function checked(request, label) {
@@ -109,6 +110,28 @@ try {
     b = await fixture("reader", "senior_lecturer"),
     manager = await fixture("manager", "admin"),
     participant = await fixture("participant", "participant");
+  // Capabilities reflect the actual current actor and MFA level, never an editable role hint.
+  assert.deepEqual(
+    await checked(
+      a.client.rpc("knowledge_access"),
+      "Actual staff author capabilities",
+    ),
+    { can_author: true, can_publish_wiki: false, can_moderate_forum: false },
+  );
+  assert.deepEqual(
+    await checked(
+      participant.client.rpc("knowledge_access"),
+      "Actual participant has no knowledge capabilities",
+    ),
+    { can_author: false, can_publish_wiki: false, can_moderate_forum: false },
+  );
+  assert.deepEqual(
+    await checked(
+      manager.client.rpc("knowledge_access"),
+      "Password-only manager has no publishing or moderation capabilities",
+    ),
+    { can_author: true, can_publish_wiki: false, can_moderate_forum: false },
+  );
   const wiki = (
     await checked(
       a.client.rpc("knowledge_categories", { p_kind: "wiki" }),
@@ -156,6 +179,20 @@ try {
     ).error,
     "Password-only manager cannot publish",
   );
+  assert.equal(
+    (
+      await manager.client.rpc("save_knowledge_category", {
+        p_id: null,
+        p_kind: "wiki",
+        p_slug: `qa-denied-${suffix}`,
+        p_label_de: "Fiktiv",
+        p_label_en: "Fictional",
+        p_archived: false,
+      })
+    ).error?.code,
+    "42501",
+    "Password-only manager cannot create a category",
+  );
   const enrollment = await checked(
     manager.client.auth.mfa.enroll({
       factorType: "totp",
@@ -179,6 +216,77 @@ try {
     ).currentLevel,
     "aal2",
   );
+  assert.deepEqual(
+    await checked(
+      manager.client.rpc("knowledge_access"),
+      "Current MFA enables only authorised publishing and moderation",
+    ),
+    { can_author: true, can_publish_wiki: true, can_moderate_forum: true },
+  );
+  // Exercise the same category mutation used by management, including current MFA
+  // and staff visibility, rather than seeding this state through service-role SQL.
+  const categoryPayload = {
+    p_id: null,
+    p_kind: "wiki",
+    p_slug: `qa-${suffix}`,
+    p_label_de: "Fiktive API-Lehrpraxis",
+    p_label_en: "Fictional API teaching",
+    p_archived: false,
+  };
+  assert.equal(
+    (await a.client.rpc("save_knowledge_category", categoryPayload)).error
+      ?.code,
+    "42501",
+    "Ordinary staff cannot create categories",
+  );
+  const category = await checked(
+    manager.client.rpc("save_knowledge_category", categoryPayload),
+    "MFA manager creates bilingual wiki category",
+  );
+  categories.push(category);
+  resources.push(category);
+  const categoryRow = (
+    await checked(
+      b.client.rpc("knowledge_categories", { p_kind: "wiki" }),
+      "Staff receives approved category",
+    )
+  ).find((item) => item.id === category);
+  assert.equal(categoryRow.label_de, categoryPayload.p_label_de);
+  assert.equal(categoryRow.label_en, categoryPayload.p_label_en);
+  await checked(
+    manager.client.rpc("save_knowledge_category", {
+      ...categoryPayload,
+      p_id: category,
+      p_archived: true,
+    }),
+    "MFA manager archives category",
+  );
+  assert.ok(
+    !(
+      await checked(
+        b.client.rpc("knowledge_categories", { p_kind: "wiki" }),
+        "Archived category hidden from staff",
+      )
+    ).some((item) => item.id === category),
+  );
+  assert.equal(
+    (
+      await checked(
+        manager.client.rpc("knowledge_categories", { p_kind: "wiki" }),
+        "Manager can recover archived category",
+      )
+    ).find((item) => item.id === category).archived,
+    true,
+  );
+  await checked(
+    manager.client.rpc("save_knowledge_category", {
+      ...categoryPayload,
+      p_id: category,
+    }),
+    "MFA manager restores category",
+  );
+  base.p_category_id = category;
+
   const published = await checked(
     manager.client.rpc("save_wiki_page", {
       ...base,
@@ -230,6 +338,54 @@ try {
     ).error,
     "Stale author revision is rejected",
   );
+  // Search the actor's authorised revision: an unpublished correction must not leak through filters.
+  const publishedSearch = await checked(
+    b.client.rpc("wiki_pages_list", {
+      p_search: suffix,
+      p_locale: "de",
+      p_category_id: category,
+    }),
+    "Combine actual title, language and category filters",
+  );
+  assert.deepEqual(
+    publishedSearch.map((item) => item.id),
+    [page],
+  );
+  assert.equal(publishedSearch[0].version, 2);
+  assert.equal(publishedSearch[0].has_draft, false);
+  assert.deepEqual(
+    await checked(
+      b.client.rpc("wiki_pages_list", {
+        p_search: suffix,
+        p_locale: "en",
+        p_category_id: category,
+      }),
+      "Language filter excludes German authored content",
+    ),
+    [],
+  );
+  assert.deepEqual(
+    await checked(
+      b.client.rpc("wiki_pages_list", {
+        p_search: "Not published yet",
+        p_category_id: category,
+      }),
+      "Search cannot leak unpublished correction",
+    ),
+    [],
+  );
+  assert.equal(
+    (
+      await checked(
+        a.client.rpc("wiki_pages_list", {
+          p_search: "Not published yet",
+          p_category_id: category,
+        }),
+        "Author can find own unpublished correction",
+      )
+    )[0].id,
+    page,
+  );
   const unsafe = doc("Unsafe link");
   unsafe.content[0].content[0].marks = [
     { type: "link", attrs: { href: "javascript:alert(1)" } },
@@ -273,6 +429,280 @@ try {
       "Idempotent forum retry",
     ),
     reply,
+  );
+  // A committed reply notifies its subscribers once; retrying it cannot renew a read notice.
+  const firstNotice = await checked(
+    a.client
+      .from("notifications")
+      .select("id,created_at,read_at")
+      .eq("kind", "forum_reply")
+      .eq("resource_id", thread)
+      .single(),
+    "Committed reply creates exactly one subscriber notice",
+  );
+  assert.equal(
+    (
+      await checked(
+        b.client
+          .from("notifications")
+          .select("id")
+          .eq("kind", "forum_reply")
+          .eq("resource_id", thread),
+        "Author receives no self notification",
+      )
+    ).length,
+    0,
+  );
+  await checked(
+    a.client.rpc("mark_notifications", {
+      p_ids: [firstNotice.id],
+      p_read: true,
+    }),
+    "Read actual forum reply notice",
+  );
+  const readNotice = await checked(
+    a.client
+      .from("notifications")
+      .select("id,created_at,read_at")
+      .eq("id", firstNotice.id)
+      .single(),
+    "Read persisted notice state",
+  );
+  assert.ok(readNotice.read_at);
+  assert.equal(
+    await checked(
+      b.client.rpc("add_forum_post", {
+        p_thread_id: thread,
+        p_content: rich,
+        p_client_id: key,
+      }),
+      "Retry after subscriber read",
+    ),
+    reply,
+  );
+  assert.deepEqual(
+    await checked(
+      a.client
+        .from("notifications")
+        .select("id,created_at,read_at")
+        .eq("id", firstNotice.id)
+        .single(),
+      "Idempotent retry cannot reannounce already read post",
+    ),
+    readNotice,
+  );
+  assert.equal(
+    (
+      await b.client.rpc("add_forum_post", {
+        p_thread_id: thread,
+        p_content: doc("Changed retry content"),
+        p_client_id: key,
+      })
+    ).error?.code,
+    "22023",
+    "Changed idempotent content is explicitly rejected",
+  );
+  // Subscription rows remain personal; unsubscribe must stop later fanout without deleting old history.
+  await checked(
+    b.client.rpc("subscribe_forum_thread", {
+      p_thread_id: thread,
+      p_subscribed: true,
+    }),
+    "Subscribe reader to actual thread",
+  );
+  await checked(
+    b.client.rpc("subscribe_forum_thread", {
+      p_thread_id: thread,
+      p_subscribed: true,
+    }),
+    "Retry subscription without duplicate row",
+  );
+  assert.equal(
+    (
+      await checked(
+        b.client
+          .from("forum_subscriptions")
+          .select("user_id")
+          .eq("thread_id", thread),
+        "Read only own subscription",
+      )
+    ).length,
+    1,
+  );
+  assert.ok(
+    (
+      await checked(
+        a.client
+          .from("forum_subscriptions")
+          .select("user_id")
+          .eq("thread_id", thread),
+        "Thread owner cannot enumerate other subscriptions",
+      )
+    ).every((item) => item.user_id === a.id),
+  );
+  assert.equal(
+    (
+      await checked(
+        b.client.rpc("forum_thread", { p_id: thread }),
+        "Thread projection reflects subscription",
+      )
+    ).subscribed,
+    true,
+  );
+  await checked(
+    a.client.rpc("add_forum_post", {
+      p_thread_id: thread,
+      p_content: doc("Actual subscription follow-up"),
+      p_client_id: randomUUID(),
+    }),
+    "Create subscribed follow-up",
+  );
+  const subscriptionNotice = await checked(
+    b.client
+      .from("notifications")
+      .select("id,created_at,read_at")
+      .eq("kind", "forum_reply")
+      .eq("resource_id", thread)
+      .single(),
+    "Subscribed reader receives one actual notice",
+  );
+  const linkedNotice = (
+    await checked(
+      b.client.rpc("notification_inbox"),
+      "Authorised forum notification projection",
+    )
+  ).items.find((item) => item.id === subscriptionNotice.id);
+  assert.equal(linkedNotice.href, `/forum?thread=${thread}`);
+  await checked(
+    b.client.rpc("subscribe_forum_thread", {
+      p_thread_id: thread,
+      p_subscribed: false,
+    }),
+    "Unsubscribe actual reader",
+  );
+  await checked(
+    b.client.rpc("mark_notifications", {
+      p_ids: [subscriptionNotice.id],
+      p_read: true,
+    }),
+    "Mark previous subscribed notice read",
+  );
+  const unsubscribedNotice = await checked(
+    b.client
+      .from("notifications")
+      .select("id,created_at,read_at")
+      .eq("id", subscriptionNotice.id)
+      .single(),
+    "Read old notice after unsubscribe",
+  );
+  await checked(
+    a.client.rpc("add_forum_post", {
+      p_thread_id: thread,
+      p_content: doc("Actual unsubscribed follow-up"),
+      p_client_id: randomUUID(),
+    }),
+    "Post after reader unsubscribes",
+  );
+  assert.deepEqual(
+    await checked(
+      b.client
+        .from("notifications")
+        .select("id,created_at,read_at")
+        .eq("id", subscriptionNotice.id)
+        .single(),
+      "Unsubscribed reader receives no renewed notice",
+    ),
+    unsubscribedNotice,
+  );
+  assert.equal(
+    (
+      await checked(
+        b.client.rpc("forum_thread", { p_id: thread }),
+        "Thread projection reflects unsubscribe",
+      )
+    ).subscribed,
+    false,
+  );
+  // The author alone can revise a post, with exact version checking and a private previous-content record.
+  const corrected = doc(`searchable-correction-${suffix}`);
+  assert.equal(
+    (
+      await a.client.rpc("edit_forum_post", {
+        p_post_id: reply,
+        p_content: corrected,
+        p_expected_version: 1,
+      })
+    ).error?.code,
+    "42501",
+    "Thread owner cannot rewrite another author",
+  );
+  await checked(
+    b.client.rpc("edit_forum_post", {
+      p_post_id: reply,
+      p_content: corrected,
+      p_expected_version: 1,
+    }),
+    "Edit actual authored reply with expected version",
+  );
+  assert.equal(
+    (
+      await b.client.rpc("edit_forum_post", {
+        p_post_id: reply,
+        p_content: doc("Stale edit"),
+        p_expected_version: 1,
+      })
+    ).error?.code,
+    "40001",
+    "Stale API edit cannot overwrite committed correction",
+  );
+  const edited = (
+    await checked(
+      a.client.rpc("forum_posts", { p_thread_id: thread }),
+      "Read committed edited reply",
+    )
+  ).find((item) => item.id === reply);
+  assert.equal(edited.version, 2);
+  assert.deepEqual(edited.content, corrected);
+  assert.ok(edited.edited_at);
+  const revision = await checked(
+    b.client
+      .from("forum_post_revisions")
+      .select("version,previous_content")
+      .eq("post_id", reply)
+      .single(),
+    "Author can inspect exact prior revision",
+  );
+  assert.equal(revision.version, 1);
+  assert.deepEqual(revision.previous_content, rich);
+  assert.deepEqual(
+    await checked(
+      a.client.from("forum_post_revisions").select("id").eq("post_id", reply),
+      "Thread owner has no private revision bypass",
+    ),
+    [],
+  );
+  assert.deepEqual(
+    (
+      await checked(
+        b.client.rpc("forum_threads_list", {
+          p_search: `searchable-correction-${suffix}`,
+          p_category_id: forum,
+        }),
+        "Search current edited body and category",
+      )
+    ).map((item) => item.id),
+    [thread],
+  );
+  assert.ok(
+    !(
+      await checked(
+        b.client.rpc("forum_threads_list", {
+          p_search: "console.log",
+          p_category_id: forum,
+        }),
+        "Historical reply body is absent from current search",
+      )
+    ).some((item) => item.id === thread),
   );
   await checked(
     a.client.rpc("accept_forum_answer", {
@@ -338,6 +768,53 @@ try {
     }),
     "Resolve report with actual MFA",
   );
+  // Archiving revokes both current reads and old notification links; explicit recovery restores access.
+  await checked(
+    manager.client.rpc("moderate_forum_thread", {
+      p_thread_id: thread,
+      p_archived: true,
+    }),
+    "Archive actual discussion",
+  );
+  assert.equal(
+    (await b.client.rpc("forum_thread", { p_id: thread })).error?.code,
+    "42501",
+    "Archived discussion is no longer readable by peer",
+  );
+  const archivedNotice = (
+    await checked(
+      b.client.rpc("notification_inbox"),
+      "Archived discussion revalidates stored notification",
+    )
+  ).items.find((item) => item.id === subscriptionNotice.id);
+  assert.equal(archivedNotice.href, null);
+  assert.equal(archivedNotice.title, "");
+  assert.equal(
+    (
+      await b.client.rpc("subscribe_forum_thread", {
+        p_thread_id: thread,
+        p_subscribed: true,
+      })
+    ).error?.code,
+    "42501",
+    "Archived discussion cannot be subscribed through stale ID",
+  );
+  await checked(
+    manager.client.rpc("moderate_forum_thread", {
+      p_thread_id: thread,
+      p_archived: false,
+    }),
+    "Recover archived discussion",
+  );
+  assert.equal(
+    (
+      await checked(
+        b.client.rpc("forum_thread", { p_id: thread }),
+        "Restored discussion is readable",
+      )
+    ).archived,
+    false,
+  );
   await checked(
     b.client.rpc("delete_forum_post", { p_post_id: reply }),
     "Delete own answer by tombstone",
@@ -384,8 +861,15 @@ try {
     ),
     [],
   );
+  assert.deepEqual(
+    await checked(
+      b.client.rpc("knowledge_access"),
+      "Suspension removes existing-session knowledge capabilities",
+    ),
+    { can_author: false, can_publish_wiki: false, can_moderate_forum: false },
+  );
   console.log(
-    "PASS: actual Auth/REST plus real manager TOTP: private drafts, published code preservation, independent unpublished corrections/history RLS, version conflicts and unsafe-content rejection, durable/idempotent forum replies, accepted answers, MFA pin/lock/report moderation, tombstones, participant and suspended-token denial.",
+    "PASS: actual Auth/REST plus real manager TOTP: private drafts, bilingual category archive/recovery, combined permission-aware wiki filters, published code preservation, independent unpublished corrections/history RLS, version conflicts and unsafe-content rejection, durable/idempotent forum replies and notices, subscription/unsubscription and current links, own versioned edits/restricted revisions/current-body search, accepted answers, MFA pin/lock/report moderation and archive recovery, tombstones, participant and suspended-token denial.",
   );
 } finally {
   for (const client of clients) await client.removeAllChannels();
@@ -403,6 +887,11 @@ try {
     await checked(
       service.from("wiki_pages").delete().in("id", pages),
       "Remove scoped QA wiki revisions",
+    );
+  if (categories.length)
+    await checked(
+      service.from("knowledge_categories").delete().in("id", categories),
+      "Remove scoped QA categories after dependent content",
     );
   if ([...pages, ...threads, ...resources].length)
     await checked(
