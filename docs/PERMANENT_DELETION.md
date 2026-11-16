@@ -62,3 +62,9 @@ relationships remain blockers. The complete counts and row fingerprints are stil
 reviewed before confirmation. Notification deliveries in leased, sending or uncertain
 states block purge even after lease expiry; application rechecks their rows before
 removal. No worker is started by a deletion preview or this migration.
+
+PR-only migration versions follow the complete accepted main prefix so retained-data
+upgrades remain append-only. The current document helper keeps its OID/ACL and
+delegates to the exact accepted support/qualification predecessor through a revoked
+private clone. Dependency and blocker catalogue walks use explicit ordering: a
+different PostgreSQL execution plan cannot invalidate unchanged reviewed records.

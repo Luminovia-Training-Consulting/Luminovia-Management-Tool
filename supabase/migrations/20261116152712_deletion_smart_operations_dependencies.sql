@@ -1,6 +1,8 @@
 -- Integrate deletion with accepted smart-operation ownership. Historical migration
 -- bytes remain unchanged. Existing function privileges and caller checks survive
 -- replacement; shared evidence and uncertain external deliveries remain blockers.
+-- Catalog walks use explicit ordering so query-plan changes cannot invalidate
+-- an unchanged reviewed graph merely by reordering scope/blocker arrays.
 
 begin;
 
@@ -55,7 +57,7 @@ begin
   entry=result->i;i=i+1;
   for ref in select c.oid,c.conrelid::regclass::text child,c.conkey,c.confkey,c.confrelid
    from pg_catalog.pg_constraint c where c.contype='f' and c.confdeltype='c' and c.confrelid=(entry->>'table')::regclass
-   and c.connamespace in('public'::regnamespace,'private'::regnamespace) loop
+   and c.connamespace in('public'::regnamespace,'private'::regnamespace) order by c.conrelid,c.conname loop
    if not ((ref.child||'->'||(entry->>'table'))=any(array['public.user_roles->public.profiles','public.lecturer_topics->public.profiles','public.profile_details->public.profiles','public.profile_avatars->public.profiles','public.job_sessions->public.jobs','public.job_requirements->public.jobs','public.organisation_private_details->public.organisations','public.organisation_contacts->public.organisations','public.course_template_topics->public.course_templates','public.wiki_revisions->public.wiki_pages','public.forum_posts->public.forum_threads','public.forum_post_revisions->public.forum_posts','public.forum_subscriptions->public.forum_threads','public.forum_reports->public.forum_posts','private.notification_preferences->public.profiles','private.welcome_progress->public.profiles','private.chat_content_versions->public.messages','private.chat_mention_versions->private.chat_content_versions','private.chat_mention_requests->public.profiles','private.document_organisation->public.profiles','private.document_organisation->public.documents','private.saved_job_views->public.profiles','private.attention_preferences->public.profiles','private.announcement_revisions->private.portal_announcements','private.announcement_publications->private.announcement_revisions','private.announcement_acknowledgements->public.profiles','private.announcement_acknowledgements->private.announcement_revisions','private.announcement_requests->public.profiles','private.global_event_requests->public.profiles','private.qualification_states->public.profiles','private.qualification_evidence->public.profiles','private.qualification_evidence->public.document_versions','private.qualification_events->public.profiles','private.qualification_events->private.qualification_evidence','private.qualification_requests->public.profiles','private.delivery_preferences->public.profiles','private.dashboard_preferences->public.profiles','private.staff_contact_visibility->public.profiles','private.push_subscriptions->public.profiles','private.calendar_subscriptions->public.profiles','private.personal_favourites->public.profiles','private.job_waitlist->public.profiles','private.job_waitlist->public.jobs','private.course_notebooks->public.profiles','private.course_resource_acknowledgements->public.profiles','private.notification_email_outbox->public.notifications','private.notification_push_outbox->public.notifications','private.notification_push_outbox->private.push_subscriptions','private.teaching_preparation->public.job_claims','private.client_request_briefs->private.client_course_requests','private.client_request_revisions->private.client_course_requests'])) or private.deletion_selector(result,ref.child) is not null then continue;end if;
    select string_agg(format('x.%I=parent%s.%I',a.attname,i,b.attname),' and ' order by k.n) into join_sql
     from unnest(ref.conkey,ref.confkey) with ordinality k(a,b,n)
@@ -83,7 +85,7 @@ begin
    active_deliveries=active_deliveries+n;
   end if;
   for ref in select c.oid,c.conrelid::regclass::text child,c.conkey,c.confkey,c.confrelid
-   from pg_catalog.pg_constraint c where c.contype='f' and c.confrelid=(entry->>'table')::regclass and not(c.conrelid='public.audit_events'::regclass and c.conname='audit_events_actor_id_fkey') loop
+   from pg_catalog.pg_constraint c where c.contype='f' and c.confrelid=(entry->>'table')::regclass and not(c.conrelid='public.audit_events'::regclass and c.conname='audit_events_actor_id_fkey') order by c.conrelid,c.conname loop
    select string_agg(format('x.%I=y.%I',a.attname,b.attname),' and ' order by k.n) into join_sql
     from unnest(ref.conkey,ref.confkey) with ordinality k(a,b,n)
     join pg_catalog.pg_attribute a on a.attrelid=ref.child::regclass and a.attnum=k.a

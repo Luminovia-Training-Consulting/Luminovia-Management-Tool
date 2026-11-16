@@ -152,22 +152,24 @@ begin
  from public.job_claims c join public.profiles p on p.id=c.lecturer_id where c.job_id=j.id and (manager or c.lecturer_id=auth.uid())),'[]'::jsonb));
 end;$$;
 
--- Preserve qualification-specific evidence rules and personal/room document ACLs.
--- Only current lecturers inherit job attachment access from a confirmed claim.
+-- Preserve the exact accepted support/qualification document gate, including
+-- stronger independently installed privacy rules. Clone its body privately and
+-- replace the current gate in place so existing policy/function OIDs stay bound.
+do $$declare predecessor text;begin
+ select prosrc into predecessor from pg_catalog.pg_proc where oid='private.can_access_document(uuid)'::regprocedure;
+ execute format('create function private.can_access_document_before_deletion(p_id uuid) returns boolean language plpgsql stable security definer set search_path='''' as %L',predecessor);
+end;$$;
+revoke all on function private.can_access_document_before_deletion(uuid) from public,anon,authenticated,service_role;
 create or replace function private.can_access_document(p_id uuid) returns boolean language plpgsql stable security definer set search_path='' as $$
 declare d public.documents;
 begin
- if not private.actor_active() then return false;end if;
- if private.deletion_document_fenced(p_id) then return false;end if;
- select * into d from public.documents where id=p_id and deleted_at is null;if not found then return false;end if;
- if d.scope='room' then return private.can_access_chat_room(d.room_id);end if;
- if d.scope='personal' then return d.owner_id=auth.uid()
-  or(d.kind='cv' and private.has_permission('users.manage'))
-  or(d.kind='contract' and private.has_permission('contracts.read'))
-  or(d.kind='invoice' and private.has_permission('finance.manage'));end if;
- if private.has_permission('jobs.manage') then return true;end if;
- if private.lecturer_actor() and exists(select 1 from public.job_claims c where c.job_id=d.job_id and c.lecturer_id=auth.uid() and c.status='confirmed') then return true;end if;
- return d.scope='job_before' and private.lecturer_actor() and exists(select 1 from public.jobs j where j.id=d.job_id and j.status='published');
+ if not private.actor_active() or private.deletion_document_fenced(p_id) then return false;end if;
+ select * into d from public.documents where id=p_id and deleted_at is null;
+ if not found then return false;end if;
+ -- A historical assignment grants staff material access only to a current
+ -- lecturer. Personal, room, support and stricter evidence gates stay delegated.
+ if d.scope in('job_before','job_after') and not private.has_permission('jobs.manage') and not private.lecturer_actor() then return false;end if;
+ return private.can_access_document_before_deletion(p_id);
 end;$$;
 
 revoke execute on function private.can_read_job(uuid),private.job_offers(),private.job_lifecycle(uuid),private.assignment_job_titles(uuid[]),private.finance_earnings(boolean) from public,anon;

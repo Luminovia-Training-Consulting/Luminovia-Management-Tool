@@ -407,6 +407,21 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
   await check(
     "Referenced used accounts remain active and intact after dependency refusal",
     async () => {
+      // Planner scan choices must not reorder a reviewed graph or its blockers.
+      // Otherwise identical data can intermittently produce a stale-plan error
+      // instead of the exact protected-dependency refusal asserted below.
+      const snapshotFor = (mode, scan) =>
+        sql(`begin;set local plan_cache_mode=${q(mode)};
+          set local enable_seqscan=${scan === "index" ? "off" : "on"};
+          set local enable_indexscan=${scan === "index" ? "on" : "off"};
+          set local enable_bitmapscan=off;
+          select private.deletion_snapshot('account',${q(owner)});commit;`).then(
+          JSON.parse,
+        );
+      assert.deepEqual(
+        await snapshotFor("force_custom_plan", "index"),
+        await snapshotFor("force_generic_plan", "sequential"),
+      );
       const p = await plan("account", owner);
       assert.equal(p.can_confirm, false);
       assert.equal(p.blockers.length > 0, true);

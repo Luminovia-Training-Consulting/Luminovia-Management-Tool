@@ -4,6 +4,8 @@
 
 - [x] Reproduce the current SQL blocker and trace the fresh-account browser blocker to accepted request-revision and profile-preference dependencies.
 - [x] Add a forward-only private deletion-scope integration; preserve released SQL, granular permissions, shared evidence, accepted commercial history and uncertain external delivery barriers.
+- [x] Place all3unaccepted deletion migrations after the68accepted sources; preserve exact installed support/qualification document gates and pass4actual upgrade composition groups.
+- [x] Reproduce planner-dependent snapshot reordering and order both catalogue walks; retain exact protected-dependency and concurrent-change assertions.
 - [x] Pass8company and25permanent-deletion PostgreSQL groups with ownership/preservation/delivery regressions and bilingual impact labels.
 - [x] Pass `./portal check`:697frontend cases/91files, coverage floors, types/lint/format/compiler and production/PWA build.
 - [ ] Finish current-head full required CI, including native Auth/Storage/browser acceptance; canonical local invocation initially refused a foreign-owned shared QA lock.
@@ -31,6 +33,7 @@ The complete target and all unrelated pending work remain below.
 - [x] Pass complete canonical local acceptance on signed67b749d:29native API suites,116application+2PWA browsers, all SQL/source checks and actual cleanup. Keep this evidence source-bound.
 - [x] Close remaining company history/earnings/calendar/raw-RLS paths and pass8expanded SQL groups; improve reviewed impact clarity and pass23focused deletion cases.
 - [ ] Verify the final follow-up with native company deletion/revocation and new screenshots; integrate only actual accepted main and replay the final migration order before current required CI and the authorised PR35 merge.
+
 ## Current final delivery on actual 68-migration main
 
 - [x] Preserve accepted PR24 main `99add7de`, all68published migration bytes, its operational source and both complete ledgers. Maintain PR12-first priority; no additional feature merge is needed.
@@ -53,6 +56,7 @@ The complete target and all unrelated pending work remain below.
 - [x] Pass combined source/build/coverage checks with 515 frontend/65 files and all 144 runtime cases without skips, including real-controller phase/source/browser/privacy/cancellation regressions; formatting/actionlint/diff checks pass. Preserve exact6ff's separately completed 15-gate/120+2/91-stage full checkpoint as history.
 - [ ] Preserve the parallel remote Main36 reconciliation in ordinary ancestry, publish the signed final source and require fresh full-profile system AND browser reports plus native/security/preview success on the current base.
 - [ ] Merge and verify PR12 normally, then release the temporary review-state hold where still applicable. No renewed merge approval, unaccepted feature collection or production dispatch.
+
 ## Current all-PR merge continuation — PR12
 
 - [x] Integrate actually accepted PR36/main `7fbdb956` through normal ancestry; preserve both ledgers, phase isolation, strict browser evidence and all 36 released migration files.
@@ -115,6 +119,7 @@ Earlier checkpoint evidence and the complete product scope below remain unchange
 - [x] Pass combined local source/build acceptance with254frontend cases/52files,102runtime cases,23maintenance guards and16focused publication/GitHub/documentation guards; workflow/diff checks pass. No new full PC/native pass is inferred.
 - [ ] Complete the coordinated full PC slot naturally, preserve actual logs/exit/cleanup, and integrate PR27's actual main plus any required newer main before final exact-head15-check acceptance.
 - [ ] Keep PR12's temporary draft state and no-auto-merge instruction until its reserved merge is released; no source/QA work waits for a larger collected branch.
+
 ## Actual Main17 integration — final PR24 current-head acceptance
 
 PR17 has actually merged as main `4cc20874edc1f865b71106b7bb1299e16fec5aad`. Its 62 published SQL files remain byte-identical; six pending operational additions make 68 files in PR24. Application, SQL, E2E specifications, database helper, generated API inventory and package/lock bytes remain identical to the complete local `2c850fc488165e37887807a74e92414e4fa0a25e` pass. The newer executor combines accepted Main36 system/browser phase routing with Main17’s 30-minute aggregate browser budget; individual tests, assertions and retries are unchanged.
@@ -455,6 +460,7 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [ ] Push one necessary signed integration, pass all15current exact-head required gates and merge the completed functional PR according to the direct user instruction. No release/preview-publication dispatch belongs to this task.
 
 Other proposed PR21/22/26 group work remains separate from this frozen functional scope. The complete outstanding product/platform requirements below remain required.
+
 ## Smart operations extension — current user request
 
 **Current delivery priority:** PR10 alone owns the next main merge/shared PC QA slot. Keep PR17 draft with no auto-merge or merge watcher. Own58-source code and focused evidence are committed; full current-main acceptance is pending. After PR10, integrate actual main e88df84 or newer (including local publication controls/customer-neutral catalogue and the final canonical core), reconcile only undelivered own migration versions with byte-identical SQL, and repeat complete local/native/current-head CI before advancing PR17. The server's automatic mail/Push workers remain uninstalled.
