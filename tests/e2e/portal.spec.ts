@@ -347,47 +347,29 @@ test("language changes preserve input, themes render accessibly, offline mutatio
 
 /** Hebt die echte Browser-Verwaltungssitzung per TOTP an, bevor privilegierte Formulare benutzt werden. */
 async function adminSession(page: Page) {
-  const statePath = ".local/e2e-admin-totp.json";
+  const statePath = '.local/e2e-admin-totp.json';
   const { client } = await signInApi(process.env.E2E_ADMIN_EMAIL!);
   const { data: factors, error } = await client.auth.mfa.listFactors();
   expect(error).toBeNull();
-  let state: { factorId: string; secret: string } | null = existsSync(statePath)
-    ? JSON.parse(readFileSync(statePath, "utf8"))
-    : null;
-  if (!factors!.totp.some((factor) => factor.id === state?.factorId))
-    state = null;
+  let state: { factorId: string; secret: string } | null = existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) : null;
+  if (!factors!.totp.some((factor) => factor.id === state?.factorId)) state = null;
   await login(page, process.env.E2E_ADMIN_EMAIL!);
-  await page.goto("/security");
+  await page.goto('/security');
   if (!state) {
-    expect(
-      factors!.totp.filter((factor) => factor.status === "verified"),
-      "Use a disposable local admin with no unknown MFA factor",
-    ).toEqual([]);
-    const responsePromise = page.waitForResponse(
-      (response) =>
-        response.url().endsWith("/auth/v1/factors") &&
-        response.request().method() === "POST",
-    );
-    await page
-      .getByRole("button", { name: "Authenticator einrichten", exact: true })
-      .click();
+    expect(factors!.totp.filter((factor) => factor.status === 'verified'), 'Use a disposable local admin with no unknown MFA factor').toEqual([]);
+    const responsePromise = page.waitForResponse((response) => response.url().endsWith('/auth/v1/factors') && response.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Authenticator einrichten', exact: true }).click();
     const response = await responsePromise;
     const enrollment = await response.json();
     expect(enrollment.id).toBeTruthy();
     expect(enrollment.totp?.secret).toBeTruthy();
     state = { factorId: enrollment.id, secret: enrollment.totp.secret };
-    mkdirSync(".local", { recursive: true, mode: 0o700 });
+    mkdirSync('.local', { recursive: true, mode: 0o700 });
     writeFileSync(statePath, JSON.stringify(state), { mode: 0o600 });
   }
-  await page
-    .getByLabel("Sechsstelliger Code", { exact: true })
-    .fill(totp(state!.secret));
-  await page
-    .getByRole("button", { name: "Code bestätigen", exact: true })
-    .click();
-  await expect(page.getByRole("status")).toContainText(
-    /zwei Faktoren bestätigt/,
-  );
+  await page.getByLabel('Sechsstelliger Code', { exact: true }).fill(totp(state!.secret));
+  await page.getByRole('button', { name: 'Code bestätigen', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText(/zwei Faktoren bestätigt/);
 }
 
 test("admin verifies a real TOTP factor and publishes a five-session job through the UI", async ({
