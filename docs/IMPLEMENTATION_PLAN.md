@@ -1,5 +1,13 @@
 # Persistent implementation plan
 
+## Accepted Main34 integration — combined-source acceptance pending
+
+- [x] Resolve documentation conflicts while retaining accepted Main34 `c5281002c2ea1102abe91a71d497ceeea87341f4`, both complete historical ledgers and the intended active policy/12:16 disabled-review distinction. Main34's merge at 12:21:30 UTC is observed; its initiator remains unconfirmed.
+- [x] Retain the source-bound `3f405` guard evidence: 84 targeted tests and two old-red/new-green regression fixtures requiring actual completed full application/native steps. These results precede the combined source.
+- [ ] Integrate and verify the bounded routing correction: fast profiles only for genuine Draft PRs, full acceptance for ready PRs and a `ready_for_review` CI event. It is not yet integrated or accepted at this merge-resolution checkpoint.
+- [ ] Complete the local merge and fresh applicable checks on its exact combined head/current base, including all 15 required contexts and actual full application/native execution. Preserve the earlier 7daaa7b and Main34 evidence with their original source boundaries.
+- [ ] Resolve user review-policy clarification and follow the coordinated PR19 delivery reservation; separately observe trusted-Main controller operation and native App merging. Preserve the full remaining product and production/operational acceptance scope below.
+
 ## Exact-source 7daaa7b acceptance and coordinated delivery
 
 The following acceptance belongs to head `7daaa7b557243e6ab8ffc70d372e536158d80a1a` and accepted base `c0622a763127081a7b5be092ce2782253991c6a5`. Earlier checkpoint sections retain their source-bound historical status.
@@ -92,6 +100,30 @@ Full product/module scope and independently ongoing PR acceptance remain unchang
 - [x] Pass all 65 maintenance unit/contract cases, including 29 financial cases, scoped lint/format and diff checks; preserve automatic maintenance-test discovery. These lightweight checks are not native acceptance.
 - [ ] Coordinate the shared QA lock and run the exact signed candidate against a separately archived actual `1de544d` baseline, with the current 36 migrations and discovered API inventory. Record matching anonymous financial digests, full native Auth/Storage/TLS/50-claim checks and verified owned cleanup before claiming a current pass.
 - [ ] Run complete canonical application acceptance and the final exact-head PR CI gates through the owning quality integration. Keep the historical `5876224`/`e048edb` 26-migration proof source-bound; no deployment or PostgreSQL image upgrade is implied.
+
+## Safe development-speed improvements — explicit continuation
+
+- [x] Observe signed608687f/PR34 Portal43855915270 success in11m36s (approximately59%less than28m),351actual SQL groups and every required context; fix missing metadata labels and observe green43856170205.
+- [x] Implement two separate pinned networkless SQL workers with exhaustive partition, unchanged real races/durability, bounded cancellation/cleanup and actual per-suite timing reports; disable JIT only in the disposable PR fixture.
+- [x] Add conservative actual-merge docs/standard/full selection, full sensitive/unknown/main/manual acceptance, early independent jobs and required-gate preflights that fail on scope errors or fast non-PR profiles.
+- [x] Preserve source/rules/dependencies/migrations, all15required statuses, coverage/security/release requirements; make preview evidence profile explicit and reject missing CLI profile.
+- [x] Pass26focused local scope/worker/routing/preview/governance cases and scoped lint/format/actionlint; record local subprocess/Docker limitations and independent read-only review.
+- [ ] Publish final signed source, verify exact remote bytes, pass actual SQL-worker plus full application/native/security/package CI and measure the new SQL duration.
+- [ ] Perform the expressly authorised protected PR34 merge only when every final-current-head check passes; observe main acceptance separately without dispatching a release.
+
+This continuation preserves the complete remaining product scope and prior source-bound evidence below.
+
+## Faster PR CI — 16 November 2026
+
+- [x] Measure actual successful baseline: approximately28minutes, mostly21-minute application plus6-minute serial native rehearsal.
+- [x] Keep quality/coverage/security/metadata contexts; add bounded runtime/Edge/audit and one pinned isolated PostgreSQL suite on every PR, without repeated frontend quality/unit/build commands.
+- [x] Preserve all15required context names, preview success prerequisites, immutable SQL/dependencies and exact-main manual release gates; run unchanged complete application/native main/manual suites in parallel.
+- [x] Document PR SQL/Auth-stub limitations and package evidence scope; pass six runner orchestration, three routing/release-policy and four maintenance/governance checks, scoped lint/format and actionlint.
+- [ ] Publish the prepared branch changes after repository write access or browser file upload is available; connector403 and shell DNS restrictions currently block publication. No extension permission was changed.
+- [ ] Observe exact-head GitHub runtime/Edge/PostgreSQL/image startup and security/coverage/package results, measure actual optimized duration and merge only after every current required check succeeds.
+- [ ] Observe a complete main/manual application/native run before claiming that parallel full acceptance passed; no publication is requested.
+
+All remaining product and operational scope below is preserved. Local Docker and subprocess execution are restricted; mocked routing passes do not replace the pending native evidence.
 
 ## English quote/discovery documentation — released PR10 continuation
 

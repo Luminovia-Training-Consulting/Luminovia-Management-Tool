@@ -30,6 +30,10 @@ Under that recorded active policy, the sole personal review exception follows `C
 
 ## Required checks and native auto-merge
 
+The `PR preview package` job follows quality, coverage, runtime/Edge and isolated SQL acceptance. The source-derived profile uses explicit documentation-only verification, two independent SQL workers for ordinary UI work, or full native/application acceptance for sensitive/unknown changes. Main/manual always uses full acceptance, with independent jobs in parallel; selector failure cannot skip the required gates. It is now also a required Actions check, so all 15 PR checks must finish successfully before a merge. The main-only release job and separate preview-metadata workflow are not substituted for these PR checks.
+
+This profile mechanism comes from accepted Main34 `c5281002`. The prepared controller additionally requires completed full application/native steps; green context names alone do not establish that evidence. Combined-source CI remains pending. Draft-only fast routing, full acceptance for ready PRs and the `ready_for_review` trigger are the next bounded correction and remain unintegrated at this merge-resolution checkpoint.
+
 All **15** contexts are required. The first 14 below come from GitHub Actions integration `15368`; the generated findings result comes from integration `57789`.
 
 - Build
@@ -56,7 +60,7 @@ The prepared [native controller](AUTO_MERGE.md) requires independent review and 
 
 ## Controller delivery still pending
 
-The legacy fragment above remains valid for older links. **Controller delivery remains pending; live review enforcement differs from the recorded active snapshot as noted above.** This prepared narrow follow-up includes main `e88df84c`, the protected PR22 daily-maintenance source and the accepted English/customer-neutral documentation and still requires its own exact-source CI, merge and successful default-branch execution. Source files, repository auto-merge availability and a configured App token do not prove that the controller is running on accepted main.
+The legacy fragment above remains valid for older links. **Controller delivery remains pending; live review enforcement differs from the recorded active snapshot as noted above.** This prepared integration includes accepted Main34 `c5281002`, the protected PR22 daily-maintenance source and the accepted English/customer-neutral documentation and still requires its own combined-source CI, merge and successful default-branch execution. Source files, repository auto-merge availability and a configured App token do not prove that the controller is running on accepted main.
 
 The existing App `5776881` (`luminovia-portal-maintenance`) remains scoped to this repository. Its existing protected `maintenance-signing` credentials are reused; no new App, permission scope, personal token or server credential is introduced. The standard Actions token reads REST and a fixed GraphQL operation. Only the separate App token may call the native PR merge endpoint or the two main-verification dispatch endpoints. It has no main-ref/force-write route and no native-rule bypass.
 
@@ -92,7 +96,7 @@ References: [rulesets and exceptions](https://docs.github.com/en/repositories/co
 
 ## PR preview packages and deployment records
 
-After complete quality, coverage, application and native acceptance, PRs produce a seven-day source package for a complete local preview. The artifact remains available without a Deployment record. Only an authorised manual `PR preview deployments` dispatch on `main` with `action=publish`, the exact `run_id` and `run_attempt` asks the trusted default-branch publisher to create metadata. Its default `action=cleanup` deactivates stale/closed/expired records without publishing a new one; no PR event or schedule runs that cleanup automatically. Contribution code receives no write token or hosting secrets. The deployment URL opens the downloadable package; successful publication does not claim a hosted website. The packaged launcher uses owned local database identities and distinct ports. See [PR previews](PR_PREVIEWS.md) for permissions and local operation.
+After the bounded quality, coverage, runtime/Edge and PostgreSQL PR suite, PRs produce a seven-day source package for a complete local preview. The manifest states the actual source-derived profile. Only the full profile claims native/browser/retained-data acceptance; that unchanged suite always runs on main/manual and sensitive PRs. All existing required context names and successful-job requirements remain intact. The artifact remains available without a Deployment record. Only an authorised manual `PR preview deployments` dispatch on `main` with `action=publish`, the exact `run_id` and `run_attempt` asks the trusted default-branch publisher to create metadata. Its default `action=cleanup` deactivates stale/closed/expired records without publishing a new one; no PR event or schedule runs that cleanup automatically. Contribution code receives no write token or hosting secrets. The deployment URL opens the downloadable package; successful publication does not claim a hosted website. The packaged launcher uses owned local database identities and distinct ports. See [PR previews](PR_PREVIEWS.md) for permissions and local operation.
 
 <a id="labels-and-historical-prs"></a>
 
