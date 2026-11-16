@@ -1,3 +1,7 @@
+/**
+ * Contracts, fee tables, invoices and payment dialogs, using shared brand colours and surface
+ * variables.
+ */
 .commercial-contract-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));
@@ -33,6 +37,7 @@
   min-width: 0;
   padding: 1.4rem;
 }
+/* Term/value pairs keep contract/invoice metadata readable even with long identifiers. */
 .commercial-facts {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -115,6 +120,7 @@
   box-shadow: none;
   background: transparent;
 }
+/* Keep upload/scanning feedback next to the commercial document being used. */
 .commercial-upload {
   padding: 1rem;
   border: 1px dashed var(--line);
@@ -306,6 +312,7 @@
 .commercial-voided strong {
   text-decoration: line-through;
 }
+
 @media (max-width: 600px) {
   .commercial-contract-card,
   .commercial-invoice-card {

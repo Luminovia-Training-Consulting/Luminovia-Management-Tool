@@ -1,3 +1,7 @@
+/**
+ * Job list, URL filters and detail view with immediate server allocation. Filter the loaded
+ * authorized set; only the atomic RPC can confirm a claim and preserve accepted terms.
+ */
 import { JobPricingPanel } from "../commercial/pricing";
 import { JobLifecyclePanel } from "./lifecycle";
 import {
@@ -46,6 +50,7 @@ import {
   PageHeading,
 } from "../../components/common";
 import { BackLink } from "../../app/shell";
+/** Display the current offer projection with its earliest session and per-position lecturer fee. */
 export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
   const { t, i18n } = useTranslation();
   const lifeText = useTranslation("jobLifecycle").t;
@@ -102,11 +107,14 @@ export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
     </article>
   );
 }
+/** Keep combined filters in the URL and apply them to the currently loaded authorized offers. */
 export function Jobs() {
   const { t, i18n } = useTranslation();
   const query = useQuery(jobsQuery);
   const topics = useQuery(topicsQuery);
   const [params, setParams] = useSearchParams();
+  // URL filters let browser navigation and shared links restore the same
+  // selection without maintaining a second filter state.
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
@@ -120,6 +128,8 @@ export function Jobs() {
   const to = params.get("to") ?? "";
   const min = params.get("min") ?? "";
   const currency = params.get("currency") ?? "";
+  // This filters the loaded, already authorized server result set.
+  // It does not claim complete discovery beyond the REST row limit.
   const filtered =
     query.data?.filter((j) => {
       const search = [j.title, j.description, j.customer_name, j.location]
@@ -253,6 +263,7 @@ export function Jobs() {
     </>
   );
 }
+/** Display own accepted terms and request new allocation only through the atomic claim RPC. */
 export function JobDetail() {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
@@ -261,6 +272,8 @@ export function JobDetail() {
   const online = useOnline();
   const client = useQueryClient();
   const [accepted, setAccepted] = useState<number | null>(null);
+  // Network uncertainty preserves the same operation; only a confirmed claim
+  // later receives a fresh identity for a genuine reopening.
   const key = useRef(crypto.randomUUID());
   const permissions = useQuery(permissionsQuery(session!.user.id));
   const jobs = useQuery(jobsQuery);
@@ -273,6 +286,8 @@ export function JobDetail() {
     mutationFn: async () => {
       requireOnline();
       if (!job || accepted !== job.terms_version) throw new Error("invalid");
+      // The browser submits no winner/lecturer ID. The server atomically checks
+      // the current actor, eligibility, every session and accepted terms.
       const { data, error } = await db().rpc("claim_job", {
         p_job_id: job.id,
         p_idempotency_key: key.current,
@@ -305,6 +320,8 @@ export function JobDetail() {
       </>
     );
   const zone = profile.data?.time_zone ?? job.time_zone;
+  // An accepted claim remains the source for agreed fees and conditions
+  // even if the current offer is subsequently edited.
   const terms = ownClaim ?? job;
   const result = claim.data?.status;
   const resultKey =

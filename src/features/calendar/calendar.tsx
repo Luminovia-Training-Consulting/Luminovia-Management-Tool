@@ -1,3 +1,7 @@
+/**
+ * FullCalendar view of own events, confirmed assignments and published course sessions. Each
+ * source retains its visibility rules; convert local form times to instants before mutations.
+ */
 import { Link } from "react-router-dom";
 import "../availability/i18n";
 import { runsQuery, templatesQuery } from "../operations/data";
@@ -40,12 +44,14 @@ import {
   Notice,
   PageHeading,
 } from "../../components/common";
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
   title: z.string().trim().min(1).max(200),
   starts_at: z.string().min(1),
   ends_at: z.string().min(1),
   time_zone: z.string().refine(validZone),
 });
+/** Create a private event from unambiguous zoned input and invalidate the actor's event query. */
 function EventForm({
   userId,
   zone,
@@ -192,6 +198,7 @@ function EventForm({
     </form>
   );
 }
+/** Combine separately authorized calendar sources and display them in the selected IANA zone. */
 export function CalendarPage() {
   const { t, i18n } = useTranslation();
   const availabilityText = useTranslation("availability").t;

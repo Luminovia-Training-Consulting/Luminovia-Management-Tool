@@ -1,3 +1,7 @@
+/**
+ * Fees, claim-derived invoices, review and individual payment records. Amounts/references follow
+ * confirmed server rows; payment reversals require their own auditable action.
+ */
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,11 +48,13 @@ import { RevenuePanel } from "./revenue";
 import "./i18n";
 import "./platform-i18n";
 import "./commercial.css";
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const invoiceSchema = z.object({
   number: z.string().trim().min(1).max(80),
   issued: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
+/** Link a clean invoice PDF version to selected accepted assignments checked by the server. */
 function SubmitInvoice({
   actor,
   zone,
@@ -246,6 +252,7 @@ function SubmitInvoice({
     </form>
   );
 }
+/** Record a reasoned payment reversal as a separate server action. */
 function VoidPayment({
   actor,
   payment,
@@ -301,6 +308,7 @@ function VoidPayment({
     </form>
   );
 }
+/** Load this invoice's authorized payment history and display reversals transparently. */
 function PaymentHistory({
   actor,
   invoice,
@@ -378,11 +386,13 @@ function PaymentHistory({
     </>
   );
 }
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const paymentSchema = z.object({
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/),
   paidAt: z.string().min(1),
   reference: z.string().trim().max(200),
 });
+/** Validate a payment draft; the server checks the remaining balance and invoice state. */
 function RecordPayment({
   actor,
   invoice,
@@ -504,6 +514,7 @@ function RecordPayment({
     </form>
   );
 }
+/** Submit explicit invoice approval/rejection through its business contract. */
 function ReviewInvoice({
   actor,
   invoice,
@@ -580,6 +591,7 @@ function ReviewInvoice({
     </form>
   );
 }
+/** Combine the confirmed invoice, exact PDF version, review state and applicable payment actions. */
 function InvoiceCard({
   actor,
   invoice,
@@ -730,6 +742,7 @@ function InvoiceCard({
     </article>
   );
 }
+/** Render authorized fee records with original currency and confirmed billing state. */
 function EarningsTable({
   rows,
   manager,
@@ -784,6 +797,7 @@ function EarningsTable({
     </div>
   );
 }
+/** Combine permissions, fees, invoices, export and payment actions for the current actor. */
 export function FinancePage() {
   const { t, i18n } = useTranslation("commercial");
   const platformText = useTranslation("platform").t;

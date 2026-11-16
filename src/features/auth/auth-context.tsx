@@ -1,3 +1,7 @@
+/**
+ * React's shared binding to native Supabase session state. Auth events outrank a late initial
+ * lookup; identity changes clear private queries before rendering the new actor.
+ */
 /* eslint-disable react-refresh/only-export-components */
 import {
   createContext,
@@ -12,16 +16,19 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { synchronizePushActor } from "../notifications/push-browser";
 import { synchronizeOfflineActor } from "../calendar/offline-store";
+/** Session state with distinct initial-loading and initial-lookup failure flags. */
 interface AuthState {
   session: Session | null;
   loading: boolean;
   error: boolean;
 }
+/** Shared context with no fabricated fallback session; without a provider it stays loading. */
 const AuthContext = createContext<AuthState>({
   session: null,
   loading: true,
   error: false,
 });
+/** Synchronize native Auth events and initial lookup; an older result must not overwrite a newer event. */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     session: null,
@@ -38,6 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     let alive = true;
     let revision = 0;
+    // Clear the previous actor's query cache before publishing the new session.
+    // Otherwise new components could briefly observe another actor's retained private data.
     const applySession = (session: Session | null, error = false) => {
       synchronizeOfflineActor(session?.user.id ?? null);
       void synchronizePushActor(session?.user.id ?? null);
@@ -51,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!alive) return;
+      // Every native Auth event supersedes the pending initial lookup.
       revision++;
       applySession(session);
       if (event === "SIGNED_OUT") {
@@ -71,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(() => {
         if (alive && revision === initialRevision) applySession(null, true);
       });
+    // Late promises must not publish a session after this provider unmounts.
     return () => {
       alive = false;
       subscription.unsubscribe();
@@ -78,4 +89,5 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [client]);
   return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>;
 }
+/** Read the session/loading/error state maintained by the shared AuthProvider. */
 export const useAuth = () => useContext(AuthContext);

@@ -1,3 +1,7 @@
+/**
+ * Browser workflows for scanned private bytes, previews and exact document versions.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
+ */
 import { test, expect, type Request } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
@@ -6,6 +10,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Run through ./portal test in its isolated database.",
 );
+/** Signs this test actor in through the visible form and waits for confirmed navigation. */
 async function login(page: import("@playwright/test").Page) {
   await page.goto("/login");
   await page
@@ -89,6 +94,7 @@ test("real private upload is scanned, downloaded, versioned and archived through
   await page.waitForLoadState("networkidle");
   const idleReads: string[] = [];
   const navigations: string[] = [];
+  /** Counts actual document-metadata requests to detect unnecessary polling, not merely timer activity. */
   const countReads = (request: Request) => {
     if (
       request.method() === "GET" &&

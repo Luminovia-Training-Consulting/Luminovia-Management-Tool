@@ -1,3 +1,7 @@
+/**
+ * Regressions for visibility-bound read receipts and retries after uncertain outcomes. SDK/DOM
+ * fixtures do not replace native chat acceptance.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -81,6 +85,7 @@ it("retains exactly one composer and its unsent draft across room-list refreshes
   }
 });
 
+/** Create an isolated real thread with fictional history and controlled read receipts. */
 function populatedThread() {
   HTMLElement.prototype.scrollIntoView = vi.fn();
   const client = new QueryClient({

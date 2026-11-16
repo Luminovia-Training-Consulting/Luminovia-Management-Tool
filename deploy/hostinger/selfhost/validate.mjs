@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+/**
+ * Validate rendered selfhost configuration, image pins and real gateway boundaries using synthetic values. Temporary files belong only to this probe; no existing instance is configured.
+ */
 /** Offline cryptography, permissions and Docker Compose boundary validation. */
 import assert from "node:assert/strict";
 import { createHash, createHmac, createPublicKey, verify } from "node:crypto";

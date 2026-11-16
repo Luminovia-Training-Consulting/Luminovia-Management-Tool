@@ -1,3 +1,7 @@
+/**
+ * Browser workflows for the actor's own inbox and persisted DE/EN preferences.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
+ */
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";

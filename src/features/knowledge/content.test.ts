@@ -1,3 +1,7 @@
+/**
+ * Regressions for node/link allowlists, structure/size limits and rejection of executable
+ * destinations. Pure normalization checks do not replace server validation.
+ */
 import { describe, expect, it } from "vitest";
 import {
   contentIsValid,

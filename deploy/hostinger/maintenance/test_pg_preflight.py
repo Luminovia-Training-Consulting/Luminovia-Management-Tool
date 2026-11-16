@@ -1,3 +1,4 @@
+# Controlled process/Compose fixtures check prerequisites and private-cluster probe ordering. These unit cases do not replace the separate native image/data test.
 import datetime as dt
 import json
 from pathlib import Path
@@ -11,6 +12,7 @@ PIN = "supabase/postgres:17.12.0.000@sha256:" + "a" * 64
 SNAPSHOT = {"tables": [{"name": "public.fixture", "rows": 1, "hash": "original"}], "roles": "protected", "memberships": "same", "policies": "same", "functions": "same"}
 
 
+# Controlled cluster/Compose inventory records start/stop/copy ordering without accessing real data.
 class Fixture:
     def __init__(self, root):
         self.root = Path(root)
@@ -45,6 +47,7 @@ class Fixture:
             return json.dumps({"services": {"db": {"image": PIN, "environment": {"POSTGRES_PASSWORD": "fixture-private-password"}, "command": ["postgres", "-c", "shared_buffers=128MB"]}}}).encode()
         return b""
 
+    # Run the supplied process without a shell and preserve a real failure status.
     def command(self, args, **kwargs):
         self.calls.append(tuple(args))
         if args[:2] == ["docker", "inspect"]:
@@ -79,6 +82,7 @@ class Fixture:
         return b""
 
 
+# Exercise prerequisites and failure paths of the private same-major preflight.
 class PreflightTests(unittest.TestCase):
     def test_major_and_mutable_images_refused(self):
         for image in ["supabase/postgres:latest", PIN.replace(":17.", ":18.")]:

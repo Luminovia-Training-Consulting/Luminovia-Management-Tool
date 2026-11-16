@@ -1,3 +1,7 @@
+/**
+ * Regressions for version-bound metadata/bytes and disposal of late preview Blob URLs.
+ * Controlled UI transport does not establish server file authorization.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -42,6 +46,7 @@ const file: PortalDocument = {
   created_at: "2026-01-01T00:00:00Z",
   deleted_at: null,
 };
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(child: React.ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },

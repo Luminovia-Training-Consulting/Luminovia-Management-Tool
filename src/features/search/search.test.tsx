@@ -1,3 +1,7 @@
+/**
+ * Regressions for URL-driven search, retained typing drafts and no requests for short terms. UI
+ * fixtures do not replace permission-filtered server search.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -31,6 +35,7 @@ beforeEach(async () => {
   });
 });
 afterEach(cleanup);
+/** Render the real page in its router/query context for the interaction checks below. */
 function page() {
   const router = createMemoryRouter(
     [{ path: "/search", element: <PortalSearch /> }],

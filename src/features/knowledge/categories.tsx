@@ -1,3 +1,7 @@
+/**
+ * Wiki/forum category management. Local validation supports the editor; the corresponding RPCs
+ * decide persistence and moderation authority.
+ */
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -12,6 +16,7 @@ import { Dialog } from "../../components/ui/dialog";
 import { categoriesQuery, knowledgeKeys } from "./api";
 import type { KnowledgeCategory } from "./types";
 import "./i18n";
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
   slug: z
     .string()
@@ -22,6 +27,7 @@ const schema = z.object({
   label_en: z.string().trim().min(1).max(120),
   archived: z.boolean(),
 });
+/** Validate category drafts and submit the corresponding wiki/forum management action. */
 function CategoryForm({
   actor,
   kind,
@@ -110,6 +116,7 @@ function CategoryForm({
     </form>
   );
 }
+/** Display permitted categories and scope their editor to the selected knowledge area. */
 export function CategoryManager({
   actor,
   kind,

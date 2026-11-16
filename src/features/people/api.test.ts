@@ -1,3 +1,7 @@
+/**
+ * Regressions for normalized authored profile labels without role-like authority. Input/SDK
+ * fixtures do not establish native profile permissions.
+ */
 import { describe, expect, it } from "vitest";
 import { labelText } from "./api";
 describe("self-authored profile labels", () => {

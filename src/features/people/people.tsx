@@ -1,3 +1,7 @@
+/**
+ * Searchable people directory and permitted profiles with courses/reviews. Start DMs through the
+ * existing RPC; moderation remains a separate reasoned action.
+ */
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -28,6 +32,7 @@ import {
 } from "./api";
 import "./i18n";
 import "./people.css";
+/** Filter the permitted projection by search, label and expertise instead of assembling private profiles in the browser. */
 export function PeopleDirectory() {
   const { t, i18n } = useTranslation("people");
   const { session } = useAuth();
@@ -135,6 +140,7 @@ export function PeopleDirectory() {
     </>
   );
 }
+/** Request reasoned moderation rather than silently deleting a review in the browser. */
 function ModerateReview({ review }: { review: CourseReview }) {
   const { t } = useTranslation("people");
   const online = useOnline();
@@ -193,6 +199,7 @@ function ModerateReview({ review }: { review: CourseReview }) {
     </>
   );
 }
+/** Combine permitted profile details, courses and reviews and request actual authorized DMs. */
 export function PersonProfile() {
   const { id = "" } = useParams();
   const { t, i18n } = useTranslation("people");

@@ -1,3 +1,8 @@
+/**
+ * Manage qualification verification, expiry and account suspension. Changes require confirmed
+ * server responses and invalidate related queries; private profile fields retain database access
+ * controls.
+ */
 import { ProfileEvidence } from "../files/profile-evidence";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -24,10 +29,14 @@ import {
   PageHeading,
 } from "../../components/common";
 
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const expirySchema = z.object({ valid_until: z.string() });
+/** Derive form values from the validation schema so runtime input checks and TypeScript agree. */
 type ExpiryValues = z.infer<typeof expirySchema>;
+/** Reviewed target name and intended activation state for the confirmation dialog. */
 type AccountChange = { id: string; name: string; active: boolean };
 
+/** Save verified qualification state and expiry through the administrative server contract. */
 function ExpertiseReview({
   profile,
   expertise,
@@ -177,6 +186,7 @@ function ExpertiseReview({
   );
 }
 
+/** Load administrative profiles, expertise and account state; require explicit confirmation for the selected suspension target. */
 function PeopleDirectory({ actorId }: { actorId: string }) {
   const { t, i18n } = useTranslation();
   const online = useOnline();
@@ -443,6 +453,7 @@ function PeopleDirectory({ actorId }: { actorId: string }) {
   );
 }
 
+/** Open the administrative directory only after permission loading succeeds. */
 export function PeopleAdminPage() {
   const { t } = useTranslation();
   const { session } = useAuth();

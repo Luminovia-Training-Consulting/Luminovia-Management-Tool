@@ -1,4 +1,9 @@
+/**
+ * Build boundary for exclusively public Supabase browser configuration.
+ * Server secrets must not enter the bundle even when accidentally assigned to a VITE variable.
+ */
 /** Reject accidental server keys before Vite can put them in a public bundle. */
+
 export function validatePublicConfig(
   url: string | undefined,
   key: string | undefined,

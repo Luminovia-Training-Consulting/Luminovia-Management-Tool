@@ -1,3 +1,7 @@
+/**
+ * Regressions for active options and retaining already referenced archived topics. Pure
+ * selection tests do not replace native taxonomy access checks.
+ */
 import { describe, expect, it } from "vitest";
 import { selectableTopics } from "./selection";
 describe("active taxonomy choices and historical removals", () => {

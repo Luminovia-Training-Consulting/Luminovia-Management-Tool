@@ -1,3 +1,7 @@
+/**
+ * Regressions for encoded image dimensions and bounded browser preparation. Byte/DOM fixtures do
+ * not replace actual avatar scanning and access checks.
+ */
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 import { sourceImageSize } from "./avatar-api";

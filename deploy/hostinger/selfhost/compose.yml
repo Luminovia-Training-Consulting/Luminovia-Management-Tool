@@ -1,7 +1,9 @@
+# Development backend with private persistent mounts. Public ingress goes through Caddy/gateway; this file alone does not establish production or capacity acceptance.
 # DEVELOPMENT/SETUP ONLY on purchased KVM1: no production or100GB capacity acceptance.
 # Derived from official self-hosted/v0.8.4; digest pinned. Only Mailpit8025 binds host LOOPBACK.
 name: luminovia-supabase
 services:
+  # Transactional source with persistent PGDATA and a separate configuration volume.
   db:
     image: supabase/postgres:17.12.0.000@sha256:8630950b489ecc70563300180287a98c192a4a48f5ae00b4febdaeea1abe85de
     restart: unless-stopped
@@ -62,6 +64,7 @@ services:
         max-file: '2'
     security_opt:
     - no-new-privileges:true
+  # Native invitation/sign-in/MFA; signup is disabled and development mail goes to Mailpit.
   auth:
     image: supabase/gotrue:v2.197.0@sha256:1736a63078f5922b198c4cbe50f80ab9a2d3b54fe8b7b6cfb2e9dc5dbbc12c6b
     restart: unless-stopped
@@ -142,6 +145,7 @@ services:
         max-file: '2'
     security_opt:
     - no-new-privileges:true
+  # RLS/GRANT-bound Data API; a row cap does not replace server-side pagination.
   rest:
     image: postgrest/postgrest:v16.5@sha256:1347d7552b88f17832912c06afbf7c43209af6eeeb60834b04aae12c9bd9d5cc
     restart: unless-stopped
@@ -184,6 +188,7 @@ services:
         max-file: '2'
     security_opt:
     - no-new-privileges:true
+  # Persisted Realtime channels remain subject to current database and membership rules.
   realtime:
     image: supabase/realtime:v2.161.0@sha256:f5c0e0f330b8eb4d0d74b2f795d1f8e4bc9523fc9dc7ceb684a1968fc57cf414
     restart: unless-stopped
@@ -236,6 +241,7 @@ services:
     security_opt:
     - no-new-privileges:true
     hostname: realtime-dev.supabase-realtime
+  # Private object bytes in a separate persistent file mount.
   storage:
     image: supabase/storage-api:v1.95.0@sha256:833558845aafcfd493c33a4258cc8def1a7c6b3c20dd3b35aacfd2d89aa79558
     restart: unless-stopped
@@ -289,6 +295,7 @@ services:
         max-file: '2'
     security_opt:
     - no-new-privileges:true
+  # Portal Edge handlers use user JWTs for business permissions and separate server-only keys.
   functions:
     image: supabase/edge-runtime:v1.79.1@sha256:185b4039d8e8ffe0a3a41b425bd299a51100a590d04e05aa4c2be1d66d09cb5d
     mem_limit: ${PORTAL_FUNCTIONS_MEMORY_LIMIT:-1280m}
@@ -348,6 +355,7 @@ services:
         max-file: '2'
     security_opt:
     - no-new-privileges:true
+  # Private API-key/routing boundary forwards only approved application services.
   api-gw:
     image: envoyproxy/envoy:v1.40.2@sha256:8de97e654644827d62afdbf7e1d3dc9fee01a8690d410dd1c63a30dc6b6cecbb
     restart: unless-stopped
@@ -401,6 +409,7 @@ services:
         max-file: '2'
     security_opt:
     - no-new-privileges:true
+  # Development mail sink with persistent test messages; no delivery to real recipients.
   mailpit:
     image: axllent/mailpit:v1.33.1@sha256:aef2aacc11f075ec0fb6874275ee4a421e688e11a96ebb296134d1735c7761ce
     restart: unless-stopped

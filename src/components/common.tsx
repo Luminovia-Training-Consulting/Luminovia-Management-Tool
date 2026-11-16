@@ -1,3 +1,7 @@
+/**
+ * Shared translated loading, error, notice and form primitives. Field connects native controls
+ * to labels/descriptions without replacing form handlers or refs.
+ */
 import {
   Children,
   cloneElement,
@@ -9,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { AlertCircle, ArrowRight, LoaderCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Link } from "react-router-dom";
+/** Announce the translated loading state as a polite status update. */
 export function Loading() {
   const { t } = useTranslation();
   return (
@@ -18,6 +23,7 @@ export function Loading() {
     </div>
   );
 }
+/** Announce the error and link public recovery guidance; retry exists only when the caller supplies an action. */
 export function ErrorState({ retry }: { retry?: () => void }) {
   const { t } = useTranslation();
   return (
@@ -29,13 +35,18 @@ export function ErrorState({ retry }: { retry?: () => void }) {
           {t("retry")}
         </Button>
       )}
+      <a className="text-link" href="/help?topic=troubleshooting">
+        {t("errorHelp")}
+      </a>
     </div>
   );
 }
+/** The native ID/ARIA attributes that Field may augment for accessible labelling. */
 type FieldControlProps = Pick<
   AriaAttributes,
   "aria-describedby" | "aria-invalid"
 > & { id?: string };
+/** Connect one native input to its label, hint and validation error while preserving existing handlers/refs. */
 export function Field({
   id,
   label,
@@ -92,6 +103,7 @@ export function Field({
     </div>
   );
 }
+/** Provide a consistent page heading with optional description and feature action. */
 export function PageHeading({
   eyebrow,
   title,
@@ -114,6 +126,7 @@ export function PageHeading({
     </div>
   );
 }
+/** Render an internal router link with the shared direction indicator. */
 export function TextLink({
   to,
   children,
@@ -128,6 +141,7 @@ export function TextLink({
     </Link>
   );
 }
+/** Use an alert for errors and a status announcement for confirmed results. */
 export function Notice({
   children,
   kind = "success",
