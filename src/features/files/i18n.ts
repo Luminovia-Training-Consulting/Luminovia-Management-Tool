@@ -48,6 +48,54 @@ const pairs: Record<string, [string, string]> = {
   rejected: ["Gesperrt", "Rejected"],
   empty: ["Noch keine Dateien vorhanden.", "No files yet."],
   search: ["Dateien suchen", "Search files"],
+  discoveryHelp: [
+    "Die Suche und Filter berücksichtigen alle Dateien, die dein Konto aktuell lesen darf. Tags und virtuelle Ordner gehören nur zu deinem Konto.",
+    "Search and filters cover all files your account can currently read. Tags and virtual folders belong to your account only.",
+  ],
+  tagFilter: ["Eigenes Tag filtern", "Filter by your tag"],
+  folderFilter: ["Eigenen Ordner filtern", "Filter by your folder"],
+  exactFilter: [
+    "Vollständige Bezeichnung; Groß-/Kleinschreibung wird ignoriert.",
+    "Exact label; case is ignored.",
+  ],
+  unfiledOnly: ["Nur ohne eigenen Ordner", "Only without your folder"],
+  refreshFiles: ["Dateiliste aktualisieren", "Refresh file list"],
+  loadMoreFiles: ["Weitere Dateien laden", "Load more files"],
+  loadingFiles: ["Weitere Dateien werden geladen …", "Loading more files…"],
+  loadedFiles_one: ["1 Datei geladen", "1 file loaded"],
+  loadedFiles_other: ["{{count}} Dateien geladen", "{{count}} files loaded"],
+  discoveryOffline: [
+    "Neue Suchergebnisse und Änderungen benötigen eine Onlineverbindung.",
+    "An online connection is required for new search results and changes.",
+  ],
+  organise: ["Persönlich organisieren", "Organise for me"],
+  organisationPrivate: [
+    "Diese Tags und dieser virtuelle Ordner sind nur für dein Konto sichtbar. Dateibesitz, Freigabe und Dateiinhalte werden dadurch nicht verändert.",
+    "These tags and this virtual folder are visible to your account only. File ownership, sharing and contents remain unchanged.",
+  ],
+  ownTags: ["Eigene Tags", "Your tags"],
+  ownFolder: ["Eigener virtueller Ordner", "Your virtual folder"],
+  tagsHint: [
+    "Ein Tag pro Zeile, höchstens 20 mit je 60 Zeichen.",
+    "One tag per line, up to 20 tags of 60 characters each.",
+  ],
+  folderHint: [
+    "Eine private Bezeichnung bis 80 Zeichen; leer lässt die Datei ungeordnet. Dies ist kein Speicherpfad.",
+    "A private label of up to 80 characters; leave blank for unfiled. This is not a storage path.",
+  ],
+  saveOrganisation: ["Eigene Ordnung speichern", "Save my organisation"],
+  organisationError: [
+    "Das Speichern konnte nicht bestätigt werden. Prüfe Werte und aktuellen Dateizugriff.",
+    "Saving could not be confirmed. Check values and current file access.",
+  ],
+  organisationStale: [
+    "Deine Ordnung wurde inzwischen geändert. Der Entwurf bleibt erhalten; lade die aktuelle Fassung vor einer neuen Bearbeitung.",
+    "Your organisation changed in the meantime. Your draft is retained; reload the current version before editing again.",
+  ],
+  organisationReload: [
+    "Aktuelle Ordnung laden und Entwurf schließen",
+    "Reload current organisation and close draft",
+  ],
   uploading: [
     "Übertragung {{percent}} % · anschließend Sicherheitsprüfung",
     "Uploading {{percent}}% · security scan follows",
