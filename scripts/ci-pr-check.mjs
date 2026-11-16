@@ -4,7 +4,7 @@
  * pinned PostgreSQL image and real suites, with Auth helpers emulated by them.
  */
 import { randomBytes } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
+import { appendFileSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -86,10 +86,20 @@ export async function runPrCheck(
     docker = assertLocalDocker,
     signal,
     report = console.log,
+    sqlShard = 0,
+    sqlShards = 1,
+    recordTiming = () => {},
   } = {},
 ) {
   if (!["guards", "sql"].includes(mode))
     throw new Error("Choose guards or sql.");
+  if (
+    !Number.isInteger(sqlShard) ||
+    ![1, 2].includes(sqlShards) ||
+    sqlShard < 0 ||
+    sqlShard >= sqlShards
+  )
+    throw new Error("Use one or two valid SQL shards.");
   const plan = prCheckPlan(cwd);
   let env = cleanEnvironment();
   // Neither mode needs a GitHub write/read token, hosted credentials or secrets.
@@ -164,7 +174,7 @@ export async function runPrCheck(
       "/bin/sh",
       image,
       "-ec",
-      "initdb -D /tmp/portal-pr-data -U postgres --auth=trust >/dev/null; exec postgres -D /tmp/portal-pr-data -c listen_addresses='' -c unix_socket_directories=/tmp",
+      "initdb -D /tmp/portal-pr-data -U postgres --auth=trust >/dev/null; exec postgres -D /tmp/portal-pr-data -c listen_addresses='' -c unix_socket_directories=/tmp -c jit=off",
     ]);
     await step(
       "docker",
@@ -191,7 +201,22 @@ export async function runPrCheck(
       "-c",
       "create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;",
     ]);
-    for (const suite of plan.sql) await step(process.execPath, [suite]);
+    // Each worker has its own PostgreSQL cluster and connection limit. Never
+    // overlap independent 50-claim races inside one shared 100-connection cluster.
+    for (const suite of plan.sql.filter(
+      (_, index) => index % sqlShards === sqlShard,
+    )) {
+      const started = performance.now();
+      await step(process.execPath, [suite]);
+      const seconds = ((performance.now() - started) / 1000).toFixed(2);
+      report(`[PR SQL ${sqlShard + 1}/${sqlShards}] ${suite}: ${seconds}s`);
+      recordTiming({
+        suite,
+        seconds,
+        worker: sqlShard + 1,
+        workers: sqlShards,
+      });
+    }
   } catch (error) {
     failure = error;
   } finally {
@@ -215,6 +240,50 @@ export async function runPrCheck(
   );
 }
 
+/** Run both exhaustive SQL shards in separate owned clusters. Failure stops the
+ * peer's commands, and all cleanup settles before a combined failure is reported.
+ * Injectable workers let tests prove concurrency and membership without Docker.
+ */
+export async function runPrSqlChecks({
+  worker = runPrCheck,
+  signal,
+  ...options
+} = {}) {
+  const cancellation = new AbortController();
+  const cancel = () => cancellation.abort();
+  if (signal?.aborted) cancel();
+  signal?.addEventListener("abort", cancel, { once: true });
+  try {
+    const results = await Promise.allSettled(
+      [0, 1].map(async (sqlShard) => {
+        try {
+          await worker("sql", {
+            ...options,
+            signal: cancellation.signal,
+            sqlShard,
+            sqlShards: 2,
+          });
+        } catch (error) {
+          cancellation.abort();
+          throw error;
+        }
+      }),
+    );
+    const failures = results
+      .filter((result) => result.status === "rejected")
+      .map((result) => result.reason);
+    if (failures.length)
+      throw new AggregateError(
+        failures,
+        "PR SQL workers failed; owned cleanup completed or its errors are included.",
+      );
+    if (cancellation.signal.aborted)
+      throw new Error("PR SQL checks cancelled.");
+  } finally {
+    signal?.removeEventListener("abort", cancel);
+  }
+}
+
 // Importing the runner in tests has no side effects. Cancellation terminates the
 // owned child command, then the SQL finally block removes only its own container.
 if (
@@ -226,7 +295,18 @@ if (
   process.once("SIGINT", cancel);
   process.once("SIGTERM", cancel);
   try {
-    await runPrCheck(process.argv[2], { signal: cancellation.signal });
+    if (process.argv[2] === "sql")
+      await runPrSqlChecks({
+        signal: cancellation.signal,
+        recordTiming: ({ suite, seconds, worker, workers }) => {
+          if (process.env.GITHUB_STEP_SUMMARY)
+            appendFileSync(
+              process.env.GITHUB_STEP_SUMMARY,
+              `- SQL worker ${worker}/${workers}: ${suite} — ${seconds}s\n`,
+            );
+        },
+      });
+    else await runPrCheck(process.argv[2], { signal: cancellation.signal });
   } finally {
     process.removeListener("SIGINT", cancel);
     process.removeListener("SIGTERM", cancel);

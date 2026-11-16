@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { readdirSync } from "node:fs";
 import test from "node:test";
-import { prCheckPlan, runPrCheck } from "./ci-pr-check.mjs";
+import { prCheckPlan, runPrCheck, runPrSqlChecks } from "./ci-pr-check.mjs";
 import { root } from "./runtime-lib.mjs";
 
 test("PR plans include every SQL/runtime suite and Edge entry without repeating frontend quality or coverage", () => {
@@ -167,5 +167,90 @@ test("SQL startup failures stop assertions and retain bounded owned cleanup", as
       fixture.calls.some(({ args }) => args[0] === "rm"),
       failStartup !== "pull",
     );
+  }
+});
+
+// All original suites must run exactly once across the two clusters.
+test("SQL shards partition every suite exactly once with distinct owned clusters", async () => {
+  const fixtures = [sqlFixture(), sqlFixture()];
+  await Promise.all(
+    fixtures.map((fixture, sqlShard) =>
+      runPrCheck("sql", { ...fixture, sqlShard, sqlShards: 2 }),
+    ),
+  );
+  const suites = fixtures.map((fixture) =>
+    fixture.calls
+      .filter(({ file }) => file === process.execPath)
+      .map(({ args }) => args[0]),
+  );
+  assert.deepEqual(suites.flat().sort(), [...prCheckPlan().sql].sort());
+  assert(!suites[0].some((suite) => suites[1].includes(suite)));
+  const names = fixtures.map(
+    (fixture) => fixture.calls.find(({ args }) => args[0] === "run").args,
+  );
+  assert.notEqual(
+    names[0][names[0].indexOf("--name") + 1],
+    names[1][names[1].indexOf("--name") + 1],
+  );
+  for (const args of names) {
+    assert(args.at(-1).includes("-c jit=off"));
+    assert(!/fsync|synchronous_commit|max_connections/.test(args.at(-1)));
+  }
+  await assert.rejects(
+    runPrCheck("sql", { sqlShard: 2, sqlShards: 2 }),
+    /valid SQL shards/,
+  );
+});
+
+test("SQL workers overlap, abort the peer on failure and await both cleanup paths", async () => {
+  const active = [];
+  let peerCleaned = false;
+  let releaseFirst;
+  const firstStarted = new Promise((resolve) => {
+    releaseFirst = resolve;
+  });
+  await assert.rejects(
+    runPrSqlChecks({
+      worker: async (_mode, { sqlShard, signal, sqlShards }) => {
+        assert.equal(sqlShards, 2);
+        active.push(sqlShard);
+        if (sqlShard === 0) {
+          releaseFirst();
+          await new Promise((resolve) =>
+            signal.addEventListener("abort", resolve, { once: true }),
+          );
+          await Promise.resolve();
+          peerCleaned = true;
+          throw new Error("peer cancelled after cleanup");
+        }
+        await firstStarted;
+        assert.deepEqual(active.sort(), [0, 1]);
+        throw new Error("fictional worker failed");
+      },
+    }),
+    AggregateError,
+  );
+  assert.equal(peerCleaned, true);
+});
+
+// Cancellation cannot turn a successful-looking worker outcome into acceptance.
+test("SQL worker orchestration rejects pre-existing and mid-run cancellation", async () => {
+  for (const alreadyAborted of [true, false]) {
+    const cancellation = new AbortController();
+    if (alreadyAborted) cancellation.abort();
+    let completed = 0;
+    await assert.rejects(
+      runPrSqlChecks({
+        signal: cancellation.signal,
+        worker: async (_mode, { signal }) => {
+          if (alreadyAborted) assert(signal.aborted);
+          else cancellation.abort();
+          await Promise.resolve();
+          completed++;
+        },
+      }),
+      /cancelled/,
+    );
+    assert.equal(completed, 2);
   }
 });

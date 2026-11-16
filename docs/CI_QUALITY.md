@@ -2,21 +2,40 @@
 
 > Reviewed server snapshot on 16 November 2026 at 06:42:36 UTC: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception (`bypass_mode: pull_request`). No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. Live server rules are authoritative and may later differ. [Reviewed rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
 
-Pull requests run quality/build, coverage, runtime guards, Edge lint/type/tests,
-production dependency audit and all existing PostgreSQL migration/RLS/claim-race
-suites. A single digest-pinned networkless database replaces the full multi-service
-stack on PRs. Its Auth helpers are emulated; this is SQL evidence, not native Auth,
-Storage, browser, PWA or retained-data acceptance. The existing required context
-`Actual isolated selfhost image compatibility` names this bounded SQL check on PRs.
-No required context is skipped or removed, and security analysis is unchanged.
+Every PR retains quality/build, full-source unit coverage, CodeQL, dependency
+review and metadata. The checked-out two-parent merge determines the work below;
+labels and caller-supplied paths cannot select a cheaper profile. Missing Git
+history, invalid paths and unknown source locations conservatively select full.
 
-Pushes to `main` and manual `Portal checks` runs execute the unchanged complete
-`./portal test` and native selfhost retained-data rehearsal **in parallel** after
-quality/coverage. Select a branch in a manual run for full pre-merge acceptance.
+| Change profile                                                                                                                | Acceptance beyond quality/coverage/security                                                                                                                  |
+| ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Documentation/templates only                                                                                                  | Runtime/Edge/audit checks; no SQL or native run is claimed.                                                                                                  |
+| Ordinary frontend/static changes                                                                                              | Runtime/Edge/audit plus every existing SQL migration/RLS/race suite, split exhaustively between two separate digest-pinned, networkless PostgreSQL clusters. |
+| Backend, Auth, private file/chat access, shared app/cache code, dependencies, test/delivery infrastructure or unknown changes | Complete unchanged `./portal test` and actual native retained-data rehearsal in parallel. PRs also exercise both new SQL workers.                            |
+| Every main push or manual run                                                                                                 | Complete unchanged application and native retained-data acceptance in parallel.                                                                              |
+
+The required verification jobs start after the small scope job instead of waiting
+for the quality matrix. Their first shell step independently rejects a failed,
+missing or invalid scope, and rejects every non-full main/manual profile. Thus a
+broken selector cannot convert a required check into a successful skipped job.
+No required context is removed and no threshold, race count or security assertion
+is reduced. A manual branch run remains available for full pre-merge acceptance.
+
+Each SQL worker has its own engine, connection limit, random ownership label and
+UUID databases. No host ports/mounts or network are available. Cancellation stops
+the peer and both owned cleanup paths settle before failure is reported. Only the
+PR fixture disables JIT compilation; durability/transaction settings stay unchanged.
+Per-suite timings appear in logs and the job summary. SQL uses existing emulated
+Auth helpers; actual Auth/Storage/browser/PWA/retention is covered by the full profile.
+The historical selfhost check name is retained for required-check compatibility.
+Preview manifests and bilingual instructions record the actual verification profile.
+
 Publication still requires explicit exact-main approval and both complete gates.
-The local complete command and daily-maintenance candidate acceptance are unchanged.
+Local complete acceptance, daily maintenance and repository protections remain unchanged.
+Npm dependency caching and cancellation of superseded PR runs were already present;
+no credentials, database state or generated QA files are cached.
 
-Observed successful baseline [43827354265](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43827354265): quality/coverage finished in 24–41 seconds, complete application took 21 minutes and native selfhost took another 6 minutes sequentially. The PR package finished about 28 minutes after the run began. These are baseline timings, not a measured result for the new pipeline.
+Actual baseline [43827354265](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43827354265) took about28minutes, including21minutes application then6minutes native upgrade. The first optimized [PR34 run43855915270](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43855915270) on signed608687f passed in **11minutes36seconds**, approximately59%less elapsed time. Quality/coverage took26–48seconds, runtime/Edge/audit39seconds, and the serial SQL job10minutes30seconds with351PASS groups. All15required contexts passed after the missing metadata labels were corrected. The subsequent two-worker/scope/JIT changes need their own exact-head measurement; the11:36result does not accept those later changes.
 
 Development and testing use the local PC by default. `./portal check` runs fast
 quality, coverage and build checks without starting services; `./portal test`
@@ -27,21 +46,21 @@ verification; a successful check or merge is not a publication request.
 
 ## Visible checks
 
-| Check                                                             | What it verifies                                                                                                                                     |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Build                                                             | Production compilation and PWA build using only synthetic public Supabase configuration. It does not access a real instance.                         |
-| Typecheck                                                         | TypeScript project checks through `npm run typecheck`.                                                                                               |
-| Lint                                                              | ESLint with no warnings allowed.                                                                                                                     |
-| Formatting                                                        | Existing source formatting and GitHub configuration.                                                                                                 |
-| Code quality                                                      | Existing compiler-based checks for reachable modules, exports and connections.                                                                       |
-| Tests and coverage                                                | All Vitest unit/component tests, V8 coverage and enforced thresholds; downloadable HTML/LCOV/JSON artifacts.                                         |
-| verify                                                            | PR: runtime guards, Edge lint/types/tests and production audit. Main/manual: complete `./portal test`.                                               |
-| Actual isolated selfhost image compatibility                      | PR: real SQL/migration/RLS/race suites in one pinned PostgreSQL image. Main/manual: full native images and retained data from the previous revision. |
-| PR preview package                                                | Package the committed tested application and upload its real runnable local preview artifact; required before PR merge.                              |
-| PR metadata                                                       | Current PR labels and matching repository/commit identity.                                                                                           |
-| CodeQL (javascript-typescript), CodeQL (python), CodeQL (actions) | Completion of each configured language analysis.                                                                                                     |
-| Dependency review                                                 | Newly introduced vulnerable dependencies on the PR.                                                                                                  |
-| CodeQL                                                            | Generated findings check, separate from successful scanner execution.                                                                                |
+| Check                                                             | What it verifies                                                                                                                                 |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Build                                                             | Production compilation and PWA build using only synthetic public Supabase configuration. It does not access a real instance.                     |
+| Typecheck                                                         | TypeScript project checks through `npm run typecheck`.                                                                                           |
+| Lint                                                              | ESLint with no warnings allowed.                                                                                                                 |
+| Formatting                                                        | Existing source formatting and GitHub configuration.                                                                                             |
+| Code quality                                                      | Existing compiler-based checks for reachable modules, exports and connections.                                                                   |
+| Tests and coverage                                                | All Vitest unit/component tests, V8 coverage and enforced thresholds; downloadable HTML/LCOV/JSON artifacts.                                     |
+| verify                                                            | Docs/ordinary PR: runtime guards, Edge lint/types/tests and production audit. Sensitive PR/main/manual: complete `./portal test`.                |
+| Actual isolated selfhost image compatibility                      | Ordinary PR: two isolated PostgreSQL workers. Sensitive PR/main/manual: actual native images and retained data; docs records its narrower scope. |
+| PR preview package                                                | Package the committed tested application and upload its real runnable local preview artifact; required before PR merge.                          |
+| PR metadata                                                       | Current PR labels and matching repository/commit identity.                                                                                       |
+| CodeQL (javascript-typescript), CodeQL (python), CodeQL (actions) | Completion of each configured language analysis.                                                                                                 |
+| Dependency review                                                 | Newly introduced vulnerable dependencies on the PR.                                                                                              |
+| CodeQL                                                            | Generated findings check, separate from successful scanner execution.                                                                            |
 
 All 15 listed checks are mandatory before a PR can merge. The strict rule also requires the PR to be up to date with `main`. Neither maintainers, administrators nor the maintenance App can bypass these checks.
 

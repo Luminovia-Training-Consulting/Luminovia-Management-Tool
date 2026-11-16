@@ -1,5 +1,17 @@
 # Persistent implementation plan
 
+## Safe development-speed improvements — explicit continuation
+
+- [x] Observe signed608687f/PR34 Portal43855915270 success in11m36s (approximately59%less than28m),351actual SQL groups and every required context; fix missing metadata labels and observe green43856170205.
+- [x] Implement two separate pinned networkless SQL workers with exhaustive partition, unchanged real races/durability, bounded cancellation/cleanup and actual per-suite timing reports; disable JIT only in the disposable PR fixture.
+- [x] Add conservative actual-merge docs/standard/full selection, full sensitive/unknown/main/manual acceptance, early independent jobs and required-gate preflights that fail on scope errors or fast non-PR profiles.
+- [x] Preserve source/rules/dependencies/migrations, all15required statuses, coverage/security/release requirements; make preview evidence profile explicit and reject missing CLI profile.
+- [x] Pass26focused local scope/worker/routing/preview/governance cases and scoped lint/format/actionlint; record local subprocess/Docker limitations and independent read-only review.
+- [ ] Publish final signed source, verify exact remote bytes, pass actual SQL-worker plus full application/native/security/package CI and measure the new SQL duration.
+- [ ] Perform the expressly authorised protected PR34 merge only when every final-current-head check passes; observe main acceptance separately without dispatching a release.
+
+This continuation preserves the complete remaining product scope and prior source-bound evidence below.
+
 ## Faster PR CI — 16 November 2026
 
 - [x] Measure actual successful baseline: approximately28minutes, mostly21-minute application plus6-minute serial native rehearsal.
