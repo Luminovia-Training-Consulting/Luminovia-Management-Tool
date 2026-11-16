@@ -6,9 +6,156 @@
 - [x] Preserve pending/rejected reservations, accepted snapshots and started/invoiced safeguards; enforce the boundary through the legacy API, atomic locks, immutable retry payloads, role-revocation checks and committed inbox outcomes.
 - [x] Connect DE/EN accessible job detail dialogs/history/decisions and inbox links; document the contract, migration and operating boundaries without reducing the full target scope.
 - [x] Pass652frontendcases/84files and full fast source/build checks,146runtimeguards,17finalfocusedcases and58realPostgreSQLgroups (including15newwithdrawalcases and strict diagnostics); regenerate API from actual replay.
-- [ ] Complete the fresh canonical native/Auth/HTTP/browser/PWA/retention run, inspect actual desktop/mobile DE/EN light/dark screenshots, then observe all required current-head CI/native/security/package gates and complete the authorized protected PR merge.
+- [x] Integrate accepted main `99add7d`, preserving all 68 released SQL sources; close directed and marketplace replacement self-release paths under seven days while preserving explicit current-management initiation and receipt/snapshot behavior.
+- [x] Pass integrated fast checks: 683 frontend cases in 90 files, unchanged coverage floors, 146 runtime guards, actionlint and production/PWA build (86 entries). Add only fictional withdrawal PNGs to the existing exact screenshot artifact allowlist.
+- [x] Pass 91 actual PostgreSQL groups on the integrated 69-migration schema, including 26 withdrawal/transfer/race cases and 33 zero-warning operational diagnostics; regenerate the inventory from 250 real public functions.
+- [ ] Observe complete current-head native/Auth/HTTP/browser/PWA/retention acceptance and actual desktop/mobile DE/EN light/dark screenshots, then all required CI/native/security/package gates and the queue-permitted protected PR merge. Both local canonical attempts were canceled; the second passed real retained-data rehearsal then released the shared QA reservation with verified own cleanup. Do not restart shared full QA without a coordinated slot.
 
 [Workflow and recovery](ASSIGNMENT_WITHDRAWALS.md). This is a withdrawal review path, not a routine approval queue for claiming jobs. The complete remaining product ledger below stays required. No production/provider/release activation is included.
+
+## Actual Main17 integration — final PR24 current-head acceptance
+
+PR17 has actually merged as main `4cc20874edc1f865b71106b7bb1299e16fec5aad`. Its 62 published SQL files remain byte-identical; six pending operational additions make 68 files in PR24. Application, SQL, E2E specifications, database helper, generated API inventory and package/lock bytes remain identical to the complete local `2c850fc488165e37887807a74e92414e4fa0a25e` pass. The newer executor combines accepted Main36 system/browser phase routing with Main17’s 30-minute aggregate browser budget; individual tests, assertions and retries are unchanged.
+
+- [x] Integrate actual accepted Main17 while preserving both complete product and feature ledgers, all 62 published SQL bodies and six pending additions, original financial snapshots, four authority-race corrections and two notification-resolver ACL corrections.
+- [x] Preserve remote `9bfa7f2` ancestry while excluding accidental accounting through signed revert `31d4e975d87b50835275be5e78454f0b3bc32397`. The original accounting source remains separately preserved for later delivery; no history rewrite or accounting acceptance is inferred.
+- [x] Retain the source-bound full local `2c850` result: 674 frontend cases, all 68 SQL files and real APIs, 150 application browser cases in 13.3 minutes, 4 built-PWA cases in 10.4 seconds and checked cleanup. Current executor/phase checks separately pass 146 runtime cases and 3 documentation cases.
+- [ ] Sign and publish the final reviewed integration, then observe every current-head full system, browser, actual native, security and package gate before the individual PR24 merge. All 15 required contexts and the browser-phase package prerequisite remain mandatory.
+- [ ] Rebind the already prepared stacked PR25 to the actually accepted PR24 source and complete its own current-source checks before its separate merge. Preserve every remaining product item and accounting’s separate scope.
+
+The `2c850` pass is not relabelled as a repeated full run of the newer executor. Ordinary `./portal test` remains complete; neither split phase alone constitutes full acceptance. The personal Carina-only PR review exception and manual-only publication controls remain unchanged. Earlier unmerged-candidate notes, queue reservations and failures below retain their historical source-bound meaning.
+
+## Current Main36 reconciliation and history-preserving accounting correction
+
+Actual accepted Main36 is `7fbdb956a513ca8eec3d0f2404adc213c656af1f`, with 36 published SQL files. Frozen PR17 `dd646f91ece7eb136f776597d04e67b27bf72b60` remains an unmerged candidate; our local source still contains 68 SQL files and the generated 247-public-function API inventory. This preparation reconciles Main36’s CI/runner changes with the fully tested local `2c850` candidate while keeping accounting outside PR24’s operational scope.
+
+- [x] Complete ordinary full local acceptance on exact `2c850fc488165e37887807a74e92414e4fa0a25e`: 674 frontend cases, all 68 SQL files and real API stages, 150 application browser cases in 13.3 minutes and 4 built-PWA cases in 10.4 seconds. Owned cleanup completed and the shared slot was released.
+- [x] Preserve accidental remote accounting integration `9bfa7f2` in normal ancestry and prepare signed local revert `31d4e975d87b50835275be5e78454f0b3bc32397`. Its tree is exactly the pre-accounting `bbc1ea7` tree; accounting’s original source remains available for separately scoped later delivery. The revert is not pushed, and the `2c850` pass does not cover `9bfa7f2`.
+- [x] Retain every product and feature ledger, all 62 candidate-prefix SQL bodies, the six pending operational additions, four authority-race corrections, two resolver ACL corrections and historical contract tests. Preserve the personal Carina-only PR review exception and manual-only publication.
+- [ ] Complete the current Main36 runner reconciliation and relevant source/phase checks. Conservative full scope is mandatory for this backend/private-resource/test-infrastructure PR; system, browser and actual native success must all gate the final package. Ordinary `./portal test` remains complete.
+- [ ] After PR17 actually merges, bind the prepared source to its accepted main tree and the corrected remote history, preserve all released SQL bytes, and observe all 15 successful final exact-head checks and signed history before the individual PR24 merge.
+
+Earlier source-specific passes, queue notes and remaining product checkboxes below are preserved as history. They neither accept the accidental accounting composition nor substitute for final current-main CI. No deployment, publication or real-message delivery is authorised by this correction.
+
+## Historical preparation states retained during Main36 reconciliation
+
+Earlier source from the preceding local candidate recorded these states. They remain historical; the current Main36 reconciliation above controls delivery.
+
+> - [ ] Publish final signed source, verify exact remote bytes, pass actual SQL-worker plus full application/native/security/package CI and measure the new SQL duration.
+>
+> - [ ] Perform the expressly authorised protected PR34 merge only when every final-current-head check passes; observe main acceptance separately without dispatching a release.
+
+Earlier source from the incoming pre-candidate preparation recorded these states. They remain historical; the current Main36 reconciliation above controls delivery.
+
+> The latest direct request is to make PR24 and then PR25 mergeable and merge them individually. A subsequently relayed direct instruction reserves PR17 first, so actual main/QA ordering is **PR17 → PR24 → PR25**. This coordinates actual merge collisions; it is not a blanket development or source freeze. Accepted PR10/main `1de544d` and all36released SQL blobs remain intact. The six unreleased operational files now follow that accepted prefix (42total); after PR17 actually merges, compare its real migration prefix and recreate only still-unreleased versions if required.
+>
+> - [x] Reconcile accepted main PR10 with the first-four operational source, retaining both full product/extension ledgers and the current personal-only review/manual-publication rules.
+>
+> - [x] Recreate the six pending migration filenames through the installed CLI with unchanged SQL bodies and dependency order; retain all36published blobs exactly.
+>
+> - [x] Generate the actual183public-RPC reference from42SQL files. Root's current source checks pass546frontend cases/71files, unchanged coverage floors, types/lint/format/compiler checks; focused SQL evidence remains separately scoped.
+>
+> - [ ] Complete the real current-base integration after actual PR17, including renewed prefix checks and relevant source/functional checks.
+>
+> - [ ] Obtain all15successful exact-head application/native/security/package checks and signed history before individually merging PR24, then repeat the scoped process for PR25. Historical acceptance does not replace these gates.
+>
+> - [ ] Preserve every outstanding item across all seven requested additions; do not infer full product, native retention, installation or production acceptance from this preparation.
+>
+> The earlier PR10/PR27 priority notes below describe their recorded source checkpoints. Their merges are now accepted; they are not current blockers or instructions to restore a previous shared freeze.
+
+## Accepted Main34 CI integration with the still-unmerged PR17 candidate
+
+Actual accepted main is now `c5281002c2ea1102abe91a71d497ceeea87341f4` (PR34). This local merge applies its 13 CI, documentation and testing-file changes to signed PR24 candidate `d96ea21`; Main34 changes no application or SQL source. Frozen PR17 source `dd646f91ece7eb136f776597d04e67b27bf72b60` remains an unmerged candidate. The inventory stays at 68 SQL files, including the 36 published main migrations and the complete unchanged 62-file candidate prefix. Current PR24 additions retain the two pending notification-resolver ACL corrections and the test-only historical contract ceilings.
+
+- [x] Preserve both complete product and feature ledgers, historical failures and successes, the four operational modules, current governance and manual-only publication controls while reconciling the accepted CI documentation.
+- [x] Record the pre-Main34 candidate `d96ea21` checks: 674 frontend cases, 110 runtime cases and the final 10 relevant SQL suites pass. The generated API reference remains owned by its actual 68-file replay; it is not overwritten by this documentation merge.
+- [x] Retain conservative source-derived docs/standard/full CI selection. Unknown or sensitive paths and uncertain Git context select full, as does every main/manual invocation; required jobs independently reject invalid scope. All 15 required contexts and the outer 60-minute full-profile verify budget remain intact.
+- [ ] Bind the candidate to the actual accepted PR17 main tree after its real merge, preserving every published SQL byte and rechecking the remaining version order.
+- [ ] Complete current combined local/browser/native acceptance after PR35 cleanup and the legitimate PR24 QA reservation. Observe all 15 successful exact-head checks and signed history before the individual PR24 merge, then repeat for PR25.
+
+This PR changes backend, private-resource and test infrastructure, so its final acceptance requires the full profile. Faster evidence for a documentation-only or standard PR is not substituted. The PR17 owner’s separately prepared 30-minute browser-only aggregate budget remains candidate work; the outer full-profile budget stays 60 minutes. Neither a timeout adjustment nor earlier scoped passes establish combined browser/native acceptance. Earlier sections below retain their named historical states, including the now-completed PR34 delivery tasks.
+
+## Local PR17 and PR24 candidate integration — accepted main still pending
+
+The coordinator explicitly authorised local candidate integration while the actual delivery order remains **PR17 → PR24 → PR25**. This preparation combines PR24 checkpoint `d4e2954` with frozen PR17 source `dd646f91ece7eb136f776597d04e67b27bf72b60`. Accepted main remains `c0622a7`. The local inventory is 68 SQL files: the 62 byte-identical PR17 candidate sources, including 36 already released main migrations, followed by six CLI-reversioned PR24 bodies. This source preparation does not claim PR17 is merged or that the combined candidate has passed its complete final acceptance.
+
+- [x] Preserve both complete feature and product ledgers, the four operational modules and four observed authority-race corrections, current actor-specific pricing, original accepted snapshots, customer-neutral guidance, the personal Carina-only PR review exception and manual-only publication controls.
+- [x] Reconcile the candidate architecture, schema, user workflows and migration guide while retaining the actual failed and successful source-bound history from both branches.
+- [x] Pass candidate-only source checks: 674 frontend cases in 89 files, coverage S66.68/B62.10/F56.90/L68.82%, unchanged thresholds, TypeScript and ESLint. These results do not replace the complete local/native checks.
+- [ ] Generate the public API inventory from the actual 68-file replay; complete the combined SQL, cross-RPC directed/marketplace, authority, resource-isolation and current-source functional checks.
+- [ ] Complete the permitted full local acceptance after actual Main17 binding and PR35 cleanup, when the shared QA slot reaches PR24. Separate PR17 evidence records 643 frontend cases, 142 application browser cases and 4 built-PWA cases; its native CI remains pending, and those outcomes do not certify this combination.
+- [ ] After PR17 actually merges, bind this preparation to the accepted main tree and verify the released migration prefix and remaining version order. Complete all 15 exact-head required application/native/security/package checks and signed history before individually merging PR24, then repeat the scoped process for PR25.
+
+Earlier sections below preserve the tasks and pending states at their named checkpoints. Their former source-freeze or accepted-main prerequisites do not prohibit this expressly authorised local candidate preparation. Remaining product, installation, physical-device, external delivery and production work stays in scope as recorded.
+
+## Current PR17 delivery — explicitly next after PR10
+
+- [x] Preserve original PR17 ancestry and integrate actual accepted main `1de544d`, manual-only publication, neutral catalogue, the current strict fifteen gates and PR10 archive correction.
+- [x] Preserve all 36 published SQL bodies and reconcile the 23 unpublished extension versions after them; actual 59-source replay inventories 224 public functions.
+- [x] Complete independent frontend, SQL authorization/concurrency/commercial and course-resource reviews; correct demonstrated substitution-consent and post-lock waitlist authority defects without dropping requested features.
+- [x] Verify the full reviewed substitution snapshot invalidates previous consent on changed offers; preserve identical-refresh/language state. Four real waitlist lock-barrier cases and the vulnerable-source negative control also establish the additive 60th correction.
+- [ ] Complete current-source local checks and complete Auth/API/desktop/mobile/built-PWA/retained-data/native acceptance; record failures and stages not reached honestly.
+- [ ] Push the signed integrated PR17 head, observe all fifteen required current-head checks, resolve review threads and merge with the tested tree.
+
+Current final source contains62 migrations:36 unchanged published main files and26 additive extension/correction sources. Independently reproduced waitlist metadata disclosure and real safeupdate Push-configuration refusal are also corrected; eight privacy/authority and six actual safeupdate SQL groups pass. Full acceptance remains the unchecked gate above. Local command04 passed62-source SQL/43 APIs/retention but failed11 of142 application browser cases across six flows (131 passed,19.0min); no timeout or full pass is claimed. The filled-offer waitlist fallback, mobile navigation lifetime and keyboard-scrollable finance table defects are corrected with original-source negative regressions; final source/build check passes643/83. Named-form/search/committed-save/immutable-receipt and separate browser-project known/unknown-cost fixtures retain their assertions. Final focused reproduction passes18/18 desktop/mobile cases with actual62-migration restart retention and checked cleanup; this is targeted-only evidence. The unchanged complete local/current-head/native gates remain required, with final acceptance and merge recorded on PR17. The application job outer budget alone rises40→60min after the recorded40m CI timeout; all per-test/stage deadlines, zero retries and fifteen gates remain.
+
+Carina clarified that PR17 is next; unrelated PRs and historical reservations below are not prerequisites. No deployment, real email, server timer activation or physical-device acceptance is implied. The full smart-operations request and remaining master-product ledger below remain required.
+
+## Smart operations extension — current user request
+
+**Current delivery priority:** PR10 alone owns the next main merge/shared PC QA slot. Keep PR17 draft with no auto-merge or merge watcher. Own58-source code and focused evidence are committed; full current-main acceptance is pending. After PR10, integrate actual main e88df84 or newer (including local publication controls/customer-neutral catalogue and the final canonical core), reconcile only undelivered own migration versions with byte-identical SQL, and repeat complete local/native/current-head CI before advancing PR17. The server's automatic mail/Push workers remain uninstalled.
+
+The entire new request is preserved in [SMART_OPERATIONS_SPEC](SMART_OPERATIONS_SPEC.md): alerts/email/push, personal dashboard, quality management, search, timesheets, client/participant workflows, Control Center, replacements/waitlists, favourites/saved filters, calendar feeds, qualifications, forecasts, history, tasks and offline schedule. No pending feature is removed from the original module ledger below.
+
+Current isolated branch: `codex/smart-notifications-and-dashboard`, integrating accepted main `0a6002a`/PR21 after `fabd71a`/PR18 in an independent worktree. All26 accepted migration sources are byte-identical. Full local development/functional testing is the default; no deployment/release workflow is invoked by preparing this feature PR. Independent PR27 owns those workflow switches. Other feature PRs retain their own delivery and integration evidence.
+
+- [x] Implement transactional email outbox, per-account email opt-in/quiet hours and service-only finite Hostinger SMTP worker; disabled server templates, no credential in deliverables.
+- [x] Implement private persisted dashboard card order/visibility, own Teaching Day and own assignment preparation checklist, with server ownership/version checks.
+- [x] Implement fresh permission-checked personal ICS downloads, bounded periods/size, explicit private-event inclusion and UTC/zone preservation.
+- [x] Implement explicit self-opt-in staff email/phone contact visibility, current staff-only projection and versioned DE/EN controls; focused SQL/component checks pass.
+- [x] Complete local integrated acceptance on signed d7d3c58: 219 component tests, 272 SQL cases/groups, 23 actual business API suites, 80 desktop/mobile cases and two built-PWA cases; exit 0 after cleanup. [Evidence](QA_RESULTS.md).
+- [ ] Observe separate current PR application/native retained-image CI and review status; no production acceptance is inferred from local success.
+- [ ] Activate reviewed SMTP/timer on the authorised target with privately supplied credentials, live authorised-recipient/provider proof and monitoring. Source completion does not mean live mail was sent.
+- [x] Implement source and focused checks for Push, waitlists/atomic substitutions, shared learning/customer workspaces, attendance/Q&A/notebook/feedback/quiz/PDF completion, timesheets/statements/forecasts/Control Center, tasks/templates/favourites/recommendations, revocable calendars/offline schedules and stable eleven-area search. These are source checkpoints, not combined acceptance.
+- [x] Complete customer teaching-hour/document briefs and immutable revision history; exact reviewed rollout controller and standalone worker distribution; integrate accepted private roles and reviewed discovery/saved-view/evidence source. Focused checks pass; installed/combined acceptance remains separate.
+- [x] Bind discovery and substitution to the recipient/current actor's captured-role quote; retain explicit monetary/terms consent, nullable private prices, role/policy-bound cursors and honest unknown forecast costs. Recheck withdrawal authority after concurrent role edits and return current assignment status on accepted retries.
+- [x] Connect Teaching Day to the current course, deliberately shared same-organisation customer contact, exact allowed materials/reports and shared preparation counts, preserving own private checklist and current confirmed-session authority.
+- [ ] Freeze and run the entire expanded source, actual Auth/API/desktop/mobile/PWA and native ten-service retained-data suites. Resolve every genuine failure; generate current API/architecture and honest acceptance records.
+- [ ] Publish signed PR17 after complete local feature acceptance, observe all15 current required exact-head checks and resolve actual merge collisions through central coordination. Verify the eventual merge/main readback; do not infer it from a push or green local tests.
+- [ ] Follow the user's explicit release preference before any CMS deployment or private SMTP/Push timer activation. Retain per-account/per-device consent. Physical mobile/desktop Push delivery requires a supported consenting device and remains a separate untested acceptance step.
+- [x] Actual self-addressed Hostinger465 TLS SMTP acceptance and IMAP993 receipt; that exact test's SPF/DKIM/DMARC pass. Automatic application timers are not yet installed.
+
+## All-open-PR merge continuation
+
+The latest direct instruction authorises all current PR integrations and protected merges after successful current required checks. Earlier merge reservations below are historical. PR24 now incorporates accepted main `7fbdb95`, preserving both CI-routing and operational histories, all36released SQL files and six pending additions unchanged. Relevant integration checks and fresh exact-head required CI remain the next gate; no deployment is requested.
+
+## Current user-directed operational delivery preparation
+
+The current delivery order is **PR17 → PR24 → PR25**: make each PR mergeable and merge it separately after its current required checks pass. Accepted main `c0622a763127081a7b5be092ce2782253991c6a5` includes PR29’s English private-pricing and discovery documentation. This local preparation integrates those six documentation updates while retaining PR24’s four operational modules, four observed authority-race corrections, 36 unchanged released SQL files and six pending additions (42 SQL files in total). Independent source work continues while the actual merge and shared acceptance slots follow that order.
+
+- [x] Reconcile accepted PR10 and PR29 documentation with the operational source, retaining the complete product and extension ledgers, customer-neutral guidance, personal Carina-only PR review exception and manual-only publication controls.
+- [x] Create the six pending migration versions through the installed CLI in dependency order; preserve all 36 released bodies exactly. Generate the current 183-public-RPC inventory from the actual 42-file replay.
+- [x] Correct and test the four real post-wait authority failures through current public account and business RPCs, retaining the original claims, receipts and financial snapshots.
+- [x] Observe all 15 required checks passing on signed PR24 head `2a15df12a287c8882d675417c90637142fe7866d`, including the complete application and native retained-data gates in [run 43842679588](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43842679588). That source-bound result remains recorded separately from this documentation merge and the future accepted PR17 integration.
+- [ ] Integrate PR17 only after its actual main merge. Compare the real accepted migration prefix, recreate only still-unreleased versions if necessary, and complete the relevant current-source functional checks.
+- [ ] Obtain all 15 successful exact-head checks and signed history on that final current-base PR24 integration, then merge PR24 normally and repeat the scoped process for PR25.
+- [ ] Preserve every outstanding item across all seven requested additions. Full product completion, installation and production acceptance remain separate from the recorded PR24 checks.
+
+The earlier PR10, PR27 and PR29 preparation notes below record their named historical checkpoints. Those PRs are now accepted; their former holds and pending checkboxes do not restore an earlier source freeze or supersede the current order.
+
+## Seven additional operational modules — current user request
+
+The exact additional [implementation prompt](OPERATIONS_EXTENSION_PROMPT.txt) is preserved alongside the original authoritative specification. All seven additions remain required. [Ownership/PR audit](EXTENSION_COORDINATION.md), [actual status and next actions](OPERATIONS_EXTENSION_STATUS.md).
+
+- [x] Inspect/fetch current main, all11open PRs/commits/checks, live rules, security findings and authorised development-release automation; isolate new work from the original dirty checkout.
+- [x] Implement initial course-readiness, delivery, future whole-block replacement and support source with server-side authority, DE/EN UI and focused SQL/source tests. Their full acceptance remains open.
+- [ ] Deliver the separately implemented enquiry/document, accounting and consented-amendment sources. Current focused evidence is recorded in their worktrees; actual Auth/scanner/browser acceptance and final current-main reconciliation remain required.
+- [ ] Complete started/partially completed/invoiced replacement workflow and optional waitlist/ordered notices.
+- [ ] Complete exact-source canonical acceptance. Local e34a5bf passes SQL/Auth/API/scanner and 95/96 browsers; transport failure makes the whole run FAIL and build/PWA were not reached. Own feature screenshots were inspected; the isolated public-help desktop/mobile follow-up passes2/2.
+- [ ] Push the corrected signed PR24/PR25 sources and prepare focused accounting/amendment PRs. Verify all current required checks. Coordinate the current actual PR17 → PR24 → PR25 sequence and legitimate shared QA ownership while continuing independent feature preparation.
+- [ ] Verify any separately authorised installation from actual state. Local development/tests are now the default; the separate workflow owner controls publication switches. No production/public Website/DNS/real-mail/purchase action is implied.
+
+Initial SQL evidence: readiness16, delivery12, replacement13, support12groups. Whole-source257tests and unchanged coverage floors pass; TypeScript/ESLint pass. The canonical complete command returned exit1 before startup because another checkout holds shared QA ownership; this is not a full integration pass.
 
 ## All-open-PR merge continuation — smart operations
 
@@ -187,30 +334,6 @@ No App review exemption is restored: automated PRs need normal independent appro
 This current instruction supersedes historical ALWAYS/disabled guidance below. The full product ledger remains required. Admins retain settings-edit authority, but ordinary merges and pushes must satisfy the active rules.
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
-
-## Smart operations extension — current user request
-
-**Current delivery priority:** PR10 alone owns the next main merge/shared PC QA slot. Keep PR17 draft with no auto-merge or merge watcher. Own58-source code and focused evidence are committed; full current-main acceptance is pending. After PR10, integrate actual main e88df84 or newer (including local publication controls/customer-neutral catalogue and the final canonical core), reconcile only undelivered own migration versions with byte-identical SQL, and repeat complete local/native/current-head CI before advancing PR17. The server's automatic mail/Push workers remain uninstalled.
-
-The entire new request is preserved in [SMART_OPERATIONS_SPEC](SMART_OPERATIONS_SPEC.md): alerts/email/push, personal dashboard, quality management, search, timesheets, client/participant workflows, Control Center, replacements/waitlists, favourites/saved filters, calendar feeds, qualifications, forecasts, history, tasks and offline schedule. No pending feature is removed from the original module ledger below.
-
-Current isolated branch: `codex/smart-notifications-and-dashboard`, integrating accepted main `0a6002a`/PR21 after `fabd71a`/PR18 in an independent worktree. All26 accepted migration sources are byte-identical. Full local development/functional testing is the default; no deployment/release workflow is invoked by preparing this feature PR. Independent PR27 owns those workflow switches. Other feature PRs retain their own delivery and integration evidence.
-
-- [x] Implement transactional email outbox, per-account email opt-in/quiet hours and service-only finite Hostinger SMTP worker; disabled server templates, no credential in deliverables.
-- [x] Implement private persisted dashboard card order/visibility, own Teaching Day and own assignment preparation checklist, with server ownership/version checks.
-- [x] Implement fresh permission-checked personal ICS downloads, bounded periods/size, explicit private-event inclusion and UTC/zone preservation.
-- [x] Implement explicit self-opt-in staff email/phone contact visibility, current staff-only projection and versioned DE/EN controls; focused SQL/component checks pass.
-- [x] Complete local integrated acceptance on signed d7d3c58: 219 component tests, 272 SQL cases/groups, 23 actual business API suites, 80 desktop/mobile cases and two built-PWA cases; exit 0 after cleanup. [Evidence](QA_RESULTS.md).
-- [ ] Observe separate current PR application/native retained-image CI and review status; no production acceptance is inferred from local success.
-- [ ] Activate reviewed SMTP/timer on the authorised target with privately supplied credentials, live authorised-recipient/provider proof and monitoring. Source completion does not mean live mail was sent.
-- [x] Implement source and focused checks for Push, waitlists/atomic substitutions, shared learning/customer workspaces, attendance/Q&A/notebook/feedback/quiz/PDF completion, timesheets/statements/forecasts/Control Center, tasks/templates/favourites/recommendations, revocable calendars/offline schedules and stable eleven-area search. These are source checkpoints, not combined acceptance.
-- [x] Complete customer teaching-hour/document briefs and immutable revision history; exact reviewed rollout controller and standalone worker distribution; integrate accepted private roles and reviewed discovery/saved-view/evidence source. Focused checks pass; installed/combined acceptance remains separate.
-- [x] Bind discovery and substitution to the recipient/current actor's captured-role quote; retain explicit monetary/terms consent, nullable private prices, role/policy-bound cursors and honest unknown forecast costs. Recheck withdrawal authority after concurrent role edits and return current assignment status on accepted retries.
-- [x] Connect Teaching Day to the current course, deliberately shared same-organisation customer contact, exact allowed materials/reports and shared preparation counts, preserving own private checklist and current confirmed-session authority.
-- [ ] Freeze and run the entire expanded source, actual Auth/API/desktop/mobile/PWA and native ten-service retained-data suites. Resolve every genuine failure; generate current API/architecture and honest acceptance records.
-- [ ] Publish signed PR17 after complete local feature acceptance, observe all15 current required exact-head checks and resolve actual merge collisions through central coordination. Verify the eventual merge/main readback; do not infer it from a push or green local tests.
-- [ ] Follow the user's explicit release preference before any CMS deployment or private SMTP/Push timer activation. Retain per-account/per-device consent. Physical mobile/desktop Push delivery requires a supported consenting device and remains a separate untested acceptance step.
-- [x] Actual self-addressed Hostinger465 TLS SMTP acceptance and IMAP993 receipt; that exact test's SPF/DKIM/DMARC pass. Automatic application timers are not yet installed.
 
 ## Current joint PR10/PR13 integration with released PR18
 
@@ -482,6 +605,10 @@ The additional PR-/check rules remain disabled until the independently prepared 
 - [x] Measure the current compiler inventory: 135 reachable modules, 34 routes, 286 runtime exports and zero connectivity/export/link/asset errors; collect 106 authored business browser cases plus two built-PWA cases without collection errors. Discovery does not mark those journeys passed.
 - [ ] Complete integration checks and a fresh full isolated run of the combined M7/M8/Demo/Help source, then observe both exact application and retained-data CI gates. Do not reuse individual branch or pre-merge counts as combined acceptance.
 - [ ] After the tested product merge, execute the actual main-only maintenance-App workflow proof. Preserve the current 15 required checks, including PR preview package, mandatory signatures and review-only Maintain/Admin PR exception; do not restore an older nine-check policy. Review-hold decisions for separate PR13/19 remain separate from this product gate.
+
+The incoming PR17 history recorded the following earlier pending instruction when that snapshot named 14 required checks. It is retained as historical evidence; the current 15-check policy and personal Carina-only PR review exception above remain authoritative.
+
+> - [ ] After the tested product merge, execute the actual main-only maintenance-App workflow proof. Preserve the independently strengthened14 required checks, mandatory signatures and review-only Maintain/Admin PR exception; do not restore an older nine-check policy. Review-hold decisions for separate PR13/19 remain separate from this product gate.
 
 ## PR13 documentation-branch acceptance history
 

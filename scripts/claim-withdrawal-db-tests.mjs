@@ -202,6 +202,11 @@ await withTestDatabase(
           "private.review_assignment_withdrawal(uuid,boolean,text,uuid)",
           "private.job_lifecycle(uuid)",
           "private.notification_target(text,uuid)",
+          "private.check_substitution_claim(uuid)",
+          "private.respond_job_substitution(uuid,text,text,uuid,boolean)",
+          "private.request_replacement(uuid,text,text,uuid[],boolean,uuid)",
+          "private.claim_replacement(uuid,integer,integer,uuid)",
+          "private.replacement_assignments()",
         ])
           assert.deepEqual(
             JSON.parse(
@@ -633,6 +638,376 @@ await withTestDatabase(
       },
     );
 
+    const propose = (fixture, who = fixture.who) =>
+      actor(
+        who,
+        `select public.propose_job_substitution(${q(fixture.claim)},${q(peer)},'Fictional complete replacement request',${q(randomUUID())})`,
+        [manager, managerTeacher, admin].includes(who) ? "aal2" : "aal1",
+      );
+    const targetOffer = async (id) =>
+      (await rpc(peer, "job_substitutions")).find((offer) => offer.id === id);
+    const accept = (offer, key = randomUUID()) =>
+      rpc(peer, "respond_job_substitution", [
+        q(offer.id),
+        "'accept'",
+        q(offer.quote_hash),
+        q(key),
+        "true",
+      ]);
+    const handoverSnapshot = (fixture) =>
+      sql(`select jsonb_build_object(
+      'claims',(select jsonb_agg(to_jsonb(c) order by c.id) from public.job_claims c where c.job_id=${q(fixture.job)}),
+      'sessions',(select jsonb_agg(to_jsonb(s) order by s.id) from public.assignment_sessions s join public.job_claims c on c.id=s.claim_id where c.job_id=${q(fixture.job)}),
+      'directed',(select jsonb_agg(to_jsonb(o) order by o.id) from private.job_substitutions o where o.job_id=${q(fixture.job)}),
+      'marketplace',(select jsonb_agg(to_jsonb(o) order by o.id) from private.replacement_offers o where o.original_claim_id=${q(fixture.claim)}),
+      'ledger',(select jsonb_agg(to_jsonb(l) order by l.claim_id) from private.claim_revenue_ledger l where l.job_id=${q(fixture.job)}))`);
+
+    await check(
+      "A short-notice source lecturer cannot bypass review through a directed substitute, including management's own assignment",
+      async () => {
+        for (const who of [teacher, managerTeacher]) {
+          const fixture = await create({ who });
+          const before = await handoverSnapshot(fixture);
+          await assert.rejects(
+            propose(fixture),
+            /22023:[^\n]*Short-notice withdrawal/,
+          );
+          assert.equal(await handoverSnapshot(fixture), before);
+        }
+      },
+    );
+
+    await check(
+      "An earlier lecturer-proposed substitute cannot cross into the short-notice window without review",
+      async () => {
+        const fixture = await create({ days: 10 });
+        const offer = await targetOffer(await propose(fixture));
+        await sql(
+          `update public.assignment_sessions set starts_at=starts_at-interval '7 days',ends_at=ends_at-interval '7 days' where claim_id=${q(fixture.claim)}`,
+        );
+        const before = await handoverSnapshot(fixture);
+        await assert.rejects(
+          accept(offer),
+          /22023:[^\n]*Short-notice withdrawal/,
+        );
+        assert.equal(await handoverSnapshot(fixture), before);
+      },
+    );
+
+    await check(
+      "Exact historical lecturer-proposed consent inside seven days still cannot release the source",
+      async () => {
+        const fixture = await create();
+        const id = randomUUID();
+        // A coherent historical fixture models time passing since a proposal was
+        // originally made outside the window. Its unchanged quote exactly equals
+        // the current canonical quote, so stale terms cannot explain the denial.
+        await sql(`insert into private.job_substitutions(id,original_claim_id,job_id,target_user_id,proposed_by,request_id,reason,quote,quote_hash,pricing_context,expires_at,created_at)
+        select ${q(id)},${q(fixture.claim)},${q(fixture.job)},${q(peer)},${q(teacher)},${q(randomUUID())},'Fictional historical source proposal',quote,encode(sha256(convert_to(quote::text,'UTF8')),'hex'),private.substitution_pricing_context(${q(fixture.claim)},${q(peer)}),clock_timestamp()+interval '2 days',clock_timestamp()-interval '5 days'
+        from(select private.substitution_target_quote(${q(fixture.claim)},${q(peer)})quote)canonical`);
+        const offer = await targetOffer(id);
+        assert.equal(
+          await sql(
+            `select (quote=private.substitution_target_quote(original_claim_id,target_user_id))::text from private.job_substitutions where id=${q(id)}`,
+          ),
+          "true",
+        );
+        const before = await handoverSnapshot(fixture);
+        await assert.rejects(
+          accept(offer),
+          /22023:[^\n]*Short-notice withdrawal/,
+        );
+        assert.equal(await handoverSnapshot(fixture), before);
+      },
+    );
+
+    await check(
+      "A distinct current management proposal permits an atomic short-notice substitute and historical receipt retries",
+      async () => {
+        const fixture = await create();
+        const before = await snapshot(fixture);
+        const offer = await targetOffer(await propose(fixture, manager));
+        const key = randomUUID();
+        const result = await accept(offer, key);
+        assert.equal(result.status, "confirmed");
+        const after = await snapshot(fixture);
+        assert.deepEqual(after.claim, { ...before.claim, status: "cancelled" });
+        assert.deepEqual(after.ledger, before.ledger);
+        assert.equal(
+          after.sessions.filter((session) => session.released_at).length,
+          2,
+        );
+        assert.equal(
+          await sql(
+            `select count(*) from public.assignment_sessions where claim_id=${q(result.claim_id)} and lecturer_id=${q(peer)} and released_at is null`,
+          ),
+          "2",
+        );
+        await actor(
+          admin,
+          `select public.set_account_roles(${q(manager)},array['participant'])`,
+          "aal2",
+        );
+        try {
+          assert.deepEqual(
+            await accept(offer, key),
+            result,
+            "Historical acceptance remains a truthful receipt after the approving manager's later role change",
+          );
+        } finally {
+          await actor(
+            admin,
+            `select public.set_account_roles(${q(manager)},array['management'])`,
+            "aal2",
+          );
+        }
+      },
+    );
+
+    await check(
+      "Revoked management provenance cannot authorize a pending short-notice substitute",
+      async () => {
+        const fixture = await create();
+        const offer = await targetOffer(await propose(fixture, manager));
+        const before = await handoverSnapshot(fixture);
+        await actor(
+          admin,
+          `select public.set_account_roles(${q(manager)},array['participant'])`,
+          "aal2",
+        );
+        try {
+          await assert.rejects(
+            accept(offer),
+            /22023:[^\n]*Short-notice withdrawal/,
+          );
+          assert.equal(await handoverSnapshot(fixture), before);
+        } finally {
+          await actor(
+            admin,
+            `select public.set_account_roles(${q(manager)},array['management'])`,
+            "aal2",
+          );
+        }
+      },
+    );
+
+    await check(
+      "Queued short-notice substitute acceptance observes the proposer's committed management revocation",
+      async () => {
+        const fixture = await create();
+        const offer = await targetOffer(await propose(fixture, manager));
+        const before = await handoverSnapshot(fixture);
+        const revokeTag = `substitute_revoke_${randomUUID().replaceAll("-", "")}`;
+        const writeTag = `substitute_accept_${randomUUID().replaceAll("-", "")}`;
+        const revoker = actor(
+          admin,
+          `set local application_name=${q(revokeTag)};select public.set_account_roles(${q(manager)},array['participant']);select pg_sleep(2)`,
+          "aal2",
+        );
+        let writer;
+        try {
+          await barrier(revokeTag, "wait_event='PgSleep'");
+          writer = actor(
+            peer,
+            `set local application_name=${q(writeTag)};select public.respond_job_substitution(${q(offer.id)},'accept',${q(offer.quote_hash)},${q(randomUUID())},true)`,
+          );
+          const settled = Promise.allSettled([revoker, writer]);
+          await barrier(writeTag, "wait_event_type='Lock'");
+          const results = await settled;
+          assert.equal(results[0].status, "fulfilled");
+          assert.equal(results[1].status, "rejected");
+          assert.match(
+            results[1].reason.message,
+            /22023:[^\n]*Short-notice withdrawal/,
+          );
+          assert.equal(await handoverSnapshot(fixture), before);
+        } finally {
+          await Promise.allSettled([revoker, ...(writer ? [writer] : [])]);
+          await actor(
+            admin,
+            `select public.set_account_roles(${q(manager)},array['management'])`,
+            "aal2",
+          );
+        }
+      },
+    );
+
+    const requestMarket = (fixture, who = fixture.who) =>
+      actor(
+        who,
+        `select public.request_replacement(${q(fixture.claim)},'Fictional marketplace replacement','open','{}',false,${q(randomUUID())})`,
+        [manager, managerTeacher, admin].includes(who) ? "aal2" : "aal1",
+      );
+    const marketOffer = async (id) =>
+      (await rpc(peer, "replacement_marketplace")).find(
+        (offer) => offer.id === id,
+      );
+    const takeMarket = (offer) =>
+      rpc(peer, "claim_replacement", [
+        q(offer.id),
+        String(offer.version),
+        String(offer.quote.terms_version),
+        q(randomUUID()),
+      ]);
+    await check(
+      "A short-notice source cannot bypass review through an open replacement marketplace offer",
+      async () => {
+        for (const who of [teacher, managerTeacher]) {
+          const fixture = await create({ who });
+          const before = await handoverSnapshot(fixture);
+          await assert.rejects(
+            requestMarket(fixture),
+            /22023:[^\n]*Short-notice withdrawal/,
+          );
+          assert.equal(await handoverSnapshot(fixture), before);
+        }
+      },
+    );
+    await check(
+      "An older source-opened marketplace offer cannot release work after entering the short-notice window",
+      async () => {
+        const fixture = await create({ days: 10 });
+        const id = await requestMarket(fixture);
+        await sql(`update public.assignment_sessions set starts_at=starts_at-interval '7 days',ends_at=ends_at-interval '7 days' where claim_id=${q(fixture.claim)};
+        update public.job_sessions set starts_at=starts_at-interval '7 days',ends_at=ends_at-interval '7 days' where job_id=${q(fixture.job)}`);
+        const offer = await marketOffer(id);
+        assert.ok(offer?.quote);
+        const before = await handoverSnapshot(fixture);
+        await assert.rejects(
+          takeMarket(offer),
+          /22023:[^\n]*Short-notice withdrawal/,
+        );
+        assert.equal(await handoverSnapshot(fixture), before);
+      },
+    );
+    await check(
+      "Distinct management may authorize a complete short-notice marketplace replacement",
+      async () => {
+        const fixture = await create();
+        const offer = await marketOffer(await requestMarket(fixture, manager));
+        const result = await takeMarket(offer);
+        assert.equal(result.status, "confirmed");
+        assert.equal(
+          await sql(
+            `select status from public.job_claims where id=${q(fixture.claim)}`,
+          ),
+          "cancelled",
+        );
+        assert.equal(
+          await sql(
+            `select count(*) from public.assignment_sessions where claim_id=${q(result.claim_id)} and lecturer_id=${q(peer)} and released_at is null`,
+          ),
+          "2",
+        );
+      },
+    );
+    await check(
+      "Marketplace claims recheck management provenance after both committed revocation and a real profile-lock wait",
+      async () => {
+        const fixture = await create();
+        const offer = await marketOffer(await requestMarket(fixture, manager));
+        const before = await handoverSnapshot(fixture);
+        await actor(
+          admin,
+          `select public.set_account_roles(${q(manager)},array['participant'])`,
+          "aal2",
+        );
+        try {
+          await assert.rejects(
+            takeMarket(offer),
+            /22023:[^\n]*Short-notice withdrawal/,
+          );
+          assert.equal(await handoverSnapshot(fixture), before);
+        } finally {
+          await actor(
+            admin,
+            `select public.set_account_roles(${q(manager)},array['management'])`,
+            "aal2",
+          );
+        }
+        const revokeTag = `market_revoke_${randomUUID().replaceAll("-", "")}`;
+        const writeTag = `market_claim_${randomUUID().replaceAll("-", "")}`;
+        const revoker = actor(
+          admin,
+          `set local application_name=${q(revokeTag)};select public.set_account_roles(${q(manager)},array['participant']);select pg_sleep(2)`,
+          "aal2",
+        );
+        let writer;
+        try {
+          await barrier(revokeTag, "wait_event='PgSleep'");
+          writer = actor(
+            peer,
+            `set local application_name=${q(writeTag)};select public.claim_replacement(${q(offer.id)},${offer.version},${offer.quote.terms_version},${q(randomUUID())})`,
+          );
+          const settled = Promise.allSettled([revoker, writer]);
+          await barrier(writeTag, "wait_event_type='Lock'");
+          const results = await settled;
+          assert.equal(results[0].status, "fulfilled");
+          assert.equal(results[1].status, "rejected");
+          assert.match(
+            results[1].reason.message,
+            /22023:[^\n]*Short-notice withdrawal/,
+          );
+          assert.equal(await handoverSnapshot(fixture), before);
+        } finally {
+          await Promise.allSettled([revoker, ...(writer ? [writer] : [])]);
+          await actor(
+            admin,
+            `select public.set_account_roles(${q(manager)},array['management'])`,
+            "aal2",
+          );
+        }
+      },
+    );
+    await check(
+      "A directed acceptance waiting across the exact 168-hour cutoff rechecks actual post-lock time",
+      async () => {
+        const source = randomUUID();
+        await sql(
+          `insert into auth.users(id,email) values(${q(source)},${q(source + "@example.invalid")});insert into public.user_roles(user_id,role) values(${q(source)},'lecturer')`,
+        );
+        const fixture = await create({ days: 8, who: source });
+        // The dedicated lecturer avoids unrelated allocations at this boundary.
+        // Capture a real quote outside the window; only elapsed wall time changes
+        // between proposal and acceptance, so every consent field remains exact.
+        await sql(`update public.assignment_sessions set starts_at=starts_at+shift.delta,ends_at=ends_at+shift.delta
+        from(select clock_timestamp()+interval '168 hours 1.5 seconds'-min(starts_at) delta from public.assignment_sessions where claim_id=${q(fixture.claim)})shift where claim_id=${q(fixture.claim)}`);
+        const offer = await targetOffer(await propose(fixture));
+        const before = await handoverSnapshot(fixture);
+        const lockTag = `cutoff_holder_${randomUUID().replaceAll("-", "")}`;
+        const acceptTag = `cutoff_accept_${randomUUID().replaceAll("-", "")}`;
+        const holder = sql(
+          `begin;set local application_name=${q(lockTag)};select id from public.jobs where id=${q(fixture.job)} for update;select pg_sleep(2);commit`,
+        );
+        let writer;
+        try {
+          await barrier(lockTag, "wait_event='PgSleep'");
+          assert.equal(
+            await sql(
+              `select min(starts_at)>clock_timestamp()+interval '168 hours' from public.assignment_sessions where claim_id=${q(fixture.claim)}`,
+            ),
+            "t",
+            "Acceptance begins outside the cutoff",
+          );
+          writer = actor(
+            peer,
+            `set local application_name=${q(acceptTag)};select public.respond_job_substitution(${q(offer.id)},'accept',${q(offer.quote_hash)},${q(randomUUID())},true)`,
+          );
+          const settled = Promise.allSettled([holder, writer]);
+          await barrier(acceptTag, "wait_event_type='Lock'");
+          const results = await settled;
+          assert.equal(results[0].status, "fulfilled");
+          assert.equal(results[1].status, "rejected");
+          assert.match(
+            results[1].reason.message,
+            /22023:[^\n]*Short-notice withdrawal/,
+          );
+          assert.equal(await handoverSnapshot(fixture), before);
+        } finally {
+          await Promise.allSettled([holder, ...(writer ? [writer] : [])]);
+        }
+      },
+    );
     console.log(`${checks} withdrawal SQL groups passed`);
   },
 );

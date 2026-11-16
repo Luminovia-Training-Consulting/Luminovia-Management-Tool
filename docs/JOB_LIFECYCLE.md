@@ -97,7 +97,10 @@ lecturer's assignment. The legacy cancellation RPC also enforces the short-notic
 rule for an actor's own assignment, so a direct API call cannot bypass review.
 Started blocks and **any** invoice-item history are refused and require separate
 financial review. These workflows record no bank payment, refund or credit note.
-See [withdrawal operations](ASSIGNMENT_WITHDRAWALS.md) for the RPC, retry and
+Directed and marketplace replacement paths likewise refuse short-notice
+self-initiated transfers; a distinct current authorized manager can explicitly
+initiate a replacement. Offers created earlier do not bypass the policy by aging
+into the protected window. See [withdrawal operations](ASSIGNMENT_WITHDRAWALS.md) for the RPC, retry and
 migration boundaries.
 
 Cancellation:

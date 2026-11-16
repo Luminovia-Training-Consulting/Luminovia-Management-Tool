@@ -1,6 +1,14 @@
 # Architecture and decisions
 
-This integration preserves the published main migration history and adds the PR17 smart-operations sources. The ordered model includes current actor-role quotes, immutable recipient-specific substitution consent, current-status receipts, own Teaching Day course/contact context, effective-amendment forecasts and dedicated private-document isolation. The current combined source requires fresh and retained-data replay plus the complete application/native acceptance; previous source-bound results remain in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md). [ERD](ERD.md) maps physical relations, [MIGRATION_GUIDE](MIGRATION_GUIDE.md) explains source order and [API_REFERENCE](API_REFERENCE.md) inventories replayed interfaces. The full target remains [PRODUCT_SPEC](PRODUCT_SPEC.md) and the authoritative [master prompt](UNIVERSAL_MASTER_PROMPT.txt). Hosted state, external delivery and platform acceptance remain separate operational evidence.
+## Combined operational architecture — local candidate
+
+This PR24 integration includes actual accepted Main17 `4cc20874edc1f865b71106b7bb1299e16fec5aad` and the four operational modules. Its 68 SQL files consist of 62 byte-identical published main migrations and six pending PR24 additions. Application, SQL and E2E source remains identical to the complete local `2c850` pass; accepted Main36 runner routing and Main17’s 30-minute aggregate browser budget are integrated separately. Current executor/phase checks do not constitute a repeated full run. Final current-head full system, browser, native and all 15 required CI checks remain mandatory. [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md) retain source-bound outcomes.
+
+Course readiness is a live resource-scoped SQL projection; no authoritative percentage is writable. Private per-run settings, tasks and instruction receipts bind current schedules/assignments and actual accessible clean material. Teaching delivery uses editable unsubmitted drafts and immutable submitted revisions/review history, leaving accepted prices/invoices unchanged. A replacement calls the existing claim implementation within a rollback-safe handover transaction and preserves the original until success. Support uses ticket ownership or explicit MFA support authority, with separate filtered internal messages and dedicated frozen attachments. No capability grants unrelated private calendar/chat/contracts. New wrappers remain invoker functions; private tables retain RLS and no browser table access. Online confirmation remains mandatory. General API responses and private files are not cached; ADR-026 documents the separately opted-in minimal own teaching snapshot. [Actual implementation/evidence/limits](OPERATIONS_EXTENSION_STATUS.md).
+
+Dedicated support evidence also checks optional course-resource history. Incoming dedication and a reverse registry trigger serialize on the document row; neither ownership nor removed course history can override that exclusivity. A feature introducing that registry later must install the reverse guard and preserve private selectors/downloads. [Contract and actual checks](SUPPORT_COURSE_RESOURCE_REGRESSION.md).
+
+The smart-operations model complements these workflows. The ordered model includes current actor-role quotes, immutable recipient-specific substitution consent, current-status receipts, own Teaching Day course/contact context, effective-amendment forecasts and dedicated private-document isolation. The current combined source requires fresh and retained-data replay plus the complete application/native acceptance; previous source-bound results remain in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md). [ERD](ERD.md) maps physical relations, [MIGRATION_GUIDE](MIGRATION_GUIDE.md) explains source order and [API_REFERENCE](API_REFERENCE.md) inventories replayed interfaces. The full target remains [PRODUCT_SPEC](PRODUCT_SPEC.md) and the authoritative [master prompt](UNIVERSAL_MASTER_PROMPT.txt). Hosted state, external delivery and platform acceptance remain separate operational evidence.
 
 ## ADR-001 — separate private portal and static frontend
 
@@ -337,14 +345,14 @@ PR packaging runs with read-only permissions after complete application/native c
 
 ## Current scope and evidence boundaries
 
-All 36 published main migrations remain byte-identical. The existing M7 additions provide structured chat mentions, private personal file organisation, bounded job discovery and saved views, attention preferences and announcements. Their private tables use RLS and revoke
+All 62 published main migrations remain byte-identical. The existing M7 additions provide structured chat mentions, private personal file organisation, bounded job discovery and saved views, attention preferences and announcements. Their private tables use RLS and revoke
 direct PUBLIC/anon/authenticated access. Public invoker wrappers call scoped
 private implementations with empty search paths and explicit authenticated
 execution grants; pure internal trigger/filter helpers revoke browser execution. Private routines
 needed by public wrappers retain their own current-actor/resource checks. Service credentials remain server-only. [ERD](ERD.md) records physical
 keys and exceptions rather than inferring grants from schema placement.
 
-The published M8 extensions provide scoped administrative job pickers, explicit global-calendar publications and qualification evidence/attestation history. Their chronological source links are recorded in [MIGRATION_GUIDE](MIGRATION_GUIDE.md); still-undelivered PR17 sources follow the published prefix without changing released bytes. The picker is a
+The published M8 extensions provide scoped administrative job pickers, explicit global-calendar publications and qualification evidence/attestation history. Their chronological source links are recorded in [MIGRATION_GUIDE](MIGRATION_GUIDE.md); the now-published PR17 sources follow the earlier 36-file prefix without changing released bytes. The picker is a
 projection; calendar extends the existing event table plus one private request
 ledger; qualification adds four private relations. New private tables use RLS and
 revoke direct browser access. See [JOB_PICKERS](JOB_PICKERS.md),
@@ -409,3 +417,15 @@ An active lecturer can explicitly export their own selected expertise. The API h
 ## ADR-032 — explicit reviewed migration release
 
 Unattended updates retain the existing strict classifier. An explicit root-private, expiring one-shot plan binds the exact immutable green current-main release, full installed history and pending source hashes. The reviewed path shares the host lock, requires a fresh encrypted backup and uses existing stopped-writer backup/physical-checkpoint/install/private-health/rollback. It repeats identity/history checks and expiry before durable consumption; failure requires a fresh review. No automatic plan discovery, history rewrite or rewind after admitting public writes is added. See [REVIEWED_MIGRATION_PLANS](REVIEWED_MIGRATION_PLANS.md).
+
+## Reasoned short-notice withdrawal decisions
+
+The withdrawal extension separates application review from ordinary first-come
+claims. The first session's canonical instant determines the 168-hour boundary;
+only a completed database action releases any allocation. Private application and
+command tables retain actor-bound retries and authored decision history. Current
+MFA job-management authority is required to decide someone else's short-notice
+application. The original cancellation transaction remains the release owner and
+retains invoice/snapshot/chat guards. Private inbox targets reauthorize the current
+actor without copying reason text into notices. See
+[workflow and operating contract](ASSIGNMENT_WITHDRAWALS.md).

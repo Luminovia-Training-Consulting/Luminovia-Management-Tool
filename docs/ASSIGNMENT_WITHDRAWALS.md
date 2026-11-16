@@ -49,7 +49,13 @@ The command ledger binds actor, operation and payload; a changed payload cannot
 reuse an old command. A rejected application needs a fresh explicit operation.
 The existing lecturer/job/claim locks also serialize invoices, substitutions and
 competing decisions. The old cancellation RPC refuses own short-notice attempts,
-including actors who also have a management role.
+including actors who also have a management role. Directed substitutions and the
+replacement marketplace enforce the same rule: an own proposal cannot be created
+inside the window, and an older own proposal cannot release its source after aging
+into it. Short-notice transfers remain possible when a different current authorized
+manager explicitly initiated them. Their immutable server-written proposer ID and
+current management role are checked under profile locks before release; a revoked
+or suspended proposer no longer authorizes the transfer.
 
 ## Migration and operations
 
