@@ -516,6 +516,11 @@ test("actual archive is committed exact source with an inspectable checksum, nev
     assert.equal(manifest.tested_revision, testedSha);
     assert.equal(manifest.source_head, head);
     assert.equal(manifest.hosted, false);
+    assert.equal(manifest.verification_profile, "standard");
+    assert.equal(
+      manifest.verification_scope,
+      "pr-quality-runtime-edge-postgresql",
+    );
     assert.match(
       readFileSync(join(output, "README.txt"), "utf8"),
       /node preview.mjs start/,
@@ -755,7 +760,7 @@ test("privileged workflow uses only trusted default-branch metadata code; produc
   );
   assert.match(
     ci,
-    /preview-package:[\s\S]*?needs: \[quality, coverage, verify, verify-selfhost\]/,
+    /preview-package:[\s\S]*?needs: \[quality, coverage, verify, verify-selfhost, verify-browser, scope\]/,
   );
   assert.match(ci, /retention-days: 7/);
   const producer = ci.slice(

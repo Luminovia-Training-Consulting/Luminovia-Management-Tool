@@ -66,14 +66,14 @@ function workflow(name) {
 /** Exercise the maintained Actions condition, restricted to its primitive gate
  * variables and boolean operators rather than executing arbitrary source text.
  */
-function allows(condition, github, inputs = {}) {
+function allows(condition, github, inputs = {}, needs = {}) {
   const expression = condition
     .replace(/^\s*\$\{\{/, "")
     .replace(/\}\}\s*$/, "");
   const remaining = expression
     .replace(/'[^']*'/g, "")
     .replace(
-      /\b(?:github\.(?:event_name|ref|sha)|inputs\.(?:publish_release|expected_commit))\b/g,
+      /\b(?:github\.(?:event_name|ref|sha)|inputs\.(?:publish_release|expected_commit)|needs\.scope\.outputs\.profile)\b/g,
       "",
     )
     .replace(/\b(?:true|false)\b/g, "")
@@ -86,7 +86,7 @@ function allows(condition, github, inputs = {}) {
   return Boolean(
     runInNewContext(
       expression,
-      { github, inputs },
+      { github, inputs, needs },
       {
         timeout: 100,
         contextCodeGeneration: { strings: false, wasm: false },
@@ -95,7 +95,7 @@ function allows(condition, github, inputs = {}) {
   );
 }
 
-test("automatic quality, security and complete application gates remain in place", () => {
+test("PR checks are bounded while main/manual retains complete acceptance", () => {
   const ci = workflow("ci");
   assert.deepEqual(Object.keys(ci.on).sort(), [
     "pull_request",
@@ -111,11 +111,103 @@ test("automatic quality, security and complete application gates remain in place
   assert.ok(
     ci.jobs.coverage.steps.some((step) => step.run === "npm run test:coverage"),
   );
-  assert.deepEqual(ci.jobs.verify.needs, ["quality", "coverage"]);
-  assert.equal(ci.jobs.verify.if, undefined);
-  assert.ok(ci.jobs.verify.steps.some((step) => step.run === "./portal test"));
-  assert.equal(ci.jobs["verify-selfhost"].needs, "verify");
-  assert.equal(ci.jobs["verify-selfhost"].if, undefined);
+  assert.equal(ci.jobs.scope.steps[0].with["fetch-depth"], "2");
+  assert.equal(
+    ci.jobs.scope.outputs.profile,
+    "${{ steps.scope.outputs.profile }}",
+  );
+  assert.equal(ci.jobs.verify.needs, "scope");
+  assert.equal(ci.jobs.verify.if, "always() && !cancelled()");
+  const application = ci.jobs.verify.steps.find(
+    (step) => step.id === "application",
+  );
+  assert.match(
+    application.run,
+    /node scripts\/runtime-test\.mjs --phase system/,
+  );
+  assert.match(application.run, /else\s+\.\/portal test\s+fi/);
+  const browserJob = ci.jobs["verify-browser"];
+  assert.equal(browserJob.needs, "scope");
+  assert.equal(
+    browserJob.if,
+    "always() && !cancelled() && github.event_name == 'pull_request'",
+  );
+  const browser = browserJob.steps.find((step) => step.id === "browser");
+  assert.equal(browser.run, "node scripts/runtime-test.mjs --phase browser");
+  assert.equal(browser.if, "needs.scope.outputs.profile == 'full'");
+  const guards = ci.jobs.verify.steps.find(
+    (step) => step.run === "node scripts/ci-pr-check.mjs guards",
+  );
+  const native = ci.jobs["verify-selfhost"].steps.find((step) =>
+    step.run?.includes("selfhost-candidate-check.mjs --run"),
+  );
+  const sql = ci.jobs["verify-selfhost"].steps.find(
+    (step) => step.run === "node scripts/ci-pr-check.mjs sql",
+  );
+  const baseline = ci.jobs["verify-selfhost"].steps.find((step) =>
+    step.run?.includes("git archive HEAD^"),
+  );
+  // Risky PRs/main/manual run both complete suites; only proven UI/docs PRs
+  // take faster paths. SQL shards still exercise the new runner on a risky PR.
+  for (const [event_name, profile] of [
+    ["pull_request", "docs"],
+    ["pull_request", "standard"],
+    ["pull_request", "full"],
+    ["push", "full"],
+    ["workflow_dispatch", "full"],
+  ]) {
+    const github = { event_name };
+    const needs = { scope: { outputs: { profile } } };
+    assert.equal(allows(guards.if, github, {}, needs), profile !== "full");
+    assert.equal(
+      allows(sql.if, github, {}, needs),
+      event_name === "pull_request" && profile !== "docs",
+    );
+    for (const step of [application, native, baseline])
+      assert.equal(allows(step.if, github, {}, needs), profile === "full");
+  }
+  assert.equal(ci.jobs["verify-selfhost"].needs, "scope");
+  for (const job of [ci.jobs.verify, ci.jobs["verify-selfhost"]]) {
+    assert.equal(job.if, "always() && !cancelled()");
+    const scopeCheck = job.steps[0];
+    assert.equal(scopeCheck.env.SCOPE_RESULT, "${{ needs.scope.result }}");
+    assert.equal(scopeCheck.env.PROFILE, "${{ needs.scope.outputs.profile }}");
+    assert.equal(scopeCheck.env.EVENT_NAME, "${{ github.event_name }}");
+    assert.match(
+      scopeCheck.run,
+      /if test "\$EVENT_NAME" != pull_request; then test "\$PROFILE" = full; fi/,
+    );
+    assert.match(scopeCheck.run, /test "\$SCOPE_RESULT" = success/);
+    assert.match(
+      scopeCheck.run,
+      /case "\$PROFILE" in docs\|standard\|full\) ;; \*\) exit 1 ;; esac/,
+    );
+  }
+  assert.equal(
+    ci.jobs["preview-package"].if,
+    "always() && github.event_name == 'pull_request'",
+  );
+  const finalPreflight = ci.jobs["preview-package"].steps[0];
+  assert.deepEqual(finalPreflight.env, {
+    SCOPE_RESULT: "${{ needs.scope.result }}",
+    QUALITY_RESULT: "${{ needs.quality.result }}",
+    COVERAGE_RESULT: "${{ needs.coverage.result }}",
+    APPLICATION_RESULT: "${{ needs.verify.result }}",
+    NATIVE_RESULT: "${{ needs.verify-selfhost.result }}",
+    BROWSER_RESULT: "${{ needs.verify-browser.result }}",
+  });
+  for (const name of Object.keys(finalPreflight.env))
+    assert(finalPreflight.run.includes(`test "$${name}" = success`));
+  // Both suites must actually pass; skipping a required job is not this design.
+  assert.deepEqual(ci.jobs["preview-package"].needs, [
+    "quality",
+    "coverage",
+    "verify",
+    "verify-selfhost",
+    "verify-browser",
+    "scope",
+  ]);
+
   assert.ok(
     ci.jobs["verify-selfhost"].steps.some((step) =>
       step.run?.includes("selfhost-candidate-check.mjs --run"),
@@ -274,4 +366,117 @@ test("PR deployment metadata is manual and runs only trusted main metadata code"
   const commands = publisher.steps.filter((step) => step.run);
   assert.equal(commands.length, 1);
   assert.equal(commands[0].run, "node scripts/pr-preview-deployments.mjs");
+});
+
+// Exercise the maintained shell gate: a fast main/manual classification must
+// independently fail even if a future classifier regresses.
+test("scope shell preflight fails closed for bad scope and fast non-PR profiles", () => {
+  for (const job of [
+    workflow("ci").jobs.verify,
+    workflow("ci").jobs["verify-selfhost"],
+  ]) {
+    const preflight = job.steps[0].run;
+    for (const [event, profile, result, allowed] of [
+      ["pull_request", "docs", "success", true],
+      ["pull_request", "standard", "success", true],
+      ["pull_request", "full", "success", true],
+      ["push", "full", "success", true],
+      ["workflow_dispatch", "full", "success", true],
+      ["push", "standard", "success", false],
+      ["workflow_dispatch", "docs", "success", false],
+      ["pull_request", "full", "failure", false],
+      ["pull_request", "full", "skipped", false],
+      ["pull_request", "", "success", false],
+      ["pull_request", "unknown", "success", false],
+    ]) {
+      const execution = spawnSync(
+        "bash",
+        ["-e", "-u", "-o", "pipefail", "-c", preflight],
+        {
+          env: {
+            PATH: process.env.PATH,
+            EVENT_NAME: event,
+            PROFILE: profile,
+            SCOPE_RESULT: result,
+          },
+          timeout: 1000,
+          encoding: "utf8",
+        },
+      );
+      assert.ifError(execution.error);
+      assert.equal(
+        execution.status === 0,
+        allowed,
+        `${event}/${profile}/${result}`,
+      );
+    }
+  }
+});
+
+// An unrequired canceled scope must not make every required dependent check
+// skipped/successful. The required package job is the fail-closed final gate.
+test("preview shell preflight rejects every failed skipped canceled or missing prerequisite", () => {
+  const script = workflow("ci").jobs["preview-package"].steps[0].run;
+  const results = {
+    SCOPE_RESULT: "success",
+    QUALITY_RESULT: "success",
+    COVERAGE_RESULT: "success",
+    APPLICATION_RESULT: "success",
+    NATIVE_RESULT: "success",
+    BROWSER_RESULT: "success",
+  };
+  const execute = (overrides) => {
+    const result = spawnSync(
+      "bash",
+      ["-e", "-u", "-o", "pipefail", "-c", script],
+      {
+        env: { PATH: process.env.PATH, ...results, ...overrides },
+        timeout: 1000,
+        encoding: "utf8",
+      },
+    );
+    assert.ifError(result.error);
+    return result.status === 0;
+  };
+  assert.equal(execute({}), true);
+  for (const name of Object.keys(results))
+    for (const status of ["failure", "skipped", "cancelled", ""])
+      assert.equal(execute({ [name]: status }), false, `${name}/${status}`);
+});
+
+test("browser scope preflight accepts only an exact successful PR profile", () => {
+  const preflight = workflow("ci").jobs["verify-browser"].steps[0].run;
+  for (const [event, profile, scopeResult, allowed] of [
+    ["pull_request", "docs", "success", true],
+    ["pull_request", "standard", "success", true],
+    ["pull_request", "full", "success", true],
+    ["push", "full", "success", false],
+    ["workflow_dispatch", "full", "success", false],
+    ["pull_request", "full", "failure", false],
+    ["pull_request", "full", "skipped", false],
+    ["pull_request", "full", "cancelled", false],
+    ["pull_request", "", "success", false],
+    ["pull_request", "unknown", "success", false],
+  ]) {
+    const result = spawnSync(
+      "bash",
+      ["-e", "-u", "-o", "pipefail", "-c", preflight],
+      {
+        env: {
+          PATH: process.env.PATH,
+          EVENT_NAME: event,
+          PROFILE: profile,
+          SCOPE_RESULT: scopeResult,
+        },
+        timeout: 1000,
+        encoding: "utf8",
+      },
+    );
+    assert.ifError(result.error);
+    assert.equal(
+      result.status === 0,
+      allowed,
+      `${event}/${profile}/${scopeResult}`,
+    );
+  }
 });

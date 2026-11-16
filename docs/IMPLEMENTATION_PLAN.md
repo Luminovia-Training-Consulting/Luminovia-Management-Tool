@@ -1,5 +1,9 @@
 # Persistent implementation plan
 
+## All-open-PR merge continuation
+
+The latest direct instruction authorises all current PR integrations and protected merges after successful current required checks. Earlier merge reservations below are historical. PR24 now incorporates accepted main `7fbdb95`, preserving both CI-routing and operational histories, all36released SQL files and six pending additions unchanged. Relevant integration checks and fresh exact-head required CI remain the next gate; no deployment is requested.
+
 ## Current user-directed operational delivery preparation
 
 The latest direct request is to make PR24 and then PR25 mergeable and merge them individually. A subsequently relayed direct instruction reserves PR17 first, so actual main/QA ordering is **PR17 → PR24 → PR25**. This coordinates actual merge collisions; it is not a blanket development or source freeze. Accepted PR10/main `1de544d` and all36released SQL blobs remain intact. The six unreleased operational files now follow that accepted prefix (42total); after PR17 actually merges, compare its real migration prefix and recreate only still-unreleased versions if required.
@@ -26,6 +30,48 @@ The exact additional [implementation prompt](OPERATIONS_EXTENSION_PROMPT.txt) is
 - [ ] Verify any separately authorised installation from actual state. Local development/tests are now the default; the separate workflow owner controls publication switches. No production/public Website/DNS/real-mail/purchase action is implied.
 
 Initial SQL evidence: readiness16, delivery12, replacement13, support12groups. Whole-source257tests and unchanged coverage floors pass; TypeScript/ESLint pass. The canonical complete command returned exit1 before startup because another checkout holds shared QA ownership; this is not a full integration pass.
+
+## Full PR acceptance critical path — further authorised continuation
+
+- [x] Measure two-worker SQL5m07s, complete native/retained-data success, and historical full browser13.9m versus13s Chromium setup; preserve canonical SQL lint/advisor and native-engine checks.
+- [x] Route sensitive PR system and browser acceptance onto separate owned runners; preserve main/manual/local complete acceptance and all existing required context names.
+- [x] Pass56focused phase/bootstrap/snapshot/safety/worker/scope/preview/policy cases and38actual shell boundary/routing cases; validate launcher normalization, complete stage partition, fresh service/persistence/seed setup and failure/cancellation cleanup. Scoped lint/format/compiler connectivity/actionlint pass; actual Docker/complete child-process evidence remains pending CI.
+- [ ] Publish signed exact source, observe every final-head system/browser/native/security/package gate, measure actual wall time, and complete the user-authorised protected merge.
+
+The complete product scope and earlier actual-source evidence below remain in force.
+
+## Safe development-speed improvements — explicit continuation
+
+- [x] Observe signed608687f/PR34 Portal43855915270 success in11m36s (approximately59%less than28m),351actual SQL groups and every required context; fix missing metadata labels and observe green43856170205.
+- [x] Implement two separate pinned networkless SQL workers with exhaustive partition, unchanged real races/durability, bounded cancellation/cleanup and actual per-suite timing reports; disable JIT only in the disposable PR fixture.
+- [x] Add conservative actual-merge docs/standard/full selection, full sensitive/unknown/main/manual acceptance, early independent jobs and required-gate preflights that fail on scope errors or fast non-PR profiles.
+- [x] Preserve source/rules/dependencies/migrations, all15required statuses, coverage/security/release requirements; make preview evidence profile explicit and reject missing CLI profile.
+- [x] Pass26focused local scope/worker/routing/preview/governance cases and scoped lint/format/actionlint; record local subprocess/Docker limitations and independent read-only review.
+- [x] Publish signed8f29147 and verify13exact remote blobs; Portal43860971674 passes complete SQL/native/application/security/package gates in32m35s, including SQL5m07s,114desktop/mobile and2built-PWA cases.
+- [x] Observe the user-performed protected PR34 merge after every final-head check passed: signedmain c528100. Main acceptance is a separate run; no release was dispatched.
+
+This continuation preserves the complete remaining product scope and prior source-bound evidence below.
+
+## Faster PR CI — 16 November 2026
+
+- [x] Measure actual successful baseline: approximately28minutes, mostly21-minute application plus6-minute serial native rehearsal.
+- [x] Keep quality/coverage/security/metadata contexts; add bounded runtime/Edge/audit and one pinned isolated PostgreSQL suite on every PR, without repeated frontend quality/unit/build commands.
+- [x] Preserve all15required context names, preview success prerequisites, immutable SQL/dependencies and exact-main manual release gates; run unchanged complete application/native main/manual suites in parallel.
+- [x] Document PR SQL/Auth-stub limitations and package evidence scope; pass six runner orchestration, three routing/release-policy and four maintenance/governance checks, scoped lint/format and actionlint.
+- [ ] Publish the prepared branch changes after repository write access or browser file upload is available; connector403 and shell DNS restrictions currently block publication. No extension permission was changed.
+- [ ] Observe exact-head GitHub runtime/Edge/PostgreSQL/image startup and security/coverage/package results, measure actual optimized duration and merge only after every current required check succeeds.
+- [ ] Observe a complete main/manual application/native run before claiming that parallel full acceptance passed; no publication is requested.
+
+All remaining product and operational scope below is preserved. Local Docker and subprocess execution are restricted; mocked routing passes do not replace the pending native evidence.
+
+## English quote/discovery documentation — released PR10 continuation
+
+- [x] Integrate accepted main `1de544d` and preserve all 36 released SQL sources, neutral naming, operator guidance and complete actual-main histories.
+- [x] Replace obsolete unpaged/future wording with actual shipped actor quotes, monetary filtering/order, cursor context, exact consent and current SQL/query/DTO/UI ownership in the role, discovery and migration guides.
+- [x] Pass fresh `./portal check` (515 frontend cases/65 files, unchanged coverage floors and build), 102 runtime cases, 20 focused documentation/privacy/catalogue/metadata cases and technical-guide formatting; deliver the signed bounded update through [PR #29](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/29).
+- [ ] Complete all 15 exact-current-head required checks and the assigned actual merge. Preserve queue-controlled Draft; no additional routine user approval is required.
+
+The earlier 3ed9a24 all-green checkpoint applies only to its e88 base. All remaining product and operational scope in the ledger below remains required.
 
 ## PR10 current accepted Main13 checkpoint
 
