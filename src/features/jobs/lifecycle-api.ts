@@ -24,6 +24,7 @@ export interface JobLifecycle {
   open_positions?: number;
   can_set_capacity?: boolean;
   gross_budget?: number | null;
+  max_net_budget?: number | null;
   can_manage: boolean;
   can_edit: boolean;
   can_duplicate: boolean;

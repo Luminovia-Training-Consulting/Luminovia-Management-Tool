@@ -447,6 +447,92 @@ await withTestDatabase(
         );
       },
     );
+    await check(
+      "Maximum lecturer budget uses the captured senior price per position and keeps confidential totals administrative",
+      async () => {
+        const budgetJob = await create(10, 100.01, 3);
+        const adminState = await rpc(
+          admin,
+          "job_lifecycle",
+          [budgetJob],
+          "aal2",
+        );
+        const ownerState = await rpc(
+          owner,
+          "job_lifecycle",
+          [budgetJob],
+          "aal2",
+        );
+        assert.equal(adminState.max_net_budget, 219.03);
+        assert.equal(ownerState.max_net_budget, 219.03);
+        assert.equal(
+          Number((await offer(admin, budgetJob)).total_amount) * 3,
+          93,
+        );
+        for (const who of [manager, teacher, senior])
+          assert.equal(
+            (
+              await rpc(
+                who,
+                "job_lifecycle",
+                [budgetJob],
+                who === manager ? "aal2" : "aal1",
+              )
+            ).max_net_budget,
+            null,
+          );
+        assert.equal(
+          (await rpc(admin, "job_lifecycle", [budgetJob])).max_net_budget,
+          null,
+        );
+        const receipt = await claim(teacher, budgetJob);
+        assert.equal(receipt.status, "confirmed");
+        const accepted = await sql(
+          `select row_to_json(c) from public.job_claims c where id='${receipt.claim_id}'`,
+        );
+        const revenue = await sql(
+          `select row_to_json(r) from private.claim_revenue_ledger r where claim_id='${receipt.claim_id}'`,
+        );
+        assert.equal(
+          (await rpc(admin, "job_lifecycle", [budgetJob], "aal2"))
+            .max_net_budget,
+          219.03,
+        );
+        assert.equal(
+          await sql(
+            `select row_to_json(c) from public.job_claims c where id='${receipt.claim_id}'`,
+          ),
+          accepted,
+        );
+        assert.equal(
+          await sql(
+            `select row_to_json(r) from private.claim_revenue_ledger r where claim_id='${receipt.claim_id}'`,
+          ),
+          revenue,
+        );
+        assert.equal(
+          (await rpc(admin, "job_lifecycle", [legacy], "aal2")).max_net_budget,
+          50,
+        );
+        assert.equal(
+          (await rpc(manager, "job_lifecycle", [legacy], "aal2"))
+            .max_net_budget,
+          50,
+        );
+        assert.equal(
+          await sql(
+            `select row_to_json(c) from public.job_claims c where id='${historic.claim_id}'`,
+          ),
+          beforeClaim,
+        );
+        assert.equal(
+          await sql(
+            `select row_to_json(r) from private.claim_revenue_ledger r where claim_id='${historic.claim_id}'`,
+          ),
+          beforeRevenue,
+        );
+      },
+    );
     let id;
     await check(
       "Raw REST table has no pay quote; own role-specific RPC quote has exact net with no gross or percentage keys",
@@ -619,6 +705,10 @@ await withTestDatabase(
         );
         assert.equal(updated.policy_version, 2);
         assert.deepEqual(await offer(teacher, pending), before);
+        assert.equal(
+          (await rpc(admin, "job_lifecycle", [pending], "aal2")).max_net_budget,
+          73,
+        );
         const captured = await rpc(
           admin,
           "commission_offer_policy",

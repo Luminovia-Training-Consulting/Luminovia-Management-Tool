@@ -498,4 +498,21 @@ end;$$;
 create function public.commission_offer_policy(p_job_id uuid) returns jsonb language sql stable security invoker set search_path='' as $$select private.commission_offer_policy(p_job_id);$$;
 revoke execute on function private.commission_offer_policy(uuid),public.commission_offer_policy(uuid) from public,anon;
 grant execute on function private.commission_offer_policy(uuid),public.commission_offer_policy(uuid) to authenticated;
+-- The upper lecturer-cost bound uses the captured senior tier, never the
+-- requesting administrator's personal quote. Legacy exact-net offers retain
+-- their existing total meaning; confidential role-priced budgets require MFA.
+create or replace function private.job_lifecycle(p_job_id uuid) returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare j public.jobs; manager boolean:=private.has_permission('jobs.manage');
+begin
+ if not private.actor_active() then raise exception 'Authentication required' using errcode='42501';end if;
+ select * into j from public.jobs where id=p_job_id;
+ if j.id is null or not (manager or (private.lecturer_actor() and j.status='published') or exists(select 1 from public.job_claims c where c.job_id=j.id and c.lecturer_id=auth.uid())) then raise exception 'Job access denied' using errcode='42501';end if;
+ return jsonb_build_object('version',j.lifecycle_version,'capacity',j.capacity,'capacity_basis',j.capacity_basis,'confirmed_count',(select count(*) from public.job_claims where job_id=j.id and status='confirmed'),'open_positions',case when j.status='published' then j.capacity-(select count(*) from public.job_claims where job_id=j.id and status='confirmed') else 0 end,'can_set_capacity',manager and j.capacity_basis='per_position' and not exists(select 1 from public.job_claims where job_id=j.id),'gross_budget',case when private.has_permission('finance.gross.read') then (select gross_total_amount*j.capacity from private.job_commission_offers where job_id=j.id) end,'max_net_budget',case when exists(select 1 from private.job_commission_offers where job_id=j.id and pricing_mode='role_split') then case when private.has_permission('finance.gross.read') then (select round(gross_total_amount*senior_percent/100,2)*j.capacity from private.job_commission_offers where job_id=j.id) end else j.total_amount*j.capacity end,'can_manage',manager,'can_edit',manager and not exists(select 1 from public.job_claims c where c.job_id=j.id),
+ 'can_duplicate',manager and private.has_permission('courses.manage') and not exists(select 1 from public.job_sessions where job_id=j.id and starts_at<=now()) and (not exists(select 1 from private.job_commission_offers o where o.job_id=j.id) or private.has_permission('finance.gross.read')),
+ 'claims',coalesce((select jsonb_agg(jsonb_build_object('id',c.id,'lecturer_id',c.lecturer_id,'lecturer_name',p.display_name,'status',c.status,'created_at',c.created_at,
+ 'can_cancel',c.status='confirmed' and not exists(select 1 from public.invoice_items i where i.claim_id=c.id) and (select min(s.starts_at) from public.assignment_sessions s where s.claim_id=c.id)>now(),
+ 'sessions',(select jsonb_agg(jsonb_build_object('starts_at',s.starts_at,'ends_at',s.ends_at,'released_at',s.released_at) order by s.starts_at) from public.assignment_sessions s where s.claim_id=c.id),
+ 'events',(select jsonb_agg(jsonb_build_object('type',e.event_type,'created_at',e.created_at,'reason',case when e.event_type='cancelled' then a.details->>'reason' end) order by e.created_at,e.id) from public.claim_events e left join public.audit_events a on a.resource_id=c.id and a.action='claim.cancelled' where e.claim_id=c.id)) order by c.created_at desc,c.id)
+ from public.job_claims c join public.profiles p on p.id=c.lecturer_id where c.job_id=j.id and (manager or c.lecturer_id=auth.uid())),'[]'::jsonb));
+end;$$;
 commit;
