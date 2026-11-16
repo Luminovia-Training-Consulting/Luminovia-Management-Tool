@@ -26,6 +26,7 @@ import { Button } from "../../components/ui/button";
 import { ErrorState, Loading, TextLink } from "../../components/common";
 import { validZone } from "../../lib/dates";
 import { DashboardCalendarPreview, DashboardWidgets } from "./widgets";
+import { DashboardReadinessWidget } from "../readiness/widget";
 import "./i18n";
 /** Compose personal entry points, actual offers and confirmed assignments from shared queries. */
 export function Dashboard() {
@@ -212,6 +213,7 @@ export function Dashboard() {
         clientAccount={clientAccount}
         jobCounts={jobs.data?.management ?? undefined}
       />
+      {staff && <DashboardReadinessWidget actor={session!.user.id} />}
     </>
   );
 }
