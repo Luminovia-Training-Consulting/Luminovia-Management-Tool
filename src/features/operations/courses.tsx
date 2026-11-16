@@ -743,7 +743,7 @@ export function CoursesPage() {
                 <p>{template?.description}</p>
                 {template?.building_block_id && (
                   <span className="badge">
-                    CBW{" "}
+                    {t("buildingBlocks")}{" "}
                     {
                       blocks.data.find(
                         (block) => block.id === template.building_block_id,
@@ -936,7 +936,7 @@ export function CoursesPage() {
         title={
           templateDetail?.title ??
           (blockDetail
-            ? `CBW ${blockDetail.code} · ${blockDetail.title}`
+            ? `${blockDetail.code} · ${blockDetail.title}`
             : t("template"))
         }
         description={t("reusableBlock")}

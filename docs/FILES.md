@@ -38,7 +38,7 @@ This correction was reproduced first and checked by **47 passing file-component 
 
 Upload, byte/MIME/size validation, quarantine and actual ClamAV scanning, private Storage, version history, preview Blob lifetime, rename and archive remain connected. Downloads continue using the existing authenticated file gateway with current resource checks and the selected version; tags or folders provide neither a public URL nor a Storage bypass. A metadata row is not evidence of an existing scanned file.
 
-The additive CLI-generated migration is `20261116022731_file_discovery_personal_organisation.sql`. The previous 24 migrations are not replaced. The new table has RLS, no client write grants and no admin exception. Public RPCs remain invoker entry points into restricted private implementations with an empty search path and explicit execution grants. A timestamp/UUID index supports discovery pages and an account-bound folder index supports private filters.
+The additive CLI-generated migration is `20261116080732_file_discovery_personal_organisation.sql`. The previous 24 migrations are not replaced. The new table has RLS, no client write grants and no admin exception. Public RPCs remain invoker entry points into restricted private implementations with an empty search path and explicit execution grants. A timestamp/UUID index supports discovery pages and an account-bound folder index supports private filters.
 
 ## Verification and continuation
 

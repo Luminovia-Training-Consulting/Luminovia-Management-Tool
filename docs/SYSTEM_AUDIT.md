@@ -1,12 +1,12 @@
 # System audit: functionality, performance and failure paths
 
-As of 16 November 2026, Australia/Brisbane. Baseline: PR #4 / `b9cdcc8`. This report describes examined contracts and concrete findings. Actual complete acceptance is recorded in [QA_RESULTS](QA_RESULTS.md); the entire remaining product scope stays in [IMPLEMENTATION_PLAN](IMPLEMENTATION_PLAN.md).
+As of 16 November 2026, Australia/Brisbane. Baseline: PR #4 / `b9cdcc8`. This report preserves that historical audit's examined contracts, concrete findings and measurements; its module and migration counts are not the current inventory. The current source has 27 migrations, including delegated roles/private compensation and welcome progress; see the [migration guide](MIGRATION_GUIDE.md). Actual complete acceptance is recorded in [QA_RESULTS](QA_RESULTS.md); the entire remaining product scope stays in [IMPLEMENTATION_PLAN](IMPLEMENTATION_PLAN.md).
 
 ## Scope and traceable entry points
 
 The audit covers delivered frontend feature modules, Auth/data/file/realtime interfaces, all application migrations, local process management, the isolated test launcher and release/proxy boundaries. At this audit checkpoint the compiler inventory identified **85 connected frontend modules, 25 routes and 175 runtime exports**, with no unreachable modules, unused runtime exports, missing relative imports/static assets or invalid literal routes. Computed dynamic paths still require their own business checks.
 
-The existing 17 migrations remain unchanged. Headless APIs, CLI/test entry points and the documented, unchanged Supabase vendor reference are deliberate interfaces. Missing browser imports alone do not make them dead code. The API check binds actual literal frontend calls to migrated functions and checks the invoker boundary, RLS in public/private schemas, anonymous execution rights and empty privileged search paths.
+At this audit checkpoint, the existing 17 migrations remained unchanged; the finite-interval correction below added the 18th. Headless APIs, CLI/test entry points and the documented, unchanged Supabase vendor reference are deliberate interfaces. Missing browser imports alone do not make them dead code. The API check binds actual literal frontend calls to migrated functions and checks the invoker boundary, RLS in public/private schemas, anonymous execution rights and empty privileged search paths.
 
 | Area             | Owning files                                                 | Added check/correction                                                                                                      |
 | ---------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |

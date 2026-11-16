@@ -14,7 +14,7 @@ const jobs = Object.fromEntries(
       .matchAll(/^ {2}([a-z-]+):\n([\s\S]*?)(?=^ {2}[a-z-]+:\n|$(?![\s\S]))/gm),
   ].map((m) => [m[1], m[2]]),
 );
-test("maintainer review exceptions are PR-only and signing plus all15CI checks have no bypass", () => {
+test("only Carina has the PR-only review exception and signing plus all15CI checks have no bypass", () => {
   const history = JSON.parse(read(".github/rulesets/history.json")),
     review = JSON.parse(read(".github/rulesets/review.json")),
     checks = JSON.parse(read(".github/rulesets/checks.json"));
@@ -26,8 +26,7 @@ test("maintainer review exceptions are PR-only and signing plus all15CI checks h
   assert.equal(review.enforcement, "active");
   assert.equal(checks.enforcement, "active");
   assert.deepEqual(review.bypass_actors, [
-    { actor_id: 2, actor_type: "RepositoryRole", bypass_mode: "pull_request" },
-    { actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "pull_request" },
+    { actor_id: 29256704, actor_type: "User", bypass_mode: "pull_request" },
   ]);
   assert.deepEqual(checks.bypass_actors, []);
   const required = review.rules.find(

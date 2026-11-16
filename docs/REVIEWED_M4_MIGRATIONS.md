@@ -6,11 +6,11 @@ This is a read-only operator handoff for the existing CMS **development** instan
 
 The existing updater accepts ordinary additive forward SQL, but deliberately stops on constraint removal and top-level procedural/data changes. Local checks against the actual M4 source returned:
 
-| Version / source                                  | SHA-256                                                            | Ordinary update policy                                                                                                   |
-| ------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| `20261115154942_profile_avatar_selection.sql`     | `90f09db02e06ce7e2445e63c65130e557f78d4552992afcb7ca9178c0623b197` | Review required: replace the document-kind check to add avatars; every previous kind remains allowed.                    |
-| `20261115155038_resource_comments.sql`            | `476f360ad3bf9c3674bb4daae78766492b626c95f5b1cf161b649f5c1036d9ac` | Eligible forward comment tables/functions/policy DDL. Include it in the same complete M4 review.                         |
-| `20261115155208_cbw_building_block_templates.sql` | `2bede4f4375b2c0d3a5840e462ad159a143757d041d229d6521f3ffc8305c3f1` | Review required: bounded catalogue `DO` block inserts 22 templates/blocks and 24 source versions, then links new blocks. |
+| Version / source                              | SHA-256                                                            | Ordinary update policy                                                                                                   |
+| --------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `20261115154942_profile_avatar_selection.sql` | `90f09db02e06ce7e2445e63c65130e557f78d4552992afcb7ca9178c0623b197` | Review required: replace the document-kind check to add avatars; every previous kind remains allowed.                    |
+| `20261115155038_resource_comments.sql`        | `476f360ad3bf9c3674bb4daae78766492b626c95f5b1cf161b649f5c1036d9ac` | Eligible forward comment tables/functions/policy DDL. Include it in the same complete M4 review.                         |
+| `20261115155208` (building-block catalogue)   | `2bede4f4375b2c0d3a5840e462ad159a143757d041d229d6521f3ffc8305c3f1` | Review required: bounded catalogue `DO` block inserts 22 templates/blocks and 24 source versions, then links new blocks. |
 
 New trigger/provenance DDL is compatible. All three versions follow the installed capacity migration (`20261115142130`); this is a forward **14→17** transition. Automatic installation nevertheless remains ineligible because two source files need operator review. Do not hide these operations inside a function or weaken the ordinary SQL classifier to make the gate pass.
 
@@ -44,7 +44,7 @@ The result lists exact files/hashes, the two review reasons and `operator_review
 1. Establish the exact tested main commit, immutable release identity and matching archive/manifest through the existing release controls. Keep the 14-entry source-history export and review output with the release record.
 2. Review the three pinned sources together, including the avatar allowlist replacement and insert-only/idempotent catalogue import. Confirm the intended 22 blocks, 24 source versions and the old-row preservation evidence below. A different hash requires a new review.
 3. Before any separately authorised application, use the existing maintenance/writer-stop procedure and verified backup of database **and actual Storage objects**, with private recovery files and rollback ownership. The verifier supplies no hosted apply or automatic bypass; do not use the strict M3 backfill for M4.
-4. After an approved operation, establish exact 17-entry source history, unchanged existing account IDs/roles/private records/custom quotas, valid existing files and the new scanned-avatar, CBW course/job and comment journeys. Run actual Auth/MFA/API/revocation checks on that instance. On failure retain maintenance/recovery state; do not downgrade history or clear the failure marker blindly.
+4. After an approved operation, establish exact 17-entry source history, unchanged existing account IDs/roles/private records/custom quotas, valid existing files and the new scanned-avatar, course/job and comment journeys. Run actual Auth/MFA/API/revocation checks on that instance. On failure retain maintenance/recovery state; do not downgrade history or clear the failure marker blindly.
 
 Native Auth password/MFA and Storage object recovery must be checked by the actual backup/restore procedure; source-schema rehearsal is not a substitute. No operator operation in this checklist was performed by this work.
 

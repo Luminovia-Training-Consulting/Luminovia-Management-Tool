@@ -37,7 +37,7 @@ The M8 source replaces the former file/chat job selectors with a [dedicated purp
 
 ## API and database
 
-Migration: `20261116022732_job_discovery_and_saved_views.sql`.
+Migration: `20261116080735_job_discovery_and_saved_views.sql`.
 
 | Public RPC                                                | Purpose                                                                                                     |
 | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |

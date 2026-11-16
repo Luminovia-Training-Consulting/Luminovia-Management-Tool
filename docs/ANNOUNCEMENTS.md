@@ -70,7 +70,7 @@ resolver returns an empty title and destination for unavailable revisions.
 ## Storage, permissions and API
 
 The additive CLI migration is
-`20261116022734_portal_announcements.sql`. Earlier delivered migrations and the
+`20261116080739_portal_announcements.sql`. Earlier delivered migrations and the
 separate quiet-preference migration remain unchanged.
 
 Private RLS-enabled tables store announcement state, immutable draft revisions,

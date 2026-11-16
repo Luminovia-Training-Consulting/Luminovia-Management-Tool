@@ -1,10 +1,10 @@
 # Creating, reviewing and merging pull requests
 
-> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Maintainers/admins may bypass review through a PR only; nobody can bypass the 15 mandatory CI/security checks or up-to-date testing. The maintenance App has no rule exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
+> Reviewed server snapshot on 16 November 2026 at 06:42:36 UTC: Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception (`bypass_mode: pull_request`). No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. Live server rules are authoritative and may later differ. [Reviewed rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
 
 This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
-The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). Those historical merges did not themselves activate server-side rules; all three protection policies are now active, as recorded in [GitHub administration](GITHUB_WORKFLOW.md). The source catalogue [labels.json](../.github/labels.json) now contains 36 managed labels; nine original GitHub labels are also preserved.
+The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). These historical merges did not themselves activate server-side review rules; the current live activation is described below. The source catalogue [labels.json](../.github/labels.json) now contains 36 managed labels; nine original GitHub labels are also preserved.
 
 ## Branch and title
 
@@ -55,13 +55,11 @@ Choose every area that is materially affected. The original area labels remain a
 | `area:accessibility` | Keyboard, focus, screen-reader and contrast work            |
 | `area:design`        | Brand, layout, typography and colour system                 |
 
-A documentation change receives `area:docs` and any relevant documented area; general contribution rules also use `area:github`. A test does not need every label used by the whole system. A feature with a migration should include the product and technical areas it actually changes. The 36 managed labels comprise eight types, 24 areas, three risk levels and the `merge:hold` stop signal; nine original GitHub labels remain available. Additional labels do not replace a required category.
+A documentation change receives `area:docs` and any relevant documented area; general contribution rules also use `area:github`. A test does not need every label used by the whole system. A feature with a migration should include the product and technical areas it actually changes. The 36 managed labels comprise eight types, 24 areas, three risk levels and the `merge:hold` stop signal; nine original GitHub labels remain available. `merge:hold` records a maintainer review stop. Preserve it until the stated concern is addressed; it grants no permission and does not replace required checks. Additional labels do not replace a required category. Add a new managed label to the shared catalogue before applying it. See [metadata operation and historical rechecks](GITHUB_WORKFLOW.md#labels-and-metadata-validation).
 
 Apply the five additional areas based on the actual diff. Use `area:api` for changed interface contracts or documented RPC/OpenAPI functions; `area:backend` still describes server implementation. Add `area:security` to the affected area for actual protection or permission changes. It is not a second type label: a `type:feature` can change security boundaries, while `type:security` identifies a coordinated security fix as the main purpose.
 
 `area:performance` requires a concrete change to query, loading or cache behaviour; an incidental index or an existing full-system test is insufficient. `area:accessibility` identifies actual keyboard, focus, screen-reader or contrast work. `area:design` describes visible design changes; a theme contrast fix can need both labels. Preserve existing labels when they remain accurate. Select labels for the reviewable scope, not to use every available category.
-
-`merge:hold` records a maintainer review stop. Preserve it until the stated concern is addressed; it grants no permission and does not replace required checks.
 
 | Risk          | Meaning                                                                                             |
 | ------------- | --------------------------------------------------------------------------------------------------- |
@@ -91,26 +89,33 @@ Use `./portal github test` for an independent test of current `main`. `./portal 
 
 ## Review rules for `main`
 
-Every change to `main` requires a pull request. Ordinary contributors and the maintenance App need at least one independent approval, approval of the latest push and resolved review conversations. Self-approval does not count; new changes dismiss stale approvals. Maintainers and administrators may bypass review requirements while merging a PR. They cannot push directly to `main` or bypass required checks. The maintenance App has no exception.
+The repository contribution policy requires a pull request and at least one approval from another authorised person. Self-approval does not count as independent review; new changes dismiss old approvals. Approval of the latest push must come from someone other than its pusher. Resolve review conversations before merging and address feedback against current code.
 
-All 15 mandatory checks must pass for the current revision and the PR must be up to date with `main`:
+Only `CarinaSchoppe` (`User:29256704`) has a personal `pull_request` exception on the review rule. She may merge a PR, including her own, without an independent approval. This exception does not allow direct pushes to `main` or bypass the separate required-check or history/signature rules. The exception follows the person acting, so another maintainer, administrator, bot or App gains none from a PR's author. GitHub may require an explicit bypass action for Carina. The [GitHub workflow guide](GITHUB_WORKFLOW.md#active-rule-layers) records the exact review conditions.
+
+All fifteen required checks must pass against the current base:
 
 - `Build`, `Typecheck`, `Lint`, `Formatting` and `Code quality` check compilation, rules, style and actual source connections.
 - `Tests and coverage` runs unit/component tests with complete frontend source coverage reporting and enforced thresholds.
 - `verify` runs the complete real application/SQL/API/browser/PWA/maintenance suites; `Actual isolated selfhost image compatibility` checks real runtime behaviour and retained data.
-- `PR metadata` checks required labels.
-- `PR preview package` packages the exact tested source after application and native acceptance.
-- `CodeQL (javascript-typescript)`, `CodeQL (python)`, `CodeQL (actions)`, `Dependency review` and the generated `CodeQL` findings check enforce the security gates. See [CI_QUALITY](CI_QUALITY.md).
+- `PR metadata` checks required labels against trusted current-main code.
+- `PR preview package` creates the gated downloadable source package; package availability does not claim a hosted portal or complete-product acceptance.
+- `CodeQL (javascript-typescript)`, `CodeQL (python)` and `CodeQL (actions)` run the separate language-specific security analyses; `Dependency review` rejects newly introduced vulnerable dependencies.
+- The generated `CodeQL` finding check evaluates the uploaded security findings separately from successful scanner execution.
 
-Missing, pending or failed required checks block merges for everyone. A newer main revision requires updating the PR and obtaining current test evidence again. The live server rules enforce this; source JSON alone is not proof of activation.
+Fourteen statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. All fifteen are required for merging. See [CI_QUALITY](CI_QUALITY.md).
 
-Daily maintenance uses a signed separate branch and a PR labelled `type:dependencies`, `area:devops` and `risk:high`. Requesting native auto-merge queues the PR until its independent review and required checks are satisfied. The [operational setup status](GITHUB_WORKFLOW.md#activation-still-pending) distinguishes implemented source from tested App permissions and a real workflow run.
+If main changes, update the PR as required and wait for checks against the current base. The required-check and history/signature rulesets have no bypass actors. The review ruleset grants only `CarinaSchoppe` (`User:29256704`) the personal PR-only exception within that layer. No App has a review or required-check exception. Historical App-token tests grant no current merge authority; see the [current rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
 
 ## Merge and publication
 
-Review the description, labels, tests and open conversations before merging. Use the regular PR merge operation or native auto-merge. GitHub enforces all mandatory checks even when a maintainer or administrator uses the PR-only review exception; direct branch updates are prohibited.
+Only `CarinaSchoppe` (`User:29256704`) may merge a PR without an independent approval through her personal PR-only exception, including for her own PR, once the fifteen required checks and current-base requirement are satisfied. Other merge actors must satisfy the normal review requirements. Check the description, labels, tests and unresolved conversations first. Pending operational approvals remain separate from repository merge eligibility.
 
-A merge can start the existing development release process. Its immutable `cms-dev-*` packages and hosted migration checks remain separate. Production operation, real data, SMTP, DNS and risky maintenance need the appropriate separate approvals. Claim a hosted installation only when actual operational evidence exists.
+The separate Security outcomes are required for PR merge eligibility. Release publication still follows the explicit dependencies in `ci.yml`; the ruleset does not add them as release-job dependencies.
+
+The accepted local-first controls from [PR #27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27) are present. Use `./portal check` for fast local quality, coverage and build checks, followed by `./portal test` for complete isolated acceptance. A merge does not publish a release or PR deployment metadata. An authorized maintainer must dispatch `Portal checks` on `main` with `publish_release=true` and the exact current `main` SHA in `expected_commit`. Ordinary checks and daily-maintenance verification do not publish releases. PR deployment metadata has its own manual-only publication and cleanup workflow; the verified local artifact remains downloadable without a record. See [PR previews](PR_PREVIEWS.md). Production operation, real data, SMTP, DNS and risky maintenance need the appropriate separate authorization. Claim a hosted installation only when actual operational evidence exists.
+
+Signatures remain mandatory for every actor. Native repository Auto-Merge is available and waits for applicable requirements; enable it only within the task's authorized merge scope, preserving coordinated holds and `merge:hold`.
 
 Signed annotated `milestone/*` tags identify verified historical development states. They are not PR labels or a promise of a Semver or production version. Do not move existing tags; create tags only on the intended commit.
 

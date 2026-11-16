@@ -1,10 +1,13 @@
-/** Verify delivered local documentation files and GitHub-style heading links.
- * Fixtures exercise anchors without browser/network access; private state stays ignored. */
+/**
+ * Checks local Markdown links and heading fragments against delivered repository files.
+ * Fenced examples are not navigation; external URLs are not fetched here.
+ */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile, readdir, access } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
+/** Removes fenced examples before collecting links or heading targets. */
 function withoutFences(markdown) {
   return markdown.replace(/```[^]*?```|~~~[^]*?~~~/g, "");
 }
@@ -43,6 +46,7 @@ test("repository documentation links and heading fragments resolve", async () =>
     "ROADMAP.md",
     "CHANGELOG.md",
   ];
+  /** Collects delivered Markdown documents recursively for local link validation. */
   async function walk(directory) {
     for (const item of await readdir(directory, { withFileTypes: true })) {
       const path = `${directory}/${item.name}`;
@@ -104,4 +108,57 @@ test("translated heading links distinguish duplicates, Unicode and code examples
   assert.ok(anchors.has("prüfung--main"));
   assert.ok(anchors.has("stable-link"));
   assert.equal(anchors.has("not-a-heading"), false);
+});
+
+// Installed migration sources remain immutable. Derive the historic provider
+// labels so this check itself does not republish customer identities.
+test("public guidance and current catalogue contain no historical customer identity", async () => {
+  const migrationDir = new URL("../supabase/migrations/", import.meta.url);
+  const migration = (await readdir(migrationDir)).find((name) =>
+    name.startsWith("20261115155208_"),
+  );
+  assert.ok(migration);
+  const historical = await readFile(new URL(migration, migrationDir), "utf8");
+  const labels = [
+    ...new Set(
+      [...historical.matchAll(/"provider":"([^"\n]+)"/g)].map(
+        (match) => match[1],
+      ),
+    ),
+  ];
+  assert.ok(labels.length > 0, "Inspect the actual historical catalogue");
+  const files = [
+    "README.md",
+    "CONTRIBUTING.md",
+    "AGENTS.md",
+    "SECURITY.md",
+    "data/course-building-blocks.json",
+    "ROADMAP.md",
+    "CHANGELOG.md",
+  ];
+  async function collect(directory) {
+    for (const item of await readdir(directory, { withFileTypes: true })) {
+      const path = `${directory}/${item.name}`;
+      if (item.isDirectory()) await collect(path);
+      else if (/\.(?:md|txt)$/.test(item.name)) files.push(path);
+    }
+  }
+  await collect("docs");
+  await collect(".github");
+  const leaks = [];
+  for (const file of files) {
+    const text = (await readFile(file, "utf8")).toLowerCase();
+    for (const label of labels) {
+      if (
+        file.toLowerCase().includes(label.toLowerCase()) ||
+        text.includes(label.toLowerCase())
+      )
+        leaks.push(file);
+    }
+  }
+  assert.deepEqual(
+    leaks,
+    [],
+    "Public customer-independent content must exclude historical customer labels",
+  );
 });
