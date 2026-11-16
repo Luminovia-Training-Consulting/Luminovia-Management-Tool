@@ -91,6 +91,12 @@ export function FileUpload({
       );
     },
     onSuccess: async (document) => {
+      // An initial in-flight list or version read can predate this committed
+      // upload. Cancel it before refetching so its older snapshot cannot hide
+      // the newly confirmed document or replacement.
+      await client.cancelQueries({ queryKey: ["documents"] });
+      await client.cancelQueries({ queryKey: ["document"] });
+      await client.cancelQueries({ queryKey: ["document-versions"] });
       await client.invalidateQueries({ queryKey: ["documents"] });
       await client.invalidateQueries({ queryKey: ["document"] });
       await client.invalidateQueries({ queryKey: ["document-versions"] });
