@@ -157,16 +157,21 @@ await withApiFixture(async ({ actor, mfa, sql, defer, checked, suffix }) => {
     0,
   );
   assert.ok((await notice(published.published.id)).read_at);
-  const now = new Date(),
-    minute = now.getUTCHours() * 60 + now.getUTCMinutes(),
+  // Read the actual PostgreSQL minute; keep the real window wide enough for
+  // publication and REST assertions to cross a minute boundary safely.
+  const minute = Number(
+      await sql(
+        "select extract(hour from now() at time zone 'UTC')::integer*60+extract(minute from now() at time zone 'UTC')::integer",
+      ),
+    ),
     clock = (value) =>
       `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
   await checked(
     teacher.client.rpc("save_attention_preferences", {
       p_payload: {
         enabled: true,
-        start_time: clock((minute + 1439) % 1440),
-        end_time: clock((minute + 1) % 1440),
+        start_time: clock((minute + 1410) % 1440),
+        end_time: clock((minute + 30) % 1440),
         time_zone: "UTC",
       },
       p_expected_version: 0,
