@@ -28,6 +28,8 @@ const de = {
   to: "Vertretung: {{name}}",
   expires: "Antwort möglich bis {{date}}",
   quote: "Verbindlich angebotene Konditionen",
+  quotePrivate:
+    "Die persönlichen Konditionen sind nur für die angefragte Vertretung sichtbar.",
   total: "Gesamthonorar",
   rate: "Vergütungseinheit",
   contract: "Ein gültiger eigener Rahmenvertrag ist erforderlich.",
@@ -91,6 +93,8 @@ const en: Record<keyof typeof de, string> = {
   to: "Substitute: {{name}}",
   expires: "Respond by {{date}}",
   quote: "Concrete assignment terms",
+  quotePrivate:
+    "Personal compensation is visible only to the proposed replacement.",
   total: "Total compensation",
   rate: "Rate unit",
   contract: "A valid personal framework agreement is required.",

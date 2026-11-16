@@ -179,7 +179,12 @@ const forecastSchema = z.object({
       accepted_gross_known: z.number().nullable(),
       accepted_margin_known: z.number().nullable(),
       unknown_gross_claims: z.number().int().nullable(),
-      pipeline_lecturer_cost_known: z.number(),
+      pipeline_lecturer_cost_known: z.number().nullable(),
+      pipeline_cost_unknown_positions: z
+        .number()
+        .int()
+        .nonnegative()
+        .default(0),
       pipeline_gross_known: z.number().nullable(),
       lecturer_invoice_payments: z.number(),
     }),

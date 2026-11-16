@@ -194,3 +194,45 @@ it("a successful online response refreshes the immutable quote and survives a UI
   ).not.toBeInTheDocument();
   expect(screen.getByText("Immutable reviewed fictional terms")).toBeVisible();
 });
+
+it("shows operational history without another recipient's private price or a consent action", async () => {
+  const sourceView = offer();
+  fake.responses.job_substitutions = [
+    {
+      ...sourceView,
+      quote_hash: null,
+      can_accept: false,
+      can_withdraw: true,
+      quote: {
+        ...sourceView.quote,
+        amount: null,
+        total_amount: null,
+        currency: null,
+        rate_unit: null,
+        terms: null,
+        terms_version: null,
+      },
+    },
+  ];
+  mount(<SubstitutionOffers jobId={job} />);
+  expect(
+    await screen.findByText(
+      "Die persönlichen Konditionen sind nur für die angefragte Vertretung sichtbar.",
+    ),
+  ).toBeVisible();
+  expect(
+    screen.queryByText("Immutable reviewed fictional terms"),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Vertretung verbindlich übernehmen" }),
+  ).not.toBeInTheDocument();
+  await act(async () => {
+    await i18n.changeLanguage("en");
+  });
+  expect(
+    screen.getByText(
+      "Personal compensation is visible only to the proposed replacement.",
+    ),
+  ).toBeVisible();
+});

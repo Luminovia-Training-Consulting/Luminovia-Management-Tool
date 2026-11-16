@@ -38,8 +38,8 @@ await withTestDatabase(
       if (commission) {
         const organisation = randomUUID();
         await sql(`insert into public.organisations(id,name) values(${q(organisation)},'Fictional handover finance client');
-          insert into private.job_commission_offers(job_id,organisation_id,gross_amount,gross_total_amount,platform_percent,platform_total_amount,lecturer_net_amount,lecturer_net_total_amount,currency)
-          select id,${q(organisation)},amount*2.4,total_amount*2.4,round((amount*2.4-amount)/(amount*2.4)*100,2),total_amount*2.4-total_amount,amount,total_amount,currency from public.jobs where id=${q(job)};`);
+          insert into private.job_commission_offers(job_id,organisation_id,gross_amount,gross_total_amount,platform_percent,platform_total_amount,lecturer_net_amount,lecturer_net_total_amount,currency,pricing_mode)
+          select id,${q(organisation)},amount*2.4,total_amount*2.4,round((amount*2.4-amount)/(amount*2.4)*100,2),total_amount*2.4-total_amount,amount,total_amount,currency,'legacy' from public.jobs where id=${q(job)};`);
       }
       const claim = await rpc(teacher, "claim_job", [
         q(job),

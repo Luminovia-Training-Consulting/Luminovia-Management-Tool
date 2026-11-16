@@ -145,17 +145,30 @@ function SubstituteOffer({ offer }: { offer: Substitution }) {
       </p>
       <p className="preserve-text">{offer.reason}</p>
       <h4>{t("quote")}</h4>
-      <p>
-        <strong>
-          {t("total")}:{" "}
-          {money(offer.quote.total_amount, offer.quote.currency, i18n.language)}
-        </strong>
-      </p>
-      <p>
-        {money(offer.quote.amount, offer.quote.currency, i18n.language)} ·{" "}
-        {common(offer.quote.rate_unit)} · {offer.quote.time_zone}
-      </p>
-      <p className="preserve-text">{offer.quote.terms}</p>
+      {offer.quote.total_amount !== null &&
+      offer.quote.amount !== null &&
+      offer.quote.currency !== null &&
+      offer.quote.rate_unit !== null ? (
+        <>
+          <p>
+            <strong>
+              {t("total")}:{" "}
+              {money(
+                offer.quote.total_amount,
+                offer.quote.currency,
+                i18n.language,
+              )}
+            </strong>
+          </p>
+          <p>
+            {money(offer.quote.amount, offer.quote.currency, i18n.language)} ·{" "}
+            {common(offer.quote.rate_unit)} · {offer.quote.time_zone}
+          </p>
+          <p className="preserve-text">{offer.quote.terms}</p>
+        </>
+      ) : (
+        <p>{t("quotePrivate")}</p>
+      )}
       <p className="preserve-text">{offer.quote.location}</p>
       {offer.quote.requires_contract && <p>{t("contract")}</p>}
       <ol>

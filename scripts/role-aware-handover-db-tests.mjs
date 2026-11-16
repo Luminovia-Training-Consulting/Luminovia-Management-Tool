@@ -1,0 +1,418 @@
+/** Recipient-specific compensation/consent and unknown forecast evidence.
+ * Policy percentages here are fictional and exist only in an owned disposable
+ * database. No operational configuration, real customer or SMTP is accessed.
+ */
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
+
+await withTestDatabase(
+  "role_handover",
+  async ({ sql, actor }) => {
+    const [
+      admin,
+      manager,
+      regularA,
+      regularB,
+      seniorA,
+      seniorB,
+      outsider,
+      org,
+    ] = Array.from({ length: 8 }, randomUUID);
+    const users = [
+      admin,
+      manager,
+      regularA,
+      regularB,
+      seniorA,
+      seniorB,
+      outsider,
+    ];
+    await sql(`insert into auth.users(id,email)values${users.map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};
+insert into public.user_roles(user_id,role)values(${q(admin)},'admin'),(${q(manager)},'management'),(${q(regularA)},'lecturer'),(${q(regularB)},'lecturer'),(${q(seniorA)},'senior_lecturer'),(${q(seniorB)},'senior_lecturer'),(${q(outsider)},'lecturer');
+insert into public.organisations(id,name)values(${q(org)},'Fictional recipient pricing academy');update public.profiles set display_name='Fictional integration actor',time_zone='UTC';`);
+    const call = (who, name, args = [], aal = "aal1") =>
+      actor(who, `select public.${name}(${args.join(",")})`, aal);
+    const rpc = async (...args) => JSON.parse(await call(...args));
+    // Explicit fictional settings; no product policy is seeded or inferred.
+    await rpc(
+      admin,
+      "configure_compensation_policy",
+      ["37", "61", "0"],
+      "aal2",
+    );
+    let sequence = 0,
+      checks = 0;
+    const check = async (name, run) => {
+      await run();
+      checks++;
+      console.log(`PASS ${name}`);
+    };
+    const ledger = (id) =>
+      sql(
+        `select row_to_json(l) from private.claim_revenue_ledger l where claim_id=${q(id)}`,
+      );
+    const claimFacts = (id) =>
+      sql(
+        `select jsonb_build_object('amount',amount,'total_amount',total_amount,'currency',currency,'terms',terms,'terms_version',terms_version)from public.job_claims where id=${q(id)}`,
+      );
+    const ownOffer = async (who, job) =>
+      (await rpc(who, "job_offers")).find((row) => row.id === job);
+    const proposal = async (fixture, target = fixture.target) => {
+      const id = await call(fixture.source, "propose_job_substitution", [
+        q(fixture.claim),
+        q(target),
+        q("Fictional complete replacement request"),
+        q(randomUUID()),
+      ]);
+      return (await rpc(target, "job_substitutions")).find(
+        (row) => row.id === id,
+      );
+    };
+    const accept = (who, offer) =>
+      rpc(who, "respond_job_substitution", [
+        q(offer.id),
+        q("accept"),
+        q(offer.quote_hash),
+        q(randomUUID()),
+        "true",
+      ]);
+    const make = async (source = regularA, target = seniorB) => {
+      const begins = Date.UTC(2048, 0, 1) + ++sequence * 5 * 86400000;
+      const payload = {
+        title: "Fictional recipient-specific handover",
+        delivery_type: "online",
+        time_zone: "UTC",
+        gross_amount: 100.01,
+        gross_total_amount: 100.01,
+        currency: "EUR",
+        rate_unit: "fixed_total",
+        sessions: Array.from({ length: 3 }, (_, n) => ({
+          starts_at: new Date(begins + n * 86400000).toISOString(),
+          ends_at: new Date(begins + n * 86400000 + 3600000).toISOString(),
+        })),
+        topic_ids: [],
+        terms: "Fictional personal compensation and complete teaching block",
+        requires_contract: false,
+      };
+      const job = await call(
+        admin,
+        "create_capacity_job",
+        [q(JSON.stringify(payload)), "2", q(randomUUID()), q(org), "null"],
+        "aal2",
+      );
+      const quote = await ownOffer(source, job);
+      const receipt = await rpc(source, "claim_job", [
+        q(job),
+        q(randomUUID()),
+        quote.terms_version,
+      ]);
+      assert.equal(receipt.status, "confirmed");
+      const result = { job, claim: receipt.claim_id, source, target };
+      return {
+        ...result,
+        oldLedger: await ledger(result.claim),
+        oldFacts: await claimFacts(result.claim),
+      };
+    };
+
+    // Reproduce the prior pending format, then apply only this forward migration.
+    const historical = await make();
+    const previousOffer = await proposal(historical);
+    await sql(
+      await readFile(
+        new URL(
+          "../supabase/migrations/20261116045011_role_aware_handover_and_forecast.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+    await check(
+      "Upgrade closes unsnapshotted pending offers without rewriting accepted facts or revenue",
+      async () => {
+        assert.equal(
+          (await rpc(historical.target, "job_substitutions")).find(
+            (row) => row.id === previousOffer.id,
+          ).status,
+          "superseded",
+        );
+        assert.equal(await claimFacts(historical.claim), historical.oldFacts);
+        assert.equal(await ledger(historical.claim), historical.oldLedger);
+      },
+    );
+
+    for (const [label, source, target] of [
+      ["regular to senior", regularA, seniorB],
+      ["senior to regular", seniorA, regularB],
+      ["same tier", regularA, regularB],
+    ]) {
+      await check(
+        `${label} consents to the recipient's exact own net, preserving old facts and conserved new revenue`,
+        async () => {
+          const fixture = await make(source, target),
+            offer = await proposal(fixture),
+            expected = await ownOffer(target, fixture.job);
+          assert.equal(offer.quote.amount, expected.amount);
+          assert.equal(offer.quote.total_amount, expected.total_amount);
+          assert.equal(offer.quote.terms_version, expected.terms_version);
+          assert.doesNotMatch(
+            JSON.stringify(offer),
+            /"(?:gross\w*|\w*percent\w*|policy_version|pricing_context|role_discriminator)"\s*:/,
+          );
+          const receipt = await accept(target, offer);
+          assert.equal(receipt.status, "confirmed");
+          const actual = JSON.parse(await claimFacts(receipt.claim_id));
+          assert.equal(actual.amount, offer.quote.amount);
+          assert.equal(actual.total_amount, offer.quote.total_amount);
+          assert.equal(await claimFacts(fixture.claim), fixture.oldFacts);
+          assert.equal(await ledger(fixture.claim), fixture.oldLedger);
+          assert.equal(
+            await sql(
+              `select count(*) from public.assignment_sessions where claim_id=${q(receipt.claim_id)} and released_at is null`,
+            ),
+            "3",
+          );
+          assert.equal(
+            await sql(
+              `select gross_total_amount=platform_total_amount+lecturer_net_total_amount and lecturer_net_total_amount=${Number(offer.quote.total_amount)} from private.claim_revenue_ledger where claim_id=${q(receipt.claim_id)}`,
+            ),
+            "t",
+          );
+        },
+      );
+    }
+
+    await check(
+      "Source and operational management receive no recipient price, terms or guessable quote hash",
+      async () => {
+        const fixture = await make(),
+          offer = await proposal(fixture);
+        for (const [who, aal] of [
+          [fixture.source, "aal1"],
+          [manager, "aal2"],
+        ]) {
+          const projection = (
+            await rpc(who, "job_substitutions", [q(fixture.job)], aal)
+          ).find((row) => row.id === offer.id);
+          assert.equal(projection.quote_hash, null);
+          for (const key of [
+            "amount",
+            "total_amount",
+            "currency",
+            "rate_unit",
+            "terms",
+            "terms_version",
+          ])
+            assert.equal(projection.quote[key], null);
+          assert.equal(projection.can_accept, false);
+        }
+        await assert.rejects(
+          call(outsider, "job_substitutions", [q(fixture.job)]),
+          /42501/,
+        );
+        await assert.rejects(
+          actor(
+            fixture.target,
+            `select private.substitution_pricing_context(${q(fixture.claim)},${q(fixture.target)})`,
+          ),
+          /42501/,
+        );
+        await assert.rejects(
+          actor(fixture.target, "select * from private.job_substitutions"),
+          /42501/,
+        );
+        assert.equal(
+          (
+            await rpc(admin, "job_substitutions", [q(fixture.job)], "aal2")
+          ).find((row) => row.id === offer.id).quote.total_amount,
+          offer.quote.total_amount,
+        );
+      },
+    );
+
+    await check(
+      "Role change after proposal rejects stale consent before INSERT and leaves source/calendar/ledger intact",
+      async () => {
+        const fixture = await make(regularA, regularB),
+          offer = await proposal(fixture);
+        await call(
+          admin,
+          "set_account_roles",
+          [q(regularB), "array['senior_lecturer']"],
+          "aal2",
+        );
+        assert.equal((await accept(regularB, offer)).status, "terms_changed");
+        assert.equal(await claimFacts(fixture.claim), fixture.oldFacts);
+        assert.equal(await ledger(fixture.claim), fixture.oldLedger);
+        assert.equal(
+          await sql(
+            `select status from public.job_claims where id=${q(fixture.claim)}`,
+          ),
+          "confirmed",
+        );
+        assert.equal(
+          await sql(
+            `select count(*) from public.assignment_sessions where claim_id=${q(fixture.claim)} and released_at is null`,
+          ),
+          "3",
+        );
+        await call(regularA, "respond_job_substitution", [
+          q(offer.id),
+          q("withdraw"),
+          "null",
+          q(randomUUID()),
+          "false",
+        ]);
+        const fresh = await proposal(fixture);
+        assert.notEqual(fresh.quote_hash, offer.quote_hash);
+        assert.equal((await accept(regularB, fresh)).status, "confirmed");
+        await call(
+          admin,
+          "set_account_roles",
+          [q(regularB), "array['lecturer']"],
+          "aal2",
+        );
+      },
+    );
+
+    await check(
+      "Captured offer-policy drift invalidates consent while global future policy changes preserve the captured deal",
+      async () => {
+        const fixture = await make(),
+          offer = await proposal(fixture);
+        await rpc(
+          admin,
+          "configure_compensation_policy",
+          ["38", "62", "1"],
+          "aal2",
+        );
+        assert.equal((await accept(fixture.target, offer)).status, "confirmed");
+        const changed = await make(),
+          stale = await proposal(changed);
+        await assert.rejects(
+          call(
+            admin,
+            "set_job_commission",
+            [q(changed.job), "200", "200", "null"],
+            "aal2",
+          ),
+          /22023/,
+        );
+        // Superuser-only fault injection tests the independent acceptance fence.
+        await sql(
+          `update private.job_commission_offers set policy_version=policy_version+1 where job_id=${q(changed.job)}`,
+        );
+        assert.equal(
+          (await accept(changed.target, stale)).status,
+          "terms_changed",
+        );
+        assert.equal(await ledger(changed.claim), changed.oldLedger);
+        assert.equal(
+          await sql(
+            `select status from public.job_claims where id=${q(changed.claim)}`,
+          ),
+          "confirmed",
+        );
+      },
+    );
+
+    await check(
+      "A pre-proposal customer gross mismatch cannot become an authorised replacement contract",
+      async () => {
+        const fixture = await make();
+        await sql(
+          `update private.job_commission_offers set gross_amount=gross_amount+1,gross_total_amount=gross_total_amount+1 where job_id=${q(fixture.job)}`,
+        );
+        const offer = await proposal(fixture);
+        assert.equal(
+          (await accept(fixture.target, offer)).status,
+          "financial_review",
+        );
+        assert.equal(await ledger(fixture.claim), fixture.oldLedger);
+        assert.equal(
+          await sql(
+            `select status from public.job_claims where id=${q(fixture.claim)}`,
+          ),
+          "confirmed",
+        );
+      },
+    );
+
+    await check(
+      "Concurrent promotion and acceptance serialize to either exact frozen receipt or untouched stale rejection",
+      async () => {
+        const fixture = await make(regularA, regularB),
+          offer = await proposal(fixture);
+        const [receipt] = await Promise.all([
+          accept(regularB, offer),
+          call(
+            admin,
+            "set_account_roles",
+            [q(regularB), "array['senior_lecturer']"],
+            "aal2",
+          ),
+        ]);
+        assert.ok(["confirmed", "terms_changed"].includes(receipt.status));
+        if (receipt.status === "confirmed")
+          assert.equal(
+            JSON.parse(await claimFacts(receipt.claim_id)).total_amount,
+            offer.quote.total_amount,
+          );
+        else
+          assert.equal(
+            await sql(
+              `select status from public.job_claims where id=${q(fixture.claim)}`,
+            ),
+            "confirmed",
+          );
+        assert.equal(await ledger(fixture.claim), fixture.oldLedger);
+        await call(
+          admin,
+          "set_account_roles",
+          [q(regularB), "array['lecturer']"],
+          "aal2",
+        );
+      },
+    );
+
+    await check(
+      "Role-dependent open positions are unknown, never a zero-cost sentinel; accepted costs stay actual",
+      async () => {
+        for (const who of [admin, manager]) {
+          const forecast = await rpc(
+            who,
+            "finance_forecast",
+            [q("2048-01-01"), q("2048-04-01"), "0.5"],
+            "aal2",
+          );
+          assert.ok(
+            forecast.months.some(
+              (row) => row.pipeline_cost_unknown_positions > 0,
+            ),
+          );
+          for (const row of forecast.months.filter(
+            (row) => row.pipeline_cost_unknown_positions > 0,
+          ))
+            assert.equal(row.pipeline_lecturer_cost_known, null);
+          assert.ok(
+            forecast.months.some((row) => row.accepted_lecturer_cost > 0),
+          );
+          assert.doesNotMatch(
+            JSON.stringify(forecast),
+            /"(?:\w*percent\w*|policy_version|pricing_context)"\s*:/,
+          );
+          if (who === manager)
+            assert.ok(
+              forecast.months.every((row) => row.pipeline_gross_known === null),
+            );
+        }
+      },
+    );
+    console.log(
+      `${checks} role-aware handover/forecast PostgreSQL groups passed.`,
+    );
+  },
+  { migrationsThrough: "20261116045010" },
+);

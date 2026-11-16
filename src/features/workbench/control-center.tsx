@@ -364,10 +364,19 @@ export function ControlCenterPage() {
                           </>
                         )}
                         <td>
-                          {money(
-                            item.pipeline_lecturer_cost_known,
-                            item.currency,
-                            i18n.language,
+                          {item.pipeline_lecturer_cost_known === null
+                            ? t("unknown")
+                            : money(
+                                item.pipeline_lecturer_cost_known,
+                                item.currency,
+                                i18n.language,
+                              )}
+                          {item.pipeline_cost_unknown_positions > 0 && (
+                            <p>
+                              {t("unknownPipelineCost", {
+                                count: item.pipeline_cost_unknown_positions,
+                              })}
+                            </p>
                           )}
                         </td>
                         {forecast.data.gross_authorized && (

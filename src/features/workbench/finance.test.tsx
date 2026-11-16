@@ -351,6 +351,29 @@ it("does not fetch any privileged Control Center or forecast data without curren
   expect(fake.rpc).toHaveBeenCalledWith("get_my_permissions");
 });
 
+it("keeps an open role-dependent cost unknown in both languages instead of rendering a zero fee", async () => {
+  const forecast = fake.responses.finance_forecast as {
+    months: Array<Record<string, unknown>>;
+  };
+  forecast.months[0]!.pipeline_lecturer_cost_known = null;
+  forecast.months[0]!.pipeline_cost_unknown_positions = 3;
+  mount(<ControlCenterPage />);
+  const table = await screen.findByRole("table");
+  const marker = await within(table).findByText(
+    "3 offene Positionen ohne verbindlich vereinbarte persönliche Vergütung",
+  );
+  const cell = marker.closest("td")!;
+  expect(cell).toHaveTextContent("Nicht verfügbar");
+  expect(cell).not.toHaveTextContent(/0[,.]00/);
+  await act(async () => {
+    await i18n.changeLanguage("en");
+  });
+  expect(cell).toHaveTextContent("Not available");
+  expect(cell).toHaveTextContent(
+    "3 open positions without agreed personal compensation",
+  );
+});
+
 it("rejects impossible and oversized periods before any new data request", () => {
   for (const period of [
     { from: "2020-02-30", until: "2020-03-02" },

@@ -109,6 +109,8 @@ const de = {
   knownGross: "Bekannter Bruttoumsatz",
   knownMargin: "Bekannte Marge",
   pipelineCost: "Erwartete offene Dozentenkosten",
+  unknownPipelineCost:
+    "{{count}} offene Positionen ohne verbindlich vereinbarte persönliche Vergütung",
   pipelineGross: "Erwarteter bekannter Bruttoumsatz",
   payments: "Erfasste Dozentenzahlungen",
   unknownGross: "{{count}} Zuweisungen ohne bekannten Bruttowert",
@@ -223,6 +225,8 @@ const en: Record<keyof typeof de, string> = {
   knownGross: "Known gross revenue",
   knownMargin: "Known margin",
   pipelineCost: "Expected open lecturer cost",
+  unknownPipelineCost:
+    "{{count}} open positions without agreed personal compensation",
   pipelineGross: "Expected known gross revenue",
   payments: "Recorded lecturer payments",
   unknownGross: "{{count}} assignments without a known gross value",

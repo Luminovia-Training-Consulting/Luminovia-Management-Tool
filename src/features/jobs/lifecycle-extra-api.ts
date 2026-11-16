@@ -79,52 +79,67 @@ export const substitutionCandidatesQuery = (
     staleTime: 15000,
     retry: false,
   });
-export const substitutionSchema = z.object({
-  id: uuid,
-  job_id: uuid,
-  original_claim_id: uuid,
-  target_user_id: uuid,
-  target_name: z.string(),
-  proposer_name: z.string(),
-  reason: z.string(),
-  quote_hash: z.string().regex(/^[a-f0-9]{64}$/),
-  status: z.enum([
-    "pending",
-    "accepted",
-    "declined",
-    "withdrawn",
-    "superseded",
-    "expired",
-  ]),
-  expires_at: instant,
-  created_at: instant,
-  accepted_claim_id: uuid.nullable(),
-  can_accept: z.boolean(),
-  can_withdraw: z.boolean(),
-  quote: z.object({
-    title: z.string(),
-    customer_name: z.string(),
-    time_zone: z.string().refine(validZone),
-    delivery_type: z.enum(["online", "onsite"]),
-    location: z.string(),
-    amount: z.number().nonnegative(),
-    total_amount: z.number().nonnegative(),
-    currency: z.enum(["EUR", "AUD"]),
-    rate_unit: z.enum([
-      "per_day",
-      "per_hour",
-      "per_teaching_unit",
-      "fixed_total",
+export const substitutionSchema = z
+  .object({
+    id: uuid,
+    job_id: uuid,
+    original_claim_id: uuid,
+    target_user_id: uuid,
+    target_name: z.string(),
+    proposer_name: z.string(),
+    reason: z.string(),
+    // Other lecturers may follow the handover without seeing the recipient's
+    // private net quote or a fingerprint that could reveal it by guessing.
+    quote_hash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .nullable(),
+    status: z.enum([
+      "pending",
+      "accepted",
+      "declined",
+      "withdrawn",
+      "superseded",
+      "expired",
     ]),
-    terms: z.string(),
-    terms_version: z.number().int().positive(),
-    requires_contract: z.boolean(),
-    sessions: z
-      .array(z.object({ starts_at: instant, ends_at: instant }))
-      .min(1)
-      .max(500),
-  }),
-});
+    expires_at: instant,
+    created_at: instant,
+    accepted_claim_id: uuid.nullable(),
+    can_accept: z.boolean(),
+    can_withdraw: z.boolean(),
+    quote: z.object({
+      title: z.string(),
+      customer_name: z.string(),
+      time_zone: z.string().refine(validZone),
+      delivery_type: z.enum(["online", "onsite"]),
+      location: z.string(),
+      amount: z.number().nonnegative().nullable(),
+      total_amount: z.number().nonnegative().nullable(),
+      currency: z.enum(["EUR", "AUD"]).nullable(),
+      rate_unit: z
+        .enum(["per_day", "per_hour", "per_teaching_unit", "fixed_total"])
+        .nullable(),
+      terms: z.string().nullable(),
+      terms_version: z.number().int().positive().nullable(),
+      requires_contract: z.boolean(),
+      sessions: z
+        .array(z.object({ starts_at: instant, ends_at: instant }))
+        .min(1)
+        .max(500),
+    }),
+  })
+  .refine(
+    (offer) =>
+      !offer.can_accept ||
+      (offer.quote_hash !== null &&
+        offer.quote.amount !== null &&
+        offer.quote.total_amount !== null &&
+        offer.quote.currency !== null &&
+        offer.quote.rate_unit !== null &&
+        offer.quote.terms !== null &&
+        offer.quote.terms_version !== null),
+    "An actionable recipient quote must contain its exact personal terms",
+  );
 export type Substitution = z.infer<typeof substitutionSchema>;
 export const substitutionsKey = (actor: string, job?: string) =>
   ["job-substitutions", actor, job ?? "inbox"] as const;
