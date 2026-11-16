@@ -45,6 +45,39 @@ const expectedServices = [
   "web",
 ].sort();
 const immutable = /^[A-Za-z0-9./_-]+(?::[A-Za-z0-9._-]+)?@sha256:[a-f0-9]{64}$/;
+/** Apply the existing candidate secret boundary before any diagnostic slicing. */
+function redactCandidateDiagnostic(value, secrets) {
+  let output = String(value);
+  for (const secret of secrets)
+    if (secret.length >= 8) output = output.replaceAll(secret, "[redacted]");
+  return output
+    .replace(
+      /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,
+      "[redacted JWT]",
+    )
+    .replace(/\bsb_(?:secret|publishable)_[A-Za-z0-9_-]+\b/g, "[redacted key]");
+}
+
+/** Preserve the primary failure and final cleanup context within the same
+ * bounded diagnostic budget. Registered secrets/JWTs/keys are removed first;
+ * truncating raw credentials could otherwise leave an unredactable fragment. */
+export function candidateCommandFailure(file, errors, output, secrets) {
+  const context = redactCandidateDiagnostic(errors + "\n" + output, secrets);
+  const marker = "\n[... diagnostic middle omitted ...]\n";
+  const excerpt =
+    context.length <= 12000
+      ? context
+      : context.slice(0, 8000) +
+        marker +
+        context.slice(-(4000 - marker.length));
+  return (
+    "Candidate operation failed: " +
+    redactCandidateDiagnostic(file, secrets) +
+    " " +
+    excerpt
+  );
+}
+
 // Compute a stable SHA-256 digest for the source/artifact comparison.
 const hash = (data) => createHash("sha256").update(data).digest("hex");
 
@@ -365,20 +398,6 @@ export async function checkCandidate({
   };
   process.once("SIGINT", abort);
   process.once("SIGTERM", abort);
-  const redact = (value) => {
-    let output = String(value);
-    for (const secret of secrets)
-      if (secret.length >= 8) output = output.replaceAll(secret, "[redacted]");
-    return output
-      .replace(
-        /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,
-        "[redacted JWT]",
-      )
-      .replace(
-        /\bsb_(?:secret|publishable)_[A-Za-z0-9_-]+\b/g,
-        "[redacted key]",
-      );
-  };
   const run = (file, args, options = {}) =>
     new Promise((done, fail) => {
       if (cancelled && !cleanupMode) {
@@ -418,12 +437,7 @@ export async function checkCandidate({
         if (code === 0) done(output.trim());
         else
           fail(
-            new Error(
-              "Candidate operation failed: " +
-                file +
-                " " +
-                redact(errors + "\n" + output).slice(-12000),
-            ),
+            new Error(candidateCommandFailure(file, errors, output, secrets)),
           );
       });
       child.stdin.end(options.input);
