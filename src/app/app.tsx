@@ -28,6 +28,16 @@ const AdminAuditPage = lazy(() =>
     default: module.AdminAuditPage,
   })),
 );
+const DemoPage = lazy(() =>
+  import("../features/demo/demo").then((module) => ({
+    default: module.DemoPage,
+  })),
+);
+const HelpCenter = lazy(() =>
+  import("../features/help/help").then((module) => ({
+    default: module.HelpCenter,
+  })),
+);
 const AvailabilityPage = lazy(() =>
   import("../features/availability/availability").then((module) => ({
     default: module.AvailabilityPage,
@@ -164,6 +174,8 @@ export function App() {
       <AppNotices />
       <Suspense fallback={<Loading />}>
         <Routes>
+          <Route path="/demo/*" element={<DemoPage />} />
+          <Route path="/help" element={<HelpCenter />} />
           <Route
             path="/login"
             element={

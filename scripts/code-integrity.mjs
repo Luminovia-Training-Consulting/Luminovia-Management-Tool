@@ -136,12 +136,17 @@ export function auditFrontend(root) {
     for (const dependency of modules.get(file) ?? []) follow(dependency);
   }
   follow(join(source, "main.tsx"));
-  const routePatterns = [...routes].map(
-    (route) =>
-      new RegExp(
-        `^${route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/:[^/]+/g, "[^/]+")}/?$`,
-      ),
-  );
+  const routePatterns = [...routes].map((route) => {
+    // React Router's terminal splat includes its base path and descendants.
+    // Keep the separator inside the optional group: /demo/* must not match
+    // /demography. Other stars remain escaped literals, not global wildcards.
+    const splat = route.endsWith("/*");
+    const base = splat ? route.slice(0, -2) : route;
+    const pattern = base
+      .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      .replace(/:[^/]+/g, "[^/]+");
+    return new RegExp(`^${pattern}${splat ? "(?:/.*)?" : "/?"}$`);
+  });
   const invalidLinks = links.filter(({ path }) => {
     const pathname = path.split(/[?#]/)[0];
     return (
