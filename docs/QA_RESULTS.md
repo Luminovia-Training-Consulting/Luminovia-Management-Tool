@@ -2,6 +2,14 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## Current roles/pricing/welcome/PR-preview extension — combined acceptance pending
+
+[PR18](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/18) preserves accepted M6 and all historical commercial records. The current combined run is a separate gate. Focused frontend:215cases/49files, S48.61/B43.47/F38.76/L50.43%; lint/type/format/build and the source graph pass. Preview/runtime/community guard combination passes36cases; three additional execution-based QA bootstrap cases pass.
+
+Actual signed-source `a55089b` local `.local/tests/98a4eba3/RESULT.txt` and [CI43795741418](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43795741418) both return **exit1** after all26migrations, schema lint/advisors, **257 individual SQL cases**, genuine retained password/MFA/profile/private-event/Storage bytes and four actual API suites. The first CBW commissioned-offer API correctly rejects missing private policy. The QA bootstrap had been filtered out by intentionally sanitized nested startup; the corrected runner explicitly seeds its fictional policy with its own QA identity after the persistence proof. No normal development or production policy is chosen by seeding. Native API/browser/build-PWA completion is still required after this test-environment correction.
+
+Earlier CI43794432854 exposed wrapper fixture dependence on the outer QA port overlay, fixed and covered by an actual nested-process regression. CI43794974281 exposed legacy test expectations that allowed one equal-role administrator suspension; assertions now require both denied and both accounts unchanged. No permission/assertion was relaxed to accept either behavior. Current captured-offer duplication, role-bound consent, private configuration and stale-policy UI reload have independent regressions. Source/test existence and previous milestone acceptance are not labelled complete acceptance for this extension.
+
 ## Subsequent theme regression — actual defect fixed, new CI pending
 
 Repeated documentation CI43774441712 rejected one taxonomy contrast check(69/70passed). Actual served M6markup/styles reproduced first-state button contrast1.841/1.037 during background interpolation; stable themes pass. Removing that interpolation retains transform feedback and gives immediate dark9.104/13.982 on the same actual page. New effect-based desktop/mobile regression samples the first computed theme states; exact new PR9 CI remains required. The historical accepted M6counts below are not rewritten as if this later run passed.

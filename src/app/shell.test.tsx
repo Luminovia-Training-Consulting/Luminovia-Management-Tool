@@ -3,7 +3,13 @@
  * the shell; real Auth and permission acceptance remain separate.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -135,14 +141,17 @@ describe("tour access recovery", () => {
   it("explains an actual permission query failure and retries both owning queries", async () => {
     access.failed = true;
     const { user, client } = setup();
-    expect(screen.getByRole("alert")).toHaveTextContent(
+    const tour = within(
+      screen.getByRole("region", { name: "Portal-Rundgang" }),
+    );
+    expect(tour.getByRole("alert")).toHaveTextContent(
       "Die Zugriffsrechte konnten nicht geladen werden",
     );
     expect(
-      screen.getByRole("button", { name: "Portal-Rundgang" }),
+      tour.getByRole("button", { name: "Portal-Rundgang" }),
     ).toBeDisabled();
     await user.click(
-      screen.getByRole("button", { name: "Zugriffsrechte erneut laden" }),
+      tour.getByRole("button", { name: "Zugriffsrechte erneut laden" }),
     );
     expect(refetchPermissions).toHaveBeenCalledTimes(1);
     expect(refetchRoles).toHaveBeenCalledTimes(1);

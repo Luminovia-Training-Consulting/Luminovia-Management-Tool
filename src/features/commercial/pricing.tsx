@@ -19,21 +19,67 @@ import {
   commissionAccessQuery,
   commissionKeys,
   commissionReportQuery,
+  offerPolicyQuery,
   splitFee,
   type ClientRequest,
   type CommissionRecord,
+  type CommissionAccess,
 } from "./commission-api";
 import "./platform-i18n";
 import "./platform.css";
+/** Show role-specific previews only to an actor whose server projection permits gross access. */
+export function RoleFeePreview({
+  gross,
+  currency,
+  access,
+}: {
+  gross: number;
+  currency: string;
+  access: CommissionAccess | undefined;
+}) {
+  const { t } = useTranslation("platform");
+  if (
+    !access?.can_manage_gross ||
+    !Number.isFinite(gross) ||
+    gross < 0 ||
+    !Number.isFinite(access.regular_lecturer_percent) ||
+    !Number.isFinite(access.senior_lecturer_percent)
+  )
+    return null;
+  return (
+    <div>
+      {(
+        [
+          ["regularLecturer", access.regular_lecturer_percent!],
+          ["seniorLecturer", access.senior_lecturer_percent!],
+        ] as const
+      ).map(([label, share]) => (
+        <section key={label}>
+          <h3>
+            {t(label)} · {share}%
+          </h3>
+          <FeeSplitPreview
+            gross={gross}
+            percent={100 - share}
+            lecturerAmount={splitFee(gross, share).platform}
+            currency={currency}
+          />
+        </section>
+      ))}
+    </div>
+  );
+}
 /** Explain local cent allocation without presenting it as a binding server snapshot. */
 export function FeeSplitPreview({
   gross,
   percent,
   currency,
+  lecturerAmount,
 }: {
   gross: number;
   percent: number;
   currency: string;
+  lecturerAmount?: number;
 }) {
   const { t, i18n } = useTranslation("platform");
   if (
@@ -44,7 +90,14 @@ export function FeeSplitPreview({
     percent > 100
   )
     return null;
-  const split = splitFee(gross, percent);
+  const split =
+    lecturerAmount === undefined
+      ? splitFee(gross, percent)
+      : {
+          gross,
+          lecturer: lecturerAmount,
+          platform: Math.round((gross - lecturerAmount) * 100) / 100,
+        };
   return (
     <div className="platform-split" role="group" aria-label={t("pricePreview")}>
       <div>
@@ -67,26 +120,26 @@ function EditPrice({
   actor,
   job,
   record,
+  access,
   onDone,
 }: {
   actor: string;
   job: Job;
   record: CommissionRecord | undefined;
+  access: CommissionAccess;
   onDone: () => void;
 }) {
   const { t } = useTranslation("platform");
   const online = useOnline();
   const client = useQueryClient();
-  const [amount, setAmount] = useState(
-    String(record?.gross_amount ?? Number(job.amount) * 2),
-  );
-  const [total, setTotal] = useState(
-    String(record?.gross_total_amount ?? Number(job.total_amount) * 2),
-  );
-  const [percent, setPercent] = useState(
-    String(record?.platform_percent ?? 50),
-  );
+  const [amount, setAmount] = useState(String(record?.gross_amount ?? ""));
+  const [total, setTotal] = useState(String(record?.gross_total_amount ?? ""));
+  const percent =
+    access.regular_lecturer_percent == null
+      ? NaN
+      : 100 - access.regular_lecturer_percent;
   const valid =
+    access.policy_configured &&
     Number.isFinite(Number(amount)) &&
     Number.isFinite(Number(total)) &&
     Number.isFinite(Number(percent)) &&
@@ -102,13 +155,15 @@ function EditPrice({
         p_job_id: job.id,
         p_gross_amount: Number(amount),
         p_gross_total_amount: Number(total),
-        p_platform_percent: Number(percent),
       });
       if (error) throw error;
     },
     onSuccess: async () => {
       await Promise.all([
         client.invalidateQueries({ queryKey: ["jobs"] }),
+        client.invalidateQueries({
+          queryKey: ["commission-offer-policy", actor, job.id],
+        }),
         client.invalidateQueries({ queryKey: commissionKeys.report(actor) }),
         client.invalidateQueries({ queryKey: commissionKeys.requests(actor) }),
       ]);
@@ -154,23 +209,10 @@ function EditPrice({
             disabled={save.isPending}
           />
         </Field>
-        <Field id="edit-platform-percent" label={t("platformPercent")}>
-          <input
-            id="edit-platform-percent"
-            type="number"
-            required
-            min="0"
-            max="100"
-            step="0.01"
-            value={percent}
-            onChange={(event) => setPercent(event.target.value)}
-            disabled={save.isPending}
-          />
-        </Field>
       </div>
-      <FeeSplitPreview
+      <RoleFeePreview
         gross={Number(total)}
-        percent={Number(percent)}
+        access={access}
         currency={job.currency}
       />
       <p className="muted commercial-small">
@@ -193,14 +235,26 @@ export function JobPricingPanel({ job }: { job: Job }) {
     ...commissionReportQuery(actor),
     enabled: Boolean(access.data?.can_manage_gross),
   });
+  const policy = useQuery({
+    ...offerPolicyQuery(actor, job.id),
+    enabled: Boolean(access.data?.can_manage_gross),
+  });
   const lifecycle = useQuery({
     ...lifecycleQuery(actor, job.id),
     enabled: Boolean(access.data?.can_manage_gross),
   });
   const [editing, setEditing] = useState(false);
   if (!access.data?.can_manage_gross) return null;
-  if (report.isPending) return <Loading />;
-  if (report.isError) return <ErrorState retry={() => void report.refetch()} />;
+  if (report.isPending || policy.isPending) return <Loading />;
+  if (report.isError || policy.isError)
+    return (
+      <ErrorState
+        retry={() => {
+          void report.refetch();
+          void policy.refetch();
+        }}
+      />
+    );
   const record = report.data.find((row) => row.job_id === job.id);
   const locked =
     lifecycle.isPending ||
@@ -213,11 +267,20 @@ export function JobPricingPanel({ job }: { job: Job }) {
       <h2>{t("pricingTitle")}</h2>
       {record?.pricing_model === "commission" &&
       record.gross_total_amount !== null ? (
-        <FeeSplitPreview
-          gross={Number(record.gross_total_amount)}
-          percent={Number(record.platform_percent)}
-          currency={record.currency}
-        />
+        record.claim_id || !policy.data ? (
+          <FeeSplitPreview
+            gross={Number(record.gross_total_amount)}
+            percent={Number(record.platform_percent)}
+            currency={record.currency}
+            lecturerAmount={Number(record.lecturer_net_total_amount)}
+          />
+        ) : (
+          <RoleFeePreview
+            gross={Number(record.gross_total_amount)}
+            currency={record.currency}
+            access={{ ...access.data, ...policy.data }}
+          />
+        )
       ) : (
         <p className="muted">{t("legacyPricing")}</p>
       )}
@@ -239,6 +302,7 @@ export function JobPricingPanel({ job }: { job: Job }) {
             actor={actor}
             job={job}
             record={record}
+            access={access.data}
             onDone={() => setEditing(false)}
           />
         )}
@@ -260,7 +324,11 @@ export function PublishClientRequest({
   const common = useTranslation().t;
   const online = useOnline();
   const client = useQueryClient();
-  const [percent, setPercent] = useState("50");
+  const access = useQuery(commissionAccessQuery(actor));
+  const percent =
+    access.data?.regular_lecturer_percent == null
+      ? NaN
+      : 100 - access.data.regular_lecturer_percent;
   const [terms, setTerms] = useState("");
   const [contract, setContract] = useState(true);
   const publish = useMutation({
@@ -268,7 +336,6 @@ export function PublishClientRequest({
       requireOnline();
       const { data, error } = await db().rpc("publish_client_request", {
         p_request_id: request.id,
-        p_platform_percent: Number(percent),
         p_terms: terms.trim(),
         p_requires_contract: contract,
         p_claim_deadline: null,
@@ -292,22 +359,9 @@ export function PublishClientRequest({
         publish.mutate();
       }}
     >
-      <Field id="publish-platform-percent" label={t("platformPercent")}>
-        <input
-          id="publish-platform-percent"
-          type="number"
-          min="0"
-          max="100"
-          step="0.01"
-          required
-          value={percent}
-          onChange={(event) => setPercent(event.target.value)}
-          disabled={publish.isPending}
-        />
-      </Field>
-      <FeeSplitPreview
+      <RoleFeePreview
         gross={Number(request.gross_total_amount)}
-        percent={Number(percent)}
+        access={access.data}
         currency={request.currency}
       />
       <Field id="publish-client-terms" label={common("terms")}>
@@ -335,7 +389,9 @@ export function PublishClientRequest({
             !online ||
             publish.isPending ||
             !terms.trim() ||
-            !percent ||
+            !access.data?.can_manage_gross ||
+            !access.data.policy_configured ||
+            !Number.isFinite(percent) ||
             Number(percent) < 0 ||
             Number(percent) > 100
           }

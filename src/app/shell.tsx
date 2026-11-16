@@ -30,10 +30,13 @@ import {
   Star,
   PanelLeftClose,
   PanelLeftOpen,
+  Compass,
 } from "lucide-react";
+import { WelcomeGuideEntry } from "../features/onboarding/welcome";
 import { NotificationsMenu } from "../features/notifications/notifications";
 import { Avatar } from "../features/profile/avatar";
 import { useAuth } from "../features/auth/auth-context";
+import { useAuthorizationRefresh } from "../features/auth/authorization-refresh";
 import { db } from "../lib/supabase";
 import { permissionsQuery, profileQuery, userRolesQuery } from "../lib/queries";
 import { Button } from "../components/ui/button";
@@ -54,6 +57,7 @@ export function Shell() {
   const profile = useQuery(profileQuery(session!.user.id));
   const permissions = useQuery(permissionsQuery(session!.user.id));
   const roles = useQuery(userRolesQuery(session!.user.id));
+  useAuthorizationRefresh(session!.user.id, roles.data, permissions.data);
   const teaching =
     roles.data?.some((role) =>
       ["owner", "admin", "lecturer", "senior_lecturer"].includes(role),
@@ -99,6 +103,7 @@ export function Shell() {
     { to: "/settings", icon: Settings2, label: "settings" },
     { to: "/profile", icon: UserRound, label: "profile" },
     { to: "/security", icon: ShieldCheck, label: "security" },
+    { to: "/welcome", icon: Compass, label: "welcome:nav" },
     ...(manage ? [{ to: "/admin", icon: Settings2, label: "admin" }] : []),
   ];
   const mobilePrimary = [
@@ -265,7 +270,9 @@ export function Shell() {
                   void permissions.refetch();
                   void roles.refetch();
                 }}
-              />
+              >
+                <WelcomeGuideEntry />
+              </PortalTour>
               <Outlet />
             </>
           )}

@@ -14,6 +14,7 @@ export const accountRoles = [
   "lecturer",
   "client",
   "participant",
+  "guest",
 ] as const;
 /** Derive input roles from the role list; the server decides current assignment permission. */
 export type AccountRole = (typeof accountRoles)[number];
@@ -26,7 +27,22 @@ export interface AccountPerson {
   locale: string;
   time_zone: string;
   roles: AccountRole[];
+  can_assign_roles: boolean;
+  can_change_active: boolean;
 }
+/** Server-provided role capabilities; browser state never grants assignment authority. */
+export interface AccountRoleCapability {
+  role: AccountRole;
+  permissions: string[];
+  assignable: boolean;
+}
+/** Refresh current assignable roles under this actor's own cache scope. */
+export const accountRoleCatalogQuery = (actor: string) =>
+  queryOptions({
+    queryKey: ["account-role-catalog", actor],
+    queryFn: () => accountRequest<AccountRoleCapability[]>("roles"),
+    staleTime: 0,
+  });
 /** Account page with total count and the actual applied pagination bounds. */
 export interface AccountList {
   items: AccountPerson[];

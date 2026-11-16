@@ -18,6 +18,7 @@ import { isConfigured } from "../lib/supabase";
 import { useOnline } from "../lib/online";
 import { Button } from "../components/ui/button";
 import { Dashboard } from "../features/dashboard/dashboard";
+import { WelcomeGuidePage } from "../features/onboarding/welcome";
 import { Jobs, JobDetail } from "../features/jobs/jobs";
 import { ProfilePage } from "../features/profile/profile";
 // Job/profile widgets already load this module; another lazy wrapper only adds
@@ -216,6 +217,7 @@ export function App() {
           <Route element={<Protected />}>
             <Route element={<Shell />}>
               <Route index element={<Dashboard />} />
+              <Route path="welcome" element={<WelcomeGuidePage />} />
               <Route path="jobs" element={<Jobs />} />
               <Route path="jobs/:id" element={<JobDetailRoute />} />
               <Route path="calendar" element={<CalendarPage />} />
