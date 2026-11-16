@@ -1,6 +1,6 @@
 # Operational extensions: source status and boundaries
 
-The additional product direction is preserved verbatim in [OPERATIONS_EXTENSION_PROMPT.txt](OPERATIONS_EXTENSION_PROMPT.txt). It extends the [original specification](UNIVERSAL_MASTER_PROMPT.txt). Current source status below was checked against repository baseline `2c7d326` on 17 November 2026; execution results remain separately source-bound in [QA_RESULTS](QA_RESULTS.md). The complete remaining product scope is in [ROADMAP](../ROADMAP.md).
+The additional product direction is preserved verbatim in [OPERATIONS_EXTENSION_PROMPT.txt](OPERATIONS_EXTENSION_PROMPT.txt). It extends the [original specification](UNIVERSAL_MASTER_PROMPT.txt). Current source status below was checked against repository baseline `4f7f6c0` on 17 November 2026; execution results remain separately source-bound in [QA_RESULTS](QA_RESULTS.md). The complete remaining product scope is in [ROADMAP](../ROADMAP.md).
 
 ## Source delivered in this repository
 
@@ -19,10 +19,10 @@ The recorded complete local `2c850` checkpoint covered 674 frontend cases, all 6
 
 ## Remaining requested modules
 
-Formal change requests, website-to-portal enquiries and accounting integration remain separate deliverables; their source was not present in this reviewed main baseline. A feature branch, investigation or retained Git ancestry does not make them delivered application functions.
+Formal change requests and accounting integration remain separate deliverables; their source was not present in this reviewed main baseline. Portal-side website enquiries are now integrated through [PR25](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/25), merge `4f7f6c0`, with one additive migration after the unchanged 68-file history. The [enquiry workflow](WEBSITE_ENQUIRIES.md) provides disabled-by-default trusted-server intake, private original/consent records, MFA triage/customer/contact creation and transactional course planning; public Website transport/activation remains separate. A feature branch, investigation or retained Git ancestry does not make them delivered application functions.
 
 - **Change requests:** implement a versioned request/approval/amendment/apply workflow preserving original accepted sessions, terms, revenue and audit. Existing lifecycle edits are not this full amendment model.
-- **Website enquiries:** implement and test secure intake plus a permissioned management workflow. Public Website activation, an external anti-abuse service or real outgoing mail requires its own authorised operation.
+- **Website activation:** the Portal intake/management source exists, but connecting the public Website requires approved trusted transport and abuse controls. Public Website changes, new external services and real outgoing mail require their own authorised operation.
 - **Accounting:** build validated original-currency adapters/exports using genuine required invoice/customer data. Existing CSV is not XRechnung/ZUGFeRD interoperability; do not invent tax identities, conversions or validation success. The prior accounting candidate was excluded from PR24 by signed revert `31d4e9` and remains separate work.
 
 ## Verification and publication

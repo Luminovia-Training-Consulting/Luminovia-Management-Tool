@@ -4,7 +4,9 @@
 
 Readiness settings/tasks/instruction receipts/events reference course_runs and currently assigned profiles; percentages derive from current source records. Delivery records reference assignment_sessions, with immutable submissions and events plus actor/request receipts. Replacement offers link original job_claims to a new accepted job_claim only after atomic handover; allocation history remains in assignment_sessions. Support tickets link their requester, optional authorised course/claim/organisation and support assignee; separate messages/events/attachments enforce hidden internal entries. All new persistent operational tables are private, RLS-enabled and accessed by reviewed invoker RPCs over scoped implementations. [Schema/workflow guides](OPERATIONS_EXTENSION_STATUS.md) and additive migration source own exact columns and acceptance.
 
-The target diagrams preserve the complete product map; conceptual entities do not claim that every table exists. Implemented diagrams show selected physical relations in the **68 published SQL sources** at accepted main `2c7d326`, with `PRIVATE_*` aliases mapped to unexposed private relations. Both PR17 and PR24 cohorts are merged. This is a domain map, not a complete schema dump. Later routine replacements, triggers and constraints must be read in source order. [ARCHITECTURE](ARCHITECTURE.md), [MIGRATION_GUIDE](MIGRATION_GUIDE.md) and [API_REFERENCE](API_REFERENCE.md) explain the current boundaries. Source identity and a diagram do not establish hosted installation or complete acceptance; see [QA_RESULTS](QA_RESULTS.md).
+The target diagrams preserve the complete product map; conceptual entities do not claim that every table exists. Implemented diagrams show selected physical relations in the **69 published SQL sources** at accepted main `4f7f6c0`, with `PRIVATE_*` aliases mapped to unexposed private relations. PR17, PR24 and PR25 cohorts are merged. This is a domain map, not a complete schema dump. Later routine replacements, triggers and constraints must be read in source order. [ARCHITECTURE](ARCHITECTURE.md), [MIGRATION_GUIDE](MIGRATION_GUIDE.md) and [API_REFERENCE](API_REFERENCE.md) explain the current boundaries. Source identity and a diagram do not establish hosted installation or complete acceptance; see [QA_RESULTS](QA_RESULTS.md).
+
+The enquiry cohort adds private original-submission, history and retry records, with links to authorised management, directory organisations/contacts and an explicitly converted course run. These selected diagrams do not enumerate the complete enquiry schema. [WEBSITE_ENQUIRIES](WEBSITE_ENQUIRIES.md) and its owning migration describe exact columns and grants; directory linkage does not create customer-account membership.
 
 ## Core target relations
 
@@ -482,7 +484,7 @@ The three additive sources are `20261116080741_scoped_administrative_job_pickers
 `20261116080743_global_calendar_publications` and
 `20261116080746_qualification_evidence_and_attestation_history`. Together with the
 29 earlier migration sources these form the historical 32-migration M7/M8 model.
-The following diagram covers the fourteen-source operational cohort depicted here, not every later addition in the current 68-source inventory. Focused source,
+The following diagram covers the fourteen-source operational cohort depicted here, not every later addition in the current 69-source inventory. Focused source,
 SQL/component/Edge checks do not establish combined native acceptance.
 
 ## Implemented personal settings and external delivery

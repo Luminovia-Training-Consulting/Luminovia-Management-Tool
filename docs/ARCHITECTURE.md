@@ -2,7 +2,7 @@
 
 ## Current system
 
-The application is a static React/TypeScript/Vite PWA backed by Supabase PostgreSQL, Auth, Data API, Realtime, private Storage and bounded Edge Functions. There is no additional business application server. Accepted main `2c7d326` contains 68 released SQL files, including the merged smart-operations and PR24 operational modules. [API_REFERENCE](API_REFERENCE.md) is regenerated from that complete migration replay; [ERD](ERD.md) maps the physical domain relations and [MIGRATION_GUIDE](MIGRATION_GUIDE.md) explains source order.
+The application is a static React/TypeScript/Vite PWA backed by Supabase PostgreSQL, Auth, Data API, Realtime, private Storage and bounded Edge Functions. There is no additional business application server. Accepted main `4f7f6c0` contains 69 released SQL files, including the merged smart-operations, PR24 operational modules and PR25 private enquiry intake. [API_REFERENCE](API_REFERENCE.md) is regenerated from that complete migration replay; [ERD](ERD.md) maps the physical domain relations and [MIGRATION_GUIDE](MIGRATION_GUIDE.md) explains source order.
 
 Browser components validate input and call identity-scoped query/mutation APIs. PostgreSQL checks the current actor, MFA/capability, resource membership, expected version and transaction invariants before committing. Realtime and notifications refresh authorised projections after the commit. Edge gateways hold server credentials only for narrowly checked invitation, private-byte and rendering operations; browser roles never receive them.
 
@@ -13,6 +13,8 @@ Course readiness is a live resource-scoped SQL projection; no authoritative perc
 Dedicated support evidence also checks optional course-resource history. Incoming dedication and a reverse registry trigger serialize on the document row; neither ownership nor removed course history can override that exclusivity. A feature introducing that registry later must install the reverse guard and preserve private selectors/downloads. [Contract and actual checks](SUPPORT_COURSE_RESOURCE_REGRESSION.md).
 
 The smart-operations model complements these workflows. The ordered model includes current actor-role quotes, immutable recipient-specific substitution consent, current-status receipts, own Teaching Day course/contact context, effective-amendment forecasts and dedicated private-document isolation. The current combined source requires fresh and retained-data replay plus the complete application/native acceptance; previous source-bound results remain in [QA_RESULTS](QA_RESULTS.md). [ERD](ERD.md) maps physical relations, [MIGRATION_GUIDE](MIGRATION_GUIDE.md) explains source order and [API_REFERENCE](API_REFERENCE.md) inventories replayed interfaces. The full target remains [PRODUCT_SPEC](PRODUCT_SPEC.md) and the authoritative [master prompt](UNIVERSAL_MASTER_PROMPT.txt). Hosted state, external delivery and platform acceptance remain separate operational evidence.
+
+The [website enquiry gateway](WEBSITE_ENQUIRIES.md) is a bounded integration-only Edge entry point, disabled by default. It adds a private server credential above the existing gateway boundary, stores original consent-versioned submissions in private ledgers and exposes management decisions through current MFA/capability-checked invoker RPCs. Conversion creates an unpublished course plan atomically; it neither creates a quote nor activates a public Website transport.
 
 ## ADR-001 — separate private portal and static frontend
 

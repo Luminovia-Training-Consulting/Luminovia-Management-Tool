@@ -56,6 +56,8 @@ Documentation uses English; the application supports German/English and user-aut
 - [Web Push on desktop and mobile](WEB_PUSH.md)
 - [Administrative audit log](ADMIN_AUDIT.md)
 
+- [Website enquiry intake and management](WEBSITE_ENQUIRIES.md)
+
 ## Architecture, API and source contracts
 
 - [Architecture and decisions](ARCHITECTURE.md)

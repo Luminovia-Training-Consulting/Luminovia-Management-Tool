@@ -1,6 +1,6 @@
 # Reading and safely extending SQL migrations
 
-This guide covers the **68 published SQL source files** present in accepted main `2c7d326` on 17 November 2026. PR17's operational cohort and PR24's six additional files are merged; earlier candidate/pending descriptions apply only to their historical checkpoints. The ordered source versions and byte hashes are bound into the generated [API reference](API_REFERENCE.md).
+This guide covers the **69 published SQL source files** present in accepted main `4f7f6c0` on 17 November 2026. PR17's operational cohort, PR24's six additional files and PR25's enquiry intake are merged; earlier candidate/pending descriptions apply only to their historical checkpoints. The ordered source versions and byte hashes are bound into the generated [API reference](API_REFERENCE.md).
 
 Published SQL participates in preview, update and recovery fingerprints and must remain byte-identical. New business changes require additive migrations. Repository history does not establish what an installed or hosted database has applied. Read [QA_RESULTS](QA_RESULTS.md) for source-specific executed checks and [FUNCTIONAL_ACCEPTANCE](FUNCTIONAL_ACCEPTANCE.md) for the current acceptance contract. A split CI phase alone is not complete application acceptance; publication remains a separate authorised manual operation.
 
@@ -592,6 +592,16 @@ Replaces the current inbox target in place and retains an owner-only trusted cor
 
 Tests: automatically discovered [operational-forward-db-tests.mjs](../scripts/operational-forward-db-tests.mjs); strict optional [operational-pr17-integration.mjs](../scripts/operational-pr17-integration.mjs). [Integration, chronology and actual evidence](OPERATIONAL_FORWARD_INTEGRATION.md).
 
+### 69. Private website enquiry intake and planning
+
+Source: [20261116143242_website_enquiry_intake.sql](../supabase/migrations/20261116143242_website_enquiry_intake.sql).
+
+A service-only intake RPC validates a bounded, consent-versioned submission and records original private content, sender-scoped retry identity and durable rate limits. Current `organisations.manage` and MFA protect the management queue, history, assignment, notes and customer linking. Conversion additionally requires `courses.manage`, locks the enquiry and creates a complete unpublished course run atomically; it creates no accepted quote, job or customer account. Private ledgers retain RLS without direct browser grants.
+
+The current notification resolver discovers its owner-only enquiry helper without renaming the accepted resolver or granting authenticated users direct helper execution. Later capability/status revocation is checked after lock waits. The integration-only Edge endpoint remains disabled by default and requires a separate server credential; a public Website change or external delivery is not implied by a source merge. See [WEBSITE_ENQUIRIES](WEBSITE_ENQUIRIES.md) for the HTTP contract and activation boundary.
+
+Tests: [enquiries-db-tests.mjs](../scripts/enquiries-db-tests.mjs), [enquiries-upgrade-db-tests.mjs](../scripts/enquiries-upgrade-db-tests.mjs), [enquiries-api-check.mjs](../scripts/enquiries-api-check.mjs) and [enquiries.spec.ts](../tests/e2e/enquiries.spec.ts). These are entry points; actual execution remains source-bound evidence in [QA_RESULTS](QA_RESULTS.md).
+
 ## The critical data flows
 
 **A job is claimed:** browser draft and idempotency key → public `claim_job` invoker → latest private implementation → current actor, locks, contract/qualification/capacity/time-conflict checks → immutable claim/schedule/revenue snapshots, memberships and notifications → transaction commit → confirmed UI. An error cannot leave a partially successful multi-day booking. Kanban calls permitted lifecycle actions; dragging a card does not create a claim.
@@ -612,7 +622,7 @@ Tests: automatically discovered [operational-forward-db-tests.mjs](../scripts/op
 
 ## Historical pre-release source version reconciliation
 
-At this historical pre-PR17-release checkpoint, the accepted main prefix contained 36 published SQL files. The table retains its status at that time; accepted main now includes these files in the 68-source inventory above. Nine shared branch sources are byte-identical to their published canonical files and are represented once. The 23 then-undelivered PR17 files were assigned new forward identifiers with the installed CLI, preserving every SQL byte, SHA-256 and relative dependency order. This is source-file reconciliation before release, not an installed-database history repair. No ordinary or hosted database was reset, backdated or given fabricated migration records. The separate 60th source adds the post-lock waitlist authority correction described above; it does not rewrite those 59 files.
+At this historical pre-PR17-release checkpoint, the accepted main prefix contained 36 published SQL files. The table retains its status at that time; accepted main now includes these files in the 69-source inventory above. Nine shared branch sources are byte-identical to their published canonical files and are represented once. The 23 then-undelivered PR17 files were assigned new forward identifiers with the installed CLI, preserving every SQL byte, SHA-256 and relative dependency order. This is source-file reconciliation before release, not an installed-database history repair. No ordinary or hosted database was reset, backdated or given fabricated migration records. The separate 60th source adds the post-lock waitlist authority correction described above; it does not rewrite those 59 files.
 
 | Earlier branch version | Current source version | Status at reconciliation |
 | ---------------------- | ---------------------- | ------------------------ |
