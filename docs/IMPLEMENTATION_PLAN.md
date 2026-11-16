@@ -2,16 +2,17 @@
 
 ## Current user-directed operational delivery preparation
 
-The latest direct request is to make PR24 and then PR25 mergeable and merge them individually. A subsequently relayed direct instruction reserves PR17 first, so actual main/QA ordering is **PR17 → PR24 → PR25**. This coordinates actual merge collisions; it is not a blanket development or source freeze. Accepted PR10/main `1de544d` and all36released SQL blobs remain intact. The six unreleased operational files now follow that accepted prefix (42total); after PR17 actually merges, compare its real migration prefix and recreate only still-unreleased versions if required.
+The current delivery order is **PR17 → PR24 → PR25**: make each PR mergeable and merge it separately after its current required checks pass. Accepted main `c0622a763127081a7b5be092ce2782253991c6a5` includes PR29’s English private-pricing and discovery documentation. This local preparation integrates those six documentation updates while retaining PR24’s four operational modules, four observed authority-race corrections, 36 unchanged released SQL files and six pending additions (42 SQL files in total). Independent source work continues while the actual merge and shared acceptance slots follow that order.
 
-- [x] Reconcile accepted main PR10 with the first-four operational source, retaining both full product/extension ledgers and the current personal-only review/manual-publication rules.
-- [x] Recreate the six pending migration filenames through the installed CLI with unchanged SQL bodies and dependency order; retain all36published blobs exactly.
-- [x] Generate the actual183public-RPC reference from42SQL files. Root's current source checks pass546frontend cases/71files, unchanged coverage floors, types/lint/format/compiler checks; focused SQL evidence remains separately scoped.
-- [ ] Complete the real current-base integration after actual PR17, including renewed prefix checks and relevant source/functional checks.
-- [ ] Obtain all15successful exact-head application/native/security/package checks and signed history before individually merging PR24, then repeat the scoped process for PR25. Historical acceptance does not replace these gates.
-- [ ] Preserve every outstanding item across all seven requested additions; do not infer full product, native retention, installation or production acceptance from this preparation.
+- [x] Reconcile accepted PR10 and PR29 documentation with the operational source, retaining the complete product and extension ledgers, customer-neutral guidance, personal Carina-only PR review exception and manual-only publication controls.
+- [x] Create the six pending migration versions through the installed CLI in dependency order; preserve all 36 released bodies exactly. Generate the current 183-public-RPC inventory from the actual 42-file replay.
+- [x] Correct and test the four real post-wait authority failures through current public account and business RPCs, retaining the original claims, receipts and financial snapshots.
+- [x] Observe all 15 required checks passing on signed PR24 head `2a15df12a287c8882d675417c90637142fe7866d`, including the complete application and native retained-data gates in [run 43842679588](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43842679588). That source-bound result remains recorded separately from this documentation merge and the future accepted PR17 integration.
+- [ ] Integrate PR17 only after its actual main merge. Compare the real accepted migration prefix, recreate only still-unreleased versions if necessary, and complete the relevant current-source functional checks.
+- [ ] Obtain all 15 successful exact-head checks and signed history on that final current-base PR24 integration, then merge PR24 normally and repeat the scoped process for PR25.
+- [ ] Preserve every outstanding item across all seven requested additions. Full product completion, installation and production acceptance remain separate from the recorded PR24 checks.
 
-The earlier PR10/PR27 priority notes below describe their recorded source checkpoints. Their merges are now accepted; they are not current blockers or instructions to restore a previous shared freeze.
+The earlier PR10, PR27 and PR29 preparation notes below record their named historical checkpoints. Those PRs are now accepted; their former holds and pending checkboxes do not restore an earlier source freeze or supersede the current order.
 
 ## Seven additional operational modules — current user request
 
@@ -26,6 +27,15 @@ The exact additional [implementation prompt](OPERATIONS_EXTENSION_PROMPT.txt) is
 - [ ] Verify any separately authorised installation from actual state. Local development/tests are now the default; the separate workflow owner controls publication switches. No production/public Website/DNS/real-mail/purchase action is implied.
 
 Initial SQL evidence: readiness16, delivery12, replacement13, support12groups. Whole-source257tests and unchanged coverage floors pass; TypeScript/ESLint pass. The canonical complete command returned exit1 before startup because another checkout holds shared QA ownership; this is not a full integration pass.
+
+## English quote/discovery documentation — released PR10 continuation
+
+- [x] Integrate accepted main `1de544d` and preserve all 36 released SQL sources, neutral naming, operator guidance and complete actual-main histories.
+- [x] Replace obsolete unpaged/future wording with actual shipped actor quotes, monetary filtering/order, cursor context, exact consent and current SQL/query/DTO/UI ownership in the role, discovery and migration guides.
+- [x] Pass fresh `./portal check` (515 frontend cases/65 files, unchanged coverage floors and build), 102 runtime cases, 20 focused documentation/privacy/catalogue/metadata cases and technical-guide formatting; deliver the signed bounded update through [PR #29](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/29).
+- [ ] Complete all 15 exact-current-head required checks and the assigned actual merge. Preserve queue-controlled Draft; no additional routine user approval is required.
+
+The earlier 3ed9a24 all-green checkpoint applies only to its e88 base. All remaining product and operational scope in the ledger below remains required.
 
 ## PR10 current accepted Main13 checkpoint
 
