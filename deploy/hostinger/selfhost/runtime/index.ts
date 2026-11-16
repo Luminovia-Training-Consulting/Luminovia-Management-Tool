@@ -17,7 +17,7 @@ addEventListener('unhandledrejection', (ev) => {
 const MAX_WORKER_RETRIES = 3
 
 // Only reviewed application workers are executable, including through the private gateway.
-const PORTAL_FUNCTIONS = new Set(['files', 'invite-lecturer', 'accounts'])
+const PORTAL_FUNCTIONS = new Set(['files', 'invite-lecturer', 'accounts', 'website-enquiries'])
 
 const JWT_SECRET = Deno.env.get('JWT_SECRET')
 const SUPABASE_JWKS = parseJwks(Deno.env.get('SUPABASE_JWKS'))
