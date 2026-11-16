@@ -2,6 +2,10 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — M6 follow-up accepted; complete M7 test starts
+
+PR9 exact head3c55678 passed application CI43777971815 and actual isolated selfhost compatibility, with valid metadata. It merged as9c2103b83c6097ef92faa0bddf18e59aef18a5e6 at2026-11-16T00:30:00Z. The M7 branch now includes that actual main ancestry and preserves both sets of evidence below. Signed M7 source b45d468 is saved remotely; source remains frozen for the full detached local gate. Later pending statements below are historical checkpoints.
+
 ## 16 November 2026 — M7 integrated source freeze before canonical verification
 
 All five module owners have frozen connected source. Existing accepted24migrations remain untouched; actual CLI-created29schema includes chat230301,files230604,jobs230702,attention231704,announcements232824 (20261115). File/chat source was signed and pushed incrementally as7a896e5; remaining completed source/docs are now being integrated. All executed focus checks retain their narrow temporary-SQL/RTL scope; native actual Auth/API/scan/WebSocket/browser/PWA gate is still required.
@@ -23,6 +27,18 @@ Focused SQL uses only the explicitly owned `supabase_db_luminovia-portal-test-m7
 Current additive schema owners:20261115230301chat_structured_mentions,20261115230604file_discovery_personal_organisation,20261115230702job_discovery_and_saved_views. Existing kinds/resourceIDs and current resource ACLs are reused. First-ever structured message/recipient mention may renew one read chatnotice once; retries, repeat edits and remove/readd do not create spam, and globalchat preferences still suppress optional delivery. File tests have reproduced the1000-row omission and begun >1000/cursor/privacy checks. Do not treat focused temporary-SQL identity stubs as native Auth acceptance.
 
 Immediate root operations still required: finish PR9 CI/merge, verify the updated official GitHub preview's actual post-upgrade persistence, then integrate/root-test quiet hours/announcements, review all agent slices and run a complete canonical M7 acceptance. Capture the long local launcher exit through an independent detached wrapper as well as RESULT.txt. Continue the complete remaining module ledger after this gate; no production/public-site changes are authorized.
+
+## 16 November 2026 — repeated CI exposed and reproduced a transient theme contrast defect
+
+Documentation PR9's unchanged-application run43774441712 reached69/70passing browsers but rejected taxonomy desktop immediately after a light→dark switch: axe color-contrast on primary/secondary buttons. Native Chromium reproduced this against the actual official M6preview. Foreground colors changed immediately while the160ms background transition retained/interpolated old colors: first-state contrast1.841/1.037, at32ms3.076/1.765, while stable endpoints were7.905/15.493(light) and9.104/13.982(dark).
+
+The production fix removes only background interpolation from `.button`, retaining transform feedback. Applying that exact revised production rule in the same real preview page makes immediate dark ratios9.104/13.982 and every sampled state≥4.5. No Auth/business data was modified. A new desktop/mobile E2E checks the first computed light→dark→light action-label states with the actual application stylesheet; it deliberately waits only for the initial before-change render, never after the theme changes. The CSS fix and this regression are included in the next exact PR9 CI; no blind rerun, axe relaxation or arbitrary wait replaces the failure. Private evidence `.local/theme-contrast-probe/actual-preview-comparison.json`.
+
+## 16 November 2026 — official GitHub preview upgraded and retained data verified
+
+The actual official latest-main preview upgraded from5f89986(18migrations) to mergedM6dc8e9a7(24migrations). `./portal github plan` identified exactly the six forward migrations and requested review for taxonomy/lifecycle/capacity changes. The reviewed source-bound digest was accepted for this owned fictional local preview; no normal development/hosted/production database was targeted. `./portal github update --accept-migration-plan <reviewed-digest>` returned exit0 and reportedready on5373/API56321/Mailpit56324. Status confirms exactdc8e9a7 and actual migration history count24.
+
+An actual post-upgrade `runtime-persistence-check` from the pinned preview source then returned **exit0**, retaining the same password, verified MFA, edited profile/timezone, private event and exact private Storage bytes through stop/start. Its fictional probe and private bucket were cleaned. Private evidence: `.local/github-official-preview/m6-update.log`, `m6-update.exit`, `m6-persistence.log`, `m6-persistence.exit`. The preview remains usable, with owned persistent data. Signed annotated tag `milestone/m6-connected-operations` targetsdc8e9a7 and GitHub reports verified=true/reason=valid. This is development acceptance, not a production release tag.
 
 ## 16 November 2026 — M6 application and retained-data acceptance passed; PR8 merged
 
@@ -691,7 +707,6 @@ Inspected actual repository administration, existing ruleset27315671, GitHub Act
 
 The current API accepted direct User29256704 PR-only bypass; no extra team or contributor rights were created. Generic Integration15368 bypass was rejected; exact Bot User41898282 was accepted in disabled policies. A temporary ruleset tests only `codex/maintenance-signature-probe-*`, requiring a PR and deliberately absent check so bot success cannot come from an unprotected branch. The first queued probe was cancelled because it waited behind an unrelated daily run; signature-only concurrency is now separate. Main rules stay unchanged until the equivalent bot behavior is proved. Current focused metadata/documentation checks pass 9/9; the gate includes eight regression cases, actual malicious-text/no-execution and failure-exit fixtures. Exact CI and final server readback remain the delivery gates; their durable record belongs to the resulting PR.
 
-
 ### GitHub actual identity proof and approval boundary
 
 The real protected signature probe43755067933 failed: accepting Bot User41898282 in a ruleset does not make the normal GITHUB_TOKEN bypass it. Removed temporary rule27329046; no probe branch remained. Original main rule27315671 stays unchanged. Review27329000 and checks27329142 remain disabled, with no ineffective bot bypass. Actual Carina User29256704 PR-only configuration is accepted. Activation is waiting for a private repository-scoped maintenance App, not silently replacing the bot exception with a broad human-role bypass.
@@ -707,6 +722,5 @@ The latest supplied master-prompt attachment is byte-identical to docs/UNIVERSAL
 Requested continuation: implement the remaining product scope, classify all historical/open PRs and provide one-command latest-GitHub local testing. All PRs1–5 were classified from their actual changed filenames, preserving existing labels; PR6 already has its classification. Ten additional concrete area labels expand the catalogue to30 managed labels plus9 untouched defaults. The matching catalogue source will accompany the product milestone.
 
 The first independently reviewable runtime slice adds `./portal github` and `start/update/plan/test/status/stop/credentials`: fixed upstream main, immutable SHA, owned separate persistent preview, explicit project/port overlay, safe migration plan, unchanged development data, isolated QA worktree and kernel exclusion. Focused real Git/process fixtures, syntax/lint/format/docs checks passed. This source slice does not yet claim a real Auth/Storage preview-start proof: the required helper must first exist in latest main; exact CI and the authorised merge record own that release gate. Actual preview execution follows that merge. Other product features remain in progress in the isolated M6 worktree and are not included in this runtime-only commit.
-
 
 The first preview CI43761274867 correctly failed its runtime fixtures before starting services: they copied the canonical runner's already-rewritten553xx/5273 config instead of normal upstream543xx/5173 config. Replaced only the fictional upstream input with self-contained normal TOML and added an explicit rejection of nested QA/preview overlays; production guards remain unchanged. The native rehearsal from signed278ce9b separately passed18 migrations, actual Auth/MFA/profile/private event/Storage bytes across stop/start, then removed only its own project and confirmed original5173/scratchDB remained running. Logs are private .local/m6-preview-native. The corrected exact-source CI remains the release gate.
