@@ -1,3 +1,7 @@
+/**
+ * DE/EN UI resources for the platform namespace. Module import registers these strings with
+ * i18next; authored business content is not translated.
+ */
 import i18n from "../../lib/i18n";
 const pairs: Record<string, [string, string]> = {
   location: ["Ort / Link", "Location / link"],

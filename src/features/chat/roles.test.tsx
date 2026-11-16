@@ -1,3 +1,7 @@
+/**
+ * Regressions for staff capabilities and separate participant controls. Mocked UI projections do
+ * not establish database room access.
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -25,6 +29,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(role: string) {
   state.role = role;
   rpc.mockImplementation(async (name: string) => ({

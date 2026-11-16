@@ -1,3 +1,7 @@
+/**
+ * Organization-scoped course requests and client spending views. Membership limits available
+ * organizations; publication and lecturer allocation remain separate server operations.
+ */
 import { useRef, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -39,6 +43,7 @@ import {
 import { PublishClientRequest } from "./pricing";
 import "./platform-i18n";
 import "./platform.css";
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
   organisation: z.string().uuid(),
   title: z.string().trim().min(1).max(200),
@@ -63,6 +68,7 @@ const schema = z.object({
     .min(1)
     .max(60),
 });
+/** Create an organization-bound course request from local schedule/price drafts. */
 function RequestForm({
   actor,
   organisations,
@@ -398,6 +404,7 @@ function RequestForm({
     </form>
   );
 }
+/** Show confirmed request state and applicable next actions for this organization. */
 function RequestCard({
   actor,
   request,
@@ -544,6 +551,7 @@ function RequestCard({
     </article>
   );
 }
+/** Combine permitted client organizations, requests and the actor's spending projection. */
 export function ClientPortalPage() {
   const { t, i18n } = useTranslation("platform");
   const { session } = useAuth();

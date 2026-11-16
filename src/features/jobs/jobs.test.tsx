@@ -1,3 +1,7 @@
+/**
+ * Regressions for actual claim state, current-terms consent and safe retry identities. SDK/DOM
+ * fixtures do not prove atomic server allocation.
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -48,6 +52,7 @@ const job: Job = {
   ],
   job_requirements: [],
 };
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(route = "/jobs/job-a", list = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },

@@ -7,7 +7,8 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Correct the missing disposable compensation bootstrap after real retention, with explicit owned QA identity and three executable orchestration regressions.
 - [x] Cover candidate-only settings after the older native-selfhost baseline upgrades and passes retention/readiness; preserve no-policy normal startup.
 - [x] Integrate current main e75f55d, retaining account welcome, Portal tour and public help/demo.
-- [ ] Observe exact-head complete quality/security/application/native-selfhost/preview-package results on PR18 and record actual evidence. No production or merge action is part of this CI repair.
+- [x] Observe actual application/quality/security success on21959fa:249unit/component tests,88desktop/mobile cases,2built-PWA cases, real retention/SQL/API and checked cleanup.
+- [ ] Observe native-selfhost/preview outcomes, integrate PR20/PR15 main without losing private-pricing behavior or source comments, and complete exact final-head CI. No production action is part of this CI repair; respect the independent PR15 main-merge hold.
 
 ## Current continuation — private roles/pricing, welcome guide and PR previews
 
@@ -24,6 +25,28 @@ The latest request supersedes the earlier shared compensation default. Work is i
 - [ ] Production policy setup/migration/deployment is a separate operational step; this request does not authorise production or real email changes.
 
 [Roles and private pricing](DELEGATED_ROLES_PRICING.md), [welcome guide](WELCOME_GUIDE.md), [PR previews](PR_PREVIEWS.md). The verbatim original specification remains preserved; these explicit user extensions update its operating details without dropping any remaining modules.
+## Comprehensive code comments and agent guide
+
+Requested directly on `main`: explain the maintained code throughout and provide a project-specific `AGENTS.md`, using OpenXLR's guide as a structural reference. Work uses a dedicated review worktree so the original checkout's concurrent feature changes remain separate. The independent English community commit `3256d1a` is preserved; contributor guidance remains English and source commentary uses English.
+
+- [x] Annotate the original170frontend and104launcher/script/browser-test files, maintained Edge/operating code and root build/CI/configuration entry points with purposes, contracts and important flow/security/resource explanations. Preserve and annotate the incoming PR16 guided-demo/help main additions:183frontend and109launcher/script/browser-test files in total, including the two private fixture sources. Combined226frontend/63runtime/10publicbrowser cases pass locally; exact protected PR acceptance remains required.
+- [x] Expand `AGENTS.md` with the actual ownership map, reading order, business/security invariants, commands, collaboration/Git rules, comprehensive English-comment policy and operational boundaries; add a canonical `.github/copilot-instructions.md` entry point.
+- [x] Explain all 24 released migrations in [MIGRATION_GUIDE](MIGRATION_GUIDE.md); preserve their exact bytes, vendor provenance, JSON/lockfiles, generated data and assets.
+- [x] Compare executable syntax/literals, CSS rules and parsed/active configuration against current main at pure-comment checkpoint1055101; run frontend coverage, type/lint/build, runtime, Edge and offline operating checks.
+- [x] Harden only the existing private MFA test-state IO after the protected CodeQL gate re-flags it; ten real filesystem regression groups and all62combined runtime tests pass. Fresh exact-head full CI remains the acceptance source for this bounded harness exception.
+
+The full product ledger below remains unchanged. The protected PR additionally requires hardening the existing private MFA test-state file reader/writer after CodeQL re-flags its old race warning in the touched fixture. That bounded harness change receives real ownership/symlink/atomic-write regressions; application business behavior stays unchanged. Exact-head CodeQL and full application/selfhost CI remain acceptance gates, with no advance production/hosted claim.
+
+## Historical PR CI repair
+
+Requested PRs6/7/8/9/14/11 are already merged. Their final application checks and later metadata failures are distinguished in [the audit](PR_CI_REPAIR_20261116.md);14 is a cancelled temporary-base fixture, not a failed product merge.
+
+- [x] Reconcile the35managed labels with current GitHub usage; preserve existing names, colours, descriptions and assignments.
+- [x] Use current trusted main for the ordinary read-only metadata check, skip automatic closed-PR events and add a main-only manual historical check; retain strict categories, canonical identity and stale-head rejection.
+- [x] Pass12focused Node regressions plus workflow/format/link checks and real read-only label validation for all six PRs.
+- [ ] Publish the signed fix, observe exact-head CI, merge under the user's explicit instruction and execute all six historical checks through the merged main workflow.
+
+No new application migration, production deployment or reduction of the remaining product scope belongs to this repair.
 
 ## Guided exploration and practical help
 

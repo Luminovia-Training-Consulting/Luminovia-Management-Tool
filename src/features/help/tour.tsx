@@ -1,3 +1,7 @@
+/**
+ * Explicit navigation guidance inside the live portal, without performing business mutations.
+ * The shell keys this component by actor; current capabilities and readiness shape every render.
+ */
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -54,6 +58,7 @@ const copy = {
   },
 };
 
+/** Read progress on the actor-keyed mount; navigation occurs only after explicit tour controls are used. */
 export function PortalTour({
   actor,
   roles,
@@ -74,6 +79,7 @@ export function PortalTour({
   const [state, setState] = useState<TourState>(() => readTour(actor));
   const heading = useRef<HTMLHeadingElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
+  // Recompute visible stops from current capabilities; stored progress never grants a destination.
   const modules = permittedTourModules(roles, permissions);
   const index = Math.max(
     0,
@@ -87,6 +93,7 @@ export function PortalTour({
     setState(next);
     storeTour(actor, next);
   };
+  // Update guidance progress and navigate only; destination pages retain their normal access checks.
   const visit = (position: number) => {
     const next = modules[position];
     if (!next) return;

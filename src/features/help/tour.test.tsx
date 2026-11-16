@@ -1,3 +1,7 @@
+/**
+ * DOM regressions for explicit tour navigation, actor-scoped progress, capability changes and
+ * keyboard focus. Browser-storage fixtures do not replace native authorization/MFA checks.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

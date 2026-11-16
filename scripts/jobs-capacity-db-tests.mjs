@@ -12,6 +12,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
   );
   await actor(manager, "select public.configure_compensation_policy(31,73,0)", "aal2");
   let day = 0;
+  /** Creates a controlled job with an explicit currency and gross/net pricing variant. */
   const body = (gross = false, currency = "EUR") => {
     day += 3;
     return {
@@ -34,6 +35,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
       })),
     };
   };
+  /** Creates the complete multi-position offer through create_capacity_job with controlled capacity, pricing and retry identity. */
   const create = async (
     capacity = 3,
     gross = false,
@@ -45,8 +47,10 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
       `select public.create_capacity_job(${quoteSql(JSON.stringify(payload))}::jsonb,${capacity},'${key}')`,
       "aal2",
     );
+  /** Reads the current versioned management projection at the specified MFA level. */
   const meta = async (job, who = manager, aal = "aal2") =>
     JSON.parse(await actor(who, `select public.job_lifecycle('${job}')`, aal));
+  /** Calls the actual claim RPC; only the database result confirms whole-block allocation. */
   const claim = async (job, who, key = randomUUID()) => {
     const version = await sql(
       `select case when exists(select 1 from private.job_commission_offers where job_id='${job}' and pricing_mode='role_split') then terms_version*10+1 else terms_version end from public.jobs where id='${job}'`,
@@ -55,17 +59,20 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
       await actor(who, `select public.claim_job('${job}','${key}',${version})`),
     );
   };
+  /** Cancels an accepted position through the business contract rather than directly editing claim rows. */
   const cancel = async (claimId, who) =>
     actor(
       who,
       `select public.cancel_job_assignment('${claimId}','Fictional position cancellation','${randomUUID()}')`,
     );
+  /** Explicitly reopens a cancelled job; free positions alone must not permit a replacement claim. */
   const reopen = async (job) =>
     actor(
       manager,
       `select public.manage_job_offer('${job}','reopen',${(await meta(job)).version},'${randomUUID()}', '{"reason":"Fictional replacement position required"}')`,
       "aal2",
     );
+  /** Counts and reports a case only after all of its assertions have completed successfully. */
   const check = async (name, run) => {
     await run();
     checks++;
@@ -232,6 +239,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
       assert.ok(claimed.every((x) => x.status === "confirmed"));
       assert.equal(Number((await meta(job)).gross_budget), 300.03);
       assert.equal((await meta(job, teachers[0], "aal1")).gross_budget, null);
+      /** Captures actual retained state before and after a concurrent or rejected action. */
       const summary = async () =>
         JSON.parse(
           await actor(

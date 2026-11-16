@@ -1,64 +1,369 @@
-import assert from 'node:assert/strict';
-import {randomUUID} from 'node:crypto';
-import {withTestDatabase,quoteSql as q} from './testing/database.mjs';
-let checks=0;const check=async(name,fn)=>{await fn();checks++;console.log(`PASS ${name}`)};
-await withTestDatabase('accounts_test',async({sql,actor})=>{
- const admin=randomUUID(),owner=randomUUID(),manager=randomUUID(),lecturer=randomUUID(),peer=randomUUID(),client=randomUUID(),participant=randomUUID();
- const org=randomUUID();
- await sql(`insert into auth.users(id,email) values${[admin,owner,manager,lecturer,peer,client,participant].map(id=>`('${id}','${id}@example.invalid')`).join(',')};insert into public.user_roles(user_id,role) values('${admin}','admin'),('${owner}','owner'),('${manager}','management'),('${lecturer}','lecturer'),('${peer}','lecturer'),('${client}','client'),('${participant}','participant');update public.profiles set display_name='Fictional account';insert into public.organisations(id,name) values('${org}','Fictional API customer');`);
- const rpc=(who,name,args=[],aal='aal1')=>actor(who,`select public.${name}(${args.map(value=>value===null?'null':typeof value==='boolean'||typeof value==='number'?String(value):q(value)).join(',')})`,aal).then(value=>{try{return JSON.parse(value)}catch{return value}});
- await check('Each account gets only its own current identity and roles, never secrets',async()=>{
-  const me=await rpc(lecturer,'account_me');assert.equal(me.profile.id,lecturer);assert.deepEqual(me.roles,['lecturer']);assert.ok(me.profile.email.endsWith('@example.invalid'));assert.equal('password' in me,false);assert.equal('service_role' in me,false);
-  await assert.rejects(sql('set role anon;select public.account_me()'),/permission denied/);
- });
- await check('Own profile changes persist; role, activity, foreign IDs and invalid JSON fields cannot be forged',async()=>{
-  await rpc(lecturer,'save_account_profile',[JSON.stringify({display_name:'API teacher',bio_de:'Eigener Text',time_zone:'Australia/Brisbane'})]);assert.equal((await rpc(lecturer,'account_me')).profile.time_zone,'Australia/Brisbane');
-  for(const payload of [{id:peer},{active:false},{roles:['admin']},{display_name:{nested:'x'}},{time_zone:'Not/AZone'}])await assert.rejects(rpc(lecturer,'save_account_profile',[JSON.stringify(payload)]),/Unknown profile field|Invalid profile/);
-  await assert.rejects(actor(lecturer,`update public.profiles set time_zone='Not/AZone' where id='${lecturer}'`),/22023/);
- });
- await check('Account directory requires current management MFA and excludes auth credential internals',async()=>{
-  await assert.rejects(rpc(admin,'account_users'),/MFA required/);await assert.rejects(rpc(lecturer,'account_users',[], 'aal2'),/MFA required/);
-  const result=await rpc(admin,'account_users',['API teacher',25,0],'aal2');assert.equal(result.total,1);assert.equal(result.items[0].id,lecturer);assert.equal('encrypted_password' in result.items[0],false);
-  await assert.rejects(rpc(admin,'account_users',['',101,0],'aal2'),/Invalid pagination/);await assert.rejects(rpc(admin,'account_users',['',null,0],'aal2'),/Invalid pagination/);await assert.rejects(rpc(admin,'account_users',['',10,null],'aal2'),/Invalid pagination/);
- });
- await check('Owner/admin may assign multiple actual roles; staff cannot promote themselves',async()=>{
-  await assert.rejects(rpc(manager,'set_account_roles',[lecturer,'{admin}'],'aal2'),/42501/);
-  await assert.rejects(rpc(lecturer,'set_account_roles',[lecturer,'{admin}'],'aal2'),/42501/);
-  await rpc(owner,'set_account_roles',[peer,'{lecturer,participant}'],'aal2');assert.deepEqual((await rpc(peer,'account_me')).roles,['lecturer','participant']);
-  await assert.rejects(rpc(admin,'set_account_roles',[peer,'{fake_role}'],'aal2'),/Invalid roles/);
- });
- await check('Self administrative removal and self suspension are protected and role mutations are audited',async()=>{
-  await assert.rejects(rpc(admin,'set_account_roles',[admin,'{lecturer}'],'aal2'),/Self administrative/);await assert.rejects(rpc(owner,'set_user_active',[owner,false],'aal2'),/Self-deactivation/);
-  assert.equal(await sql(`select count(*) from public.audit_events where action='account.roles_changed' and resource_id='${peer}'`),'1');
- });
- await check('Concurrent mutual administrator removal cannot eliminate every administrator',async()=>{
-  const results=await Promise.allSettled([rpc(admin,'set_account_roles',[owner,'{lecturer}'],'aal2'),rpc(owner,'set_account_roles',[admin,'{lecturer}'],'aal2')]);assert.equal(results.filter(result=>result.status==='fulfilled').length,1);assert.equal(await sql("select count(distinct ur.user_id) from public.user_roles ur join public.profiles p on p.id=ur.user_id where ur.role in ('admin','owner') and p.active"),'1');
-  await sql(`insert into public.user_roles(user_id,role) values('${admin}','admin'),('${owner}','owner') on conflict do nothing;`);
- });
- await check('Role removal and suspension use the same lock and cannot race into zero active administrators',async()=>{
-  const results=await Promise.allSettled([rpc(admin,'set_account_roles',[owner,'{lecturer}'],'aal2'),rpc(owner,'set_user_active',[admin,false],'aal2')]);assert.equal(results.filter(result=>result.status==='fulfilled').length,1);assert.equal(await sql("select count(distinct ur.user_id) from public.user_roles ur join public.profiles p on p.id=ur.user_id where ur.role in ('admin','owner') and p.active"),'1');
-  await sql(`update public.profiles set active=true where id='${admin}';insert into public.user_roles(user_id,role) values('${admin}','admin'),('${owner}','owner') on conflict do nothing;`);
- });
- const inviteKey=randomUUID();let invitation;
- await check('Client invitations bind exact role, organisation and request identity before any external send',async()=>{
-  invitation=await rpc(admin,'reserve_account_invitation',['fictional-client@example.invalid','Client','client',org,inviteKey],'aal2');assert.equal(invitation.status,'reserved');
-  assert.equal((await rpc(admin,'reserve_account_invitation',['fictional-client@example.invalid','Client','client',org,inviteKey],'aal2')).status,'in_progress');
-  assert.equal((await rpc(admin,'reserve_account_invitation',['fictional-client@example.invalid','Client','lecturer',null,inviteKey],'aal2')).status,'idempotency_conflict');
-  await assert.rejects(rpc(manager,'reserve_account_invitation',['another@example.invalid','Client','management',null,randomUUID()],'aal2'),/Only subordinate invitation/);
-  await assert.rejects(rpc(admin,'reserve_account_invitation',['bad@example.invalid','Client','lecturer',org,randomUUID()],'aal2'),/Valid client organisation/);
- });
- await check('Completion is server-only and grants only the reserved role and reserved organisation',async()=>{
-  await assert.rejects(rpc(admin,'complete_account_invitation',[invitation.invitation_id,client,'Untrusted',true],'aal2'),/permission denied/);
-  await sql(`begin;set local role service_role;select public.complete_account_invitation('${invitation.invitation_id}','${client}','Client',true);commit;`);
-  assert.equal((await rpc(admin,'reserve_account_invitation',['fictional-client@example.invalid','Client','client',org,inviteKey],'aal2')).status,'already_sent');
-  assert.equal(await sql(`select count(*) from public.client_organisation_memberships where user_id='${client}' and organisation_id='${org}' and removed_at is null`),'1');assert.deepEqual((await rpc(client,'account_me')).roles,['client']);
- });
- await check('A revoked inviter cannot complete a pending privileged invitation',async()=>{
-  const pending=await rpc(manager,'reserve_account_invitation',['student-api@example.invalid','Student','participant',null,randomUUID()],'aal2');await sql(`delete from public.user_roles where user_id='${manager}'`);
-  await assert.rejects(sql(`begin;set local role service_role;select public.complete_account_invitation('${pending.invitation_id}','${participant}','Student',true);commit;`),/Inviter authority revoked/);
- });
- await check('Suspended accounts lose existing-token account/API access immediately',async()=>{
-  await rpc(admin,'set_user_active',[lecturer,false],'aal2');await assert.rejects(rpc(lecturer,'account_me'),/Active login/);await assert.rejects(rpc(lecturer,'save_account_profile',['{}']),/Active login/);await rpc(admin,'set_user_active',[lecturer,true],'aal2');assert.equal((await rpc(lecturer,'account_me')).profile.active,true);
- });
+/**
+ * PostgreSQL regression groups for accounts, roles and reserved invitations.
+ * Real migrations define the contract; controlled role/MFA claims exercise it independently of the UI.
+ */
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
+let checks = 0;
+/** Counts and reports a group only after every related assertion has passed. */
+const check = async (name, fn) => {
+  await fn();
+  checks++;
+  console.log(`PASS ${name}`);
+};
+await withTestDatabase("accounts_test", async ({ sql, actor }) => {
+  const admin = randomUUID(),
+    owner = randomUUID(),
+    manager = randomUUID(),
+    lecturer = randomUUID(),
+    peer = randomUUID(),
+    client = randomUUID(),
+    participant = randomUUID();
+  const org = randomUUID();
+  await sql(
+    `insert into auth.users(id,email) values${[admin, owner, manager, lecturer, peer, client, participant].map((id) => `('${id}','${id}@example.invalid')`).join(",")};insert into public.user_roles(user_id,role) values('${admin}','admin'),('${owner}','owner'),('${manager}','management'),('${lecturer}','lecturer'),('${peer}','lecturer'),('${client}','client'),('${participant}','participant');update public.profiles set display_name='Fictional account';insert into public.organisations(id,name) values('${org}','Fictional API customer');`,
+  );
+  /** Calls the business database API under the fixture's controlled identity/MFA claims. */
+  const rpc = (who, name, args = [], aal = "aal1") =>
+    actor(
+      who,
+      `select public.${name}(${args.map((value) => (value === null ? "null" : typeof value === "boolean" || typeof value === "number" ? String(value) : q(value))).join(",")})`,
+      aal,
+    ).then((value) => {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    });
+  await check(
+    "Each account gets only its own current identity and roles, never secrets",
+    async () => {
+      const me = await rpc(lecturer, "account_me");
+      assert.equal(me.profile.id, lecturer);
+      assert.deepEqual(me.roles, ["lecturer"]);
+      assert.ok(me.profile.email.endsWith("@example.invalid"));
+      assert.equal("password" in me, false);
+      assert.equal("service_role" in me, false);
+      await assert.rejects(
+        sql("set role anon;select public.account_me()"),
+        /permission denied/,
+      );
+    },
+  );
+  await check(
+    "Own profile changes persist; role, activity, foreign IDs and invalid JSON fields cannot be forged",
+    async () => {
+      await rpc(lecturer, "save_account_profile", [
+        JSON.stringify({
+          display_name: "API teacher",
+          bio_de: "Eigener Text",
+          time_zone: "Australia/Brisbane",
+        }),
+      ]);
+      assert.equal(
+        (await rpc(lecturer, "account_me")).profile.time_zone,
+        "Australia/Brisbane",
+      );
+      for (const payload of [
+        { id: peer },
+        { active: false },
+        { roles: ["admin"] },
+        { display_name: { nested: "x" } },
+        { time_zone: "Not/AZone" },
+      ])
+        await assert.rejects(
+          rpc(lecturer, "save_account_profile", [JSON.stringify(payload)]),
+          /Unknown profile field|Invalid profile/,
+        );
+      await assert.rejects(
+        actor(
+          lecturer,
+          `update public.profiles set time_zone='Not/AZone' where id='${lecturer}'`,
+        ),
+        /22023/,
+      );
+    },
+  );
+  await check(
+    "Account directory requires current management MFA and excludes auth credential internals",
+    async () => {
+      await assert.rejects(rpc(admin, "account_users"), /MFA required/);
+      await assert.rejects(
+        rpc(lecturer, "account_users", [], "aal2"),
+        /MFA required/,
+      );
+      const result = await rpc(
+        admin,
+        "account_users",
+        ["API teacher", 25, 0],
+        "aal2",
+      );
+      assert.equal(result.total, 1);
+      assert.equal(result.items[0].id, lecturer);
+      assert.equal("encrypted_password" in result.items[0], false);
+      await assert.rejects(
+        rpc(admin, "account_users", ["", 101, 0], "aal2"),
+        /Invalid pagination/,
+      );
+      await assert.rejects(
+        rpc(admin, "account_users", ["", null, 0], "aal2"),
+        /Invalid pagination/,
+      );
+      await assert.rejects(
+        rpc(admin, "account_users", ["", 10, null], "aal2"),
+        /Invalid pagination/,
+      );
+    },
+  );
+  await check(
+    "Owner/admin may assign multiple actual roles; staff cannot promote themselves",
+    async () => {
+      await assert.rejects(
+        rpc(manager, "set_account_roles", [lecturer, "{admin}"], "aal2"),
+        /42501/,
+      );
+      await assert.rejects(
+        rpc(lecturer, "set_account_roles", [lecturer, "{admin}"], "aal2"),
+        /42501/,
+      );
+      await rpc(
+        owner,
+        "set_account_roles",
+        [peer, "{lecturer,participant}"],
+        "aal2",
+      );
+      assert.deepEqual((await rpc(peer, "account_me")).roles, [
+        "lecturer",
+        "participant",
+      ]);
+      await assert.rejects(
+        rpc(admin, "set_account_roles", [peer, "{fake_role}"], "aal2"),
+        /Invalid roles/,
+      );
+    },
+  );
+  await check(
+    "Self administrative removal and self suspension are protected and role mutations are audited",
+    async () => {
+      await assert.rejects(
+        rpc(admin, "set_account_roles", [admin, "{lecturer}"], "aal2"),
+        /Self administrative/,
+      );
+      await assert.rejects(
+        rpc(owner, "set_user_active", [owner, false], "aal2"),
+        /Self-deactivation/,
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from public.audit_events where action='account.roles_changed' and resource_id='${peer}'`,
+        ),
+        "1",
+      );
+    },
+  );
+  await check(
+    "Concurrent mutual administrator removal cannot eliminate every administrator",
+    async () => {
+      const results = await Promise.allSettled([
+        rpc(admin, "set_account_roles", [owner, "{lecturer}"], "aal2"),
+        rpc(owner, "set_account_roles", [admin, "{lecturer}"], "aal2"),
+      ]);
+      assert.equal(
+        results.filter((result) => result.status === "fulfilled").length,
+        1,
+      );
+      assert.equal(
+        await sql(
+          "select count(distinct ur.user_id) from public.user_roles ur join public.profiles p on p.id=ur.user_id where ur.role in ('admin','owner') and p.active",
+        ),
+        "1",
+      );
+      await sql(
+        `insert into public.user_roles(user_id,role) values('${admin}','admin'),('${owner}','owner') on conflict do nothing;`,
+      );
+    },
+  );
+  await check(
+    "Role removal and suspension use the same lock and cannot race into zero active administrators",
+    async () => {
+      const results = await Promise.allSettled([
+        rpc(admin, "set_account_roles", [owner, "{lecturer}"], "aal2"),
+        rpc(owner, "set_user_active", [admin, false], "aal2"),
+      ]);
+      assert.equal(
+        results.filter((result) => result.status === "fulfilled").length,
+        1,
+      );
+      assert.equal(
+        await sql(
+          "select count(distinct ur.user_id) from public.user_roles ur join public.profiles p on p.id=ur.user_id where ur.role in ('admin','owner') and p.active",
+        ),
+        "1",
+      );
+      await sql(
+        `update public.profiles set active=true where id='${admin}';insert into public.user_roles(user_id,role) values('${admin}','admin'),('${owner}','owner') on conflict do nothing;`,
+      );
+    },
+  );
+  const inviteKey = randomUUID();
+  let invitation;
+  await check(
+    "Client invitations bind exact role, organisation and request identity before any external send",
+    async () => {
+      invitation = await rpc(
+        admin,
+        "reserve_account_invitation",
+        [
+          "fictional-client@example.invalid",
+          "Client",
+          "client",
+          org,
+          inviteKey,
+        ],
+        "aal2",
+      );
+      assert.equal(invitation.status, "reserved");
+      assert.equal(
+        (
+          await rpc(
+            admin,
+            "reserve_account_invitation",
+            [
+              "fictional-client@example.invalid",
+              "Client",
+              "client",
+              org,
+              inviteKey,
+            ],
+            "aal2",
+          )
+        ).status,
+        "in_progress",
+      );
+      assert.equal(
+        (
+          await rpc(
+            admin,
+            "reserve_account_invitation",
+            [
+              "fictional-client@example.invalid",
+              "Client",
+              "lecturer",
+              null,
+              inviteKey,
+            ],
+            "aal2",
+          )
+        ).status,
+        "idempotency_conflict",
+      );
+      await assert.rejects(
+        rpc(
+          manager,
+          "reserve_account_invitation",
+          [
+            "another@example.invalid",
+            "Client",
+            "management",
+            null,
+            randomUUID(),
+          ],
+          "aal2",
+        ),
+        /Only subordinate invitation/,
+      );
+      await assert.rejects(
+        rpc(
+          admin,
+          "reserve_account_invitation",
+          ["bad@example.invalid", "Client", "lecturer", org, randomUUID()],
+          "aal2",
+        ),
+        /Valid client organisation/,
+      );
+    },
+  );
+  await check(
+    "Completion is server-only and grants only the reserved role and reserved organisation",
+    async () => {
+      await assert.rejects(
+        rpc(
+          admin,
+          "complete_account_invitation",
+          [invitation.invitation_id, client, "Untrusted", true],
+          "aal2",
+        ),
+        /permission denied/,
+      );
+      await sql(
+        `begin;set local role service_role;select public.complete_account_invitation('${invitation.invitation_id}','${client}','Client',true);commit;`,
+      );
+      assert.equal(
+        (
+          await rpc(
+            admin,
+            "reserve_account_invitation",
+            [
+              "fictional-client@example.invalid",
+              "Client",
+              "client",
+              org,
+              inviteKey,
+            ],
+            "aal2",
+          )
+        ).status,
+        "already_sent",
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from public.client_organisation_memberships where user_id='${client}' and organisation_id='${org}' and removed_at is null`,
+        ),
+        "1",
+      );
+      assert.deepEqual((await rpc(client, "account_me")).roles, ["client"]);
+    },
+  );
+  await check(
+    "A revoked inviter cannot complete a pending privileged invitation",
+    async () => {
+      const pending = await rpc(
+        manager,
+        "reserve_account_invitation",
+        [
+          "student-api@example.invalid",
+          "Student",
+          "participant",
+          null,
+          randomUUID(),
+        ],
+        "aal2",
+      );
+      await sql(`delete from public.user_roles where user_id='${manager}'`);
+      await assert.rejects(
+        sql(
+          `begin;set local role service_role;select public.complete_account_invitation('${pending.invitation_id}','${participant}','Student',true);commit;`,
+        ),
+        /Inviter authority revoked/,
+      );
+    },
+  );
+  await check(
+    "Suspended accounts lose existing-token account/API access immediately",
+    async () => {
+      await rpc(admin, "set_user_active", [lecturer, false], "aal2");
+      await assert.rejects(rpc(lecturer, "account_me"), /Active login/);
+      await assert.rejects(
+        rpc(lecturer, "save_account_profile", ["{}"]),
+        /Active login/,
+      );
+      await rpc(admin, "set_user_active", [lecturer, true], "aal2");
+      assert.equal((await rpc(lecturer, "account_me")).profile.active, true);
+    },
+  );
 });
-console.log(`\n${checks} account PostgreSQL checks passed (identity, roles, invitation binding and lifecycle races).`);
+console.log(
+  `\n${checks} account PostgreSQL checks passed (identity, roles, invitation binding and lifecycle races).`,
+);

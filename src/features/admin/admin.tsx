@@ -1,3 +1,7 @@
+/**
+ * Offer editor for standalone jobs and jobs derived from a course run. Retain the reviewed
+ * source while editing; the server checks actual sessions and prices on save.
+ */
 import { useRef, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -39,6 +43,7 @@ import {
   Notice,
   PageHeading,
 } from "../../components/common";
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().max(10000),
@@ -69,7 +74,9 @@ const schema = z.object({
     .min(1)
     .max(60),
 });
+/** Derive form values from the validation schema so runtime input checks and TypeScript agree. */
 type Values = z.infer<typeof schema>;
+/** Create the complete offer and bind a course-derived request to its reviewed source revision. */
 function JobForm({
   courseRun: initialSource,
 }: {
@@ -657,6 +664,7 @@ function JobForm({
     </form>
   );
 }
+/** Choose a standalone draft or server-loaded course source from the route and current capabilities. */
 export function AdminPage() {
   const { t } = useTranslation();
   const courseText = useTranslation("courseOffer").t;

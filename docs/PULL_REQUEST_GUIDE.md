@@ -4,7 +4,7 @@
 
 This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
-The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). These merges do not activate the pending server-side review rules. The source catalogue [labels.json](../.github/labels.json) now contains 30 managed labels; nine original GitHub labels are also preserved.
+The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). These merges do not activate the pending server-side review rules. The source catalogue [labels.json](../.github/labels.json) contains 35 managed labels; nine original GitHub labels are also preserved.
 
 ## Branch and title
 
@@ -35,7 +35,7 @@ Every pull request needs **exactly one type label**, **at least one area label**
 | `type:security`     | Coordinate a security fix; never use a public PR as the initial vulnerability report |
 | `type:dependencies` | Update reviewed dependencies                                                         |
 
-Choose every area that is materially affected. The original area labels remain available: `area:frontend`, `area:backend`, `area:database`, `area:auth`, `area:files`, `area:finance`, `area:courses`, `area:devops` and `area:github`. Ten additional areas provide more specific classifications:
+Choose every area that is materially affected. The original area labels remain available: `area:frontend`, `area:backend`, `area:database`, `area:auth`, `area:files`, `area:finance`, `area:courses`, `area:devops` and `area:github`. Additional areas provide more specific classifications:
 
 | Area                 | Use                                                     |
 | -------------------- | ------------------------------------------------------- |
@@ -49,8 +49,13 @@ Choose every area that is materially affected. The original area labels remain a
 | `area:testing`       | QA, regressions, browser and permission checks          |
 | `area:docs`          | Guides, API references and operational documentation    |
 | `area:taxonomy`      | Topics, tools, programming languages and hierarchies    |
+| `area:api`           | API and RPC contracts and integration clients           |
+| `area:security`      | Authorization, protected data and security hardening    |
+| `area:performance`   | Loading, query budgets, caching and runtime performance |
+| `area:accessibility` | Keyboard access, accessible controls and WCAG checks    |
+| `area:design`        | Luminovia branding, layout and visual design            |
 
-A documentation change receives `area:docs` and any relevant documented area; general contribution rules also use `area:github`. A test does not need every label used by the whole system. A feature with a migration should include the product and technical areas it actually changes. The 30 managed labels comprise eight types, 19 areas and three risk levels; additional original GitHub labels do not replace a required category.
+A documentation change receives `area:docs` and any relevant documented area; general contribution rules also use `area:github`. A test does not need every label used by the whole system. A feature with a migration should include the product and technical areas it actually changes. The 35 managed labels comprise eight types, 24 areas and three risk levels; additional original GitHub labels do not replace a required category. Add new managed labels to the shared catalogue before applying them. [Metadata operation and historical rechecks](GITHUB_WORKFLOW.md#labels-and-metadata-validation).
 
 | Risk          | Meaning                                                                                             |
 | ------------- | --------------------------------------------------------------------------------------------------- |

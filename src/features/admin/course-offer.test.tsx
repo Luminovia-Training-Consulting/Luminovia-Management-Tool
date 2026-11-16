@@ -1,3 +1,7 @@
+/**
+ * Regressions for referenced course offers, stable reviewed sources and retryable financial
+ * inputs. SDK/DOM fixtures isolate the form; actual server/data acceptance remains separate.
+ */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -97,6 +101,7 @@ afterEach(() => {
   cleanup();
   cache.clear();
 });
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup() {
   return render(
     <QueryClientProvider client={cache}>

@@ -12,6 +12,7 @@ await withTestDatabase(
     await sql(
       `insert into auth.users(id,email) values ${[teacher, peer, admin, participant].map((id) => `('${id}','${id}@example.invalid')`).join(",")};insert into public.user_roles(user_id,role) values('${teacher}','lecturer'),('${peer}','lecturer'),('${admin}','admin'),('${participant}','participant');update public.profiles set display_name='Fictional available teacher',phone='PRIVATE CONTACT' where id='${teacher}'`,
     );
+    /** Calls the business database API under the fixture's controlled identity/MFA claims. */
     const rpc = async (who, name, args = [], aal = "aal1") => {
       const value = await actor(
         who,
@@ -24,6 +25,7 @@ await withTestDatabase(
         return value;
       }
     };
+    /** Creates a controlled window, type, sharing flag and explicitly private notes for projection comparisons. */
     const window = (from, to, kind = "available", shared = false) => ({
       kind,
       starts_at: from,
@@ -32,8 +34,10 @@ await withTestDatabase(
       notes: "PRIVATE availability note",
       share_with_management: shared,
     });
+    /** Sends the checked draft with its version and identity context to the owning API. */
     const save = (id, payload, version = 0, who = teacher) =>
       rpc(who, "save_lecturer_availability", [id, payload, version]);
+    /** Creates a fictional published job at the supplied times for the claim/blocked-time conflict. */
     const create = async (sessions) =>
       rpc(
         admin,
@@ -55,6 +59,7 @@ await withTestDatabase(
         ],
         "aal2",
       );
+    /** Calls the actual claim RPC; only the database result confirms whole-block allocation. */
     const claim = async (job) =>
       rpc(teacher, "claim_job", [
         job,
@@ -64,6 +69,7 @@ await withTestDatabase(
         ),
       ]);
     let count = 0;
+    /** Counts and reports a case only after all of its assertions have completed successfully. */
     const check = async (name, fn) => {
       await fn();
       count++;

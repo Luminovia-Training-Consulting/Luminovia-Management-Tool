@@ -1,3 +1,7 @@
+/**
+ * Comment threads with own edits/withdrawal and reasoned moderation. Load current resource
+ * context separately; access errors must not present retained comments as still authorized.
+ */
 import { useId, useRef, useState } from "react";
 import {
   useInfiniteQuery,
@@ -27,7 +31,9 @@ import {
 import "./i18n";
 import "./comments.css";
 
+/** Separate own editing, own withdrawal and reasoned moderation explicitly. */
 type EditAction = "edit" | "withdraw" | "moderate";
+/** Connect a comment row to own-edit or reasoned moderation actions. */
 function CommentEntry({
   row,
   canEdit,
@@ -222,6 +228,7 @@ function CommentEntry({
   );
 }
 
+/** Load authorized pages and preserve request/version safeguards during mutations. */
 function CommentThread({
   actor,
   kind,
@@ -359,7 +366,10 @@ function CommentThread({
   );
 }
 
-/** Remount drafts on resource/actor navigation; private text cannot cross contexts. */
+/**
+ * Check current resource context before showing an interactive thread. Remount on resource/actor
+ * navigation so private drafts cannot cross contexts.
+ */
 export function ResourceComments({
   kind,
   resourceId,

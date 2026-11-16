@@ -1,5 +1,9 @@
+/**
+ * Purpose-built Office ZIP fixtures exercise allowed formats and byte-level VBA filtering without using customer documents.
+ */
 import { validateFile } from "./validation.ts";
 
+// Fail a specific fixture condition as a real test failure; never substitute silent success.
 function assert(value: unknown, message = "assertion failed"): asserts value {
   if (!value) throw new Error(message);
 }
@@ -25,6 +29,7 @@ const formats = [
 
 /** Real stored ZIP local/central records and CRCs keep the MIME detector in the
  * test path. These packages contain fictional content, never private files. */
+// Build controlled Office ZIP bytes with actual file markers rather than treating a MIME string as proof.
 function archive(
   format: typeof formats[number],
   extraName?: string,
@@ -102,6 +107,7 @@ function archive(
   return result;
 }
 
+// Require rejection of the specific byte/MIME fixture.
 async function rejected(bytes: Uint8Array, format: typeof formats[number]) {
   let error: unknown;
   try {

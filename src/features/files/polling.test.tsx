@@ -1,3 +1,7 @@
+/**
+ * Regressions for bounded fast scan polling and slow revalidation of settled metadata. Timer/SDK
+ * fixtures do not replace actual scanning/Storage acceptance.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import {
   act,
@@ -79,10 +83,12 @@ afterEach(() => {
   state.signals = [];
   state.hold = false;
 });
+/** Observe the real file-list query so its polling interval is measurable independently of attachment UI. */
 function List() {
   const files = useQuery(documentsQuery(state.actor));
   return <p>{files.data?.length ?? 0} files</p>;
 }
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(list = false) {
   vi.useFakeTimers();
   const client = new QueryClient({
@@ -99,6 +105,7 @@ function setup(list = false) {
   const view = render(element());
   return { client, view, element };
 }
+/** Advance the controlled clock inside act so timer-driven React updates settle before assertions. */
 async function advance(ms = 1) {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(ms);

@@ -1,3 +1,7 @@
+/**
+ * Actor-scoped categories/wiki/forum queries. Published content, own drafts, revisions and
+ * moderation reports retain separate server projections.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import type {
@@ -9,6 +13,7 @@ import type {
   WikiPageRecord,
   WikiRevision,
 } from "./types";
+/** Shared actor-scoped knowledge, revision and forum cache prefixes for targeted revalidation. */
 export const knowledgeKeys = {
   access: (actor: string) => ["knowledge-access", actor] as const,
   categories: (actor: string, kind: string) =>
@@ -16,6 +21,7 @@ export const knowledgeKeys = {
   wiki: (actor: string) => ["wiki", actor] as const,
   forum: (actor: string) => ["forum", actor] as const,
 };
+/** Read the knowledge_access server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const knowledgeAccessQuery = (actor: string) =>
   queryOptions({
     queryKey: knowledgeKeys.access(actor),
@@ -26,6 +32,7 @@ export const knowledgeAccessQuery = (actor: string) =>
     },
     staleTime: 1000,
   });
+/** Read the knowledge_categories server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const categoriesQuery = (actor: string, kind: "wiki" | "forum") =>
   queryOptions({
     queryKey: knowledgeKeys.categories(actor, kind),
@@ -37,6 +44,7 @@ export const categoriesQuery = (actor: string, kind: "wiki" | "forum") =>
       return (data ?? []) as KnowledgeCategory[];
     },
   });
+/** Read the wiki_pages_list server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const wikiListQuery = (
   actor: string,
   search: string,
@@ -64,6 +72,7 @@ export const wikiListQuery = (
       return (data ?? []) as WikiPageRecord[];
     },
   });
+/** Read the wiki_page server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const wikiPageQuery = (actor: string, id: string) =>
   queryOptions({
     queryKey: [...knowledgeKeys.wiki(actor), "page", id],
@@ -74,6 +83,7 @@ export const wikiPageQuery = (actor: string, id: string) =>
     },
     refetchOnWindowFocus: false,
   });
+/** Read the wiki_page_history server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const wikiHistoryQuery = (actor: string, id: string) =>
   queryOptions({
     queryKey: [...knowledgeKeys.wiki(actor), "history", id],
@@ -83,6 +93,7 @@ export const wikiHistoryQuery = (actor: string, id: string) =>
       return (data ?? []) as WikiRevision[];
     },
   });
+/** Read the forum_threads_list server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const forumListQuery = (
   actor: string,
   search: string,
@@ -107,6 +118,7 @@ export const forumListQuery = (
       return (data ?? []) as ForumThread[];
     },
   });
+/** Read the forum_thread server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const forumThreadQuery = (actor: string, id: string) =>
   queryOptions({
     queryKey: [...knowledgeKeys.forum(actor), "thread", id],
@@ -116,6 +128,7 @@ export const forumThreadQuery = (actor: string, id: string) =>
       return data as ForumThread | null;
     },
   });
+/** Read the forum_posts server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const forumPostsQuery = (actor: string, id: string) =>
   queryOptions({
     queryKey: [...knowledgeKeys.forum(actor), "posts", id],
@@ -127,6 +140,7 @@ export const forumPostsQuery = (actor: string, id: string) =>
       return (data ?? []) as ForumPost[];
     },
   });
+/** Read the forum_reports server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const forumReportsQuery = (actor: string) =>
   queryOptions({
     queryKey: [...knowledgeKeys.forum(actor), "reports"],

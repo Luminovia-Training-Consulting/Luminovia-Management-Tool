@@ -1,3 +1,6 @@
+/**
+ * Build a verifiable CMS development release from one commit. Validate allowed paths, exact file/migration hashes, public build values and pinned images before packaging.
+ */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -53,8 +56,10 @@ const OPTIONAL_FILES = [
   "deploy/hostinger/backups/luminovia-complete-backup.timer",
 ];
 
+// Compute a stable SHA-256 digest for the source/artifact comparison.
 const hash = (data) => createHash("sha256").update(data).digest("hex");
 
+// Limit archive paths to the fixed app allowlist; reject traversal and private checkout paths.
 function safePath(name) {
   if (
     !name ||
@@ -79,6 +84,7 @@ function safePath(name) {
   }
 }
 
+// Check path components for symlinks and require a regular source file within its size limit.
 function plainFile(path, sourceRoot) {
   const rel = relative(sourceRoot, path);
   if (rel === ".." || rel.startsWith(".." + sep) || rel.startsWith(sep)) {
@@ -96,6 +102,7 @@ function plainFile(path, sourceRoot) {
   return info;
 }
 
+// Collect only allowed files from an approved source tree and reject duplicate archive destinations.
 function collectTree(
   sourceRoot,
   sourceDirectory,
@@ -127,6 +134,7 @@ function collectTree(
   visit(directory, "");
 }
 
+// Read each Compose service's immutable digest pin from actual source.
 function serviceImages(text) {
   const result = [];
   let service;
@@ -144,6 +152,7 @@ function serviceImages(text) {
   return result;
 }
 
+// Bind the expected service inventory and PostgreSQL proof to exact release migrations.
 function runtimeMetadata(sourceRoot, migrations) {
   const images = [
     ...serviceImages(
@@ -262,6 +271,7 @@ function runtimeMetadata(sourceRoot, migrations) {
   };
 }
 
+// Reject known server-secret patterns before including content in a distributable release.
 function assertNoCredentials(data, source, publicKey, forbiddenValues) {
   const text = data.toString("utf8");
   if (
@@ -306,6 +316,7 @@ function assertNoCredentials(data, source, publicKey, forbiddenValues) {
     throw new Error("Secret key cannot be public build configuration.");
 }
 
+// Validate build configuration, source inventory and runtime contract before creating the manifest/archive.
 export function createRelease(options) {
   const sourceRoot = realpathSync(resolve(options.sourceRoot ?? "."));
   const output = resolve(options.outputDirectory);

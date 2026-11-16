@@ -1,3 +1,7 @@
+/**
+ * Binds compiler-discovered frontend RPCs to a freshly migrated test database.
+ * Checks execution grants, RLS and separation of the public API from private implementations.
+ */
 /** Bind delivered frontend RPC references to the actual replayed database surface. */
 import assert from "node:assert/strict";
 import { dirname, resolve } from "node:path";

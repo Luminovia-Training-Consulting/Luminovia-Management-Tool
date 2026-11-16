@@ -1,3 +1,7 @@
+/**
+ * Regressions for alias validation, actor caches and actual request-cancellation forwarding. SDK
+ * fixtures do not establish native catalogue permissions.
+ */
 import { describe, expect, it, vi } from "vitest";
 import { taxonomyPayload, taxonomyQuery } from "./api";
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));

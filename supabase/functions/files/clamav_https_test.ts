@@ -1,3 +1,6 @@
+/**
+ * Injected HTTPS replies exercise deadlines, redirect rejection, size and signature age. Use fictional secrets and retain real timeout/abort behavior.
+ */
 import { type HttpsScannerConfig, scan } from "./clamav.ts";
 
 const bytes = new TextEncoder().encode("Fictional scan input");
@@ -5,11 +8,15 @@ const config = {
   url: "https://scanner.example.invalid/scan",
   token: "test_".padEnd(64, "a"),
 };
+// Create a fictional ClamAV signature timestamp fresh at test execution.
 const freshVersion = () => "ClamAV 1.4.3/12345/" + new Date().toUTCString();
+// Build the controlled JSON scan response for protocol cases.
 const response = (value: unknown) => Response.json(value);
+// Fail a specific fixture condition as a real test failure; never substitute silent success.
 function assert(value: unknown, message = "assertion failed"): asserts value {
   if (!value) throw new Error(message);
 }
+// Require the operation to reject and optionally check its stable failure reason.
 async function rejects(work: () => Promise<unknown>, expected?: string) {
   try {
     await work();
@@ -24,6 +31,7 @@ async function rejects(work: () => Promise<unknown>, expected?: string) {
   }
   throw new Error("expected rejection");
 }
+// Inject only the chosen response while retaining actual adapter validation.
 const fetchWith = (value: Response) =>
   (() => Promise.resolve(value)) as typeof fetch;
 

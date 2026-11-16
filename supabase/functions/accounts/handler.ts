@@ -1,3 +1,6 @@
+/**
+ * Account-management HTTP contract. Business RPCs use the caller's bearer token; only injected invitation delivery/completion uses server administration privileges.
+ */
 export const roles = [
   "owner",
   "admin",
@@ -10,7 +13,9 @@ export const roles = [
   "guest",
   "guest",
 ] as const;
+// Allowed target roles are input values, not evidence of the caller's authority.
 export type AccountRole = (typeof roles)[number];
+// Validated invitation request with a durable retry key and optional organization binding.
 export interface Invitation {
   email: string;
   display_name: string;
@@ -18,10 +23,12 @@ export interface Invitation {
   organisation_id: string | null;
   idempotency_key: string;
 }
+// Bounded RPC result; do not expose internal database errors to HTTP clients.
 interface RpcResult {
   data: unknown;
   error?: { code?: string } | null;
 }
+// Separate caller-scoped database operations from server-only delivery/completion privileges.
 export interface AccountDependencies {
   origins: string[];
   appOrigin: string;
@@ -41,12 +48,15 @@ export interface AccountDependencies {
   ) => Promise<void>;
   openapi: unknown;
 }
+// Validate an input UUID's format; a valid identifier grants no access.
 const uuid = (value: unknown): value is string =>
   typeof value === "string" &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+// Accept only JSON objects as payloads; arrays and null do not satisfy the field contract.
 function object(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
+// Normalize the allowed invitation payload and bind client accounts to one valid organization.
 export function parseInvitation(value: unknown): Invitation | null {
   if (
     !object(value) ||
@@ -89,6 +99,7 @@ export function parseInvitation(value: unknown): Invitation | null {
     idempotency_key,
   };
 }
+// Bound actual JSON bytes independently of Content-Length and reject invalid UTF-8.
 async function body(request: Request): Promise<unknown> {
   if (
     !request.headers
@@ -126,6 +137,7 @@ async function body(request: Request): Promise<unknown> {
     throw new Error("invalid_request");
   }
 }
+// Map methods/payloads to caller-scoped RPCs and translate database failures into stable HTTP errors without internal details.
 export function createAccountHandler(deps: AccountDependencies) {
   return async (request: Request): Promise<Response> => {
     const origin = request.headers.get("origin") ?? "";
@@ -186,6 +198,7 @@ export function createAccountHandler(deps: AccountDependencies) {
         }
         return response(200, result.data);
       };
+      // Own-profile and management requests use the same caller-scoped RPC path; target IDs never replace the actor.
       if (path === "/v1/me") {
         if (request.method === "GET") return await call("account_me");
         if (request.method === "PATCH") {
@@ -270,6 +283,7 @@ export function createAccountHandler(deps: AccountDependencies) {
           return response(503, { error: "invitations_disabled" });
         const invitation = parseInvitation(await body(request));
         if (!invitation) return response(400, { error: "invalid_request" });
+        // Complete the shared durable reservation before invoking external delivery.
         const reserved = await deps.rpc(token, "reserve_account_invitation", {
           p_email: invitation.email,
           p_display_name: invitation.display_name,
@@ -288,6 +302,7 @@ export function createAccountHandler(deps: AccountDependencies) {
           status: string;
           invitation_id?: string;
         };
+        // Retries and throttling return existing state without sending another invitation.
         if (result.status !== "reserved")
           return response(
             result.status === "throttled"
@@ -317,6 +332,7 @@ export function createAccountHandler(deps: AccountDependencies) {
             invitation_id: result.invitation_id,
           });
         }
+        // If completion fails after delivery, keep the reservation so automatic retries cannot duplicate the invitation.
         await deps.completeInvitation(
           result.invitation_id,
           userId,

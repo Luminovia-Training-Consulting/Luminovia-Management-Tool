@@ -14,6 +14,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
   );
   await actor(admin, "select public.configure_compensation_policy(31,73,0)", "aal2");
   let day = 1;
+  /** Creates this module's fictional inputs; authoritative validation remains on the server. */
   const payload = () => ({
     title: "Fictional lifecycle teaching block",
     customer_name: "Fictional lifecycle customer",
@@ -29,6 +30,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
       ends_at: new Date(Date.UTC(2039, 0, day + n, 9)).toISOString(),
     })),
   });
+  /** Creates the next controlled published job and advances later dates so independent groups do not collide. */
   const create = async () => {
     const result = await actor(
       admin,
@@ -38,6 +40,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
     day += 3;
     return result;
   };
+  /** Calls the actual claim RPC; only the database result confirms whole-block allocation. */
   const claim = async (job, who = teacher, key = randomUUID()) => {
     const version = await actor(who,
       `select item->>'terms_version' from jsonb_array_elements(public.job_offers()) item where item->>'id'='${job}'`,
@@ -46,14 +49,17 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
       await actor(who, `select public.claim_job('${job}','${key}',${version})`),
     );
   };
+  /** Reads the actual versioned management state before the next comparison. */
   const state = async (job, who = admin, aal = "aal2") =>
     JSON.parse(await actor(who, `select public.job_lifecycle('${job}')`, aal));
+  /** Sends an explicit lifecycle action with the expected version and retry identity to the database contract. */
   const action = async (job, type, values = {}, key = randomUUID(), version) =>
     actor(
       admin,
       `select public.manage_job_offer('${job}',${quoteSql(type)},${version ?? (await state(job)).version},'${key}',${quoteSql(JSON.stringify(values))}::jsonb)`,
       "aal2",
     );
+  /** Cancels a specific claim under the selected identity and requires the server's permission checks. */
   const cancel = async (
     id,
     who = teacher,
@@ -66,6 +72,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
       `select public.cancel_job_assignment('${id}',${quoteSql(reason)},'${key}')`,
       aal,
     );
+  /** Counts and reports a case only after all of its assertions have completed successfully. */
   const check = async (name, fn) => {
     await fn();
     checks++;
@@ -238,12 +245,14 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
     "Every genuine reopening renews its optional notice; exact retries and disabled preferences do not",
     async () => {
       const job = await create();
+      /** Reads this actor's specific notice to distinguish read state from reopening history. */
       const notice = async () =>
         JSON.parse(
           await sql(
             `select to_jsonb(n) from public.notifications n where user_id='${teacher}' and kind='job_reopened' and resource_id='${job}'`,
           ),
         );
+      /** Marks the tested notice read through its contract rather than changing only a browser counter. */
       const markRead = async () =>
         actor(
           teacher,
@@ -252,6 +261,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
       const originalPreferences = JSON.parse(
         await actor(teacher, "select public.notification_preferences()"),
       );
+      /** Changes this actor's category preference for the following notification-boundary test. */
       const setUpdates = async (enabled) => {
         const current = JSON.parse(
           await actor(teacher, "select public.notification_preferences()"),
@@ -477,6 +487,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
       const org = await sql(
         `select organisation_id from private.job_commission_offers where job_id='${job}'`,
       );
+      /** Captures actual retained state before and after a concurrent or rejected action. */
       const summary = async () =>
         JSON.parse(
           await actor(
@@ -536,6 +547,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
   await check(
     "Invoice submission serializes with cancellation after its accepted-claim check",
     async () => {
+      /** Creates the controlled invoice fixture for an accepted position in the cancellation/invoice race. */
       const prepareInvoice = async (claimId) => {
         const document = randomUUID(),
           version = randomUUID(),

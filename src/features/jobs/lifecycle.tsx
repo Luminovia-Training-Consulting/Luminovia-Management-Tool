@@ -1,3 +1,7 @@
+/**
+ * Explicit offer metadata, capacity and cancellation actions. Confirmation state retains
+ * reviewed version/request ID; background changes must not silently authorize an action.
+ */
 import { useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -20,12 +24,15 @@ import {
 import "./lifecycle-i18n";
 import "./lifecycle.css";
 
+/** Derive the shared lifecycle action's exact input contract instead of maintaining a second parameter definition. */
 type OfferInput = Parameters<typeof manageOffer>[0];
+/** Frozen action/version for deliberate cancellation, reopening or copy confirmation. */
 type Confirmation = {
   kind: "cancel" | "reopen" | "duplicate";
   version: number;
   claim?: string;
 };
+/** Load capabilities/lifecycle, retain confirmation input and execute explicit management actions. */
 export function JobLifecyclePanel({ job }: { job: Job }) {
   const { session } = useAuth();
   const { t, i18n } = useTranslation("jobLifecycle");
@@ -420,6 +427,7 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
   );
 }
 
+/** Edit allowed metadata against its reviewed version; preserve exact timestamps when their inputs are unchanged. */
 function EditOffer({
   job,
   version,

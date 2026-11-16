@@ -1,3 +1,8 @@
+/**
+ * Shared DTOs for the original profile/job/calendar contract. Keep ISO instants, IANA zones and
+ * accepted terms distinct; feature extensions own their additional types.
+ */
+/** Own profile fields and display zone; never a substitute for current role/capability queries. */
 export interface Profile {
   id: string;
   display_name: string;
@@ -8,6 +13,7 @@ export interface Profile {
   locale: string;
   active: boolean;
 }
+/** Shared expertise entry with DE/EN labels and optional archive/hierarchy references. */
 export interface Topic {
   id: string;
   label_de: string;
@@ -20,18 +26,21 @@ export interface Topic {
   description_de?: string;
   description_en?: string;
 }
+/** Selected qualification with separate management verification and expiry. */
 export interface Expertise {
   user_id: string;
   topic_id: string;
   verified: boolean;
   valid_until: string | null;
 }
+/** A concrete offer session represented by start/end instants. */
 export interface JobSession {
   id: string;
   job_id: string;
   starts_at: string;
   ends_at: string;
 }
+/** Current offer projection with terms version, capacity basis and related sessions. */
 export interface Job {
   capacity?: number;
   capacity_basis?: "single_position" | "per_position";
@@ -54,6 +63,7 @@ export interface Job {
   job_sessions: JobSession[];
   job_requirements: { topic_id: string }[];
 }
+/** Accepted assignment snapshot with own fee and reserved session intervals. */
 export interface Claim {
   id: string;
   job_id: string;
@@ -73,6 +83,7 @@ export interface Claim {
     ends_at: string;
   }[];
 }
+/** Own private event with instants and intended display zone. */
 export interface PersonalEvent {
   id: string;
   user_id: string;

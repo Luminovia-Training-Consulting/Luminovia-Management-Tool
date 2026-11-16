@@ -1,3 +1,6 @@
+/**
+ * Native compatibility check of the full selfhost stack in an owned Compose project. Preserve test data across the image switch and exercise Auth/API/Storage rather than only startup or YAML.
+ */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomBytes, createHash } from "node:crypto";
@@ -42,8 +45,10 @@ const expectedServices = [
   "web",
 ].sort();
 const immutable = /^[A-Za-z0-9./_-]+(?::[A-Za-z0-9._-]+)?@sha256:[a-f0-9]{64}$/;
+// Compute a stable SHA-256 digest for the source/artifact comparison.
 const hash = (data) => createHash("sha256").update(data).digest("hex");
 
+// Verify project name, ports, mounts and private configuration before starting the isolated candidate.
 export function assertCandidateConfiguration(configuration, scope) {
   assert.match(scope.project, /^luminovia-portal-test-[a-f0-9]{24}$/);
   assert.equal(scope.network, scope.project + "-backend");
@@ -110,6 +115,7 @@ export function assertCandidateConfiguration(configuration, scope) {
   );
 }
 
+// Store exact migration source in a real ledger entry, not only its version number.
 export function migrationWithHistory(filename, source) {
   assert.match(filename, /^\d{14}_[a-z0-9_]+\.sql$/);
   assert(
@@ -123,6 +129,7 @@ export function migrationWithHistory(filename, source) {
   return source.replace(/commit;\s*$/i, () => record + "COMMIT;\n");
 }
 
+// Copy allowed source files without private data or unrelated checkout artifacts.
 function copySource(source, target) {
   const info = lstatSync(source);
   assert(!info.isSymbolicLink(), "Candidate source symlinks are refused.");
@@ -142,6 +149,7 @@ function copySource(source, target) {
   }
 }
 
+// Create an owned candidate tree from actual source for the native probe.
 export function stageCandidateSource(sourceRoot, scratch) {
   for (const item of [
     "scripts",
@@ -171,6 +179,7 @@ export function stageCandidateSource(sourceRoot, scratch) {
   );
 }
 
+// Discover the candidate's actual API check programs.
 export function candidateApiSuites(sourceRoot) {
   const scripts = join(sourceRoot, "scripts");
   return [
@@ -184,6 +193,7 @@ export function candidateApiSuites(sourceRoot) {
   });
 }
 
+// Adapt only the fixture's explicit isolated project/port contract.
 export function adaptCandidateApiFixture(source, { project, apiPort }) {
   assert.match(project, /^luminovia-portal-test-[a-f0-9]{24}$/);
   assert(Number.isInteger(apiPort) && apiPort > 1024 && apiPort <= 65535);
@@ -205,6 +215,7 @@ export function adaptCandidateApiFixture(source, { project, apiPort }) {
     .replace(client, identity + client);
 }
 
+// Temporarily reserve a free loopback port for the isolated probe.
 async function availablePort() {
   const server = createServer();
   await new Promise((done, fail) =>
@@ -215,6 +226,7 @@ async function availablePort() {
   return port;
 }
 
+// Start owned Compose resources, verify data before/after upgrading, and clean up only resources covered by the ownership contract.
 export async function checkCandidate({
   baselineRoot,
   candidateRoot = root,

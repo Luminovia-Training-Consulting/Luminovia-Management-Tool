@@ -36,13 +36,19 @@ After complete quality, coverage, application and native acceptance, PRs produce
 
 [labels.json](../.github/labels.json) is the shared catalogue of managed labels used by local and CI validation. The nine existing GitHub standard labels are preserved. Every PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. Other labels may be added; unknown values within these three categories are rejected. The [pull request guide](PULL_REQUEST_GUIDE.md#pull-request-labels) explains how to choose them.
 
-The [metadata workflow](../.github/workflows/pr-metadata.yml) also responds to label changes. It reads current labels, verifies the repository, PR number and commit identity, and treats text as data. It installs no dependencies and requests only `contents: read` and `pull-requests: read`. Its eight regression tests are discovered automatically by `./portal test`:
+The [metadata workflow](../.github/workflows/pr-metadata.yml) responds to changes on open PRs through the ordinary `pull_request` event. It explicitly checks out `refs/heads/main` from this repository, so current labels are checked against the current shared catalogue rather than an obsolete contribution snapshot. It never checks out or executes contribution code, installs dependencies or uses secrets. Permissions remain only `contents: read` and `pull-requests: read`; no elevated event is needed. Repository, PR number and live head identity are validated; titles, bodies and labels remain data. Its regression tests are discovered automatically by `./portal test`:
 
 ```bash
 node --test scripts/runtime-pr-metadata.test.mjs scripts/runtime-documentation.test.mjs
 ```
 
-External contributors can suggest labels in the description; a maintainer applies them. Missing labels must not be bypassed by inventing a green status. Workflow changes themselves need review because ordinary PR workflows execute the proposed source version.
+Closed PR label changes do not run this gate. For an explicit historical check, dispatch this workflow from `main` with a positive `pull_request_number`, for example:
+
+```bash
+gh workflow run pr-metadata.yml --ref main -f pull_request_number=6
+```
+
+The manual run reads current GitHub labels and records the actual PR head, including for a closed temporary-base fixture. It does not rerun application acceptance, replace historical SHA-bound results or invent a green status on an old failed run. A new managed label must be added to the shared catalogue before use. External contributors can suggest labels in the description; a maintainer applies them. Workflow changes themselves still need review.
 
 ## Git tags and development packages
 

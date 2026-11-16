@@ -1,6 +1,11 @@
+/**
+ * Typed accounts Edge HTTP adapter with paginated search. Actor IDs partition browser caches;
+ * the Edge handler independently verifies the native JWT and current database permissions.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { db } from "../../lib/supabase";
+/** Supported business roles for validated forms; this list grants no assignment authority. */
 export const accountRoles = [
   "owner",
   "admin",
@@ -11,7 +16,9 @@ export const accountRoles = [
   "participant",
   "guest",
 ] as const;
+/** Derive input roles from the role list; the server decides current assignment permission. */
 export type AccountRole = (typeof accountRoles)[number];
+/** Administrative account projection with activation, locale and server-provided roles. */
 export interface AccountPerson {
   id: string;
   display_name: string;
@@ -23,23 +30,27 @@ export interface AccountPerson {
   can_assign_roles: boolean;
   can_change_active: boolean;
 }
+/** Server-provided role capabilities; browser state never grants assignment authority. */
 export interface AccountRoleCapability {
   role: AccountRole;
   permissions: string[];
   assignable: boolean;
 }
+/** Refresh current assignable roles under this actor's own cache scope. */
 export const accountRoleCatalogQuery = (actor: string) =>
   queryOptions({
     queryKey: ["account-role-catalog", actor],
     queryFn: () => accountRequest<AccountRoleCapability[]>("roles"),
     staleTime: 0,
   });
+/** Account page with total count and the actual applied pagination bounds. */
 export interface AccountList {
   items: AccountPerson[];
   total: number;
   limit: number;
   offset: number;
 }
+/** Call the accounts HTTP contract and propagate both transport and reported business errors. */
 export async function accountRequest<T>(
   path: string,
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" = "GET",
@@ -62,6 +73,7 @@ export async function accountRequest<T>(
   }
   return data as T;
 }
+/** Fetch 25 accounts per page; previous results are placeholders only within the same actor identity. */
 export const accountListQuery = (
   actor: string,
   search: string,
@@ -69,6 +81,8 @@ export const accountListQuery = (
 ) =>
   queryOptions({
     queryKey: ["accounts", actor, search, offset],
+    // Keep the previous page visible while the same actor changes the search.
+    // An actor change must never reuse another person's directory placeholder.
     placeholderData: (previous, query) =>
       query?.queryKey[1] === actor ? previous : undefined,
     queryFn: () =>

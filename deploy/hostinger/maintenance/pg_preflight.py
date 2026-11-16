@@ -1,3 +1,4 @@
+# Probe a same-major PostgreSQL image against a private copy of the stopped cluster. Expose no candidate network ports and never mount active original data into the candidate.
 """Validate a same-major engine against a private, stopped-cluster copy.
 
 The active source cluster is never mounted into the candidate. This hook runs
@@ -29,11 +30,13 @@ class PreflightError(Exception):
     pass
 
 
+# Accept only an immutable PostgreSQL 17 pin; another major requires a separate migration.
 def validate_image(image):
     if not isinstance(image, str) or not IMAGE.fullmatch(image):
         raise PreflightError("postgres_major_or_unpinned_image_requires_migration")
 
 
+# Reject external tablespaces, symlinks and special files before copying the cluster.
 def assert_plain_tree(path):
     path = Path(path)
     if path.is_symlink() or not path.is_dir() or any(p.is_symlink() for p in path.parents):
@@ -43,6 +46,7 @@ def assert_plain_tree(path):
             raise PreflightError("postgres_external_tablespace_or_special_file_requires_review")
 
 
+# Build server-side summaries, hashing row contents, role passwords and definitions for comparison rather than returning their raw values.
 def fingerprint_sql():
     # Row values, role password hashes and definitions remain in the server-side
     # aggregate; only their digests leave PostgreSQL. Physical OIDs are retained.
@@ -73,10 +77,12 @@ COMMIT;
 """
 
 
+# Hash the canonically ordered check object for the result witness.
 def canonical(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
+# Probe an owned networkless cluster copy after quiescence and a fresh backup; resume the old database before starting the candidate.
 def run_preflight(updater, tree, candidate_image):
     validate_image(candidate_image)
     root = Path(updater.root).resolve()
@@ -162,6 +168,7 @@ def run_preflight(updater, tree, candidate_image):
         if not ready:
             raise PreflightError("postgres_candidate_not_ready")
 
+        # Query only the owned candidate container with a timeout and ON_ERROR_STOP.
         def sql(query, database="postgres"):
             raw = updater.command(["docker", "exec", "-i", name, "psql", "-U", "supabase_admin", "-d", database,
                 "-X", "-qAt", "-v", "ON_ERROR_STOP=1"], data=query.encode(), timeout=120).decode().strip()

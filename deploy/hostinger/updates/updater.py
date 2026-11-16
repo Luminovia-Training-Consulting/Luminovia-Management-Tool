@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# CMS development updater bound to exact main/CI/release identity. Fence public writers, back up data and retain recovery state before runtime changes; never automatically rewind data after the API reopens.
 """Pull verified public main releases; keep all credentials and data on this VM."""
 
 from __future__ import annotations
@@ -40,18 +41,22 @@ CONTROLLER = "deploy/hostinger/updates/updater.py"
 REBOOT_PENDING = Path("/run/luminovia-reboot-pending")
 
 
+# Stable operator error; keep internal output and secrets out of the public reason.
 class UpdateError(Exception):
     """A stable, non-sensitive operator reason code."""
 
 
+# Identify only transient image-pull failures before any runtime/data mutation.
 class RuntimeImagePullError(UpdateError):
     """A registry pull failed before application or persistent-data mutation."""
 
 
+# Return a timezone-aware UTC timestamp for persistent operational state.
 def now():
     return dt.datetime.now(dt.timezone.utc).isoformat()
 
 
+# Hash the complete file incrementally rather than loading large artifacts into memory.
 def digest(path):
     value = hashlib.sha256()
     with Path(path).open("rb") as stream:
@@ -60,6 +65,7 @@ def digest(path):
     return value.hexdigest()
 
 
+# Enforce 0700 on the private target directory and reject a symlink at that target.
 def private_directory(path):
     path = Path(path)
     path.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -68,6 +74,7 @@ def private_directory(path):
     path.chmod(0o700)
 
 
+# Write state to an exclusive private temporary file before atomically replacing the previous document.
 def atomic_json(path, value):
     path = Path(path)
     private_directory(path.parent)
@@ -81,6 +88,7 @@ def atomic_json(path, value):
     os.replace(temporary, path)
 
 
+# Read simple environment assignments as data without evaluating shell expressions.
 def read_environment(path):
     result = {}
     for raw in Path(path).read_text(encoding="utf-8").splitlines():
@@ -99,6 +107,7 @@ def read_environment(path):
     return result
 
 
+# Limit archive targets to the known app tree; reject private paths and traversal.
 def allowed_path(name):
     if not isinstance(name, str) or not name or "\\" in name or "\x00" in name:
         return False
@@ -114,6 +123,7 @@ def allowed_path(name):
     return name.startswith(("supabase/functions/", "supabase/migrations/", "deploy/hostinger/"))
 
 
+# Validate the release contract: commit, file sizes, checksums and pinned runtime.
 def validate_manifest(value):
     if not isinstance(value, dict) or value.get("schemaVersion") != 1:
         raise UpdateError("invalid_release_manifest")
@@ -178,6 +188,7 @@ def validate_manifest(value):
     return by_path
 
 
+# Validate archive entries before exclusive extraction; reject links, duplicates and unexpected files.
 def unpack_verified(archive, manifest, destination):
     files = validate_manifest(manifest)
     if Path(archive).stat().st_size > MAX_ARCHIVE or digest(archive) != manifest["archiveSha256"]:
@@ -220,6 +231,7 @@ def unpack_verified(archive, manifest, destination):
         raise UpdateError("missing_archive_member")
 
 
+# Mask SQL comments and quoted content for conservative classification without executing SQL.
 def visible_sql(source):
     """Remove SQL quoted values/comments while retaining executable statement tokens."""
     result = []
@@ -275,6 +287,7 @@ def visible_sql(source):
     return "".join(result)
 
 
+# Reject destructive or ambiguous migrations in the automatic path; retain separate operator review.
 def compatible_migration(source):
     visible = visible_sql(source)
     statements = [part.strip() for part in visible.split(";") if part.strip()]
@@ -297,6 +310,7 @@ def compatible_migration(source):
             raise UpdateError("migration_requires_operator_review")
 
 
+# Wrap the same source in a transaction, advisory lock and exact history entry.
 def migration_sql(source, version, name):
     compatible_migration(source)
     delimiter = "$cms_history_" + uuid.uuid4().hex + "$"
@@ -309,7 +323,9 @@ def migration_sql(source, version, name):
     return command[:opening.end()] + "\nSELECT pg_advisory_xact_lock(hashtext('luminovia.schema_migrations'));\n" + command[opening.end():]
 
 
+# Restrict redirects to the release source's explicitly allowed HTTPS download targets.
 class SafeRedirect(urllib.request.HTTPRedirectHandler):
+    # Revalidate the redirect target before allowing the base handler to follow it.
     def redirect_request(self, request, response, code, message, headers, new_url):
         parsed = urllib.parse.urlparse(new_url)
         if parsed.scheme != "https" or parsed.username or parsed.password or parsed.port not in (None, 443) or parsed.hostname not in {"api.github.com", "github.com", "release-assets.githubusercontent.com", "objects.githubusercontent.com"}:
@@ -317,7 +333,9 @@ class SafeRedirect(urllib.request.HTTPRedirectHandler):
         return super().redirect_request(request, response, code, message, headers, new_url)
 
 
+# Own only state, processes and source under the explicit installation root; mutate them under maintenance locking.
 class Updater:
+    # Bind instance paths and private operational files to the supplied installation root.
     def __init__(self, root=Path("/opt/luminovia-portal")):
         self.root = Path(root).absolute()
         self.private = self.root / "private"
@@ -329,6 +347,7 @@ class Updater:
         self.opener = urllib.request.build_opener(SafeRedirect())
         self.maintenance = self.www / "maintenance.enabled"
 
+    # Run the supplied process without a shell and preserve a real failure status.
     def command(self, arguments, *, data=None, output=None, timeout=300):
         try:
             result = subprocess.run(arguments, input=data, stdout=output if output is not None else subprocess.PIPE, stderr=subprocess.PIPE, check=True, timeout=timeout)
@@ -336,15 +355,18 @@ class Updater:
         except (subprocess.SubprocessError, OSError) as error:
             raise UpdateError("subprocess_" + Path(arguments[0]).name + "_failed") from error
 
+    # Run SQL through the known database container with ON_ERROR_STOP, not an arbitrary remote connection.
     def sql(self, source, *, database="postgres", user="postgres"):
         return self.command(["docker", "exec", "-i", DB, "psql", "-U", user, "-d", database, "-X", "-qAt", "-v", "ON_ERROR_STOP=1"], data=source.encode()).decode().strip()
 
+    # Render/start only the known web/backend projects using their private environment files.
     def compose(self, kind, arguments, *, tree=None):
         tree = Path(tree or self.source)
         directory = tree / "deploy/hostinger" / ("selfhost" if kind == "backend" else "")
         env = self.private / ("selfhost.env" if kind == "backend" else "web.env")
         return self.command(["docker", "compose", "--project-directory", str(directory), "--env-file", str(env), "-f", str(directory / "compose.yml"), *arguments], timeout=600)
 
+    # Pull runtime images before mutation; only this early failure qualifies for a network retry.
     def pull_runtime_images(self, tree):
         # Configuration/manifest validation happens separately before this narrow
         # wrapper. No stop, backup, file promotion or data mutation belongs here.
@@ -354,6 +376,7 @@ class Updater:
         except UpdateError as error:
             raise RuntimeImagePullError("runtime_image_pull_failed") from error
 
+    # Read bounded GitHub JSON; treat only an explicitly allowed 404 as a missing release.
     def api(self, path, *, missing_ok=False):
         request = urllib.request.Request(API + path, headers={"Accept": "application/vnd.github+json", "User-Agent": "Luminovia-Development-Updater/1", "X-GitHub-Api-Version": "2026-03-10"})
         try:
@@ -371,6 +394,7 @@ class Updater:
         except (OSError, ValueError, urllib.error.URLError) as error:
             raise UpdateError("github_request_failed") from error
 
+    # Bind the candidate to current main, its exact immutable release tag and successful complete CI.
     def candidate(self):
         # GitHub's release list order is not a deployment ordering guarantee.
         # Read current main first, then resolve that commit's exact release tag.
@@ -406,6 +430,7 @@ class Updater:
             assets[name] = matches[0]["browser_download_url"]
         return {"status": "candidate", "commit": commit, "assets": assets}
 
+    # Download to an exclusive private file within the size limit; do not overwrite existing files.
     def download(self, url, path, limit):
         request = urllib.request.Request(url, headers={"User-Agent": "Luminovia-Development-Updater/1"})
         descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
@@ -422,6 +447,7 @@ class Updater:
         except (OSError, urllib.error.URLError, http.client.HTTPException) as error:
             raise UpdateError("release_download_failed") from error
 
+    # Record bounded exponential retry timing without permanently suppressing a transiently failed candidate.
     def defer_network_retry(self, code, commit=None):
         attempts = min(int(self.state.get("networkRetryAttempts", 0)) + 1, 10)
         deadline = dt.datetime.now(dt.timezone.utc) + dt.timedelta(seconds=min(3600, 300 * 2 ** (attempts - 1)))
@@ -431,6 +457,7 @@ class Updater:
         atomic_json(self.state_file, self.state)
         return {"status": "waiting_for_network_retry", "commit": commit, "retryAt": deadline.isoformat()}
 
+    # Match the public build URL and publishable-key digest to this instance's configuration.
     def verify_public_build(self, manifest):
         env = read_environment(self.private / "selfhost.env")
         expected = env.get("SUPABASE_PUBLISHABLE_KEY", "")
@@ -442,10 +469,12 @@ class Updater:
             raise UpdateError("release_public_configuration_mismatch")
         return env
 
+    # Read actual stored migration source, not merely version numbers.
     def current_history(self):
         raw = self.sql("SELECT coalesce(json_agg(json_build_object('version',version,'source',statements[1])),'[]'::json)::text FROM supabase_migrations.schema_migrations;")
         return {row["version"]: row["source"] for row in json.loads(raw)}
 
+    # Preserve released source byte-for-byte and accept only compatible forward migrations.
     def plan_migrations(self, tree, manifest):
         applied = self.current_history()
         candidates = {item["version"]: item for item in manifest["migrations"]}
@@ -465,6 +494,7 @@ class Updater:
                 pending.append((version, Path(item["path"]).name[15:-4], source))
         return pending
 
+    # Read actual images from rendered Compose configuration and require immutable digests.
     def rendered_images(self, tree):
         images = {}
         for kind in ("backend", "web"):
@@ -476,6 +506,7 @@ class Updater:
                 images[service] = image
         return images
 
+    # Match rendered images to the release contract; keep PostgreSQL major upgrades outside automatic deployment.
     def verify_runtime(self, tree, manifest):
         images = self.rendered_images(tree)
         declared = {item["service"]: item["image"] for item in manifest["runtime"]["images"]}
@@ -490,6 +521,7 @@ class Updater:
             raise UpdateError("runtime_change_requires_reviewed_bundle")
         return changed, images.get("db") != current.get("db")
 
+    # Distinguish runtime changes from site/controller changes using actual bytes and the prior inventory.
     def release_changes(self, manifest):
         changed = set()
         runtime_files = set()
@@ -517,6 +549,7 @@ class Updater:
         changed.update(set(previous_files) - runtime_files)
         return changed, controller_changed, sorted(runtime_files)
 
+    # Reconcile web services; force recreation only when changed file bind mounts would otherwise retain an old inode.
     def activate_web(self, changed):
         forced = []
         if "deploy/hostinger/Caddyfile" in changed:
@@ -530,6 +563,7 @@ class Updater:
             # File bind mounts keep their old inode after atomic source copying.
             self.compose("web", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *forced])
 
+    # Replace the updater with a verified private copy only after successful activation.
     def install_controller(self, tree):
         updater = Path(tree) / CONTROLLER
         if updater.exists():
@@ -542,6 +576,7 @@ class Updater:
             temporary.chmod(0o700)
             os.replace(temporary, destination)
 
+    # Account for Storage, database copies, staging and reserve space before a full update.
     def preflight_space(self, tree):
         data = self.root / "data/storage"
         object_bytes = 0
@@ -556,10 +591,12 @@ class Updater:
         if shutil.disk_usage(self.root).free < required:
             raise UpdateError("insufficient_free_disk_for_safe_update")
 
+    # Read actual systemd state before application and OS maintenance could overlap.
     def os_updates_busy(self):
         state = self.command(["systemctl", "show", "apt-daily-upgrade.service", "--property=ActiveState", "--value"], timeout=10).decode().strip()
         return state in {"activating", "active", "reloading", "deactivating"}
 
+    # Create this attempt's fresh bounded recovery backup; remove incomplete artifacts.
     def backup(self, commit):
         root = self.private / "update-backups"
         private_directory(root)
@@ -589,6 +626,7 @@ class Updater:
             shutil.rmtree(path)
             raise
 
+    # Reject unreviewed collation changes; confirm explicitly approved reindexing in the actual catalog.
     def collation_guard(self, manifest):
         rows = json.loads(self.sql("SELECT coalesce(json_agg(json_build_object('name',datname,'allow',datallowconn,'template',datistemplate)),'[]'::json)::text FROM pg_database WHERE datcollversion IS NOT NULL AND datcollversion IS DISTINCT FROM pg_database_collation_actual_version(oid);", user="supabase_admin"))
         if not rows:
@@ -605,6 +643,7 @@ class Updater:
         if self.sql("SELECT count(*) FROM pg_database WHERE datcollversion IS NOT NULL AND datcollversion IS DISTINCT FROM pg_database_collation_actual_version(oid);", user="supabase_admin") != "0":
             raise UpdateError("collation_rebuild_not_confirmed")
 
+    # Capture the complete rollback map before atomically replacing any runtime source.
     def copy_runtime(self, tree, manifest, rollback, original):
         replacements = []
         for item in manifest["files"]:
@@ -635,6 +674,7 @@ class Updater:
             os.replace(temporary, target)
         return original
 
+    # Restore captured old files and remove only files newly introduced by this attempt.
     def rollback_runtime(self, original, rollback):
         for name, existed in original.items():
             target = self.source / name
@@ -643,6 +683,7 @@ class Updater:
             elif target.is_file() and not target.is_symlink():
                 target.unlink()
 
+    # Prepare a new static release without overwriting active or differently populated hashed assets.
     def prepare_site(self, tree, commit):
         release = self.www / "releases" / commit
         if release.exists():
@@ -669,6 +710,7 @@ class Updater:
                 target.chmod(0o644)
         return release
 
+    # Switch the current static release through an atomically replaced symlink.
     def promote(self, target):
         if (self.www / "current").exists() and not (self.www / "current").is_symlink():
             raise UpdateError("static_current_must_be_release_symlink")
@@ -676,6 +718,7 @@ class Updater:
         os.symlink(target, temporary)
         os.replace(temporary, self.www / "current")
 
+    # Load only the named verified recovery helper from the validated candidate tree.
     def runtime_helper(self, tree, name):
         path = Path(tree) / "deploy/hostinger/maintenance" / (name + ".py")
         specification = importlib.util.spec_from_file_location("luminovia_" + name, path)
@@ -685,16 +728,20 @@ class Updater:
         specification.loader.exec_module(module)
         return module
 
+    # Delegate physical capture to the verified helper with an explicit scanner-restart decision.
     def create_checkpoint(self, tree, *, include_clamav):
         return self.runtime_helper(tree, "atomic_recovery").create_checkpoint(self, include_clamav=include_clamav)
 
+    # Delegate rollback with the public API fenced and explicit checks of the previous runtime/health.
     def restore_checkpoint(self, tree, checkpoint, *, public_unblocked, restart_old_runtime, verify_health):
         return self.runtime_helper(tree, "atomic_recovery").restore_checkpoint(self, checkpoint, public_unblocked=public_unblocked, restart_old_runtime=restart_old_runtime, verify_health=verify_health)
 
+    # Probe the declared database image on a private data copy before switching live source.
     def postgres_preflight(self, tree, manifest):
         image = next(item["image"] for item in manifest["runtime"]["images"] if item["service"] == "db")
         return self.runtime_helper(tree, "pg_preflight").run_preflight(self, tree, image)
 
+    # Check container state, public JWKS and exact index bytes; use only the owned private gateway during maintenance.
     def health(self, env, expected_index=None, *, private_api=False):
         for project, services in (("luminovia-supabase", (*WRITERS, "db", "mailpit")), ("luminovia-portal", ("web", "clamav"))):
             for service in services:
@@ -739,6 +786,7 @@ class Updater:
             except Exception as error:
                 raise UpdateError("static_release_health_failed") from error
 
+    # Validate first, separate site/runtime paths, and reopen writers only after backup, migrations and private health checks.
     def apply(self, archive, manifest):
         validate_manifest(manifest)
         commit = manifest["commit"]
@@ -830,6 +878,7 @@ class Updater:
             if stopped and checkpoint is not None and not public_unblocked:
                 try:
                     self.rollback_runtime(original, rollback)
+                    # Restore the previous runtime in dependency order while public writers remain fenced.
                     def restart_old_runtime():
                         self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "db", "mailpit"])
                         self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *WRITERS])
@@ -868,6 +917,7 @@ class Updater:
             # The staged directory is unique and owned; application data are elsewhere.
             shutil.rmtree(stage, ignore_errors=True)
 
+    # Acquire the updater lock, respect OS/recovery fences, and attempt at most one eligible release.
     def once(self, *, package=None, manifest_path=None, retry_failed=False):
         private_directory(self.control)
         lock = os.open(self.control / "updater.lock", os.O_WRONLY | os.O_CREAT, 0o600)
@@ -940,6 +990,7 @@ class Updater:
             os.close(lock)
 
 
+# Separate the documented operating modes and expose stable results/error codes without private process details.
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)

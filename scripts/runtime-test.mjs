@@ -1,3 +1,7 @@
+/**
+ * Canonical complete acceptance in an owned snapshot, random project and separate service ports.
+ * Every stage must pass; failures and cleanup errors remain visible in the private result report.
+ */
 import {
   cpSync,
   mkdirSync,
@@ -68,6 +72,7 @@ const env = cleanEnvironment({
 let failure;
 let localDockerReady = false;
 const cancellation = new AbortController();
+/** Cancels the current stage; the outer finally path remains responsible for cleanup. */
 const cancel = () => {
   console.log("Test wird abgebrochen; isolierte Dienste werden aufgeräumt …");
   cancellation.abort();
@@ -98,6 +103,7 @@ try {
       entry.isDirectory() ? "dir" : "file",
     );
   }
+  // Only the disposable copy receives the test project/ports; normal development source stays unchanged.
   const configPath = join(scratch, "supabase/config.toml");
   let config = readFileSync(configPath, "utf8");
   config = config
@@ -105,6 +111,7 @@ try {
     .replaceAll("543", "553")
     .replaceAll(":5173", ":5273");
   writeFileSync(configPath, config);
+  /** Runs one named stage in the isolated snapshot with a timeout and shared cancellation signal. */
   const step = async (label, file, args, extra = {}) => {
     console.log(`\n[TEST] ${label}`);
     return await command(file, args, {
@@ -134,6 +141,7 @@ try {
   const functions = join(scratch, "supabase/functions");
   const handlerTests = [];
   const entries = [];
+  /** Discovers delivered Edge entry points and tests recursively so new functions do not silently escape verification. */
   function find(path) {
     for (const entry of readdirSync(path, { withFileTypes: true })) {
       const child = join(path, entry.name);

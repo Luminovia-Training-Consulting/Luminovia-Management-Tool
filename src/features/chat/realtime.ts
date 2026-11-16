@@ -1,8 +1,15 @@
+/**
+ * Lifetime-scoped subscription for one actor and room. Events batch authorized refetches;
+ * observed membership revocation immediately discards room data and stops pending refreshes.
+ */
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import { chatKeys } from "./api";
-/** Realtime payloads are notifications only. Authorised RPCs remain the source of truth. */
+/**
+ * Treat Realtime payloads as refetch signals; authorized RPCs remain authoritative. Observe one room,
+ * batch refreshes and dispose timers/subscription on actor or room changes.
+ */
 export function useChatRealtime(actor: string, room: string | undefined) {
   const client = useQueryClient();
   const [status, setStatus] = useState<"connecting" | "connected" | "retrying">(

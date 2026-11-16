@@ -1,3 +1,6 @@
+/**
+ * Decrypt and verify a complete recovery set in private scratch paths. Restore databases/files into isolated resources and clean up only resources owned by this drill.
+ */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile, writeFile, rm, mkdir } from "node:fs/promises";
@@ -13,8 +16,11 @@ import {
 import { verifyRecoveredCredentials } from "./credential_recovery.mjs";
 import { verifyRestoredRecoveryInventory } from "./postgres_recovery_witness.mjs";
 const here = dirname(fileURLToPath(import.meta.url));
+// Quote a SQL identifier, including embedded quotation marks.
 const identifier = (s) => '"' + s.replaceAll('"', '""') + '"';
+// Quote a SQL text value only; object identifiers need a separate quoting path.
 const literal = (s) => "'" + s.replaceAll("'", "''") + "'";
+// Normalize only explicitly known operator-dependent text fields for reproducible restore comparison.
 const normalize = (text, operator) =>
   text
     .split("\n")
@@ -29,6 +35,7 @@ const normalize = (text, operator) =>
     )
     .sort();
 
+// Decrypt into owned private scratch storage, restore databases/extensions/roles, and verify bytes and credentials before cleanup.
 export async function restoreComplete({
   backup,
   identity,
