@@ -1,22 +1,30 @@
 # GitHub administration and contribution workflow
 
-> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Maintainers/admins may bypass review through a PR only; nobody can bypass the 15 mandatory CI/security checks or up-to-date testing. The maintenance App has no rule exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
+> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Only `CarinaSchoppe` (User 29256704) has a personal `pull_request` exception in the review rules. Nobody can bypass the 15 mandatory CI/security checks or strict up-to-date testing. The history/check rules and maintenance App have no bypass exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
 
 Contributors should start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue guide](ISSUE_GUIDE.md) and the [pull request guide](PULL_REQUEST_GUIDE.md). This page explains the administrative sources and the boundaries of rule exceptions. Public contribution guidance and new contribution discussions use English; the product interface remains German and English.
 
 <a id="active-rule-layers"></a>
 
+Current publication policy: use `./portal check` for fast local feedback and
+`./portal test` for complete local acceptance. Ordinary PR/main activity keeps
+its GitHub quality/security checks but creates no automatic deployment record or
+CMS release. Releases require an authorised manual `Portal checks` dispatch on
+`main`, `publish_release=true`, the exact current `main` SHA in `expected_commit`
+and every existing release gate. PR metadata publication/cleanup is manual-only;
+see [PR_PREVIEWS](PR_PREVIEWS.md). The existing VPS polling timer is unchanged.
+
 ## Rules for `main`
 
-The JSON files under `.github/rulesets/` are snapshots of the configuration read back from GitHub. Files alone do not activate protection; the [server-side rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. All three policies are active:
+The JSON files under `.github/rulesets/` are versioned snapshots and can predate current server settings. In particular, `review.json` still records an earlier role-based exception; the latest live review rule instead permits only User 29256704 (`CarinaSchoppe`) with mode `pull_request`. Do not treat that older snapshot as the effective exception. Files alone do not activate protection; the [server-side rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. The latest readback confirms all three policies active:
 
-| Rule                          | Source                                           | Enforcement and exceptions                                                                                                                                                  |
-| ----------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Branch Protection             | [history.json](../.github/rulesets/history.json) | Signatures, deletion/force-push restrictions and existing deployment/code-quality rules. No bypass actors.                                                                  |
-| Main pull requests and review | [review.json](../.github/rulesets/review.json)   | PR, one independent approval, latest-push approval and resolved conversations. Only human repository roles `maintain` (ID 2) and `admin` (ID 5) have `pull_request` bypass. |
-| Main verified checks          | [checks.json](../.github/rulesets/checks.json)   | All 15 required application/native, quality/coverage, metadata and security checks; strict up-to-date testing. No bypass actors.                                            |
+| Rule                          | Source                                           | Enforcement and exceptions                                                                                                                              |
+| ----------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Branch Protection             | [history.json](../.github/rulesets/history.json) | Signatures, deletion/force-push restrictions and existing deployment/code-quality rules. No bypass actors.                                              |
+| Main pull requests and review | [review.json](../.github/rulesets/review.json)   | PR, one independent approval, latest-push approval and resolved conversations. Only `CarinaSchoppe` (User 29256704) has personal `pull_request` bypass. |
+| Main verified checks          | [checks.json](../.github/rulesets/checks.json)   | All 15 required application/native, quality/coverage, metadata and security checks; strict up-to-date testing. No bypass actors.                        |
 
-The human review exception applies to the person performing a PR merge. It does not permit direct pushes or skipped, failed or pending mandatory checks. Ordinary write access and the maintenance App receive no review exception. The App must satisfy independent approval, latest-push approval and conversation resolution before GitHub can merge its PR. No identity, including an administrator or the App, can bypass the required-check rules. Administrators retain permission to edit repository settings; the current rules govern normal push and merge operations.
+The personal review exception applies only when `CarinaSchoppe` performs a PR merge. It does not permit direct pushes or skipped, failed or pending mandatory checks. Repository-role membership, other contributors and the maintenance App receive no review exception. The App must satisfy independent approval, latest-push approval and conversation resolution before GitHub can merge its PR. No identity, including `CarinaSchoppe`, an administrator or the App, can bypass the history or required-check rules. Administrators retain permission to edit repository settings; the current rules govern normal push and merge operations.
 
 PR18 introduces the `PR preview package` job after native verification. It is now also a required Actions check, so all 15 PR checks must finish successfully before a merge. The main-only release job and separate preview-metadata workflow are not substituted for these PR checks.
 
@@ -46,7 +54,7 @@ References: [rulesets and exceptions](https://docs.github.com/en/repositories/co
 
 ## PR preview packages and deployment records
 
-After complete quality, coverage, application and native acceptance, PRs produce a seven-day source package for a complete local preview. A separate trusted default-branch publisher updates GitHub Deployments using actual current PR, workflow and artifact metadata. Contribution code receives no write token or hosting secrets. The deployment URL opens the downloadable package; successful publication does not claim a hosted website. Closed, superseded and expired previews become inactive. The packaged launcher uses owned local database identities and distinct ports. See [PR previews](PR_PREVIEWS.md) for permissions, local operation and first activation.
+After complete quality, coverage, application and native acceptance, PRs produce a seven-day source package for a complete local preview. The artifact remains available without a Deployment record. Only an authorised manual `PR preview deployments` dispatch on `main` with `action=publish`, the exact `run_id` and `run_attempt` asks the trusted default-branch publisher to create metadata. Its default `action=cleanup` deactivates stale/closed/expired records without publishing a new one; no PR event or schedule runs that cleanup automatically. Contribution code receives no write token or hosting secrets. The deployment URL opens the downloadable package; successful publication does not claim a hosted website. The packaged launcher uses owned local database identities and distinct ports. See [PR previews](PR_PREVIEWS.md) for permissions and local operation.
 
 ## Labels and metadata validation
 
@@ -76,7 +84,7 @@ Labels classify issues and pull requests. Git tags identify an immutable source 
 | `milestone/m4-cbw-templates`       | `b9cdcc89758451bc8258f3a9f173e95ee1a23736` | Building-block templates, avatars and comments; PR #4.                |
 | `milestone/m5-system-audit`        | `bb322746d3cf18b1a0f1eae0eaa96450d26e26cd` | System review and concrete functional/performance corrections; PR #5. |
 
-These tags are not production approvals or new Semver releases. They do not change existing `cms-dev-*` release tags. Current workflows publish development packages after successful main CI; pushing these `milestone/*` tags does not start those release jobs. Do not move or replace published tags.
+These tags are not production approvals or new Semver releases. They do not change existing `cms-dev-*` release tags. Development packages require the explicit manual publication inputs and complete verification described above; successful automatic main CI alone does not publish one. Pushing `milestone/*` tags does not start release jobs. Do not move or replace published tags.
 
 ## Public and private reports
 

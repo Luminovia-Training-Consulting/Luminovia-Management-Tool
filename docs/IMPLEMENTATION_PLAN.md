@@ -1,5 +1,13 @@
 # Persistent implementation plan
 
+## PR10 final accepted-base merge gate
+
+- [x] Complete local isolated acceptance on eee73e4:514frontend,30additional SQL suites,28business APIs plus invitation,112application+2built-PWA browsers, restart retention and checked cleanup; PASS/exit0.
+- [x] Observe all15exact eee73e4 GitHub checks in43818183207, including actual native35migrations/29API suites/retained data and PRpreview package.
+- [x] Integrate actual accepted PR27/main e048edb without unrelated feature sources; preserve manual publication, both ledgers and stable documentation anchors.
+- [x] Run actual `./portal check` and100runtime cases on that final control integration; application/SQL/dependency/browser source remains byte-identical to eee73e4. No extra shared-PC full run is claimed.
+- [ ] Observe all15required checks on the final signed pushed integration/current base, then perform the explicitly authorised regular PR10 merge. Earlier passes do not replace this final gate.
+
 ## PR10 sequential merge continuation
 
 - [x] Preserve original PR10 and M7/English integration ancestry; reconcile actual accepted main319ab69 and its PR-based maintenance boundary without changing live settings.
@@ -61,6 +69,18 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 The current required-check policy has 15 contexts. Older 14-check readbacks below remain historical evidence; use current server rules and exact-head results. Production, hosted installation and other operational approvals remain separate.
 
 > Historical PR21 acceptance notes follow. PR18 and PR21 have since merged; they do not impose a current merge hold. The active joint integration is recorded above.
+
+## Current direction — local PC testing and explicit publication
+
+- Final integration follows actual main319ab69 through verified remote mergef24eae9. Prior head30075c9 passed all15required checks (88browser/2PWA plus real26-migration/20-suite native retention); current f24local checks pass254frontend/95runtime/23maintenance cases. Correct the three retained governance contradictions once, preserving manual publication controls, then use PR27's fresh exact-head checks and actual merge record. Other feature development remains independent.
+- [x] Add `./portal check` for fast local source/coverage/build feedback, retaining complete isolated `./portal test` and latest-main `./portal github test`.
+- [x] Keep automatic quality/security/application/native gates; make CMS publication an explicit exact-SHA manual choice and PR deployment metadata manual-only.
+- [x] Notify the 16 other active project Codex chats and preserve the local-first rule in `AGENTS.md` and operator/contribution guides.
+- [x] Run the actual fast local command (249 frontend tests before integration;254on current-main integration and build pass), all95integrated offline runtime tests and workflow validation. Cancel the old automatic main publication run and temporarily disable the old metadata publisher, with real server readback.
+- Signed [PR27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27) owns the exact required CI and coordinated user-authorised merge record. After its actual merge, re-enable the manual-only metadata workflow and verify main's publication guard. The first run was cancelled after PR21 advanced main; current-main integration preserves both feature histories.
+- [x] Reproduce the existing50-way lifecycle fixture's disappearing-offer consent lookup from the actual failed run, capture real actor quotes before racing and add a deterministic late-reader case; all12real PostgreSQL groups pass in a fresh disposable local container. Fresh signed-head CI remains the merge gate.
+
+The VPS polling timer and normal/hosted data are unchanged. This direction supersedes historical automatic release/publication descriptions below; it does not remove any product, security or release acceptance requirements.
 
 ## Coordinated PR18 integration
 

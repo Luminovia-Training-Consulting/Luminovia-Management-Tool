@@ -1,8 +1,15 @@
 # GitHub checks, security and coverage
 
-> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Maintainers/admins may bypass review through a PR only; nobody can bypass the 15 mandatory CI/security checks or up-to-date testing. The maintenance App has no rule exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
+> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Only `CarinaSchoppe` (User 29256704) has a personal `pull_request` exception in the review rules. Nobody can bypass the 15 mandatory CI/security checks or strict up-to-date testing. The history/check rules and maintenance App have no bypass exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
 
 Workflows run for pull requests and `main`; manual execution is also available. They need no VPS credentials, private Supabase keys or production data. Existing real application/database/API/browser checks remain in place.
+
+Development and testing use the local PC by default. `./portal check` runs fast
+quality, coverage and build checks without starting services; `./portal test`
+provides complete isolated acceptance of the working source before delivery, `./portal github test` verifies freshly fetched `main` locally,
+and `./portal github` starts a separate persistent preview. No GitHub deployment
+or self-hosted Actions runner is needed. GitHub checks remain independent
+verification; a successful check or merge is not a publication request.
 
 ## Visible checks
 
@@ -22,7 +29,20 @@ Workflows run for pull requests and `main`; manual execution is also available. 
 | Dependency review                                                 | Newly introduced vulnerable dependencies on the PR.                                                                          |
 | CodeQL                                                            | Generated findings check, separate from successful scanner execution.                                                        |
 
-All 15 listed checks are mandatory before a PR can merge. The strict rule also requires the PR to be up to date with `main`. Neither maintainers, administrators nor the maintenance App can bypass these checks. After merging, the release job requires the fast quality gates and both complete application/selfhost gates again. VPS automation still verifies that the entire CI run for the exact main commit succeeded.
+All 15 listed checks are mandatory before a PR can merge. The strict rule also requires the PR to be up to date with `main`. Neither maintainers, administrators nor the maintenance App can bypass these checks.
+
+The release job runs only for an authorised manual `Portal checks` dispatch on
+`main` with `publish_release=true` and the exact current `main` SHA supplied as
+`expected_commit`. Pushes, ordinary manual verification and daily-maintenance
+verification do not publish releases. The fast quality gates and both complete
+application/selfhost gates remain required; failed checks do not produce a
+publication package. VPS automation still verifies that the entire CI run
+for the exact main commit succeeded. The existing five-minute VPS polling timer
+is unchanged; changing publication policy does not claim a hosted timer change.
+
+The `PR preview deployments` workflow is manual-only. The verified downloadable
+PR package remains an artifact, independent of optional deployment metadata.
+See [PR_PREVIEWS](PR_PREVIEWS.md) for that explicit publication and cleanup path.
 
 [CodeQL](../.github/workflows/security.yml) additionally analyses JavaScript/TypeScript, Python and GitHub Actions on PRs/main and on Mondays at 05:23 UTC (15:23 Brisbane). This is static security analysis, not a replacement for real RLS/auth/file-access tests. Findings appear under GitHub Security/Code scanning; a successfully completed scan does not by itself mean there are no warnings. Its three language analyses, `Dependency review` and the generated `CodeQL` finding check are now required for PR merges. The fourteen workflow-produced statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. The separate Security workflow is not an additional release-job `needs` gate; publication conditions remain explicitly defined in `ci.yml`.
 
@@ -55,7 +75,7 @@ Dependabot PRs receive suitable existing type/area/risk labels and run through t
 
 ## Maintainers and server-side rules
 
-The history, review and required-check rules are active. Human maintainers and administrators have a `pull_request` exception only in the review rules: they may merge a PR without an additional review, once all mandatory checks pass. They cannot push directly to `main`. Ordinary contributors and the maintenance App must satisfy the independent/latest-push review and resolved-conversation rules as well as every check. The App has no bypass actor entry in any policy. [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md) documents the readback and remaining operational App setup.
+The history, review and required-check rules are active. The only current review bypass actor is `CarinaSchoppe` (User 29256704), with mode `pull_request`; it does not allow direct pushes or skipped checks. Maintainer or administrator role membership alone grants no review exception. Other contributors and the maintenance App must satisfy the independent/latest-push review and resolved-conversation rules as well as every check. The history and required-check rules have no bypass actors, and the App has no bypass entry in any policy. Versioned JSON snapshots can predate the current live exception; the server-side rules are authoritative. [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md) documents the readback and remaining operational App setup.
 
 The initial quality setup was merged through [PR11](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/11) under the previous policy, which allowed an early maintainer merge while long-running tests were active. That historical result is not the current merge policy. The scanner job and generated CodeQL findings check were verified separately; the initial test-fixture finding was fixed by checking the exact URL origin. The first complete main scan additionally reported existing operations/test-script findings. They are individually assessed in [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md); a successful PR-diff scan does not imply a main scan without warnings.
 
