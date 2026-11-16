@@ -8,6 +8,24 @@ import { readFile, readdir } from "node:fs/promises";
 import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
 
 const migrations = new URL("../supabase/migrations/", import.meta.url);
+// This provenance-checked metadata fixture deliberately models optional modules
+// before their real tables exist. Keep both historical install orders before
+// the operational modules; full current support/course RPC composition is
+// exercised separately by support-course-registry-db-tests.mjs.
+const migrationFiles = (await readdir(migrations))
+  .filter((name) => name.endsWith(".sql"))
+  .sort();
+const operationalStart = migrationFiles.find((name) =>
+  name.endsWith("_course_readiness.sql"),
+);
+const metadataContractThrough = migrationFiles
+  .filter((name) => !operationalStart || name < operationalStart)
+  .at(-1)
+  ?.slice(0, 14);
+assert.ok(
+  metadataContractThrough,
+  "The real course predecessor must be present.",
+);
 const fixture = await readFile(
   new URL(
     "./testing/fixtures/course-private-registry-contract.sql",
@@ -45,11 +63,11 @@ for (const moduleFirst of [false, true]) {
       // other order the root migration must operate safely with no module present.
       if (moduleFirst) {
         await sql(fixture);
-        for (const file of (await readdir(migrations))
-          .filter(
-            (f) => f.endsWith(".sql") && f.slice(0, 14) > "20261116091014",
-          )
-          .sort())
+        for (const file of migrationFiles.filter(
+          (file) =>
+            file.slice(0, 14) > "20261116091014" &&
+            file.slice(0, 14) <= metadataContractThrough,
+        ))
           await sql(await readFile(new URL(file, migrations), "utf8"));
       }
       const check = async (name, fn) => {
@@ -325,7 +343,11 @@ for (const moduleFirst of [false, true]) {
         },
       );
     },
-    moduleFirst ? { migrationsThrough: "20261116091014" } : {},
+    {
+      migrationsThrough: moduleFirst
+        ? "20261116091014"
+        : metadataContractThrough,
+    },
   );
 }
 console.log(
