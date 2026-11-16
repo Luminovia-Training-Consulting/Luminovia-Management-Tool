@@ -2,10 +2,10 @@ blank_issues_enabled: false
 contact_links:
   - name: Contributing and local development
     url: https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/CONTRIBUTING.md
-    about: Setup, local commands, branches, tests and the path to merge.
+    about: Getting started, local commands, branches, tests and the workflow through to merge.
   - name: Questions and support
     url: https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/ISSUE_GUIDE.md
     about: Read the issue guide for questions, classification and useful evidence.
-  - name: Report a vulnerability privately
+  - name: Report a security vulnerability privately
     url: https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/security/advisories/new
-    about: Send security details through GitHub private reporting; do not open a public issue.
+    about: Send security details through GitHub's private reporting channel. Do not create a public issue.

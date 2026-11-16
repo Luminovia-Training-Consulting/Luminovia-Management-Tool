@@ -75,7 +75,7 @@ test("unknown prefixed labels fail even beside an otherwise valid selection", ()
           catalogue,
           context,
         ),
-      /Katalog/,
+      /catalogue/,
     );
 });
 
@@ -105,7 +105,7 @@ test("current REST labels are authoritative and a changed head rejects stale eve
         ...context,
         livePullRequest: live,
       }),
-    /inzwischen geändert/,
+    /has changed/,
   );
 });
 

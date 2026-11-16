@@ -1,20 +1,20 @@
-name: Bug report
-description: Describe a reproducible problem in Luminovia Portal.
+name: Report a bug
+description: Describe a reproducible bug in the Luminovia Portal.
 title: "[Bug]: "
 labels: ["type:fix"]
 body:
   - type: markdown
     attributes:
       value: |
-        Check existing issues before reporting a problem.
-        Use fictional or redacted examples only. Do not post passwords,
-        tokens, MFA codes, private documents or personal customer data.
-        Report vulnerabilities through the [private process in the issue guide](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/ISSUE_GUIDE.md#reporting-security-issues).
+        Thanks for reporting a problem. First check whether a matching issue already exists.
+        Use fictional or redacted examples only. Do not post passwords, tokens, MFA codes,
+        private documents or personal customer data.
+        Report security vulnerabilities through the [private channel in the issue guide](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/ISSUE_GUIDE.md#reporting-security-vulnerabilities).
   - type: input
     id: revision
     attributes:
       label: Version or commit
-      description: Commit SHA, release tag or date of the observed version. Explicitly state "unknown" if unavailable.
+      description: Commit SHA, release tag or date of the affected version. If you do not know, explicitly write "unknown".
       placeholder: "For example: commit abc1234, local branch codex/example"
     validations:
       required: true
@@ -33,15 +33,15 @@ body:
     id: client
     attributes:
       label: Operating system and browser
-      description: For browser defects, include browser name, version and device; for API/CLI defects, identify the tools used.
-      placeholder: "For example: Linux, Chromium 140, desktop; language DE, dark theme"
+      description: For browser issues, include the browser name, version and device. For API or CLI issues, list the tools used.
+      placeholder: "For example: Linux, Chromium 140, desktop; language EN, dark theme"
     validations:
       required: true
   - type: textarea
     id: reproduce
     attributes:
       label: Steps to reproduce
-      description: Describe initial state, affected page or API, required role and exact steps. Do not include credentials.
+      description: Describe the starting state, affected page or API, required role and exact steps. Do not include credentials.
       placeholder: |
         1. Sign in with a fictional lecturer account.
         2. ...
@@ -51,28 +51,28 @@ body:
   - type: textarea
     id: expected
     attributes:
-      label: Expected behaviour
+      label: Expected behavior
       description: What should happen after these steps?
     validations:
       required: true
   - type: textarea
     id: actual
     attributes:
-      label: Observed behaviour
-      description: What happens instead? Is the problem reproducible or intermittent?
+      label: Actual behavior
+      description: What happens instead? Does the problem occur consistently or only occasionally?
     validations:
       required: true
   - type: textarea
     id: evidence
     attributes:
-      label: Sanitised evidence and context
-      description: Optionally include screenshots, exact errors or short sanitised logs. Include date and IANA time zone for calendar problems. Do not upload complete private network captures.
+      label: Redacted evidence and additional context
+      description: Optionally include screenshots, the exact error message or short redacted logs. For calendar issues, include the date and IANA time zone. Do not upload complete private network traces.
   - type: checkboxes
     id: checks
     attributes:
       label: Before submitting
       options:
-        - label: I searched existing issues.
+        - label: I have searched for existing issues.
           required: true
-        - label: This report contains no credentials, private documents or personal data; I will report vulnerabilities through the private process.
+        - label: This report contains no credentials, private documents or personal data. I will report security vulnerabilities through the private channel described above.
           required: true

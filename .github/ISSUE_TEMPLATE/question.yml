@@ -1,5 +1,5 @@
-name: Question
-description: Ask a specific development, usage or documentation question.
+name: Ask a question
+description: Ask a specific question about development, usage or documentation.
 title: "[Question]: "
 labels: ["question"]
 body:
@@ -8,33 +8,33 @@ body:
       value: |
         Read [CONTRIBUTING](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/CONTRIBUTING.md)
         and the [issue guide](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/ISSUE_GUIDE.md) first.
-        Do not post credentials, tokens, MFA codes, private documents or real personal/customer data.
-        Report suspected vulnerabilities through [GitHub private vulnerability reporting](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/security/advisories/new).
+        Do not post credentials, tokens, MFA codes, private documents or real personal and customer data.
+        Report suspected security vulnerabilities through [GitHub's private reporting channel](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/security/advisories/new).
   - type: textarea
     id: question
     attributes:
       label: Your question
-      description: Which specific information is missing? Describe the intended result.
+      description: What specific information is missing? Describe the result you want to achieve.
     validations:
       required: true
   - type: textarea
     id: context
     attributes:
       label: Context and information already checked
-      description: Link the affected guide or feature and explain what you already read or tried. Use fictional or sanitised examples only.
+      description: Link the relevant guide or feature and describe what you have already read or tried. Use fictional or redacted examples only.
     validations:
       required: true
   - type: input
     id: revision
     attributes:
       label: Version or environment (optional)
-      description: Include commit, development release, browser or local environment where relevant; no credentials.
+      description: If relevant, include the commit, development release, browser or local environment. Do not include credentials.
   - type: checkboxes
     id: checks
     attributes:
       label: Before submitting
       options:
-        - label: I searched existing documentation and issues for an answer.
+        - label: I have searched the documentation and existing issues for an answer.
           required: true
         - label: My information and attachments contain no secrets, private documents or personal data.
           required: true

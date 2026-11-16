@@ -95,4 +95,4 @@ The inherited actual selfhost image/retained-data compatibility gate remains a s
 
 ## Latest GitHub preview
 
-Use `./portal github` to fetch and start the exact latest main in a separate persistent local preview on port5373/API56321. Use `./portal github test` for a separate latest-source QA checkout. The normal development tree, its dirty files and data are preserved. The [complete preview guide](GITHUB_LOCAL_PREVIEW.md) explains ownership, retained data, local migration review, commands and ports; this is distinct from updating your development branch with Git.
+Use `./portal github` to fetch and start the exact latest main in a separate persistent local preview on port 5373/API 56321. Use `./portal github test` for a separate latest-source QA checkout. The normal development tree, its dirty files and data are preserved. The [complete preview guide](GITHUB_LOCAL_PREVIEW.md) explains ownership, retained data, local migration review, commands and ports; this is distinct from updating your development branch with Git.

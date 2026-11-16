@@ -1,37 +1,37 @@
-## Problem and resulting behaviour
+## Problem and resulting behavior
 
-<!-- What concrete problem does this change solve? Describe the result; a short before/after example helps for bug fixes. -->
+<!-- What concrete problem does this change solve? Describe the resulting behavior. For a bug fix, a short before/after example is helpful. -->
 
 ## Related issue
 
-<!-- Use "Closes #123" only if this PR fully completes the issue. Otherwise use "Refs #123". For a small independent correction, briefly explain why no issue was needed. -->
+<!-- Use "Closes #123" only if this PR fully resolves the issue. Otherwise use "Related to #123". For a small standalone fix, briefly explain why no issue was needed. -->
 
 ## Changes
 
-<!-- Describe changes material to review and the affected roles/workflows. -->
+<!-- Describe the changes and affected roles or workflows that matter to a reviewer. -->
 
-## Validation actually performed
+## Checks actually performed
 
-<!-- State command, result and relevant scope. Explicitly identify checks not run or failing. A written test is not evidence of a passing test run. -->
+<!-- Include the command, result and relevant scope. Explicitly identify checks that failed or were not run. A written test is not a passed test run. -->
 
-| Check/command | Result and scope |
-| ------------- | ---------------- |
-|               |                  |
+| Check or command | Result and scope |
+| ---------------- | ---------------- |
+|                  |                  |
 
-## Interface and operational effects
+## UI and other significant effects
 
-<!-- Complete relevant points only; mark others "not affected" or remove them.
-- UI: fictional screenshots, desktop/mobile, DE/EN, light/dark and keyboard use.
-- Database/API: new migrations, permissions, retained data and accepted sessions/fees.
+<!-- Complete only the relevant points; mark others as "not affected" or remove them.
+- UI: screenshots with fictional data, desktop/mobile, DE/EN, light/dark and keyboard access.
+- Database/API: new migrations, permissions, existing data and accepted sessions/fees.
 - Operations: required configuration, update/rollback procedure and remaining risks.
-A merged PR does not authorise production or risky data migrations.
+A merged PR does not authorize production deployment or risky data migrations.
 -->
 
 ## Before review
 
-- [ ] I followed [CONTRIBUTING](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/CONTRIBUTING.md) and the [PR guide](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/PULL_REQUEST_GUIDE.md).
+- [ ] I have followed [CONTRIBUTING](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/CONTRIBUTING.md) and the [pull request guide](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/PULL_REQUEST_GUIDE.md).
 - [ ] This change contains no secrets, private documents or personal test data.
-- [ ] Tests and documentation match the change; remaining gaps are identified above.
-- [ ] Exactly one `type:*`, exactly one `risk:*` and at least one `area:*` are applied. For a fork PR without label permissions, ask a maintainer to apply the proposed classification.
+- [ ] Tests and documentation match the change; remaining gaps are listed above.
+- [ ] Exactly one `type:*`, exactly one `risk:*` and at least one `area:*` label are set. For a fork PR without label access, ask a maintainer to classify it.
 
-<!-- Ordinary contributions follow independent review and green-check process expectations. Maintainers/Admins have an explicit ALWAYS bypass. Additional server-side review/check rules remain disabled pending the proven maintenance App path; see GITHUB_WORKFLOW.md for actual activation status. -->
+<!-- Maintainers and administrators have an ALWAYS exception for direct merges, including while reviews or checks are pending. Release publication still requires successful CI. Additional review/check enforcement rules remain disabled until the maintenance app's protected update path is verified; see docs/GITHUB_WORKFLOW.md for the current server configuration. -->

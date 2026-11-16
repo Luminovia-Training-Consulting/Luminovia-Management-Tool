@@ -40,7 +40,7 @@ The effective branch endpoint returns active rules; inspect the individual rules
 
 ## Labels and metadata validation
 
-[labels.json](../.github/labels.json) contains 30 managed labels. Nine original GitHub labels remain available. Each PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. Additional unprefixed labels are allowed; unknown values in the three managed categories are rejected. See [label selection](PULL_REQUEST_GUIDE.md#labels-for-pull-requests).
+[labels.json](../.github/labels.json) contains 30 managed labels. Nine original GitHub labels remain available. Each PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. Additional unprefixed labels are allowed; unknown values in the three managed categories are rejected. See [label selection](PULL_REQUEST_GUIDE.md#pull-request-labels).
 
 The [metadata workflow](../.github/workflows/pr-metadata.yml) also responds to label changes. It reads the current labels, checks repository/PR/head identity and treats all text as data. It installs no dependencies and requests only `contents: read` and `pull-requests: read`. Its regressions are discovered by `./portal test`:
 
@@ -67,6 +67,6 @@ These tags are development acceptance markers, not production approval or semant
 
 ## Public and private reports
 
-Use the [issue chooser](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/issues/new/choose) for ordinary bugs, features and questions. Blank issues are disabled in that UI in favour of structured forms; this is not an Issue API access restriction.
+Use English for new issues, pull requests and contributor-facing documentation. Application interfaces remain German/English and authored content retains its language. Use the [issue chooser](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/issues/new/choose) for ordinary bugs, features and questions. Blank issues are disabled in that UI in favour of structured forms; this is not an Issue API access restriction.
 
 Private vulnerability reporting is enabled; follow [SECURITY](../SECURITY.md). Secret Scanning and Push Protection were separately enabled and read back in the earlier quality task; private reporting alone would not enable them. No new App, key, paid service, invitation, real email or hosting/production change was made in this documentation task.
