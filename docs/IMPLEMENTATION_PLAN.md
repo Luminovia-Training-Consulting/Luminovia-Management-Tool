@@ -9,6 +9,10 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Add strict pointer hit-target readiness/geometry and a native covered-control/scroll/capture regression; both desktop/mobile fixture cases pass without changing business assertions, retries or timeouts.
 - [x] Integrate current mainfabd71a comments, private role pricing/welcome and previews, preserving26published SQL sources, customer-neutral wording and MIGRATION_GUIDE.
 - [x] Correct the nonwrapping German course tabs with scoped wrapping; four real-source-CSS pointer/layout regressions pass, and overflow checks use document clientWidth.
+- [x] Complete exacta793da4/fabd71a acceptance:249frontend,263SQL,92browser,2PWA; native27migration upgrade/retention/20API suites; all quality/security/preview gates. Six fresh screenshots inspected and OCR checked.
+- [x] Retain newly merged main0a6002a guided-help/compiler fixes; this new combined source needs its own acceptance.
+- [x] Current-main focused local254frontend/89runtime/type/lint/format/compiler checks pass. Local complete3250296d passes90/92browsers and all4course/source cases; two initial-login module loads fail with recorded ERR_NETWORK_CHANGED. Keep this failed run distinct from the accepted prior CI.
+- [x] Diagnose coincident host container-interface churn without changing assertions;20fresh actual-React login renders pass in a separate backend-free diagnostic. Respect the explicit PC-QA reservation for any complete rerun.
 - Current exact-source full application/native/security acceptance, feature screenshots and the user-authorised merge are owned by [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23). A partial screenshot artifact or source submission does not mark that acceptance complete.
 
 ## Current correction — customer-independent catalogue and authorised Git delivery
@@ -19,6 +23,23 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Submit signed [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23) with main-compatible preservation checks, required complete application/security/native gates and a six-screenshot fictional artifact. Actual CI completion, visual evidence and the user-authorised merge are recorded on that PR; submission alone is not acceptance.
 
 Customer organisations remain privately configured and reusable templates support multiple explicit organisation scopes. Publication of this source does not assert hosted migration installation or production acceptance.
+
+## Coordinated PR18 integration
+
+The owner-approved PR18 head0675bb9 is integrated on the owned PR21 branch, preserving all audit fixes and both guidance systems. Local combined checks pass254frontend/87runtime cases with no disconnected modules/exports; migration bytes and dependencies match the owner source. The explicit PR18 main-merge hold is respected. Include the actual resulting main merge before the final push, then require all current-head quality/security/application/native and PR-preview-package gates before immediate merge.
+
+## Standing delivery workflow
+
+Carina requires signed commit → push → prepared PR → direct merge after required CI succeeds, without another routine approval. AGENTS.md records this rule; explicit merge holds remain respected. PR21 already includes exact PR15 head2e367f6 on its own branch to preserve comments and the audited fixes. Local integration passes231frontend/68runtime cases with identical production JS; exact-head combined/native/security CI and PR15 coordination completion govern its immediate merge.
+
+## Guided experience re-audit
+
+- [x] Independently trace all PR16 modules, routes, handlers, runtime exports and meaningful control-flow/state behavior; preserve legitimate non-frontend entries.
+- [x] Reproduce/fix actual tour-access recovery, same-topic Help focus and demo accepted-offer identity errors; remove confirmed inert copy/metadata/branches/markers.
+- [x] Correct erased-type false positives in the runtime-use guard with adverse fixtures and runtime-class inheritance preservation.
+- [x] Execute current local source/coverage/public-browser/guard/build checks and document actual evidence in [GUIDED_EXPERIENCE_AUDIT](GUIDED_EXPERIENCE_AUDIT.md).
+
+Exact combined/native/security, extended real-account browser acceptance and the user-authorised merge are tracked on [PR21](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/21). Application head13313de passed all combined/native/security gates. Current main metadata changes are integrated with unchanged application source and21passingtargetedguards. Further main merges are temporarily held by user-authorised coordination until PR15 completes. The prior merged PR16 baseline remains preserved; these focused fixes do not mark unrelated product modules complete.
 
 ## PR18 complete-CI repair
 

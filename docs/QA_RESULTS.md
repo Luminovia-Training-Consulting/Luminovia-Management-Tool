@@ -1,5 +1,17 @@
 # QA evidence — 2026-11-16
 
+## PR23 current-main local run: failed transport, own course flows passed
+
+Current-main0a6002a focused local checks pass254frontend/89runtime/type/lint/format/compiler inventory. Canonical3250296d is **FAIL**,90/92browsers: dashboard.desktop and a chat member's mobile context lost initial source/ReactDOM modules with `ERR_NETWORK_CHANGED`, leaving no login form before either business check began. All4course/source journeys pass;263SQL cases/groups,19real API suites plus Edge/Mailpit and restart persistence pass. Build/PWA were not reached. No permission assertion, retries0 or timeout was weakened.
+
+Read-only host journal correlates container-interface creation19ms before the chat failure and1.5–1.8s before dashboard failures; exact owner/causal attribution remains unproven. A separate backend-free actual-React login-load diagnostic passes20fresh contexts with no failed module loads or observed network events. No new complete rerun bypasses the user's reserved PC-QA order. The earlier a793da4 complete CI/native/PWA success below remains separate evidence; later exact-head acceptance/merge is recorded on [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23).
+
+## PR23 complete accepted source and newer main baseline
+
+[a793da4 / CI43809580902](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43809580902) against fabd71a passed249frontend,263SQL cases/groups,19real API suites plus Edge/Mailpit,92/92browsers,build and2/2PWA with checked cleanup. Native passed27migration main26→candidate upgrade, retained password/MFA/private event/file,20API/invitation suites,TLS/WSS,50claims and cleanup. Quality/security and runnable-preview gates passed. Six feature PNGs were downloaded/visually reviewed and OCR checked without the historical customer label. Actual mobile geometry is412×839/offset0 and both ordinary clicks pass.
+
+Main then advanced to0a6002a. That guided-help/compiler source is integrated next; the prior green run is separate evidence, not current-base acceptance. PR27 has the next actual merge reservation for manual-only publication; PR23 auto-merge is disabled. Exact later CI/merge is recorded on [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23). No hosted installation or production operation is asserted.
+
 ## PR23 exact mobile overflow reproduced and corrected
 
 [Run43806035677](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43806035677) on `553acc4` failed84/86browser cases; its safe geometry and four downloaded partial PNGs informed diagnosis. Actual React with fictional loopback responses and `DejaVu Sans` reproduced the exact435×886layout versus412×839visual viewport/47pxoffset and failed ordinary clicks even without capture. Wrapping only the operations toolbar's translated tab group restores normal geometry and passes four source/run click probes. Four desktop/mobile real-source-CSS/covered-target/scroll/capture regressions pass locally; overflow checks now use document clientWidth. Mainfabd71a and all26published migration bytes are preserved. Type/lint/format/compiler graph and19catalogue/docs/metadata checks pass. Final complete application/native/security and visual acceptance is taken from [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23), not assumed from these bounded fixtures.
