@@ -14,12 +14,14 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, mfa }) => {
     candidate = await actor("recipient-candidate", "lecturer");
   const users = [admin.id, regular.id, senior.id, candidate.id],
     org = randomUUID(),
-    jobs = [];
+    jobs = [],
+    rolePricedJobs = new Set(),
+    confirmedCosts = new Map();
   defer(async () => {
     if (jobs.length) {
       const selected = jobs.map(q).join(",");
       await sql(`begin;
-create temporary table recipient_qa_runs as select r.id,r.template_id from public.course_runs r join public.jobs j on j.course_run_id=r.id where j.id in(${selected});
+create temporary table recipient_qa_runs as select r.id,r.template_id,r.organisation_id from public.course_runs r join public.jobs j on j.course_run_id=r.id where j.id in(${selected});
 delete from private.job_substitutions where job_id in(${selected});
 delete from private.job_lifecycle_requests where actor_id in(${users.map(q).join(",")});
 delete from private.claim_revenue_ledger where job_id in(${selected});
@@ -38,6 +40,7 @@ delete from public.course_sessions where course_run_id in(select id from recipie
 delete from public.course_runs where id in(select id from recipient_qa_runs);
 delete from public.course_template_topics where template_id in(select template_id from recipient_qa_runs);
 delete from public.course_templates where id in(select template_id from recipient_qa_runs);
+delete from public.organisations where id in(select organisation_id from recipient_qa_runs) and id<>${q(org)};
 commit;`);
     }
     await checked(service.from("organisations").delete().eq("id", org));
@@ -56,19 +59,31 @@ commit;`);
   let sequence = 0;
   const ownQuote = async (who, job) =>
     (await checked(who.client.rpc("job_offers"))).find((row) => row.id === job);
-  const make = async (source, target) => {
+  // Publication and acceptance are separate fixtures: a forecast's open
+  // positions cannot be inferred from the number of historical assignments.
+  const publish = async ({ capacity = 2, knownNet = false } = {}) => {
     const day = ++sequence * 5;
     const payload = {
       title: "Fictional HTTP personal replacement",
       delivery_type: "online",
       time_zone: "UTC",
-      gross_amount: 777.77,
-      gross_total_amount: 777.77,
-      currency: "EUR",
+      ...(knownNet
+        ? {
+            customer_name: "Fictional known-net HTTP academy",
+            status: "published",
+            amount: 123.45,
+            total_amount: 123.45,
+            currency: "AUD",
+          }
+        : {
+            gross_amount: 777.77,
+            gross_total_amount: 777.77,
+            currency: "EUR",
+          }),
       rate_unit: "fixed_total",
       sessions: Array.from({ length: 3 }, (_, n) => ({
-        starts_at: `2048-06-${String(day + n).padStart(2, "0")}T08:00:00Z`,
-        ends_at: `2048-06-${String(day + n).padStart(2, "0")}T09:00:00Z`,
+        starts_at: new Date(Date.UTC(2048, 5, day + n, 8)).toISOString(),
+        ends_at: new Date(Date.UTC(2048, 5, day + n, 9)).toISOString(),
       })),
       topic_ids: [],
       terms: "Fictional exact personal replacement terms",
@@ -77,13 +92,21 @@ commit;`);
     const job = await checked(
       admin.client.rpc("create_capacity_job", {
         p_payload: payload,
-        p_capacity: 2,
+        p_capacity: capacity,
         p_request_id: randomUUID(),
-        p_organisation_id: org,
+        p_organisation_id: knownNet ? null : org,
         p_platform_percent: null,
       }),
     );
     jobs.push(job);
+    if (!knownNet) rolePricedJobs.add(job);
+    return job;
+  };
+  // Track issued net snapshots, including later releases, independently of
+  // forecast aggregation or the actor's subsequently changed pricing tier.
+  const cents = (amount) => Math.round(Number(amount) * 100);
+  const make = async (source, target) => {
+    const job = await publish();
     const quote = await ownQuote(source, job);
     const receipt = await checked(
       source.client.rpc("claim_job", {
@@ -93,6 +116,7 @@ commit;`);
       }),
     );
     assert.equal(receipt.status, "confirmed");
+    confirmedCosts.set(receipt.claim_id, cents(quote.total_amount));
     const ledger = await sql(
       `select row_to_json(l)from private.claim_revenue_ledger l where claim_id=${q(receipt.claim_id)}`,
     );
@@ -172,6 +196,8 @@ commit;`);
       ),
       [],
     );
+    confirmedCosts.delete(fixture.claim);
+    confirmedCosts.set(receipt.claim_id, cents(offer.quote.total_amount));
   };
   for (const [source, target] of [
     [regular, senior],
@@ -204,6 +230,7 @@ commit;`);
           p_request_id: randomUUID(),
         }),
       );
+      confirmedCosts.delete(receipt.claim_id);
       const scope = [fixture.claim, receipt.claim_id, fixture.job, offer.id]
         .map(q)
         .join(",");
@@ -335,6 +362,55 @@ commit;`);
       ),
       "confirmed",
     );
+  // Include genuine unclaimed inventory. EUR has captured role-split gross
+  // but no determined future lecturer net; AUD is an independently known net
+  // offer. Distinct currencies keep the two forecast cases independently testable.
+  const openRole = await publish({ capacity: 3 }),
+    openKnown = await publish({ knownNet: true });
+  const publishedJobs = await checked(
+      service.from("jobs").select("id,status,capacity").in("id", jobs),
+    ),
+    activeClaims = await checked(
+      service
+        .from("job_claims")
+        .select("id,job_id,total_amount")
+        .in("job_id", jobs)
+        .eq("status", "confirmed"),
+    );
+  for (const [id, capacity] of [
+    [openRole, 3],
+    [openKnown, 2],
+  ]) {
+    assert.deepEqual(
+      publishedJobs.find((job) => job.id === id),
+      {
+        id,
+        status: "published",
+        capacity,
+      },
+    );
+    assert.equal(activeClaims.filter((claim) => claim.job_id === id).length, 0);
+  }
+  assert.deepEqual(
+    activeClaims
+      .map((claim) => [claim.id, cents(claim.total_amount)])
+      .sort(([a], [b]) => a.localeCompare(b)),
+    [...confirmedCosts].sort(([a], [b]) => a.localeCompare(b)),
+    "Only unreleased confirmed receipt snapshots contribute accepted costs",
+  );
+  const unknownPositions = publishedJobs
+      .filter((job) => rolePricedJobs.has(job.id) && job.status === "published")
+      .reduce(
+        (total, job) =>
+          total +
+          job.capacity -
+          activeClaims.filter((claim) => claim.job_id === job.id).length,
+        0,
+      ),
+    acceptedCents = [...confirmedCosts.values()].reduce(
+      (total, amount) => total + amount,
+      0,
+    );
   const forecast = await checked(
     admin.client.rpc("finance_forecast", {
       p_from: "2048-06-01",
@@ -342,16 +418,26 @@ commit;`);
       p_pipeline_probability: 0.5,
     }),
   );
-  assert.ok(
-    forecast.months.some(
-      (row) => row.pipeline_cost_unknown_positions >= jobs.length,
-    ),
+  assert.deepEqual(
+    forecast.months.map(({ month, currency }) => ({ month, currency })),
+    [
+      { month: "2048-06-01", currency: "AUD" },
+      { month: "2048-06-01", currency: "EUR" },
+    ],
   );
-  for (const row of forecast.months.filter(
-    (row) => row.pipeline_cost_unknown_positions > 0,
-  ))
-    assert.equal(row.pipeline_lecturer_cost_known, null);
-  assert.ok(forecast.months.some((row) => row.accepted_lecturer_cost > 0));
+  const euro = forecast.months.find((row) => row.currency === "EUR"),
+    australian = forecast.months.find((row) => row.currency === "AUD");
+  assert.equal(euro.pipeline_cost_unknown_positions, unknownPositions);
+  assert.equal(euro.pipeline_lecturer_cost_known, null);
+  assert.equal(
+    euro.pipeline_gross_known,
+    Math.round(77777 * unknownPositions * 0.5) / 100,
+    "Current captured customer gross is weighted per remaining position",
+  );
+  assert.equal(euro.accepted_lecturer_cost, acceptedCents / 100);
+  assert.equal(australian.pipeline_cost_unknown_positions, 0);
+  assert.equal(australian.pipeline_lecturer_cost_known, 123.45);
+  assert.equal(australian.accepted_lecturer_cost, 0);
   assert.equal(
     (
       await regular.client.rpc("finance_forecast", {
