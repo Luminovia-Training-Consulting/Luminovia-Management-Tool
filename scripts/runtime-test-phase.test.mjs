@@ -228,7 +228,7 @@ async function runFixture({
 /** Represent actual executed commands independently of the phase planner. */
 const commands = (result) =>
   result.calls
-    .filter((call) => call.timeoutMs === 1200000)
+    .filter((call) => call.signal !== undefined)
     .map(({ file, args }) => [file, args]);
 const contains = (result, value) =>
   result.calls.some(({ args }) => args.includes(value));
@@ -445,9 +445,9 @@ test("system and browser phases preserve the complete command partition, duplica
 test("browser phase gets its own snapshot, retained real services and explicit owned policy before browser acceptance", async () => {
   const browser = await runFixture({ args: ["--phase", "browser"] });
   assert.ifError(browser.error);
-  const relevant = browser.calls.filter(
-    ({ timeoutMs }) => timeoutMs === 1200000,
-  );
+  // Owned stage calls carry cancellation even when a measured aggregate has
+  // a different bound; cleanup commands deliberately use separate deadlines.
+  const relevant = browser.calls.filter(({ signal }) => signal !== undefined);
   assert.deepEqual(
     relevant.slice(0, 4).map(({ args }) => args[0]),
     [
@@ -477,6 +477,13 @@ test("browser phase gets its own snapshot, retained real services and explicit o
   );
   assert.equal(desktop.env.PORTAL_DB_CONTAINER, seed.env.PORTAL_DB_CONTAINER);
   assert.equal(desktop.env.PORTAL_BROWSER_STAGE, "application");
+  assert.equal(desktop.timeoutMs, 1800000);
+  assert.equal(
+    discovery.timeoutMs,
+    1200000,
+    "Discovery keeps its original deadline",
+  );
+  assert.equal(discovery.signal, desktop.signal);
   assert.deepEqual(desktop.args, [
     "--no-install",
     "playwright",
@@ -516,6 +523,10 @@ test("browser phase gets its own snapshot, retained real services and explicit o
     "/owned-qa/scratch/.local/browser/pwa/plan.json",
   );
   assert.ok(relevant.indexOf(pwaDiscovery) < relevant.indexOf(pwa));
+  assert.equal(pwa.timeoutMs, 1200000);
+  assert.equal(pwaDiscovery.timeoutMs, 1200000);
+  assert.equal(pwa.signal, desktop.signal);
+  assert.equal(pwaDiscovery.signal, desktop.signal);
   assert.equal(pwa.env.E2E_PWA, "1");
   assert.equal(pwa.env.E2E_BASE_URL, "http://127.0.0.1:4273");
   assert.equal(browser.snapshots, 1);

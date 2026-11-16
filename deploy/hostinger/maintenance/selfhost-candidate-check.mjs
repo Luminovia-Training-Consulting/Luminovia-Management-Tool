@@ -747,6 +747,9 @@ export async function checkCandidate({
       PORTAL_CANDIDATE_OWNER: project,
       PORTAL_DB_CONTAINER: "supabase_db_" + project,
       NODE_EXTRA_CA_CERTS: join(scratch, "certs/cert.pem"),
+      // The actual Python SMTP worker also calls the candidate HTTPS API.
+      // Trust only this fixture CA, retaining hostname/certificate checks.
+      SSL_CERT_FILE: join(scratch, "certs/cert.pem"),
     };
     console.log(
       "Candidate: baseline initialized; seeding and retaining real password/MFA/private event/scanned bytes.",

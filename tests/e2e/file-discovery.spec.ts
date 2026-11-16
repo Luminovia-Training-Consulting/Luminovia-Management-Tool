@@ -1,3 +1,4 @@
+/** Real file discovery, quarantine scan, exact bytes and private organisation in the canonical disposable stack. */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";

@@ -199,6 +199,8 @@ export const jobDiscoveryQuery = (
   quoteContext = "",
 ) =>
   infiniteQueryOptions({
+    // Known role transitions reset infinite pages; SQL also binds opaque cursors
+    // to fresh role/policy context for changes the browser has not observed.
     queryKey: ["jobs", "discovery", actor, filters, quoteContext],
     initialPageParam: null as JobCursor | null,
     queryFn: async ({ pageParam, signal }) => {
@@ -216,6 +218,7 @@ export const jobDiscoveryQuery = (
       page.has_more ? (page.next_cursor ?? undefined) : undefined,
     staleTime: 15000,
   });
+/** Validate the complete exact detail DTO, including a possibly restricted quote. */
 export const jobDetailQuery = (actor: string, id: string) =>
   queryOptions({
     queryKey: ["jobs", "detail", actor, id],
@@ -288,6 +291,7 @@ export interface JobDashboard {
   as_of: string;
 }
 const count = z.number().int().nonnegative();
+/** Share strict quote/null validation with marketplace items so suggestions never coerce restricted amounts. */
 export const jobDashboardQuery = (actor: string) =>
   queryOptions({
     queryKey: ["jobs", "dashboard", actor],

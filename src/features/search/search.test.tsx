@@ -8,17 +8,22 @@ import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PortalSearch } from "./search";
+import i18n from "../../lib/i18n";
 
 const fake = vi.hoisted(() => ({ from: vi.fn(), rpc: vi.fn() }));
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "search-actor" } } }),
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => fake }));
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}));
-beforeEach(() => {
-  fake.rpc.mockReset().mockResolvedValue({ data: [], error: null });
+beforeEach(async () => {
+  await i18n.changeLanguage("de");
+  fake.rpc.mockReset().mockImplementation(() => {
+    const request = Promise.resolve({
+      data: { items: [], has_more: false, next_cursor: null },
+      error: null,
+    });
+    return Object.assign(request, { abortSignal: () => request });
+  });
   fake.from.mockReset().mockImplementation(() => {
     const query = {
       select: () => query,
@@ -51,7 +56,7 @@ function page() {
 describe("URL-driven portal search", () => {
   it("replaces the draft on query navigation but preserves ordinary unsaved typing", async () => {
     const router = page();
-    const input = screen.getByRole("searchbox", { name: "portalSearch" });
+    const input = screen.getByRole("searchbox", { name: "Suchbegriff" });
     expect(input).toHaveValue("Alpha");
     await userEvent.clear(input);
     await userEvent.type(input, "unfinished draft");
@@ -59,13 +64,13 @@ describe("URL-driven portal search", () => {
     await router.navigate("/search?q=Beta");
     await waitFor(() =>
       expect(
-        screen.getByRole("searchbox", { name: "portalSearch" }),
+        screen.getByRole("searchbox", { name: "Suchbegriff" }),
       ).toHaveValue("Beta"),
     );
     await router.navigate("/search?q=Alpha");
     await waitFor(() =>
       expect(
-        screen.getByRole("searchbox", { name: "portalSearch" }),
+        screen.getByRole("searchbox", { name: "Suchbegriff" }),
       ).toHaveValue("Alpha"),
     );
   });

@@ -165,7 +165,7 @@ try {
   writeFileSync(configPath, config);
   /** Runs one named stage in the isolated snapshot with a timeout and shared cancellation signal. */
   /** Run one required child command; cancellation/failure cannot be recorded as success. */
-  const step = async (label, file, args, extra = {}) => {
+  const step = async (label, file, args, extra = {}, timeoutMs = 1200000) => {
     console.log(`\n[TEST] ${label}`);
     const item = {
       label,
@@ -179,7 +179,7 @@ try {
       const output = await command(file, args, {
         cwd: scratch,
         env: { ...env, ...extra },
-        timeoutMs: 1200000,
+        timeoutMs,
         signal: cancellation.signal,
       });
       item.status = "passed";
@@ -193,7 +193,13 @@ try {
     }
   };
   /** Inventory all expected files/projects, execute them and retain truthful separate stage evidence. */
-  const browserStage = async (stage, label, args, extra = {}) => {
+  const browserStage = async (
+    stage,
+    label,
+    args,
+    extra = {},
+    timeoutMs = 1200000,
+  ) => {
     const directory = join(scratch, ".local/browser", stage);
     privateDirectory(directory);
     const stageEnv = { ...extra, PORTAL_BROWSER_STAGE: stage };
@@ -236,6 +242,7 @@ try {
         "npx",
         ["--no-install", "playwright", "test", ...args],
         stageEnv,
+        timeoutMs,
       );
       evidence.browsers[stage] = browserAcceptance(
         JSON.parse(readFileSync(join(directory, "report.json"), "utf8")),
@@ -317,6 +324,7 @@ try {
         join(scratch, "node_modules/deno/bin.cjs"),
         "test",
         "--allow-env",
+        `--allow-read=${join(functions, "course-documents/assets")}`,
         ...handlerTests,
       ]);
     }
@@ -327,6 +335,17 @@ try {
         [join(scratch, "node_modules/deno/bin.cjs"), "check", entry],
       );
     // Keep release/update safety in the same local command as application QA.
+    await step("SMTP-Benachrichtigungsschutz", "python3", [
+      "-W",
+      "error::ResourceWarning",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts",
+      "-p",
+      "test_notification_mail_worker.py",
+    ]);
     // These checks use fixtures and owned proxy containers, never the hosted VM.
     const hosting = join(scratch, "deploy/hostinger");
     if (existsSync(hosting)) {
@@ -456,10 +475,15 @@ try {
       ...(process.env.CI === "true" ? ["--with-deps"] : []),
       "chromium",
     ]);
-    await browserStage("application", "Desktop- und Mobilbrowser", [
-      "--grep-invert",
-      "built PWA",
-    ]);
+    // Preserve the measured whole-command budget; individual browser tests
+    // remain bounded and strict discovery/results still reject incomplete runs.
+    await browserStage(
+      "application",
+      "Desktop- und Mobilbrowser",
+      ["--grep-invert", "built PWA"],
+      {},
+      1800000,
+    );
     await step("Produktions-Build", "npm", ["run", "build"]);
     // The test supervisor serves the built artifact from a separate, owned preview.
     await step("Gebautes PWA starten", process.execPath, [

@@ -1,4 +1,4 @@
-/** Real aggregate-search journey across Auth/RPC/REST/scanned files: authorised results navigate correctly while foreign private records stay absent. Uses only canonical fictional actors. */
+/** Real unified-search journey across Auth/RPC/scanned files: six authorised fixture sources and their result links, with foreign private records excluded. Uses only canonical fictional actors. */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
@@ -108,12 +108,13 @@ test("real portal search combines authorized sources, excludes foreign private r
   const decoy = randomUUID();
   const hiddenJob = randomUUID();
   const jobTitle = `${literal} visible job`;
+  const decoyTitle = `${marker}XY wildcard decoy`;
   const hiddenJobTitle = `${marker} unpublished job`;
   await checked(
     service.from("jobs").insert(
       [
         { id: job, title: jobTitle, status: "published" },
-        { id: decoy, title: `${marker}XY wildcard decoy`, status: "published" },
+        { id: decoy, title: decoyTitle, status: "published" },
         { id: hiddenJob, title: hiddenJobTitle, status: "draft" },
       ].map((row) => ({
         ...row,
@@ -186,30 +187,75 @@ test("real portal search combines authorized sources, excludes foreign private r
   if (!(await searchLink.isVisible())) await more.click();
   await expect(searchLink).toBeVisible();
   await searchLink.click();
+  await expect(
+    page.getByRole("heading", { name: "Universelle Suche", exact: true }),
+  ).toBeVisible();
   const search = page.getByRole("searchbox", {
-    name: "Im Portal suchen",
+    name: "Suchbegriff",
     exact: true,
   });
   await search.fill(marker);
-  const responses = [
-    "jobs",
-    "documents",
-    "rpc/wiki_pages_list",
-    "rpc/forum_threads_list",
-    "messages",
-    "rpc/chat_contacts",
-  ].map((path) =>
+  const waitForSearch = (query: string) =>
     page.waitForResponse(
-      (response) => new URL(response.url()).pathname === `/rest/v1/${path}`,
-    ),
-  );
+      (response) =>
+        new URL(response.url()).pathname === "/rest/v1/rpc/unified_search" &&
+        response.request().method() === "POST" &&
+        response.request().postDataJSON().p_query === query,
+    );
+  const responsePromise = waitForSearch(marker);
   await search.press("Enter");
-  for (const response of await Promise.all(responses))
-    expect(response.status()).toBe(200);
+  const response = await responsePromise;
+  expect(response.status()).toBe(200);
+  expect(response.request().postDataJSON()).toEqual({
+    p_query: marker,
+    p_kind: "",
+    p_after_kind: null,
+    p_after_title: null,
+    p_after_id: null,
+    p_limit: 40,
+  });
+  const expectedRows = [
+    { id: job, kind: "jobs", title: jobTitle, url: `/jobs/${job}` },
+    { id: decoy, kind: "jobs", title: decoyTitle, url: `/jobs/${decoy}` },
+    {
+      kind: "files",
+      title: fileName,
+      url: `/files?q=${encodeURIComponent(fileName)}`,
+    },
+    {
+      id: wiki.page_id,
+      kind: "wiki",
+      title: wikiTitle,
+      url: `/wiki?page=${wiki.page_id}`,
+    },
+    {
+      id: thread,
+      kind: "forum",
+      title: forumTitle,
+      url: `/forum?thread=${thread}`,
+    },
+    { kind: "chats", title: visibleMessage, url: `/chats?room=${room}` },
+    {
+      id: peer.id,
+      kind: "people",
+      title: peer.name,
+      url: `/people/${peer.id}`,
+    },
+  ];
+  const data = await response.json();
+  expect(data).toEqual({
+    items: expect.arrayContaining(
+      expectedRows.map((row) => expect.objectContaining(row)),
+    ),
+    has_more: false,
+    next_cursor: null,
+  });
+  expect(data.items).toHaveLength(7);
   const results = page.locator(".portal-search-results");
   await expect(results.getByRole("link")).toHaveCount(7);
   for (const title of [
     jobTitle,
+    decoyTitle,
     fileName,
     wikiTitle,
     forumTitle,
@@ -231,27 +277,36 @@ test("real portal search combines authorized sources, excludes foreign private r
     results.locator(`a[href="/forum?thread=${thread}"]`),
   ).toBeVisible();
   await expect(results.locator(`a[href="/chats?room=${room}"]`)).toBeVisible();
-  await expect(
-    results.locator(`a[href="/chats?contact=${peer.id}"]`),
-  ).toBeVisible();
+  await expect(results.locator(`a[href="/people/${peer.id}"]`)).toBeVisible();
 
   const draft = `${marker} unsubmitted text`;
   await search.fill(draft);
   await page.getByLabel("Sprache", { exact: true }).selectOption("en");
+  await expect(
+    page.getByRole("heading", { name: "Universal search", exact: true }),
+  ).toBeVisible();
   const englishSearch = page.getByRole("searchbox", {
-    name: "Search the portal",
+    name: "Search term",
     exact: true,
   });
   await expect(englishSearch).toHaveValue(draft);
   await expect(results.getByText(wikiTitle, { exact: true })).toBeVisible();
   await englishSearch.fill(literal);
+  const literalResponsePromise = waitForSearch(literal);
   await englishSearch.press("Enter");
+  const literalResponse = await literalResponsePromise;
+  expect(literalResponse.status()).toBe(200);
+  expect(await literalResponse.json()).toEqual({
+    items: [expect.objectContaining(expectedRows[0])],
+    has_more: false,
+    next_cursor: null,
+  });
   await expect(results.getByRole("link")).toHaveCount(1);
   await expect(results.getByText(jobTitle, { exact: true })).toBeVisible();
   expect(new URL(page.url()).searchParams.get("q")).toBe(literal);
   await page.reload();
   await expect(
-    page.getByRole("searchbox", { name: "Search the portal", exact: true }),
+    page.getByRole("searchbox", { name: "Search term", exact: true }),
   ).toHaveValue(literal);
   await expect(results.getByRole("link")).toHaveCount(1);
   await results.getByRole("link").click();
@@ -269,6 +324,12 @@ test("real portal search combines authorized sources, excludes foreign private r
   await results.locator(`a[href="/chats?room=${room}"]`).click();
   await expect(
     page.locator(".chat-message-body").filter({ hasText: visibleMessage }),
+  ).toBeVisible();
+  await page.goto(`/search?q=${encodeURIComponent(marker)}`);
+  await results.locator(`a[href="/people/${peer.id}"]`).click();
+  await expect(page).toHaveURL(new RegExp(`/people/${peer.id}$`));
+  await expect(
+    page.getByRole("heading", { name: peer.name, exact: true }),
   ).toBeVisible();
   await page.goto(`/search?q=${encodeURIComponent(marker)}`);
   await expect(results.getByRole("link")).toHaveCount(7);

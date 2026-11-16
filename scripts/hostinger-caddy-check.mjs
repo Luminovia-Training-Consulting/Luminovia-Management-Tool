@@ -100,7 +100,7 @@ try {
   file(
     "api.mjs",
     `import {createServer} from 'node:http';
-createServer(async(req,res)=>{let body='';for await(const chunk of req)body+=chunk;res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'public, max-age=3600'});res.end(JSON.stringify({method:req.method,path:req.url,body}));}).listen(8000,'0.0.0.0');\n`,
+createServer(async(req,res)=>{if(req.url.startsWith('/functions/v1/calendar-feed?')||req.url.startsWith('/auth/v1/recover?')){req.socket.destroy();return;}let body='';for await(const chunk of req)body+=chunk;res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'public, max-age=3600'});res.end(JSON.stringify({method:req.method,path:req.url,body}));}).listen(8000,'0.0.0.0');\n`,
   );
   docker(["network", "create", "--label", `${label}=${id}`, network]);
   docker([
@@ -334,6 +334,61 @@ createServer(async(req,res)=>{let body='';for await(const chunk of req)body+=chu
           (server) => !server.logs,
         ),
       );
+    },
+  );
+  await check(
+    "upstream transport errors retain diagnostics but strip calendar and recovery query credentials",
+    async () => {
+      const markers = [
+        "FICTIONAL_CALENDAR_ERROR_SENTINEL",
+        "FICTIONAL_RECOVERY_ERROR_SENTINEL",
+      ];
+      const paths = [
+        `/backend/functions/v1/calendar-feed?token=${markers[0]}&arbitrary_private_key=${markers[0]}`,
+        `/backend/auth/v1/recover?token_hash=${markers[1]}&code=${markers[1]}`,
+      ];
+      for (const path of paths) {
+        const response = await request(path, {
+          headers: {
+            Referer: `https://portal.test/return?token=${markers[0]}`,
+          },
+        });
+        assert.equal(response.status, 502);
+        await response.text();
+      }
+      await delay(100);
+      const result = spawnSync("docker", ["logs", caddy], {
+        encoding: "utf8",
+        env,
+        timeout: 10000,
+      });
+      assert.equal(result.status, 0);
+      const text = result.stdout + result.stderr;
+      for (const marker of markers)
+        assert(
+          !text.includes(marker),
+          "Error logs must not retain capability or recovery query values",
+        );
+      const records = text
+        .split("\n")
+        .flatMap((line) => {
+          try {
+            return [JSON.parse(line)];
+          } catch {
+            return [];
+          }
+        })
+        .filter((record) => record.logger?.startsWith("http.log.error"));
+      assert(
+        records.length >= 2,
+        "Transport error diagnostics remain available",
+      );
+      for (const record of records) {
+        assert.equal(record.status, 502);
+        assert.equal(typeof record.msg, "string");
+        assert(!record.request.uri.includes("?"));
+        assert(!("Referer" in (record.request.headers ?? {})));
+      }
     },
   );
   await check(
