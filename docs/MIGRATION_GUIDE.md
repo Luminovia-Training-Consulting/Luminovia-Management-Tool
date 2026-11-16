@@ -1,6 +1,6 @@
 # Reading and safely extending SQL migrations
 
-This guide explains the **24 SQL files shipped at this main baseline** without changing their bytes. Accepted migrations form part of the local preview, update and recovery fingerprints. Even an added SQL comment would produce a different source hash. New migrations are added separately; extend this guide and the relevant feature guides when that happens.
+This guide maps the **47 ordered SQL sources through `20261116044535_own_qualification_passport.sql`** without changing their bytes. The earlier 24-source foundation remains intact; eight M7/M8 sources and fifteen smart-operations sources extend it. This is a source checkpoint, not an assertion that a hosted database has applied all 47 or that the current combined acceptance has passed. Accepted migrations form part of the local preview, update and recovery fingerprints. Even an added SQL comment would produce a different source hash. New migrations are added separately; extend this guide and the relevant feature guides when that happens.
 
 The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API inventory. [ERD](ERD.md), [DEVELOPER_GUIDE](DEVELOPER_GUIDE.md) and the relevant feature guides explain how the parts connect.
 
@@ -8,7 +8,7 @@ The running database reflects **all migrations applied in order**. A later `crea
 
 The test files below are existing feature entry points. Listing them does not claim that this documentation pass reran a complete database acceptance test. Run mutating checks only in their own isolated stack through `./portal test`.
 
-### 01. Foundation schema and atomic immediate assignment
+### 1. Foundation schema and atomic immediate assignment
 
 Source: [20261115111133_portal_foundation.sql](../supabase/migrations/20261115111133_portal_foundation.sql).
 
@@ -16,7 +16,7 @@ Profiles, roles/capabilities, courses, jobs, claims, calendar snapshots and priv
 
 Test entry point: [db-rpc-tests.mjs](../scripts/db-rpc-tests.mjs).
 
-### 02. Durable invitation reservations
+### 2. Durable invitation reservations
 
 Source: [20261115112053_lecturer_invitations.sql](../supabase/migrations/20261115112053_lecturer_invitations.sql).
 
@@ -24,7 +24,7 @@ Source: [20261115112053_lecturer_invitations.sql](../supabase/migrations/2026111
 
 Test entry point: [accounts-db-tests.mjs](../scripts/accounts-db-tests.mjs).
 
-### 03. Verification and activation
+### 3. Verification and activation
 
 Source: [20261115113559_lecturer_verification_and_suspension.sql](../supabase/migrations/20261115113559_lecturer_verification_and_suspension.sql).
 
@@ -32,7 +32,7 @@ Management verifies an already declared qualification with an expiry date and ca
 
 Test entry point: [db-rpc-tests.mjs](../scripts/db-rpc-tests.mjs).
 
-### 04. Private document metadata and versions
+### 4. Private document metadata and versions
 
 Source: [20261115121732_private_documents.sql](../supabase/migrations/20261115121732_private_documents.sql).
 
@@ -40,7 +40,7 @@ Source: [20261115121732_private_documents.sql](../supabase/migrations/2026111512
 
 Test entry point: [documents-db-tests.mjs](../scripts/documents-db-tests.mjs).
 
-### 05. Chat access through membership
+### 5. Chat access through membership
 
 Source: [20261115121922_secure_chat_collaboration.sql](../supabase/migrations/20261115121922_secure_chat_collaboration.sql).
 
@@ -48,7 +48,7 @@ Rooms, members, messages, reactions and their revision history share an access b
 
 Test entry point: [chat-db-tests.mjs](../scripts/chat-db-tests.mjs).
 
-### 06. Chat attachments with document authorization
+### 6. Chat attachments with document authorization
 
 Source: [20261115123659_document_chat_attachment_authorization.sql](../supabase/migrations/20261115123659_document_chat_attachment_authorization.sql).
 
@@ -56,7 +56,7 @@ Replaces the initially denying adapter with a check of the clean document and it
 
 Test entry point: [chat-db-tests.mjs](../scripts/chat-db-tests.mjs).
 
-### 07. Versioned knowledge and a moderated forum
+### 7. Versioned knowledge and a moderated forum
 
 Source: [20261115123853_wiki_forum_knowledge.sql](../supabase/migrations/20261115123853_wiki_forum_knowledge.sql).
 
@@ -64,7 +64,7 @@ A restricted Tiptap JSON structure replaces arbitrary HTML. The server validates
 
 Test entry point: [knowledge-db-tests.mjs](../scripts/knowledge-db-tests.mjs).
 
-### 08. Organizations, templates and course runs
+### 8. Organizations, templates and course runs
 
 Source: [20261115125144_customer_course_operations.sql](../supabase/migrations/20261115125144_customer_course_operations.sql).
 
@@ -72,7 +72,7 @@ Private contacts and notes are stored separately. Reusable templates and actual 
 
 Test entry point: [operations-api-check.mjs](../scripts/operations-api-check.mjs).
 
-### 09. Executed contracts, invoices and payments
+### 9. Executed contracts, invoices and payments
 
 Source: [20261115125912_contracts_finance_tracking.sql](../supabase/migrations/20261115125912_contracts_finance_tracking.sql).
 
@@ -200,6 +200,190 @@ Requires the current `audit.read` capability and MFA; only explicitly reviewed a
 
 Test entry point: [admin-audit-db-tests.mjs](../scripts/admin-audit-db-tests.mjs).
 
+### 25. Private email preferences and committed-event outbox
+
+Source: [20261116021141_notification_email_outbox.sql](../supabase/migrations/20261116021141_notification_email_outbox.sql).
+
+Own email/quiet-hour/zone preferences are versioned and disabled by default. Notification occurrences enter a private deduplicated outbox; service-only lease/prepare/finish routines separate current eligibility from provider submission. Accepted, suppressed, failed and uncertain outcomes do not imply inbox deletion or an automatic retry after ambiguous SMTP acceptance. Credentials do not belong in these tables.
+
+Test entry point: [notification-delivery-db-tests.mjs](../scripts/notification-delivery-db-tests.mjs).
+
+### 26. Private dashboard layout and teaching-day preparation
+
+Source: [20261116021232_personal_dashboard_and_teaching_day.sql](../supabase/migrations/20261116021232_personal_dashboard_and_teaching_day.sql).
+
+Own allowed widget order/visibility uses CAS. Teaching-day data derives current confirmed, unreleased allocations in the profile zone; an own claim-bound preparation checklist is separate from shared customer progress. Neither preferences nor admin status expose another person's private checklist or files.
+
+Test entry point: [dashboard-personal-db-tests.mjs](../scripts/dashboard-personal-db-tests.mjs).
+
+### 27. Bounded own calendar-file projection
+
+Source: [20261116022220_calendar_file_export.sql](../supabase/migrations/20261116022220_calendar_file_export.sql).
+
+The security-invoker export reads only current-owner confirmed/unreleased allocations and explicitly included own private events. It accepts finite windows and fails beyond 500 events. IANA identity/instants remain explicit; the browser produces ICS from fresh checked data. No calendar copy table is added.
+
+Test entry point: [calendar-export-db-tests.mjs](../scripts/calendar-export-db-tests.mjs).
+
+### 28. Explicit staff-directory contact visibility
+
+Source: [20261116022729_staff_contact_visibility.sql](../supabase/migrations/20261116022729_staff_contact_visibility.sql).
+
+Own email/phone consent defaults off and uses current identity/CAS. The separate contact projection admits active staff to opted-in current Auth email/profile phone; clients/participants and administrative consent overrides are excluded. Existing people/profile projections stay narrow.
+
+Test entry point: [staff-contact-db-tests.mjs](../scripts/staff-contact-db-tests.mjs).
+
+### 29. Version-bound structured chat recipients
+
+Source: [20261116022730_chat_structured_mentions.sql](../supabase/migrations/20261116022730_chat_structured_mentions.sql).
+
+Current room recipients, message/recipient versions, author correction history and moderation remain under the existing chat ACL. Mentions are resolved for the accepted message version rather than trusting displayed names or stale client membership. This adds no administrator access to DMs.
+
+Test entry point: [chat-mentions-db-tests.mjs](../scripts/chat-mentions-db-tests.mjs).
+
+### 30. Paged file discovery and private personal organisation
+
+Source: [20261116022731_file_discovery_personal_organisation.sql](../supabase/migrations/20261116022731_file_discovery_personal_organisation.sql).
+
+Server keyset discovery applies current document permission before returning a page. Own tags/virtual-folder annotations retain a CAS version and do not relocate or share bytes. The UI preserves captured operations across changing filters but separately rechecks their exact current target; private response caching is not introduced.
+
+Test entry point: [files-discovery-db-tests.mjs](../scripts/files-discovery-db-tests.mjs).
+
+### 31. Paged job discovery and own saved views
+
+Source: [20261116022732_job_discovery_and_saved_views.sql](../supabase/migrations/20261116022732_job_discovery_and_saved_views.sql).
+
+Job discovery uses complete cursors and validated server filters; saved views belong to the active account. Eligibility, capacity and the final atomic claim remain separate checked operations. Neither paging nor a saved filter raises the REST row cap or grants commercial access.
+
+Test entry point: [job-discovery-db-tests.mjs](../scripts/job-discovery-db-tests.mjs).
+
+### 32. Own in-app attention windows
+
+Source: [20261116022733_notification_attention_preferences.sql](../supabase/migrations/20261116022733_notification_attention_preferences.sql).
+
+Versioned own quiet-window preferences alter in-app attention, not underlying notification history or another account's events. Later smart notification definitions deliberately preserve operational receipts and add current external-channel checks.
+
+Test entry point: [attention-db-tests.mjs](../scripts/attention-db-tests.mjs).
+
+### 33. Explicit published announcement revisions
+
+Source: [20261116022734_portal_announcements.sql](../supabase/migrations/20261116022734_portal_announcements.sql).
+
+Private draft and published revision lifecycles separate editing from audience/window publication. Acknowledgement binds the exact published revision and current active audience; it is not a general file or course grant.
+
+Test entry point: [announcements-db-tests.mjs](../scripts/announcements-db-tests.mjs).
+
+### 34. Purpose-scoped administrative job choices
+
+Source: [20261116022735_scoped_administrative_job_pickers.sql](../supabase/migrations/20261116022735_scoped_administrative_job_pickers.sql).
+
+Checked picker projections replace unpaged job choices for file attachments and participant-course channels. Each purpose requires its own current capability/MFA; course metadata does not leak hidden job fees/text. The supplied selected choice is resolved in the same bounded request. No new picker table is created.
+
+Test entry point: [job-picker-db-tests.mjs](../scripts/job-picker-db-tests.mjs).
+
+### 35. Versioned global-event publication
+
+Source: [20261116022736_global_calendar_publications.sql](../supabase/migrations/20261116022736_global_calendar_publications.sql).
+
+Extends the existing global-events lifecycle with explicit draft/publish/unpublish/archive/recovery, finite windows, cursor pages and a private retry ledger. Recovery does not republish automatically. No global-event role grants access to personal calendar rows.
+
+Test entry point: [calendar-global-db-tests.mjs](../scripts/calendar-global-db-tests.mjs).
+
+### 36. Explicit exact qualification evidence and attestation history
+
+Source: [20261116022737_qualification_evidence_and_attestation_history.sql](../supabase/migrations/20261116022737_qualification_evidence_and_attestation_history.sql).
+
+Own consent binds an exact clean personal certificate version/hash to a selected topic. Current qualification managers/MFA may review that evidence and record versioned decisions/history; the legacy verification signature delegates to the same attestation core. Blanket foreign certificate access/upload is removed. Withdrawal prevents future evidence download without silently rewriting earlier verification or accepted assignments.
+
+Test entry point: [qualifications-db-tests.mjs](../scripts/qualifications-db-tests.mjs).
+
+### 37. Waitlist interest and atomic explicit substitution
+
+Source: [20261116031429_assignment_waitlist_and_substitution.sql](../supabase/migrations/20261116031429_assignment_waitlist_and_substitution.sql).
+
+Private waitlist rows record interest without reserving capacity. Substitution proposals fix the original claim, target, quote/hash, expiry and retry identity. Explicit target acceptance serializes both lecturer schedules, rechecks current eligibility and atomically releases/recreates the complete block while retaining original accepted history.
+
+Test entry point: [assignment-handover-db-tests.mjs](../scripts/assignment-handover-db-tests.mjs).
+
+### 38. Device opt-in and committed Web Push delivery
+
+Source: [20261116031533_web_push_notifications.sql](../supabase/migrations/20261116031533_web_push_notifications.sql).
+
+A private configuration singleton, owner-bound provider subscriptions and occurrence/device outbox separate browser consent from external delivery. Endpoint/encryption validation, active-device expiry, service-only worker leases and recipient eligibility fail closed. VAPID private material is operating configuration; source does not establish actual device permission or delivery.
+
+Test entry point: [web-push-db-tests.mjs](../scripts/web-push-db-tests.mjs).
+
+### 39. Shared course and participant learning workspace
+
+Source: [20261116031728_course_learning_workspace.sql](../supabase/migrations/20261116031728_course_learning_workspace.sql).
+
+Adds scoped preparation/contact settings, exact material/report resources and receipts, audited attendance, staff/learner Q&A, private notebooks, identity-protected feedback aggregates, immutable quiz versions/eligible attempts and frozen completion facts. The workspace derives current manager/assignment/enrolment/client scope. Repeat booking creates a fresh future request; later brief integration copies requirements without private learner data.
+
+Test entry point: [course-workspace-db-tests.mjs](../scripts/course-workspace-db-tests.mjs).
+
+### 40. Private favourites, versioned tasks and reusable workflows
+
+Source: [20261116032008_personal_workbench_and_tasks.sql](../supabase/migrations/20261116032008_personal_workbench_and_tasks.sql).
+
+Private/operations tasks retain CAS history, exact creation retries and bounded all-or-none bulk changes. Templates/applications bind a selected revision and retry key. Message-derived tasks require continuing current source-room access; neither manager access nor a copied description bypasses private scope. Favourites/recommendations re-resolve current resource/eligibility rights.
+
+Test entry point: [workbench-db-tests.mjs](../scripts/workbench-db-tests.mjs).
+
+### 41. Audited teaching time, printable finance facts and Control Center
+
+Source: [20261116032842_timesheets_finance_and_control_center.sql](../supabase/migrations/20261116032842_timesheets_finance_and_control_center.sql).
+
+Timesheets bind actual assignment sessions, bounded intervals/breaks, nonoverlap and audited review/retry state. Accepted compensation remains unchanged. Current capability/MFA gates own/all printable stable-hash facts, original-currency forecasts and date-bounded operational exceptions; customer gross requires its separate capability. No accounting, bank, payroll or legal-signature integration is implied.
+
+Test entry point: [timesheets-finance-db-tests.mjs](../scripts/timesheets-finance-db-tests.mjs).
+
+### 42. Revocable private calendar capabilities
+
+Source: [20261116034053_private_calendar_subscriptions.sql](../supabase/migrations/20261116034053_private_calendar_subscriptions.sql).
+
+Own creation/rotation/revocation binds CAS/retry keys and stores only a token hash plus explicit private-event inclusion and expiry. Service-only snapshot/recheck routines validate current active owner and the capability before/after rendering. The exact GET calendar-feed endpoint is the reviewed JWT exception; all other function authentication remains unchanged.
+
+Test entry point: [calendar-subscriptions-db-tests.mjs](../scripts/calendar-subscriptions-db-tests.mjs).
+
+### 43. Current-permission unified search
+
+Source: [20261116034638_permission_aware_unified_search.sql](../supabase/migrations/20261116034638_permission_aware_unified_search.sql).
+
+Adds a checked paginated union across the actual authorized modules, with kind/title/UUID cursor and bounded input/page size. Selected wiki revisions, current chat/task access and commercial capability checks prevent a search index from becoming a new read grant. No global materialized search table or all-pages browser download is added.
+
+Test entry point: [unified-search-db-tests.mjs](../scripts/unified-search-db-tests.mjs).
+
+### 44. Cross-feature notification targets and delivery rechecks
+
+Source: [20261116040854_smart_operations_notifications.sql](../supabase/migrations/20261116040854_smart_operations_notifications.sql).
+
+Replaces earlier target/category/prepare/reminder/attention definitions with the combined course, task, waitlist/substitution, timesheet and existing notification model. Committed changes emit scoped generic notifications; current recipient, channel, quiet-window and resource rights are checked again at delivery. Read this latest definition after the initial inbox/email/Push migrations.
+
+Test entry point: [smart-notifications-db-tests.mjs](../scripts/smart-notifications-db-tests.mjs).
+
+### 45. Direct current-authorisation task lookup
+
+Source: [20261116041354_workbench_direct_task_lookup.sql](../supabase/migrations/20261116041354_workbench_direct_task_lookup.sql).
+
+Resolves an explicit task deep link through the same current task/source-message helper used by paged tasks. Finding a private task by UUID never widens its visibility and avoids fetching every history page in the browser. No new table is created.
+
+Test entry point: [workbench-db-tests.mjs](../scripts/workbench-db-tests.mjs).
+
+### 46. Versioned customer teaching briefs and immutable request snapshots
+
+Source: [20261116042100_client_request_brief_and_history.sql](../supabase/migrations/20261116042100_client_request_brief_and_history.sql).
+
+Adds explicit whole teaching units of 45/60 minutes, required-document descriptions and exact scanned material/report attachments without changing original prices. Required minutes must fit planned sessions. Atomic creation retries compare the immutable first brief; edits share the publication row lock and CAS boundary before publication. Current organisation history uses stable pages, while repeat booking copies requirements/time but no attachments or learner records.
+
+Test entry point: [client-request-brief-db-tests.mjs](../scripts/client-request-brief-db-tests.mjs).
+
+### 47. Own qualification passport facts
+
+Source: [20261116044535_own_qualification_passport.sql](../supabase/migrations/20261116044535_own_qualification_passport.sql).
+
+The invoker API accepts locale and a bounded current snapshot instant, derives its subject from the actual active lecturer and returns explicit facts plus SHA-256. Verified/unverified/expired eligibility, current evidence availability and historical attestation provenance remain separate. It neither exports certificate bytes/private paths nor creates verification decisions. The protected PDF gateway repeats the same facts/access read before releasing generated bytes.
+
+Test entry points: [qualification-passport-db-tests.mjs](../scripts/qualification-passport-db-tests.mjs), [qualification-passport-api-check.mjs](../scripts/qualification-passport-api-check.mjs).
+
 ## The critical data flows
 
 **A job is claimed:** browser draft and idempotency key → public `claim_job` invoker → latest private implementation → current actor, locks, contract/qualification/capacity/time-conflict checks → immutable claim/schedule/revenue snapshots, memberships and notifications → transaction commit → confirmed UI. An error cannot leave a partially successful multi-day booking. Kanban calls permitted lifecycle actions; dragging a card does not create a claim.
@@ -207,6 +391,33 @@ Test entry point: [admin-audit-db-tests.mjs](../scripts/admin-audit-db-tests.mjs
 **A file is uploaded:** authenticated Edge request → bounded and validated bytes → version reserved under caller permissions → immutable quarantine bytes → actual scan → fresh current-permission check → clean exact version. A download checks current rights again; a saved notification or avatar ID is not a permanent access token. SQL metadata alone does not prove an actual object transfer or a clean scan.
 
 **A private projection is read:** authenticated actor → current capability/MFA and resource rights → explicitly bounded result. A `public` wrapper is an API boundary, not proof of public visibility. An internal `security definer` implementation technically bypasses RLS, so it must retain its own actor/resource checks and precise grants. Administrative overviews do not implicitly grant access to private DMs, calendars or contracts.
+
+**A substitution is accepted:** targeted quote/hash and explicit acceptance → current actor/resource checks → stable profile/scheduling/job/claim lock order → renewed qualification/contract/conflict/invoice checks → complete old block release plus new immutable claim/allocation → commit. The waitlist does not allocate or bypass this protocol.
+
+**A brief is revised or repeated:** current organisation scope → request publication row lock → expected brief version → whole teaching-time and exact scanned-version validation → append immutable snapshot → commit. A creation retry compares the immutable first brief; later revisions remain intact. Repetition requests new future dates and never copies learner records or document consent.
+
+**A protected printable document is downloaded:** caller JWT/current Auth → reviewed SQL facts/exact share → private Storage bytes or bounded deterministic PDF rendering → SHA-256 and repeat current Auth/permission/fact checks → private/no-store response. Vendored fonts/runtime and the release archive are separate source assets, not a migration or a legal signature.
+
+**An external notice is delivered:** committed business event → deduplicated occurrence/device outbox → service-only bounded lease → fresh current recipient/preference/quiet-window/resource preparation → provider submission → explicit outcome. An uncertain handoff does not become a fabricated success or an automatic duplicate retry. Worker installation/provider/device acceptance is separate from database replay.
+
+## Unreleased branch version reconciliation
+
+The eight M7/M8 migrations were still unmerged and unapplied on the authorised CMS target. Their original branch identifiers preceded the accepted PR18 welcome migration and the initial PR17 snapshot. A retained-data rehearsal correctly rejected that order. Before release, only those eight filenames were assigned the following forward identifiers; every SQL byte/SHA-256 remained identical. The24accepted foundation sources and PR17's four initial sources were unchanged. No live history was repaired or reset; strict updater/native order checks remain enabled.
+
+| Original branch version | Release version |
+| ----------------------- | --------------- |
+| 20261115230301          | 20261116022730  |
+| 20261115230604          | 20261116022731  |
+| 20261115230702          | 20261116022732  |
+| 20261115231704          | 20261116022733  |
+| 20261115232824          | 20261116022734  |
+| 20261116003728          | 20261116022735  |
+| 20261116003733          | 20261116022736  |
+| 20261116004358          | 20261116022737  |
+
+A private experimental database that applied old unmerged identifiers needs separate inspection; do not reset or falsify its history. The actual CMS has18 earlier versions. Accepted main and the initial PR17 snapshot remain forward baselines.
+
+The reviewed updater plan is an operating-controller extension, not a migration. See [REVIEWED_MIGRATION_PLANS](REVIEWED_MIGRATION_PLANS.md) for exact release/history binding, one-shot private approval and backup/checkpoint/rollback. Source documentation does not establish live activation or combined acceptance.
 
 ## Before changing SQL
 

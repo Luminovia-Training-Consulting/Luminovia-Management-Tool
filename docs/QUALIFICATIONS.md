@@ -14,7 +14,7 @@ Withdrawal, replacement, document archiving or removal of a topic ends the forme
 
 ## Database and APIs
 
-New CLI migration: `20261116004358_qualification_evidence_and_attestation_history.sql`. Existing migrations remain unchanged. Private tables `qualification_states`, `qualification_evidence`, `qualification_events` and `qualification_requests` have RLS and no browser table grants. Current topic selections remain in `lecturer_topics`; the new core does not alter underlying job claims, accepted terms or calendar allocations.
+New CLI migration: `20261116022737_qualification_evidence_and_attestation_history.sql`. Existing migrations remain unchanged. Private tables `qualification_states`, `qualification_evidence`, `qualification_events` and `qualification_requests` have RLS and no browser table grants. Current topic selections remain in `lecturer_topics`; the new core does not alter underlying job claims, accepted terms or calendar allocations.
 
 | RPC                              | Contract                                                                                             |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------- |

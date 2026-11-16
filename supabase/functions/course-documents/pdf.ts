@@ -1,10 +1,14 @@
+/** Render explicit reviewed fact projections using the pinned Unicode font/PDF
+ * runtime. Unsupported characters fail visibly instead of changing names. */
 import { fontkit, PDFDocument, rgb } from "./vendor/pdf-runtime.js";
+import { passportLines } from "./passport.ts";
 type Facts = Record<string, unknown>;
 const titles: Record<string, string> = {
   completion: "Teilnahmebestätigung / Completion record",
   attendance: "Anwesenheitsbericht / Attendance report",
   earnings_statement: "Honorarübersicht / Earnings statement",
   assignment_confirmation: "Auftragsbestätigung / Assignment confirmation",
+  qualification_passport: "Qualifikationspass / Qualification passport",
 };
 function printable(value: unknown): string {
   if (value === null || value === undefined) return "-";
@@ -13,6 +17,7 @@ function printable(value: unknown): string {
     .normalize("NFC");
 }
 export function factLines(kind: string, facts: Facts): string[] {
+  if (kind === "qualification_passport") return passportLines(facts);
   if (kind === "completion") {
     return [
       `Teilnehmende Person / Participant: ${printable(facts.participant)}`,
@@ -159,7 +164,11 @@ export async function renderFactPdf(
   facts: Facts,
   fontBytes: Uint8Array,
 ): Promise<Uint8Array> {
-  const title = titles[kind];
+  const title = kind === "qualification_passport"
+    ? ((facts.data as Facts | undefined)?.locale === "en"
+      ? "Qualification passport"
+      : "Qualifikationspass")
+    : titles[kind];
   if (!title) throw new Error("invalid_document_kind");
   const lines = factLines(kind, facts);
   if (lines.length > 10000 || lines.some((line) => line.length > 20000)) {

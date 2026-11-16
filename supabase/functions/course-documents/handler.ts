@@ -1,3 +1,5 @@
+/** Protected document boundary: exact caller/origin, finite inputs and a second
+ * current-authorization/facts read after rendering or private byte access. */
 interface Dependencies {
   origins: string[];
   authenticate: (token: string) => Promise<boolean>;
@@ -78,6 +80,15 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
       const kind = body.kind;
       let name: string, args: Record<string, unknown>;
       if (
+        kind === "qualification_passport" &&
+        ["de", "en"].includes(body.locale) &&
+        Object.keys(body).every((key) => ["kind", "locale"].includes(key))
+      ) {
+        name = "own_qualification_passport";
+        // Capture server time once. Both permission/fact reads must receive the
+        // same snapshot label; the database still evaluates current expiry.
+        args = { p_locale: body.locale, p_as_of: new Date().toISOString() };
+      } else if (
         ["resource", "completion", "attendance"].includes(kind) &&
         uuid(body.id) &&
         Object.keys(body).every((key) => ["kind", "id"].includes(key))
@@ -89,7 +100,7 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
         uuid(body.id) &&
         uuid(body.request_id) &&
         Object.keys(body).every((key) =>
-          ["kind", "id", "request_id"].includes(key),
+          ["kind", "id", "request_id"].includes(key)
         )
       ) {
         name = "client_request_document_access";
@@ -107,7 +118,7 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
         /^\d{4}-\d{2}-\d{2}$/.test(body.until) &&
         (body.all === undefined || typeof body.all === "boolean") &&
         Object.keys(body).every((key) =>
-          ["kind", "from", "until", "all"].includes(key),
+          ["kind", "from", "until", "all"].includes(key)
         )
       ) {
         name = "finance_statement";
@@ -126,8 +137,9 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
         if (
           typeof first.data.object_path !== "string" ||
           typeof first.data.sha256 !== "string"
-        )
+        ) {
           return json(403, "document_unavailable");
+        }
         bytes = await dependencies.download(first.data.object_path);
         const digest = [
           ...new Uint8Array(
@@ -154,8 +166,9 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
         final.error ||
         !final.data ||
         JSON.stringify(final.data) !== JSON.stringify(first.data)
-      )
+      ) {
         return json(403, "document_changed_or_revoked");
+      }
       return new Response(new Uint8Array(bytes), {
         status: 200,
         headers: {
@@ -171,8 +184,9 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
       if (
         error instanceof SyntaxError ||
         (error instanceof Error && error.message === "invalid_request")
-      )
+      ) {
         return json(400, "invalid_request");
+      }
       return json(503, "document_unavailable");
     }
   };

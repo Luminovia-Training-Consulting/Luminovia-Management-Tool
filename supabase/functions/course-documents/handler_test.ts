@@ -1,4 +1,46 @@
 import { createCourseDocumentHandler } from "./handler.ts";
+
+Deno.test("own passport binds one server timestamp across reauthorization and rejects a browser subject", async () => {
+  const args: Record<string, unknown>[] = [];
+  let storageCalls = 0;
+  const handler = createCourseDocumentHandler({
+    origins: ["https://portal.example.invalid"],
+    authenticate: async () => true,
+    rpc: async (_token, name, value) => {
+      assert(name === "own_qualification_passport");
+      args.push(value);
+      return {
+        data: { data: { locale: value.p_locale }, hash: "a".repeat(64) },
+        error: null,
+      };
+    },
+    download: async () => {
+      storageCalls++;
+      return new Uint8Array();
+    },
+    render: async () => new TextEncoder().encode("%PDF-fictional"),
+  });
+  const response = await handler(
+    request({ kind: "qualification_passport", locale: "en" }),
+  );
+  assert(response.status === 200);
+  assert(response.headers.get("cache-control")?.includes("no-store"));
+  assert(
+    args.length === 2 && JSON.stringify(args[0]) === JSON.stringify(args[1]),
+  );
+  assert(Object.keys(args[0]).sort().join(",") === "p_as_of,p_locale");
+  assert(Math.abs(Date.now() - Date.parse(String(args[0].p_as_of))) < 10000);
+  assert(storageCalls === 0);
+  assert(
+    (await handler(
+      request({ kind: "qualification_passport", locale: "de", user_id: id }),
+    )).status === 400,
+  );
+  assert(
+    (await handler(request({ kind: "qualification_passport", locale: "fr" })))
+      .status === 400,
+  );
+});
 const id = "52b7ddee-2166-485a-bcee-04d0eea958d1",
   origin = "https://portal.example.invalid";
 function assert(value: unknown, message = "Assertion failed"): asserts value {
@@ -36,12 +78,10 @@ function fixture() {
       rpcCalls++;
       state.calls.push(name);
       return {
-        data: state.revoked
-          ? null
-          : {
-              id: args.p_id ?? args.p_claim_id ?? id,
-              version: state.changed && rpcCalls > 1 ? 2 : 1,
-            },
+        data: state.revoked ? null : {
+          id: args.p_id ?? args.p_claim_id ?? id,
+          version: state.changed && rpcCalls > 1 ? 2 : 1,
+        },
         error: null,
       };
     },
@@ -197,14 +237,12 @@ Deno.test(
         assert(args.p_request_id === id && args.p_version_id === id);
         calls++;
         return {
-          data: revoked
-            ? null
-            : {
-                object_path: "fictional/request.txt",
-                sha256,
-                name: "Request.txt",
-                mime_type: "text/plain",
-              },
+          data: revoked ? null : {
+            object_path: "fictional/request.txt",
+            sha256,
+            name: "Request.txt",
+            mime_type: "text/plain",
+          },
           error: null,
         };
       },

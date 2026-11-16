@@ -34,6 +34,16 @@ The integrated source preserves incoming main3256d1a, all32 migrations and both 
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — integrated47-source checkpoint, acceptance in progress
+
+Signed48a5f65 was integrated with actual main43504b8, M7/M8 source94c8aebe and reviewed updater2a81842/49e8781. Owners retained new functions, meaningful English comments and the full target. Main merges are temporarily held by the independently authorised PR18 coordination; its role/pricing/welcome source still needs integration and coherent role-aware substitution/discovery/forecast fixes. Native reproduction found mismatched recipient-consent fees and zero prospective costs under that incoming policy. Those are release blockers, not accepted behavior.
+
+The own DE/EN qualification passport brings source to47 migrations. Focused merge checks passed current types,109 file/evidence/contact/brief cases,76 calendar/chat/notification cases,7 evidence Edge cases,63 updater Python cases and5 real updater transaction groups. Passport has5 SQL/31 component/13 Edge/PDF cases plus visually inspected DE/EN PDFs. Source coverage before M7 passed278/278 and53.01% lines against unchanged48% floor. These do not constitute final combined acceptance.
+
+The first actual native diagnostic preserved password/MFA/roles/private-event/scanned bytes and passed six business API suites, then failed a new fixture expecting405 from anonymous calendar POST. Only GET is exempt: the fixture now independently requires anonymous401 and authenticated405. The second rehearsal correctly rejected M7's older unmerged identifiers after the initial PR17 snapshot. Only those eight unmerged filenames were reconciled to022730–022737, keeping identical SQL hashes, all24accepted sources and the four initial PR17 identifiers. No actual history/data changed. [Version map](MIGRATION_GUIDE.md#unreleased-branch-version-reconciliation). A fresh complete native/application run is required.
+
+The actual CMS complete encrypted backup service succeeded after explicit invocation. Official Ubuntu Node24.19.0 was installed under the global maintenance lock for the finite packaged Push worker. Installed application/SMTP/Auth configuration and notification timers remain unchanged here. Earlier self-addressed SMTP delivery is actual provider proof, not automatic activation.
+
 ## 16 November 2026 — full-scope completion and live email explicitly authorised, in progress
 
 The user now explicitly requests finishing the remaining scope (including Push, waitlists and substitution), testing everything, completing/merging PR17 and activating automatic Hostinger email. They want installable desktop and mobile PWAs to the extent the browser supports them. This authorisation does not permit deleting/resetting data or purchasing services. Work remains on the isolated PR17 worktree; the original checkout's delegated-role/private-pricing work and other open PRs remain untouched.

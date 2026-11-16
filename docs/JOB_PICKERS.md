@@ -42,7 +42,7 @@ remain authoritative. Selection does not reserve an offer or alter a claim.
 ## API and database
 
 The additive CLI-created migration is
-`20261116003728_scoped_administrative_job_pickers.sql`. All previous 29 migration
+`20261116022735_scoped_administrative_job_pickers.sql`. All previous 29 migration
 sources are preserved. Other M8 feature migrations remain separate.
 
 `job_picker(p_purpose,p_search,p_cursor,p_limit,p_selected_id)` returns:

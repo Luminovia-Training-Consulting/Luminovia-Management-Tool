@@ -191,6 +191,7 @@ export type PortalDocumentRequest =
       id: string;
     }
   | { kind: "request_resource"; id: string; request_id: string }
+  | { kind: "qualification_passport"; locale: "de" | "en" }
   | { kind: "earnings_statement"; from: string; until: string; all?: boolean };
 /** Downloads protected exact facts/bytes and checks the current identity again before releasing a Blob. */
 export async function downloadPortalDocument(
