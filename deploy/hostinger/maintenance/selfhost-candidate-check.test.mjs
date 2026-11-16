@@ -25,6 +25,7 @@ import {
   candidateApiSuites,
   checkCandidate,
   migrationWithHistory,
+  financialProbeReceipt,
   ownershipLabel,
   stageCandidateSource,
 } from "./selfhost-candidate-check.mjs";
@@ -224,6 +225,40 @@ test("candidate port bind failure releases earlier leases and preserves an unrel
 });
 
 const project = "luminovia-portal-test-" + "a".repeat(24);
+test("financial receipts require actual complete matching-phase data instead of a bare successful process", () => {
+  const proof = {
+    kind: "accepted-financial-witness",
+    phase: "--create",
+    claims: 2,
+    invoices: 1,
+    commissioned: true,
+    snapshotSha256: "a".repeat(64),
+    foreignDenied: true,
+  };
+  assert.deepEqual(
+    financialProbeReceipt(
+      "PASS scoped fixture\n" + JSON.stringify(proof),
+      "--create",
+    ),
+    proof,
+  );
+  for (const change of [
+    { phase: "--verify" },
+    { claims: 1 },
+    { invoices: 0 },
+    { foreignDenied: false },
+    { snapshotSha256: "wrong" },
+    { commissioned: null },
+  ])
+    assert.throws(() =>
+      financialProbeReceipt(
+        JSON.stringify({ ...proof, ...change }),
+        "--create",
+      ),
+    );
+  for (const missing of ["", "PASS legacy witness", "null", "{}"])
+    assert.throws(() => financialProbeReceipt(missing, "--create"));
+});
 const scope = {
   project,
   network: project + "-backend",

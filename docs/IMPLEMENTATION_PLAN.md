@@ -1,5 +1,15 @@
 # Persistent implementation plan
 
+## Current quality integration after actual PR10 merge
+
+- [x] Integrate actual main1de544d and preserve all36released SQL files, accepted application/source guides, manual-publication and personal-only review boundaries.
+- [x] Preserve original PR19 ancestry and native merge controller; include continuous read-only source probe and contributor attribution without new credentials or permissions.
+- [x] Retain already accepted test bodies without duplication; integrate course PostgreSQL/browser precision and the narrowly scoped financial upgrade witness.
+- [x] Pass529frontend cases with whole-source S65.52/B59.99/F56.66/L67.59%, unchanged accepted floors, both criticalAPI100% gates,159runtime cases,63focusedAPI and3documentation checks; pass strict directE2E types and actionlint. Maintenance witness source separately passes65cases.
+- [ ] Complete isolated local acceptance on the signed assembled source and record owned cleanup; earlier checkpoints do not certify this assembly.
+- [ ] Observe actual36→36 retained-financial native upgrade with identical accepted records/PDF bytes and checked cleanup.
+- [ ] Publish current PR19 update, observe all15exact-head/current-base checks including the first continuous Actions-token probe, then follow the coordinated normal merge slot. Record actual controller execution/native App merge separately; no permission bypass or production publication is authorised.
+
 ## Local native integration of accepted main e88df84
 
 - [x] Integrate exact accepted main `e88df84` into native checkpoint `986a74c`, retaining both documentation/evidence histories, customer-neutral source and all 27 SQL blobs unchanged. Preserve native merge protection, the sealed User/Bot query, the continuous read-only probe, metadata hold behavior and all 49 API cases.
@@ -33,6 +43,14 @@ This bounded quality slice starts from accepted main `fabd71a7` and retains ever
 - [ ] Complete exact-source full application/security/native CI, review results and perform the authorised merge on [PR #19](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/19); inspect its durable final checks/merge record on continuation. Workflow-file permissions or native rules must fail closed; do not broaden App rights silently.
 
 Full product/module scope and independently ongoing PR acceptance remain unchanged.
+
+## Retained financial witness after accepted PR10
+
+- [x] Port only the executed financial witness's two maintenance programs, two test files and owning README onto accepted main `1de544d872706eebc95a942a1956254ed87ae40d`; preserve current controllers, application contracts and all 36 released migration blobs.
+- [x] Require actual caller/MFA/scanner creation before the source switch and exact accepted compensation, session, private policy/split, contract receipt, invoice/item/payment and PDF retention afterward, including fresh identity sessions and foreign-record/byte denials. Keep candidate-only bootstrap after comparison and disallow role-pricing sentinel fallback.
+- [x] Pass all 65 maintenance unit/contract cases, including 29 financial cases, scoped lint/format and diff checks; preserve automatic maintenance-test discovery. These lightweight checks are not native acceptance.
+- [ ] Coordinate the shared QA lock and run the exact signed candidate against a separately archived actual `1de544d` baseline, with the current 36 migrations and discovered API inventory. Record matching anonymous financial digests, full native Auth/Storage/TLS/50-claim checks and verified owned cleanup before claiming a current pass.
+- [ ] Run complete canonical application acceptance and the final exact-head PR CI gates through the owning quality integration. Keep the historical `5876224`/`e048edb` 26-migration proof source-bound; no deployment or PostgreSQL image upgrade is implied.
 
 ## PR10 current accepted Main13 checkpoint
 
