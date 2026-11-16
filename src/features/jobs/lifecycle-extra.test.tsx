@@ -236,3 +236,35 @@ it("shows operational history without another recipient's private price or a con
     ),
   ).toBeVisible();
 });
+
+it("reports a cancelled accepted receipt truthfully after a transport retry in both languages", async () => {
+  const user = userEvent.setup();
+  mount(<SubstitutionOffers />);
+  await screen.findByText("Immutable reviewed fictional terms");
+  await user.click(screen.getByRole("checkbox"));
+  fake.responses.respond_job_substitution = {
+    status: "cancelled",
+    claim_id: "bc8f023c-5f82-4b6f-8ea2-47daf8a210cb",
+  };
+  fake.responses.job_substitutions = [
+    { ...offer(), status: "accepted", can_accept: false },
+  ];
+  await user.click(
+    screen.getByRole("button", { name: "Vertretung verbindlich übernehmen" }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Die bestätigte Vertretung wurde inzwischen abgesagt. Es wurden keine Termine erneut reserviert.",
+  );
+  expect(
+    screen.queryByText("Die Vertretung ist verbindlich bestätigt."),
+  ).not.toBeInTheDocument();
+  await act(async () => {
+    await i18n.changeLanguage("en");
+  });
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "The confirmed replacement has since been cancelled. No sessions were reserved again.",
+  );
+  expect(
+    screen.queryByText("The substitution is confirmed."),
+  ).not.toBeInTheDocument();
+});

@@ -112,6 +112,7 @@ function SubstituteOffer({ offer }: { offer: Substitution }) {
     result &&
     [
       "confirmed",
+      "cancelled",
       "declined",
       "withdrawn",
       "expired",

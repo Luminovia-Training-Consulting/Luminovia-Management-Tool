@@ -30,6 +30,8 @@ const de = {
   quote: "Verbindlich angebotene Konditionen",
   quotePrivate:
     "Die persönlichen Konditionen sind nur für die angefragte Vertretung sichtbar.",
+  cancelled:
+    "Die bestätigte Vertretung wurde inzwischen abgesagt. Es wurden keine Termine erneut reserviert.",
   total: "Gesamthonorar",
   rate: "Vergütungseinheit",
   contract: "Ein gültiger eigener Rahmenvertrag ist erforderlich.",
@@ -95,6 +97,8 @@ const en: Record<keyof typeof de, string> = {
   quote: "Concrete assignment terms",
   quotePrivate:
     "Personal compensation is visible only to the proposed replacement.",
+  cancelled:
+    "The confirmed replacement has since been cancelled. No sessions were reserved again.",
   total: "Total compensation",
   rate: "Rate unit",
   contract: "A valid personal framework agreement is required.",

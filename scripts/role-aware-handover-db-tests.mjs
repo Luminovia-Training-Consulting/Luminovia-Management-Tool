@@ -139,6 +139,15 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
         "utf8",
       ),
     );
+    await sql(
+      await readFile(
+        new URL(
+          "../supabase/migrations/20261116052910_substitution_receipt_current_status.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
     await check(
       "Upgrade closes unsnapshotted pending offers without rewriting accepted facts or revenue",
       async () => {
@@ -505,6 +514,79 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
           ),
           "confirmed",
         );
+      },
+    );
+
+    await check(
+      "A cancelled accepted replacement stays cancelled on exact consent retries without new allocations or notices",
+      async () => {
+        const fixture = await make(),
+          offer = await proposal(fixture),
+          key = randomUUID();
+        const response = [
+          q(offer.id),
+          q("accept"),
+          q(offer.quote_hash),
+          q(key),
+          "true",
+        ];
+        const accepted = await rpc(
+          fixture.target,
+          "respond_job_substitution",
+          response,
+        );
+        assert.equal(accepted.status, "confirmed");
+        await call(fixture.target, "cancel_job_assignment", [
+          q(accepted.claim_id),
+          q("Fictional later cancellation of accepted replacement"),
+          q(randomUUID()),
+        ]);
+        const scope = [fixture.claim, accepted.claim_id, fixture.job, offer.id]
+          .map(q)
+          .join(",");
+        const snapshot = () =>
+          sql(
+            `select jsonb_build_object('offer',(select to_jsonb(o)from private.job_substitutions o where id=${q(offer.id)}),'claims',(select jsonb_agg(to_jsonb(c)order by c.id)from public.job_claims c where job_id=${q(fixture.job)}),'sessions',(select jsonb_agg(to_jsonb(s)order by s.id)from public.assignment_sessions s join public.job_claims c on c.id=s.claim_id where c.job_id=${q(fixture.job)}),'notices',(select jsonb_agg(to_jsonb(n)order by n.id)from public.notifications n where resource_id in(${scope})),'audit',(select jsonb_agg(to_jsonb(a)order by a.id)from public.audit_events a where resource_id in(${scope})))`,
+          );
+        const before = await snapshot();
+        const replay = await rpc(
+          fixture.target,
+          "respond_job_substitution",
+          response,
+        );
+        assert.deepEqual(replay, {
+          status: "cancelled",
+          claim_id: accepted.claim_id,
+        });
+        assert.equal(await snapshot(), before);
+        assert.equal(
+          await sql(
+            `select count(*)from public.assignment_sessions where claim_id=${q(accepted.claim_id)}and released_at is null`,
+          ),
+          "0",
+        );
+        assert.equal(await ledger(fixture.claim), fixture.oldLedger);
+        await assert.rejects(
+          call(fixture.target, "respond_job_substitution", [
+            q(offer.id),
+            q("accept"),
+            q("forged"),
+            q(key),
+            "true",
+          ]),
+          /22023/,
+        );
+        await assert.rejects(
+          call(fixture.target, "respond_job_substitution", [
+            q(offer.id),
+            q("accept"),
+            q(offer.quote_hash),
+            q(key),
+            "false",
+          ]),
+          /22023/,
+        );
+        assert.equal(await snapshot(), before);
       },
     );
 

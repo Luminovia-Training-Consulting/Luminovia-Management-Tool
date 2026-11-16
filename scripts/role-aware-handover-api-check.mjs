@@ -118,13 +118,13 @@ commit;`);
       (row) => row.id === id,
     );
   };
-  const accept = (who, offer) =>
+  const accept = (who, offer, request = randomUUID()) =>
     checked(
       who.client.rpc("respond_job_substitution", {
         p_offer_id: offer.id,
         p_action: "accept",
         p_quote_hash: offer.quote_hash,
-        p_request_id: randomUUID(),
+        p_request_id: request,
         p_accept_terms: true,
       }),
     );
@@ -193,7 +193,43 @@ commit;`);
     assert.equal(sourceView.quote_hash, null);
     assert.equal(sourceView.quote.total_amount, null);
     assert.equal(sourceView.quote.terms, null);
-    await verifyReceipt(fixture, offer, await accept(target, offer));
+    const request = randomUUID(),
+      receipt = await accept(target, offer, request);
+    await verifyReceipt(fixture, offer, receipt);
+    if (source === regular) {
+      await checked(
+        target.client.rpc("cancel_job_assignment", {
+          p_claim_id: receipt.claim_id,
+          p_reason: "Fictional later cancellation before retry",
+          p_request_id: randomUUID(),
+        }),
+      );
+      const scope = [fixture.claim, receipt.claim_id, fixture.job, offer.id]
+        .map(q)
+        .join(",");
+      const snapshot = () =>
+        sql(
+          `select jsonb_build_object('claims',(select jsonb_agg(to_jsonb(c)order by c.id)from public.job_claims c where job_id=${q(fixture.job)}),'sessions',(select jsonb_agg(to_jsonb(s)order by s.id)from public.assignment_sessions s join public.job_claims c on c.id=s.claim_id where c.job_id=${q(fixture.job)}),'notices',(select jsonb_agg(to_jsonb(n)order by n.id)from public.notifications n where resource_id in(${scope})),'events',(select jsonb_agg(to_jsonb(e)order by e.id)from public.claim_events e where e.claim_id in(${q(fixture.claim)},${q(receipt.claim_id)})))`,
+        );
+      const cancelled = await snapshot();
+      assert.deepEqual(await accept(target, offer, request), {
+        status: "cancelled",
+        claim_id: receipt.claim_id,
+      });
+      assert.equal(await snapshot(), cancelled);
+      assert.equal(
+        (
+          await checked(
+            target.client
+              .from("assignment_sessions")
+              .select("id")
+              .eq("claim_id", receipt.claim_id)
+              .is("released_at", null),
+          )
+        ).length,
+        0,
+      );
+    }
   }
   const stale = await make(regular, candidate),
     oldOffer = await propose(stale);
