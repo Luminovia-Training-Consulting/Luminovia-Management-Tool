@@ -1,6 +1,12 @@
 # Reading and safely extending SQL migrations
 
-This guide inventories **69 SQL files: 68 unchanged migrations accepted on main `99add7d` and one new assignment-withdrawal extension**. The 62-source Main17 prefix and six subsequent operational additions remain byte-identical. The final additive workflow enforces the lecturer withdrawal window across cancellation and replacement paths. Earlier source/candidate counts below are historical checkpoints.
+## PR25 integration on accepted main
+
+PR24 is accepted as main `99add7de8598bf415977c7cae79f1c5f6993626d` with 68 published SQL files. The unpublished enquiry source is resequenced with the installed CLI as `20261116143242_website_enquiry_intake.sql`, after that complete prefix. All 68 released files remain byte-identical. This produces 69 sources; source presence does not claim hosted installation.
+
+The enquiry helper is discovered by main's existing owner-only notification resolver. The obsolete resolver rename/wrapper and authenticated EXECUTE grant are removed from the unpublished source, preserving the accepted resolver's identity, fallback branches and restricted ACL. Current SQL tests exercise the actual inbox projection and denied direct helper calls. HTTP fixtures must validate either the canonical disposable backend or the exact ownership-checked native candidate, including its private TLS trust; ordinary services remain excluded.
+
+This guide inventories **68 SQL files: 62 unchanged published Main17 migrations and six pending PR24 operational additions**. Actual accepted main is `4cc20874edc1f865b71106b7bb1299e16fec5aad`. All 62 published bodies remain byte-identical, and the six pending files retain their CLI-created dependency order. Their post-wait authority corrections and the two notification files’ owner-only resolver boundary remain recorded in [WORKLOG](WORKLOG.md). Earlier 36-, 42- and candidate-prefix counts describe their named pre-merge checkpoints.
 
 The historical PR24 source checkpoint below passed its own 68-migration replay and application acceptance before being merged. That evidence does not certify the new withdrawal extension or its integrated application source. Current-source checks and pending native/browser gates are recorded in [WORKLOG](WORKLOG.md).
 

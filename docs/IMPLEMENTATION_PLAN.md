@@ -1,6 +1,22 @@
 # Persistent implementation plan
 
-## 17 November 2026 — short-notice withdrawal policy
+## PR25 mergeability continuation — 17 November 2026
+
+- [x] Resolve both documentation conflicts against accepted main `2c7d326`, preserving all released migrations and complete ledgers.
+- [x] Correct native candidate TLS leaf semantics without disabling validation; actual enquiry-runtime positive/untrusted/wrong-host HTTPS and socket/candidate suite passes29cases.
+- [x] Pass combined `./portal check` (681frontend),173runtime and74Edge cases with unchanged gates. Full local acceptance refuses a foreign-owned shared QA lock before startup.
+- [ ] Push signed correction, inspect fresh exact-head full system/browser/native/security/package CI, repair any failures and complete the authorised PR25 merge when repository rules permit. No production/publication action is included.
+
+## PR25 repair on accepted PR24 — 17 November 2026
+
+- [x] Bind private enquiry intake to accepted main `99add7d`, preserving all 68 published migrations and incoming application/operational workflows.
+- [x] Resequence the one unpublished enquiry migration after the released prefix; use the accepted owner-only notification resolver without restoring direct authenticated execution.
+- [ ] Verify canonical and native enquiry adapter startup, actual SQL permissions/inbox/conversion, frontend and complete isolated acceptance. Record actual results in WORKLOG; previous PR24 results do not accept PR25.
+- [ ] Push signed repair to PR25, refresh its stale stacked description and draft status when ready, observe all required current-revision checks, and merge only when repository rules permit. No release or production action is included.
+
+All complete product and seven-module ledgers below remain required. Prior coordination notes describe their historical checkpoints; this PR repair follows the current user request.
+
+## Current final delivery on actual 68-migration main
 
 - [x] Implement own direct withdrawal at least 168 elapsed hours before the first session; shorter notice requires a private reasoned application and non-author Administration/Management review with current MFA.
 - [x] Preserve pending/rejected reservations, accepted snapshots and started/invoiced safeguards; enforce the boundary through the legacy API, atomic locks, immutable retry payloads, role-revocation checks and committed inbox outcomes.

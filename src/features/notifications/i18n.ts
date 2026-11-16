@@ -58,6 +58,7 @@ const de = {
   activity: "Neue Aktivität",
   support_update: "Neue Supportantwort oder Statusänderung",
   readiness_task: "Vorbereitungsaufgabe zugewiesen oder geändert",
+  website_enquiry: "Neue Schulungsanfrage eingegangen",
   replacement_available: "Passender Ersatzeinsatz verfügbar",
   replacement_completed: "Ersatzübernahme bestätigt",
   delivery_submitted: "Leistungsnachweis eingereicht",
@@ -84,6 +85,7 @@ const de = {
 const en: Record<keyof typeof de, string> = {
   support_update: "New support reply or status change",
   readiness_task: "Preparation task assigned or changed",
+  website_enquiry: "New training enquiry received",
   replacement_available: "Eligible replacement assignment available",
   replacement_completed: "Replacement handover confirmed",
   delivery_submitted: "Delivery confirmation submitted",
