@@ -6,7 +6,7 @@ import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { createClient } from '@supabase/supabase-js';
 import { createHmac, randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readPrivateJson, writePrivateJson } from '../../scripts/testing/private-state.mjs';
 
 const configured = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.E2E_PASSWORD);
 test.skip(!configured, 'Real local Supabase fixtures required. Run scripts/local-start.sh and scripts/local-seed.mjs.');
@@ -204,7 +204,7 @@ async function adminSession(page: Page) {
   const { client } = await signInApi(process.env.E2E_ADMIN_EMAIL!);
   const { data: factors, error } = await client.auth.mfa.listFactors();
   expect(error).toBeNull();
-  let state: { factorId: string; secret: string } | null = existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) : null;
+  let state: { factorId: string; secret: string } | null = readPrivateJson(statePath);
   if (!factors!.totp.some((factor) => factor.id === state?.factorId)) state = null;
   await login(page, process.env.E2E_ADMIN_EMAIL!);
   await page.goto('/security');
@@ -217,8 +217,7 @@ async function adminSession(page: Page) {
     expect(enrollment.id).toBeTruthy();
     expect(enrollment.totp?.secret).toBeTruthy();
     state = { factorId: enrollment.id, secret: enrollment.totp.secret };
-    mkdirSync('.local', { recursive: true, mode: 0o700 });
-    writeFileSync(statePath, JSON.stringify(state), { mode: 0o600 });
+    writePrivateJson(statePath, state);
   }
   await page.getByLabel('Sechsstelliger Code', { exact: true }).fill(totp(state!.secret));
   await page.getByRole('button', { name: 'Code bestätigen', exact: true }).click();
