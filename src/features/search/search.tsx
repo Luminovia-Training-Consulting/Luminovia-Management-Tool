@@ -1,188 +1,136 @@
+/** Unified discovery renders only server-authorised pages for the current actor. */
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Search } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
-import { db } from "../../lib/supabase";
 import { Button } from "../../components/ui/button";
-import { ErrorState, Loading, PageHeading } from "../../components/common";
-interface Result {
-  id: string;
-  kind: string;
-  title: string;
-  detail: string;
-  url: string;
-}
+import {
+  ErrorState,
+  Loading,
+  PageHeading,
+  Field,
+} from "../../components/common";
+import { unifiedSearchQuery, searchKinds } from "./unified-api";
+import "./unified-i18n";
+import "./unified.css";
+/** URL navigation remounts the draft; a language change preserves unsaved text. */
 function SearchForm({
   query,
+  kind,
   onSearch,
 }: {
   query: string;
-  onSearch: (value: string) => void;
+  kind: string;
+  onSearch: (query: string, kind: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation("unifiedSearch");
   const [input, setInput] = useState(query);
+  const [type, setType] = useState(kind);
   return (
     <form
       className="panel search-page-form"
       onSubmit={(event) => {
         event.preventDefault();
-        onSearch(input);
+        onSearch(input.trim(), type);
       }}
     >
-      <label className="sr-only" htmlFor="portal-query">
-        {t("portalSearch")}
-      </label>
-      <input
-        id="portal-query"
-        type="search"
-        value={input}
-        maxLength={100}
-        onChange={(event) => setInput(event.target.value)}
-      />
-      <Button>
-        <Search size={18} />
-        {t("searchAction")}
-      </Button>
+      <Field id="portal-query" label={t("query")}>
+        <input
+          id="portal-query"
+          type="search"
+          value={input}
+          maxLength={100}
+          onChange={(event) => setInput(event.target.value)}
+        />
+      </Field>
+      <Field id="portal-search-kind" label={t("kind")}>
+        <select
+          id="portal-search-kind"
+          value={type}
+          onChange={(event) => setType(event.target.value)}
+        >
+          <option value="">{t("all")}</option>
+          {searchKinds.map((value) => (
+            <option key={value} value={value}>
+              {t(value)}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Button>{t("search")}</Button>
     </form>
   );
 }
+/** Keep the server's cursor intact and hide cached results on a failed recheck. */
 export function PortalSearch() {
-  const { t } = useTranslation();
+  const { t } = useTranslation("unifiedSearch");
   const { session } = useAuth();
   const [params, setParams] = useSearchParams();
-  const q = (params.get("q") ?? "").trim().slice(0, 100);
-  const query = useQuery({
-    queryKey: ["portal-search", session!.user.id, q],
-    enabled: q.length >= 2,
-    queryFn: async () => {
-      const result: Result[] = [];
-      const like = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
-      const source = await Promise.allSettled([
-        db()
-          .from("jobs")
-          .select("id,title,customer_name")
-          .ilike("title", like)
-          .limit(10),
-        db()
-          .from("documents")
-          .select("id,original_name,kind")
-          .is("deleted_at", null)
-          .ilike("original_name", like)
-          .limit(10),
-        db().rpc("wiki_pages_list", {
-          p_search: q,
-          p_locale: "",
-          p_category_id: null,
-          p_include_archived: false,
-        }),
-        db().rpc("forum_threads_list", {
-          p_search: q,
-          p_category_id: null,
-          p_include_archived: false,
-        }),
-        db()
-          .from("messages")
-          .select("id,room_id,body")
-          .is("deleted_at", null)
-          .ilike("body", like)
-          .limit(10),
-        db().rpc("chat_contacts"),
-      ]);
-      for (let index = 0; index < source.length; index++) {
-        const answer = source[index];
-        if (answer.status === "rejected") throw answer.reason;
-        const { data, error } = answer.value;
-        if (error) {
-          if (error.code === "42501") continue;
-          throw error;
-        }
-        for (const row of (data ?? []).slice(0, index === 5 ? 1000 : 10)) {
-          if (index === 0)
-            result.push({
-              id: row.id,
-              kind: "jobs",
-              title: row.title,
-              detail: row.customer_name,
-              url: `/jobs/${row.id}`,
-            });
-          if (index === 1)
-            result.push({
-              id: row.id,
-              kind: "files",
-              title: row.original_name,
-              detail: "",
-              url: `/files?q=${encodeURIComponent(row.original_name)}`,
-            });
-          if (index === 2)
-            result.push({
-              id: row.id,
-              kind: "wiki",
-              title: row.title,
-              detail: row.locale,
-              url: `/wiki?page=${row.id}`,
-            });
-          if (index === 3)
-            result.push({
-              id: row.id,
-              kind: "forum",
-              title: row.title,
-              detail: "",
-              url: `/forum?thread=${row.id}`,
-            });
-          if (index === 4)
-            result.push({
-              id: row.id,
-              kind: "chats",
-              title: row.body.slice(0, 150),
-              detail: "",
-              url: `/chats?room=${row.room_id}`,
-            });
-          if (
-            index === 5 &&
-            row.display_name.toLocaleLowerCase().includes(q.toLocaleLowerCase())
-          )
-            result.push({
-              id: row.id,
-              kind: "people",
-              title: row.display_name,
-              detail: "",
-              url: `/chats?contact=${row.id}`,
-            });
-        }
-      }
-      return result;
-    },
-  });
+  const q = (params.get("q") ?? "").trim().slice(0, 100),
+    rawKind = params.get("kind") ?? "",
+    kind = searchKinds.includes(rawKind as (typeof searchKinds)[number])
+      ? rawKind
+      : "";
+  const query = useInfiniteQuery(unifiedSearchQuery(session!.user.id, q, kind));
+  const rows = new Map<
+    string,
+    NonNullable<typeof query.data>["pages"][number]["items"][number]
+  >();
+  for (const page of query.data?.pages ?? [])
+    for (const row of page.items)
+      if (!rows.has(`${row.kind}:${row.id}`))
+        rows.set(`${row.kind}:${row.id}`, row);
   return (
     <>
-      <PageHeading title={t("portalSearch")} description={t("searchHint")} />
-      {/* A linked query starts a new draft; translations/refetches preserve typing. */}
+      <PageHeading title={t("title")} description={t("hint")} />
       <SearchForm
-        key={q}
+        key={`${q}\0${kind}`}
         query={q}
-        onSearch={(value) => setParams({ q: value })}
+        kind={kind}
+        onSearch={(text, value) =>
+          setParams({ q: text, ...(value ? { kind: value } : {}) })
+        }
       />
       {q.length >= 2 &&
         (query.isPending ? (
           <Loading />
         ) : query.isError ? (
           <ErrorState retry={() => void query.refetch()} />
-        ) : query.data.length ? (
-          <ul className="portal-search-results">
-            {query.data.map((row) => (
-              <li key={`${row.kind}:${row.id}`}>
-                <Link to={row.url}>
-                  <span className="badge">{t(row.kind)}</span>
-                  <strong>{row.title}</strong>
-                  {row.detail && <small>{row.detail}</small>}
-                </Link>
-              </li>
-            ))}
-          </ul>
+        ) : rows.size ? (
+          <>
+            <ul className="portal-search-results">
+              {[...rows.values()].map((row) => (
+                <li key={`${row.kind}:${row.id}`}>
+                  <Link to={row.url}>
+                    <span className="badge">{t(row.kind)}</span>
+                    <strong>{row.title}</strong>
+                    {row.detail && (
+                      <small>
+                        {row.kind === "tasks" &&
+                        ["open", "doing", "done", "cancelled"].includes(
+                          row.detail,
+                        )
+                          ? t(`task_${row.detail}`)
+                          : row.detail}
+                      </small>
+                    )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            {query.hasNextPage && (
+              <Button
+                variant="secondary"
+                disabled={query.isFetchingNextPage}
+                onClick={() => void query.fetchNextPage()}
+              >
+                {t("more")}
+              </Button>
+            )}
+          </>
         ) : (
-          <div className="empty-state">{t("searchEmpty")}</div>
+          <div className="empty-state">{t("empty")}</div>
         ))}
     </>
   );

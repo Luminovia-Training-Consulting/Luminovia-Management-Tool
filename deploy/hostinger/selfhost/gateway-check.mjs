@@ -101,10 +101,23 @@ export function checkGatewayRouting({ directory, here, image, server }) {
       ],
       ["/functions/v1/accounts/openapi.json", 503, "portal-function-accounts"],
       ["/functions/v1/files", 503, "portal-function-files"],
+      [
+        "/functions/v1/course-documents",
+        503,
+        "portal-function-course-documents",
+      ],
+      [
+        "/functions/v1/calendar-feed?token=fictional-owned-capability",
+        503,
+        "portal-function-calendar-feed",
+      ],
       ["/functions/v1/invite-lecturer", 503, "portal-function-invite-lecturer"],
       ["/functions/v1/accounts-extra/v1/me", 404],
       ["/functions/v1/account/v1/me", 404],
       ["/functions/v1/files/extra", 404],
+      ["/functions/v1/course-documents/extra", 404],
+      ["/functions/v1/calendar-feed/extra", 404],
+      ["/functions/v1/calendar-feed-extra", 404],
       ["/functions/v1/main", 404],
       ["/functions/v1/unreviewed", 404],
     ];

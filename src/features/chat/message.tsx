@@ -13,6 +13,7 @@ import { Dialog } from "../../components/ui/dialog";
 import { chatKeys } from "./api";
 import type { ChatMessage } from "./types";
 import "./i18n";
+import { TaskFromMessageAction } from "../workbench/message-action";
 const editSchema = z.object({ body: z.string().max(8000) });
 const quickReactions = ["👍", "❤️", "🎉", "💡", "👀", "✅"];
 /** Text is never interpreted as HTML. Only explicit HTTP(S) links become anchors. */
@@ -189,6 +190,7 @@ export function MessageBubble({
                 role="group"
                 aria-label={t("messageActions")}
               >
+                <TaskFromMessageAction messageId={message.id} />
                 <details className="chat-reaction-menu">
                   <summary aria-label={t("reactions")}>
                     <SmilePlus size={16} />

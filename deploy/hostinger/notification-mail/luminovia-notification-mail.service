@@ -11,7 +11,7 @@ WorkingDirectory=/opt/luminovia-portal/source
 EnvironmentFile=/opt/luminovia-portal/private/notification-mail.env
 # The shared global lock prevents this DB writer from crossing the existing
 # exclusive backup/update/restore boundary. A busy boundary skips this batch.
-ExecStart=/usr/bin/flock --shared --nonblock --conflict-exit-code 0 /run/lock/luminovia-maintenance.lock /usr/bin/python3 /opt/luminovia-portal/source/scripts/notification-mail-worker.py --run
+ExecStart=/usr/bin/flock --shared --nonblock --conflict-exit-code 0 /run/lock/luminovia-maintenance.lock /usr/bin/python3 /opt/luminovia-portal/source/deploy/hostinger/notification-mail/worker.py --run
 TimeoutStartSec=300
 UMask=0077
 NoNewPrivileges=true

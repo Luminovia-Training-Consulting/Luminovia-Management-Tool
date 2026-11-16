@@ -1,7 +1,8 @@
 import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
 import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import "../learning/i18n";
 import { EnrolmentManager } from "../people/enrolments";
 import { ResourceComments } from "../comments/comments";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
@@ -972,6 +973,11 @@ export function CoursesPage() {
             {manage && !detail.archived_at && (
               <CourseRunOfferLink runId={detail.id} />
             )}
+            <Button asChild variant="secondary">
+              <Link to={`/courses/${detail.id}/workspace`}>
+                {t("learning:openWorkspace")}
+              </Link>
+            </Button>
             <h3>{t("syllabus")}</h3>
             <p className="preserve-text">
               {findTemplate(detail)?.syllabus || "—"}

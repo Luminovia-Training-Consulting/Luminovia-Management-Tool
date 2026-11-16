@@ -35,6 +35,9 @@ import { permissionsQuery, profileQuery, userRolesQuery } from "../lib/queries";
 import { Button } from "../components/ui/button";
 import { ErrorState, Loading, Notice } from "../components/common";
 import { readPreference, writePreference } from "../lib/preferences";
+import "../features/learning/i18n";
+import "../features/workbench/i18n";
+import "../features/workbench/finance-i18n";
 export function Preferences() {
   const { t, i18n } = useTranslation();
   const [theme, setTheme] = useState(() => {
@@ -117,6 +120,20 @@ export function Shell() {
     { to: "/files", icon: FolderOpen, label: "files" },
     { to: "/search", icon: Search, label: "portalSearch" },
     { to: "/courses", icon: GraduationCap, label: "courses" },
+    { to: "/learning", icon: BookOpen, label: "learning:hub" },
+    { to: "/workbench", icon: FileCheck2, label: "workbench:title" },
+    ...(staff
+      ? [{ to: "/timesheets", icon: Wallet, label: "financeOps:timesheets" }]
+      : []),
+    ...(manage
+      ? [
+          {
+            to: "/control-center",
+            icon: Settings2,
+            label: "financeOps:controlCenter",
+          },
+        ]
+      : []),
     { to: "/people", icon: Users, label: "staffDirectory" },
     ...(clientPortalAccess
       ? [{ to: "/client", icon: Building2, label: "clientPortal" }]

@@ -1,4 +1,6 @@
 import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import "../learning/i18n";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -37,6 +39,12 @@ import {
   type ClientRequest,
 } from "./commission-api";
 import { PublishClientRequest } from "./pricing";
+import { RequestBriefFields, RequestBriefPanel } from "./request-brief";
+import {
+  cleanRequestBrief,
+  initialRequestBrief,
+  validRequestBrief,
+} from "./request-brief-api";
 import "./platform-i18n";
 import "./platform.css";
 const schema = z.object({
@@ -80,6 +88,8 @@ function RequestForm({
   const client = useQueryClient();
   const topics = useQuery(topicsQuery);
   const [invalidSessions, setInvalidSessions] = useState(false);
+  const [brief, setBrief] = useState(initialRequestBrief);
+  const { t: briefText } = useTranslation("requestBrief");
   const retry = useRef<{ signature: string; key: string } | null>(null);
   const [initial] = useState(() => {
     const day = DateTime.now().setZone(zone).plus({ days: 7 });
@@ -129,14 +139,21 @@ function RequestForm({
       });
       const { organisation, ...rest } = values;
       const payload = { ...rest, sessions };
-      const signature = JSON.stringify([organisation, payload]);
+      const cleanedBrief = cleanRequestBrief(brief);
+      if (!validRequestBrief(cleanedBrief, sessions))
+        throw new Error("invalid_brief");
+      const signature = JSON.stringify([organisation, payload, cleanedBrief]);
       if (!retry.current || retry.current.signature !== signature)
         retry.current = { signature, key: crypto.randomUUID() };
-      const { data, error } = await db().rpc("create_client_request", {
-        p_organisation_id: organisation,
-        p_payload: payload,
-        p_client_id: retry.current.key,
-      });
+      const { data, error } = await db().rpc(
+        "create_client_request_with_brief",
+        {
+          p_organisation_id: organisation,
+          p_payload: payload,
+          p_brief: cleanedBrief,
+          p_client_id: retry.current.key,
+        },
+      );
       if (error || !data) throw error ?? new Error("unconfirmed");
     },
     onSuccess: async () => {
@@ -377,6 +394,11 @@ function RequestForm({
           ))}
         </fieldset>
       )}
+      <RequestBriefFields
+        value={brief}
+        onChange={setBrief}
+        disabled={save.isPending}
+      />
       <p className="muted commercial-small">{t("requestHint")}</p>
       <div className="form-actions">
         <Button
@@ -392,7 +414,9 @@ function RequestForm({
       )}
       {save.isError && (
         <Notice kind="error">
-          {t(invalidSessions ? "invalidSessions" : "requestFailed")}
+          {save.error instanceof Error && save.error.message === "invalid_brief"
+            ? briefText("invalid")
+            : t(invalidSessions ? "invalidSessions" : "requestFailed")}
         </Notice>
       )}
     </form>
@@ -487,6 +511,7 @@ function RequestCard({
             : t("unassigned")}
         </span>
       </div>
+      <RequestBriefPanel actor={actor} request={request} />
       {submitted && (
         <div className="form-actions">
           {manager && (
@@ -605,6 +630,11 @@ export function ClientPortalPage() {
           </Button>
         }
       />
+      <div className="page-actions">
+        <Button asChild variant="secondary">
+          <Link to="/learning">{t("learning:hub")}</Link>
+        </Button>
+      </div>
       {orgs.isError || requests.isError || spend.isError ? (
         <ErrorState
           retry={() => {

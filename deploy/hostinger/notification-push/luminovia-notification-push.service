@@ -1,0 +1,23 @@
+[Unit]
+Description=Luminovia finite committed Web Push outbox
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/opt/luminovia-portal/private/notification-push.env
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/luminovia-portal/source
+EnvironmentFile=/opt/luminovia-portal/private/notification-push.env
+ExecStart=/usr/bin/flock --shared --nonblock --conflict-exit-code 0 /run/lock/luminovia-maintenance.lock /usr/bin/node /opt/luminovia-portal/source/deploy/hostinger/notification-push/worker.mjs --run
+TimeoutStartSec=300
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadWritePaths=/run/lock

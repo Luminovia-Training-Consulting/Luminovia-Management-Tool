@@ -12,6 +12,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "node:test";
 import { API_URL, createRelease, REPOSITORY } from "./package.mjs";
 
@@ -21,6 +22,7 @@ const image = (repository) => repository + "@sha256:" + "a".repeat(64);
 const postgres = image("supabase/postgres:17.12.0.000");
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const pgProofPath = "deploy/hostinger/selfhost/postgres-candidate-proof.json";
+const repositoryRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const newRuntimeFiles = [
   "deploy/hostinger/updates/luminovia-update.service",
   "deploy/hostinger/maintenance/pg_preflight.py",
@@ -142,6 +144,24 @@ function fixture(t) {
   put("deploy/hostinger/updates/updater.py", "print('fixture updater')\n");
   for (const name of newRuntimeFiles)
     put(name, "# fictional selected runtime fixture\n");
+  for (const name of [
+    "package.json",
+    "package-lock.json",
+    "scripts/notification-mail-worker.py",
+    "scripts/notification-push-worker.mjs",
+    "deploy/hostinger/notification-push/licenses/http_ece-LICENSE.txt",
+    ...["notification-mail", "notification-push"].flatMap((kind) => [
+      `deploy/hostinger/${kind}/luminovia-${kind}.service`,
+      `deploy/hostinger/${kind}/luminovia-${kind}.timer`,
+      `deploy/hostinger/${kind}/worker.env.example`,
+    ]),
+  ])
+    put(name, readFileSync(join(repositoryRoot, name)));
+  symlinkSync(
+    join(repositoryRoot, "node_modules"),
+    join(root, "node_modules"),
+    "dir",
+  );
   for (const name of ["service", "timer"])
     put(
       "deploy/hostinger/backups/luminovia-complete-backup." + name,
@@ -214,7 +234,10 @@ test("real archive and manifest contain only runtime files with exact byte hashe
     !names.some(
       (name) =>
         name.includes("handler_test") ||
-        name.includes(".env") ||
+        (name.includes(".env") &&
+          !/^deploy\/hostinger\/notification-(?:mail|push)\/worker\.env\.example$/.test(
+            name,
+          )) ||
         name.includes("ACCOUNTS"),
     ),
   );
@@ -254,6 +277,47 @@ test("real archive and manifest contain only runtime files with exact byte hashe
   });
   assert.equal(second.manifest.archiveSha256, result.manifest.archiveSha256);
   assert.throws(() => release(), /overwrite/);
+});
+
+test("real release archive preserves the exact reviewed PDF runtime, font, integrity lock and license assets", (t) => {
+  const { put, release } = fixture(t);
+  const names = [
+    "index.ts",
+    "handler.ts",
+    "pdf.ts",
+    "deno.lock",
+    "vendor/pdf-runtime.js",
+    "vendor/pdf-runtime.d.ts",
+    "assets/DejaVuSans.ttf",
+    "assets/LICENSE-DejaVu.txt",
+    ...[
+      "fontkit",
+      "pako",
+      "pdf-lib",
+      "pdf-lib-standard-fonts",
+      "pdf-lib-upng",
+      "tslib",
+    ].map((name) => `vendor/licenses/${name}-LICENSE.txt`),
+  ];
+  const expected = new Map();
+  for (const name of names) {
+    const target = `supabase/functions/course-documents/${name}`;
+    const bytes = readFileSync(new URL(`../../../${target}`, import.meta.url));
+    expected.set(target, bytes);
+    put(target, bytes);
+  }
+  const result = release();
+  for (const [name, bytes] of expected) {
+    assert.ok(
+      result.manifest.files.some(
+        (file) => file.path === name && file.sha256 === digest(bytes),
+      ),
+    );
+    const archived = execFileSync("tar", ["-xOzf", result.archivePath, name], {
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    assert.deepEqual(archived, bytes);
+  }
 });
 
 test("a wrong backend or browser secret key cannot produce a release", (t) => {
@@ -655,4 +719,141 @@ test("CLI rejects source-commit mismatch and dirty tracked code without a bypass
     () => release({ verifyGit: true, commit: sha }),
     /not tracked by the release/,
   );
+});
+
+test("packaged finite workers run outside node_modules and retain actual AES/VAPID/provider contract", (t) => {
+  const { root, release } = fixture(t);
+  const result = release();
+  const isolated = mkdtempSync(join(tmpdir(), "luminovia-standalone-worker-"));
+  t.after(() => rmSync(isolated, { recursive: true, force: true }));
+  const extract = (name) =>
+    execFileSync("tar", ["-xOzf", result.archivePath, "--", name], {
+      maxBuffer: 8 * 1024 * 1024,
+    });
+  const bundle = join(isolated, "worker.mjs"),
+    python = join(isolated, "worker.py");
+  writeFileSync(
+    bundle,
+    extract("deploy/hostinger/notification-push/worker.mjs"),
+  );
+  writeFileSync(
+    python,
+    extract("deploy/hostinger/notification-mail/worker.py"),
+  );
+  assert.deepEqual(
+    readFileSync(python),
+    readFileSync(join(root, "scripts/notification-mail-worker.py")),
+  );
+  const provenance = JSON.parse(
+    extract("deploy/hostinger/notification-push/provenance.json"),
+  );
+  assert.equal(provenance.bundleSha256, digest(readFileSync(bundle)));
+  assert.equal(provenance.proxySupport, false);
+  assert.ok(
+    provenance.dependencies.some(
+      (item) => item.name === "web-push" && item.version === "4.0.0",
+    ),
+  );
+  assert.ok(
+    provenance.dependencies.every(
+      (item) => item.integrity.startsWith("sha512-") && item.modules.length > 0,
+    ),
+  );
+  for (const item of provenance.sources)
+    assert.equal(item.sha256, digest(readFileSync(join(root, item.path))));
+  const names = result.manifest.files.map((item) => item.path);
+  assert.ok(
+    names.some((name) => name.endsWith("licenses/http_ece-LICENSE.txt")),
+  );
+  assert.ok(names.some((name) => name.includes("web-push-LICENSE")));
+  assert.ok(
+    !names.some(
+      (name) =>
+        name.includes("node_modules") ||
+        (name.startsWith("site/") && name.includes("notification-push")),
+    ),
+  );
+  assert.equal(
+    JSON.parse(
+      execFileSync(process.execPath, [bundle], {
+        cwd: isolated,
+        encoding: "utf8",
+      }),
+    ).network_calls,
+    0,
+  );
+  assert.equal(
+    JSON.parse(
+      execFileSync("python3", [python], { cwd: isolated, encoding: "utf8" }),
+    ).network_calls,
+    0,
+  );
+  const childEnvironment = {
+    ...process.env,
+    PORTAL_PUSH_TEST_BUNDLE_URL: pathToFileURL(bundle).href,
+  };
+  delete childEnvironment.NODE_TEST_CONTEXT;
+  const checked = execFileSync(
+    process.execPath,
+    ["--test", join(repositoryRoot, "scripts/runtime-web-push.test.mjs")],
+    {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+      env: childEnvironment,
+      timeout: 60000,
+      maxBuffer: 1024 * 1024,
+    },
+  );
+  assert.match(checked, /tests 8/);
+  assert.match(checked, /fail 0/);
+});
+
+test("worker lock mismatch, missing license and unexpected local import fail closed", (t) => {
+  for (const defect of ["lock", "license", "import"]) {
+    const child = fixture(t);
+    if (defect === "lock") {
+      const lock = JSON.parse(
+        readFileSync(join(child.root, "package-lock.json")),
+      );
+      lock.packages["node_modules/web-push"].version = "0.0.0";
+      child.put("package-lock.json", JSON.stringify(lock));
+    }
+    if (defect === "license")
+      child.put(
+        "deploy/hostinger/notification-push/licenses/http_ece-LICENSE.txt",
+        "Wrong license source",
+      );
+    if (defect === "import") {
+      child.put(
+        "scripts/unreviewed-helper.mjs",
+        "console.log('unreviewed helper');",
+      );
+      child.put(
+        "scripts/notification-push-worker.mjs",
+        readFileSync(
+          join(repositoryRoot, "scripts/notification-push-worker.mjs"),
+          "utf8",
+        ) + "\nimport './unreviewed-helper.mjs';\n",
+      );
+    }
+    assert.throws(
+      () => child.release(),
+      /lock version|license source differs|Unexpected worker source module/,
+    );
+    assert.equal(existsSync(join(child.root, "out/cms-release.tar.gz")), false);
+  }
+});
+
+test("known short mailbox secrets are excluded from mapped worker artifacts", (t) => {
+  const child = fixture(t);
+  const password = "Fiction-1234";
+  child.put(
+    "scripts/notification-mail-worker.py",
+    `# exact known fixture value ${password}\n`,
+  );
+  assert.throws(
+    () => child.release({ forbiddenValues: [password] }),
+    /private credential/,
+  );
+  assert.equal(existsSync(join(child.root, "out/cms-release.tar.gz")), false);
 });

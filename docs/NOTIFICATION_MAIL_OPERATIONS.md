@@ -16,17 +16,17 @@ The reviewed templates are in [deploy/hostinger/notification-mail](../deploy/hos
 
 Configuration variables:
 
-| Variable | Purpose |
-| --- | --- |
-| `PORTAL_NOTIFICATION_MAIL_ENABLED` | Only literal `true` permits a delivery run. Default/off values make no network calls. |
-| `PORTAL_NOTIFICATION_API_URL` | Supabase API origin, optionally ending in `/backend`. HTTPS required except an exact loopback IP for a private local gateway. No URL credentials, query or fragment. |
-| `PORTAL_NOTIFICATION_APP_ORIGIN` | Reviewed portal origin for the generic `/notifications` link. No path, query or credentials. |
-| `PORTAL_NOTIFICATION_SERVICE_KEY` | Server-only key for the narrowly granted worker RPCs; never a browser key. |
-| `PORTAL_NOTIFICATION_SMTP_USERNAME` | Full mailbox and sender, default `info@luminovia.org`. |
-| `PORTAL_NOTIFICATION_SMTP_PASSWORD` | Mailbox password, supplied privately. |
-| `PORTAL_NOTIFICATION_SMTP_PORT` | `465` by default, or `587` with mandatory STARTTLS. |
-| `PORTAL_NOTIFICATION_BATCH` | Finite batch size, default 10 and maximum 20. |
-| `PORTAL_NOTIFICATION_TIMEOUT_SECONDS` | Per-network-operation timeout, default 15 and maximum 20 seconds. |
+| Variable                              | Purpose                                                                                                                                                              |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PORTAL_NOTIFICATION_MAIL_ENABLED`    | Only literal `true` permits a delivery run. Default/off values make no network calls.                                                                                |
+| `PORTAL_NOTIFICATION_API_URL`         | Supabase API origin, optionally ending in `/backend`. HTTPS required except an exact loopback IP for a private local gateway. No URL credentials, query or fragment. |
+| `PORTAL_NOTIFICATION_APP_ORIGIN`      | Reviewed portal origin for the generic `/notifications` link. No path, query or credentials.                                                                         |
+| `PORTAL_NOTIFICATION_SERVICE_KEY`     | Server-only key for the narrowly granted worker RPCs; never a browser key.                                                                                           |
+| `PORTAL_NOTIFICATION_SMTP_USERNAME`   | Full mailbox and sender, default `info@luminovia.org`.                                                                                                               |
+| `PORTAL_NOTIFICATION_SMTP_PASSWORD`   | Mailbox password, supplied privately.                                                                                                                                |
+| `PORTAL_NOTIFICATION_SMTP_PORT`       | `465` by default, or `587` with mandatory STARTTLS.                                                                                                                  |
+| `PORTAL_NOTIFICATION_BATCH`           | Finite batch size, default 10 and maximum 20.                                                                                                                        |
+| `PORTAL_NOTIFICATION_TIMEOUT_SECONDS` | Per-network-operation timeout, default 15 and maximum 20 seconds.                                                                                                    |
 
 Calling the worker with no flags is a dry run and makes **zero API/SMTP calls**, even if the environment is enabled. `--check` validates configuration without leases or network calls. It requires enabled configuration to perform the validation; otherwise it reports disabled. `--run` and the environment flag together permit one finite batch. Do not put credentials in command arguments or paste them into shell history.
 
@@ -53,3 +53,5 @@ python3 -W error::ResourceWarning -m unittest scripts/test_notification_mail_wor
 At this source checkpoint all **33** cases pass. Tests exercise a real loopback HTTP server and SMTP dialogue, stable Message-ID and DE/EN minimal content, real wall-clock deadline interruption before/during DATA and during API preparation/completion, reminder-generation failure boundaries, temporary/permanent recipient rejection, explicit DATA rejection, lost final DATA response, prepare suppression/failure, finish-after-acceptance failure, malformed DTOs, header injection, disabled/default dry runs, bounded configuration, redirect rejection, certificate requirements and 587 STARTTLS-before-authentication. TLS connectors are substituted at the test boundary for the loopback SMTP capture; these cases do not prove an actual Hostinger TLS connection, mailbox authentication or external delivery. Real PostgreSQL lease/permission/backoff tests are maintained separately in `scripts/notification-delivery-db-tests.mjs`. The guarded `scripts/notification-mail-api-check.mjs` additionally connects actual disposable Auth/PostgREST to the Python worker and a real loopback SMTP capture; its execution result belongs to the full runner evidence and is not implied by these 33 focused passes.
 
 Automatic mail delivery covers events actually produced by the application and the bounded reminder refresh above. Automatic reminder refresh requires an enabled scheduled worker and email opt-in; users without email opt-in retain the existing manual in-app reminder refresh. This worker does not implement Web Push, SMS/mobile OS alerts, or change invitation/recovery SMTP. Those remain separate product/activation work.
+
+The immutable release now maps the exact tracked Python source into `deploy/hostinger/notification-mail/worker.py` and includes disabled unit/environment templates. The service uses `/opt/luminovia-portal/source/deploy/hostinger/notification-mail/worker.py`; the development CLI remains under `scripts/`. A functional archive test extracts and runs the delivered stdlib worker outside the source checkout with no flags, observing zero network calls. Workers and private credentials are excluded from the public `site/` tree. Timer installation and server configuration still require the reviewed activation procedure.

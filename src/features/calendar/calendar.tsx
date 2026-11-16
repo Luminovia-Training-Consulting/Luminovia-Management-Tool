@@ -9,6 +9,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import { CalendarExport } from "./export";
+import { CalendarSubscriptions } from "./subscriptions";
+import { OfflineSchedule } from "./offline";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -235,7 +237,22 @@ export function CalendarPage() {
     globals.isPending ||
     (global && (publicRuns.isPending || templates.isPending))
   )
-    return <Loading />;
+    return (
+      <>
+        <PageHeading title={t("calendar")} description={t("privateNote")} />
+        <CalendarSubscriptions
+          key={`subscriptions-${session!.user.id}`}
+          actor={session!.user.id}
+          zone={zone}
+        />
+        <OfflineSchedule
+          key={`offline-${session!.user.id}`}
+          actor={session!.user.id}
+          zone={zone}
+        />
+        <Loading />
+      </>
+    );
   if (
     claims.isError ||
     personal.isError ||
@@ -244,18 +261,31 @@ export function CalendarPage() {
     (global && (publicRuns.isError || templates.isError))
   )
     return (
-      <ErrorState
-        retry={() => {
-          void claims.refetch();
-          void personal.refetch();
-          void jobs.refetch();
-          void globals.refetch();
-          if (global) {
-            void publicRuns.refetch();
-            void templates.refetch();
-          }
-        }}
-      />
+      <>
+        <PageHeading title={t("calendar")} description={t("privateNote")} />
+        <CalendarSubscriptions
+          key={`subscriptions-${session!.user.id}`}
+          actor={session!.user.id}
+          zone={zone}
+        />
+        <OfflineSchedule
+          key={`offline-${session!.user.id}`}
+          actor={session!.user.id}
+          zone={zone}
+        />
+        <ErrorState
+          retry={() => {
+            void claims.refetch();
+            void personal.refetch();
+            void jobs.refetch();
+            void globals.refetch();
+            if (global) {
+              void publicRuns.refetch();
+              void templates.refetch();
+            }
+          }}
+        />
+      </>
     );
   const events = global
     ? [
@@ -347,6 +377,16 @@ export function CalendarPage() {
       {message && <Notice>{message}</Notice>}
       <CalendarExport
         key={session!.user.id}
+        actor={session!.user.id}
+        zone={zone}
+      />
+      <CalendarSubscriptions
+        key={`subscriptions-${session!.user.id}`}
+        actor={session!.user.id}
+        zone={zone}
+      />
+      <OfflineSchedule
+        key={`offline-${session!.user.id}`}
         actor={session!.user.id}
         zone={zone}
       />

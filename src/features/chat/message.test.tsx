@@ -7,6 +7,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MessageBubble, MessageText } from "./message";
 import { orderedMessages } from "./api";
@@ -36,12 +37,14 @@ function bubble(value: ChatMessage = message, actor = "lecturer-a") {
   });
   return render(
     <QueryClientProvider client={client}>
-      <MessageBubble
-        message={value}
-        actor={actor}
-        zone="Europe/Berlin"
-        now={now}
-      />
+      <MemoryRouter>
+        <MessageBubble
+          message={value}
+          actor={actor}
+          zone="Europe/Berlin"
+          now={now}
+        />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }

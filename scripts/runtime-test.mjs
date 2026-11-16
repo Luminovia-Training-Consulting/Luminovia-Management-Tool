@@ -165,6 +165,7 @@ try {
       join(scratch, "node_modules/deno/bin.cjs"),
       "test",
       "--allow-env",
+      `--allow-read=${join(functions, "course-documents/assets")}`,
       ...handlerTests,
     ]);
   }

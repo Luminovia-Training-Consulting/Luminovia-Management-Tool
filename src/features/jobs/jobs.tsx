@@ -1,5 +1,11 @@
 import { JobPricingPanel } from "../commercial/pricing";
 import { JobLifecyclePanel } from "./lifecycle";
+import {
+  JobSubstitutionPanel,
+  MyJobWaitlist,
+  JobWaitlist,
+  SubstitutionOffers,
+} from "./lifecycle-extra";
 import { refreshJobState } from "./lifecycle-api";
 import { ResourceComments } from "../comments/comments";
 import { JobBuildingBlockReference } from "../operations/building-blocks";
@@ -140,6 +146,8 @@ export function Jobs() {
         title={t("jobs")}
         description={t("heroText")}
       />
+      <SubstitutionOffers />
+      <MyJobWaitlist />
       <section className="filters panel" aria-label={t("search")}>
         <div className="search-field">
           <Search size={20} />
@@ -293,6 +301,7 @@ export function JobDetail() {
               : "claim_unavailable",
           )}
         </Notice>
+        {id && <JobWaitlist jobId={id} />}
       </>
     );
   const zone = profile.data?.time_zone ?? job.time_zone;
@@ -325,6 +334,8 @@ export function JobDetail() {
         <JobPricingPanel job={job} />
       )}
       <JobLifecyclePanel job={job} />
+      <JobWaitlist jobId={job.id} />
+      <JobSubstitutionPanel jobId={job.id} />
       <div className="detail-layout">
         <div>
           <section className="panel">

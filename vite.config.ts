@@ -40,6 +40,7 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
+          importScripts: ["/push-sw.js"],
           globPatterns: ["**/*.{js,css,html,woff2,png,webp,ico}"],
           navigateFallback: "/index.html",
           cleanupOutdatedCaches: true,
