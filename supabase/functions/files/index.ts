@@ -1,6 +1,10 @@
 /**
- * Authenticated file gateway: reserve under caller permissions, store immutable quarantine bytes, scan and promote explicitly. Downloads check current resource access before and after Storage reads.
+ * Authenticated file gateway: reserve under caller permissions, store immutable
+ * quarantine bytes, scan and promote explicitly. Downloads recheck current
+ * resource access around Storage reads; qualification evidence has its own
+ * exact-version authorization context.
  */
+import {qualificationEvidenceBytes} from './qualification-download.ts';
 import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {scan} from './clamav.ts';
 import {validateAvatar} from './avatar.ts';
@@ -108,8 +112,8 @@ Deno.serve(async(request:Request)=>{
    await service.storage.from('portal-quarantine').remove([reservation.object_path]);
    return json(200,{document:await visible(doc.id)});
   }
-  const data=JSON.parse(new TextDecoder().decode(await bounded(request,4096))) as {action?:string;id?:string;version_id?:string;user_id?:string};
-  // Avatars use the narrow selection view, not a general grant to read personal files.
+  const data=JSON.parse(new TextDecoder().decode(await bounded(request,4096))) as {action?:string;id?:string;version_id?:string;user_id?:string;evidence_id?:string};
+  // Avatar selection is a narrow projection, not a general grant to personal files.
   if(data.action==='avatar'){
    if(!uuid(data.user_id))return json(400,{error:'invalid_request'});
    const bytes=await selectedAvatarBytes(data.user_id,{
@@ -135,6 +139,17 @@ Deno.serve(async(request:Request)=>{
    });
    return new Response(new Uint8Array(bytes),{headers:{...headers,'Content-Type':'image/png',
     'Content-Disposition':'inline; filename="avatar.png"','Content-Security-Policy':"default-src 'none'; sandbox"}});
+  }
+  if(data.action==='qualification_evidence_download'){
+   if(!uuid(data.evidence_id))return json(400,{error:'invalid_request'});
+   const selected=await qualificationEvidenceBytes(data.evidence_id,{
+    selection:async(id)=>{const r=await user.rpc('qualification_evidence_access',{p_evidence_id:id});return r.error?null:r.data;},
+    version:async(id)=>{const r=await service.from('document_versions').select('id,document_id,object_path,status,mime_type,original_name,size_bytes,sha256').eq('id',id).maybeSingle();return r.error?null:r.data;},
+    document:async(id)=>{const r=await service.from('documents').select('owner_id,scope,kind,deleted_at').eq('id',id).maybeSingle();return r.error?null:r.data;},
+    download:async(path)=>{const r=await service.storage.from('portal-clean').download(path);return r.error||!r.data?null:new Uint8Array(await r.data.arrayBuffer());}
+   });
+   await service.from('audit_events').insert({actor_id:actor,action:'qualification.evidence_downloaded',resource_id:data.evidence_id});
+   return new Response(new Uint8Array(selected.bytes),{headers:{...headers,'Content-Type':selected.mime_type,'Content-Disposition':downloadDisposition(selected.original_name),'Content-Security-Policy':"default-src 'none'; sandbox"}});
   }
   if(data.action!=='download'||!uuid(data.id)||(data.version_id&&!uuid(data.version_id)))return json(400,{error:'invalid_request'});
   const doc=await visible(data.id);

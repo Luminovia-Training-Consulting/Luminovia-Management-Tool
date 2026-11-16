@@ -28,7 +28,7 @@ The JSON files under `.github/rulesets/` preserve the verified 16 November 2026 
 
 The personal review exception applies only when `CarinaSchoppe` performs a PR merge. It does not permit direct pushes or skipped, failed or pending mandatory checks. Repository-role membership, other contributors and the maintenance App receive no review exception. The App must satisfy independent approval, latest-push approval and conversation resolution before GitHub can merge its PR. No identity, including `CarinaSchoppe`, an administrator or the App, can bypass the history or required-check rules. Administrators retain permission to edit repository settings; the current rules govern normal push and merge operations.
 
-PR18 introduces the `PR preview package` job after native verification. It is now also a required Actions check, so all 15 PR checks must finish successfully before a merge. The main-only release job and separate preview-metadata workflow are not substituted for these PR checks.
+The `PR preview package` job follows quality, coverage, runtime/Edge and isolated SQL acceptance. The source-derived profile uses explicit documentation-only verification, two independent SQL workers for ordinary UI work, or full native/application acceptance for sensitive/unknown changes. Main/manual always uses full acceptance, with independent jobs in parallel; selector failure cannot skip the required gates. It is now also a required Actions check, so all 15 PR checks must finish successfully before a merge. The main-only release job and separate preview-metadata workflow are not substituted for these PR checks.
 
 The App's previous `always` exceptions were removed from both review and check rules and the effective rules were read back. The GitHub Actions integration 15368 and CodeQL integration 57789 identify the required checks' producers, not bypass actors. CI and coverage details are in [CI_QUALITY](CI_QUALITY.md).
 
@@ -58,7 +58,7 @@ References: [rulesets and exceptions](https://docs.github.com/en/repositories/co
 
 ## PR preview packages and deployment records
 
-After complete quality, coverage, application and native acceptance, PRs produce a seven-day source package for a complete local preview. The artifact remains available without a Deployment record. Only an authorised manual `PR preview deployments` dispatch on `main` with `action=publish`, the exact `run_id` and `run_attempt` asks the trusted default-branch publisher to create metadata. Its default `action=cleanup` deactivates stale/closed/expired records without publishing a new one; no PR event or schedule runs that cleanup automatically. Contribution code receives no write token or hosting secrets. The deployment URL opens the downloadable package; successful publication does not claim a hosted website. The packaged launcher uses owned local database identities and distinct ports. See [PR previews](PR_PREVIEWS.md) for permissions and local operation.
+After the bounded quality, coverage, runtime/Edge and PostgreSQL PR suite, PRs produce a seven-day source package for a complete local preview. The manifest states the actual source-derived profile. Only the full profile claims native/browser/retained-data acceptance; that unchanged suite always runs on main/manual and sensitive PRs. All existing required context names and successful-job requirements remain intact. The artifact remains available without a Deployment record. Only an authorised manual `PR preview deployments` dispatch on `main` with `action=publish`, the exact `run_id` and `run_attempt` asks the trusted default-branch publisher to create metadata. Its default `action=cleanup` deactivates stale/closed/expired records without publishing a new one; no PR event or schedule runs that cleanup automatically. Contribution code receives no write token or hosting secrets. The deployment URL opens the downloadable package; successful publication does not claim a hosted website. The packaged launcher uses owned local database identities and distinct ports. See [PR previews](PR_PREVIEWS.md) for permissions and local operation.
 
 <a id="labels-and-historical-prs"></a>
 
@@ -82,7 +82,7 @@ The manual run reads current GitHub labels and records the actual PR head, inclu
 
 ## Git tags and development packages
 
-Labels classify issues and PRs; Git tags identify immutable commits. Existing signed annotated development milestones include:
+Labels classify issues and pull requests. Git tags identify an immutable source revision. These signed annotated tags name already merged development milestones:
 
 | Tag                                 | Accepted merge commit                      | Scope                                                                                  |
 | ----------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------- |

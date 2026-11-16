@@ -142,6 +142,32 @@ describe("people administration interactions (mocked backend)", () => {
     expect(state.from).not.toHaveBeenCalled();
   });
 
+  it("retains the exact existing expiry instant when the legacy minute editor is untouched", async () => {
+    state.expertise = [
+      {
+        user_id: "lecturer",
+        topic_id: "python",
+        verified: true,
+        valid_until: "2045-06-01T17:30:56.789Z",
+      },
+    ];
+    page();
+    const person = await selectLecturer();
+    const form = within(person).getByRole("form", {
+      name: "Expertise prüfen: Python",
+    });
+    await userEvent.click(
+      within(form).getByRole("button", { name: "Verifizierung speichern" }),
+    );
+    await waitFor(() =>
+      expect(state.rpc).toHaveBeenCalledWith("verify_lecturer_topic", {
+        p_user_id: "lecturer",
+        p_topic_id: "python",
+        p_verified: true,
+        p_valid_until: "2045-06-01T17:30:56.789Z",
+      }),
+    );
+  });
   it("verifies only the selected declared topic with an explicit UTC expiry after server confirmation", async () => {
     let finish!: (result: Result) => void;
     const pending = new Promise<Result>((resolve) => {

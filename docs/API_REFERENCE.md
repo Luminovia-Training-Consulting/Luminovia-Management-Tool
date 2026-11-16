@@ -8,15 +8,15 @@ Use Supabase Auth for password login, recovery, password/email changes, sessions
 
 The versioned account facade is /functions/v1/accounts/v1 with its machine-readable OpenAPI at /functions/v1/accounts/openapi.json. Supported resources:
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| GET/PATCH | /me | Own identity/roles/capabilities and safe profile editing |
-| GET | /users?q=&limit=&offset= | Administrative bounded account search |
-| GET | /roles | Role/capability catalogue |
-| PUT | /users/{id}/roles | Audited multiple-role assignment |
-| PATCH | /users/{id}/status | Reversible suspension/reactivation |
-| PUT/DELETE | /users/{id}/organisations/{organisationId} | Scoped client access/revocation |
-| POST | /invitations | Reserved/idempotent role-bound invitation |
+| Method     | Path                                       | Purpose                                                  |
+| ---------- | ------------------------------------------ | -------------------------------------------------------- |
+| GET/PATCH  | /me                                        | Own identity/roles/capabilities and safe profile editing |
+| GET        | /users?q=&limit=&offset=                   | Administrative bounded account search                    |
+| GET        | /roles                                     | Role/capability catalogue                                |
+| PUT        | /users/{id}/roles                          | Audited multiple-role assignment                         |
+| PATCH      | /users/{id}/status                         | Reversible suspension/reactivation                       |
+| PUT/DELETE | /users/{id}/organisations/{organisationId} | Scoped client access/revocation                          |
+| POST       | /invitations                               | Reserved/idempotent role-bound invitation                |
 
 Browser Origins are allowlisted; authenticated CLI clients can omit Origin. Bearer authentication remains required for account data. Errors return safe error codes and proper status; failed/uncertain writes are not reported as success. Self/equal/higher/last-admin protection spans role and status changes. Role entries carry assignable and account entries carry can_assign_roles/can_change_active; company financial membership grants remain administrative. Invitation timeout retains its ledger for reconciliation and never automatically resends.
 
