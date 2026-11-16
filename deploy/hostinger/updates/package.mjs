@@ -7,11 +7,16 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
+  closeSync,
+  constants,
   existsSync,
   lstatSync,
+  fstatSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readFileSync,
+  readSync,
   readdirSync,
   realpathSync,
   rmSync,
@@ -75,6 +80,52 @@ const bundle=await rolldown({input:'scripts/notification-push-worker.mjs',platfo
 try{const result=await bundle.generate({format:'esm',codeSplitting:false,comments:false,legalComments:'none'});if(result.output.length!==1||result.output[0].type!=='chunk')throw new Error('single_worker_chunk_required');const chunk=result.output[0];process.stdout.write(JSON.stringify({code:chunk.code,modules:Object.keys(chunk.modules),imports:chunk.imports,dynamicImports:chunk.dynamicImports}));}finally{await bundle.close();}
 `;
 
+/** Open a worker input once and validate/read that descriptor, never a checked
+ * path again. Nonblocking/no-follow opens reject links and cannot hang on FIFOs;
+ * the finite read and post-read metadata check reject replacement/in-place edits.
+ */
+function readWorkerInput(path) {
+  if (
+    !Number.isInteger(constants.O_NOFOLLOW) ||
+    !Number.isInteger(constants.O_NONBLOCK)
+  )
+    throw new Error("Secure worker input descriptor flags are unavailable.");
+  const descriptor = openSync(
+    path,
+    constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+  );
+  try {
+    const before = fstatSync(descriptor, { bigint: true });
+    if (!before.isFile() || before.size > BigInt(MAX_FILE_BYTES))
+      throw new Error("Worker input must be a bounded regular file.");
+    const size = Number(before.size);
+    const bytes = Buffer.alloc(size + 1);
+    let count = 0;
+    while (count < bytes.length) {
+      const received = readSync(
+        descriptor,
+        bytes,
+        count,
+        bytes.length - count,
+        null,
+      );
+      if (!received) break;
+      count += received;
+    }
+    const after = fstatSync(descriptor, { bigint: true });
+    if (
+      count !== size ||
+      after.size !== before.size ||
+      after.mtimeNs !== before.mtimeNs ||
+      after.ctimeNs !== before.ctimeNs
+    )
+      throw new Error("Worker input changed while reading.");
+    return bytes.subarray(0, count);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
 /** Bundle only reviewed worker paths; runtime imports and provenance fail closed. */
 function workerArtifacts(sourceRoot, tracked) {
   const sourceNames = [
@@ -87,10 +138,10 @@ function workerArtifacts(sourceRoot, tracked) {
     plainFile(join(sourceRoot, path), sourceRoot);
     if (tracked && !tracked.has(path))
       throw new Error("Worker source is not tracked by release commit.");
-    return { path, sha256: hash(readFileSync(join(sourceRoot, path))) };
+    return { path, sha256: hash(readWorkerInput(join(sourceRoot, path))) };
   });
   const lock = JSON.parse(
-    readFileSync(join(sourceRoot, "package-lock.json"), "utf8"),
+    readWorkerInput(join(sourceRoot, "package-lock.json")).toString("utf8"),
   );
   if (lock.packages?.["node_modules/web-push"]?.version !== "4.0.0")
     throw new Error("Reviewed exact web-push lock version required.");
@@ -129,7 +180,7 @@ function workerArtifacts(sourceRoot, tracked) {
         : segments[0];
     const packageRoot = normalized.slice(0, marker + 14) + name;
     const metadata = JSON.parse(
-      readFileSync(join(packageRoot, "package.json"), "utf8"),
+      readWorkerInput(join(packageRoot, "package.json")).toString("utf8"),
     );
     const candidates = Object.entries(lock.packages ?? {}).filter(
       ([path, value]) =>
@@ -163,7 +214,7 @@ function workerArtifacts(sourceRoot, tracked) {
         plainFile(join(sourceRoot, fallback), sourceRoot);
         if (tracked && !tracked.has(fallback))
           throw new Error("Worker license fallback is not tracked.");
-        const bytes = readFileSync(join(sourceRoot, fallback));
+        const bytes = readWorkerInput(join(sourceRoot, fallback));
         if (
           hash(bytes) !==
           "717363ac0c7f0883042868db171cfed1f4b423119249eac9bce5131291017ea8"
@@ -176,29 +227,26 @@ function workerArtifacts(sourceRoot, tracked) {
         throw new Error("Worker dependency license is missing.");
       for (const file of licenses) {
         const licensePath = join(packageRoot, file);
-        if (
-          !lstatSync(licensePath).isFile() ||
-          lstatSync(licensePath).isSymbolicLink()
-        )
-          throw new Error("Worker dependency license must be a regular file.");
         artifacts.set(
           `deploy/hostinger/notification-push/licenses/${name.replaceAll("/", "_")}-${file.replaceAll(" ", "_")}`,
-          readFileSync(licensePath),
+          readWorkerInput(licensePath),
         );
       }
     }
     record.modules.push({
       path: relative(packageRoot, module).split(sep).join("/"),
-      sha256: hash(readFileSync(module)),
+      sha256: hash(readWorkerInput(module)),
     });
   }
   const toolRoot = realpathSync(join(sourceRoot, "node_modules/rolldown"));
-  const tool = JSON.parse(readFileSync(join(toolRoot, "package.json"), "utf8"));
+  const tool = JSON.parse(
+    readWorkerInput(join(toolRoot, "package.json")).toString("utf8"),
+  );
   if (tool.version !== lock.packages?.["node_modules/rolldown"]?.version)
     throw new Error("Worker bundler differs from lockfile.");
   artifacts.set(
     "deploy/hostinger/notification-push/licenses/rolldown-LICENSE",
-    readFileSync(join(toolRoot, "LICENSE")),
+    readWorkerInput(join(toolRoot, "LICENSE")),
   );
   artifacts.set(
     "deploy/hostinger/notification-push/worker.mjs",
@@ -235,7 +283,7 @@ function workerArtifacts(sourceRoot, tracked) {
     ),
   );
   for (const source of sources)
-    if (hash(readFileSync(join(sourceRoot, source.path))) !== source.sha256)
+    if (hash(readWorkerInput(join(sourceRoot, source.path))) !== source.sha256)
       throw new Error("Worker source changed during packaging.");
   return artifacts;
 }

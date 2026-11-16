@@ -4,15 +4,18 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import {
+import fs, {
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
+import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -726,6 +729,100 @@ test("CLI rejects source-commit mismatch and dirty tracked code without a bypass
     /not tracked by the release/,
   );
 });
+
+for (const mutation of ["replacement", "in-place edit"])
+  test(`dependency license ${mutation} after metadata checks cannot leak outside bytes`, (t) => {
+    const { root, put, release } = fixture(t);
+    // Copy only this dependency into the owned fixture. Never alter the installed
+    // dependency tree shared with ordinary development or another test process.
+    const modules = join(root, "node_modules");
+    rmSync(modules);
+    mkdirSync(modules);
+    for (const name of readdirSync(join(repositoryRoot, "node_modules"))) {
+      const target = join(modules, name);
+      if (name === "web-push")
+        cpSync(join(repositoryRoot, "node_modules", name), target, {
+          recursive: true,
+          dereference: true,
+        });
+      else symlinkSync(join(repositoryRoot, "node_modules", name), target);
+    }
+    const license = join(modules, "web-push", "LICENSE");
+    const original = readFileSync(license);
+    const outside = join(root, "outside-license.txt");
+    const outsideText = "Fictional outside content must never enter a release";
+    put("outside-license.txt", outsideText);
+    let raced = false;
+    const replace = () => {
+      if (raced) return;
+      raced = true;
+      if (mutation === "replacement") {
+        rmSync(license);
+        symlinkSync(outside, license);
+      } else writeFileSync(license, outsideText);
+    };
+    const stat = fs.lstatSync,
+      descriptorStat = fs.fstatSync,
+      open = fs.openSync,
+      close = fs.closeSync;
+    const licenseDescriptors = new Set();
+    let pathChecks = 0;
+    // Deterministically race both the old path-check implementation and the
+    // descriptor implementation at its first authenticated metadata observation.
+    t.mock.method(fs, "lstatSync", (path, ...args) => {
+      const result = stat(path, ...args);
+      if (String(path) === license && ++pathChecks === 2) replace();
+      return result;
+    });
+    t.mock.method(fs, "openSync", (path, ...args) => {
+      const descriptor = open(path, ...args);
+      if (String(path) === license) licenseDescriptors.add(descriptor);
+      return descriptor;
+    });
+    t.mock.method(fs, "fstatSync", (descriptor, ...args) => {
+      const result = descriptorStat(descriptor, ...args);
+      if (licenseDescriptors.has(descriptor)) replace();
+      return result;
+    });
+    t.mock.method(fs, "closeSync", (descriptor) => {
+      licenseDescriptors.delete(descriptor);
+      return close(descriptor);
+    });
+    syncBuiltinESMExports();
+    t.after(() => {
+      t.mock.restoreAll();
+      syncBuiltinESMExports();
+    });
+    let result;
+    try {
+      result = release();
+    } catch (error) {
+      assert.equal(raced, true, "The real file replacement must have occurred");
+      assert.match(error.message, /Worker input changed while reading/);
+      assert.equal(
+        licenseDescriptors.size,
+        0,
+        "Failed reads must close their descriptor",
+      );
+      assert.ok(!existsSync(join(root, "out/cms-release.tar.gz")));
+      assert.ok(!existsSync(join(root, "out/cms-release.json")));
+      return;
+    }
+    assert.equal(raced, true, "The real file replacement must have occurred");
+    assert.equal(
+      licenseDescriptors.size,
+      0,
+      "Successful reads must close their descriptor",
+    );
+    const bytes = execFileSync("tar", [
+      "-xOzf",
+      result.archivePath,
+      "--",
+      "deploy/hostinger/notification-push/licenses/web-push-LICENSE",
+    ]);
+    assert.deepEqual(bytes, original);
+    assert.ok(!bytes.includes(Buffer.from(outsideText)));
+  });
 
 test("packaged finite workers run outside node_modules and retain actual AES/VAPID/provider contract", (t) => {
   const { root, release } = fixture(t);
