@@ -129,6 +129,16 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
         "utf8",
       ),
     );
+    // Keep released source bytes and exercise the actual additive permission fix.
+    await sql(
+      await readFile(
+        new URL(
+          "../supabase/migrations/20261116051736_substitution_withdrawal_permission_recheck.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
     await check(
       "Upgrade closes unsnapshotted pending offers without rewriting accepted facts or revenue",
       async () => {
@@ -373,6 +383,127 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
           "set_account_roles",
           [q(regularB), "array['lecturer']"],
           "aal2",
+        );
+      },
+    );
+
+    await check(
+      "A foreign manager waiting behind committed role revocation cannot withdraw or mutate an offer",
+      async () => {
+        const fixture = await make(),
+          offer = await proposal(fixture);
+        const snapshot = () =>
+          sql(
+            `select jsonb_build_object('offer',(select to_jsonb(s) from private.job_substitutions s where id=${q(offer.id)}),'claim',(select to_jsonb(c) from public.job_claims c where id=${q(fixture.claim)}),'sessions',(select jsonb_agg(to_jsonb(s) order by s.id)from public.assignment_sessions s where claim_id=${q(fixture.claim)}),'closed_notices',(select count(*)from public.notifications where resource_id=${q(offer.id)} and kind='substitution_closed'),'withdraw_audit',(select count(*)from public.audit_events where resource_id=${q(offer.id)} and action='assignment.substitution_withdraw'))`,
+          );
+        const before = await snapshot();
+        const tag = `handover_revoke_${randomUUID().replaceAll("-", "")}`,
+          writeTag = `handover_wait_${randomUUID().replaceAll("-", "")}`;
+        const barrier = async (name, condition) => {
+          for (let attempt = 0; attempt < 100; attempt++) {
+            if (
+              (await sql(
+                `select exists(select 1 from pg_stat_activity where datname=current_database() and application_name=${q(name)} and ${condition})`,
+              )) === "t"
+            )
+              return;
+            await new Promise((resolve) => setTimeout(resolve, 10));
+          }
+          throw new Error(
+            "The actual PostgreSQL role/profile lock barrier was not observed",
+          );
+        };
+        // Actual account-role RPC holds the target profile FOR UPDATE until its
+        // transaction commits; the old committed role is visible before that.
+        const revoked = actor(
+          admin,
+          `set local application_name=${q(tag)};select public.set_account_roles(${q(manager)},array['lecturer']);select pg_sleep(3)`,
+          "aal2",
+        );
+        let writer;
+        try {
+          await barrier(tag, "wait_event='PgSleep'");
+          writer = actor(
+            manager,
+            `set local application_name=${q(writeTag)};select public.respond_job_substitution(${q(offer.id)},'withdraw',null,${q(randomUUID())},false)`,
+            "aal2",
+          );
+          const settled = Promise.allSettled([revoked, writer]);
+          await barrier(writeTag, "wait_event_type='Lock'");
+          const results = await settled;
+          assert.equal(results[0].status, "fulfilled");
+          assert.equal(results[1].status, "rejected");
+          assert.match(results[1].reason.message, /42501/);
+        } finally {
+          await Promise.allSettled([revoked, ...(writer ? [writer] : [])]);
+        }
+        assert.equal(await snapshot(), before);
+        await call(
+          admin,
+          "set_account_roles",
+          [q(manager), "array['management']"],
+          "aal2",
+        );
+      },
+    );
+
+    await check(
+      "Immutable proposer and source ownership still permit withdrawal without management capability",
+      async () => {
+        const fixture = await make();
+        const id = await call(
+          manager,
+          "propose_job_substitution",
+          [
+            q(fixture.claim),
+            q(fixture.target),
+            q("Fictional owner withdrawal after delegation ends"),
+            q(randomUUID()),
+          ],
+          "aal2",
+        );
+        await call(
+          admin,
+          "set_account_roles",
+          [q(manager), "array['lecturer']"],
+          "aal2",
+        );
+        assert.equal(
+          (
+            await rpc(
+              manager,
+              "respond_job_substitution",
+              [q(id), q("withdraw"), "null", q(randomUUID()), "false"],
+              "aal2",
+            )
+          ).status,
+          "withdrawn",
+        );
+        await call(
+          admin,
+          "set_account_roles",
+          [q(manager), "array['management']"],
+          "aal2",
+        );
+        const next = await proposal(fixture);
+        assert.equal(
+          (
+            await rpc(fixture.source, "respond_job_substitution", [
+              q(next.id),
+              q("withdraw"),
+              "null",
+              q(randomUUID()),
+              "false",
+            ])
+          ).status,
+          "withdrawn",
+        );
+        assert.equal(await ledger(fixture.claim), fixture.oldLedger);
+        assert.equal(
+          await sql(
+            `select status from public.job_claims where id=${q(fixture.claim)}`,
+          ),
+          "confirmed",
         );
       },
     );
