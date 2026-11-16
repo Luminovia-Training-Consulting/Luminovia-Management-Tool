@@ -11,6 +11,11 @@ if (process.env.PORTAL_TEST_MODE !== "1")
     "Browser integration tests require the isolated ./portal test command; development data are preserved.",
   );
 
+const stage = process.env.PORTAL_BROWSER_STAGE;
+if (stage && !["application", "pwa"].includes(stage))
+  throw new Error("Unknown isolated browser acceptance stage.");
+const reportRoot = stage ? `.local/browser/${stage}` : undefined;
+
 export default defineConfig({
   testDir: "./tests/e2e",
   // Scenarios mutate real fictional records. Sequential execution keeps resource
@@ -18,9 +23,27 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
+  forbidOnly: true,
+  failOnFlakyTests: true,
   timeout: 45_000,
   expect: { timeout: 10_000 },
-  reporter: [["list"], ["html", { open: "never" }]],
+  outputDir: reportRoot ? `${reportRoot}/results` : "test-results",
+  reporter: [
+    ["list"],
+    [
+      "html",
+      {
+        open: "never",
+        ...(reportRoot ? { outputFolder: `${reportRoot}/html` } : {}),
+      },
+    ],
+    ...(reportRoot
+      ? ([["json", { outputFile: `${reportRoot}/report.json` }]] as [
+          string,
+          { outputFile: string },
+        ][])
+      : []),
+  ],
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173",
     // Failure artifacts may contain private QA sessions and remain ignored.
