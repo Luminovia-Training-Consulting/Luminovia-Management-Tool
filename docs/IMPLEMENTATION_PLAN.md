@@ -1,39 +1,20 @@
 # Persistent implementation plan
 
-## PR31 actual main24 integration — focused checks passed
+## PR25 mergeability continuation — 17 November 2026
 
-Prepared the exact operational48385aa source locally; before publication it was actually accepted as main99add7de8598bf415977c7cae79f1c5f6993626d. No application conflict occurred; documentation/API conflicts preserve both feature histories. Current composed source passes whole-project TypeScript,14briefing component cases,3documentation guards and12briefing+12lifecycle PostgreSQL groups on an owned512MiB/1CPU networkless fixture with no ports. All69migration sources replayed and249public functions were read from the real PostgreSQL catalogue. Exact ownership was verified before fixture removal. The 62previously accepted files plus the six actual main24 migrations remain byte-identical; only the never-released briefing extension follows them. Claim/cancel refresh retains both briefing and operational keys.
+- [x] Resolve both documentation conflicts against accepted main `2c7d326`, preserving all released migrations and complete ledgers.
+- [x] Correct native candidate TLS leaf semantics without disabling validation; actual enquiry-runtime positive/untrusted/wrong-host HTTPS and socket/candidate suite passes29cases.
+- [x] Pass combined `./portal check` (681frontend),173runtime and74Edge cases with unchanged gates. Full local acceptance refuses a foreign-owned shared QA lock before startup.
+- [ ] Push signed correction, inspect fresh exact-head full system/browser/native/security/package CI, repair any failures and complete the authorised PR25 merge when repository rules permit. No production/publication action is included.
 
-The complete59c3/4b5bc7a1 result remains explicitly an earlier candidate pass, not a complete execution of this composition. Actual12/25 integration, final unpublished migration order and required final-head remote application/native/browser/security/package checks remain before merge. No new shared/native/full stack or remote feature-branch write occurred for this preparation.
+## PR25 repair on accepted PR24 — 17 November 2026
 
-## PR31 complete candidate gate passed; actual-base merge gate pending
+- [x] Bind private enquiry intake to accepted main `99add7d`, preserving all 68 published migrations and incoming application/operational workflows.
+- [x] Resequence the one unpublished enquiry migration after the released prefix; use the accepted owner-only notification resolver without restoring direct authenticated execution.
+- [ ] Verify canonical and native enquiry adapter startup, actual SQL permissions/inbox/conversion, frontend and complete isolated acceptance. Record actual results in WORKLOG; previous PR24 results do not accept PR25.
+- [ ] Push signed repair to PR25, refresh its stale stacked description and draft status when ready, observe all required current-revision checks, and merge only when repository rules permit. No release or production action is included.
 
-- [x] Complete assigned canonical candidate on59c3bd6:657frontend,53additional SQL suites,44actual APIs,144app browsers,4PWA, real retention and verified cleanup.
-- [x] Inspect four fictional DE/light and EN/dark desktop/mobile feature captures; incorporate actual accepted main17 with byte-identical tested tree.
-- [ ] Preserve actual future main12→24→25 and its complete released prefix, then finish final exact-head required CI and protected PR31 merge. No release/deployment or extra shared-stack start is authorised by this checkbox.
-
-## PR31 anticipated PR17 integration — local preparation only
-
-- [x] Retain briefing and PR17 waitlist/substitution panels and actor-scoped invalidation together; preserve both complete documentation histories.
-- [x] Pass657frontend cases/source check,36runtime guards and24real briefing/lifecycle SQL groups; regenerate226RPCs and remove the owned fixture.
-- [ ] Incorporate actually accepted main17→24→25, preserve the final released migration prefix, then run final current-head checks and protected merge. The local branch preparation grants no acceptance to another PR.
-
-## PR31 all-open-PR delivery continuation
-
-- [x] Integrate accepted main36, preserve all36released migration bytes and current complete documentation histories.
-- [x] CLI-reversion the never-released briefing extension after that prefix with byte-identical SQL; pass12real PostgreSQL groups and regenerate162RPCs.
-- [x] Pass529frontend cases/full source check and34focused runtime guards. Canonical local acceptance is blocked before startup by a foreign QA lock.
-- [ ] Observe current final-head complete native/application/security/package checks and merge through the ordinary protected PR workflow; no release/deployment dispatch.
-
-## Optional job contacts and external reference
-
-- [x] Implement optional per-job reference URL/label/description and contact channels with deliberate after-claim/default or authorised-offer visibility.
-- [x] Add private RLS storage, current role/MFA/resource checks, immutable commercial separation, strict validation and versioned/idempotent saves.
-- [x] Add the DE/EN detail editor and post-create shortcut; 268 frontend tests and 12 isolated PostgreSQL groups pass.
-- [x] Pass the actual local ten-service native26→27 retained-data rehearsal and all21 Auth/API/invitation suites on585c883 and corrected3c4ac24, including complete owned cleanup.
-- [x] Pass both new real desktop/mobile contact/reference cases locally on96c3c5c, including claim/cancellation, DE/EN/light/dark, axe and inspected fictional screenshots.
-- [x] Complete local repetition on7215e72 after the exact PR12 board correction: all prior source/268unit/retention/SQL/API/invitation stages,90/90browser cases,2/2built-PWA cases and checked cleanup pass (project66e1ed83, exit0). Initial96c3c5c89/90 failures remain historical.
-- [ ] Deliver signed commits/push/prepared PR, observe exact required green CI and hand merge sequencing to the authorised coordinator. Do not trigger deployment/release workflows.
+All complete product and seven-module ledgers below remain required. Prior coordination notes describe their historical checkpoints; this PR repair follows the current user request.
 
 ## Current final delivery on actual 68-migration main
 

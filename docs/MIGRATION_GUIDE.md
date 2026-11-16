@@ -1,6 +1,12 @@
 # Reading and safely extending SQL migrations
 
-This candidate contains69SQL files: all68byte-identical actual main24 migrations and one never-released optional job-briefing extension. The briefing body retains its original bytes and follows the complete accepted prefix. The combined source passes12briefing and12lifecycle SQL groups and inventories249public functions through real PostgreSQL replay. Earlier complete candidate59c3 acceptance did not include main24; final accepted12/25 composition and required current-head acceptance remain distinct pending gates. Accepted migrations stay immutable, and source order does not establish hosted installation or production acceptance.
+## PR25 integration on accepted main
+
+PR24 is accepted as main `99add7de8598bf415977c7cae79f1c5f6993626d` with 68 published SQL files. The unpublished enquiry source is resequenced with the installed CLI as `20261116143242_website_enquiry_intake.sql`, after that complete prefix. All 68 released files remain byte-identical. This produces 69 sources; source presence does not claim hosted installation.
+
+The enquiry helper is discovered by main's existing owner-only notification resolver. The obsolete resolver rename/wrapper and authenticated EXECUTE grant are removed from the unpublished source, preserving the accepted resolver's identity, fallback branches and restricted ACL. Current SQL tests exercise the actual inbox projection and denied direct helper calls. HTTP fixtures must validate either the canonical disposable backend or the exact ownership-checked native candidate, including its private TLS trust; ordinary services remain excluded.
+
+This guide inventories **68 SQL files: 62 unchanged published Main17 migrations and six pending PR24 operational additions**. Actual accepted main is `4cc20874edc1f865b71106b7bb1299e16fec5aad`. All 62 published bodies remain byte-identical, and the six pending files retain their CLI-created dependency order. Their post-wait authority corrections and the two notification files’ owner-only resolver boundary remain recorded in [WORKLOG](WORKLOG.md). Earlier 36-, 42- and candidate-prefix counts describe their named pre-merge checkpoints.
 
 Application, SQL, E2E, database helper, generated API and package/lock bytes remain identical to the complete local `2c850fc488165e37887807a74e92414e4fa0a25e` pass, which replayed all 68 migrations and real APIs before 150 application browser and 4 built-PWA cases and checked cleanup. Accepted Main36 runner routing and Main17’s 30-minute browser aggregate are newer executor evidence; no repeated complete local run is claimed for that delta. Accidental accounting integration remains excluded through the history-preserving signed revert.
 
