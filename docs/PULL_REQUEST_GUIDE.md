@@ -91,7 +91,7 @@ Die Prüfungen laufen weiterhin und liefern nachvollziehbare Ergebnisse:
 - `verify` führt die vollständigen realen Anwendungs-/SQL-/API-/Browser-/PWA-/Wartungstests aus; `Actual isolated selfhost image compatibility` prüft echte Laufzeit und Datenübernahme.
 - `PR metadata` prüft Pflichtlabels; CodeQL analysiert Sicherheitsmuster. Details: [CI_QUALITY](CI_QUALITY.md).
 
-Ein Maintainer kann einen Merge bewusst vorziehen. Das macht fehlgeschlagene Tests nicht grün und veröffentlicht kein ungeprüftes Entwicklungsupdate: Der Releasejob wartet auf seine vollständigen CI-Gates. Für andere Beitragende bleiben unabhängige Review und grüne, aktuelle Tests der vorgesehene Ablauf. Die zusätzlichen serverseitigen PR-/Checkregeln bleiben bis zur bewiesenen Wartungs-App-Anbindung deaktiviert; [aktueller Zustand](GITHUB_WORKFLOW.md#aktivierung-noch-ausstehend).
+Ein Maintainer kann einen Merge bewusst vorziehen. Das macht fehlgeschlagene Tests nicht grün und veröffentlicht kein ungeprüftes Entwicklungsupdate: Der Releasejob wartet auf alle ausdrücklich in `ci.yml` definierten Gates; der zusätzliche Security-Workflow läuft getrennt. Für andere Beitragende bleiben unabhängige Review und grüne, aktuelle Tests der vorgesehene Ablauf. Die zusätzlichen serverseitigen PR-/Checkregeln bleiben bis zur bewiesenen Wartungs-App-Anbindung deaktiviert; [aktueller Zustand](GITHUB_WORKFLOW.md#aktivierung-noch-ausstehend).
 
 ## Merge und Veröffentlichung
 

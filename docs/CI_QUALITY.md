@@ -18,7 +18,7 @@ Die Workflows laufen bei Pull Requests und auf `main`; eine manuelle Ausführung
 
 Der Releasejob benötigt die schnellen Qualitätsgates und beide vollständigen Anwendungs-/Selfhost-Gates. Ein früher Maintainer-Merge kann die Repo-Regeln umgehen, veröffentlicht aber kein fehlgeschlagenes Paket. Die VPS-Automatik prüft weiterhin den erfolgreichen gesamten exakten Main-CI-Lauf.
 
-[CodeQL](../.github/workflows/security.yml) analysiert zusätzlich JavaScript/TypeScript, Python und GitHub Actions bei PRs/Main und montags um 05:23 UTC (15:23 Brisbane). Das ist statische Sicherheitsanalyse, kein Ersatz für tatsächliche RLS-/Auth-/Dateizugriffstests. Erkenntnisse stehen unter GitHubs Security/Code scanning; ein erfolgreich abgeschlossener Scan allein bedeutet nicht, dass keine Warnungen vorliegen.
+[CodeQL](../.github/workflows/security.yml) analysiert zusätzlich JavaScript/TypeScript, Python und GitHub Actions bei PRs/Main und montags um 05:23 UTC (15:23 Brisbane). Das ist statische Sicherheitsanalyse, kein Ersatz für tatsächliche RLS-/Auth-/Dateizugriffstests. Erkenntnisse stehen unter GitHubs Security/Code scanning; ein erfolgreich abgeschlossener Scan allein bedeutet nicht, dass keine Warnungen vorliegen. Dieser separate Security-Workflow ist derzeit kein zusätzlicher Release-`needs`-Gate; die Veröffentlichungsbedingungen stehen ausdrücklich im `ci.yml`.
 
 ## Coverage ausführen und richtig lesen
 
@@ -31,7 +31,7 @@ Der Bericht liegt lokal in `coverage/index.html`, maschinenlesbar in `coverage/c
 
 Erfasst werden **alle ausführbaren `src`-TS/TSX-Dateien und `scripts/public-config.ts`**, auch nicht importierte Module. Tests, Testsetup und Deklarationen sind ausgeschlossen. Die V8-Abdeckung stammt aus Unit-/Komponententests; SQL, Edge, Python/Node-Wartung und echte Browserabläufe werden nicht zu einer erfundenen Gesamtzahl zusammengerechnet.
 
-Die erste vollständige Messung mit den ergänzten Fällen besteht mit **197 Tests in 46 Dateien**: Statements 47,09 %, Branches 41,61 %, Functions 37,07 %, Lines 48,89 % über 106 erfasste Quelldateien. Die globalen Mindestwerte 46,5/41/36,5/48 verhindern Rückschritte gegenüber dieser ehrlichen Basis. Ungetestete UI-Pfade bleiben sichtbar; eine beliebige 80%-Vorgabe wird nicht durch Ausschluss dieser Dateien hergestellt.
+Die erste vollständige Messung mit den ergänzten Fällen besteht mit **197 Tests in 46 Dateien**: Statements 47,09 %, Branches 41,61 %, Functions 37,07 %, Lines 48,89 % über 106 erfasste Quelldateien. Die globalen Mindestwerte 46,5/41/36,5/48 begrenzen Rückschritte gegenüber dieser ehrlichen Basis mit kleiner Messreserve. Ungetestete UI-Pfade bleiben sichtbar; eine beliebige 80%-Vorgabe wird nicht durch Ausschluss dieser Dateien hergestellt.
 
 Kritische Teilbereiche haben strengere Gates: 100 % für Browser-Key-Konfiguration, Zeitzonen-/DST-/Datumslogik und Terminplanung; hohe eigene Statement-/Branch-/Function-/Line-Grenzen für Dateitransfer und sichere Wissensinhalte. Die exakten Werte stehen in [vite.config.ts](../vite.config.ts). Künftige Verbesserungen erhöhen die gemessene Abdeckung; Mindestwerte werden nicht automatisch abgesenkt.
 
