@@ -116,6 +116,13 @@ export function checkGatewayRouting({ directory, here, image, server }) {
         "portal-function-calendar-feed",
       ],
       ["/functions/v1/invite-lecturer", 503, "portal-function-invite-lecturer"],
+      [
+        "/functions/v1/website-enquiries",
+        503,
+        "portal-function-website-enquiries",
+      ],
+      ["/functions/v1/website-enquiries/extra", 404],
+      ["/functions/v1/website-enquiries-extra", 404],
       ["/functions/v1/accounts-extra/v1/me", 404],
       ["/functions/v1/account/v1/me", 404],
       ["/functions/v1/files/extra", 404],

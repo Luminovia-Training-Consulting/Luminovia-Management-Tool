@@ -1,0 +1,121 @@
+/* Responsive enquiry lists/forms use the existing theme surfaces and multicolour accents. */
+.enquiry-connection {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border-left: 5px solid var(--mint);
+}
+.enquiry-connection svg {
+  flex: 0 0 auto;
+}
+.enquiry-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+}
+.enquiry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+}
+.enquiry-filters .enquiry-actions {
+  grid-column: 1/-1;
+  margin: 0;
+}
+.enquiry-list,
+.enquiry-history {
+  display: grid;
+  gap: 18px;
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+}
+.enquiry-card {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(150px, 1fr);
+  gap: 20px;
+  border-left: 5px solid var(--peach);
+}
+.enquiry-card:nth-child(3n + 2) {
+  border-left-color: var(--mint);
+}
+.enquiry-card:nth-child(3n) {
+  border-left-color: var(--indigo);
+}
+.enquiry-card h2 {
+  font-size: 1.2rem;
+  margin: 14px 0 8px;
+}
+.enquiry-card h2 a {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.enquiry-card time,
+.enquiry-history span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.enquiry-original dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.enquiry-original dl,
+.enquiry-management dl {
+  margin: 0;
+}
+.enquiry-original dt,
+.enquiry-management dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.enquiry-original dd,
+.enquiry-management dd {
+  margin: 5px 0 12px;
+  overflow-wrap: anywhere;
+}
+.enquiry-original p {
+  overflow-wrap: anywhere;
+}
+.enquiry-management .text-link {
+  margin: 12px 18px 0 0;
+}
+.enquiry-history li {
+  border-left: 4px solid var(--lilac);
+  padding: 5px 0 5px 16px;
+  min-width: 0;
+}
+.enquiry-history span {
+  display: block;
+  margin-top: 6px;
+}
+.enquiry-history p {
+  overflow-wrap: anywhere;
+}
+.enquiry-sessions {
+  padding: 16px;
+  margin: 20px 0;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.enquiry-session {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  margin: 15px 0 24px;
+}
+.enquiry-session > .button {
+  grid-column: 1/-1;
+  justify-self: start;
+}
+@media (max-width: 650px) {
+  .enquiry-filters,
+  .enquiry-card,
+  .enquiry-original dl,
+  .enquiry-session {
+    grid-template-columns: 1fr;
+  }
+}
