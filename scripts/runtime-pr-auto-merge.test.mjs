@@ -32,6 +32,8 @@ const author = { login: "maintainer", id: 1, type: "User" };
 const reviewer = { login: "reviewer", id: 99, type: "User" };
 const pusher = { login: "source-writer", id: 20, type: "User" };
 const writer = { login: "ordinary-writer", id: 30, type: "User" };
+// GitHub's real GraphQL Bot login is bare; REST includes the [bot] suffix.
+const dependabot = { login: "dependabot[bot]", id: 49699333, type: "Bot" };
 const started = "2026-11-16T04:00:00Z";
 const names = [
   "Build",
@@ -311,7 +313,12 @@ function fixture(options = {}) {
         options.reviewInspections?.[inspection] ??
           options.reviews ?? [approval()],
       );
-    const login = route.match(/^\/collaborators\/([^/]+)\/permission$/)?.[1];
+    const encodedLogin = route.match(
+      /^\/collaborators\/([^/]+)\/permission$/,
+    )?.[1];
+    const login = encodedLogin
+      ? decodeURIComponent(encodedLogin).toLowerCase()
+      : null;
     if (login) {
       const user =
         options.identities?.[login] ??
@@ -363,6 +370,21 @@ function fixture(options = {}) {
     calls,
     writes: () =>
       calls.filter((call) => call.method !== "GET" && call.path !== "/graphql"),
+  };
+}
+
+function botOptions(login = "dependabot", overrides = {}) {
+  const graphql = pushResponse();
+  graphql.data.node.push.pusher = {
+    __typename: "Bot",
+    login,
+    databaseId: dependabot.id,
+  };
+  return {
+    graphql,
+    identities: { [dependabot.login]: dependabot },
+    permissions: { [dependabot.login]: "none" },
+    ...overrides,
   };
 }
 function httpFixture(options = {}) {
@@ -731,16 +753,111 @@ test("the actual immutable pusher cannot approve their own pushed contribution",
     { reviews: [approval({ user: { ...pusher, login: "SOURCE-WRITER" } })] },
     "external-review",
   );
-  const bot = { __typename: "Bot", login: "dependency-bot[bot]" };
   await blocked(
-    {
-      graphql: pushResponse({
-        push: { ...pushResponse().data.node.push, pusher: bot },
-      }),
-      reviews: [approval({ user: { id: 50, type: "Bot", login: bot.login } })],
-    },
+    botOptions("dependabot", { reviews: [approval({ user: dependabot })] }),
     "external-review",
   );
+});
+
+test("a real bare GraphQL Bot identity with REST suffix and permission none permits independent human review", async () => {
+  const source = httpFixture(botOptions());
+  const result = await processPullRequest(source.request, 31, catalogue, {
+    apply: true,
+  });
+  assert.equal(result.nativeMerged, true);
+  assert.ok(
+    source.calls.some(
+      (call) =>
+        call.path === prefix + "/collaborators/dependabot%5Bbot%5D/permission",
+    ),
+  );
+});
+
+test("bare, already suffixed and case-variant Bot logins bind the same immutable canonical REST identity", async () => {
+  for (const login of [
+    "dependabot",
+    "dependabot[bot]",
+    "Dependabot",
+    "Dependabot[BOT]",
+  ]) {
+    const source = fixture(botOptions(login));
+    assert.equal(
+      (await inspectPullRequest(source.request, 31, catalogue)).eligible,
+      true,
+    );
+    assert.ok(
+      source.calls.some(
+        (call) =>
+          decodeURIComponent(call.path).toLowerCase() ===
+          prefix.toLowerCase() + "/collaborators/dependabot[bot]/permission",
+      ),
+    );
+  }
+});
+
+test("a Bot pusher cannot self-approve through a bare, suffixed, case-variant or renamed login", async () => {
+  for (const login of [
+    "dependabot",
+    "dependabot[bot]",
+    "DEPENDABOT[bot]",
+    "renamed-bot[bot]",
+  ])
+    await blocked(
+      botOptions("dependabot", {
+        permissions: { [dependabot.login]: "write" },
+        reviews: [approval({ user: { ...dependabot, login } })],
+      }),
+      "external-review",
+    );
+});
+
+test("missing, invalid and incorrect Bot database IDs cannot borrow the canonical Bot's authority", async () => {
+  for (const id of [undefined, null, 0, -1, "49699333", 49699334]) {
+    const options = botOptions();
+    options.graphql.data.node.push.pusher.databaseId = id;
+    const source = fixture(options);
+    await assert.rejects(
+      processPullRequest(source.request, 31, catalogue, { apply: true }),
+    );
+    assert.deepEqual(source.writes(), []);
+  }
+});
+
+test("canonical Bot identity mismatch or a changed identity at the final inspection prevents native merging", async () => {
+  for (const user of [
+    { ...dependabot, id: 49699334 },
+    { ...dependabot, login: "another-bot[bot]" },
+    { ...dependabot, type: "User" },
+    { id: dependabot.id, type: "Bot" },
+    { id: dependabot.id, login: dependabot.login },
+  ]) {
+    const source = fixture(
+      botOptions("dependabot", {
+        permissions: { [dependabot.login]: { permission: "none", user } },
+      }),
+    );
+    await assert.rejects(
+      processPullRequest(source.request, 31, catalogue, { apply: true }),
+    );
+    assert.deepEqual(source.writes(), []);
+  }
+  const changed = fixture(
+    botOptions("dependabot", {
+      permissionInspections: [
+        { [dependabot.login]: { permission: "none", user: dependabot } },
+        {
+          [dependabot.login]: {
+            permission: "none",
+            user: { ...dependabot, id: 49699334 },
+          },
+        },
+      ],
+    }),
+  );
+  await assert.rejects(
+    processPullRequest(changed.request, 31, catalogue, { apply: true }),
+  );
+  assert.deepEqual(changed.writes(), []);
 });
 test("null push evidence gives no exemption while valid independent native-clean review still works", async () => {
   const graphql = pushResponse({ push: null });
@@ -1032,6 +1149,13 @@ test("only the exact fixed GraphQL read reaches the read credential; arbitrary q
       method: "POST",
       body: {
         query: pushQuery + " mutation { deleteRef }",
+        variables: { id: "CS_1000" },
+      },
+    },
+    {
+      method: "POST",
+      body: {
+        query: pushQuery.replace(" ... on Bot { databaseId }", ""),
         variables: { id: "CS_1000" },
       },
     },

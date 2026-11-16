@@ -410,6 +410,24 @@ function readyRoutes() {
   ];
 }
 
+function botReadyRoutes(login = "dependabot") {
+  const routes = readyRoutes();
+  routes.find((item) => item.path === "/graphql").data.data.node.push.pusher = {
+    __typename: "Bot",
+    login,
+    databaseId: 49699333,
+  };
+  const permission = routes.find(
+    (item) => item.path === prefix + "/collaborators/source-writer/permission",
+  );
+  permission.path = prefix + "/collaborators/dependabot%5Bbot%5D/permission";
+  permission.data = {
+    permission: "none",
+    user: { id: 49699333, login: "dependabot[bot]", type: "Bot" },
+  };
+  return routes;
+}
+
 test("actual default CLI is read-only on an empty PR list without an App credential", () => {
   const result = runCli([route(listPath, [])], {
     env: { PROMOTION_TOKEN: undefined },
@@ -468,6 +486,43 @@ test("actual CLI GraphQL errors fail closed without printing private response co
     errors: [{ message: privateError }],
     data: { node: null },
   };
+  const result = runCli(routes, { env: { PROMOTION_TOKEN: undefined } });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Invalid or incomplete GitHub response/);
+  assert.ok(result.calls.every((call) => call.credential === "read"));
+});
+
+test("actual CLI normalizes the real bare GraphQL Bot to a suffixed REST identity using only the reader", () => {
+  for (const login of ["dependabot", "dependabot[bot]"]) {
+    const result = runCli(botReadyRoutes(login), { apply: true });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(JSON.parse(result.stdout).nativeMerged, true);
+    assert.ok(
+      result.calls.some(
+        (call) =>
+          call.path ===
+            prefix + "/collaborators/dependabot%5Bbot%5D/permission" &&
+          call.credential === "read",
+      ),
+    );
+    assert.ok(
+      result.calls
+        .filter((call) => call.path === "/graphql")
+        .every((call) => call.credential === "read"),
+    );
+    assert.equal(
+      result.calls.filter((call) => call.credential === "promotion").length,
+      3,
+    );
+  }
+});
+
+test("actual CLI refuses an immutable Bot ID mismatch without any writer credential or mutation", () => {
+  const routes = botReadyRoutes();
+  routes.find(
+    (item) =>
+      item.path === prefix + "/collaborators/dependabot%5Bbot%5D/permission",
+  ).data.user.id = 49699334;
   const result = runCli(routes, { env: { PROMOTION_TOKEN: undefined } });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Invalid or incomplete GitHub response/);

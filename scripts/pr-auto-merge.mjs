@@ -35,10 +35,10 @@ const requiredChecks = new Map([
   ["CodeQL", 57789],
 ]);
 const prefix = `/repos/${repository}`;
-// This exact read-only query was independently exercised with GITHUB_TOKEN.
-// The opaque suite identifier is typed JSON data, never executable query text.
+// Sealed read-only query: changes require a new read-only token integration
+// check. The opaque suite identifier is JSON data, never executable query text.
 export const pushQuery =
-  "query($id: ID!) { node(id: $id) { __typename ... on CheckSuite { id databaseId commit { oid repository { nameWithOwner } } push { nextSha previousSha pusher { __typename login ... on User { databaseId } } repository { nameWithOwner } } } } }";
+  "query($id: ID!) { node(id: $id) { __typename ... on CheckSuite { id databaseId commit { oid repository { nameWithOwner } } push { nextSha previousSha pusher { __typename login ... on User { databaseId } ... on Bot { databaseId } } repository { nameWithOwner } } } } }";
 const blocked = (reason) => ({ eligible: false, reason });
 function assert(condition) {
   if (!condition) throw new Error("Invalid or incomplete GitHub response.");
@@ -117,7 +117,7 @@ export function evaluateNativePolicy(rules) {
   return { eligible: true };
 }
 
-/** Bind the actual push, when present, to the exact independently proven suite.
+/** Bind the actual push, when present, to the exact validated CI suite.
  * Missing push evidence never creates an exception; contradictory evidence fails.
  * Workflow actors and retry initiators cannot substitute for the pusher. */
 export async function readSourcePusher(request, run, head) {
@@ -161,20 +161,22 @@ export async function readSourcePusher(request, run, head) {
     actor &&
       typeof actor.__typename === "string" &&
       typeof actor.login === "string" &&
-      /^[a-zA-Z0-9-]+(?:\[bot\])?$/.test(actor.login),
+      /^[a-zA-Z0-9-]+(?:\[bot\])?$/i.test(actor.login) &&
+      ["User", "Bot"].includes(actor.__typename) &&
+      Number.isSafeInteger(actor.databaseId) &&
+      actor.databaseId > 0,
   );
   if (actor.__typename === "User") {
-    assert(
-      Number.isSafeInteger(actor.databaseId) &&
-        actor.databaseId > 0 &&
-        !actor.login.endsWith("[bot]"),
-    );
+    assert(!/\[bot\]$/i.test(actor.login));
     return { id: actor.databaseId, login: actor.login, type: "User" };
   }
-  // The fixed proven query returns no numeric Bot ID. Its canonical login is
-  // still excluded from approvals; no Bot receives any author/actor exemption.
-  assert(actor.__typename === "Bot" && actor.login.endsWith("[bot]"));
-  return { id: null, login: actor.login, type: "Bot" };
+  // GraphQL returns a bare Bot login while REST appends [bot]. Bind the real
+  // immutable Bot ID too; normalize only this API naming difference.
+  return {
+    id: actor.databaseId,
+    login: actor.login.replace(/\[bot\]$/i, "") + "[bot]",
+    type: "Bot",
+  };
 }
 
 /** A name alone is not evidence: require the current SHA and the expected App.
@@ -475,21 +477,20 @@ export async function inspectPullRequest(request, number, catalogue) {
     const permission = permissions.get(user.id);
     const current = permission?.user;
     // A retained login must not transfer an old actor/reviewer's authority to
-    // another account. Validate canonical login/type too when the API supplies it.
+    // another account. Require the current canonical ID, login and account type.
     if (
-      current?.id !== user.id ||
-      (current.login !== undefined &&
-        (typeof current.login !== "string" ||
-          current.login.toLowerCase() !== user.login.toLowerCase())) ||
-      (current.type !== undefined && current.type !== user.type)
+      !knownIdentity(current) ||
+      current.id !== user.id ||
+      current.login.toLowerCase() !== user.login.toLowerCase() ||
+      current.type !== user.type
     )
       return null;
     return permission;
   };
   assert(knownIdentity(pr.user));
-  // A numeric GraphQL pusher must still resolve to that immutable REST identity.
+  // Every human/Bot pusher must still resolve to that immutable REST identity.
   // Current permissions confer reviewer authority only, never an author bypass.
-  if (pusher && pusher.id !== null) assert(await permissionFor(pusher));
+  if (pusher) assert(await permissionFor(pusher));
   const sameIdentity = (a, b) =>
     b &&
     (a?.id === b.id ||
