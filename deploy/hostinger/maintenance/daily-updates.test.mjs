@@ -173,9 +173,10 @@ test("discovery upgrades the test runner and exact-peer coverage provider togeth
     });
     await writeFile(path, JSON.stringify(pkg));
     const plan = await discover(context.root, async (url) => {
-      if (!url.includes("registry.npmjs.org"))
+      const endpoint = new URL(url);
+      if (endpoint.origin !== "https://registry.npmjs.org")
         throw new Error("Unrelated upstream is unavailable in this fixture.");
-      const name = decodeURIComponent(url.split("/").at(-2));
+      const name = decodeURIComponent(endpoint.pathname.split("/").at(-2));
       return {
         name,
         version:
