@@ -111,6 +111,19 @@ test("failed acceptance retains actual passed/failed/skipped cases without sensi
   assert.ok(!JSON.stringify(outcome).includes("private"));
 });
 
+test("a failed shared spec cannot relabel the passing browser project as failed", () => {
+  const actual = report();
+  const spec = actual.suites[0].specs[0];
+  spec.ok = false;
+  spec.tests[1].status = "unexpected";
+  spec.tests[1].results[0].status = "failed";
+  const outcome = browserFailure(actual);
+  assert.equal(outcome.passed, 3);
+  assert.equal(outcome.failed, 1);
+  assert.equal(outcome.workflows[0].status, "passed");
+  assert.equal(outcome.workflows[1].status, "failed");
+});
+
 test("exit-zero skipped, expected failures, retries and incomplete results fail closed", () => {
   const plan = browserPlan(report(), { files, projects });
   const mutations = [
@@ -239,6 +252,21 @@ test("real Playwright exit-zero runtime skips and focused suites cannot pass acc
     assert.match(
       JSON.stringify(JSON.parse(readFileSync(output, "utf8")).errors),
       /forbidOnly/,
+    );
+    writeFileSync(
+      source,
+      `${header}\ntest('one failing project', ({}, info) => { if (info.project.name === 'mobile-chromium') throw new Error('private failing-project probe'); });`,
+    );
+    await assert.rejects(
+      execute(process.execPath, [cli, "test", "--config", config], {
+        timeout: 20000,
+      }),
+    );
+    const failed = browserFailure(JSON.parse(readFileSync(output, "utf8")));
+    assert.equal(failed.passed, 1);
+    assert.equal(failed.failed, 1);
+    assert.ok(
+      !JSON.stringify(failed).includes("private failing-project probe"),
     );
   } finally {
     rmSync(directory, { recursive: true, force: true });

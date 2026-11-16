@@ -2,6 +2,27 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## Corrected functional and native acceptance — all checks passed
+
+GitHub-verified signed implementation `1e72507ff2ca774048fe93c9a95dae31805c47b5` passed [Portal CI43795517565](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43795517565), including the separate actual image/retained-data job. Full application verification completed at **2026-11-16T03:21:47Z**, native compatibility at **03:27:28Z** (13:21/13:27 Australia/Brisbane).
+
+| Check | Actual result on this source |
+| --- | --- |
+| Source | Build/type/lint/format/reachability;197 Vitest cases/46 files;coverage floors preserved with the new sensor included |
+| Runtime/Edge |58 runtime cases;42 Edge cases and3 entry-point checks |
+| Operating boundaries |76 Python and61 Node cases;actual Envoy/Caddy HTTP checks |
+| Database/API |24 migrations;234 PostgreSQL cases including legacy refusal;all18 business API suites plus actual captured-mail invitation |
+| Browser |**78/78 passed**, desktop/mobile;zero skips/retries;long-column keyboard/cancel/drop regression passes both projects |
+| Build/PWA |56 public precache entries/2601.72KiB;**2/2** built-PWA cases, zero skips/retries |
+| Native retained data |Password/MFA/roles/private event/scanned bytes preserved;real TLS/WebSockets,50 competing claims,private Mailpit,18 API suites plus invitation and owned cleanup pass |
+| Security/metadata |Dependency Review,3 CodeQL analyses,separate CodeQL and current PR metadata pass;zero new changed-code alerts/annotations, distinct from existing main warnings |
+
+Safe artifact14194274558 records all **68 passed stages**,78 application/2PWA cases, source SHA-256 `0c4b44d7a5c7dd4a10d80b9b952c6b2d83846b1b8e5ffb1dfb2e83fbd76a93a4`, start03:02:08.506Z/end03:21:45.010Z. Private evidence: `.local/functional-ci/pr12-1e72507/`, including0600verify/native logs and `f40829f9/acceptance.json`. Native `changedImages` is empty; no runtime image upgrade is invented.
+
+Corrected local run04 safely returned1before startup because another checkout owned the shared QA lock; no competing resource was modified. Corrected full acceptance comes from independently successful exact-source CI, supported by the real local Chromium/dnd-kit comparison. Earlier local and failed-CI records below remain accurate.
+
+The final report follow-up counts each browser result independently, so a failed shared spec cannot relabel a passed sibling project. Seven focused guard cases pass, including actual Playwright skipped/focused/single-project-failure probes and credential-free summaries. Application, migrations, dependencies and user journeys are unchanged from accepted1e72507. Subsequent exact-head check state is on [PR12](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/12). Full remaining product/platform/manual/production scope stays in the plan. No production/hosted/public-website/real-mail operation was performed.
+
 ## Independent functional sweep — mobile keyboard board failure reproduced by CI
 
 The subsequent source correction passed an actual isolated Chromium/dnd-kit DOM comparison: legacy2522px/one arrow leaves the destination offscreen; the actual new sensor targets a visible allowed column, respects boundaries/filled exclusion, cancels and drops successfully, with zero page errors. Owned random-port fixture/browser were cleaned. The test now awaits the genuine cancellation-animation finished promises before a second pickup; it uses no arbitrary delay. Full corrected business/CI/native acceptance remains pending.

@@ -12,7 +12,8 @@ Current user priority: verify real connected user functions and repair missing b
 - [x] Implement discovered-versus-executed browser enforcement, zero skipped/flaky/retried cases, separate application/PWA reports and source-bound stage evidence. Actual exit-zero-skipped/focused-suite negative probe passes.
 - [x] Complete fresh frozen `./portal test` on signed b93b400:run3346a7e6,actual exit0,68passed stages,234SQL/all18APIs/78application+2PWA,zero skipped/retried browser cases and owned cleanup. [Actual results](QA_RESULTS.md).
 - [x] Push signed reviewable source as draft PR12, preserving concurrent independent product changes.
-- [ ] Accept the corrected keyboard board in fresh combined local/CI/native runs. First b93b400 remote run passed77/78browsers but failed mobile fixed-distance keyboard targeting; built-PWA/native not reached. Product sensor now traverses actual allowed columns with visible targets and a deterministic long-column/cancel/exact-RPC regression. Focused quality/coverage passes; no thresholds/skips were relaxed. Full acceptance remains pending. No production/hosted deployment belongs to this request.
+- [x] Accept the corrected board in exact-source full CI/native verification on signed1e72507:all68 stages,234SQL/all18APIs/78application+2PWA,zero skips/retries;actual retained password/MFA/roles/private event/scanned bytes/TLS/WebSockets/50claims/cleanup passed. Local run04 safely refused a competing checkout's QA lock; no local pass is invented. First77/78 CI failure remains historical. [Exact results](QA_RESULTS.md).
+- [x] Preserve per-project failure evidence without miscounting a passed sibling browser;7 focused guards include genuine Playwright skip/focus/single-project-failure probes. Application/migrations/journeys remain unchanged after accepted1e72507; final PR checks are independently inspectable. No production/hosted deployment belongs to this request.
 
 ## English community information
 

@@ -45,7 +45,7 @@ Expanded API flows cover versioned bilingual knowledge categories, current-only 
 
 The browser-evidence guard has adversarial report fixtures and a genuine Playwright negative probe: a runtime-skipped suite normally exits zero, but complete acceptance rejects it; an actual focused suite is rejected by Playwright.
 
-Independent CI also exposed the old board keyboard's fixed10px/100-arrow limitation on long mobile columns. The correction uses real dnd-kit sensor activation/collision/drop with semantic next/previous allowed columns and a visible destination. The real capacity workflow seeds16drafts, enforces a gap over1000px on mobile, checks boundaries/filled-column exclusion, Escape with zero mutations/unchanged version and exactly one server-confirmed drop. The correction requires its own new full acceptance; an earlier local pass does not override a later CI failure. Failed reduced reports retain actual passed/failed/skipped workflow identities/counts without raw errors or credentials.
+Independent CI also exposed the old board keyboard's fixed10px/100-arrow limitation on long mobile columns. The correction uses real dnd-kit sensor activation/collision/drop with semantic next/previous allowed columns and a visible destination. The real capacity workflow seeds16drafts, enforces a gap over1000px on mobile, checks boundaries/filled-column exclusion, Escape with zero mutations/unchanged version and exactly one server-confirmed drop. The correction passed full application and actual retained-image CI on signed1e72507; the earlier local pass did not override the intervening CI failure. Failed reduced reports retain actual passed/failed/skipped workflow identities/counts without raw errors or credentials.
 
 ## Limits and required continuation
 

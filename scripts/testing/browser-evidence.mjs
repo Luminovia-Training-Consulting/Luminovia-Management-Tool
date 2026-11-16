@@ -47,10 +47,9 @@ function cases(report, { allowErrors = false } = {}) {
  * errors, response bodies, environment values, stdout or private traces. */
 export function browserFailure(report) {
   const executed = cases(report, { allowErrors: true });
-  const workflows = executed.map(({ file, title, project, spec, test }) => {
+  const workflows = executed.map(({ file, title, project, test }) => {
     const result = test.results[0];
     const passed =
-      spec.ok === true &&
       test.expectedStatus === "passed" &&
       test.status === "expected" &&
       test.results.length === 1 &&
