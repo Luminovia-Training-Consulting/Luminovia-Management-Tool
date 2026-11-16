@@ -11,7 +11,7 @@ The user requests English general documentation, detailed contribution/issue/PR 
 - [x] Read back actual active default-branch history/signature protection and Maintainer/Admin `always`; confirm the additional review/check rules are still disabled. Preserve the independently pending App work.
 - [x] Read back all eleven existing PRs, including active #10; every PR already has one type, one risk and at least one area label. Preserve classifications and the nine original labels.
 - [x] Extend delivered documentation verification to roadmap/change notes and local heading fragments so translated navigation is checked.
-- [ ] Record fresh local/full application checks, exact PR CI and remote English-label readback. No bug-free certification, new product module, hosted/production change or real mail is implied by this increment.
+- [x] Record actual local checks, safe full-command refusal, verified English-label readback and signed publication on [PR #13](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/13). All six quality gates and the four Security jobs passed on first head `8e14e9e`; the latest complete application/native acceptance is recorded by the PR's exact-source checks, not inferred from this checkbox. No bug-free certification, new product module, hosted/production change or real mail is implied by this increment.
 
 The full product and operational ledger remains below; open PR #10 and concurrent source are not silently included in this documentation acceptance.
 

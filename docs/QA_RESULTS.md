@@ -2,6 +2,16 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## English documentation and repository verification
+
+[PR #13](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/13) contains English general documentation/forms/labels, roadmap/changelog/index/decision notes and an extended real-document heading-link check. It changes no application, database migration, package or backend source relative to accepted main `1341b16`. The authoritative master prompt is unchanged. Original concurrent work and active PRs #10/#12 are independent.
+
+Actual local checks: clean `npm ci`;197Vitest cases/46files; coverage S47.09/B41.59/F37.07/L48.89%; ESLint, TypeScript, formatting, synthetic-public production build and56PWAprecache entries/2600.80KiB; compiler connectivity/exports;10documentation/PRmetadata plus8connectivity/private-snapshot regressions; form/label structural comparisons and diff whitespace checks. The full local command returned1 before starting services because another checkout holds the global QA lock; no competing process or data was altered.
+
+On signed first head `8e14e9e`, all6quality gates in [CI43792083385](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43792083385), all4jobs in [Security43792083378](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43792083378) and current PRmetadata passed. The complete application and native retained-data jobs are tracked on the [exact current PR checks](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/13/checks); this checkpoint does not substitute an earlier revision's success for an unobserved run. Baseline main1341b16 independently passed all9CIjobs in43788369925.
+
+Live API readback verifies main `protected:true`, actual Maintainer/Admin ALWAYS exceptions, disabled additional review/check rules, private vulnerability reporting enabled,30managed English label descriptions plus9preserved originals and valid type/risk/area categories on all11pre-existing PRs. Alerts2–4are fixed without dismissals, leaving25open CodeQL hints(10high/15medium). Test success, scanner success and finding closure are separate claims. Existing4low build-tool audit entries remain documented; no complete bug-free/security/physical-device/production certification is asserted.
+
 ## Subsequent theme regression — actual defect fixed, new CI pending
 
 Repeated documentation CI43774441712 rejected one taxonomy contrast check(69/70passed). Actual served M6markup/styles reproduced first-state button contrast1.841/1.037 during background interpolation; stable themes pass. Removing that interpolation retains transform feedback and gives immediate dark9.104/13.982 on the same actual page. New effect-based desktop/mobile regression samples the first computed theme states; exact new PR9 CI remains required. The historical accepted M6counts below are not rewritten as if this later run passed.
