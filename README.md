@@ -156,7 +156,7 @@ Repository license: GNU GPLv3; the authentic Space Grotesk font retains its incl
 
 ## Account and revenue APIs
 
-[Account/revenue specification](docs/ACCOUNTS_REVENUE_SPEC.md) · [Generated platform API reference](docs/API_REFERENCE.md) · [Server audit](docs/ACCOUNTS_PLATFORM_AUDIT.md). The source reference inventories public RPCs from an actual disposable migration replay; an inventory proves the interface exists, not that every branch has passed native end-to-end acceptance.
+[Current delegated roles and private pricing](docs/DELEGATED_ROLES_PRICING.md) · [Foundational account/revenue specification](docs/ACCOUNTS_REVENUE_SPEC.md) · [Generated platform API reference](docs/API_REFERENCE.md) · [Server audit](docs/ACCOUNTS_PLATFORM_AUDIT.md). The source reference inventories public RPCs from an actual disposable migration replay; an inventory proves the interface exists, not that every branch has passed native end-to-end acceptance.
 
 New role-priced offers require a confidential compensation policy configured by authorised Administration with current MFA. The server captures the policy for each offer and returns only the current actor's permitted quote; later policy changes do not rewrite accepted amounts. Public source provides no business-percentage default. Customer total and platform amounts remain in private tables and never appear in lecturer job/claim/invoice responses. Legacy accepted net fees stay unchanged, and unknown historical customer totals remain unknown. Income/payment status is tracking data; no bank transfer or tax calculation is initiated.
 

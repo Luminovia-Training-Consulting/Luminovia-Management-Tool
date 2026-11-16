@@ -4,6 +4,10 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 ## PR13 current-base acceptance
 
+- [x] Preserve prior exact-head acceptance as historical evidence; resolve the eight current conflicts and integrate accepted main through `0a6002a` without application or released-migration changes.
+- [x] Reconcile the 36-label catalogue, 15 mandatory live checks, current private pricing/roles/welcome guidance and both documentation histories.
+- [x] Pass fresh local254frontend/88runtime/13documentation-metadata cases, unchanged coverage thresholds, type/lint/format/source-integrity/build/actionlint checks. Application,26SQL migrations and operating code match accepted main.
+- [ ] Publish the signed conflict resolution and pass every current required check on the final head before the authorised merge. PR27 has the next actual main merge; preserve its publication controls and required shared-fixture correction when integrating that base.
 - [x] Confirm prior exact-head quality, security, full application/native and corrected metadata success.
 - [x] Integrate current main e75f55d after PR16; retain both documentation histories and the complete guided-demo implementation.
 - [ ] Observe fresh exact-source quality/security/application/native and metadata checks; merge PR13 only when every required gate passes, as explicitly authorised by the user. The live PR is the final acceptance record.
