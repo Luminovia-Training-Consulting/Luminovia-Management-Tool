@@ -24,7 +24,7 @@ function event(names = ["type:docs", "area:github", "risk:low"]) {
     repository: { full_name: repository },
     pull_request: {
       number: 23,
-      base: { repo: { full_name: repository } },
+      base: { ref: "main", repo: { full_name: repository } },
       head: { sha: "a".repeat(40) },
       labels: labels(names),
     },
@@ -46,6 +46,7 @@ test("PR metadata accepts one type/risk, multiple areas and existing optional la
     ),
     {
       number: 23,
+      headSha: "a".repeat(40),
       type: "type:docs",
       risk: "risk:low",
       areas: ["area:devops", "area:github"],
@@ -77,6 +78,80 @@ test("unknown prefixed labels fail even beside an otherwise valid selection", ()
         ),
       /catalogue/,
     );
+});
+
+test("the current catalogue accepts the five areas missing from historical snapshots", () => {
+  const areas = [
+    "area:api",
+    "area:security",
+    "area:performance",
+    "area:accessibility",
+    "area:design",
+  ];
+  const snapshot = event(["type:fix", "risk:high", ...areas]);
+  assert.deepEqual(
+    validatePullRequestMetadata(snapshot, catalogue, context).areas,
+    areas.sort(),
+  );
+  const obsolete = catalogue.filter((label) => !areas.includes(label.name));
+  assert.throws(
+    () => validatePullRequestMetadata(snapshot, obsolete, context),
+    /catalogue/,
+  );
+});
+
+test("manual main checks validate current labels on a closed temporary-base PR", () => {
+  const payload = {
+    repository: { full_name: repository },
+    inputs: { pull_request_number: "23" },
+  };
+  const live = event(["type:tests", "area:testing", "risk:low"]).pull_request;
+  live.state = "closed";
+  live.base.ref = "codex/owned-temporary-fixture";
+  const manual = {
+    ...context,
+    eventName: "workflow_dispatch",
+    ref: "refs/heads/main",
+    livePullRequest: live,
+  };
+  assert.equal(
+    validatePullRequestMetadata(payload, catalogue, manual).number,
+    23,
+  );
+  for (const value of [
+    "0",
+    "-1",
+    "1.5",
+    " 23",
+    "23 ",
+    "023",
+    "23/labels",
+    "9007199254740992",
+    23,
+  ])
+    assert.throws(() =>
+      validatePullRequestMetadata(
+        { ...payload, inputs: { pull_request_number: value } },
+        catalogue,
+        manual,
+      ),
+    );
+  for (const ref of [undefined, "refs/heads/contributor", "refs/tags/main"])
+    assert.throws(() =>
+      validatePullRequestMetadata(payload, catalogue, { ...manual, ref }),
+    );
+  assert.throws(() =>
+    validatePullRequestMetadata(payload, catalogue, {
+      ...manual,
+      livePullRequest: undefined,
+    }),
+  );
+  assert.throws(() =>
+    validatePullRequestMetadata(payload, catalogue, {
+      ...manual,
+      livePullRequest: { ...live, number: 24 },
+    }),
+  );
 });
 
 test("current REST labels are authoritative and a changed head rejects stale events", () => {
@@ -127,6 +202,9 @@ test("foreign, malformed and non-PR event identities fail before any remote oper
       value.pull_request.base.repo.full_name = "other/project";
     },
     (value) => {
+      value.pull_request.base.ref = "contributor-branch";
+    },
+    (value) => {
       value.pull_request.head.sha = "not-a-commit";
     },
     (value) => {
@@ -145,12 +223,7 @@ test("foreign, malformed and non-PR event identities fail before any remote oper
       validatePullRequestMetadata(payload, catalogue, context),
     );
   }
-  for (const eventName of [
-    "push",
-    "pull_request_target",
-    "workflow_dispatch",
-    undefined,
-  ])
+  for (const eventName of ["push", "pull_request_target", undefined])
     assert.throws(() =>
       validatePullRequestMetadata(event(), catalogue, {
         ...context,
@@ -230,16 +303,96 @@ test("actual CLI treats hostile optional labels as data, never shell commands or
   }
 });
 
-test("runtime discovery includes the PR gate and it needs no package installation", () => {
+test("manual CLI only fetches the canonical PR and rejects invalid inputs before fetching", () => {
+  const directory = mkdtempSync(join(tmpdir(), "luminovia-pr-metadata-api-"));
+  try {
+    const eventPath = join(directory, "event.json");
+    const responsePath = join(directory, "response.json");
+    const requestPath = join(directory, "request.txt");
+    const mockPath = join(directory, "fetch.mjs");
+    const payload = {
+      repository: { full_name: repository, url: "https://hostile.invalid" },
+      inputs: { pull_request_number: "23" },
+    };
+    writeFileSync(eventPath, JSON.stringify(payload));
+    writeFileSync(responsePath, JSON.stringify(event().pull_request));
+    writeFileSync(
+      mockPath,
+      `import { readFileSync, writeFileSync } from "node:fs";
+      globalThis.fetch = async (url, options) => {
+        if (options.headers.Authorization !== "Bearer fictional-read-token")
+          throw new Error("Unexpected fixture token");
+        writeFileSync(process.env.METADATA_REQUEST_PATH, url);
+        return { ok: true, json: async () => JSON.parse(readFileSync(process.env.METADATA_RESPONSE_PATH, "utf8")) };
+      };`,
+    );
+    const env = {
+      ...process.env,
+      GH_TOKEN: "fictional-read-token",
+      GITHUB_EVENT_PATH: eventPath,
+      GITHUB_EVENT_NAME: "workflow_dispatch",
+      GITHUB_REPOSITORY: repository,
+      GITHUB_REF: "refs/heads/main",
+      GITHUB_ACTIONS: "true",
+      METADATA_REQUEST_PATH: requestPath,
+      METADATA_RESPONSE_PATH: responsePath,
+    };
+    delete env.GITHUB_TOKEN;
+    const run = () =>
+      spawnSync(
+        process.execPath,
+        ["--import", mockPath, "scripts/pr-metadata.mjs"],
+        {
+          cwd: new URL("..", import.meta.url),
+          env,
+          encoding: "utf8",
+          timeout: 5000,
+        },
+      );
+    const valid = run();
+    assert.equal(valid.status, 0, valid.stderr);
+    assert.equal(
+      readFileSync(requestPath, "utf8"),
+      `https://api.github.com/repos/${repository}/pulls/23`,
+    );
+    assert.match(valid.stdout, new RegExp(`Head ${"a".repeat(40)}`));
+    assert.doesNotMatch(
+      valid.stdout + valid.stderr,
+      /fictional-read-token|hostile/,
+    );
+    const wrong = event().pull_request;
+    wrong.number = 24;
+    writeFileSync(responsePath, JSON.stringify(wrong));
+    assert.equal(run().status, 1);
+    rmSync(requestPath);
+    payload.inputs.pull_request_number = "23/../../secrets";
+    writeFileSync(eventPath, JSON.stringify(payload));
+    assert.equal(run().status, 1);
+    assert.equal(existsSync(requestPath), false);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("metadata workflow only executes trusted base code with read-only permissions", () => {
   const source = readFileSync(
     new URL("../.github/workflows/pr-metadata.yml", import.meta.url),
     "utf8",
   );
   assert.match(source, /name: PR metadata/);
-  assert.match(source, /pull_request:/);
+  assert.match(source, /pull_request:\s+branches: \[main\]/);
+  assert.match(source, /ref: refs\/heads\/main/);
+  assert.match(
+    source,
+    /repository: Luminovia-Training-Consulting\/Luminovia-Management-Tool/,
+  );
+  assert.match(source, /workflow_dispatch:/);
+  assert.match(source, /github\.event\.pull_request\.state == 'open'/);
+  assert.match(source, /github\.ref == 'refs\/heads\/main'/);
+  assert.match(source, /group:.*inputs\.pull_request_number/);
   assert.doesNotMatch(
     source,
-    /pull_request_target:|npm |contents: write|pull-requests: write/,
+    /pull_request_target:|npm |contents: write|pull-requests: write|secrets\.|pull_request\.head/,
   );
   execFileSync(process.execPath, ["--check", "scripts/pr-metadata.mjs"], {
     cwd: new URL("..", import.meta.url),
