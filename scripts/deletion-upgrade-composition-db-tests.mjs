@@ -6,7 +6,8 @@ import { randomUUID } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
 
-const ceiling = "20261116121605";
+// PR25 is now accepted: retain its enquiry source in the actual upgrade baseline.
+const ceiling = "20261116143242";
 const directory = new URL("../supabase/migrations/", import.meta.url);
 const upgrades = (await readdir(directory))
   .filter((name) => name.endsWith(".sql") && name.slice(0, 14) > ceiling)

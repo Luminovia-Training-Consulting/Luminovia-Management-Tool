@@ -137,6 +137,11 @@ const ReplacementMarketplacePage = lazy(() =>
     default: module.ReplacementMarketplacePage,
   })),
 );
+const EnquiriesPage = lazy(() =>
+  import("../features/enquiries/enquiries").then((module) => ({
+    default: module.EnquiriesPage,
+  })),
+);
 const LearningHubPage = lazy(() =>
   import("../features/learning/learning").then((module) => ({
     default: module.LearningHubPage,
@@ -291,6 +296,8 @@ export function App() {
                 path="replacements"
                 element={<ReplacementMarketplacePage />}
               />
+              <Route path="enquiries" element={<EnquiriesPage />} />
+              <Route path="enquiries/:id" element={<EnquiriesPage />} />
               <Route path="learning" element={<LearningHubPage />} />
               <Route path="workbench" element={<WorkbenchPage />} />
               <Route path="timesheets" element={<TimesheetsPage />} />

@@ -1,5 +1,12 @@
 # Persistent implementation plan
 
+## PR35 integration after accepted PR25 — 17 November 2026
+
+- [x] Preserve actually merged PR25/main `4f7f6c0`, all69published SQL blobs and the existing PR35 fixes through normal ancestry; resolve all three documentation conflicts without dropping ledgers or contracts.
+- [x] Upgrade the real composition fixture from the accepted69file baseline; combined72file replay passes upgrade4/deletion25/company8/support16/API6/enquiries17groups and regenerates265public API functions.
+- [x] Pass704frontend cases,173runtime and92Edge cases,29candidate/TLS and3documentation checks plus existing source/coverage/build gates. The full local command remains refused before startup by a foreign-owned shared QA lock.
+- [ ] Publish the signed integration, inspect complete fresh current-head system/browser/native/security/package CI, fix any failures and merge PR35 under existing repository rules. No production/publication operation belongs to this work.
+
 ## PR35 mergeability repair — 17 November 2026
 
 - [x] Reproduce the current SQL blocker and trace the fresh-account browser blocker to accepted request-revision and profile-preference dependencies.
@@ -33,6 +40,21 @@ The complete target and all unrelated pending work remain below.
 - [x] Pass complete canonical local acceptance on signed67b749d:29native API suites,116application+2PWA browsers, all SQL/source checks and actual cleanup. Keep this evidence source-bound.
 - [x] Close remaining company history/earnings/calendar/raw-RLS paths and pass8expanded SQL groups; improve reviewed impact clarity and pass23focused deletion cases.
 - [ ] Verify the final follow-up with native company deletion/revocation and new screenshots; integrate only actual accepted main and replay the final migration order before current required CI and the authorised PR35 merge.
+## PR25 mergeability continuation — 17 November 2026
+
+- [x] Resolve both documentation conflicts against accepted main `2c7d326`, preserving all released migrations and complete ledgers.
+- [x] Correct native candidate TLS leaf semantics without disabling validation; actual enquiry-runtime positive/untrusted/wrong-host HTTPS and socket/candidate suite passes29cases.
+- [x] Pass combined `./portal check` (681frontend),173runtime and74Edge cases with unchanged gates. Full local acceptance refuses a foreign-owned shared QA lock before startup.
+- [ ] Push signed correction, inspect fresh exact-head full system/browser/native/security/package CI, repair any failures and complete the authorised PR25 merge when repository rules permit. No production/publication action is included.
+
+## PR25 repair on accepted PR24 — 17 November 2026
+
+- [x] Bind private enquiry intake to accepted main `99add7d`, preserving all 68 published migrations and incoming application/operational workflows.
+- [x] Resequence the one unpublished enquiry migration after the released prefix; use the accepted owner-only notification resolver without restoring direct authenticated execution.
+- [ ] Verify canonical and native enquiry adapter startup, actual SQL permissions/inbox/conversion, frontend and complete isolated acceptance. Record actual results in WORKLOG; previous PR24 results do not accept PR25.
+- [ ] Push signed repair to PR25, refresh its stale stacked description and draft status when ready, observe all required current-revision checks, and merge only when repository rules permit. No release or production action is included.
+
+All complete product and seven-module ledgers below remain required. Prior coordination notes describe their historical checkpoints; this PR repair follows the current user request.
 
 ## Current final delivery on actual 68-migration main
 
