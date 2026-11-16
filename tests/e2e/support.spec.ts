@@ -1,3 +1,7 @@
+/** Real isolated support lifecycle: wait for each committed action to close its dialog,
+ * then inspect persisted conversation/history content rather than the draft field.
+ * Separate Auth sessions retain internal-note and foreign-account denial checks.
+ */
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { withApiFixture } from "../../scripts/testing/api.mjs";
@@ -54,6 +58,7 @@ test("own support lifecycle, restricted management note, reasoned reopening and 
       await create
         .getByRole("button", { name: "Ticket absenden", exact: true })
         .click();
+      await expect(create).not.toBeVisible();
       await expect(
         page.getByRole("heading", { name: title, exact: true }),
       ).toBeVisible();
@@ -69,8 +74,13 @@ test("own support lifecycle, restricted management note, reasoned reopening and 
         .getByRole("dialog")
         .getByRole("button", { name: "Antwort senden", exact: true })
         .click();
+      // Refetch can render the committed reply before the submitting dialog closes.
+      // A page-wide text match also selects the textarea during that interval.
+      await expect(page.getByRole("dialog")).not.toBeVisible();
       await expect(
-        page.getByText("Fictional reproduction supplied.", { exact: true }),
+        page
+          .locator(".support-thread")
+          .getByText("Fictional reproduction supplied.", { exact: true }),
       ).toBeVisible();
       staffContext = await browser.newContext();
       const staff = await staffContext.newPage();
@@ -87,10 +97,13 @@ test("own support lifecycle, restricted management note, reasoned reopening and 
         .getByRole("dialog")
         .getByRole("button", { name: "Interne Notiz speichern", exact: true })
         .click();
+      await expect(staff.getByRole("dialog")).not.toBeVisible();
       await expect(
-        staff.getByText("RESTRICTED fictional staff analysis.", {
-          exact: true,
-        }),
+        staff
+          .locator(".support-thread")
+          .getByText("RESTRICTED fictional staff analysis.", {
+            exact: true,
+          }),
       ).toBeVisible();
       await page
         .getByRole("button", {
@@ -143,8 +156,11 @@ test("own support lifecycle, restricted management note, reasoned reopening and 
         .getByRole("dialog")
         .getByRole("button", { name: "Speichern", exact: true })
         .click();
+      await expect(page.getByRole("dialog")).not.toBeVisible();
       await expect(
-        page.getByText("A fictional regression remains.", { exact: true }),
+        page
+          .locator(".support-history")
+          .getByText("A fictional regression remains.", { exact: true }),
       ).toBeVisible();
       await page.getByLabel("Sprache", { exact: true }).selectOption("en");
       await page.getByLabel("Theme", { exact: true }).selectOption("dark");

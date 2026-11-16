@@ -19,6 +19,12 @@ This review uses accepted main `2c7d326` as its baseline. It removes the root ch
 - All 156 runtime regressions pass without skips, including the three documentation guards; the separate PR metadata and CI-scope invocation also passes 21/21. All three documentation-link/heading/privacy guards pass, including the entire delivered documentation set. Final submitted CI is recorded in the PR after execution.
 - `./portal test` returns exit 1 before startup because another checkout owns the shared QA lock. No foreign process is stopped and no local full Auth/API/browser/native pass is claimed for this documentation revision. Current-head GitHub acceptance remains its own gate.
 
+## PR38 support browser selector correction
+
+The first PR38 browser job in [CI43895316165](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43895316165/job/133400897154) fails overall: 155/156 application cases pass, and the mobile support journey rejects an ambiguous exact-text selector. Its two matches are the committed thread paragraph and the still-open disabled draft textarea during the successful mutation's asynchronous refresh. This is not accepted browser evidence; built-PWA stages were not reached in that phase.
+
+The correction waits for each successful action dialog to close, then checks the persisted conversation or history container. Failed mutations continue to leave the dialog open and fail acceptance. Privacy, staff-only notes, status changes, reopening, DE/EN, accessibility, offline and foreign-account assertions remain. Focused verification passes all seven support component cases, ESLint/Prettier and both desktop/mobile test discovery; discovery is not execution. Current-head actual browser/system/native outcomes belong to the PR checks.
+
 ## Complete functional checkpoints
 
 These are selected completed checkpoints retained from the prior evidence record. Each row applies only to its named source; later changes require their own verification. `S/B/F/L` denotes statement/branch/function/line V8 coverage.
