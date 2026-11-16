@@ -4,6 +4,7 @@
  */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { randomUUID } from "node:crypto";
 import {
   api,
   actor,
@@ -24,6 +25,25 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
   const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!),
     manager = await actor("Fictional capacity UI manager", "admin"),
     teacher = await actor("Fictional capacity UI teacher", "lecturer");
+  // A real tall draft column reproduces the CI failure even on an empty board.
+  // Keyboard movement must not depend on ten-pixel steps or a test arrow limit.
+  await checked(
+    service.from("jobs").insert(
+      Array.from({ length: 16 }, (_, index) => ({
+        id: randomUUID(),
+        title: `Fictional long keyboard column ${testInfo.project.name} ${index}`,
+        customer_name: "Fictional keyboard academy",
+        delivery_type: "online",
+        status: "draft",
+        amount: 100,
+        total_amount: 100,
+        currency: "EUR",
+        rate_unit: "fixed_total",
+        terms: "Fictional keyboard regression fixture",
+        requires_contract: false,
+      })),
+    ),
+  );
   await adminLogin(page, manager);
   await page.goto("/admin");
   const title = `Fictional capacity UI ${testInfo.project.name}`;
@@ -54,6 +74,7 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
       .eq("title", title)
       .single(),
   );
+  if (!created) throw new Error("The server did not return the created offer.");
   expect(created).toMatchObject({
     capacity: 3,
     capacity_basis: "per_position",
@@ -70,21 +91,84 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
     name: `${title} verschieben`,
     exact: true,
   });
-  await handle.focus();
-  await page.keyboard.press("Space");
-  await expect(handle).toHaveAttribute("aria-grabbed", "true");
-  // The real keyboard sensor uses geometric collisions. Advance until the
-  // authorized published column is targeted on both stacked and wide boards.
   const direction = testInfo.project.name.startsWith("mobile")
     ? "ArrowDown"
     : "ArrowRight";
   const target = board.locator('[data-board-column="published"]');
-  for (let n = 0; n < 100; n++) {
-    if ((await target.getAttribute("class"))?.includes("offer-column-target"))
-      break;
-    await page.keyboard.press(direction);
-    await page.waitForTimeout(20);
+  const archived = board.locator('[data-board-column="archived"]');
+  if (testInfo.project.name.startsWith("mobile")) {
+    const distance = await target.evaluate((element, id) => {
+      const card = document.querySelector(`[data-offer-id="${id}"]`)!;
+      return (
+        element.getBoundingClientRect().top -
+        card.getBoundingClientRect().bottom
+      );
+    }, created.id);
+    expect(
+      distance,
+      "Regression fixture separates destinations by more than 1000px",
+    ).toBeGreaterThan(1000);
   }
+  let requests = 0;
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/rest/v1/rpc/manage_job_offer")
+      requests++;
+  });
+  await handle.focus();
+  await page.keyboard.press("Space");
+  await expect(handle).toHaveAttribute("aria-grabbed", "true");
+  const draftColumn = board.locator('[data-board-column="draft"]');
+  await expect(draftColumn).toHaveClass(/offer-column-target/);
+  await page.keyboard.press(
+    testInfo.project.name.startsWith("mobile") ? "ArrowUp" : "ArrowLeft",
+  );
+  await expect(draftColumn).toHaveClass(/offer-column-target/);
+  await page.keyboard.press(direction);
+  await expect(target).toHaveClass(/offer-column-target/);
+  await expect(target.locator("h3")).toBeInViewport();
+  await page.keyboard.press(direction);
+  await expect(archived).toHaveClass(/offer-column-target/);
+  await page.keyboard.press(direction);
+  await expect(archived).toHaveClass(/offer-column-target/);
+  await expect(board.locator('[data-board-column="filled"]')).not.toHaveClass(
+    /offer-column-target/,
+  );
+  await page.keyboard.press(
+    testInfo.project.name.startsWith("mobile") ? "ArrowUp" : "ArrowLeft",
+  );
+  await expect(target).toHaveClass(/offer-column-target/);
+  await page.keyboard.press("Escape");
+  await expect(handle).not.toHaveAttribute("aria-grabbed", "true");
+  expect(
+    requests,
+    "Navigating and cancelling never requests a server mutation",
+  ).toBe(0);
+  expect(
+    await checked(
+      service
+        .from("jobs")
+        .select("status,terms_version")
+        .eq("id", created.id)
+        .single(),
+    ),
+  ).toEqual({ status: "draft", terms_version: created.terms_version });
+  // aria-grabbed clears before the real cancellation animation completes.
+  // A new pickup must wait for that lifecycle, not for an arbitrary delay or
+  // incidental database/network latency between the two keyboard gestures.
+  await page.evaluate(async () => {
+    await Promise.all(
+      document
+        .getAnimations()
+        .filter(
+          (animation) => animation.effect?.getTiming().iterations !== Infinity,
+        )
+        .map((animation) => animation.finished.catch(() => undefined)),
+    );
+  });
+  await handle.focus();
+  await page.keyboard.press("Space");
+  await expect(handle).toHaveAttribute("aria-grabbed", "true");
+  await page.keyboard.press(direction);
   await expect(target).toHaveClass(/offer-column-target/);
   await page.keyboard.press("Space");
   await expect
@@ -94,10 +178,11 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
           await checked(
             service.from("jobs").select("status").eq("id", created.id).single(),
           )
-        ).status,
+        )?.status,
     )
     .toBe("published");
   await expect(card().getByRole("combobox")).toHaveValue("published");
+  expect(requests).toBe(1);
   // Always retain the ordinary keyboard/select fallback for status changes.
   await card().getByRole("combobox").selectOption("draft");
   await expect(card().getByRole("combobox")).toHaveValue("draft");
@@ -157,7 +242,7 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
         await checked(
           service.from("jobs").select("status").eq("id", created.id).single(),
         )
-      ).status,
+      )?.status,
     ).toBe("published");
     await page
       .getByRole("button", { name: "Board aktualisieren", exact: true })

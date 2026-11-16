@@ -1,8 +1,9 @@
 /** Exercise draft-event provenance, path routing and real Git argv with fictional metadata and no services. */
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { runInNewContext } from "node:vm";
 import test from "node:test";
 import {
   classifyChangePaths,
@@ -517,4 +518,101 @@ test("output uses the derived fixed profile and reasons without reflecting chang
   assert.match(writes[1][1], /CI profile: docs/);
   assert.doesNotMatch(writes[1][1], /unsafe|example\.invalid/);
   assert.equal(reports[0], writes[1][1]);
+});
+
+test("independent acceptance phases upload distinct safe evidence only after actual execution", () => {
+  const workflow = readFileSync(
+    new URL("../.github/workflows/ci.yml", import.meta.url),
+    "utf8",
+  );
+  const jobs = new Map(
+    [
+      ...workflow.matchAll(
+        /^ {2}([a-z][\w-]*):\n([\s\S]*?)(?=^ {2}[a-z][\w-]*:\n|(?![\s\S]))/gm,
+      ),
+    ].map(([, name, body]) => [name, body]),
+  );
+  const names = [];
+  const runSuffix = "${{ github.run_id }}-${{ github.run_attempt }}";
+  for (const [jobName, stepId, suffix] of [
+    ["verify", "application", "verify"],
+    ["verify-browser", "browser", "browser"],
+  ]) {
+    const job = jobs.get(jobName);
+    assert.ok(job, `Inspect the actual ${jobName} job`);
+    const steps = job.match(
+      /^ {6}- name: Preserve actual functional and integration acceptance\n(?:^ {8}.*(?:\n|$))+/gm,
+    );
+    assert.equal(
+      steps?.length,
+      1,
+      `${jobName} needs one unique evidence upload`,
+    );
+    assert.equal(
+      job.match(new RegExp(`^ {8}id: ${stepId}$`, "gm"))?.length,
+      1,
+      "The evidence gate must refer to this job's actual unique execution step",
+    );
+    const upload = steps[0];
+    const condition = /^ {8}if: (.+)$/m.exec(upload)?.[1];
+    assert.ok(condition, "The actual upload needs an explicit execution gate");
+    assert.match(
+      condition,
+      /\balways\(\)/,
+      "Retain reports after a failed stage",
+    );
+    const allows = (outcome) => {
+      const expression = condition
+        .replace(/\balways\(\)/g, "true")
+        .replaceAll(`steps.${stepId}.outcome`, JSON.stringify(outcome));
+      assert.equal(
+        expression
+          .replace(/'[^']*'|"[^"]*"/g, "")
+          .replace(/\btrue\b/g, "")
+          .replace(/\s|&&|\|\||[()=!]/g, ""),
+        "",
+        "Review unsupported upload-condition syntax before executing it",
+      );
+      return runInNewContext(expression, Object.create(null), { timeout: 100 });
+    };
+    for (const [profile, outcome, expected] of [
+      ["docs", "skipped", false],
+      ["standard", "skipped", false],
+      ["docs", "", false],
+      ["standard", "", false],
+      ["full", "skipped", false],
+      ["full", "", false],
+      ["full", "success", true],
+      ["full", "failure", true],
+      ["full", "cancelled", true],
+    ])
+      assert.equal(
+        allows(outcome),
+        expected,
+        `${jobName}/${profile}/${outcome || "not started"}`,
+      );
+    const name = /^ {10}name: (.+)$/m.exec(upload)?.[1];
+    assert.equal(
+      name,
+      `portal-functional-acceptance-${suffix}-${runSuffix}`,
+      "Independent runners must not overwrite or conflict with another phase's artifact",
+    );
+    names.push(name);
+    assert.match(
+      upload,
+      /^ {10}if-no-files-found: error$/m,
+      "A required report from an actual execution must never be optional",
+    );
+    assert.match(
+      upload,
+      /^ {10}path: \.local\/tests\/\*\/acceptance\.json$/m,
+      "Upload only the safe summary, not raw browser reports or credentials",
+    );
+    assert.match(upload, /^ {10}include-hidden-files: true$/m);
+  }
+  assert.equal(
+    new Set(names).size,
+    2,
+    "Both phase artifacts must survive a run",
+  );
 });

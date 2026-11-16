@@ -138,17 +138,19 @@ const commissionJob = (
     ],
     "aal2",
   );
+/** Read the actual actor-visible offer; a filled offer may legitimately be absent. */
 const quoteOffer = (who, job) =>
   value(who, "job_offers")
     .then(JSON.parse)
     .then((rows) => rows.find((row) => row.id === job));
-/** Capture each actor's real reviewed quote while that offer is still available. */
+/** Capture validated actor-specific consent before claims race; never invent a fallback token. */
 const reviewedOffer = async (who, job) => {
   const offer = await quoteOffer(who, job);
-  assert.ok(offer, "An available actor-specific offer must be reviewed first");
+  assert.ok(offer, "A current authorised offer must supply its consent");
   assert.equal(offer.id, job);
   assert.ok(
     Number.isSafeInteger(offer.terms_version) && offer.terms_version > 0,
+    "A visible offer must supply a positive integer consent version",
   );
   return offer;
 };
@@ -157,7 +159,7 @@ const claim = async (who, job, version) =>
   value(who, "claim_job", [
     job,
     randomUUID(),
-    version ?? (await quoteOffer(who, job)).terms_version,
+    version ?? (await reviewedOffer(who, job)).terms_version,
   ]).then(JSON.parse);
 let r, job, winner, accepted;
 try {
@@ -448,19 +450,44 @@ try {
     "Concurrent instant claims create exactly one immutable revenue snapshot and complete allocation",
     async () => {
       const concurrentJob = await commissionJob(1, 300);
-      // Every claimant reviewed an available offer before anyone could fill it;
-      // a fresh discovery read inside the race can legitimately hide that job.
-      const offers = await Promise.all(
+      // Every actor captures its actual validated quote before the first claim;
+      // later discovery reads may legitimately omit the already filled offer.
+      const reviewedQuotes = await Promise.all(
         candidates.map((id) => reviewedOffer(id, concurrentJob)),
       );
       const results = await Promise.all(
         candidates.map((id, index) =>
-          claim(id, concurrentJob, offers[index].terms_version),
+          claim(id, concurrentJob, reviewedQuotes[index].terms_version),
         ),
       );
       assert.equal(results.filter((x) => x.status === "confirmed").length, 1);
       assert.equal(results.filter((x) => x.status === "filled").length, 9);
       winner = candidates[results.findIndex((x) => x.status === "confirmed")];
+      // Deterministically reproduce a late losing reader after the race: the
+      // offer disappears, but its previously reviewed token still reaches the
+      // real claim RPC and produces filled without another accepted snapshot.
+      const losingIndex = results.findIndex(
+        (result) => result.status === "filled",
+      );
+      const loser = candidates[losingIndex];
+      assert.equal(
+        JSON.parse(await value(loser, "job_offers")).some(
+          (offer) => offer.id === concurrentJob,
+        ),
+        false,
+        "A losing actor no longer sees the filled offer in a later list read",
+      );
+      assert.equal(
+        (
+          await claim(
+            loser,
+            concurrentJob,
+            reviewedQuotes[losingIndex].terms_version,
+          )
+        ).status,
+        "filled",
+        "Previously reviewed consent reaches the server after visibility changes",
+      );
       assert.equal(
         await sql(
           `select count(*) from private.claim_revenue_ledger where job_id='${concurrentJob}'`,
