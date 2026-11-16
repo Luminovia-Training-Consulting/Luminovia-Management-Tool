@@ -1,5 +1,16 @@
 # Persistent implementation plan
 
+## Current quality acceptance and corrected-source delivery gate
+
+- [x] Complete frozen e498 PC acceptance: 529 frontend, 159 runtime, all SQL/RLS/concurrency, 29 real API groups plus invitation, 116 desktop/mobile and 2 built-PWA cases and observed owned cleanup, exit0 at 09:42:44 UTC.
+- [x] Observe actual first continuous Actions-token source-push probe in CI 43838873452; preserve immutable identity, six read-only scopes and no write token.
+- [x] Record e498's four real CodeQL findings as a failed security gate; correct descriptor/UUID boundaries in signed `291773a` with targeted tests and independent review, without dismissals or weaker gates.
+- [x] Observe unchanged Security 43841175580: corrected probe has no findings in the full branch scan; 22 inherited hints remain versus 25 on actual Main. Do not confuse a full inventory with incremental PR zero results.
+- [ ] Preserve actual future accepted Main from PR17/24/25 only after their real merges; before any shared-PC start read the operative coordinator reservation and respect its owner/order.
+- [ ] Extend lifecycle regression assertions for newly accepted invalidation prefixes when Main from PR17 actually lands; preserve critical API 100% gates and all released SQL bytes.
+- [ ] Complete corrected combined-source application/native financial acceptance and all 15 fresh current-head/current-base GitHub checks. The current 36-migration local checkpoint does not certify a future 60-plus-migration base.
+- [ ] Follow the assigned actual PR19 merge slot, then separately observe trusted Main controller execution. An actual independent-review App merge remains distinct; no bypass, production or release-publication authority is added.
+
 ## Current quality integration after actual PR10 merge
 
 - [x] Integrate actual main1de544d and preserve all36released SQL files, accepted application/source guides, manual-publication and personal-only review boundaries.
