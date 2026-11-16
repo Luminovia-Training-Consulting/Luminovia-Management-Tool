@@ -264,6 +264,12 @@ export function Shell() {
                 roles={roles.data ?? []}
                 permissions={permissions.data ?? []}
                 ready={permissions.isSuccess && roles.isSuccess}
+                failed={permissions.isError || roles.isError}
+                retrying={permissions.isFetching || roles.isFetching}
+                onRetry={() => {
+                  void permissions.refetch();
+                  void roles.refetch();
+                }}
               >
                 <WelcomeGuideEntry />
               </PortalTour>
