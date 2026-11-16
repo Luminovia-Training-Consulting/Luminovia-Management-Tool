@@ -50,6 +50,15 @@ Keep each branch focused on one coherent change. Use meaningful, signed commits 
 
 During development, run focused checks such as `npm test`, `npm run test:coverage`, `npm run lint` and `npm run typecheck` after installing dependencies. The [CI and coverage guide](docs/CI_QUALITY.md) explains checks, reports and thresholds. `./portal test` is the canonical complete acceptance command. Understand a check's target and resources before running it, and do not publish unredacted private test artifacts.
 
+Local PC verification is the default. Use `./portal check` for fast quality,
+coverage and build feedback while editing, then `./portal test` for complete
+isolated acceptance of your working source before delivery;
+`./portal github test` fetches and verifies current `main` in a separate local
+checkout, while `./portal github` opens its persistent preview. No GitHub
+deployment or self-hosted Actions runner is needed. Coordinate the shared QA lock
+with other agents and never stop a foreign stack to obtain its ports. Automatic
+GitHub quality/security checks remain in place.
+
 ## 4. Preserve the domain contracts
 
 - **Permissions:** The database and API decide access. Test other accounts, revoked permissions and rejected requests; hiding a button is insufficient.
@@ -74,9 +83,16 @@ Maintainers and administrators have an explicit role-based exception and may **m
 
 Build, Typecheck, Lint, Formatting, Code quality and Tests and coverage run alongside `verify`, `Actual isolated selfhost image compatibility` and `PR metadata`. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes, CodeQL and Dependabot. The additional mandatory review/check rules for ordinary contributors remain disabled until the maintenance App path is verified; committed JSON alone does not prove active enforcement.
 
-A direct maintainer merge does not skip publication checks: the development release job waits for its gates in `ci.yml`. Failed checks do not produce an approved installation package. The separate Security workflow provides additional analysis. The existing daily maintenance path remains unchanged until the App setup is coordinated; no unverified bot bypass is assumed.
+A direct maintainer merge does not skip publication checks: an explicitly requested development release waits for its gates in `ci.yml`. Failed checks do not produce an approved installation package. The separate Security workflow provides additional analysis. The existing daily maintenance path remains unchanged until the App setup is coordinated; no unverified bot bypass is assumed.
 
-A merge may trigger the existing **development release automation**. Production installation, risky migrations, and changes to hosting, DNS or real data still require the relevant separate authorization. A GitHub merge does not replace that operational approval.
+A merge does not publish a development release or create PR deployment metadata.
+An authorised maintainer must explicitly dispatch `Portal checks` on `main` with
+`publish_release=true` and the exact current `main` SHA in `expected_commit`.
+Normal manual checks and daily-maintenance verification do not publish releases.
+PR deployment metadata has its own manual-only workflow; the verified local
+artifact remains downloadable without creating that record. Production
+installation, risky migrations, and changes to hosting, DNS or real data still
+require the relevant separate authorization. A GitHub merge does not replace it.
 
 ## Tags and releases
 

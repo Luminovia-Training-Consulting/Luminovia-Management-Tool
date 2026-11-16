@@ -2,6 +2,16 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Current direction — local PC testing and explicit publication
+
+- [x] Add `./portal check` for fast local source/coverage/build feedback, retaining complete isolated `./portal test` and latest-main `./portal github test`.
+- [x] Keep automatic quality/security/application/native gates; make CMS publication an explicit exact-SHA manual choice and PR deployment metadata manual-only.
+- [x] Notify the 16 other active project Codex chats and preserve the local-first rule in `AGENTS.md` and operator/contribution guides.
+- [x] Run the actual fast local command (249 frontend tests and build pass), focused publication/orchestration regressions and workflow validation. Cancel the old automatic main publication run and temporarily disable the old metadata publisher, with real server readback.
+- [ ] Complete the signed PR, exact required CI and coordinated user-authorised merge; then re-enable the manual-only metadata workflow and verify main's publication guard.
+
+The VPS polling timer and normal/hosted data are unchanged. This direction supersedes historical automatic release/publication descriptions below; it does not remove any product, security or release acceptance requirements.
+
 ## PR18 complete-CI repair
 
 - [x] Correct the missing disposable compensation bootstrap after real retention, with explicit owned QA identity and three executable orchestration regressions.

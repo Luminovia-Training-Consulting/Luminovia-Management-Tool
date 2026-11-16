@@ -2,6 +2,18 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — local testing and explicit publication
+
+Carina explicitly requested local PC testing instead of frequent GitHub deployments, immediate integration and notification of the other Codex instances. Work is isolated on `codex/local-first-no-auto-deploy` from main `fabd71a`, preserving all unrelated dirty checkouts. All 16 other active Luminovia Codex chats received the new direction; `AGENTS.md` now preserves it for continuations. Main merge order is coordinated with the existing project chat.
+
+`./portal check` now runs exact dependency setup, TypeScript, ESLint, source/workflow formatting, source integrity, unit coverage and a synthetic public-config build locally without starting Docker or contacting a real backend. It stops at the first failure. `./portal test` remains full isolated working-source acceptance; `./portal github test` verifies latest main locally and `./portal github` opens its separate persistent local preview. No self-hosted Actions runner or new service is installed.
+
+Ordinary PR/main/maintenance verification keeps every existing quality, coverage, application, native-selfhost and security gate. CMS release publication additionally requires manual dispatch on main, `publish_release=true` and `expected_commit` equal to that run's SHA. The metadata publisher is manual-only with a safe cleanup default; publication binds a successful actual PR run and exact attempt, current PR head and verified package. Its executable rejects the old automatic event types before any API request. This changes publication, not the VPS five-minute polling timer; no hosting or business data was edited.
+
+To prevent the old definitions publishing during integration, the actual automatic main run `43808375378` was cancelled (server readback: completed/cancelled) and `pr-previews.yml` (ID419755371) was temporarily disabled (readback: disabled_manually). Re-enable this workflow only after the manual-only definition reaches main, then verify server state. No PR verification was cancelled and no required gate or repository rule was relaxed.
+
+Executed: `npm ci`; real `./portal check` exit0 with all 249 frontend tests/52files, S51.02/B45.97/F41.54/L52.84% above unchanged floors, and a build/PWA with63precache entries. All93offline runtime tests pass, including publisher/package/Git-preview/workflow/documentation and fast-check orchestration regressions; `actionlint`, targeted script lint/format and diff checks pass. No new SQL/migration/UI/business behavior is introduced. Full local database/API/browser/native acceptance and exact PR CI are separate evidence, recorded only when observed. Signed publication, exact PR checks and the coordinated merge remain the integration steps at this checkpoint.
+
 ## 16 November 2026 — PR18 actual combined acceptance and main integration preparation
 
 Signed PR18 head `21959fa` passed the complete application job133078623458 in [run43800078573](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43800078573) at04:12:43UTC: all preceding retention, SQL and actual API stages, **88/88 desktop/mobile browser cases** (12.7minutes), production build, **2/2 built-PWA cases** and checked cleanup. The separate quality/coverage job passes249tests/52files, and Security43800078603 passes. The selfhost/preview stages are recorded only after their actual outcomes; their success is not inferred from this application result.

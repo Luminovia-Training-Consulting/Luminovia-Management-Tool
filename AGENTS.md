@@ -123,6 +123,16 @@ Carina requests comprehensive code comments. Maintain them with every change:
 
 ## Build and check
 
+Development and verification run on Carina's local PC by default. Use
+`./portal check` for fast edit feedback and `./portal test` for complete
+acceptance of the working source before delivery. Use `./portal github test` to verify the
+latest `main` locally, and `./portal github` for its persistent local preview.
+These commands need no GitHub-hosted deployment or self-hosted Actions runner.
+Keep automatic GitHub quality/security checks; do not publish deployments or
+CMS releases merely to test a change. Publication requires an explicit user
+request and the manual workflow controls described in
+[PR_PREVIEWS](docs/PR_PREVIEWS.md) and [CI_QUALITY](docs/CI_QUALITY.md).
+
 [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) documents prerequisites, ports and
 ownership rules. Use the Node version in `.node-version` and exact
 `package-lock.json` dependencies through `npm ci`. Full operating/recovery checks
@@ -130,6 +140,7 @@ also require Docker/Compose, Python 3, Linux `flock` and `age`/`age-keygen`.
 
 ```sh
 npm ci
+./portal check                 # Fast local quality/coverage/build; no service startup
 ./portal start                 # Persistent own development: 5173 / API 54321
 ./portal status
 ./portal stop                  # Stop owned services; preserve data volumes
@@ -144,6 +155,7 @@ node scripts/code-integrity.mjs --exports
 npm run test:coverage
 node --test scripts/runtime-*.test.mjs
 ./portal test                  # Canonical complete isolated acceptance
+./portal github test           # Latest main; complete acceptance on this PC
 ```
 
 `npm run build` requires public `VITE_SUPABASE_URL` and
@@ -179,9 +191,12 @@ physical PWA installation, mail delivery or production readiness.
   actual server-side rules. A prepared ruleset is not necessarily active.
 - Check dependencies and compatible peer families together. Do not add blanket
   `audit fix --force` or version upgrades to an unrelated task.
-- Main CI can publish a development release after full acceptance; the existing
-  development updater can consume it. Claim an installation only after observing
-  it. Production approval remains separate.
+- Merging or pushing `main` does not publish a CMS release. An authorised manual
+  `Portal checks` run must select `publish_release=true` and the exact current
+  `main` commit through `expected_commit`, then pass all publication gates. PR
+  deployment metadata also requires a manual action. The existing development
+  updater can consume an explicitly published release; claim an installation
+  only after observing it. Production approval remains separate.
 - Report concrete changes, executed checks, remaining limits and commit/PR links.
   Preserve the complete open product scope and honest next actions in the plan/log.
 
