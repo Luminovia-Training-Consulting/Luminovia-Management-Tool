@@ -2,6 +2,12 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — actual PR18 main incorporated for final functional CI
+
+PR18 merged as actual main `fabd71a7958d7814c18e3403877e542c20c3bea2` at05:09:15UTC after all14required checks, full application acceptance and actual26-migration/20-suite retained-data compatibility passed on0675bb9. This owned branch now incorporates that actual main ancestry, preserving all incoming work. Before this evidence update, the merge introduced no tree change over our signed search correctionf010721; no coordinator/main source was overwritten. Locked dependencies and all migration bytes match the accepted incoming source.
+
+The new combined push must pass complete application/browser/built-PWA/native/security acceptance on its own current head. Local249frontend/92runtime checks and the genuine delayed-navigation diagnostic remain focused evidence; the failed89/90be1run below remains failed. Carina's explicit direct CI-gated merge instruction applies after those final checks, with production/hosting/real mail still outside this change. Full remaining A–N requirements remain in this plan.
+
 ## 16 November 2026 — independent CI exposed a search-navigation fixture race
 
 Published be1ef25 [CI43804535426](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43804535426) correctly failed at04:57:17UTC:63prior stages, including all SQL and actual API suites, passed; **89/90application browser cases passed with zero skips/retries/flaky outcomes**. Only desktop search timed out at its initial hidden mobile-menu click. The sign-in helper confirms the URL before shell rendering finishes; the immediate non-waiting `searchLink.isVisible()` snapshot could choose the mobile branch on desktop. Mobile search and both calendar/keyboard projects passed. Built-PWA was not reached and native compatibility was skipped; no full pass is inferred.
