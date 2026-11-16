@@ -66,6 +66,19 @@ test("every missing category fails; multiple type or risk labels cannot pass", (
     );
 });
 
+test("a review hold blocks the required metadata check even with otherwise valid labels", () => {
+  const held = event(["type:docs", "area:github", "risk:low", "merge:hold"]);
+  assert.throws(
+    () => validatePullRequestMetadata(held, catalogue, context),
+    /paused by merge:hold/,
+  );
+  held.pull_request.labels = labels(["type:docs", "area:github", "risk:low"]);
+  assert.equal(
+    validatePullRequestMetadata(held, catalogue, context).type,
+    "type:docs",
+  );
+});
+
 test("unknown prefixed labels fail even beside an otherwise valid selection", () => {
   for (const name of ["type:typo", "risk:negligible", "area:unknown"])
     assert.throws(

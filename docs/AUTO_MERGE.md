@@ -31,7 +31,7 @@ The approved App can trigger ordinary push workflows. Every sweep also reconcile
 
 Every apply sweep independently reconciles current-main verification **before inspecting open PRs**. If promotion succeeded but its response was lost, or a dispatch failed after the PR closed, the next sweep can still schedule the missing workflow. Existing runs, including failed runs, are not silently retried or relabelled as successful. Fix the reported cause and use the ordinary documented retry process. Scheduled sweeps do not edit PR branches to resolve stale-base evidence or merge conflicts.
 
-Inspect the Actions log for numeric PR identifiers and bounded reason codes. No PR title/body, credentials, private API response or customer data is printed. A draft or `merge:hold` pauses a candidate; a stale base requires an ordinary reviewed branch update and new acceptance.
+Inspect the Actions log for numeric PR identifiers and bounded reason codes. No PR title/body, credentials, private API response or customer data is printed. A draft or `merge:hold` pauses a candidate. The required PR metadata check also rejects the hold label, so native GitHub auto-merge cannot ignore this pause; a stale base requires an ordinary reviewed branch update and new acceptance.
 
 ## Local verification
 

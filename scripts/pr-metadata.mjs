@@ -89,6 +89,12 @@ export function validatePullRequestMetadata(event, catalogue, context = {}) {
       selected[category].push(label.name);
     }
   }
+  // Native GitHub auto-merge does not understand custom labels. Keep its
+  // required metadata check blocked too, so a review hold has one meaning.
+  requireMetadata(
+    !seen.has("merge:hold"),
+    "Merging is paused by merge:hold; remove it only after the concern is resolved.",
+  );
   requireMetadata(
     selected.type.length === 1,
     "Exactly one type: label is required.",
