@@ -602,7 +602,7 @@ Tests: automatically discovered [operational-forward-db-tests.mjs](../scripts/op
 
 ### 69. Optional job-specific contacts and external references
 
-Source: [20261116130626_job_briefing_contacts_references.sql](../supabase/migrations/20261116130626_job_briefing_contacts_references.sql).
+Source: [20261116163013_job_briefing_contacts_references.sql](../supabase/migrations/20261116163013_job_briefing_contacts_references.sql).
 
 Unexposed, RLS-protected job briefing and retry rows separate optional authored reference/contact data from the private customer directory and accepted commercial snapshots. Current staff/job access gates reads; contact visibility defaults to a current confirmed claim, with deliberate manager-controlled offer-viewer release. Role removal and cancellation cannot retain the default contact grant through historical claims. Current management MFA gates versioned writes; retries bind actor, job, expected version and exact payload. Strict bounded values and HTTP(S) authority validation reject forged or ambiguous input. Archive is read-only and safe duplication copies none of these fields.
 

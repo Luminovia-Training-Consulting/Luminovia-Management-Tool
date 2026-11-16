@@ -1,5 +1,11 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — PR31 retained-upgrade repair
+
+CI43903766171 passed SQL/RLS but the actual retained native upgrade failed because the unpublished briefing migration preceded accepted PR25/main `4f7f6c0`. Created `20261116163013_job_briefing_contacts_references.sql` with the installed CLI and moved the exact unreleased SQL bytes after the 69 accepted files; all accepted blobs are unchanged. Updated current documentation links and added a regression for the accepted enquiry/briefing order. No runtime permissions or assertions were weakened.
+
+Actual local verification: `./portal check` passes 695 frontend cases/91 files, coverage floors, types/lint/format/compiler and production/PWA build; 13 candidate guards and 3 documentation checks pass. An owned networkless PostgreSQL fixture passed the real 69→70 upgrade, preserving notification resolver identity/body/ACL and anonymous denial; 12 briefing and 12 lifecycle groups pass, including 50 competing claims and immutable commercial history. The fixture and UUID databases were verified removed. Fresh current-head full system/browser/native/security/package CI remains required. No release, production change or real mail is performed.
+
 ## 17 November 2026 — PR25 conflict and native TLS repair
 
 The direct user request is to make PR25 mergeable. In the isolated `codex/pr25-mergeability-20261117` worktree, merged actual accepted main `2c7d326` through normal signed ancestry and retained both complete work logs/plans. Only those two documents conflicted; all 68 released migration blobs remain identical to main and the enquiry source remains the sole added SQL file. No unrelated branch is imported.

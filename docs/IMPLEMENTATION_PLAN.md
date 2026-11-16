@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## PR31 retained-upgrade repair — 17 November 2026
+
+- [x] Place the byte-identical unpublished briefing migration after all 69 accepted SQL sources and guard its order.
+- [x] Pass 695 frontend cases and source/build gates, 13 candidate and 3 documentation checks, and the real 69→70 upgrade plus 12 briefing and 12 lifecycle SQL groups.
+- [ ] Observe fresh current-head full CI, integrate any newly accepted main, and merge PR31 only after all required gates succeed. No deployment is included.
+
 ## PR25 mergeability continuation — 17 November 2026
 
 - [x] Resolve both documentation conflicts against accepted main `2c7d326`, preserving all released migrations and complete ledgers.

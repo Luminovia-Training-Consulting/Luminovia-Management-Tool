@@ -20,7 +20,7 @@ The information is separate from the accepted financial/contractual snapshot. Up
 
 ## Owning data and API
 
-The additive migration `20261116130626_job_briefing_contacts_references.sql` creates `private.job_briefings` and `private.job_briefing_requests`, both with RLS and no direct browser grants. Public wrappers remain security invoker. Their unexposed implementations check current actor/resource authority, lock actor/request/job in a consistent order and use comparison-and-swap versions. Request identity binds actor, job, expected version and the exact original JSON payload. Only safe flags and version enter the ordinary audit event; personal contact values remain in the private rows.
+The additive migration `20261116163013_job_briefing_contacts_references.sql` creates `private.job_briefings` and `private.job_briefing_requests`, both with RLS and no direct browser grants. Public wrappers remain security invoker. Their unexposed implementations check current actor/resource authority, lock actor/request/job in a consistent order and use comparison-and-swap versions. Request identity binds actor, job, expected version and the exact original JSON payload. Only safe flags and version enter the ordinary audit event; personal contact values remain in the private rows.
 
 - `job_briefing(p_job_id)` returns the current authorised projection and write capabilities.
 - `save_job_briefing(p_job_id, p_expected_version, p_request_id, p_payload)` stores an explicit complete set and returns confirmed current state.
