@@ -306,6 +306,8 @@ services:
     - ../../../supabase/functions/files:/home/deno/functions/files:ro
     - ../../../supabase/functions/invite-lecturer:/home/deno/functions/invite-lecturer:ro
     - ../../../supabase/functions/accounts:/home/deno/functions/accounts:ro
+    - ../../../supabase/functions/course-documents:/home/deno/functions/course-documents:ro
+    - ../../../supabase/functions/calendar-feed:/home/deno/functions/calendar-feed:ro
     - deno-cache:/root/.cache/deno
     depends_on:
       api-gw:

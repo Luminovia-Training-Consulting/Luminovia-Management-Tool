@@ -118,8 +118,8 @@ jobs:
     # A broken scope job must fail this required gate instead of skipping it.
     if: always() && !cancelled()
     runs-on: ubuntu-latest
-    # The previous complete run took 38m53s near its 40m outer limit. Allow the
-    # expanded suite to finish; request/test/stage deadlines remain unchanged.
+    # Full PR17 acceptance reached browsers after 31m on run43858966704.
+    # Retain room for the complete suite; individual test deadlines stay fixed.
     timeout-minutes: 60
     steps:
       - name: Require a successful recognized scope
