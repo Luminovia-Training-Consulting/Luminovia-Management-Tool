@@ -1,24 +1,37 @@
+# Optional metadata publication only. Local verification and the downloadable
+# PR artifact remain independent; normal PR/main activity creates no deployments.
 name: PR preview deployments
 on:
-  workflow_run:
-    workflows: [Portal checks]
-    types: [in_progress, completed]
-  pull_request_target:
-    types: [closed]
-  schedule:
-    - cron: "19 5 * * *"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Publish a reviewed local preview link or expire stale records
+        required: true
+        default: cleanup
+        type: choice
+        options:
+          - cleanup
+          - publish
+      run_id:
+        description: Completed Portal checks run ID; required for publication
+        required: false
+        type: string
+      run_attempt:
+        description: Exact completed run attempt; required for publication
+        required: false
+        type: string
 permissions:
   contents: read
   actions: read
   pull-requests: read
   deployments: write
 concurrency:
-  group: pr-preview-record-${{ github.event.workflow_run.id || github.event.number || 'expiry' }}
+  group: pr-preview-record-${{ inputs.run_id || 'expiry' }}
   cancel-in-progress: false
 jobs:
   publish:
     name: Record local PR preview
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.event == 'pull_request'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

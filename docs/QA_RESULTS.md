@@ -1,5 +1,17 @@
 # QA evidence — 2026-11-16
 
+## Final local verification of the accepted-main composition
+
+`./portal check` passes TypeScript, ESLint, source/GitHub formatting, the compiler export graph, all254frontend tests in52files and the synthetic public-config production/PWA build (63precache entries). Coverage remains S51.15/B46.15/F41.61/L52.96% with unchanged floors. `node --test scripts/runtime-*.test.mjs` passes98cases without skips, including the14documentation/privacy/metadata cases. All12native candidate allocator/boundary cases pass; actionlint and resolved-document formatting/whitespace checks pass. All26previously released SQL blobs remain unchanged and the catalogue is the preserved27thmigration.
+
+The canonical `./portal test` attempt exits1 before snapshot/service startup because another checkout holds the global QA lock. No foreign ports, processes or data are altered, and no complete local DB/API/browser/native pass is claimed. All15fresh exact-head GitHub results remain required before the authorised PR13 merge. Six fictional desktop/mobile catalogue/source/job images from named PR23 application checkpoint `d448fab`/run43814253694 were inspected; they show neutral sample content and wrapping mobile tabs, while source dialogs are scrolled to comments. This historical visual checkpoint does not replace final combined native acceptance.
+
+## Final PR13 integration of accepted PR27/main
+
+PR27 passed all15mandatory checks on `485ac16`, including full application, actual selfhost retained-data and preview-package gates, and merged as actual main `e048edb` at07:21:44UTC. This PR13 continuation incorporates that actual accepted main without bundling an unmerged branch. It preserves `./portal check`, complete local acceptance, explicit exact-SHA CMS publication and manual-only PR deployment metadata, together with the corrected pre-captured quote versions in the concurrent lifecycle fixture. No publication workflow is dispatched.
+
+The complete PR13 source retains the English documentation, customer-neutral PR23 `7767564` product/migration27, all26released SQL bytes, current personal PR-only review snapshot and the unified12-case native port allocator correction. Both complete ledgers and every original branch head remain in normal ancestry. The next gates are final current-source local checks, one signed normal PR13 branch update, all15fresh exact-head GitHub checks and the directly authorised merge. Earlier checkpoints and externally changed rule modes below remain historical.
+
 ## Latest PR23 port-correction ancestry
 
 PR23 advanced to `7767564` with an independently developed correction for the same duplicate-port failure. This normal merge preserves that actual head, both prior PR23 heads and the earlier reviewed port correction. The selector and complementary recycling, real-socket and cleanup regressions are reconciled into one implementation; all ownership/isolation/unique-port gates remain. The reconciled source passes all12candidate cases without skips, plus targeted ESLint, Prettier, syntax and whitespace checks. The original8boundary cases are unchanged on both sides; no Docker or ordinary service is invoked by this focused validation. Current evidence and the final combined PR13 checks govern acceptance. Older records below describe their exact named source checkpoints and do not establish the current live policy, source tree or complete final native pass.

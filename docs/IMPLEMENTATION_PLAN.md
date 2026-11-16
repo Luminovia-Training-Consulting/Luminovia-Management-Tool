@@ -1,5 +1,18 @@
 # Persistent implementation plan
 
+## Final PR13 delivery gates
+
+- [x] Integrate actual accepted main `e048edb` and preserve current PR23 `7767564` ancestry, all27migration sources, English/private-role guidance and both ledgers.
+- [x] Run `./portal check` (254frontend cases),98runtime cases,12native candidate cases, documentation/privacy/metadata, formatting, source-export and actionlint checks.
+- [x] Attempt canonical full local acceptance; record the existing global QA lock refusal before service startup and preserve every foreign process/port.
+- [ ] Publish the signed final existing-PR branch update; all15exact-head current-base GitHub gates must pass before the directly authorised normal merge.
+
+## Final PR13 integration of accepted PR27/main
+
+PR27 passed all15mandatory checks on `485ac16`, including full application, actual selfhost retained-data and preview-package gates, and merged as actual main `e048edb` at07:21:44UTC. This PR13 continuation incorporates that actual accepted main without bundling an unmerged branch. It preserves `./portal check`, complete local acceptance, explicit exact-SHA CMS publication and manual-only PR deployment metadata, together with the corrected pre-captured quote versions in the concurrent lifecycle fixture. No publication workflow is dispatched.
+
+The complete PR13 source retains the English documentation, customer-neutral PR23 `7767564` product/migration27, all26released SQL bytes, current personal PR-only review snapshot and the unified12-case native port allocator correction. Both complete ledgers and every original branch head remain in normal ancestry. The next gates are final current-source local checks, one signed normal PR13 branch update, all15fresh exact-head GitHub checks and the directly authorised merge. Earlier checkpoints and externally changed rule modes below remain historical.
+
 ## Latest PR23 port-correction ancestry
 
 PR23 advanced to `7767564` with an independently developed correction for the same duplicate-port failure. This normal merge preserves that actual head, both prior PR23 heads and the earlier reviewed port correction. The selector and complementary recycling, real-socket and cleanup regressions are reconciled into one implementation; all ownership/isolation/unique-port gates remain. Current evidence and the final combined PR13 checks govern acceptance. Older records below describe their exact named source checkpoints and do not establish the current live policy, source tree or complete final native pass.
@@ -63,7 +76,7 @@ This current instruction supersedes historical ALWAYS/disabled guidance below. T
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
-## Current GitHub policy and PR13 delivery precedence
+## Earlier PR13 policy checkpoint — superseded by the latest dated readback
 
 The latest explicit user decision is authoritative: only `CarinaSchoppe` (GitHub User29256704) receives the sole personal review-ruleset exception. The latest readback sets `bypass_mode: always` only on that review ruleset and includes CodeQL, code-quality and Copilot-review rules. All15CI checks and verified signatures remain mandatory; history/check bypass lists are empty. Source snapshots mirror the designated owner's confirmed live update. Older role-based, unrestricted or disabled-rule entries below are dated development history, not instructions to restore those configurations. PR27 has the next main merge, followed by this independent PR13 conflict resolution; feature work does not wait for a large aggregate branch.
 
@@ -139,6 +152,18 @@ The full product and operational ledger remains below; open PR #10 and concurren
 - [x] Submit signed [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23) with main-compatible preservation checks, required complete application/security/native gates and a six-screenshot fictional artifact. Actual CI completion, visual evidence and the user-authorised merge are recorded on that PR; submission alone is not acceptance.
 
 Customer organisations remain privately configured and reusable templates support multiple explicit organisation scopes. Publication of this source does not assert hosted migration installation or production acceptance.
+
+## Current direction — local PC testing and explicit publication
+
+- Final integration follows actual main319ab69 through verified remote mergef24eae9. Prior head30075c9 passed all15required checks (88browser/2PWA plus real26-migration/20-suite native retention); current f24local checks pass254frontend/95runtime/23maintenance cases. Correct the three retained governance contradictions once, preserving manual publication controls, then use PR27's fresh exact-head checks and actual merge record. Other feature development remains independent.
+- [x] Add `./portal check` for fast local source/coverage/build feedback, retaining complete isolated `./portal test` and latest-main `./portal github test`.
+- [x] Keep automatic quality/security/application/native gates; make CMS publication an explicit exact-SHA manual choice and PR deployment metadata manual-only.
+- [x] Notify the 16 other active project Codex chats and preserve the local-first rule in `AGENTS.md` and operator/contribution guides.
+- [x] Run the actual fast local command (249 frontend tests before integration;254on current-main integration and build pass), all95integrated offline runtime tests and workflow validation. Cancel the old automatic main publication run and temporarily disable the old metadata publisher, with real server readback.
+- Signed [PR27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27) owns the exact required CI and coordinated user-authorised merge record. After its actual merge, re-enable the manual-only metadata workflow and verify main's publication guard. The first run was cancelled after PR21 advanced main; current-main integration preserves both feature histories.
+- [x] Reproduce the existing50-way lifecycle fixture's disappearing-offer consent lookup from the actual failed run, capture real actor quotes before racing and add a deterministic late-reader case; all12real PostgreSQL groups pass in a fresh disposable local container. Fresh signed-head CI remains the merge gate.
+
+The VPS polling timer and normal/hosted data are unchanged. This direction supersedes historical automatic release/publication descriptions below; it does not remove any product, security or release acceptance requirements.
 
 ## Coordinated PR18 integration
 
