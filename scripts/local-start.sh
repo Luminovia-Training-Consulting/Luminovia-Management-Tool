@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Kompatibler Einstieg für ältere lokale Startanleitungen.
-# Die zentrale Portal-CLI besitzt Dienste und Daten; hier entsteht kein zweiter Startpfad.
+# Legacy startup alias retained for older local setup instructions.
+# The portal CLI owns lifecycle and persistent data; forward its exit status unchanged.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 # Compatibility entry point: the owned supervisor starts the complete local stack

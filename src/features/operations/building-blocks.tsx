@@ -1,5 +1,6 @@
 /**
- * Lesbare Provenienz von CBW-Bausteinen und Einstieg in vorlagenbasierte Kursplanung. Quellenhash und fachliche Referenz werden angezeigt; ursprüngliche Unterrichts-PDFs werden dadurch nicht veröffentlicht.
+ * Readable CBW provenance and template-based course planning entry points. Display source
+ * hashes/references without publishing original teaching PDFs.
  */
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -19,7 +20,7 @@ import "./i18n";
 import "./building-blocks.css";
 import { jobBuildingBlockQuery } from "./building-blocks-api";
 
-/** Zeigt den kanonischen CBW-Baustein und seine referenzierten Quelleninformationen. */
+/** Display the canonical CBW building block and its referenced provenance. */
 export function BuildingBlockReference({
   buildingBlockId,
   sourceId,
@@ -69,7 +70,7 @@ export function BuildingBlockReference({
   ) : null;
 }
 
-/** Lädt die geschützte Quellenkette des einen Auftrags und rendert sie nur bei vorhandener Referenz. */
+/** Read one job's protected source chain and render it only when a reference exists. */
 export function JobBuildingBlockReference({ jobId }: { jobId: string }) {
   const { session } = useAuth();
   const reference = useQuery(jobBuildingBlockQuery(session!.user.id, jobId));
@@ -84,7 +85,7 @@ export function JobBuildingBlockReference({ jobId }: { jobId: string }) {
   ) : null;
 }
 
-/** Stellt unterschiedliche Originalfassungen mit Herkunftsmetadaten dar, ohne Originaldateien zu kopieren. */
+/** Show distinct original revisions with provenance metadata without copying source files. */
 export function BuildingBlockSources({
   block,
   sourceId,
@@ -156,7 +157,7 @@ export function BuildingBlockSources({
   );
 }
 
-/** Erlaubt die Auswahl bestehender kanonischer Bausteine für eine neue Kursvorlage oder Durchführung. */
+/** Select existing canonical blocks for a new course template or run. */
 export function BuildingBlockCards({
   blocks,
   canManage,
@@ -209,7 +210,7 @@ export function BuildingBlockCards({
   );
 }
 
-/** Bietet den berechtigten Einstieg in ein Angebot aus genau diesem Kurslauf. */
+/** Offer the authorized entry point for an offer derived from this specific course run. */
 export function CourseRunOfferLink({ runId }: { runId: string }) {
   const { t } = useTranslation("operations");
   return (

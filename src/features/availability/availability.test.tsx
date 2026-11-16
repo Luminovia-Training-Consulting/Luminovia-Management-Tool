@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für private Fenster, ausdrücklich reduzierte Managementfreigabe und versionierte Formularänderungen. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for private windows, explicitly reduced management sharing and versioned edits.
+ * Controlled UI fixtures do not replace real conflict/permission checks.
  */
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -28,7 +29,7 @@ const row: AvailabilityWindow = {
   share_with_management: false,
   version: 1,
 };
-/** Bildet einen awaitbaren SDK-Response samt Kettenmethode nach, ohne einen echten Backendzugriff auszuführen. */
+/** Model an awaitable SDK response with its chain method; this fixture makes no backend request. */
 function response(data: unknown, error: unknown = null) {
   return Object.assign(Promise.resolve({ data, error }), {
     abortSignal() {
@@ -80,7 +81,7 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
-/** Mountet den echten Fachscreen mit isoliertem Cache und kontrollierten SDK-Antworten. */
+/** Mount the real feature screen with an isolated cache and controlled SDK responses. */
 function mount() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

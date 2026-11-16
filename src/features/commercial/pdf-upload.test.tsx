@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für Scanabschluss, konkrete PDF-Versionen und erhaltene Upload-Retry-Kennung. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for scan completion, exact PDF versions and retained upload retry identity.
+ * Controlled transport does not replace real scanning/Storage checks.
  */
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
@@ -13,7 +14,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
-/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(done: (document: PortalDocument | null) => void) {
   render(
     <QueryClientProvider

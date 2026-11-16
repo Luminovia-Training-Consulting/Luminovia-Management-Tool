@@ -1,6 +1,6 @@
 /**
- * Echte Auth-/HTTP-Prüfung für private Dokumentversionen, Scanstatus und Zugriffsgrenzen.
- * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
+ * Real Auth/HTTP checks for private document versions, scan status and access boundaries.
+ * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
 import { createHash, createHmac, randomUUID } from "node:crypto";
@@ -16,7 +16,7 @@ assert.ok(
 );
 const origin = new URL(process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173")
   .origin;
-/** Erzeugt einen getrennten SDK-Client ohne persistierte oder automatisch erneuerte Testsitzung. */
+/** Creates a separate SDK client without persistent sessions or automatic session refresh. */
 const make = (key) =>
   createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -24,13 +24,13 @@ const make = (key) =>
 const service = make(process.env.SUPABASE_SERVICE_ROLE_KEY),
   users = [],
   rooms = [];
-/** Wertet den tatsächlichen SDK-Erfolg aus und gibt erst danach dessen Daten zurück. */
+/** Requires actual SDK success before returning the response data. */
 const checked = async (request, label) => {
   const { data, error } = await request;
   assert.equal(error, null, `${label}: ${error?.message}`);
   return data;
 };
-/** Berechnet den aktuellen sechsstelligen TOTP aus dem fiktiven MFA-Geheimnis; keine Codes protokollieren. */
+/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
 function totp(secret) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "").toUpperCase()]
@@ -46,7 +46,7 @@ function totp(secret) {
     .toString()
     .padStart(6, "0");
 }
-/** Erzeugt getrennte fiktive Konten und meldet sie über Auth an; ihre Kennungen dienen nur der Fixture. */
+/** Creates separate fictional accounts and signs them in through Auth; their IDs belong only to the fixture. */
 async function fixture(role) {
   const created = await checked(
     service.auth.admin.createUser({
@@ -71,7 +71,7 @@ async function fixture(role) {
   );
   return { client, id: created.user.id };
 }
-/** Liest den aktuellen Sitzungstoken der Testidentität für echte authentifizierte Gatewayaufrufe. */
+/** Reads the test actor's current session token for actual authenticated gateway requests. */
 async function headers(actor) {
   const { session } = await checked(
     actor.client.auth.getSession(),
@@ -83,7 +83,7 @@ async function headers(actor) {
     apikey: process.env.SUPABASE_ANON_KEY,
   };
 }
-/** Sendet echte Fixturebytes an den authentifizierten Dateipfad; Scan und Freigabe bleiben Serveraufgaben. */
+/** Sends real fixture bytes through the authenticated file endpoint; scanning and release remain server responsibilities. */
 async function upload(
   actor,
   bytes,
@@ -113,7 +113,7 @@ async function upload(
   });
   return { status: response.status, body: await response.json() };
 }
-/** Fragt die berechtigten Dokumentbytes für die konkrete Identität und Version über das Gateway ab. */
+/** Requests the authorised bytes for this identity and exact document version through the gateway. */
 async function download(actor, id, versionId) {
   return await fetch(`${url}/functions/v1/files`, {
     method: "POST",

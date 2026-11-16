@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für Aliasvalidierung, Akteurscache und echte Request-Abbruchweitergabe. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for alias validation, actor caches and actual request-cancellation forwarding. SDK
+ * fixtures do not establish native catalogue permissions.
  */
 import { describe, expect, it, vi } from "vitest";
 import { taxonomyPayload, taxonomyQuery } from "./api";

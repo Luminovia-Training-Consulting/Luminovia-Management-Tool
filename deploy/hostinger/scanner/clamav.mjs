@@ -1,12 +1,12 @@
 /**
- * Begrenzter ClamAV-INSTREAM-Client für das private Scanner-Gateway. Antwortformat, Zeitlimit und Aktualität der Signaturen werden geprüft; Verbindungsfehler erzeugen niemals einen sauberen Befund.
+ * Bounded ClamAV INSTREAM client for the private gateway. Validate response format, timeout and signature freshness; connection failures never become clean scan results.
  */
 import { createConnection } from "node:net";
 
 export const MAX_BYTES = 100 * 1024 * 1024;
 const MAX_REPLY_BYTES = 4096;
 
-// Beachtet Socket-Backpressure und wartet auf die tatsächliche Annahme des nächsten Protokollblocks.
+// Honor socket backpressure before sending the next protocol block.
 function write(socket, bytes) {
   return new Promise((resolve, reject) => {
     socket.write(bytes, (error) => (error ? reject(error) : resolve()));
@@ -15,7 +15,7 @@ function write(socket, bytes) {
 
 // clamd is deliberately reachable only on the private container network.
 // A total deadline covers DNS/connect/write/read, including a silent peer.
-// Besitzt den TCP-Socket, begrenzt Antwort und Frist und schließt die Verbindung auf jedem Abschlussweg.
+// Own the TCP socket, bound response/time, and close it on every completion path.
 function exchange({ host, port, timeoutMs }, send) {
   return new Promise((resolve, reject) => {
     const socket = createConnection({ host, port });
@@ -56,7 +56,7 @@ function exchange({ host, port, timeoutMs }, send) {
   });
 }
 
-// Verweigert ungültige oder veraltete Signaturinformationen, auch wenn clamd erreichbar ist.
+// Reject invalid or stale signature information even when clamd is reachable.
 export function validateVersion(version, now = Date.now()) {
   if (typeof version !== "string" || !/^ClamAV [ -~]{1,500}$/.test(version)) {
     throw new Error("scanner_version");
@@ -72,7 +72,7 @@ export function validateVersion(version, now = Date.now()) {
   return version;
 }
 
-// Erzeugt den INSTREAM-Scanner mit festen Größen-/Zeitgrenzen und zusätzlicher Signaturprüfung.
+// Create the INSTREAM scanner with fixed size/time limits and signature validation.
 export function createClamavScanner({
   host = "clamav",
   port = 3310,

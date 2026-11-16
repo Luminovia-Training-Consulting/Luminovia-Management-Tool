@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für lesenden Katalog, stabilen Suchfokus, bestätigte Änderungen und erhaltene Konfliktentwürfe. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for catalogue reads, stable search focus, confirmed edits and retained conflict
+ * drafts. UI fixtures do not replace native taxonomy authorization.
  */
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -30,7 +31,7 @@ const original: TaxonomyTopic = {
 };
 let manage = false,
   rows: TaxonomyTopic[] = [];
-/** Bildet einen awaitbaren SDK-Response samt Kettenmethode nach, ohne einen echten Backendzugriff auszuführen. */
+/** Model an awaitable SDK response with its chain method; this fixture makes no backend request. */
 function response(data: unknown, error: unknown = null) {
   return Object.assign(Promise.resolve({ data, error }), {
     abortSignal() {
@@ -38,7 +39,7 @@ function response(data: unknown, error: unknown = null) {
     },
   });
 }
-/** Mountet den echten Fachscreen mit isoliertem Cache und kontrollierten SDK-Antworten. */
+/** Mount the real feature screen with an isolated cache and controlled SDK responses. */
 function mount() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

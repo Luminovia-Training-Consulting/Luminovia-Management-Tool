@@ -1,5 +1,6 @@
 /**
- * Geteilte, übersetzte Lade-, Fehler-, Hinweis- und Formularbausteine. Die Feldkomponente verknüpft native Controls mit Labels und Beschreibungen, ohne Formularhandler oder Refs zu ersetzen.
+ * Shared translated loading, error, notice and form primitives. Field connects native controls
+ * to labels/descriptions without replacing form handlers or refs.
  */
 import {
   Children,
@@ -12,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { AlertCircle, ArrowRight, LoaderCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Link } from "react-router-dom";
-/** Meldet einen übersetzten Ladezustand als höfliche Statusänderung für assistive Technik. */
+/** Announce the translated loading state as a polite status update. */
 export function Loading() {
   const { t } = useTranslation();
   return (
@@ -22,7 +23,7 @@ export function Loading() {
     </div>
   );
 }
-/** Zeigt einen Fehler als Alert und ergänzt nur dann einen Wiederholungsbutton, wenn der Aufrufer eine Aktion liefert. */
+/** Expose the error as an alert; offer retry only when the caller supplies an action. */
 export function ErrorState({ retry }: { retry?: () => void }) {
   const { t } = useTranslation();
   return (
@@ -37,12 +38,12 @@ export function ErrorState({ retry }: { retry?: () => void }) {
     </div>
   );
 }
-/** Nur die nativen ID-/ARIA-Attribute, die Field beim zugänglichen Verknüpfen ergänzen darf. */
+/** The native ID/ARIA attributes that Field may augment for accessible labelling. */
 type FieldControlProps = Pick<
   AriaAttributes,
   "aria-describedby" | "aria-invalid"
 > & { id?: string };
-/** Verbindet genau ein natives Eingabefeld mit Label, Hinweis und Validierungsfehler und erhält vorhandene Handler/Refs. */
+/** Connect one native input to its label, hint and validation error while preserving existing handlers/refs. */
 export function Field({
   id,
   label,
@@ -99,7 +100,7 @@ export function Field({
     </div>
   );
 }
-/** Setzt eine konsistente Seitenüberschrift mit optionaler Beschreibung und fachlicher Aktion. */
+/** Provide a consistent page heading with optional description and feature action. */
 export function PageHeading({
   eyebrow,
   title,
@@ -122,7 +123,7 @@ export function PageHeading({
     </div>
   );
 }
-/** Rendert einen internen Routerlink mit gemeinsamem visuellen Richtungshinweis. */
+/** Render an internal router link with the shared direction indicator. */
 export function TextLink({
   to,
   children,
@@ -137,7 +138,7 @@ export function TextLink({
     </Link>
   );
 }
-/** Verwendet für Fehler eine Alert-Rolle und für bestätigte Ergebnisse eine Status-Rolle. */
+/** Use an alert for errors and a status announcement for confirmed results. */
 export function Notice({
   children,
   kind = "success",

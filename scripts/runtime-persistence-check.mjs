@@ -1,6 +1,6 @@
 /**
- * Prüft echte Auth-/MFA-/Profil-/Kalender- und Storage-Persistenz über Stopp und Neustart.
- * Ein eigener fiktiver Prüfnutzer und genaue Objektbytes unterscheiden Datenbestand von bloßer Dienstbereitschaft.
+ * Checks real Auth/MFA/profile/calendar/Storage persistence across stop and restart.
+ * An owned fictional probe actor and exact object bytes distinguish retained data from mere service readiness.
  */
 import assert from "node:assert/strict";
 import { randomUUID, createHmac } from "node:crypto";
@@ -22,7 +22,7 @@ assert.ok(
 const service = createClient(url.href, env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
-/** Erzeugt einen getrennten flüchtigen Auth-Client für die tatsächliche Passwort- und MFA-Persistenzprüfung. */
+/** Creates a separate nonpersistent Auth client for actual password and MFA persistence checks. */
 const anon = () =>
   createClient(url.href, env.SUPABASE_ANON_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -38,13 +38,13 @@ let fixtureProfile;
 let fixtureExpertise;
 let probeFailure;
 const cleanupFailures = [];
-/** Wertet den tatsächlichen SDK-Erfolg aus und gibt erst danach dessen Daten zurück. */
+/** Requires actual SDK success before returning the response data. */
 async function checked(promise, label) {
   const { data, error } = await promise;
   assert.equal(error, null, `${label}: ${error?.message}`);
   return data;
 }
-/** Berechnet den aktuellen TOTP der Fixture für die echte MFA-Challenge. */
+/** Computes the fixture's current TOTP for the real MFA challenge. */
 function code(secret) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "")]
@@ -247,7 +247,7 @@ try {
 } catch (error) {
   probeFailure = error;
 } finally {
-  /** Entfernt die vom Prüflauf erzeugten Ressourcen; Aufräumen darf keinen fachlichen Testfehler verbergen. */
+  /** Removes resources created by this run; cleanup must not hide a business assertion failure. */
   const cleanup = async (operation, label) => {
     try {
       await checked(operation, label);

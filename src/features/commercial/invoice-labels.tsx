@@ -1,5 +1,6 @@
 /**
- * Begrenzter Editor für Rechnungslabels. Labels dienen der Organisation und verändern keine angenommenen Gebühren, Rechnungspositionen oder Zahlungsbeträge.
+ * Bounded invoice-label editor. Labels organize records without altering accepted fees, invoice
+ * items or payment amounts.
  */
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -13,7 +14,7 @@ import { Field, Notice } from "../../components/common";
 import { commercialKeys, parseInvoiceLabels } from "./api";
 import type { InvoiceRecord } from "./types";
 import "./platform-i18n";
-/** Speichert begrenzte Rechnungslabels über die Fach-RPC und aktualisiert danach die Rechnungsdaten. */
+/** Save bounded invoice labels through the RPC, then refresh invoice data. */
 export function InvoiceLabels({
   actor,
   invoice,

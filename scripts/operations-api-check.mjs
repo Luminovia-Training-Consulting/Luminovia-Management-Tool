@@ -1,6 +1,6 @@
 /**
- * Echte Auth-/HTTP-Prüfung für private Kundendaten sowie wiederverwendbare Kurse und Durchführungen.
- * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
+ * Real Auth/HTTP checks for private customer data, reusable courses and actual course runs.
+ * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
 import { randomUUID, createHmac } from "node:crypto";
@@ -15,7 +15,7 @@ assert.ok(
   url && ["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname),
   "Operations tests only use loopback Supabase",
 );
-/** Erzeugt einen getrennten SDK-Client ohne persistierte oder automatisch erneuerte Testsitzung. */
+/** Creates a separate SDK client without persistent sessions or automatic session refresh. */
 const make = (key) =>
   createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -29,13 +29,13 @@ const jobs = [];
 const clients = [];
 const tag = randomUUID();
 let count = 0;
-/** Wertet den tatsächlichen SDK-Erfolg aus und gibt erst danach dessen Daten zurück. */
+/** Requires actual SDK success before returning the response data. */
 async function checked(request, label) {
   const { data, error } = await request;
   assert.equal(error, null, `${label}: ${error?.message}`);
   return data;
 }
-/** Erzeugt getrennte fiktive Konten und meldet sie über Auth an; ihre Kennungen dienen nur der Fixture. */
+/** Creates separate fictional accounts and signs them in through Auth; their IDs belong only to the fixture. */
 async function fixture(role) {
   const email = `operations-${role}-${tag}@example.invalid`;
   const result = await checked(
@@ -62,7 +62,7 @@ async function fixture(role) {
   );
   return { client, id: result.user.id };
 }
-/** Berechnet den aktuellen TOTP der Fixture für die echte MFA-Challenge. */
+/** Computes the fixture's current TOTP for the real MFA challenge. */
 function code(secret) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "")]
@@ -78,7 +78,7 @@ function code(secret) {
     .toString()
     .padStart(6, "0");
 }
-/** Führt eine benannte Prüfgruppe aus; fehlgeschlagene Assertions müssen den Lauf abbrechen. */
+/** Runs a named assertion group; any failed assertion must stop the run. */
 async function test(name, fn) {
   await fn();
   count++;

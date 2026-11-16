@@ -1,5 +1,7 @@
 /**
- * Bruttopreis-/Verteilungseditor, lokale Honorarvorschau und Veröffentlichung von Kundenanfragen. Die Vorschau erklärt Cent-Rundung; verbindliche Preise, Versionsprüfung und akzeptierte Snapshots bleiben in PostgreSQL.
+ * Gross-price/share editor, local compensation preview and client-request publication. The
+ * preview explains cent rounding; PostgreSQL owns binding prices, version checks and accepted
+ * snapshots.
  */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,7 +25,7 @@ import {
 } from "./commission-api";
 import "./platform-i18n";
 import "./platform.css";
-/** Erklärt die lokale Cent-Aufteilung eines Angebots ohne einen verbindlichen Serversnapshot vorzutäuschen. */
+/** Explain local cent allocation without presenting it as a binding server snapshot. */
 export function FeeSplitPreview({
   gross,
   percent,
@@ -60,7 +62,7 @@ export function FeeSplitPreview({
     </div>
   );
 }
-/** Bearbeitet nur die nach aktuellen Rechten und Angebotsstand zulässige Preis-/Verteilungsinformation. */
+/** Edit only price/share fields permitted by current capabilities and offer state. */
 function EditPrice({
   actor,
   job,
@@ -181,7 +183,7 @@ function EditPrice({
     </form>
   );
 }
-/** Lädt die berechtigte Preisprojektion und bietet nur für bearbeitbare Angebote den Preisdialog. */
+/** Load the authorized price projection and offer the dialog only for editable offers. */
 export function JobPricingPanel({ job }: { job: Job }) {
   const { t } = useTranslation("platform");
   const { session } = useAuth();
@@ -244,7 +246,7 @@ export function JobPricingPanel({ job }: { job: Job }) {
     </section>
   );
 }
-/** Erstellt aus einer geprüften Kundenanfrage ein echtes Angebot über die Veröffentlichungs-RPC. */
+/** Publish a reviewed client request as a real offer through the publication RPC. */
 export function PublishClientRequest({
   actor,
   request,

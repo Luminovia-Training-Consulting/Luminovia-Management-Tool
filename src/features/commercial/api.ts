@@ -1,5 +1,7 @@
 /**
- * Vertrags-/Finanzqueries und lokale Exportaufbereitung für autorisierte Datensätze. Sichtbereichsparameter beantragen eine Projektion, erteilen aber keine Rechte; Beträge werden je Originalwährung getrennt und CSV-Zellen gegen Formelauswertung geschützt.
+ * Contract/finance queries and local export preparation for authorized records. Scope parameters
+ * request a projection rather than granting access; keep original currencies separate and
+ * protect CSV cells against formula execution.
  */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
@@ -11,13 +13,13 @@ import type {
   InvoicePayment,
   InvoiceRecord,
 } from "./types";
-/** Gemeinsame akteursbezogene Präfixe für kommerzielle Queries und deren gezielte Invalidierung. */
+/** Shared actor-scoped commercial query prefixes for targeted invalidation. */
 export const commercialKeys = {
   access: (actor: string) => ["commercial-access", actor] as const,
   contracts: (actor: string) => ["contracts", actor] as const,
   finance: (actor: string) => ["finance", actor] as const,
 };
-/** Lädt die Serverprojektion über commercial_access und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read the commercial_access server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const commercialAccessQuery = (actor: string) =>
   queryOptions({
     queryKey: commercialKeys.access(actor),
@@ -28,7 +30,7 @@ export const commercialAccessQuery = (actor: string) =>
     },
     staleTime: 1000,
   });
-/** Lädt die Serverprojektion über commercial_people und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read the commercial_people server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const commercialPeopleQuery = (actor: string) =>
   queryOptions({
     queryKey: ["commercial-people", actor],
@@ -38,7 +40,7 @@ export const commercialPeopleQuery = (actor: string) =>
       return (data ?? []) as CommercialPerson[];
     },
   });
-/** Lädt die Serverprojektion über contract_records und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read the contract_records server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const contractsQuery = (actor: string, all: boolean) =>
   queryOptions({
     queryKey: [...commercialKeys.contracts(actor), all],
@@ -50,7 +52,7 @@ export const contractsQuery = (actor: string, all: boolean) =>
       return (data ?? []) as ContractRecord[];
     },
   });
-/** Lädt die Serverprojektion über finance_earnings und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read the finance_earnings server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const earningsQuery = (actor: string, all: boolean) =>
   queryOptions({
     queryKey: [...commercialKeys.finance(actor), "earnings", all],
@@ -62,7 +64,7 @@ export const earningsQuery = (actor: string, all: boolean) =>
       return (data ?? []) as EarningRecord[];
     },
   });
-/** Lädt die Serverprojektion über invoice_records und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read the invoice_records server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const invoicesQuery = (actor: string, all: boolean) =>
   queryOptions({
     queryKey: [...commercialKeys.finance(actor), "invoices", all],
@@ -72,7 +74,7 @@ export const invoicesQuery = (actor: string, all: boolean) =>
       return (data ?? []) as InvoiceRecord[];
     },
   });
-/** Lädt die Serverprojektion über invoice_payments und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read the invoice_payments server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const paymentsQuery = (actor: string, invoice: string) =>
   queryOptions({
     queryKey: [...commercialKeys.finance(actor), "payments", invoice],
@@ -84,18 +86,17 @@ export const paymentsQuery = (actor: string, invoice: string) =>
       return (data ?? []) as InvoicePayment[];
     },
   });
-/** Protect exported user-authored text from spreadsheet formula interpretation. */
-/** Maskiert Zelltext, Zeilenumbrüche und Formelpräfixe, damit verfasste Texte beim Tabellenimport nicht als Formeln starten. */
+/** Escape cell text, line breaks and formula prefixes to keep authored exports from becoming spreadsheet formulas. */
 export function csvCell(value: unknown) {
   let text = String(value ?? "").replace(/[\r\n\t]/g, " ");
   if (/^\s*[=+\-@]/.test(text)) text = `'${text}`;
   return `"${text.replaceAll('"', '""')}"`;
 }
-/** Erzeugt UTF-8-CSV mit BOM, CRLF und derselben sicheren Zellmaskierung für jede Zeile. */
+/** Produce UTF-8 CSV with BOM, CRLF and the same safe escaping for every row. */
 export function csvText(rows: unknown[][]) {
   return "\uFEFF" + rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
 }
-/** Startet den Download der autorisierten Exportzeilen und gibt die temporäre Blob-URL danach frei. */
+/** Download the authorized export rows and release the temporary Blob URL afterwards. */
 export function downloadCsv(filename: string, rows: unknown[][]) {
   const url = URL.createObjectURL(
     new Blob([csvText(rows)], { type: "text/csv;charset=utf-8" }),
@@ -108,7 +109,7 @@ export function downloadCsv(filename: string, rows: unknown[][]) {
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-/** Summiert Statusbeträge centbasiert je Originalwährung, ohne EUR und AUD zusammenzurechnen. */
+/** Sum fee states in integer cents per original currency, without combining EUR and AUD. */
 export function groupedEarnings(rows: EarningRecord[]) {
   const groups = new Map<
     string,
@@ -140,7 +141,7 @@ export function groupedEarnings(rows: EarningRecord[]) {
   }));
 }
 
-/** Normalisiert eindeutige kommagetrennte Labels und weist übergroße oder steuerzeichenhaltige Eingaben ab. */
+/** Normalize unique comma-separated labels; reject oversized or control-character input. */
 export function parseInvoiceLabels(value: string) {
   const labels = [
     ...new Set(

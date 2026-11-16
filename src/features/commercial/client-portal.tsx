@@ -1,5 +1,6 @@
 /**
- * Organisationsbezogene Kursanfragen und Ausgabenansicht für Kundenkonten. Mitgliedschaften begrenzen die verfügbaren Organisationen; Veröffentlichung und Dozierendenzuweisung sind eigene serverseitige Abläufe.
+ * Organization-scoped course requests and client spending views. Membership limits available
+ * organizations; publication and lecturer allocation remain separate server operations.
  */
 import { useRef, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -42,7 +43,7 @@ import {
 import { PublishClientRequest } from "./pricing";
 import "./platform-i18n";
 import "./platform.css";
-/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
   organisation: z.string().uuid(),
   title: z.string().trim().min(1).max(200),
@@ -67,7 +68,7 @@ const schema = z.object({
     .min(1)
     .max(60),
 });
-/** Erstellt eine organisationsgebundene Kursanfrage aus lokalen Termin- und Preisentwürfen. */
+/** Create an organization-bound course request from local schedule/price drafts. */
 function RequestForm({
   actor,
   organisations,
@@ -403,7 +404,7 @@ function RequestForm({
     </form>
   );
 }
-/** Zeigt den bestätigten Anfragestand und passende Folgeaktionen für diese Organisation. */
+/** Show confirmed request state and applicable next actions for this organization. */
 function RequestCard({
   actor,
   request,
@@ -550,7 +551,7 @@ function RequestCard({
     </article>
   );
 }
-/** Verbindet freigegebene Kundenorganisationen, Anfragen und die eigene Ausgabenprojektion. */
+/** Combine permitted client organizations, requests and the actor's spending projection. */
 export function ClientPortalPage() {
   const { t, i18n } = useTranslation("platform");
   const { session } = useAuth();

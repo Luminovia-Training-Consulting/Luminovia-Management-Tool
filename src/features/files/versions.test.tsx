@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für versionsgebundene Metadaten/Bytes und Freigabe verspäteter Vorschau-Blob-URLs. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for version-bound metadata/bytes and disposal of late preview Blob URLs.
+ * Controlled UI transport does not establish server file authorization.
  */
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -45,7 +46,7 @@ const file: PortalDocument = {
   created_at: "2026-01-01T00:00:00Z",
   deleted_at: null,
 };
-/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(child: React.ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },

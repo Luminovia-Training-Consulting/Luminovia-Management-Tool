@@ -1,7 +1,3 @@
-/**
- * PostgreSQL-Regressionsgruppen für endliche Terminintervalle und historische Migrationsgrenzen.
- * Die Testdatenbank spielt echte Migrationen ein; Rollen-/MFA-Claims prüfen den Datenvertrag unabhängig von der UI.
- */
 /** Real disposable checks: a scheduling API must never create an infinite
  * booking. Migration rejection retains prior data instead of rewriting work. */
 import assert from "node:assert/strict";
@@ -34,14 +30,14 @@ const payload = {
     { starts_at: "2037-06-01T09:00:00Z", ends_at: "2037-06-01T10:00:00Z" },
   ],
 };
-/** Legt gezielt kontrollierte historische Daten vor der jeweiligen Migrationsprüfung an. */
+/** Creates controlled historical records before the selected migration check. */
 async function seed(sql) {
   await sql(
     `insert into auth.users(id,email) values('${admin}','time-admin@example.invalid'),('${teacher}','time-teacher@example.invalid'),('${peer}','time-peer@example.invalid');insert into public.user_roles(user_id,role) values('${admin}','admin'),('${teacher}','lecturer'),('${peer}','lecturer');`,
   );
 }
 let checks = 0;
-/** Zählt und meldet einen Fall erst, wenn sämtliche zugehörigen Assertions erfolgreich abgeschlossen sind. */
+/** Counts and reports a case only after all of its assertions have completed successfully. */
 const check = async (name, fn) => {
   await fn();
   checks++;
@@ -51,7 +47,7 @@ const scopedCounts = `select jsonb_build_object('organisations',(select count(*)
 
 await withTestDatabase("schedule_finite", async ({ sql, actor }) => {
   await seed(sql);
-  /** Sendet den kontrollierten Terminauftrag als AAL2-Verwaltung an create_job, damit die echten Intervall-Constraints wirken. */
+  /** Submits the controlled job as AAL2 management through create_job so real interval constraints apply. */
   const create = async (values = payload) =>
     await actor(
       admin,

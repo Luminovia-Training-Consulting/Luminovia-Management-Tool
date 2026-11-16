@@ -1,6 +1,6 @@
 /**
- * Browserabläufe für ganze Auftragsplätze und zugängliche autorisierte Boardaktionen.
- * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ * Browser workflows for complete job positions and accessible authorised board actions.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
@@ -63,7 +63,7 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
     name: "Auftragsboard",
     exact: true,
   });
-  /** Lokalisiert genau den erzeugten Auftrag im Board, damit fremde Fixturekarten die Prüfung nicht erfüllen. */
+  /** Locates the exact fixture job on the board so unrelated cards cannot satisfy the assertion. */
   const card = () => board.locator(`[data-offer-id="${created.id}"]`);
   await expect(card()).toBeVisible();
   const handle = card().getByRole("button", {

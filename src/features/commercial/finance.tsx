@@ -1,5 +1,6 @@
 /**
- * Honorare, claimbasierte Rechnungen, Prüfung und einzelne Zahlungen. Beträge und Zuordnung folgen bestätigten Serverdatensätzen; Rücknahmen benötigen ihre eigene nachvollziehbare Aktion.
+ * Fees, claim-derived invoices, review and individual payment records. Amounts/references follow
+ * confirmed server rows; payment reversals require their own auditable action.
  */
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -47,13 +48,13 @@ import { RevenuePanel } from "./revenue";
 import "./i18n";
 import "./platform-i18n";
 import "./commercial.css";
-/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const invoiceSchema = z.object({
   number: z.string().trim().min(1).max(80),
   issued: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
-/** Verknüpft eine saubere Rechnungs-PDF-Version mit ausgewählten, servergeprüften akzeptierten Einsätzen. */
+/** Link a clean invoice PDF version to selected accepted assignments checked by the server. */
 function SubmitInvoice({
   actor,
   zone,
@@ -251,7 +252,7 @@ function SubmitInvoice({
     </form>
   );
 }
-/** Erfasst die begründete Rücknahme einer Zahlung als eigenständige Serveraktion. */
+/** Record a reasoned payment reversal as a separate server action. */
 function VoidPayment({
   actor,
   payment,
@@ -307,7 +308,7 @@ function VoidPayment({
     </form>
   );
 }
-/** Lädt die berechtigte Zahlungshistorie der einen Rechnung und zeigt Rücknahmen nachvollziehbar an. */
+/** Load this invoice's authorized payment history and display reversals transparently. */
 function PaymentHistory({
   actor,
   invoice,
@@ -385,13 +386,13 @@ function PaymentHistory({
     </>
   );
 }
-/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const paymentSchema = z.object({
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/),
   paidAt: z.string().min(1),
   reference: z.string().trim().max(200),
 });
-/** Validiert einen Zahlungsentwurf und lässt den Server Restbetrag und Rechnungsstatus prüfen. */
+/** Validate a payment draft; the server checks the remaining balance and invoice state. */
 function RecordPayment({
   actor,
   invoice,
@@ -513,7 +514,7 @@ function RecordPayment({
     </form>
   );
 }
-/** Übermittelt die explizite Rechnungsprüfung beziehungsweise Ablehnung mit dem vorgesehenen Fachvertrag. */
+/** Submit explicit invoice approval/rejection through its business contract. */
 function ReviewInvoice({
   actor,
   invoice,
@@ -590,7 +591,7 @@ function ReviewInvoice({
     </form>
   );
 }
-/** Stellt bestätigte Rechnung, PDF-Version, Prüfstatus und passende Zahlungsaktionen zusammen. */
+/** Combine the confirmed invoice, exact PDF version, review state and applicable payment actions. */
 function InvoiceCard({
   actor,
   invoice,
@@ -741,7 +742,7 @@ function InvoiceCard({
     </article>
   );
 }
-/** Rendert autorisierte Honorardatensätze mit Originalwährung und bestätigtem Abrechnungsstand. */
+/** Render authorized fee records with original currency and confirmed billing state. */
 function EarningsTable({
   rows,
   manager,
@@ -796,7 +797,7 @@ function EarningsTable({
     </div>
   );
 }
-/** Verbindet Rechte, Honorare, Rechnungen, Export und Zahlungsaktionen im aktuellen Akteurskontext. */
+/** Combine permissions, fees, invoices, export and payment actions for the current actor. */
 export function FinancePage() {
   const { t, i18n } = useTranslation("commercial");
   const platformText = useTranslation("platform").t;

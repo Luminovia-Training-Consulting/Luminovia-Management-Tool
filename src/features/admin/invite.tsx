@@ -1,5 +1,6 @@
 /**
- * Einladungsformular mit validierten Eingaben und wiederverwendbarer Anfragekennung. Ein unsicherer Netzwerkabschluss wird nicht als versandte Einladung ausgegeben; Status und erlaubte Rollen kommen aus dem Serververtrag.
+ * Validated invitation form with reusable request identity. An uncertain network outcome is not
+ * a sent invitation; status and permitted roles follow the server contract.
  */
 import { useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -15,16 +16,16 @@ import { db } from "../../lib/supabase";
 import { accountRequest, accountRoles } from "../accounts/api";
 import "../accounts/i18n";
 
-/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
   email: z.string().trim().email().max(254),
   display_name: z.string().trim().max(120),
   role: z.enum(accountRoles),
   organisation_id: z.string(),
 });
-/** Formularwerte direkt aus dem zugehörigen Validierungsschema, damit Eingabe- und TypeScript-Vertrag übereinstimmen. */
+/** Derive form values from the validation schema so runtime input checks and TypeScript agree. */
 type Values = z.infer<typeof schema>;
-/** Erlaubte bestätigte Statuswerte des dauerhaften Einladung-/Reservierungsprotokolls. */
+/** Confirmed status values supported by the durable invitation/reservation protocol. */
 const serverStatuses = [
   "sent",
   "already_sent",
@@ -33,16 +34,16 @@ const serverStatuses = [
   "idempotency_conflict",
   "failed",
 ] as const;
-/** Bekannte Versand- und lokale Fehlerzustände; keiner davon behauptet bei unklarer Antwort einen Versand. */
+/** Known delivery/local failures; an uncertain response must not claim that mail was sent. */
 type ResultStatus =
   | (typeof serverStatuses)[number]
   | "permission_required"
   | "disabled"
   | "origin_denied"
   | "unavailable";
-/** Begrenzte Einladungsergebnisform mit bekanntem Status statt ungeprüfter Antwortdaten. */
+/** Bound the invitation result to known statuses instead of trusting arbitrary response data. */
 type Result = { status: ResultStatus };
-/** Normalisierte fachliche Eingaben zur Wiedererkennung derselben Einladung bei einer Wiederholung. */
+/** Normalized business input used to recognize the same invitation on retry. */
 const signature = (values: Partial<Values>) =>
   JSON.stringify([
     values.email?.trim().toLowerCase() ?? "",
@@ -50,7 +51,7 @@ const signature = (values: Partial<Values>) =>
     values.role ?? "lecturer",
     values.organisation_id ?? "",
   ]);
-/** Begrenzt fremde Antwortdaten auf bekannte Einladungsstatus; unbekannte Antworten werden kein Erfolg. */
+/** Accept only known invitation statuses from response data; unknown responses cannot become success. */
 function resultFrom(value: unknown): Result {
   if (!value || typeof value !== "object") return { status: "unavailable" };
   const data = value as Record<string, unknown>;
@@ -69,10 +70,10 @@ function resultFrom(value: unknown): Result {
   return { status: "unavailable" };
 }
 
-/** The parent shows this form only to actors with users.manage/users.invite.
- * The Edge Function and PostgreSQL repeat the permission and MFA checks.
+/**
+ * Validate invitation/role input, retain retry identity and show only confirmed delivery state.
+ * The parent requires users.manage/users.invite; Edge and PostgreSQL repeat permission/MFA checks.
  */
-/** Validiert Einladung und Rolle, erhält Retry-Identität und zeigt ausschließlich den bestätigten Versandstatus. */
 export function InviteForm({
   allRoles = false,
   canAssignRoles = false,

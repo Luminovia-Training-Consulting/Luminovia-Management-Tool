@@ -1,6 +1,6 @@
 /**
- * Positive und negative PR-Metadatenfälle einschließlich tatsächlicher CLI-Ausführung.
- * Bösartige Labeltexte müssen als Daten behandelt werden; veraltete oder fremde Identitäten scheitern.
+ * Positive and negative PR metadata cases, including actual CLI execution.
+ * Hostile label text must remain data; stale or foreign identities fail.
  */
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
@@ -21,9 +21,9 @@ const catalogue = JSON.parse(
   readFileSync(new URL("../.github/labels.json", import.meta.url), "utf8"),
 );
 const context = { eventName: "pull_request", repository };
-/** Formt Fixture-Namen in das tatsächliche GitHub-Labelobjektformat um. */
+/** Converts fixture label names into GitHub's actual label-object format. */
 const labels = (names) => names.map((name) => ({ name }));
-/** Erzeugt ein kontrolliertes PR-Ereignis mit genauer Zielrepository- und Commitidentität. */
+/** Creates a controlled PR event with exact target-repository and commit identity. */
 function event(names = ["type:docs", "area:github", "risk:low"]) {
   return {
     number: 23,

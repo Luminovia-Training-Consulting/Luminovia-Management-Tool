@@ -1,12 +1,12 @@
 /**
- * PostgreSQL-Regressionsgruppen für Konten, Rollen und reservierte Einladungen.
- * Die Testdatenbank spielt echte Migrationen ein; Rollen-/MFA-Claims prüfen den Datenvertrag unabhängig von der UI.
+ * PostgreSQL regression groups for accounts, roles and reserved invitations.
+ * Real migrations define the contract; controlled role/MFA claims exercise it independently of the UI.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
 let checks = 0;
-/** Zählt und meldet die Gruppe erst nach dem erfolgreichen Abschluss aller zugehörigen Assertions. */
+/** Counts and reports a group only after every related assertion has passed. */
 const check = async (name, fn) => {
   await fn();
   checks++;
@@ -24,7 +24,7 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
   await sql(
     `insert into auth.users(id,email) values${[admin, owner, manager, lecturer, peer, client, participant].map((id) => `('${id}','${id}@example.invalid')`).join(",")};insert into public.user_roles(user_id,role) values('${admin}','admin'),('${owner}','owner'),('${manager}','management'),('${lecturer}','lecturer'),('${peer}','lecturer'),('${client}','client'),('${participant}','participant');update public.profiles set display_name='Fictional account';insert into public.organisations(id,name) values('${org}','Fictional API customer');`,
   );
-  /** Ruft die fachliche Datenbank-API unter den kontrollierten Identitäts-/MFA-Claims der Fixture auf. */
+  /** Calls the business database API under the fixture's controlled identity/MFA claims. */
   const rpc = (who, name, args = [], aal = "aal1") =>
     actor(
       who,

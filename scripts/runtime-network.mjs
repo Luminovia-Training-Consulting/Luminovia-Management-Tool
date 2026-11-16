@@ -1,6 +1,6 @@
 /**
- * Besitzgeprüfte Docker-Netzverwaltung für die lokale Supabase-Laufzeit.
- * Veröffentlichte Dienstports müssen an Loopback gebunden bleiben; fremde Netze werden nicht verändert.
+ * Ownership-checked Docker network management for the local Supabase runtime.
+ * Published service ports must remain on loopback; unrelated networks are not changed.
  */
 import { command } from "./runtime-lib.mjs";
 
@@ -8,7 +8,7 @@ const ownerLabel = "org.luminovia.portal";
 const purposeLabel = "org.luminovia.portal.network";
 const bindingOption = "com.docker.network.bridge.host_binding_ipv4";
 
-/** Leitet den Netzwerknamen ausschließlich aus einer begrenzten sicheren Projektkennung ab. */
+/** Derives the network name only from a constrained, safe project identifier. */
 export function networkName(project) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,100}$/.test(project ?? ""))
     throw new Error(
@@ -17,7 +17,7 @@ export function networkName(project) {
   return `portal_network_${project}`;
 }
 
-/** Prüft Besitzlabels, Bridge-Treiber und ausschließliches Loopback-Binding vor jeder Netzänderung. */
+/** Checks ownership labels, bridge driver and loopback-only publishing before changing a network. */
 export function assertNetworkDefinition(network, project) {
   if (
     network.Name !== networkName(project) ||
@@ -35,7 +35,7 @@ export function assertNetworkDefinition(network, project) {
     );
 }
 
-/** Liest das benannte Netz erst nach Abgleich mit dem tatsächlichen Docker-Netzbestand. */
+/** Inspects the named network only after matching it against Docker's actual network inventory. */
 async function inspectNetwork(project) {
   const names = (
     await command("docker", ["network", "ls", "--format", "{{.Name}}"], {
@@ -52,7 +52,7 @@ async function inspectNetwork(project) {
   )[0];
 }
 
-/** Erzeugt bei Bedarf das eigene Netz und bestätigt anschließend dessen tatsächliche Definition. */
+/** Creates the owned network when needed and then confirms its actual definition. */
 export async function ensureLoopbackNetwork(project) {
   let network = await inspectNetwork(project);
   if (!network) {
@@ -79,7 +79,7 @@ export async function ensureLoopbackNetwork(project) {
   return network.Name;
 }
 
-/** Entfernt nur ein geprüftes eigenes, vollständig unbenutztes Netz; Container werden nicht abgehängt. */
+/** Removes only a verified, entirely unused owned network; containers are never detached to force removal. */
 export async function removeLoopbackNetwork(project) {
   const network = await inspectNetwork(project);
   if (!network) return;
@@ -91,7 +91,7 @@ export async function removeLoopbackNetwork(project) {
   await command("docker", ["network", "rm", network.Name], { quiet: true });
 }
 
-/** Ermittelt projektmarkierte Container und liest deren begrenzte Netzwerkinformationen. */
+/** Finds project-labelled containers and reads their bounded network metadata. */
 async function projectContainers(project) {
   const ids = (
     await command(
@@ -113,7 +113,7 @@ async function projectContainers(project) {
   return await Promise.all(ids.map(containerInfo));
 }
 
-/** Liest gezielt Netzwerk-/Besitzfelder statt einer vollständigen Inspektion mit möglichen Geheimnissen. */
+/** Reads only network/ownership fields; full container inspection could expose secrets. */
 async function containerInfo(id) {
   // Inspect only networking/ownership fields: a full container inspection includes credentials.
   const format =
@@ -125,7 +125,7 @@ async function containerInfo(id) {
   );
 }
 
-/** Bestätigt genau ein eigenes Netz und ausschließlich erlaubte Hostbindungen; Scannerports bleiben intern. */
+/** Requires exactly one owned network and only permitted host bindings; scanner ports stay internal. */
 export function assertContainerBindings(
   container,
   project,
@@ -149,7 +149,7 @@ export function assertContainerBindings(
   }
 }
 
-/** Erkennt veraltete Netzbindungen als Neustartbedarf, ohne fremde Dienste umzubauen. */
+/** Recognises stale network bindings as requiring restart without rebuilding unrelated services. */
 export async function stackNeedsNetworkMigration(project) {
   return (await projectContainers(project)).some((container) => {
     try {
@@ -161,7 +161,7 @@ export async function stackNeedsNetworkMigration(project) {
   });
 }
 
-/** Prüft den tatsächlich laufenden Dienstbestand und die geforderten DB-/Gateway-/Edge-/Scannergrenzen. */
+/** Checks actual running services and the required database/gateway/Edge/scanner boundaries. */
 export async function verifyLoopbackBindings(
   project,
   { scanner = false, edge = false } = {},

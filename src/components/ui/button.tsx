@@ -1,12 +1,13 @@
 /**
- * Zentrale Schaltfläche mit Brand-Varianten und optionaler Radix-Slot-Komposition. Native Button-Attribute bleiben beim tatsächlichen interaktiven Element, auch wenn ein Link als Kind verwendet wird.
+ * Shared brand button variants with optional Radix Slot composition. Native attributes stay on
+ * the actual interactive element, including a child link.
  */
 // shadcn/ui Button pattern (Radix Slot + class-variance-authority), brand adapted.
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import type { ComponentProps } from "react";
 import { cn } from "../../lib/utils";
-/** Zentrale Klassenzuordnung für Varianten und Größen; Fachseiten müssen keine eigene Buttonfarblogik duplizieren. */
+/** Centralize variant/size classes so feature pages reuse the same button styling. */
 const buttonVariants = cva("button", {
   variants: {
     variant: {
@@ -19,7 +20,7 @@ const buttonVariants = cva("button", {
   },
   defaultVariants: { variant: "default", size: "default" },
 });
-/** Wählt die gemeinsame Variante und reicht Attribute an den nativen Button beziehungsweise das Slot-Kind weiter. */
+/** Choose the shared variant and forward attributes to the native button or slotted child. */
 export function Button({
   className,
   variant,

@@ -1,13 +1,14 @@
 /**
- * Best-effort-Ablage ausschließlich für Sprache und Farbschema. Blockierter Browserstorage darf die aktive Oberfläche nicht abbrechen; Auth-Sessionablage folgt ihrem eigenen Supabase-SDK-Vertrag.
+ * Best-effort persistence for language/theme only. Blocked browser storage must not break the
+ * active UI; Auth persistence follows the separate Supabase SDK contract.
  */
-/** Ausschließlich nicht sensible UI-Präferenzen, keine Auth- oder Fachdatenspeicherung. */
+/** Non-sensitive UI preferences only, never Auth or business-data storage. */
 type Preference = "language" | "theme";
 
-/** Visual preferences are best-effort local state. Storage denial or a full
- * quota must not prevent boot, language changes or theme controls from working.
- * Authentication storage stays under the Supabase client's separate contract. */
-/** Liest eine nicht sensible UI-Präferenz und verwendet bei gesperrtem Storage den normalen Fallback. */
+/**
+ * Read a visual preference best-effort; denied/full storage returns null without blocking boot,
+ * language changes or theme controls. Auth persistence keeps the Supabase SDK's separate contract.
+ */
 export function readPreference(name: Preference) {
   try {
     return localStorage.getItem(`luminovia.${name}`);
@@ -16,7 +17,7 @@ export function readPreference(name: Preference) {
   }
 }
 
-/** Speichert die UI-Auswahl best effort, ohne aktive Formulare bei Storagefehlern zurückzusetzen. */
+/** Persist the UI choice best-effort without resetting active forms on storage failure. */
 export function writePreference(name: Preference, value: string) {
   try {
     localStorage.setItem(`luminovia.${name}`, value);

@@ -1,5 +1,6 @@
 /**
- * Personenkarten, freigegebene Profilinformationen, Bewertungen und Einschreibung. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ * People cards, shared profile fields, reviews and enrollment, using shared brand colours and
+ * surface variables.
  */
 .people-filters {
   display: grid;
@@ -7,7 +8,7 @@
   gap: 16px;
   margin-bottom: 24px;
 }
-/* Das berechtigte Verzeichnis passt die Kartenzahl an die verfügbare Breite an. */
+/* Adapt the authorized directory's card count to available width. */
 .people-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
@@ -117,7 +118,7 @@
   padding: 12px 0;
   border-bottom: 1px solid var(--line);
 }
-/* Layoutanpassung (max-width: 700px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 700px) {
   .people-filters,
   .people-details-grid,

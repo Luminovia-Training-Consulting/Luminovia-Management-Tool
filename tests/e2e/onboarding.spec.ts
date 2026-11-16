@@ -1,6 +1,6 @@
 /**
- * Browserabläufe für tatsächliche Einladungs-/Recoverylinks aus lokalem Mailpit.
- * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ * Browser workflows using actual invitation/recovery links captured by local Mailpit.
+ * Mail is captured inside the fixture; these checks do not prove external delivery or manual platform acceptance.
  */
 import { test, expect } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";

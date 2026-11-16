@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Lokaler PostgreSQL-Prüfeinstieg: echte RPC-Fälle, Lint und Advisors.
-# Der eigentliche Gesamtprüflauf ruft Datenbanktests in seinem eigenen Testprojekt auf.
+# SQL-only entry point for real RPC cases, lint and advisors.
+# The canonical full runner supplies its own disposable project context.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 node scripts/db-rpc-tests.mjs

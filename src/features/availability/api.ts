@@ -1,5 +1,6 @@
 /**
- * Private Verfügbarkeitsfenster, bewusst reduzierte Managementfreigabe und versionierte Änderungen. Bestehende exakte Instants bleiben bei reinen Metadatenänderungen erhalten; neue lokale Zeiten müssen eindeutig auflösbar sein.
+ * Private availability, explicitly reduced management sharing and versioned changes. Preserve
+ * exact instants for metadata-only edits; new local times must resolve unambiguously.
  */
 import { queryOptions } from "@tanstack/react-query";
 import { DateTime } from "luxon";
@@ -7,7 +8,7 @@ import { z } from "zod";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 import { validZone, zonedInstant } from "../../lib/dates";
-/** Eigener versionierter Zeitraum mit privater Notiz und ausdrücklicher Managementfreigabe. */
+/** Own versioned interval with a private note and explicit management-sharing flag. */
 export interface AvailabilityWindow {
   id: string;
   user_id: string;
@@ -19,12 +20,12 @@ export interface AvailabilityWindow {
   share_with_management: boolean;
   version: number;
 }
-/** Reduzierte Managementprojektion ohne private Notizen oder bearbeitbare Versionsinformation. */
+/** Reduced management projection without private notes or editable version information. */
 export type SharedAvailabilityWindow = Omit<
   AvailabilityWindow,
   "notes" | "share_with_management" | "version"
 > & { display_name: string };
-/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 export const availabilitySchema = z.object({
   kind: z.enum(["available", "unavailable"]),
   starts_at: z.string().min(1),
@@ -33,9 +34,9 @@ export const availabilitySchema = z.object({
   notes: z.string().max(2000),
   share_with_management: z.boolean(),
 });
-/** Aus dem Formularschema abgeleiteter Entwurf vor der Umrechnung lokaler Zeiten in Instants. */
+/** Draft values derived from the form schema before converting local times to instants. */
 export type AvailabilityValues = z.infer<typeof availabilitySchema>;
-/** Validiert Fensterdaten und bewahrt unveränderte exakte Instants, die ein minutenweises Formular nicht verlustfrei repräsentiert. */
+/** Validate windows and preserve unchanged instants that minute-precision inputs cannot represent losslessly. */
 export function availabilityPayload(
   values: AvailabilityValues,
   previous?: Pick<AvailabilityWindow, "starts_at" | "ends_at" | "time_zone">,
@@ -63,7 +64,7 @@ export function availabilityPayload(
     throw new Error("invalid-time");
   return { ...parsed, starts_at: starts, ends_at: ends };
 }
-/** Begrenzt lokale inklusive Datumseingaben auf ein gültiges halboffenes UTC-Lesefenster. */
+/** Convert inclusive local date input into a valid half-open UTC read window. */
 export function availabilityRange(from: string, to: string, zone: string) {
   const start = DateTime.fromISO(from, { zone }).startOf("day"),
     end = DateTime.fromISO(to, { zone }).plus({ days: 1 }).startOf("day");
@@ -76,7 +77,7 @@ export function availabilityRange(from: string, to: string, zone: string) {
     return null;
   return { from: start.toUTC().toISO()!, to: end.toUTC().toISO()! };
 }
-/** Lädt die Serverprojektion über my_availability und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read the my_availability server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const myAvailabilityQuery = (actor: string, from: string, to: string) =>
   queryOptions({
     queryKey: ["availability", actor, from, to],
@@ -89,7 +90,7 @@ export const myAvailabilityQuery = (actor: string, from: string, to: string) =>
     },
     staleTime: 15000,
   });
-/** Lädt die Serverprojektion über shared_availability und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read the shared_availability server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const sharedAvailabilityQuery = (
   actor: string,
   from: string,
@@ -106,7 +107,7 @@ export const sharedAvailabilityQuery = (
     },
     staleTime: 15000,
   });
-/** Übermittelt eigene Fensterdaten samt erwarteter Version; die RPC entscheidet über Konflikte und aktuelle Rechte. */
+/** Submit own window data with its expected version; the RPC decides conflicts and current permission. */
 export async function saveAvailability(
   id: string,
   version: number,
@@ -114,8 +115,8 @@ export async function saveAvailability(
   previous?: AvailabilityWindow,
 ) {
   requireOnline();
-  // Nutzeridentität und Konfliktprüfung kommen aus der nativen Serversession.
-  // Die erwartete Version verhindert das Überschreiben eines neueren Fensterstands.
+  // Actor identity and conflict checks come from the native server session.
+  // The expected version prevents overwriting a more recent window revision.
   const { data, error } = await db().rpc("save_lecturer_availability", {
     p_id: id,
     p_payload: availabilityPayload(values, previous),
@@ -124,7 +125,7 @@ export async function saveAvailability(
   if (error) throw error;
   return data as string;
 }
-/** Entfernt das angegebene eigene Fenster nur gegen seine erwartete Version und bei echter Onlineantwort. */
+/** Remove the own window only against its expected version and a successful online response. */
 export async function removeAvailability(window: AvailabilityWindow) {
   requireOnline();
   const { error } = await db().rpc("remove_lecturer_availability", {

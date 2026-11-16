@@ -1,6 +1,6 @@
 /**
- * Browserabläufe für gebaute öffentliche Offlinehülle ohne private API-Caches.
- * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ * Browser checks for the built public offline shell without private API caches.
+ * Service-worker behaviour is exercised in Chromium; physical PWA installation remains separate acceptance.
  */
 import { test, expect } from "@playwright/test";
 

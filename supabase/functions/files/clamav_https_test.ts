@@ -1,5 +1,5 @@
 /**
- * Injizierte HTTPS-Scannerantworten prüfen Fristen, Redirectverbot, Größen und Signaturalter. Testwerte enthalten keine echten Gatewaygeheimnisse; Timeoutfälle behalten die reale Abbruchlogik.
+ * Injected HTTPS replies exercise deadlines, redirect rejection, size and signature age. Use fictional secrets and retain real timeout/abort behavior.
  */
 import { type HttpsScannerConfig, scan } from "./clamav.ts";
 
@@ -8,15 +8,15 @@ const config = {
   url: "https://scanner.example.invalid/scan",
   token: "test_".padEnd(64, "a"),
 };
-// Erzeugt einen zur Testlaufzeit frischen fiktiven ClamAV-Signaturzeitstempel.
+// Create a fictional ClamAV signature timestamp fresh at test execution.
 const freshVersion = () => "ClamAV 1.4.3/12345/" + new Date().toUTCString();
-// Erzeugt die kontrollierte JSON-Scannerantwort für die folgenden Protokollfälle.
+// Build the controlled JSON scan response for protocol cases.
 const response = (value: unknown) => Response.json(value);
-// Lässt eine konkrete Fixturebedingung als echten Testfehler scheitern; es gibt keinen stillen Erfolgsersatz.
+// Fail a specific fixture condition as a real test failure; never substitute silent success.
 function assert(value: unknown, message = "assertion failed"): asserts value {
   if (!value) throw new Error(message);
 }
-// Verlangt die tatsächliche Ablehnung des übergebenen Vorgangs und prüft gegebenenfalls den stabilen Fehlergrund.
+// Require the operation to reject and optionally check its stable failure reason.
 async function rejects(work: () => Promise<unknown>, expected?: string) {
   try {
     await work();
@@ -31,7 +31,7 @@ async function rejects(work: () => Promise<unknown>, expected?: string) {
   }
   throw new Error("expected rejection");
 }
-// Injiziert ausschließlich die vorgegebene Scannerantwort und behält die echte Adaptervalidierung bei.
+// Inject only the chosen response while retaining actual adapter validation.
 const fetchWith = (value: Response) =>
   (() => Promise.resolve(value)) as typeof fetch;
 

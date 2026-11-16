@@ -1,4 +1,4 @@
-# Begrenzt den Scanner-Buildkontext auf eigene Runtimequellen; private Konfiguration und Tests werden nicht in das Image übernommen.
+# Limit the scanner build context to maintained runtime source; exclude private configuration and tests from the image.
 *.test.mjs
 node_modules
 .env*

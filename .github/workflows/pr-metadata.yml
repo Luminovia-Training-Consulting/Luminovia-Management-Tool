@@ -1,4 +1,4 @@
-# Labels werden als Daten aus der API gelesen, niemals als Shell-Programm ausgeführt.
+# Read labels from the API as data; never execute them as shell commands.
 name: Pull request metadata
 on:
   pull_request:

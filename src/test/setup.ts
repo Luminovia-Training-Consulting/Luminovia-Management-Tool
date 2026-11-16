@@ -1,4 +1,5 @@
 /**
- * Gemeinsame Vitest-/Testing-Library-Umgebung mit zusätzlichen DOM-Matchern. Fixtures und Cleanup werden in den jeweiligen Tests eingerichtet; dieses Modul stellt ausschließlich die gemeinsamen Assertions bereit.
+ * Shared Vitest/Testing Library environment with additional DOM matchers. Individual tests own
+ * their fixtures/cleanup; this module supplies assertions only.
  */
 import "@testing-library/jest-dom/vitest";

@@ -1,5 +1,6 @@
 /**
- * Explizit ausgelöste globale Suche mit begrenztem URL-Suchtext. Nur die sichere Suchprojektion des Servers liefert Ergebnisse; private Entwürfe und fremde Ressourcen werden nicht im Browser zu einem Vollindex zusammenkopiert.
+ * Explicit global search with bounded URL input. Only the safe server projection supplies
+ * results; private drafts/foreign resources are not assembled into a client-side full index.
  */
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -10,7 +11,7 @@ import { useAuth } from "../auth/auth-context";
 import { db } from "../../lib/supabase";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Loading, PageHeading } from "../../components/common";
-/** Sichere Suchprojektion mit Titel, Vorschau und serverbestimmtem Ziel. */
+/** Safe search projection with title, excerpt and server-determined destination. */
 interface Result {
   id: string;
   kind: string;
@@ -18,7 +19,7 @@ interface Result {
   detail: string;
   url: string;
 }
-/** Übernimmt den Suchentwurf erst beim ausdrücklichen Absenden in den aktiven Suchzustand. */
+/** Apply the search draft only when the user explicitly submits it. */
 function SearchForm({
   query,
   onSearch,
@@ -53,7 +54,7 @@ function SearchForm({
     </form>
   );
 }
-/** Begrenzt den URL-Suchtext und fordert ab zwei Zeichen die berechtigungsgefilterte Serversuche an. */
+/** Bound URL terms and request permission-filtered server search from two characters onward. */
 export function PortalSearch() {
   const { t } = useTranslation();
   const { session } = useAuth();

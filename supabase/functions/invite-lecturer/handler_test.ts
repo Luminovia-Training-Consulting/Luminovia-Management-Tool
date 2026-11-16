@@ -1,5 +1,5 @@
 /**
- * Einladungsfälle mit injizierten Abhängigkeiten prüfen Origin, Auth, Größen und idempotente Reservierung. Erfolgs- und Fehlerantworten dürfen keinen zweiten Versand nach einem unklaren ersten Ergebnis auslösen.
+ * Injected invitation cases exercise origin, Auth, limits and idempotent reservation. Success/failure handling must not send twice after an ambiguous first result.
  */
 import {createHandler,parseBody,type InviteDependencies} from './handler.ts';
 function equal(a:unknown,b:unknown){if(JSON.stringify(a)!==JSON.stringify(b))throw new Error(`Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);}

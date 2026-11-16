@@ -1,5 +1,6 @@
 /**
- * Actor-bezogene Query-Schlüssel und autorisierte Chatprojektionen. Die Nachrichtenhistorie verwendet Zeit/ID-Cursor; Realtime dient ergänzend zur Revalidierung und ersetzt keine RPC-Zugriffsprüfung.
+ * Actor-scoped query keys and authorized chat projections. History uses timestamp/ID cursors;
+ * Realtime supplements revalidation and never replaces RPC access checks.
  */
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
@@ -10,7 +11,7 @@ import type {
   ChatRoom,
   MessageCursor,
 } from "./types";
-/** Einheitliche Cachepräfixe für gezielte Revalidierung und sofortiges Entfernen eines widerrufenen Raums. */
+/** Shared cache prefixes for targeted revalidation and immediate removal of a revoked room. */
 export const chatKeys = {
   rooms: (actor: string) => ["chat-rooms", actor] as const,
   contacts: (actor: string) => ["chat-contacts", actor] as const,
@@ -19,7 +20,7 @@ export const chatKeys = {
   messages: (actor: string, room: string) =>
     ["chat-messages", actor, room] as const,
 };
-/** Lädt die Serverprojektion über chat_rooms_list und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read the chat_rooms_list server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const chatRoomsQuery = (actor: string) =>
   queryOptions({
     queryKey: chatKeys.rooms(actor),
@@ -31,7 +32,7 @@ export const chatRoomsQuery = (actor: string) =>
     refetchInterval: 3000,
     staleTime: 1000,
   });
-/** Lädt die Serverprojektion über chat_contacts und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read the chat_contacts server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const chatContactsQuery = (actor: string) =>
   queryOptions({
     queryKey: chatKeys.contacts(actor),
@@ -41,7 +42,7 @@ export const chatContactsQuery = (actor: string) =>
       return (data ?? []) as ChatContact[];
     },
   });
-/** Lädt die Serverprojektion über chat_room_members und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read the chat_room_members server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const chatMembersQuery = (actor: string, room: string) =>
   queryOptions({
     queryKey: chatKeys.members(actor, room),
@@ -54,7 +55,7 @@ export const chatMembersQuery = (actor: string, room: string) =>
     },
     refetchInterval: 5000,
   });
-/** Lädt die Serverprojektion über chat_messages und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read the chat_messages server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const chatMessagesQuery = (
   actor: string,
   room: string,
@@ -83,7 +84,7 @@ export const chatMessagesQuery = (
     staleTime: 1000,
     refetchInterval: 10000,
   });
-/** Erkennt den PostgreSQL-Rechtefehler, damit die Oberfläche behaltene Raumdaten verbergen kann. */
+/** Recognize PostgreSQL access denial so the UI can hide retained room data. */
 export function chatAccessDenied(error: unknown) {
   return Boolean(
     error &&
@@ -92,7 +93,7 @@ export function chatAccessDenied(error: unknown) {
     error.code === "42501",
   );
 }
-/** Entfernt Cursorüberschneidungen zugunsten der zuerst geladenen neueren Seite und sortiert stabil nach Zeit/ID. */
+/** Deduplicate overlapping cursors in favour of the newer page loaded first, then sort stably by timestamp/ID. */
 export function orderedMessages(pages: ChatMessage[][] | undefined) {
   const unique = new Map<string, ChatMessage>();
   // Newer pages win if a concurrent update makes cursor pages overlap.

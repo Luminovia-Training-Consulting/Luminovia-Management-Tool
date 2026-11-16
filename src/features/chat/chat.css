@@ -1,12 +1,13 @@
 /**
- * Raum-/Threadlayout, Nachrichten, Composer und mobile Einzelansicht des Chats. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ * Room/thread layout, messages, composer and mobile single-pane chat, using shared brand colours
+ * and surface variables.
  */
 .chat-page-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 9px;
 }
-/* Desktop: Raumwahl und aktiver Verlauf nebeneinander, beide ohne intrinsischen horizontalen Überlauf. */
+/* Desktop room selection and active history sit side by side without intrinsic horizontal overflow. */
 .chat-workspace {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
@@ -82,7 +83,7 @@
   line-height: 1.5;
   margin-top: 5px;
 }
-/* Raumzeilen halten Auswahl, Ungelesenzahl und Raumart getrennt sichtbar. */
+/* Keep selection, unread count and room type distinct in each room row. */
 .chat-room-list {
   display: flex;
   flex-direction: column;
@@ -231,7 +232,7 @@
   top: -20px;
   color: var(--brand);
 }
-/* Aktiver Gesprächsbereich mit eigener scrollbarer Historie. */
+/* The active conversation owns its scrollable history. */
 .chat-thread {
   display: flex;
   flex-direction: column;
@@ -339,7 +340,7 @@
   margin: 0;
   list-style: none;
 }
-/* Nachrichten behalten Autor, Zeit, Text und bestätigte Anhänge als zusammenhängenden Eintrag. */
+/* Keep author, time, text and confirmed attachments together as one message entry. */
 .chat-message {
   display: flex;
   gap: 10px;
@@ -501,7 +502,7 @@
   justify-content: center;
   margin-bottom: 18px;
 }
-/* Verbleibender Entwurf, Uploadstatus und Versandaktionen bilden einen gemeinsamen Composer. */
+/* Keep the retained draft, upload state and send controls in one composer. */
 .chat-composer {
   padding: 14px 24px 17px;
   border-top: 1px solid var(--line);
@@ -680,7 +681,7 @@
   max-height: 170px;
   overflow-y: auto;
 }
-/* Layoutanpassung (max-width: 1150px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 1150px) {
   .chat-workspace {
     grid-template-columns: 260px minmax(0, 1fr);
@@ -717,7 +718,7 @@
     display: none;
   }
 }
-/* Layoutanpassung (max-width: 900px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 900px) {
   .chat-workspace {
     grid-template-columns: 225px minmax(0, 1fr);
@@ -763,7 +764,7 @@
     min-width: 100px;
   }
 }
-/* Layoutanpassung (max-width: 760px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 760px) {
   .chat-workspace {
     display: block;

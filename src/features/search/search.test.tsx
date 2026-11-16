@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für URL-getriebene Suche mit erhaltenem Tippentwurf und ohne Abruf für zu kurze Begriffe. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for URL-driven search, retained typing drafts and no requests for short terms. UI
+ * fixtures do not replace permission-filtered server search.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -29,7 +30,7 @@ beforeEach(() => {
   });
 });
 afterEach(cleanup);
-/** Rendert die tatsächliche Seite in ihrem Router-/Query-Kontext für die folgenden Bedienprüfungen. */
+/** Render the real page in its router/query context for the interaction checks below. */
 function page() {
   const router = createMemoryRouter(
     [{ path: "/search", element: <PortalSearch /> }],

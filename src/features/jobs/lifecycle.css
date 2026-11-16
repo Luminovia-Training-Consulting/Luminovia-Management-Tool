@@ -1,5 +1,6 @@
 /**
- * Angebotsaktionen, Claimhistorie und explizite Bestätigungsdialoge. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ * Offer actions, claim history and explicit confirmations, using shared brand colours and
+ * surface variables.
  */
 .job-lifecycle {
   margin-block: 1.5rem;
@@ -11,7 +12,7 @@
   flex-wrap: wrap;
   gap: 0.65rem;
 }
-/* Kapazität und freie/angenommene Plätze stehen als eigener überprüfbarer Verwaltungsbereich. */
+/* Expose capacity and free/accepted positions as a distinct, checkable administrative section. */
 .job-life-capacity {
   display: flex;
   flex-wrap: wrap;
@@ -33,7 +34,7 @@
 .job-life-form > button {
   justify-self: start;
 }
-/* Vergangene Claims und Freigaben bleiben als Historie lesbar statt aus dem Angebot zu verschwinden. */
+/* Keep past claims/releases visible as history instead of removing them from the offer. */
 .job-life-history {
   display: grid;
   gap: 1rem;

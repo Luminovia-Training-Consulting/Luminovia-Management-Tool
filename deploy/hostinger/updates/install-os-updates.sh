@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Operatorinstaller für offizielle Ubuntu-Sicherheitsupdates der freigegebenen Entwicklungsinstanz. Erhält einen fremden Schutzdienst und koordiniert Paketoperationen mit der gemeinsamen Wartungssperre.
+# Install official Ubuntu security-update policy for the authorized development instance, retaining repository/service safety checks and shared maintenance locking.
 set -euo pipefail
 if [[ $(id -u) != 0 ]]; then
   echo "Run this reviewed installer as the VPS administrator." >&2

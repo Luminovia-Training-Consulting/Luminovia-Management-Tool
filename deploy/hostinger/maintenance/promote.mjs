@@ -1,5 +1,5 @@
 /**
- * Promotet ausschließlich geprüfte Änderungen aus der festen Wartungs-Allowlist. Vergleicht den erwarteten Main-Basiscommit vor dem signierten GitHub-Commit; ein veralteter Kandidat darf parallele Arbeit nicht überschreiben.
+ * Promote only verified changes from the fixed maintenance allowlist. Compare the expected main base before creating a signed commit so a stale candidate cannot overwrite concurrent work.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -26,7 +26,7 @@ import {
   validatePgProof,
 } from "./daily-updates.mjs";
 
-// Begrenzt einen einzelnen Kandidatendiff auf erlaubte Dateien und die zugehörigen Updatewerte.
+// Limit one candidate diff to allowed files and their permitted update values.
 export function validateFileChange(
   path,
   before,
@@ -140,7 +140,7 @@ export function validateFileChange(
     );
   }
 }
-// Prüft Quellenbasis, Kandidatenstruktur und alle Änderungen vor einem GitHub-Schreibzugriff.
+// Validate the source base, candidate structure and every change before writing to GitHub.
 export function validatePatch(patch, root = ROOT) {
   assert(
     patch.schemaVersion === 1 &&
@@ -266,7 +266,7 @@ export function validatePatch(patch, root = ROOT) {
     );
   }
 }
-// Begrenzt den GitHub-Aufruf auf die benötigte API und gibt Fehler ohne ein scheinbar erfolgreiches Teilergebnis weiter.
+// Call the required GitHub API and propagate failure instead of returning apparent partial success.
 export async function github(
   path,
   { method = "GET", body, allowMissing = false } = {},
@@ -291,7 +291,7 @@ export async function github(
   );
   return response.status === 204 ? null : response.json();
 }
-// Erzeugt den signierten Commit auf der überprüften Basis und liest den Signaturnachweis zurück.
+// Create the signed commit on the checked base and read back signature verification.
 async function createSignedCommit(branch, base, additions, headline, api) {
   const response = await api("/graphql", {
     method: "POST",
@@ -325,8 +325,8 @@ async function createSignedCommit(branch, base, additions, headline, api) {
   );
   return commit;
 }
-// Prüft den aktuellen Main-Stand erneut und aktualisiert nur den unveralteten, vollständig validierten Kandidaten.
-// Die finale Branchaktualisierung bleibt an dieselbe zuvor geprüfte Basis gebunden; paralleles Main gewinnt gegenüber einem veralteten Patch.
+// Recheck current main and promote only a fully validated candidate whose base is still current.
+// Keep the final branch update bound to the checked base; a concurrent main update wins over a stale patch.
 export async function promote(patch, { root = ROOT, api = github } = {}) {
   validatePatch(patch, root);
   const branch = await api("/repos/" + REPOSITORY + "/branches/main");
@@ -347,7 +347,7 @@ export async function promote(patch, { root = ROOT, api = github } = {}) {
   });
   return { status: "promoted_waiting_for_exact_main_ci", commit };
 }
-// Prüft die tatsächliche Signaturfähigkeit des aktuellen GitHub-Schreibpfads auf einem begrenzten Probe-Ref.
+// Test actual signing capability through the current GitHub write path on an owned probe ref.
 export async function signatureProbe(api = github) {
   const main = await api("/repos/" + REPOSITORY + "/branches/main");
   const base = main.commit?.sha;
@@ -387,7 +387,7 @@ export async function signatureProbe(api = github) {
       });
   }
 }
-// Fordert nur die CI für den aktuell erwarteten Main-Commit an; ein Workflowstart allein ist noch kein bestandener Lauf.
+// Dispatch CI only for the expected current main commit; starting a workflow does not mean it passed.
 export async function retryMainChecks(api = github) {
   const branch = await api("/repos/" + REPOSITORY + "/branches/main");
   const commit = branch.commit?.sha;
@@ -417,7 +417,7 @@ export async function retryMainChecks(api = github) {
   });
   return { status: "retried_unreleased_main_checks", commit };
 }
-// Verarbeitet nur die dokumentierten Unterbefehle und gibt Fehler als fehlgeschlagenen Prozessabschluss weiter.
+// Handle only documented subcommands and propagate failures as a failed process exit.
 async function cli() {
   const [operation, file] = process.argv.slice(2);
   const result =

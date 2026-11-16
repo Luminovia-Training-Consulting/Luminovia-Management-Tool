@@ -1,5 +1,6 @@
 /**
- * Raumverzeichnis, Direktnachrichtenstart und Auswahl des aktiven Gesprächs. Die Raumauswahl steuert die Thread-Lebensdauer; Kontakte und Mitgliedschaften stammen aus autorisierten Serverprojektionen.
+ * Room directory, direct-message creation and active conversation selection. Selection owns
+ * thread lifetime; contacts and membership come from authorized server projections.
  */
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -28,7 +29,7 @@ import { ContactPicker, CreateGroup, RoomIcon } from "./manage";
 import { ChatThread } from "./thread";
 import "./i18n";
 import "./chat.css";
-/** Steuert Raumauswahl und DM-Start aus autorisierten Kontakt-/Raumprojektionen. */
+/** Select rooms and start DMs using authorized contact/room projections. */
 export function ChatPage() {
   const { t, i18n } = useTranslation("chat");
   const online = useOnline();

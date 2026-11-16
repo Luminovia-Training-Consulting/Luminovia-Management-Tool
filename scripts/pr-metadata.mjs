@@ -1,6 +1,6 @@
 /**
- * Prüft aktuelle PR-Identität und die gemeinsamen Pflichtkategorien für Labels.
- * Ereignisfelder bleiben Daten; Repository und API-Ziel werden nicht aus frei gelieferten URLs übernommen.
+ * Checks current PR identity and the shared required label categories.
+ * Event fields remain data; repository and API targets are not accepted from arbitrary supplied URLs.
  */
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -9,12 +9,12 @@ import { fileURLToPath } from "node:url";
 const repository = "Luminovia-Training-Consulting/Luminovia-Management-Tool";
 const categories = ["type", "risk", "area"];
 
-/** Bricht bei ungültiger Metadatenbedingung mit einer gezielten Meldung ab. */
+/** Rejects an invalid metadata condition with a specific diagnostic. */
 function requireMetadata(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-/** Validiert den gemeinsamen Katalog einschließlich eindeutiger Namen und aller Pflichtkategorien. */
+/** Validates the shared catalogue, including unique names and all required categories. */
 function allowedLabels(catalogue) {
   requireMetadata(
     Array.isArray(catalogue),
@@ -39,7 +39,7 @@ function allowedLabels(catalogue) {
   return names;
 }
 
-/** Bindet PR-Nummer, Zielrepository und vollständige Commit-SHA an die erwartete Identität. */
+/** Binds the PR number, target repository and full commit SHA to the expected identity. */
 function checkIdentity(pullRequest, number) {
   requireMetadata(
     pullRequest &&
@@ -51,7 +51,7 @@ function checkIdentity(pullRequest, number) {
   );
 }
 
-/** Lehnt fremde oder ungeeignete Ereignisse vor jedem Netzwerkzugriff ab. */
+/** Rejects foreign or unsuitable events before any network request. */
 function checkEventIdentity(event, context) {
   requireMetadata(
     context.eventName === "pull_request" &&
@@ -65,7 +65,7 @@ function checkEventIdentity(event, context) {
 }
 
 /** Validate metadata only. PR titles, bodies and label names are never commands. */
-/** Prüft aktuelle Labels gegen den Katalog und lehnt einen inzwischen überholten PR-Head ab. */
+/** Validates current labels against the catalogue and rejects a superseded PR head. */
 export function validatePullRequestMetadata(event, catalogue, context = {}) {
   checkEventIdentity(event, context);
   const pullRequest = context.livePullRequest ?? event.pull_request;
@@ -118,7 +118,7 @@ export function validatePullRequestMetadata(event, catalogue, context = {}) {
   };
 }
 
-/** Liest das Ereignis, bestätigt die aktuelle REST-Identität und gibt ausschließlich validierte Klassifikationen aus. */
+/** Reads the event, verifies current REST identity and outputs only validated classifications. */
 async function main() {
   requireMetadata(
     process.env.GITHUB_EVENT_PATH,

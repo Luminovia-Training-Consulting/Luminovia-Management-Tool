@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für Reihenfolge von Initialsession und Auth-Ereignissen sowie Entfernen fremder Cachezustände. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for initial-session/Auth-event ordering and clearing another actor's cached data.
+ * SDK fixtures test ordering; actual Auth/RLS/browser acceptance remains separate.
  */
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -14,7 +15,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
-/** Macht den tatsächlichen Auth-Contextzustand für die Assertions beobachtbar. */
+/** Expose the actual Auth context state to the assertions. */
 function State() {
   const state = useAuth();
   return (
@@ -27,7 +28,7 @@ function State() {
     </p>
   );
 }
-/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup() {
   let callback!: (event: AuthChangeEvent, session: Session | null) => void;
   let resolve!: (value: {

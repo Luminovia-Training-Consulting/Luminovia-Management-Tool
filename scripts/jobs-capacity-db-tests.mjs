@@ -1,7 +1,3 @@
-/**
- * PostgreSQL-Regressionsgruppen für mehrere vollständige Auftragsplätze und deren unveränderliche Annahmen.
- * Die Testdatenbank spielt echte Migrationen ein; Rollen-/MFA-Claims prüfen den Datenvertrag unabhängig von der UI.
- */
 /** Real PostgreSQL slot/currency/budget/concurrency checks. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -15,7 +11,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
     `insert into auth.users(id,email) values('${manager}','capacity-admin@example.invalid'),('${client}','capacity-client@example.invalid'),${teachers.map((id, i) => `('${id}','capacity-${i}@example.invalid')`).join(",")};insert into public.user_roles(user_id,role) values('${manager}','admin'),('${client}','client'),${teachers.map((id) => `('${id}','lecturer')`).join(",")}`,
   );
   let day = 0;
-  /** Erzeugt einen kontrollierten Auftrag mit ausdrücklicher Währungs- und Brutto-/Nettovariante. */
+  /** Creates a controlled job with an explicit currency and gross/net pricing variant. */
   const body = (gross = false, currency = "EUR") => {
     day += 3;
     return {
@@ -38,7 +34,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
       })),
     };
   };
-  /** Erzeugt den vollständigen Mehrplatzauftrag über create_capacity_job mit kontrollierter Kapazität, Preisvariante und Retry-Kennung. */
+  /** Creates the complete multi-position offer through create_capacity_job with controlled capacity, pricing and retry identity. */
   const create = async (
     capacity = 3,
     gross = false,
@@ -50,10 +46,10 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
       `select public.create_capacity_job(${quoteSql(JSON.stringify(payload))}::jsonb,${capacity},'${key}')`,
       "aal2",
     );
-  /** Liest die aktuelle Managementprojektion einschließlich Versionsstand mit der angegebenen MFA-Stufe. */
+  /** Reads the current versioned management projection at the specified MFA level. */
   const meta = async (job, who = manager, aal = "aal2") =>
     JSON.parse(await actor(who, `select public.job_lifecycle('${job}')`, aal));
-  /** Ruft die tatsächliche Claim-RPC auf; nur das Datenbankergebnis bestätigt eine vollständige Zuweisung. */
+  /** Calls the actual claim RPC; only the database result confirms whole-block allocation. */
   const claim = async (job, who, key = randomUUID()) => {
     const version = await sql(
       `select terms_version from public.jobs where id='${job}'`,
@@ -62,20 +58,20 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
       await actor(who, `select public.claim_job('${job}','${key}',${version})`),
     );
   };
-  /** Storniert eine konkrete angenommene Position über den geprüften Fachvertrag statt Claimzeilen direkt zu ändern. */
+  /** Cancels an accepted position through the business contract rather than directly editing claim rows. */
   const cancel = async (claimId, who) =>
     actor(
       who,
       `select public.cancel_job_assignment('${claimId}','Fictional position cancellation','${randomUUID()}')`,
     );
-  /** Öffnet einen stornierten Auftrag ausdrücklich wieder; freie Plätze allein erlauben keine Ersatzannahme. */
+  /** Explicitly reopens a cancelled job; free positions alone must not permit a replacement claim. */
   const reopen = async (job) =>
     actor(
       manager,
       `select public.manage_job_offer('${job}','reopen',${(await meta(job)).version},'${randomUUID()}', '{"reason":"Fictional replacement position required"}')`,
       "aal2",
     );
-  /** Zählt und meldet einen Fall erst, wenn sämtliche zugehörigen Assertions erfolgreich abgeschlossen sind. */
+  /** Counts and reports a case only after all of its assertions have completed successfully. */
   const check = async (name, run) => {
     await run();
     checks++;
@@ -242,7 +238,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
       assert.ok(claimed.every((x) => x.status === "confirmed"));
       assert.equal(Number((await meta(job)).gross_budget), 300.03);
       assert.equal((await meta(job, teachers[0], "aal1")).gross_budget, null);
-      /** Liest den geprüften Bestandszustand für Vergleiche vor und nach einer konkurrierenden oder abgelehnten Aktion. */
+      /** Captures actual retained state before and after a concurrent or rejected action. */
       const summary = async () =>
         JSON.parse(
           await actor(

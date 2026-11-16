@@ -1,5 +1,6 @@
 /**
- * Katalogsuche, Hierarchiedetails und versionierter Themeneditor. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ * Catalogue search, hierarchy details and versioned topic editor, using shared brand colours and
+ * surface variables.
  */
 .taxonomy-filters {
   display: grid;
@@ -80,7 +81,7 @@
 .taxonomy-editor textarea {
   min-height: 110px;
 }
-/* Layoutanpassung (max-width: 640px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 640px) {
   .taxonomy-filters,
   .taxonomy-editor-pair {

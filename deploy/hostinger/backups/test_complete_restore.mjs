@@ -1,5 +1,5 @@
 /**
- * Native Wiederherstellungsprobe mit synthetischem Komplettbackup. Echte age-/PostgreSQL-/Dateioperationen prüfen den Recovery-Vertrag; normale Instanzen und echte Konten sind keine Testfixtures.
+ * Native recovery drill using a synthetic complete backup. Real age/PostgreSQL/file operations exercise recovery; normal instances and real accounts are not fixtures.
  */
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, rm, writeFile, readFile } from "node:fs/promises";

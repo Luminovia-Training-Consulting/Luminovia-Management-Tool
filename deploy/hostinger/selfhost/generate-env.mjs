@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Erzeugt die private Konfiguration der genehmigten selbst gehosteten Entwicklung. Öffentlicher Publishable-Key und serverseitige Verwaltungs-/Signiergeheimnisse bleiben getrennt; Ausgabedateien sind exklusiv und privat.
+ * Generate private configuration for authorized selfhost development. Keep the public publishable key separate from server administration/signing secrets; create output files exclusively and privately.
  */
 /**
  * Generate a NEW private self-host configuration. Never prints credential values.
@@ -26,7 +26,7 @@ import {
 import { dirname, isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Erzeugt die öffentliche/private Konfiguration aus validierten Parametern und frischen kryptografischen Werten.
+// Build public/private configuration from validated parameters and fresh cryptographic values.
 export function createConfiguration(options) {
   const portal = checkedUrl(options.portalOrigin, true);
   const api = checkedUrl(options.apiOrigin, false);
@@ -163,7 +163,7 @@ export function createConfiguration(options) {
   };
 }
 
-// Begrenzt Origin-/API-URLs auf das erwartete Protokoll und die jeweils erlaubte Pfadstruktur.
+// Limit origin/API URLs to the expected protocols and permitted path structures.
 function checkedUrl(value, rootOnly) {
   let url;
   try {
@@ -187,7 +187,7 @@ function checkedUrl(value, rootOnly) {
   return url;
 }
 
-// Schreibt neue Konfigurationsdateien exklusiv mit privaten Rechten; vorhandene Geheimnisse werden nicht überschrieben.
+// Create configuration files exclusively with private permissions; never overwrite existing secrets.
 export function writeConfiguration(output, configuration) {
   const destination = resolve(output);
   const publicDestination = destination + ".public.env";

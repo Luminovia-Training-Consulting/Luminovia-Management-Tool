@@ -1,7 +1,3 @@
-/**
- * PostgreSQL-Regressionsgruppen für ausgeführte Vertrags-PDFs, Honorare, Rechnungen und Zahlungen.
- * Die Testdatenbank spielt echte Migrationen ein; Rollen-/MFA-Claims prüfen den Datenvertrag unabhängig von der UI.
- */
 /** Commercial permission and snapshot tests on actual PostgreSQL, in a disposable DB.
  * Auth helpers are compatible stubs here; the separate chat-api-check uses real JWTs/realtime.
  */
@@ -20,7 +16,7 @@ if (
     "Only the named local portal database container is permitted.",
   );
 const database = `commercial_test_${randomUUID().replaceAll("-", "")}`;
-/** Startet das Prüfprogramm mit expliziten Argumenten und bewahrt seinen Fehlerstatus. */
+/** Starts the test program with explicit arguments and preserves its failure status. */
 function command(args, input = "") {
   return new Promise((resolve, reject) => {
     const child = spawn("docker", args, { stdio: ["pipe", "pipe", "pipe"] });
@@ -35,7 +31,7 @@ function command(args, input = "") {
     child.stdin.end(input);
   });
 }
-/** Sendet SQL an die eigene Testdatenbank und lässt jeden psql-Fehler den Prüflauf ablehnen. */
+/** Sends SQL to the owned test database and makes every psql error fail the run. */
 const sql = (text, name = database) =>
   command(
     [
@@ -54,21 +50,21 @@ const sql = (text, name = database) =>
     ],
     text,
   );
-/** Maskiert SQL-Literalwerte der kontrollierten Testfixture; SQL-Bezeichner folgen eigenen Prüfungen. */
+/** Quotes controlled fixture SQL literals; identifiers have separate validation. */
 const quote = (value) => `'${String(value).replaceAll("'", "''")}'`;
-/** Führt die Prüfung unter einer konkreten Identität aus; Verwaltungsrechte dürfen den Testaufruf nicht verdecken. */
+/** Executes the check as a specific identity so administrative fixture privileges cannot mask the tested access. */
 const actor = (id, statement, aal = "aal1") =>
   sql(
     `begin;set local role authenticated;set local request.jwt.claims=${quote(JSON.stringify({ sub: id, aal, role: "authenticated" }))};${statement};commit;`,
   );
-/** Ruft die öffentliche RPC als Testidentität auf und liefert deren skalaren Datenbankwert. */
+/** Calls the public RPC as the test identity and returns its scalar database value. */
 const value = (id, fn, args = [], aal) =>
   actor(
     id,
     `select public.${fn}(${args.map((x) => (x === null ? "null" : typeof x === "boolean" ? String(x) : quote(x))).join(",")})`,
     aal,
   );
-/** Aggregiert öffentliche RPC-Zeilen als JSON unter der geprüften Aufruferidentität. */
+/** Aggregates public RPC rows into JSON under the checked caller identity. */
 const rows = (id, fn, args = [], aal) =>
   actor(
     id,
@@ -81,7 +77,7 @@ const a = randomUUID(),
   admin2 = randomUUID(),
   participant = randomUUID();
 let checks = 0;
-/** Zählt und meldet einen Fall erst, wenn sämtliche zugehörigen Assertions erfolgreich abgeschlossen sind. */
+/** Counts and reports a case only after all of its assertions have completed successfully. */
 const check = async (name, fn) => {
   await fn();
   checks++;
@@ -91,7 +87,7 @@ const start = new Date(Date.now() + 90 * 86400000),
   expiry = new Date(Date.now() + 365 * 86400000).toISOString(),
   effective = "2026-01-01T00:00:00Z";
 const sha = "1".repeat(64);
-/** Legt eine kontrollierte PDF-Version samt Besitz und Scanstatus für reine SQL-Vertragstests an. */
+/** Creates a controlled PDF version with ownership and scan status for SQL-only contract tests. */
 async function file(owner, kind = "contract", clean = true) {
   const id = randomUUID(),
     version = randomUUID(),
@@ -101,7 +97,7 @@ async function file(owner, kind = "contract", clean = true) {
   );
   return { id, version };
 }
-/** Registriert die genaue ausgeführte Dokumentversion mit kontrollierter MFA-Stufe und eigener Wiederholungskennung. */
+/** Registers the exact executed document version at the controlled MFA level and with its own retry identity. */
 const register = (
   owner,
   document,
@@ -118,7 +114,7 @@ const register = (
     [owner, title, document.version, effective, ends, kind, parent, key],
     aal,
   );
-/** Erzeugt einen fiktiven Auftrag mit kontrollierten Terminen und Konditionen für die anschließenden Assertions. */
+/** Creates a fictional job with controlled sessions and terms for the following assertions. */
 async function job(day, fee, currency = "EUR", requires = false) {
   const begins = new Date(+start + day * 86400000),
     ends = new Date(+begins + 3600000);
@@ -146,7 +142,7 @@ async function job(day, fee, currency = "EUR", requires = false) {
     "aal2",
   );
 }
-/** Ruft die tatsächliche Claim-RPC auf; nur das Datenbankergebnis bestätigt eine vollständige Zuweisung. */
+/** Calls the actual claim RPC; only the database result confirms whole-block allocation. */
 const claim = (who, id) =>
   value(who, "claim_job", [id, randomUUID(), 1]).then(JSON.parse);
 let master,

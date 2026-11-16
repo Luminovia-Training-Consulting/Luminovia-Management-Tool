@@ -1,6 +1,6 @@
 /**
- * Erzeugt die API-Referenz aus tatsächlich wiedergegebenen PostgreSQL-Migrationen.
- * Dokumentierte Signaturen und Grants stammen aus dem temporären Datenbankkatalog.
+ * Generates API references from real replayed PostgreSQL migrations.
+ * Documented signatures and grants come from the temporary database catalogue.
  */
 import { writeFile } from "node:fs/promises";
 import { withTestDatabase } from "./testing/database.mjs";

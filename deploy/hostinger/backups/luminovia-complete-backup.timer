@@ -1,4 +1,4 @@
-# Startet den täglichen verschlüsselten Backupversuch in UTC. Dieser lokale Timer ist kein Nachweis einer externen Aufbewahrung oder eines erfolgreichen Restoretests.
+# Schedule daily encrypted backup attempts in UTC. This local timer does not prove off-site retention or a successful restore drill.
 [Unit]
 Description=Luminovia complete encrypted recovery backup every 24 hours
 

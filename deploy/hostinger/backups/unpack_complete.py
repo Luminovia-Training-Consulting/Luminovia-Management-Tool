@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Desktopseitige authentifizierte Entschlüsselung mit exklusiven privaten Zieldateien und Inventarprüfung. Ursprüngliche privilegierte Rechte und absolute Symlinks werden verifiziert, aber auf dem Desktop nicht aktiviert.
+# Authenticate and decrypt on the desktop into exclusive private destinations. Verify original privileged metadata and absolute links without applying them to the desktop.
 """Desktop-only authenticated decrypt and safe private recovery extraction."""
 import argparse
 import hashlib
@@ -14,7 +14,7 @@ import sys
 from complete_backup import BackupError, FORMAT, digest, private_dir, private_file, verify_complete, write_json
 
 
-# Akzeptiert nur kanonische relative Archivpfade ohne NUL oder Traversal.
+# Accept only canonical relative archive paths without NUL or traversal.
 def safe_name(name):
     path = PurePosixPath(name)
     if not name or path.is_absolute() or ".." in path.parts or path.as_posix() != name.rstrip("/") or "\x00" in name:
@@ -22,7 +22,7 @@ def safe_name(name):
     return Path(*path.parts)
 
 
-# Verifiziert den verschlüsselten Katalog und jeden Teil vor/in der exklusiven privaten Extraktion; bei Fehlern wird nur das neue eigene Ziel entfernt.
+# Authenticate the catalog/parts and check inventory during exclusive private extraction; failure removes only the new owned destination.
 def unpack(backup, identity, output, *, age="age"):
     import tarfile
     backup, identity, output = Path(backup).absolute(), Path(identity).absolute(), Path(output).absolute()
@@ -68,9 +68,9 @@ def unpack(backup, identity, output, *, age="age"):
         process = subprocess.Popen([age, "--decrypt", "--identity", str(identity), str(backup / "files.tar.gz.age")], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         content_hash = hashlib.sha256()
         plaintext_bytes = 0
-        # Verknüpft den entschlüsselten Archivstream mit dem erwarteten Klartextfingerabdruck.
+        # Bind the decrypted archive stream to the expected plaintext digest.
         class Reader:
-            # Aktualisiert Hash und Bytezahl für alle tatsächlich konsumierten entschlüsselten Archivbytes.
+            # Update the hash/count for decrypted archive bytes actually consumed.
             def read(self, size=-1):
                 nonlocal plaintext_bytes
                 content = process.stdout.read(size)

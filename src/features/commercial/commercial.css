@@ -1,5 +1,6 @@
 /**
- * Verträge, Honorartabellen, Rechnungen und Zahlungsdialoge. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ * Contracts, fee tables, invoices and payment dialogs, using shared brand colours and surface
+ * variables.
  */
 .commercial-contract-grid {
   display: grid;
@@ -36,7 +37,7 @@
   min-width: 0;
   padding: 1.4rem;
 }
-/* Begriff/Wert-Paare halten Vertrags-/Rechnungsmetadaten auch mit langen Identifikatoren lesbar. */
+/* Term/value pairs keep contract/invoice metadata readable even with long identifiers. */
 .commercial-facts {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -119,7 +120,7 @@
   box-shadow: none;
   background: transparent;
 }
-/* Upload- und Scanfeedback steht direkt beim verwendeten kaufmännischen Dokument. */
+/* Keep upload/scanning feedback next to the commercial document being used. */
 .commercial-upload {
   padding: 1rem;
   border: 1px dashed var(--line);
@@ -311,7 +312,7 @@
 .commercial-voided strong {
   text-decoration: line-through;
 }
-/* Layoutanpassung (max-width: 600px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 600px) {
   .commercial-contract-card,
   .commercial-invoice-card {

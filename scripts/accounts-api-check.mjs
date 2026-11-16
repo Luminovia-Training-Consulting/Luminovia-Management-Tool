@@ -1,6 +1,6 @@
 /**
- * Echte Auth-/HTTP-Prüfung für Konten, Rollen und reservierte Einladungen.
- * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
+ * Real Auth/HTTP checks for accounts, roles and reserved invitations.
+ * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
 import { randomUUID, createHmac } from "node:crypto";
@@ -17,7 +17,7 @@ assert.match(project ?? "", /^luminovia-portal-test-[a-f0-9]+$/);
 const url = process.env.SUPABASE_URL;
 assert.ok(["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname));
 const origin = process.env.PORTAL_APP_ORIGIN ?? "http://127.0.0.1:5273";
-/** Erzeugt einen getrennten SDK-Client ohne persistierte oder automatisch erneuerte Testsitzung. */
+/** Creates a separate SDK client without persistent sessions or automatic session refresh. */
 const make = (key) =>
   createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -26,13 +26,13 @@ const service = make(process.env.SUPABASE_SERVICE_ROLE_KEY),
   users = [],
   organisations = [];
 const suffix = randomUUID().slice(0, 8);
-/** Wertet den tatsächlichen SDK-Erfolg aus und gibt erst danach dessen Daten zurück. */
+/** Requires actual SDK success before returning the response data. */
 async function checked(request, label) {
   const result = await request;
   assert.equal(result.error, null, `${label}: ${result.error?.message}`);
   return result.data;
 }
-/** Berechnet den aktuellen sechsstelligen TOTP aus dem fiktiven MFA-Geheimnis; keine Codes protokollieren. */
+/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
 function totp(secret) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "").toUpperCase()]
@@ -51,7 +51,7 @@ function totp(secret) {
     .toString()
     .padStart(6, "0");
 }
-/** Erzeugt getrennte fiktive Konten und meldet sie über Auth an; ihre Kennungen dienen nur der Fixture. */
+/** Creates separate fictional accounts and signs them in through Auth; their IDs belong only to the fixture. */
 async function fixture(name, role) {
   const email = `account-${name}-${suffix}@example.invalid`;
   const data = await checked(
@@ -84,7 +84,7 @@ async function fixture(name, role) {
   );
   return { id: data.user.id, email, client };
 }
-/** Verifiziert einen echten TOTP-Faktor, damit privilegierte Prüfaufrufe tatsächlich AAL2 verwenden. */
+/** Verifies a real TOTP factor so privileged test requests actually use AAL2. */
 async function mfa(actor) {
   const factor = await checked(
     actor.client.auth.mfa.enroll({
@@ -101,7 +101,7 @@ async function mfa(actor) {
     "Verify actual TOTP",
   );
 }
-/** Sendet den tatsächlichen Prüfrequest mit der ausgewählten Identität; Antworten werden unabhängig geprüft. */
+/** Sends the actual test request as the selected identity; its response is asserted separately. */
 async function request(
   actor,
   path,

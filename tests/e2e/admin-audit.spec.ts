@@ -1,6 +1,6 @@
 /**
- * Browserabläufe für MFA-begrenzte Auditfilter und deren Entzug.
- * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ * Browser workflows for MFA-restricted audit filters and revoked access.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
@@ -17,7 +17,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Audit fixtures require the canonical disposable stack.",
 );
-/** Prüft den aktuellen sichtbaren Browserzustand auf die hier ausgewählten axe-Verstöße. */
+/** Checks the current rendered browser state for the selected axe violations. */
 async function accessible(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   const result = await new AxeBuilder({ page })

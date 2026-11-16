@@ -1,4 +1,4 @@
-# Feste private Upstreamcluster für die freigegebenen Appdienste. Diese Datei eröffnet keine eigenständigen öffentlichen Datenbank- oder Verwaltungsendpunkte.
+# Fixed private upstream clusters for approved app services. This file does not independently expose database or administration endpoints.
 # Pinned upstream clusters, retaining only the five required API upstreams.
 resources:
 - '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster

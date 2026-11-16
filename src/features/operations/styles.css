@@ -1,5 +1,6 @@
 /**
- * Organisations-/Kontaktansicht und Formularlayouts für Vorlagen sowie Kursläufe. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ * Organization/contact views and template/run forms, using shared brand colours and surface
+ * variables.
  */
 .operations-layout {
   display: grid;
@@ -39,7 +40,7 @@
 .operations-detail h3 {
   margin-top: 24px;
 }
-/* Private Geschäftskontakte behalten eine eigene lesbare Gruppe in der Organisationsdetailansicht. */
+/* Keep private business contacts in their own readable organization-detail group. */
 .operations-contact-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -127,7 +128,7 @@
 .operations-detail > small {
   overflow-wrap: anywhere;
 }
-/* Layoutanpassung (max-width: 1100px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 1100px) {
   .operations-layout {
     grid-template-columns: 1fr;
@@ -137,7 +138,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-/* Layoutanpassung (max-width: 650px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 650px) {
   .operations-courses-grid,
   .operations-contact-list {

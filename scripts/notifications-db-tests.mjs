@@ -1,7 +1,3 @@
-/**
- * PostgreSQL-Regressionsgruppen für eigene Meldungen, Lesestatus und Kategorieeinstellungen.
- * Die Testdatenbank spielt echte Migrationen ein; Rollen-/MFA-Claims prüfen den Datenvertrag unabhängig von der UI.
- */
 /** Real isolated PostgreSQL: notification ownership, current links and preferences. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -9,13 +5,13 @@ import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
 
 await withTestDatabase("notification_test", async ({ sql, actor }) => {
   const [teacher, peer, admin] = Array.from({ length: 3 }, randomUUID);
-  /** Ruft die fachliche Datenbank-API unter den kontrollierten Identitäts-/MFA-Claims der Fixture auf. */
+  /** Calls the business database API under the fixture's controlled identity/MFA claims. */
   const rpc = async (who, name, args = []) => {
     const value = await actor(who, `select public.${name}(${args.join(",")})`);
     return JSON.parse(value);
   };
   let checks = 0;
-  /** Zählt und meldet einen Fall erst, wenn sämtliche zugehörigen Assertions erfolgreich abgeschlossen sind. */
+  /** Counts and reports a case only after all of its assertions have completed successfully. */
   const check = async (name, run) => {
     await run();
     console.log(`PASS ${name}`);
@@ -277,7 +273,7 @@ await withTestDatabase("notification_test", async ({ sql, actor }) => {
       const dueSession = randomUUID(),
         releasedSession = randomUUID(),
         dueContract = randomUUID();
-      /** Erzeugt kontrollierte bestätigte oder freigegebene Terminzuweisungen für Meldungs-/Erinnerungsprüfungen. */
+      /** Creates controlled confirmed or released allocations for notification/reminder checks. */
       const seedSession = async (id, who, start, end, released = false) => {
         const job = randomUUID(),
           claim = randomUUID();

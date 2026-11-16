@@ -1,5 +1,6 @@
 /**
- * Management-Kanban für versionierte Angebotszustände. Drag-and-drop und Tastaturauswahl rufen denselben Serververtrag auf; gefüllte Angebote entstehen durch echte Claims und sind kein frei wählbares Drag-Ziel.
+ * Management Kanban for versioned offer state. Drag and keyboard changes share the server
+ * contract; actual claims determine filled state, which is never a manual drop target.
  */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -22,11 +23,11 @@ import { manageOffer } from "./lifecycle-api";
 import "./lifecycle-i18n";
 import "./board.css";
 
-/** Feste Darstellung der Angebotszustände; die Spalte filled bleibt serverabgeleitet. */
+/** Fixed offer-state presentation; the filled column remains server-derived. */
 const statuses = ["draft", "published", "filled", "archived"] as const;
-/** Die vier sichtbaren Boardspalten; manuell veränderbar ist nur deren erlaubte Teilmenge. */
+/** Four visible board columns; only the permitted subset is manually mutable. */
 type Status = (typeof statuses)[number];
-/** Reduzierte autorisierte Boardprojektion mit Version und expliziter Übergangserlaubnis. */
+/** Reduced authorized board projection with version and explicit transition capability. */
 interface BoardOffer {
   id: string;
   title: string;
@@ -36,10 +37,10 @@ interface BoardOffer {
   confirmed_count: number;
   can_transition: boolean;
 }
-/** Begrenzt manuelle Angebotsübergänge auf Entwurf, veröffentlicht und archiviert; gefüllt folgt echten Claims. */
+/** Allow manual draft/published/archived transitions only; actual claims determine filled state. */
 const mutableStatus = (s: string): s is Exclude<Status, "filled"> =>
   s === "draft" || s === "published" || s === "archived";
-/** Registriert zulässige Drop-Ziele und stellt gefüllte Angebote bewusst nicht als Übergangsziel bereit. */
+/** Register allowed drop destinations without exposing filled as a manual transition target. */
 function Column({
   status,
   children,
@@ -66,13 +67,13 @@ function Column({
     </section>
   );
 }
-/** Daten und gemeinsame Aktion für Maus-/Tastaturbedienung derselben Angebotskarte. */
+/** Shared data/action contract for mouse and keyboard interaction with one offer card. */
 type CardProps = {
   offer: BoardOffer;
   disabled: boolean;
   change: (offer: BoardOffer, status: Exclude<Status, "filled">) => void;
 };
-/** Verwendet für Tastaturauswahl und Drag-Griff dieselben erlaubten Angebotszustände. */
+/** Use the same allowed offer states for keyboard selection and the drag handle. */
 function CardContent({
   offer,
   disabled,
@@ -122,7 +123,7 @@ function CardContent({
     </>
   );
 }
-/** Registriert nur eine tatsächlich bewegliche Angebotskarte als Draggable mit eigenem Griff. */
+/** Register only a movable offer as draggable, with its own explicit handle. */
 function MovableCard(props: CardProps) {
   const { offer, disabled } = props;
   const { ref, handleRef, isDragging } = useDraggable({
@@ -140,7 +141,7 @@ function MovableCard(props: CardProps) {
     </article>
   );
 }
-/** Erhält historische Karten als gewöhnliche Artikel/Links ohne künstliche Drag-Button-Semantik. */
+/** Keep historical cards as ordinary articles/links without artificial drag-button semantics. */
 function Card(props: CardProps) {
   // Historical/accepted cards never register as draggables: this also avoids
   // adding synthetic button/tab semantics around their ordinary detail link.
@@ -152,9 +153,10 @@ function Card(props: CardProps) {
     </article>
   );
 }
-/** One server-scoped batch, no per-card polling or optimistic status changes.
- * A drag is only a versioned publication request, never an assignment. */
-/** Lädt einen servergefilterten Batch und bestätigt jeden Versionsübergang online ohne optimistischen Kartenwechsel. */
+/**
+ * Read one server-scoped batch without per-card polling. Confirm versioned publication transitions
+ * online without optimistic card moves; dragging never allocates an assignment.
+ */
 export function OfferBoard() {
   const { session } = useAuth();
   const { t } = useTranslation();

@@ -1,6 +1,6 @@
 /**
- * Dateisystem-Fixtures prüfen verschachtelte Geheimnisse, generierte Daten und Symlink-Aliasse.
- * Nur erlaubte Quelldateien dürfen im echten kopierten QA-Snapshot landen.
+ * Filesystem fixtures exercise nested secrets, generated state and symlink aliases.
+ * Only permitted source files may enter the actual copied QA snapshot.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -18,20 +18,20 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { runtimeSnapshotSource } from "./runtime-snapshot.mjs";
 
-/** Erzeugt getrennte temporäre Quell-/Snapshotverzeichnisse und registriert ihr Cleanup beim Testkontext. */
+/** Creates separate temporary source/snapshot directories and registers cleanup with the test context. */
 function fixture(t) {
   const directory = mkdtempSync(join(tmpdir(), "portal-snapshot-test-"));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   const source = join(directory, "source"),
     output = join(directory, "snapshot");
   mkdirSync(source);
-  /** Legt eine gezielte Datei innerhalb des eigenen Snapshot-Fixtures an. */
+  /** Creates one targeted file inside the owned snapshot fixture. */
   const put = (name, value) => {
     const path = join(source, name);
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, value);
   };
-  /** Führt den echten rekursiven Kopiervorgang mit dem produktiven Snapshotfilter aus. */
+  /** Runs the actual recursive copy with the production snapshot filter. */
   const copy = () =>
     cpSync(source, output, {
       recursive: true,
@@ -39,7 +39,7 @@ function fixture(t) {
     });
   return { directory, source, output, put, copy };
 }
-/** Sammelt den tatsächlich entstandenen Dateibestand für den Soll-/Istvergleich. */
+/** Collects the resulting file inventory for comparison with the expected snapshot. */
 function files(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);

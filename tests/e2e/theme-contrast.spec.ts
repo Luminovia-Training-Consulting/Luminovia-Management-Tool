@@ -1,6 +1,6 @@
 /**
- * Browserabläufe für lesbare Aktionsbeschriftung im ersten berechneten Themezustand.
- * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ * Browser checks for readable action labels in the first computed theme state.
+ * Rendered states are checked directly; this does not replace manual device/platform acceptance.
  */
 import { expect, test } from "@playwright/test";
 import { sampleThemeContrast } from "./helpers/theme-contrast";

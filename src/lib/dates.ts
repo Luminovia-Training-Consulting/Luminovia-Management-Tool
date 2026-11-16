@@ -1,8 +1,9 @@
 /**
- * Gemeinsame Umrechnung lokaler IANA-Zeiten und lokalisierte Anzeige von Instants/Geld. Nicht existierende oder doppeldeutige lokale Sommerzeitwerte werden für neue Buchungen abgewiesen; Währungen werden niemals implizit umgerechnet.
+ * Shared IANA local-time conversion and localized instant/money display. Reject
+ * nonexistent/ambiguous DST input for new bookings; never perform implicit currency conversion.
  */
 import { DateTime, IANAZone } from "luxon";
-/** Wandelt nur existierende, eindeutige lokale Minutenwerte in UTC um; DST-Lücken und Doppelzeiten liefern null. */
+/** Convert only existing, unambiguous local minute values to UTC; return null for DST gaps/duplicates. */
 export function zonedInstant(value: string, zone: string): string | null {
   if (!IANAZone.isValidZone(zone)) return null;
   const date = DateTime.fromISO(value, { zone });
@@ -15,7 +16,7 @@ export function zonedInstant(value: string, zone: string): string | null {
     return null;
   return date.toUTC().toISO();
 }
-/** Formatiert einen echten Instant in der gewünschten Sprache und expliziten Anzeigezone. */
+/** Format an instant in the requested language and explicit display zone. */
 export function dateTime(iso: string, language: string, zone: string) {
   return new Intl.DateTimeFormat(language, {
     dateStyle: "medium",
@@ -23,14 +24,14 @@ export function dateTime(iso: string, language: string, zone: string) {
     timeZone: zone,
   }).format(new Date(iso));
 }
-/** Formatiert den vorhandenen Betrag in seiner Originalwährung ohne Wechselkursumrechnung. */
+/** Format the supplied amount in its original currency without exchange-rate conversion. */
 export function money(amount: number, currency: string, language: string) {
   return new Intl.NumberFormat(language, {
     style: "currency",
     currency,
   }).format(amount);
 }
-/** Prüft eine IANA-Zonenkennung mit Luxon statt beliebige feste Offsettexte zu akzeptieren. */
+/** Validate an IANA zone through Luxon rather than accepting arbitrary fixed-offset text. */
 export function validZone(zone: string) {
   return IANAZone.isValidZone(zone);
 }

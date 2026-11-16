@@ -1,25 +1,25 @@
 /**
- * Edge-seitiger ClamAV-Adapter mit HTTPS-Gateway oder privatem TCP-Protokoll. Größen, Antwortbytes, Zeitlimits und Signaturalter sind begrenzt; Fehler halten das Dokument außerhalb des sauberen Zustands.
+ * Edge ClamAV adapter using HTTPS gateway or private TCP. Bound upload/response bytes, time and signature age; failure must not mark a document clean.
  */
 const encoder = new TextEncoder();
 const MAX_SCAN_BYTES = 100 * 1024 * 1024;
 const MAX_RESPONSE_BYTES = 4096;
 const SIGNATURE_MAX_AGE = 14 * 86400000;
 
-// Serverseitige HTTPS-Gatewaykonfiguration; diese Werte kommen nie aus einem Browserupload.
+// Server-side HTTPS gateway configuration, never supplied by a browser upload.
 export interface HttpsScannerConfig {
   url?: string;
   token?: string;
 }
 
 // Injection is for isolated protocol/deadline tests, never browser input.
-// Austauschbare Transport-/Fristgrenze für isolierte Protokolltests.
+// Replaceable transport/deadline boundary for isolated protocol tests.
 interface ScannerDependencies {
   fetcher?: typeof fetch;
   timeoutMs?: number;
 }
 
-// Prüft Format und Signaturdatum der Scannerantwort; eine bloße Versionszeichenfolge beweist keine aktuellen Signaturen.
+// Validate response format and signature date; a version string alone does not prove fresh signatures.
 function validateVersion(value: unknown): string {
   if (
     typeof value !== "string" || !value.startsWith("ClamAV ") ||
@@ -36,7 +36,7 @@ function validateVersion(value: unknown): string {
   return value;
 }
 
-// Akzeptiert nur den serverseitig konfigurierten HTTPS-/scan-Endpunkt ohne Credentials, Query oder Redirectziel.
+// Accept only the server-configured HTTPS /scan endpoint without credentials or a query; redirects are rejected by the transport.
 function httpsEndpoint(config: HttpsScannerConfig): URL {
   let endpoint: URL;
   try {
@@ -54,7 +54,7 @@ function httpsEndpoint(config: HttpsScannerConfig): URL {
   return endpoint;
 }
 
-// Begrenzt Upload und Antwort, verbietet Redirects und beendet Fetch/Reader nach Abschluss oder Fristablauf.
+// Bound upload/response size, reject redirects, and terminate fetch/readers on completion or timeout.
 async function scanHttps(
   bytes: Uint8Array,
   config: HttpsScannerConfig,
@@ -150,7 +150,7 @@ async function scanHttps(
   }
 }
 
-// Schreibt den vollständigen Protokollblock auch bei partiellen TCP-Schreibvorgängen.
+// Write the complete protocol block even when TCP writes accept only part of it.
 async function writeAll(conn: Deno.Conn, bytes: Uint8Array) {
   let at = 0;
   while (at < bytes.length) {
@@ -160,7 +160,7 @@ async function writeAll(conn: Deno.Conn, bytes: Uint8Array) {
   }
 }
 
-// Liest nur die begrenzte clamd-Antwort bis zum Protokollende.
+// Read only the bounded clamd response through its protocol terminator.
 async function readResult(conn: Deno.Conn) {
   let result = "";
   const buffer = new Uint8Array(4096);
@@ -173,7 +173,7 @@ async function readResult(conn: Deno.Conn) {
   return result.trim().replace(/\0/g, "");
 }
 
-// Fragt die aktuelle clamd-Signaturversion über eine eigene begrenzte Verbindung ab.
+// Query clamd's current signature version through a separate bounded connection.
 async function scannerVersion(host: string, port: number) {
   const conn = await Deno.connect({ hostname: host, port });
   const timeout = setTimeout(() => {
@@ -192,7 +192,7 @@ async function scannerVersion(host: string, port: number) {
   }
 }
 
-// Wählt nur den konfigurierten Transport und akzeptiert ausschließlich einen korrekt validierten vollständigen Scanbefund.
+// Use only the configured transport and accept a complete, validated scan result.
 export async function scan(
   bytes: Uint8Array,
   host: string,

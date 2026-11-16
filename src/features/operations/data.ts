@@ -1,9 +1,10 @@
 /**
- * DTOs und actorbezogene Lesequeries für Organisationen, Kontakte, CBW-Quellen, Vorlagen und Kursläufe. Die relationalen Referenzen bewahren die Trennung von wiederverwendbarem Inhalt und konkret geplantem Unterricht.
+ * DTOs and actor-scoped reads for organizations, contacts, CBW sources, templates and course
+ * runs. Relational references keep reusable content separate from scheduled teaching.
  */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
-/** Organisationsstammdaten des freigegebenen Verzeichnisses. */
+/** Shared organization metadata from the permitted directory. */
 export interface Organisation {
   id: string;
   name: string;
@@ -14,7 +15,7 @@ export interface Organisation {
   tags: string[];
   archived_at: string | null;
 }
-/** Geschäftskontakt im gesondert berechtigten Organisationskontext. */
+/** Business contact in its separately authorized organization context. */
 export interface Contact {
   id: string;
   organisation_id: string;
@@ -25,7 +26,7 @@ export interface Contact {
   notes: string;
   archived_at: string | null;
 }
-/** Wiederverwendbare Kursinhalte ohne konkrete Termine oder persönliche Vertragskopien. */
+/** Reusable course content without concrete sessions or copies of personal contracts. */
 export interface Template {
   id: string;
   title: string;
@@ -37,7 +38,7 @@ export interface Template {
   building_block_source_id: string | null;
   course_template_topics: { topic_id: string }[];
 }
-/** Konkrete Originalfassung eines CBW-Bausteins mit Hash- und Herkunftsinformation. */
+/** Exact original CBW revision with hash and provenance metadata. */
 export interface BuildingBlockSource {
   id: string;
   building_block_id: string;
@@ -66,7 +67,7 @@ export interface BuildingBlock {
   default_template_id: string;
   building_block_sources: BuildingBlockSource[];
 }
-/** Lädt die berechtigten building_blocks-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read building_blocks through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const buildingBlocksQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "building-blocks", actor],
@@ -79,7 +80,7 @@ export const buildingBlocksQuery = (actor: string) =>
       return data as BuildingBlock[];
     },
   });
-/** Konkrete Durchführung mit Kunde, Zone und tatsächlichen Sessions, getrennt von der Inhaltsvorlage. */
+/** Actual run with customer, zone and concrete sessions, separate from its content template. */
 export interface CourseRun {
   id: string;
   template_id: string;
@@ -91,7 +92,7 @@ export interface CourseRun {
   archived_at: string | null;
   course_sessions: { id: string; starts_at: string; ends_at: string }[];
 }
-/** Lädt die berechtigten organisations-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read organisations through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const orgQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "organisations", actor],
@@ -104,7 +105,7 @@ export const orgQuery = (actor: string) =>
       return data as Organisation[];
     },
   });
-/** Lädt die berechtigten organisation_contacts-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read organisation_contacts through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const contactsQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "contacts", actor],
@@ -117,7 +118,10 @@ export const contactsQuery = (actor: string) =>
       return data as Contact[];
     },
   });
-/** Lädt die berechtigten organisation_private_details-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/**
+ * Read organisation_private_details through the native client, propagate access/read failures
+ * and scope cached data to the actor and requested resource.
+ */
 export const notesQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "notes", actor],
@@ -129,7 +133,7 @@ export const notesQuery = (actor: string) =>
       return data as { organisation_id: string; private_notes: string }[];
     },
   });
-/** Lädt die berechtigten course_templates-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read course_templates through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const templatesQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "templates", actor],
@@ -142,7 +146,7 @@ export const templatesQuery = (actor: string) =>
       return data as Template[];
     },
   });
-/** Lädt die berechtigten course_runs-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read course_runs through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const runsQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "runs", actor],

@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für Rechte vor Kontosuche und erhaltenen Suchfokus bei ausstehenden Seitenabfragen. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for permission checks before account search and retained search focus during
+ * pending page requests. SDK/DOM fixtures do not replace real account API/database acceptance.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -23,7 +24,7 @@ vi.mock("../../lib/supabase", () => ({
   db: () => ({ rpc: fake.rpc, functions: { invoke: fake.invoke } }),
 }));
 let client: QueryClient;
-/** Rendert die tatsächliche Seite in ihrem Router-/Query-Kontext für die folgenden Bedienprüfungen. */
+/** Render the real page in its router/query context for the interaction checks below. */
 function page() {
   render(
     <MemoryRouter>

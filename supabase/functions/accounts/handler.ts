@@ -1,5 +1,5 @@
 /**
- * HTTP-Vertrag für Kontenverwaltung. Fachliche RPCs laufen mit dem Bearer-Token des Aufrufers; nur die separat injizierte Einladungszustellung/-komplettierung verwendet serverseitige Verwaltungsrechte.
+ * Account-management HTTP contract. Business RPCs use the caller's bearer token; only injected invitation delivery/completion uses server administration privileges.
  */
 export const roles = [
   "owner",
@@ -10,9 +10,9 @@ export const roles = [
   "client",
   "participant",
 ] as const;
-// Erlaubte fachliche Zielrollen; die gewählte Rolle ist eine Eingabe und keine Aussage über Rechte des Aufrufers.
+// Allowed target roles are input values, not evidence of the caller's authority.
 export type AccountRole = (typeof roles)[number];
-// Validierter Versandauftrag mit dauerhaftem Wiederholungsschlüssel und gegebenenfalls Organisationsbindung.
+// Validated invitation request with a durable retry key and optional organization binding.
 export interface Invitation {
   email: string;
   display_name: string;
@@ -20,12 +20,12 @@ export interface Invitation {
   organisation_id: string | null;
   idempotency_key: string;
 }
-// Begrenzte RPC-Antwort; interne Fehlermeldungen werden nicht an HTTP-Clients weitergereicht.
+// Bounded RPC result; do not expose internal database errors to HTTP clients.
 interface RpcResult {
   data: unknown;
   error?: { code?: string } | null;
 }
-// Trennt caller-bezogene Datenbankoperationen von den ausschließlich serverseitigen Versand-/Abschlussrechten.
+// Separate caller-scoped database operations from server-only delivery/completion privileges.
 export interface AccountDependencies {
   origins: string[];
   appOrigin: string;
@@ -45,15 +45,15 @@ export interface AccountDependencies {
   ) => Promise<void>;
   openapi: unknown;
 }
-// Prüft das UUID-Format einer fremden Eingabe; eine gültige Kennung verleiht keine Zugriffsrechte.
+// Validate an input UUID's format; a valid identifier grants no access.
 const uuid = (value: unknown): value is string =>
   typeof value === "string" &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-// Akzeptiert nur JSON-Objekte als Payloadbasis; Arrays und null erhalten keinen Feldvertrag.
+// Accept only JSON objects as payloads; arrays and null do not satisfy the field contract.
 function object(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
-// Normalisiert eine erlaubte Einladungsstruktur und bindet Clientkonten an genau eine gültige Organisation.
+// Normalize the allowed invitation payload and bind client accounts to one valid organization.
 export function parseInvitation(value: unknown): Invitation | null {
   if (
     !object(value) ||
@@ -96,7 +96,7 @@ export function parseInvitation(value: unknown): Invitation | null {
     idempotency_key,
   };
 }
-// Begrenzt die tatsächlich gelesenen JSON-Bytes zusätzlich zum Content-Length-Header und verweigert ungültiges UTF-8.
+// Bound actual JSON bytes independently of Content-Length and reject invalid UTF-8.
 async function body(request: Request): Promise<unknown> {
   if (
     !request.headers
@@ -134,7 +134,7 @@ async function body(request: Request): Promise<unknown> {
     throw new Error("invalid_request");
   }
 }
-// Verdrahtet Methoden und Payloads mit caller-bezogenen RPCs; Datenbankfehler werden ohne interne Details in stabile HTTP-Antworten übersetzt.
+// Map methods/payloads to caller-scoped RPCs and translate database failures into stable HTTP errors without internal details.
 export function createAccountHandler(deps: AccountDependencies) {
   return async (request: Request): Promise<Response> => {
     const origin = request.headers.get("origin") ?? "";
@@ -195,7 +195,7 @@ export function createAccountHandler(deps: AccountDependencies) {
         }
         return response(200, result.data);
       };
-      // Eigenes Profil und Verwaltung behalten denselben caller-bezogenen RPC-Pfad; Ziel-IDs ersetzen nie den Actor.
+      // Own-profile and management requests use the same caller-scoped RPC path; target IDs never replace the actor.
       if (path === "/v1/me") {
         if (request.method === "GET") return await call("account_me");
         if (request.method === "PATCH") {
@@ -280,7 +280,7 @@ export function createAccountHandler(deps: AccountDependencies) {
           return response(503, { error: "invitations_disabled" });
         const invitation = parseInvitation(await body(request));
         if (!invitation) return response(400, { error: "invalid_request" });
-        // Der gemeinsame dauerhafte Reservierungsvertrag wird vor der externen Zustellung erfolgreich abgeschlossen.
+        // Complete the shared durable reservation before invoking external delivery.
         const reserved = await deps.rpc(token, "reserve_account_invitation", {
           p_email: invitation.email,
           p_display_name: invitation.display_name,
@@ -299,7 +299,7 @@ export function createAccountHandler(deps: AccountDependencies) {
           status: string;
           invitation_id?: string;
         };
-        // Wiederholungen und Drosselung liefern den vorhandenen Zustand zurück und lösen keinen neuen Versand aus.
+        // Retries and throttling return existing state without sending another invitation.
         if (result.status !== "reserved")
           return response(
             result.status === "throttled"
@@ -329,7 +329,7 @@ export function createAccountHandler(deps: AccountDependencies) {
             invitation_id: result.invitation_id,
           });
         }
-        // Scheitert erst dieser Abschluss, bleibt die bereits versandte Einladung gegen automatische Duplikate reserviert.
+        // If completion fails after delivery, keep the reservation so automatic retries cannot duplicate the invitation.
         await deps.completeInvitation(
           result.invitation_id,
           userId,

@@ -1,12 +1,13 @@
 /**
- * Capability-gesteuerte Unterseiten der Administration. Diese Links dienen der Orientierung; direkte Routen und Datenzugriffe bleiben unabhängig davon geschützt.
+ * Capability-aware administration navigation. These links provide orientation; direct routes and
+ * data access retain their independent authorization checks.
  */
 import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../auth/auth-context";
 import { permissionsQuery } from "../../lib/queries";
-/** Zeigt nur die Unterseiten, für die aktuelle Capabilities vorliegen; Links ersetzen keine Serverrechte. */
+/** Show sections allowed by loaded capabilities; links do not replace server permissions. */
 export function AdminNavigation() {
   const { t } = useTranslation();
   const { session } = useAuth();

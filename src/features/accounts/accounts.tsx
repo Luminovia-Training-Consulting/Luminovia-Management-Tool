@@ -1,5 +1,6 @@
 /**
- * Kontoverzeichnis und kontrollierte Rollen-/Aktivierungsänderungen. Das UI lädt erst aktuelle Rechte und verwendet die Accounts-API; weder der sichtbare Rollenwähler noch eine Benutzer-ID erteilt Berechtigungen.
+ * Account directory and controlled role/activation changes. Load current permissions before
+ * using the accounts API; a visible role selector or submitted user ID grants no authority.
  */
 import { Link } from "react-router-dom";
 import { useState } from "react";
@@ -27,7 +28,7 @@ import {
   type AccountRole,
 } from "./api";
 import "./i18n";
-/** Hält Such-/Seitenentwürfe und bestätigte Kontoänderungen im aktuellen Akteurskontext. */
+/** Keep search/page drafts and confirmed account changes scoped to the current actor. */
 function AccountsDirectory({
   actorId,
   canAssign,
@@ -311,7 +312,7 @@ function AccountsDirectory({
     </>
   );
 }
-/** Lädt aktuelle Konto-Capabilities vor der Verzeichnisansicht und trennt Fehler von fehlenden Rechten. */
+/** Load current account capabilities before the directory and distinguish failed checks from missing permission. */
 export function AccountsPage() {
   const { session } = useAuth();
   const { t } = useTranslation("accounts");

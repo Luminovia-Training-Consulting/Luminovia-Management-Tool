@@ -1,5 +1,5 @@
 /**
- * Entschlüsselt und prüft ein vollständiges Recovery-Set in privaten temporären Pfaden. Stellt alle gesicherten Datenbanken und Dateiinventare in isolierten Ressourcen wieder her und bereinigt ausschließlich eigene Prüfressourcen.
+ * Decrypt and verify a complete recovery set in private scratch paths. Restore databases/files into isolated resources and clean up only resources owned by this drill.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -16,11 +16,11 @@ import {
 import { verifyRecoveredCredentials } from "./credential_recovery.mjs";
 import { verifyRestoredRecoveryInventory } from "./postgres_recovery_witness.mjs";
 const here = dirname(fileURLToPath(import.meta.url));
-// Quotiert einen SQL-Bezeichner einschließlich eingebetteter Anführungszeichen.
+// Quote a SQL identifier, including embedded quotation marks.
 const identifier = (s) => '"' + s.replaceAll('"', '""') + '"';
-// Quotiert ausschließlich einen SQL-Textwert; Objektbezeichner benötigen ihren eigenen Quoting-Pfad.
+// Quote a SQL text value only; object identifiers need a separate quoting path.
 const literal = (s) => "'" + s.replaceAll("'", "''") + "'";
-// Normalisiert nur die explizit bekannten operatorabhängigen Textfelder für einen reproduzierbaren Restore-Vergleich.
+// Normalize only explicitly known operator-dependent text fields for reproducible restore comparison.
 const normalize = (text, operator) =>
   text
     .split("\n")
@@ -35,7 +35,7 @@ const normalize = (text, operator) =>
     )
     .sort();
 
-// Entschlüsselt in ein eigenes privates Verzeichnis, stellt Datenbanken/Erweiterungen/Rollen wieder her und prüft Bytes sowie Zugänge vor der kontrollierten Bereinigung.
+// Decrypt into owned private scratch storage, restore databases/extensions/roles, and verify bytes and credentials before cleanup.
 export async function restoreComplete({
   backup,
   identity,

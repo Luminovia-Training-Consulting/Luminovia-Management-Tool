@@ -1,9 +1,9 @@
 /**
- * Gezielt gebaute Office-ZIP-Fixtures prüfen erlaubte Formate und den byteweisen VBA-Markerfilter. Die Fixture beschreibt Dateistruktur, ohne echte Kundenunterlagen zu verwenden.
+ * Purpose-built Office ZIP fixtures exercise allowed formats and byte-level VBA filtering without using customer documents.
  */
 import { validateFile } from "./validation.ts";
 
-// Lässt eine konkrete Fixturebedingung als echten Testfehler scheitern; es gibt keinen stillen Erfolgsersatz.
+// Fail a specific fixture condition as a real test failure; never substitute silent success.
 function assert(value: unknown, message = "assertion failed"): asserts value {
   if (!value) throw new Error(message);
 }
@@ -29,7 +29,7 @@ const formats = [
 
 /** Real stored ZIP local/central records and CRCs keep the MIME detector in the
  * test path. These packages contain fictional content, never private files. */
-// Baut die kontrollierte Office-ZIP-Struktur mit tatsächlichen Dateimarkern, statt einen MIME-String als Beweis zu verwenden.
+// Build controlled Office ZIP bytes with actual file markers rather than treating a MIME string as proof.
 function archive(
   format: typeof formats[number],
   extraName?: string,
@@ -107,7 +107,7 @@ function archive(
   return result;
 }
 
-// Bestätigt, dass die konkrete Byte-/MIME-Fixture wirklich abgewiesen wird.
+// Require rejection of the specific byte/MIME fixture.
 async function rejected(bytes: Uint8Array, format: typeof formats[number]) {
   let error: unknown;
   try {

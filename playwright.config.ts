@@ -1,11 +1,11 @@
-/** Reale Browserabläufe für den eigenen QA-Stack, getrennt von Entwicklungsdaten. */
+/** Real browser workflows on the owned QA stack, isolated from development data. */
 import { defineConfig, devices } from "@playwright/test";
 import { existsSync } from "node:fs";
 
-// Die private Datei erzeugt der Launcher pro Umgebung; sie gehört nicht in Git.
+// The launcher creates this private per-environment file; it must stay out of Git.
 if (existsSync(".env.test.local")) process.loadEnvFile(".env.test.local");
 
-// Direktes Playwright gegen einen normalen persistenten Stack wird abgewiesen.
+// Reject direct Playwright runs against a normal persistent development stack.
 if (process.env.PORTAL_TEST_MODE !== "1")
   throw new Error(
     "Browser integration tests require the isolated ./portal test command; development data are preserved.",
@@ -13,8 +13,8 @@ if (process.env.PORTAL_TEST_MODE !== "1")
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  // Die Szenarien verändern echte fiktive Datensätze. Eine sequenzielle Suite
-  // hält ihre Ressourcen nachvollziehbar; fehlgeschlagene Fälle werden nicht kaschiert.
+  // Scenarios mutate real fictional records. Sequential execution keeps resource
+  // ownership traceable; failed cases are not hidden with retries.
   fullyParallel: false,
   workers: 1,
   retries: 0,
@@ -23,13 +23,13 @@ export default defineConfig({
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:5173",
-    // Fehlerartefakte können private QA-Sessions enthalten und bleiben ignoriert.
+    // Failure artifacts may contain private QA sessions and remain ignored.
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
   projects: [
-    // Beide Chromium-Layouts laufen dieselben Abläufe; dies belegt keine
-    // physische PWA-Installation oder Safari-/iOS-Kompatibilität.
+    // Both Chromium layouts run the same journeys; this does not establish
+    // physical PWA installation or Safari/iOS compatibility.
     {
       name: "desktop-chromium",
       use: {
@@ -40,8 +40,8 @@ export default defineConfig({
     { name: "mobile-chromium", use: { ...devices["Pixel 7"] } },
   ],
   webServer: process.env.E2E_BASE_URL
-    ? // Der Gesamtprüflauf betreibt seinen eigenen überwachten Server. Nur ohne
-      // explizite URL startet Playwright den hier beschriebenen Vite-Prozess.
+    ? // The complete runner owns its supervised server. Playwright starts the
+      // Vite process below only when no explicit URL was supplied.
       undefined
     : {
         command: "npm run dev -- --port 5173 --strictPort",

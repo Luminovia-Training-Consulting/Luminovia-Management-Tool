@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für funktionale Lehrteamrollen und getrennte Teilnehmerbedienung. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for staff capabilities and separate participant controls. Mocked UI projections do
+ * not establish database room access.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
@@ -28,7 +29,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
-/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(role: string) {
   state.role = role;
   rpc.mockImplementation(async (name: string) => ({

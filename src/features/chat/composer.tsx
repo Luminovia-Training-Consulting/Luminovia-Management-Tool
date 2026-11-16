@@ -1,5 +1,6 @@
 /**
- * Nachrichtenentwurf mit validiertem Text, Anhängen und bestätigtem Versand. Anfragekennungen bleiben für Wiederholungen erhalten; hochgeladene Dokumente werden erst nach Scanfreigabe referenziert.
+ * Message drafts with validated text, attachments and confirmed sending. Retain request IDs for
+ * retry and reference uploaded documents only after scan clearance.
  */
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -15,11 +16,11 @@ import { Button } from "../../components/ui/button";
 import { uploadDocument } from "../files/api";
 import { chatKeys } from "./api";
 import "./i18n";
-/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const messageSchema = z.object({ body: z.string().max(8000) });
-/** Dateiauswahlhilfe des Browsers; MIME, Magic Bytes, Größe und Scan werden unabhängig davon auf dem Server geprüft. */
+/** Guide the browser file picker; the server independently checks MIME type, magic bytes, size and scanning. */
 const acceptedFiles = ".pdf,.png,.jpg,.jpeg,.webp,.txt,.docx,.xlsx,.pptx";
-/** Sendet Text und saubere Anhänge mit einer wiederholbaren Operation; lokale Eingaben bleiben bis zur Bestätigung erhalten. */
+/** Send text and clean attachments as a retryable operation; retain local input until confirmation. */
 export function MessageComposer({
   actor,
   room,
@@ -31,8 +32,8 @@ export function MessageComposer({
   const online = useOnline();
   const client = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
-  // Versand- und Uploadkennung gehören zu getrennten Operationen. Bei unklarem
-  // Abschluss behält derselbe Inhalt seine Kennung; geänderte Eingaben beginnen neu.
+  // Sending and uploading are separate operations with separate retry identities.
+  // An uncertain outcome keeps the same identity for unchanged content; changed input starts a new operation.
   const retry = useRef<{ signature: string; key: string } | null>(null);
   const uploadRetry = useRef<{ signature: string; key: string } | null>(null);
   const [attachment, setAttachment] = useState<{

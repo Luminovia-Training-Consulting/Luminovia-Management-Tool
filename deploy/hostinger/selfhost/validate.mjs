@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Prüft gerenderte Selfhost-Konfiguration, Images und echte Gateway-Grenzen mit synthetischen Werten. Temporäre Dateien gehören nur dieser Probe; es wird keine bestehende Instanz konfiguriert.
+ * Validate rendered selfhost configuration, image pins and real gateway boundaries using synthetic values. Temporary files belong only to this probe; no existing instance is configured.
  */
 /** Offline cryptography, permissions and Docker Compose boundary validation. */
 import assert from "node:assert/strict";

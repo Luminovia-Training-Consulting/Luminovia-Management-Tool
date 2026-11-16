@@ -1,5 +1,5 @@
 /**
- * Containerinterner Readiness-Check des Scanner-Gateways. Verwendet ausschließlich den lokalen Health-Endpunkt; ein erfolgreicher Check ist keine Prüfung eines konkreten Uploads.
+ * Container readiness probe for the scanner gateway's configured localhost health URL. Success does not validate a particular upload.
  */
 import { readToken } from "./server.mjs";
 

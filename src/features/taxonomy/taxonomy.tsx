@@ -1,5 +1,6 @@
 /**
- * Suche, Detailansicht und versionierte Pflege des gemeinsamen Katalogs. Konflikte erfordern einen bewussten Neuabruf, statt lokale Entwürfe oder bestehende historische Referenzen still zu überschreiben.
+ * Shared catalogue search, detail and versioned maintenance. Conflicts require explicit
+ * reloading instead of silently overwriting drafts or historical references.
  */
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -31,7 +32,7 @@ import {
 import "./i18n";
 import "./taxonomy.css";
 
-/** Erkennt SQLSTATE 40001 als Versionskonflikt für einen bewussten Neuabruf. */
+/** Recognize SQLSTATE 40001 as a version conflict requiring deliberate reload. */
 function isConflict(error: unknown) {
   return (
     typeof error === "object" &&
@@ -41,7 +42,7 @@ function isConflict(error: unknown) {
   );
 }
 
-/** Hält Metadaten-/Hierarchieentwürfe lokal und übernimmt nur bestätigte Änderungen gegen die überprüfte Version. */
+/** Retain local metadata/hierarchy drafts and accept only confirmed changes against the reviewed version. */
 function TopicEditor({
   topic,
   parents,
@@ -187,7 +188,7 @@ function TopicEditor({
   );
 }
 
-/** Verbindet explizite Suche, aktuelle Capabilities und Katalogeditor mit Versionskonfliktbehandlung. */
+/** Combine explicit search, current capabilities and a version-conflict-aware catalogue editor. */
 export function TaxonomyPage() {
   const { t, i18n } = useTranslation("taxonomy");
   const { session } = useAuth();

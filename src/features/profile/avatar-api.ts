@@ -1,16 +1,18 @@
 /**
- * Versionsgebundene Avatarauswahl, authentifizierter Byteabruf und begrenzte Bildaufbereitung. Kodierte Dimensionen werden vor dem Browserdecode kontrolliert; der neu rasterisierte PNG-Upload durchläuft anschließend weiterhin den Server-Scan.
+ * Version-bound avatar selection, authenticated byte reads and bounded image preparation. Check
+ * encoded dimensions before browser decode; rerasterized PNG uploads still require server
+ * scanning.
  */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 
-/** Referenz auf die ausdrücklich gewählte saubere Avatarversion, ohne allgemeine Dokumentfreigabe. */
+/** Reference the explicitly selected clean avatar version without general document sharing. */
 interface AvatarSelection {
   version_id: string;
   updated_at: string;
 }
-/** Lädt die Serverprojektion über profile_avatar und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
+/** Read the profile_avatar server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const avatarQuery = (actor: string, target: string) =>
   queryOptions({
     queryKey: ["avatar", actor, target],
@@ -27,7 +29,7 @@ export const avatarQuery = (actor: string, target: string) =>
     gcTime: 0,
   });
 
-/** Wählt eine bereits saubere eigene Dokumentversion als Avatar oder entfernt die Auswahl mit null. */
+/** Select an already clean own document version as avatar, or clear selection with null. */
 export async function selectAvatar(versionId: string | null) {
   requireOnline();
   const result = await db().rpc("set_profile_avatar", {
@@ -36,7 +38,7 @@ export async function selectAvatar(versionId: string | null) {
   if (result.error) throw result.error;
 }
 
-/** Lädt erlaubte PNG-Bytes über das authentifizierte Dateigateway mit AbortSignal und ohne HTTP-Cache. */
+/** Read permitted PNG bytes through the authenticated gateway with AbortSignal and no HTTP cache. */
 export async function readAvatar(
   target: string,
   signal: AbortSignal,
@@ -64,10 +66,10 @@ export async function readAvatar(
   return await response.blob();
 }
 
-/** Check encoded dimensions before asking the browser to decode the image.
- * The output is a newly rasterised PNG; EXIF, filenames and other source
- * metadata are not copied into the private, scanned avatar document. */
-/** Prüft kodierte PNG/JPEG/WebP-Dimensionen vor dem Bilddecode und begrenzt Kanten sowie Pixelzahl. */
+/**
+ * Read bounded encoded PNG/JPEG/WebP dimensions before browser decode. The later prepareAvatar
+ * stage rasterizes new PNG bytes without copying source filenames or metadata.
+ */
 export function sourceImageSize(
   bytes: Uint8Array,
   mime: string,
@@ -141,7 +143,7 @@ export function sourceImageSize(
   return [width, height];
 }
 
-/** Rasterisiert ein geprüftes Bild mittig auf höchstens 512 Pixel als neues PNG und schließt das ImageBitmap auch bei Fehlern. */
+/** Rasterize the checked image into a centred PNG of at most 512 pixels and close the ImageBitmap even on failure. */
 export async function prepareAvatar(file: File): Promise<File> {
   if (
     file.size < 1 ||
@@ -150,8 +152,8 @@ export async function prepareAvatar(file: File): Promise<File> {
   )
     throw new Error("avatar_image_invalid");
   sourceImageSize(new Uint8Array(await file.arrayBuffer()), file.type);
-  // Erst nach Kodierungs-/Pixelbudgetprüfung wird Browserdecode erlaubt.
-  // Die dekodierten Dimensionen werden anschließend unabhängig nochmals geprüft.
+  // Check encoding/pixel budgets before allowing browser decode.
+  // Independently recheck the decoded dimensions afterwards.
   const image = await createImageBitmap(file);
   try {
     if (
@@ -186,8 +188,8 @@ export async function prepareAvatar(file: File): Promise<File> {
       ),
     );
     if (blob.size > 2 * 1024 * 1024) throw new Error("avatar_image_invalid");
-    // Neue PNG-Bytes übernehmen weder ursprünglichen Namen noch EXIF-Metadaten.
-    // Das ist weiterhin ein ungeprüfter Upload bis zum echten serverseitigen Scan.
+    // New PNG bytes copy neither the original filename nor EXIF metadata.
+    // The result is still an unverified upload until the actual server scan succeeds.
     return new File([blob], "avatar.png", { type: "image/png" });
   } finally {
     image.close();

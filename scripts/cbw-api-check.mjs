@@ -1,6 +1,6 @@
 /**
- * Echte Auth-/HTTP-Prüfung für provenienzgebundene CBW-Vorlagen und daraus geplante Aufträge.
- * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
+ * Real Auth/HTTP checks for CBW templates with source provenance and jobs planned from them.
+ * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -99,13 +99,13 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
     }),
   );
   templates.push(template);
-  /** Erzeugt kontrollierte fiktive Terminintervalle für die Prüfung vollständiger Auftragsblöcke. */
+  /** Creates controlled fictional session intervals to test whole-block offers. */
   const sessions = (offset) =>
     [0, 1].map((day) => ({
       starts_at: `2037-07-${String(6 + offset + day).padStart(2, "0")}T08:00:00Z`,
       ends_at: `2037-07-${String(6 + offset + day).padStart(2, "0")}T14:00:00Z`,
     }));
-  /** Erzeugt die konkrete Durchführungsplanung mit kontrollierten Terminen aus der ausgewählten CBW-Vorlage. */
+  /** Plans the concrete run with controlled dates from the selected CBW template. */
   const runPayload = (offset = 0) => ({
     template_id: template,
     organisation_id: org,
@@ -115,7 +115,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
     published: false,
     sessions: sessions(offset),
   });
-  /** Plant eine tatsächliche Durchführung aus der referenzierten Vorlage, statt nur einen Bildschirmzustand zu setzen. */
+  /** Plans a real course run from the referenced template rather than merely setting a screen state. */
   const createRun = async (offset = 0) => {
     const id = await checked(
       admin.client.rpc("save_course_run", {
@@ -130,7 +130,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
   const before = await checked(
     admin.client.rpc("course_run_job_defaults", { p_course_run_id: run }),
   );
-  /** Bindet den Honorarentwurf an die gelesene Quellenrevision; brutto und netto bleiben explizite Varianten. */
+  /** Binds the fee draft to the source revision already read; gross and net stay explicit variants. */
   const fee = (revision, gross = true) => ({
     source_revision: revision,
     ...(gross
@@ -281,7 +281,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
     racePreview = await checked(
       admin.client.rpc("course_run_job_defaults", { p_course_run_id: raceRun }),
     );
-  // Gleichzeitige echte Veröffentlichungsaufrufe prüfen denselben Quellenstand; keine serielle Scheinkonkurrenz.
+  // Real simultaneous publication requests use the same source revision; sequential calls would not prove concurrency.
   const race = await Promise.all([
     admin.client.rpc("create_course_run_job", {
       p_course_run_id: raceRun,

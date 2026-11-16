@@ -1,5 +1,5 @@
 /**
- * Prüft den engen historischen Backfill-Vertrag gegen echte versionierte SQL-Quellen. Falsche Historie oder Quellen dürfen keinen verallgemeinerten Migrations-Bypass erzeugen.
+ * Check the bounded historical backfill against real versioned SQL. Wrong history/source must not create a general migration bypass.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -22,7 +22,7 @@ import {
   reviewedMigrations,
 } from "./reviewed-m3-backfill.mjs";
 
-// Baut den genau erwarteten historischen Zustand für den folgenden positiven oder gezielt beschädigten Planfall.
+// Build the exact historical state for the successful or deliberately corrupted plan case.
 async function history() {
   const files = await readdir(resolve(repository, "supabase/migrations"));
   return Promise.all(

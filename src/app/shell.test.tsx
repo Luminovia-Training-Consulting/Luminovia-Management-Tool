@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für Navigation, Suche und bestätigtes beziehungsweise fehlgeschlagenes Abmelden. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for navigation, search and confirmed or failed sign-out. SDK/DOM fixtures isolate
+ * the shell; real Auth and permission acceptance remain separate.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -47,7 +48,7 @@ afterEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
 });
-/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup() {
   vi.stubGlobal(
     "matchMedia",

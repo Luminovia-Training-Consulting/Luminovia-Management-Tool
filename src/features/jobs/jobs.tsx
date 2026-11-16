@@ -1,5 +1,6 @@
 /**
- * Auftragsliste, URL-Filter und Detailansicht mit verbindlicher Sofortzuweisung. Die Liste filtert die aktuell geladene Servermenge; Claim-Erfolg entsteht erst durch die echte atomare RPC und bewahrt angenommene Konditionen.
+ * Job list, URL filters and detail view with immediate server allocation. Filter the loaded
+ * authorized set; only the atomic RPC can confirm a claim and preserve accepted terms.
  */
 import { JobPricingPanel } from "../commercial/pricing";
 import { JobLifecyclePanel } from "./lifecycle";
@@ -43,7 +44,7 @@ import {
   PageHeading,
 } from "../../components/common";
 import { BackLink } from "../../app/shell";
-/** Zeigt die aktuelle Angebotsprojektion samt frühestem Termin und Honorar je Dozierendenposition. */
+/** Display the current offer projection with its earliest session and per-position lecturer fee. */
 export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
   const { t, i18n } = useTranslation();
   const lifeText = useTranslation("jobLifecycle").t;
@@ -100,14 +101,14 @@ export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
     </article>
   );
 }
-/** Bewahrt kombinierte Filter in der URL und wendet sie auf die aktuell autorisierte geladene Angebotsmenge an. */
+/** Keep combined filters in the URL and apply them to the currently loaded authorized offers. */
 export function Jobs() {
   const { t, i18n } = useTranslation();
   const query = useQuery(jobsQuery);
   const topics = useQuery(topicsQuery);
   const [params, setParams] = useSearchParams();
-  // Filter leben in der URL. Browsernavigation und geteilte Links stellen
-  // dieselbe Auswahl wieder her, ohne einen zweiten Filterzustand zu pflegen.
+  // URL filters let browser navigation and shared links restore the same
+  // selection without maintaining a second filter state.
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
@@ -121,8 +122,8 @@ export function Jobs() {
   const to = params.get("to") ?? "";
   const min = params.get("min") ?? "";
   const currency = params.get("currency") ?? "";
-  // Dies ist ein Filter auf der geladenen, bereits berechtigten Servermenge.
-  // Eine vollständige Suche über mehr als das REST-Zeilenlimit ist damit nicht behauptet.
+  // This filters the loaded, already authorized server result set.
+  // It does not claim complete discovery beyond the REST row limit.
   const filtered =
     query.data?.filter((j) => {
       const search = [j.title, j.description, j.customer_name, j.location]
@@ -254,7 +255,7 @@ export function Jobs() {
     </>
   );
 }
-/** Zeigt angenommene Konditionen aus dem eigenen Claim und fordert neue Zuweisungen ausschließlich per atomarer Claim-RPC an. */
+/** Display own accepted terms and request new allocation only through the atomic claim RPC. */
 export function JobDetail() {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
@@ -263,8 +264,8 @@ export function JobDetail() {
   const online = useOnline();
   const client = useQueryClient();
   const [accepted, setAccepted] = useState<number | null>(null);
-  // Netzwerkunsicherheit behält dieselbe Operation; erst ein bestätigter Claim
-  // erhält später eine neue Kennung für eine mögliche echte Wiederöffnung.
+  // Network uncertainty preserves the same operation; only a confirmed claim
+  // later receives a fresh identity for a genuine reopening.
   const key = useRef(crypto.randomUUID());
   const permissions = useQuery(permissionsQuery(session!.user.id));
   const jobs = useQuery(jobsQuery);
@@ -277,8 +278,8 @@ export function JobDetail() {
     mutationFn: async () => {
       requireOnline();
       if (!job || accepted !== job.terms_version) throw new Error("invalid");
-      // Der Browser übermittelt keine Gewinner-/Dozierenden-ID. Der Server
-      // entscheidet atomar über aktuellen Akteur, Eignung, alle Termine und Konditionen.
+      // The browser submits no winner/lecturer ID. The server atomically checks
+      // the current actor, eligibility, every session and accepted terms.
       const { data, error } = await db().rpc("claim_job", {
         p_job_id: job.id,
         p_idempotency_key: key.current,
@@ -310,8 +311,8 @@ export function JobDetail() {
       </>
     );
   const zone = profile.data?.time_zone ?? job.time_zone;
-  // Ein akzeptierter Claim bleibt die Anzeigequelle für vereinbarte Beträge
-  // und Bedingungen, auch wenn das heutige Angebot später geändert wird.
+  // An accepted claim remains the source for agreed fees and conditions
+  // even if the current offer is subsequently edited.
   const terms = ownClaim ?? job;
   const result = claim.data?.status;
   const resultKey =

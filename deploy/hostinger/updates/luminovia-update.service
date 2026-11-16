@@ -1,4 +1,4 @@
-# Ein begrenzter Updaterversuch unter gemeinsamer Wartungssperre. Secrets bleiben in privaten Instanzdateien; der Timer allein garantiert weder eine erfolgreiche CI noch eine Installation.
+# One bounded updater attempt under the shared maintenance lock. Secrets stay in private instance files; the unit alone proves neither successful CI nor installation.
 [Unit]
 Description=Install a verified Luminovia CMS release from GitHub
 Wants=network-online.target docker.service

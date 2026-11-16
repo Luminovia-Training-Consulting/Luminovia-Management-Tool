@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für fehlende Organisationscapability ohne Abfrage privater Kontakte oder Notizen. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions proving missing organization capability does not query private contacts/notes.
+ * Controlled UI data do not establish native business-contact access.
  */
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";

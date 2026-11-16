@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für erhaltene Entwürfe/Retry-Kennungen und ausschließlich bestätigte saubere Anhänge. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for retained drafts/retry identities and confirmed clean attachments. Controlled
+ * SDK/DOM fixtures do not replace real chat/Storage acceptance.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -16,7 +17,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
-/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

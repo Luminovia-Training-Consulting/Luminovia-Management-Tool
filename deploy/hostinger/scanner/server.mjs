@@ -1,5 +1,5 @@
 /**
- * Authentifiziertes HTTP-Gateway vor dem privaten clamd. Begrenzt Header, Uploadgröße, Parallelität und Laufzeit; nur ein expliziter ClamAV-Befund wird als Scanergebnis ausgegeben.
+ * Authenticated HTTP gateway in front of private clamd. Bound headers, upload size, concurrency and duration; return only an explicit ClamAV result as a scan outcome.
  */
 import { createHash, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -7,7 +7,7 @@ import { createServer } from "node:http";
 import { pathToFileURL } from "node:url";
 import { createClamavScanner, MAX_BYTES, validateVersion } from "./clamav.mjs";
 
-// Lädt ausschließlich den serverseitigen Gateway-Token und verweigert eine unbrauchbare Konfiguration.
+// Load the server-only gateway token and reject unusable configuration.
 export function readToken(environment = process.env) {
   const value = environment.PORTAL_SCANNER_TOKEN;
   const file = environment.PORTAL_SCANNER_TOKEN_FILE;
@@ -20,12 +20,12 @@ export function readToken(environment = process.env) {
   return token;
 }
 
-// Bildet Bearerwerte auf gleich lange SHA-256-Puffer ab, damit timingSafeEqual keinen direkten Längenvergleich des Tokens benötigt.
+// Hash bearer values to equal-length buffers for timingSafeEqual rather than comparing token lengths directly.
 function digest(value) {
   return createHash("sha256").update(value).digest();
 }
 
-// Schreibt die begrenzte JSON-Antwort samt explizitem HTTP-Status und Sicherheitsheadern.
+// Write bounded JSON with an explicit HTTP status and security headers.
 function json(response, status, value, extraHeaders = {}) {
   if (response.destroyed || response.writableEnded) return;
   response.writeHead(status, {
@@ -37,13 +37,13 @@ function json(response, status, value, extraHeaders = {}) {
   response.end(JSON.stringify(value));
 }
 
-// Beendet eine abgewiesene Request-Verbindung nach der Antwort, damit Restbytes nicht als weiterer Upload fortgesetzt werden.
+// Close a rejected request connection after responding so leftover bytes cannot continue as another upload.
 function closeAfterReply(request, response) {
   response.setHeader("Connection", "close");
   response.once("finish", () => request.destroy());
 }
 
-// Zählt echte rohe Headerfelder; zusammengeführte Headerwerte würden doppelte Auth-/Längenangaben verdecken.
+// Count raw header fields; combined header values could hide duplicate authorization/length fields.
 function headerCount(request, name) {
   let count = 0;
   for (let index = 0; index < request.rawHeaders.length; index += 2) {
@@ -52,7 +52,7 @@ function headerCount(request, name) {
   return count;
 }
 
-// Erzeugt das begrenzte Scan-Gateway mit injizierbarem Adapter, Authentifizierung und kontrollierter Belegung.
+// Create the bounded scan gateway with an injectable adapter, authentication and controlled occupancy.
 export function createScannerServer({
   token,
   scanner = createClamavScanner(),

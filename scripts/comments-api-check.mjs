@@ -1,6 +1,6 @@
 /**
- * Echte Auth-/HTTP-Prüfung für ressourcenbezogene Kommentare und begründete Moderation.
- * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
+ * Real Auth/HTTP checks for resource-specific comments and reasoned moderation.
+ * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -86,7 +86,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
   );
   assert.equal(new Set(posted).size, 1);
   const id = posted[0];
-  /** Liest die fachliche Projektion als konkrete Fixtureidentität, um Sichtbarkeit und Datenschutz zu prüfen. */
+  /** Reads the business projection as a specific fixture identity to verify visibility and privacy. */
   const read = () =>
     checked(peer.client.rpc("resource_comments", { p_kind: "job", p_id: job }));
   assert.equal((await read())[0].body, body);

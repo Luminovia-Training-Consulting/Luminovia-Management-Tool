@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für verweigerte Ressourcenrechte, getrennte Entwürfe und exakte Wiederholung unsicherer Kommentaroperationen. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for denied resource access, separate drafts and exact retries after uncertain
+ * comment mutations. Controlled responses do not establish real resource permissions.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -15,7 +16,7 @@ vi.mock("../auth/auth-context", () => ({
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: mock.rpc }) }));
 
 const clients: QueryClient[] = [];
-/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(id = "job-a") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

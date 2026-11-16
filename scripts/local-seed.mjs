@@ -1,6 +1,6 @@
 /**
- * Ergänzt ausschließlich fiktive lokale Entwicklungsdaten mit stabilen Referenzkennungen.
- * Vorhandene Konten, geänderte Passwörter und MFA werden beim Neustart nicht zurückgesetzt.
+ * Adds only fictional local development data with stable reference IDs.
+ * Existing accounts, changed passwords and MFA are preserved across restarts.
  */
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
@@ -18,14 +18,14 @@ const service = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY, {
 });
 const password = process.env.E2E_PASSWORD;
 // A missing saved password never authorises resetting an existing account.
-/** Leitet fiktive lokale Referenz-UUIDs stabil aus dem benannten Fixtureobjekt ab. */
+/** Derives stable fictional reference UUIDs from the named fixture object. */
 const stableId = (name) => {
   const hash = createHash("sha256")
     .update(`luminovia-local-${name}`)
     .digest("hex");
   return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-4${hash.slice(13, 16)}-a${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
 };
-/** Wertet den tatsächlichen SDK-Erfolg aus und gibt erst danach dessen Daten zurück. */
+/** Requires actual SDK success before returning the response data. */
 async function checked(request, label) {
   const result = await request;
   if (result.error) throw new Error(`${label}: ${result.error.message}`);
@@ -35,7 +35,7 @@ const existingUsers = await checked(
   service.auth.admin.listUsers({ perPage: 1000 }),
   "List local users",
 );
-/** Ergänzt nur fehlende fiktive Konten und erhält vorhandene Identitäten samt Passwort und MFA. */
+/** Adds only missing fictional accounts, preserving existing identities, passwords and MFA. */
 async function user(email, displayName, role) {
   let account = existingUsers.users.find((entry) => entry.email === email);
   if (account) return { id: account.id, created: false };
@@ -186,7 +186,7 @@ for (const account of lecturers.filter((account) => account.created)) {
 const start = new Date();
 start.setUTCDate(start.getUTCDate() + 7);
 start.setUTCHours(8, 0, 0, 0);
-/** Berechnet den kontrollierten künftigen Fixturetermin für lokale Beispielaufträge. */
+/** Calculates the controlled future fixture date for local example jobs. */
 const nextDay = (index, hour = 8) => {
   const date = new Date(start);
   date.setUTCDate(date.getUTCDate() + index);

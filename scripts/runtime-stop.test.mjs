@@ -1,6 +1,6 @@
 /**
- * Echte Supervisor-Fixtures prüfen den datenerhaltenden Stoppvertrag der CLI.
- * Nur eine zur Sitzung passende Aufräumbestätigung darf als erfolgreicher Stopp gelten.
+ * Real supervisor fixtures verify the CLI's data-preserving stop contract.
+ * Only a cleanup acknowledgement matching the session may count as a successful stop.
  */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -20,7 +20,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 import { cleanEnvironment, command, root } from "./runtime-lib.mjs";
 
-/** Startet einen eigenen kontrollierten Supervisor, der die ausgewählte Aufräum-/Endzustandsvariante nachstellt. */
+/** Starts an owned controlled supervisor that models the selected cleanup/terminal-state variant. */
 async function stopFixture(phase) {
   const directory = mkdtempSync(join(tmpdir(), "portal-stop-fixture-"));
   const scripts = join(directory, "scripts");

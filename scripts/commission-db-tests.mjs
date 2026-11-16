@@ -1,7 +1,3 @@
-/**
- * PostgreSQL-Regressionsgruppen für Mandantenrechte sowie getrennte Brutto-, Plattform- und Nettoanteile.
- * Die Testdatenbank spielt echte Migrationen ein; Rollen-/MFA-Claims prüfen den Datenvertrag unabhängig von der UI.
- */
 /** Commission/client isolation on a disposable real PostgreSQL database. */
 import { spawn } from "node:child_process";
 import { readFile, readdir } from "node:fs/promises";
@@ -18,7 +14,7 @@ if (
     "Only the named local portal database container is permitted.",
   );
 const database = `commission_test_${randomUUID().replaceAll("-", "")}`;
-/** Startet das Prüfprogramm mit expliziten Argumenten und bewahrt seinen Fehlerstatus. */
+/** Starts the test program with explicit arguments and preserves its failure status. */
 function command(args, input = "") {
   return new Promise((resolve, reject) => {
     const child = spawn("docker", args, { stdio: ["pipe", "pipe", "pipe"] });
@@ -33,7 +29,7 @@ function command(args, input = "") {
     child.stdin.end(input);
   });
 }
-/** Sendet SQL an die eigene Testdatenbank und lässt jeden psql-Fehler den Prüflauf ablehnen. */
+/** Sends SQL to the owned test database and makes every psql error fail the run. */
 const sql = (text, name = database) =>
   command(
     [
@@ -52,21 +48,21 @@ const sql = (text, name = database) =>
     ],
     text,
   );
-/** Maskiert SQL-Literalwerte der kontrollierten Testfixture; SQL-Bezeichner folgen eigenen Prüfungen. */
+/** Quotes controlled fixture SQL literals; identifiers have separate validation. */
 const quote = (value) => `'${String(value).replaceAll("'", "''")}'`;
-/** Führt die Prüfung unter einer konkreten Identität aus; Verwaltungsrechte dürfen den Testaufruf nicht verdecken. */
+/** Executes the check as a specific identity so administrative fixture privileges cannot mask the tested access. */
 const actor = (id, statement, aal = "aal1") =>
   sql(
     `begin;set local role authenticated;set local request.jwt.claims=${quote(JSON.stringify({ sub: id, aal, role: "authenticated" }))};${statement};commit;`,
   );
-/** Ruft die öffentliche RPC als Testidentität auf und liefert deren skalaren Datenbankwert. */
+/** Calls the public RPC as the test identity and returns its scalar database value. */
 const value = (id, fn, args = [], aal) =>
   actor(
     id,
     `select public.${fn}(${args.map((x) => (x === null ? "null" : typeof x === "boolean" ? String(x) : quote(x))).join(",")})`,
     aal,
   );
-/** Aggregiert öffentliche RPC-Zeilen als JSON unter der geprüften Aufruferidentität. */
+/** Aggregates public RPC rows into JSON under the checked caller identity. */
 const rows = (id, fn, args = [], aal) =>
   actor(
     id,
@@ -84,13 +80,13 @@ const admin = randomUUID(),
   otherOrg = randomUUID();
 const candidates = Array.from({ length: 10 }, () => randomUUID());
 let checks = 0;
-/** Zählt und meldet einen Fall erst, wenn sämtliche zugehörigen Assertions erfolgreich abgeschlossen sind. */
+/** Counts and reports a case only after all of its assertions have completed successfully. */
 const check = async (name, fn) => {
   await fn();
   checks++;
   console.log(`PASS ${name}`);
 };
-/** Erzeugt die fiktiven Eingabedaten dieses Prüfmoduls; die tatsächliche Validierung bleibt beim Server. */
+/** Creates this module's fictional inputs; authoritative validation remains on the server. */
 const payload = (day = 0, gross = 100.01, currency = "EUR") => ({
   title: `Fictional commissioned course ${day}`,
   description: "Safe authored course text",
@@ -111,14 +107,14 @@ const payload = (day = 0, gross = 100.01, currency = "EUR") => ({
   ],
   topic_ids: [],
 });
-/** Sendet den tatsächlichen Prüfrequest mit der ausgewählten Identität; Antworten werden unabhängig geprüft. */
+/** Sends the actual test request as the selected identity; its response is asserted separately. */
 const request = (who, organisation, body, key = randomUUID()) =>
   value(who, "create_client_request", [
     organisation,
     JSON.stringify(body),
     key,
   ]);
-/** Erzeugt den provisionsgebundenen Auftrag über die Fach-RPC; der Server berechnet den tatsächlichen Nettoanteil. */
+/** Creates the commission-backed job through its business RPC; the server calculates the actual net share. */
 const commissionJob = (
   day,
   gross = 100.01,
@@ -142,7 +138,7 @@ const commissionJob = (
     ],
     "aal2",
   );
-/** Ruft die tatsächliche Claim-RPC auf; nur das Datenbankergebnis bestätigt eine vollständige Zuweisung. */
+/** Calls the actual claim RPC; only the database result confirms whole-block allocation. */
 const claim = (who, job, version = 2) =>
   value(who, "claim_job", [job, randomUUID(), version]).then(JSON.parse);
 let r, job, winner, accepted;

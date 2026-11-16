@@ -1,6 +1,6 @@
 /**
- * Echte Auth-/HTTP-Prüfung für Raummitgliedschaft, Nachrichten und deren Entzug.
- * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
+ * Real Auth/HTTP checks for room membership, messages and access revocation.
+ * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -12,7 +12,7 @@ assert.ok(
   url && ["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname),
   "Chat checks only permit a loopback project.",
 );
-/** Erzeugt einen getrennten SDK-Client ohne persistierte oder automatisch erneuerte Testsitzung. */
+/** Creates a separate SDK client without persistent sessions or automatic session refresh. */
 const make = (key) =>
   createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -22,13 +22,13 @@ const clients = [],
   users = [],
   rooms = [];
 const suffix = randomUUID();
-/** Wertet den tatsächlichen SDK-Erfolg aus und gibt erst danach dessen Daten zurück. */
+/** Requires actual SDK success before returning the response data. */
 async function checked(request, label) {
   const { data, error } = await request;
   assert.equal(error, null, `${label}: ${error?.message}`);
   return data;
 }
-/** Erzeugt getrennte fiktive Konten und meldet sie über Auth an; ihre Kennungen dienen nur der Fixture. */
+/** Creates separate fictional accounts and signs them in through Auth; their IDs belong only to the fixture. */
 async function fixture(index, role) {
   const email = `chat-${index}-${suffix}@example.invalid`;
   const created = await checked(
@@ -63,7 +63,7 @@ async function fixture(index, role) {
   await client.realtime.setAuth(auth.session.access_token);
   return { client, id: created.user.id };
 }
-/** Verbindet eine echte Realtime-Subscription der Testidentität und wartet auf den Bereitschaftszustand. */
+/** Connects a real Realtime subscription for this identity and waits until it is ready. */
 async function subscribe(client, room, events, name) {
   const channel = client
     .channel(`qa-chat-${name}-${randomUUID()}`, {
@@ -96,7 +96,7 @@ async function subscribe(client, room, events, name) {
   });
   return channel;
 }
-/** Begrenzt das Warten auf ein beobachtbares Ereignis; ein Timeout bleibt ein Testfehler. */
+/** Bounds the wait for an observable event; a timeout remains a test failure. */
 async function eventually(predicate, label, ms = 10_000) {
   const deadline = Date.now() + ms;
   while (Date.now() < deadline) {

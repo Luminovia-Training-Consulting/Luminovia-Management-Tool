@@ -1,7 +1,3 @@
-/**
- * Echte Auth-/HTTP-Prüfung für begrenzte, redigierte Auditansichten.
- * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
- */
 /** Actual native Auth/MFA/REST audit reader; canonical disposable stack only. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -35,7 +31,7 @@ await withApiFixture(async ({ actor, mfa, service, checked, suffix, url }) => {
     (await teacher.client.rpc("admin_audit_events")).error?.code,
     "42501",
   );
-  // Identische Zeitstempel erzwingen den zweiten Cursorbestandteil; private JSON-Felder sind absichtlich befüllt.
+  // Identical timestamps force the second cursor component; private JSON fields are deliberately populated.
   const label = `Fictional audit ${suffix}`,
     at = new Date(Date.now() - 3600000).toISOString(),
     ids = Array.from({ length: 45 }, randomUUID),
@@ -77,7 +73,7 @@ await withApiFixture(async ({ actor, mfa, service, checked, suffix, url }) => {
     ),
     "Seed scoped private/unknown actions",
   );
-  // Die erlaubte Projektion muss sowohl Feldmenge als auch Aktionsauswahl begrenzen.
+  // The allowed projection must restrict both returned fields and the set of permitted actions.
   const first = await checked(
     administrator.client.rpc("admin_audit_events", {
       p_search: label,
@@ -142,7 +138,7 @@ await withApiFixture(async ({ actor, mfa, service, checked, suffix, url }) => {
     ).error?.code,
     "22023",
   );
-  // Leserechte geben keine direkten Schreibrechte; anschließender Rollenentzug muss mit altem Token wirken.
+  // Read access grants no direct write access; later role revocation must take effect with the old token.
   const rewritten = await administrator.client
     .from("audit_events")
     .update({ action: "taxonomy.archived" })

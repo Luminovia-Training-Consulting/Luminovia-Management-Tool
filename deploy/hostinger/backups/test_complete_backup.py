@@ -1,4 +1,4 @@
-# Eigene synthetische Backupsets prüfen Dateirechte, Besitz, Sperren und Aufbewahrung. Die nativen Verschlüsselungsfälle verwenden echte age-Roundtrips und prüfen authentifizierte Extraktion ohne Kundendaten.
+# Owned synthetic sets exercise permissions, ownership, locks and retention. Native age round trips verify authenticated extraction without customer data.
 import datetime as dt
 import fcntl
 import hashlib
@@ -26,7 +26,7 @@ AGE = os.environ.get("AGE_TEST_BINARY") or shutil.which("age")
 KEYGEN = os.environ.get("AGE_KEYGEN_TEST_BINARY") or shutil.which("age-keygen")
 
 
-# Erzeugt ein eigenes minimales verschlüsseltes-Set-Inventar für Frische-/Aufbewahrungsfälle.
+# Build a minimal owned encrypted-set inventory for freshness/retention cases.
 def synthetic_set(root, ordinal, *, hours=0):
     directory = root / ("20260101T0000" + str(ordinal).zfill(2) + "Z-" + str(ordinal).zfill(12))
     b.private_dir(directory)
@@ -41,9 +41,9 @@ def synthetic_set(root, ordinal, *, hours=0):
     return directory
 
 
-# Prüft mit synthetischen Sets Privatheit, Sperren, Frische und begrenzte Aufbewahrung ohne echte Instanzzugriffe.
+# Exercise privacy, locks, freshness and bounded retention using synthetic sets, not real instances.
 class BackupSafetyTests(unittest.TestCase):
-    # Legt eigene temporäre Fixturepfade an; kein bestehender Betriebsbestand wird verwendet.
+    # Create owned temporary fixture paths without reusing existing operational data.
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="luminovia-backup-test-")
         self.root = Path(self.temp.name)
@@ -53,11 +53,11 @@ class BackupSafetyTests(unittest.TestCase):
         (self.portal / "www").mkdir(parents=True)
         self.backup = b.CompleteBackup(self.portal, self.destination, reserve=0, host_root=self.root / "host")
 
-    # Entfernt ausschließlich die in diesem Fall angelegten temporären Ressourcen.
+    # Remove only temporary resources created by this case.
     def tearDown(self):
         self.temp.cleanup()
 
-    # Erzeugt einen fiktiven abgeschlossenen PostgreSQL-Zeugen samt exakter historischer Quellenkette.
+    # Build fictional completed PostgreSQL proof with its exact historical source chain.
     def postgres_proof_fixture(self):
         # Fictional guard inputs: never a claim that a future engine was tested.
         self.backup.host_root = self.root / "host"
@@ -291,10 +291,10 @@ class BackupSafetyTests(unittest.TestCase):
         self.assertEqual(json.loads(self.backup.status.read_text())["status"], "failed")
 
 
-# Verwendet echtes age gegen eigene temporäre Daten und prüft authentifizierte Entschlüsselung samt Dateibytes.
+# Use real age with owned temporary data to verify authenticated decryption and file bytes.
 @unittest.skipUnless(AGE and KEYGEN, "Native age/age-keygen required for authenticated encryption acceptance")
 class NativeEncryptionTests(unittest.TestCase):
-    # Legt eigene temporäre Fixturepfade an; kein bestehender Betriebsbestand wird verwendet.
+    # Create owned temporary fixture paths without reusing existing operational data.
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="luminovia-age-test-")
         self.root = Path(self.temp.name)
@@ -302,11 +302,11 @@ class NativeEncryptionTests(unittest.TestCase):
         subprocess.run([KEYGEN, "-o", str(self.identity)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.recipient = subprocess.check_output([KEYGEN, "-y", str(self.identity)], stderr=subprocess.DEVNULL).decode().strip()
 
-    # Entfernt ausschließlich die in diesem Fall angelegten temporären Ressourcen.
+    # Remove only temporary resources created by this case.
     def tearDown(self):
         self.temp.cleanup()
 
-    # Erstellt nur den synthetischen mit echter age-Identität verschlüsselten Recoverybestand dieses Falls.
+    # Create only this case's synthetic recovery data, encrypted with a real age identity.
     def recovery_set(self, *, unsafe_path=False):
         directory = self.root / "complete-set"
         b.private_dir(directory)

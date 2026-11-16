@@ -1,5 +1,6 @@
 /**
- * Eigene Bewertungen tatsächlich bewertbarer Kurse. Die Serverliste entscheidet über Berechtigung und vorherige Bewertung; Bearbeiten oder Rückzug wird erst nach erfolgreicher Antwort sichtbar bestätigt.
+ * Own reviews for courses the server marks reviewable. Server eligibility and existing-review
+ * state govern editing; confirm save/withdrawal only after a successful response.
  */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,7 +21,7 @@ import { dateTime } from "../../lib/dates";
 import { peopleRpc, type ReviewableCourse } from "./api";
 import "./i18n";
 import "./people.css";
-/** Bearbeitet eine vom Server als bewertbar gelieferte Kurs-/Dozierendenbeziehung mit expliziter Speicherung oder Rücknahme. */
+/** Edit the server-authorized course/lecturer review through explicit save/withdrawal actions. */
 function ReviewForm({ course }: { course: ReviewableCourse }) {
   const { t, i18n } = useTranslation("people");
   const online = useOnline();
@@ -154,7 +155,7 @@ function ReviewForm({ course }: { course: ReviewableCourse }) {
     </article>
   );
 }
-/** Lädt nur die aktuell bewertbaren Kurse und stellt jeweils deren vorhandenen eigenen Reviewstand bereit. */
+/** Read only currently reviewable courses with their existing own-review state. */
 export function MyCourseReviews() {
   const { t } = useTranslation("people");
   const { session } = useAuth();

@@ -1,5 +1,5 @@
 #:schema https://supabase.com/schemas/config/v1.json
-# Normale lokale Entwicklungsinstanz. Der kanonische Test-/GitHub-Previewrunner erstellt eigene Projekt-/Portoverlays; diese Basisdatei darf bestehende Daten nicht auf einen QA-Reset umleiten.
+# Normal local development configuration. Canonical tests and the GitHub preview build separate project/port overlays; this base must not redirect existing data into a QA reset.
 # For detailed configuration reference documentation, visit:
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the

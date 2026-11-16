@@ -1,6 +1,6 @@
 /**
- * Echte Auth-/HTTP-Prüfung für gescannte Profilbilder und deren aktuelle Sichtbarkeit.
- * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
+ * Real Auth/HTTP checks for scanned avatars and current viewing permissions.
+ * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
 import { randomUUID, createHash } from "node:crypto";
@@ -16,13 +16,13 @@ await withApiFixture(async ({ service, actor, mfa, defer, checked, url }) => {
     job = randomUUID(),
     claim = randomUUID();
   let courseCreated = false;
-  /** Erstellt und meldet die konkrete fiktive Identität für die echte Avatarberechtigungsprüfung an. */
+  /** Creates and signs in the specific fictional identity for the real avatar-permission check. */
   async function identity(role) {
     const who = await actor(`avatar-${role}-${users.length}`, role);
     users.push(who.id);
     return who;
   }
-  /** Liest den aktuellen Sitzungstoken der Testidentität für echte authentifizierte Gatewayaufrufe. */
+  /** Reads the test actor's current session token for actual authenticated gateway requests. */
   async function headers(who) {
     const { session } = await checked(
       who.client.auth.getSession(),
@@ -34,7 +34,7 @@ await withApiFixture(async ({ service, actor, mfa, defer, checked, url }) => {
       apikey: process.env.SUPABASE_ANON_KEY,
     };
   }
-  /** Sendet den tatsächlichen Prüfrequest mit der ausgewählten Identität; Antworten werden unabhängig geprüft. */
+  /** Sends the actual test request as the selected identity; its response is asserted separately. */
   async function request(who, body) {
     return await fetch(`${url}/functions/v1/files`, {
       method: "POST",
@@ -42,7 +42,7 @@ await withApiFixture(async ({ service, actor, mfa, defer, checked, url }) => {
       body: JSON.stringify(body),
     });
   }
-  /** Sendet echte Fixturebytes an den authentifizierten Dateipfad; Scan und Freigabe bleiben Serveraufgaben. */
+  /** Sends real fixture bytes through the authenticated file endpoint; scanning and release remain server responsibilities. */
   async function upload(who, bytes, mime = "image/png", name = "avatar.png") {
     const form = new FormData();
     form.set("file", new File([bytes], name, { type: mime }));

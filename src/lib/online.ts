@@ -1,8 +1,10 @@
 /**
- * React-kompatible Beobachtung des Browser-Onlinestatus und früher Abbruch von Offlineaktionen. navigator.onLine ist ein Bedienhinweis und garantiert keine Servererreichbarkeit; Erfolg braucht weiterhin die echte Antwort.
+ * React-compatible browser connectivity observation and early rejection of known offline
+ * actions. navigator.onLine is a UX hint, not proof of server reachability; success still
+ * requires the actual response.
  */
 import { useSyncExternalStore } from "react";
-/** Registriert genau die beiden Browser-Netzwerkereignisse und liefert deren symmetrische Abmeldung. */
+/** Subscribe to the two browser network events and return their matching cleanup. */
 const subscribe = (callback: () => void) => {
   window.addEventListener("online", callback);
   window.addEventListener("offline", callback);
@@ -11,14 +13,14 @@ const subscribe = (callback: () => void) => {
     window.removeEventListener("offline", callback);
   };
 };
-/** Abonniert Browser-online/offline-Ereignisse über useSyncExternalStore mit passendem Unsubscribe. */
+/** Observe online/offline events through useSyncExternalStore with the corresponding unsubscribe. */
 export const useOnline = () =>
   useSyncExternalStore(
     subscribe,
     () => navigator.onLine,
     () => true,
   );
-/** Bricht im bekannten Offlinezustand vor einer Mutation ab; verbleibende Netzfehler behandelt der tatsächliche Aufruf. */
+/** Reject known offline mutations early; each actual request still handles remaining network failures. */
 export function requireOnline() {
   if (!navigator.onLine) throw new Error("offline");
 }

@@ -1,12 +1,12 @@
 /**
- * Testbarer Einladungshandler mit dauerhafter Datenbankreservierung vor jeder Zustellung. Unklare Sendeergebnisse werden nicht automatisch erneut verschickt; die serverseitige Reservierung hält Wiederholungen auseinander.
+ * Testable invitation handler with durable database reservation before delivery. Do not automatically resend ambiguous results; the reservation distinguishes retries.
  */
 /** Dependency-injected invitation boundary. All sends require a durable DB reservation first. */
-// Validierter Aufruf mit normalisierter Email und explizitem Wiederholungsschlüssel.
+// Validated request with normalized email and an explicit retry key.
 export type InviteBody = {email:string; display_name:string; idempotency_key:string};
-// Ergebnis der dauerhaften Datenbankreservierung; nur reserved erlaubt einen Versand.
+// Durable reservation result; only reserved permits delivery.
 type Reservation = {status:string;invitation_id?:string};
-// Testbare Grenze für echte Aufruferrechte, Reservierung, Versand und dauerhaften Abschluss.
+// Testable boundary for actual caller permissions, reservation, delivery and durable completion.
 export type InviteDependencies = {
  enabled:boolean;
  allowedOrigins:readonly string[];
@@ -16,7 +16,7 @@ export type InviteDependencies = {
  send:(body:InviteBody,redirectTo:string)=>Promise<string>;
  complete:(id:string,userId:string|null,name:string,success:boolean)=>Promise<void>;
 };
-// Verweigert unbekannte Felder und normalisiert Email, Anzeigename und den Wiederholungsschlüssel.
+// Reject unknown fields and normalize email, display name and retry key.
 export function parseBody(value:unknown):InviteBody|null {
  if(!value || typeof value!=='object' || Array.isArray(value)) return null;
  const v=value as Record<string,unknown>;
@@ -27,7 +27,7 @@ export function parseBody(value:unknown):InviteBody|null {
  if(v.display_name!==undefined && (typeof v.display_name!=='string' || v.display_name.length>120))return null;
  return {email,idempotency_key:v.idempotency_key,display_name:typeof v.display_name==='string'?v.display_name.trim():''};
 }
-// Liest höchstens den vereinbarten kleinen Einladungsbody und bricht den Stream bei Überschreitung ab.
+// Read at most the small permitted invitation body and cancel oversized streams.
 async function readBoundedBody(request:Request):Promise<string|null> {
  const reader=request.body?.getReader();if(!reader)return '';
  const chunks:Uint8Array[]=[];let size=0;
@@ -35,7 +35,7 @@ async function readBoundedBody(request:Request):Promise<string|null> {
  const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
  return new TextDecoder('utf-8',{fatal:true}).decode(bytes);
 }
-// Prüft Origin/Auth und reserviert dauerhaft vor dem Senden; unsichere Versandfehler bleiben gegen automatische Wiederholung gesperrt.
+// Check origin/Auth and reserve durably before sending; ambiguous delivery failures remain blocked against automatic retries.
 export function createHandler(deps:InviteDependencies) {
  return async(request:Request):Promise<Response>=>{
   const origin=request.headers.get('Origin')??'';

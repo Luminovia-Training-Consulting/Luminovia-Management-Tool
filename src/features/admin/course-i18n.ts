@@ -1,5 +1,6 @@
 /**
- * DE/EN-Oberflächentexte für courseOffer. Die Registrierung erweitert i18next beim Modulimport; verfasste Fachinhalte werden nicht automatisch übersetzt.
+ * DE/EN UI resources for the courseOffer namespace. Module import registers these strings with
+ * i18next; authored business content is not translated.
  */
 import i18n from "../../lib/i18n";
 const en = {

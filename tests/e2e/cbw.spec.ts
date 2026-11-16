@@ -1,6 +1,6 @@
 /**
- * Browserabläufe für CBW-Quellenvorlagen, geplante Sitzungen und netto sichtbare Annahmen.
- * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ * Browser workflows for CBW source templates, planned sessions and lecturer-visible net claims.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
@@ -17,7 +17,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "CBW writes require the canonical disposable project.",
 );
-/** Prüft den gerenderten Zustand mit axe; dies ersetzt keine manuelle Barrierefreiheitsabnahme. */
+/** Checks the rendered state with axe; this does not replace manual accessibility acceptance. */
 async function a11y(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   const scan = await new AxeBuilder({ page })

@@ -1,5 +1,5 @@
 /**
- * Startet ein isoliertes echtes Gateway mit gezielt unerreichbaren Upstreams und unterscheidet erlaubte Routen von den gesperrten Pfaden. Diese Probe validiert Proxygrenzen und ersetzt keine vollständige Auth- oder Geschäftsabnahme.
+ * Run a real isolated gateway with deliberately unreachable upstreams to distinguish allowed routes from blocked paths. This checks proxy boundaries, not complete Auth/business acceptance.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -9,7 +9,7 @@ import { join } from "node:path";
 
 // Optional real Envoy routing check. Generated test-only keys, no backend,
 // network or host ports; only this labelled temporary container is removed.
-// Prüft echte Gatewayrequests gegen kontrollierte Upstreams und entfernt nur die dafür angelegten Ressourcen.
+// Exercise real gateway requests against controlled upstreams and remove only owned resources.
 export function checkGatewayRouting({ directory, here, image, server }) {
   const name = "portal-gateway-check-" + randomUUID();
   const label = "org.luminovia.gateway-check";

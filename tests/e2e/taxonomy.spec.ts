@@ -1,6 +1,6 @@
 /**
- * Browserabläufe für gemeinsame Themenhierarchie und auf Entdeckung begrenzte Dozierendenrechte.
- * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ * Browser workflows for shared topic hierarchies and lecturer access limited to discovery.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
@@ -17,7 +17,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Taxonomy mutations belong to the disposable canonical stack.",
 );
-/** Prüft den gerenderten Zustand mit axe; Tastatur- und Datenabläufe behalten eigene Assertions. */
+/** Checks the rendered state with axe; keyboard interaction and data flows retain separate assertions. */
 async function accessibility(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   const result = await new AxeBuilder({ page })

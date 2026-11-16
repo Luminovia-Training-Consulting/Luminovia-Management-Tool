@@ -1,6 +1,6 @@
 /**
- * Browserabläufe für Kontenrollen, gescopte Einladungen und bestätigte Statusänderungen.
- * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ * Browser workflows for account roles, scoped invitations and confirmed status changes.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";

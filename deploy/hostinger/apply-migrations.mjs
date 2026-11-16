@@ -1,5 +1,5 @@
 /**
- * Operatorwerkzeug für die ausdrücklich freigegebene Entwicklungsinstanz. Vergleicht gespeicherte Migrationsquellen und führt nur fehlende Quellen aus; der Aufruf ist keine allgemeine Produktionsfreigabe.
+ * Operator tool for the explicitly authorized development instance. Compares stored migration source and applies only missing files; invocation is not general production approval.
  */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -15,7 +15,7 @@ if (process.argv[2] !== "--development-vps") {
 const remote = "root@72.61.20.240";
 const command =
   "docker exec -i luminovia-supabase-db-1 psql -U postgres -d postgres -X -At -v ON_ERROR_STOP=1";
-// Führt SQL ausschließlich auf der fest konfigurierten Entwicklungsdatenbank aus; ON_ERROR_STOP verhindert Weiterarbeit nach einem Datenbankfehler.
+// Run SQL only against the fixed development database; ON_ERROR_STOP prevents continuing after a database error.
 function sql(input) {
   try {
     return execFileSync("ssh", ["-o", "BatchMode=yes", remote, command], {

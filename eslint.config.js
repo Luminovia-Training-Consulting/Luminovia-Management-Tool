@@ -1,4 +1,4 @@
-/** ESLint-Grenzen für Browser, Node-Werkzeuge und gemeinsam genutzte Konfiguration. */
+/** ESLint boundaries for browser code, Node tools and shared configuration. */
 import js from "@eslint/js";
 import globals from "globals";
 import tseslint from "typescript-eslint";
@@ -6,8 +6,8 @@ import hooks from "eslint-plugin-react-hooks";
 import refresh from "eslint-plugin-react-refresh";
 export default tseslint.config(
   {
-    // Edge-Code hat Deno-Lint im Gesamtprüflauf; die gepinnte Upstream-Kopie
-    // und erzeugte/private Dateien werden nicht nach lokalen JS-Regeln verändert.
+    // The complete runner uses Deno lint for Edge source; pinned upstream source
+    // and generated/private files are excluded from local JS lint rules.
     ignores: [
       "dist",
       ".local",
@@ -22,17 +22,17 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {
     files: ["scripts/**/*.mjs", "deploy/hostinger/**/*.mjs", "*.{js,ts}"],
-    // Wartungs-/Testprogramme laufen unter Node, nicht in einer Browserumgebung.
+    // Maintenance and test programs run in Node, not in the browser.
     languageOptions: { globals: globals.node },
   },
   {
     files: ["scripts/local-capture.mjs"],
-    // Das Werkzeug enthält auch Code, den Playwright innerhalb der Seite ausführt.
+    // This tool also includes code that Playwright executes inside the page.
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {
     files: ["src/**/*.{ts,tsx}"],
-    // Hook-Abhängigkeiten und Fast-Refresh-Verträge gelten für den React-Quellbaum.
+    // Hook dependencies and Fast Refresh contracts apply to React source.
     plugins: { "react-hooks": hooks, "react-refresh": refresh },
     rules: {
       ...hooks.configs.recommended.rules,

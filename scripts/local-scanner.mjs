@@ -1,6 +1,6 @@
 /**
- * Verwaltet den versionierten lokalen ClamAV-Container im eigenen internen Netz.
- * Nur der passende Projektbesitzer darf ihn stoppen oder ersetzen; Signaturdaten bleiben persistent.
+ * Manages the versioned local ClamAV container on its owned internal network.
+ * Only the matching project owner may stop or replace it; signature data remain persistent.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -18,7 +18,7 @@ const project = /^project_id\s*=\s*"([a-zA-Z0-9_-]+)"/m.exec(
 )?.[1];
 if (!project) throw new Error("A safe local Supabase project ID is required.");
 const container = `portal_scanner_${project}`;
-/** Führt den begrenzten lokalen Dockerbefehl aus; optionale Inspektionen dürfen fehlende Ressourcen als null melden. */
+/** Runs the bounded local Docker command; optional inspections may return null for absent resources. */
 const docker = (args, quiet = false) => {
   try {
     return execFileSync("docker", args, {
@@ -34,7 +34,7 @@ const docker = (args, quiet = false) => {
     );
   }
 };
-/** Liest den tatsächlichen Zustand genau des projektbenannten Scannercontainers. */
+/** Reads the actual state of the project-named scanner container only. */
 const inspect = () => {
   const raw = docker(["inspect", container], true);
   return raw ? JSON.parse(raw)[0] : null;

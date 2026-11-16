@@ -1,7 +1,3 @@
-/**
- * PostgreSQL-Regressionsgruppen für geteilte Profilangaben, eigene Labels und berechtigte Kursbewertungen.
- * Die Testdatenbank spielt echte Migrationen ein; Rollen-/MFA-Claims prüfen den Datenvertrag unabhängig von der UI.
- */
 /** Real disposable PostgreSQL/RLS checks for profiles, enrolment and reviews.
  * The separate profiles-api-check exercises actual Auth and management MFA.
  */
@@ -21,7 +17,7 @@ if (
     "Only the named local portal database container is permitted.",
   );
 const database = `profiles_test_${randomUUID().replaceAll("-", "")}`;
-/** Startet das Prüfprogramm mit expliziten Argumenten und bewahrt seinen Fehlerstatus. */
+/** Starts the test program with explicit arguments and preserves its failure status. */
 function command(args, input = "") {
   return new Promise((resolve, reject) => {
     const child = spawn("docker", args, { stdio: ["pipe", "pipe", "pipe"] });
@@ -36,7 +32,7 @@ function command(args, input = "") {
     child.stdin.end(input);
   });
 }
-/** Sendet SQL an die eigene Testdatenbank und lässt jeden psql-Fehler den Prüflauf ablehnen. */
+/** Sends SQL to the owned test database and makes every psql error fail the run. */
 const sql = (text, name = database) =>
   command(
     [
@@ -55,9 +51,9 @@ const sql = (text, name = database) =>
     ],
     text,
   );
-/** Maskiert SQL-Literalwerte der kontrollierten Testfixture; SQL-Bezeichner folgen eigenen Prüfungen. */
+/** Quotes controlled fixture SQL literals; identifiers have separate validation. */
 const quote = (value) => `'${String(value).replaceAll("'", "''")}'`;
-/** Führt die Prüfung unter einer konkreten Identität aus; Verwaltungsrechte dürfen den Testaufruf nicht verdecken. */
+/** Executes the check as a specific identity so administrative fixture privileges cannot mask the tested access. */
 const actor = (id, statement, aal = "aal1") =>
   sql(
     `begin;set local role authenticated;set local request.jwt.claims=${quote(JSON.stringify({ sub: id, aal, role: "authenticated" }))};${statement};commit;`,
@@ -71,7 +67,7 @@ const lecturer = randomUUID(),
 const run = randomUUID(),
   org = randomUUID(),
   template = randomUUID();
-/** Ruft die fachliche Datenbank-API unter den kontrollierten Identitäts-/MFA-Claims der Fixture auf. */
+/** Calls the business database API under the fixture's controlled identity/MFA claims. */
 const rpc = (who, name, args = [], aal = "aal1") =>
   actor(
     who,
@@ -85,7 +81,7 @@ const rpc = (who, name, args = [], aal = "aal1") =>
     }
   });
 let checks = 0;
-/** Zählt und meldet die Gruppe erst nach dem erfolgreichen Abschluss aller zugehörigen Assertions. */
+/** Counts and reports a group only after every related assertion has passed. */
 const check = async (name, fn) => {
   await fn();
   checks++;
@@ -116,7 +112,7 @@ try {
  insert into public.course_templates(id,title) values('${template}','Fictional completed course');
  insert into public.course_runs(id,template_id,organisation_id,published) values('${run}','${template}','${org}',false);
  insert into public.course_sessions(course_run_id,starts_at,ends_at) values('${run}',now()-interval '2 day',now()-interval '1 day');`);
-  /** Erzeugt eine kontrollierte tatsächliche Kurszuweisung, damit Rezensionen reale Teilnahmeberechtigung prüfen. */
+  /** Creates a controlled actual course assignment so reviews check real participation eligibility. */
   const seedAssignment = async (target, course, starts, ends) => {
     const job = randomUUID(),
       claim = randomUUID();

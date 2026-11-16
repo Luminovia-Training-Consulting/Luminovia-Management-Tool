@@ -1,8 +1,9 @@
 /**
- * DTOs für Wissensrechte, Kategorien, Wiki-/Revisionsstände und Forumobjekte. Entwurfs-/Publikationszustand sowie Moderationsdaten bleiben explizit und werden nicht aus der bloßen Route abgeleitet.
+ * DTOs for knowledge capabilities, categories, wiki/revisions and forum objects.
+ * Draft/publication and moderation state stay explicit rather than being inferred from a route.
  */
 import type { JSONContent } from "@tiptap/react";
-/** Aktuelle Lese-/Autoren-/Moderationsfähigkeiten für die Wissensbereiche. */
+/** Current read/author/moderator capabilities for knowledge areas. */
 export interface KnowledgeAccess {
   can_author: boolean;
   can_publish_wiki: boolean;
@@ -17,7 +18,7 @@ export interface KnowledgeCategory {
   label_en: string;
   archived: boolean;
 }
-/** Wiki-Metadaten und erlaubter aktueller Inhalts-/Publikationsstand. */
+/** Wiki metadata and the currently permitted content/publication state. */
 export interface WikiPageRecord {
   id: string;
   title: string;
@@ -34,7 +35,7 @@ export interface WikiPageRecord {
   updated_at: string;
   content: JSONContent;
 }
-/** Unveränderlicher gespeicherter Wiki-Versionsstand für die zugelassene Historienansicht. */
+/** Immutable saved wiki revision for the authorized history view. */
 export interface WikiRevision {
   version: number;
   title: string;
@@ -44,7 +45,7 @@ export interface WikiRevision {
   published: boolean;
   content: JSONContent;
 }
-/** Themenprojektion einschließlich sichtbarem Moderations-/Abonnementzustand. */
+/** Thread projection with visible moderation/subscription state. */
 export interface ForumThread {
   id: string;
   title: string;
@@ -62,7 +63,7 @@ export interface ForumThread {
   created_at: string;
   updated_at: string;
 }
-/** Freigegebener Forumsbeitrag mit strukturierter Inhaltsdarstellung und Autor-/Änderungsinformationen. */
+/** Permitted forum post with structured content and author/edit metadata. */
 export interface ForumPost {
   id: string;
   thread_id: string;
@@ -74,7 +75,7 @@ export interface ForumPost {
   deleted_at: string | null;
   version: number;
 }
-/** Berechtigte Moderationsmeldung, die nicht zum allgemeinen Foruminhalt gehört. */
+/** Authorized moderation report separate from general forum content. */
 export interface ForumReport {
   id: string;
   post_id: string;

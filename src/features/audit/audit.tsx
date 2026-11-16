@@ -1,5 +1,6 @@
 /**
- * Lesemaske des Administrationsprotokolls mit explizit übernommenen Filtern. Entwurf und aktive Abfrage bleiben getrennt, damit Datumseingaben keine unkontrollierten Historienabrufe auslösen.
+ * Read-only administrative audit view with explicitly applied filters. Keep drafts separate from
+ * the active query so date edits do not trigger uncontrolled history requests.
  */
 import { useId, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -26,7 +27,7 @@ import {
 import "./i18n";
 import "./audit.css";
 
-/** Übernimmt Filter bewusst und navigiert über servergelieferte Tupelcursor statt einen gesamten Auditbestand zu laden. */
+/** Apply filters deliberately and follow server-provided tuple cursors instead of loading all audit events. */
 function AuditReader({ actor, zone }: { actor: string; zone: string }) {
   const { t, i18n } = useTranslation("adminAudit"),
     online = useOnline(),
@@ -218,7 +219,7 @@ function AuditReader({ actor, zone }: { actor: string; zone: string }) {
     </>
   );
 }
-/** Lädt Audit-Capability und Anzeigezone, bevor freigegebene Verwaltungsereignisse angefragt werden. */
+/** Load the audit capability and display zone before requesting permitted administrative events. */
 export function AdminAuditPage() {
   const { t } = useTranslation("adminAudit"),
     { session } = useAuth(),

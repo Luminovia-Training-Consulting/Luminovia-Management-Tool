@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für Fehlerpfade von Anmeldung, Wiederherstellung und Passwortänderung. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for failed sign-in, recovery and password changes. Controlled SDK responses test
+ * error/retry presentation, not real Auth delivery.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -40,7 +41,7 @@ beforeEach(() => {
   window.history.replaceState(null, "", "/");
 });
 afterEach(cleanup);
-/** Rendert die untersuchte Komponente mit den für diesen Test notwendigen lokalen Providern. */
+/** Render the subject with the local providers required by this test. */
 function view(element: React.ReactNode) {
   return render(<MemoryRouter>{element}</MemoryRouter>);
 }

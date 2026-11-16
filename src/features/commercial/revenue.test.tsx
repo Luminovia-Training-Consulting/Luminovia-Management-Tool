@@ -1,5 +1,7 @@
 /**
- * Vitest-Regressionen für fehlende Brutto-Capability ohne Abruf oder Anzeige privater Umsatzdaten. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions proving a missing gross-price capability triggers neither requests nor rendering
+ * of private revenue data. Mocked capability projections do not establish native access
+ * controls.
  */
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";

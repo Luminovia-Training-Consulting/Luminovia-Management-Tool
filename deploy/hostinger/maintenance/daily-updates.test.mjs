@@ -1,5 +1,5 @@
 /**
- * Wartungstests mit eigenem temporärem Checkout und injizierten Metadaten/Kommandos. Prüfen Discovery, feste Dateigrenzen und Kandidatenfreigabe ohne Registry-, GitHub- oder Serveränderungen.
+ * Maintenance tests use an owned temporary checkout and injected metadata/commands. Exercise discovery, fixed file boundaries and candidate approval without registry, GitHub or server mutations.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -40,7 +40,7 @@ import {
 
 const BACKEND = "deploy/hostinger/selfhost/compose.yml",
   WEB = "deploy/hostinger/compose.yml";
-// Erzeugt ausschließlich einen kontrollierten lokalen/injizierten Fixturebestand; externe Systemantworten bleiben gezielt austauschbar.
+// Create controlled owned fixtures with replaceable external responses.
 async function fixture() {
   const root = await mkdtemp(resolve(tmpdir(), "luminovia-maintenance-test-"));
   for (const file of [
@@ -127,7 +127,7 @@ async function fixture() {
     cleanup: () => rm(root, { recursive: true, force: true }),
   };
 }
-// Leitet den Imagekandidaten ausschließlich aus dem eigenen injizierten Metadaten-/Checkoutkontext ab.
+// Derive the image candidate only from this fixture's injected metadata and checkout.
 async function imagePlan(context) {
   const text = await readFile(resolve(context.root, BACKEND), "utf8");
   const from = composeImages(text).get("rest");

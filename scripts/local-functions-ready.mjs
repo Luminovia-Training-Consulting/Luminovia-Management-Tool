@@ -1,6 +1,6 @@
 /**
- * Prüft Bereitschaft des tatsächlichen lokalen Einladungshandlers.
- * Nur dessen erwartete anonyme Ablehnung zählt; eine erfolgreiche Gateway-OPTIONS-Antwort genügt nicht.
+ * Checks readiness of the actual local invitation handler.
+ * Only its expected anonymous rejection qualifies; a successful gateway OPTIONS response alone does not.
  */
 import { setTimeout as delay } from "node:timers/promises";
 

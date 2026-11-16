@@ -1,5 +1,6 @@
 /**
- * Dateiauswahl, Uploadfortschritt, Listen und versionsgebundene Vorschauen. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ * File selection, upload progress, lists and version-bound previews, using shared brand colours
+ * and surface variables.
  */
 .file-drop {
   display: flex;
@@ -32,7 +33,7 @@
   font-size: 12px;
   overflow-wrap: anywhere;
 }
-/* Netzwerkfortschritt ist sichtbar, aber die finale Freigabe bleibt an die echte Serverantwort gebunden. */
+/* Show network progress while keeping final clearance tied to the actual server response. */
 .upload-progress {
   display: flex;
   flex-direction: column;
@@ -44,7 +45,7 @@
   width: 100%;
   accent-color: var(--brand);
 }
-/* Dateizeilen gruppieren Name, Metadaten, Scanstatus und explizite Aktionen. */
+/* Group name, metadata, scan state and explicit actions within each file row. */
 .document-list {
   display: flex;
   flex-direction: column;
@@ -135,7 +136,7 @@
   width: 190px;
   border-radius: 12px;
 }
-/* Vorschaudimensionen begrenzen die Anzeige der bereits authentifiziert geladenen Blob-Bytes. */
+/* Bound previews of Blob bytes already loaded through authenticated requests. */
 .file-preview-image {
   max-height: 70vh;
   max-width: 100%;
@@ -146,7 +147,7 @@
   height: 65vh;
   border: 1px solid var(--line);
 }
-/* Historische Dateiversionen behalten eigene Metadaten und Downloadaktionen. */
+/* Historical versions retain their own metadata and download actions. */
 .document-versions li {
   display: flex;
   align-items: center;
@@ -172,7 +173,7 @@
   font-family: monospace;
   font-size: 9px !important;
 }
-/* Kompakte Anhänge verwenden dieselbe Dateisprache wie das Dateizentrum. */
+/* Compact attachments share the file centre's visual conventions. */
 .document-attachment {
   display: flex;
   align-items: center;
@@ -209,7 +210,7 @@
   font-weight: 600;
   margin-bottom: 15px;
 }
-/* Layoutanpassung (max-width: 600px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 600px) {
   .document-list > li {
     flex-wrap: wrap;
@@ -249,7 +250,7 @@
 .people-profile .profile-evidence h2 {
   font-size: 18px;
 }
-/* Layoutanpassung (max-width: 800px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 800px) {
   .profile-evidence {
     grid-template-columns: 1fr;

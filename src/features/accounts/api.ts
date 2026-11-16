@@ -1,10 +1,11 @@
 /**
- * Typisierte HTTP-Anbindung der Accounts-Edge-Function samt paginierter Suche. Der Akteur trennt Browser-Caches; die Edge-Function prüft das native JWT und aktuelle Datenbankrechte selbst.
+ * Typed accounts Edge HTTP adapter with paginated search. Actor IDs partition browser caches;
+ * the Edge handler independently verifies the native JWT and current database permissions.
  */
 import { queryOptions } from "@tanstack/react-query";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { db } from "../../lib/supabase";
-/** Unterstützte fachliche Rollen für validierte Formulare; diese Liste verleiht keine Zuweisungsrechte. */
+/** Supported business roles for validated forms; this list grants no assignment authority. */
 export const accountRoles = [
   "owner",
   "admin",
@@ -14,9 +15,9 @@ export const accountRoles = [
   "client",
   "participant",
 ] as const;
-/** Aus der Rollenliste abgeleitete Eingabemenge; aktuelle Zuweisungsrechte entscheidet der Server. */
+/** Derive input roles from the role list; the server decides current assignment permission. */
 export type AccountRole = (typeof accountRoles)[number];
-/** Verwaltungsprojektion eines Kontos mit Aktivierung, Locale und servergelieferten Rollen. */
+/** Administrative account projection with activation, locale and server-provided roles. */
 export interface AccountPerson {
   id: string;
   display_name: string;
@@ -26,14 +27,14 @@ export interface AccountPerson {
   time_zone: string;
   roles: AccountRole[];
 }
-/** Paginierte Kontoantwort samt Gesamtzahl und tatsächlich angewendeten Seitengrenzen. */
+/** Account page with total count and the actual applied pagination bounds. */
 export interface AccountList {
   items: AccountPerson[];
   total: number;
   limit: number;
   offset: number;
 }
-/** Ruft den Accounts-HTTP-Vertrag auf und propagiert sowohl Transport- als auch gemeldete Fachfehler. */
+/** Call the accounts HTTP contract and propagate both transport and reported business errors. */
 export async function accountRequest<T>(
   path: string,
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" = "GET",
@@ -56,7 +57,7 @@ export async function accountRequest<T>(
   }
   return data as T;
 }
-/** Lädt 25 Konten je Seite; vorherige Suchdaten bleiben nur innerhalb derselben Akteursidentität als Platzhalter sichtbar. */
+/** Fetch 25 accounts per page; previous results are placeholders only within the same actor identity. */
 export const accountListQuery = (
   actor: string,
   search: string,
@@ -64,8 +65,8 @@ export const accountListQuery = (
 ) =>
   queryOptions({
     queryKey: ["accounts", actor, search, offset],
-    // Innerhalb derselben Person darf die vorige Seite ruhig sichtbar bleiben.
-    // Ein Kontowechsel darf jedoch niemals einen fremden Verzeichnisplatzhalter erhalten.
+    // Keep the previous page visible while the same actor changes the search.
+    // An actor change must never reuse another person's directory placeholder.
     placeholderData: (previous, query) =>
       query?.queryKey[1] === actor ? previous : undefined,
     queryFn: () =>

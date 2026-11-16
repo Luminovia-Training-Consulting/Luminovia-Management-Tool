@@ -1,5 +1,6 @@
 /**
- * Explizite Verwaltungsaktionen für Angebotsmetadaten, Kapazität und Zuweisungsstorno. Bestätigungszustände enthalten die überprüfte Version und Anfragekennung; Hintergrundänderungen dürfen keine stillschweigende Freigabe erteilen.
+ * Explicit offer metadata, capacity and cancellation actions. Confirmation state retains
+ * reviewed version/request ID; background changes must not silently authorize an action.
  */
 import { useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,15 +24,15 @@ import {
 import "./lifecycle-i18n";
 import "./lifecycle.css";
 
-/** Übernimmt den exakten Eingabevertrag der gemeinsamen Lebenszyklusaktion ohne eine zweite Parameterspezifikation. */
+/** Derive the shared lifecycle action's exact input contract instead of maintaining a second parameter definition. */
 type OfferInput = Parameters<typeof manageOffer>[0];
-/** Festgehaltene Aktion und überprüfte Version für eine bewusste Storno-/Wiederöffnungs-/Kopierbestätigung. */
+/** Frozen action/version for deliberate cancellation, reopening or copy confirmation. */
 type Confirmation = {
   kind: "cancel" | "reopen" | "duplicate";
   version: number;
   claim?: string;
 };
-/** Lädt Rechte und Lebenszyklus, hält Bestätigungseingaben fest und führt explizite Verwaltungsaktionen aus. */
+/** Load capabilities/lifecycle, retain confirmation input and execute explicit management actions. */
 export function JobLifecyclePanel({ job }: { job: Job }) {
   const { session } = useAuth();
   const { t, i18n } = useTranslation("jobLifecycle");
@@ -422,7 +423,7 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
   );
 }
 
-/** Bearbeitet zulässige Metadaten gegen die überprüfte Version und erhält genaue bestehende Zeitwerte bei unveränderten Feldern. */
+/** Edit allowed metadata against its reviewed version; preserve exact timestamps when their inputs are unchanged. */
 function EditOffer({
   job,
   version,

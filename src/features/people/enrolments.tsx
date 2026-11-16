@@ -1,5 +1,6 @@
 /**
- * Explizite Verwaltung optionaler Kursteilnehmender. Rollenprüfung steuert die Oberfläche; echte Einschreibung und davon abhängige Ressourcenrechte entstehen durch den Serververtrag.
+ * Explicit optional-participant enrollment management. Roles shape the UI; the server
+ * establishes enrollment and dependent resource permissions.
  */
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,7 +13,7 @@ import { Field, Loading, ErrorState, Notice } from "../../components/common";
 import { peopleRpc, type Enrolment } from "./api";
 import "./i18n";
 import "./people.css";
-/** Lädt und verändert explizite Kurseinschreibungen nur über den vorgesehenen Verwaltungsvertrag. */
+/** Read/change explicit course enrollments only through their administrative contract. */
 export function EnrolmentManager({ courseRunId }: { courseRunId: string }) {
   const { t } = useTranslation("people");
   const { session } = useAuth();

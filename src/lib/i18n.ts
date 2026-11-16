@@ -1,5 +1,6 @@
 /**
- * Gemeinsames DE/EN-Wörterbuch und Initialisierung des aktiven Sprachzustands. Übersetzungsschlüssel steuern ausschließlich UI-Texte; verfasste Fachinhalte bleiben in ihrer ursprünglichen Sprache.
+ * Shared DE/EN dictionary and active-language initialization. Translation keys affect UI text
+ * only; authored business content keeps its original language.
  */
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
@@ -481,8 +482,8 @@ const pairs: Record<string, [string, string]> = {
   collapse: ["Navigation einklappen", "Collapse navigation"],
   expand: ["Navigation ausklappen", "Expand navigation"],
 };
-// Statische UI-Ressourcen; Variablen und Pluralformen folgen dem gemeinsamen
-// i18next-Vertrag des jeweiligen Fachnamensraums.
+// Static UI resources use the namespace's shared interpolation and pluralization contract.
+// Authored content is separate from these i18next interface strings.
 const de = Object.fromEntries(Object.entries(pairs).map(([k, v]) => [k, v[0]]));
 const en = Object.fromEntries(Object.entries(pairs).map(([k, v]) => [k, v[1]]));
 const saved = readPreference("language");

@@ -1,18 +1,20 @@
 /**
- * DTOs für kommerzielle Rechte, Vertragsstände, Honorare, Rechnungen und Zahlungen. Dokumentversionen und akzeptierte Claim-Daten sind eigene Referenzen, damit spätere Vorlagenänderungen alte Vereinbarungen nicht umdeuten.
+ * DTOs for commercial capabilities, contract versions, fees, invoices and payments. Document
+ * versions and accepted claims retain distinct references so template changes cannot reinterpret
+ * old agreements.
  */
-/** Aktuelle kommerzielle Sicht-/Verwaltungsrechte, nicht aus einer UI-Rollenhierarchie abgeleitet. */
+/** Current commercial view/manage capabilities, not a UI role hierarchy. */
 export interface CommercialAccess {
   can_submit_invoice: boolean;
   can_manage_contracts: boolean;
   can_manage_finance: boolean;
 }
-/** Berechtigte Personenauswahl für kommerzielle Verwaltungsformulare. */
+/** Authorized person selection for commercial administration forms. */
 export interface CommercialPerson {
   id: string;
   display_name: string;
 }
-/** Konkrete Vertragsfassung samt sauberer Dokumentversion, Gültigkeit und Empfangsstand. */
+/** Exact contract version with clean document reference, validity and receipt state. */
 export interface ContractRecord {
   id: string;
   user_id: string;
@@ -30,7 +32,7 @@ export interface ContractRecord {
   acknowledged_at: string | null;
   created_at: string;
 }
-/** Honorarprojektion aus akzeptierten Vereinbarungen mit Originalwährung und bestätigtem Abrechnungsstadium. */
+/** Fee projection from accepted agreements, retaining original currency and confirmed billing stage. */
 export interface EarningRecord {
   claim_id: string;
   job_id: string;
@@ -47,7 +49,7 @@ export interface EarningRecord {
   stage: "expected" | "completed" | "invoiced" | "paid";
   invoice_id: string | null;
 }
-/** Rechnungsprojektion mit exakter PDF-Version, serverermittelten Summen und Prüf-/Zahlungsstatus. */
+/** Invoice projection with exact PDF version, server-calculated totals and review/payment state. */
 export interface InvoiceRecord {
   labels: string[];
   id: string;
@@ -67,7 +69,7 @@ export interface InvoiceRecord {
   note: string | null;
   paid_at: string | null;
 }
-/** Einzelne gebuchte beziehungsweise nachvollziehbar zurückgenommene Zahlung. */
+/** An individual recorded payment or its auditable reversal. */
 export interface InvoicePayment {
   id: string;
   amount: number;

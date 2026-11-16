@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für Knoten-/Linkallowlist, Struktur-/Größenbegrenzung und Ablehnung ausführbarer Ziele. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for node/link allowlists, structure/size limits and rejection of executable
+ * destinations. Pure normalization checks do not replace server validation.
  */
 import { describe, expect, it } from "vitest";
 import {

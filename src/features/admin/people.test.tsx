@@ -1,5 +1,7 @@
 /**
- * Vitest-Regressionen für Capabilitygrenzen, gezielte Expertiseprüfung und ausdrücklich bestätigte Kontosperren. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for capability boundaries, targeted expertise verification and explicitly
+ * confirmed suspensions. Local fixtures do not replace actual administrative API/database
+ * checks.
  */
 import {
   act,
@@ -110,7 +112,7 @@ afterEach(() => {
   cleanup();
   client.clear();
 });
-/** Rendert die tatsächliche Seite in ihrem Router-/Query-Kontext für die folgenden Bedienprüfungen. */
+/** Render the real page in its router/query context for the interaction checks below. */
 function page() {
   render(
     <QueryClientProvider client={client}>
@@ -120,7 +122,7 @@ function page() {
     </QueryClientProvider>,
   );
 }
-/** Wählt gezielt die fiktive Dozierendenzeile, bevor eine Verwaltungsänderung geprüft wird. */
+/** Select the fictional lecturer row explicitly before testing an administrative change. */
 async function selectLecturer() {
   await userEvent.click(
     await screen.findByRole("button", {

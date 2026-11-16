@@ -1,6 +1,6 @@
 /**
- * Browserabläufe für persönliche Aktivitätsvorschau ohne fremde private Termine.
- * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ * Browser workflows for personal activity previews without exposing other actors' private events.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
@@ -18,7 +18,7 @@ test.skip(
   "Dashboard fixture writes require the canonical disposable project.",
 );
 
-/** Erzeugt einen kontrollierten privaten Termin der angegebenen Testperson für den Dashboard-Isolationsvergleich. */
+/** Creates a controlled private event for this actor to verify dashboard isolation. */
 function appointment(user: string, title: string) {
   const start = new Date(Date.now() + 2 * 86400000);
   return {

@@ -1,7 +1,3 @@
-/**
- * PostgreSQL-Regressionsgruppen für veröffentlichte Wissensstände und getrennte Forumsdiskussionen.
- * Die Testdatenbank spielt echte Migrationen ein; Rollen-/MFA-Claims prüfen den Datenvertrag unabhängig von der UI.
- */
 /** Knowledge permission and revision tests on actual PostgreSQL, in a disposable DB.
  * Auth helpers are compatible stubs here; the separate chat-api-check uses real JWTs/realtime.
  */
@@ -20,7 +16,7 @@ if (
     "Only the named local portal database container is permitted.",
   );
 const database = `knowledge_test_${randomUUID().replaceAll("-", "")}`;
-/** Startet das Prüfprogramm mit expliziten Argumenten und bewahrt seinen Fehlerstatus. */
+/** Starts the test program with explicit arguments and preserves its failure status. */
 function command(args, input = "") {
   return new Promise((resolve, reject) => {
     const child = spawn("docker", args, { stdio: ["pipe", "pipe", "pipe"] });
@@ -35,7 +31,7 @@ function command(args, input = "") {
     child.stdin.end(input);
   });
 }
-/** Sendet SQL an die eigene Testdatenbank und lässt jeden psql-Fehler den Prüflauf ablehnen. */
+/** Sends SQL to the owned test database and makes every psql error fail the run. */
 const sql = (text, name = database) =>
   command(
     [
@@ -54,21 +50,21 @@ const sql = (text, name = database) =>
     ],
     text,
   );
-/** Maskiert SQL-Literalwerte der kontrollierten Testfixture; SQL-Bezeichner folgen eigenen Prüfungen. */
+/** Quotes controlled fixture SQL literals; identifiers have separate validation. */
 const quote = (value) => `'${String(value).replaceAll("'", "''")}'`;
-/** Führt die Prüfung unter einer konkreten Identität aus; Verwaltungsrechte dürfen den Testaufruf nicht verdecken. */
+/** Executes the check as a specific identity so administrative fixture privileges cannot mask the tested access. */
 const actor = (id, statement, aal = "aal1") =>
   sql(
     `begin;set local role authenticated;set local request.jwt.claims=${quote(JSON.stringify({ sub: id, aal, role: "authenticated" }))};${statement};commit;`,
   );
-/** Ruft die öffentliche RPC als Testidentität auf und liefert deren skalaren Datenbankwert. */
+/** Calls the public RPC as the test identity and returns its scalar database value. */
 const value = (id, fn, args = [], aal) =>
   actor(
     id,
     `select public.${fn}(${args.map((x) => (x === null ? "null" : typeof x === "boolean" ? String(x) : quote(x))).join(",")})`,
     aal,
   );
-/** Aggregiert öffentliche RPC-Zeilen als JSON unter der geprüften Aufruferidentität. */
+/** Aggregates public RPC rows into JSON under the checked caller identity. */
 const rows = (id, fn, args = [], aal) =>
   actor(
     id,
@@ -80,13 +76,13 @@ const a = randomUUID(),
   admin = randomUUID(),
   participant = randomUUID();
 let checks = 0;
-/** Zählt und meldet einen Fall erst, wenn sämtliche zugehörigen Assertions erfolgreich abgeschlossen sind. */
+/** Counts and reports a case only after all of its assertions have completed successfully. */
 const check = async (name, fn) => {
   await fn();
   checks++;
   console.log(`PASS ${name}`);
 };
-/** Erzeugt einen minimalen erlaubten Editorbaum mit wörtlichem Fixturetext statt ausführbarem HTML. */
+/** Creates a minimal allowed editor tree containing literal fixture text rather than executable HTML. */
 const doc = (text) => ({
   type: "doc",
   content: [{ type: "paragraph", content: [{ type: "text", text }] }],
@@ -130,7 +126,7 @@ const rich = {
     },
   ],
 };
-/** Sendet den geprüften Entwurf mit dessen Versions-/Identitätsbezug an die zuständige API. */
+/** Sends the checked draft with its version and identity context to the owning API. */
 const save = (who, id, title, content, state, expected = null, aal) =>
   value(
     who,

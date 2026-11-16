@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für gebündelte Revalidierung, Raumwechsel und sofortigen Cacheentzug nach Mitgliedschaftswiderruf. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for batched revalidation, room changes and immediate cache revocation. Channel
+ * fixtures test the hook; real WebSocket/RLS acceptance remains separate.
  */
 import { afterEach, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
@@ -51,7 +52,7 @@ afterEach(() => {
   vi.clearAllMocks();
   state.channels = [];
 });
-/** Macht Verbindungs-/Widerrufzustand des echten Realtime-Hooks im Test-DOM beobachtbar. */
+/** Expose the real hook's connection/revocation state in the test DOM. */
 function Status({ actor, room }: { actor: string; room: string }) {
   const value = useChatRealtime(actor, room);
   return (
@@ -60,7 +61,7 @@ function Status({ actor, room }: { actor: string; room: string }) {
     </p>
   );
 }
-/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup() {
   vi.useFakeTimers();
   const client = new QueryClient({
@@ -78,7 +79,7 @@ function setup() {
   const view = render(element());
   return { client, invalidate, view, element };
 }
-/** Ruft einen registrierten Kanalhandler mit fiktivem Payload auf; es wird kein echter WebSocket geöffnet. */
+/** Invoke a registered channel handler with fictional data; no actual WebSocket is opened. */
 function emit(
   channel: TestChannel,
   event = "messages:INSERT",
@@ -86,7 +87,7 @@ function emit(
 ) {
   act(() => channel.handlers.get(event)!(payload));
 }
-/** Bewegt die kontrollierte Testuhr innerhalb von act, damit Timerupdates vor Assertions verarbeitet werden. */
+/** Advance the controlled clock inside act so timer-driven React updates settle before assertions. */
 async function advance(ms = 200) {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(ms);

@@ -1,6 +1,6 @@
 /**
- * Echte Kindprozessregressionen für Timeout, Abbruch und fehlgeschlagene Starts.
- * Ein Null-Exit nach SIGTERM oder ein noch lebender Prozess darf keinen Erfolg vortäuschen.
+ * Real child-process regressions for timeouts, cancellation and failed startup.
+ * A zero exit after SIGTERM or a process still alive must not falsely report success.
  */
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, existsSync } from "node:fs";

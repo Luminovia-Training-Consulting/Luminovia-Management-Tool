@@ -1,5 +1,6 @@
 /**
- * Darstellung einzelner Nachrichten mit sicheren Textlinks, Reaktionen und eigenen Bearbeitungsaktionen. Sichtbare Autor-/Zeitregeln sind Bedienlogik; die Chat-RPC validiert jede Änderung erneut.
+ * Single messages with safe text links, reactions and own-edit controls. Visible author/time
+ * rules guide the UI; chat RPCs reauthorize every mutation.
  */
 import { Fragment, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
@@ -16,12 +17,11 @@ import { Dialog } from "../../components/ui/dialog";
 import { chatKeys } from "./api";
 import type { ChatMessage } from "./types";
 import "./i18n";
-/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const editSchema = z.object({ body: z.string().max(8000) });
-/** Begrenzte schnelle Emoji-Auswahl; der Server validiert jede tatsächliche Reaktionsänderung. */
+/** Bound the quick emoji picker; the server validates actual reaction changes. */
 const quickReactions = ["👍", "❤️", "🎉", "💡", "👀", "✅"];
 /** Text is never interpreted as HTML. Only explicit HTTP(S) links become anchors. */
-/** Teilt Nachrichtentext in sicheren Text und erlaubte Linkziele, ohne Nachrichtentext als HTML auszuwerten. */
 export function MessageText({ body }: { body: string }) {
   return (
     <>
@@ -49,7 +49,7 @@ export function MessageText({ body }: { body: string }) {
     </>
   );
 }
-/** Zeigt Nachricht, Reaktionen und zulässige Bearbeitung an und wartet für Änderungen auf die jeweilige RPC. */
+/** Display message/reaction/edit controls and await the corresponding RPC before confirming changes. */
 export function MessageBubble({
   message,
   actor,

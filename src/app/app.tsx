@@ -1,5 +1,6 @@
 /**
- * Routen, globale Fehlergrenze und PWA-Hinweise der Single-Page-Anwendung. Öffentliche Auth-Callbacks liegen außerhalb des geschützten, nach Benutzer-ID erneuerten Bereichs; Fachseiten werden bedarfsgerecht geladen.
+ * SPA routes, global error boundary and PWA notices. Public Auth callbacks remain outside the
+ * protected user-keyed subtree; feature pages load on demand.
  */
 import { Component, lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Outlet, Route, Routes, useParams } from "react-router-dom";
@@ -26,121 +27,121 @@ import {
   NotificationsPage,
   SettingsPage,
 } from "../features/notifications/notifications";
-/** Bindet die Fachseite AdminAuditPage per dynamischem Import als verzögert gerenderte Route ein. */
+
 const AdminAuditPage = lazy(() =>
   import("../features/audit/audit").then((module) => ({
     default: module.AdminAuditPage,
   })),
 );
-/** Bindet die Fachseite AvailabilityPage per dynamischem Import als verzögert gerenderte Route ein. */
+
 const AvailabilityPage = lazy(() =>
   import("../features/availability/availability").then((module) => ({
     default: module.AvailabilityPage,
   })),
 );
-/** Bindet die Fachseite TaxonomyPage per dynamischem Import als verzögert gerenderte Route ein. */
+
 const TaxonomyPage = lazy(() =>
   import("../features/taxonomy/taxonomy").then((module) => ({
     default: module.TaxonomyPage,
   })),
 );
-/** Bindet die Fachseite AccountsPage per dynamischem Import als verzögert gerenderte Route ein. */
+
 const AccountsPage = lazy(() =>
   import("../features/accounts/accounts").then((module) => ({
     default: module.AccountsPage,
   })),
 );
-/** Bindet die Fachseite ClientPortalPage per dynamischem Import als verzögert gerenderte Route ein. */
+
 const ClientPortalPage = lazy(() =>
   import("../features/commercial/client-portal").then((module) => ({
     default: module.ClientPortalPage,
   })),
 );
-/** Bindet die Fachseite PeopleDirectory per dynamischem Import als verzögert gerenderte Route ein. */
+
 const PeopleDirectory = lazy(() =>
   import("../features/people/people").then((module) => ({
     default: module.PeopleDirectory,
   })),
 );
-/** Bindet die Fachseite PersonProfile per dynamischem Import als verzögert gerenderte Route ein. */
+
 const PersonProfile = lazy(() =>
   import("../features/people/people").then((module) => ({
     default: module.PersonProfile,
   })),
 );
-/** Bindet die Fachseite MyCourseReviews per dynamischem Import als verzögert gerenderte Route ein. */
+
 const MyCourseReviews = lazy(() =>
   import("../features/people/reviews").then((module) => ({
     default: module.MyCourseReviews,
   })),
 );
-/** Bindet die Fachseite ContractsPage per dynamischem Import als verzögert gerenderte Route ein. */
+
 const ContractsPage = lazy(() =>
   import("../features/commercial/contracts").then((module) => ({
     default: module.ContractsPage,
   })),
 );
-/** Bindet die Fachseite FinancePage per dynamischem Import als verzögert gerenderte Route ein. */
+
 const FinancePage = lazy(() =>
   import("../features/commercial/finance").then((module) => ({
     default: module.FinancePage,
   })),
 );
-/** Bindet die Fachseite ClientsPage per dynamischem Import als verzögert gerenderte Route ein. */
+
 const ClientsPage = lazy(() =>
   import("../features/operations/clients").then((module) => ({
     default: module.ClientsPage,
   })),
 );
-/** Bindet die Fachseite CoursesPage per dynamischem Import als verzögert gerenderte Route ein. */
+
 const CoursesPage = lazy(() =>
   import("../features/operations/courses").then((module) => ({
     default: module.CoursesPage,
   })),
 );
-/** Bindet die Fachseite PortalSearch per dynamischem Import als verzögert gerenderte Route ein. */
+
 const PortalSearch = lazy(() =>
   import("../features/search/search").then((module) => ({
     default: module.PortalSearch,
   })),
 );
-/** Bindet die Fachseite WikiPage per dynamischem Import als verzögert gerenderte Route ein. */
+
 const WikiPage = lazy(() =>
   import("../features/knowledge/wiki").then((module) => ({
     default: module.WikiPage,
   })),
 );
-/** Bindet die Fachseite ForumPage per dynamischem Import als verzögert gerenderte Route ein. */
+
 const ForumPage = lazy(() =>
   import("../features/knowledge/forum").then((module) => ({
     default: module.ForumPage,
   })),
 );
-/** Bindet die Fachseite ChatPage per dynamischem Import als verzögert gerenderte Route ein. */
+
 const ChatPage = lazy(() =>
   import("../features/chat/chat").then((module) => ({
     default: module.ChatPage,
   })),
 );
-/** Bindet die Fachseite CalendarPage per dynamischem Import als verzögert gerenderte Route ein. */
+
 const CalendarPage = lazy(() =>
   import("../features/calendar/calendar").then((module) => ({
     default: module.CalendarPage,
   })),
 );
-/** Bindet die Fachseite PeopleAdminPage per dynamischem Import als verzögert gerenderte Route ein. */
+
 const PeopleAdminPage = lazy(() =>
   import("../features/admin/people").then((module) => ({
     default: module.PeopleAdminPage,
   })),
 );
-/** Bindet die Fachseite AdminPage per dynamischem Import als verzögert gerenderte Route ein. */
+
 const AdminPage = lazy(() =>
   import("../features/admin/admin").then((module) => ({
     default: module.AdminPage,
   })),
 );
-/** Lässt private Routen erst nach geklärter Session zu und remountet lokale Zustände bei einem Kontowechsel. */
+/** Wait for session resolution before entering private routes; remount local state when the actor changes. */
 function Protected() {
   const { session, loading, error } = useAuth();
   if (loading) return <Loading />;
@@ -153,7 +154,7 @@ function Protected() {
     <Navigate to="/login" replace />
   );
 }
-/** Zeigt Offline-/Updatezustände und überlässt die Aktivierung eines neuen Service Workers der sichtbaren Benutzeraktion. */
+/** Expose offline/update state and activate a new service worker only through the visible user action. */
 function AppNotices() {
   const { t } = useTranslation();
   const online = useOnline();
@@ -182,7 +183,7 @@ function AppNotices() {
     </>
   );
 }
-/** Verbindet öffentliche Auth-Routen und geschützte Fachseiten unter derselben Suspense-Grenze. */
+/** Compose public Auth routes and protected feature pages under the shared Suspense boundary. */
 export function App() {
   return (
     <>
@@ -241,12 +242,12 @@ export function App() {
     </>
   );
 }
-/** Verwirft Detailentwürfe und Anfragekennungen beim Wechsel auf eine andere Auftrags-ID. */
+/** Discard detail drafts and retry identities when navigation selects a different job ID. */
 function JobDetailRoute() {
   const { id } = useParams();
   return <JobDetail key={id} />;
 }
-/** Bietet für unbekannte Routen einen übersetzten, erreichbaren Rückweg. */
+/** Offer a translated, accessible route back from an unknown URL. */
 function NotFound() {
   const { t } = useTranslation();
   return (
@@ -258,7 +259,7 @@ function NotFound() {
     </div>
   );
 }
-/** Fängt Renderfehler im Anwendungsbaum ab und bietet eine feste zweisprachige Ersatzansicht statt einer leeren Seite. */
+/** Catch render failures and show a fixed bilingual fallback instead of a blank application. */
 export class ErrorBoundary extends Component<
   { children: ReactNode },
   { hasError: boolean }

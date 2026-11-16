@@ -1,4 +1,4 @@
-# Pollt auf ein tatsächlich geprüftes unveränderliches Main-Release. Der Updater selbst entscheidet anhand CI, Zustand und Wartungszäunen, ob eine Installation zulässig ist.
+# Poll for a verified immutable main release. The updater decides eligibility from CI, state and maintenance fences.
 [Unit]
 Description=Check for verified CMS updates every five minutes
 

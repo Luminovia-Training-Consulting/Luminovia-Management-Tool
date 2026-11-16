@@ -1,6 +1,6 @@
 /**
- * Browserabläufe für private Sperrzeiten, eigene Notizen und reduzierte Managementfreigabe.
- * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ * Browser workflows for private blocked time, own notes and reduced management sharing.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
@@ -17,7 +17,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Only canonical isolated availability workflows are permitted.",
 );
-/** Prüft den gerenderten Zustand mit axe; dies ersetzt keine manuelle Barrierefreiheitsabnahme. */
+/** Checks the rendered state with axe; this does not replace manual accessibility acceptance. */
 async function a11y(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   const report = await new AxeBuilder({ page })

@@ -1,13 +1,13 @@
 /**
- * PostgreSQL-Regressionsgruppen für ressourcenbezogene Kommentare und begründete Moderation.
- * Die Testdatenbank spielt echte Migrationen ein; Rollen-/MFA-Claims prüfen den Datenvertrag unabhängig von der UI.
+ * PostgreSQL regression groups for resource-specific comments and reasoned moderation.
+ * Real migrations define the contract; controlled role/MFA claims exercise it independently of the UI.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
 
 let checks = 0;
-/** Zählt und meldet einen Fall erst, wenn sämtliche zugehörigen Assertions erfolgreich abgeschlossen sind. */
+/** Counts and reports a case only after all of its assertions have completed successfully. */
 const check = async (name, run) => {
   await run();
   checks++;
@@ -31,7 +31,7 @@ await withTestDatabase("comments_test", async ({ sql, actor }) => {
  insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,time_zone,status,amount,total_amount,currency,rate_unit,terms) values
  ('${job}','${run}','Fictional discussion','Fictional academy','online','Europe/Berlin','published',100,100,'EUR','fixed_total','Immutable net terms'),
  ('${draft}',null,'Private draft','Fictional academy','online','Europe/Berlin','draft',100,100,'EUR','fixed_total','Immutable draft terms');`);
-  /** Ruft die fachliche Datenbank-API unter den kontrollierten Identitäts-/MFA-Claims der Fixture auf. */
+  /** Calls the business database API under the fixture's controlled identity/MFA claims. */
   const rpc = (who, name, args = [], aal = "aal1") =>
     actor(
       who,

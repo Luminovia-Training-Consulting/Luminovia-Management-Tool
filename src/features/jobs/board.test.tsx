@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für bestätigte Boardübergänge und Verbot eines Drag-basierten Claim-Erfolgs. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for confirmed board transitions and prohibition of drag-based claim success. UI
+ * fixtures do not replace actual transactional allocation checks.
  */
 import { afterEach, expect, it, vi } from "vitest";
 import {
@@ -53,7 +54,7 @@ const initial = [
     can_transition: false,
   },
 ];
-/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(
   write: (
     args: Record<string, unknown>,

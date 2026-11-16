@@ -1,5 +1,6 @@
 /**
- * Glockenmenü, vollständige Inbox und persönliche Benachrichtigungseinstellungen. Vorschau und Historie teilen passende Cachebereiche, während bestätigte Lesestände und Versionskonflikte sichtbar behandelt werden.
+ * Bell menu, complete inbox and personal notification preferences. Preview/history share
+ * appropriate caches while confirmed read state and version conflicts remain visible.
  */
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -40,7 +41,7 @@ import {
 import "./i18n";
 import "./notifications.css";
 
-/** Bekannte Meldungsarten für übersetzte Bezeichnungen; unbekannte Arten erhalten den vorgesehenen Fallback. */
+/** Known notification kinds for translated labels; unknown kinds use the defined fallback. */
 const knownKinds = new Set([
   "claim_confirmed",
   "claim_cancelled",
@@ -52,7 +53,7 @@ const knownKinds = new Set([
   "contract_expiring",
   "contract_available",
 ]);
-/** Verknüpft bestätigte Lesestatusmutationen mit gezielter Revalidierung der eigenen Inbox. */
+/** Connect confirmed read-state mutations to targeted revalidation of the actor's inbox. */
 function useReadState(actor: string) {
   const client = useQueryClient();
   return useMutation({
@@ -72,7 +73,7 @@ function useReadState(actor: string) {
       client.invalidateQueries({ queryKey: notificationKeys.all(actor) }),
   });
 }
-/** Zeigt nur validierte interne Ziele und bindet eine einzelne Meldung an die Lesestatusaktion. */
+/** Display validated internal destinations and bind each notification to its read action. */
 function NotificationRow({
   item,
   zone,
@@ -112,7 +113,7 @@ function NotificationRow({
     </li>
   );
 }
-/** Beobachtet die begrenzte eigene Vorschau und stellt den gemeinsamen Glocken-/Ungelesenzustand bereit. */
+/** Observe the bounded own preview and expose the shared bell/unread state. */
 export function NotificationsMenu({ id, zone }: { id: string; zone: string }) {
   const { t } = useTranslation("inbox");
   const online = useOnline();
@@ -166,7 +167,7 @@ export function NotificationsMenu({ id, zone }: { id: string; zone: string }) {
     </details>
   );
 }
-/** Lädt Inboxhistorie auf Anforderung über Cursor und hält Filter sowie Lesestand getrennt. */
+/** Load inbox history on demand through cursors and keep filter/read state separate. */
 export function NotificationsPage() {
   const { t } = useTranslation("inbox");
   const actor = useAuth().session!.user.id;
@@ -263,7 +264,7 @@ export function NotificationsPage() {
     </>
   );
 }
-/** Bearbeitet persönliche Meldungskategorien gegen die geladene Version statt den Serverstand blind zu überschreiben. */
+/** Edit personal categories against the loaded version instead of overwriting current server state blindly. */
 function PreferencesForm({
   actor,
   initial,
@@ -342,7 +343,7 @@ function PreferencesForm({
     </form>
   );
 }
-/** Lädt die eigenen versionierten Meldungseinstellungen und behandelt Fehler vor dem Editor. */
+/** Load the actor's versioned notification preferences and handle errors before opening the editor. */
 export function SettingsPage() {
   const { t } = useTranslation("inbox");
   const actor = useAuth().session!.user.id;

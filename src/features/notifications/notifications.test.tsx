@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für sichere Inboxziele, bestätigte Lesestände und erhaltene Entwürfe bei Versionskonflikten. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for safe inbox destinations, confirmed read state and retained drafts after
+ * version conflicts. UI/SDK fixtures do not replace native notification authorization.
  */
 import {
   act,
@@ -105,7 +106,7 @@ afterEach(() => {
   clients.splice(0).forEach((client) => client.clear());
   vi.clearAllMocks();
 });
-/** Rendert die untersuchte Komponente mit den für diesen Test notwendigen lokalen Providern. */
+/** Render the subject with the local providers required by this test. */
 function view(component: React.ReactNode) {
   const client = new QueryClient({
     defaultOptions: {

@@ -1,9 +1,10 @@
 /**
- * DE/EN-Oberflächentexte für accounts. Die Registrierung erweitert i18next beim Modulimport; verfasste Fachinhalte werden nicht automatisch übersetzt.
+ * DE/EN UI resources for the accounts namespace. Module import registers these strings with
+ * i18next; authored business content is not translated.
  */
 import i18n from "../../lib/i18n";
-// Statische UI-Ressourcen; Variablen und Pluralformen folgen dem gemeinsamen
-// i18next-Vertrag des jeweiligen Fachnamensraums.
+// Static UI resources use the namespace's shared interpolation and pluralization contract.
+// Authored content is separate from these i18next interface strings.
 const de = {
   title: "Konten & Zugänge",
   invited:

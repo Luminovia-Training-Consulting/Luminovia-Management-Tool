@@ -1,7 +1,3 @@
-/**
- * Kernregressionen für echte PostgreSQL-RPCs, RLS und konkurrierende Sofortzuweisungen.
- * Jede Gruppe verwendet kontrollierte fiktive Rollen; Parallelaufrufe prüfen tatsächliche Transaktionskonflikte.
- */
 /** Real PostgreSQL security/transaction tests in a disposable database inside the LOCAL stack.
  * Uses real RLS roles and auth.uid()/jwt() compatible test stubs, not Auth HTTP token validation.
  * No production connection or database URL is accepted. No dependency beyond Node + Docker.
@@ -17,7 +13,7 @@ if (!/^supabase_db_luminovia-portal(?:-test-[a-f0-9]+|-test)?$/.test(container))
     "Only this project or its isolated test container is allowed.",
   );
 const database = `portal_test_${randomUUID().replaceAll("-", "")}`;
-/** Startet das Prüfprogramm mit expliziten Argumenten und bewahrt seinen Fehlerstatus. */
+/** Starts the test program with explicit arguments and preserves its failure status. */
 function command(args, input = "") {
   return new Promise((resolve, reject) => {
     const p = spawn("docker", args, { stdio: ["pipe", "pipe", "pipe"] });
@@ -32,7 +28,7 @@ function command(args, input = "") {
     p.stdin.end(input);
   });
 }
-/** Sendet SQL an die eigene Testdatenbank und lässt jeden psql-Fehler den Prüflauf ablehnen. */
+/** Sends SQL to the owned test database and makes every psql error fail the run. */
 const sql = (text, db = database) =>
   command(
     [
@@ -51,21 +47,21 @@ const sql = (text, db = database) =>
     ],
     text,
   );
-/** Maskiert SQL-Literalwerte der kontrollierten Testfixture; SQL-Bezeichner folgen eigenen Prüfungen. */
+/** Quotes controlled fixture SQL literals; identifiers have separate validation. */
 const quote = (s) => `'${String(s).replaceAll("'", "''")}'`;
-/** Setzt Rolle und JWT-Claims innerhalb der Testtransaktion für eine konkrete Aufruferidentität. */
+/** Sets the role and JWT claims inside the test transaction for one specific caller. */
 function actorSql(id, text, aal = "aal1") {
   return `begin; set local role authenticated; set local request.jwt.claims=${quote(JSON.stringify({ sub: id, aal, role: "authenticated" }))}; ${text}; commit;`;
 }
-/** Führt die echte SQL-Anfrage mit den lokal gesetzten Identitäts- und MFA-Claims der Testtransaktion aus. */
+/** Executes real SQL with the test transaction's controlled identity and MFA claims. */
 const as = (id, text, aal) => sql(actorSql(id, text, aal));
-/** Ruft die fachliche Datenbank-API unter den kontrollierten Identitäts-/MFA-Claims der Fixture auf. */
+/** Calls the business database API under the fixture's controlled identity/MFA claims. */
 const rpc = (id, job, key = randomUUID(), version = 1) =>
   as(id, `select public.claim_job('${job}','${key}',${version})`).then(
     JSON.parse,
   );
 let checks = 0;
-/** Führt eine benannte Prüfgruppe aus; fehlgeschlagene Assertions müssen den Lauf abbrechen. */
+/** Runs a named assertion group; any failed assertion must stop the run. */
 const test = async (name, fn) => {
   await fn();
   checks++;
@@ -81,7 +77,7 @@ const sessions = Array.from({ length: 5 }, (_, i) => ({
   starts_at: new Date(+start + i * 86400000).toISOString(),
   ends_at: new Date(+start + i * 86400000 + 6 * 3600000).toISOString(),
 }));
-/** Erzeugt einen vollständigen fiktiven Mehrtagesauftrag als Ausgangspunkt gezielter positiver und negativer Varianten. */
+/** Creates a complete fictional multi-day job for targeted positive and negative variants. */
 const jobPayload = (overrides = {}) => ({
   title: "Fictional five-day test course",
   description: "Database isolation test only",
@@ -100,7 +96,7 @@ const jobPayload = (overrides = {}) => ({
   topic_ids: [],
   ...overrides,
 });
-/** Erzeugt einen fiktiven Auftrag mit kontrollierten Terminen und Konditionen für die anschließenden Assertions. */
+/** Creates a fictional job with controlled sessions and terms for the following assertions. */
 async function job(overrides = {}) {
   return as(
     admin,

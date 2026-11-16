@@ -1,5 +1,6 @@
 /**
- * Browser-Einstiegspunkt mit StrictMode, Fehlergrenze, Router, QueryClient und AuthProvider. Private Serverdaten bleiben im Arbeitsspeicher; Mutationen werden nicht automatisch wiederholt oder offline als erfolgreich vorgemerkt.
+ * Browser entry with StrictMode, error boundary, router, QueryClient and AuthProvider. Keep
+ * private server data in memory; never automatically retry mutations or claim offline success.
  */
 import React from "react";
 import ReactDOM from "react-dom/client";
@@ -10,7 +11,7 @@ import "./styles.css";
 import { App, ErrorBoundary } from "./app/app";
 import { AuthProvider } from "./features/auth/auth-context";
 // Memory-only cache. No persister or service-worker caching for API/private data.
-/** Ein gemeinsamer speicherbasierter QueryClient; Schreiboperationen werden weder automatisch wiederholt noch offline bestätigt. */
+/** One memory-only QueryClient; mutations neither retry automatically nor become offline confirmations. */
 const client = new QueryClient({
   defaultOptions: {
     queries: { staleTime: 15000, retry: 1, refetchOnWindowFocus: true },

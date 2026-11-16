@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für aktive Auswahl und Erhalt bereits referenzierter archivierter Themen. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for active options and retaining already referenced archived topics. Pure
+ * selection tests do not replace native taxonomy access checks.
  */
 import { describe, expect, it } from "vitest";
 import { selectableTopics } from "./selection";

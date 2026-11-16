@@ -1,6 +1,6 @@
 /**
- * Verwaltet die eigene gebaute PWA-Vorschau des isolierten Testlaufs.
- * Aufgezeichnete Prozessidentität und lokale Ports begrenzen Start und Aufräumen.
+ * Manages the isolated test run's owned built-PWA preview.
+ * Recorded process identity and local ports constrain startup and cleanup.
  */
 import { spawn } from "node:child_process";
 import { openSync, closeSync, readFileSync, existsSync } from "node:fs";

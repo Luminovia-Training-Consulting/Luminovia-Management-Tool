@@ -1,5 +1,6 @@
 /**
- * Persönliche Startseite mit passenden Angeboten, bestätigten Einsätzen und Fachwidgets. Kennzahlen werden aus den geladenen autorisierten Projektionen abgeleitet; Managementansichten folgen aktuellen Capabilities.
+ * Personal dashboard with matching offers, confirmed assignments and feature widgets. Derive
+ * metrics from loaded authorized projections; management views follow current capabilities.
  */
 import { useState } from "react";
 import { FinancialSummaryCards } from "../commercial/revenue";
@@ -27,7 +28,7 @@ import { ErrorState, Loading, TextLink } from "../../components/common";
 import { validZone } from "../../lib/dates";
 import { DashboardCalendarPreview, DashboardWidgets } from "./widgets";
 import "./i18n";
-/** Stellt persönliche Einstiege, echte Angebote und bestätigte Zuweisungen aus den gemeinsamen Queries zusammen. */
+/** Compose personal entry points, actual offers and confirmed assignments from shared queries. */
 export function Dashboard() {
   const { t, i18n } = useTranslation();
   const [openedAt] = useState(() => Date.now());

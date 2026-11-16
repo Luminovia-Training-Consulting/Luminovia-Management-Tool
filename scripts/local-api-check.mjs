@@ -1,6 +1,6 @@
 /**
- * Prüft lokale Auth-/RPC-/REST-Grenzen mit getrennten tatsächlich angemeldeten Konten.
- * Die Loopback- und Konfigurationsprüfungen begrenzen das Ziel auf die lokale Testumgebung.
+ * Checks local Auth/RPC/REST boundaries with separate, actually signed-in accounts.
+ * Loopback and configuration checks restrict the target to the local test environment.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -16,20 +16,20 @@ assert.ok(
   url && ["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname),
   "Only loopback test projects are permitted",
 );
-/** Erzeugt einen getrennten SDK-Client ohne persistierte oder automatisch erneuerte Testsitzung. */
+/** Creates a separate SDK client without persistent sessions or automatic session refresh. */
 const make = (key) =>
   createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 const service = make(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const anonymous = make(process.env.SUPABASE_ANON_KEY);
-/** Wertet den tatsächlichen SDK-Erfolg aus und gibt erst danach dessen Daten zurück. */
+/** Requires actual SDK success before returning the response data. */
 async function checked(request, label) {
   const { data, error } = await request;
   assert.equal(error, null, `${label}: ${error?.message}`);
   return data;
 }
-/** Meldet die Testidentität tatsächlich über Auth an; Fehler werden nicht als autorisierter Zustand behandelt. */
+/** Signs the test identity in through Auth; an error never counts as an authorised session. */
 async function signIn(email) {
   const client = make(process.env.SUPABASE_ANON_KEY);
   const data = await checked(

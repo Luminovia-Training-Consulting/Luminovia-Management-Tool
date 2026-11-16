@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für centgenaue Aufteilung, Kapazitätsangebote und unverfälschte historische Bruttowerte. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for cent-exact shares, capacity offers and unchanged historical gross values. Pure
+ * projection tests do not replace native commercial permission checks.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -8,7 +9,7 @@ import {
   type CommissionRecord,
 } from "./commission-api";
 import { parseInvoiceLabels } from "./api";
-/** Erzeugt einen fiktiven Provisionsdatensatz mit expliziten Überschreibungen für Grenzfälle. */
+/** Create a fictional commission record with explicit overrides for boundary cases. */
 function record(overrides: Partial<CommissionRecord> = {}): CommissionRecord {
   return {
     job_id: crypto.randomUUID(),

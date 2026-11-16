@@ -1,11 +1,12 @@
 /**
- * Kontrollierter Radix-Dialog für gemeinsame modale Interaktionen. Die aufrufende Fachkomponente besitzt Öffnungszustand und Inhalt; Radix übernimmt die Dialog- und Fokusmechanik.
+ * Controlled Radix dialog shared across features. The caller owns open state and content; Radix
+ * manages dialog semantics and focus.
  */
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
-/** Bindet kontrollierte Öffnung, zugänglichen Titel und Inhalt an einen modal fokussierten Radix-Dialog. */
+/** Connect controlled opening, accessible title and content to the modal focus boundary. */
 export function Dialog({
   open,
   onOpenChange,

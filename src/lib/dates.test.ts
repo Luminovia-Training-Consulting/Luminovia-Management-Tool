@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für Berlin-/Brisbane-Zonen, Sommerzeitlücken und doppeldeutige lokale Uhrzeiten. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for Berlin/Brisbane zones, DST gaps and ambiguous local times. Pure date tests do
+ * not establish database scheduling behavior.
  */
 import { describe, expect, it } from "vitest";
 import { dateTime, money, zonedInstant } from "./dates";

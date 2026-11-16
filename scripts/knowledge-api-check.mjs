@@ -1,6 +1,6 @@
 /**
- * Echte Auth-/HTTP-Prüfung für veröffentlichte Wissensstände und getrennte Forumsdiskussionen.
- * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
+ * Real Auth/HTTP checks for published knowledge revisions and separate forum discussions.
+ * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
 import { createHmac, randomUUID } from "node:crypto";
@@ -11,7 +11,7 @@ assert.ok(
   url && ["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname),
   "Knowledge checks only permit loopback test projects.",
 );
-/** Erzeugt einen getrennten SDK-Client ohne persistierte oder automatisch erneuerte Testsitzung. */
+/** Creates a separate SDK client without persistent sessions or automatic session refresh. */
 const make = (key) =>
   createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -23,13 +23,13 @@ const service = make(process.env.SUPABASE_SERVICE_ROLE_KEY),
   threads = [],
   resources = [];
 const suffix = randomUUID();
-/** Wertet den tatsächlichen SDK-Erfolg aus und gibt erst danach dessen Daten zurück. */
+/** Requires actual SDK success before returning the response data. */
 async function checked(request, label) {
   const { data, error } = await request;
   assert.equal(error, null, `${label}: ${error?.message}`);
   return data;
 }
-/** Erzeugt getrennte fiktive Konten und meldet sie über Auth an; ihre Kennungen dienen nur der Fixture. */
+/** Creates separate fictional accounts and signs them in through Auth; their IDs belong only to the fixture. */
 async function fixture(name, role) {
   const email = `knowledge-${name}-${suffix}@example.invalid`;
   const auth = await checked(
@@ -63,7 +63,7 @@ async function fixture(name, role) {
   );
   return { client, id: auth.user.id };
 }
-/** Berechnet den aktuellen sechsstelligen TOTP aus dem fiktiven MFA-Geheimnis; keine Codes protokollieren. */
+/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
 function totp(secret) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "").toUpperCase()]
@@ -82,7 +82,7 @@ function totp(secret) {
     .toString()
     .padStart(6, "0");
 }
-/** Erzeugt einen minimalen erlaubten Editorbaum mit wörtlichem Fixturetext statt ausführbarem HTML. */
+/** Creates a minimal allowed editor tree containing literal fixture text rather than executable HTML. */
 const doc = (text) => ({
   type: "doc",
   content: [{ type: "paragraph", content: [{ type: "text", text }] }],

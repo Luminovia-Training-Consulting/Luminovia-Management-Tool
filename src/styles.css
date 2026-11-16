@@ -1,8 +1,9 @@
 /**
- * Globale Brandtokens, gemeinsame Controls sowie Desktop-/Mobilrahmen. Dark Mode verwendet bewusst eigene Kontrastwerte; responsive Regeln ändern das Layout, ohne fachliche Aktionen auszublenden. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ * Global brand tokens, shared controls and desktop/mobile shell. Dark mode uses deliberate
+ * contrast values; responsive layouts preserve business actions and share brand variables.
  */
 @import "tailwindcss";
-/* Lokal gebündelte Markenschrift: kein externer Fontrequest und kein blockierter Textrender. */
+/* Locally bundled brand font: no external font request or blocked text rendering. */
 @font-face {
   font-family: "Space Grotesk";
   font-style: normal;
@@ -10,7 +11,7 @@
   font-display: swap;
   src: url("/brand/space-grotesk-latin-wght-normal.woff2") format("woff2");
 }
-/* Heller Grundzustand und die sieben offiziellen Akzentfarben als zentrale Designvariablen. */
+/* Light surfaces and the seven official accent colours as central design variables. */
 :root {
   font-family:
     Inter,
@@ -44,7 +45,7 @@
   --radius: 18px;
   color-scheme: light;
 }
-/* Bewusste dunkle Oberflächen-/Textkontraste; Brandakzente werden nicht bloß invertiert. */
+/* Deliberate dark surface/text contrasts rather than simply inverted brand accents. */
 :root[data-theme="dark"] {
   --paper: #111a2e;
   --surface: #1b2840;
@@ -57,7 +58,7 @@
   --shadow: 0 5px 20px #0001;
   color-scheme: dark;
 }
-/* Konsistente Boxberechnung und native Grundelemente vor den Komponentenregeln. */
+/* Consistent box sizing and native defaults before component rules. */
 * {
   box-sizing: border-box;
 }
@@ -138,7 +139,7 @@ ol {
 svg {
   flex-shrink: 0;
 }
-/* Gemeinsame Formcontrols mit mindestens 44 Pixeln Höhe und expliziten Themefarben. */
+/* Shared form controls have at least 44-pixel height and explicit theme colours. */
 input:not([type="checkbox"]),
 select,
 textarea {
@@ -170,7 +171,7 @@ input[type="checkbox"] {
   flex-shrink: 0;
   margin: 0;
 }
-/* Tastaturfokus ist unabhängig von Hover sichtbar und darf von Fachstyles nicht entfernt werden. */
+/* Keep keyboard focus visible independently of hover; feature styles must preserve it. */
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
@@ -180,7 +181,7 @@ summary:focus-visible {
   outline: 3px solid var(--brand);
   outline-offset: 3px;
 }
-/* Zugänglichkeitshelfer verstecken Text nur visuell; der Skiplink bleibt per Tastatur erreichbar. */
+/* Accessibility helpers hide text visually only; the skip link remains keyboard-accessible. */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -222,7 +223,7 @@ summary:focus-visible {
   color: var(--muted);
   margin-bottom: 12px;
 }
-/* Gemeinsame Schaltflächenbasis. Themefarben wechseln ohne Hintergrundinterpolation, damit Textkontrast auch unmittelbar nach dem Umschalten stimmt. */
+/* Shared buttons switch theme colours without background interpolation so immediate text contrast remains valid. */
 .button {
   display: inline-flex;
   align-items: center;
@@ -283,7 +284,7 @@ summary:focus-visible {
 .full-width {
   width: 100%;
 }
-/* Formulargruppen und ihre Hinweise; semantische ID-/ARIA-Verknüpfung liegt in components/common.tsx. */
+/* Form fields/hints share styling; components/common.tsx owns their semantic ID/ARIA links. */
 .field {
   display: flex;
   flex-direction: column;
@@ -323,7 +324,7 @@ legend {
   margin: 12px 0;
   min-height: 30px;
 }
-/* Gemeinsame Panels, Ergebnis-/Fehlerhinweise und leere beziehungsweise ladende Zustände. */
+/* Shared panels, result/error notices and empty/loading states. */
 .panel {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -398,7 +399,7 @@ legend {
 .text-link:hover {
   text-decoration: underline;
 }
-/* Konsistente Statuschips und Tags; Statusfarben sind Darstellung, keine fachlichen Übergangsregeln. */
+/* Consistent state chips/tags; colours present state, not business transition rules. */
 .badge,
 .status {
   display: inline-flex;
@@ -444,7 +445,7 @@ legend {
   max-width: 660px;
   margin: 0 auto;
 }
-/* Gemeinsame Seitenüberschrift mit flexibel angeordneter Fachaktion. */
+/* Shared page heading with a flexible feature action. */
 .page-heading {
   display: flex;
   justify-content: space-between;
@@ -461,7 +462,7 @@ legend {
 .page-heading h1 {
   margin-bottom: 8px;
 }
-/* Desktopgrundgerüst: feste Navigationsspalte und eine in sich schrumpfbare Arbeitsfläche. */
+/* Desktop shell with a fixed navigation column and a workspace that can shrink internally. */
 .app-shell {
   display: grid;
   grid-template-columns: 225px minmax(0, 1fr);
@@ -587,7 +588,7 @@ legend {
   background: #29466b;
   color: #fff;
 }
-/* Arbeitsfläche, Kopfzeile und gemeinsame Suche. min-width-Grenzen verhindern Überlauf durch lange Inhalte. */
+/* Workspace, header and shared search; min-width rules prevent overflow from long content. */
 .workspace {
   min-width: 0;
   display: flex;
@@ -678,7 +679,7 @@ legend {
 .mobile-nav {
   display: none;
 }
-/* Kompakter Desktopzustand erhält Navigationssymbole und dieselben erreichbaren Ziele. */
+/* Compact desktop mode preserves navigation icons and the same reachable destinations. */
 .is-collapsed {
   grid-template-columns: 82px minmax(0, 1fr);
 }
@@ -702,7 +703,7 @@ legend {
 .is-collapsed .collapse-button {
   width: 100%;
 }
-/* Native Glockenaufklappung mit begrenzter eigener Vorschau statt einer zweiten vollständigen Inbox. */
+/* Native bell disclosure with a bounded personal preview, not another complete inbox. */
 .notification-menu {
   position: relative;
 }
@@ -758,7 +759,7 @@ legend {
 .notification-popover p {
   font-size: 13px;
 }
-/* Sichtbare globale Netzwerk-/Updatehinweise oberhalb der aktuellen Fachansicht. */
+/* Global network/update notices above the current feature view. */
 .connection-banner {
   position: sticky;
   top: 0;
@@ -786,7 +787,7 @@ legend {
   box-shadow: 0 10px 35px #0002;
   font-size: 12px;
 }
-/* Persönlicher Startseitenkopf und eigenständige Markenhero-Komposition. */
+/* Personal dashboard heading and distinct brand hero composition. */
 .dashboard-heading {
   display: flex;
   align-items: center;
@@ -856,7 +857,7 @@ legend {
 .hero .button:hover {
   background: #123a92;
 }
-/* Dekorative Bögen und Sterne unterstützen das Branding; fachliche Information steht im normalen Text. */
+/* Decorative arcs/stars support branding; ordinary text carries business information. */
 .hero-art {
   position: relative;
   min-height: 280px;
@@ -949,7 +950,7 @@ legend {
 [data-theme="dark"] .hero .little-star {
   color: #ffdb76;
 }
-/* Responsive Kennzahlenkarten mit den offiziellen Pastellakzenten und lesbarem Navytext. */
+/* Responsive metric cards use official pastel accents and legible navy text. */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1000,7 +1001,7 @@ legend {
   top: 12px;
   opacity: 0.6;
 }
-/* Startseitenangebote und kommende Einsätze teilen dieselben Kartenbausteine wie die Fachansichten. */
+/* Dashboard offers/upcoming assignments reuse feature-view card primitives. */
 .dashboard-lower {
   display: grid;
   grid-template-columns: minmax(0, 1.65fr) minmax(260px, 1fr);
@@ -1181,7 +1182,7 @@ legend {
   margin: 0 !important;
   text-transform: uppercase;
 }
-/* Marktplatzlayout mit kombinierbaren Filtern und erreichbarem Leerzustand. */
+/* Marketplace layout with combinable filters and an accessible empty state. */
 .jobs-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1239,7 +1240,7 @@ legend {
   font-size: 13px;
   max-width: 450px;
 }
-/* Auftragsdetails und Claim-Seitenpanel; der bestätigte Zustand wird nicht durch CSS hergestellt. */
+/* Job details and claim side panel; CSS cannot establish confirmed allocation. */
 .detail-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 330px;
@@ -1305,7 +1306,7 @@ legend {
 .claim-panel h2 {
   margin-top: 0;
 }
-/* Eigenes Profil und Expertiseauswahl, einschließlich langer Labels und Formularinhalte. */
+/* Own profile and expertise selection accommodate long labels and form content. */
 .profile-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr);
@@ -1340,7 +1341,7 @@ legend {
   margin-top: 4px;
   font-size: 10px;
 }
-/* Kalenderbedienung und FullCalendar-Anpassung über globale Themevariablen. */
+/* Calendar controls and FullCalendar adaptation use global theme variables. */
 .calendar-controls {
   display: flex;
   justify-content: space-between;
@@ -1403,7 +1404,7 @@ legend {
 .fc .fc-daygrid-dot-event {
   color: var(--ink);
 }
-/* Modale Oberfläche mit eigener Überlagerung; Fokusmechanik und Rollen liefert der Radix-Dialog. */
+/* Modal overlay styling; the Radix dialog owns focus mechanics and roles. */
 .dialog-overlay {
   position: fixed;
   inset: 0;
@@ -1459,7 +1460,7 @@ legend {
 .admin-form legend {
   padding: 0 6px;
 }
-/* Terminzeilen und begrenzte MFA-QR-Darstellung in Verwaltungs-/Sicherheitsformularen. */
+/* Session rows and bounded MFA QR presentation in administrative/security forms. */
 .session-form-row {
   display: grid;
   grid-template-columns: 1fr 1fr 44px;
@@ -1483,7 +1484,7 @@ legend {
 .security-panel form {
   margin-top: 20px;
 }
-/* Öffentlicher Anmelderahmen mit Markenerzählung und eigenständigem Formularpanel. */
+/* Public sign-in shell with brand narrative and a separate form panel. */
 .login-layout {
   min-height: 100vh;
   display: grid;
@@ -1607,7 +1608,7 @@ legend {
   top: 22px;
   z-index: 5;
 }
-/* Layoutanpassung (min-width: 1500px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (min-width: 1500px) {
   .hero-art .arc-one {
     right: 21%;
@@ -1622,7 +1623,7 @@ legend {
     right: 35%;
   }
 }
-/* Layoutanpassung (max-width: 1250px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 1250px) {
   .topbar {
     padding-inline: 25px;
@@ -1690,7 +1691,7 @@ legend {
     gap: 18px;
   }
 }
-/* Layoutanpassung (max-width: 960px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 960px) {
   .topbar-actions {
     gap: 6px;
@@ -1754,7 +1755,7 @@ legend {
     width: 210px;
   }
 }
-/* Layoutanpassung (max-width: 760px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 760px) {
   .app-shell,
   .app-shell.is-collapsed {
@@ -2056,7 +2057,7 @@ legend {
     background: #fffdf8;
   }
 }
-/* Layoutanpassung (max-width: 480px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 480px) {
   .global-search {
     display: none;
@@ -2145,7 +2146,7 @@ legend {
     right: -140px;
   }
 }
-/* Bewegung reduzieren, wenn das Betriebssystem dies verlangt; Kernbedienung und Information bleiben erhalten. */
+/* Respect the system reduced-motion preference while preserving controls and information. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *:before,
@@ -2162,7 +2163,7 @@ legend {
 .fc .fc-day-other .fc-daygrid-day-number {
   color: var(--muted);
 }
-/* Einladung-/Recovery-Rückweg mit kompakter eigener Oberfläche außerhalb des privaten Shellzustands. */
+/* Compact invitation/recovery return UI outside private shell state. */
 .callback-layout {
   min-height: 100vh;
   display: grid;
@@ -2187,7 +2188,7 @@ legend {
   max-width: 130px;
   overflow-wrap: normal;
 }
-/* Verwaltungsnavigation und zweispaltige Personenauswahl mit gezielter Detailprüfung. */
+/* Administrative navigation and two-column person selection with targeted review. */
 .admin-tabs {
   display: flex;
   gap: 8px;
@@ -2313,7 +2314,7 @@ legend {
 .people-expertise-card .button {
   font-size: 12px;
 }
-/* Layoutanpassung (max-width: 1100px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 1100px) {
   .people-admin-layout {
     grid-template-columns: 1fr;
@@ -2324,7 +2325,7 @@ legend {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-/* Layoutanpassung (max-width: 520px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 520px) {
   .people-results {
     grid-template-columns: 1fr;
@@ -2339,7 +2340,7 @@ legend {
     gap: 10px;
   }
 }
-/* Zusätzliche mobile Module bleiben über More erreichbar, ohne die Hauptnavigation zu überladen. */
+/* Keep additional mobile modules reachable through More without crowding primary navigation. */
 .mobile-more {
   display: none;
 }
@@ -2350,7 +2351,7 @@ legend {
 .sidebar-bottom {
   flex-shrink: 0;
 }
-/* Wenig verfügbare Höhe: Desktopnavigation bleibt mit erreichbaren Aktionen nutzbar. */
+/* Low-height desktop layouts retain accessible navigation actions. */
 @media (max-height: 850px) {
   .sidebar-note {
     display: none;
@@ -2359,7 +2360,7 @@ legend {
     padding-top: 12px;
   }
 }
-/* Layoutanpassung (max-width: 760px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 760px) {
   .mobile-more {
     display: block;
@@ -2397,7 +2398,7 @@ legend {
     background: var(--blue-soft);
   }
 }
-/* Explizite globale Suchmaske und nach Typ gruppierte autorisierte Ergebnisse. */
+/* Explicit global search with authorized results grouped by type. */
 .search-page-form {
   display: flex;
   gap: 12px;
@@ -2426,7 +2427,7 @@ legend {
 .portal-search-results small {
   color: var(--muted);
 }
-/* Layoutanpassung (max-width: 700px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 700px) {
   .portal-search-results {
     grid-template-columns: 1fr;
@@ -2436,7 +2437,7 @@ legend {
   }
 }
 
-/* Konto-/Rollendarstellung mit umbrechenden Aktionen für schmale Bildschirme. */
+/* Wrap account/role actions on narrow screens. */
 .account-list {
   list-style: none;
   padding: 0;

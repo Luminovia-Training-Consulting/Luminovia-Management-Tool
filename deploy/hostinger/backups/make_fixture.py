@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Erzeugt ein synthetisches vollständiges Backup für die native Recovery-Probe. Die abgeleitete Backupklasse ersetzt ausschließlich Inventar-/Pfadzugriffe auf die echte Installation.
+# Build a synthetic complete backup for native recovery testing. The subclass replaces real installation inventory/path access with owned fixtures.
 """Test fixture only: accepts an owned networkless recovery container, never VPS."""
 import argparse
 import importlib.util
@@ -37,20 +37,20 @@ for name, data in fixtures.items():
 module.DB = args.container
 original_run = module.run
 
-# Führt den übergebenen Prozess ohne Shell aus und übernimmt einen echten Fehlerstatus.
+# Run the supplied process without a shell and preserve a real failure status.
 def command(arguments, **kwargs):
     if arguments[0] in ['dpkg-query', 'apt-mark', 'systemctl']:
         return b'fictional reconstructible inventory\n'
     return original_run(arguments, **kwargs)
 module.run = command
 
-# Ersetzt die echten Deploymentinventare durch die isolierten synthetischen Recoveryquellen.
+# Replace deployment inventories with isolated synthetic recovery sources.
 class FixtureBackup(CompleteBackup):
-    # Liefert ausschließlich das bekannte Fixtureimage; es wird kein echter Entwicklungscontainer inspiziert.
+    # Return only the known fixture image; do not inspect a real development container.
     def inspect(self):
         self.containers = [row]
         return row['Config']['Image']
-    # Begrenzt die Sicherungsquellen auf die eigens für die Probe angelegten Dateibäume.
+    # Limit backup sources to file trees created for this drill.
     def paths(self):
         return [portal], [], []
 

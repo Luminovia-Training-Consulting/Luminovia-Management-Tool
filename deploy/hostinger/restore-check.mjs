@@ -1,5 +1,5 @@
 /**
- * Wiederherstellungsprobe in einer eigenen temporären PostgreSQL-Instanz. Prüft Dump, Rollen, Objektbytes und Migrationshistorie; darf weder normale Datenvolumes noch den laufenden Entwicklungsstack übernehmen.
+ * Restore drill in an owned temporary PostgreSQL instance. Check dumps, roles, object bytes and migration history without reusing normal volumes or the running development stack.
  */
 import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
@@ -38,7 +38,7 @@ const originalDatabaseImage =
 export const candidateDatabaseImage =
   "supabase/postgres:17.12.0.000@sha256:8630950b489ecc70563300180287a98c192a4a48f5ae00b4febdaeea1abe85de";
 const approvedDatabaseImages = reviewedDatabaseImages;
-// Erlaubt nur ein ausdrücklich geprüftes Recovery-Image oder einen gültigen quellgebundenen Zukunftsnachweis.
+// Allow only an explicitly reviewed recovery image or valid source-bound proof for a later image.
 export function checkedDatabaseImage(image, { recoveryEvidence } = {}) {
   if (!approvedDatabaseImages.has(image) && !recoveryEvidence)
     throw new Error(
@@ -82,7 +82,7 @@ rm /tmp/restore-password
 exec "$drop_privileges" postgres postgres -D "$PGDATA" -c config_file=/etc/postgresql/postgresql.conf -c data_directory="$PGDATA" -c hba_file="$PGDATA/pg_hba.conf" -c ident_file="$PGDATA/pg_ident.conf" -c listen_addresses= -c shared_buffers=64MB -c max_connections=20 -c log_min_messages=fatal -c log_min_error_statement=fatal -c log_statement=none
 `;
 
-// Erzeugt eine eigene temporäre Datenbankinstanz mit begrenzten Ressourcen und Besitzerkennung.
+// Create an owned temporary database instance with resource limits and an ownership label.
 export async function createIsolatedDatabase(
   image = databaseImage,
   options = {},
@@ -267,7 +267,7 @@ export async function createIsolatedDatabase(
   }
 }
 
-// Leitet eine Artefaktdatei als Stream an den eigenen Container weiter und prüft den tatsächlichen Abschluss beider Seiten.
+// Stream an artifact to the owned container and require both sides to complete successfully.
 export async function streamIntoContainer(name, command, file, errorFile) {
   const child = (await import("node:child_process")).spawn(
     "docker",
@@ -359,7 +359,7 @@ except Exception:
  sys.stderr.write('Storage restore validation failed; private paths withheld.\\n');sys.exit(1)
 `;
 
-// Prüft Manifest, Artefaktgrößen und Prüfsummen vor jedem Wiederherstellungsversuch.
+// Verify manifest, artifact sizes and checksums before restoring.
 export async function inspectBackup(directory) {
   const actual = await realpath(directory);
   const expectedRoot = await realpath(backupRoot);
@@ -408,7 +408,7 @@ export async function inspectBackup(directory) {
   return { actual, manifest };
 }
 
-// Spielt ein geprüftes Backup ausschließlich isoliert ein und vergleicht Datenbank-/Rollen-/Storage-Inventare.
+// Restore the verified backup only into isolation and compare database, role and Storage inventories.
 export async function restoreCheck(directory, { candidateImage } = {}) {
   if (candidateImage !== undefined && candidateImage !== candidateDatabaseImage)
     throw new Error("Unreviewed PostgreSQL upgrade candidate.");
@@ -637,7 +637,7 @@ export async function restoreCheck(directory, { candidateImage } = {}) {
   return result;
 }
 
-// Erzeugt nur die synthetischen Daten der eigenen Recovery-Probe.
+// Create only synthetic data for the owned recovery drill.
 async function createFixture({ keepFailure = false } = {}) {
   await mkdir(backupRoot, { recursive: true, mode: 0o700 });
   await chmod(backupRoot, 0o700);
@@ -756,7 +756,7 @@ async function createFixture({ keepFailure = false } = {}) {
   }
 }
 
-// Führt die native Sicherungs-/Wiederherstellungsprobe mit eigenen temporären Ressourcen aus.
+// Run the native backup/restore drill using owned temporary resources.
 export async function selfTest({ keepFailure = false } = {}) {
   const fixture = await createFixture({ keepFailure });
   let passed = false;
@@ -813,7 +813,7 @@ with tarfile.open(path,'w') as tar:
   }
 }
 
-// Wählt ausschließlich ein vorhandenes gültiges Entwicklungsbackup aus dem privaten Backupverzeichnis.
+// Select only an existing valid development backup from the private backup directory.
 async function latestDevelopmentBackup() {
   const names = (await readdir(backupRoot))
     .filter((name) => /^\d{8}T\d{9}Z-[a-f0-9]{8}$/.test(name))

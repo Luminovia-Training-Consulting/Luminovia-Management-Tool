@@ -1,6 +1,6 @@
 /**
- * Erzeugt lokale Browseraufnahmen für die visuelle Entwicklungsprüfung.
- * Zugänge stammen aus der privaten Testkonfiguration; Aufnahmen sind keine Produktionsabnahme.
+ * Captures local browser screenshots for visual development review.
+ * Credentials come from private test configuration; screenshots do not prove production acceptance.
  */
 import { chromium, devices } from "@playwright/test";
 import { mkdirSync } from "node:fs";

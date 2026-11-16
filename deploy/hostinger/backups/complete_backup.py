@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Vollständige verschlüsselte Sicherung aller Datenbanken, echten Dokumentbytes und Recovery-Konfiguration. Streams gehen direkt an age; nur abgeschlossene, gehashte Ciphertext-Sets zählen für Frische und begrenzte Aufbewahrung.
+# Encrypt all connectable databases, actual document bytes and recovery configuration. Streams go directly to age; only completed, hash-verified ciphertext sets count toward freshness and retention.
 """Encrypted, coordinated full recovery sets for the named development VPS.
 
 No decryption identity or plaintext dump is written on the VPS. Each logical
@@ -44,12 +44,12 @@ class BackupError(Exception):
     pass
 
 
-# Liefert einen UTC-Zeitstempel für Backupkatalog und Frischeprüfung.
+# Return a UTC timestamp for the backup catalog and freshness checks.
 def utc():
     return dt.datetime.now(dt.timezone.utc).isoformat()
 
 
-# Erzwingt private Verzeichnisrechte und verweigert unsichere Pfadbestandteile.
+# Reject target/ancestor symlinks, require current ownership and enforce 0700.
 def private_dir(path):
     path = Path(path)
     if path.is_symlink() or any(parent.is_symlink() for parent in path.absolute().parents):
@@ -60,14 +60,14 @@ def private_dir(path):
     path.chmod(0o700)
 
 
-# Akzeptiert nur eine reguläre private Datei des ausführenden Besitzers.
+# Accept only a private regular file owned by the executing user.
 def private_file(path):
     s = Path(path).lstat()
     if not stat.S_ISREG(s.st_mode) or s.st_uid != os.geteuid() or s.st_mode & 0o077:
         raise BackupError("unsafe_private_file")
 
 
-# Schreibt private Recovery-Metadaten über eine neue temporäre Datei und atomaren Austausch.
+# Write recovery metadata through a new private temporary file and atomic replacement.
 def write_json(path, value):
     private_dir(Path(path).parent)
     temporary = Path(str(path) + "." + uuid.uuid4().hex + ".partial")
@@ -85,7 +85,7 @@ def write_json(path, value):
         os.close(descriptor)
 
 
-# Hasht die ganze Datei stückweise, damit große Artefakte nicht vollständig in den Speicher geladen werden.
+# Hash the complete file incrementally rather than loading large artifacts into memory.
 def digest(path):
     h = hashlib.sha256()
     with Path(path).open("rb") as stream:
@@ -94,7 +94,7 @@ def digest(path):
     return h.hexdigest()
 
 
-# Startet einen begrenzten Prozess ohne Shell und hält dessen interne Ausgaben aus stabilen Backupfehlern heraus.
+# Run a command with a timeout and no shell; keep process output out of stable backup error codes.
 def run(arguments, *, data=None, timeout=300):
     try:
         return subprocess.run(arguments, input=data, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True, timeout=timeout).stdout
@@ -103,9 +103,9 @@ def run(arguments, *, data=None, timeout=300):
         raise BackupError("command_failed_" + Path(arguments[0]).name) from error
 
 
-# Besitzt den age-Prozess und hasht Klartext-/Ciphertextstream getrennt; nur ein erfolgreicher finaler Abschluss akzeptiert den Teil.
+# Own the age process and hash plaintext/ciphertext separately; accept a part only after successful finalization.
 class EncryptedPart:
-    # Öffnet das eigene partielle Ciphertextartefakt exklusiv und startet genau einen zugehörigen age-Prozess.
+    # Exclusively create this partial ciphertext artifact and start its own age process.
     def __init__(self, path, recipient, *, age="age", reserve=MIN_FREE):
         self.path = Path(path)
         self.partial = Path(str(path) + ".partial")
@@ -124,7 +124,7 @@ class EncryptedPart:
         self.reader = threading.Thread(target=self._drain, daemon=True)
         self.reader.start()
 
-    # Leert den stderr-Stream von age fortlaufend und behält höchstens die begrenzte private Fehlerdiagnose im Speicher.
+    # Continuously drain age stderr while retaining only bounded private diagnostics.
     def _drain(self):
         while True:
             chunk = self.process.stderr.read(4096)
@@ -133,7 +133,7 @@ class EncryptedPart:
             if len(self.error) < 16384:
                 self.error.extend(chunk[:16384 - len(self.error)])
 
-    # Schreibt direkt an age und aktualisiert Klartexthash/Bytezahl nach erfolgreicher Weitergabe; es entsteht keine Klartextdumpdatei.
+    # Write directly to age and update the plaintext hash/count after forwarding bytes; do not create a plaintext dump file.
     def write(self, content):
         if shutil.disk_usage(self.path.parent).free < self.reserve:
             raise BackupError("disk_reserve_reached")
@@ -145,11 +145,11 @@ class EncryptedPart:
         self.plain_bytes += len(content)
         return len(content)
 
-    # Leitet den Flush an den eigenen Verschlüsselungsprozess weiter.
+    # Forward flushing to the owned encryption process.
     def flush(self):
         self.process.stdin.flush()
 
-    # Schließt die Eingabe und wartet auf echten Verschlüsselungs-/Writererfolg vor der finalen Prüfsumme.
+    # Close input and require encryption/writer success before finalizing the checksum.
     def finish(self):
         try:
             self.process.stdin.close()
@@ -172,7 +172,7 @@ class EncryptedPart:
             self.abort()
             raise
 
-    # Beendet ausschließlich die eigene unvollständige Verschlüsselung und entfernt deren nicht akzeptiertes Artefakt.
+    # Abort only this incomplete encryption process and remove its unaccepted artifact.
     def abort(self):
         if self.process.poll() is None:
             self.process.kill()
@@ -187,7 +187,7 @@ class EncryptedPart:
         self.partial.unlink(missing_ok=True)
 
 
-# Verbindet einen echten Erzeugerprozess direkt mit age und verlangt erfolgreichen Abschluss beider Prozesse.
+# Pipe a real producer directly into age and require both processes to succeed.
 def encrypt_command(arguments, path, recipient, *, age="age", reserve=MIN_FREE):
     part = EncryptedPart(path, recipient, age=age, reserve=reserve)
     process = None
@@ -208,7 +208,7 @@ def encrypt_command(arguments, path, recipient, *, age="age", reserve=MIN_FREE):
         raise
 
 
-# Prüft Ciphertextteile, Größen, Rechte und Manifestvollständigkeit, bevor ein Set als verwendbar zählt.
+# Check ciphertext parts, lengths, permissions and manifest completeness before accepting a set.
 def verify_complete(path):
     """Ciphertext integrity only. No private identity is present on the VPS."""
     path = Path(path)
@@ -237,7 +237,7 @@ def verify_complete(path):
     return manifest
 
 
-# Erkennt nur eigene vollständige und erfolgreich verifizierte Sets als Kandidaten für Aufbewahrung.
+# Consider only owned, complete, successfully verified sets for retention.
 def retained_sets(destination):
     result = []
     for path in Path(destination).iterdir():
@@ -250,7 +250,7 @@ def retained_sets(destination):
     return sorted(result)
 
 
-# Entfernt nur bekannte gültige ältere Sets unter Beibehaltung eines letzten Rückkehrbestands.
+# Remove only known valid older sets while preserving a last usable recovery set.
 def make_room(destination, required, *, reserve=MIN_FREE, free_bytes=None):
     free_bytes = free_bytes or (lambda: shutil.disk_usage(destination).free)
     valid = retained_sets(destination)
@@ -262,7 +262,7 @@ def make_room(destination, required, *, reserve=MIN_FREE, free_bytes=None):
         raise BackupError("insufficient_disk_with_last_valid_backup_preserved")
 
 
-# Begrenzt die Aufbewahrung erst nach einem tatsächlich erfolgreichen neuen Set.
+# Apply final retention only after a new set has actually succeeded.
 def prune_after_success(destination, *, reserve=MIN_FREE):
     valid = retained_sets(destination)
     while len(valid) > RETAIN or (shutil.disk_usage(destination).free < reserve and len(valid) >= 2):
@@ -271,9 +271,9 @@ def prune_after_success(destination, *, reserve=MIN_FREE):
         shutil.rmtree(old)
 
 
-# Koordiniert Quieszenz, verschlüsselte Datenbank-/Dateistreams und Wiederanlauf unter denselben Wartungssperren wie der Updater.
+# Coordinate quiescence, encrypted database/file streams and service resumption under the updater's maintenance locks.
 class CompleteBackup:
-    # Bindet die privaten Pfade und Prozess-/Sperrzustände an genau diese Backupinstanz.
+    # Bind private paths and process/lock ownership to this backup instance.
     def __init__(self, root=ROOT, destination=DESTINATION, *, age="age", reserve=MIN_FREE, host_root=Path("/")):
         self.root = Path(root)
         self.destination = Path(destination)
@@ -291,11 +291,11 @@ class CompleteBackup:
         self.flag_owned = False
         self.started = None
 
-    # Liest die bekannten Datenbanken über den festen Containerzugang mit explizitem Datenbanknamen.
+    # Query known databases through the fixed container connection with an explicit database name.
     def sql(self, query, *, database="postgres"):
         return run(["docker", "exec", "-i", DB, "psql", "-U", "supabase_admin", "-d", database, "-X", "-qAt", "-v", "ON_ERROR_STOP=1"], data=query.encode()).decode().strip()
 
-    # Bestätigt den vollständigen tatsächlich vorhandenen Dienstsatz und ein laufendes unveränderliches Datenbankimage.
+    # Check the expected service inventory and running immutable database image.
     def inspect(self):
         containers = []
         for project, expected in SERVICES.items():
@@ -312,7 +312,7 @@ class CompleteBackup:
             raise BackupError("database_not_running_on_immutable_image")
         return image
 
-    # Verlangt für spätere Images den installierten abgeschlossenen Nachweis und bytegleiche aktuelle Migrationsquellen.
+    # Require installed completed proof and exact current migration source for later database images.
     def recovery_image_evidence(self, image):
         if image in LEGACY_IMAGES:
             return None  # Preserve the original explicitly reviewed recovery path.
@@ -350,7 +350,7 @@ class CompleteBackup:
                 "proofPath": proof_path.relative_to(self.host_root).as_posix(), "proofSha256": digest(proof_path),
                 "appliedMigrationInventory": inventory}
 
-    # Erfasst alle recoveryrelevanten Roots und schreibbaren Mounts; wiederherstellbare Caches bleiben ausdrücklich ausgeschlossen.
+    # Capture recovery roots and writable mounts while explicitly excluding reconstructible caches.
     def paths(self):
         paths = [self.root / name for name in ["source", "www", "private", "control", "data/storage", "data/mailpit"]]
         # Restore-critical configuration is captured separately; live PGDATA
@@ -379,7 +379,7 @@ class CompleteBackup:
                 raise BackupError("missing_or_symlinked_recovery_root")
         return sorted(set(paths)), volumes, excluded
 
-    # Verhindert rekursive Backups, Schlüsselidentitäten, temporäre Rückkehrbestände und rekonstruierbare Checkoutcaches.
+    # Exclude recursive backups, recovery identities, temporary rollback state and reconstructible checkout caches.
     def excluded(self, path):
         path = Path(path)
         if path.suffix == ".agekey":
@@ -399,7 +399,7 @@ class CompleteBackup:
             return True
         return False
 
-    # Durchläuft eindeutige Inventarpfade mit lstat; Sockets werden ausgelassen und unbekannte Spezialdateien verweigert.
+    # Walk unique inventory paths with lstat; skip sockets and reject unsupported special files.
     def walk(self, roots):
         seen = set()
         for root in roots:
@@ -418,7 +418,7 @@ class CompleteBackup:
                 if stat.S_ISDIR(state.st_mode):
                     todo.extend(sorted(path.iterdir(), reverse=True))
 
-    # Erwirbt die eigene Wartungsmarkierung exklusiv und stoppt nur zuvor laufende bekannte Schreiber vor logischen Dumps.
+    # Acquire this maintenance marker exclusively and stop only previously running known writers before logical dumps.
     def quiesce(self):
         if self.maintenance.exists() or self.maintenance.is_symlink():
             raise BackupError("maintenance_already_active")
@@ -442,7 +442,7 @@ class CompleteBackup:
         if writers:
             raise BackupError("database_clients_remain_after_quiescence")
 
-    # Startet nur die selbst angehaltenen Dienste in Abhängigkeitsreihenfolge und bestätigt deren tatsächlichen Healthzustand.
+    # Resume only services stopped by this backup, in dependency order, and verify their health.
     def resume(self):
         failures = []
         # Scanner/mail before Auth; all were running before the backup. Start
@@ -471,7 +471,7 @@ class CompleteBackup:
             self.flag_owned = False
         self.stopped.clear()
 
-    # Streamt Dateibytes samt ursprünglichen Metadaten/Xattrs in das verschlüsselte Archiv und den authentifizierten Katalog.
+    # Stream file bytes and original metadata/xattrs into the encrypted archive and authenticated catalog.
     def archive_files(self, roots, path, recipient):
         part = EncryptedPart(path, recipient, age=self.age, reserve=self.reserve)
         files = []
@@ -494,11 +494,11 @@ class CompleteBackup:
                             # Hash and archive the same opened bytes; detect changes
                             # despite quiescence instead of accepting mixed snapshots.
                             h = hashlib.sha256()
-                            # Reicht die Dateibytes an tar weiter und berechnet dabei den Hash genau desselben geöffneten Inhalts.
+                            # Feed file bytes into tar and hash the same opened content.
                             class Reader:
-                                # Hält ausschließlich den bereits geöffneten Quellstream dieses Archiveintrags.
+                                # Hold only the already opened source stream for this archive entry.
                                 def __init__(self, stream): self.stream = stream
-                                # Hasht die tatsächlich vom Tarstream angeforderten Klartextbytes für den späteren Vergleich.
+                                # Hash the plaintext bytes actually consumed by tar for later comparison.
                                 def read(self, size=-1):
                                     value = self.stream.read(size)
                                     h.update(value)
@@ -517,7 +517,7 @@ class CompleteBackup:
             part.abort()
             raise
 
-    # Erstellt erst nach Quieszenz das komplette verschlüsselte Set und akzeptiert es nur mit vollständigem Abschlussmanifest.
+    # Capture the complete encrypted set under quiescence and accept it only with a completed final manifest.
     def create(self):
         private_dir(self.control)
         private_dir(self.destination)
@@ -616,7 +616,7 @@ class CompleteBackup:
         write_json(self.status, {"format": FORMAT, "status": "complete", "lastSuccessAt": utc(), "lastBackup": final.name, "ciphertextBytes": sum(p["bytes"] for p in parts.values()), "manualRecoveryRequired": False, "offSite": False, "desktopDecryptRestoreVerified": False})
         return {"status": "complete", "backup": final.name, "parts": len(parts), "offSite": False}
 
-    # Ermittelt Frische aus einem tatsächlich verifizierten Ciphertextset statt allein aus einem Statuszeitstempel.
+    # Derive freshness from a verified ciphertext set, not only a status timestamp.
     def fresh(self, *, max_age_hours=26):
         if not self.destination.exists():
             return False
@@ -631,7 +631,7 @@ class CompleteBackup:
         except (KeyError, ValueError, TypeError):
             return False
 
-    # Koordiniert globale/Updater-Sperre, Rebootzaun, Platzprüfung und zwingenden Wiederanlauf auch nach einem Backupfehler.
+    # Acquire the global lock before the updater lock; enforce reboot/space gates and resume services even after backup failure.
     def execute(self, *, lock_wait=1800):
         # Global host/Docker maintenance lock precedes the updater-specific lock,
         # exactly matching the app/system maintenance ordering. Never nest a global
@@ -666,7 +666,7 @@ class CompleteBackup:
                 os.close(descriptor)
 
 
-# Trennt die dokumentierten Betriebsmodi und gibt nur stabile Ergebnisse/Fehlercodes ohne private Prozessdetails aus.
+# Separate the documented operating modes and expose stable results/error codes without private process details.
 def main():
     parser = argparse.ArgumentParser()
     action = parser.add_mutually_exclusive_group(required=True)
@@ -691,7 +691,7 @@ def main():
     if os.geteuid() != 0:
         raise BackupError("root_required_for_named_vps_backup")
     # A termination signal still enters the recovery finally block.
-    # Leitet ein Abbruchsignal in den kontrollierten Cleanup-/Wiederanlaufpfad des eigenen Backups.
+    # Route an interrupt into this backup's controlled cleanup/resumption path.
     def interrupt(_signal, _frame):
         raise BackupError("backup_interrupted")
     signal.signal(signal.SIGTERM, interrupt)

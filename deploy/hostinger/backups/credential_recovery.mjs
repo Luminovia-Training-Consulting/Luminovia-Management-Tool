@@ -1,5 +1,5 @@
 /**
- * Prüft wiederhergestellte Datenbank-/Auth-Zugänge gegen die gesicherten Konfigurationswerte. Geheimnisse werden nur für den Vergleich verwendet und gehören weder in Rückgaben noch in Diagnoseausgaben.
+ * Check restored database/Auth credentials against captured configuration. Use secrets only for comparison, never in results or diagnostics.
  */
 import assert from "node:assert/strict";
 import {
@@ -11,9 +11,9 @@ import {
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-// Quotiert ausschließlich einen SQL-Textwert; Objektbezeichner benötigen ihren eigenen Quoting-Pfad.
+// Quote a SQL text value only; object identifiers need a separate quoting path.
 const literal = (s) => "'" + s.replaceAll("'", "''") + "'";
-// Rekonstruiert den SCRAM-Nachweis aus dem gesicherten Passwort und vergleicht nur die abgeleiteten Schlüssel.
+// Reconstruct SCRAM proof from the captured password and compare only derived keys.
 export function verifiesScram(password, encoded) {
   const match =
     /^SCRAM-SHA-256\$(\d+):([A-Za-z0-9+/=]+)\$([A-Za-z0-9+/=]+):([A-Za-z0-9+/=]+)$/.exec(
@@ -42,7 +42,7 @@ export function verifiesScram(password, encoded) {
   );
 }
 
-// Prüft alle erwarteten Dienst-/Auth-Zugänge im wiederhergestellten Bestand, ohne Passwörter oder Passwort-Hashes auszugeben.
+// Verify expected service/Auth credentials in the restored data without printing passwords or hashes.
 export async function verifyRecoveredCredentials(
   database,
   temporary,

@@ -1,6 +1,6 @@
 /**
- * Prüft den statischen Import-/Symbol-/Routenprüfer an gelieferten Quellen und Gegenbeispielen.
- * Fehlende Verbindungen müssen erkannt werden, ohne legitime Laufzeiteinstiege als toten Code zu entfernen.
+ * Checks the static import/symbol/route analyser against delivered source and counterexamples.
+ * Missing connections must be detected without treating legitimate runtime entry points as dead code.
  */
 import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";

@@ -1,6 +1,6 @@
 /**
- * Prüft Vites echten Watcher gegen Quelländerungen und generierte private Prüfberichte.
- * Die Anwendung soll auf echte Quellen reagieren, ohne sich durch eigene Testergebnisse neu zu laden.
+ * Checks Vite's real watcher against source edits and generated private QA reports.
+ * The application must react to real source changes without reloading because of its own test output.
  */
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";

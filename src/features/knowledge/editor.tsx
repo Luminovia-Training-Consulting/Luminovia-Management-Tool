@@ -1,5 +1,6 @@
 /**
- * Tiptap-Editor und lesende Darstellung mit begrenzten Erweiterungen und Codehervorhebung. Inhalt passiert die gemeinsame Normalisierung; freies, ungeprüftes HTML wird nicht als Speicherformat eingeführt.
+ * Tiptap editing/read views with bounded extensions and code highlighting. Content passes shared
+ * normalization; raw unvalidated HTML is not introduced as a storage format.
  */
 import { useState } from "react";
 import {
@@ -31,9 +32,9 @@ import { Dialog } from "../../components/ui/dialog";
 import { Field, Notice } from "../../components/common";
 import { emptyDocument, normalizedDocument, safeLink } from "./content";
 import "./i18n";
-/** Gemeinsame Syntaxhervorhebung der ausdrücklich geladenen Code-Sprachen. */
+/** Shared syntax highlighting for the explicitly loaded code languages. */
 const lowlight = createLowlight(common);
-/** Begrenzte Editorfunktionen passend zum normalisierten Speichervertrag. */
+/** Bound editor extensions to the normalized storage contract. */
 const extensions = [
   StarterKit.configure({
     codeBlock: false,
@@ -65,7 +66,7 @@ const extensions = [
     },
   }).configure({ lowlight, defaultLanguage: "plaintext" }),
 ];
-/** Bindet Tiptap an kontrollierten normalisierten Inhalt und unterstützt denselben Vertrag beim Lesen und Bearbeiten. */
+/** Bind Tiptap to controlled normalized content with the same contract for reading and editing. */
 export function KnowledgeEditor({
   value,
   onChange,
@@ -98,12 +99,12 @@ export function KnowledgeEditor({
         class: "knowledge-prose",
       },
     },
-    // Auch vom Editor erzeugte JSON-Daten laufen wieder durch dieselbe Allowlist
-    // wie geladene Inhalte; Erweiterungen können den Speichervertrag nicht still erweitern.
+    // JSON produced by the editor passes through the same allowlist
+    // as loaded content; extensions must not silently expand the storage contract.
     onUpdate: ({ editor }) => onChange?.(normalizedDocument(editor.getJSON())),
   });
-  // Nur die benötigten Toolbarattribute beobachten, statt bei jeder Transaktion
-  // den gesamten React-Editorbaum erneut zu rendern.
+  // Observe only toolbar attributes needed by React instead of rerendering
+  // the entire editor tree for every transaction.
   const active = useEditorState({
     editor,
     selector: ({ editor }) => ({

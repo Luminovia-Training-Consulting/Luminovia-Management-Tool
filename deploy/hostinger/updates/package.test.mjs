@@ -1,5 +1,5 @@
 /**
- * Release-Pakettests in eigenen temporären Verzeichnissen mit synthetischen Buildwerten. Prüfen Dateigrenzen, Hashbindung, Geheimniserkennung und unveränderliche Runtime-Pins vor jeder Veröffentlichung.
+ * Package tests use owned temporary directories and synthetic public build values. Exercise path boundaries, hashes, secret detection and immutable pins without publishing a release.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -20,10 +20,10 @@ import { API_URL, createRelease, REPOSITORY } from "./package.mjs";
 
 const commit = "a".repeat(40);
 const publicKey = "sb_publishable_" + "ExamplePublicBuildValue".repeat(2);
-// Ergänzt den fiktiven Repositorynamen um einen unveränderlichen synthetischen Imagedigest für die Releasefixture.
+// Add an immutable synthetic image digest to the fictional repository name for this release fixture.
 const image = (repository) => repository + "@sha256:" + "a".repeat(64);
 const postgres = image("supabase/postgres:17.12.0.000");
-// Berechnet den Fingerabdruck für die quellgebundene Vergleichs-/Prüfentscheidung.
+// Compute the digest used for source-bound comparison and verification.
 const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const pgProofPath = "deploy/hostinger/selfhost/postgres-candidate-proof.json";
 const newRuntimeFiles = [
@@ -36,7 +36,7 @@ const newRuntimeFiles = [
   "deploy/hostinger/backups/extension-recovery.json",
 ];
 
-// Erzeugt ausschließlich einen kontrollierten lokalen/injizierten Fixturebestand; externe Systemantworten bleiben gezielt austauschbar.
+// Create controlled owned fixtures with replaceable external responses.
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), "portal-package-test-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));

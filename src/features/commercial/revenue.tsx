@@ -1,5 +1,6 @@
 /**
- * Capability-geschützte Umsatzdarstellung mit getrennten Währungsgruppen. Angebot, angenommener Umsatz und historisch unbekannte Bruttowerte werden sichtbar getrennt gehalten.
+ * Capability-gated revenue grouped by currency. Keep offers, accepted revenue and historically
+ * unknown gross values visibly distinct.
  */
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -24,7 +25,7 @@ import {
 } from "./commission-api";
 import "./platform-i18n";
 import "./platform.css";
-/** Lädt die erlaubte Umsatzprojektion und hält unbekannte historische Bruttowerte sichtbar. */
+/** Load permitted revenue projections and preserve visibly unknown historical gross amounts. */
 export function RevenuePanel() {
   const { t, i18n } = useTranslation("platform");
   const common = useTranslation().t;
@@ -206,7 +207,7 @@ export function RevenuePanel() {
     </section>
   );
 }
-/** Zeigt gruppierte Originalwährungswerte der übergebenen autorisierten Zusammenfassung. */
+/** Display original-currency groups from the supplied authorized summary. */
 export function FinancialSummaryCards() {
   const { t, i18n } = useTranslation("platform");
   const { session } = useAuth();

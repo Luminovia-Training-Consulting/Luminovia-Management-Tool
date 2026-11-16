@@ -1,6 +1,6 @@
 /**
- * Browserabläufe für wörtliche Kommentare, eigene Revisionen und begründete MFA-Moderation.
- * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ * Browser workflows for literal comments, own revisions and reasoned MFA moderation.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";

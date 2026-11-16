@@ -1,5 +1,6 @@
 /**
- * Eigene zusätzliche Profildaten wie Land, Sprachen, Erfahrung und Labels. Formulare halten Entwürfe lokal und übernehmen Erfolg erst nach bestätigter Speicherung; veröffentlichte Projektionen folgen dem Backendvertrag.
+ * Own country, language, experience and label fields. Keep drafts local, confirm saves only
+ * after server success and retain the backend's publication projections.
  */
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,7 +13,7 @@ import { Field, Loading, ErrorState, Notice } from "../../components/common";
 import { labelText, peopleRpc, type ProfileDetails } from "./api";
 import "./i18n";
 import "./people.css";
-/** Speichert zusätzliche eigene Profildaten aus lokal gehaltenen Entwürfen und invalidiert die betroffenen Projektionen. */
+/** Save own additional profile drafts and invalidate the affected projections. */
 function DetailsForm({ details }: { details: ProfileDetails }) {
   const { t } = useTranslation("people");
   const online = useOnline();
@@ -100,7 +101,7 @@ function DetailsForm({ details }: { details: ProfileDetails }) {
     </form>
   );
 }
-/** Lädt die eigene private Detailprojektion vor dem Formular für Erfahrung, Land, Sprachen und Labels. */
+/** Read own private details before opening the experience/country/language/label form. */
 export function OwnProfileDetails() {
   const { session } = useAuth();
   const { t } = useTranslation("people");

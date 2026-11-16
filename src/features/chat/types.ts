@@ -1,13 +1,14 @@
 /**
- * DTOs der berechtigungsgefilterten Chat-RPCs. Raumart, Mitgliedschaft, Nachrichtenstatus und Cursor bleiben explizit, damit private DMs und getrennte Kurskanäle nicht durch UI-Annahmen vermischt werden.
+ * DTOs from permission-filtered chat RPCs. Explicit room types, membership, message state and
+ * cursors prevent UI assumptions from merging private DMs with separate course channels.
  */
-/** Serverfreigegebener Kontakt für echte DM-/Gruppenaktionen. */
+/** Server-authorized contact for actual DM/group actions. */
 export interface ChatContact {
   id: string;
   display_name: string;
   roles: string[];
 }
-/** Berechtigte Raumprojektion einschließlich Raumart, Lesestand und Stummschaltung. */
+/** Permitted room projection with type, read state and mute status. */
 export interface ChatRoom {
   id: string;
   kind: "dm" | "general" | "topic" | "lecturer_course" | "participant_course";
@@ -18,7 +19,7 @@ export interface ChatRoom {
   last_message_at: string | null;
   muted: boolean;
 }
-/** Mitgliedschaftsprojektion im aktuell zugänglichen Raum. */
+/** Membership projection for the currently accessible room. */
 export interface ChatMember {
   user_id: string;
   display_name: string;
@@ -30,7 +31,7 @@ export interface ChatReaction {
   count: number;
   mine: boolean;
 }
-/** Persistierte Nachricht mit sichtbarem Autor, Änderungs-/Löschstand und erlaubten Anhängen. */
+/** Persisted message with visible author, edit/deletion state and permitted attachments. */
 export interface ChatMessage {
   id: string;
   room_id: string;
@@ -43,7 +44,7 @@ export interface ChatMessage {
   document_id: string | null;
   reactions: ChatReaction[];
 }
-/** Fortsetzung der Nachrichtenhistorie anhand des letzten Zeit/ID-Paares. */
+/** History continuation using the last timestamp/ID pair. */
 export interface MessageCursor {
   at: string;
   id: string;

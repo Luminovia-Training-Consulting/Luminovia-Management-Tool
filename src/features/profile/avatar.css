@@ -1,7 +1,8 @@
 /**
- * Rasterbilder, Initialenfallback und eigener Bildeditor in definierten Avatargrößen. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ * Raster images, initials fallback and own editor at defined avatar sizes, using shared brand
+ * colours and surface variables.
  */
-/* Feste Bild-/Initialengeometrie verhindert springende Profillayouts während des authentifizierten Downloads. */
+/* Fixed image/initials geometry prevents profile shifts during authenticated downloads. */
 .profile-avatar {
   display: inline-flex;
   align-items: center;
@@ -27,7 +28,7 @@
   height: 100%;
   object-fit: cover;
 }
-/* Eigene Auswahl und Uploadaktionen bleiben vom allgemeinen Personenbild getrennt. */
+/* Keep own selection/upload controls separate from the general person image. */
 .avatar-editor {
   display: flex;
   align-items: flex-start;
@@ -37,7 +38,7 @@
 .avatar-editor > div {
   min-width: 0;
 }
-/* Layoutanpassung (max-width: 640px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
+
 @media (max-width: 640px) {
   .avatar-editor {
     flex-direction: column;

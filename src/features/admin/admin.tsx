@@ -1,5 +1,6 @@
 /**
- * Auftragseditor für freie Angebote und Angebote aus einem konkreten Kurslauf. Der überprüfte Kursquellenstand bleibt während der Eingabe stabil; echte Termine und Preise werden beim Speichern serverseitig geprüft.
+ * Offer editor for standalone jobs and jobs derived from a course run. Retain the reviewed
+ * source while editing; the server checks actual sessions and prices on save.
  */
 import { useRef, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
@@ -41,7 +42,7 @@ import {
   Notice,
   PageHeading,
 } from "../../components/common";
-/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().max(10000),
@@ -73,9 +74,9 @@ const schema = z.object({
     .min(1)
     .max(60),
 });
-/** Formularwerte direkt aus dem zugehörigen Validierungsschema, damit Eingabe- und TypeScript-Vertrag übereinstimmen. */
+/** Derive form values from the validation schema so runtime input checks and TypeScript agree. */
 type Values = z.infer<typeof schema>;
-/** Erstellt ein vollständiges Angebot und bindet bei Kursübernahme die überprüfte Quellenrevision an den Serveraufruf. */
+/** Create the complete offer and bind a course-derived request to its reviewed source revision. */
 function JobForm({
   courseRun: initialSource,
 }: {
@@ -688,7 +689,7 @@ function JobForm({
     </form>
   );
 }
-/** Wählt freien Angebotsentwurf oder servergeladenen Kursquellenstand anhand der Route und aktuellen Rechte. */
+/** Choose a standalone draft or server-loaded course source from the route and current capabilities. */
 export function AdminPage() {
   const { t } = useTranslation();
   const courseText = useTranslation("courseOffer").t;

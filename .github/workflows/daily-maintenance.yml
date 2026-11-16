@@ -1,5 +1,5 @@
-# Tägliche Komponentenpflege: jeden Kandidaten einzeln prüfen, die Kombination
-# erneut prüfen und nur einen quellengebundenen erfolgreichen Stand promoten.
+# Daily component maintenance: verify each candidate, verify the combined set
+# again, and promote only a successful revision bound to its source.
 name: Daily verified component maintenance
 on:
   schedule:
@@ -36,7 +36,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: node deploy/hostinger/maintenance/promote.mjs signature-probe
   discover:
-    # Ermittelt Kandidaten aus öffentlichem Quellstand; keine Änderung an main/VPS.
+    # Discover candidates from public source without changing main or the VPS.
     if: inputs.signature_probe_only != true
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -63,8 +63,8 @@ jobs:
           retention-days: 14
           if-no-files-found: error
   candidates:
-    # Ein Fehlschlag wird als Ergebnis exportiert und darf andere Kandidaten nicht
-    # verdecken. continue-on-error ist keine Freigabe eines fehlgeschlagenen Updates.
+    # Export failures as results so one candidate does not hide the others.
+    # continue-on-error does not authorize promotion of a failed update.
     needs: discover
     if: needs.discover.outputs.has_candidates == 'true'
     runs-on: ubuntu-latest
@@ -131,7 +131,7 @@ jobs:
           retention-days: 14
           if-no-files-found: error
   combined:
-    # Einzelerfolge beweisen keine gemeinsame Kompatibilität; deshalb erneute Abnahme.
+    # Individual passes do not prove combined compatibility; verify the union again.
     if: always() && needs.discover.result == 'success'
     needs: [discover, candidates]
     runs-on: ubuntu-latest
@@ -188,8 +188,8 @@ jobs:
           retention-days: 14
           if-no-files-found: error
   fallback:
-    # Falls die Kombination scheitert, sucht der bestehende Plan einen erneut
-    # prüfbaren kleineren Satz. Fehlgeschlagene Ergebnisse werden nicht umetikettiert.
+    # If the combined candidate fails, assemble another set from the existing
+    # plan and verify it again. Never relabel failed results as passes.
     if: always() && needs.discover.result == 'success' && needs.combined.result == 'failure'
     needs: [discover, candidates, combined]
     runs-on: ubuntu-latest

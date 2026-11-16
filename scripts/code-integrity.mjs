@@ -1,6 +1,6 @@
 /**
- * Statische Verbindungsprüfung des Frontends über den TypeScript-Syntax- und Symbolbaum.
- * Routen, lokale Imports, Assets, Exportverwendung und RPC-Namen werden ohne Appstart untersucht.
+ * Static frontend connection checks using TypeScript syntax and symbols.
+ * Inspects routes, local imports, assets, export usage and RPC names without starting the app.
  */
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
@@ -10,14 +10,14 @@ import ts from "typescript";
 const extensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".json", ".css"];
 const script = /\.(?:tsx?|jsx?|mjs)$/;
 const excluded = /(?:^|\/)test(?:\/|$)|\.(?:test|spec)\.[^.]+$|\.d\.ts$/;
-/** Sammelt Dateien rekursiv; die späteren Filter bestimmen, welche zum Frontendgraphen gehören. */
+/** Collects files recursively; later filters decide which belong to the frontend graph. */
 function filesUnder(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
     return entry.isDirectory() ? filesUnder(path) : [path];
   });
 }
-/** Löst relative Imports anhand der tatsächlich gelieferten Dateiendungen und index-Dateien auf. */
+/** Resolves relative imports against delivered extensions and index files. */
 function localTarget(file, specifier) {
   const target = resolve(dirname(file), specifier);
   return [
@@ -26,7 +26,7 @@ function localTarget(file, specifier) {
     ...extensions.map((extension) => join(target, `index${extension}`)),
   ].find((candidate) => existsSync(candidate) && statSync(candidate).isFile());
 }
-/** Liest ausschließlich statisch erkennbare JSX-Attribute; dynamische Ausdrücke werden nicht erfunden. */
+/** Reads only statically identifiable JSX attributes; dynamic values are not invented. */
 function attribute(node, name) {
   if (!ts.isJsxOpeningElement(node) && !ts.isJsxSelfClosingElement(node))
     return null;
@@ -46,7 +46,7 @@ function attribute(node, name) {
 }
 
 /** Follow code/type and literal lazy imports; server/tool entry points are separate graphs. */
-/** Verfolgt statische und literale Lazy-Imports vom echten Einstieg aus und prüft Routen sowie Assets. */
+
 export function auditFrontend(root) {
   const source = join(root, "src");
   const files = filesUnder(source).filter(
@@ -67,17 +67,17 @@ export function auditFrontend(root) {
       true,
     );
     const imports = new Set();
-    /** Verknüpft einen Befund mit der tatsächlichen Dateiposition für eine nachprüfbare Diagnose. */
+    /** Attaches each finding to its actual source position for an inspectable diagnostic. */
     const location = (node) =>
       `${relative(root, file)}:${ast.getLineAndCharacterOfPosition(node.getStart()).line + 1}`;
-    /** Registriert nur relative Quellverbindungen und hält ungelöste Verweise als Befund fest. */
+    /** Records relative source connections and reports unresolved references. */
     const registerImport = (node, specifier) => {
       if (!specifier.startsWith(".")) return;
       const target = localTarget(file, specifier);
       if (!target) unresolved.push({ source: location(node), specifier });
       else imports.add(target);
     };
-    /** Durchläuft Syntaxknoten unter Erhalt des jeweiligen Routen- oder Symbolkontexts. */
+    /** Visits syntax nodes while retaining their route or symbol context. */
     function visit(node, routeBase = "") {
       if (
         (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
@@ -141,7 +141,7 @@ export function auditFrontend(root) {
     modules.set(file, imports);
   }
   const visited = new Set();
-  /** Verfolgt den Modulgraphen mit Besuchsmenge, damit Importzyklen nicht endlos rekursieren. */
+  /** Traverses the module graph with a visited set so import cycles cannot recurse indefinitely. */
   function follow(file) {
     if (visited.has(file)) return;
     visited.add(file);
@@ -179,7 +179,7 @@ export function auditFrontend(root) {
   };
 }
 
-/** Erzeugt das Compilerprogramm samt Symbolauflösung für tatsächliche Quellverweise. */
+/** Builds the compiler program and symbol resolution for actual source references. */
 function sourceProgram(root) {
   const files = filesUnder(join(root, "src")).filter(
     (file) =>
@@ -202,11 +202,11 @@ function sourceProgram(root) {
 
 /** Compiler references distinguish a disconnected export from a helper used
  * inside its own module. Import/export declarations alone do not count as use. */
-/** Zählt tatsächliche Symbolverwendung innerhalb und außerhalb des Moduls statt bloße Exportdeklarationen. */
+
 export function scanRuntimeExports(root) {
   const { checker, sources } = sourceProgram(root);
   const tracked = new Map();
-  /** Löst Alias-/Kurzschreibweisen auf das tatsächliche Compilersymbol zurück. */
+  /** Resolves aliases and shorthand references to the actual compiler symbol. */
   const symbol = (node) => {
     const value = ts.isShorthandPropertyAssignment(node.parent)
       ? checker.getShorthandAssignmentValueSymbol(node.parent)
@@ -247,7 +247,7 @@ export function scanRuntimeExports(root) {
     }
   }
   for (const source of sources) {
-    /** Durchläuft Syntaxknoten unter Erhalt des jeweiligen Routen- oder Symbolkontexts. */
+    /** Visits syntax nodes while retaining their route or symbol context. */
     function visit(node) {
       if (
         ts.isImportDeclaration(node) ||
@@ -278,32 +278,32 @@ export function scanRuntimeExports(root) {
 
 /** Discover forwarding wrappers by symbols, so renamed imports/new domain helpers
  * cannot silently fall outside the actual database binding check. */
-/** Verfolgt RPC-Namen auch durch umbenannte und weitergereichte Wrapper über Compilersymbole. */
+
 export function scanFrontendRpcReferences(root) {
   const { checker, sources } = sourceProgram(root);
   const calls = [];
   const wrappers = new Map();
-  /** Löst Alias-/Kurzschreibweisen auf das tatsächliche Compilersymbol zurück. */
+  /** Resolves aliases and shorthand references to the actual compiler symbol. */
   const symbol = (node) => {
     const value = checker.getSymbolAtLocation(node);
     return value && value.flags & ts.SymbolFlags.Alias
       ? checker.getAliasedSymbol(value)
       : value;
   };
-  /** Sammelt tatsächliche Symbolverweise der betrachteten RPC-Verbindung. */
+  /** Collects actual symbol references for the RPC connection under inspection. */
   function collect(node, source) {
     if (ts.isCallExpression(node)) calls.push({ node, source });
     ts.forEachChild(node, (child) => collect(child, source));
   }
   for (const source of sources) collect(source, source);
-  /** Erkennt die direkte Aufrufverbindung anhand des Syntax- und Symbolvertrags. */
+  /** Recognises a direct call connection from the syntax and symbol contract. */
   const direct = (call) =>
     ts.isPropertyAccessExpression(call.expression) &&
     call.expression.name.text === "rpc";
-  /** Ermittelt, an welcher Wrapperposition der RPC-Name weitergereicht wird. */
+  /** Finds the wrapper parameter position that forwards the RPC name. */
   const argumentIndex = (call) =>
     direct(call) ? 0 : wrappers.get(symbol(call.expression));
-  /** Ermittelt den tatsächlich weiterleitenden Funktionskontext der RPC-Referenz. */
+  /** Finds the function context that actually forwards this RPC reference. */
   function forwardingFunction(argument) {
     const target = symbol(argument);
     if (!target || !ts.isIdentifier(argument)) return null;

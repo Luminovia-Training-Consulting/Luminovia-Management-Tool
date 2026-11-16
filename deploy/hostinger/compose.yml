@@ -1,4 +1,4 @@
-# Öffentlicher Caddy und privater ClamAV des Entwicklungsstacks. Images sind digestgepinnt; nur Caddy veröffentlicht Hostports, die gemeinsame Backendverbindung ist ein explizites vorhandenes Netz.
+# Development Caddy ingress and private ClamAV use digest-pinned images. Only Caddy publishes host ports; backend connectivity uses the explicit existing network.
 name: luminovia-portal
 services:
   web:

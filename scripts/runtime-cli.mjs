@@ -1,6 +1,6 @@
 /**
- * Zentrale Befehlsverteilung für die datenerhaltende lokale Portal-Laufzeit.
- * Start/Stopp werden serialisiert; Vorschau und isolierte Gesamtprüfung haben eigene Zuständigkeiten.
+ * Dispatches commands for the local portal runtime while preserving persistent data.
+ * Start/stop are serialised; preview and isolated full acceptance have separate ownership.
  */
 import { spawn } from "node:child_process";
 import {
@@ -42,7 +42,7 @@ if (process.platform !== "linux" && !["help", "--help", "-h"].includes(action))
   throw new Error(
     "Der lokale Launcher ist derzeit für Linux geprüft. Siehe docs/LOCAL_DEVELOPMENT.md.",
   );
-/** Serialisiert Laufzeitmutationen dieses Checkouts und gibt die eigene Sperre auch im Fehlerfall frei. */
+/** Serialises this checkout's runtime mutations and releases its own lock on failure as well. */
 async function locked(operation) {
   privateDirectory();
   const lock = join(runtimeDir, "runtime.lock");
@@ -77,7 +77,7 @@ async function locked(operation) {
       await delay(500);
     }
   }
-  /** Schreibt die Kennung des aktuellen CLI-Sperrhalters in die private Laufzeitablage. */
+  /** Writes the current CLI lock holder's identity into private runtime storage. */
   function writeStateLock() {
     writeFileSync(join(lock, "pid"), String(process.pid), { mode: 0o600 });
   }
@@ -87,13 +87,13 @@ async function locked(operation) {
     rmSync(lock, { recursive: true, force: true });
   }
 }
-/** Beschreibt ausschließlich tatsächlich angebotene Befehle und deren lokale Datenhaltung. */
+/** Describes only commands actually offered and their local data storage. */
 function help() {
   console.log(
     `Luminovia Portal – lokale vollständige Laufzeit\n\n  ./portal start        Alle lokalen Dienste starten (Hintergrund)\n  ./portal up           Starten; Ctrl+C stoppt datenerhaltend\n  ./portal restart      Datenerhaltend neu starten\n  ./portal status       Dienststatus und lokale URLs\n  ./portal stop         Eigene Dienste stoppen; Daten bleiben erhalten\n  ./portal test         Vollständige Tests in isolierter Umgebung\n  ./portal credentials  Lokales ursprüngliches Testpasswort anzeigen\n  ./portal github       Neuesten GitHub-main separat lokal ausprobieren\n  ./portal github test  Neuesten GitHub-main vollständig isoliert testen\n\nNode.js >=22.12, npm und laufendes Docker werden benötigt.\nKeine Produktion, keine echten E-Mails, kein Reset beim Start.`,
   );
 }
-/** Zeigt dienstbezogene Statuswerte und lokale URLs ohne private Schlüssel an. */
+/** Shows service status and local URLs without exposing private keys. */
 function printStatus(state = readState()) {
   const config = projectConfig();
   const alive = processIsOurs(state);
@@ -103,7 +103,7 @@ function printStatus(state = readState()) {
     `Portal: ${config.site}\nSupabase API: http://127.0.0.1:${config.api}\nLokale E-Mails: http://127.0.0.1:${config.mail}\nZugang: admin@example.invalid oder lecturer01@example.invalid\nPasswort anzeigen: ./portal credentials\nPrivates Protokoll: .local/runtime.log`,
   );
 }
-/** Startet oder übernimmt den eigenen Supervisor und bestätigt Erfolg erst bei dessen ready-Zustand. */
+/** Starts or adopts the owned supervisor and confirms success only after its ready state. */
 async function start() {
   const [major, minor] = process.versions.node.split(".").map(Number);
   if (major < 22 || (major === 22 && minor < 12))
@@ -181,7 +181,7 @@ async function start() {
     "Lokaler Start dauert zu lange. ./portal status zeigt den aktuellen Stand.",
   );
 }
-/** Beendet nur den eigenen Dienstverbund und verlangt eine zur Sitzung passende Aufräumbestätigung. */
+/** Stops only the owned service group and requires a cleanup acknowledgement matching its session. */
 async function stop() {
   await assertLocalDocker();
   const state = readState();

@@ -1,5 +1,5 @@
 /**
- * Deno-Einstieg der Account-API: verbindet den testbaren Handler mit nativer Auth und caller-bezogenen RPCs. Der Serviceclient bleibt auf dem Server und wird nur für reservierte Einladungen verwendet.
+ * Deno account-API entry point connecting the testable handler to native Auth and caller-scoped RPCs. Keep the service client server-side and limited to reserved invitations.
  */
 import { createClient } from "npm:@supabase/supabase-js@2.119.0";
 import { createAccountHandler } from "./handler.ts";
@@ -11,7 +11,7 @@ const service = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
   { auth: { persistSession: false, autoRefreshToken: false } },
 );
-// Erzeugt pro Aufrufer-JWT einen zustandslosen Client; dadurch bleiben normale Fachoperationen an dessen aktuelle Datenbankrechte gebunden.
+// Create a stateless client per caller JWT so ordinary business operations retain that caller's current database permissions.
 const caller = (token: string) =>
   createClient(url, publicKey, {
     global: { headers: { Authorization: `Bearer ${token}` } },

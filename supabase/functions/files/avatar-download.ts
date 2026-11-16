@@ -1,9 +1,9 @@
 /**
- * Eng begrenzter Profilbild-Lesepfad über die aktuell sichtbare Auswahl. Gibt Bytes einer exakten sauberen Version zurück, ohne allgemeine Leserechte auf persönliche Dokumente oder Storage-URLs zu vergeben.
+ * Narrow avatar-read path through the currently visible selection. Return one exact clean version without granting broad access to personal documents or Storage URLs.
  */
 import { MAX_AVATAR_SIZE, validateAvatar } from "./avatar.ts";
 
-// Serverseitig gelesene exakte Version; der Status und Dokumentbezug werden vor Byteausgabe erneut geprüft.
+// Exact server-read version; recheck status and document binding before returning bytes.
 interface AvatarVersion {
   id: string;
   document_id: string;
@@ -12,14 +12,14 @@ interface AvatarVersion {
   mime_type: string;
   size_bytes: number;
 }
-// Minimaler Eigentümer-/Artvertrag für den besonderen Profilbildpfad.
+// Minimal owner/kind contract for the special avatar path.
 interface AvatarDocument {
   owner_id: string;
   scope: string;
   kind: string;
   deleted_at: string | null;
 }
-// Injizierte Schnittstelle zwischen aktueller Benutzersicht und serverseitigem Lesen der ausgewählten Objektbytes.
+// Injected boundary between current user visibility and server-side reads of selected object bytes.
 interface AvatarDependencies {
   selection: (target: string) => Promise<{ version_id: string } | null>;
   version: (id: string) => Promise<AvatarVersion | null>;
@@ -30,7 +30,7 @@ interface AvatarDependencies {
 /** No Storage URL or general personal-document grant is returned. The caller
  * adapter uses the user's SQL projection for selection/visibility, and a
  * server-only client solely for reading the selected exact clean object. */
-// Prüft die sichtbare Auswahl und exakte saubere PNG-Version, liest deren Bytes und bestätigt dieselbe Auswahl unmittelbar vor der Rückgabe erneut.
+// Validate the visible selection and exact clean PNG version, read bytes, then recheck the same selection immediately before returning them.
 export async function selectedAvatarBytes(
   target: string,
   dependencies: AvatarDependencies,

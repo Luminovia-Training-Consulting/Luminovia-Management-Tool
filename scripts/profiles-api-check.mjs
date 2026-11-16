@@ -1,6 +1,6 @@
 /**
- * Echte Auth-/HTTP-Prüfung für geteilte Profilangaben, eigene Labels und berechtigte Kursbewertungen.
- * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
+ * Real Auth/HTTP checks for shared profile fields, own labels and eligible course reviews.
+ * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
 import { randomUUID, createHmac } from "node:crypto";
@@ -19,7 +19,7 @@ const url = process.env.SUPABASE_URL;
 assert.ok(
   url && ["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname),
 );
-/** Erzeugt einen getrennten SDK-Client ohne persistierte oder automatisch erneuerte Testsitzung. */
+/** Creates a separate SDK client without persistent sessions or automatic session refresh. */
 const make = (key) =>
   createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -34,13 +34,13 @@ const suffix = randomUUID(),
   job = randomUUID(),
   claim = randomUUID();
 let businessCreated = false;
-/** Wertet den tatsächlichen SDK-Erfolg aus und gibt erst danach dessen Daten zurück. */
+/** Requires actual SDK success before returning the response data. */
 async function checked(request, label) {
   const { data, error } = await request;
   assert.equal(error, null, `${label}: ${error?.message}`);
   return data;
 }
-/** Erzeugt getrennte fiktive Konten und meldet sie über Auth an; ihre Kennungen dienen nur der Fixture. */
+/** Creates separate fictional accounts and signs them in through Auth; their IDs belong only to the fixture. */
 async function fixture(name, role) {
   const email = `profile-${name}-${suffix}@example.invalid`;
   const data = await checked(
@@ -74,7 +74,7 @@ async function fixture(name, role) {
   );
   return { id: data.user.id, client };
 }
-/** Berechnet den aktuellen sechsstelligen TOTP aus dem fiktiven MFA-Geheimnis; keine Codes protokollieren. */
+/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
 function totp(secret) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567",
     bits = [...secret.replace(/=+$/, "").toUpperCase()]

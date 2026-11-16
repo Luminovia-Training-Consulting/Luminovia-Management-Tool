@@ -1,7 +1,3 @@
-/**
- * Prüft den Übergang historischer Migrationsstände mit bewusst vorhandenen Altdaten.
- * Die Rehearsal-Datenbanken sind wegwerfbar; unveränderliche Aufträge und Quellen bleiben Prüfgegenstand.
- */
 /** Disposable 14→17 review rehearsal. Auth is a four-row id/email stub; this is
  * not a live backup, native password/MFA or Storage-binary preservation claim. */
 import assert from "node:assert/strict";
@@ -14,10 +10,10 @@ import {
 const context = await loadM4ReviewContext();
 const historyQuery =
   "select coalesce(json_agg(json_build_object('version',version,'source',statements[1]) order by version),'[]'::json)::text from supabase_migrations.schema_migrations";
-/** Rendert die tatsächliche Migrationshistorie der Rehearsal-Fixture ohne bestehende Quelldateien umzuschreiben. */
+/** Renders the rehearsal fixture's actual migration history without rewriting existing source files. */
 const historyInsert = (entry) =>
   `insert into supabase_migrations.schema_migrations(version,name,statements) values(${quoteSql(entry.version)},${quoteSql(entry.file.slice(15, -4))},array[${quoteSql(entry.source)}]);`;
-/** Erzeugt reproduzierbare fiktive UUIDs für die gezielt vorbereiteten historischen Daten. */
+/** Creates reproducible fictional UUIDs for deliberately prepared historical data. */
 const id = (n) => `f4000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const roleColumns =
   "oid,rolname,rolsuper,rolinherit,rolcreaterole,rolcreatedb,rolcanlogin,rolreplication,rolconnlimit,rolvaliduntil,rolbypassrls,rolconfig";

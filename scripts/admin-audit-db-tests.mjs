@@ -1,7 +1,3 @@
-/**
- * PostgreSQL-Regressionsgruppen für begrenzte, redigierte Auditansichten.
- * Die Testdatenbank spielt echte Migrationen ein; Rollen-/MFA-Claims prüfen den Datenvertrag unabhängig von der UI.
- */
 /** Real isolated PostgreSQL checks for the reduced, read-only audit projection. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -22,13 +18,13 @@ await withTestDatabase("admin_audit", async ({ sql, actor }) => {
     `insert into auth.users(id,email) values ${roles.map((role) => `(${q(users[role])},${q(`audit-${role}@example.invalid`)})`).join(",")};insert into public.user_roles(user_id,role) values ${roles.map((role) => `(${q(users[role])},${q(role)})`).join(",")};update public.profiles set display_name='Fictional audit actor <script>literal</script>' where id=${q(users.lecturer)}`,
   );
   let checks = 0;
-  /** Zählt und meldet einen Fall erst, wenn sämtliche zugehörigen Assertions erfolgreich abgeschlossen sind. */
+  /** Counts and reports a case only after all of its assertions have completed successfully. */
   const check = async (name, run) => {
     await run();
     checks++;
     console.log(`PASS ${name}`);
   };
-  /** Liest die fachliche Projektion als konkrete Fixtureidentität, um Sichtbarkeit und Datenschutz zu prüfen. */
+  /** Reads the business projection as a specific fixture identity to verify visibility and privacy. */
   const read = async (who = users.admin, args = "", aal = "aal2") =>
     JSON.parse(
       await actor(who, `select public.admin_audit_events(${args})`, aal),

@@ -1,7 +1,3 @@
-/**
- * PostgreSQL-Regressionsgruppen für private Dokumentversionen, Scanstatus und Zugriffsgrenzen.
- * Die Testdatenbank spielt echte Migrationen ein; Rollen-/MFA-Claims prüfen den Datenvertrag unabhängig von der UI.
- */
 /** Real disposable PostgreSQL/RLS checks for document reservation identity and quotas.
  * The separate documents-api-check exercises actual Auth, Storage and ClamAV.
  */
@@ -21,7 +17,7 @@ if (
     "Only the named local portal database container is permitted.",
   );
 const database = `documents_test_${randomUUID().replaceAll("-", "")}`;
-/** Startet das Prüfprogramm mit expliziten Argumenten und bewahrt seinen Fehlerstatus. */
+/** Starts the test program with explicit arguments and preserves its failure status. */
 function command(args, input = "") {
   return new Promise((resolve, reject) => {
     const child = spawn("docker", args, { stdio: ["pipe", "pipe", "pipe"] });
@@ -36,7 +32,7 @@ function command(args, input = "") {
     child.stdin.end(input);
   });
 }
-/** Sendet SQL an die eigene Testdatenbank und lässt jeden psql-Fehler den Prüflauf ablehnen. */
+/** Sends SQL to the owned test database and makes every psql error fail the run. */
 const sql = (text, name = database) =>
   command(
     [
@@ -55,9 +51,9 @@ const sql = (text, name = database) =>
     ],
     text,
   );
-/** Maskiert SQL-Literalwerte der kontrollierten Testfixture; SQL-Bezeichner folgen eigenen Prüfungen. */
+/** Quotes controlled fixture SQL literals; identifiers have separate validation. */
 const quote = (value) => `'${String(value).replaceAll("'", "''")}'`;
-/** Führt die Prüfung unter einer konkreten Identität aus; Verwaltungsrechte dürfen den Testaufruf nicht verdecken. */
+/** Executes the check as a specific identity so administrative fixture privileges cannot mask the tested access. */
 const actor = (id, statement, aal = "aal1") =>
   sql(
     `begin;set local role authenticated;set local request.jwt.claims=${quote(JSON.stringify({ sub: id, aal, role: "authenticated" }))};${statement};commit;`,
@@ -72,7 +68,7 @@ const owner = randomUUID(),
   versionOwner = randomUUID(),
   globalOwner1 = randomUUID(),
   globalOwner2 = randomUUID();
-/** Reserviert eine Dokumentversion unter kontrolliertem Besitzer-, Größen- und Wiederholungsbezug. */
+/** Reserves a document version with controlled owner, size and retry context. */
 const reserve = async (
   who,
   {
@@ -92,13 +88,13 @@ const reserve = async (
     ),
   );
 let checks = 0;
-/** Zählt und meldet einen Fall erst, wenn sämtliche zugehörigen Assertions erfolgreich abgeschlossen sind. */
+/** Counts and reports a case only after all of its assertions have completed successfully. */
 const check = async (name, fn) => {
   await fn();
   checks++;
   console.log(`PASS ${name}`);
 };
-/** Füllt die kontrollierte SQL-Quota-Fixture, um konkurrierende Reservierungen an der tatsächlichen Grenze zu prüfen. */
+/** Fills the controlled SQL quota fixture to test concurrent reservations at the actual limit. */
 async function seedNinetyMiB(subject) {
   for (let index = 0; index < 9; index++) {
     const id = randomUUID(),

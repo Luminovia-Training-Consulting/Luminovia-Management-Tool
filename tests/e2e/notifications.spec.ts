@@ -1,6 +1,6 @@
 /**
- * Browserabläufe für eigene Inbox und dauerhaft bestätigte DE-/EN-Einstellungen.
- * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ * Browser workflows for the actor's own inbox and persisted DE/EN preferences.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";

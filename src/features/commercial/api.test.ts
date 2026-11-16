@@ -1,10 +1,11 @@
 /**
- * Vitest-Regressionen für formelsichere CSV-Zellen und centbasierte getrennte Originalwährungssummen. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for formula-safe CSV cells and cent-based totals separated by original currency.
+ * Pure export/aggregation tests do not establish commercial API authorization.
  */
 import { describe, expect, it } from "vitest";
 import { csvCell, csvText, groupedEarnings } from "./api";
 import type { EarningRecord } from "./types";
-/** Erzeugt eine kleine fiktive Honorarzeile für währungs-/statusgetrennte Summenprüfungen. */
+/** Create a small fictional fee row for currency/status aggregation cases. */
 function row(
   currency: "EUR" | "AUD",
   total_amount: number,

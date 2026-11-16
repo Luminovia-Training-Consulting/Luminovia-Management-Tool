@@ -1,7 +1,3 @@
-/**
- * Echte Auth-/HTTP-Prüfung für versionierte Bearbeitung, Stornierung und ausdrückliche Wiederöffnung.
- * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
- */
 /** Real Auth/MFA/REST lifecycle proof; scoped to the canonical disposable stack. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -48,7 +44,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
         "Clean own lifecycle organisations",
       );
   });
-  /** Bindet die gewünschte Lebenszyklusaktion an Auftrag, erwartete Version und Wiederholungskennung. */
+  /** Binds the requested lifecycle action to the job, expected version and retry identity. */
   const req = (job, action, version, payload = {}, key = randomUUID()) => ({
     p_job_id: job,
     p_action: action,
@@ -88,7 +84,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
     "Create real lifecycle offer",
   );
   jobs.push(job);
-  /** Ermittelt die zum eigenen Auftrag gehörenden Durchführungs-, Vorlagen- und Organisationskennungen für das spätere Cleanup. */
+  /** Records the fixture job's run, template and organisation IDs for later scoped cleanup. */
   const track = async (id) => {
     const j = await checked(
       service.from("jobs").select("course_run_id").eq("id", id).single(),

@@ -4,14 +4,15 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 ## Comprehensive code comments and agent guide
 
-Requested directly on `main`: explain the maintained code throughout and provide a project-specific `AGENTS.md`, using OpenXLR's guide as a structural reference. Work uses a dedicated main worktree so the original checkout's concurrent feature changes remain separate. The independent English community commit `3256d1a` is preserved; contributor guidance remains English and source commentary uses German.
+Requested directly on `main`: explain the maintained code throughout and provide a project-specific `AGENTS.md`, using OpenXLR's guide as a structural reference. Work uses a dedicated review worktree so the original checkout's concurrent feature changes remain separate. The independent English community commit `3256d1a` is preserved; contributor guidance remains English and source commentary uses English.
 
 - [x] Annotate all 170 frontend files, all 104 launcher/script/browser-test files, maintained Edge/operating code and root build/CI/configuration entry points with purposes, contracts and important flow/security/resource explanations.
-- [x] Expand `AGENTS.md` with the actual ownership map, reading order, business/security invariants, commands, collaboration/Git rules, comprehensive-comment policy and operational boundaries.
+- [x] Expand `AGENTS.md` with the actual ownership map, reading order, business/security invariants, commands, collaboration/Git rules, comprehensive English-comment policy and operational boundaries; add a canonical `.github/copilot-instructions.md` entry point.
 - [x] Explain all 24 released migrations in [MIGRATION_GUIDE](MIGRATION_GUIDE.md); preserve their exact bytes, vendor provenance, JSON/lockfiles, generated data and assets.
-- [x] Compare executable syntax/literals, CSS rules and parsed/active configuration against current main; run frontend coverage, type/lint/build, runtime, Edge and offline operating checks with no behavioral changes.
+- [x] Compare executable syntax/literals, CSS rules and parsed/active configuration against current main at pure-comment checkpoint1055101; run frontend coverage, type/lint/build, runtime, Edge and offline operating checks.
+- [x] Harden only the existing private MFA test-state IO after the protected CodeQL gate re-flags it; ten real filesystem regression groups and all62combined runtime tests pass. Fresh exact-head full CI remains the acceptance source for this bounded harness exception.
 
-The full product ledger below remains unchanged. This source-documentation slice does not certify native/browser/selfhost or production acceptance; exact-main CI runs its existing gates after publication.
+The full product ledger below remains unchanged. The protected PR additionally requires hardening the existing private MFA test-state file reader/writer after CodeQL re-flags its old race warning in the touched fixture. That bounded harness change receives real ownership/symlink/atomic-write regressions; application business behavior stays unchanged. Exact-head CodeQL and full application/selfhost CI remain acceptance gates, with no advance production/hosted claim.
 
 ## English community information
 

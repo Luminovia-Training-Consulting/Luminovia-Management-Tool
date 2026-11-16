@@ -1,5 +1,6 @@
 /**
- * Gemeinsamer Desktop-/Mobilrahmen mit Navigation, Suche, Meldungen und Sprache/Farbschema. Sichtbare Aktionen folgen den geladenen Capabilities; verbindliche Zugriffsprüfungen bleiben im Backend.
+ * Shared desktop/mobile shell for navigation, search, notifications and language/theme controls.
+ * Loaded capabilities shape visible actions; the backend remains authoritative for access.
  */
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
@@ -38,7 +39,7 @@ import { permissionsQuery, profileQuery, userRolesQuery } from "../lib/queries";
 import { Button } from "../components/ui/button";
 import { ErrorState, Loading, Notice } from "../components/common";
 import { readPreference, writePreference } from "../lib/preferences";
-/** Hält Sprache und Farbschema aktiv, reagiert auf Systemfarben und speichert die Auswahl nur best effort. */
+/** Apply language/theme preferences, follow system colours and persist the choice on a best-effort basis. */
 export function Preferences() {
   const { t, i18n } = useTranslation();
   const [theme, setTheme] = useState(() => {
@@ -88,7 +89,7 @@ export function Preferences() {
     </div>
   );
 }
-/** Rendert die aktuelle Navigation und gemeinsame Bedienung; Abmelden leert private Zustände erst entlang des echten Auth-Ablaufs. */
+/** Render shared navigation and controls; sign-out clears private state only along the actual Auth flow. */
 export function Shell() {
   const { t } = useTranslation();
   const { session } = useAuth();
@@ -324,7 +325,7 @@ export function Shell() {
     </div>
   );
 }
-/** Führt aus einer Auftragsdetailansicht zurück zur Auftragsübersicht. */
+/** Return from a job detail view to the job list. */
 export function BackLink() {
   const { t } = useTranslation();
   return (

@@ -1,5 +1,6 @@
 /**
- * Forum mit Themen, Antworten, akzeptierter Antwort, Abonnements und sichtbarer Moderation. Neue Beiträge und Aktionen warten auf Serverbestätigung und aktualisieren nur die betroffenen Query-Bereiche.
+ * Forum threads, replies, accepted answers, subscriptions and visible moderation. Wait for
+ * server confirmation and invalidate only the affected query scopes.
  */
 import { useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -51,12 +52,12 @@ import { KnowledgeEditor } from "./editor";
 import { CategoryManager } from "./categories";
 import "./i18n";
 import "./knowledge.css";
-/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const threadSchema = z.object({
   title: z.string().trim().min(1).max(200),
   category: z.string().min(1),
 });
-/** Legt ein validiertes Forumthema mit normalisiertem Erstbeitrag über den Serververtrag an. */
+/** Create a validated thread and normalized first post through the server contract. */
 function CreateThread({
   actor,
   categories,
@@ -166,7 +167,7 @@ function CreateThread({
     </form>
   );
 }
-/** Hält Antwortinhalt lokal und meldet erst nach bestätigtem Posten einen erfolgreichen Beitrag. */
+/** Keep reply content local until the server confirms posting. */
 function ReplyForm({ actor, thread }: { actor: string; thread: ForumThread }) {
   const { t } = useTranslation("knowledge");
   const online = useOnline();
@@ -229,7 +230,7 @@ function ReplyForm({ actor, thread }: { actor: string; thread: ForumThread }) {
     </form>
   );
 }
-/** Rendert einen erlaubten Beitrag mit eigenen Änderungen und zulässigen Moderations-/Antwortaktionen. */
+/** Render a permitted post with own-edit and applicable moderation/answer actions. */
 function ForumPostView({
   actor,
   thread,
@@ -519,7 +520,7 @@ function ForumPostView({
     </article>
   );
 }
-/** Verbindet Thema, paginierte Beiträge und bestätigte Abonnement-/Moderationsaktionen. */
+/** Combine thread, paginated posts and confirmed subscription/moderation actions. */
 function ForumThreadView({
   actor,
   id,
@@ -693,7 +694,7 @@ function ForumThreadView({
     </>
   );
 }
-/** Zeigt freigegebene Moderationsmeldungen und deren explizite Bearbeitung. */
+/** Display permitted moderation reports and their explicit handling. */
 function Reports({
   actor,
   open,
@@ -776,7 +777,7 @@ function Reports({
     </Dialog>
   );
 }
-/** Steuert Kategorie-/Themenauswahl, Suche und autorisierte Moderation des Forums. */
+/** Coordinate category/thread selection, search and authorized forum moderation. */
 export function ForumPage() {
   const { t, i18n } = useTranslation("knowledge");
   const online = useOnline();

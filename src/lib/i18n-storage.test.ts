@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für Sprachinitialisierung bei fehlender oder gesperrter Präferenzablage. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for language initialization when preference storage is missing or blocked. Storage
+ * fixtures do not establish Auth persistence.
  */
 import { afterEach, expect, it, vi } from "vitest";
 

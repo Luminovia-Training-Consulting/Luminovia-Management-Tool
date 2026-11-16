@@ -1,6 +1,6 @@
 /**
- * Regressionen für CBW-Extraktion, Quellenhashes und deterministische Katalogidentitäten.
- * Fiktive Dokumenttexte prüfen den Importvertrag ohne persönliche Originalunterlagen.
+ * Regressions for CBW extraction, source hashes and deterministic catalogue identities.
+ * Fictional document text tests the import contract without personal original documents.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -13,7 +13,7 @@ import {
 } from "./cbw-catalogue.mjs";
 
 const catalogue = JSON.parse(readFileSync(cataloguePath, "utf8"));
-/** Erzeugt fiktiven PDF-Extraktionstext mit steuerbarem Kurzzeichen, Lehrplan und Revisionsdatum; private Randangaben dürfen nicht im Katalog landen. */
+/** Creates fictional PDF extraction text with controlled code, syllabus and revision date; private marginal notes must not enter the catalogue. */
 const fixture = (
   code = "LPC3",
   syllabus = "- Shell-Umgebung\n- Skripte\n",

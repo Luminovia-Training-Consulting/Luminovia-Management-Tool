@@ -1,5 +1,6 @@
 /**
- * Eigene Verfügbarkeitsplanung und ausdrücklich geteilte Zeitfenster. Der Editor unterscheidet Versionskonflikte und Terminüberschneidungen, während die Datenbank Zuweisungsrennen atomar verhindert.
+ * Own availability planning and explicitly shared windows. Distinguish stale versions and
+ * overlaps in the editor; the database atomically enforces assignment conflicts.
  */
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -38,13 +39,13 @@ import {
 } from "./api";
 import "./i18n";
 import "./availability.css";
-/** Unterscheidet Intervallkonflikt (23P01), veraltete Version (40001) und sonstige Fehler für die passenden UI-Texte. */
+/** Map overlap (23P01), stale version (40001) and other failures to the corresponding UI message. */
 function failure(error: unknown) {
   const code =
     typeof error === "object" && error && "code" in error ? error.code : null;
   return code === "23P01" ? "conflict" : code === "40001" ? "stale" : "error";
 }
-/** Bearbeitet ein Zeitfenster lokal und übernimmt erst nach bestätigtem Speichern den neuen Serverstand. */
+/** Edit a window locally and adopt the new server state only after confirmed saving. */
 function AvailabilityForm({
   item,
   zone,
@@ -158,7 +159,7 @@ function AvailabilityForm({
     </form>
   );
 }
-/** Verbindet ausgewählten Zeitraum, eigene Fenster und ausdrücklich reduzierte Managementfreigaben. */
+/** Combine the selected date range, own windows and explicitly reduced management projections. */
 function ReadyAvailability({
   actor,
   zone,
@@ -400,7 +401,7 @@ function ReadyAvailability({
     </>
   );
 }
-/** Lädt Profilzone und Capabilities als Grundlage der Verfügbarkeitsansicht. */
+/** Load the profile zone and capabilities before constructing the availability view. */
 export function AvailabilityPage() {
   const { session } = useAuth(),
     actor = session!.user.id;

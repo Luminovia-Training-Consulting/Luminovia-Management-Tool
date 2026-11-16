@@ -1,5 +1,6 @@
 /**
- * Suchbares Personenverzeichnis und freigegebene Profilansicht mit Kursen und Bewertungen. Direktnachrichten nutzen die bestehende DM-RPC, und Moderation verlangt eine begründete eigenständige Aktion.
+ * Searchable people directory and permitted profiles with courses/reviews. Start DMs through the
+ * existing RPC; moderation remains a separate reasoned action.
  */
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -30,7 +31,7 @@ import {
 } from "./api";
 import "./i18n";
 import "./people.css";
-/** Filtert die freigegebene Personenprojektion nach Suchtext, Label und Expertise statt private Profile clientseitig zusammenzuführen. */
+/** Filter the permitted projection by search, label and expertise instead of assembling private profiles in the browser. */
 export function PeopleDirectory() {
   const { t, i18n } = useTranslation("people");
   const { session } = useAuth();
@@ -138,7 +139,7 @@ export function PeopleDirectory() {
     </>
   );
 }
-/** Fordert eine begründete Moderationsaktion an, ohne eine Bewertung im Browser still zu löschen. */
+/** Request reasoned moderation rather than silently deleting a review in the browser. */
 function ModerateReview({ review }: { review: CourseReview }) {
   const { t } = useTranslation("people");
   const online = useOnline();
@@ -197,7 +198,7 @@ function ModerateReview({ review }: { review: CourseReview }) {
     </>
   );
 }
-/** Kombiniert freigegebene Profildetails, Kurse und Reviews und startet echte autorisierte Direktnachrichten. */
+/** Combine permitted profile details, courses and reviews and request actual authorized DMs. */
 export function PersonProfile() {
   const { id = "" } = useParams();
   const { t, i18n } = useTranslation("people");

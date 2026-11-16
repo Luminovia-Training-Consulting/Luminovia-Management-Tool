@@ -1,9 +1,9 @@
 /**
- * Buildgrenze für die ausschließlich öffentliche Supabase-Browserkonfiguration.
- * Servergeheimnisse dürfen selbst bei einer versehentlichen VITE-Variable nicht in das Bundle gelangen.
+ * Build boundary for exclusively public Supabase browser configuration.
+ * Server secrets must not enter the bundle even when accidentally assigned to a VITE variable.
  */
 /** Reject accidental server keys before Vite can put them in a public bundle. */
-/** Prüft URL und öffentlichen Key vor dem Bundlebau; fehlende optionale Entwicklungskonfiguration bleibt erlaubt. */
+
 export function validatePublicConfig(
   url: string | undefined,
   key: string | undefined,

@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für präzise Deep Links veröffentlichter Kurstermine in die tatsächlich ausgewählte Durchführung. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for published-course deep links selecting the actual course run. Controlled UI
+ * data do not replace server authorization checks.
  */
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";

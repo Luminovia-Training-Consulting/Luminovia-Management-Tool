@@ -1,14 +1,15 @@
 /**
- * Ein gemeinsamer Browserclient mit öffentlicher URL und Publishable-Key. Fehlende Konfiguration bleibt als expliziter Zustand sichtbar; serverseitige Secret-/Service-Role-Schlüssel gehören niemals in dieses Modul.
+ * One shared browser client using a public URL/publishable key. Expose missing configuration
+ * explicitly; server secret/service-role keys never belong in this module.
  */
 import { createClient } from "@supabase/supabase-js";
-/** Öffentliche Backendadresse aus der beim Build geprüften Browserkonfiguration. */
+/** Public backend address from the browser configuration validated at build time. */
 const url = import.meta.env.VITE_SUPABASE_URL;
-/** Öffentlicher Publishable-Key; private Service-/Secret-Schlüssel sind hier ausdrücklich unzulässig. */
+/** Public publishable key; service/secret keys are explicitly forbidden here. */
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-/** Unterscheidet echte Browserkonfiguration von einem nicht verbundenen Anwendungsstart. */
+/** Distinguish configured browser startup from a deliberately unconnected application. */
 export const isConfigured = Boolean(url && key);
-/** Ein nativer Client mit PKCE, Sessionpersistenz und Tokenrefresh für den gesamten Browserbaum. */
+/** One native client using PKCE, session persistence and token refresh across the browser tree. */
 export const supabase = isConfigured
   ? createClient(url, key, {
       auth: {
@@ -19,7 +20,7 @@ export const supabase = isConfigured
       },
     })
   : null;
-/** Liefert den gemeinsamen Browserclient oder schlägt bei fehlender Konfiguration ausdrücklich fehl. */
+/** Return the shared browser client or fail explicitly when configuration is missing. */
 export function db() {
   if (!supabase) throw new Error("backend_not_configured");
   return supabase;

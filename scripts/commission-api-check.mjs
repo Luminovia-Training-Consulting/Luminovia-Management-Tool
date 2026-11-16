@@ -1,6 +1,6 @@
 /**
- * Echte Auth-/HTTP-Prüfung für Mandantenrechte sowie getrennte Brutto-, Plattform- und Nettoanteile.
- * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
+ * Real Auth/HTTP checks for tenant permissions and separate gross, platform and net shares.
+ * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
 import { createHmac, randomUUID } from "node:crypto";
@@ -33,7 +33,7 @@ const origin = new URL(
     process.env.E2E_BASE_URL ??
     "http://127.0.0.1:5273",
 ).origin;
-/** Erzeugt einen getrennten SDK-Client ohne persistierte oder automatisch erneuerte Testsitzung. */
+/** Creates a separate SDK client without persistent sessions or automatic session refresh. */
 const make = (key) =>
   createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -44,13 +44,13 @@ const service = make(process.env.SUPABASE_SERVICE_ROLE_KEY),
   jobs = [],
   orgs = [];
 const suffix = randomUUID();
-/** Wertet den tatsächlichen SDK-Erfolg aus und gibt erst danach dessen Daten zurück. */
+/** Requires actual SDK success before returning the response data. */
 async function checked(request, label) {
   const { data, error } = await request;
   assert.equal(error, null, `${label}: ${error?.message}`);
   return data;
 }
-/** Erzeugt getrennte fiktive Konten und meldet sie über Auth an; ihre Kennungen dienen nur der Fixture. */
+/** Creates separate fictional accounts and signs them in through Auth; their IDs belong only to the fixture. */
 async function fixture(name, role) {
   const email = `commission-${name}-${suffix}@example.invalid`;
   const auth = await checked(
@@ -84,7 +84,7 @@ async function fixture(name, role) {
   );
   return { client, id: auth.user.id };
 }
-/** Verifiziert einen echten TOTP-Faktor, damit privilegierte Prüfaufrufe tatsächlich AAL2 verwenden. */
+/** Verifies a real TOTP factor so privileged test requests actually use AAL2. */
 async function mfa(actor) {
   const factor = await checked(
     actor.client.auth.mfa.enroll({
@@ -101,7 +101,7 @@ async function mfa(actor) {
     "Verify real TOTP",
   );
 }
-/** Erzeugt die fiktiven Eingabedaten dieses Prüfmoduls; die tatsächliche Validierung bleibt beim Server. */
+/** Creates this module's fictional inputs; authoritative validation remains on the server. */
 const payload = (day = 0, gross = 100.01, currency = "EUR") => ({
   title: `Fictional commissioned course ${suffix} ${day}`,
   description: "Auth API test",
@@ -122,7 +122,7 @@ const payload = (day = 0, gross = 100.01, currency = "EUR") => ({
   ],
   topic_ids: [],
 });
-/** Berechnet den aktuellen sechsstelligen TOTP aus dem fiktiven MFA-Geheimnis; keine Codes protokollieren. */
+/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
 function totp(secret) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "").toUpperCase()]
@@ -141,7 +141,7 @@ function totp(secret) {
     .toString()
     .padStart(6, "0");
 }
-/** Erzeugt synthetische PDF-Bytes für den echten Dateiprüfpfad ohne persönliche Originaldokumente. */
+/** Creates synthetic PDF bytes for the real file-validation path without personal source documents. */
 function pdf(label) {
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
@@ -168,7 +168,7 @@ function pdf(label) {
     `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
   return new TextEncoder().encode(body);
 }
-/** Liest den aktuellen Sitzungstoken der Testidentität für echte authentifizierte Gatewayaufrufe. */
+/** Reads the test actor's current session token for actual authenticated gateway requests. */
 async function headers(actor) {
   const data = await checked(
     actor.client.auth.getSession(),
@@ -180,7 +180,7 @@ async function headers(actor) {
     Authorization: `Bearer ${data.session.access_token}`,
   };
 }
-/** Sendet echte Fixturebytes an den authentifizierten Dateipfad; Scan und Freigabe bleiben Serveraufgaben. */
+/** Sends real fixture bytes through the authenticated file endpoint; scanning and release remain server responsibilities. */
 async function upload(actor, bytes, kind, owner, replace) {
   const form = new FormData();
   form.set(

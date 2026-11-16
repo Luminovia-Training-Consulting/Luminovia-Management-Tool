@@ -1,12 +1,12 @@
 /**
- * Synthetische PNG-Bausteine mit echten CRC-/Deflate-Daten für erlaubte und manipulierte Profilbilder. Die Tests prüfen Strukturgrenzen und sind kein Ersatz für ClamAV.
+ * Synthetic PNG pieces with real CRC/Deflate data exercise valid and altered avatars. Structural tests do not replace ClamAV.
  */
 import { crc32, validateAvatar } from "./avatar.ts";
-// Lässt eine konkrete Fixturebedingung als echten Testfehler scheitern; es gibt keinen stillen Erfolgsersatz.
+// Fail a specific fixture condition as a real test failure; never substitute silent success.
 function assert(value: unknown, message = "assertion failed"): asserts value {
   if (!value) throw new Error(message);
 }
-// Verbindet nur die synthetischen Bytefragmente des PNG-Testbildes.
+// Concatenate only the synthetic PNG fixture's byte fragments.
 function join(...parts: Uint8Array[]) {
   const result = new Uint8Array(
     parts.reduce((size, part) => size + part.length, 0),
@@ -18,7 +18,7 @@ function join(...parts: Uint8Array[]) {
   }
   return result;
 }
-// Erzeugt einen synthetischen PNG-Chunk mit passender CRC als Ausgangspunkt gezielter Manipulation.
+// Build a synthetic PNG chunk with a matching CRC before deliberate mutations.
 function chunk(type: string, bytes: Uint8Array) {
   const result = new Uint8Array(bytes.length + 12),
     view = new DataView(result.buffer);
@@ -28,7 +28,7 @@ function chunk(type: string, bytes: Uint8Array) {
   view.setUint32(8 + bytes.length, crc32(result.subarray(4, 8 + bytes.length)));
   return result;
 }
-// Baut ein echtes kleines synthetisches PNG mit Deflate-Nutzdaten für die Strukturprüfung.
+// Build a small synthetic PNG with real Deflate payload for structural validation.
 async function image(
   width = 1,
   height = 1,
@@ -56,7 +56,7 @@ async function image(
     chunk("IEND", new Uint8Array()),
   );
 }
-// Verlangt die tatsächliche Ablehnung des übergebenen Vorgangs und prüft gegebenenfalls den stabilen Fehlergrund.
+// Require the operation to reject and optionally check its stable failure reason.
 async function rejects(bytes: Uint8Array) {
   let failed = false;
   try {

@@ -1,6 +1,6 @@
 /**
- * Browserabläufe für Kundenauftrag, unveränderlicher Preisanteil und netto sichtbare Abrechnung.
- * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ * Browser workflows for client requests, immutable fee shares and lecturer-visible net invoicing.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
@@ -12,7 +12,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Commercial writes run only in the isolated ./portal test stack.",
 );
-/** Erzeugt den SDK-Prüfclient; die jeweilige Kontositzung muss ausdrücklich angemeldet werden. */
+/** Creates an SDK test client; each account session must be signed in explicitly. */
 function client(key: string) {
   const url = process.env.SUPABASE_URL!;
   if (!["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname))
@@ -21,14 +21,14 @@ function client(key: string) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
-/** Erzeugt den administrativen Fixtureclient; dessen Schlüssel bleibt außerhalb der Browseranwendung. */
+/** Creates the administrative fixture client; its key stays outside the browser application. */
 const service = () => client(process.env.SUPABASE_SERVICE_ROLE_KEY!);
 interface Account {
   id: string;
   email: string;
   name: string;
 }
-/** Erstellt eine fiktive Testperson für getrennte Browser-/API-Sitzungen und das spätere gezielte Cleanup. */
+/** Creates a fictional actor for separate browser/API sessions and later scoped cleanup. */
 async function account(
   role: "lecturer" | "admin" | "client",
   label: string,
@@ -56,7 +56,7 @@ async function account(
   ).toBeNull();
   return { id, email, name };
 }
-/** Meldet die konkrete Testperson über die sichtbaren Anmeldefelder an und wartet auf die bestätigte Navigation. */
+/** Signs this test actor in through the visible form and waits for confirmed navigation. */
 async function login(page: Page, user: Account) {
   await page.goto("/login");
   await page.getByLabel("E-Mail", { exact: true }).fill(user.email);
@@ -66,7 +66,7 @@ async function login(page: Page, user: Account) {
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
 }
-/** Berechnet den aktuellen sechsstelligen TOTP aus dem fiktiven MFA-Geheimnis; keine Codes protokollieren. */
+/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
 function totp(secret: string) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "").toUpperCase()]
@@ -85,7 +85,7 @@ function totp(secret: string) {
     .toString()
     .padStart(6, "0");
 }
-/** Hebt die tatsächliche Testsitzung über Auth/TOTP auf AAL2 statt Privilegien im Browser zu simulieren. */
+/** Raises the actual test session to AAL2 through Auth/TOTP rather than simulating browser privileges. */
 async function adminMfa(page: Page, user: Account) {
   await login(page, user);
   await page.goto("/security");
@@ -110,7 +110,7 @@ async function adminMfa(page: Page, user: Account) {
     }),
   ).toBeVisible();
 }
-/** Prüft den gerenderten Zustand mit axe; dies ersetzt keine manuelle Barrierefreiheitsabnahme. */
+/** Checks the rendered state with axe; this does not replace manual accessibility acceptance. */
 async function a11y(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   const result = await new AxeBuilder({ page })
@@ -128,7 +128,7 @@ async function a11y(page: Page) {
 }
 
 /** Small actual PDF with a valid xref, not renamed plain text. */
-/** Erzeugt minimale fiktive PDF-Bytes für den echten Upload- und Scanpfad. */
+
 function fictionalPdf() {
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
@@ -152,7 +152,7 @@ function fictionalPdf() {
     )}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
   return Buffer.from(pdf);
 }
-/** Erzeugt eine tatsächliche Auth-Sitzung der Testperson für vorbereitende Fach-API-Aufrufe. */
+/** Signs the test actor into a real Auth session for preparatory business API calls. */
 async function signedIn(user: Account) {
   const api = client(process.env.SUPABASE_ANON_KEY!);
   expect(

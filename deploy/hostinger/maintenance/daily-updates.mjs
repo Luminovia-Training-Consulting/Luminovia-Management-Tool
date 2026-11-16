@@ -1,5 +1,5 @@
 /**
- * Entdeckt kompatible stabile Komponenten und erzeugt begrenzte, quellgebundene Updatekandidaten. Entdeckung, lokale Anwendung, Prüfberichte und Promotion sind getrennte Schritte; Discovery allein installiert nichts auf dem Server.
+ * Discover stable components and construct bounded source-bound candidates. Discovery, local application, test reports and promotion are separate; discovery alone installs nothing on the server.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -111,12 +111,12 @@ export const IMAGE_POLICIES = [
     file: WEB,
   },
 ];
-// Berechnet SHA-256; verglichen werden exakte Bytes statt nur Versionsbezeichnungen.
+// Compute SHA-256 so comparisons bind exact bytes, not only version labels.
 export const sha = (data) => createHash("sha256").update(data).digest("hex");
-// Akzeptiert nur stabile Semver-Versionen ohne Vorab-/Entwicklungskennung.
+// Accept stable numeric release versions without prerelease/development labels.
 export const stableVersion = (value) =>
   typeof value === "string" && /^\d+\.\d+(?:\.\d+){0,2}$/.test(value);
-// Vergleicht die numerischen Semver-Bestandteile für die begrenzte Updatepolitik.
+// Compare numeric version components under the bounded update policy.
 export const compareVersions = (left, right) => {
   const a = left.split(".").map(Number),
     b = right.split(".").map(Number);
@@ -125,7 +125,7 @@ export const compareVersions = (left, right) => {
       return (a[index] ?? 0) - (b[index] ?? 0);
   return 0;
 };
-// Führt einen erlaubten lokalen Wartungsschritt im Kandidatencheckout aus und erhält dessen Fehlerstatus.
+// Run a local maintenance command in the candidate checkout and preserve failure status.
 function command(root, executable, args) {
   try {
     return execFileSync(executable, args, {
@@ -140,12 +140,12 @@ function command(root, executable, args) {
     );
   }
 }
-// Speichert das maschinenlesbare Wartungsergebnis im vorgesehenen Ausgabepfad.
+// Save the machine-readable maintenance result to the requested output path.
 async function save(file, value) {
   await mkdir(dirname(resolve(file)), { recursive: true });
   await writeFile(file, JSON.stringify(value, null, 2) + "\n");
 }
-// Ordnet gekoppelte Pakete derselben kompatiblen Updateeinheit zu; insbesondere müssen Vitest und Coverage-Provider zusammenpassen.
+// Group coupled packages into one update candidate; Vitest and its coverage provider must remain compatible.
 export function packageGroup(name) {
   if (name === "vitest" || name.startsWith("@vitest/")) return "vitest";
   if (name.startsWith("@fullcalendar/")) return "fullcalendar";
@@ -165,7 +165,7 @@ export function packageGroup(name) {
     return "eslint";
   return name;
 }
-// Lädt begrenzte Upstream-Metadaten; nur erfolgreich gelesene JSON-Antworten gehen in die Entdeckung ein.
+// Read bounded upstream metadata; use only successfully parsed JSON for discovery.
 export async function fetchJSON(
   url,
   { github = false, limit = 4 * 1024 * 1024 } = {},
@@ -192,7 +192,7 @@ export async function fetchJSON(
   );
   return JSON.parse(text);
 }
-// Liest die tatsächlich deklarierten Image-Pins aus der Compose-Quelle statt mutable Tags zu erfinden.
+// Read declared image pins from Compose source rather than inventing mutable tags.
 export function composeImages(text) {
   const result = new Map();
   let service;
@@ -210,7 +210,7 @@ export function composeImages(text) {
   }
   return result;
 }
-// Ermittelt stabile Kandidaten anhand aktueller Registry-/Upstream-Metadaten und der festgelegten Kompatibilitätsgrenzen.
+// Discover stable candidates from registry/upstream metadata within the configured compatibility limits.
 export async function discover(root = ROOT, metadata = fetchJSON) {
   const pkg = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
   const plan = {
@@ -477,7 +477,7 @@ export async function discover(root = ROOT, metadata = fetchJSON) {
   return plan;
 }
 
-// Prüft den vollständigen Plan samt Quellenbasis und erlaubten Komponenten vor jeder lokalen Änderung.
+// Validate the full plan, source base and permitted components before local changes.
 export function validatePlan(plan) {
   assert(
     plan.schemaVersion === 1 &&
@@ -547,7 +547,7 @@ export function validatePlan(plan) {
     }
   }
 }
-// Wendet nur die ausgewählten validierten Komponenten im Kandidatencheckout an und lässt die Paketauflösung die echte Lockdatei aktualisieren.
+// Apply only selected validated components and let package resolution update the real lockfile.
 export async function applyPlan(plan, ids, root = ROOT, run = command) {
   validatePlan(plan);
   assert.equal(
@@ -635,7 +635,7 @@ export async function applyPlan(plan, ids, root = ROOT, run = command) {
     ]);
   return changedFiles(root);
 }
-// Liest den tatsächlichen Git-Diff als Grundlage der begrenzten Promotion.
+// Read the actual Git diff for bounded promotion.
 export function changedFiles(root = ROOT) {
   const names = command(root, "git", ["diff", "--name-only", "--no-renames"])
     .split("\n")
@@ -651,7 +651,7 @@ export function changedFiles(root = ROOT) {
   );
   return names;
 }
-// Bindet die Kandidatenänderungen an Plan, Basiscommit und tatsächlichen Prüfstatus.
+// Bind candidate changes to their plan, base commit and actual test status.
 export async function exportCandidate(plan, component, status, root = ROOT) {
   validatePlan(plan);
   assert(
@@ -699,7 +699,7 @@ export async function exportCandidate(plan, component, status, root = ROOT) {
     }
   return result;
 }
-// Erfasst die vorhandenen Migrationsdateien mit Hashes in ihrer verbindlichen Reihenfolge.
+// Hash migration files in their required order.
 export async function migrationInventory(root = ROOT) {
   const directory = resolve(root, "supabase/migrations"),
     items = [];
@@ -713,11 +713,11 @@ export async function migrationInventory(root = ROOT) {
   assert(items.length > 0, "Missing candidate migration history.");
   return items;
 }
-// Bindet das vollständige Migrationsinventar an einen einzigen reproduzierbaren Digest.
+// Bind the complete migration inventory to one reproducible digest.
 export async function migrationInventorySha256(root = ROOT) {
   return sha(JSON.stringify(await migrationInventory(root)));
 }
-// Prüft den nativen PostgreSQL-Kandidatenbeleg einschließlich Major-Version, Herkunft und ausgeführten Akzeptanzbedingungen.
+// Validate native PostgreSQL candidate proof, including major version, source and completed acceptance conditions.
 export function validatePgProof(proof) {
   assert(
     proof.schemaVersion === 1 &&
@@ -767,7 +767,7 @@ export function validatePgProof(proof) {
       "PG proof lacks completed retained-data checks.",
     );
 }
-// Übernimmt nur einen tatsächlich bestandenen, quellgebundenen PostgreSQL-Beleg in den Kandidaten.
+// Capture only completed source-bound PostgreSQL proof into the candidate.
 export async function capturePgProof(plan, input, root = ROOT) {
   const change = plan.components.find((item) => item.id === "docker-db")
     ?.changes[0];
@@ -789,7 +789,7 @@ export async function capturePgProof(plan, input, root = ROOT) {
   );
   await save(resolve(root, PG_PROOF), proof);
 }
-// Liest die vorhandenen Komponentenberichte aus dem Ergebnisverzeichnis.
+// Read available component reports from the result directory.
 async function resultsIn(directory) {
   const results = [];
   let entries;
@@ -809,7 +809,7 @@ async function resultsIn(directory) {
   }
   return results;
 }
-// Wählt ausschließlich Komponenten aus, deren erforderliche Prüfungen tatsächlich erfolgreich sind.
+// Select only components whose required checks actually passed.
 export function passedComponents(plan, results, { firstOnly = false } = {}) {
   validatePlan(plan);
   assert(Array.isArray(results) && results.length <= 128);
@@ -829,7 +829,7 @@ export function passedComponents(plan, results, { firstOnly = false } = {}) {
     .map((item) => item.id);
   return firstOnly ? accepted.slice(0, 1) : accepted;
 }
-// Führt die bestandenen Einzelkandidaten mit derselben Quellenbasis zu einem prüfbaren Gesamtpatch zusammen.
+// Combine passed candidates from the same source base into a reviewable patch.
 export async function assembleCandidates(
   plan,
   results,
@@ -839,7 +839,7 @@ export async function assembleCandidates(
   const names = await applyPlan(plan, accepted, root, run);
   return { accepted, names };
 }
-// Verarbeitet nur die dokumentierten Unterbefehle und gibt Fehler als fehlgeschlagenen Prozessabschluss weiter.
+// Handle only documented subcommands and propagate failures as a failed process exit.
 async function cli() {
   const [operation, ...args] = process.argv.slice(2);
   const options = {};

@@ -1,5 +1,5 @@
 /**
- * Erstellt das prüfbare CMS-Entwicklungsrelease aus genau einem Commit. Erlaubte Pfade, exakte Datei-/Migrationshashes, öffentliche Buildwerte und gepinnte Runtime-Images werden vor dem Packen validiert.
+ * Build a verifiable CMS development release from one commit. Validate allowed paths, exact file/migration hashes, public build values and pinned images before packaging.
  */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -56,10 +56,10 @@ const OPTIONAL_FILES = [
   "deploy/hostinger/backups/luminovia-complete-backup.timer",
 ];
 
-// Berechnet einen stabilen SHA-256-Fingerabdruck für den folgenden Quellen-/Artefaktvergleich.
+// Compute a stable SHA-256 digest for the source/artifact comparison.
 const hash = (data) => createHash("sha256").update(data).digest("hex");
 
-// Begrenzt jeden Archivpfad auf die feste App-Allowlist und verweigert Traversal sowie private Checkoutpfade.
+// Limit archive paths to the fixed app allowlist; reject traversal and private checkout paths.
 function safePath(name) {
   if (
     !name ||
@@ -84,7 +84,7 @@ function safePath(name) {
   }
 }
 
-// Prüft jeden Pfadbestandteil auf Symlinks und die Quelldatei auf regulären Typ und erlaubte Größe.
+// Check path components for symlinks and require a regular source file within its size limit.
 function plainFile(path, sourceRoot) {
   const rel = relative(sourceRoot, path);
   if (rel === ".." || rel.startsWith(".." + sep) || rel.startsWith(sep)) {
@@ -102,7 +102,7 @@ function plainFile(path, sourceRoot) {
   return info;
 }
 
-// Sammelt nur zulässige Dateien eines erlaubten Quellbaums und verhindert doppelte Archivziele.
+// Collect only allowed files from an approved source tree and reject duplicate archive destinations.
 function collectTree(
   sourceRoot,
   sourceDirectory,
@@ -134,7 +134,7 @@ function collectTree(
   visit(directory, "");
 }
 
-// Liest pro Compose-Dienst den unveränderlichen Digest-Pin aus der tatsächlichen Quelle.
+// Read each Compose service's immutable digest pin from actual source.
 function serviceImages(text) {
   const result = [];
   let service;
@@ -152,7 +152,7 @@ function serviceImages(text) {
   return result;
 }
 
-// Verknüpft den bekannten Dienstsatz und PostgreSQL-Nachweise mit den exakten Release-Migrationen.
+// Bind the expected service inventory and PostgreSQL proof to exact release migrations.
 function runtimeMetadata(sourceRoot, migrations) {
   const images = [
     ...serviceImages(
@@ -271,7 +271,7 @@ function runtimeMetadata(sourceRoot, migrations) {
   };
 }
 
-// Verweigert bekannte serverseitige Geheimnismuster vor dem Einpacken in ein verteilbares Release.
+// Reject known server-secret patterns before including content in a distributable release.
 function assertNoCredentials(data, source, publicKey, forbiddenValues) {
   const text = data.toString("utf8");
   if (
@@ -316,7 +316,7 @@ function assertNoCredentials(data, source, publicKey, forbiddenValues) {
     throw new Error("Secret key cannot be public build configuration.");
 }
 
-// Prüft Buildkonfiguration, Quelleninventar und Runtime-Vertrag und erzeugt erst danach Manifest und Archiv.
+// Validate build configuration, source inventory and runtime contract before creating the manifest/archive.
 export function createRelease(options) {
   const sourceRoot = realpathSync(resolve(options.sourceRoot ?? "."));
   const output = resolve(options.outputDirectory);

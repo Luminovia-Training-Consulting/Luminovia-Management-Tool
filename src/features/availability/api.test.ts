@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für eindeutige zonierte Fenster, exakte erhaltene Instants und weitergereichte Request-Abbrüche. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for unambiguous zoned windows, retained exact instants and request cancellation.
+ * Input/SDK fixtures do not replace real database conflict checks.
  */
 import { describe, expect, it, vi } from "vitest";
 import {

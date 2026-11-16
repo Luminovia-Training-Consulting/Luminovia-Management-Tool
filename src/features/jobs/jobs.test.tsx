@@ -1,5 +1,6 @@
 /**
- * Vitest-Regressionen für echte Claimstatusanzeige, Konditionszustimmung und sichere Wiederholungskennungen. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ * Regressions for actual claim state, current-terms consent and safe retry identities. SDK/DOM
+ * fixtures do not prove atomic server allocation.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -51,7 +52,7 @@ const job: Job = {
   ],
   job_requirements: [],
 };
-/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(route = "/jobs/job-a", list = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },

@@ -1,5 +1,6 @@
 /**
- * Kontaktwahl, Gruppenerstellung und sichtbare Mitgliedschaftsverwaltung. Direktnachrichten, allgemeiner Lehrteamraum und Kursräume behalten ihre unterschiedlichen Verwaltungsregeln.
+ * Contact selection, group creation and visible membership controls. DMs, the general staff room
+ * and course rooms retain their distinct management rules.
  */
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -17,12 +18,12 @@ import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { chatContactsQuery, chatKeys, chatMembersQuery } from "./api";
 import type { ChatContact, ChatRoom } from "./types";
 import "./i18n";
-/** Verwendet den freigegebenen Anzeigenamen oder den übersetzten Fallback für unbenannte Kontakte. */
+/** Use the permitted display name or translated fallback for unnamed contacts. */
 const contactName = (
   contact: Pick<ChatContact, "display_name">,
   fallback: string,
 ) => contact.display_name || fallback;
-/** Bietet eine kontrollierte Auswahl aus den bereits autorisiert geladenen Kontakten. */
+/** Offer a controlled selection from contacts already returned by the authorized query. */
 export function ContactPicker({
   actor,
   open,
@@ -114,14 +115,14 @@ export function ContactPicker({
     </Dialog>
   );
 }
-/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const groupSchema = z.object({
   title: z.string().trim().min(1).max(120),
   kind: z.enum(["topic", "participant_course"]),
   job: z.string(),
   members: z.array(z.string()).max(60),
 });
-/** Erstellt eine explizite Gruppe mit ausgewählten Mitgliedern über den Chat-Serververtrag. */
+/** Create an explicit group with selected members through the chat server contract. */
 export function CreateGroup({
   actor,
   canManageCourses,
@@ -275,7 +276,7 @@ export function CreateGroup({
     </Dialog>
   );
 }
-/** Zeigt aktuelle Mitgliedschaften und bietet nur passende, serverseitig geprüfte Verwaltungsaktionen an. */
+/** Display current members and offer applicable management actions that the server independently checks. */
 export function MembersPanel({
   actor,
   room,
@@ -457,7 +458,7 @@ export function MembersPanel({
     </>
   );
 }
-/** Ordnet der fachlichen Raumart ein rein visuelles Symbol zu. */
+/** Map room type to a presentation-only icon. */
 export function RoomIcon({
   kind,
   size = 20,
