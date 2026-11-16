@@ -1,8 +1,10 @@
 /**
- * Manage qualification verification, expiry and account suspension. Changes require confirmed
- * server responses and invalidate related queries; private profile fields retain database access
- * controls.
+ * Manage qualification verification, evidence and expiry plus account suspension.
+ * Changes require confirmed server responses and invalidate related queries;
+ * private profile fields retain their resource-specific database access controls.
  */
+import { qualificationKey } from "../qualifications/api";
+import { QualificationEvidenceReview } from "../qualifications/evidence";
 import { ProfileEvidence } from "../files/profile-evidence";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -75,7 +77,17 @@ function ExpertiseReview({
       requireOnline();
       setSaved(false);
       setInvalidExpiry(false);
-      const until = verified && value ? zonedInstant(value, "UTC") : null;
+      const shown = expertise.valid_until
+        ? DateTime.fromISO(expertise.valid_until)
+            .toUTC()
+            .toFormat("yyyy-MM-dd'T'HH:mm")
+        : "";
+      const until =
+        verified && value
+          ? value === shown
+            ? expertise.valid_until
+            : zonedInstant(value, "UTC")
+          : null;
       if (verified && value && (!until || new Date(until) <= new Date())) {
         setInvalidExpiry(true);
         throw new Error("invalid_expiry");
@@ -92,6 +104,9 @@ function ExpertiseReview({
       await Promise.all([
         client.invalidateQueries({ queryKey: ["admin-expertise", actorId] }),
         client.invalidateQueries({ queryKey: ["expertise", profile.id] }),
+        client.invalidateQueries({
+          queryKey: qualificationKey(actorId, profile.id, topic.id),
+        }),
       ]);
       setSaved(true);
     },
@@ -107,82 +122,90 @@ function ExpertiseReview({
       : "unverified";
   const fieldId = `review-${profile.id}-${topic.id}-expiry`;
   return (
-    <form
-      className="people-expertise-card"
-      aria-label={t("peopleReviewTopic", { topic: label })}
-      onSubmit={handleSubmit((values) =>
-        review.mutate({ verified: true, value: values.valid_until }),
-      )}
-      noValidate
-    >
-      <div className="section-heading">
-        <h3>{label}</h3>
-        <span className="badge">
-          {expertise.verified && !expired && <CheckCircle2 size={14} />}
-          {t(status)}
-        </span>
-      </div>
-      {expertise.valid_until && (
-        <p className="muted">
-          {t("peopleCurrentExpiry")}:{" "}
-          {dateTime(expertise.valid_until, i18n.language, "UTC")} UTC
-        </p>
-      )}
-      <Field
-        id={fieldId}
-        label={t("peopleValidUntil")}
-        hint={t("peopleExpiryHint")}
-        error={invalidExpiry}
-      >
-        <input
-          id={fieldId}
-          type="datetime-local"
-          {...register("valid_until", {
-            onChange: () => {
-              setSaved(false);
-              setInvalidExpiry(false);
-            },
-          })}
-          disabled={!profile.active || review.isPending}
-        />
-      </Field>
-      <div className="form-actions">
-        <Button
-          type="submit"
-          disabled={!online || !profile.active || review.isPending}
-        >
-          <ShieldCheck size={16} />
-          {t(
-            review.isPending
-              ? "saving"
-              : expertise.verified
-                ? "peopleUpdateVerification"
-                : "peopleVerify",
-          )}
-        </Button>
-        {expertise.verified && (
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!online || !profile.active || review.isPending}
-            onClick={() => review.mutate({ verified: false, value: "" })}
-          >
-            {t("peopleRevokeVerification")}
-          </Button>
+    <div className="people-expertise-card">
+      <form
+        aria-label={t("peopleReviewTopic", { topic: label })}
+        onSubmit={handleSubmit((values) =>
+          review.mutate({ verified: true, value: values.valid_until }),
         )}
-      </div>
-      {!profile.active && (
-        <p className="muted">{t("peopleActivateBeforeReview")}</p>
-      )}
-      {saved && <Notice>{t("peopleVerificationSaved")}</Notice>}
-      {review.isError && (
-        <Notice kind="error">
-          {t(
-            invalidExpiry ? "peopleExpiryInvalid" : "peopleVerificationFailed",
+        noValidate
+      >
+        <div className="section-heading">
+          <h3>{label}</h3>
+          <span className="badge">
+            {expertise.verified && !expired && <CheckCircle2 size={14} />}
+            {t(status)}
+          </span>
+        </div>
+        {expertise.valid_until && (
+          <p className="muted">
+            {t("peopleCurrentExpiry")}:{" "}
+            {dateTime(expertise.valid_until, i18n.language, "UTC")} UTC
+          </p>
+        )}
+        <Field
+          id={fieldId}
+          label={t("peopleValidUntil")}
+          hint={t("peopleExpiryHint")}
+          error={invalidExpiry}
+        >
+          <input
+            id={fieldId}
+            type="datetime-local"
+            {...register("valid_until", {
+              onChange: () => {
+                setSaved(false);
+                setInvalidExpiry(false);
+              },
+            })}
+            disabled={!profile.active || review.isPending}
+          />
+        </Field>
+        <div className="form-actions">
+          <Button
+            type="submit"
+            disabled={!online || !profile.active || review.isPending}
+          >
+            <ShieldCheck size={16} />
+            {t(
+              review.isPending
+                ? "saving"
+                : expertise.verified
+                  ? "peopleUpdateVerification"
+                  : "peopleVerify",
+            )}
+          </Button>
+          {expertise.verified && (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!online || !profile.active || review.isPending}
+              onClick={() => review.mutate({ verified: false, value: "" })}
+            >
+              {t("peopleRevokeVerification")}
+            </Button>
           )}
-        </Notice>
-      )}
-    </form>
+        </div>
+        {!profile.active && (
+          <p className="muted">{t("peopleActivateBeforeReview")}</p>
+        )}
+        {saved && <Notice>{t("peopleVerificationSaved")}</Notice>}
+        {review.isError && (
+          <Notice kind="error">
+            {t(
+              invalidExpiry
+                ? "peopleExpiryInvalid"
+                : "peopleVerificationFailed",
+            )}
+          </Notice>
+        )}
+      </form>
+      <QualificationEvidenceReview
+        userId={profile.id}
+        topicId={topic.id}
+        disabled={!profile.active}
+      />
+    </div>
   );
 }
 
@@ -376,9 +399,9 @@ function PeopleDirectory({ actorId }: { actorId: string }) {
               </Button>
             )}
             <hr />
-            <ProfileEvidence ownerId={selected.id} readOnly />
+            <ProfileEvidence ownerId={selected.id} readOnly kinds={["cv"]} />
             <h3>{t("peopleExpertiseTitle")}</h3>
-            <p>{t("peopleVerificationHint")}</p>
+            <p>{t("intro", { ns: "qualifications" })}</p>
             <div className="people-expertise-list">
               {selectedExpertise.length ? (
                 selectedExpertise.map((item) => {

@@ -56,4 +56,6 @@ You do not need permission to manage labels to open an issue. Mention the likely
 3. The fix receives appropriate tests and updated documentation.
 4. The pull request is merged after its checks and any required review. `Closes #123` automatically closes the linked issue.
 
+Maintainers and repository administrators may use their PR-only review exception; required CI and commit signatures still apply. Auto-Merge waits for the active requirements. See the [pull request guide](PULL_REQUEST_GUIDE.md#review-rules-for-main) for the review and merge rules.
+
 A closed issue means its agreed goal has been completed. It does not prove a production deployment. For a regression, provide a new reproducible report that links to the earlier issue.

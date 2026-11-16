@@ -115,10 +115,11 @@ test('combined filters find a real job, claim confirms all five sessions and imm
   expect(sessionError).toBeNull();
   await login(page);
   await page.goto('/jobs');
-  await page.getByRole('searchbox', { name: 'Stellen durchsuchen', exact: true }).fill(title);
+  await page.getByRole('searchbox', { name: 'Suchtext', exact: true }).fill(title);
   await page.getByLabel('Durchführung', { exact: true }).selectOption('online');
   await page.getByLabel('Währung', { exact: true }).selectOption('EUR');
-  await page.getByLabel('Mindestgesamtvergütung', { exact: true }).fill('1900');
+  await page.getByLabel('Gesamthonorar ab', { exact: true }).fill('1900');
+  await page.getByRole('button', { name: 'Filter anwenden', exact: true }).click();
   await expect(page.getByRole('link', { name: new RegExp(title) }).first()).toBeVisible();
   await page.getByRole('link', { name: new RegExp(title) }).first().click();
   await expect(page).toHaveURL(new RegExp(`/jobs/${id}`));

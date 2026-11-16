@@ -132,7 +132,10 @@ try {
       "--test",
       ...runtimeTests,
     ]);
-  await step("Unit- und Komponententests", "npm", ["test"]);
+  await step("Unit-/Komponententests und Coverage", "npm", [
+    "run",
+    "test:coverage",
+  ]);
   await step("Produktionsabhängigkeiten", "npm", [
     "audit",
     "--omit=dev",
@@ -369,7 +372,7 @@ try {
       /* scanner may not have started */
     }
   }
-  for (const name of ["playwright-report", "test-results"])
+  for (const name of ["playwright-report", "test-results", "coverage"])
     if (existsSync(join(scratch, name)))
       cpSync(join(scratch, name), join(artifacts, name), { recursive: true });
   if (existsSync(join(scratch, "docs/screenshots")))
