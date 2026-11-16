@@ -162,7 +162,7 @@ Stop managed local services with `./portal stop`; database and actual Storage fi
 
 The prepared [native automatic-merge controller](docs/AUTO_MERGE.md) integrates main `0a6002a5`; its own exact-source CI, merge and successful default-branch execution are still required. It requires independent current-head review and native `clean` mergeability for every candidate, including Carina-authored, maintainer/admin and App-authored PRs. It uses native PR merging with an expected head SHA, never a main-ref or force update, and makes no exact-test-merge-SHA guarantee. The read-only metadata proof is not a completed automatic merge or application acceptance. Keep work as a draft or add `merge:hold` to pause it.
 
-The [GitHub contributor graph](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/graphs/contributors) lists actual contributions. Source comments explain permission, transaction and recovery contracts; the complete A–N product scope remains in the plan. Merging and verification do not themselves authorise release publication, installation or production work; follow their separate owning controls.
+The [contributor list](CONTRIBUTORS.md) records verified attribution and links to the current GitHub contributor graph. Source comments explain permission, transaction and recovery contracts; the complete A–N product scope remains in the plan. Merging and verification do not themselves authorise release publication, installation or production work; follow their separate owning controls.
 
 Repository license: GNU GPLv3; the authentic Space Grotesk font retains its included OFL notice. Brand assets remain Luminovia assets.
 

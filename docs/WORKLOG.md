@@ -10,6 +10,8 @@ PR10 retains exclusive main/shared-QA priority. This integration is local only: 
 
 ## 16 November 2026 — isolated continuous source-provenance probe
 
+Added the requested dedicated contributor list, linked from README and CONTRIBUTING. The real GitHub contributor API currently attributes CarinaSchoppe; no duplicate author aliases, invented team members, copied mutable contribution count or permission grant are introduced. This documentation-only addition needs no backend or reserved QA resources.
+
 Signed source abc1473 adds a read-only `--probe-source <runID>` and the Code-quality-only CI invocation. The final production query bytes and Bot-ID/current-identity mapping remain unchanged; proof 43814730991 already observed that query with the standard Actions token. Probe mode branches before reading or constructing a write credential, rejects mixed/unknown arguments, performs only canonical CI/suite/pusher reads and grants no authority. Current evidence: 152/152 runtime cases, 72 focused CLI/metadata/delivery cases, ESLint, Prettier, actionlint and syntax checks pass. Its own first continuous CI execution remains pending.
 
 The implementation is published separately on `codex/native-verified-automerge-20261116`; the PR19 head is intentionally not advanced during PR10's reserved shared-QA/main priority. No new backend/native/full-PC run, ready switch, native auto-merge or merge watcher was started. After PR10 finishes, integrate the actual accepted main and repeat only the relevant changed-source checks before the coordinated exact-head PR acceptance. The distinct Financial Witness remains with its separate source owner; no alternative whole Core/controller tree is imported.

@@ -115,4 +115,4 @@ The repository uses GNU GPLv3. Preserve existing license and provenance notices;
 
 ## Contributors
 
-The [GitHub contributor graph](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/graphs/contributors) records actual contributions. Git author-name variants are not separate team members. Use this guide and the complete project plan to find useful work; no contributor list implies extra repository permission or review authority.
+The [contributor list](CONTRIBUTORS.md) is a dated verified attribution snapshot; its linked GitHub graph remains the current contribution record. Git author-name variants are not separate team members. Use this guide and the complete project plan to find useful work; no contributor list implies extra repository permission or review authority.
