@@ -1,6 +1,6 @@
 # Reading and safely extending SQL migrations
 
-This guide maps the **55 ordered SQL sources through `20261116054135_substitution_retry_current_lecturer_authority.sql`** without changing their bytes. The earlier 26-source accepted main foundation remains intact. Eight M7/M8 sources and twenty-one smart-operations sources extend it. This is a source checkpoint, not an assertion that a hosted database has applied all 55 or that the current combined acceptance has passed. Accepted migrations form part of the local preview, update and recovery fingerprints. Even an added SQL comment would produce a different source hash. New migrations are added separately; extend this guide and the relevant feature guides when that happens.
+This guide maps the **56 ordered SQL sources through `20261116055929_smart_operations_explicit_plpgsql_types.sql`** without changing their bytes. The earlier 26-source accepted main foundation remains intact. Eight M7/M8 sources and twenty-two smart-operations sources extend it. This is a source checkpoint, not an assertion that a hosted database has applied all 56 or that the current combined acceptance has passed. Accepted migrations form part of the local preview, update and recovery fingerprints. Even an added SQL comment would produce a different source hash. New migrations are added separately; extend this guide and the relevant feature guides when that happens.
 
 The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API inventory. [ERD](ERD.md), [DEVELOPER_GUIDE](DEVELOPER_GUIDE.md) and the relevant feature guides explain how the parts connect.
 
@@ -449,6 +449,14 @@ Source: [20261116054135_substitution_retry_current_lecturer_authority.sql](../su
 After the existing profile/workflow locks and exact consent checks, accepted retries require current lecturer authority. An active account that lost its teaching role receives `not_eligible`; a suspended account is denied. Tests observe both role and activation mutations holding the profile lock, then verify the waiting request uses the newly committed authority without changing business history or creating notices.
 
 Test entry points: [role-aware-handover-db-tests.mjs](../scripts/role-aware-handover-db-tests.mjs), [role-aware-handover-api-check.mjs](../scripts/role-aware-handover-api-check.mjs). The vulnerable52910-only negative control fails the new role-revocation regression.
+
+### 56. Explicit PL/pgSQL initializer types and quiz index
+
+Source: [20261116055929_smart_operations_explicit_plpgsql_types.sql](../supabase/migrations/20261116055929_smart_operations_explicit_plpgsql_types.sql).
+
+The strict complete-CI lint gate found implicit text-to-UUID-array/JSONB initializer conversions and a shadowed quiz loop index/unused local row. This forward migration explicitly types the three empty values, removes the unused declaration and gives the automatic loop index its own name. Independent exact-definition comparison confirms every other business, permission, lock, retry and grant remains unchanged. All three replacement routines pass actual `plpgsql_check` with ordinary/extra warnings enabled; focused course/workbench/brief SQL flows pass. The complete CI gate is retained.
+
+Test entry points: [course-workspace-db-tests.mjs](../scripts/course-workspace-db-tests.mjs), [workbench-db-tests.mjs](../scripts/workbench-db-tests.mjs), [client-request-brief-db-tests.mjs](../scripts/client-request-brief-db-tests.mjs).
 
 ## The critical data flows
 

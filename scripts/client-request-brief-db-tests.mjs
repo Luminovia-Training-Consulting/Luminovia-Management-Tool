@@ -1,3 +1,4 @@
+/** Real request-brief authorization/history with a separately configured fictional role-pricing policy. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
@@ -275,9 +276,21 @@ await withTestDatabase("client_request_brief", async ({ sql, actor }) => {
   await check(
     "Published requests are atomically read-only and publication is in revision history",
     async () => {
+      // Policy setup is a separate MFA-gated operation; publishing cannot
+      // inject a new percentage or bypass the captured role-pricing contract.
+      await rpc(admin, "configure_compensation_policy", ["17", "31", "0"]);
+      await assert.rejects(
+        rpc(admin, "publish_client_request", [
+          q(request),
+          "50",
+          q("Fictional accepted terms"),
+          "false",
+        ]),
+        /22023.*Compensation policy is configured separately/s,
+      );
       job = await rpc(admin, "publish_client_request", [
         q(request),
-        "50",
+        "null",
         q("Fictional accepted terms"),
         "false",
       ]);

@@ -262,12 +262,23 @@ await withApiFixture(
     assert.equal(doc.job_id, ids[0]);
     assert.equal(doc.scope, "job_after");
     assert.equal(doc.status, "quarantined");
-    await checked(
-      admin.client.rpc("set_account_roles", {
-        p_user_id: admin.id,
-        p_roles: ["admin"],
-      }),
-      "Preserve current actual role",
+    // Even an unchanged administrative role cannot be self-assigned. Prove
+    // this guard before checking suspension with the same issued MFA token.
+    assert.equal(
+      (
+        await admin.client.rpc("set_account_roles", {
+          p_user_id: admin.id,
+          p_roles: ["admin"],
+        })
+      ).error?.code,
+      "42501",
+    );
+    assert.deepEqual(
+      await checked(
+        admin.client.from("user_roles").select("role").eq("user_id", admin.id),
+        "Read unchanged own roles through RLS",
+      ),
+      [{ role: "admin" }],
     );
     await sql(
       `update public.profiles set active=false where id=${q(admin.id)}`,
