@@ -2,6 +2,16 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## Combined current application — 90 browser workflows and native acceptance passed
+
+Signed `f7453a6f7efda9f593774460094c5898158d90a8`, including incoming main's guided demo/help, passed [full CI43799280625](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43799280625). Application verification completed at **2026-11-16T03:59:20Z**, actual native retained-data compatibility at **04:04:45Z** (13:59/14:04 Australia/Brisbane).
+
+Actual final-source totals: **68 passed stages;226 Vitest cases/49 files;60 runtime;42 Edge;76 Python;61 operating Node;234 SQL;18 business API suites;90 application browser workflows plus2 built-PWA cases, zero skips/retries**. Build has63 public precache entries/2686.68KiB. Native24-migration proof retains password/MFA/roles/private event/scanned bytes, passes19 suites including invitation,50 claims,TLS/WebSockets,private Mailpit and owned cleanup;changedImages[] does not establish an image upgrade. Security, separately generated CodeQL and current metadata pass without new PR alerts.
+
+Safe artifact14195564209 is `.local/functional-ci/pr12-f7453a6/3d77713e/acceptance.json`, source SHA-256 `0052ca2eb438fef1b9656455ac926a7d95108edaf974b8b533323de8083ff45c`,03:38:52.397–03:59:16.222UTC. Counts were extracted from actual final logs, not inferred from the earlier78-case implementation.
+
+Main subsequently advanced only its GitHub metadata catalogue/workflow and documentation through d4c1f49. That current metadata was reconciled on this branch, retaining both work-log/plan sections. Actual source comparison against acceptedf7453a6 shows **no changes to application, migrations, dependencies, browser journeys or complete test runner**. All63 current runtime cases, including11metadata cases, and actionlint pass locally. Exact new CI may repeat after this administrative reconciliation; its current state is on PR12 and is not invented here. Carina's coordinated pause prohibits merging this PR into main until the PR15 coordinator releases it. No production/hosted/real-mail action was performed.
+
 ## Corrected functional and native acceptance — all checks passed
 
 GitHub-verified signed implementation `1e72507ff2ca774048fe93c9a95dae31805c47b5` passed [Portal CI43795517565](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43795517565), including the separate actual image/retained-data job. Full application verification completed at **2026-11-16T03:21:47Z**, native compatibility at **03:27:28Z** (13:21/13:27 Australia/Brisbane).

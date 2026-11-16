@@ -46,25 +46,47 @@ function checkIdentity(pullRequest, number) {
 
 function checkEventIdentity(event, context) {
   requireMetadata(
+    context.repository === repository &&
+      event?.repository?.full_name === repository,
+    "This check requires an event from this repository.",
+  );
+  if (context.eventName === "workflow_dispatch") {
+    const input = event.inputs?.pull_request_number;
+    requireMetadata(
+      context.ref === "refs/heads/main" &&
+        typeof input === "string" &&
+        /^[1-9][0-9]*$/.test(input) &&
+        Number.isSafeInteger(Number(input)),
+      "Manual checks require main and a positive pull request number.",
+    );
+    return Number(input);
+  }
+  requireMetadata(
     context.eventName === "pull_request" &&
-      context.repository === repository &&
-      event?.repository?.full_name === repository &&
       Number.isSafeInteger(event.number) &&
-      event.number > 0,
-    "This check requires a pull_request event from this repository.",
+      event.number > 0 &&
+      event.pull_request?.base?.ref === "main",
+    "Automatic checks require a pull_request event against main.",
   );
   checkIdentity(event.pull_request, event.number);
+  return event.number;
 }
 
 /** Validate metadata only. PR titles, bodies and label names are never commands. */
 export function validatePullRequestMetadata(event, catalogue, context = {}) {
-  checkEventIdentity(event, context);
+  const number = checkEventIdentity(event, context);
   const pullRequest = context.livePullRequest ?? event.pull_request;
-  checkIdentity(pullRequest, event.number);
-  requireMetadata(
-    pullRequest.head.sha === event.pull_request.head.sha,
-    "The pull request has changed; use the newer check run.",
-  );
+  checkIdentity(pullRequest, number);
+  if (context.eventName === "pull_request")
+    requireMetadata(
+      pullRequest.head.sha === event.pull_request.head.sha,
+      "The pull request has changed; use the newer check run.",
+    );
+  else
+    requireMetadata(
+      context.livePullRequest,
+      "Manual checks require current pull request metadata from GitHub.",
+    );
   requireMetadata(
     Array.isArray(pullRequest.labels),
     "Pull request labels are missing or invalid.",
@@ -102,7 +124,8 @@ export function validatePullRequestMetadata(event, catalogue, context = {}) {
     "At least one area: label is required.",
   );
   return {
-    number: event.number,
+    number,
+    headSha: pullRequest.head.sha,
     type: selected.type[0],
     risk: selected.risk[0],
     areas: selected.area.sort(),
@@ -123,9 +146,10 @@ async function main() {
   const context = {
     eventName: process.env.GITHUB_EVENT_NAME,
     repository: process.env.GITHUB_REPOSITORY,
+    ref: process.env.GITHUB_REF,
   };
   // Check event identity before constructing a request; never trust a payload URL.
-  checkEventIdentity(event, context);
+  const number = checkEventIdentity(event, context);
   const token = process.env.GH_TOKEN;
   requireMetadata(
     process.env.GITHUB_ACTIONS !== "true" || token,
@@ -135,7 +159,7 @@ async function main() {
     let response;
     try {
       response = await fetch(
-        `https://api.github.com/repos/${repository}/pulls/${event.number}`,
+        `https://api.github.com/repos/${repository}/pulls/${number}`,
         {
           headers: {
             Accept: "application/vnd.github+json",
@@ -157,7 +181,7 @@ async function main() {
   }
   const result = validatePullRequestMetadata(event, catalogue, context);
   console.log(
-    `PR #${result.number}: ${result.type}, ${result.risk}, ${result.areas.join(", ")}.`,
+    `PR #${result.number}: ${result.type}, ${result.risk}, ${result.areas.join(", ")}. Head ${result.headSha}.`,
   );
 }
 
