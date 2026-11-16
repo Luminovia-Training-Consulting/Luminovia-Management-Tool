@@ -257,25 +257,25 @@ language sql security invoker set search_path='' as $$select private.update_supp
 
 -- A support attachment is a dedicated scanned upload, never a link to a CV,
 -- contract, invoice, old document history, existing room or financial record.
+-- Clone the exact already-installed private document gate, including stricter
+-- evidence/accounting extensions. Replacing the helper in place preserves its
+-- OID and every existing RLS policy dependency. Only its definer owner may call
+-- the clone, so ticket checks cannot be bypassed through a second entry point.
+do $$declare original text;begin
+ select prosrc into original from pg_proc where oid='private.can_access_document(uuid)'::regprocedure;
+ execute format('create function private.can_access_document_before_support(p_id uuid) returns boolean language plpgsql stable security definer set search_path='''' as %L',original);
+end;$$;
+revoke execute on function private.can_access_document_before_support(uuid) from public,anon,authenticated,service_role;
 create or replace function private.can_access_document(p_id uuid) returns boolean language plpgsql stable security definer set search_path='' as $$
-declare d public.documents;
 begin
- if not private.actor_active() then return false; end if;
- select * into d from public.documents where id=p_id and deleted_at is null;
- if not found then return false; end if;
+ if not private.actor_active() or not exists(select 1 from public.documents where id=p_id and deleted_at is null) then return false;end if;
  if exists(select 1 from private.support_attachments where document_id=p_id) then
+  -- Ticket authority is final even for its uploader. Denied internal evidence
+  -- must never fall back to the personal-document ownership permission.
   return exists(select 1 from private.support_attachments a where a.document_id=p_id and private.can_read_support(a.ticket_id)
    and (not a.internal or private.has_permission('support.manage')));
  end if;
- if d.scope='room' then return private.can_access_chat_room(d.room_id); end if;
- if d.scope='personal' then return d.owner_id=auth.uid()
-  or (d.kind='certificate' and private.has_permission('qualifications.verify'))
-  or (d.kind='cv' and private.has_permission('users.manage'))
-  or (d.kind='contract' and private.has_permission('contracts.read'))
-  or (d.kind='invoice' and private.has_permission('finance.manage')); end if;
- if private.has_permission('jobs.manage') then return true; end if;
- if exists(select 1 from public.job_claims c where c.job_id=d.job_id and c.lecturer_id=auth.uid() and c.status='confirmed') then return true; end if;
- return d.scope='job_before' and private.lecturer_actor() and exists(select 1 from public.jobs j where j.id=d.job_id and j.status='published');
+ return private.can_access_document_before_support(p_id);
 end;$$;
 create function private.freeze_support_attachment() returns trigger language plpgsql security definer set search_path='' as $$
 declare document uuid;

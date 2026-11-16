@@ -159,7 +159,7 @@ language sql security invoker set search_path='' as $$select private.cancel_repl
 
 create function private.claim_replacement(p_offer_id uuid,p_expected_version integer,p_terms_version integer,p_request_id uuid) returns jsonb
 language plpgsql security definer set search_path='' as $$
-declare o private.replacement_offers; c public.job_claims; j public.jobs; prior private.replacement_requests; payload jsonb; result jsonb; target uuid;
+declare o private.replacement_offers; c public.job_claims; j public.jobs; prior private.replacement_requests; payload jsonb; result jsonb; target uuid; room record;
 begin
  if not private.actor_active() then raise exception 'Active account required' using errcode='42501';end if;
  if not private.lecturer_actor() then return jsonb_build_object('status','not_eligible');end if;
@@ -204,10 +204,26 @@ begin
   -- A personal replacement does not authorise reopening another paused slot.
   if j.status='draft' then update public.jobs set status='draft',claim_deadline=j.claim_deadline where id=j.id;
   elsif j.claim_deadline is not null then update public.jobs set claim_deadline=j.claim_deadline where id=j.id;end if;
-  perform 1 from public.chat_rooms where job_id=j.id and kind='lecturer_course' for update;
-  update public.chat_members m set removed_at=clock_timestamp() from public.chat_rooms r
-   where r.job_id=j.id and r.kind='lecturer_course' and m.room_id=r.id and m.user_id=c.lecturer_id and m.removed_at is null;
-  update public.chat_rooms set owner_id=auth.uid() where job_id=j.id and kind='lecturer_course' and owner_id=c.lecturer_id;
+  -- Participant rooms belong to a run and have no job_id. Transfer both room
+  -- kinds in the room-before-member order used by membership management.
+  -- Another accepted assignment or genuine enrolment retains its own rights;
+  -- the cancelled source claim itself never keeps participant-room access.
+  for room in select r.id,r.kind,r.owner_id from public.chat_rooms r where
+   (r.job_id=j.id and r.kind='lecturer_course')
+   or (j.course_run_id is not null and r.course_run_id=j.course_run_id and r.kind='participant_course')
+   order by r.id for update loop
+   if room.kind='lecturer_course' or (
+    not exists(select 1 from public.jobs other join public.job_claims retained on retained.job_id=other.id
+     where other.course_run_id=j.course_run_id and retained.lecturer_id=c.lecturer_id and retained.status='confirmed')
+    and not exists(select 1 from public.course_enrolments e where e.course_run_id=j.course_run_id
+     and e.user_id=c.lecturer_id and e.status in('enrolled','completed'))) then
+    update public.chat_members set removed_at=clock_timestamp()
+     where room_id=room.id and user_id=c.lecturer_id and removed_at is null;
+   end if;
+   insert into public.chat_members(room_id,user_id) values(room.id,auth.uid())
+    on conflict(room_id,user_id) do update set removed_at=null,joined_at=clock_timestamp();
+   if room.owner_id=c.lecturer_id then update public.chat_rooms set owner_id=auth.uid() where id=room.id;end if;
+  end loop;
   insert into public.claim_events(claim_id,actor_id,event_type) values(c.id,auth.uid(),'cancelled');
   insert into public.audit_events(actor_id,action,resource_id,details) values(auth.uid(),'replacement.completed',o.id,jsonb_build_object('original_claim_id',c.id,'replacement_claim_id',result->>'claim_id'));
   insert into public.notifications(user_id,kind,resource_id) values(c.lecturer_id,'replacement_completed',o.id) on conflict do nothing;
