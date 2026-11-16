@@ -12,6 +12,9 @@
 - [x] Deliver signed commits and pushed [draft PR35](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/35), with actual checks and native/CI gaps stated.
 - [x] Correct actual SQL-lint failure, protected payment history, assignment room/file revocation, retained business audit visibility and full lifecycle budget contract;21deletion+8company SQL groups,64Edge cases and real PL/pgSQL checking pass.
 - [ ] Complete the reserved actual native/full local acceptance and fresh required CI, then merge only PR35 under the user's latest explicit instruction. No other PR merge or production operation is authorised.
+- [x] Pass complete canonical local acceptance on signed67b749d:29native API suites,116application+2PWA browsers, all SQL/source checks and actual cleanup. Keep this evidence source-bound.
+- [x] Close remaining company history/earnings/calendar/raw-RLS paths and pass8expanded SQL groups; improve reviewed impact clarity and pass23focused deletion cases.
+- [ ] Verify the final follow-up with native company deletion/revocation and new screenshots; integrate only actual accepted main and replay the final migration order before current required CI and the authorised PR35 merge.
 
 ## English quote/discovery documentation — released PR10 continuation
 

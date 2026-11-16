@@ -1,6 +1,81 @@
 /** Register bilingual irreversible-deletion guidance without translating authored target labels. */
 import i18n from "../../lib/i18n";
 const pairs: Record<string, [string, string]> = {
+  roleAssignments: ["Rollenzuordnungen", "Role assignments"],
+  expertiseEntries: ["Fachkenntnisse", "Expertise entries"],
+  profileDetails: ["Erweiterte Profilangaben", "Additional profile details"],
+  avatarSelections: ["Profilbildzuordnungen", "Profile picture selections"],
+  notificationEntries: ["Benachrichtigungen", "Notifications"],
+  notificationPreferences: [
+    "Benachrichtigungseinstellungen",
+    "Notification preferences",
+  ],
+  attentionPreferences: [
+    "Ruhezeiten und Erinnerungseinstellungen",
+    "Quiet hours and reminder preferences",
+  ],
+  welcomeProgress: ["Einführungsfortschritt", "Welcome guide progress"],
+  chatMemberships: ["Chatmitgliedschaften", "Chat memberships"],
+  messageReactions: ["Nachrichtenreaktionen", "Message reactions"],
+  companyMemberships: ["Unternehmenszuordnungen", "Company memberships"],
+  invitationRecords: ["Einladungsnachweise", "Invitation records"],
+  assignmentHistory: ["Zuweisungsverlauf", "Assignment history"],
+  jobChangeRecords: ["Gespeicherte Auftragsänderungen", "Recorded job changes"],
+  companyCourseRequests: [
+    "Kursanfragen des Unternehmens",
+    "Company course requests",
+  ],
+  jobPricingRecords: ["Auftragskonditionen", "Job pricing records"],
+  courseJobRecords: ["Kurs-Auftragszuordnungen", "Course job records"],
+  organisationDetails: [
+    "Interne Unternehmensangaben",
+    "Internal organisation details",
+  ],
+  courseTopicAssignments: ["Kursthemenzuordnungen", "Course topic assignments"],
+  messageRevisions: [
+    "Frühere Nachrichtenfassungen",
+    "Previous message revisions",
+  ],
+  messageVersions: [
+    "Gespeicherte Nachrichtenfassungen",
+    "Saved message versions",
+  ],
+  mentionRecords: ["Erwähnungszuordnungen", "Mention records"],
+  mentionOperations: [
+    "Gespeicherte Erwähnungsvorgänge",
+    "Recorded mention operations",
+  ],
+  fileOrganisation: [
+    "Persönliche Dateiordner und Schlagwörter",
+    "Personal file folders and tags",
+  ],
+  announcementVersions: ["Ankündigungsfassungen", "Announcement versions"],
+  announcementPublications: [
+    "Ankündigungsveröffentlichungen",
+    "Announcement publications",
+  ],
+  announcementAcknowledgements: [
+    "Lesebestätigungen für Ankündigungen",
+    "Announcement acknowledgements",
+  ],
+  announcementOperations: [
+    "Gespeicherte Ankündigungsänderungen",
+    "Recorded announcement changes",
+  ],
+  calendarChangeRecords: [
+    "Gespeicherte Kalenderänderungen",
+    "Recorded calendar changes",
+  ],
+  qualificationStates: ["Qualifikationsstände", "Qualification states"],
+  qualificationEvidence: ["Qualifikationsnachweise", "Qualification evidence"],
+  qualificationHistory: ["Qualifikationsverlauf", "Qualification history"],
+  qualificationOperations: [
+    "Gespeicherte Qualifikationsänderungen",
+    "Recorded qualification changes",
+  ],
+  forumPostVersions: ["Frühere Beitragsfassungen", "Previous post versions"],
+  forumSubscriptions: ["Forenabonnements", "Forum subscriptions"],
+  forumReports: ["Beitragsmeldungen", "Post reports"],
   protectedPaymentHistory: [
     "Gebuchte Zahlungen bleiben erhalten; nutze die dokumentierte Stornierung",
     "Posted payments are retained; use the audited void action",

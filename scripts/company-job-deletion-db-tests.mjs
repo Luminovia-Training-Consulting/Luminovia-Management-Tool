@@ -8,16 +8,18 @@ let checks = 0;
 await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
   const company = randomUUID(),
     otherCompany = randomUUID(),
-    teacher = randomUUID();
+    teacher = randomUUID(),
+    outsider = randomUUID();
   const org = randomUUID(),
     otherOrg = randomUUID(),
     template = randomUUID();
   await sql(`insert into auth.users(id,email) values
     (${q(company)},'company-deletion-a@example.invalid'),
     (${q(otherCompany)},'company-deletion-b@example.invalid'),
-    (${q(teacher)},'company-deletion-teacher@example.invalid');
+    (${q(teacher)},'company-deletion-teacher@example.invalid'),
+    (${q(outsider)},'company-deletion-outsider@example.invalid');
     insert into public.user_roles(user_id,role) values
-    (${q(company)},'client'),(${q(otherCompany)},'client'),(${q(teacher)},'lecturer');
+    (${q(company)},'client'),(${q(otherCompany)},'client'),(${q(teacher)},'lecturer'),(${q(outsider)},'lecturer');
     insert into public.organisations(id,name) values (${q(org)},'Fictional company A'),(${q(otherOrg)},'Fictional company B');
     insert into public.client_organisation_memberships(user_id,organisation_id) values (${q(company)},${q(org)}),(${q(otherCompany)},${q(otherOrg)});
     insert into public.course_templates(id,title) values (${q(template)},'Fictional company deletion curriculum');`);
@@ -84,6 +86,74 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
     values(${q(attachment)},${q(otherCompany)},${q(otherCompany)},'job_after','material',${q(accepted)},'Fictional restricted teaching notes.pdf','application/pdf',100,'clean',${q(randomUUID())});
     insert into public.chat_rooms(job_id,kind,title) values(${q(accepted)},'lecturer_course','Fictional private lecturer room') on conflict(job_id) do nothing;
     insert into public.chat_members(room_id,user_id) select id,${q(teacher)} from public.chat_rooms where job_id=${q(accepted)} on conflict do nothing;`);
+
+  const acceptedClaim = await sql(
+    `select id from public.job_claims where job_id=${q(accepted)}`,
+  );
+  const acceptedRun = await sql(
+    `select course_run_id from public.jobs where id=${q(accepted)}`,
+  );
+  const foreignRun = await sql(
+    `select course_run_id from public.jobs where id=${q(foreign)}`,
+  );
+  const courseSession = randomUUID();
+  await sql(`update public.course_runs set published=true where id=${q(acceptedRun)};
+    insert into public.course_sessions(id,course_run_id,starts_at,ends_at) values(${q(courseSession)},${q(acceptedRun)},now()+interval '60 days',now()+interval '60 days 1 hour');`);
+  const allocation = randomUUID(),
+    foreignClaim = randomUUID(),
+    foreignAllocation = randomUUID();
+  const claimEvent = randomUUID(),
+    foreignClaimEvent = randomUUID(),
+    privateEvent = randomUUID();
+  await sql(`insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,status,amount,total_amount,currency,rate_unit,terms,terms_version)
+    values(${q(foreignClaim)},${q(foreign)},${q(outsider)},${q(randomUUID())},'confirmed',50,50,'EUR','fixed_total','Unrelated lecturer accepted snapshot',1);
+    insert into public.assignment_sessions(id,claim_id,lecturer_id,starts_at,ends_at) values
+    (${q(allocation)},${q(acceptedClaim)},${q(teacher)},now()+interval '60 days',now()+interval '60 days 1 hour'),
+    (${q(foreignAllocation)},${q(foreignClaim)},${q(outsider)},now()+interval '60 days',now()+interval '60 days 1 hour');
+    insert into public.claim_events(id,claim_id,actor_id,event_type) values(${q(claimEvent)},${q(acceptedClaim)},${q(teacher)},'confirmed'),(${q(foreignClaimEvent)},${q(foreignClaim)},${q(outsider)},'confirmed');
+    insert into public.personal_events(id,user_id,title,starts_at,ends_at) values(${q(privateEvent)},${q(teacher)},'Fictional personal appointment remains private',now()+interval '70 days',now()+interval '70 days 1 hour');`);
+  /** Real REST-facing RLS paths are exercised as the current role, including
+   * nested claim-event policies and forged known identifiers from another actor. */
+  const history = (who) =>
+    actor(
+      who,
+      `select jsonb_build_object(
+    'claims',(select count(*) from public.job_claims where id=${q(acceptedClaim)}),
+    'sessions',(select count(*) from public.assignment_sessions where id=${q(allocation)}),
+    'events',(select count(*) from public.claim_events where id=${q(claimEvent)}),
+    'courses',(select count(*) from public.course_runs where id=${q(acceptedRun)}),
+    'course_sessions',(select count(*) from public.course_sessions where id=${q(courseSession)}),
+    'templates',(select count(*) from public.course_templates where id=${q(template)}),
+    'foreign_courses',(select count(*) from public.course_runs where id=${q(foreignRun)}),
+    'foreign_claims',(select count(*) from public.job_claims where id=${q(foreignClaim)}),
+    'foreign_sessions',(select count(*) from public.assignment_sessions where id=${q(foreignAllocation)}),
+    'foreign_events',(select count(*) from public.claim_events where id=${q(foreignClaimEvent)}),
+    'private_events',(select count(*) from public.personal_events where id=${q(privateEvent)}))`,
+    ).then(JSON.parse);
+  const readableHistory = {
+    claims: 1,
+    sessions: 1,
+    events: 1,
+    courses: 1,
+    course_sessions: 1,
+    templates: 1,
+    foreign_courses: 0,
+    foreign_claims: 0,
+    foreign_sessions: 0,
+    foreign_events: 0,
+    private_events: 1,
+  };
+  const titles = (who) =>
+    actor(
+      who,
+      `select public.assignment_job_titles(array[${q(accepted)},${q(foreign)},${q(randomUUID())}]::uuid[])`,
+    ).then(JSON.parse);
+  const earnings = (who, all = "false", aal = "aal1") =>
+    actor(
+      who,
+      `select coalesce(jsonb_agg(row),'[]') from public.finance_earnings(${all}) row`,
+      aal,
+    ).then(JSON.parse);
 
   await check(
     "Only consistent current company ownership appears; creator and display names grant no rights",
@@ -228,6 +298,22 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
   await check(
     "Current lecturers retain accepted history; switching to company removes historical staff/net read routes",
     async () => {
+      assert.deepEqual(await history(teacher), readableHistory);
+      assert.deepEqual(
+        (await titles(teacher)).map((row) => row.id),
+        [accepted],
+      );
+      const priorEarnings = (await earnings(teacher)).find(
+        (row) => row.claim_id === acceptedClaim,
+      );
+      assert.equal(priorEarnings.amount, 50);
+      assert.equal(priorEarnings.total_amount, 50);
+      const dashboardBefore = JSON.parse(
+        await actor(teacher, "select public.job_dashboard()"),
+      );
+      assert.equal(dashboardBefore.next_assignments.length, 1);
+      assert.equal(dashboardBefore.next_assignments[0].job.id, accepted);
+
       assert.equal(
         await actor(
           teacher,
@@ -296,6 +382,45 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
         /42501|denied/i,
       );
       assert(!JSON.stringify(await list(teacher)).includes(accepted));
+      assert.deepEqual(await history(teacher), {
+        ...readableHistory,
+        claims: 0,
+        sessions: 0,
+        events: 0,
+        courses: 0,
+        course_sessions: 0,
+        templates: 0,
+      });
+      assert.deepEqual(await titles(teacher), []);
+      assert.equal(
+        await actor(
+          teacher,
+          `select count(*) from public.job_claims where job_id=${q(ownAccepted)}`,
+        ),
+        "0",
+      );
+      await assert.rejects(
+        actor(teacher, "select public.job_dashboard()"),
+        /42501|denied/i,
+      );
+      for (const all of ["false", "true", "null"])
+        await assert.rejects(earnings(teacher, all), /42501/);
+      assert.equal(
+        await actor(
+          teacher,
+          `select count(*) from public.job_claims where id=${q(randomUUID())}`,
+        ),
+        "0",
+      );
+      // Revocation is projection-only: the accepted business record and personal
+      // appointment remain stored; no historical values or event ownership change.
+      assert.equal(
+        await sql(
+          `select count(*) from public.job_claims where id=${q(acceptedClaim)} and amount=50 and total_amount=50`,
+        ),
+        "1",
+      );
+
       await assert.rejects(
         actor(teacher, `select public.job_detail(${q(accepted)})`),
         /42501|denied/i,
@@ -317,6 +442,15 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
           `select count(*) from public.jobs where id=${q(accepted)}`,
         ),
         "1",
+      );
+      assert.deepEqual(await history(teacher), readableHistory);
+      assert.deepEqual(
+        (await titles(teacher)).map((row) => row.id),
+        [accepted],
+      );
+      assert.deepEqual(
+        (await earnings(teacher)).find((row) => row.claim_id === acceptedClaim),
+        priorEarnings,
       );
     },
   );
@@ -478,6 +612,32 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
         assert.equal(old.gross_budget, null);
       }
       await assert.rejects(read(manager, rolePriced, "aal1"), /42501|denied/i);
+      // Keep the existing privileged claims and finance RPC authority without
+      // granting a manager somebody else's private calendar allocation rows.
+      assert.equal(
+        await actor(
+          manager,
+          `select count(*) from public.job_claims where id=${q(acceptedClaim)}`,
+          "aal2",
+        ),
+        "1",
+      );
+      assert.equal(
+        await actor(
+          manager,
+          `select count(*) from public.assignment_sessions where id=${q(allocation)}`,
+          "aal2",
+        ),
+        "0",
+      );
+      assert.equal(
+        (await earnings(manager, "true", "aal2")).some(
+          (row) => row.claim_id === acceptedClaim,
+        ),
+        true,
+      );
+      assert.deepEqual(await earnings(manager, "false", "aal2"), []);
+
       await assert.rejects(read(company, rolePriced, "aal2"), /42501|denied/i);
       const publicRate = JSON.parse(
         await sql(

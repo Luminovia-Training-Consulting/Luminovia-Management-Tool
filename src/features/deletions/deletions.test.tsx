@@ -21,7 +21,11 @@ import {
   PermanentDeleteAction,
   PermanentDeletionProvider,
 } from "./deletions";
-import { deletionAccessQuery, deletionReceiptsQuery } from "./api";
+import {
+  deletionAccessQuery,
+  deletionPreviewQuery,
+  deletionReceiptsQuery,
+} from "./api";
 
 const state = vi.hoisted(() => ({ actor: "actor-a", request: vi.fn() }));
 vi.mock("../auth/auth-context", () => ({
@@ -104,6 +108,141 @@ async function acknowledge() {
   );
 }
 describe("permanent deletion confirmation", () => {
+  it.each([
+    {
+      language: "de",
+      action: "Endgültig löschen: Fictional workshop",
+      labels: [
+        "Konten",
+        "Rollenzuordnungen",
+        "Erweiterte Profilangaben",
+        "Benachrichtigungseinstellungen",
+        "Einführungsfortschritt",
+        "Verlaufseinträge bleiben ohne Personenzuordnung erhalten",
+      ],
+      generic: "Einträge",
+    },
+    {
+      language: "en",
+      action: "Delete permanently: Fictional workshop",
+      labels: [
+        "Accounts",
+        "Role assignments",
+        "Additional profile details",
+        "Notification preferences",
+        "Welcome guide progress",
+        "History entries retained without account attribution",
+      ],
+      generic: "Records",
+    },
+  ])(
+    "shows meaningful positive account impact without zero-count clutter in $language",
+    async ({ language, action, labels, generic }) => {
+      await i18n.changeLanguage(language);
+      const counts = {
+        "public.profiles": 1,
+        "public.user_roles": 2,
+        "public.profile_details": 1,
+        "private.notification_preferences": 1,
+        "private.welcome_progress": 1,
+        audit_attributions: 3,
+        ...Object.fromEntries(
+          [
+            "public.personal_events",
+            "public.lecturer_availability",
+            "public.notifications",
+            "public.chat_members",
+            "public.message_reactions",
+            "public.client_organisation_memberships",
+            "public.invitation_requests",
+            "public.lecturer_topics",
+            "public.profile_avatars",
+            "private.chat_mention_requests",
+            "private.document_organisation",
+            "private.saved_job_views",
+            "private.attention_preferences",
+            "private.announcement_acknowledgements",
+            "private.announcement_requests",
+            "private.global_event_requests",
+            "private.qualification_states",
+            "private.qualification_evidence",
+            "private.qualification_events",
+            "private.qualification_requests",
+          ].map((key) => [key, 0]),
+        ),
+      };
+      const initial = state.request.getMockImplementation()!;
+      state.request.mockImplementation((...args) =>
+        args[0] === "deletions/preview"
+          ? Promise.resolve({
+              ...preview,
+              kind: "account",
+              id: "account-a",
+              counts,
+            })
+          : initial(...args),
+      );
+      const { client } = setup(
+        <PermanentDeleteAction
+          kind="account"
+          id="account-a"
+          label="Fictional workshop"
+        />,
+      );
+      await userEvent.click(
+        await screen.findByRole("button", { name: action }),
+      );
+      const dialog = await screen.findByRole("dialog");
+      await within(dialog).findByText(labels[0]);
+      for (const label of labels)
+        expect(within(dialog).getByText(label)).toBeVisible();
+      expect(within(dialog).getAllByRole("term")).toHaveLength(6);
+      expect(
+        within(dialog)
+          .getAllByRole("definition")
+          .map((element) => element.textContent),
+      ).toEqual(["1", "2", "1", "1", "1", "3"]);
+      expect(
+        within(dialog).queryByText(generic, { exact: true }),
+      ).not.toBeInTheDocument();
+      expect(
+        within(dialog).queryByText("0", { exact: true }),
+      ).not.toBeInTheDocument();
+      expect(dialog.textContent).not.toMatch(
+        /public\.|private\.|notification_preferences|user_roles/,
+      );
+      expect(
+        client.getQueryData(
+          deletionPreviewQuery("actor-a", "account", "account-a").queryKey,
+        ),
+      ).toMatchObject({ counts });
+      expect(within(dialog).getByRole("checkbox")).not.toBeChecked();
+    },
+  );
+  it("retains every blocker while hiding only zero impact rows", async () => {
+    const initial = state.request.getMockImplementation()!;
+    state.request.mockImplementation((...args) =>
+      args[0] === "deletions/preview"
+        ? Promise.resolve({
+            ...preview,
+            counts: { "public.jobs": 1, "public.invoices": 0 },
+            blockers: [
+              { code: "referenced", kind: "public.invoices", count: 2 },
+            ],
+            can_confirm: false,
+          })
+        : initial(...args),
+    );
+    setup();
+    await open();
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getAllByRole("term")).toHaveLength(1);
+    expect(within(dialog).getByText("Rechnungen: 2")).toBeVisible();
+    expect(within(dialog).queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByText("0", { exact: true }),
+    ).not.toBeInTheDocument();
+  });
   it("requires reviewed impact, acknowledgement and exact confirmation before starting; pending is not success", async () => {
     setup();
     await open();

@@ -66,6 +66,58 @@ language sql stable security definer set search_path='' as $$
   );
 $$;
 
+-- Raw REST reads share the same current-role rule as staff job projections.
+-- Retain the existing jobs.manage/MFA claims branch; allocations remain private
+-- to the actual current lecturer. Claim-event RLS already follows job_claims.
+alter policy claims_read on public.job_claims using(
+  (select private.actor_active()) and (
+    ((select private.lecturer_actor()) and lecturer_id=(select auth.uid()))
+    or (select private.has_permission('jobs.manage'))
+  )
+);
+alter policy allocations_read on public.assignment_sessions using(
+  (select private.actor_active()) and (select private.lecturer_actor())
+  and lecturer_id=(select auth.uid())
+);
+
+-- The calendar's course projection also has a historical staff-claim branch.
+-- Keep management, explicit publication, participant-room and independent
+-- enrolment authority; only inherited staff assignment access needs a current role.
+create or replace function private.can_read_course_run(p_id uuid) returns boolean language sql stable security definer set search_path='' as $$
+ select private.actor_active() and (
+ private.has_permission('courses.manage')
+ or (private.lecturer_actor() and exists(select 1 from public.course_runs r where r.id=p_id and r.published and r.archived_at is null))
+ or (private.lecturer_actor() and exists(select 1 from public.jobs j join public.job_claims c on c.job_id=j.id where j.course_run_id=p_id and c.lecturer_id=auth.uid() and c.status='confirmed'))
+ or exists(select 1 from public.chat_rooms r where r.kind='participant_course' and r.course_run_id=p_id and private.can_access_chat_room(r.id))
+ );
+$$;
+
+-- The calendar's definer title lookup must not bypass the raw assignment RLS
+-- after a lecturer changes to a company account. Keep its bounded input and
+-- harmless empty projection for current active non-lecturer accounts.
+create or replace function private.assignment_job_titles(p_job_ids uuid[])returns jsonb language plpgsql stable security definer set search_path='' as $$
+begin
+ if not private.actor_active()then raise exception 'Account inactive'using errcode='42501';end if;
+ if p_job_ids is null or cardinality(p_job_ids)>1000 or array_position(p_job_ids,null)is not null then raise exception 'Invalid assignment identities'using errcode='22023';end if;
+ return coalesce((select jsonb_agg(jsonb_build_object('id',j.id,'title',j.title)order by j.id)from public.jobs j where private.lecturer_actor()and j.id=any(p_job_ids)and exists(select 1 from public.job_claims c where c.job_id=j.id and c.lecturer_id=auth.uid()and c.status='confirmed')),'[]'::jsonb);
+end;$$;
+
+-- Earnings is another definer projection of accepted assignment snapshots.
+-- Current finance.manage/MFA authority retains both existing finance modes;
+-- personal teaching history otherwise requires a current lecturer role. This
+-- changes no quote, snapshot, invoice, private-event or global-calendar data.
+create or replace function private.finance_earnings(p_all boolean default false)
+returns table(claim_id uuid,job_id uuid,lecturer_id uuid,lecturer_name text,title text,customer_name text,starts_at timestamptz,ends_at timestamptz,amount numeric,rate_unit text,total_amount numeric,currency text,stage text,invoice_id uuid)
+language plpgsql stable security definer set search_path='' as $$
+begin
+ if not private.actor_active() or (p_all and not private.has_permission('finance.manage'))
+ or (not private.lecturer_actor() and not private.has_permission('finance.manage')) then raise exception 'Own earnings or finance management and MFA required' using errcode='42501';end if;
+ return query select c.id,c.job_id,c.lecturer_id,p.display_name,j.title,j.customer_name,(select min(s.starts_at) from public.assignment_sessions s where s.claim_id=c.id),(select max(s.ends_at) from public.assignment_sessions s where s.claim_id=c.id),c.amount,c.rate_unit,c.total_amount,c.currency,
+ case when i.status='paid' then 'paid' when i.id is not null then 'invoiced' when (select max(s.ends_at) from public.assignment_sessions s where s.claim_id=c.id)<=now() then 'completed' else 'expected' end,i.id
+ from public.job_claims c join public.profiles p on p.id=c.lecturer_id join public.jobs j on j.id=c.job_id left join public.invoice_items item on item.claim_id=c.id and item.active left join public.invoices i on i.id=item.invoice_id
+ where c.status='confirmed' and (p_all or c.lecturer_id=auth.uid()) order by c.created_at desc,c.id;
+end;$$;
+
 -- Keep the existing quote projection; centralize its resource access decision so
 -- legacy net prices cannot escape through the historical-claim branch.
 create or replace function private.job_offers() returns jsonb language plpgsql stable security definer set search_path='' as $$
@@ -118,6 +170,6 @@ begin
  return d.scope='job_before' and private.lecturer_actor() and exists(select 1 from public.jobs j where j.id=d.job_id and j.status='published');
 end;$$;
 
-revoke execute on function private.can_read_job(uuid),private.job_offers(),private.job_lifecycle(uuid) from public,anon;
-grant execute on function private.can_read_job(uuid),private.job_offers(),private.job_lifecycle(uuid) to authenticated;
+revoke execute on function private.can_read_job(uuid),private.job_offers(),private.job_lifecycle(uuid),private.assignment_job_titles(uuid[]),private.finance_earnings(boolean) from public,anon;
+grant execute on function private.can_read_job(uuid),private.job_offers(),private.job_lifecycle(uuid),private.assignment_job_titles(uuid[]),private.finance_earnings(boolean) to authenticated;
 commit;

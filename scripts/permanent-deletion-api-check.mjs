@@ -27,7 +27,11 @@ const service = make(process.env.SUPABASE_SERVICE_ROLE_KEY),
   documents = [],
   objects = [],
   leases = [],
-  allActors = [];
+  allActors = [],
+  organisations = [],
+  templates = [],
+  runs = [],
+  jobs = [];
 /** Fail the test at the actual provider error without logging credentials. */
 async function checked(request, label) {
   const result = await request;
@@ -393,6 +397,154 @@ try {
   console.log(
     "PASS Native account hard deletion, actual profile/Auth absence, old-token denial and MFA/self/peer protections",
   );
+
+  // Native company authority must reach the same worker through the caller's
+  // real JWT, never through an administrative role or a submitted owner ID.
+  const company = await actor("client");
+  await mfa(company);
+  const ownOrganisation = randomUUID(),
+    foreignOrganisation = randomUUID();
+  const template = randomUUID(),
+    ownRun = randomUUID(),
+    foreignRun = randomUUID();
+  const ownJob = randomUUID(),
+    retainedOwnJob = randomUUID(),
+    foreignJob = randomUUID();
+  organisations.push(ownOrganisation, foreignOrganisation);
+  templates.push(template);
+  runs.push(ownRun, foreignRun);
+  jobs.push(ownJob, retainedOwnJob, foreignJob);
+  await checked(
+    service.from("organisations").insert([
+      {
+        id: ownOrganisation,
+        name: `Fictional deletion company ${ownOrganisation}`,
+      },
+      {
+        id: foreignOrganisation,
+        name: `Fictional other company ${foreignOrganisation}`,
+      },
+    ]),
+    "Create owned company fixtures",
+  );
+  await checked(
+    service
+      .from("course_templates")
+      .insert({ id: template, title: "Fictional company deletion template" }),
+    "Create owned template",
+  );
+  await checked(
+    service.from("course_runs").insert([
+      { id: ownRun, template_id: template, organisation_id: ownOrganisation },
+      {
+        id: foreignRun,
+        template_id: template,
+        organisation_id: foreignOrganisation,
+      },
+    ]),
+    "Create authoritative organisation links",
+  );
+  await checked(
+    service.from("jobs").insert(
+      [
+        { id: ownJob, course_run_id: ownRun },
+        { id: retainedOwnJob, course_run_id: ownRun },
+        { id: foreignJob, course_run_id: foreignRun },
+      ].map((job) => ({
+        ...job,
+        title: `Fictional company deletion ${job.id}`,
+        customer_name: "Fictional display label grants no ownership",
+        delivery_type: "online",
+        status: "draft",
+        amount: 0,
+        total_amount: 0,
+        currency: "EUR",
+        rate_unit: "fixed_total",
+        terms: "Fictional test only",
+        created_by: admin.id,
+      })),
+    ),
+    "Create owned draft jobs",
+  );
+  await checked(
+    admin.client.rpc("manage_client_organisation", {
+      p_user_id: company.id,
+      p_organisation_id: ownOrganisation,
+      p_remove: false,
+    }),
+    "Grant actual company membership",
+  );
+  const companyTargets = await request(company, "resources?kind=job");
+  assert.equal(companyTargets.status, 200);
+  assert.deepEqual(
+    new Set(companyTargets.body.items.map((entry) => entry.id)),
+    new Set([ownJob, retainedOwnJob]),
+  );
+  assert.equal(
+    (await request(company, "preview", { kind: "job", id: foreignJob })).status,
+    403,
+    "Known foreign UUID grants no deletion authority",
+  );
+  const reviewedCompanyPlan = await request(company, "preview", {
+    kind: "job",
+    id: retainedOwnJob,
+  });
+  assert.equal(reviewedCompanyPlan.status, 200);
+  assert.equal(reviewedCompanyPlan.body.can_confirm, true);
+  const companyDeleted = await confirm(company, "job", ownJob);
+  assert.equal(companyDeleted.status, 200, JSON.stringify(companyDeleted.body));
+  assert.equal(companyDeleted.body.status, "completed");
+  assert.deepEqual(
+    await checked(
+      service.from("jobs").select("id").eq("id", ownJob),
+      "Verify actual company job removal",
+    ),
+    [],
+  );
+  assert.equal(
+    (
+      await checked(
+        service.from("jobs").select("id").eq("id", foreignJob),
+        "Verify foreign job retained",
+      )
+    ).length,
+    1,
+  );
+  await checked(
+    admin.client.rpc("manage_client_organisation", {
+      p_user_id: company.id,
+      p_organisation_id: ownOrganisation,
+      p_remove: true,
+    }),
+    "Revoke membership against existing company token",
+  );
+  assert.equal(
+    (
+      await request(company, "confirm", {
+        plan_id: reviewedCompanyPlan.body.plan_id,
+        request_id: randomUUID(),
+        confirmation: "DELETE",
+      })
+    ).status,
+    403,
+    "Revocation invalidates an already reviewed plan",
+  );
+  assert.deepEqual(
+    (await request(company, "resources?kind=job")).body.items,
+    [],
+  );
+  assert.equal(
+    (
+      await checked(
+        service.from("jobs").select("id").eq("id", retainedOwnJob),
+        "Verify refused deletion changes nothing",
+      )
+    ).length,
+    1,
+  );
+  console.log(
+    "PASS Native company-only job discovery/deletion, foreign-ID denial, actual removal and membership revocation against an existing token/plan",
+  );
 } finally {
   // Owned UUIDs only; failure cleanup never broadens into ordinary data.
   for (const lease of leases)
@@ -424,6 +576,33 @@ try {
     );
   }
   if (users.length) {
+    if (jobs.length)
+      await checked(
+        service.from("jobs").delete().in("id", jobs),
+        "Remove exact owned job fixtures",
+      );
+    if (runs.length)
+      await checked(
+        service.from("course_runs").delete().in("id", runs),
+        "Remove exact owned run fixtures",
+      );
+    if (templates.length)
+      await checked(
+        service.from("course_templates").delete().in("id", templates),
+        "Remove exact owned template fixtures",
+      );
+    await checked(
+      service
+        .from("client_organisation_memberships")
+        .delete()
+        .in("user_id", allActors),
+      "Remove owned membership fixtures",
+    );
+    if (organisations.length)
+      await checked(
+        service.from("organisations").delete().in("id", organisations),
+        "Remove exact owned organisation fixtures",
+      );
     await checked(
       service.from("audit_events").delete().in("actor_id", users),
       "Remove owned audit fixtures",

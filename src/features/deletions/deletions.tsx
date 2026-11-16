@@ -201,6 +201,45 @@ function resourceLabel(
     protected_payment_history: "protectedPaymentHistory",
     audit_attributions: "auditAttributions",
     pending_personal_deletions: "pendingPersonalDeletions",
+    user_roles: "roleAssignments",
+    lecturer_topics: "expertiseEntries",
+    profile_details: "profileDetails",
+    profile_avatars: "avatarSelections",
+    notifications: "notificationEntries",
+    notification_preferences: "notificationPreferences",
+    attention_preferences: "attentionPreferences",
+    welcome_progress: "welcomeProgress",
+    chat_members: "chatMemberships",
+    message_reactions: "messageReactions",
+    client_organisation_memberships: "companyMemberships",
+    invitation_requests: "invitationRecords",
+    claim_events: "assignmentHistory",
+    job_lifecycle_requests: "jobChangeRecords",
+    client_course_requests: "companyCourseRequests",
+    job_commission_offers: "jobPricingRecords",
+    course_run_job_requests: "courseJobRecords",
+    organisation_private_details: "organisationDetails",
+    course_template_topics: "courseTopicAssignments",
+    chat_message_revisions: "messageRevisions",
+    chat_content_versions: "messageVersions",
+    chat_mention_versions: "mentionRecords",
+    chat_mention_requests: "mentionOperations",
+    document_organisation: "fileOrganisation",
+    saved_job_views: "saved_job_view",
+    announcement_revisions: "announcementVersions",
+    announcement_publications: "announcementPublications",
+    announcement_acknowledgements: "announcementAcknowledgements",
+    announcement_requests: "announcementOperations",
+    portal_announcements: "announcement",
+    global_event_requests: "calendarChangeRecords",
+    qualification_states: "qualificationStates",
+    qualification_evidence: "qualificationEvidence",
+    qualification_events: "qualificationHistory",
+    qualification_requests: "qualificationOperations",
+    forum_post_revisions: "forumPostVersions",
+    forum_subscriptions: "forumSubscriptions",
+    forum_reports: "forumReports",
+    building_blocks: "building_block",
     profiles: "account",
     users: "account",
     documents: "document",
@@ -449,12 +488,14 @@ function DeletionDialog({
             <h3>{targetLabel(preview.data, t)}</h3>
             <h4>{t("impact")}</h4>
             <dl className="deletion-counts">
-              {Object.entries(preview.data.counts).map(([kind, count]) => (
-                <div key={kind}>
-                  <dt>{resourceLabel(kind, t)}</dt>
-                  <dd>{count}</dd>
-                </div>
-              ))}
+              {Object.entries(preview.data.counts)
+                .filter(([, count]) => count > 0)
+                .map(([kind, count]) => (
+                  <div key={kind}>
+                    <dt>{resourceLabel(kind, t)}</dt>
+                    <dd>{count}</dd>
+                  </div>
+                ))}
             </dl>
             {preview.data.blockers.length > 0 && (
               <Notice kind="error">
