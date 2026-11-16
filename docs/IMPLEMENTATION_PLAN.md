@@ -11,6 +11,17 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 Customer organisations remain privately configured and reusable templates support multiple explicit organisation scopes. Publication of this source does not assert hosted migration installation or production acceptance.
 
+## Historical PR CI repair
+
+Requested PRs6/7/8/9/14/11 are already merged. Their final application checks and later metadata failures are distinguished in [the audit](PR_CI_REPAIR_20261116.md);14 is a cancelled temporary-base fixture, not a failed product merge.
+
+- [x] Reconcile the35managed labels with current GitHub usage; preserve existing names, colours, descriptions and assignments.
+- [x] Use current trusted main for the ordinary read-only metadata check, skip automatic closed-PR events and add a main-only manual historical check; retain strict categories, canonical identity and stale-head rejection.
+- [x] Pass12focused Node regressions plus workflow/format/link checks and real read-only label validation for all six PRs.
+- [ ] Publish the signed fix, observe exact-head CI, merge under the user's explicit instruction and execute all six historical checks through the merged main workflow.
+
+No new application migration, production deployment or reduction of the remaining product scope belongs to this repair.
+
 ## Guided exploration and practical help
 
 User requested a complete bilingual guided experience, safe fictional test system, practical problem explanations and a tested PR/merge. Work is isolated on `codex/guided-demo-help`; unrelated original roles/preview/welcome-checklist changes remain outside this PR.
