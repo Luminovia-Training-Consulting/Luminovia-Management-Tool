@@ -68,11 +68,36 @@ const runSchema = z.object({
   archived: z.boolean(),
   sessions: z
     .array(
-      z.object({ starts_at: z.string().min(1), ends_at: z.string().min(1) }),
+      z.object({
+        starts_at: z.string().min(1),
+        ends_at: z.string().min(1),
+        // Form-local identity follows retained rows through removal. It is
+        // stripped when sessions are normalized for the authoritative RPC.
+        source_session_id: z.string().optional(),
+      }),
     )
     .min(1)
     .max(60),
 });
+/** Compare explicit instants without dropping PostgreSQL's six-digit fractions. */
+function compareCourseInstants(first: string, second: string): number | null {
+  const firstMillis = Date.parse(first);
+  const secondMillis = Date.parse(second);
+  if (!Number.isFinite(firstMillis) || !Number.isFinite(secondMillis))
+    return null;
+  const difference = firstMillis - secondMillis;
+  if (difference) return difference;
+  // Equal JavaScript milliseconds can still differ at PostgreSQL precision.
+  // Explicit whole-minute offsets do not change the fractional absolute second.
+  const microseconds = (instant: string) =>
+    Number(
+      (/\.(\d+)(?:Z|[+-]\d{2}:\d{2})$/i.exec(instant)?.[1] ?? "")
+        .padEnd(6, "0")
+        .slice(0, 6),
+    );
+  return microseconds(first) - microseconds(second);
+}
+
 /** Edit reusable content templates separately from particular customers and schedules. */
 function TemplateForm({
   original,
@@ -193,6 +218,17 @@ function RunForm({
   const [planningStart, setPlanningStart] = useState("09:00");
   const [planningEnd, setPlanningEnd] = useState("17:00");
   const [planningError, setPlanningError] = useState(false);
+  // Snapshot initial row identity and exact bytes once for this keyed form.
+  // Later query updates must not reinterpret the user's existing input draft.
+  const [sessionOrigins] = useState(() => ({
+    zone: original?.time_zone,
+    sessions: new Map(
+      original?.course_sessions.map((session) => [
+        session.id,
+        Object.freeze({ ...session }),
+      ]) ?? [],
+    ),
+  }));
   const {
     register,
     control,
@@ -213,6 +249,7 @@ function RunForm({
         ? [...original.course_sessions]
             .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
             .map((s) => ({
+              source_session_id: s.id,
               starts_at: DateTime.fromISO(s.starts_at)
                 .setZone(original.time_zone)
                 .toFormat("yyyy-MM-dd'T'HH:mm"),
@@ -239,9 +276,34 @@ function RunForm({
       requireOnline();
       setTimeError(false);
       const sessions = values.sessions.map((s) => {
-        const start = zonedInstant(s.starts_at, values.time_zone);
-        const end = zonedInstant(s.ends_at, values.time_zone);
-        if (!start || !end || end <= start) {
+        const source = sessionOrigins.sessions.get(s.source_session_id ?? "");
+        /** Preserve an unchanged endpoint's hidden precision/offset; validate edits strictly. */
+        const endpoint = (
+          input: string,
+          originalInstant: string | undefined,
+        ) => {
+          const previous = originalInstant
+            ? DateTime.fromISO(originalInstant)
+            : null;
+          // A minute editor cannot represent stored seconds, microseconds or
+          // which offset was used inside a DST fold. Keep the known instant only
+          // when both its displayed minute and intended zone are unchanged.
+          return previous?.isValid &&
+            values.time_zone === sessionOrigins.zone &&
+            previous
+              .setZone(values.time_zone)
+              .toFormat("yyyy-MM-dd'T'HH:mm") === input
+            ? originalInstant!
+            : zonedInstant(input, values.time_zone);
+        };
+        const start = endpoint(s.starts_at, source?.starts_at);
+        const end = endpoint(s.ends_at, source?.ends_at);
+        const unchanged =
+          start === source?.starts_at && end === source?.ends_at;
+        const order = start && end ? compareCourseInstants(end, start) : null;
+        // Existing database intervals already satisfy the range constraint.
+        // Edited intervals still require positive duration, including sub-ms ties.
+        if (!start || !end || order === null || (!unchanged && order <= 0)) {
           setTimeError(true);
           throw new Error("time");
         }

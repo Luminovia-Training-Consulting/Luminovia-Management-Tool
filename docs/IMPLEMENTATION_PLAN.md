@@ -2,6 +2,16 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Main26 course precision and critical form recovery
+
+Independent delivery from exact main `fabd71a7958d7814c18e3403877e542c20c3bea2`; all 26 migrations, current server authority and the complete target ledger below are preserved. This slice contains no M7 product functionality or server/schema changes.
+
+- [x] Reproduce the actual unchanged-session truncation and known DST-fold save refusal before changing course source; both targeted cases fail on the original Main26 implementation.
+- [x] Preserve unchanged session endpoints by form-local original identity and zone; strictly parse edited/new endpoints, strip local identity from the RPC payload and compare PostgreSQL microseconds correctly.
+- [x] Pass 26 actual course component cases plus 28 finance/wiki failure-recovery cases, and the complete 303-test/55-file frontend suite. Measured coverage over 119 source files is S59.01/B53.55/F49.11/L61.23%; existing coverage gates/exclusions remain unchanged.
+- [x] Pass TypeScript, whole-tree ESLint, source formatting, compiler connectivity/export audit and synthetic production/PWA build.
+- [ ] Publish the independently reviewed signed slice through its own PR; observe exact-head required security/application/native checks and merge only after their actual successful results. Local frontend acceptance does not certify SQL/API/browser/native or production behavior.
+
 ## PR18 complete-CI repair
 
 - [x] Correct the missing disposable compensation bootstrap after real retention, with explicit owned QA identity and three executable orchestration regressions.
