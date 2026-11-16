@@ -1,5 +1,27 @@
 # Initial CodeQL baseline review
 
+## Dated Main24 inventory and later quality-source boundary — 16 November 2026 UTC
+
+This recorded accepted-Main24 security inventory is bound to source `99add7de8598bf415977c7cae79f1c5f6993626d`. JavaScript analysis `2177259389` reports **25 open findings: 9 high and 16 medium**. Python analysis `2177251295` and GitHub Actions analysis `2177248311` each report zero findings. The analysis error/warning fields are empty; that scanner-health result does not erase the JavaScript findings. The earlier twelve inherited findings remain included in the current 25, rather than defining its current total. The historical inventories and contextual reviews below remain preserved with their original source boundaries. This is not a full-tree inventory of the subsequently accepted Main12 `2c7d326` or the current quality branch.
+
+Historical PR19 head `b9043df227f82f62706caa474817f749f29e85d7` has separate exact signed PR test-merge evidence at `38fbea4031f68c268291d2151c2d72f8a016064b`: incremental JavaScript `2177506071`, Python `2177490569` and Actions `2177496914` each report zero findings. Generated findings check `133374852609` passes with zero annotations. **These are incremental PR results, not a zero-finding full-tree scan of `b9043df` or proof that the accepted Main inventory is closed.** Current source/base and all other application/native/security gates remain separate acceptance requirements.
+
+The high-severity inventory retains these explicit boundaries:
+
+| Findings         | Current source status and remaining evidence                                                                                                                                                                                                                               |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #5, #6, #38, #39 | Descriptor-bound filesystem corrections are prepared in PR19. Accepted Main is not claimed fixed: closure requires the permitted merge and an actual subsequent Main scan.                                                                                                 |
+| #9               | The package-concurrency source fix is integrated in the quality branch as signed `5c8444d9cc5617399e2d24cd39d2c20165c7aca6`; 31/31 actual package cases pass. Fresh exact-source scanning and a later accepted-Main scan remain pending. No Main alert closure is claimed. |
+| #11              | The unsafe local-scanner environment-file write remains unfixed. Local-writer prerequisites and ownership/mode/ACL/concurrency policy require their own bounded review and regression evidence.                                                                            |
+| #7, #8           | Filesystem-descriptor follow-ups remain outstanding; historical context is not closure evidence.                                                                                                                                                                           |
+| #13              | The finding is in test-only state handling. That scope is recorded without dismissing the finding or declaring it harmless.                                                                                                                                                |
+
+Dependabot alert **#1** separately tracks development-transitive `deepmerge` **4.3.1**, low severity, advisory **GHSA-gcqx-w48m-w2h4 / CVE-2026-93753**. The observed advisory metadata has `first_patched_version: null`; no available patched upgrade or remediation is invented. A passing incremental CodeQL check does not close this dependency alert.
+
+No alert dismissal, query/path exclusion, gate reduction, complete-security claim or production/provider acceptance follows from this checkpoint. The historical twelve-result branch scan, older Main counts, source fixes, current Main inventory and incremental PR gate are distinct evidence; none substitutes for the others.
+
+## Historical scan and correction checkpoints
+
 ## Corrected hosted request fields and incremental PR gate
 
 The exact f0f6fae PR analysis2175760898 reports eight findings: the new filesystem assertion race47 and seven inherited Main flows21/23/24/25/26/27/37 in the modified hosted checker. Six concern SUPABASE_PUBLISHABLE_KEY from the private configuration entering API-key headers; only one concerns the persisted document UUID. No password, actor-session or service-key rewrite is required to address those reported paths.

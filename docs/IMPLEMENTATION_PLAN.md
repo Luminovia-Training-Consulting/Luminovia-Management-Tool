@@ -1,5 +1,17 @@
 # Persistent implementation plan
 
+## Current package-hardening and remote-union checkpoint
+
+- [x] Integrate independently reviewed package correction `c24` as signed `5c8444d9cc5617399e2d24cd39d2c20165c7aca6`; actual package suite passes 31/31 in 6.78 seconds and combined post-package runtime/maintenance passes 341 unique cases in 9.18 seconds.
+- [x] Preserve the recorded local Main12 frontend proof: 690/90, V8 S66.57/B61.98/F56.92/L68.70%, both APIs 100% across 65 included cases, full types/lint/actionlint/format, graph 197/46 and PWA build86. All 68 SQL and accepted Main12 production bytes remain unchanged.
+- [x] Preserve verified remote `2659618` (15:09:28 UTC, parents `b9043df` / actual Main12 `2c7d326`) through normal ancestry. Root's non-documentation/README comparison to `5c8444d` is empty after exact test-conflict restoration; 37 focused union cases pass. Preserve both complete ordered ledgers and all A–N scope.
+- [x] Preserve foreign `2659618` failure evidence separately: workflow43893363955 lint/system has undefined `reviewedQuotes`/`readFileSync`/`runInNewContext`, with native SQL failing `reviewedQuotes` at 15:16 UTC. Root restores the affected test files exactly to tested `5c8444d` and retains remote ancestry; 37 focused union cases pass, while new remote gates remain pending.
+- [x] Record old-source native job133375514530 success separately: `b9043df`/base99, 68 SQL, 10 services, 48 APIs, TLS/WSS, 50 claims, retained private/financial facts, unchanged images and checked cleanup. Financial creation/verification preserve two claims/one invoice and equal snapshot `5ea2169e39fbf22757579d3ce5e22ac8053ebc8138dfdc5b59f125a12a67e6c4`. System/browser cancellation at 15:10 prevents complete acceptance; none of this is rebased to the Main12/package union.
+- [x] Document the dated Main99 security inventory, incremental PR evidence, integrated #9 source fix and builder output/recovery limits without claiming a current Main scan or closed finding.
+- [ ] Publish the coherent signed union normally, retain Draft/hold and assigned PR25 priority, and obtain fresh exact-head/current-base system/browser/native/security/preview-package gates before the permitted merge. Later Ready verification and all separate operating approvals remain required.
+
+Package tests and old native success authorise no release/deployment, image upgrade, paid invoice, real provider action or production work. Current active personal-only review policy remains unchanged. Full product scope and all historical source boundaries below remain preserved without a collective A–N completion gate for each PR.
+
 ## Current local Main12 quality evidence
 
 - [x] Preserve all 68 released SQL files and production application bytes from accepted Main12 `2c7d3264040896bce5fd005c7f4e1f98e35da295`; retain the five focused frontend test-file changes, existing strong-null/error-redaction SDK-helper bytes, both ordered histories and the full A–N target.

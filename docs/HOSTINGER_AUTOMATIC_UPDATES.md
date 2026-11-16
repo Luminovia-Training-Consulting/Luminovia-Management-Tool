@@ -16,9 +16,17 @@ Complete backup 02:00 UTC, GitHub dependency maintenance 02:41 UTC, official OS 
 
 GitHub's actual token signature probe passed. The first full compatible candidate run passed application/selfhost/combined gates but correctly stopped promotion when concurrent PR5 moved main. No bot main-promotion success is claimed from that stale-base run. TypeScript 7/FullCalendar 7 are held on actual incompatible peer dependencies; other components proceed independently.
 
+## Release-builder output and failure recovery
+
+The prepared [release builder](../deploy/hostinger/updates/package.mjs) requires Linux with accessible procfs descriptor paths and GNU tar. Use a real output directory owned by the invoking UID, normally `0700` or `0755`, without group/other write permission; the output leaf must not be a symlink. Existing safe directories may contain unrelated files. The builder pins the directory descriptor, stages each attempt privately and publishes each final name exclusively; it does not silently chmod an existing directory or overwrite another writer's artifacts.
+
+`cms-release.tar.gz` and `cms-release.json` are **not published as an atomic pair**. A late collision or I/O error can leave an unpaired final archive. That attempt is a failure: stop, inspect the output and artifact ownership, and retry in a fresh owned output directory after resolving the cause. Never blindly remove final files or foreign/unverified files to make a retry pass. An archive alone, an erroring build or a successful unit test is not a valid release pair.
+
+This local hardening and its tests authorise no release or deployment. Publication retains its separate authorised manual workflow and exact-current-source gates; no installed update, provider activation or production outcome is inferred.
+
 ## What is updated
 
-The GitHub `Portal checks` workflow runs the complete isolated application verification plus release/updater/proxy checks. A successful push to `main` then builds the CMS frontend with the two public repository variables `CMS_SUPABASE_URL` and `CMS_SUPABASE_PUBLISHABLE_KEY`. It packages the frontend, application Edge Functions, complete migration history and reviewed, digest-pinned runtime configuration. No server environment, SSH key, database password or service-role key is sent to GitHub.
+The GitHub `Portal checks` workflow runs the complete isolated application verification plus release/updater/proxy checks. An explicitly authorised manual run on `main`, selecting `publish_release=true` and its exact current SHA through `expected_commit`, builds the CMS frontend with the two public repository variables `CMS_SUPABASE_URL` and `CMS_SUPABASE_PUBLISHABLE_KEY`. It packages the frontend, application Edge Functions, complete migration history and reviewed, digest-pinned runtime configuration. No server environment, SSH key, database password or service-role key is sent to GitHub.
 
 The workflow creates a draft, uploads both `cms-release.tar.gz` and `cms-release.json`, and only then publishes the immutable prerelease tagged `cms-dev-<full source SHA>`. Repository immutable releases are enabled. The VPS downloads public artifacts directly; it does not need a GitHub token or a fresh clone.
 
