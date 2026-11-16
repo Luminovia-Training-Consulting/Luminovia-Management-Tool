@@ -34,6 +34,7 @@ import {
   ClipboardCheck,
   LifeBuoy,
   ArrowRightLeft,
+  Inbox,
 } from "lucide-react";
 import { NotificationsMenu } from "../features/notifications/notifications";
 import { Avatar } from "../features/profile/avatar";
@@ -101,7 +102,10 @@ export function Shell() {
       ? [{ to: "/finance", icon: Wallet, label: "finance" }]
       : []),
     ...(permissions.data?.includes("organisations.manage")
-      ? [{ to: "/clients", icon: Building2, label: "clients" }]
+      ? [
+          { to: "/clients", icon: Building2, label: "clients" },
+          { to: "/enquiries", icon: Inbox, label: "websiteEnquiries" },
+        ]
       : []),
     ...(staff ? [{ to: "/wiki", icon: BookOpen, label: "wiki" }] : []),
     ...(staff ? [{ to: "/forum", icon: MessageCircle, label: "forum" }] : []),

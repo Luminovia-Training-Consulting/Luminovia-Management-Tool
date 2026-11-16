@@ -195,4 +195,16 @@ $$;
 revoke all on function private.receive_website_enquiry(text,uuid,jsonb),public.receive_website_enquiry(text,uuid,jsonb),private.enquiry_context(),private.enquiry_inbox(text,text,timestamptz,uuid,integer),private.enquiry_detail(uuid),private.manage_enquiry(uuid,text,jsonb,integer,uuid),private.enquiry_notification_target(text,uuid),public.enquiry_context(),public.enquiry_inbox(text,text,timestamptz,uuid,integer),public.enquiry_detail(uuid),public.manage_enquiry(uuid,text,jsonb,integer,uuid) from public,anon,authenticated;
 grant execute on function private.receive_website_enquiry(text,uuid,jsonb),public.receive_website_enquiry(text,uuid,jsonb) to service_role;
 grant execute on function private.enquiry_context(),private.enquiry_inbox(text,text,timestamptz,uuid,integer),private.enquiry_detail(uuid),private.manage_enquiry(uuid,text,jsonb,integer,uuid),public.enquiry_context(),public.enquiry_inbox(text,text,timestamptz,uuid,integer),public.enquiry_detail(uuid),public.manage_enquiry(uuid,text,jsonb,integer,uuid) to authenticated;
+
+-- Compose with the already installed inbox resolver; keep all prior resource
+-- checks and expose neither customer identity nor submitted text in the title.
+alter function private.notification_target(text,uuid) rename to notification_target_before_enquiries;
+create function private.notification_target(p_kind text,p_resource uuid) returns jsonb
+language plpgsql stable security definer set search_path='' as $$
+begin
+ if p_kind='website_enquiry' then return private.enquiry_notification_target(p_kind,p_resource);end if;
+ return private.notification_target_before_enquiries(p_kind,p_resource);
+end;$$;
+revoke all on function private.notification_target(text,uuid) from public,anon;
+grant execute on function private.notification_target(text,uuid) to authenticated;
 commit;

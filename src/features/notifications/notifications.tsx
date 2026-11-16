@@ -54,6 +54,7 @@ const knownKinds = new Set([
   "contract_available",
   "support_update",
   "readiness_task",
+  "website_enquiry",
   "replacement_available",
   "replacement_completed",
   "delivery_submitted",

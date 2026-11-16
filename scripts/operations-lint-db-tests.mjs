@@ -10,6 +10,7 @@ const sources = [
   "20261116034812_replacement_marketplace.sql",
   "20261116034826_attendance_delivery.sql",
   "20261116035802_operations_notification_integration.sql",
+  "20261116041140_website_enquiry_intake.sql",
 ];
 const names = new Set();
 for (const file of sources) {

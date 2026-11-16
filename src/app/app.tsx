@@ -128,6 +128,11 @@ const ReplacementMarketplacePage = lazy(() =>
     default: module.ReplacementMarketplacePage,
   })),
 );
+const EnquiriesPage = lazy(() =>
+  import("../features/enquiries/enquiries").then((module) => ({
+    default: module.EnquiriesPage,
+  })),
+);
 const PortalSearch = lazy(() =>
   import("../features/search/search").then((module) => ({
     default: module.PortalSearch,
@@ -255,6 +260,8 @@ export function App() {
                 path="replacements"
                 element={<ReplacementMarketplacePage />}
               />
+              <Route path="enquiries" element={<EnquiriesPage />} />
+              <Route path="enquiries/:id" element={<EnquiriesPage />} />
               <Route path="contracts" element={<ContractsPage />} />
               <Route path="finance" element={<FinancePage />} />
               <Route path="wiki" element={<WikiPage />} />

@@ -240,6 +240,14 @@ Preserves the prior resolver and composes readiness/support/delivery/replacement
 
 Strict non-trigger body diagnostics are additionally checked by [operations-lint-db-tests.mjs](../scripts/operations-lint-db-tests.mjs); canonical SQL lint/advisor/trigger and actual Auth/browser checks remain mandatory. [The extension ledger](OPERATIONS_EXTENSION_STATUS.md) distinguishes executed focused checks from full acceptance and release status.
 
+### 30. Private website enquiry intake and course planning
+
+Source: [20261116041140_website_enquiry_intake.sql](../supabase/migrations/20261116041140_website_enquiry_intake.sql).
+
+The existing Edge/gateway architecture accepts only an explicitly enabled trusted sender with a separate server credential and configured privacy-notice version. A service-only RPC validates and records minimal intake, sender limits and duplicate-safe receipts; public responses disclose no internal directory data. Current MFA organisation management handles private notes, responsibility, customer/contact creation and transactional conversion into an existing-style course run. No price or invoice is inferred from an enquiry. The inbox composes its current-authority resolver with all prior feature destinations. Public Website activation remains a separate transport/approval boundary.
+
+Tests: [enquiries-db-tests.mjs](../scripts/enquiries-db-tests.mjs), [enquiries-api-check.mjs](../scripts/enquiries-api-check.mjs), the Edge handler cases and actual isolated gateway checks. [Operating/configuration guide](WEBSITE_ENQUIRIES.md).
+
 ## The critical data flows
 
 **A job is claimed:** browser draft and idempotency key → public `claim_job` invoker → latest private implementation → current actor, locks, contract/qualification/capacity/time-conflict checks → immutable claim/schedule/revenue snapshots, memberships and notifications → transaction commit → confirmed UI. An error cannot leave a partially successful multi-day booking. Kanban calls permitted lifecycle actions; dragging a card does not create a claim.
