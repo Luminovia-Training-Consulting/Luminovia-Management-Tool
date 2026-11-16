@@ -8,19 +8,19 @@ Start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue guide](ISSUE_GUIDE.md)
 
 ## Reviewed rule layers
 
-The reviewed server snapshot on 16 November 2026 at **06:25 UTC** records all three `main` rulesets as **active**. Source configurations under `.github/rulesets/` preserve that reviewed active snapshot; later live settings may differ. Committing JSON does not activate a rule: the [server rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. Earlier disabled-rule, role-based-review, unrestricted-human-bypass and App-exception snapshots describe their recorded time. This reconciliation changes no server settings.
+The reviewed server snapshot on 16 November 2026 at **06:42:36 UTC** records all three `main` rulesets as **active**. Source configurations under `.github/rulesets/` preserve that reviewed active snapshot; later live settings may differ. Committing JSON does not activate a rule: the [server rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. Earlier disabled-rule, role-based-review, unrestricted-human-bypass and App-exception snapshots describe their recorded time. This reconciliation changes no server settings.
 
-| Layer                 | Live ID    | Source                                           | Exceptions                                                                              |
-| --------------------- | ---------- | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| History and integrity | `27315671` | [history.json](../.github/rulesets/history.json) | None.                                                                                   |
-| PRs and review        | `27329000` | [review.json](../.github/rulesets/review.json)   | Only `CarinaSchoppe` (`User:29256704`), with `bypass_mode: always` within this ruleset. |
-| Verified checks       | `27329142` | [checks.json](../.github/rulesets/checks.json)   | None.                                                                                   |
+| Layer                 | Live ID    | Source                                           | Exceptions                                                                     |
+| --------------------- | ---------- | ------------------------------------------------ | ------------------------------------------------------------------------------ |
+| History and integrity | `27315671` | [history.json](../.github/rulesets/history.json) | None.                                                                          |
+| PRs and review        | `27329000` | [review.json](../.github/rulesets/review.json)   | Only `CarinaSchoppe` (`User:29256704`), with `bypass_mode: pull_request` only. |
+| Verified checks       | `27329142` | [checks.json](../.github/rulesets/checks.json)   | None.                                                                          |
 
 The history layer preserves deletion protection, non-fast-forward protection, valid signatures, the existing deployment rule with an empty environment list and code-quality errors. It has no bypass actors.
 
-For actors without an exception, the review layer requires a PR, one independent approval, current last-push approval and resolved conversations. New pushes dismiss old approvals; code-owner review is not required. The same ruleset contains CodeQL scanning thresholds (`security_alerts_threshold: high_or_higher`, `alerts_threshold: errors`), a code-quality rule with `severity: errors`, and Copilot review with `review_on_push: true` and `review_draft_pull_requests: false`.
+The review layer contains only a pull-request rule: a PR, one independent approval, current last-push approval and resolved conversations are required. New pushes dismiss old approvals; code-owner review is not required. It has no separate scanning, quality or Copilot-review rule.
 
-Only `CarinaSchoppe` (`User:29256704`) has `bypass_mode: always` in this review ruleset. Her exception can bypass that layer's PR/review and added scanning, quality and Copilot conditions; it is not limited to a PR-only bypass. It does not bypass the separate required-check or history/signature rules. All fifteen statuses, including CodeQL and Code quality, and the history layer's own code-quality restriction remain mandatory. No repository role, other user, bot or App receives this exception, including when handling a PR authored by Carina. Administrators retain permission to edit settings; the recorded rules govern normal push and merge operations.
+Only `CarinaSchoppe` (`User:29256704`) has `bypass_mode: pull_request` in this review ruleset. She may merge a PR, including her own, without a separate approving review. This personal PR-only exception grants neither direct-main push permission nor a required-check or history/signature exception. All fifteen statuses, including CodeQL and Code quality, and the history layer's own code-quality restriction remain mandatory. No repository role, other user, bot or App receives this exception, including when handling a PR authored by Carina. Administrators retain permission to edit settings; the recorded rules govern normal push and merge operations.
 
 ## Required checks and merge controls
 
@@ -49,7 +49,7 @@ Repository `allow_auto_merge` is enabled. Native Auto-Merge waits for applicable
 
 ## Current enforcement and maintenance path
 
-The legacy fragment above is retained for published links. At the reviewed 06:25 UTC snapshot, rule activation was complete; this paragraph does not establish later enforcement. Required-check and history/signature rules have no bypass actors. The review ruleset has only the personal `always` exception for `CarinaSchoppe` (`User:29256704`), limited to that layer. No repository role, other user, bot or App has a review exception. Maintenance App `5776881` has no review, check or history exception. GitHub Actions `15368` and CodeQL `57789` identify check producers, not bypass actors.
+The legacy fragment above is retained for published links. At the reviewed 06:42:36 UTC snapshot, rule activation was complete; this paragraph does not establish later enforcement. Required-check and history/signature rules have no bypass actors. The review ruleset has only the personal PR-only exception for `CarinaSchoppe` (`User:29256704`), limited to its pull-request rule. No repository role, other user, bot or App has a review exception. Maintenance App `5776881` has no review, check or history exception. GitHub Actions `15368` and CodeQL `57789` identify check producers, not bypass actors.
 
 Current main contains daily component discovery, candidate verification and a promotion helper. These files do not prove that direct-main promotion can succeed under today's rules. It must fail closed if protection prevents it; do not restore an App exception or substitute a broadly privileged personal token. A replacement path must use a signed PR with the applicable review and exact-head checks. App registration or historical token/signature tests do not establish source delivery or successful operation under the current policy. See the [maintenance runbook](HOSTINGER_AUTOMATIC_UPDATES.md) for revision-specific evidence.
 

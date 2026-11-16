@@ -1,6 +1,6 @@
 # GitHub checks, security and coverage
 
-> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Maintainers/admins may bypass review through a PR only; nobody can bypass the 15 mandatory CI/security checks or up-to-date testing. The maintenance App has no rule exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
+> Server snapshot verified on 16 November 2026 at 06:42:36 UTC: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception (`bypass_mode: pull_request`). No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. Live server rules are authoritative. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
 
 Workflows run for pull requests and `main`; manual execution is also available. They need no VPS credentials, private Supabase keys or production data. Existing real application/database/API/browser checks remain in place.
 
@@ -59,7 +59,7 @@ Dependabot PRs receive suitable existing type/area/risk labels and run through t
 
 ## Maintainers and server-side rules
 
-The reviewed server snapshot on 16 November 2026 at 06:25 UTC records all three rulesets as active with fifteen mandatory statuses. Source snapshots preserve that reviewed active configuration; live server rules are authoritative and may later differ. Only `CarinaSchoppe` (`User:29256704`) has an `always` exception within the review ruleset. No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. The review ruleset also contains CodeQL scanning thresholds (`high_or_higher` security alerts and `errors` alerts), code-quality errors and Copilot review on pushes, excluding draft PRs. Carina's exception applies only within that layer; the separate mandatory security/check results and history/code-quality restrictions still apply.
+The reviewed server snapshot on 16 November 2026 at 06:42:36 UTC records all three rulesets as active with fifteen mandatory statuses. Source snapshots preserve that reviewed configuration; live server rules are authoritative and may later differ. Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception (`bypass_mode: pull_request`). No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. The review ruleset contains only its pull-request rule; security statuses and history/code-quality restrictions remain enforced in their separate layers.
 
 No App has a review or required-check exception. Earlier App-token tests belong to their recorded historical rules. See [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md#active-rule-layers) for the current configuration.
 

@@ -1,6 +1,6 @@
 # Creating, reviewing and merging pull requests
 
-> Reviewed server snapshot on 16 November 2026 at 06:25 UTC: Only `CarinaSchoppe` (`User:29256704`) has an `always` exception within the review ruleset. No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. Live server rules are authoritative and may later differ. [Reviewed rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
+> Reviewed server snapshot on 16 November 2026 at 06:42:36 UTC: Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception (`bypass_mode: pull_request`). No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. Live server rules are authoritative and may later differ. [Reviewed rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
 
 This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
@@ -87,7 +87,7 @@ Use `./portal github test` for an independent test of current `main`. `./portal 
 
 The repository contribution policy requires a pull request and at least one approval from another authorised person. Self-approval does not count as independent review; new changes dismiss old approvals. Approval of the latest push must come from someone other than its pusher. Resolve review conversations before merging and address feedback against current code.
 
-Only `CarinaSchoppe` (`User:29256704`) has a personal `always` exception within the review ruleset. She may bypass its PR, approval, conversation, scanning, quality and Copilot-review conditions. The exception follows the person acting, so another maintainer, administrator, bot or App gains none from a PR's author. It does not bypass the separate required-check or history/signature rules. GitHub may require an explicit bypass action for Carina. The [GitHub workflow guide](GITHUB_WORKFLOW.md#active-rule-layers) records the exact added scanning, quality and Copilot conditions.
+Only `CarinaSchoppe` (`User:29256704`) has a personal `pull_request` exception on the review rule. She may merge a PR, including her own, without an independent approval. This exception does not allow direct pushes to `main` or bypass the separate required-check or history/signature rules. The exception follows the person acting, so another maintainer, administrator, bot or App gains none from a PR's author. GitHub may require an explicit bypass action for Carina. The [GitHub workflow guide](GITHUB_WORKFLOW.md#active-rule-layers) records the exact review conditions.
 
 All fifteen required checks must pass against the current base:
 
@@ -101,11 +101,11 @@ All fifteen required checks must pass against the current base:
 
 Fourteen statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. All fifteen are required for merging. See [CI_QUALITY](CI_QUALITY.md).
 
-If main changes, update the PR as required and wait for checks against the current base. The required-check and history/signature rulesets have no bypass actors. The review ruleset grants only `CarinaSchoppe` (`User:29256704`) the personal `always` exception within that layer. No App has a review or required-check exception. Historical App-token tests grant no current merge authority; see the [current rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
+If main changes, update the PR as required and wait for checks against the current base. The required-check and history/signature rulesets have no bypass actors. The review ruleset grants only `CarinaSchoppe` (`User:29256704`) the personal PR-only exception within that layer. No App has a review or required-check exception. Historical App-token tests grant no current merge authority; see the [current rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
 
 ## Merge and publication
 
-Only `CarinaSchoppe` (`User:29256704`) may use the review ruleset's personal `always` exception when merging, including for her own PR, once the fifteen required checks and current-base requirement are satisfied. Other merge actors must satisfy the normal review requirements. Check the description, labels, tests and unresolved conversations first. Pending operational approvals remain separate from repository merge eligibility.
+Only `CarinaSchoppe` (`User:29256704`) may merge a PR without an independent approval through her personal PR-only exception, including for her own PR, once the fifteen required checks and current-base requirement are satisfied. Other merge actors must satisfy the normal review requirements. Check the description, labels, tests and unresolved conversations first. Pending operational approvals remain separate from repository merge eligibility.
 
 The separate Security outcomes are required for PR merge eligibility. Release publication still follows the explicit dependencies in `ci.yml`; the ruleset does not add them as release-job dependencies.
 

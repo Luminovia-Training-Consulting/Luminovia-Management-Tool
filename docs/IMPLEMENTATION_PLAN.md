@@ -1,10 +1,16 @@
 # Persistent implementation plan
 
+## Current PR13 continuation — latest personal policy and native fixture
+
+The verified06:42UTC correction restores active review27329000 with only User29256704 (`CarinaSchoppe`) in `pull_request` mode and its original independent-review conditions. There are no extra scanning/quality/Copilot rules in that layer. History/checks remain active, without bypass and with all15mandatory statuses/signatures. All older always/disabled/role-based records below are timestamped history; no server rule is written here.
+
+Both current PR13 `eb001c4` and PR23 `8047b94` heads are preserved in the normal ancestry. The native candidate port selector now reserves all3loopback listeners together before releasing them; a deterministic recycling regression, failure-cleanup cases and real TCP group rebind pass (11candidate+3documentation cases). The incoming isolation/ownership/unique3guards remain. An independent read-only review finds no actionable defect; actual Docker handoff/native preservation still requires final CI. PR27's current-base acceptance and actual main merge remain the preceding release dependency; no unaccepted PR27 bundle is published in this branch.
+
 ## PR13 preservation of actual merged PR22/main
 
 The remote PR13 branch was updated through GitHub to `eb001c4`, incorporating actual accepted main `319ab69`/PR22. This continuation retains that exact ancestry and the signed PR23 product composition, without force pushing. The maintenance publisher, no-retry-main behavior, workflow and CLI regressions are preserved. Current personal review-policy snapshot and its later external enforcement drift remain documented above older dated governance records. PR27 still owns the separately tested local-first/manual-publication controls and concurrent lifecycle-fixture correction; its updated current-base acceptance precedes final PR13 delivery.
 
-The later06:30UTC readback found the live review ruleset disabled externally, while history/checks remained active and unchanged. The committed active review JSON is explicitly the reviewed06:25UTC policy snapshot, not an applied server change. Current merge acceptance still requires all15checks and signatures; live review enforcement must be read separately. No server rule is modified or re-enabled by this task.
+Historical06:30UTC checkpoint: review enforcement was disabled externally while history/checks remained active. At that point source preserved the06:25UTC snapshot. The later06:42UTC readback supersedes both: active review, only CarinaSchoppe User29256704 in `pull_request` mode and no extra scanning/quality/Copilot rules in that layer. Source and present-tense guidance now follow that corrected configuration. No server rule is modified by this task.
 
 ## Final PR13 composition and acceptance boundary
 

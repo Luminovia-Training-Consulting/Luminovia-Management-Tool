@@ -1,14 +1,20 @@
 # Luminovia Portal — development work log
 
+## Current PR13 continuation — latest personal policy and native fixture
+
+The verified06:42UTC correction restores active review27329000 with only User29256704 (`CarinaSchoppe`) in `pull_request` mode and its original independent-review conditions. There are no extra scanning/quality/Copilot rules in that layer. History/checks remain active, without bypass and with all15mandatory statuses/signatures. All older always/disabled/role-based records below are timestamped history; no server rule is written here.
+
+Both current PR13 `eb001c4` and PR23 `8047b94` heads are preserved in the normal ancestry. The native candidate port selector now reserves all3loopback listeners together before releasing them; a deterministic recycling regression, failure-cleanup cases and real TCP group rebind pass (11candidate+3documentation cases). The incoming isolation/ownership/unique3guards remain. An independent read-only review finds no actionable defect; actual Docker handoff/native preservation still requires final CI. PR27's current-base acceptance and actual main merge remain the preceding release dependency; no unaccepted PR27 bundle is published in this branch.
+
 ## PR13 preservation of actual merged PR22/main
 
 The remote PR13 branch was updated through GitHub to `eb001c4`, incorporating actual accepted main `319ab69`/PR22. This continuation retains that exact ancestry and the signed PR23 product composition, without force pushing. The maintenance publisher, no-retry-main behavior, workflow and CLI regressions are preserved. Current personal review-policy snapshot and its later external enforcement drift remain documented above older dated governance records. PR27 still owns the separately tested local-first/manual-publication controls and concurrent lifecycle-fixture correction; its updated current-base acceptance precedes final PR13 delivery.
 
 Fresh local checks of the combined PR13/PR23 source pass254frontend tests in52files with unchanged coverage floors (S51.15/B46.15/F41.61/L52.96%),90runtime cases including14documentation/privacy/metadata cases, TypeScript, ESLint, source formatting, actionlint and the synthetic public-config PWA build. All26published SQL blobs and the entire incoming PR23 product/backend/operating/workflow/browser source remain intact. These checks do not claim complete database/API/browser/native acceptance; final required CI remains pending on the accepted current base.
 
-The later06:30UTC readback found the live review ruleset disabled externally, while history/checks remained active and unchanged. The committed active review JSON is explicitly the reviewed06:25UTC policy snapshot, not an applied server change. Current merge acceptance still requires all15checks and signatures; live review enforcement must be read separately. No server rule is modified or re-enabled by this task.
+Historical06:30UTC checkpoint: review enforcement was disabled externally while history/checks remained active. At that point source preserved the06:25UTC snapshot. The later06:42UTC readback supersedes both: active review, only CarinaSchoppe User29256704 in `pull_request` mode and no extra scanning/quality/Copilot rules in that layer. Source and present-tense guidance now follow that corrected configuration. No server rule is modified by this task.
 
-## 16 November 2026 — latest personal review-ruleset readback
+## 16 November 2026 — 06:25 review snapshot (superseded at06:42)
 
 At06:25UTC, the user-managed review ruleset changed again. Trusted human configuration and actual GitHub readback now grant only CarinaSchoppe User29256704 `bypass_mode: always` on the review ruleset, which additionally contains CodeQL high-or-higher/error gating, code-quality error gating and Copilot review on nondraft pushes. History/check rules still have no bypass and all15current-base CI checks plus signatures remain mandatory. Source snapshots and present-tense guides mirror this exact latest state without writing any server setting. Earlier PR-only or role-based descriptions below are dated checkpoints, not the effective configuration. This task continues to deliver through a reviewed PR and green CI.
 

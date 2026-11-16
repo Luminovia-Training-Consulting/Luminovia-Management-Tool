@@ -39,7 +39,7 @@ See [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) for operation, troubleshootin
 
 M6 connects the database, APIs and interface. Its complete application and native retained-data acceptance passed before [PR #8](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/8) merged. The later accepted `1341b16` checkpoint passed [all nine Main CI jobs](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43788369925), including 197 unit/component tests, 234 SQL cases, 18 actual business API suites, 72 desktop/mobile browser cases, persistence, built-PWA checks and real selfhost compatibility. New revisions need their own verification; these results do not imply complete production acceptance. See [QA_RESULTS](docs/QA_RESULTS.md) and [WORKLOG](docs/WORKLOG.md).
 
-The contribution guides merged in [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the independent GitHub preview launcher in [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). The catalogue contains 36 managed labels alongside nine preserved GitHub defaults. Public contribution guidance, issue forms and pull request instructions use English. The [GitHub administration guide](docs/GITHUB_WORKFLOW.md) documents the timestamped three-ruleset snapshot and subsequent live review-enforcement drift, 15 required checks without a history/check bypass, and the sole personal review-ruleset exception for `CarinaSchoppe` (GitHub user 29256704).
+The contribution guides merged in [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the independent GitHub preview launcher in [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). The catalogue contains 36 managed labels alongside nine preserved GitHub defaults. Public contribution guidance, issue forms and pull request instructions use English. The [GitHub administration guide](docs/GITHUB_WORKFLOW.md) documents the latest active three-ruleset snapshot and dated earlier review-enforcement changes, 15 required checks without a history/check bypass, and the sole personal PR-only review exception for `CarinaSchoppe` (GitHub user 29256704).
 
 ## Implemented routes
 
@@ -81,7 +81,7 @@ German/English and light/dark/system preferences persist locally. Server data ar
 
 ## GitHub checks and coverage
 
-Separate Build, Typecheck, Lint, Formatting, Code quality and Tests and coverage tasks complement the existing real SQL/API/browser/selfhost checks. Run `npm run test:coverage` for full-source frontend V8 reports and regression thresholds. CodeQL, Dependabot and CarinaSchoppe's personal review-ruleset exception are explained in [CI_QUALITY](docs/CI_QUALITY.md).
+Separate Build, Typecheck, Lint, Formatting, Code quality and Tests and coverage tasks complement the existing real SQL/API/browser/selfhost checks. Run `npm run test:coverage` for full-source frontend V8 reports and regression thresholds. CodeQL, Dependabot and CarinaSchoppe's personal PR-only review exception are explained in [CI_QUALITY](docs/CI_QUALITY.md).
 
 ## Stack and layout
 

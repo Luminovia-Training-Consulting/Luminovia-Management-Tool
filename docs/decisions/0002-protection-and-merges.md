@@ -1,10 +1,10 @@
 # 0002 — Main protection and merge authority
 
-Status: live server readback on 16 November 2026 at 06:25 UTC; supersedes earlier disabled-rule, role-based-review, personal PR-only and maintenance-App-exception snapshots.
+Status: live server snapshot verified on 16 November 2026 at 06:42:36 UTC. Live server rules are authoritative and may later differ from source snapshots.
 
-At that reviewed snapshot, all three rulesets were active. The source preserves this reviewed active configuration; live server rules are authoritative and may later differ. Default-branch signatures, deletion and force-push restrictions have no bypass actors. All **15 required checks** and strict current-base verification apply to every identity: fourteen contexts are bound to GitHub Actions integration `15368`, and the generated `CodeQL` findings result to integration `57789`.
+At that snapshot, all three rulesets were active. Default-branch signatures, deletion and force-push restrictions have no bypass actors. All **15 required checks** and strict current-base verification apply to every identity: fourteen contexts are bound to GitHub Actions integration `15368`, and the generated `CodeQL` findings result to integration `57789`.
 
-The review ruleset grants only `CarinaSchoppe` (`User:29256704`) `bypass_mode: always`. This exception applies only within that ruleset. It can bypass its PR/review conditions, CodeQL thresholds (`high_or_higher` security alerts, `errors` alerts), code-quality errors and Copilot review on pushes (drafts excluded). It does not bypass the separate required-check or history/signature layers, including their CodeQL, Code quality and history-integrity requirements. Other users, repository roles, bots and Apps have no exception. An author identity does not transfer Carina's exception to another merge actor.
+The review ruleset contains only its pull-request rule and grants only `CarinaSchoppe` (`User:29256704`) `bypass_mode: pull_request`. She may merge a PR, including her own, without a separate approving review. The personal PR-only exception does not authorize direct-main pushes or bypass the separate required-check and history/signature layers. Other users, repository roles, bots and Apps have no exception. An author identity does not transfer Carina's exception to another merge actor.
 
 Maintenance App `5776881` has no exception in any rule layer. Historical token tests establish no current merge authority. Existing direct-main promotion must fail closed if these rules prevent it; do not restore bypasses to make it work. Replacement maintenance needs its own verified source and operational evidence.
 
