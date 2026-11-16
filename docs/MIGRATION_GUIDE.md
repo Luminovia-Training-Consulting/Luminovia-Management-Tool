@@ -1,6 +1,6 @@
 # Reading and safely extending SQL migrations
 
-The first **24 entries describe the accepted main baseline** without changing its SQL bytes. The operational extension below adds five separately versioned migrations; its presence in source does not claim installation. Accepted migrations form part of the local preview, update and recovery fingerprints. Even an added SQL comment would produce a different source hash. New migrations are added separately; extend this guide and the relevant feature guides when that happens.
+The first **24 entries describe the accepted main baseline** without changing its SQL bytes. The operational extensions below add separately versioned migrations; its presence in source does not claim installation. Accepted migrations form part of the local preview, update and recovery fingerprints. Even an added SQL comment would produce a different source hash. New migrations are added separately; extend this guide and the relevant feature guides when that happens.
 
 The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API inventory. [ERD](ERD.md), [DEVELOPER_GUIDE](DEVELOPER_GUIDE.md) and the relevant feature guides explain how the parts connect.
 
