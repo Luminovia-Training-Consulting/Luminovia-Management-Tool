@@ -107,10 +107,7 @@ export function BuildingBlockSources({
         {t("sourceReference")}
       </h3>
       <p>
-        <strong>
-          {block.provider} {block.code}
-        </strong>{" "}
-        ·{" "}
+        <strong>{block.code}</strong> ·{" "}
         {t("sourceDuration", {
           days: block.duration_days,
           hours: block.duration_hours,
@@ -170,9 +167,7 @@ export function BuildingBlockCards({
         <article className="panel operations-course" key={block.id}>
           <div className="section-heading">
             <BookOpen className="blue" />
-            <span className="badge">
-              {block.provider} {block.code}
-            </span>
+            <span className="badge">{block.code}</span>
           </div>
           <h2>{block.title}</h2>
           <p>

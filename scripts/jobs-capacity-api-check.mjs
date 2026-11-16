@@ -683,7 +683,7 @@ await withApiFixture(
       "reasoned cancellation and audited replacement preserve snapshots/history and never double client spending",
     );
 
-    // Existing client and CBW source totals describe one offer, not a fee for an
+    // Existing client and course building-block source totals describe one offer, not a fee for an
     // arbitrary new number of positions. Exercise those real creation paths too.
     const request = await checked(
         client.client.rpc("create_client_request", {
@@ -709,14 +709,14 @@ await withApiFixture(
           .select("default_template_id")
           .eq("code", "LPC3")
           .single(),
-        "Read canonical CBW source without modifying it",
+        "Read canonical course building-block source without modifying it",
       ),
       template = await checked(
         admin.client.rpc("duplicate_course_template", {
           p_id: block.default_template_id,
-          p_title: `Fictional capacity CBW ${suffix}`,
+          p_title: `Fictional capacity course building-block ${suffix}`,
         }),
-        "Duplicate owned CBW source fixture",
+        "Duplicate owned course building-block source fixture",
       );
     templates.add(template);
     const run = await checked(
@@ -727,19 +727,19 @@ await withApiFixture(
           organisation_id: organisation,
           delivery_type: "online",
           time_zone: "Europe/Berlin",
-          venue: "Fictional capacity CBW room",
+          venue: "Fictional capacity course building-block room",
           sessions: sessions(10),
           published: false,
         },
       }),
-      "Create owned CBW course run",
+      "Create owned course building-block course run",
     );
     runs.add(run);
     const defaults = await checked(
         admin.client.rpc("course_run_job_defaults", { p_course_run_id: run }),
-        "Read immutable CBW source revision",
+        "Read immutable course building-block source revision",
       ),
-      cbwJob = track(
+      courseJob = track(
         await checked(
           admin.client.rpc("create_course_run_job", {
             p_course_run_id: run,
@@ -755,10 +755,10 @@ await withApiFixture(
             },
             p_client_id: randomUUID(),
           }),
-          "Create actual CBW-source offer",
+          "Create actual course building-block-source offer",
         ),
       );
-    for (const singleJob of [clientJob, cbwJob]) {
+    for (const singleJob of [clientJob, courseJob]) {
       const single = await metadata(singleJob);
       assert.equal(single.capacity, 1);
       assert.equal(single.capacity_basis, "single_position");
@@ -777,7 +777,7 @@ await withApiFixture(
       );
     }
     pass(
-      "actual client and CBW creation retain capacity one and reject retroactive budget multiplication",
+      "actual client and course building-block creation retain capacity one and reject retroactive budget multiplication",
     );
     console.log(`${checks} real Auth/MFA/REST job capacity checks passed.`);
   },

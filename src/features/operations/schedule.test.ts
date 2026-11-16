@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { weekdaySessions } from "./schedule";
 import { zonedInstant } from "../../lib/dates";
-describe("CBW weekday planning", () => {
+describe("Course weekday planning", () => {
   it("generates the complete ten-day block across weekends without changing local daily times", () => {
     const sessions = weekdaySessions("2027-03-26", "09:00", "17:00", 10);
     expect(sessions).toHaveLength(10);

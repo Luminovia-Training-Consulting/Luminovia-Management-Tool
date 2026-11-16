@@ -26,7 +26,7 @@ Use POST /rest/v1/rpc/{function} with JSON argument names shown below, the publi
 
 Client requests and new commission jobs use gross_amount/gross_total_amount. Legacy create_job remains a net-compensation compatibility operation; it does not fabricate unknown customer revenue. Lecturers' jobs/claims/invoice responses contain net compensation. Only admin/owner gross capabilities and own-organisation client projections expose relevant gross values. Money stays in original currency. Payment RPCs record tracking entries, not bank transfers.
 
-Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comments, jobs/claims/calendar, chats/wiki/forum, contracts/invoices/payments and client/revenue operations are included in this generated inventory. Use the feature security documents for exact resource eligibility.
+Profiles/reviews/labels/avatars, courses/enrolment/source provenance, resource comments, jobs/claims/calendar, chats/wiki/forum, contracts/invoices/payments and client/revenue operations are included in this generated inventory. Use the feature security documents for exact resource eligibility.
 
 | RPC | JSON argument names and SQL types | Result | Client execution |
 | --- | --- | --- | --- |
@@ -156,9 +156,9 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | wiki_pages_list | p_search text, p_locale text, p_category_id uuid, p_include_archived boolean | TABLE(id uuid, title text, locale text, category_id uuid, category_label_de text, category_label_en text, owner_id uuid, owner_name text, status text, version integer, published_version integer, has_draft boolean, updated_at timestamp with time zone) | Authenticated; resource/capability checks apply |
 | withdraw_resource_comment | p_comment_id uuid, p_version integer | void | Authenticated; resource/capability checks apply |
 
-## CBW source revisions and staff comments
+## Course source revisions and staff comments
 
-course_run_job_defaults returns the trusted source_revision, content/customer IDs and exact session references for an existing run. create_course_run_job accepts only financial/terms/status fields plus the reviewed source_revision and request identity; it locks the existing source and rejects stale previews or duplicate active offers. Staff comments use their own resource ACL, cursor/version and idempotency parameters. Client and learner access does not grant teaching-discussion access. See CBW_TEMPLATES.md and RESOURCE_COMMENTS.md.
+course_run_job_defaults returns the trusted source_revision, content/customer IDs and exact session references for an existing run. create_course_run_job accepts only financial/terms/status fields plus the reviewed source_revision and request identity; it locks the existing source and rejects stale previews or duplicate active offers. Staff comments use their own resource ACL, cursor/version and idempotency parameters. Client and learner access does not grant teaching-discussion access. See COURSE_BUILDING_BLOCKS.md and RESOURCE_COMMENTS.md.
 
 ## Files and API consistency
 

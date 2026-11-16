@@ -17,7 +17,7 @@
 - Do not expose lecturer contracts, private calendar events or private messages through an administrator-wide bypass.
 - All UI strings must support German and English; authored content stays in its authored language. Store time instants and preserve intended IANA time zones.
 - Keep the full target scope in the plan even when a milestone implements only a subset. Label implemented, tested, blocked, untested and pending honestly. Never invent tests, sent invitations, deployed URLs, hardware/platform acceptance or legal compliance.
-- Use fictional data only for development/tests. Do not copy personal CVs or customer records from brand sources.
+- Keep public documentation, filenames, UI examples and screenshots customer-neutral. Never name actual customers or publish their records; use clearly fictional organisations in development/tests. Actual customers and their account memberships are configured privately in the application. Do not copy personal CVs or customer records from brand sources.
 - Brand assets and provenance are in `public/brand` and `docs/BRAND_DESIGN_SYSTEM.md`. Keep the seven-colour palette and official logo.
 
 ## Collaboration and deliverables

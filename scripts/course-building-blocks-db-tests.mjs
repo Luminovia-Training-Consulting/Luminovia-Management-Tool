@@ -1,14 +1,14 @@
-/** Real isolated PostgreSQL checks for reviewed CBW sources and run-backed offers. */
+/** Real isolated PostgreSQL checks for reviewed course building-block sources and run-backed offers. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
-import { renderCatalogueSql } from "./cbw-catalogue.mjs";
+import { renderCatalogueSql } from "./course-catalogue.mjs";
 
 const catalogue = JSON.parse(
-  readFileSync(new URL("../data/cbw-building-blocks.json", import.meta.url)),
+  readFileSync(new URL("../data/course-building-blocks.json", import.meta.url)),
 );
-await withTestDatabase("cbw_test", async ({ sql, actor }) => {
+await withTestDatabase("course_test", async ({ sql, actor }) => {
   const ids = Object.fromEntries(
     [
       "admin",
@@ -20,7 +20,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
     ].map((name) => [name, randomUUID()]),
   );
   await sql(`insert into auth.users(id,email) values ${Object.entries(ids)
-    .map(([name, id]) => `(${q(id)},${q(`cbw-${name}@example.invalid`)})`)
+    .map(([name, id]) => `(${q(id)},${q(`course-${name}@example.invalid`)})`)
     .join(",")};
   insert into public.user_roles(user_id,role) values ${Object.entries(ids)
     .map(
@@ -55,7 +55,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
   const org = randomUUID();
   const sourceTemplate = block.default_template_id;
   await sql(
-    `insert into public.organisations(id,name) values(${q(org)},'Fictional CBW Academy');insert into public.client_organisation_memberships(user_id,organisation_id) values(${q(ids.client)},${q(org)});`,
+    `insert into public.organisations(id,name) values(${q(org)},'Fictional course building-block Academy');insert into public.client_organisation_memberships(user_id,organisation_id) values(${q(ids.client)},${q(org)});`,
   );
   const createRun = async (templateId = template, offset = 0) => {
     const start = new Date(Date.now() + (100 + offset) * 86400000);
@@ -211,7 +211,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
       template = await rpc(
         "admin",
         "duplicate_course_template",
-        [sourceTemplate, "Fictional reusable CBW course"],
+        [sourceTemplate, "Fictional reusable course building-block course"],
         "aal2",
       );
       const copied = JSON.parse(
@@ -695,6 +695,6 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
     },
   );
   console.log(
-    `\n${count} CBW curriculum/source/run-offer PostgreSQL checks passed.`,
+    `\n${count} course building-block curriculum/source/run-offer PostgreSQL checks passed.`,
   );
 });

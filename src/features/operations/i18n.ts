@@ -1,6 +1,6 @@
 import i18n from "../../lib/i18n";
 const pairs: Record<string, [string, string]> = {
-  buildingBlocks: ["CBW-Bausteine", "CBW building blocks"],
+  buildingBlocks: ["Kursbausteine", "Course building blocks"],
   blockDetails: ["Bausteindetails", "Building-block details"],
   planRun: ["Durchführung planen", "Plan course run"],
   createRunOffer: ["Auftrag daraus erstellen", "Create teaching offer"],
@@ -8,7 +8,7 @@ const pairs: Record<string, [string, string]> = {
     "Inhalte und Quellenbezug wiederverwenden; Kundenzuordnung, Termine und Honorar für jede Durchführung festlegen.",
     "Reuse content and source references; set the customer, sessions and fee for each run.",
   ],
-  sourceReference: ["CBW-Quellenreferenz", "CBW source reference"],
+  sourceReference: ["Quellenreferenz", "Source reference"],
   sourceDuration: [
     "{{days}} Tage · {{hours}} Std. laut Quelle",
     "{{days}} days · {{hours}} hours according to source",

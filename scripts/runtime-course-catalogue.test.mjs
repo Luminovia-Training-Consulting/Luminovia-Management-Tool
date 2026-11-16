@@ -5,8 +5,10 @@ import {
   buildCatalogue,
   cataloguePath,
   extractBuildingBlock,
+  originalCatalogue,
   renderCatalogueSql,
-} from "./cbw-catalogue.mjs";
+  renderNeutralCatalogueMigration,
+} from "./course-catalogue.mjs";
 
 const catalogue = JSON.parse(readFileSync(cataloguePath, "utf8"));
 const fixture = (
@@ -15,7 +17,7 @@ const fixture = (
   revision = "09.09.2026",
 ) =>
   `Formblatt\nKurzzeichen: ${code} Fachgebiet NW\nBausteinbezeichnung: Linux course\nErstellt am: 09.12.2022\nAutor: Private source author\nBausteindauer 10 Tage, 80 Std.\nBausteininhalt: ${syllabus}\nAls Dozent/-in freely designed\nTheorie/Praxis: 40:60\nAusstattung: Not curriculum\n\n${revision} 1\f`;
-test("CBW catalogue covers 24 source versions, 22 real codes and exact primary aliases", () => {
+test("course-building-block catalogue covers 24 source versions, 22 real codes and exact primary aliases", () => {
   assert.equal(catalogue.source_count, 24);
   assert.equal(catalogue.blocks.length, 22);
   assert.equal(
@@ -95,20 +97,34 @@ test("Alias dedupe compares actual syllabus and rejects conflicting definitions"
     /Conflicting sources/,
   );
 });
-test("Reviewed catalogue and the immutable generated migration data stay reproducible", () => {
+test("Neutral catalogue preserves every historical identity, curriculum and source byte reference", () => {
+  const original = originalCatalogue();
+  assert.equal(catalogue.blocks.length, original.blocks.length);
+  for (const current of catalogue.blocks) {
+    const prior = original.blocks.find((block) => block.id === current.id);
+    assert.deepEqual(
+      {
+        ...current,
+        provider: prior.provider,
+        description: prior.description,
+        notes: prior.notes,
+      },
+      prior,
+    );
+    assert.equal(current.provider, "course-catalogue");
+    assert.ok(current.description.startsWith(`Kursbaustein ${current.code}:`));
+    assert.ok(!JSON.stringify(current).includes(original.provider));
+  }
+});
+test("Reviewed neutral catalogue and the additive migration stay reproducible", () => {
   const migration = readFileSync(
     new URL(
-      "../supabase/migrations/20261115155208_cbw_building_block_templates.sql",
+      "../supabase/migrations/20261116032005_customer_neutral_course_catalogue.sql",
       import.meta.url,
     ),
     "utf8",
   );
-  const embedded = migration.slice(
-    migration.indexOf("-- BEGIN GENERATED CBW CATALOGUE"),
-    migration.indexOf("-- END GENERATED CBW CATALOGUE") +
-      "-- END GENERATED CBW CATALOGUE".length,
-  );
-  assert.equal(embedded, renderCatalogueSql(catalogue));
+  assert.equal(migration, renderNeutralCatalogueMigration(catalogue) + "\n");
   assert.throws(
     () =>
       extractBuildingBlock(
@@ -120,10 +136,21 @@ test("Reviewed catalogue and the immutable generated migration data stay reprodu
   );
 });
 test("SQL generation rejects either nested dollar delimiter in future source content", () => {
-  for (const delimiter of ["$cbw_catalogue$", "$cbw_import$"])
+  for (const delimiter of ["$course_catalogue$", "$course_import$"])
     assert.throws(
       () =>
         renderCatalogueSql({ ...catalogue, untrusted_future_note: delimiter }),
+      /SQL delimiter occurs in source/,
+    );
+  for (const delimiter of ["$neutral_rows$", "$neutral_import$"])
+    assert.throws(
+      () =>
+        renderNeutralCatalogueMigration({
+          ...catalogue,
+          blocks: catalogue.blocks.map((block, index) =>
+            index === 0 ? { ...block, notes: delimiter } : block,
+          ),
+        }),
       /SQL delimiter occurs in source/,
     );
 });

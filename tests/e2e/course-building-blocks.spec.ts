@@ -11,7 +11,7 @@ import {
 
 test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
-  "CBW writes require the canonical disposable project.",
+  "Course writes require the canonical disposable project.",
 );
 async function a11y(page: Page) {
   await page.evaluate(() => document.fonts.ready);
@@ -30,14 +30,14 @@ async function a11y(page: Page) {
     ),
   ).toBe(true);
 }
-test("CBW source template plans ten real sessions and one linked net-only teaching claim", async ({
+test("Course source template plans ten real sessions and one linked net-only teaching claim", async ({
   page,
   browser,
 }, testInfo) => {
   test.setTimeout(120000);
   const tag = randomUUID().slice(0, 8),
-    admin = await actor(`CBW Administration ${tag}`, "admin"),
-    teacher = await actor(`CBW Lecturer ${tag}`, "lecturer");
+    admin = await actor(`Course Administration ${tag}`, "admin"),
+    teacher = await actor(`Course Lecturer ${tag}`, "lecturer");
   const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const block = await checked(
     service
@@ -53,12 +53,12 @@ test("CBW source template plans ten real sessions and one linked net-only teachi
   await checked(
     service
       .from("organisations")
-      .insert({ id: org, name: `Fictional CBW UI ${tag}` }),
+      .insert({ id: org, name: `Fictional Course UI ${tag}` }),
   );
   await adminLogin(page, admin);
   await page.goto("/courses");
   await page
-    .getByRole("button", { name: "CBW-Bausteine", exact: true })
+    .getByRole("button", { name: "Kursbausteine", exact: true })
     .click();
   await page
     .getByRole("searchbox", { name: "Suchen", exact: true })
@@ -82,7 +82,7 @@ test("CBW source template plans ten real sessions and one linked net-only teachi
   ).toHaveCSS("border-top-width", "5px");
   await a11y(page);
   await page.screenshot({
-    path: `docs/screenshots/${testInfo.project.name}-cbw-catalogue-dark-en.png`,
+    path: `docs/screenshots/${testInfo.project.name}-course-building-blocks-catalogue-dark-en.png`,
     fullPage: true,
   });
   await page.getByLabel("Language", { exact: true }).selectOption("de");
@@ -90,7 +90,7 @@ test("CBW source template plans ten real sessions and one linked net-only teachi
   await page
     .getByRole("button", { name: "Bausteindetails: LPC3", exact: true })
     .click();
-  const sourceDialog = page.getByRole("dialog", { name: /CBW LPC3/ });
+  const sourceDialog = page.getByRole("dialog", { name: /LPC3/ });
   await expect(
     sourceDialog.getByText("Bausteinbeschreibung-LPIC3.pdf", { exact: true }),
   ).toBeVisible();
@@ -102,7 +102,7 @@ test("CBW source template plans ten real sessions and one linked net-only teachi
     .first()
     .click();
   await expect(sourceDialog.locator("code").first()).toHaveText(primary.sha256);
-  const note = `Fictional reusable CBW note ${tag} <script>literal only</script>`;
+  const note = `Fictional reusable Course note ${tag} <script>literal only</script>`;
   await sourceDialog.getByLabel("Dein Kommentar", { exact: true }).fill(note);
   await sourceDialog
     .getByRole("button", { name: "Kommentar veröffentlichen", exact: true })
@@ -110,7 +110,7 @@ test("CBW source template plans ten real sessions and one linked net-only teachi
   await expect(sourceDialog.getByText(note, { exact: true })).toBeVisible();
   await a11y(page);
   await page.screenshot({
-    path: `docs/screenshots/${testInfo.project.name}-cbw-source-reference.png`,
+    path: `docs/screenshots/${testInfo.project.name}-course-building-blocks-source-reference.png`,
     fullPage: true,
   });
   await sourceDialog
@@ -134,7 +134,7 @@ test("CBW source template plans ten real sessions and one linked net-only teachi
   await expect(runDialog.getByLabel(/^Ende \d+$/)).toHaveCount(10);
   await runDialog
     .getByLabel("Ort / Zugangslink", { exact: true })
-    .fill("Fictional CBW online classroom");
+    .fill("Fictional Course online classroom");
   await runDialog
     .getByRole("button", { name: "Speichern", exact: true })
     .click();
@@ -149,7 +149,7 @@ test("CBW source template plans ten real sessions and one linked net-only teachi
   expect(run.template_id).toBe(block.default_template_id);
   expect(run.course_sessions).toHaveLength(10);
   await page.goto(`/courses?run=${run.id}`);
-  const courseDialog = page.getByRole("dialog", { name: /CBW LPC3/ });
+  const courseDialog = page.getByRole("dialog", { name: /LPC3/ });
   await courseDialog
     .getByRole("link", { name: "Auftrag daraus erstellen", exact: true })
     .click();
@@ -167,7 +167,7 @@ test("CBW source template plans ten real sessions and one linked net-only teachi
     .fill("1000");
   await page
     .getByLabel("Konditionen", { exact: true })
-    .fill(`Fictional CBW complete-block terms ${tag}`);
+    .fill(`Fictional Course complete-block terms ${tag}`);
   await page.getByLabel("Sofort veröffentlichen", { exact: true }).check();
   await page
     .getByLabel("Gültiger Rahmenvertrag erforderlich", { exact: true })
@@ -219,7 +219,7 @@ test("CBW source template plans ten real sessions and one linked net-only teachi
     ).toBeVisible();
     await expect(
       lecturerPage.getByRole("region", {
-        name: "CBW-Quellenreferenz",
+        name: "Quellenreferenz",
         exact: true,
       }),
     ).toHaveCSS("border-top-style", "solid");
@@ -245,7 +245,7 @@ test("CBW source template plans ten real sessions and one linked net-only teachi
     expect(claims[0].assignment_sessions).toHaveLength(10);
     await a11y(lecturerPage);
     await lecturerPage.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-cbw-linked-job.png`,
+      path: `docs/screenshots/${testInfo.project.name}-course-building-blocks-linked-job.png`,
       fullPage: true,
     });
   } finally {
