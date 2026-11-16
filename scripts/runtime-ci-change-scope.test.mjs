@@ -1,5 +1,8 @@
-/** Exercise classification and real Git argv without spawning child processes. */
+/** Exercise draft-event provenance, path routing and real Git argv with fictional metadata and no services. */
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import {
   classifyChangePaths,
@@ -10,6 +13,38 @@ import {
 const head = "a".repeat(40);
 const base = "b".repeat(40);
 const contribution = "c".repeat(40);
+const repository = "Luminovia-Training-Consulting/Luminovia-Management-Tool";
+
+/** Model the canonical runner event as public JSON data, without API requests or actual account records. */
+function draftEvent({ draft = true, action = "synchronize" } = {}) {
+  const payload = {
+    action,
+    number: 34,
+    repository: { full_name: repository },
+    pull_request: {
+      number: 34,
+      state: "open",
+      draft,
+      base: { sha: base, ref: "main", repo: { full_name: repository } },
+      head: { sha: contribution },
+    },
+  };
+  const reads = [];
+  return {
+    payload,
+    reads,
+    options: {
+      eventPath: "/fictional/github-event.json",
+      expectedRef: "refs/pull/34/merge",
+      expectedRepository: repository,
+      readEvent: (path) => {
+        reads.push(path);
+        assert.equal(path, "/fictional/github-event.json");
+        return JSON.stringify(payload);
+      },
+    },
+  };
+}
 
 test("only known documentation and contribution templates use the docs profile", () => {
   for (const path of [
@@ -110,6 +145,7 @@ test("empty, invalid and ambiguous changed paths fail closed", () => {
     assert.equal(classifyChangePaths(paths).profile, "full");
 });
 
+/** Model only the three read-only Git commands; unexpected arguments fail the fixture. */
 function mergeGit({
   checkout = head,
   parents = `${head} ${base} ${contribution}\n`,
@@ -138,9 +174,225 @@ function mergeGit({
   };
 }
 
+test("ready UI and documentation PRs require complete acceptance before merging", () => {
+  for (const path of ["src/features/operations/courses.tsx", "README.md"]) {
+    const fixture = mergeGit({ diff: path + "\0" });
+    assert.equal(
+      detectChangeScope({
+        ...draftEvent({ draft: false }).options,
+        eventName: "pull_request",
+        expectedSha: head,
+        git: fixture.git,
+      }).profile,
+      "full",
+    );
+    assert.deepEqual(fixture.calls, []);
+  }
+});
+
+test("bound draft UI and docs events preserve the whitelist optimizations, including fork contributions", () => {
+  for (const action of ["opened", "reopened", "synchronize"])
+    for (const [path, profile] of [
+      ["src/features/operations/courses.tsx", "standard"],
+      ["README.md", "docs"],
+    ]) {
+      const event = draftEvent({ action });
+      event.payload.pull_request.head.repo = {
+        full_name: "fictional-contributor/portal-fork",
+      };
+      const fixture = mergeGit({ diff: path + "\0" });
+      assert.equal(
+        detectChangeScope({
+          ...event.options,
+          eventName: "pull_request",
+          expectedSha: head,
+          git: fixture.git,
+        }).profile,
+        profile,
+      );
+      assert.deepEqual(event.reads, ["/fictional/github-event.json"]);
+      assert.equal(fixture.calls.length, 3);
+    }
+});
+
+test("ready_for_review remains full even when a stale payload still claims draft true", () => {
+  for (const path of ["README.md", "src/features/jobs/jobs.tsx"]) {
+    const fixture = mergeGit({ diff: path + "\0" });
+    assert.equal(
+      detectChangeScope({
+        ...draftEvent({ action: "ready_for_review" }).options,
+        eventName: "pull_request",
+        expectedSha: head,
+        git: fixture.git,
+      }).profile,
+      "full",
+    );
+    assert.deepEqual(fixture.calls, []);
+  }
+});
+
+test("missing, false or non-boolean draft state cannot enable a reduced profile", () => {
+  for (const draft of [undefined, null, false, 0, 1, "true", "false", {}, []]) {
+    const event = draftEvent();
+    event.payload.pull_request.draft = draft;
+    assert.equal(
+      detectChangeScope({
+        ...event.options,
+        eventName: "pull_request",
+        expectedSha: head,
+        git: () => assert.fail("unverified draft state cannot inspect paths"),
+      }).profile,
+      "full",
+    );
+  }
+});
+
+test("wrong repositories, PR identities, actions and merge-parent snapshots fail full before path classification", () => {
+  for (const change of [
+    (event) => delete event.repository,
+    (event) => {
+      event.repository.full_name = "foreign/repository";
+    },
+    (event) => {
+      event.pull_request.base.repo.full_name = "foreign/repository";
+    },
+    (event) => {
+      event.pull_request.base.ref = "other-branch";
+    },
+    (event) => {
+      event.number = 0;
+    },
+    (event) => {
+      event.number = "34";
+    },
+    (event) => {
+      event.number = Number.MAX_SAFE_INTEGER + 1;
+    },
+    (event) => {
+      event.pull_request.number = 35;
+    },
+    (event) => {
+      event.pull_request.state = "closed";
+    },
+    (event) => {
+      event.action = "unknown";
+    },
+    (event) => delete event.action,
+    (event) => delete event.pull_request,
+    (event) => {
+      event.pull_request.base.sha = contribution;
+    },
+    (event) => {
+      event.pull_request.head.sha = base;
+    },
+    (event) => {
+      event.pull_request.base.sha = "invalid";
+    },
+    (event) => {
+      event.pull_request.head.sha = null;
+    },
+  ]) {
+    const event = draftEvent();
+    change(event.payload);
+    const fixture = mergeGit();
+    assert.equal(
+      detectChangeScope({
+        ...event.options,
+        eventName: "pull_request",
+        expectedSha: head,
+        git: fixture.git,
+      }).profile,
+      "full",
+    );
+    assert(!fixture.calls.some((args) => args[0] === "diff"));
+  }
+});
+
+test("invalid runner repository, PR ref, event path and unreadable or malformed event data fail full", () => {
+  for (const options of [
+    { expectedRepository: "foreign/repository" },
+    { expectedRepository: "" },
+    { expectedRef: "refs/pull/35/merge" },
+    { expectedRef: "refs/pull/034/merge" },
+    { expectedRef: "refs/pull/0/merge" },
+    { expectedRef: "refs/pull/34/head" },
+    { expectedRef: "refs/heads/main" },
+    { expectedRef: "refs/pull/99999999999999999999/merge" },
+    { expectedRef: "" },
+    { eventPath: "" },
+    { eventPath: null },
+    { eventPath: "relative/event.json" },
+    {
+      readEvent: () => {
+        throw new Error("FICTIONAL_UNREADABLE_EVENT");
+      },
+    },
+    { readEvent: () => "FICTIONAL_MALFORMED_EVENT" },
+    ...[null, [], {}, true, "fictional"].map((value) => ({
+      readEvent: () => JSON.stringify(value),
+    })),
+  ]) {
+    const result = detectChangeScope({
+      ...draftEvent().options,
+      ...options,
+      eventName: "pull_request",
+      expectedSha: head,
+      git: () => assert.fail("invalid event data cannot inspect paths"),
+    });
+    assert.equal(result.profile, "full");
+    assert.doesNotMatch(JSON.stringify(result), /FICTIONAL_|event\.json/);
+  }
+});
+
+test("default runner variables read the actual event file and missing provenance remains full", (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "portal-draft-scope-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const eventPath = join(directory, "event.json");
+  const values = {
+    GITHUB_EVENT_NAME: "pull_request",
+    GITHUB_SHA: head,
+    GITHUB_REPOSITORY: repository,
+    GITHUB_REF: "refs/pull/34/merge",
+    GITHUB_EVENT_PATH: eventPath,
+  };
+  const previous = Object.fromEntries(
+    Object.keys(values).map((key) => [key, process.env[key]]),
+  );
+  Object.assign(process.env, values);
+  try {
+    writeFileSync(eventPath, JSON.stringify(draftEvent().payload), {
+      mode: 0o600,
+    });
+    assert.equal(
+      detectChangeScope({ git: mergeGit().git }).profile,
+      "standard",
+    );
+    writeFileSync(
+      eventPath,
+      JSON.stringify(draftEvent({ draft: false }).payload),
+    );
+    assert.equal(detectChangeScope({ git: mergeGit().git }).profile, "full");
+    writeFileSync(eventPath, JSON.stringify(draftEvent().payload));
+    for (const key of [
+      "GITHUB_EVENT_PATH",
+      "GITHUB_REF",
+      "GITHUB_REPOSITORY",
+    ]) {
+      delete process.env[key];
+      assert.equal(detectChangeScope({ git: mergeGit().git }).profile, "full");
+      process.env[key] = values[key];
+    }
+  } finally {
+    for (const [key, value] of Object.entries(previous))
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+  }
+});
+
 test("PR diff compares the verified merge first parent to the exact checked-out merge, without rename suppression", () => {
   const fixture = mergeGit();
   const result = detectChangeScope({
+    ...draftEvent().options,
     eventName: "pull_request",
     expectedSha: head,
     git: fixture.git,
@@ -156,6 +408,7 @@ test("PR diff compares the verified merge first parent to the exact checked-out 
   });
   assert.equal(
     detectChangeScope({
+      ...draftEvent().options,
       eventName: "pull_request",
       expectedSha: head,
       git: renamed.git,
@@ -167,6 +420,7 @@ test("PR diff compares the verified merge first parent to the exact checked-out 
   });
   assert.equal(
     detectChangeScope({
+      ...draftEvent().options,
       eventName: "pull_request",
       expectedSha: head,
       git: deleted.git,
@@ -188,6 +442,7 @@ test("main, manual, missing events and unrecognized event types always use full 
       detectChangeScope({
         eventName: eventName ?? "",
         expectedSha: head,
+        readEvent: () => assert.fail("non-PR events do not read event files"),
         git: () => assert.fail("non-PR events do not need Git"),
       }).profile,
       "full",
@@ -198,6 +453,7 @@ test("main, manual, missing events and unrecognized event types always use full 
 test("requested profiles, labels and supplied changed paths cannot replace the actual risky merge diff", () => {
   const fixture = mergeGit({ diff: "supabase/functions/invite/index.ts\0" });
   const result = detectChangeScope({
+    ...draftEvent().options,
     eventName: "pull_request",
     expectedSha: head,
     git: fixture.git,
@@ -227,6 +483,7 @@ test("incorrect revision, missing parents, empty diff and every Git failure requ
     const fixture = mergeGit(options);
     assert.equal(
       detectChangeScope({
+        ...draftEvent().options,
         eventName: "pull_request",
         expectedSha: head,
         git: fixture.git,

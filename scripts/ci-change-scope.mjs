@@ -1,13 +1,15 @@
-/** Conservative CI routing: uncertain changes receive complete acceptance.
+/** Conservative draft CI routing: ready PRs and uncertain changes receive complete acceptance.
  * This chooses work to run, never authorizes a release or replaces a test gate.
  * PR scope comes from the checked-out merge result, including deleted paths.
  */
 import { execFileSync } from "node:child_process";
-import { appendFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { appendFileSync, readFileSync } from "node:fs";
+import { isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const sha = /^[a-f0-9]{40}$/;
+const repository = "Luminovia-Training-Consulting/Luminovia-Management-Tool";
+const draftActions = new Set(["opened", "reopened", "synchronize"]);
 const full = (...reasons) => ({ profile: "full", reasons });
 const documentation = /\.(?:md|txt|rst|pdf|png|jpe?g|webp|gif|svg)$/i;
 const staticAsset = /\.(?:css|png|jpe?g|webp|gif|svg|ico|woff2?|ttf|otf)$/i;
@@ -104,13 +106,17 @@ export function classifyChangePaths(paths) {
       };
 }
 
-/** The only fast path is a genuine two-parent PR merge matching GITHUB_SHA.
+/** Only a genuine draft event bound to its PR ref and actual two-parent merge may use a fast profile.
  * No label, requested profile, base override or changed-file environment is
- * consulted. Git failures, empty diffs and unexpected checkout shapes fail full.
+ * consulted. Missing event data, ready PRs, Git failures and ambiguous history fail full.
  */
 export function detectChangeScope({
   eventName = process.env.GITHUB_EVENT_NAME,
   expectedSha = process.env.GITHUB_SHA,
+  expectedRepository = process.env.GITHUB_REPOSITORY,
+  expectedRef = process.env.GITHUB_REF,
+  eventPath = process.env.GITHUB_EVENT_PATH,
+  readEvent = (path) => readFileSync(path, "utf8"),
   git = (args) =>
     execFileSync("git", args, {
       encoding: "utf8",
@@ -125,6 +131,36 @@ export function detectChangeScope({
   if (!sha.test(expectedSha || ""))
     return full("The PR event did not identify an exact checked-out revision.");
   try {
+    if (typeof eventPath !== "string" || !isAbsolute(eventPath))
+      return full("A canonical runner event path is required for draft scope.");
+    const event = JSON.parse(readEvent(eventPath));
+    if (event?.action === "ready_for_review")
+      return full("Ready-for-review events require complete acceptance.");
+    const pr = event?.pull_request;
+    const ref =
+      typeof expectedRef === "string"
+        ? /^refs\/pull\/([1-9][0-9]*)\/merge$/.exec(expectedRef)
+        : null;
+    if (
+      expectedRepository !== repository ||
+      event?.repository?.full_name !== repository ||
+      !draftActions.has(event?.action) ||
+      pr?.draft !== true ||
+      pr?.state !== "open" ||
+      !Number.isSafeInteger(event.number) ||
+      event.number <= 0 ||
+      pr.number !== event.number ||
+      !ref ||
+      !Number.isSafeInteger(Number(ref[1])) ||
+      Number(ref[1]) !== event.number ||
+      pr.base?.repo?.full_name !== repository ||
+      pr.base?.ref !== "main" ||
+      typeof pr.base?.sha !== "string" ||
+      !sha.test(pr.base.sha) ||
+      typeof pr.head?.sha !== "string" ||
+      !sha.test(pr.head.sha)
+    )
+      return full("Only a verified open draft PR snapshot may reduce CI work.");
     const head = git(["rev-parse", "--verify", "HEAD"]).trim();
     if (head !== expectedSha)
       return full("The checkout does not match the PR event revision.");
@@ -137,6 +173,8 @@ export function detectChangeScope({
       !parents.every((value) => sha.test(value))
     )
       return full("The PR checkout is not an inspectable two-parent merge.");
+    if (parents[1] !== pr.base.sha || parents[2] !== pr.head.sha)
+      return full("The draft event does not match the tested base and source.");
     const changed = git([
       "diff",
       "--name-only",
@@ -151,7 +189,7 @@ export function detectChangeScope({
     return classifyChangePaths(changed.slice(0, -1).split("\0"));
   } catch {
     return full(
-      "Git scope could not be verified; complete acceptance is required.",
+      "Draft event or Git scope could not be verified; complete acceptance is required.",
     );
   }
 }
