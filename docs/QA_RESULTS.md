@@ -2,6 +2,12 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## Optional job contacts/reference — feature browser cases pass; whole acceptance pending
+
+PR31 signed96c3c5c passes268frontend tests/53files and unchanged coverage floors (S52.08/B47.4/F42.52/L53.93%). Twelve real briefing PostgreSQL groups include role/MFA/privacy/CAS/retry/Unicode boundaries; the imported lifecycle fixture also passes12groups. Native3c4ac24 passes27migrations,21actual API/invitation suites, exact retained password/MFA/roles/private-event/scanned bytes, TLS/WebSockets,50claims and checked cleanup.
+
+Actual complete local projectea5eccf0 passes all preceding source/retention/SQL/API/invitation stages, then **89/90browser cases**. Both new feature desktop/mobile cases pass and their four fictional DE/light and EN/dark screenshots were inspected. [Exact CI failure](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43815873906/job/133128105342) matches the sole existing mobile Kanban keyboard failure. Whole acceptance and PWA completion are not claimed. Its unchanged PR12-owned correction is narrowly imported; fresh integrated browser/CI results remain required. Owned local containers, volumes and network were verified removed; normal/foreign services remain untouched.
+
 ## Current roles/pricing/welcome/PR-preview extension — combined acceptance pending
 
 [PR18](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/18) preserves accepted M6 and all historical commercial records. The current combined run is a separate gate. Focused frontend:215cases/49files, S48.61/B43.47/F38.76/L50.43%; lint/type/format/build and the source graph pass. Preview/runtime/community guard combination passes36cases; three additional execution-based QA bootstrap cases pass.

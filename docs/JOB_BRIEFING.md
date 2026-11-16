@@ -35,3 +35,12 @@ The actor/job-scoped `job-briefing` query is refreshed after real claims and can
 - `tests/e2e/job-briefing.spec.ts`: actual management editing, lecturer claim/cancellation, DE/EN, dark theme, responsive layout and axe on desktop/mobile.
 
 Executed results belong in WORKLOG/QA_RESULTS and the exact PR CI. Physical-device acceptance and production installation are separate and are not claimed by these checks.
+
+## Observed browser examples
+
+Both new browser journeys passed on96c3c5c with fictional data. The complete run still requires correction/repetition for its separate existing mobile-board failure; see QA_RESULTS.
+
+| Layout | Management, German/light | Revoked contact, English/dark |
+| --- | --- | --- |
+| Desktop | [Saved optional details](screenshots/desktop-chromium-job-briefing-management-de-light.png) | [Contact hidden after cancellation](screenshots/desktop-chromium-job-briefing.png) |
+| Mobile | [Saved optional details](screenshots/mobile-chromium-job-briefing-management-de-light.png) | [Contact hidden after cancellation](screenshots/mobile-chromium-job-briefing.png) |

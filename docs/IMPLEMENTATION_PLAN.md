@@ -8,7 +8,8 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Add private RLS storage, current role/MFA/resource checks, immutable commercial separation, strict validation and versioned/idempotent saves.
 - [x] Add the DE/EN detail editor and post-create shortcut; 268 frontend tests and 12 isolated PostgreSQL groups pass.
 - [x] Pass the actual local ten-service native26→27 retained-data rehearsal and all21 Auth/API/invitation suites on585c883 and corrected3c4ac24, including complete owned cleanup.
-- [ ] Complete desktop/mobile/DE/EN/dark accessibility and full local browser acceptance; fix concrete failures without relaxing gates.
+- [x] Pass both new real desktop/mobile contact/reference cases locally on96c3c5c, including claim/cancellation, DE/EN/light/dark, axe and inspected fictional screenshots.
+- [ ] Repeat full acceptance after importing PR12's existing mobile-board keyboard correction: initial local/CI96c3c5c has89/90browser cases and the same unrelated board failure; PWA is not reached.
 - [ ] Deliver signed commits/push/prepared PR, observe exact required green CI and hand merge sequencing to the authorised coordinator. Do not trigger deployment/release workflows.
 
 ## Coordinated PR18 integration
