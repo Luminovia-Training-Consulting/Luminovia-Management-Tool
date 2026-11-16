@@ -1,6 +1,6 @@
 # Pull Requests erstellen, prüfen und mergen
 
-> Stand 16. November 2026: Das Review-/Merge-Regelwerk unten ist vorbereitet. Seine serverseitige Aktivierung wartet auf die Freigabe einer beschränkten Wartungs-App; die bisherigen Hauptzweig-Regeln bleiben bis dahin wirksam. [Aktueller Aktivierungsstand](GITHUB_WORKFLOW.md#aktivierung-noch-ausstehend).
+> Stand 16. November 2026: Maintainer und Administratoren haben eine dauerhafte `always`-Ausnahme zum direkten Merge. Die zusätzlichen Review-/Checkpflichten für gewöhnliche Beitragende bleiben bis zum nachgewiesenen Wartungs-App-Pfad deaktiviert vorbereitet. [Aktueller Aktivierungsstand](GITHUB_WORKFLOW.md#aktivierung-noch-ausstehend).
 
 Dieser Leitfaden beschreibt die Abnahme einer Änderung. Einrichtung und lokale Entwicklung stehen in [CONTRIBUTING](../CONTRIBUTING.md) und [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); Meldungen beginnen mit dem [Issue-Leitfaden](ISSUE_GUIDE.md).
 
@@ -37,18 +37,18 @@ Jeder PR braucht **genau ein Typ-Label**, **mindestens ein Bereichslabel** und *
 
 Wähle alle tatsächlich wesentlich betroffenen Bereiche. Die ursprünglichen Bereichslabels bleiben erhalten: `area:frontend`, `area:backend`, `area:database`, `area:auth`, `area:files`, `area:finance`, `area:courses`, `area:devops` und `area:github`. Zehn weitere Bereiche ergänzen die Einordnung:
 
-| Bereich | Verwendung |
-| --- | --- |
-| `area:chat` | Nachrichten, Kurs-/Interessengruppen und Realtime |
-| `area:knowledge` | Wiki, Forum und Wissensverwaltung |
-| `area:calendar` | Termine, Verfügbarkeit, Sperrzeiten und Zeitzonen |
-| `area:notifications` | Posteingang, Meldungen und Zustellpräferenzen |
-| `area:profiles` | Profile, Qualifikationen und Dozierendenverzeichnis |
-| `area:clients` | Auftraggeberkonten, Organisationen und Geschäftskontakte |
-| `area:pwa` | Installation, Service Worker, Offlinezustand und Updates |
-| `area:testing` | QA, Regressionen, Browser- und Berechtigungsprüfungen |
-| `area:docs` | Anleitungen, API-Referenzen und Betriebsdokumentation |
-| `area:taxonomy` | Themen, Werkzeuge, Programmiersprachen und Hierarchien |
+| Bereich              | Verwendung                                               |
+| -------------------- | -------------------------------------------------------- |
+| `area:chat`          | Nachrichten, Kurs-/Interessengruppen und Realtime        |
+| `area:knowledge`     | Wiki, Forum und Wissensverwaltung                        |
+| `area:calendar`      | Termine, Verfügbarkeit, Sperrzeiten und Zeitzonen        |
+| `area:notifications` | Posteingang, Meldungen und Zustellpräferenzen            |
+| `area:profiles`      | Profile, Qualifikationen und Dozierendenverzeichnis      |
+| `area:clients`       | Auftraggeberkonten, Organisationen und Geschäftskontakte |
+| `area:pwa`           | Installation, Service Worker, Offlinezustand und Updates |
+| `area:testing`       | QA, Regressionen, Browser- und Berechtigungsprüfungen    |
+| `area:docs`          | Anleitungen, API-Referenzen und Betriebsdokumentation    |
+| `area:taxonomy`      | Themen, Werkzeuge, Programmiersprachen und Hierarchien   |
 
 Eine Dokumentationsänderung erhält `area:docs` und gegebenenfalls den dokumentierten Fachbereich; allgemeine Beitragsregeln zusätzlich `area:github`. Ein Test allein erfordert nicht jedes vom Gesamtsystem verwendete Label. Umgekehrt braucht eine Funktionsänderung mit Migration die tatsächlich betroffenen Fach- und Technikbereiche. Die 30 verwalteten Labels ergeben sich aus acht Typen, 19 Bereichen und drei Risikostufen; zusätzliche ursprüngliche GitHub-Labels ersetzen keine Pflichtkategorie.
 
@@ -82,21 +82,20 @@ Für einen unabhängigen Test des aktuellen Hauptzweigs gibt es `./portal github
 
 Beiträge benötigen einen PR. Für gewöhnliche Beitragende muss mindestens eine andere berechtigte Person zustimmen. Eine eigene Zustimmung zählt nicht als unabhängige Review; neue Änderungen verwerfen alte Zustimmungen. Die Zustimmung zum letzten Push muss von einer anderen Person als der zuletzt pushenden kommen. Löse offene Review-Gespräche vor dem Merge und beantworte Rückfragen mit Bezug auf den aktuellen Code.
 
-`CarinaSchoppe` erhält eine gezielt auf ihr Konto begrenzte Ausnahme. Sie kann die Reviewpflicht beim Merge eines PRs umgehen. GitHub ordnet diese Ausnahme der **handelnden Person** zu: Sie hängt nicht vom PR-Autor ab und gilt nicht automatisch für andere Administratoren oder Personen mit Schreibrechten. Direkte menschliche Pushes nach `main` bleiben untersagt.
+Maintainer und Administratoren erhalten eine dauerhafte Rollen-Ausnahme (`always`) und können jederzeit direkt mergen, auch bei ausstehenden Reviews oder Checks. Die frühere persönliche PR-only-Ausnahme ist ersetzt. Die Ausnahme folgt der handelnden Person, nicht dem PR-Autor; gewöhnliche Schreibrechte allein reichen nicht. GitHub kann im Merge-Dialog eine ausdrückliche Bypass-Aktion verlangen.
 
-Die Ausnahme hebt folgende Pflichtprüfungen nicht auf:
+Die Prüfungen laufen weiterhin und liefern nachvollziehbare Ergebnisse:
 
-- `verify`: gemeinsamer vollständiger Anwendungs-/Datenbank-/API-/Browser-/PWA- und Wartungstest.
-- `Actual isolated selfhost image compatibility`: tatsächliche Supabase-Laufzeit und Übernahme bestehender Testdaten.
-- `PR metadata`: vorgeschriebene Typ-, Bereichs- und Risikolabels.
+- `Build`, `Typecheck`, `Lint`, `Formatting` und `Code quality` prüfen Kompilierung, Regeln, Stil und tatsächliche Quellverbindungen.
+- `Tests and coverage` führt Unit-/Komponententests mit ehrlicher vollständiger Frontend-Erfassung und Mindestwerten aus.
+- `verify` führt die vollständigen realen Anwendungs-/SQL-/API-/Browser-/PWA-/Wartungstests aus; `Actual isolated selfhost image compatibility` prüft echte Laufzeit und Datenübernahme.
+- `PR metadata` prüft Pflichtlabels; CodeQL analysiert Sicherheitsmuster. Details: [CI_QUALITY](CI_QUALITY.md).
 
-Ein grüner einzelner Job genügt nicht. Verwende den exakt geprüften aktuellen PR-Stand. Der Branch muss gegenüber `main` aktuell sein: Wenn `main` zwischenzeitlich fortgeschritten ist, übernimm die Änderungen und lasse die Kombination erneut prüfen. Ausstehende, fehlgeschlagene oder veraltete Nachweise werden geklärt, statt die allgemeinen Regeln abzuschalten.
-
-Für die bereits vorhandene signierte GitHub-Actions-Wartung gibt es eine separate technische Ausnahme: Sie prüft Kandidaten einschließlich tatsächlicher Datenübernahme vor einer direkten Promotion auf `main`. Anschließend fordert sie die vollständige CI für genau den neuen Commit an; erst nach deren Erfolg kann ein Entwicklungspaket erscheinen. Dieser Botpfad ist kein beitragsberechtigtes Konto und keine Freigabe für andere Apps. Die eigenständigen Signatur-, Force-Push- und Löschregeln bleiben erhalten.
+Ein Maintainer kann einen Merge bewusst vorziehen. Das macht fehlgeschlagene Tests nicht grün und veröffentlicht kein ungeprüftes Entwicklungsupdate: Der Releasejob wartet auf seine vollständigen CI-Gates. Für andere Beitragende bleiben unabhängige Review und grüne, aktuelle Tests der vorgesehene Ablauf. Die zusätzlichen serverseitigen PR-/Checkregeln bleiben bis zur bewiesenen Wartungs-App-Anbindung deaktiviert; [aktueller Zustand](GITHUB_WORKFLOW.md#aktivierung-noch-ausstehend).
 
 ## Merge und Veröffentlichung
 
-Wenn Beschreibung, Labels, Tests, offene Gespräche und erforderliche Review passen, kann ein berechtigter Maintainer mergen. Für `CarinaSchoppe` entfällt nur die externe Review. Die UI kann dafür eine ausdrückliche Bypass-Aktion verlangen; prüfe dabei, dass ausschließlich die Review-Regel betroffen ist.
+Maintainer und Administratoren können jederzeit selbst mergen und die konfigurierte `always`-Ausnahme ausdrücklich verwenden. Im normalen Ablauf prüfen sie Beschreibung, Labels, Tests und offene Gespräche vorab. Ein vorgezogener Merge bleibt eine bewusste Entscheidung; fehlgeschlagene CI oder ausstehende Betriebsfreigaben werden dadurch nicht als bestanden bezeichnet.
 
 Ein Merge kann den vorhandenen Entwicklungsrelease-Prozess anstoßen. Seine unveränderlichen `cms-dev-*`-Pakete und die gehosteten Migrationsprüfungen bleiben davon getrennt. Produktionsbetrieb, echte Daten, SMTP, DNS und riskante Wartung benötigen die vorgesehenen gesonderten Freigaben. Behaupte eine gehostete Installation nur mit tatsächlichem Betriebsnachweis.
 

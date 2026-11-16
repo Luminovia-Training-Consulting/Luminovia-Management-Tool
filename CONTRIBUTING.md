@@ -1,6 +1,6 @@
 # Zum Luminovia Portal beitragen
 
-> Stand 16. November 2026: Das Review-/Merge-Regelwerk unten ist vorbereitet. Seine serverseitige Aktivierung wartet auf die Freigabe einer beschränkten Wartungs-App; die bisherigen Hauptzweig-Regeln bleiben bis dahin wirksam. [Aktueller Aktivierungsstand](docs/GITHUB_WORKFLOW.md#aktivierung-noch-ausstehend).
+> Stand 16. November 2026: Maintainer und Administratoren haben eine dauerhafte `always`-Ausnahme zum direkten Merge. Die zusätzlichen Review-/Checkpflichten für gewöhnliche Beitragende bleiben bis zum nachgewiesenen Wartungs-App-Pfad deaktiviert vorbereitet. [Aktueller Aktivierungsstand](docs/GITHUB_WORKFLOW.md#aktivierung-noch-ausstehend).
 
 Willkommen! Hier steht, wie aus einer Idee oder Fehlermeldung eine nachvollziehbare, getestete Änderung wird. **English contributions are welcome.** Please follow the same issue, test and pull-request process; German is the main documentation language, and application interface changes need both German and English strings.
 
@@ -48,7 +48,7 @@ Die unterstützten Voraussetzungen stehen vollständig in [LOCAL_DEVELOPMENT](do
 
 `start` startet das echte lokale System und bewahrt seine Daten. `test` verwendet einen getrennten temporären Datenbestand und prüft unter anderem Komponenten, Datenbankrechte, APIs, Browser und die gebaute PWA. `stop` beendet die verwaltete Entwicklungsumgebung datenerhaltend. Eine normale Datenbank wird für einen Test nicht zurückgesetzt. Der erste Start benötigt Downloads und ausreichend RAM für die Dienste samt Malware-Scanner.
 
-Während der Entwicklung sind gezielte Prüfungen sinnvoll, zum Beispiel `npm test`, `npm run lint` und `npm run typecheck`, sobald die lokalen Abhängigkeiten installiert sind. Vor der Abnahme ist `./portal test` maßgeblich. Führe nur Prüfungen aus, deren Ziel und Ressourcen du verstanden hast; veröffentliche keine unbearbeiteten privaten Testartefakte.
+Während der Entwicklung sind gezielte Prüfungen sinnvoll, zum Beispiel `npm test`, `npm run test:coverage`, `npm run lint` und `npm run typecheck`, sobald die lokalen Abhängigkeiten installiert sind. Die [CI-/Coverage-Anleitung](docs/CI_QUALITY.md) erklärt Prüfungen, Berichte und Mindestwerte. Vor der Abnahme ist `./portal test` maßgeblich. Führe nur Prüfungen aus, deren Ziel und Ressourcen du verstanden hast; veröffentliche keine unbearbeiteten privaten Testartefakte.
 
 ## 4. Die fachlichen Verträge erhalten
 
@@ -70,11 +70,11 @@ Jeder PR braucht genau ein `type:*`-Label, mindestens ein `area:*`-Label und gen
 
 Beiträge an `main` laufen über einen Pull Request. Für gewöhnliche Beitragende ist mindestens eine unabhängige zustimmende Review erforderlich; neue Änderungen machen eine vorherige Zustimmung ungültig. Beantworte offene Rückfragen und halte die CI grün.
 
-`CarinaSchoppe` kann mit der auf ihr Konto begrenzten Ausnahme die Reviewpflicht **innerhalb eines PRs** übergehen und selbst mergen. Die Ausnahme gilt für die handelnde Person, nicht automatisch für PRs eines bestimmten Autors. Sie erlaubt keinen direkten menschlichen Push auf `main` und hebt für sie keine verpflichtende CI-Prüfung auf. Andere Admin- oder Schreibrechte allein ergeben diese Ausnahme nicht.
+Maintainer und Administratoren können durch die ausdrücklich konfigurierte Rollen-Ausnahme **jederzeit direkt mergen**, auch bei ausstehender Review oder noch laufenden/fehlgeschlagenen Checks. Das ersetzt die frühere auf Carina beschränkte PR-only-Ausnahme. Gewöhnliche Schreibrechte ergeben keinen Bypass. Die Ausnahme bezieht sich auf die handelnde Person; GitHub kann eine ausdrückliche Bypass-Aktion anzeigen. Fachliche Prüfung und nachvollziehbare Testnachweise bleiben die empfohlene Arbeitsweise.
 
-Die verpflichtenden PR-Prüfungen heißen `verify`, `Actual isolated selfhost image compatibility` und `PR metadata`. Die native Supabase-Prüfung ergänzt den vollständigen Anwendungstest um eine reale Datenübernahme. Fehlende oder fehlgeschlagene Checks müssen vor einem menschlichen Merge geklärt werden.
+Build, Typecheck, Lint, Formatting, Code quality und Tests and coverage laufen neben `verify`, `Actual isolated selfhost image compatibility` und `PR metadata`. Die genaue Trennung, zusätzliche CodeQL-Analyse und Dependabot stehen in [CI_QUALITY](docs/CI_QUALITY.md). Die zusätzlichen verpflichtenden Review-/Checkregeln für gewöhnliche Beitragende sind bis zum nachgewiesenen Wartungs-App-Pfad deaktiviert; eine JSON-Datei oder Rollen-Ausnahme beweist keine solche Aktivierung.
 
-Eine getrennte Ausnahme erhält ausschließlich die bestehende GitHub-Actions-Wartungsautomatik. Sie prüft reale Kandidaten samt Datenübernahme vor der signierten direkten Promotion nach `main` und fordert danach die CI für genau den neuen Commit an. Ein Entwicklungspaket wird erst nach deren erfolgreicher Abnahme veröffentlicht. Diese technische Bot-Ausnahme überträgt keine Bypass-Rechte auf Beitragende oder andere Apps. Signaturen sowie das Verbot von Force-Push und Branchlöschung bleiben eigenständige Regeln.
+Ein direkter Maintainer-Merge überspringt **nicht** die Veröffentlichungsprüfung: Die Entwicklungsrelease-Automatik wartet auf alle CI-Gates. Eine fehlgeschlagene Prüfung erzeugt kein freigegebenes Installationspaket. Der bestehende tägliche Wartungspfad bleibt bis zur abgestimmten App-Einrichtung unverändert; es wird kein fiktiver Bot-Bypass behauptet.
 
 Ein Merge kann die bestehende **Entwicklungsrelease-Automatik** anstoßen. Eine Produktionsinstallation, riskante Migration oder Änderung an Hosting, DNS und echten Daten benötigt weiterhin die dafür vorgesehene separate Freigabe. Der GitHub-Merge ist kein Ersatz für diese Betriebsfreigabe.
 

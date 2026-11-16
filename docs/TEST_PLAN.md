@@ -2,6 +2,10 @@
 
 Run the checks relevant to the changed slice, fix observed failures, then record exact commands/results in [WORKLOG.md](WORKLOG.md). A planned test is not a passed test. Use the lockfile and actual package scripts; inspect `--help` before using evolving Supabase CLI commands. No real customer/person records or production endpoints in tests.
 
+## GitHub quality and measured coverage
+
+Separate Build, Typecheck, Lint, Formatting, Code quality and Tests and coverage checks complement the complete command. `npm run test:coverage` measures all executable frontend source, includes untested modules and enforces global plus critical-module floors. HTML/LCOV/JSON reports are inspectable; real SQL/HTTP/Edge/maintenance/browser results are separate evidence, not part of the V8 percentage. CodeQL and dependency review add static security/supply-chain checks. See [CI_QUALITY](CI_QUALITY.md) for exact scopes and thresholds.
+
 ## Canonical complete command
 
 Run `./portal test` for all mutating integration/browser verification. It creates a sanitized temporary checkout with a random independent Supabase project, separate ports/volumes and scoped cleanup, preserving the normal local development instance. It includes actual restart persistence, all `*-db-tests.mjs` / `*-api-check.mjs`, all Edge tests, browser/axe and a separate built-PWA stage. Reports stay in ignored `.local/tests/<run>/`. CI uses the same command.

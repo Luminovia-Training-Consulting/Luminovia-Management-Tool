@@ -1,21 +1,44 @@
 {
+  "name": "Main verified checks",
   "target": "branch",
   "enforcement": "disabled",
   "conditions": {
     "ref_name": {
-      "include": ["~DEFAULT_BRANCH"],
-      "exclude": []
+      "exclude": [],
+      "include": ["~DEFAULT_BRANCH"]
     }
   },
-  "name": "Main verified checks",
-  "bypass_actors": [],
   "rules": [
     {
       "type": "required_status_checks",
       "parameters": {
-        "do_not_enforce_on_create": false,
         "strict_required_status_checks_policy": true,
+        "do_not_enforce_on_create": false,
         "required_status_checks": [
+          {
+            "context": "Build",
+            "integration_id": 15368
+          },
+          {
+            "context": "Typecheck",
+            "integration_id": 15368
+          },
+          {
+            "context": "Lint",
+            "integration_id": 15368
+          },
+          {
+            "context": "Formatting",
+            "integration_id": 15368
+          },
+          {
+            "context": "Code quality",
+            "integration_id": 15368
+          },
+          {
+            "context": "Tests and coverage",
+            "integration_id": 15368
+          },
           {
             "context": "verify",
             "integration_id": 15368
@@ -30,6 +53,18 @@
           }
         ]
       }
+    }
+  ],
+  "bypass_actors": [
+    {
+      "actor_id": 2,
+      "actor_type": "RepositoryRole",
+      "bypass_mode": "always"
+    },
+    {
+      "actor_id": 5,
+      "actor_type": "RepositoryRole",
+      "bypass_mode": "always"
     }
   ]
 }

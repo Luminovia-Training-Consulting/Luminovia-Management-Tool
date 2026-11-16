@@ -41,41 +41,45 @@ Die Beitragsunterlagen wurden mit [PR #6](https://github.com/Luminovia-Training-
 
 ## Implemented routes
 
-| Route                    | Function                                                                                                                            |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `/login`                 | Real email/password sign-in and password recovery; no public signup.                                                                |
-| `/auth/callback`         | Explicit one-time invitation acceptance; PKCE recovery callback.                                                                    |
-| `/auth/password`         | Set a password after an authenticated invite/recovery.                                                                              |
-| `/`                      | Personal job suggestions, calendar/chat/notification/file previews, own contract receipts and capability-scoped management follow-ups. |
-| `/jobs`, `/jobs/:id`     | Combined filters, localised sessions/fees, exact-version terms acceptance and atomic allocation.                                    |
-| `/calendar`              | Private appointments, confirmed assignments, published global events and month/week/day/agenda views.                               |
-| `/profile`               | Persisted DE/EN biography, contact/timezone, expertise and private CV/certificate uploads.                                          |
-| `/chats`                 | Private DMs, staff/group and separate lecturer/participant course rooms; realtime messages, files, membership and read/mute state.  |
-| `/files`                 | Quarantined/scanned private files, upload progress, authorised download/preview, history, replace, rename and archive.              |
-| `/wiki`, `/forum`        | Safe rich text/code, drafts/publication/revisions; threads, replies, accepted answers, subscriptions and moderation.                |
-| `/clients`               | MFA/capability-protected customer records, private contacts/notes, tags and archive.                                                |
-| `/courses`               | Reusable templates, actual runs/sessions, safe duplication and explicit publication.                                                |
-| `/contracts`             | Executed PDF versions/hashes, master/addendum chain, private downloads and receipt history. A receipt is not an e-signature.        |
-| `/finance`               | Accepted-assignment earnings, scanned invoice PDFs, review, partial/full payments and authorised CSV with separate currencies.      |
-| `/search`                | Permission-aware jobs, documents, messages, safe wiki/forum results and minimal chat contacts.                                      |
-| `/security`              | Real Auth TOTP enrollment/challenge; administrative actions require AAL2 at the database.                                           |
-| `/admin`                 | Atomic course/job creation, publication/archive, lecturer invitations.                                                              |
-| `/people`, `/people/:id` | Safe lecturer directory, own labels/expertise, actual upcoming/current/past courses and authorised anonymised ratings.              |
-| `/my-reviews`            | Optional learners review actual completed enrolled courses; management enrols and moderates with MFA.                               |
-| `/client`                | Own-organisation course requests/full fee, commissioned spend and assigned lecturers.                                               |
-| `/admin/accounts`        | Versioned account API-backed role assignment, separate invitations, scoped client memberships and linked profile/status management. |
-| `/admin/people`          | Search people, attest declared expertise with UTC expiry, suspend/reactivate accounts with named confirmation.                      |
-| `/topics`               | DE/EN topic/tool/programming-language hierarchy, aliases, authorized related templates and MFA-protected versioned CRUD/archive. |
-| `/availability`         | Own private available/unavailable windows; explicit reduced sharing with MFA management and transaction-safe assignment conflict checks. |
-| `/notifications`        | Own cursor-paged inbox, current-authorized links, read/unread state and explicit due-reminder refresh. |
-| `/settings`             | Own versioned notification preferences; optional categories never disable committed-work receipts. |
-| `/admin/audit`          | MFA/current `audit.read` capability, bounded metadata search/filter/cursor pages and an exact reviewed action allowlist. |
+| Route                    | Function                                                                                                                                 |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `/login`                 | Real email/password sign-in and password recovery; no public signup.                                                                     |
+| `/auth/callback`         | Explicit one-time invitation acceptance; PKCE recovery callback.                                                                         |
+| `/auth/password`         | Set a password after an authenticated invite/recovery.                                                                                   |
+| `/`                      | Personal job suggestions, calendar/chat/notification/file previews, own contract receipts and capability-scoped management follow-ups.   |
+| `/jobs`, `/jobs/:id`     | Combined filters, localised sessions/fees, exact-version terms acceptance and atomic allocation.                                         |
+| `/calendar`              | Private appointments, confirmed assignments, published global events and month/week/day/agenda views.                                    |
+| `/profile`               | Persisted DE/EN biography, contact/timezone, expertise and private CV/certificate uploads.                                               |
+| `/chats`                 | Private DMs, staff/group and separate lecturer/participant course rooms; realtime messages, files, membership and read/mute state.       |
+| `/files`                 | Quarantined/scanned private files, upload progress, authorised download/preview, history, replace, rename and archive.                   |
+| `/wiki`, `/forum`        | Safe rich text/code, drafts/publication/revisions; threads, replies, accepted answers, subscriptions and moderation.                     |
+| `/clients`               | MFA/capability-protected customer records, private contacts/notes, tags and archive.                                                     |
+| `/courses`               | Reusable templates, actual runs/sessions, safe duplication and explicit publication.                                                     |
+| `/contracts`             | Executed PDF versions/hashes, master/addendum chain, private downloads and receipt history. A receipt is not an e-signature.             |
+| `/finance`               | Accepted-assignment earnings, scanned invoice PDFs, review, partial/full payments and authorised CSV with separate currencies.           |
+| `/search`                | Permission-aware jobs, documents, messages, safe wiki/forum results and minimal chat contacts.                                           |
+| `/security`              | Real Auth TOTP enrollment/challenge; administrative actions require AAL2 at the database.                                                |
+| `/admin`                 | Atomic course/job creation, publication/archive, lecturer invitations.                                                                   |
+| `/people`, `/people/:id` | Safe lecturer directory, own labels/expertise, actual upcoming/current/past courses and authorised anonymised ratings.                   |
+| `/my-reviews`            | Optional learners review actual completed enrolled courses; management enrols and moderates with MFA.                                    |
+| `/client`                | Own-organisation course requests/full fee, commissioned spend and assigned lecturers.                                                    |
+| `/admin/accounts`        | Versioned account API-backed role assignment, separate invitations, scoped client memberships and linked profile/status management.      |
+| `/admin/people`          | Search people, attest declared expertise with UTC expiry, suspend/reactivate accounts with named confirmation.                           |
+| `/topics`                | DE/EN topic/tool/programming-language hierarchy, aliases, authorized related templates and MFA-protected versioned CRUD/archive.         |
+| `/availability`          | Own private available/unavailable windows; explicit reduced sharing with MFA management and transaction-safe assignment conflict checks. |
+| `/notifications`         | Own cursor-paged inbox, current-authorized links, read/unread state and explicit due-reminder refresh.                                   |
+| `/settings`              | Own versioned notification preferences; optional categories never disable committed-work receipts.                                       |
+| `/admin/audit`           | MFA/current `audit.read` capability, bounded metadata search/filter/cursor pages and an exact reviewed action allowlist.                 |
 
 New standalone administrative offers support 1–20 explicitly priced lecturer positions. Each position covers the whole offered block; existing, client-originated and CBW/course-originated offers retain their original single-position budget. Every session is reserved in one PostgreSQL transaction. Qualification validity, executed-contract prerequisites, remaining capacity, job/deadline/terms status and private calendar/unavailable-window/confirmed-assignment conflicts are checked server-side. Accepted rates/currency/terms remain immutable snapshots. Requests are idempotent and competing jobs for the same lecturer are serialised. Future uninvoiced assignments can be cancelled as a whole block, preserving history; an audited explicit reopening permits a replacement to claim. Started or invoiced work requires separate review. The management Kanban cannot drag a lecturer into confirmation. See [JOB_LIFECYCLE](docs/JOB_LIFECYCLE.md).
 
 Admins gain no access to others' private appointments, availability notes, DMs or contract documents through these additions. Shared availability is explicitly opt-in; the audit view excludes private action families and all detail payloads. Contract/session reminders are generated by the user's explicit refresh, without a claimed background email or push service.
 
 German/English and light/dark/system preferences persist locally. Server data are held only in memory; the service worker caches static application assets only. Claims, messages, file operations and all other mutations require online server confirmation. The PWA provides an offline shell and explicit connection state; it does not pretend offline actions succeeded.
+
+## GitHub checks and coverage
+
+Separate Build, Typecheck, Lint, Formatting, Code quality and Tests and coverage tasks complement the existing real SQL/API/browser/selfhost checks. Run `npm run test:coverage` for full-source frontend V8 reports and regression thresholds. CodeQL, Dependabot and the current Maintainer/Admin direct-merge exceptions are explained in [CI_QUALITY](docs/CI_QUALITY.md).
 
 ## Stack and layout
 
