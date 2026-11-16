@@ -117,6 +117,31 @@ const CoursesPage = lazy(() =>
     default: module.CoursesPage,
   })),
 );
+const LearningHubPage = lazy(() =>
+  import("../features/learning/learning").then((module) => ({
+    default: module.LearningHubPage,
+  })),
+);
+const WorkbenchPage = lazy(() =>
+  import("../features/workbench/workbench").then((module) => ({
+    default: module.WorkbenchPage,
+  })),
+);
+const TimesheetsPage = lazy(() =>
+  import("../features/workbench/timesheets").then((module) => ({
+    default: module.TimesheetsPage,
+  })),
+);
+const ControlCenterPage = lazy(() =>
+  import("../features/workbench/control-center").then((module) => ({
+    default: module.ControlCenterPage,
+  })),
+);
+const CourseWorkspacePage = lazy(() =>
+  import("../features/learning/learning").then((module) => ({
+    default: module.CourseWorkspacePage,
+  })),
+);
 
 const PortalSearch = lazy(() =>
   import("../features/search/search").then((module) => ({
@@ -237,6 +262,14 @@ export function App() {
               <Route path="people/:id" element={<PersonProfile />} />
               <Route path="my-reviews" element={<MyCourseReviews />} />
               <Route path="courses" element={<CoursesPage />} />
+              <Route path="learning" element={<LearningHubPage />} />
+              <Route path="workbench" element={<WorkbenchPage />} />
+              <Route path="timesheets" element={<TimesheetsPage />} />
+              <Route path="control-center" element={<ControlCenterPage />} />
+              <Route
+                path="courses/:id/workspace"
+                element={<CourseWorkspacePage />}
+              />
               <Route path="contracts" element={<ContractsPage />} />
               <Route path="finance" element={<FinancePage />} />
               <Route path="wiki" element={<WikiPage />} />

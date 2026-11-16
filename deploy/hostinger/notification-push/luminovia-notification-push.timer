@@ -1,0 +1,11 @@
+[Unit]
+Description=Process committed Web Push notifications every minute
+
+[Timer]
+OnBootSec=60s
+OnUnitInactiveSec=60s
+RandomizedDelaySec=5s
+Unit=luminovia-notification-push.service
+
+[Install]
+WantedBy=timers.target

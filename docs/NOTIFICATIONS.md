@@ -18,7 +18,11 @@ Matching jobs are determined after the publication transaction completes, using 
 
 The explicit reminder-refresh action creates idempotent notices for the actor's own confirmed, unreleased sessions within 24 hours and own active contracts expiring within 30 days. A server-side limit prevents repeated calculation within one minute. A changed preference permits immediate recalculation. Released historical allocations and revoked contracts do not produce current reminders.
 
-This version includes in-app notifications and manual reminder refresh. The M7 source adds the in-app quiet hours described below; their complete native verification must be demonstrated separately. Automatic reminder/delivery scheduling, email digests, web push and actual SMTP delivery remain further product work; they are not represented as existing features.
+The [email extension](NOTIFICATION_DELIVERY_DATABASE.md) adds explicit per-account consent, IANA-zone quiet hours and a transactional outbox. The versioned settings are stored server-side. The [finite Hostinger mail worker](NOTIFICATION_MAIL_OPERATIONS.md) generates due reminders for opted-in active accounts and processes newly queued events; manual reminder refresh can also queue a new email. Existing inbox history is never replayed.
+
+[Web Push](WEB_PUSH.md) adds explicit per-device consent, private subscriptions and a finite encrypted delivery worker. The in-app attention settings below remain independent of external delivery quiet hours. Committed task, assignment, course, finance and qualification events resolve their current resource permissions again before dispatch. Generic external payloads contain no private message bodies or document links.
+
+Worker templates and timers ship disabled; source changes do not install or activate them. Real SMTP authentication, external delivery and physical desktop/mobile push acceptance require their separate operational evidence. Digests remain pending. In-app notices and mandatory receipts remain available independently of external channels. Combined verification of the integrated M7 and connected operations source is recorded only when actually executed in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
 
 ## Personal in-app quiet hours
 

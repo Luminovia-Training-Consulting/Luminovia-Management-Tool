@@ -3,6 +3,7 @@
 The permanent-deletion extension adds private `deletion_plans`, `deletion_operations`, `deletion_permits`, `deletion_upload_leases` and exact Storage-path fences. Plans bind current actor, typed target, dependency hashes and expiry; operations retain only reduced execution metadata. Permits are short-lived service execution authority; upload leases must actually settle before completion. No journal stores deleted bodies or provides restore. Typed owned children and protected inbound references are distinct; the [deletion contract](PERMANENT_DELETION.md) documents the confirmation and native cleanup boundary. These source additions still require their own native/functional acceptance.
 
 The target diagrams retain the complete product map; conceptual target entities are not claims that every table exists. Implemented diagrams use physical names from `supabase/migrations/*.sql`, with `PRIVATE_*` aliases mapped below. The accepted M6 baseline contains 24 migrations. M7 adds five migrations (29 total), followed by three M8 migrations (32 total). The combined native 32-migration acceptance, including the M7 file-dialog correction, remains pending. SQL, explicit grants/RLS and owning tests remain authoritative. Source relations do not prove hosted installation or production acceptance. See [ARCHITECTURE](ARCHITECTURE.md), [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
+The target diagrams retain the complete product map; conceptual target entities do not claim that every table exists. The implemented diagrams depict a selected subset of physical relations represented in the current **62 SQL sources**, with `PRIVATE_*` aliases mapped to unexposed private relations below. They are not a complete schema dump or a claim that every later replacement routine, optional-module adapter or constraint is diagrammed. The 36 published main sources remain byte-identical; 26 PR17 files follow that prefix. Actual migration replay, SQL constraints, explicit grants/RLS and owning tests are authoritative. This source map does not claim the current combined native gate, hosted installation or platform acceptance has passed. See [ARCHITECTURE](ARCHITECTURE.md), [MIGRATION_GUIDE](MIGRATION_GUIDE.md), [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
 
 ## Core target relations
 
@@ -476,11 +477,113 @@ changing claim/upload/channel mutation APIs. No per-option RPC or all-pages loop
 is added. The administrative board remains separately limited to 500. See
 [JOB_PICKERS](JOB_PICKERS.md).
 
-The three additive sources are `20261116003728_scoped_administrative_job_pickers`,
-`20261116003733_global_calendar_publications` and
-`20261116004358_qualification_evidence_and_attestation_history`. Together with the
-29 earlier migration sources this is a 32-migration source model. Focused source,
-SQL/component/Edge checks do not establish the pending combined native acceptance.
+The three additive sources are `20261116022735_scoped_administrative_job_pickers`,
+`20261116022736_global_calendar_publications` and
+`20261116022737_qualification_evidence_and_attestation_history`. Together with the
+29 earlier migration sources these form the historical 32-migration M7/M8 model.
+The following diagram covers the fourteen-source operational cohort depicted here, not every later addition in the current 62-source inventory. Focused source,
+SQL/component/Edge checks do not establish combined native acceptance.
+
+## Implemented personal settings and external delivery
+
+```mermaid
+erDiagram
+  PROFILES ||--o| PRIVATE_DASHBOARD_PREFERENCES : orders_own_widgets
+  JOB_CLAIMS ||--o| PRIVATE_TEACHING_PREPARATION : owns_private_checklist
+  PROFILES ||--o| PRIVATE_STAFF_CONTACT_VISIBILITY : opts_in
+  PROFILES ||--o| PRIVATE_DELIVERY_PREFERENCES : opts_in_to_email
+  PROFILES ||--o{ PRIVATE_PUSH_SUBSCRIPTIONS : registers_devices
+  PROFILES ||--o{ PRIVATE_CALENDAR_SUBSCRIPTIONS : owns_capabilities
+  NOTIFICATIONS ||--o{ PRIVATE_NOTIFICATION_EMAIL_OUTBOX : deduplicates_occurrences
+  NOTIFICATIONS ||--o{ PRIVATE_NOTIFICATION_PUSH_OUTBOX : deduplicates_occurrences
+  PRIVATE_PUSH_SUBSCRIPTIONS ||--o{ PRIVATE_NOTIFICATION_PUSH_OUTBOX : selects_device
+```
+
+Aliases name `private.dashboard_preferences`, `teaching_preparation`, `staff_contact_visibility`, `delivery_preferences`, `push_subscriptions`, `calendar_subscriptions`, `notification_email_outbox` and `notification_push_outbox`. `private.push_configuration` is a separate singleton for the enabled state/public VAPID key, not an account or private-key table. Dashboard/contact/preferences use own identity and revision checks. The teaching-day checklist belongs to the claim owner; it is not the customer's shared preparation.
+
+Email occurrence uniqueness is `(notification_id, occurrence_at)`; Push adds `subscription_id`. Leases, attempts, availability, fixed outcome/error codes and terminal uncertain state distinguish a committed inbox notice from an external accepted delivery. Worker APIs have separate service-only grants and recheck current recipient/resource/channel rights. Push subscriptions retain private provider endpoint/encryption material; ordinary UI/device projections do not expose it. Mail/VAPID credentials are operating configuration, not a diagrammed database relation.
+
+Calendar subscriptions retain a token hash, explicit private-event inclusion, expiry/revocation, version and owner-bound creation/rotation retry keys. Snapshot/recheck RPCs are service-only; possession of a currently valid high-entropy feed capability is the read boundary at the exact calendar-feed endpoint. The feed does not create event copies in a new table. The separately opted-in minimal offline teaching snapshot is an expiring, identity-cleared IndexedDB record, not a PostgreSQL relation or a generic private-response cache.
+
+## Implemented waitlists, tasks and teaching-time evidence
+
+```mermaid
+erDiagram
+  JOBS ||--o{ PRIVATE_JOB_WAITLIST : records_interest
+  PROFILES ||--o{ PRIVATE_JOB_WAITLIST : joins_own_interest
+  JOBS ||--o{ PRIVATE_JOB_SUBSTITUTIONS : contextualises
+  JOB_CLAIMS ||--o{ PRIVATE_JOB_SUBSTITUTIONS : original_claim
+  JOB_CLAIMS o|--o{ PRIVATE_JOB_SUBSTITUTIONS : accepted_replacement
+  PROFILES ||--o{ PRIVATE_JOB_SUBSTITUTIONS : targeted_lecturer
+  PROFILES ||--o{ PRIVATE_WORK_TASKS : creates
+  PROFILES ||--o{ PRIVATE_WORK_TASKS : assigned_to
+  MESSAGES o|--o{ PRIVATE_WORK_TASKS : protected_source
+  PRIVATE_WORK_TASKS ||--o{ PRIVATE_WORK_TASK_HISTORY : retains_versions
+  PROFILES ||--o{ PRIVATE_WORK_TASK_TEMPLATES : authors
+  PRIVATE_WORK_TASK_TEMPLATES ||--o{ PRIVATE_WORK_TEMPLATE_RUNS : fixes_applied_revision
+  ASSIGNMENT_SESSIONS ||--o| PRIVATE_TEACHING_TIMESHEETS : exact_session_evidence
+  PRIVATE_TEACHING_TIMESHEETS ||--o{ PRIVATE_TEACHING_TIMESHEET_HISTORY : audits_changes
+```
+
+These aliases map directly to `private.job_waitlist`, `job_substitutions`, `work_tasks`, `work_task_history`, `work_task_templates`, `work_template_runs`, `teaching_timesheets` and `teaching_timesheet_history`. Additional actual private tables are `personal_favourites` and `teaching_timesheet_requests`. The favourite key `(user_id, kind, resource_id)` is a polymorphic reference checked on read/write, not a foreign key to every possible resource. Template runs retain a template revision and `task_ids uuid[]`; those array elements are application-validated references, not individual SQL foreign keys. Timesheet action retries use `(actor_id, request_id)` with the exact payload/result.
+
+Waitlist primary key is `(job_id, user_id)` and gives no allocation. A substitution binds original/accepted claim IDs, proposer/target, quote/hash and expiry; one pending/accepting proposal per original claim is enforced. Its scheduling/claim transaction preserves the all-session boundary. Task history/template/user/message references and timesheet history deliberately restrict deletion unless an explicit cascade is defined; these are not a user erasure service. Private tasks remain creator-only even for administrators. Operations/message-derived tasks need their current task and source-room rights.
+
+A timesheet has one unique `assignment_sessions.id`, current lecturer and optional reviewer references, bounded real intervals/breaks, state/version and a nonoverlap exclusion per lecturer except rejected entries. It does not replace accepted claim compensation or participant attendance. Financial statements, forecasts and Control Center are checked projections over existing claims/invoices/payments/timesheets/tasks/courses; there is no fabricated bank account, forecast ledger or finance-export table. See [WORKBENCH](WORKBENCH.md), [ASSIGNMENT_HANDOVER](ASSIGNMENT_HANDOVER.md) and [TIMESHEETS_FINANCE_CONTROL_CENTER](TIMESHEETS_FINANCE_CONTROL_CENTER.md).
+
+## Implemented shared course preparation and exact materials
+
+```mermaid
+erDiagram
+  COURSE_RUNS ||--o| PRIVATE_COURSE_WORKSPACE_SETTINGS : configures
+  ORGANISATION_CONTACTS o|--o{ PRIVATE_COURSE_WORKSPACE_SETTINGS : explicitly_selected
+  COURSE_RUNS ||--o{ PRIVATE_COURSE_PREPARATION_ITEMS : prepares
+  COURSE_RUNS ||--o{ PRIVATE_COURSE_RESOURCES : shares
+  DOCUMENT_VERSIONS ||--o{ PRIVATE_COURSE_RESOURCES : binds_exact_clean_version
+  PRIVATE_COURSE_RESOURCES ||--o{ PRIVATE_COURSE_RESOURCE_ACKNOWLEDGEMENTS : records_receipt
+  PROFILES ||--o{ PRIVATE_COURSE_RESOURCE_ACKNOWLEDGEMENTS : acknowledges
+  COURSE_RUNS ||--o{ PRIVATE_COURSE_QUESTIONS : contains
+  COURSE_RUNS ||--o{ PRIVATE_COURSE_NOTEBOOKS : contextualises
+  PROFILES ||--o{ PRIVATE_COURSE_NOTEBOOKS : owns_private_text
+  COURSE_RUNS ||--o{ PRIVATE_COURSE_FEEDBACK : contextualises
+  PROFILES ||--o{ PRIVATE_COURSE_FEEDBACK : retains_private_author
+```
+
+Aliases name actual `private.course_workspace_settings`, `course_preparation_items`, `course_resources`, `course_resource_acknowledgements`, `course_questions`, `course_notebooks` and `course_feedback`. Settings use `run_id` as primary key; deleting the selected organisation contact sets the contact pointer null. The RPC independently requires the contact's organisation to match this course. Preparation has a client-visible flag and CAS version. A material/report resource is unique by `(run_id, version_id, audience)` and can be explicitly removed; acknowledgements use `(resource_id, user_id)` and do not grant future access.
+
+Notebook and feedback keys are `(run_id, user_id)`. Notebook text is owner-only; Q&A author/answer references remain private while the current course projection determines which users can read or respond. Feedback keeps an author for server integrity but ordinary aggregate results disclose no author identity and remain unavailable below three responses. There is no true-anonymity assertion or participant-notebook management bypass. Clean resource bytes remain behind the authenticated exact-version gateway; ordinary file RLS is unchanged.
+
+## Implemented participant attendance, quizzes and completion facts
+
+```mermaid
+erDiagram
+  COURSE_SESSIONS ||--o{ PRIVATE_COURSE_ATTENDANCE : verifies_per_learner
+  PROFILES ||--o{ PRIVATE_COURSE_ATTENDANCE : learner
+  COURSE_SESSIONS ||--o{ PRIVATE_COURSE_ATTENDANCE_AUDIT : retains_corrections
+  COURSE_RUNS ||--o| PRIVATE_COURSE_QUIZZES : selects_current_version
+  COURSE_RUNS ||--o{ PRIVATE_COURSE_QUIZ_VERSIONS : publishes_immutable_questions
+  PRIVATE_COURSE_QUIZ_VERSIONS ||--o{ PRIVATE_COURSE_QUIZ_ATTEMPTS : binds_exact_revision
+  PROFILES ||--o{ PRIVATE_COURSE_QUIZ_ATTEMPTS : submits_own_attempts
+  COURSE_RUNS ||--o{ PRIVATE_COURSE_COMPLETION_RECORDS : freezes_course_facts
+  PROFILES ||--o{ PRIVATE_COURSE_COMPLETION_RECORDS : receives
+```
+
+Aliases map to `private.course_attendance`, `course_attendance_audit`, `course_quizzes`, `course_quiz_versions`, `course_quiz_attempts` and `course_completion_records`. Attendance's key is `(session_id, user_id)`; audit rows independently retain affected user, actor, before/after states and reason, with restrictive history references. Self-report and verified attendance are different states. Completion locks subsequent attendance correction until explicit revocation.
+
+Quiz versions use `(run_id, version)`; the attempt uses that composite foreign key and `(user_id, request_id)` retry uniqueness. The current-quiz integer is an application-managed pointer, not an additional composite foreign key. Learner projections omit correct answers; submission checks current publication, attempt allowance and current membership. A partial unique index permits one nonrevoked completion per `(run_id, user_id)`. Immutable completion facts require completed enrolment, ended sessions, verified 80% attendance per session and current-quiz pass where required. Revocation retains the old record and constrains reissue; PDF generation adds no separate completion/qualification/legal-signature table. See [COURSE_LEARNING_WORKSPACE](COURSE_LEARNING_WORKSPACE.md).
+
+## Implemented customer request briefs and retained revisions
+
+```mermaid
+erDiagram
+  PRIVATE_CLIENT_COURSE_REQUESTS ||--o| PRIVATE_CLIENT_REQUEST_BRIEFS : revises_before_publication
+  PRIVATE_CLIENT_COURSE_REQUESTS ||--o{ PRIVATE_CLIENT_REQUEST_REVISIONS : retains_snapshots
+  PROFILES o|--o{ PRIVATE_CLIENT_REQUEST_REVISIONS : records_actor
+```
+
+`PRIVATE_CLIENT_REQUEST_BRIEFS` and `PRIVATE_CLIENT_REQUEST_REVISIONS` are `private.client_request_briefs` and `private.client_request_revisions`. They cascade only when the parent request is deliberately removed; an actor account purge sets the history actor pointer null. A generated revision ID supplies stable decreasing cursor pages. No authenticated history update/delete API exists. Older requests receive an accurately labelled migration baseline; past events are not reconstructed.
+
+Brief JSON stores whole teaching units, 45/60-minute units, preparation instructions, required-document descriptions and exact version/category references. These JSON version IDs are validated by the RPC; they are not declared document foreign keys. Only own clean personal materials or already explicitly shared request versions can be retained, categorized as material/report. Contracts, CVs, qualification evidence and invoices have no attachment bypass. The current request organisation/gross-finance boundary authorizes the protected byte gateway, which checks exact hash and rechecks rights before release. Required time cannot exceed real session duration; it never derives the quote. Creation retry compares the immutable first brief, and revisions share the publication row lock and expected version. Repeat booking copies requirements/time but no attachments or learner records. See [CLIENT_REQUEST_BRIEFS](CLIENT_REQUEST_BRIEFS.md).
 
 ## Required constraints and ownership
 
@@ -494,28 +597,44 @@ SQL/component/Edge checks do not establish the pending combined native acceptanc
 
 ## Implemented permission matrix
 
-| Resource/action                  | Owner / eligible lecturer                                                                                   | Ordinary peer                                          | Privileged management                                                                                       |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| Own profile self-service fields  | Read/edit                                                                                                   | Only intentionally public fields, when implemented     | Explicit management capability where needed                                                                 |
-| Roles and verification           | Read own applicable grants; no self-promotion                                                               | No mutation                                            | Explicit capability plus MFA; audited                                                                       |
-| Published jobs                   | Read when authorised/eligible; claim through RPC                                                            | Same permission-based rules                            | Manage with `jobs.manage` and MFA                                                                           |
-| Accepted assignment snapshot     | Read own                                                                                                    | No                                                     | Explicit commercial/resource permission                                                                     |
-| Private calendar event           | Read/edit own                                                                                               | Denied                                                 | Denied unless actual owner                                                                                  |
-| Executed contract/file/receipt   | Read own; receipt own exact hash                                                                            | Denied                                                 | Specific `contracts.read`/`contracts.manage` plus MFA; receipt cannot impersonate owner                     |
-| Private DM/messages/revisions    | Current room member only                                                                                    | Denied                                                 | No implicit access; DM membership is not administratively editable                                          |
-| Group/channel and room files     | Current nonremoved membership plus current role constraints                                                 | Denied outside membership                              | Owner or explicit capability within accessible room; no room bypass                                         |
-| Personal files                   | Owner; clean bytes only                                                                                     | Denied                                                 | CV/certificate/contract/invoice each require their separate capability plus MFA                             |
-| Customer contacts/private notes  | No implicit lecturer access                                                                                 | Denied                                                 | `organisations.manage` plus MFA                                                                             |
-| Course catalogue                 | Published/assigned; participants explicitly enrolled through managed enrolment or course-channel membership | Denied otherwise                                       | `courses.manage` plus MFA for changes                                                                       |
-| Wiki drafts/history              | Author and current wiki managers                                                                            | Published revisions only for staff                     | `wiki.manage` plus MFA for publish/archive                                                                  |
-| Forum/report/revision            | Staff; own reports, own post revisions                                                                      | Staff discussion only                                  | `forum.moderate` plus MFA for moderation/reports                                                            |
-| Earnings/invoice/payment history | Own original-currency records                                                                               | Denied                                                 | `finance.manage` plus MFA; mutations audited                                                                |
-| Private file tags/virtual folder | Own annotation for a currently accessible document                                                          | Other account's annotation denied                      | No annotation read bypass                                                                                   |
-| Saved job views / quiet window   | Own active actor; saved views additionally require current lecturer/manage access                           | Denied                                                 | Only own records under the same rules                                                                       |
-| Qualification evidence / review  | Own explicit exact certificate-version sharing/withdrawal                                                   | No foreign grant                                       | Current `qualifications.verify`/MFA for the selected shared version; no blanket document/CV/contract access |
-| Global events                    | Published, unarchived records only; private appointments remain separate                                    | Same public-event policy                               | `courses.manage`/MFA for bounded drafts/lifecycle; no private-calendar bypass                               |
-| Scoped resource choices          | Only the current action's capability/MFA                                                                    | No privileged query from ordinary personal/topic flows | Job attachment vs participant-course metadata; no additional financial rights                               |
-| Structured chat recipients       | Current eligible room members, current message version                                                      | Denied outside room                                    | Room-scoped moderation only; no DM/history bypass                                                           |
-| Published announcements / ACK    | Current active-account audience/window; own exact-revision ACK                                              | Same current audience rules                            | Management drafts/publication need `announcements.manage` and MFA                                           |
+| Resource/action                  | Owner / eligible lecturer                                                                                   | Ordinary peer                                          | Privileged management                                                                                             |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| Own profile self-service fields  | Read/edit                                                                                                   | Only intentionally public fields, when implemented     | Explicit management capability where needed                                                                       |
+| Roles and verification           | Read own applicable grants; no self-promotion                                                               | No mutation                                            | Explicit capability plus MFA; audited                                                                             |
+| Published jobs                   | Read when authorised/eligible; claim through RPC                                                            | Same permission-based rules                            | Manage with `jobs.manage` and MFA                                                                                 |
+| Accepted assignment snapshot     | Read own                                                                                                    | No                                                     | Explicit commercial/resource permission                                                                           |
+| Private calendar event           | Read/edit own                                                                                               | Denied                                                 | Denied unless actual owner                                                                                        |
+| Executed contract/file/receipt   | Read own; receipt own exact hash                                                                            | Denied                                                 | Specific `contracts.read`/`contracts.manage` plus MFA; receipt cannot impersonate owner                           |
+| Private DM/messages/revisions    | Current room member only                                                                                    | Denied                                                 | No implicit access; DM membership is not administratively editable                                                |
+| Group/channel and room files     | Current nonremoved membership plus current role constraints                                                 | Denied outside membership                              | Owner or explicit capability within accessible room; no room bypass                                               |
+| Personal files                   | Owner; clean bytes only                                                                                     | Denied                                                 | CV/contract/invoice retain specific capability/MFA boundaries; certificates need the current exact evidence grant |
+| Customer contacts/private notes  | No implicit lecturer access                                                                                 | Denied                                                 | `organisations.manage` plus MFA                                                                                   |
+| Course catalogue                 | Published/assigned; participants explicitly enrolled through managed enrolment or course-channel membership | Denied otherwise                                       | `courses.manage` plus MFA for changes                                                                             |
+| Wiki drafts/history              | Author and current wiki managers                                                                            | Published revisions only for staff                     | `wiki.manage` plus MFA for publish/archive                                                                        |
+| Forum/report/revision            | Staff; own reports, own post revisions                                                                      | Staff discussion only                                  | `forum.moderate` plus MFA for moderation/reports                                                                  |
+| Earnings/invoice/payment history | Own original-currency records                                                                               | Denied                                                 | `finance.manage` plus MFA; mutations audited                                                                      |
+| Private file tags/virtual folder | Own annotation for a currently accessible document                                                          | Other account's annotation denied                      | No annotation read bypass                                                                                         |
+| Saved job views / quiet window   | Own active actor; saved views additionally require current lecturer/manage access                           | Denied                                                 | Only own records under the same rules                                                                             |
+| Qualification evidence / review  | Own explicit exact certificate-version sharing/withdrawal                                                   | No foreign grant                                       | Current `qualifications.verify`/MFA for the selected shared version; no blanket document/CV/contract access       |
+| Global events                    | Published, unarchived records only; private appointments remain separate                                    | Same public-event policy                               | `courses.manage`/MFA for bounded drafts/lifecycle; no private-calendar bypass                                     |
+| Scoped resource choices          | Only the current action's capability/MFA                                                                    | No privileged query from ordinary personal/topic flows | Job attachment vs participant-course metadata; no additional financial rights                                     |
+| Structured chat recipients       | Current eligible room members, current message version                                                      | Denied outside room                                    | Room-scoped moderation only; no DM/history bypass                                                                 |
+| Published announcements / ACK    | Current active-account audience/window; own exact-revision ACK                                              | Same current audience rules                            | Management drafts/publication need `announcements.manage` and MFA                                                 |
 
-See [CHAT_SECURITY](CHAT_SECURITY.md), [KNOWLEDGE_SECURITY](KNOWLEDGE_SECURITY.md), [COMMERCIAL_SECURITY](COMMERCIAL_SECURITY.md), [OPERATIONS](OPERATIONS.md) and [BACKEND_SECURITY_REVIEW](BACKEND_SECURITY_REVIEW.md) for tested boundaries and outstanding acceptance. The combined native 32-migration gate remains pending; authored tests do not establish a passed run. Tombstones, archives and audit revisions preserve data; none is a production legal-erasure or retention-policy guarantee.
+Additional operational boundaries:
+
+| Resource/action                          | Own current account / authorised participant                    | Other accounts and management                                                       |
+| ---------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Personal widget/preparation preferences  | Own versioned presentation or confirmed claim                   | No private-checklist bypass                                                         |
+| Staff directory contact                  | Explicit own email/phone consent                                | Active staff only; no client/participant or admin consent override                  |
+| Waitlist / substitution                  | Own interest; explicit targeted quote acceptance                | Scoped proposer/manager actions; no private-calendar contents                       |
+| Private task or message-derived task     | Creator-only or current permitted operations relationship       | Management never bypasses private scope or source-room access                       |
+| Timesheet / financial facts              | Own accepted session/time and net facts                         | Current finance capability/MFA; gross requires its own capability                   |
+| Course shared checklist/material/contact | Current server-scoped role and explicit audience                | No private notes, contract or implicit personal-file access                         |
+| Notebook / feedback                      | Own notebook/feedback; identity protected in ordinary summaries | No foreign notebook read; feedback threshold does not remove private author storage |
+| Attendance / quiz / completion           | Current learner eligibility; server-confirmed records           | Staff correction/revocation is audited; quiz answers remain role-scoped             |
+| Request brief/history/material           | Current exact client organisation                               | Existing gross-finance/MFA scope only; original private file RLS unchanged          |
+| Calendar capability / offline schedule   | Explicit owner opt-in; expiry/revocation and identity clearing  | No administrator calendar bypass; no general private-response cache                 |
+| Notification channel/device              | Own preference/device; current eligible event                   | Service-only delivery leases do not grant browser data access                       |
+
+See [CHAT_SECURITY](CHAT_SECURITY.md), [KNOWLEDGE_SECURITY](KNOWLEDGE_SECURITY.md), [COMMERCIAL_SECURITY](COMMERCIAL_SECURITY.md), [OPERATIONS](OPERATIONS.md) and [BACKEND_SECURITY_REVIEW](BACKEND_SECURITY_REVIEW.md) for tested boundaries and outstanding acceptance. Current combined 62-source native acceptance is recorded separately in QA/work logs; authored cases and focused passes do not establish that result. Tombstones, archives and audit revisions preserve data; none is a production legal-erasure or retention-policy guarantee.
