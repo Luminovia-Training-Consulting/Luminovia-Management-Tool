@@ -1,18 +1,8 @@
 # Reading and safely extending SQL migrations
 
-This guide covers the **69 published SQL source files** present in accepted main `4f7f6c0` on 17 November 2026. PR17's operational cohort, PR24's six additional files and PR25's enquiry intake are merged; earlier candidate/pending descriptions apply only to their historical checkpoints. The ordered source versions and byte hashes are bound into the generated [API reference](API_REFERENCE.md).
+This guide covers **70 SQL source files**, including the proposed withdrawal migration on top of the 69 present in accepted main `4f7f6c0` on 17 November 2026. PR17's operational cohort, PR24's six additional files and PR25's enquiry intake are merged; earlier candidate/pending descriptions apply only to their historical checkpoints. The ordered source versions and byte hashes are bound into the generated [API reference](API_REFERENCE.md).
 
 Published SQL participates in preview, update and recovery fingerprints and must remain byte-identical. New business changes require additive migrations. Repository history does not establish what an installed or hosted database has applied. Read [QA_RESULTS](QA_RESULTS.md) for source-specific executed checks and [FUNCTIONAL_ACCEPTANCE](FUNCTIONAL_ACCEPTANCE.md) for the current acceptance contract. A split CI phase alone is not complete application acceptance; publication remains a separate authorised manual operation.
-
-PR24 is accepted as main `99add7de8598bf415977c7cae79f1c5f6993626d` with 68 published SQL files. The unpublished enquiry source is resequenced with the installed CLI as `20261116143242_website_enquiry_intake.sql`, after that complete prefix. All 68 released files remain byte-identical. This produces 69 sources; source presence does not claim hosted installation.
-
-The enquiry helper is discovered by main's existing owner-only notification resolver. The obsolete resolver rename/wrapper and authenticated EXECUTE grant are removed from the unpublished source, preserving the accepted resolver's identity, fallback branches and restricted ACL. Current SQL tests exercise the actual inbox projection and denied direct helper calls. HTTP fixtures must validate either the canonical disposable backend or the exact ownership-checked native candidate, including its private TLS trust; ordinary services remain excluded.
-
-This guide inventories **68 SQL files: 62 unchanged published Main17 migrations and six pending PR24 operational additions**. Actual accepted main is `4cc20874edc1f865b71106b7bb1299e16fec5aad`. All 62 published bodies remain byte-identical, and the six pending files retain their CLI-created dependency order. Their post-wait authority corrections and the two notification files’ owner-only resolver boundary remain recorded in [QA_RESULTS](QA_RESULTS.md). Earlier 36-, 42- and candidate-prefix counts describe their named pre-merge checkpoints.
-
-The historical PR24 source checkpoint below passed its own 68-migration replay and application acceptance before being merged. That evidence does not certify the new withdrawal extension or its integrated application source. Current-source checks and pending native/browser gates are recorded in [QA_RESULTS](QA_RESULTS.md).
-
-Published SQL participates in preview, update and recovery fingerprints and must never be rewritten. New business changes require separate additive migrations and matching guide updates. Source identity does not establish what a hosted database has applied. Final current-head full system, browser, actual native and all 15 required CI checks remain mandatory before delivery of this extension. Ordinary `./portal test` stays complete; one split CI phase is not a full pass. Manual-only publication remains unchanged.
 
 The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API inventory. [ERD](ERD.md), [DEVELOPER_GUIDE](DEVELOPER_GUIDE.md) and the relevant feature guides explain how the parts connect.
 
@@ -679,9 +669,7 @@ A private experimental database that applied earlier unmerged identifiers needs 
 4. Check a fresh replay, actual RLS/concurrency and the affected Auth/API/browser flows. Updating an existing database and preserving actual Storage bytes require separate evidence. Use the existing isolated full verification command and document the stages actually reached.
 5. Update the API reference only through its intended actual replay; also update this guide, feature documentation and PR validation evidence. Hosted migrations follow the existing operations and approval path.
 
-6. Update the API reference only through its intended actual replay; also update this guide, feature documentation, plan and work log. Hosted migrations follow the existing operations and approval path.
-
-### 69. Reasoned short-notice assignment withdrawals
+### 70. Reasoned short-notice assignment withdrawals
 
 Source: [20261116170334_assignment_withdrawal_requests.sql](../supabase/migrations/20261116170334_assignment_withdrawal_requests.sql).
 
@@ -697,5 +685,5 @@ trigger closes requests overtaken by administrative cancellation or substitution
 Test entry points: [claim-withdrawal-db-tests.mjs](../scripts/claim-withdrawal-db-tests.mjs),
 [assignment-withdrawal-api-check.mjs](../scripts/assignment-withdrawal-api-check.mjs)
 and [assignment-withdrawal.spec.ts](../tests/e2e/assignment-withdrawal.spec.ts).
-See [workflow and operations](ASSIGNMENT_WITHDRAWALS.md) and the work log for actual
+See [workflow and operations](ASSIGNMENT_WITHDRAWALS.md) and the pull request for actual
 executed results; this inventory does not certify a hosted installation.
