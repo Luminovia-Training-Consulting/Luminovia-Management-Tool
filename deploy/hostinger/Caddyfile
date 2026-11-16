@@ -1,7 +1,19 @@
 # Development ingress serves the static app and explicitly allowed backend routes. Private API responses are not cached; the maintenance marker fences backend requests before data changes.
 {
 	admin off
-	# No access log: invitation/recovery query strings must never enter logs.
+	# Access logging stays disabled. Runtime/error logs must also omit query
+	# capabilities and invitation/recovery values during upstream failures.
+	log default {
+		format filter {
+			wrap json
+			fields {
+				request>uri regexp "[?].*$" ""
+				request>headers>Referer delete
+				uri regexp "[?].*$" ""
+				url regexp "[?].*$" ""
+			}
+		}
+	}
 }
 {$PORTAL_DOMAIN} {
 	encode zstd gzip

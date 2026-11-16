@@ -60,7 +60,16 @@ export function prCheckPlan(cwd = root) {
           ...handlers.sort(),
         ],
       ],
-      [process.execPath, [deno, "test", "--allow-env", ...handlers]],
+      [
+        process.execPath,
+        [
+          deno,
+          "test",
+          "--allow-env",
+          `--allow-read=${join(functions, "course-documents/assets")}`,
+          ...handlers,
+        ],
+      ],
       ...entries
         .sort()
         .map((entry) => [process.execPath, [deno, "check", entry]]),
@@ -199,7 +208,10 @@ export async function runPrCheck(
       "-v",
       "ON_ERROR_STOP=1",
       "-c",
-      "create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;",
+      // Strict diagnostic and safeupdate-LOAD suites use the same explicit
+      // local operator as the native image. This isolated Unix-socket cluster
+      // grants no operator capability to the ordinary tested API roles.
+      "create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls; create role supabase_admin login superuser;",
     ]);
     // Each worker has its own PostgreSQL cluster and connection limit. Never
     // overlap independent 50-claim races inside one shared 100-connection cluster.

@@ -246,6 +246,266 @@ Unexposed, RLS-protected job briefing and retry rows separate optional authored 
 Test entry points: [job-briefing-db-tests.mjs](../scripts/job-briefing-db-tests.mjs), [job-briefing-api-check.mjs](../scripts/job-briefing-api-check.mjs) and [job-briefing.spec.ts](../tests/e2e/job-briefing.spec.ts). [Feature and audience contract](JOB_BRIEFING.md).
 
 
+### 37. Private email preferences and committed-event outbox
+
+Source: [20261116091007_notification_email_outbox.sql](../supabase/migrations/20261116091007_notification_email_outbox.sql).
+
+Own email/quiet-hour/zone preferences are versioned and disabled by default. Notification occurrences enter a private deduplicated outbox; service-only lease/prepare/finish routines separate current eligibility from provider submission. Accepted, suppressed, failed and uncertain outcomes do not imply inbox deletion or an automatic retry after ambiguous SMTP acceptance. Credentials do not belong in these tables.
+
+Test entry point: [notification-delivery-db-tests.mjs](../scripts/notification-delivery-db-tests.mjs).
+
+### 38. Private dashboard layout and teaching-day preparation
+
+Source: [20261116091009_personal_dashboard_and_teaching_day.sql](../supabase/migrations/20261116091009_personal_dashboard_and_teaching_day.sql).
+
+Own allowed widget order/visibility uses CAS. Teaching-day data derives current confirmed, unreleased allocations in the profile zone; an own claim-bound preparation checklist is separate from shared customer progress. Neither preferences nor admin status expose another person's private checklist or files.
+
+Test entry point: [dashboard-personal-db-tests.mjs](../scripts/dashboard-personal-db-tests.mjs).
+
+### 39. Bounded own calendar-file projection
+
+Source: [20261116091010_calendar_file_export.sql](../supabase/migrations/20261116091010_calendar_file_export.sql).
+
+The security-invoker export reads only current-owner confirmed/unreleased allocations and explicitly included own private events. It accepts finite windows and fails beyond 500 events. IANA identity/instants remain explicit; the browser produces ICS from fresh checked data. No calendar copy table is added.
+
+Test entry point: [calendar-export-db-tests.mjs](../scripts/calendar-export-db-tests.mjs).
+
+### 40. Explicit staff-directory contact visibility
+
+Source: [20261116091011_staff_contact_visibility.sql](../supabase/migrations/20261116091011_staff_contact_visibility.sql).
+
+Own email/phone consent defaults off and uses current identity/CAS. The separate contact projection admits active staff to opted-in current Auth email/profile phone; clients/participants and administrative consent overrides are excluded. Existing people/profile projections stay narrow.
+
+Test entry point: [staff-contact-db-tests.mjs](../scripts/staff-contact-db-tests.mjs).
+
+### 41. Waitlist interest and atomic explicit substitution
+
+Source: [20261116091012_assignment_waitlist_and_substitution.sql](../supabase/migrations/20261116091012_assignment_waitlist_and_substitution.sql).
+
+Private waitlist rows record interest without reserving capacity. Substitution proposals fix the original claim, target, quote/hash, expiry and retry identity. Explicit target acceptance serializes both lecturer schedules, rechecks current eligibility and atomically releases/recreates the complete block while retaining original accepted history.
+
+Test entry point: [assignment-handover-db-tests.mjs](../scripts/assignment-handover-db-tests.mjs).
+
+### 42. Device opt-in and committed Web Push delivery
+
+Source: [20261116091013_web_push_notifications.sql](../supabase/migrations/20261116091013_web_push_notifications.sql).
+
+A private configuration singleton, owner-bound provider subscriptions and occurrence/device outbox separate browser consent from external delivery. Endpoint/encryption validation, active-device expiry, service-only worker leases and recipient eligibility fail closed. VAPID private material is operating configuration; source does not establish actual device permission or delivery.
+
+Test entry point: [web-push-db-tests.mjs](../scripts/web-push-db-tests.mjs).
+
+### 43. Shared course and participant learning workspace
+
+Source: [20261116091015_course_learning_workspace.sql](../supabase/migrations/20261116091015_course_learning_workspace.sql).
+
+Adds scoped preparation/contact settings, exact material/report resources and receipts, audited attendance, staff/learner Q&A, private notebooks, identity-protected feedback aggregates, immutable quiz versions/eligible attempts and frozen completion facts. The workspace derives current manager/assignment/enrolment/client scope. Repeat booking creates a fresh future request; later brief integration copies requirements without private learner data.
+
+Test entry point: [course-workspace-db-tests.mjs](../scripts/course-workspace-db-tests.mjs).
+
+### 44. Private favourites, versioned tasks and reusable workflows
+
+Source: [20261116091016_personal_workbench_and_tasks.sql](../supabase/migrations/20261116091016_personal_workbench_and_tasks.sql).
+
+Private/operations tasks retain CAS history, exact creation retries and bounded all-or-none bulk changes. Templates/applications bind a selected revision and retry key. Message-derived tasks require continuing current source-room access; neither manager access nor a copied description bypasses private scope. Favourites/recommendations re-resolve current resource/eligibility rights.
+
+Test entry point: [workbench-db-tests.mjs](../scripts/workbench-db-tests.mjs).
+
+### 45. Audited teaching time, printable finance facts and Control Center
+
+Source: [20261116091017_timesheets_finance_and_control_center.sql](../supabase/migrations/20261116091017_timesheets_finance_and_control_center.sql).
+
+Timesheets bind actual assignment sessions, bounded intervals/breaks, nonoverlap and audited review/retry state. Accepted compensation remains unchanged. Current capability/MFA gates own/all printable stable-hash facts, original-currency forecasts and date-bounded operational exceptions; customer gross requires its separate capability. No accounting, bank, payroll or legal-signature integration is implied.
+
+Test entry point: [timesheets-finance-db-tests.mjs](../scripts/timesheets-finance-db-tests.mjs).
+
+### 46. Revocable private calendar capabilities
+
+Source: [20261116091018_private_calendar_subscriptions.sql](../supabase/migrations/20261116091018_private_calendar_subscriptions.sql).
+
+Own creation/rotation/revocation binds CAS/retry keys and stores only a token hash plus explicit private-event inclusion and expiry. Service-only snapshot/recheck routines validate current active owner and the capability before/after rendering. The exact GET calendar-feed endpoint is the reviewed JWT exception; all other function authentication remains unchanged.
+
+Test entry point: [calendar-subscriptions-db-tests.mjs](../scripts/calendar-subscriptions-db-tests.mjs).
+
+### 47. Current-permission unified search
+
+Source: [20261116091019_permission_aware_unified_search.sql](../supabase/migrations/20261116091019_permission_aware_unified_search.sql).
+
+Adds a checked paginated union across the actual authorized modules, with kind/title/UUID cursor and bounded input/page size. Selected wiki revisions, current chat/task access and commercial capability checks prevent a search index from becoming a new read grant. No global materialized search table or all-pages browser download is added.
+
+Test entry point: [unified-search-db-tests.mjs](../scripts/unified-search-db-tests.mjs).
+
+### 48. Cross-feature notification targets and delivery rechecks
+
+Source: [20261116091020_smart_operations_notifications.sql](../supabase/migrations/20261116091020_smart_operations_notifications.sql).
+
+Replaces earlier target/category/prepare/reminder/attention definitions with the combined course, task, waitlist/substitution, timesheet and existing notification model. Committed changes emit scoped generic notifications; current recipient, channel, quiet-window and resource rights are checked again at delivery. Read this latest definition after the initial inbox/email/Push migrations.
+
+Test entry point: [smart-notifications-db-tests.mjs](../scripts/smart-notifications-db-tests.mjs).
+
+### 49. Direct current-authorisation task lookup
+
+Source: [20261116091022_workbench_direct_task_lookup.sql](../supabase/migrations/20261116091022_workbench_direct_task_lookup.sql).
+
+Resolves an explicit task deep link through the same current task/source-message helper used by paged tasks. Finding a private task by UUID never widens its visibility and avoids fetching every history page in the browser. No new table is created.
+
+Test entry point: [workbench-db-tests.mjs](../scripts/workbench-db-tests.mjs).
+
+### 50. Versioned customer teaching briefs and immutable request snapshots
+
+Source: [20261116091023_client_request_brief_and_history.sql](../supabase/migrations/20261116091023_client_request_brief_and_history.sql).
+
+Adds explicit whole teaching units of 45/60 minutes, required-document descriptions and exact scanned material/report attachments without changing original prices. Required minutes must fit planned sessions. Atomic creation retries compare the immutable first brief; edits share the publication row lock and CAS boundary before publication. Current organisation history uses stable pages, while repeat booking copies requirements/time but no attachments or learner records.
+
+Test entry point: [client-request-brief-db-tests.mjs](../scripts/client-request-brief-db-tests.mjs).
+
+### 51. Own qualification passport facts
+
+Source: [20261116091024_own_qualification_passport.sql](../supabase/migrations/20261116091024_own_qualification_passport.sql).
+
+The invoker API accepts locale and a bounded current snapshot instant, derives its subject from the actual active lecturer and returns explicit facts plus SHA-256. Verified/unverified/expired eligibility, current evidence availability and historical attestation provenance remain separate. It neither exports certificate bytes/private paths nor creates verification decisions. The protected PDF gateway repeats the same facts/access read before releasing generated bytes.
+
+Test entry points: [qualification-passport-db-tests.mjs](../scripts/qualification-passport-db-tests.mjs), [qualification-passport-api-check.mjs](../scripts/qualification-passport-api-check.mjs).
+
+### 52. Recipient-role substitution pricing and unknown forecast costs
+
+Source: [20261116091025_role_aware_handover_and_forecast.sql](../supabase/migrations/20261116091025_role_aware_handover_and_forecast.sql).
+
+Captures the recipient's own private role-pricing context and net quote. Acceptance rechecks that context under the existing locks, then independently verifies the inserted claim and revenue snapshot. Original accepted fees and customer gross remain immutable. Other lecturers and ordinary management cannot inspect the recipient's fee/hash. Role-dependent prospective costs remain unknown (`null`) with an explicit count rather than presenting the raw privacy sentinel as a zero cost.
+
+Test entry points: [role-aware-handover-db-tests.mjs](../scripts/role-aware-handover-db-tests.mjs), [role-aware-handover-api-check.mjs](../scripts/role-aware-handover-api-check.mjs).
+
+### 53. Withdrawal authority after concurrent role edits
+
+Source: [20261116091026_substitution_withdrawal_permission_recheck.sql](../supabase/migrations/20261116091026_substitution_withdrawal_permission_recheck.sql).
+
+Rechecks current manager withdrawal capability after the profile, schedule, job, claim and offer locks. A request queued behind a role edit cannot use its former permission. Immutable proposer/source ownership remains a separate active-account right. No released substitution implementation is edited.
+
+Test entry point: [role-aware-handover-db-tests.mjs](../scripts/role-aware-handover-db-tests.mjs), including an observed blocked-session negative-control regression.
+
+### 54. Current course context in the own Teaching Day
+
+Source: [20261116091027_teaching_day_course_workspace.sql](../supabase/migrations/20261116091027_teaching_day_course_workspace.sql).
+
+Extends the existing own-day projection with the current nonarchived course, its explicitly selected same-organisation shared contact, shared preparation totals and bounded exact authorised clean resource versions. The active lecturer must still own a confirmed, unreleased assignment session. Internal contacts/notes, another organisation's contact and private document versions remain excluded. Shared progress stays distinct from the lecturer's three private checklist items.
+
+Test entry points: [teaching-day-course-db-tests.mjs](../scripts/teaching-day-course-db-tests.mjs), [dashboard-personal-api-check.mjs](../scripts/dashboard-personal-api-check.mjs).
+
+### 55. Current resulting assignment on accepted retries
+
+Source: [20261116091029_substitution_receipt_current_status.sql](../supabase/migrations/20261116091029_substitution_receipt_current_status.sql).
+
+An exact accepted-offer retry reads the resulting claim's current owner, job and status under the existing locks. A subsequently cancelled assignment returns `cancelled`, without new reservations, notifications or audit events. Exact quote hash and explicit terms consent remain mandatory. Historical accepted-offer state alone no longer fabricates a current confirmation.
+
+Test entry points: [role-aware-handover-db-tests.mjs](../scripts/role-aware-handover-db-tests.mjs), [role-aware-handover-api-check.mjs](../scripts/role-aware-handover-api-check.mjs).
+
+### 56. Current lecturer authority on accepted retries
+
+Source: [20261116091030_substitution_retry_current_lecturer_authority.sql](../supabase/migrations/20261116091030_substitution_retry_current_lecturer_authority.sql).
+
+After the existing profile/workflow locks and exact consent checks, accepted retries require current lecturer authority. An active account that lost its teaching role receives `not_eligible`; a suspended account is denied. Tests observe both role and activation mutations holding the profile lock, then verify the waiting request uses the newly committed authority without changing business history or creating notices.
+
+Test entry points: [role-aware-handover-db-tests.mjs](../scripts/role-aware-handover-db-tests.mjs), [role-aware-handover-api-check.mjs](../scripts/role-aware-handover-api-check.mjs). The vulnerable52910-only negative control fails the new role-revocation regression.
+
+### 57. Explicit PL/pgSQL initializer types and quiz index
+
+Source: [20261116091031_smart_operations_explicit_plpgsql_types.sql](../supabase/migrations/20261116091031_smart_operations_explicit_plpgsql_types.sql).
+
+The strict complete-CI lint gate found implicit text-to-UUID-array/JSONB initializer conversions and a shadowed quiz loop index/unused local row. This forward migration explicitly types the three empty values, removes the unused declaration and gives the automatic loop index its own name. Independent exact-definition comparison confirms every other business, permission, lock, retry and grant remains unchanged. All three replacement routines pass actual `plpgsql_check` with ordinary/extra warnings enabled; focused course/workbench/brief SQL flows pass. The complete CI gate is retained.
+
+Test entry points: [course-workspace-db-tests.mjs](../scripts/course-workspace-db-tests.mjs), [workbench-db-tests.mjs](../scripts/workbench-db-tests.mjs), [client-request-brief-db-tests.mjs](../scripts/client-request-brief-db-tests.mjs).
+
+### 58. Effective accepted amendments and active forecast months
+
+Source: [20261116091032_amendment_aware_finance_forecast.sql](../supabase/migrations/20261116091032_amendment_aware_finance_forecast.sql).
+
+An internal, ungranted adapter resolves the optional Formal Amendments module's actual `effective_assignment(uuid)` at read time. Current accepted lecturer cost and margin use that effective net; only unreleased allocations choose the month. Original claims and customer-gross ledger rows remain immutable. Valid accepted zero fees are supported; missing, negative and nonfinite snapshots fail. The original-currency, nullable prospective-price and current finance/MFA boundaries stay effective.
+
+Test entry point: [amendment-forecast-db-tests.mjs](../scripts/amendment-forecast-db-tests.mjs). Default replay verifies the current source; explicit pinned local amendment fixtures exercise real consent/application in both installation orders. The executed21 focused groups and14 existing finance groups are separate from full native/Auth/browser acceptance. [Contract and evidence](AMENDMENT_FORECAST_BRIDGE.md).
+
+### 59. Dedicated private document isolation at course boundaries
+
+Source: [20261116091034_course_document_dedicated_registry_isolation.sql](../supabase/migrations/20261116091034_course_document_dedicated_registry_isolation.sql).
+
+Optional Support, enquiry and customer-invoice registries are checked dynamically on course selection, sharing, current resource reads and exact download facts. An unconditional course-resource trigger and shared document/version locks serialize cross-domain registration. Removed share history still prevents reusing the same document for a private enquiry. Normal authorised exact-version teaching resources retain their course audience access. Existing routine identities, unrelated action branches and private execution grants are preserved.
+
+Test entry point: [course-document-privacy-db-tests.mjs](../scripts/course-document-privacy-db-tests.mjs). Its self-contained, hash-bound contract metadata and exact enquiry RPC excerpt exercise18 groups in both module orders, including observed lock races. These fixtures do not claim full foreign-module or actual Edge/Auth acceptance. [Boundary and evidence](COURSE_DOCUMENT_PRIVACY.md).
+
+### 60. Current waitlist authority after a profile-lock wait
+
+Source: [20261116091534_waitlist_current_authority_after_profile_lock.sql](../supabase/migrations/20261116091534_waitlist_current_authority_after_profile_lock.sql).
+
+Replaces only the existing private waitlist mutation implementation, preserving its public API and grants. Immediately after the existing profile `FOR SHARE` lock, it rechecks current account activation and, for joining, current lecturer authority. A request that waited behind a committed suspension may neither join nor leave using the earlier authority result; the waitlist and corresponding notice remain unchanged. An active former lecturer may still withdraw their own existing interest. No assignment, capacity reservation or accepted commercial snapshot is changed.
+
+Test entry point: [waitlist-authority-db-tests.mjs](../scripts/waitlist-authority-db-tests.mjs). Four deterministic real PostgreSQL cases observe the profile-lock wait and verify suspended join/leave denial, downgraded-role join denial and permitted active-former-lecturer withdrawal. The vulnerable original routine fails the suspension regression before this correction; all four cases pass with the new migration. These focused results do not replace current combined native/Auth/browser acceptance. The preceding 59 SQL files remain byte-identical.
+
+### 61. Metadata-private waitlist withdrawal and retained interest
+
+Source: [20261116100136_waitlist_private_withdrawal_receipts.sql](../supabase/migrations/20261116100136_waitlist_private_withdrawal_receipts.sql).
+
+An idempotent leave request is own-state cleanup, not a foreign job lookup. After the current active-account/profile-lock checks, a caller without their own interest receives the same empty-title receipt for guessed private or missing job IDs before any foreign job lookup or row lock. Null job IDs remain denied. All successful leave receipts omit the title, including when removing a genuine own row, and preserve the permitted withdrawal by an active former lecturer.
+
+Stored own interest does not grant access to later private job edits. Exact and own-list projections redact draft/archived titles unless the caller currently has ordinary job-read authority. The existing reduced published/filled marketplace projection remains intact. The UI labels hidden interest generically, omits its job-detail link and retains its own leave action; no private title or job-existence oracle is introduced by withdrawal. The preceding 60 migration files and public API/grant identities remain unchanged.
+
+Test entry point: [waitlist-authority-db-tests.mjs](../scripts/waitlist-authority-db-tests.mjs). All eight focused authority/privacy PostgreSQL groups pass on the 61-source fixture, including the existing observed profile-lock races, guessed-ID withdrawal, retained-interest private-title changes and own-notice cleanup. Restoring the vulnerable 60-source leave implementation makes the new metadata regression fail. These bounded results are separate from full 61-source native/Auth/browser acceptance; exact broader outcomes belong in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
+
+### 62. Explicit safe-update targets for service-only Push configuration
+
+Source: [20261116101427_web_push_safe_update_targets.sql](../supabase/migrations/20261116101427_web_push_safe_update_targets.sql).
+
+Preserves the existing private `configure_web_push` signature, public invoker wrapper, service-only execution grants and public-key validation. A changed VAPID public key invalidates only currently active subscriptions with an explicit `WHERE active` predicate. The configuration write targets its existing singleton with `WHERE singleton=true`. Inactive device history is retained; the database's safe-update protection remains enabled rather than being disabled to permit unbounded updates.
+
+The preceding 61 SQL files remain unchanged, and no API or browser privilege is added. All six focused [safe-update PostgreSQL groups](../scripts/web-push-safeupdate-db-tests.mjs) passed with the actual installed safe-update module loaded and enabled in the RPC backend. They cover initial/same-key configuration, active-only rotation with unchanged inactive history, disable/re-enable behavior, validation and service-only grants. Restoring the original routine reproduces `21000` under the same test. Existing [Push PostgreSQL checks](../scripts/web-push-db-tests.mjs) and [actual Auth/PostgREST acceptance](../scripts/web-push-api-check.mjs) exercise configuration and device behavior. Exact safe-update negative-control and corrected-source results belong in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md); a focused source/SQL pass does not establish the full 62-source application/native gate or external Push delivery.
+
+### 63. Derived course readiness and scoped preparation
+
+Source: [20261116121554_course_readiness.sql](../supabase/migrations/20261116121554_course_readiness.sql).
+
+Private settings/tasks/instruction receipts complement live assignment, agreement, qualification, material, contact and schedule checks. No percentage setter exists. Reads require current course management/MFA or assignment ownership; historical or published visibility alone does not grant preparation access. Writers lock the run before the preparation advisory lock, and compare reviewed versions. A thin wrapper reuses current standalone job creation and fills its newly created run's mode/venue; it never rewrites existing authored runs.
+
+Tests: [readiness-db-tests.mjs](../scripts/readiness-db-tests.mjs), [readiness-api-check.mjs](../scripts/readiness-api-check.mjs).
+
+### 64. Private support tickets and dedicated attachments
+
+Source: [20261116121556_internal_support_desk.sql](../supabase/migrations/20261116121556_internal_support_desk.sql).
+
+Own ticket history and explicit MFA support authority replace an administrator-wide shortcut. Replies, internal notes, transitions, version checks and retry receipts stay private; internal notes/files are withheld from requesters. Clean single-version evidence becomes dedicated/frozen and the ticket ACL takes precedence over ordinary personal-document ownership, including after role revocation.
+
+Tests: [support-db-tests.mjs](../scripts/support-db-tests.mjs), [support-api-check.mjs](../scripts/support-api-check.mjs).
+
+The support migration also rejects existing/removed optional course-resource references and guards the reverse registry insertion with the same document lock. The automatically discovered [support/course contract tests](../scripts/support-course-registry-db-tests.mjs) distinguish synthetic optional-schema contracts from the strict manual actual-module gate. [Chronology and evidence](SUPPORT_COURSE_RESOURCE_REGRESSION.md).
+
+### 65. Whole-block replacement without premature release
+
+Source: [20261116121558_replacement_marketplace.sql](../supabase/migrations/20261116121558_replacement_marketplace.sql).
+
+Open/selected emergency searches keep the original confirmed allocation. Sorted profile/lecturer locks precede job/claim/offer locks. The existing current claim implementation executes inside a subtransaction; every failed handover restores the original, while success retains old financial/schedule history and transfers current calendar/chat/file authority. Optional role-price helpers are discovered by exact trusted signatures and missing quotes fail closed. Started/invoiced/partial-work orchestration and ordered notifications remain explicit limitations.
+
+Tests: [replacements-db-tests.mjs](../scripts/replacements-db-tests.mjs), [replacements-api-check.mjs](../scripts/replacements-api-check.mjs).
+
+### 66. Immutable lecturer delivery evidence
+
+Source: [20261116121600_attendance_delivery.sql](../supabase/migrations/20261116121600_attendance_delivery.sql).
+
+Assignment sessions own drafts, immutable submitted revisions and independent review/customer events. Version/request locks protect concurrent changes. Customer projections omit draft/private notes/invoice IDs; existing accepted fees and invoices never change when evidence is corrected. The feature records freelance teaching delivery and does not introduce payroll or clock-in processing.
+
+Tests: [delivery-db-tests.mjs](../scripts/delivery-db-tests.mjs), [delivery-api-check.mjs](../scripts/delivery-api-check.mjs).
+
+### 67. Current-authority operational inbox targets
+
+Source: [20261116121603_operations_notification_integration.sql](../supabase/migrations/20261116121603_operations_notification_integration.sql).
+
+Preserves the prior resolver and composes readiness/support/delivery/replacement destinations under current access. Assigned preparation reminders respect preferences and actual task changes. Removed memberships, cancelled allocations and revoked capabilities cannot turn an old notification into a private-resource link. No mail service or public cache is added.
+
+Strict non-trigger body diagnostics are additionally checked by [operations-lint-db-tests.mjs](../scripts/operations-lint-db-tests.mjs); canonical SQL lint/advisor/trigger and actual Auth/browser checks remain mandatory. [The extension ledger](OPERATIONS_EXTENSION_STATUS.md) distinguishes executed focused checks from full acceptance and release status.
+
+### 68. Optional forward notification and handover composition
+
+Source: [20261116121605_operational_module_notification_handover_integration.sql](../supabase/migrations/20261116121605_operational_module_notification_handover_integration.sql).
+
+Replaces the current inbox target in place and retains an owner-only trusted core/smart fallback. Readiness, delivery, support and marketplace targets retain their own current resource checks; exact optional enquiry/amendment helpers fail closed when absent. Where directed substitutions are installed, an accepted transition atomically closes competing open marketplace offers, with idempotent historical repair. No email/push category is activated. Later modules that replace this resolver must preserve its composition in their own newer migration.
+
+Tests: automatically discovered [operational-forward-db-tests.mjs](../scripts/operational-forward-db-tests.mjs); strict optional [operational-pr17-integration.mjs](../scripts/operational-pr17-integration.mjs). [Integration, chronology and actual evidence](OPERATIONAL_FORWARD_INTEGRATION.md).
+
 ## The critical data flows
 
 **A job is claimed:** browser draft and idempotency key → public `claim_job` invoker → latest private implementation → current actor, locks, contract/qualification/capacity/time-conflict checks → immutable claim/schedule/revenue snapshots, memberships and notifications → transaction commit → confirmed UI. An error cannot leave a partially successful multi-day booking. Kanban calls permitted lifecycle actions; dragging a card does not create a claim.
@@ -253,6 +513,57 @@ Test entry points: [job-briefing-db-tests.mjs](../scripts/job-briefing-db-tests.
 **A file is uploaded:** authenticated Edge request → bounded and validated bytes → version reserved under caller permissions → immutable quarantine bytes → actual scan → fresh current-permission check → clean exact version. A download checks current rights again; a saved notification or avatar ID is not a permanent access token. SQL metadata alone does not prove an actual object transfer or a clean scan.
 
 **A private projection is read:** authenticated actor → current capability/MFA and resource rights → explicitly bounded result. A `public` wrapper is an API boundary, not proof of public visibility. An internal `security definer` implementation technically bypasses RLS, so it must retain its own actor/resource checks and precise grants. Administrative overviews do not implicitly grant access to private DMs, calendars or contracts.
+
+**A substitution is accepted:** targeted quote/hash and explicit acceptance → current actor/resource checks → stable profile/scheduling/job/claim lock order → renewed qualification/contract/conflict/invoice checks → complete old block release plus new immutable claim/allocation → commit. The waitlist does not allocate or bypass this protocol.
+
+**A brief is revised or repeated:** current organisation scope → request publication row lock → expected brief version → whole teaching-time and exact scanned-version validation → append immutable snapshot → commit. A creation retry compares the immutable first brief; later revisions remain intact. Repetition requests new future dates and never copies learner records or document consent.
+
+**A protected printable document is downloaded:** caller JWT/current Auth → reviewed SQL facts/exact share → private Storage bytes or bounded deterministic PDF rendering → SHA-256 and repeat current Auth/permission/fact checks → private/no-store response. Vendored fonts/runtime and the release archive are separate source assets, not a migration or a legal signature.
+
+**An external notice is delivered:** committed business event → deduplicated occurrence/device outbox → service-only bounded lease → fresh current recipient/preference/quiet-window/resource preparation → provider submission → explicit outcome. An uncertain handoff does not become a fabricated success or an automatic duplicate retry. Worker installation/provider/device acceptance is separate from database replay.
+
+<a id="unreleased-branch-version-reconciliation"></a>
+
+## Historical pre-release source version reconciliation
+
+At this historical pre-PR17-release checkpoint, the accepted main prefix contained 36 published SQL files. The table retains its status at that time; actual Main17 now publishes all 62 files described above. Nine shared branch sources are byte-identical to their published canonical files and are represented once. The 23 still-undelivered PR17 files were assigned new forward identifiers with the installed CLI, preserving every SQL byte, SHA-256 and relative dependency order. This is source-file reconciliation before release, not an installed-database history repair. No ordinary or hosted database was reset, backdated or given fabricated migration records. The separate 60th source adds the post-lock waitlist authority correction described above; it does not rewrite those 59 files.
+
+| Earlier branch version | Current source version | Status                   |
+| ---------------------- | ---------------------- | ------------------------ |
+| 20261116021141         | 20261116091007         | Pending PR17 file        |
+| 20261116021232         | 20261116091009         | Pending PR17 file        |
+| 20261116022220         | 20261116091010         | Pending PR17 file        |
+| 20261116022729         | 20261116091011         | Pending PR17 file        |
+| 20261116022730         | 20261116080730         | Published canonical file |
+| 20261116022731         | 20261116080732         | Published canonical file |
+| 20261116022732         | 20261116080735         | Published canonical file |
+| 20261116022733         | 20261116080737         | Published canonical file |
+| 20261116022734         | 20261116080739         | Published canonical file |
+| 20261116022735         | 20261116080741         | Published canonical file |
+| 20261116022736         | 20261116080743         | Published canonical file |
+| 20261116022737         | 20261116080746         | Published canonical file |
+| 20261116031429         | 20261116091012         | Pending PR17 file        |
+| 20261116031533         | 20261116091013         | Pending PR17 file        |
+| 20261116031728         | 20261116091015         | Pending PR17 file        |
+| 20261116032008         | 20261116091016         | Pending PR17 file        |
+| 20261116032842         | 20261116091017         | Pending PR17 file        |
+| 20261116034053         | 20261116091018         | Pending PR17 file        |
+| 20261116034638         | 20261116091019         | Pending PR17 file        |
+| 20261116040854         | 20261116091020         | Pending PR17 file        |
+| 20261116041354         | 20261116091022         | Pending PR17 file        |
+| 20261116042100         | 20261116091023         | Pending PR17 file        |
+| 20261116044535         | 20261116091024         | Pending PR17 file        |
+| 20261116045011         | 20261116091025         | Pending PR17 file        |
+| 20261116045609         | 20261116080748         | Published canonical file |
+| 20261116051736         | 20261116091026         | Pending PR17 file        |
+| 20261116052704         | 20261116091027         | Pending PR17 file        |
+| 20261116052910         | 20261116091029         | Pending PR17 file        |
+| 20261116054135         | 20261116091030         | Pending PR17 file        |
+| 20261116055929         | 20261116091031         | Pending PR17 file        |
+| 20261116063201         | 20261116091032         | Pending PR17 file        |
+| 20261116065156         | 20261116091034         | Pending PR17 file        |
+
+A private experimental database that applied earlier unmerged identifiers needs separate inspection; never reset or falsify its history. Actual hosted history and any planned installation require the existing exact-source migration review, backup, writer-stop and recovery gates. The reviewed updater plan is an operating-controller extension, not a migration; [REVIEWED_MIGRATION_PLANS](REVIEWED_MIGRATION_PLANS.md) documents its release/history binding and one-shot approval. Source documentation proves no live activation or complete acceptance.
 
 ## Before changing SQL
 

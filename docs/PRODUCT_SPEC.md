@@ -2,6 +2,8 @@
 
 Authority: [Universal Master Prompt](UNIVERSAL_MASTER_PROMPT.txt), preserved verbatim from the user's attachment on 15 November 2026 (Australia/Brisbane). This document is its implementation map; it does not reduce the requested product scope. See [implementation plan](IMPLEMENTATION_PLAN.md) for actual completion status.
 
+The approved 16 November [smart operations extension](SMART_OPERATIONS_SPEC.md) additionally requires the full Control Center, personalized dashboard/Teaching Day, Hostinger email and optional mobile Push, waitlists/replacement workflows, timesheets, client/participant self-service, favourites, saved filters, calendar feeds, preparation, quality, forecasting and offline schedule. Its complete feature map distinguishes current source from remaining work; the original master prompt remains preserved verbatim.
+
 ## Product and operating model
 
 A private, bilingual German/English, responsive PWA for approximately eleven freelance lecturers, administrators/management and restricted course participants. Management publishes teaching jobs. An authenticated, eligible lecturer may claim an entire job immediately; the first committed database transaction wins. The claim requires no routine approval queue. Client/employer organisations have explicit individual client accounts and scoped memberships as approved on 16 November 2026; see [Accounts and commission extension](ACCOUNTS_REVENUE_SPEC.md).

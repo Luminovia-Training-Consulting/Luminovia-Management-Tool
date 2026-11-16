@@ -1,0 +1,11 @@
+[Unit]
+Description=Check committed Luminovia notification emails once per minute
+
+[Timer]
+OnBootSec=60s
+OnUnitInactiveSec=60s
+RandomizedDelaySec=5s
+Unit=luminovia-notification-mail.service
+
+[Install]
+WantedBy=timers.target

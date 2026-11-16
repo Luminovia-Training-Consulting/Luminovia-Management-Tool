@@ -14,6 +14,8 @@ import {
 import type { Session } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
+import { synchronizePushActor } from "../notifications/push-browser";
+import { synchronizeOfflineActor } from "../calendar/offline-store";
 /** Session state with distinct initial-loading and initial-lookup failure flags. */
 interface AuthState {
   session: Session | null;
@@ -36,12 +38,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const client = useQueryClient();
   const actor = useRef<string | null>(null);
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase) {
+      synchronizeOfflineActor(null);
+      void synchronizePushActor(null);
+      return;
+    }
     let alive = true;
     let revision = 0;
     // Clear the previous actor's query cache before publishing the new session.
     // Otherwise new components could briefly observe another actor's retained private data.
     const applySession = (session: Session | null, error = false) => {
+      synchronizeOfflineActor(session?.user.id ?? null);
+      void synchronizePushActor(session?.user.id ?? null);
       if (actor.current !== (session?.user.id ?? null)) {
         client.clear();
         actor.current = session?.user.id ?? null;
