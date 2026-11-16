@@ -12,6 +12,8 @@ Subsequent actual main0a6002a5 contains new guided-experience source. It and the
 
 Incoming30075c9 fixes the actual lifecycle SQL fixture race found by PR27: pre-read authorised tokens before50real claims, retain1winner/49filled/2sessions and prove a late reader can use reviewed consent after offer-list disappearance. No production SQL or fallback token changes. The local merged source passes syntax/lint/format/documentation checks; its full native/SQL acceptance is still pending. A second local invocation onbbd3238 was refused before startup by the customer-neutral checkout's legitimate lock; its exit1 is retained privately, without claiming a pass.
 
+The separate commission fixture now also pre-reads10actual authorised quotes before10real parallel claims and deterministically verifies late visibility loss plus server-confirmed filled. Exact1winner/9filled/revenue/allocation/privacy checks remain intact. Syntax/lint/format pass locally; no new SQL pass is inferred. The kernel QA lock is currently held by the M7 integration checkout, so the complete local run must wait for natural release.
+
 ## Earlier PR18 integration preparation — historical pending checkpoint
 
 Current combined source incorporates actual PR18 mainfabd71a, merged05:09:15UTC after its14required checks and independent26-migration/20-suite native acceptance passed. The actual-main merge changes no tree bytes over our signed correctedf010721 source before this evidence update. All migration/dependency bytes match accepted PR18; fresh full acceptance of this functional branch remains pending.

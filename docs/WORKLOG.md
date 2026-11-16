@@ -2,6 +2,12 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — own commission fixture race corrected
+
+A bounded census found the same pre-claim visibility race in `commission-db-tests.mjs`. This separate fixture now captures and validates all10actual authorised quotes before starting its10parallel claims. Exactly1winner/9filled results, immutable revenue, allocation and existing privacy assertions remain. A deterministic losing reader confirms the filled offer disappears from its list while a previously reviewed token still reaches the real claim RPC and returns filled; no fallback/version guess is introduced. The owner-managed lifecycle fixture was not edited again.
+
+Actual local syntax/ESLint/Prettier checks pass. Full SQL/API/browser acceptance of this repair remains pending in the reserved local complete run. The next slot was meanwhile taken by `luminovia-m7-english-main-integration` (PID1133880,06:09:11UTC), confirmed by the kernel lock and its metadata. No additional full command was launched into that occupied slot and no foreign process/port was changed. Keep this signed source frozen and start the normal complete command only after natural lock release. No larger feature collection or deployment action belongs to this repair.
+
 ## 16 November 2026 — incoming lifecycle fixture race repaired without weakening claims
 
 PR27's6cd5de0 full CI failed in the lifecycle SQL fixture with42601 after six groups. That fixture was byte-identical to accepted0950506: the50competing helpers independently reread an offer before claiming, so a lookup scheduled after the winner filled it could return no version and interpolate invalid SQL. The owner repaired this on30075c9, now merged locally with both documentation continuations. No second fixture implementation or business migration was introduced here.
