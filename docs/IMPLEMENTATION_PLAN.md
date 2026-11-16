@@ -2,6 +2,14 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Optional job contacts and external reference
+
+- [x] Implement optional per-job reference URL/label/description and contact channels with deliberate after-claim/default or authorised-offer visibility.
+- [x] Add private RLS storage, current role/MFA/resource checks, immutable commercial separation, strict validation and versioned/idempotent saves.
+- [x] Add the DE/EN detail editor and post-create shortcut; 260 frontend tests and 12 isolated PostgreSQL groups pass.
+- [ ] Complete actual Auth/API, desktop/mobile/DE/EN/dark accessibility and retained-data acceptance locally; fix concrete failures without relaxing gates.
+- [ ] Deliver signed commits/push/prepared PR, observe exact required green CI and hand merge sequencing to the authorised coordinator. Do not trigger deployment/release workflows.
+
 ## PR18 complete-CI repair
 
 - [x] Correct the missing disposable compensation bootstrap after real retention, with explicit owned QA identity and three executable orchestration regressions.

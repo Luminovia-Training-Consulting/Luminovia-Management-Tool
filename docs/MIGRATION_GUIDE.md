@@ -1,6 +1,6 @@
 # Reading and safely extending SQL migrations
 
-This guide explains the **24 preserved baseline migrations and two additional PR18 migrations**. The released baseline files retain their exact bytes. Accepted migrations form part of the local preview, update and recovery fingerprints. Even an added SQL comment would produce a different source hash. New migrations are added separately; extend this guide and the relevant feature guides when that happens.
+This guide explains the **26 preserved baseline migrations and the additional optional job-briefing migration**. The released baseline files retain their exact bytes. Accepted migrations form part of the local preview, update and recovery fingerprints. Even an added SQL comment would produce a different source hash. New migrations are added separately; extend this guide and the relevant feature guides when that happens.
 
 The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API inventory. [ERD](ERD.md), [DEVELOPER_GUIDE](DEVELOPER_GUIDE.md) and the relevant feature guides explain how the parts connect.
 
@@ -217,6 +217,14 @@ Source: [20261116021008_welcome_guide_progress.sql](../supabase/migrations/20261
 Own-account invoker RPCs read and version personal step/status state in the unexposed private schema. There is no target-user parameter or administrative bypass. Advancing, pausing or skipping the guide grants no role, MFA level or completed business action. The new source includes an outer BEGIN/COMMIT transaction so retained-data replay records the exact SQL and its history entry atomically; the native migration inventory regression checks this contract for every file.
 
 Test entry points: [welcome-db-tests.mjs](../scripts/welcome-db-tests.mjs), [welcome-api-check.mjs](../scripts/welcome-api-check.mjs), [welcome-guide.spec.ts](../tests/e2e/welcome-guide.spec.ts) and [selfhost-candidate-check.test.mjs](../deploy/hostinger/maintenance/selfhost-candidate-check.test.mjs). [Welcome guide](WELCOME_GUIDE.md).
+
+### 27. Optional job-specific contacts and external references
+
+Source: [20261116051933_job_briefing_contacts_references.sql](../supabase/migrations/20261116051933_job_briefing_contacts_references.sql).
+
+Unexposed, RLS-protected job briefing and retry rows separate optional authored reference/contact data from the private customer directory and accepted commercial snapshots. Current staff/job access gates reads; contact visibility defaults to a current confirmed claim, with deliberate manager-controlled offer-viewer release. Role removal and cancellation cannot retain the default contact grant through historical claims. Current management MFA gates versioned writes; retries bind actor, job, expected version and exact payload. Strict bounded values and HTTP(S) authority validation reject forged or ambiguous input. Archive is read-only and safe duplication copies none of these fields.
+
+Test entry points: [job-briefing-db-tests.mjs](../scripts/job-briefing-db-tests.mjs), [job-briefing-api-check.mjs](../scripts/job-briefing-api-check.mjs) and [job-briefing.spec.ts](../tests/e2e/job-briefing.spec.ts). [Feature and audience contract](JOB_BRIEFING.md).
 
 ## The critical data flows
 

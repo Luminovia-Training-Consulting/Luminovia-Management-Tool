@@ -238,3 +238,8 @@ Source versions have stable provider/code/file/hash identity. LPC3/LPC4 each ret
 | Earnings/invoice/payment history | Own original-currency records                                                                               | Denied                                             | `finance.manage` plus MFA; mutations audited                                            |
 
 See `CHAT_SECURITY.md`, `KNOWLEDGE_SECURITY.md`, `COMMERCIAL_SECURITY.md`, `OPERATIONS.md` and `BACKEND_SECURITY_REVIEW.md` for actual tested boundaries and outstanding acceptance. Tombstones, archives and audit revisions preserve data; none is a production legal-erasure or retention-policy guarantee.
+
+
+## Job-specific contact/reference extension
+
+`private.job_briefings.job_id` is a cascading one-to-one FK to jobs and contains only explicitly authored job reference/contact values, visibility, version and updater metadata. `private.job_briefing_requests` binds actor/request UUID to that job, original JSON payload and expected/saved versions; actor and job deletion cascade its private fixture/history rows. Both tables enforce RLS with no direct browser grants. These relations do not join or expose the private customer/contact directory and do not alter accepted claim, revenue, contract or invoice snapshots. Public invoker RPCs derive every audience from current roles/job access/confirmed assignment. [Feature contract](JOB_BRIEFING.md).

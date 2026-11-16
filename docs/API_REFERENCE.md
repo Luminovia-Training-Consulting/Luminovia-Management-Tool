@@ -88,6 +88,7 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | invoice_payments | p_invoice_id uuid | TABLE(id uuid, amount numeric, currency text, paid_at timestamp with time zone, reference text, recorded_by_name text, created_at timestamp with time zone, voided_at timestamp with time zone, void_reason text) | Authenticated; resource/capability checks apply |
 | invoice_records | p_all boolean | TABLE(id uuid, user_id uuid, user_name text, number text, issued_on date, due_on date, currency text, total_amount numeric, paid_amount numeric, status text, document_id uuid, document_version_id uuid, claim_ids uuid[], created_at timestamp with time zone, note text, paid_at timestamp with time zone, labels text[]) | Authenticated; resource/capability checks apply |
 | job_board | none | jsonb | Authenticated; resource/capability checks apply |
+| job_briefing | p_job_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | job_building_block_reference | p_job_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | job_lifecycle | p_job_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | job_offers | none | jsonb | Authenticated; resource/capability checks apply |
@@ -129,6 +130,7 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | save_account_profile | p_payload jsonb | jsonb | Authenticated; resource/capability checks apply |
 | save_course_run | p_id uuid, p_payload jsonb | uuid | Authenticated; resource/capability checks apply |
 | save_course_template | p_id uuid, p_payload jsonb | uuid | Authenticated; resource/capability checks apply |
+| save_job_briefing | p_job_id uuid, p_expected_version integer, p_request_id uuid, p_payload jsonb | jsonb | Authenticated; resource/capability checks apply |
 | save_knowledge_category | p_id uuid, p_kind text, p_slug text, p_label_de text, p_label_en text, p_archived boolean | uuid | Authenticated; resource/capability checks apply |
 | save_lecturer_availability | p_id uuid, p_payload jsonb, p_version integer | uuid | Authenticated; resource/capability checks apply |
 | save_notification_preferences | p_payload jsonb, p_expected_version integer | jsonb | Authenticated; resource/capability checks apply |

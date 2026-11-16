@@ -187,3 +187,8 @@ Mit **Auftrag daraus erstellen** öffnest du den vorhandenen Kurs als Auftragsgr
 Unter **Mein Profil** kannst du ein PNG-, JPEG- oder WebP-Profilbild wählen. Der Editor erklärt den quadratischen Mittelausschnitt. Erst die bestätigte Verarbeitung und Speicherung wählen das neue Bild aus; ein abgelehntes Bild ersetzt dein bisheriges nicht. **Profilbild entfernen** hebt die aktuelle Auswahl auf. Berechtigte Team-/Kurskontakte sehen das ausgewählte Bild; es wird nicht als öffentliche Internetdatei veröffentlicht. Offline erscheinen Initialen und die Bearbeitung ist gesperrt.
 
 Vorlagen und einzelne Aufträge haben **Kommentare & Unterrichtsnotizen** für das berechtigte Lehrteam. Schreibe eine Frage oder Lehrnotiz, bearbeite eigene Beiträge oder ziehe sie mit Bestätigung zurück. Die Verwaltung kann Beiträge mit MFA und Begründung ausblenden/wiederherstellen. Ein Versionskonflikt weist auf eine zwischenzeitliche Änderung hin; prüfe dann den aktuellen Beitrag. Kommentare ändern keine angenommenen Honorare oder Auftragsbedingungen und sind von Auftraggeber-/Teilnahmekonten getrennt.
+
+
+## Optional contacts and job references
+
+Open a job and use **Contact and job reference** to add an optional external brief/link and contact details. The creation confirmation also links directly to this section. Contact details default to confirmed assignees; management can deliberately release the entered details to authorised offer viewers. Private customer-directory entries are not shared automatically. Editing requires current management MFA; an explicit reload resolves a version conflict. [Details](JOB_BRIEFING.md).

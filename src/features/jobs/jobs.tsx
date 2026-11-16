@@ -4,6 +4,7 @@
  */
 import { JobPricingPanel } from "../commercial/pricing";
 import { JobLifecyclePanel } from "./lifecycle";
+import { JobBriefing } from "./briefing";
 import { refreshJobState } from "./lifecycle-api";
 import { ResourceComments } from "../comments/comments";
 import { JobBuildingBlockReference } from "../operations/building-blocks";
@@ -415,6 +416,11 @@ export function JobDetail() {
             )}
             {job.requires_contract && <p>{t("contractRequired")}</p>}
           </section>
+          <JobBriefing
+            jobId={job.id}
+            archived={job.status === "archived"}
+            managementHint={permissions.data?.includes("jobs.manage") ?? false}
+          />
           <JobDocuments
             jobId={job.id}
             canManage={permissions.data?.includes("jobs.manage") ?? false}
