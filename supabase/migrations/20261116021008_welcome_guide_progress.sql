@@ -1,3 +1,4 @@
+begin;
 -- Welcome progress is personal presentation state, never an authorisation source.
 -- No target user ID is accepted by either RPC and no administrator bypass exists.
 create table private.welcome_progress (
@@ -51,3 +52,4 @@ revoke all on function private.get_welcome_progress(),public.get_welcome_progres
  private.save_welcome_progress(text,text,integer),public.save_welcome_progress(text,text,integer) from public,anon;
 grant execute on function private.get_welcome_progress(),public.get_welcome_progress(),
  private.save_welcome_progress(text,text,integer),public.save_welcome_progress(text,text,integer) to authenticated;
+commit;
