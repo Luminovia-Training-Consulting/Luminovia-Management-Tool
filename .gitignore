@@ -1,13 +1,18 @@
+# Reproducible dependencies and the built public application.
 node_modules/
 dist/
+# Keep local keys/session fixtures private; share only the public template.
 .env*
 !.env.example
+# CLI state belongs to its checkout, not to versioned migration source.
 supabase/.temp/
 supabase/.branches/
+# QA reports and runtime state may contain private fictional accounts/traces.
 coverage/
 test-results/
 playwright-report/
 .local/
+# Compiler and Python caches are not delivery artifacts.
 *.tsbuildinfo
 __pycache__/
 *.pyc

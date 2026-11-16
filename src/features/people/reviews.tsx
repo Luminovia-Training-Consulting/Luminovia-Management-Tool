@@ -1,3 +1,7 @@
+/**
+ * Own reviews for courses the server marks reviewable. Server eligibility and existing-review
+ * state govern editing; confirm save/withdrawal only after a successful response.
+ */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -17,6 +21,7 @@ import { dateTime } from "../../lib/dates";
 import { peopleRpc, type ReviewableCourse } from "./api";
 import "./i18n";
 import "./people.css";
+/** Edit the server-authorized course/lecturer review through explicit save/withdrawal actions. */
 function ReviewForm({ course }: { course: ReviewableCourse }) {
   const { t, i18n } = useTranslation("people");
   const online = useOnline();
@@ -150,6 +155,7 @@ function ReviewForm({ course }: { course: ReviewableCourse }) {
     </article>
   );
 }
+/** Read only currently reviewable courses with their existing own-review state. */
 export function MyCourseReviews() {
   const { t } = useTranslation("people");
   const { session } = useAuth();

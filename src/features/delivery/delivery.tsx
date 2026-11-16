@@ -1,3 +1,4 @@
+/** Freelance teaching evidence separates saved drafts, immutable submissions and independent reviews; accepted compensation and invoice records remain separate. Components render pending, denied and committed outcomes separately and preserve reviewed form state. */
 import { useRef, useState } from "react";
 import {
   useInfiniteQuery,
@@ -37,6 +38,7 @@ import {
 import "./i18n";
 import "./delivery.css";
 
+/** Keep editable unsubmitted fields separate from immutable evidence; save first, explicitly submit and preserve earlier revisions. */
 function DeliveryDetail({
   row,
   actor,
@@ -346,6 +348,7 @@ function DeliveryDetail({
   );
 }
 
+/** Select a server-authorised own, management or customer projection and export only the explicitly loaded records. */
 export function TeachingDelivery() {
   const { session } = useAuth();
   const actor = session!.user.id;

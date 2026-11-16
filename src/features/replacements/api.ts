@@ -1,3 +1,4 @@
+/** Future whole-block replacements reuse the existing online claim contract; the original allocation stays confirmed until a complete transactional handover succeeds. Actor-scoped memory queries validate server projections; online mutations carry reviewed versions and retry identities. */
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
@@ -72,6 +73,7 @@ export const replacementRequestSchema = z
   .refine((v) =>
     v.mode === "open" ? v.invited.length === 0 : v.invited.length > 0,
   );
+/** Validate the selected/open audience and submit an actor-bound idempotent search request. */
 export async function requestReplacement(
   input: z.infer<typeof replacementRequestSchema>,
   request: string,
@@ -89,6 +91,7 @@ export async function requestReplacement(
   if (error) throw error;
   return z.uuid().parse(data);
 }
+/** Close only the search at its reviewed version; the original assignment is not cancelled by this operation. */
 export async function cancelReplacement(
   offer: ReplacementOffer,
   request: string,
@@ -102,6 +105,7 @@ export async function cancelReplacement(
   if (error) throw error;
   return z.uuid().parse(data);
 }
+/** Submit the reviewed quote token to the authoritative transaction; a returned refusal is never promoted to success. */
 export async function claimReplacement(
   offer: ReplacementOffer,
   request: string,

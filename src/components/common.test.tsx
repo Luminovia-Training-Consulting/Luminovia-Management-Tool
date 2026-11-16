@@ -1,3 +1,8 @@
+/**
+ * Regressions for native field labels, ARIA descriptions and validation links without lost
+ * handlers. DOM fixtures test these component contracts; full browser accessibility acceptance
+ * remains separate.
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";

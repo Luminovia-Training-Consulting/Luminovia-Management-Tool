@@ -1,3 +1,7 @@
+/**
+ * Shared desktop/mobile shell for navigation, search, notifications and preferences.
+ * Loaded capabilities shape visible actions and guidance; the backend authorizes access.
+ */
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -41,6 +45,7 @@ import { ErrorState, Loading, Notice } from "../components/common";
 import { Preferences } from "../components/preferences";
 import { PortalTour } from "../features/help/tour";
 export { Preferences } from "../components/preferences";
+/** Render private navigation and the actor-scoped tour; confirm sign-out before clearing private queries. */
 export function Shell() {
   const { t } = useTranslation();
   const { session } = useAuth();
@@ -295,6 +300,7 @@ export function Shell() {
     </div>
   );
 }
+/** Return from a job detail view to the job list. */
 export function BackLink() {
   const { t } = useTranslation();
   return (

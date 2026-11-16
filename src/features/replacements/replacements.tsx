@@ -1,3 +1,4 @@
+/** Future whole-block replacements reuse the existing online claim contract; the original allocation stays confirmed until a complete transactional handover succeeds. Components render pending, denied and committed outcomes separately and preserve reviewed form state. */
 import { useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -26,6 +27,7 @@ import {
 import "./i18n";
 import "./replacements.css";
 
+/** Reuse a request identity only while every reviewed input stays identical, making uncertain transport retries safe. */
 function useRequestKey() {
   const key = useRef<{ signature: string; id: string } | null>(null);
   return (signature: string) => {
@@ -34,6 +36,7 @@ function useRequestKey() {
     return key.current.id;
   };
 }
+/** Bind consent to the full quote and block; only a committed confirmed response may render a successful handover. */
 function ReplacementCard({
   offer,
   refresh,
@@ -167,6 +170,7 @@ function ReplacementCard({
     </article>
   );
 }
+/** Publish a reasoned search for an eligible confirmed assignment while its original allocation remains in place. */
 function ReplacementRequest({
   actor,
   refresh,
@@ -305,6 +309,7 @@ function ReplacementRequest({
     </section>
   );
 }
+/** Render only online server-filtered opportunities and refresh calendars, claims and preparation after committed changes. */
 export function ReplacementMarketplacePage() {
   const { session } = useAuth();
   const actor = session!.user.id;

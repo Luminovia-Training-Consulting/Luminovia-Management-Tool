@@ -1,3 +1,4 @@
+/** Layout and visible workflow states for delivery, using the existing theme and brand tokens across responsive sizes. */
 .delivery-grid {
   display: grid;
   grid-template-columns: minmax(16rem, 1fr) minmax(0, 1.8fr);

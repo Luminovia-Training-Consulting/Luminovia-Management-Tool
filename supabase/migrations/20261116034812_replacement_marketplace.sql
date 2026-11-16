@@ -30,7 +30,7 @@ language sql stable security definer set search_path='' as $$
  select exists(select 1 from private.replacement_offers o
  join public.job_claims c on c.id=o.original_claim_id join public.jobs j on j.id=c.job_id
  where o.id=p_offer and o.status='open' and c.status='confirmed' and c.lecturer_id<>p_user
- and j.lifecycle_version=o.job_version and private.lecturer_user(p_user)
+ and j.lifecycle_version=o.job_version and j.status<>'archived' and private.lecturer_user(p_user)
  and (o.mode='open' or p_user=any(o.invited_user_ids))
  and not exists(select 1 from public.invoice_items where claim_id=c.id)
  and exists(select 1 from public.job_sessions where job_id=j.id)
@@ -56,15 +56,24 @@ revoke execute on function private.replacement_eligible(uuid,uuid) from public,a
 create function private.replacement_quote(p_job uuid) returns jsonb
 language plpgsql stable security definer set search_path='' as $$
 declare j public.jobs; amount numeric; total numeric; token integer; mode text;
+ quote_function regproc; version_function regproc;
 begin
  select * into j from public.jobs where id=p_job;
  amount=j.amount; total=j.total_amount; token=j.terms_version;
  select to_jsonb(o)->>'pricing_mode' into mode from private.job_commission_offers o where o.job_id=j.id;
  if mode='role_split' then
   if not private.lecturer_actor() then return null;end if;
-  execute 'select private.role_net(o.gross_amount,$1,o.job_id),private.role_net(o.gross_total_amount,$1,o.job_id),private.role_quote_version($2,$1) from private.job_commission_offers o where o.job_id=$3'
+  -- This optional adapter is installed before the independently reviewed price
+  -- module on some branches. Resolve its exact trusted SQL signatures at runtime;
+  -- a captured role offer without that module fails closed instead of receiving
+  -- a guessed/raw zero quote. Parameters still use USING, never user-built SQL.
+  quote_function=to_regprocedure('private.role_net(numeric,uuid,uuid)')::oid::regproc;
+  version_function=to_regprocedure('private.role_quote_version(integer,uuid)')::oid::regproc;
+  if quote_function is null or version_function is null then return null;end if;
+  execute format('select %s(o.gross_amount,$1,o.job_id),%s(o.gross_total_amount,$1,o.job_id),%s($2,$1) from private.job_commission_offers o where o.job_id=$3',quote_function,quote_function,version_function)
    into amount,total,token using auth.uid(),j.terms_version,j.id;
  end if;
+ if amount is null or total is null or token is null then return null;end if;
  return jsonb_build_object('amount',amount,'total_amount',total,'currency',j.currency,'rate_unit',j.rate_unit,'terms',j.terms,'terms_version',token);
 end;$$;
 revoke execute on function private.replacement_quote(uuid) from public,anon,authenticated;
@@ -76,7 +85,7 @@ begin
  return coalesce((select jsonb_agg(jsonb_build_object('id',o.id,'job_id',j.id,'title',j.title,'time_zone',j.time_zone,
   'status',o.status,'mode',o.mode,'emergency',o.emergency,'version',o.version,'created_at',o.created_at,
   'can_cancel',o.status='open' and (c.lecturer_id=auth.uid() and private.lecturer_actor() or private.has_permission('jobs.manage')),
-  'can_claim',private.replacement_eligible(o.id,auth.uid()),
+  'can_claim',private.replacement_eligible(o.id,auth.uid()) and private.replacement_quote(j.id) is not null,
   'reason',case when c.lecturer_id=auth.uid() or private.has_permission('jobs.manage') then o.reason end,
   'quote',case when private.replacement_eligible(o.id,auth.uid()) then private.replacement_quote(j.id) end,
   'sessions',(select jsonb_agg(jsonb_build_object('starts_at',starts_at,'ends_at',ends_at) order by starts_at) from public.job_sessions where job_id=j.id))
@@ -111,7 +120,7 @@ begin
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(c.lecturer_id::text,0));
  select * into j from public.jobs where id=c.job_id for update;
  select * into c from public.job_claims where id=p_claim_id for update;
- if c.status<>'confirmed' or exists(select 1 from public.invoice_items where claim_id=c.id)
+ if c.status<>'confirmed' or j.status='archived' or exists(select 1 from public.invoice_items where claim_id=c.id)
  or not exists(select 1 from public.job_sessions where job_id=j.id)
  or exists(select 1 from public.job_sessions where job_id=j.id and starts_at<=clock_timestamp()) then raise exception 'Started or invoiced work requires management amendment' using errcode='22023';end if;
  if exists(select 1 from private.replacement_offers where original_claim_id=c.id and status='open') then raise exception 'Replacement already open' using errcode='22023';end if;
@@ -173,8 +182,12 @@ begin
  select * into j from public.jobs where id=c.job_id for update;
  select * into c from public.job_claims where id=c.id for update;
  select * into o from private.replacement_offers where id=p_offer_id for update;
+ -- A transaction may have started before teaching and waited on these locks.
+ -- Actual post-wait time, rather than its old transaction timestamp, decides.
+ if exists(select 1 from public.job_sessions where job_id=j.id and starts_at<=clock_timestamp()) then return jsonb_build_object('status','unavailable');end if;
  if o.status<>'open' or o.version<>p_expected_version then return jsonb_build_object('status','unavailable');end if;
  if not private.replacement_eligible(o.id,auth.uid()) then return jsonb_build_object('status','not_eligible');end if;
+ if private.replacement_quote(j.id) is null then return jsonb_build_object('status','prerequisite_missing');end if;
  if (private.replacement_quote(j.id)->>'terms_version')::integer<>p_terms_version then return jsonb_build_object('status','terms_changed');end if;
  begin
   -- Any rejection below raises into this subtransaction: the original remains
@@ -186,9 +199,11 @@ begin
   -- a claimable-looking offer that its old recruitment deadline always rejects.
   update public.jobs set status='published',claim_deadline=null where id=j.id;
   result=private.claim_job(j.id,p_request_id,p_terms_version);
-  if result->>'status'<>'confirmed' then raise exception using errcode='P0002',message='Replacement handover rejected',detail=result::text;end if;
-  if (result->>'claim_id')::uuid=c.id or not exists(select 1 from public.job_claims where id=(result->>'claim_id')::uuid and lecturer_id=auth.uid() and job_id=j.id and status='confirmed') then result=jsonb_build_object('status','idempotency_conflict');raise exception using errcode='P0002',message='Invalid replacement confirmation';end if;
-  if j.claim_deadline is not null then update public.jobs set claim_deadline=j.claim_deadline where id=j.id;end if;
+  if result->>'status'<>'confirmed' then raise exception using errcode='PZ001',message='Replacement handover rejected',detail=result::text;end if;
+  if (result->>'claim_id')::uuid=c.id or not exists(select 1 from public.job_claims where id=(result->>'claim_id')::uuid and lecturer_id=auth.uid() and job_id=j.id and status='confirmed') then result=jsonb_build_object('status','idempotency_conflict');raise exception using errcode='PZ001',message='Invalid replacement confirmation';end if;
+  -- A personal replacement does not authorise reopening another paused slot.
+  if j.status='draft' then update public.jobs set status='draft',claim_deadline=j.claim_deadline where id=j.id;
+  elsif j.claim_deadline is not null then update public.jobs set claim_deadline=j.claim_deadline where id=j.id;end if;
   perform 1 from public.chat_rooms where job_id=j.id and kind='lecturer_course' for update;
   update public.chat_members m set removed_at=clock_timestamp() from public.chat_rooms r
    where r.job_id=j.id and r.kind='lecturer_course' and m.room_id=r.id and m.user_id=c.lecturer_id and m.removed_at is null;
@@ -199,7 +214,10 @@ begin
   update private.replacement_offers set status='completed',version=version+1,replacement_claim_id=(result->>'claim_id')::uuid,completed_at=clock_timestamp() where id=o.id;
   insert into private.replacement_requests values(auth.uid(),p_request_id,payload,result);
   return result;
- exception when no_data_found then
+ exception when sqlstate 'PZ001' then
+  -- Nested business/trigger failures must never reuse an earlier confirmed
+  -- variable after the subtransaction rolled every write back.
+  if result->>'status'='confirmed' then raise;end if;
   return coalesce(result,jsonb_build_object('status','unavailable'));
  end;
 end;$$;

@@ -1,3 +1,4 @@
+/** Course preparation derives status from scoped server records; the browser edits requirements and receipts, never an authoritative readiness percentage. Actor-scoped memory queries validate server projections; online mutations carry reviewed versions and retry identities. */
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
@@ -121,6 +122,7 @@ async function result(request: PromiseLike<{ data: unknown; error: unknown }>) {
   if (error) throw error;
   return uuid.parse(data);
 }
+/** Submit the reviewed policy version; conflicts require a deliberate reload rather than overwriting current settings. */
 export function saveReadinessSettings(
   run: string,
   values: SettingsInput,
@@ -137,6 +139,7 @@ export function saveReadinessSettings(
     }),
   );
 }
+/** Bind managerial confirmation to the current server schedule fingerprint, not a browser list of sessions. */
 export function confirmCourseSessions(
   run: string,
   version: number,
@@ -151,6 +154,7 @@ export function confirmCourseSessions(
     }),
   );
 }
+/** Create or version an assigned task with an actor-bound retry key; the server validates responsibility. */
 export function saveReadinessTask(
   run: string,
   task: string | null,
@@ -169,6 +173,7 @@ export function saveReadinessTask(
     }),
   );
 }
+/** Record or revoke task completion through the authorised assignee/management transition. */
 export function completeReadinessTask(
   task: string,
   completed: boolean,
@@ -185,6 +190,7 @@ export function completeReadinessTask(
     }),
   );
 }
+/** Record the current actor acknowledging an exact authored instruction version. */
 export function acknowledgeCourseInstructions(
   run: string,
   version: number,
@@ -199,11 +205,13 @@ export function acknowledgeCourseInstructions(
     }),
   );
 }
+/** Re-fetch derived readiness and associated course state after confirmed operations. */
 export async function refreshReadiness(client: QueryClient) {
   await client.invalidateQueries({ queryKey: ["readiness"] });
 }
 
 /** Only an HTTPS URL without embedded credentials is rendered as an external link. */
+/** Permit only safe HTTPS meeting links; authored text can never become an executable or credential-bearing destination. */
 export function meetingHref(value: string) {
   try {
     const url = new URL(value);

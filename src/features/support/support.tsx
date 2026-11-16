@@ -1,3 +1,4 @@
+/** Ticket ownership and current support capability govern replies, internal notes and dedicated scanned attachments; support never grants unrelated private-resource access. Components render pending, denied and committed outcomes separately and preserve reviewed form state. */
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -34,6 +35,7 @@ import {
 import "./i18n";
 import "./support.css";
 
+/** Offer only course/claim/customer choices returned for this actor; identifiers are not an authorisation mechanism. */
 function RelatedFields({
   context,
   values,
@@ -75,6 +77,7 @@ function RelatedFields({
   );
 }
 
+/** Create a private ticket from reviewed input and retain the same retry identity across uncertain transport results. */
 function NewTicket({
   context,
   onCreated,
@@ -189,6 +192,7 @@ function NewTicket({
   );
 }
 
+/** Page and search the current ownership/capability projection without fetching unrelated ticket bodies. */
 function TicketList({
   actor,
   context,
@@ -361,6 +365,7 @@ function TicketList({
   );
 }
 
+/** Bind replies, decisions and internal notes to the reviewed ticket version and current support authority. */
 function TicketActionForm({
   ticket,
   context,
@@ -531,6 +536,7 @@ function TicketActionForm({
   );
 }
 
+/** Use the existing quarantine/scan gateway before dedicating a clean version to this ticket; attachment ACLs remain server-side. */
 function SupportUpload({
   ticket,
   onDone,
@@ -647,6 +653,7 @@ function SupportUpload({
   );
 }
 
+/** Render only current permitted messages, notes and files; hide retained staff-only content after a capability-denied refresh. */
 function TicketDetail({
   actor,
   id,
@@ -915,6 +922,7 @@ function TicketDetail({
   );
 }
 
+/** Switch own list/detail routes with actor-scoped queries and keep offline mutations disabled. */
 export function SupportDeskPage() {
   const { session } = useAuth();
   const { id } = useParams();

@@ -124,8 +124,16 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
     const run = await sql(
       `select course_run_id from public.jobs where id='${job}'`,
     );
-    await sql(
-      `update public.course_runs set delivery_type=${quoteSql(onsite ? "onsite" : "online")},venue=${quoteSql(onsite ? "Fictional teaching room" : "")},published=true where id='${run}'`,
+    await sql(`update public.course_runs set published=true where id='${run}'`);
+    assert.equal(
+      await sql(
+        `select delivery_type from public.course_runs where id='${run}'`,
+      ),
+      onsite ? "onsite" : "online",
+    );
+    assert.equal(
+      await sql(`select venue from public.course_runs where id='${run}'`),
+      onsite ? "Fictional teaching room" : "",
     );
     const organisation = await sql(
       `select organisation_id from public.course_runs where id='${run}'`,

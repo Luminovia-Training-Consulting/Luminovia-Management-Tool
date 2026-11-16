@@ -1,3 +1,7 @@
+/**
+ * Account directory and controlled role/activation changes. Load current permissions before
+ * using the accounts API; a visible role selector or submitted user ID grants no authority.
+ */
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +28,7 @@ import {
   type AccountRole,
 } from "./api";
 import "./i18n";
+/** Keep search/page drafts and confirmed account changes scoped to the current actor. */
 function AccountsDirectory({
   actorId,
   canAssign,
@@ -307,6 +312,7 @@ function AccountsDirectory({
     </>
   );
 }
+/** Load current account capabilities before the directory and distinguish failed checks from missing permission. */
 export function AccountsPage() {
   const { session } = useAuth();
   const { t } = useTranslation("accounts");

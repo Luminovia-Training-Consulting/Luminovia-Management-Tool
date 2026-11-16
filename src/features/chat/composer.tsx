@@ -1,3 +1,7 @@
+/**
+ * Message drafts with validated text, attachments and confirmed sending. Retain request IDs for
+ * retry and reference uploaded documents only after scan clearance.
+ */
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -12,8 +16,11 @@ import { Button } from "../../components/ui/button";
 import { uploadDocument } from "../files/api";
 import { chatKeys } from "./api";
 import "./i18n";
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const messageSchema = z.object({ body: z.string().max(8000) });
+/** Guide the browser file picker; the server independently checks MIME type, magic bytes, size and scanning. */
 const acceptedFiles = ".pdf,.png,.jpg,.jpeg,.webp,.txt,.docx,.xlsx,.pptx";
+/** Send text and clean attachments as a retryable operation; retain local input until confirmation. */
 export function MessageComposer({
   actor,
   room,
@@ -25,6 +32,8 @@ export function MessageComposer({
   const online = useOnline();
   const client = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
+  // Sending and uploading are separate operations with separate retry identities.
+  // An uncertain outcome keeps the same identity for unchanged content; changed input starts a new operation.
   const retry = useRef<{ signature: string; key: string } | null>(null);
   const uploadRetry = useRef<{ signature: string; key: string } | null>(null);
   const [attachment, setAttachment] = useState<{

@@ -1,3 +1,7 @@
+/**
+ * Explicit global search with bounded URL input. Only the safe server projection supplies
+ * results; private drafts/foreign resources are not assembled into a client-side full index.
+ */
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -7,6 +11,7 @@ import { useAuth } from "../auth/auth-context";
 import { db } from "../../lib/supabase";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Loading, PageHeading } from "../../components/common";
+/** Safe search projection with title, excerpt and server-determined destination. */
 interface Result {
   id: string;
   kind: string;
@@ -14,6 +19,7 @@ interface Result {
   detail: string;
   url: string;
 }
+/** Apply the search draft only when the user explicitly submits it. */
 function SearchForm({
   query,
   onSearch,
@@ -48,6 +54,7 @@ function SearchForm({
     </form>
   );
 }
+/** Bound URL terms and request permission-filtered server search from two characters onward. */
 export function PortalSearch() {
   const { t } = useTranslation();
   const { session } = useAuth();

@@ -1,3 +1,6 @@
+/**
+ * Static/filesystem candidate cases exercise isolation, unique ownership and carried fixtures. The separate native run must prove actual Auth/Storage persistence.
+ */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
@@ -28,6 +31,7 @@ const scope = {
   network: project + "-backend",
   directory: "/tmp/fictional-candidate-fixture",
 };
+// Create controlled owned fixtures with replaceable external responses.
 function fixture() {
   const services = Object.fromEntries(
     [

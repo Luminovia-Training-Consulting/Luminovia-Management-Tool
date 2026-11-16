@@ -22,7 +22,7 @@ The role-pricing compatibility path calls the inspected private `role_net` / `ro
 
 ## Evidence
 
-`PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-extensions-20261116 node scripts/replacements-db-tests.mjs` passed **10 real PostgreSQL groups** in randomly named disposable databases with no published network ports. Tests cover ownership/MFA/suspension, no release at publication, private reasons, exact retries, two concurrent claimants, immutable original agreement, complete calendars/chat, current conflicts/expired or revoked qualifications/contracts, selected invitations, cancellation CAS, injected handover failure rollback, stale terms, started work, old recruitment deadlines and concurrent original cancellation.
+`PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-extensions-20261116 node scripts/replacements-db-tests.mjs` passed **13 real PostgreSQL groups** in randomly named disposable databases with no published network ports. Tests cover ownership/MFA/suspension, no release at publication, private reasons, exact retries, two concurrent claimants, immutable original agreement, complete calendars/chat, current conflicts/expired or revoked qualifications/contracts, selected invitations, cancellation CAS, injected handover failure rollback, stale terms, started work, old recruitment deadlines and concurrent original cancellation.
 
 `npm test -- src/features/replacements` passed **4 component/business tests** for bound consent, real server-result handling, stable retries and offline/English rendering. The whole-source checkpoint passed 257 tests and the unchanged coverage gates (52.04% statements, 47.09% branches, 42.28% functions, 53.86% lines). These are focused source results, not browser/backend acceptance.
 

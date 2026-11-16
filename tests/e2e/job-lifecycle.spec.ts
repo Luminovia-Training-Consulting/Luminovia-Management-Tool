@@ -1,3 +1,7 @@
+/**
+ * Browser workflows for cancellation, explicit reopening and a new claim on the same mounted page.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
+ */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";

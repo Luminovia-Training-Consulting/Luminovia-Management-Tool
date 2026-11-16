@@ -1,3 +1,4 @@
+/** Course preparation derives status from scoped server records; the browser edits requirements and receipts, never an authoritative readiness percentage. Components render pending, denied and committed outcomes separately and preserve reviewed form state. */
 import { useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -71,11 +72,13 @@ const taskFormSchema = z.object({
   due_at: z.string(),
   archived: z.boolean(),
 });
+/** Render an instant in its intended zone for editing; conversion back to an instant is validated when saving. */
 function localTime(value: string | null, zone: string) {
   return value
     ? DateTime.fromISO(value).setZone(zone).toFormat("yyyy-MM-dd'T'HH:mm")
     : "";
 }
+/** Keep transport retries bound to identical reviewed inputs instead of creating duplicate server operations. */
 function useRequestKey() {
   const current = useRef<{ payload: string; id: string } | null>(null);
   return (payload: unknown) => {
@@ -85,6 +88,7 @@ function useRequestKey() {
     return current.current!.id;
   };
 }
+/** Distinguish a stale reviewed version from an ordinary failed write without displaying raw server details. */
 function WriteError({ error }: { error: unknown }) {
   const { t } = useTranslation("readiness");
   const stale = Boolean(
@@ -95,6 +99,7 @@ function WriteError({ error }: { error: unknown }) {
   );
   return <Notice kind="error">{t(stale ? "stale" : "error")}</Notice>;
 }
+/** Use a readable status label as well as colour so preparation state is accessible. */
 function Status({ value }: { value: CourseReadiness["status"] }) {
   const { t } = useTranslation("readiness");
   return (
@@ -108,6 +113,7 @@ function Status({ value }: { value: CourseReadiness["status"] }) {
     </span>
   );
 }
+/** Display the server-calculated denominator; missing or inapplicable requirements are not inferred locally. */
 function Progress({ course }: { course: CourseReadiness }) {
   const { t } = useTranslation("readiness");
   return (
@@ -129,6 +135,7 @@ function Progress({ course }: { course: CourseReadiness }) {
     </div>
   );
 }
+/** Isolate each receipt/task action and refresh its projection only after an acknowledged server response. */
 function Action({
   children,
   write,
@@ -160,6 +167,7 @@ function Action({
     </div>
   );
 }
+/** Keep the opening settings version bound to this form; background updates cannot silently approve a newer configuration. */
 function SettingsForm({
   course,
   onDone,
@@ -261,6 +269,7 @@ function SettingsForm({
     </form>
   );
 }
+/** Choose a responsible identity from the scoped course data; PostgreSQL rechecks assignment and management authority. */
 function TaskForm({
   course,
   task,
@@ -382,6 +391,7 @@ function TaskForm({
     </form>
   );
 }
+/** Join visible requirements, exact material gateways, task actions and versioned instructions without exposing contract records. */
 function CourseDetail({
   course,
   actor,
@@ -725,6 +735,7 @@ function CourseDetail({
     </>
   );
 }
+/** Filter and present already-authorised course snapshots without manufacturing a writable readiness score. */
 function Overview({ courses }: { courses: CourseReadiness[] }) {
   const { t, i18n } = useTranslation("readiness");
   const [search, setSearch] = useState("");
@@ -834,6 +845,7 @@ function Overview({ courses }: { courses: CourseReadiness[] }) {
     </>
   );
 }
+/** Load either the scoped overview or an exact permitted run; denied reads suppress retained preparation data. */
 export function CourseReadinessPage() {
   const { t } = useTranslation("readiness");
   const { session } = useAuth();

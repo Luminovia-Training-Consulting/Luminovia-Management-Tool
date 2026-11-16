@@ -1,3 +1,4 @@
+/** Mocked component/adapter regressions for readiness. Real authentication, PostgreSQL, scanner and browser acceptance are exercised by the separate isolated integration suites. */
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

@@ -1,3 +1,4 @@
+/** Freelance teaching evidence separates saved drafts, immutable submissions and independent reviews; accepted compensation and invoice records remain separate. Actor-scoped memory queries validate server projections; online mutations carry reviewed versions and retry identities. */
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
@@ -149,6 +150,7 @@ export interface DeliveryForm {
   reason: string;
 }
 /** No browser-local/DST guess becomes an authoritative teaching instant. */
+/** Validate local wall times and convert them to explicit instants while preserving the intended IANA time zone. */
 export function deliveryDraft(
   values: DeliveryForm,
   correction: boolean,
@@ -183,6 +185,7 @@ export function deliveryDraft(
     correction_reason: values.reason.trim(),
   });
 }
+/** Send one versioned, idempotent online operation; UI callers must wait for its committed response. */
 export async function deliveryWrite(
   name:
     | "save_delivery_draft"
@@ -196,6 +199,7 @@ export async function deliveryWrite(
   if (error) throw error;
   return deliverySchema.parse(data);
 }
+/** Prepare canonical instants, minutes and status for the shared formula-safe CSV serializer, without financial amounts. */
 export function deliveryCsvRows(rows: DeliverySession[], headers: string[]) {
   return [
     headers,

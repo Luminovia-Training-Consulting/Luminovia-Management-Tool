@@ -1,3 +1,4 @@
+/** Mocked component/adapter regressions for delivery. Real authentication, PostgreSQL, scanner and browser acceptance are exercised by the separate isolated integration suites. */
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

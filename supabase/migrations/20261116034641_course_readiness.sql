@@ -256,7 +256,11 @@ declare cfg private.course_readiness_settings; payload jsonb; result uuid; key t
 begin
  if not private.has_permission('courses.manage') then raise exception 'Course management and MFA required' using errcode='42501';end if;
  perform 1 from public.profiles where id=auth.uid() and active for share;
- if not exists(select 1 from public.course_runs where id=p_course_run_id) then raise exception 'Course unavailable' using errcode='42501';end if;
+ if not found or not private.has_permission('courses.manage') then raise exception 'Course management and MFA required' using errcode='42501';end if;
+ -- Match schedule amendments and confirmation: run first, readiness lock second.
+ -- An INSERT's course FK must not invert that order through KEY SHARE later.
+ perform 1 from public.course_runs where id=p_course_run_id for share;
+ if not found then raise exception 'Course unavailable' using errcode='42501';end if;
  if p_payload is null or jsonb_typeof(p_payload)<>'object' then raise exception 'Invalid preparation settings' using errcode='22023';end if;
  for key in select jsonb_object_keys(p_payload) loop
   if key not in ('materials_required','customer_required','contact_required','agreement_required','instructions_required','instructions','meeting_url','preparation_deadline') then raise exception 'Unsupported preparation setting' using errcode='22023';end if;
@@ -309,7 +313,8 @@ language plpgsql security definer set search_path='' as $$
 declare task private.course_readiness_tasks; payload jsonb; result uuid; responsible uuid; due timestamptz;
 begin
  if not private.has_permission('courses.manage') then raise exception 'Course management and MFA required' using errcode='42501';end if;
- if not exists(select 1 from public.course_runs where id=p_course_run_id) then raise exception 'Course unavailable' using errcode='42501';end if;
+ perform 1 from public.course_runs where id=p_course_run_id for share;
+ if not found then raise exception 'Course unavailable' using errcode='42501';end if;
  if p_payload is null or jsonb_typeof(p_payload)<>'object' or (select count(*) from jsonb_object_keys(p_payload))<>5
  or exists(select 1 from jsonb_object_keys(p_payload) key where key not in ('title','responsible_user_id','required','due_at','archived'))
  or jsonb_typeof(p_payload->'title')<>'string' or length(trim(p_payload->>'title')) not between 1 and 500
@@ -346,6 +351,7 @@ begin
  select * into task from private.course_readiness_tasks where id=p_task_id;
  if not found or not private.readiness_access(task.course_run_id) or not(private.has_permission('courses.manage') or task.responsible_user_id=auth.uid()) then raise exception 'Task access denied' using errcode='42501';end if;
  if p_completed is null then raise exception 'Completion decision required' using errcode='22023';end if;
+ perform 1 from public.course_runs where id=task.course_run_id for share;
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('course-readiness:'||task.course_run_id::text,0));
  payload=jsonb_build_object('action','task_completed','task',p_task_id,'completed',p_completed,'version',p_expected_version);
  result=private.readiness_retry(p_request_id,payload);if result is not null then return result;end if;
@@ -364,6 +370,7 @@ language plpgsql security definer set search_path='' as $$
 declare cfg private.course_readiness_settings; payload jsonb; result uuid;
 begin
  if not private.readiness_access(p_course_run_id) or not private.lecturer_actor() then raise exception 'Assigned lecturer required' using errcode='42501';end if;
+ perform 1 from public.course_runs where id=p_course_run_id for share;
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('course-readiness:'||p_course_run_id::text,0));
  if not exists(select 1 from public.job_claims c join public.jobs j on j.id=c.job_id where j.course_run_id=p_course_run_id and c.status='confirmed' and c.lecturer_id=auth.uid()) then raise exception 'Assigned lecturer required' using errcode='42501';end if;
  payload=jsonb_build_object('action','instructions_acknowledged','run',p_course_run_id,'version',p_instruction_version);
@@ -383,5 +390,25 @@ do $$declare fn record;begin
   if fn.proname in ('course_readiness','save_readiness_settings','confirm_course_sessions','save_readiness_task','complete_readiness_task','acknowledge_course_instructions') then execute format('grant execute on function %s to authenticated',fn.signature);end if;
  end loop;
 end;$$;
+
+-- Standalone job creation always creates a fresh run. Keep its delivery source
+-- consistent at creation rather than bulk rewriting existing authored courses.
+-- Preserve/reuse the current creation implementation, including any earlier
+-- price/permission extension, and never copy an older implementation over it.
+alter function private.create_job(jsonb) rename to create_job_before_readiness;
+revoke all on function private.create_job_before_readiness(jsonb) from public,anon,authenticated;
+create function private.create_job(p_payload jsonb) returns uuid
+language plpgsql security definer set search_path='' as $$
+declare result uuid;
+begin
+ result=private.create_job_before_readiness(p_payload);
+ update public.course_runs r set delivery_type=j.delivery_type,venue=j.location
+  from public.jobs j where j.id=result and r.id=j.course_run_id;
+ return result;
+end;$$;
+create or replace function public.create_job(p_payload jsonb) returns uuid
+language sql security invoker set search_path='' as $$select private.create_job(p_payload);$$;
+revoke all on function private.create_job(jsonb),public.create_job(jsonb) from public,anon;
+grant execute on function private.create_job(jsonb),public.create_job(jsonb) to authenticated;
 
 commit;

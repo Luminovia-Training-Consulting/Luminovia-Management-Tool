@@ -1,3 +1,4 @@
+/** Course preparation derives status from scoped server records; the browser edits requirements and receipts, never an authoritative readiness percentage. Components render pending, denied and committed outcomes separately and preserve reviewed form state. */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -8,6 +9,7 @@ import { readinessQuery } from "./api";
 import "./i18n";
 import "./readiness.css";
 
+/** Share the actor-scoped readiness query with the centre while avoiding another polling timer on the dashboard. */
 export function DashboardReadinessWidget({ actor }: { actor: string }) {
   const { t } = useTranslation("readiness");
   const courses = useQuery({

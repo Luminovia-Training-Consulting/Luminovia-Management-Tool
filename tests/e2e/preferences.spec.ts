@@ -1,3 +1,7 @@
+/**
+ * Browser checks for language/theme controls when browser storage is blocked.
+ * These presentation/error-path checks do not establish backend or manual platform acceptance.
+ */
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 

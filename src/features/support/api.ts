@@ -1,3 +1,4 @@
+/** Ticket ownership and current support capability govern replies, internal notes and dedicated scanned attachments; support never grants unrelated private-resource access. Actor-scoped memory queries validate server projections; online mutations carry reviewed versions and retry identities. */
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
@@ -170,6 +171,7 @@ export const supportTicketQuery = (actor: string, id: string) =>
     staleTime: 0,
     refetchInterval: 30000,
   });
+/** Validate bounded authored fields before sending an idempotent online create request. */
 export async function createTicket(
   payload: z.infer<typeof newTicketSchema>,
   request: string,
@@ -182,6 +184,7 @@ export async function createTicket(
   if (error) throw error;
   return z.uuid().parse(data);
 }
+/** Require the reviewed ticket version and request identity for every reply or lifecycle mutation. */
 export async function updateTicket(
   ticket: string,
   action: SupportAction,
@@ -200,6 +203,7 @@ export async function updateTicket(
   if (error) throw error;
   return z.uuid().parse(data);
 }
+/** Map known conflicts to translated guidance without echoing internal server error text. */
 export function supportError(error: unknown) {
   const code =
     error && typeof error === "object" && "code" in error ? error.code : "";
@@ -211,6 +215,7 @@ export function supportError(error: unknown) {
         ? "rateLimit"
         : "error";
 }
+/** Offer ordinary lifecycle choices; the database still validates the actor, current status and reason. */
 export function supportNextStatuses(status: SupportTicket["status"]) {
   switch (status) {
     case "open":

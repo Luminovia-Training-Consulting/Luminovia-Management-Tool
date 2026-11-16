@@ -1,3 +1,4 @@
+/** Layout and visible workflow states for replacements, using the existing theme and brand tokens across responsive sizes. */
 .replacement-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));

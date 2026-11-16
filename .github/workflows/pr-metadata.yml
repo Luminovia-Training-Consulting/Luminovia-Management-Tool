@@ -1,3 +1,4 @@
+# Read labels from the API as data; never execute them as shell commands.
 name: Pull request metadata
 run-name: "PR #${{ github.event.pull_request.number || inputs.pull_request_number }} metadata"
 on:
@@ -36,7 +37,7 @@ jobs:
     steps:
       # Only trusted default-branch code runs, including for forks. Never
       # check out a contribution ref here. PR metadata is input data only;
-      # no packages, secrets or write permissions belong to this workflow.
+      # no package installation, repository secrets or write permissions belong here.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Luminovia-Training-Consulting/Luminovia-Management-Tool

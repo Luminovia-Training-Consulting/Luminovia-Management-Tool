@@ -77,7 +77,7 @@ language sql stable security definer set search_path='' as $$
 $$;
 create function private.support_context() returns jsonb
 language plpgsql stable security definer set search_path='' as $$
-declare manager boolean:=private.has_permission('support.manage'); staff jsonb:='[]'; report jsonb:='[]'; courses jsonb; claims jsonb; organisations jsonb;
+declare manager boolean:=private.has_permission('support.manage'); staff jsonb:='[]'::jsonb; report jsonb:='[]'::jsonb; courses jsonb; claims jsonb; organisations jsonb;
 begin
  if not private.actor_active() then raise exception 'Support access denied' using errcode='42501'; end if;
  if manager then

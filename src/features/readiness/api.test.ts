@@ -1,3 +1,4 @@
+/** Mocked component/adapter regressions for readiness. Real authentication, PostgreSQL, scanner and browser acceptance are exercised by the separate isolated integration suites. */
 import { beforeEach, expect, it, vi } from "vitest";
 import {
   acknowledgeCourseInstructions,

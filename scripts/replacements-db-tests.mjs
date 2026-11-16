@@ -12,7 +12,7 @@ await withTestDatabase("replacement_test", async ({ sql, actor }) => {
   );
   let day = 0,
     checks = 0;
-  const create = async () => {
+  const create = async (capacity = 1) => {
     day += 4;
     const payload = {
       title: "Fictional complete replacement block",
@@ -33,7 +33,9 @@ await withTestDatabase("replacement_test", async ({ sql, actor }) => {
     };
     const job = await actor(
       manager,
-      `select public.create_job(${q(JSON.stringify(payload))}::jsonb)`,
+      capacity === 1
+        ? `select public.create_job(${q(JSON.stringify(payload))}::jsonb)`
+        : `select public.create_capacity_job(${q(JSON.stringify(payload))}::jsonb,${capacity},'${randomUUID()}')`,
       "aal2",
     );
     const terms = await sql(
@@ -387,6 +389,128 @@ await withTestDatabase("replacement_test", async ({ sql, actor }) => {
           ),
         ),
         winners * 2,
+      );
+    },
+  );
+  await check(
+    "Replacing one position cannot reopen another position paused by an independent cancellation",
+    async () => {
+      const c = await create(2),
+        other = JSON.parse(
+          await actor(
+            second,
+            `select public.claim_job('${c.job}','${randomUUID()}',${c.terms})`,
+          ),
+        );
+      assert.equal(other.status, "confirmed");
+      await actor(
+        second,
+        `select public.cancel_job_assignment('${other.claim_id}','Fictional paused second position','${randomUUID()}')`,
+      );
+      assert.equal(
+        await sql(`select status from public.jobs where id='${c.job}'`),
+        "draft",
+      );
+      const offer = await request(c.claim);
+      assert.equal((await take(offer, c.terms)).status, "confirmed");
+      assert.equal(
+        await sql(`select status from public.jobs where id='${c.job}'`),
+        "draft",
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from public.job_claims where job_id='${c.job}' and status='confirmed'`,
+        ),
+        "1",
+      );
+    },
+  );
+  await check(
+    "A nested P0002 after new-claim success never reports a rolled-back confirmation",
+    async () => {
+      const c = await create(),
+        offer = await request(c.claim);
+      await sql(
+        `create function private.fail_completion_test() returns trigger language plpgsql as $$begin if new.id='${offer}'::uuid and new.status='completed' then raise exception using errcode='P0002',message='Fictional missing handover dependency';end if;return new;end;$$;create trigger fail_completion_test before update on private.replacement_offers for each row execute function private.fail_completion_test()`,
+      );
+      await assert.rejects(take(offer, c.terms), /P0002/);
+      await sql(
+        "drop trigger fail_completion_test on private.replacement_offers;drop function private.fail_completion_test()",
+      );
+      assert.equal(
+        await sql(`select status from public.job_claims where id='${c.claim}'`),
+        "confirmed",
+      );
+      assert.equal(
+        await sql(
+          `select status from private.replacement_offers where id='${offer}'`,
+        ),
+        "open",
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from public.job_claims where job_id='${c.job}'`,
+        ),
+        "1",
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from public.assignment_sessions where claim_id='${c.claim}' and released_at is null`,
+        ),
+        "2",
+      );
+    },
+  );
+  await check(
+    "Teaching cannot start while a claimant waits on the job lock and still be transferred",
+    async () => {
+      const c = await create(),
+        old = await sql(
+          `select min(starts_at)::text from public.job_sessions where job_id='${c.job}'`,
+        ),
+        start = await sql(
+          "select (clock_timestamp()+interval '2 seconds')::text",
+        );
+      await sql(
+        `update public.job_sessions set starts_at=${q(start)},ends_at=${q(start)}::timestamptz+interval '1 hour' where job_id='${c.job}' and starts_at=${q(old)};update public.assignment_sessions set starts_at=${q(start)},ends_at=${q(start)}::timestamptz+interval '1 hour' where claim_id='${c.claim}' and starts_at=${q(old)};update public.course_sessions set starts_at=${q(start)},ends_at=${q(start)}::timestamptz+interval '1 hour' where course_run_id=(select course_run_id from public.jobs where id='${c.job}') and starts_at=${q(old)}`,
+      );
+      const offer = await request(c.claim),
+        name = "replacement-lock-" + randomUUID();
+      const blocker = sql(
+        `begin;set local application_name=${q(name)};select id from public.jobs where id='${c.job}' for update;select pg_sleep(3);commit;`,
+      );
+      try {
+        let locked = false;
+        for (let attempt = 0; attempt < 80; attempt++) {
+          if (
+            (await sql(
+              `select exists(select 1 from pg_stat_activity where application_name=${q(name)} and wait_event='PgSleep')`,
+            )) === "t"
+          ) {
+            locked = true;
+            break;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        assert.ok(locked, "The independent job lock must actually be held");
+        assert.equal(
+          await sql(`select clock_timestamp()<${q(start)}::timestamptz`),
+          "t",
+          "Claim must begin before the teaching boundary",
+        );
+        assert.equal((await take(offer, c.terms)).status, "unavailable");
+      } finally {
+        await blocker;
+      }
+      assert.equal(
+        await sql(`select status from public.job_claims where id='${c.claim}'`),
+        "confirmed",
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from public.assignment_sessions where claim_id='${c.claim}' and released_at is null`,
+        ),
+        "2",
       );
     },
   );

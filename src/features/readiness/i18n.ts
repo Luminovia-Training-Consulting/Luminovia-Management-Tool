@@ -1,3 +1,4 @@
+/** German/English interface vocabulary for readiness. User-authored notes, reasons, documents and messages retain their authored language. */
 import i18n from "../../lib/i18n";
 const de = {
   title: "Kursbereitschaft",

@@ -1,3 +1,7 @@
+/**
+ * Password change after an authenticated invitation/recovery flow. Validate input locally and
+ * confirm saving only after a successful Auth response.
+ */
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -7,9 +11,11 @@ import { db } from "../../lib/supabase";
 import { Button } from "../../components/ui/button";
 import { Field, Notice, PageHeading } from "../../components/common";
 import { useOnline } from "../../lib/online";
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
   password: z.string().min(12).regex(/[A-Z]/).regex(/[a-z]/).regex(/[0-9]/),
 });
+/** Change the current session's password and confirm only the successful SDK response. */
 export function Password() {
   const { t } = useTranslation();
   const online = useOnline();

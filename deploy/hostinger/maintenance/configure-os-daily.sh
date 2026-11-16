@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Operator installer for daily OS/reboot windows, backup freshness and shared maintenance locking. Generated units are part of the operating contract; installation is a separate server action.
 # Distribution-supported stable updates; no release upgrade or new repository.
 set -euo pipefail
 

@@ -1,3 +1,4 @@
+/** Layout and visible workflow states for support, using the existing theme and brand tokens across responsive sizes. */
 .support-filters {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);

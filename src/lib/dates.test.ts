@@ -1,3 +1,7 @@
+/**
+ * Regressions for Berlin/Brisbane zones, DST gaps and ambiguous local times. Pure date tests do
+ * not establish database scheduling behavior.
+ */
 import { describe, expect, it } from "vitest";
 import { dateTime, money, zonedInstant } from "./dates";
 describe("calendar instants and DST safety", () => {

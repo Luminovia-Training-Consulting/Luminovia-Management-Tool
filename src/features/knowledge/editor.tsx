@@ -1,3 +1,7 @@
+/**
+ * Tiptap editing/read views with bounded extensions and code highlighting. Content passes shared
+ * normalization; raw unvalidated HTML is not introduced as a storage format.
+ */
 import { useState } from "react";
 import {
   EditorContent,
@@ -28,7 +32,9 @@ import { Dialog } from "../../components/ui/dialog";
 import { Field, Notice } from "../../components/common";
 import { emptyDocument, normalizedDocument, safeLink } from "./content";
 import "./i18n";
+/** Shared syntax highlighting for the explicitly loaded code languages. */
 const lowlight = createLowlight(common);
+/** Bound editor extensions to the normalized storage contract. */
 const extensions = [
   StarterKit.configure({
     codeBlock: false,
@@ -60,6 +66,7 @@ const extensions = [
     },
   }).configure({ lowlight, defaultLanguage: "plaintext" }),
 ];
+/** Bind Tiptap to controlled normalized content with the same contract for reading and editing. */
 export function KnowledgeEditor({
   value,
   onChange,
@@ -92,8 +99,12 @@ export function KnowledgeEditor({
         class: "knowledge-prose",
       },
     },
+    // JSON produced by the editor passes through the same allowlist
+    // as loaded content; extensions must not silently expand the storage contract.
     onUpdate: ({ editor }) => onChange?.(normalizedDocument(editor.getJSON())),
   });
+  // Observe only toolbar attributes needed by React instead of rerendering
+  // the entire editor tree for every transaction.
   const active = useEditorState({
     editor,
     selector: ({ editor }) => ({

@@ -1,3 +1,7 @@
+/*
+ * Public help articles, search results and recovery cards with the seven-colour brand accents.
+ * Responsive grids and wrapping keep long instructions and navigation usable on narrow screens.
+ */
 .help-page {
   min-height: 100dvh;
   background: var(--paper);

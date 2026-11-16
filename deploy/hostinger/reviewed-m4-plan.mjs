@@ -1,3 +1,6 @@
+/**
+ * Read-only planner for the reviewed M4 transition. Bind existing history, new migration source and release inventory into a reviewable digest without mutating a server.
+ */
 /** Bounded, read-only M4 operator-review plan. This file never runs SQL, SSH,
  * Docker or an updater and is not an automatic migration-policy exception. */
 import assert from "node:assert/strict";
@@ -8,7 +11,9 @@ import { fileURLToPath } from "node:url";
 import { reviewedMigrations as m3 } from "./reviewed-m3-backfill.mjs";
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+// Compute the digest used for source-bound comparison and verification.
 const digest = (value) => createHash("sha256").update(value).digest("hex");
+// Normalize an expected migration file and its SHA-256 for source comparison.
 const migration = ([file, sha256]) => ({
   file,
   version: file.slice(0, 14),
@@ -96,6 +101,7 @@ export const reviewedM4 = Object.freeze([
   },
 ]);
 
+// Load versioned M4 source and verify every fixed provenance hash.
 export async function loadM4ReviewContext(root = repository) {
   const expected = [...m4Baseline, ...reviewedM4];
   const directory = resolve(root, "supabase/migrations");
@@ -141,6 +147,7 @@ export async function loadM4ReviewContext(root = repository) {
   });
 }
 
+// Reject changed, missing or unexpected historical migration source.
 export function validateM4History(history, context) {
   assert(Array.isArray(history), "Expected exported migration history array.");
   assert(
@@ -179,6 +186,7 @@ export function validateM4History(history, context) {
   return history.length === 17;
 }
 
+// Bind confirmed baseline history and release inventory into a verifiable transition plan.
 export function createM4ReviewPlan({ history, manifest }, context) {
   const completed = validateM4History(history, context);
   assert(

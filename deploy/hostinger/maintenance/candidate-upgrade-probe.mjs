@@ -1,3 +1,6 @@
+/**
+ * Two-phase native upgrade witness: create owned accounts/MFA/object bytes before upgrading, then verify the same data afterward. A private ledger joins the phases without publishing credentials.
+ */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash, createHmac, randomUUID } from "node:crypto";
@@ -23,6 +26,7 @@ assert.deepEqual(Object.keys(metadata.NetworkSettings.Networks), [
 process.loadEnvFile(".env.test.local");
 const url = new URL(process.env.SUPABASE_URL);
 assert(url.protocol === "https:" && url.hostname === "127.0.0.1" && url.port);
+// Create a stateless SDK client for the isolated candidate instance.
 const make = (key) =>
   createClient(url.href, key, {
     auth: {
@@ -32,12 +36,15 @@ const make = (key) =>
     },
   });
 const service = make(process.env.SUPABASE_SERVICE_ROLE_KEY);
+// Compute a stable SHA-256 digest for the source/artifact comparison.
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
+// Fail on an SDK error rather than accepting an empty response as successful evidence.
 async function checked(promise) {
   const result = await promise;
   assert.equal(result.error, null);
   return result.data;
 }
+// Calculate a time-based code for the MFA factor created only for this probe.
 function totp(secret) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "")]
