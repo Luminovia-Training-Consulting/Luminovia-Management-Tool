@@ -1,5 +1,17 @@
 # Persistent implementation plan
 
+## Faster PR CI — 16 November 2026
+
+- [x] Measure actual successful baseline: approximately28minutes, mostly21-minute application plus6-minute serial native rehearsal.
+- [x] Keep quality/coverage/security/metadata contexts; add bounded runtime/Edge/audit and one pinned isolated PostgreSQL suite on every PR, without repeated frontend quality/unit/build commands.
+- [x] Preserve all15required context names, preview success prerequisites, immutable SQL/dependencies and exact-main manual release gates; run unchanged complete application/native main/manual suites in parallel.
+- [x] Document PR SQL/Auth-stub limitations and package evidence scope; pass six runner orchestration, three routing/release-policy and four maintenance/governance checks, scoped lint/format and actionlint.
+- [ ] Publish the prepared branch changes after repository write access or browser file upload is available; connector403 and shell DNS restrictions currently block publication. No extension permission was changed.
+- [ ] Observe exact-head GitHub runtime/Edge/PostgreSQL/image startup and security/coverage/package results, measure actual optimized duration and merge only after every current required check succeeds.
+- [ ] Observe a complete main/manual application/native run before claiming that parallel full acceptance passed; no publication is requested.
+
+All remaining product and operational scope below is preserved. Local Docker and subprocess execution are restricted; mocked routing passes do not replace the pending native evidence.
+
 ## English quote/discovery documentation — released PR10 continuation
 
 - [x] Integrate accepted main `1de544d` and preserve all 36 released SQL sources, neutral naming, operator guidance and complete actual-main histories.

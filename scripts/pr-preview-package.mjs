@@ -92,6 +92,7 @@ export function createPreviewPackage({
         ),
       )
       .digest("hex"),
+    verification_scope: "pr-quality-runtime-edge-postgresql",
     hosted: false,
   };
   writeFileSync(
@@ -114,6 +115,10 @@ try {
     `Luminovia PR #${number}: local application preview / lokale Anwendungsvorschau
 
 This package contains committed source from tested revision ${testedSha}.
+PR checks cover quality, coverage, runtime/Edge and PostgreSQL suites.
+Full Auth/Storage/browser/PWA/retained-data acceptance runs on main/manual.
+PR-Pruefungen umfassen Qualitaet, Abdeckung, Laufzeit/Edge und PostgreSQL.
+Vollstaendige Auth/Storage/Browser/PWA/Datenerhalt-Pruefung: main/manuell.
 PR head: ${headSha}. It is a downloadable local preview, not a hosted website.
 It contains no live backend connection, generated account passwords or QA traces.
 Review PR source before running it: contributor code executes on your computer.

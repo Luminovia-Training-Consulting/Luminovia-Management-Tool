@@ -95,7 +95,7 @@ function allows(condition, github, inputs = {}) {
   );
 }
 
-test("automatic quality, security and complete application gates remain in place", () => {
+test("PR checks are bounded while main/manual retains complete acceptance", () => {
   const ci = workflow("ci");
   assert.deepEqual(Object.keys(ci.on).sort(), [
     "pull_request",
@@ -113,8 +113,36 @@ test("automatic quality, security and complete application gates remain in place
   );
   assert.deepEqual(ci.jobs.verify.needs, ["quality", "coverage"]);
   assert.equal(ci.jobs.verify.if, undefined);
-  assert.ok(ci.jobs.verify.steps.some((step) => step.run === "./portal test"));
-  assert.equal(ci.jobs["verify-selfhost"].needs, "verify");
+  const application = ci.jobs.verify.steps.find(
+    (step) => step.run === "./portal test",
+  );
+  const guards = ci.jobs.verify.steps.find(
+    (step) => step.run === "node scripts/ci-pr-check.mjs guards",
+  );
+  const native = ci.jobs["verify-selfhost"].steps.find((step) =>
+    step.run?.includes("selfhost-candidate-check.mjs --run"),
+  );
+  const sql = ci.jobs["verify-selfhost"].steps.find(
+    (step) => step.run === "node scripts/ci-pr-check.mjs sql",
+  );
+  const baseline = ci.jobs["verify-selfhost"].steps.find((step) =>
+    step.run?.includes("git archive HEAD^"),
+  );
+  for (const event_name of ["pull_request", "push", "workflow_dispatch"]) {
+    const github = { event_name };
+    assert.equal(allows(guards.if, github), event_name === "pull_request");
+    assert.equal(allows(sql.if, github), event_name === "pull_request");
+    for (const step of [application, native, baseline])
+      assert.equal(allows(step.if, github), event_name !== "pull_request");
+  }
+  assert.deepEqual(ci.jobs["verify-selfhost"].needs, ["quality", "coverage"]);
+  // Both suites must actually pass; skipping a required job is not this design.
+  assert.deepEqual(ci.jobs["preview-package"].needs, [
+    "quality",
+    "coverage",
+    "verify",
+    "verify-selfhost",
+  ]);
   assert.equal(ci.jobs["verify-selfhost"].if, undefined);
   assert.ok(
     ci.jobs["verify-selfhost"].steps.some((step) =>

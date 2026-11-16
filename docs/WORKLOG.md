@@ -1,5 +1,17 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — faster PR acceptance, complete main/manual gates
+
+User requested substantially faster PR CI without repeating the complete system on every contribution. Work is isolated from actual main c0622a7; the original dirty roles/customer-neutral checkout is untouched. Read real successful run43827354265: quality/coverage24–41s, complete application1260s, then native upgrade360s, preview10s; approximately28minutes end to end.
+
+PRs now retain all5quality jobs, coverage once, all3CodeQL languages, DependencyReview and metadata. The existing verify context runs dynamically discovered runtime guards, Edge source/test lint, every Edge test/entry typecheck and production npm audit. The existing selfhost context runs db-rpc plus every current *-db-tests suite against one digest-pinned PostgreSQL image. It has a random owned identity, no network/published ports/host mounts, nonroot initdb and exact-label/ID cleanup even on failure/cancellation. Auth helpers are emulated by those existing SQL fixtures; this does not claim native Auth/Storage/browser/PWA/retained-data acceptance. Preview context dependencies and successful-job metadata checks remain unchanged; its manifest/README explicitly state the PR evidence scope.
+
+Main pushes/manual runs retain the unchanged complete ./portal test and actual native retained-data rehearsal, now independently after quality/coverage on separate runners. All15required context names, security workflow, release needs, exact-main manual-publication checks and repository rules remain intact. A manual branch run remains available for full pre-merge acceptance. Daily maintenance and local complete acceptance are unchanged. No application, dependency, migration, ordinary database, hosted deployment or real email is changed.
+
+Local evidence: six new discovery/fail-fast/startup/cancellation/ownership orchestration cases, three workflow routing/publication checks and four existing maintenance/governance checks pass in-process. Scoped ESLint/Prettier and actionlint pass. A complete existing release-shell regression cannot spawn bash (EPERM); ordinary Node test-file isolation is also blocked here, and Docker daemon access is denied. No full local runtime/SQL/Edge/browser pass or optimized wall time is claimed. Independent read-only review found no blocking workflow/ownership issue; added startup failure coverage and preserved the original error alongside cleanup errors.
+
+GitHub connector branch writes return403 and shell network DNS is unavailable. The authenticated GitHub browser can create the owned branch; the browser upload is blocked because the ChatGPT extension lacks file-URL access. No extension access was expanded, and no source commit or PR was published. Exact-head CI is the next acceptance gate; retain all prior full product and operational ledger entries below.
+
 ## 16 November 2026 — English documentation follows released role-aware discovery
 
 Actual accepted main `1de544d` now includes PR #10's paginated discovery and role-aware quote bridge, following accepted PR #27/#13/customer-neutral source. The earlier guide's unpaged/future-discovery description is therefore replaced by the published contract. PR #29 now explains actor-derived quotes, protected null versus raw zero sentinels and valid quoted zero, captured-offer pricing, current actor/tier/global-policy cursor context, exact consent, immutable accepted snapshots and authoritative lifecycle budgets across the operating, discovery and migration guides.
@@ -13,7 +25,6 @@ The delta remains six documentation files. All 36 SQL files, application/scripts
 ## 16 November 2026 — historical e88 English quote-documentation delivery
 
 This earlier signed head `3ed9a24` subsequently passed all 15 required context/producer checks against then-current main `e88df84`, in Portal 43831170474/Security 43831170707: 92 business browsers, 2 built-PWA cases and native 27 migrations/20 API suites with retained data and scoped cleanup. Main advanced to the shipped discovery implementation afterward; that accepted earlier source is not the final current-base permit.
-
 
 The independently scoped [PR #29](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/29) now integrates accepted main `e88df84`, including merged local-first PR #27, the English PR #13 delivery and the customer-neutral catalogue/forward migration 27. The role-pricing explanation retains its null/sentinel/valid-zero distinctions, current-actor consent and retry/budget contracts, while preserving the neutral course-building-block wording and complete migration 27 operator-review guidance. No runtime, released SQL, workflow, dependency or generated API is changed by this PR's delta. Both remote updates and the complete actual-main ledgers are preserved.
 

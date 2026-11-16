@@ -6,9 +6,9 @@ latest `main` locally use `./portal github test`; `./portal github` starts its
 persistent local preview. These commands require no GitHub deployment or
 self-hosted Actions runner.
 
-Every pull request receives the existing build, TypeScript, style, coverage, security, application and native selfhost checks. This includes forks and Dependabot. GitHub may still require approval for first-time external workflow runs. Missing required labels continue to fail `PR metadata`; a preview package replaces neither this classification nor the separate security analysis.
+Every pull request receives the build, TypeScript, style, coverage, security, runtime/Edge checks and all existing SQL migration/RLS/concurrency suites in a single pinned PostgreSQL image. This includes forks and Dependabot. GitHub may still require approval for first-time external workflow runs. Missing required labels continue to fail `PR metadata`; a preview package replaces neither this classification nor the separate security analysis.
 
-The `PR preview package` job waits for all five quality jobs, coverage, `verify` and `Actual isolated selfhost image compatibility`. Only then does it create a downloadable package of the commit actually tested. Creating the artifact does not create a GitHub Deployment record. Its own fresh checkout contains no credentials or reports from the preceding test run. The package contains:
+The `PR preview package` job waits for all five quality jobs, coverage, `verify` and `Actual isolated selfhost image compatibility`. Only then does it create a downloadable package of the commit actually tested by the bounded PR suite. The historically named selfhost context runs SQL-only acceptance on PRs; native Auth/Storage/browser/PWA/retention remains on main/manual. The package does not certify those full acceptance paths. A manual Portal checks run on the branch can exercise them before merging. Creating the artifact does not create a GitHub Deployment record. Its own fresh checkout contains no credentials or reports from the preceding test run. The package contains:
 
 - `portal-source.tar.gz`: tracked application sources only, including migrations and the local launcher.
 - `manifest.json`: the PR head, tested merge commit, workflow run and attempt, and the source archive's SHA-256.
