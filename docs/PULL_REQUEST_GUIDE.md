@@ -1,6 +1,6 @@
 # Creating, reviewing and merging pull requests
 
-> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Only CarinaSchoppe's personal account (`User:29256704`) may bypass review through a PR; every other user, including maintainers and administrators, and every App needs independent review. Nobody can bypass the 15 mandatory CI/security checks, signatures or up-to-date testing. The maintenance App has no rule exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
+> Versioned policy snapshot: the reviewed 16 November 2026 06:42:36 UTC configuration has all three `main` rulesets active, a personal PR-only review exception for `CarinaSchoppe` (`User:29256704`), no other review exception and no bypass for the 15 mandatory checks or signatures. A later read-only check during all-open-PR integration found history/check enforcement active but the separate review layer disabled. No setting was changed by this PR. The [live server rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative; source snapshots do not establish current activation.
 
 This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
@@ -101,11 +101,11 @@ All fifteen required checks must pass against the current base:
 
 Fourteen statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. All fifteen are required for merging. See [CI_QUALITY](CI_QUALITY.md).
 
-If main changes, update the PR as required and wait for checks against the current base. The required-check and history/signature rulesets have no bypass actors. The review ruleset grants only `CarinaSchoppe` (`User:29256704`) the personal PR-only exception within that layer. No App has a review or required-check exception. Historical App-token tests grant no current merge authority; see the [current rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
+If main changes, update the PR as required and wait for checks against the current base. The required-check and history/signature rulesets have no bypass actors. The reviewed source ruleset grants only `CarinaSchoppe` (`User:29256704`) the personal PR-only exception within that layer. No App has a review or required-check exception. Historical App-token tests grant no current merge authority; see the [current rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
 
 ## Merge and publication
 
-Review the description, labels, tests and open conversations before merging. Use the regular PR merge operation or native auto-merge. GitHub enforces all mandatory checks and signatures even when Carina uses her personal PR-only review exception; every other account also needs independent review, and direct branch updates are prohibited.
+Review the description, labels, tests and open conversations before merging. Use the regular PR merge operation or native auto-merge. GitHub enforces all mandatory checks and signatures. The contribution workflow requires PRs and the reviewed personal-only approval policy; verify the actual review-layer activation described above rather than assuming that committing its snapshot activates it.
 
 The separate Security outcomes are required for PR merge eligibility. Release publication still follows the explicit dependencies in `ci.yml`; the ruleset does not add them as release-job dependencies.
 
