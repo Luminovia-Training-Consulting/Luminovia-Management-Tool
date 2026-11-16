@@ -168,3 +168,7 @@ node scripts/code-integrity.mjs --exports
 ```
 
 The compiler-based inventory detects disconnected frontend modules, genuinely unused runtime exports, unresolved relative imports, invalid literal routes/assets and transitive RPC wrappers. The complete command also checks delivered documentation links, real database/API bindings, Auth/MFA errors, actual desktop/mobile business journeys and the inherited offline updater/release/Caddy/Envoy guards. CI invokes this same command rather than a separate smaller local test subset. The [M4 migration review](docs/REVIEWED_M4_MIGRATIONS.md) describes the hosted operator gate; a merged source release does not assert those migrations are installed. These checks describe executed coverage; the outstanding complete product and hosted/manual gates remain in the plan.
+
+## Contribution and documentation
+
+Start with [CONTRIBUTING](CONTRIBUTING.md), the [developer guide](docs/DEVELOPER_GUIDE.md), the [test plan](docs/TEST_PLAN.md), and [verified automatic merging](docs/AUTO_MERGE.md). The [implementation plan](docs/IMPLEMENTATION_PLAN.md) retains the complete product scope and honest remaining work. Source comments explain permission boundaries, transaction guarantees and recovery decisions where these are not obvious from the code.

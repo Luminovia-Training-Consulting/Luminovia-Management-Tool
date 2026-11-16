@@ -87,3 +87,9 @@ Existing `cms-dev-*` tags belong to development release automation. Do not move 
 ## License and collaboration
 
 The repository uses GNU GPLv3. Preserve existing license and provenance notices; bundled fonts and brand assets retain their respective notices. Discuss technical disagreements factually, explain decisions and respond respectfully to feedback.
+
+## Contributors and automatic merging
+
+The [GitHub contributor graph](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/graphs/contributors) lists actual contributions. Git name variants are not separate team members.
+
+Ready pull requests are processed by [verified automatic merging](docs/AUTO_MERGE.md). Keep a change as a draft or add `merge:hold` to pause it. Successful unit tests alone do not satisfy the complete gate.

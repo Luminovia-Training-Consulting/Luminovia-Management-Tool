@@ -148,5 +148,10 @@
     "name": "area:taxonomy",
     "color": "5319e7",
     "description": "Topics, tools, programming languages and hierarchies."
+  },
+  {
+    "name": "merge:hold",
+    "color": "d93f0b",
+    "description": "Pause verified automatic merging while a maintainer resolves an outstanding concern."
   }
 ]

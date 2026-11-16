@@ -85,6 +85,8 @@ export default defineConfig(({ mode }) => {
           "**/scripts/public-config.ts": { 100: true },
           "**/src/lib/dates.ts": { 100: true },
           "**/src/features/operations/schedule.ts": { 100: true },
+          "**/src/features/jobs/lifecycle-api.ts": { 100: true },
+          "**/src/features/notifications/api.ts": { 100: true },
           "**/src/features/knowledge/content.ts": {
             statements: 95,
             branches: 85,

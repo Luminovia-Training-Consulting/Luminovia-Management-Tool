@@ -2,6 +2,17 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Complete-evidence automatic merge continuation
+
+- [x] Audit existing repository/PR/test/documentation state without changing concurrent worktrees.
+- [x] Add49meaningful lifecycle/inbox regressions;246unit/component tests pass,49.05%whole-source lines; two additional100%critical API gates retain all source in coverage.
+- [x] Implement trusted-main workflow, current complete workflow/check/security provenance, draft/hold/review/indirect-PR safeguards, exact signed tested-commit fast-forward and independent missing-main-check reconciliation.
+- [x] Prove signed GitHub promotion and concurrent-target refusal in owned temporary PR14; clean fixture branches; preserve main/application data.
+- [x] Reuse only the existing protected repo-scoped maintenance App for tightly routed promotion writes; preserve currently active server rules and ordinary maintenance paths. Addmerge:hold and precise contribution/operating documentation.
+- [ ] Complete exact-source full application/security/native CI, review results and perform the authorised merge. Workflow-file permissions or native rules must fail closed; do not broaden App rights silently.
+
+Full product/module scope and independently ongoing PR acceptance remain unchanged.
+
 ## English community information
 
 The current language request covers public security/contribution documentation, GitHub issue/PR forms and guidance, managed label descriptions and PR metadata feedback. Isolated branch `codex/english-community-guides` preserves concurrent application work and the full product ledger below.
