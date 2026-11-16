@@ -1,3 +1,7 @@
+/**
+ * Explicit operator-only publication/cleanup of local-package deployment metadata.
+ * Reads trusted GitHub metadata; never downloads artifacts or executes PR code.
+ */
 import { appendFile, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -98,6 +102,7 @@ async function status(
 export async function publishPullRequestPreview({
   event,
   eventName,
+  currentRef,
   currentRepository,
   request,
   now = Date.now(),
@@ -107,36 +112,19 @@ export async function publishPullRequestPreview({
       event?.repository?.full_name === repository,
     "Preview publication is restricted to the owning repository.",
   );
+  // Reject old automatic events in the executable entry point as well as YAML.
+  // A maintenance/verification dispatch has no action and cannot publish either.
+  requireValue(
+    eventName === "workflow_dispatch" && currentRef === "refs/heads/main",
+    "Preview metadata requires an explicit manual dispatch from main.",
+  );
+  const action = event.inputs?.action;
+  requireValue(
+    action === "publish" || action === "cleanup",
+    "Choose the explicit publish or cleanup action.",
+  );
   const results = [];
-  if (eventName === "pull_request_target") {
-    requireValue(
-      event.action === "closed" &&
-        positive(event.number) &&
-        event.pull_request?.number === event.number &&
-        event.pull_request.base?.repo?.full_name === repository,
-      "Only a closed PR metadata event may clean up preview records.",
-    );
-    const pr = await request(`${base}/pulls/${event.number}`);
-    requireValue(
-      pr.state === "closed" &&
-        pr.number === event.number &&
-        pr.base?.repo?.full_name === repository,
-      "A reopened or foreign PR must not be cleaned up by an old close event.",
-    );
-    const records = await list(
-      request,
-      `${base}/deployments?environment=${environment(event.number)}&task=${encodeURIComponent(task)}`,
-    );
-    for (const deployment of records.filter(ownedDeployment))
-      await status(
-        request,
-        deployment,
-        "inactive",
-        "PR closed; local preview package is no longer current.",
-      );
-    return [`PR #${event.number}: preview records deactivated.`];
-  }
-  if (eventName === "schedule") {
+  if (action === "cleanup") {
     const records = await list(
       request,
       `${base}/deployments?task=${encodeURIComponent(task)}`,
@@ -191,15 +179,19 @@ export async function publishPullRequestPreview({
     }
     return results;
   }
+  // Dispatch fields are data, never shell arguments or trusted run metadata.
+  const runId = Number(event.inputs.run_id);
+  const runAttempt = Number(event.inputs.run_attempt);
   requireValue(
-    eventName === "workflow_run" &&
-      ["in_progress", "completed"].includes(event.action) &&
-      positive(event.workflow_run?.id),
-    "Invalid preview workflow event.",
+    /^[1-9][0-9]*$/.test(event.inputs.run_id || "") &&
+      /^[1-9][0-9]*$/.test(event.inputs.run_attempt || "") &&
+      positive(runId) &&
+      positive(runAttempt),
+    "Publication requires a positive exact run_id and run_attempt.",
   );
-  const run = await request(`${base}/actions/runs/${event.workflow_run.id}`);
+  const run = await request(`${base}/actions/runs/${runId}`);
   requireValue(
-    run.id === event.workflow_run.id &&
+    run.id === runId &&
       run.repository?.full_name === repository &&
       run.event === "pull_request" &&
       shaPattern.test(run.head_sha) &&
@@ -207,8 +199,12 @@ export async function publishPullRequestPreview({
       positive(run.workflow_id),
     "Preview source must be an actual PR workflow run of the owning repository.",
   );
-  if (run.run_attempt !== event.workflow_run.run_attempt)
+  if (run.run_attempt !== runAttempt)
     return ["Superseded run attempt ignored."];
+  requireValue(
+    run.status === "completed" && run.conclusion === "success",
+    "Only a completed successful application run may publish a preview.",
+  );
   const workflow = await request(
     `${base}/actions/workflows/${run.workflow_id}`,
   );
@@ -229,8 +225,6 @@ export async function publishPullRequestPreview({
     )
   )
     return ["A newer exact-head workflow run supersedes this result."];
-  if (run.status !== "completed" && event.action === "completed")
-    return ["Run is not yet complete."];
   const candidates = run.pull_requests?.length
     ? run.pull_requests
     : await list(request, `${base}/commits/${run.head_sha}/pulls`);
@@ -299,28 +293,6 @@ export async function publishPullRequestPreview({
       );
     }
     const logUrl = `${web}/actions/runs/${run.id}/attempts/${run.run_attempt}`;
-    if (run.status !== "completed") {
-      await status(
-        request,
-        deployment,
-        "in_progress",
-        "Preparing and testing a downloadable local preview package.",
-        logUrl,
-      );
-      results.push(`PR #${number}: local preview checks running.`);
-      continue;
-    }
-    if (run.conclusion !== "success") {
-      await status(
-        request,
-        deployment,
-        "failure",
-        "Application checks did not pass; no preview package published.",
-        logUrl,
-      );
-      results.push(`PR #${number}: checks failed; no ready preview.`);
-      continue;
-    }
     const jobs = await list(
       request,
       `${base}/actions/runs/${run.id}/attempts/${run.run_attempt}/jobs`,
@@ -430,6 +402,7 @@ async function main() {
   const results = await publishPullRequestPreview({
     event,
     eventName: process.env.GITHUB_EVENT_NAME,
+    currentRef: process.env.GITHUB_REF,
     currentRepository: process.env.GITHUB_REPOSITORY,
     request,
   });

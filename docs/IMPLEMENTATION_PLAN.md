@@ -2,6 +2,16 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Current direction — local PC testing and explicit publication
+
+- [x] Add `./portal check` for fast local source/coverage/build feedback, retaining complete isolated `./portal test` and latest-main `./portal github test`.
+- [x] Keep automatic quality/security/application/native gates; make CMS publication an explicit exact-SHA manual choice and PR deployment metadata manual-only.
+- [x] Notify the 16 other active project Codex chats and preserve the local-first rule in `AGENTS.md` and operator/contribution guides.
+- [x] Run the actual fast local command (249 frontend tests before integration;254on current-main integration and build pass), all95integrated offline runtime tests and workflow validation. Cancel the old automatic main publication run and temporarily disable the old metadata publisher, with real server readback.
+- Signed [PR27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27) owns the exact required CI and coordinated user-authorised merge record. After its actual merge, re-enable the manual-only metadata workflow and verify main's publication guard. The first run was cancelled after PR21 advanced main; current-main integration preserves both feature histories.
+- [x] Reproduce the existing50-way lifecycle fixture's disappearing-offer consent lookup from the actual failed run, capture real actor quotes before racing and add a deterministic late-reader case; all12real PostgreSQL groups pass in a fresh disposable local container. Fresh signed-head CI remains the merge gate.
+
+The VPS polling timer and normal/hosted data are unchanged. This direction supersedes historical automatic release/publication descriptions below; it does not remove any product, security or release acceptance requirements.
 ## Coordinated PR18 integration
 
 The owner-approved PR18 head0675bb9 is integrated on the owned PR21 branch, preserving all audit fixes and both guidance systems. Local combined checks pass254frontend/87runtime cases with no disconnected modules/exports; migration bytes and dependencies match the owner source. The explicit PR18 main-merge hold is respected. Include the actual resulting main merge before the final push, then require all current-head quality/security/application/native and PR-preview-package gates before immediate merge.
@@ -252,3 +262,5 @@ These are remaining implementation candidates, not delivered functions or extra 
 ## Standing agent delivery rule
 
 The user's 16 November instruction makes signed commit → push → prepared PR → latest-revision required CI → prompt permitted merge mandatory for every requested repository change, without another merge confirmation. Root AGENTS.md is the canonical rule shared by Copilot. Preserve protection/review gates and active user-authorised merge coordination; complete delivery after any temporary pause instead of stopping at a local commit or open PR. This instruction-only update does not change the full remaining product scope above.
+
+The later local-first instruction preserves this delivery rule: complete and test each feature independently, then deliver its focused PR. PR26 is locally prepared with PR27's explicit-publication controls and the actual local fast/targeted evidence in WORKLOG. Complete its delivery against the actual merged PR27/main revision and its latest required CI; a shared integration branch is not a prerequisite. The full product ledger remains unchanged.
