@@ -7,15 +7,14 @@ import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
 import {
   chmodSync,
   existsSync,
-  lstatSync,
   mkdirSync,
-  readFileSync,
   renameSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { root } from "./runtime-lib.mjs";
+import { readHostedPrivateText as privateRead } from "./testing/hosted-private-text.mjs";
 
 // This is deliberately separate from the loopback-only local mutation suites.
 // Only this named, fictional, self-hosted development installation is accepted.
@@ -109,15 +108,6 @@ if (options["--mailpit-api"]) {
       !mailpit.hash,
     "Mail capture requires an explicit loopback SSH tunnel, never a public mailbox",
   );
-}
-/** Reads only the operator-owned regular private file with the expected restrictive permissions. */
-function privateRead(path) {
-  const stat = lstatSync(path);
-  assert(
-    stat.isFile() && !stat.isSymbolicLink() && (stat.mode & 0o077) === 0,
-    "Private configuration must be an exclusive regular file (0600)",
-  );
-  return readFileSync(path, "utf8");
 }
 /** Writes private operator state through a temporary file and keeps its permissions restrictive. */
 function privateWrite(path, content) {
