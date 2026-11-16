@@ -99,6 +99,8 @@ jobs:
           name: portal-course-building-blocks-${{ github.run_id }}-${{ github.run_attempt }}
           # Exact feature allowlist only: no traces, credentials or other reports.
           path: .local/tests/*/screenshots/*-course-building-blocks-*.png
+          # The parent .local directory is hidden; the PNG allowlist remains exact.
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
   verify-selfhost:
