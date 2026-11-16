@@ -36,6 +36,9 @@ const writer = { login: "ordinary-writer", id: 30, type: "User" };
 // GitHub's real GraphQL Bot login is bare; REST includes the [bot] suffix.
 const dependabot = { login: "dependabot[bot]", id: 49699333, type: "Bot" };
 const started = "2026-11-16T04:00:00Z";
+const browserCheck = "Isolated browser acceptance";
+// Native branch rules retain fifteen contexts. Browser execution is additional
+// current-run acceptance evidence, not a replacement or sixteenth branch rule.
 const names = [
   "Build",
   "Typecheck",
@@ -99,7 +102,7 @@ function nativeRules() {
   ];
 }
 function checksFor(sha = head) {
-  return names.map((name, index) => ({
+  return [...names, browserCheck].map((name, index) => ({
     id: index + 1,
     name,
     head_sha: sha,
@@ -226,6 +229,10 @@ function acceptanceJobs(sha = head, runId = 100) {
     [
       "Actual isolated selfhost image compatibility",
       "Complete isolated native selfhost verification",
+    ],
+    [
+      browserCheck,
+      "Complete isolated desktop, mobile and built-PWA acceptance",
     ],
   ].map(([name, step], index) => ({
     id: 7001 + index,
@@ -638,6 +645,7 @@ test("every required check belongs to the selected workflow suite and latest exa
     "PR preview package",
     "PR metadata",
     "Dependency review",
+    browserCheck,
   ]) {
     const checks = checksFor();
     checks.find((check) => check.name === name).check_suite.id = 999;
@@ -788,8 +796,36 @@ test("all candidates including admin authors require independent current-head ap
   );
 });
 
+test("the fifteen native rule contexts cannot substitute for a separate current browser check", async () => {
+  assert.equal(
+    nativeRules().at(-1).parameters.required_status_checks.length,
+    15,
+  );
+  assert.equal(checksFor().length, 16);
+  await blocked(
+    {
+      checks: checksFor().filter((check) => check.name !== browserCheck),
+      jobs: acceptanceJobs().slice(0, 2),
+    },
+    "acceptance-job-provenance",
+  );
+  for (const change of [
+    (check) => (check.head_sha = base),
+    (check) => (check.status = "queued"),
+    (check) => (check.conclusion = "failure"),
+    (check) => (check.conclusion = "skipped"),
+  ]) {
+    const checks = checksFor();
+    change(checks.find((check) => check.name === browserCheck));
+    await blocked({ checks }, "additional-checks");
+  }
+  const checks = checksFor();
+  checks.find((check) => check.name === browserCheck).app.id = 999;
+  await blocked({ checks }, "acceptance-job-provenance");
+});
+
 test("green contexts cannot substitute for missing, skipped, failed or ambiguous actual acceptance steps", async () => {
-  for (const index of [0, 1]) {
+  for (const index of [0, 1, 2]) {
     for (const change of [
       (job) => {
         job.steps = [];
@@ -827,7 +863,7 @@ test("green contexts cannot substitute for missing, skipped, failed or ambiguous
 });
 
 test("full acceptance jobs must bind the selected canonical run, head, name and exact check URL", async () => {
-  for (const index of [0, 1]) {
+  for (const index of [0, 1, 2]) {
     for (const change of [
       (job) => {
         job.run_id = 101;
@@ -906,7 +942,7 @@ test("missing, invalid or future acceptance attempts cannot authorize a native m
       "acceptance-job-provenance",
     );
   }
-  for (const index of [0, 1]) {
+  for (const index of [0, 1, 2]) {
     for (const run_attempt of [undefined, null, "1", 0, -1, 1.5, 2]) {
       const jobs = acceptanceJobs();
       jobs[index].run_attempt = run_attempt;
@@ -947,22 +983,32 @@ test("all Actions job pages and the final inspection remain authoritative before
     /Invalid or incomplete GitHub response/,
   );
   assert.deepEqual(changing.writes(), []);
-  const bad = structuredClone(jobs);
-  bad[1].steps[0].conclusion = "skipped";
-  await blocked({ jobInspections: [jobs, bad] }, "acceptance-steps");
+  for (const index of [1, 2]) {
+    const bad = structuredClone(jobs);
+    bad[index].steps[0].conclusion = "skipped";
+    await blocked({ jobInspections: [jobs, bad] }, "acceptance-steps");
+  }
 });
 
 test("only the currently selected check URL counts, including after a same-run retry", async () => {
-  const checks = checksFor();
-  checks.push({ ...checks.find((check) => check.name === "verify"), id: 400 });
-  await blocked({ checks }, "acceptance-job-provenance");
-  const jobs = acceptanceJobs();
-  jobs[0].check_run_url = `https://api.github.com${prefix}/check-runs/400`;
-  assert.equal(
-    (await inspectPullRequest(fixture({ checks, jobs }).request, 31, catalogue))
-      .eligible,
-    true,
-  );
+  for (const name of ["verify", browserCheck]) {
+    const checks = checksFor();
+    checks.push({ ...checks.find((check) => check.name === name), id: 400 });
+    await blocked({ checks }, "acceptance-job-provenance");
+    const jobs = acceptanceJobs();
+    jobs.find((job) => job.name === name).check_run_url =
+      `https://api.github.com${prefix}/check-runs/400`;
+    assert.equal(
+      (
+        await inspectPullRequest(
+          fixture({ checks, jobs }).request,
+          31,
+          catalogue,
+        )
+      ).eligible,
+      true,
+    );
+  }
 });
 
 test("the exact legacy native step remains accepted while duplicate aliases and invalid CI IDs fail closed", async () => {

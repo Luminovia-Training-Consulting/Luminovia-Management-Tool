@@ -246,16 +246,19 @@ function readyRoutes() {
       name,
     })),
   };
-  const checks = names.map((name, index) => ({
-    id: index + 1,
-    name,
-    status: "completed",
-    conclusion: "success",
-    head_sha: source,
-    app: { id: name === "CodeQL" ? 57789 : 15368 },
-    check_suite: { id: suiteIds[workflowFor(name)] },
-    started_at: "2026-11-16T04:00:00Z",
-  }));
+  // Browser acceptance remains additional to the fifteen native rule contexts.
+  const checks = [...names, "Isolated browser acceptance"].map(
+    (name, index) => ({
+      id: index + 1,
+      name,
+      status: "completed",
+      conclusion: "success",
+      head_sha: source,
+      app: { id: name === "CodeQL" ? 57789 : 15368 },
+      check_suite: { id: suiteIds[workflowFor(name)] },
+      started_at: "2026-11-16T04:00:00Z",
+    }),
+  );
   const rules = [
     { type: "deletion" },
     { type: "non_fast_forward" },
@@ -354,12 +357,16 @@ function readyRoutes() {
       ),
     ),
     route(prefix + "/actions/runs/100/jobs?filter=all&per_page=100&page=1", {
-      total_count: 2,
+      total_count: 3,
       jobs: [
         ["verify", "Complete isolated local verification"],
         [
           "Actual isolated selfhost image compatibility",
           "Complete isolated native selfhost verification",
+        ],
+        [
+          "Isolated browser acceptance",
+          "Complete isolated desktop, mobile and built-PWA acceptance",
         ],
       ].map(([name, step], index) => ({
         id: 7001 + index,
@@ -663,8 +670,8 @@ test("the actual ready CLI binds fixed GraphQL reads to the reader and only nati
   }
 });
 
-test("actual CLI refuses green acceptance checks whose mandatory application or native step was skipped", () => {
-  for (const index of [0, 1]) {
+test("actual CLI refuses green acceptance checks whose mandatory system, native or browser step was skipped", () => {
+  for (const index of [0, 1, 2]) {
     const routes = readyRoutes();
     const jobs = routes.find((item) => item.path.includes("/jobs?filter=all"))
       .data.jobs;
@@ -681,6 +688,34 @@ test("actual CLI refuses green acceptance checks whose mandatory application or 
         call.path.endsWith("/jobs?filter=all&per_page=100&page=1"),
       ),
     );
+    assert.ok(result.calls.every((call) => call.credential === "read"));
+  }
+});
+
+test("actual CLI refuses a missing or foreign-suite browser check while the fifteen native contexts stay green", () => {
+  for (const reason of [
+    "acceptance-job-provenance",
+    "check-suite-provenance",
+  ]) {
+    const routes = readyRoutes();
+    const response = routes.find((item) =>
+      item.path.includes("/check-runs?"),
+    ).data;
+    const browser = response.check_runs.find(
+      (check) => check.name === "Isolated browser acceptance",
+    );
+    if (reason === "acceptance-job-provenance")
+      response.check_runs = response.check_runs.filter(
+        (check) => check !== browser,
+      );
+    else browser.check_suite.id = 999;
+    const result = runCli(routes, { apply: true });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout), {
+      number: 31,
+      eligible: false,
+      reason,
+    });
     assert.ok(result.calls.every((call) => call.credential === "read"));
   }
 });
@@ -734,7 +769,7 @@ test("actual CLI refuses unavailable or malformed Actions job evidence without l
 });
 
 test("actual CLI refuses incomplete, contradictory or missing Actions job cardinality before using the writer", () => {
-  for (const total_count of [undefined, null, "2", -1, 1, 3]) {
+  for (const total_count of [undefined, null, "3", -1, 1, 2, 4]) {
     const routes = readyRoutes();
     routes.find((item) =>
       item.path.includes("/jobs?filter=all"),

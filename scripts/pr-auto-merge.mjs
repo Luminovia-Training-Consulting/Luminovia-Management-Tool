@@ -37,6 +37,12 @@ const requiredChecks = new Map([
 const prefix = `/repos/${repository}`;
 const acceptanceSteps = new Map([
   ["verify", new Set(["Complete isolated local verification"])],
+  // The separate browser job is extra execution evidence; native branch rules
+  // still require exactly their fifteen independently named contexts.
+  [
+    "Isolated browser acceptance",
+    new Set(["Complete isolated desktop, mobile and built-PWA acceptance"]),
+  ],
   [
     "Actual isolated selfhost image compatibility",
     new Set([
@@ -378,6 +384,8 @@ function evaluateAcceptanceJobs(jobs, run, head, checks) {
       .sort((a, b) => b.id - a.id)[0];
     if (!Number.isSafeInteger(check?.id) || check.id <= 0)
       return blocked("acceptance-job-provenance");
+    if (check.check_suite?.id !== run.check_suite_id)
+      return blocked("check-suite-provenance");
     const expectedCheck = `https://api.github.com${prefix}/check-runs/${check.id}`;
     const matches = jobs.filter((job) => job?.check_run_url === expectedCheck);
     if (matches.length !== 1) return blocked("acceptance-job-provenance");
