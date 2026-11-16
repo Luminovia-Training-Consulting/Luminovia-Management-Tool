@@ -73,6 +73,15 @@ Full product/module scope and independently ongoing PR acceptance remain unchang
 - [ ] Coordinate the shared QA lock and run the exact signed candidate against a separately archived actual `1de544d` baseline, with the current 36 migrations and discovered API inventory. Record matching anonymous financial digests, full native Auth/Storage/TLS/50-claim checks and verified owned cleanup before claiming a current pass.
 - [ ] Run complete canonical application acceptance and the final exact-head PR CI gates through the owning quality integration. Keep the historical `5876224`/`e048edb` 26-migration proof source-bound; no deployment or PostgreSQL image upgrade is implied.
 
+## English quote/discovery documentation — released PR10 continuation
+
+- [x] Integrate accepted main `1de544d` and preserve all 36 released SQL sources, neutral naming, operator guidance and complete actual-main histories.
+- [x] Replace obsolete unpaged/future wording with actual shipped actor quotes, monetary filtering/order, cursor context, exact consent and current SQL/query/DTO/UI ownership in the role, discovery and migration guides.
+- [x] Pass fresh `./portal check` (515 frontend cases/65 files, unchanged coverage floors and build), 102 runtime cases, 20 focused documentation/privacy/catalogue/metadata cases and technical-guide formatting; deliver the signed bounded update through [PR #29](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/29).
+- [ ] Complete all 15 exact-current-head required checks and the assigned actual merge. Preserve queue-controlled Draft; no additional routine user approval is required.
+
+The earlier 3ed9a24 all-green checkpoint applies only to its e88 base. All remaining product and operational scope in the ledger below remains required.
+
 ## PR10 current accepted Main13 checkpoint
 
 - [x] Preserve c808 archive-race regression/fix while resolving actual main e88 conflicts and retaining customer-neutral/personal-only/manual-publication contracts.
