@@ -541,16 +541,27 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
           ),
           "1",
         );
+        await sql(
+          `insert into private.teaching_preparation(claim_id,materials_ready) values(${q(claim)},true)`,
+        );
+        const assignmentPlan = await plan("assignment", claim);
+        assert.equal(assignmentPlan.counts["private.teaching_preparation"], 1);
         const prior = await sql(
           `select lifecycle_version from public.jobs where id=${q(job)}`,
         );
-        const op = await confirm(await plan("assignment", claim)),
+        const op = await confirm(assignmentPlan),
           ex = await permit(op);
         await worker("apply", key(op, ex));
         await worker("complete", `${key(op, ex)},true,true`);
         assert.equal(
           await sql(`select status from public.jobs where id=${q(job)}`),
           "published",
+        );
+        assert.equal(
+          await sql(
+            `select count(*) from private.teaching_preparation where claim_id=${q(claim)}`,
+          ),
+          "0",
         );
         assert.equal(
           await sql(
@@ -878,6 +889,301 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
       assert.equal(voided.can_confirm, false);
       await expectCode(confirm(voided), "23503");
       assert.deepEqual(await financialState(), after);
+    },
+  );
+  await check(
+    "Accepted profile housekeeping and own notebooks purge without touching another user or shared file",
+    async () => {
+      const subject = randomUUID(),
+        template = randomUUID(),
+        run = randomUUID(),
+        org = randomUUID(),
+        job = randomUUID(),
+        notification = randomUUID(),
+        otherNotification = randomUUID(),
+        subscription = randomUUID(),
+        email = randomUUID(),
+        push = randomUUID(),
+        resource = randomUUID();
+      await sql(`insert into auth.users(id,email) values(${q(subject)},'permanent-housekeeping@example.invalid');insert into public.user_roles(user_id,role) values(${q(subject)},'lecturer');
+      insert into public.organisations(id,name) values(${q(org)},'Fictional housekeeping organisation');
+      insert into public.course_templates(id,title) values(${q(template)},'Fictional housekeeping course');
+      insert into public.course_runs(id,template_id,organisation_id) values(${q(run)},${q(template)},${q(org)});
+      insert into public.jobs(id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms) values(${q(job)},'Fictional unrelated interest','Fictional organisation','online','draft',10,10,'EUR','fixed_total','Fictional terms');
+      insert into private.job_waitlist(job_id,user_id) values(${q(job)},${q(subject)}),(${q(job)},${q(other)});
+      insert into private.dashboard_preferences(user_id) values(${q(subject)});
+      insert into private.staff_contact_visibility(user_id) values(${q(subject)});
+      insert into private.personal_favourites(user_id,kind,resource_id) values(${q(subject)},'organisation',${q(org)});
+      insert into private.calendar_subscriptions(user_id,label,token_hash,client_id) values(${q(subject)},'Fictional private subscription',md5(${q(randomUUID())})||md5(${q(randomUUID())}),${q(randomUUID())});
+      insert into private.course_notebooks(run_id,user_id,body) values(${q(run)},${q(subject)},'Target private notebook'),(${q(run)},${q(other)},'Other private notebook must remain');
+      insert into public.notifications(id,user_id,kind,resource_id) values(${q(notification)},${q(subject)},'claim_confirmed',${q(randomUUID())}),(${q(otherNotification)},${q(other)},'claim_confirmed',${q(randomUUID())});
+      insert into private.push_subscriptions(id,user_id,endpoint,p256dh,auth_secret,device_token,label) values(${q(subscription)},${q(subject)},${q("https://push.example.invalid/" + subscription)},'fictional-public-key','fictional-private-secret',${q(randomUUID())},'Fictional device');
+      insert into private.notification_email_outbox(id,notification_id,occurrence_at) values(${q(email)},${q(notification)},now());
+      insert into private.notification_push_outbox(id,notification_id,subscription_id,occurrence_at) values(${q(push)},${q(otherNotification)},${q(subscription)},now())`);
+      const shared = await reserve(admin);
+      await sql(`update public.document_versions set status='clean',sha256=repeat('c',64) where id=${q(shared.version_id)};update public.documents set status='clean' where id=${q(shared.document_id)};
+      insert into private.course_resources(id,run_id,version_id,audience,category,created_by) values(${q(resource)},${q(run)},${q(shared.version_id)},'all','material',${q(admin)});
+      insert into private.course_resource_acknowledgements(resource_id,user_id) values(${q(resource)},${q(subject)}),(${q(resource)},${q(other)})`);
+      assert.equal(
+        await sql(
+          `select count(*) from private.delivery_preferences where user_id=${q(subject)}`,
+        ),
+        "1",
+        "Accepted initializer creates preferences for every new profile",
+      );
+      const p = await plan("account", subject);
+      assert.equal(p.can_confirm, true);
+      for (const table of [
+        "delivery_preferences",
+        "dashboard_preferences",
+        "staff_contact_visibility",
+        "calendar_subscriptions",
+        "push_subscriptions",
+        "personal_favourites",
+        "job_waitlist",
+        "course_notebooks",
+        "course_resource_acknowledgements",
+        "notification_email_outbox",
+        "notification_push_outbox",
+      ])
+        assert.equal(p.counts["private." + table], 1, table);
+      assert.equal(
+        JSON.stringify(p).includes("Target private notebook"),
+        false,
+      );
+      assert.equal(
+        JSON.stringify(p).includes("fictional-private-secret"),
+        false,
+      );
+      const op = await confirm(p),
+        ex = await permit(op);
+      await worker("apply", key(op, ex));
+      await sql(`delete from auth.users where id=${q(subject)}`);
+      await worker("complete", `${key(op, ex)},true,true`);
+      for (const table of [
+        "delivery_preferences",
+        "dashboard_preferences",
+        "staff_contact_visibility",
+        "calendar_subscriptions",
+        "push_subscriptions",
+        "personal_favourites",
+        "job_waitlist",
+        "course_notebooks",
+        "course_resource_acknowledgements",
+      ])
+        assert.equal(
+          await sql(
+            `select count(*) from private.${table} where user_id=${q(subject)}`,
+          ),
+          "0",
+          table,
+        );
+      assert.equal(
+        await sql(
+          `select count(*) from private.notification_email_outbox where id=${q(email)}`,
+        ),
+        "0",
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from private.notification_push_outbox where id=${q(push)}`,
+        ),
+        "0",
+      );
+      assert.equal(
+        await sql(
+          `select body from private.course_notebooks where run_id=${q(run)} and user_id=${q(other)}`,
+        ),
+        "Other private notebook must remain",
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from private.course_resource_acknowledgements where resource_id=${q(resource)} and user_id=${q(other)}`,
+        ),
+        "1",
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from public.notifications where id=${q(otherNotification)}`,
+        ),
+        "1",
+      );
+      const sharedPlan = await plan("document", shared.document_id);
+      assert.equal(sharedPlan.can_confirm, false);
+      assert.equal(
+        sharedPlan.blockers.some(
+          (item) => item.kind === "private.course_resources",
+        ),
+        true,
+      );
+      await expectCode(confirm(sharedPlan), "23503");
+    },
+  );
+  await check(
+    "Leased, sending and uncertain external deliveries block account purge even after lease expiry",
+    async () => {
+      const subject = randomUUID(),
+        notification = randomUUID(),
+        subscription = randomUUID(),
+        email = randomUUID(),
+        push = randomUUID();
+      await sql(`insert into auth.users(id,email) values(${q(subject)},'permanent-delivery-barrier@example.invalid');insert into public.user_roles(user_id,role) values(${q(subject)},'lecturer');
+      insert into public.notifications(id,user_id,kind,resource_id) values(${q(notification)},${q(subject)},'claim_confirmed',${q(randomUUID())});
+      insert into private.push_subscriptions(id,user_id,endpoint,p256dh,auth_secret,device_token,label) values(${q(subscription)},${q(subject)},${q("https://push.example.invalid/" + subscription)},'fictional-public-key','fictional-private-secret',${q(randomUUID())},'Fictional device');
+      insert into private.notification_email_outbox(id,notification_id,occurrence_at) values(${q(email)},${q(notification)},now());
+      insert into private.notification_push_outbox(id,notification_id,subscription_id,occurrence_at) values(${q(push)},${q(notification)},${q(subscription)},now())`);
+      for (const state of ["leased", "sending", "uncertain"]) {
+        await sql(`update private.notification_email_outbox set state=${q(state)},lease_until=now()-interval '1 day',lease_token=${q(randomUUID())} where id=${q(email)};
+        update private.notification_push_outbox set state=${q(state)},lease_until=now()-interval '1 day',lease_token=${q(randomUUID())} where id=${q(push)}`);
+        const p = await plan("account", subject);
+        assert.equal(p.can_confirm, false);
+        assert.equal(
+          p.blockers.find((item) => item.kind === "pending_external_deliveries")
+            ?.count,
+          2,
+        );
+        await expectCode(confirm(p), "23503");
+        assert.equal(
+          await sql(
+            `select active from public.profiles where id=${q(subject)}`,
+          ),
+          "t",
+        );
+      }
+      await sql(
+        `update private.notification_email_outbox set state='accepted',lease_until=null where id=${q(email)};update private.notification_push_outbox set state='pending',lease_until=null where id=${q(push)}`,
+      );
+      const op = await confirm(await plan("account", subject)),
+        ex = await permit(op);
+      await expectCode(
+        sql(
+          `update private.notification_push_outbox set state='leased' where id=${q(push)}`,
+        ),
+        "55000",
+      );
+      await worker("apply", key(op, ex));
+      await sql(`delete from auth.users where id=${q(subject)}`);
+      await worker("complete", `${key(op, ex)},true,true`);
+      assert.equal(
+        await sql(
+          `select count(*) from private.notification_push_outbox where id=${q(push)}`,
+        ),
+        "0",
+      );
+    },
+  );
+  await check(
+    "Unaccepted jobs own waitlists, client brief history and exact inbox deliveries; active job delivery blocks confirmation",
+    async () => {
+      const job = randomUUID(),
+        org = randomUUID(),
+        request = randomUUID(),
+        notification = randomUUID(),
+        email = randomUUID();
+      await sql(`insert into public.organisations(id,name) values(${q(org)},'Fictional request deletion organisation');
+      insert into public.jobs(id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms) values(${q(job)},'Fictional unaccepted job','Fictional organisation','online','draft',10,10,'EUR','fixed_total','Fictional terms');
+      insert into private.job_waitlist(job_id,user_id) values(${q(job)},${q(owner)}),(${q(job)},${q(other)});
+      insert into private.client_course_requests(id,organisation_id,requested_by,client_id,payload,job_id,status) values(${q(request)},${q(org)},${q(owner)},${q(randomUUID())},'{}',${q(job)},'published');
+      insert into private.client_request_briefs(request_id,content) values(${q(request)},'{"description":"Fictional authored brief"}');
+      insert into public.notifications(id,user_id,kind,resource_id) values(${q(notification)},${q(other)},'job_waitlist_available',${q(job)});
+      insert into private.notification_email_outbox(id,notification_id,occurrence_at,state,lease_until) values(${q(email)},${q(notification)},now(),'sending',now()-interval '1 day')`);
+      const blocked = await plan("job", job);
+      assert.equal(blocked.can_confirm, false);
+      assert.equal(
+        blocked.blockers.some(
+          (item) => item.kind === "pending_external_deliveries",
+        ),
+        true,
+      );
+      await expectCode(confirm(blocked), "23503");
+      await sql(
+        `update private.notification_email_outbox set state='accepted',lease_until=null where id=${q(email)}`,
+      );
+      const p = await plan("job", job);
+      assert.equal(p.can_confirm, true);
+      assert.equal(p.counts["private.job_waitlist"], 2);
+      assert.equal(p.counts["private.client_request_briefs"], 1);
+      assert.equal(p.counts["private.client_request_revisions"] >= 2, true);
+      assert.equal(p.counts["private.notification_email_outbox"], 1);
+      const op = await confirm(p),
+        ex = await permit(op);
+      await worker("apply", key(op, ex));
+      await worker("complete", `${key(op, ex)},true,true`);
+      assert.equal(
+        await sql(
+          `select count(*) from private.job_waitlist where job_id=${q(job)}`,
+        ),
+        "0",
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from private.client_request_briefs where request_id=${q(request)}`,
+        ),
+        "0",
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from private.client_request_revisions where request_id=${q(request)}`,
+        ),
+        "0",
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from private.notification_email_outbox where id=${q(email)}`,
+        ),
+        "0",
+      );
+    },
+  );
+  await check(
+    "Timesheet evidence and shared operations tasks remain explicit blockers rather than cascading through claims or accounts",
+    async () => {
+      const job = randomUUID(),
+        claim = randomUUID(),
+        session = randomUUID(),
+        timesheet = randomUUID(),
+        creator = randomUUID(),
+        task = randomUUID();
+      await sql(`insert into public.jobs(id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms) values(${q(job)},'Fictional evidenced job','Fictional organisation','online','filled',10,10,'EUR','fixed_total','Fictional terms');
+      insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,status,amount,total_amount,currency,rate_unit,terms,terms_version) values(${q(claim)},${q(job)},${q(owner)},${q(randomUUID())},'confirmed',10,10,'EUR','fixed_total','Accepted evidenced work',1);
+      insert into public.assignment_sessions(id,claim_id,lecturer_id,starts_at,ends_at) values(${q(session)},${q(claim)},${q(owner)},'2020-01-01T10:00:00Z','2020-01-01T11:00:00Z');
+      insert into private.teaching_preparation(claim_id) values(${q(claim)});
+      insert into private.teaching_timesheets(id,session_id,lecturer_id,starts_at,ends_at,state,note) values(${q(timesheet)},${q(session)},${q(owner)},'2020-01-01T10:00:00Z','2020-01-01T11:00:00Z','submitted','Fictional retained teaching evidence');
+      insert into auth.users(id,email) values(${q(creator)},'permanent-shared-task-creator@example.invalid');insert into public.user_roles(user_id,role) values(${q(creator)},'management');
+      insert into private.work_tasks(id,creator_id,assignee_id,scope,title,client_id,request_payload) values(${q(task)},${q(creator)},${q(other)},'operations','Fictional shared task',${q(randomUUID())},'{}')`);
+      const before = await sql(
+        `select to_jsonb(t) from private.teaching_timesheets t where id=${q(timesheet)}`,
+      );
+      const p = await plan("assignment", claim);
+      assert.equal(p.can_confirm, false);
+      assert.equal(
+        p.blockers.some((item) => item.kind === "private.teaching_timesheets"),
+        true,
+      );
+      await expectCode(confirm(p), "23503");
+      assert.equal(
+        await sql(
+          `select to_jsonb(t) from private.teaching_timesheets t where id=${q(timesheet)}`,
+        ),
+        before,
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from private.teaching_preparation where claim_id=${q(claim)}`,
+        ),
+        "1",
+      );
+      const account = await plan("account", creator);
+      assert.equal(account.can_confirm, false);
+      assert.equal(
+        account.blockers.some((item) => item.kind === "private.work_tasks"),
+        true,
+      );
+      await expectCode(confirm(account), "23503");
+      assert.equal(
+        await sql(`select title from private.work_tasks where id=${q(task)}`),
+        "Fictional shared task",
+      );
     },
   );
 });

@@ -50,3 +50,15 @@ An interrupted writer leaves an explicit lease and pending operation. Do not cle
 Reusable bilingual confirmation dialog binds current actor, target and preview. Show impact/blockers and require explicit irreversible confirmation. No optimistic removal; cancel old queries before post-acknowledgement refresh. Admin console supports typed targets; account/file/job and company-own-job contexts use the same deletion action. Existing archive/moderation actions must not be described as permanent deletion.
 
 Verify real PostgreSQL permissions/FKs/dependencies/races; real Auth and both Storage buckets, failure/retry/old-token/old-path cases; desktop/mobile DE/EN/light/dark and confirmation/error/pending flows. Published36 migrations remain byte-identical. Exact scoped implementation and real results belong in WORKLOG/PLAN; no complete pass is inferred from this contract.
+
+## Accepted smart-operation dependencies
+
+The additive PR35 repair includes initialized delivery/dashboard/contact preferences,
+private subscriptions/favourites/notebooks, own acknowledgements and waitlists in
+account scopes. A job owns its request briefs/revisions and exact matching/waitlist
+notifications; an assignment owns its preparation and exact reminder notifications.
+Other users' records, shared tasks, timesheet evidence and protected business
+relationships remain blockers. The complete counts and row fingerprints are still
+reviewed before confirmation. Notification deliveries in leased, sending or uncertain
+states block purge even after lease expiry; application rechecks their rows before
+removal. No worker is started by a deletion preview or this migration.

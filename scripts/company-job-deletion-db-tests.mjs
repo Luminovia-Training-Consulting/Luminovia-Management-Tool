@@ -229,6 +229,9 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
       );
       assert.equal(allowed.can_confirm, true);
       assert.deepEqual(allowed.blockers, []);
+      // Accepted request triggers create revision rows. They belong to this
+      // reviewed request, while accepted teaching history stays protected below.
+      assert(allowed.counts["private.client_request_revisions"] > 0);
       const blocked = JSON.parse(
         await actor(
           company,

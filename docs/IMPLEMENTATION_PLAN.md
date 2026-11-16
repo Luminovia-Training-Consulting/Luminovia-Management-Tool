@@ -1,5 +1,16 @@
 # Persistent implementation plan
 
+## PR35 mergeability repair — 17 November 2026
+
+- [x] Reproduce the current SQL blocker and trace the fresh-account browser blocker to accepted request-revision and profile-preference dependencies.
+- [x] Add a forward-only private deletion-scope integration; preserve released SQL, granular permissions, shared evidence, accepted commercial history and uncertain external delivery barriers.
+- [x] Pass8company and25permanent-deletion PostgreSQL groups with ownership/preservation/delivery regressions and bilingual impact labels.
+- [x] Pass `./portal check`:697frontend cases/91files, coverage floors, types/lint/format/compiler and production/PWA build.
+- [ ] Finish current-head full required CI, including native Auth/Storage/browser acceptance; canonical local invocation initially refused a foreign-owned shared QA lock.
+- [ ] Merge only PR35 after current checks pass and repository rules permit; no release publication or production operation is authorised by this repair.
+
+The complete target and all unrelated pending work remain below.
+
 ## All-open-PR merge continuation — permanent deletion
 
 - [x] Preserve actual accepted main `7fbdb956`, both additive ledgers and all released migration bytes; the latest direct user request supersedes earlier PR35-only merge sequencing.
@@ -20,6 +31,7 @@
 - [x] Pass complete canonical local acceptance on signed67b749d:29native API suites,116application+2PWA browsers, all SQL/source checks and actual cleanup. Keep this evidence source-bound.
 - [x] Close remaining company history/earnings/calendar/raw-RLS paths and pass8expanded SQL groups; improve reviewed impact clarity and pass23focused deletion cases.
 - [ ] Verify the final follow-up with native company deletion/revocation and new screenshots; integrate only actual accepted main and replay the final migration order before current required CI and the authorised PR35 merge.
+
 ## All-open-PR merge continuation — smart operations
 
 - [x] Integrate accepted main `7fbdb956`, preserving phase separation and PR17-only font/mail/browser aggregate requirements plus both ledgers.

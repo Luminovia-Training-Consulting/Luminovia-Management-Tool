@@ -117,6 +117,7 @@ describe("permanent deletion confirmation", () => {
         "Rollenzuordnungen",
         "Erweiterte Profilangaben",
         "Benachrichtigungseinstellungen",
+        "Zustellungseinstellungen",
         "Einführungsfortschritt",
         "Verlaufseinträge bleiben ohne Personenzuordnung erhalten",
       ],
@@ -130,6 +131,7 @@ describe("permanent deletion confirmation", () => {
         "Role assignments",
         "Additional profile details",
         "Notification preferences",
+        "Delivery preferences",
         "Welcome guide progress",
         "History entries retained without account attribution",
       ],
@@ -144,6 +146,7 @@ describe("permanent deletion confirmation", () => {
         "public.user_roles": 2,
         "public.profile_details": 1,
         "private.notification_preferences": 1,
+        "private.delivery_preferences": 1,
         "private.welcome_progress": 1,
         audit_attributions: 3,
         ...Object.fromEntries(
@@ -196,12 +199,12 @@ describe("permanent deletion confirmation", () => {
       await within(dialog).findByText(labels[0]);
       for (const label of labels)
         expect(within(dialog).getByText(label)).toBeVisible();
-      expect(within(dialog).getAllByRole("term")).toHaveLength(6);
+      expect(within(dialog).getAllByRole("term")).toHaveLength(7);
       expect(
         within(dialog)
           .getAllByRole("definition")
           .map((element) => element.textContent),
-      ).toEqual(["1", "2", "1", "1", "1", "3"]);
+      ).toEqual(["1", "2", "1", "1", "1", "1", "3"]);
       expect(
         within(dialog).queryByText(generic, { exact: true }),
       ).not.toBeInTheDocument();
