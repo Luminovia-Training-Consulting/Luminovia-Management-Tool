@@ -1,3 +1,7 @@
+/**
+ * Regressions for browser transfer completion, scan state, Auth/network failures and exact
+ * versions. Controlled transport does not replace real RLS/Auth/Storage/browser acceptance.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   downloadDocument,
@@ -14,6 +18,7 @@ vi.mock("../../lib/supabase", () => ({
 
 // Controlled browser transport only. Real scanning/Storage permissions remain
 // covered by the isolated HTTP/SQL suites, not this client-side fixture.
+/** Controlled XMLHttpRequest fixture exposing headers, progress and completion events. */
 class Request {
   static requests: Request[] = [];
   constructor() {
@@ -69,6 +74,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/** Call the real upload function and wait for its controlled XMLHttpRequest instance. */
 async function transfer(onProgress?: (percent: number) => void) {
   const promise = uploadDocument(file(), { scope: "personal" }, onProgress);
   await vi.waitFor(() => expect(Request.requests).toHaveLength(1));

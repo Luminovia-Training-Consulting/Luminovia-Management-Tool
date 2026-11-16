@@ -1,3 +1,7 @@
+/**
+ * SPA routes, global error boundary and PWA notices. Public Auth, demo and help routes stay
+ * outside the protected user-keyed subtree; feature pages load on demand.
+ */
 import { Component, lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Outlet, Route, Routes, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -24,6 +28,7 @@ import {
   NotificationsPage,
   SettingsPage,
 } from "../features/notifications/notifications";
+
 const AdminAuditPage = lazy(() =>
   import("../features/audit/audit").then((module) => ({
     default: module.AdminAuditPage,
@@ -49,91 +54,109 @@ const AvailabilityPage = lazy(() =>
     default: module.AvailabilityPage,
   })),
 );
+
 const TaxonomyPage = lazy(() =>
   import("../features/taxonomy/taxonomy").then((module) => ({
     default: module.TaxonomyPage,
   })),
 );
+
 const AccountsPage = lazy(() =>
   import("../features/accounts/accounts").then((module) => ({
     default: module.AccountsPage,
   })),
 );
+
 const ClientPortalPage = lazy(() =>
   import("../features/commercial/client-portal").then((module) => ({
     default: module.ClientPortalPage,
   })),
 );
+
 const PeopleDirectory = lazy(() =>
   import("../features/people/people").then((module) => ({
     default: module.PeopleDirectory,
   })),
 );
+
 const PersonProfile = lazy(() =>
   import("../features/people/people").then((module) => ({
     default: module.PersonProfile,
   })),
 );
+
 const MyCourseReviews = lazy(() =>
   import("../features/people/reviews").then((module) => ({
     default: module.MyCourseReviews,
   })),
 );
+
 const ContractsPage = lazy(() =>
   import("../features/commercial/contracts").then((module) => ({
     default: module.ContractsPage,
   })),
 );
+
 const FinancePage = lazy(() =>
   import("../features/commercial/finance").then((module) => ({
     default: module.FinancePage,
   })),
 );
+
 const ClientsPage = lazy(() =>
   import("../features/operations/clients").then((module) => ({
     default: module.ClientsPage,
   })),
 );
+
 const CoursesPage = lazy(() =>
   import("../features/operations/courses").then((module) => ({
     default: module.CoursesPage,
   })),
 );
+
 const PortalSearch = lazy(() =>
   import("../features/search/search").then((module) => ({
     default: module.PortalSearch,
   })),
 );
+
 const WikiPage = lazy(() =>
   import("../features/knowledge/wiki").then((module) => ({
     default: module.WikiPage,
   })),
 );
+
 const ForumPage = lazy(() =>
   import("../features/knowledge/forum").then((module) => ({
     default: module.ForumPage,
   })),
 );
+
 const ChatPage = lazy(() =>
   import("../features/chat/chat").then((module) => ({
     default: module.ChatPage,
   })),
 );
+
 const CalendarPage = lazy(() =>
   import("../features/calendar/calendar").then((module) => ({
     default: module.CalendarPage,
   })),
 );
+
 const PeopleAdminPage = lazy(() =>
   import("../features/admin/people").then((module) => ({
     default: module.PeopleAdminPage,
   })),
 );
+
 const AdminPage = lazy(() =>
   import("../features/admin/admin").then((module) => ({
     default: module.AdminPage,
   })),
 );
+/** Wait for session resolution before entering private routes; remount local state when the actor changes. */
 function Protected() {
   const { session, loading, error } = useAuth();
   if (loading) return <Loading />;
@@ -146,6 +169,7 @@ function Protected() {
     <Navigate to="/login" replace />
   );
 }
+/** Expose offline/update state and activate a new service worker only through the visible user action. */
 function AppNotices() {
   const { t } = useTranslation();
   const online = useOnline();
@@ -174,6 +198,7 @@ function AppNotices() {
     </>
   );
 }
+/** Compose public Auth/demo/help routes and protected feature pages under one Suspense boundary. */
 export function App() {
   return (
     <>
@@ -239,10 +264,12 @@ export function App() {
     </>
   );
 }
+/** Discard detail drafts and retry identities when navigation selects a different job ID. */
 function JobDetailRoute() {
   const { id } = useParams();
   return <JobDetail key={id} />;
 }
+/** Offer a translated, accessible route back from an unknown URL. */
 function NotFound() {
   const { t } = useTranslation();
   return (
@@ -254,6 +281,7 @@ function NotFound() {
     </div>
   );
 }
+/** Catch render failures and show a fixed bilingual fallback instead of a blank application. */
 export class ErrorBoundary extends Component<
   { children: ReactNode },
   { hasError: boolean }

@@ -1,7 +1,13 @@
+/**
+ * CV/certificate files in a person's evidence context. The selected person does
+ * not replace server authorization; qualification downloads use their separate
+ * exact-version evidence binding rather than a general foreign-file grant.
+ */
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { FileUpload, SubjectDocuments } from "./files";
 import "./i18n";
+/** Show the person's CV/certificate links under the existing document-permission contract. */
 export function ProfileEvidence({
   ownerId,
   readOnly = false,

@@ -125,3 +125,9 @@ A merge can start the existing development release process. Its immutable `cms-d
 Signed annotated `milestone/*` tags identify verified historical development states. They are not PR labels or a promise of a Semver or production version. Do not move existing tags; create tags only on the intended commit.
 
 After merging, update the issue resolution when needed and track remaining tasks separately. A new task must not silently expand the original acceptance criteria or be described as already completed.
+
+## Current catalogue and historical metadata checks
+
+The read-only metadata workflow executes only this repository's current main code and catalogue, including for fork PRs. It does not execute proposed contribution code, install dependencies or use write credentials. Automatic checks apply to open PR events; closed PR label edits do not restart this gate. Add new managed labels to the shared catalogue before applying them.
+
+A deliberate historical check can be dispatched from main with a positive PR number. It re-reads current labels and records the actual historical head, without rerunning or rewriting its past application acceptance. See [metadata operation](GITHUB_WORKFLOW.md#labels-and-metadata-validation) and [the executed repair evidence](PR_CI_REPAIR_20261116.md).

@@ -1,3 +1,7 @@
+/**
+ * Regressions for retained drafts/retry identities and confirmed clean attachments. Controlled
+ * SDK/DOM fixtures do not replace real chat/Storage acceptance.
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -13,6 +17,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

@@ -1,8 +1,13 @@
+/**
+ * Room/thread layout, messages, composer and mobile single-pane chat, using shared brand colours
+ * and surface variables.
+ */
 .chat-page-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 9px;
 }
+/* Desktop room selection and active history sit side by side without intrinsic horizontal overflow. */
 .chat-workspace {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
@@ -78,6 +83,7 @@
   line-height: 1.5;
   margin-top: 5px;
 }
+/* Keep selection, unread count and room type distinct in each room row. */
 .chat-room-list {
   display: flex;
   flex-direction: column;
@@ -226,6 +232,7 @@
   top: -20px;
   color: var(--brand);
 }
+/* The active conversation owns its scrollable history. */
 .chat-thread {
   display: flex;
   flex-direction: column;
@@ -333,6 +340,7 @@
   margin: 0;
   list-style: none;
 }
+/* Keep author, time, text and confirmed attachments together as one message entry. */
 .chat-message {
   display: flex;
   gap: 10px;
@@ -494,6 +502,7 @@
   justify-content: center;
   margin-bottom: 18px;
 }
+/* Keep the retained draft, upload state and send controls in one composer. */
 .chat-composer {
   padding: 14px 24px 17px;
   border-top: 1px solid var(--line);
@@ -672,6 +681,7 @@
   max-height: 170px;
   overflow-y: auto;
 }
+
 @media (max-width: 1150px) {
   .chat-workspace {
     grid-template-columns: 260px minmax(0, 1fr);
@@ -708,6 +718,7 @@
     display: none;
   }
 }
+
 @media (max-width: 900px) {
   .chat-workspace {
     grid-template-columns: 225px minmax(0, 1fr);
@@ -753,6 +764,7 @@
     min-width: 100px;
   }
 }
+
 @media (max-width: 760px) {
   .chat-workspace {
     display: block;

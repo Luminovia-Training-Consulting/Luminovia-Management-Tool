@@ -30,12 +30,14 @@ const payload = {
     { starts_at: "2037-06-01T09:00:00Z", ends_at: "2037-06-01T10:00:00Z" },
   ],
 };
+/** Creates controlled historical records before the selected migration check. */
 async function seed(sql) {
   await sql(
     `insert into auth.users(id,email) values('${admin}','time-admin@example.invalid'),('${teacher}','time-teacher@example.invalid'),('${peer}','time-peer@example.invalid');insert into public.user_roles(user_id,role) values('${admin}','admin'),('${teacher}','lecturer'),('${peer}','lecturer');`,
   );
 }
 let checks = 0;
+/** Counts and reports a case only after all of its assertions have completed successfully. */
 const check = async (name, fn) => {
   await fn();
   checks++;
@@ -45,6 +47,7 @@ const scopedCounts = `select jsonb_build_object('organisations',(select count(*)
 
 await withTestDatabase("schedule_finite", async ({ sql, actor }) => {
   await seed(sql);
+  /** Submits the controlled job as AAL2 management through create_job so real interval constraints apply. */
   const create = async (values = payload) =>
     await actor(
       admin,

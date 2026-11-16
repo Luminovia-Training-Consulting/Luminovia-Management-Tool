@@ -1,3 +1,6 @@
+/**
+ * Actual local HTTP/TCP cases use a fictional token and injected scan adapter. Exercise limits, deadlines, authentication and errors without loading production credentials.
+ */
 import assert from "node:assert/strict";
 import { once } from "node:events";
 import { request as httpRequest } from "node:http";
@@ -7,8 +10,10 @@ import { createClamavScanner, MAX_BYTES } from "./clamav.mjs";
 import { createScannerServer, readToken } from "./server.mjs";
 
 const token = "a".repeat(64); // Fictional unit-test value, never a deployment token.
+// Build a fresh fictional clamd version string for the local protocol test.
 const version = () => `ClamAV 1.4.3/27820/${new Date().toUTCString()}`;
 
+// Start only the owned local HTTP test server and register its cleanup with the test owner.
 async function start(t, options = {}) {
   let calls = 0;
   const scanner = options.scanner ?? {
@@ -29,6 +34,7 @@ async function start(t, options = {}) {
   return { server, url, calls: () => calls };
 }
 
+// Send fictional local upload bytes and explicit test headers to the owned server.
 function upload(url, body = "fictional lesson", extra = {}) {
   return fetch(`${url}/scan`, {
     method: "POST",
@@ -279,6 +285,7 @@ test("token configuration requires one long secret source", () => {
   assert.equal(readToken({ PORTAL_SCANNER_TOKEN: token }), token);
 });
 
+// Simulate local VERSION/INSTREAM framing to observe partial frames, replies and connection failures.
 async function fakeClamd(
   t,
   { reply = "stream: OK\0", signature = version(), silent = false } = {},

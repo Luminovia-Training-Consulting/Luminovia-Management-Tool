@@ -1,3 +1,7 @@
+/**
+ * Regressions for literal untrusted text, author boundaries, confirmed edits and hidden deleted
+ * content. UI fixtures do not replace actual chat authorization.
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   cleanup,
@@ -30,6 +34,7 @@ const message: ChatMessage = {
   document_id: null,
   reactions: [],
 };
+/** Render a real message bubble with an isolated cache and selectable fictional author. */
 function bubble(value: ChatMessage = message, actor = "lecturer-a") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

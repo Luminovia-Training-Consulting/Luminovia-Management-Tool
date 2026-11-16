@@ -1,3 +1,8 @@
+/**
+ * Role-adapted dashboard with server-aggregated job counts, bounded matching
+ * suggestions and personal widgets. Preview-array length never replaces totals;
+ * current roles/capabilities gate the actor-scoped queries.
+ */
 import { FinancialSummaryCards } from "../commercial/revenue";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -22,6 +27,7 @@ import { ErrorState, Loading, TextLink } from "../../components/common";
 import { validZone } from "../../lib/dates";
 import { DashboardCalendarPreview, DashboardWidgets } from "./widgets";
 import "./i18n";
+/** Compose personal entry points, actual offers and confirmed assignments from shared queries. */
 export function Dashboard() {
   const { t, i18n } = useTranslation();
   const dashboard = useTranslation("dashboard").t;

@@ -1,3 +1,5 @@
+# Main acceptance: fast quality gates, the real isolated application, then
+# actual selfhost images. Only a successful main revision is packaged.
 name: Portal checks
 on:
   push:
@@ -16,6 +18,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   quality:
+    # Independent diagnostics remain visible when another gate fails.
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -49,6 +52,7 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_fictional_build_only
         run: ${{ matrix.command }}
   coverage:
+    # Unit/component coverage is separate from SQL and browser acceptance.
     name: Tests and coverage
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -73,6 +77,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
   verify:
+    # The canonical local command owns its data/ports and verifies cleanup.
     needs: [quality, coverage]
     runs-on: ubuntu-latest
     # The complete gate now covers 32 migrations and the expanded native/browser
@@ -96,6 +101,8 @@ jobs:
       - name: Complete isolated local verification
         run: ./portal test
   verify-selfhost:
+    # HEAD^ supplies the previous source contract for a real retained-data upgrade;
+    # successful mocks/unit tests do not replace this container run.
     name: Actual isolated selfhost image compatibility
     needs: verify
     runs-on: ubuntu-latest
@@ -116,6 +123,8 @@ jobs:
           git archive HEAD^ | tar -x -C "$RUNNER_TEMP/selfhost-baseline"
       - run: node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run --baseline-root "$RUNNER_TEMP/selfhost-baseline" --baseline-commit "$(git rev-parse HEAD^)" --proof-output "$RUNNER_TEMP/postgres-candidate-proof.json"
   release-cms:
+    # Development release with an immutable commit tag. This gate depends on all
+    # application gates, including after a direct maintainer merge.
     name: Publish tested CMS update
     needs: [quality, coverage, verify, verify-selfhost]
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'

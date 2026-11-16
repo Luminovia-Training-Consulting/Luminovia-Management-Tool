@@ -1,3 +1,7 @@
+/**
+ * Real Auth/HTTP checks for scanned avatars and current viewing permissions.
+ * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
+ */
 import assert from "node:assert/strict";
 import { randomUUID, createHash } from "node:crypto";
 import sharp from "sharp";
@@ -12,11 +16,13 @@ await withApiFixture(async ({ service, actor, mfa, defer, checked, url }) => {
     job = randomUUID(),
     claim = randomUUID();
   let courseCreated = false;
+  /** Creates and signs in the specific fictional identity for the real avatar-permission check. */
   async function identity(role) {
     const who = await actor(`avatar-${role}-${users.length}`, role);
     users.push(who.id);
     return who;
   }
+  /** Reads the test actor's current session token for actual authenticated gateway requests. */
   async function headers(who) {
     const { session } = await checked(
       who.client.auth.getSession(),
@@ -28,6 +34,7 @@ await withApiFixture(async ({ service, actor, mfa, defer, checked, url }) => {
       apikey: process.env.SUPABASE_ANON_KEY,
     };
   }
+  /** Sends the actual test request as the selected identity; its response is asserted separately. */
   async function request(who, body) {
     return await fetch(`${url}/functions/v1/files`, {
       method: "POST",
@@ -35,6 +42,7 @@ await withApiFixture(async ({ service, actor, mfa, defer, checked, url }) => {
       body: JSON.stringify(body),
     });
   }
+  /** Sends real fixture bytes through the authenticated file endpoint; scanning and release remain server responsibilities. */
   async function upload(who, bytes, mime = "image/png", name = "avatar.png") {
     const form = new FormData();
     form.set("file", new File([bytes], name, { type: mime }));
@@ -249,14 +257,12 @@ await withApiFixture(async ({ service, actor, mfa, defer, checked, url }) => {
     "Create scoped template",
   );
   await checked(
-    service
-      .from("course_runs")
-      .insert({
-        id: run,
-        template_id: template,
-        organisation_id: org,
-        published: false,
-      }),
+    service.from("course_runs").insert({
+      id: run,
+      template_id: template,
+      organisation_id: org,
+      published: false,
+    }),
     "Create scoped course",
   );
   const starts = new Date(Date.now() - 2 * 86400000).toISOString(),
@@ -268,39 +274,35 @@ await withApiFixture(async ({ service, actor, mfa, defer, checked, url }) => {
     "Scoped course interval",
   );
   await checked(
-    service
-      .from("jobs")
-      .insert({
-        id: job,
-        course_run_id: run,
-        title: "Fictional avatar assignment",
-        customer_name: "Fictional academy",
-        delivery_type: "online",
-        time_zone: "Europe/Berlin",
-        status: "filled",
-        amount: 100,
-        currency: "EUR",
-        rate_unit: "fixed_total",
-        total_amount: 100,
-        terms: "Fictional terms",
-      }),
+    service.from("jobs").insert({
+      id: job,
+      course_run_id: run,
+      title: "Fictional avatar assignment",
+      customer_name: "Fictional academy",
+      delivery_type: "online",
+      time_zone: "Europe/Berlin",
+      status: "filled",
+      amount: 100,
+      currency: "EUR",
+      rate_unit: "fixed_total",
+      total_amount: 100,
+      terms: "Fictional terms",
+    }),
     "Scoped job",
   );
   await checked(
-    service
-      .from("job_claims")
-      .insert({
-        id: claim,
-        job_id: job,
-        lecturer_id: teacher.id,
-        idempotency_key: randomUUID(),
-        amount: 100,
-        currency: "EUR",
-        rate_unit: "fixed_total",
-        total_amount: 100,
-        terms: "Fictional terms",
-        terms_version: 1,
-      }),
+    service.from("job_claims").insert({
+      id: claim,
+      job_id: job,
+      lecturer_id: teacher.id,
+      idempotency_key: randomUUID(),
+      amount: 100,
+      currency: "EUR",
+      rate_unit: "fixed_total",
+      total_amount: 100,
+      terms: "Fictional terms",
+      terms_version: 1,
+    }),
     "Scoped accepted assignment",
   );
   await checked(

@@ -1,3 +1,5 @@
+/** Verify delivered local documentation files and GitHub-style heading links.
+ * Fixtures exercise anchors without browser/network access; private state stays ignored. */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile, readdir, access } from "node:fs/promises";

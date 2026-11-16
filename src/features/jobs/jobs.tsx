@@ -1,3 +1,8 @@
+/**
+ * Marketplace entry and exact actor-scoped job detail with immediate allocation.
+ * Discovery owns bounded server paging and URL filters; only the atomic online
+ * RPC confirms every session and preserves the accepted commercial snapshot.
+ */
 import { JobPricingPanel } from "../commercial/pricing";
 import { JobLifecyclePanel } from "./lifecycle";
 import { refreshJobState } from "./lifecycle-api";
@@ -27,9 +32,11 @@ import {
 } from "../../components/common";
 import { BackLink } from "../../app/shell";
 export { JobCard } from "./card";
+/** Delegate URL filters, private saved views and bounded server paging to JobDiscovery. */
 export function Jobs() {
   return <JobDiscovery />;
 }
+/** Display own accepted terms and request new allocation only through the atomic claim RPC. */
 export function JobDetail() {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
@@ -38,6 +45,8 @@ export function JobDetail() {
   const online = useOnline();
   const client = useQueryClient();
   const [accepted, setAccepted] = useState<number | null>(null);
+  // Network uncertainty preserves the same operation; only a confirmed claim
+  // later receives a fresh identity for a genuine reopening.
   const key = useRef(crypto.randomUUID());
   const permissions = useQuery(permissionsQuery(session!.user.id));
   const jobs = useQuery(jobDetailQuery(session!.user.id, id ?? ""));
@@ -50,6 +59,8 @@ export function JobDetail() {
     mutationFn: async () => {
       requireOnline();
       if (!job || accepted !== job.terms_version) throw new Error("invalid");
+      // The browser submits no winner/lecturer ID. The server atomically checks
+      // the current actor, eligibility, every session and accepted terms.
       const { data, error } = await db().rpc("claim_job", {
         p_job_id: job.id,
         p_idempotency_key: key.current,
@@ -81,6 +92,8 @@ export function JobDetail() {
       </>
     );
   const zone = profile.data?.time_zone ?? job.time_zone;
+  // An accepted claim remains the source for agreed fees and conditions
+  // even if the current offer is subsequently edited.
   const terms = ownClaim ?? job;
   const result = claim.data?.status;
   const resultKey =

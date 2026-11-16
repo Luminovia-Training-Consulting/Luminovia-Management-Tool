@@ -215,3 +215,28 @@ These are remaining implementation candidates, not delivered functions or extra 
 2. M3 was merged through [PR #3](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/3), then integrated with the authorised self-hosted development and automatic-release path. No merge remains pending for that application slice. The system now consumes tested main releases without manual cloning; destructive/backdated/major migrations remain reviewed operations. Production deployment is separate.
 3. M6 passed the combined application and retained-data gates and merged through PR8(dc8e9a7). Continue the isolated M7 source-derived discovery/community slices above; preserve all24accepted migrations, private-resource boundaries, old commercial snapshots and the complete remaining master-prompt ledger. Each further slice requires its own complete integration acceptance.
 4. Continue the authorised self-hosted CMS development and configure real SMTP only when approved; no managed-backend dependency is intended. Development native all-database/file/key restore and physical VM rollback have passed. Complete remaining hosted/manual/cross-browser/physical-PWA, privacy, monitoring, recurring off-site and production-scale recovery acceptance before a concrete production approval request.
+
+## Comprehensive code comments and agent guide
+
+Historical PR15 request, now reconciled on the separate combined-source rehearsal: explain the maintained code throughout and provide a project-specific `AGENTS.md`, using OpenXLR's guide as a structural reference. Work uses a dedicated review worktree so the original checkout's concurrent feature changes remain separate. The independent English community commit `3256d1a` is preserved; contributor guidance remains English and source commentary uses English.
+
+- [x] Annotate the original170frontend and104launcher/script/browser-test files, maintained Edge/operating code and root build/CI/configuration entry points with purposes, contracts and important flow/security/resource explanations. Preserve and annotate the incoming PR16 guided-demo/help main additions:183frontend and109launcher/script/browser-test files in total, including the two private fixture sources. Combined226frontend/63runtime/10publicbrowser cases pass locally; exact protected PR acceptance remains required.
+- [x] Expand `AGENTS.md` with the actual ownership map, reading order, business/security invariants, commands, collaboration/Git rules, comprehensive English-comment policy and operational boundaries; add a canonical `.github/copilot-instructions.md` entry point.
+- [x] Explain all 24 released migrations in [MIGRATION_GUIDE](MIGRATION_GUIDE.md); preserve their exact bytes, vendor provenance, JSON/lockfiles, generated data and assets.
+- [x] Compare executable syntax/literals, CSS rules and parsed/active configuration against current main at pure-comment checkpoint1055101; run frontend coverage, type/lint/build, runtime, Edge and offline operating checks.
+- [x] Harden only the existing private MFA test-state IO after the protected CodeQL gate re-flags it; ten real filesystem regression groups and all62combined runtime tests pass. Fresh exact-head full CI remains the acceptance source for this bounded harness exception.
+
+The full product ledger below remains unchanged. The protected PR additionally requires hardening the existing private MFA test-state file reader/writer after CodeQL re-flags its old race warning in the touched fixture. That bounded harness change receives real ownership/symlink/atomic-write regressions; application business behavior stays unchanged. Exact-head CodeQL and full application/selfhost CI remain acceptance gates, with no advance production/hosted claim.
+
+Current reconciliation preserves all32 released migration bytes and94 product behavior:212 frontend/Edge syntax trees and26CSS structures match, with purpose/contract comments adapted to current M7/M8 implementations. Exact final acceptance follows the actual main15 merge and the complete combined-source gates.
+
+## Historical PR CI repair
+
+Requested PRs6/7/8/9/14/11 are already merged. Their final application checks and later metadata failures are distinguished in [the audit](PR_CI_REPAIR_20261116.md);14 is a cancelled temporary-base fixture, not a failed product merge.
+
+- [x] Reconcile the35managed labels with current GitHub usage; preserve existing names, colours, descriptions and assignments.
+- [x] Use current trusted main for the ordinary read-only metadata check, skip automatic closed-PR events and add a main-only manual historical check; retain strict categories, canonical identity and stale-head rejection.
+- [x] Pass12focused Node regressions plus workflow/format/link checks and real read-only label validation for all six PRs.
+- [x] Signed PR20 head6e593f5 passed all14 required checks and merged asd4c1f49; all six explicit current-main historical metadata rechecks passed. These validate present labels, not a replacement for historical application runs.
+
+No new application migration, production deployment or reduction of the remaining product scope belongs to this repair.

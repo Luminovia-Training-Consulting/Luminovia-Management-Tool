@@ -1,3 +1,8 @@
+/**
+ * FullCalendar view of own events, confirmed assignments, published global events
+ * and course sessions. Visible ranges bound global discovery; each source keeps
+ * its own ACL. Private form times become instants before server-confirmed writes.
+ */
 import { Link } from "react-router-dom";
 import "../availability/i18n";
 import { assignmentJobTitlesQuery } from "../jobs/discovery-api";
@@ -47,12 +52,14 @@ import {
 import { globalEventsQuery } from "./publications-api";
 import { GlobalEventDetails, GlobalEventManagement } from "./publications";
 import "./publications-i18n";
+/** Validate private-event form input; current server permissions and constraints remain authoritative. */
 const schema = z.object({
   title: z.string().trim().min(1).max(200),
   starts_at: z.string().min(1),
   ends_at: z.string().min(1),
   time_zone: z.string().refine(validZone),
 });
+/** Save or delete an own private event using zoned instants, then invalidate the actor's event query after confirmation. */
 function EventForm({
   userId,
   zone,
@@ -199,6 +206,7 @@ function EventForm({
     </form>
   );
 }
+/** Combine separately authorized calendar sources and display them in the selected IANA zone. */
 export function CalendarPage() {
   const { t, i18n } = useTranslation();
   const availabilityText = useTranslation("availability").t;

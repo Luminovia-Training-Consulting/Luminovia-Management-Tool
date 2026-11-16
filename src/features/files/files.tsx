@@ -1,3 +1,8 @@
+/**
+ * File centre with drop uploads, version-bound previews and history. Captured
+ * dialogs recheck exact resource access independently of filtered result pages;
+ * transferred upload bytes alone do not confirm scan clearance.
+ */
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   useMutation,
@@ -44,6 +49,7 @@ import "./i18n";
 import "./files.css";
 import { DocumentExplorer, DocumentOrganiser } from "./discovery";
 import { JobPicker } from "../jobs/picker";
+/** Map upload failures to the known translated UI keys. */
 function fileError(error: unknown) {
   const code = error instanceof Error ? error.message : "";
   return [
@@ -55,6 +61,7 @@ function fileError(error: unknown) {
     ? code
     : "error";
 }
+/** Keep file selection and retry identity together; clear the draft only after successful upload/scan completion. */
 export function FileUpload({
   context,
   onDone,
@@ -164,6 +171,7 @@ export function FileUpload({
     </div>
   );
 }
+/** Bind metadata and bytes to the same version and dispose Blob URLs created by late responses. */
 function Preview({ file }: { file: PortalDocument }) {
   const { t } = useTranslation("files");
   const [url, setUrl] = useState("");
@@ -202,6 +210,7 @@ function Preview({ file }: { file: PortalDocument }) {
     <p>{t("noPreview")}</p>
   );
 }
+/** Load authorized history and offer downloads only for clean versions. */
 function Versions({ file }: { file: PortalDocument }) {
   const { t, i18n } = useTranslation("files");
   const online = useOnline();
@@ -334,6 +343,7 @@ function documentPermissionDenied(error: unknown) {
     error.code === "42501",
   );
 }
+/** Keep captured dialogs independent of filtered lists while revalidating their exact targets. */
 function DocumentList({
   files,
   pending = false,
@@ -700,6 +710,7 @@ function DocumentList({
     </>
   );
 }
+/** Bind files to a specific business context using the shared upload/list contract. */
 export function SubjectDocuments({
   ownerId,
   kind,
@@ -724,6 +735,7 @@ export function SubjectDocuments({
     />
   );
 }
+/** Separate pre-/post-claim job materials and expose administrative uploads only as the applicable UI action. */
 export function JobDocuments({
   jobId,
   canManage,
@@ -775,6 +787,7 @@ export function JobDocuments({
     </section>
   );
 }
+/** Filter the currently loaded file set by name/context; complete server-side discovery remains separate work. */
 export function FilesPage() {
   const { t } = useTranslation("files");
   const { session } = useAuth();

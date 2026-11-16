@@ -1,7 +1,12 @@
+/**
+ * Controlled Radix dialog shared across features. The caller owns open state and content; Radix
+ * manages dialog semantics and focus.
+ */
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+/** Connect controlled opening, accessible title and content to the modal focus boundary. */
 export function Dialog({
   open,
   onOpenChange,

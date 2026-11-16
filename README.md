@@ -170,6 +170,8 @@ Stop managed local services with `./portal stop`; database and actual Storage fi
 
 ## Documentation
 
+[Agent working guide](AGENTS.md) · [SQL migration reading guide](docs/MIGRATION_GUIDE.md). Maintain the comprehensive English source comments with their actual contracts and preserve released migration bytes.
+
 [Central developer documentation index](docs/README.md) — reading order, architecture, feature guides, APIs, test evidence, security and operations. The [user guide](docs/USER_GUIDE.md) explains connected account workflows.
 
 [Roadmap](ROADMAP.md) · [Changelog](CHANGELOG.md) · [Decision notes](docs/decisions/README.md) · [Guided demo, help and tour](docs/GUIDED_DEMO_AND_HELP.md)

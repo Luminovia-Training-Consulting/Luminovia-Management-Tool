@@ -1,3 +1,7 @@
+/**
+ * Derives private local test configuration from actual CLI service status.
+ * Public browser settings and server-side test keys stay separate; existing passwords are retained.
+ */
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";

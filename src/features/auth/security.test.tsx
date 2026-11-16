@@ -1,3 +1,7 @@
+/**
+ * Regressions for MFA challenge/enrollment failures and retryable controls. SDK/DOM fixtures do
+ * not replace real MFA acceptance.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -48,6 +52,7 @@ beforeEach(() => {
   });
 });
 afterEach(cleanup);
+/** Render the subject with the local providers required by this test. */
 function view() {
   render(
     <MemoryRouter>

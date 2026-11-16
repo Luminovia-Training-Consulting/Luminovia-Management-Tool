@@ -1,3 +1,8 @@
+/**
+ * Calendar regressions for own assignment titles, authorised course links and
+ * global-event detail lifetime across locale, query refresh and range changes.
+ * Controlled Query/FullCalendar fixtures do not replace native ACL acceptance.
+ */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useEffect } from "react";
 import { act, cleanup, render, screen, within } from "@testing-library/react";

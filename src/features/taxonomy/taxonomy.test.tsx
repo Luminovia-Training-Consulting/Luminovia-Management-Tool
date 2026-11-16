@@ -1,3 +1,7 @@
+/**
+ * Regressions for catalogue reads, stable search focus, confirmed edits and retained conflict
+ * drafts. UI fixtures do not replace native taxonomy authorization.
+ */
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -27,6 +31,7 @@ const original: TaxonomyTopic = {
 };
 let manage = false,
   rows: TaxonomyTopic[] = [];
+/** Model an awaitable SDK response with its chain method; this fixture makes no backend request. */
 function response(data: unknown, error: unknown = null) {
   return Object.assign(Promise.resolve({ data, error }), {
     abortSignal() {
@@ -34,6 +39,7 @@ function response(data: unknown, error: unknown = null) {
     },
   });
 }
+/** Mount the real feature screen with an isolated cache and controlled SDK responses. */
 function mount() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

@@ -1,9 +1,14 @@
+/**
+ * People cards, shared profile fields, reviews and enrollment, using shared brand colours and
+ * surface variables.
+ */
 .people-filters {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
   gap: 16px;
   margin-bottom: 24px;
 }
+/* Adapt the authorized directory's card count to available width. */
 .people-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
@@ -113,6 +118,7 @@
   padding: 12px 0;
   border-bottom: 1px solid var(--line);
 }
+
 @media (max-width: 700px) {
   .people-filters,
   .people-details-grid,

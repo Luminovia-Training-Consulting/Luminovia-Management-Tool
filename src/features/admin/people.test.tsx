@@ -1,3 +1,8 @@
+/**
+ * Regressions for capability boundaries, targeted expertise verification and explicitly
+ * confirmed suspensions. Local fixtures do not replace actual administrative API/database
+ * checks.
+ */
 import {
   act,
   cleanup,
@@ -107,6 +112,7 @@ afterEach(() => {
   cleanup();
   client.clear();
 });
+/** Render the real page in its router/query context for the interaction checks below. */
 function page() {
   render(
     <QueryClientProvider client={client}>
@@ -116,6 +122,7 @@ function page() {
     </QueryClientProvider>,
   );
 }
+/** Select the fictional lecturer row explicitly before testing an administrative change. */
 async function selectLecturer() {
   await userEvent.click(
     await screen.findByRole("button", {
