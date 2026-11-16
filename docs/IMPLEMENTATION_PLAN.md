@@ -9,7 +9,7 @@
 - [x] Close inherited company job/history/attachment bypasses and expose only own-company deletion targets;7real company SQL groups pass.
 - [x] Implement bilingual admin/context confirmation UI with pending/error/success and server receipt recovery; retain archive separately;535frontend cases and actual source/build checks pass.
 - [ ] Execute targeted real SQL/Auth/Storage and browser checks in owned fictional fixtures, then complete the reserved local acceptance and current-head CI.
-- [ ] Deliver signed commits, push and prepared focused PR; no other PR merge is performed by this scope.
+- [x] Deliver signed commits and pushed [draft PR35](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/35), with actual checks and native/CI gaps stated; no Ready/AutoMerge/other PR merge is performed by this scope.
 
 ## English quote/discovery documentation — released PR10 continuation
 
