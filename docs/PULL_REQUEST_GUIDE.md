@@ -4,13 +4,13 @@
 
 This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
-The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). Those historical merges did not themselves activate server-side rules; all three protection policies are now active, as recorded in [GitHub administration](GITHUB_WORKFLOW.md). The source catalogue [labels.json](../.github/labels.json) now contains 35 managed labels; nine original GitHub labels are also preserved.
+The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). These historical merges did not themselves activate server-side review rules; the current live activation is described below. The source catalogue [labels.json](../.github/labels.json) now contains 36 managed labels; nine original GitHub labels are also preserved.
 
 ## Branch and title
 
 Create a branch from the current `main`; external contributors use a fork. Keep each pull request focused on one related problem. Agent branches start with `codex/`. An early draft is useful when you need feedback before the implementation is ready for review.
 
-Choose a title that describes the outcome, such as `fix: keep accepted fee when editing a course` or `docs: explain private file permissions`. A prefix helps readers but does not replace a label. Commits should be signed and clearly describe their changes.
+Choose a title that describes the outcome, such as `fix: keep accepted fee when editing a course` or `docs: explain private file permissions`. A prefix helps readers but does not replace a label. Commits must be signed and clearly describe their changes.
 
 ## Pull request description
 
@@ -35,27 +35,31 @@ Every pull request needs **exactly one type label**, **at least one area label**
 | `type:security`     | Coordinate a security fix; never use a public PR as the initial vulnerability report |
 | `type:dependencies` | Update reviewed dependencies                                                         |
 
-Choose every area that is materially affected. The original area labels remain available: `area:frontend`, `area:backend`, `area:database`, `area:auth`, `area:files`, `area:finance`, `area:courses`, `area:devops` and `area:github`. Additional areas provide more specific classifications:
+Choose every area that is materially affected. The original area labels remain available: `area:frontend`, `area:backend`, `area:database`, `area:auth`, `area:files`, `area:finance`, `area:courses`, `area:devops` and `area:github`. The following areas provide more specific classifications; the final five describe API, security, performance, accessibility and design changes:
 
-| Area                 | Use                                                     |
-| -------------------- | ------------------------------------------------------- |
-| `area:chat`          | Messages, course/interest groups and Realtime           |
-| `area:knowledge`     | Wiki, forum and knowledge management                    |
-| `area:calendar`      | Events, availability, blocked time and time zones       |
-| `area:notifications` | Inbox, notices and delivery preferences                 |
-| `area:profiles`      | Profiles, qualifications and lecturer directory         |
-| `area:clients`       | Client accounts, organisations and business contacts    |
-| `area:pwa`           | Installation, service worker, offline state and updates |
-| `area:testing`       | QA, regressions, browser and permission checks          |
-| `area:docs`          | Guides, API references and operational documentation    |
-| `area:taxonomy`      | Topics, tools, programming languages and hierarchies    |
-| `area:api`           | API and RPC contracts and integration clients           |
-| `area:security`      | Authorization, protected data and security hardening    |
-| `area:performance`   | Loading, query budgets, caching and runtime performance |
-| `area:accessibility` | Keyboard access, accessible controls and WCAG checks    |
-| `area:design`        | Luminovia branding, layout and visual design            |
+| Area                 | Use                                                         |
+| -------------------- | ----------------------------------------------------------- |
+| `area:chat`          | Messages, course/interest groups and Realtime               |
+| `area:knowledge`     | Wiki, forum and knowledge management                        |
+| `area:calendar`      | Events, availability, blocked time and time zones           |
+| `area:notifications` | Inbox, notices and delivery preferences                     |
+| `area:profiles`      | Profiles, qualifications and lecturer directory             |
+| `area:clients`       | Client accounts, organisations and business contacts        |
+| `area:pwa`           | Installation, service worker, offline state and updates     |
+| `area:testing`       | QA, regressions, browser and permission checks              |
+| `area:docs`          | Guides, API references and operational documentation        |
+| `area:taxonomy`      | Topics, tools, programming languages and hierarchies        |
+| `area:api`           | Public interfaces, RPC contracts, OpenAPI and compatibility |
+| `area:security`      | Permission boundaries, privacy and input validation         |
+| `area:performance`   | Concrete query-cost, loading or caching changes             |
+| `area:accessibility` | Keyboard, focus, screen-reader and contrast work            |
+| `area:design`        | Brand, layout, typography and colour system                 |
 
-A documentation change receives `area:docs` and any relevant documented area; general contribution rules also use `area:github`. A test does not need every label used by the whole system. A feature with a migration should include the product and technical areas it actually changes. The 35 managed labels comprise eight types, 24 areas and three risk levels; additional original GitHub labels do not replace a required category. Add new managed labels to the shared catalogue before applying them. [Metadata operation and historical rechecks](GITHUB_WORKFLOW.md#labels-and-metadata-validation).
+A documentation change receives `area:docs` and any relevant documented area; general contribution rules also use `area:github`. A test does not need every label used by the whole system. A feature with a migration should include the product and technical areas it actually changes. The 36 managed labels comprise eight types, 24 areas, three risk levels and the `merge:hold` stop signal; nine original GitHub labels remain available. `merge:hold` records a maintainer review stop. Preserve it until the stated concern is addressed; it grants no permission and does not replace required checks. Additional labels do not replace a required category. Add a new managed label to the shared catalogue before applying it. See [metadata operation and historical rechecks](GITHUB_WORKFLOW.md#labels-and-metadata-validation).
+
+Apply the five additional areas based on the actual diff. Use `area:api` for changed interface contracts or documented RPC/OpenAPI functions; `area:backend` still describes server implementation. Add `area:security` to the affected area for actual protection or permission changes. It is not a second type label: a `type:feature` can change security boundaries, while `type:security` identifies a coordinated security fix as the main purpose.
+
+`area:performance` requires a concrete change to query, loading or cache behaviour; an incidental index or an existing full-system test is insufficient. `area:accessibility` identifies actual keyboard, focus, screen-reader or contrast work. `area:design` describes visible design changes; a theme contrast fix can need both labels. Preserve existing labels when they remain accurate. Select labels for the reviewable scope, not to use every available category.
 
 | Risk          | Meaning                                                                                             |
 | ------------- | --------------------------------------------------------------------------------------------------- |
@@ -87,7 +91,7 @@ Use `./portal github test` for an independent test of current `main`. `./portal 
 
 Every change to `main` requires a pull request. Only CarinaSchoppe's immutable personal account (`User:29256704`, `bypass_mode: pull_request`) has a review exception. Every other user, including maintainers and administrators, and every App needs at least one independent approval, approval of the latest push and resolved review conversations. Self-approval does not count; new changes dismiss stale approvals. The exception follows the executing Carina account; PR authorship, pusher identity and repository roles transfer no authority. Nobody may push directly to `main` or bypass mandatory checks or signatures.
 
-All 15 mandatory checks must pass for the current revision and the PR must be up to date with `main`:
+All fifteen required checks must pass against the current base:
 
 - `Build`, `Typecheck`, `Lint`, `Formatting` and `Code quality` check compilation, rules, style and actual source connections.
 - `Tests and coverage` runs unit/component tests with complete frontend source coverage reporting and enforced thresholds.
@@ -95,18 +99,28 @@ All 15 mandatory checks must pass for the current revision and the PR must be up
 - `PR metadata` checks required labels; `PR preview package` supplies the required locally runnable preview artifact.
 - `CodeQL (javascript-typescript)`, `CodeQL (python)`, `CodeQL (actions)`, `Dependency review` and the generated `CodeQL` findings check enforce the security gates. See [CI_QUALITY](CI_QUALITY.md).
 
-Missing, pending or failed required checks block merges for everyone. A newer main revision requires updating the PR and obtaining current test evidence again. The live server rules enforce this; source JSON alone is not proof of activation.
+Fourteen statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. All fifteen are required for merging. See [CI_QUALITY](CI_QUALITY.md).
 
-Daily maintenance uses a signed separate branch and a PR labelled `type:dependencies`, `area:devops` and `risk:high`. Requesting native auto-merge queues the PR until its independent review and required checks are satisfied. The [operational setup status](GITHUB_WORKFLOW.md#activation-still-pending) distinguishes implemented source from tested App permissions and a real workflow run.
+If main changes, update the PR as required and wait for checks against the current base. The required-check and history/signature rulesets have no bypass actors. The review ruleset grants only `CarinaSchoppe` (`User:29256704`) the personal PR-only exception within that layer. No App has a review or required-check exception. Historical App-token tests grant no current merge authority; see the [current rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
 
 ## Merge and publication
 
 Review the description, labels, tests and open conversations before merging. Use the regular PR merge operation or native auto-merge. GitHub enforces all mandatory checks and signatures even when Carina uses her personal PR-only review exception; every other account also needs independent review, and direct branch updates are prohibited.
 
-A merge can start the existing development release process. Its immutable `cms-dev-*` packages and hosted migration checks remain separate. Production operation, real data, SMTP, DNS and risky maintenance need the appropriate separate approvals. Claim a hosted installation only when actual operational evidence exists.
+The separate Security outcomes are required for PR merge eligibility. Release publication still follows the explicit dependencies in `ci.yml`; the ruleset does not add them as release-job dependencies.
+
+The accepted local-first controls from [PR #27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27) are present. Use `./portal check` for fast local quality, coverage and build checks, followed by `./portal test` for complete isolated acceptance. A merge does not publish a release or PR deployment metadata. An authorized maintainer must dispatch `Portal checks` on `main` with `publish_release=true` and the exact current `main` SHA in `expected_commit`. Ordinary checks and daily-maintenance verification do not publish releases. PR deployment metadata has its own manual-only publication and cleanup workflow; the verified local artifact remains downloadable without a record. See [PR previews](PR_PREVIEWS.md). Production operation, real data, SMTP, DNS and risky maintenance need the appropriate separate authorization. Claim a hosted installation only when actual operational evidence exists.
+
+Signatures remain mandatory for every actor. Native repository Auto-Merge is available and waits for applicable requirements; enable it only within the task's authorized merge scope, preserving coordinated holds and `merge:hold`.
 
 Signed annotated `milestone/*` tags identify verified historical development states. They are not PR labels or a promise of a Semver or production version. Do not move existing tags; create tags only on the intended commit.
 
 After merging, update the issue resolution when needed and track remaining tasks separately. A new task must not silently expand the original acceptance criteria or be described as already completed.
+
+## Current catalogue and historical metadata checks
+
+The read-only metadata workflow executes only this repository's current main code and catalogue, including for fork PRs. It does not execute proposed contribution code, install dependencies or use write credentials. Automatic checks apply to open PR events; closed PR label edits do not restart this gate. Add new managed labels to the shared catalogue before applying them.
+
+A deliberate historical check can be dispatched from main with a positive PR number. It re-reads current labels and records the actual historical head, without rerunning or rewriting its past application acceptance. See [metadata operation](GITHUB_WORKFLOW.md#labels-and-metadata-validation) and [the executed repair evidence](PR_CI_REPAIR_20261116.md).
 
 The gated [PR preview package and deployment record](PR_PREVIEWS.md) provides an owned, locally runnable application preview after the complete checks. Its artifact URL is not a hosted portal URL.

@@ -86,7 +86,9 @@ jobs:
     # The canonical local command owns its data/ports and verifies cleanup.
     needs: [quality, coverage]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The complete gate now covers 35 migrations and the expanded native/browser
+    # suite. Individual request, test and stage deadlines remain unchanged.
+    timeout-minutes: 40
     steps:
       - name: Verify explicitly requested revision
         env:
@@ -103,7 +105,19 @@ jobs:
       - name: Install official backup encryption test dependency
         run: sudo apt-get update -qq && sudo apt-get install -y age
       - name: Complete isolated local verification
+        id: application
         run: ./portal test
+      - name: Upload fictional course-building-block screenshots
+        if: always() && (steps.application.outcome == 'success' || steps.application.outcome == 'failure')
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: portal-course-building-blocks-${{ github.run_id }}-${{ github.run_attempt }}
+          # Exact feature allowlist only: no traces, credentials or other reports.
+          path: .local/tests/*/screenshots/*-course-building-blocks-*.png
+          # The parent .local directory is hidden; the PNG allowlist remains exact.
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
   verify-selfhost:
     # HEAD^ supplies the previous source contract for a real retained-data upgrade;
     # successful mocks/unit tests do not replace this container run.

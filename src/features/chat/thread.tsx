@@ -214,6 +214,9 @@ export function ChatThread({
       {room.kind === "dm" && (
         <div className="chat-channel-note">{t("messagePrivate")}</div>
       )}
+      {room.kind !== "dm" && (
+        <div className="chat-channel-note">{t("groupModerationPolicy")}</div>
+      )}
       <form
         className="chat-message-search"
         role="search"

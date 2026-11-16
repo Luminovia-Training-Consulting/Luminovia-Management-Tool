@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { Search, UserPlus, UsersRound, X } from "lucide-react";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
-import { jobsQuery } from "../../lib/queries";
+import { JobPicker } from "../jobs/picker";
 import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
@@ -140,12 +140,12 @@ export function CreateGroup({
   const online = useOnline();
   const client = useQueryClient();
   const contacts = useQuery({ ...chatContactsQuery(actor), enabled: open });
-  const jobs = useQuery({ ...jobsQuery, enabled: open && canManageCourses });
   const form = useForm<z.infer<typeof groupSchema>>({
     resolver: zodResolver(groupSchema),
     defaultValues: { title: "", kind: "topic", job: "", members: [] },
   });
   const kind = useWatch({ control: form.control, name: "kind" });
+  const selectedJob = useWatch({ control: form.control, name: "job" });
   const create = useMutation({
     mutationFn: async (values: z.infer<typeof groupSchema>) => {
       requireOnline();
@@ -209,7 +209,10 @@ export function CreateGroup({
             <select
               id="chat-group-kind"
               {...form.register("kind", {
-                onChange: () => form.setValue("members", []),
+                onChange: () => {
+                  form.setValue("members", []);
+                  form.setValue("job", "");
+                },
               })}
               disabled={create.isPending}
             >
@@ -217,26 +220,6 @@ export function CreateGroup({
               <option value="participant_course">
                 {t("kind_participant_course")}
               </option>
-            </select>
-          </Field>
-        )}
-        {kind === "participant_course" && (
-          <Field id="chat-group-job" label={t("groupJob")}>
-            <select
-              id="chat-group-job"
-              {...form.register("job")}
-              disabled={create.isPending}
-            >
-              <option value="">{t("selectJob")}</option>
-              {jobs.data
-                ?.filter(
-                  (job) => "course_run_id" in job && Boolean(job.course_run_id),
-                )
-                .map((job) => (
-                  <option key={job.id} value={job.id}>
-                    {job.title}
-                  </option>
-                ))}
             </select>
           </Field>
         )}
@@ -260,17 +243,41 @@ export function CreateGroup({
             ))
           )}
         </fieldset>
-        <Button
-          disabled={
-            !online ||
-            create.isPending ||
-            contacts.isPending ||
-            contacts.isError ||
-            (kind === "participant_course" && (jobs.isPending || jobs.isError))
-          }
-        >
-          {t("groupCreate")}
-        </Button>
+        {kind === "participant_course" ? (
+          canManageCourses && (
+            <JobPicker
+              actor={actor}
+              purpose="participant_course"
+              value={selectedJob}
+              onChange={(id) => form.setValue("job", id)}
+            >
+              {(selected) => (
+                <Button
+                  disabled={
+                    !selected ||
+                    !online ||
+                    create.isPending ||
+                    contacts.isPending ||
+                    contacts.isError
+                  }
+                >
+                  {t("groupCreate")}
+                </Button>
+              )}
+            </JobPicker>
+          )
+        ) : (
+          <Button
+            disabled={
+              !online ||
+              create.isPending ||
+              contacts.isPending ||
+              contacts.isError
+            }
+          >
+            {t("groupCreate")}
+          </Button>
+        )}
         {create.isError && <Notice kind="error">{t("groupError")}</Notice>}
       </form>
     </Dialog>

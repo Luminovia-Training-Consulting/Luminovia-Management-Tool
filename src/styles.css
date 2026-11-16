@@ -720,15 +720,6 @@ legend {
 .notification-menu summary::-webkit-details-marker {
   display: none;
 }
-.notification-dot {
-  position: absolute;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  right: 9px;
-  top: 8px;
-  background: #b13327;
-}
 .notification-popover {
   position: absolute;
   right: -40px;
