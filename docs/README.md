@@ -1,117 +1,89 @@
-# Entwickler-Dokumentation
+# Documentation index
 
-Dieser Index führt durch den vorhandenen Luminovia-Portal-Code und seine Betriebsgrenzen. Der gemeinsame M7/M8-Quellstand umfasst 32 Migrationen; seine vollständige native Abnahme und exakte CI-Prüfung stehen aus. Bestandene gezielte Prüfungen, geschriebene Tests und tatsächliche Gesamtläufe werden getrennt in [QA_RESULTS](QA_RESULTS.md) geführt. Der vollständige Zielumfang bleibt im Plan erhalten.
+General project documentation is maintained in English. The application supports German and English; user-authored content and literal UI examples retain their language. This index covers the connected implementation, its access boundaries and actual operating evidence. The complete master specification remains required.
 
-## Einstieg
+The current combined source contains 32 migrations plus the accepted Demo/Help/Tour implementation and English project guides. Its complete acceptance is **pending**. Exact `9c42730` passed 316 PostgreSQL cases, 26 business API suites and real restart persistence, then failed two of 94 business browser journeys. The Calendar correction and focused integration checks passed. Current functional preflight passed 372 tests across 57 files and all coverage floors; it does not certify a complete corrected-source rerun. Read [QA results](QA_RESULTS.md) and the latest [work-log entry](WORKLOG.md) for revision-specific evidence.
 
-Bei einer Fortsetzung zuerst [WORKLOG](WORKLOG.md), danach [IMPLEMENTATION_PLAN](IMPLEMENTATION_PLAN.md), die [Projektregeln](../AGENTS.md) und den unverändert erhaltenen [Universal Master Prompt](UNIVERSAL_MASTER_PROMPT.txt) lesen. Aktuellen Git-Status und die tatsächlich zuständigen Quellen prüfen, bevor bestehende Arbeit verändert wird.
+## Start here
 
-| Aufgabe                                                      | Dokument                                                                                                     |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| Projektüberblick, Voraussetzungen und Startbefehle           | [Repository-README](../README.md)                                                                            |
-| Neuester GitHub-Stand als getrennte, persistente Vorschau    | [GitHub-Vorschau](GITHUB_LOCAL_PREVIEW.md)                                                                   |
-| Lokale Dienste, Konten, Ports, Persistenz und Fehlerbehebung | [Lokale Entwicklung](LOCAL_DEVELOPMENT.md)                                                                   |
-| Code-Einstiege, Datenfluss und Änderungen am Projekt         | [Entwicklerhandbuch](DEVELOPER_GUIDE.md)                                                                     |
-| Bedienung aus Sicht der verschiedenen Konten                 | [Benutzerhandbuch](USER_GUIDE.md)                                                                            |
-| Branches, Beiträge und Freigaben                             | [CONTRIBUTING](../CONTRIBUTING.md), [Issue-Leitfaden](ISSUE_GUIDE.md), [PR-Leitfaden](PULL_REQUEST_GUIDE.md) |
+On continuation, read [WORKLOG](WORKLOG.md), then [IMPLEMENTATION_PLAN](IMPLEMENTATION_PLAN.md), the [project instructions](../AGENTS.md) and the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt). Inspect the current source, Git status and owning tests before changing existing work.
 
-Portable Befehle aus dem Repository:
+| I want to…                                    | Read                                                                                                                                         |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Understand the project and prerequisites      | [Repository README](../README.md), [product specification](PRODUCT_SPEC.md), [roadmap](../ROADMAP.md)                                        |
+| Run the application locally                   | [Local development](LOCAL_DEVELOPMENT.md), [latest-main isolated preview](GITHUB_LOCAL_PREVIEW.md)                                           |
+| Contribute, report a bug or propose a feature | [Contributing](../CONTRIBUTING.md), [issue guide](ISSUE_GUIDE.md), [PR guide](PULL_REQUEST_GUIDE.md)                                         |
+| Understand a change or decision               | [Changelog](../CHANGELOG.md), [decision notes](decisions/README.md), [work log](WORKLOG.md)                                                  |
+| Develop and verify source                     | [Developer guide](DEVELOPER_GUIDE.md), [architecture](ARCHITECTURE.md), [ER diagram](ERD.md), [API reference](API_REFERENCE.md)              |
+| Assess actual test evidence                   | [QA results](QA_RESULTS.md), [test plan](TEST_PLAN.md), [CI quality and coverage](CI_QUALITY.md), [security triage](CODE_SCANNING_TRIAGE.md) |
+| Operate or release the system                 | [Deployment runbook](DEPLOYMENT_RUNBOOK.md), [operations](OPERATIONS.md), [automatic updates](HOSTINGER_AUTOMATIC_UPDATES.md)                |
+| Use or safely explore the application         | [User guide](USER_GUIDE.md), [guided demo, help and tour](GUIDED_DEMO_AND_HELP.md)                                                           |
+| Report a vulnerability privately              | [Security policy](../SECURITY.md)                                                                                                            |
 
 ```bash
-./portal github start  # neuesten main-Stand separat starten, eigene Vorschau-Daten behalten
-./portal github test   # neuesten main-Stand in einer isolierten Testumgebung prüfen
-./portal start        # diesen Checkout datenerhaltend starten
-./portal test         # diesen Quellstand vollständig isoliert prüfen
+./portal github start  # Fetch current main into the separate persistent preview
+./portal github test   # Verify latest main in an isolated test checkout
+./portal start         # Start this checkout while retaining its local data
+./portal test          # Run this source's complete isolated verification
 ```
 
-Die GitHub-Vorschau verwendet eine eigene Arbeitskopie und eigene Daten. Normale Entwicklung, Vorschau und Tests sind getrennte Umgebungen. Ein Start ersetzt kein Backup; Zugangsdaten und private Testartefakte gehören nicht in Git.
+Normal development, the latest-main preview and canonical tests use separate owned environments. A local persistent volume is not an external backup. Credentials and private test artifacts must remain outside Git.
 
-## Architektur und Datenmodell
+## Product and feature guides
 
-| Dokument                                         | Inhalt                                                                                                                  |
-| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| [Architektur](ARCHITECTURE.md)                   | Technologieentscheidungen, aktuelle RPC-/RLS-Grenzen, Rollen-/Profil-Locks, Cache, private Daten und M7/M8-Verbindungen |
-| [ERD](ERD.md)                                    | Physische Tabellen, Beziehungen, private Zusatzmodule und ergänzende Moduldiagramme                                     |
-| [Produktübersicht](PRODUCT_SPEC.md)              | Produktziele und Rollen; zusammen mit dem vollständigen Master-Prompt lesen                                             |
-| [Brand und Designsystem](BRAND_DESIGN_SYSTEM.md) | Authentische Assets, Palette, Typografie und Herkunft                                                                   |
-| [Referenzquellen](REFERENCE_SOURCES.md)          | Quellen und Grenzen der verwendeten Referenzen                                                                          |
-| [CBW-Vorlagen](CBW_TEMPLATES.md)                 | Bausteine, Quellrevisionen, Hashes und Verbindung von Vorlage, Durchführung und Angebot                                 |
+| Area or entry point                                              | Connected guide and boundary                                                                                                                                                                              |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dashboard `/`                                                    | [Dashboard](DASHBOARD.md): authorised server totals and bounded personal calendar, chat, inbox, file and contract previews                                                                                |
+| Jobs `/jobs`, `/jobs/:id`, `/admin`                              | [Discovery and saved views](JOB_DISCOVERY.md), [lifecycle and capacity](JOB_LIFECYCLE.md): server cursors, complete atomic assignment, immutable terms, cancellation and explicit reopening               |
+| Administrative file/chat choices                                 | [Purpose-scoped job and course pickers](JOB_PICKERS.md): limited metadata and exact choices under distinct `jobs.manage` / `courses.manage` permissions                                                   |
+| Calendar `/calendar`                                             | [Calendar](CALENDAR.md): private appointments and allocations, visible windows and explicit global draft/publication management                                                                           |
+| Availability `/availability`                                     | [Availability](AVAILABILITY.md): private blockouts, explicit reduced management sharing and server-side conflict checks                                                                                   |
+| Topics `/topics`                                                 | [Taxonomy](TAXONOMY.md): hierarchy, aliases, revisions, archival and active/historical references                                                                                                         |
+| Profiles `/profile`, `/people`, `/my-reviews`                    | [Profiles and course reviews](PROFILES_REVIEWS.md), [profile avatars](PROFILE_AVATARS.md)                                                                                                                 |
+| Qualification review in profiles and `/admin/people`             | [Evidence and attestation history](QUALIFICATIONS.md): explicit self-owned topic binding to an exact certificate version, withdrawal and management review                                                |
+| Customers, courses and clients `/clients`, `/courses`, `/client` | [Operations](OPERATIONS.md), [CBW building blocks](CBW_TEMPLATES.md), [account and revenue specification](ACCOUNTS_REVENUE_SPEC.md)                                                                       |
+| Accounts `/admin/accounts`, security `/security`                 | [Account platform audit](ACCOUNTS_PLATFORM_AUDIT.md), [account/revenue contract](ACCOUNTS_REVENUE_SPEC.md), [API reference](API_REFERENCE.md)                                                             |
+| Files `/files`                                                   | [Files](FILES.md): real quarantine/scanning, exact versions, private tags/folders and revocation of open resource dialogs                                                                                 |
+| Chat `/chats`                                                    | [Chat and structured mentions](CHAT.md), [chat security](CHAT_SECURITY.md): current membership, deduplicated alerts, existing-policy moderation and scanned attachments                                   |
+| Wiki, forum and comments `/wiki`, `/forum`                       | [Resource comments](RESOURCE_COMMENTS.md), [knowledge security](KNOWLEDGE_SECURITY.md), [collaboration implementation](COLLABORATION_AND_COMMERCIAL_IMPLEMENTATION.md)                                    |
+| Contracts and finance `/contracts`, `/finance`                   | [Commercial security](COMMERCIAL_SECURITY.md), [client/commission security](CLIENT_COMMISSION_SECURITY.md), [collaboration and commercial implementation](COLLABORATION_AND_COMMERCIAL_IMPLEMENTATION.md) |
+| Inbox and settings `/notifications`, `/settings`                 | [Notifications and quiet hours](NOTIFICATIONS.md): retained own inbox, category preferences and timezone-aware attention rules                                                                            |
+| Announcements `/announcements`, `/admin/announcements`           | [Announcements](ANNOUNCEMENTS.md): immutable published revisions, current role audiences, validity, own acknowledgement and critical inbox notices                                                        |
+| Administration `/admin`, `/admin/audit`                          | [Administrative audit](ADMIN_AUDIT.md): bounded safe projections under current permission/MFA                                                                                                             |
+| Public exploration `/demo/*`, `/help` and account tour           | [Guided demo, help and tour](GUIDED_DEMO_AND_HELP.md): fictional exercises, practical help and an explicitly navigated permission-aware tour                                                              |
 
-Schemaänderungen sind additive CLI-Migrationen. Öffentliche Invoker-RPCs delegieren an eng berechtigte private Implementierungen; der aktuelle Datenbankzustand autorisiert den echten Aufrufer. Details zu Parametern, Grants und Migrationseigentum stehen in den Quellen und der API-Referenz.
+These guides document implemented slices and their limits. The [complete implementation plan](IMPLEMENTATION_PLAN.md) retains missing course/wiki/forum resource contexts, financial statements, real delivery scheduling, retention administration and broader platform acceptance. A demo simulation does not implement the corresponding business feature.
 
-## Fachmodule
+## Architecture, APIs and design
 
-| Bereich / Einstieg                                               | Leitfäden und wichtige Verbindung                                                                                                                                                                                     |
-| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dashboard `/`                                                    | [Dashboard](DASHBOARD.md): echte autorisierte Gesamtzahlen und begrenzte persönliche Vorschauen                                                                                                                       |
-| Aufträge `/jobs`, `/jobs/:id`, `/admin`                          | [Discovery und gespeicherte Ansichten](JOB_DISCOVERY.md), [Lebenszyklus und Kapazität](JOB_LIFECYCLE.md): Server-Paging, aktuelle Bedingungen, atomare vollständige Zuweisung, Storno und ausdrückliche Wiederöffnung |
-| Administrative Auswahl in Dateien/Chat                           | [Zweckgebundene Auftrags-/Kurswähler](JOB_PICKERS.md): begrenzte Metadaten, exakte Auswahl und separate `jobs.manage`-/`courses.manage`-Berechtigung                                                                  |
-| Kalender `/calendar`                                             | [Kalender](CALENDAR.md): eigene Termine/Zuweisungen, sichtbare Zeitfenster und ausdrückliche globale Entwurfs-/Publikationsverwaltung                                                                                 |
-| Verfügbarkeit `/availability`                                    | [Verfügbarkeit](AVAILABILITY.md): private Sperrzeiten, ausdrückliche reduzierte Freigabe und serverseitige Konfliktprüfung                                                                                            |
-| Themen `/topics`                                                 | [Taxonomie](TAXONOMY.md): Hierarchie, Aliase, Versionen, Archivierung und neue Auswahlreferenzen                                                                                                                      |
-| Profile `/profile`, `/people`, `/my-reviews`                     | [Profile und Kursbewertungen](PROFILES_REVIEWS.md), [Profilbilder](PROFILE_AVATARS.md)                                                                                                                                |
-| Qualifikationen im Profil und unter `/admin/people`              | [Belege und Prüfverlauf](QUALIFICATIONS.md): eigene ausdrückliche Themenfreigabe einer exakten Zertifikatsversion, Widerruf und Managementattestation                                                                 |
-| Kunden, Kurse und Auftraggeber `/clients`, `/courses`, `/client` | [Organisationen und Kurse](OPERATIONS.md), [CBW-Vorlagen](CBW_TEMPLATES.md), [Konten und Umsatzteilung](ACCOUNTS_REVENUE_SPEC.md)                                                                                     |
-| Konten `/admin/accounts`, Sicherheit `/security`                 | [Konten-/Plattformprüfung](ACCOUNTS_PLATFORM_AUDIT.md), [Account-/Umsatzvertrag](ACCOUNTS_REVENUE_SPEC.md), [API-Referenz](API_REFERENCE.md)                                                                          |
-| Dateien `/files`                                                 | [Dateien](FILES.md): Quarantäne/Scan, exakte Versionen, persönliche Tags/Ordner und Rechteverlust im geöffneten Dateidialog                                                                                           |
-| Chat `/chats`                                                    | [Chat](CHAT.md), [Chat-Sicherheitsmodell](CHAT_SECURITY.md): echte Mitgliedschaften, Realtime, versionsgebundene Erwähnungen und getrennte Kursräume                                                                  |
-| Ressourcenkommentare                                             | [Kommentare](RESOURCE_COMMENTS.md): auftrags-/bausteinbezogene Berechtigung, Bearbeitung und Moderation                                                                                                               |
-| Wissen `/wiki`, `/forum`, Suche `/search`                        | [Wissens- und Suchsicherheit](KNOWLEDGE_SECURITY.md), [Entwicklerhandbuch](DEVELOPER_GUIDE.md): erlaubte Inhalte, Revisionen und ressourcenbezogene Suche                                                             |
-| Verträge und Finanzen `/contracts`, `/finance`                   | [Kommerzielle Implementierung](COLLABORATION_AND_COMMERCIAL_IMPLEMENTATION.md), [Vertrag-/Rechnungssicherheit](COMMERCIAL_SECURITY.md), [Auftraggeber und Provision](CLIENT_COMMISSION_SECURITY.md)                   |
-| Meldungen `/notifications`, Einstellungen `/settings`            | [Benachrichtigungen und Ruhezeiten](NOTIFICATIONS.md): eigene Inbox, getrennte Versionsverträge und kritische Meldungen                                                                                               |
-| Ankündigungen `/announcements`, `/admin/announcements`           | [Ankündigungen](ANNOUNCEMENTS.md): Entwürfe, unveränderliche veröffentlichte Revisionen, aktuelle Zielrollen und persönliche Bestätigung                                                                              |
-| Audit `/admin/audit`                                             | [Admin-Audit](ADMIN_AUDIT.md): aktuelles MFA-/Capability-Gate und reduzierte, begrenzte Metadatenprojektion                                                                                                           |
+- [Architecture](ARCHITECTURE.md), [ER diagram](ERD.md), [generated API reference](API_REFERENCE.md) and [developer guide](DEVELOPER_GUIDE.md) explain data flow, current RPC/RLS boundaries, role/profile locking, cache isolation and migration ownership.
+- [Product specification](PRODUCT_SPEC.md) complements the unchanged [master specification](UNIVERSAL_MASTER_PROMPT.txt); the latter remains authoritative for the full target.
+- [Brand design system](BRAND_DESIGN_SYSTEM.md), [reference sources](REFERENCE_SOURCES.md) and [CBW templates](CBW_TEMPLATES.md) record authentic assets, provenance and template/run/job references.
 
-Die tatsächlichen Routen liegen in `src/app/app.tsx`. Eine Route oder ein Guide behauptet keine vollständige Umsetzung aller Anforderungen des Master-Prompts. Das administrative Auftragsboard bleibt ausdrücklich auf die neuesten **500** Angebote begrenzt; die paginierte Marktplatzsuche und die zweckgebundenen Wähler sind davon getrennt. Weitere Grenzen stehen in den Featureguides und im Plan.
+Schema changes are additive CLI-generated migrations. Public invoker RPCs delegate to narrowly granted private implementations; current database state authorises the actual caller. Authored API/browser tests and a generated reference are not evidence that a native suite passed.
 
-## APIs und Integrationen
+## Security and quality
 
-- [API_REFERENCE](API_REFERENCE.md) inventarisiert die echten öffentlichen SQL-RPCs nach Migration-Replay einschließlich Signaturen und Rechten. Das Inventar ersetzt keine ausgeführten Geschäfts- oder Browsertests.
-- [Entwicklerhandbuch](DEVELOPER_GUIDE.md) erklärt Actor-bezogene Query-Schlüssel, lokale Entwürfe, Mutationen und den Auth-/MFA-Datenfluss.
-- [Account-/Umsatzvertrag](ACCOUNTS_REVENUE_SPEC.md) beschreibt die getrennten Konten und kommerziellen Projektionen. Die Account-HTTP-Fassade und ihr OpenAPI-Einstieg stehen in der Repository-README und API-Referenz.
-- [Dateien](FILES.md), [Profilbilder](PROFILE_AVATARS.md) und [Qualifikationen](QUALIFICATIONS.md) erklären authentifizierte Edge-Gateways, Scan, Hash und erneute aktuelle Berechtigungsprüfung vor Byteausgabe.
-- [Auftragssuche](JOB_DISCOVERY.md), [Wähler](JOB_PICKERS.md), [Kalender](CALENDAR.md) und [Ankündigungen](ANNOUNCEMENTS.md) dokumentieren ihre jeweiligen Cursor-, Filter-, Versions- und Wiederholungsverträge.
+Current database roles and MFA are authoritative. Role-sensitive mutations lock the actor profile before fresh authorisation. Private calendar entries, availability notes, direct messages and contracts have no general administrator read bypass. Accepted commercial snapshots remain immutable, and lecturer projections exclude private gross/platform amounts.
 
-Kein übermittelter Benutzer-/Rollenwert und keine Auswahl in einem Picker erteilt Rechte. Zweckgebundene Kursmetadaten verleihen weder Zugriff auf verborgene Auftragsdetails noch finanzielle Berechtigungen.
+A foreign qualification download requires an active explicit binding to the exact certificate version and current review permission/MFA. It creates no new CV/contract access. The existing separate `users.manage`/MFA CV permission and compatible manual attestation remain. SQL and the protected Edge download enforce these distinctions; browser metadata grants no authority.
 
-## Tests und Nachweise
+- [Security and privacy checklist](SECURITY_PRIVACY_CHECKLIST.md), [backend security review](BACKEND_SECURITY_REVIEW.md), [dependency audit](DEPENDENCY_AUDIT.md) and [private reporting policy](../SECURITY.md).
+- [Chat security](CHAT_SECURITY.md), [knowledge security](KNOWLEDGE_SECURITY.md), [commercial security](COMMERCIAL_SECURITY.md), [client/commission security](CLIENT_COMMISSION_SECURITY.md), [account platform audit](ACCOUNTS_PLATFORM_AUDIT.md).
+- [Functional code audit](FUNCTIONAL_CODE_AUDIT.md), [system audit](SYSTEM_AUDIT.md), [test plan](TEST_PLAN.md), [executed QA results](QA_RESULTS.md), [CI/coverage](CI_QUALITY.md) and [CodeQL triage](CODE_SCANNING_TRIAGE.md).
 
-| Prüfart                                      | Zweck und maßgebliche Dokumentation                                                                                                     |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Typen, Lint, Format und Compilergraph        | Quellen, Imports, tatsächliche Routen/Assets und Laufzeitexports; [Entwicklerhandbuch](DEVELOPER_GUIDE.md) und [Testplan](TEST_PLAN.md) |
-| Vitest / Komponenten                         | Zustände, Dialoge, Auswahl, Fehler, Cachegrenzen und Bedienung; Ausführung und Grenzen in den Featureguides                             |
-| Temporäres PostgreSQL                        | Vollständiger Migration-Replay, Grants/RLS, Sperrbarrieren, CAS, Nebenläufigkeit und Regressionen; nur eigene UUID-Testdatenbanken      |
-| Edge-Tests und echte HTTP-/Auth-APIs         | Handlerlogik getrennt von tatsächlichem JWT/MFA-, Scanner-, Storage- und Einladungsnachweis                                             |
-| Browser und gebaute PWA                      | Desktop/Mobil-Workflows, Barrierefreiheit und Offline-Shell im isolierten Gesamtprüflauf                                                |
-| Native selbst gehostete Images / Datenerhalt | Reale Dienste, Stop/Start, Passwort/MFA, private Daten und Storage-Bytes; getrennt vom Quellcode-Preflight                              |
-| Exakte CI und Host-/Geräteabnahme            | Commitgebundene CI, installierter Host und physische Browser-/PWA-Prüfung bleiben verschiedene Nachweise                                |
+Credentials and private material belong neither in browser bundles, offline caches, logs nor public failure artifacts. Historical evidence describes its recorded revision and environment; audits do not certify universal bug freedom, legal compliance or production readiness.
 
-[TEST_PLAN](TEST_PLAN.md) beschreibt den kanonischen `./portal test`-Lauf und gezieltes Debugging. Mutierende Integrationsskripte gehören in dessen isolierte Umgebung, nicht gegen normale Entwicklung oder echte Daten. [QA_RESULTS](QA_RESULTS.md) enthält tatsächliche Ergebnisse und Fehler; [WORKLOG](WORKLOG.md) ordnet sie dem Quellstand zu. Historische [Systemprüfung](SYSTEM_AUDIT.md) und [funktionale Codeprüfung](FUNCTIONAL_CODE_AUDIT.md) behalten ihren jeweiligen damaligen Umfang.
+## Operations and repository administration
 
-## Sicherheit und Datenschutz
+- [GitHub workflow and effective protection](GITHUB_WORKFLOW.md), [latest-main preview](GITHUB_LOCAL_PREVIEW.md), [local development](LOCAL_DEVELOPMENT.md).
+- [Deployment runbook](DEPLOYMENT_RUNBOOK.md), [operations](OPERATIONS.md), [self-hosted development](HOSTINGER_DEVELOPMENT.md), [automatic updates and recovery](HOSTINGER_AUTOMATIC_UPDATES.md), [KVM1 performance evidence](KVM1_PERFORMANCE.md).
+- [Reviewed historical M4 migration transition](REVIEWED_M4_MIGRATIONS.md), [Hostinger deployment files](../deploy/hostinger/README.md), [selfhost runtime](../deploy/hostinger/selfhost/README.md), [maintenance tools](../deploy/hostinger/maintenance/README.md), [backup tools](../deploy/hostinger/backups/README.md).
 
-Die Datenbank prüft aktuelle Rollen und MFA. Mutationen mit Rollenentzugsrennen sperren das handelnde Profil vor der erneuten Autorisierung. Private Kalender, Verfügbarkeitsnotizen, DMs und Vertragsdokumente erhalten keinen pauschalen Admin-Lesezugriff. Angenommene kommerzielle Snapshots bleiben unverändert; Dozierendenprojektionen enthalten keine privaten Gesamtpreise/Plattformanteile.
+The current catalogue contains **36 managed labels** plus nine preserved GitHub defaults. PRs need exactly one `type:*`, one `risk:*` and at least one `area:*`. All three repository rulesets are active. Maintain/Admin accounts may merge through PRs without another person's approval; all **14 required CI checks and signatures remain mandatory for humans**. Native auto-merge is enabled and waits for applicable requirements. The maintenance App has its separate scoped review/check exception; the history/signature ruleset has no bypass. See [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md) for current read-back policy and the remaining workflow proof.
 
-Der Download eines fremden Qualifikationsbelegs benötigt eine aktive ausdrückliche Freigabe der exakten Zertifikatsversion und aktuelle Prüfberechtigung/MFA. Er eröffnet keine CV-/Vertragsbibliothek; das bestehende separate `users.manage`/MFA-Recht auf CVs und die manuelle Qualifikationsattestation bleiben erhalten. Sowohl SQL als auch Edge-Download prüfen die aktuellen Grenzen. Service-Schlüssel und private Daten gehören weder ins Browser-Bundle noch in Offline-Caches oder öffentliche Fehlerartefakte.
+The public Luminovia website remains a read-only brand reference. Production publication, real SMTP delivery, bank transfers and further hosting changes require their separate authorisation. Software documentation stays in the repository; teaching-material delivery rules do not change this format.
 
-- [SECURITY](../SECURITY.md): private Sicherheitsmeldung und unterstützter Meldeweg.
-- [Sicherheits-/Datenschutzcheckliste](SECURITY_PRIVACY_CHECKLIST.md), [Backend-Sicherheitsreview](BACKEND_SECURITY_REVIEW.md) und [Abhängigkeitsprüfung](DEPENDENCY_AUDIT.md).
-- Fachprüfungen: [Chat](CHAT_SECURITY.md), [Wissen](KNOWLEDGE_SECURITY.md), [Verträge/Rechnungen](COMMERCIAL_SECURITY.md), [Auftraggeber/Provision](CLIENT_COMMISSION_SECURITY.md) und [Konten](ACCOUNTS_PLATFORM_AUDIT.md).
+## Specification and project history
 
-Audits beschreiben ihren tatsächlichen Prüfstand; sie sind keine pauschale Zusage rechtlicher Konformität oder Fehlerfreiheit.
-
-## Betrieb und Beiträge
-
-| Aufgabe                                                                              | Dokument                                                                                                       |
-| ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| Lokale persistente Entwicklung und sicher getrennte Tests                            | [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md)                                                                      |
-| Neuester GitHub-Stand, eigener Preview-Datenbestand und Migrationsgrenzen            | [GITHUB_LOCAL_PREVIEW](GITHUB_LOCAL_PREVIEW.md)                                                                |
-| Aktuelle selbst gehostete Hostinger-Entwicklung                                      | [HOSTINGER_DEVELOPMENT](HOSTINGER_DEVELOPMENT.md), [KVM-1-Kapazität](KVM1_PERFORMANCE.md)                      |
-| Geprüfte Entwicklungsupdates und Wiederherstellung                                   | [HOSTINGER_AUTOMATIC_UPDATES](HOSTINGER_AUTOMATIC_UPDATES.md)                                                  |
-| Release, Datenbank **und Storage** sichern, Restore/Rollback und Produktionsfreigabe | [DEPLOYMENT_RUNBOOK](DEPLOYMENT_RUNBOOK.md), [geprüfte M4-Migrationsgrenze](REVIEWED_M4_MIGRATIONS.md)         |
-| GitHub-Regeln, tatsächlicher Aktivierungsstand, Wartungs-App und Labelkatalog        | [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md)                                                                          |
-| Beiträge und nachvollziehbare Issues/PRs                                             | [CONTRIBUTING](../CONTRIBUTING.md), [ISSUE_GUIDE](ISSUE_GUIDE.md), [PULL_REQUEST_GUIDE](PULL_REQUEST_GUIDE.md) |
-
-Der gemeinsame Katalog umfasst **35 verwaltete Labels** zusätzlich zu den neun ursprünglichen GitHub-Labels. PRs brauchen genau ein `type:*`, genau ein `risk:*` und mindestens ein `area:*`. Alle drei Regelwerke sind aktiv. Maintainer und Repository-Admins dürfen über einen PR ohne fremde Reviewzustimmung mergen; die neun erforderlichen CI-Prüfungen und Signaturen bleiben Pflicht. Auto-Merge ist aktiviert und wartet auf die geltenden Anforderungen. Die getrennte Wartungs-App-Ausnahme gilt für Review und Checks; das History-/Signaturregelwerk hat keine Ausnahme. Der [GitHub-Betriebsleitfaden](GITHUB_WORKFLOW.md) dokumentiert den aktuellen Zustand und den verbleibenden Workflow-Nachweis.
-
-Die öffentliche Luminovia-Website bleibt eine unveränderte, nur lesbare Brand-Referenz. Produktionsveröffentlichung, echte SMTP-Zustellung, Banktransfers und weitergehende Hostingänderungen sind getrennte autorisierte Schritte. Die Softwaredokumentation verbleibt im Repository; die Formatregeln für Unterrichtsmaterialien ändern dieses Dokumentationsformat nicht.
+[Master prompt](UNIVERSAL_MASTER_PROMPT.txt) · [complete plan](IMPLEMENTATION_PLAN.md) · [roadmap](../ROADMAP.md) · [work log](WORKLOG.md) · [changelog](../CHANGELOG.md) · [decision notes](decisions/README.md).

@@ -2,9 +2,23 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
-## Combined source coverage — full native result pending
+## Current functional preflight — complete acceptance still pending
 
-The integrated source passes **342/342 unit/component tests in54files** and every configured V8 coverage floor. Measured statements55.78%, branches50.40%, functions46.94%, lines57.60%; file API lines98.92%, functions96.29%. Reported source coverage includes all executable browser TS/TSX and public-config code; SQL, Edge and browser acceptance are separate. `./portal test` now executes this gate and preserves HTML/LCOV/JSON reports. A complete new native32 result is still required.
+The integrated functional source including PR16 Demo/Help/Tour, the Calendar correction and scoped picker passed `npm run test:coverage`: **372/372 tests across 57 files**, exit 0. Measured coverage: statements **57.65%**, branches **52.32%**, functions **49.11%**, lines **59.46%**; every configured floor passed. No new complete native pass or final merged-source SHA is claimed by this preflight. The separate PR19 automatic-merge implementation is not included.
+
+The current compiler inventory contains **135 reachable modules, 34 routes and 286 runtime exports**, with no unreachable modules, unresolved imports, unused runtime exports, broken literal links or missing assets. Playwright collection in explicit local test mode discovers **106 business cases plus two built-PWA cases**, with no collection errors. Those cases are authored/discovered, not passed current-source native acceptance.
+
+## Current 32-migration CI — Calendar failures, corrected integration pending
+
+Exact source `9c42730` failed complete acceptance in [CI43794921492](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43794921492). All **316 PostgreSQL cases, 26 actual business API suites, 46 Edge tests and real restart persistence passed**. The local run also exited 1 with the same two Calendar failures in `.local/tests/cf7ffa12/RESULT.txt` (9.8 minutes); runtime guards 56, operational Node guards 61 and Python guards 76 passed. Business browsers finished **92 passed / 2 failed out of 94**: both desktop/mobile global-calendar journeys lost the published-event detail after the DE→EN switch. Build/PWA and the native selfhost acceptance were not reached. This is a failed complete gate, not a full pass.
+
+The focused regression failed before signed correction `bf09f19` and passed afterwards. All **12 Calendar component cases**, whole-tree TypeScript and focused lint/format passed. The App/Shell merge with accepted PR16/main `e75f55d` then passed **78 tests across nine affected files**, TypeScript and focused lint/format. These checks preserve same-range details, real navigation, account boundaries, announcements, current notifications/quiet hours, Demo, Help, Tour and Preferences; they do not establish complete acceptance of the combined source. A fresh full isolated run and exact-source application/security/retained-data CI remain pending.
+
+The older counts below, including **342 tests, 128 modules and 32 routes**, belong to their recorded pre-Demo revisions. They are not the measured counts or acceptance result of the current combined source. The 29-migration failures and successful M6 results remain separate historical evidence.
+
+## Historical pre-Demo source coverage — full native result then pending
+
+The pre-Demo integrated source passed **342/342 unit/component tests in54files** and every configured V8 coverage floor. Measured statements55.78%, branches50.40%, functions46.94%, lines57.60%; file API lines98.92%, functions96.29%. Reported source coverage includes all executable browser TS/TSX and public-config code; SQL, Edge and browser acceptance are separate. `./portal test` now executes this gate and preserves HTML/LCOV/JSON reports. A complete new native32 result is still required.
 
 ## Combined 32-migration preflight — native acceptance still required
 
@@ -25,6 +39,18 @@ Visually inspected passing journeys from this run: [file centre](screenshots/m7-
 ## M7 source preflight — not full acceptance
 
 Integrated current source passed lint/type/format,240Vitest cases across50files and compiler connectivity (119modules/32routes; zero unreachable/unresolved/unused runtime exports). Actual disposable29-migration replay generated146public functions. Narrow module SQL groups passed (files6,jobs9,mentions11,attention9,announcements16); temporary minimal Auth identities are not real Auth/TOTP acceptance. Actual API/browser definitions are authored. The complete native isolated M7 command and exact application/retained-image CI remain pending; no M7deployment/merge or fullpass is claimed.
+
+## English documentation and repository verification
+
+Exact 24-migration source e7cf92a completed [CI43793778452](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43793778452) successfully:197unit/component tests,53runtime guards,18actual API suites,72desktop/mobile browser cases,2built-PWA cases, actual restart/scoped cleanup and the separate genuine selfhost/retained-data job. [Security43793778386](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43793778386) and CodeQL's zero-new-alert/zero-annotation outcome passed; findings30/31are fixed, not dismissed. A later documentation/catalogue-only follow-up includes all36managed live labels after parallel classifications otherwise made the older30-label source reject metadata. No application/backend/package source changes in that follow-up. Its focused validator/link checks and latest exact PR results remain distinct from this completed full application record.
+
+[PR #13](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/13) contains English general documentation/forms/labels, roadmap/changelog/index/decision notes and an extended real-document heading-link check. It changes no application, database migration, package or backend source relative to accepted main `1341b16`. The authoritative master prompt is unchanged. Original concurrent work and active PRs #10/#12 are independent.
+
+Actual local checks: clean `npm ci`;197Vitest cases/46files; coverage S47.09/B41.59/F37.07/L48.89%; ESLint, TypeScript, formatting, synthetic-public production build and56PWAprecache entries/2600.80KiB; compiler connectivity/exports;10documentation/PRmetadata plus8connectivity/private-snapshot regressions; form/label structural comparisons and diff whitespace checks. The full local command returned1 before starting services because another checkout holds the global QA lock; no competing process or data was altered.
+
+On signed first head `8e14e9e`, all6quality gates in [CI43792083385](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43792083385), all4jobs in [Security43792083378](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43792083378) and current PRmetadata passed. The complete application and native retained-data jobs are tracked on the [exact current PR checks](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/13/checks); this checkpoint does not substitute an earlier revision's success for an unobserved run. Baseline main1341b16 independently passed all9CIjobs in43788369925.
+
+Latest live API readback after concurrent02:33UTC activation and02:45UTC extension verifies main `protected:true`, all three active rulesets, Maintainer/Admin PR-only review bypass and all 14 strict required checks without human bypass, App5776881bypass, private vulnerability reporting enabled,30managed English label descriptions plus9preserved originals and valid type/risk/area categories on all11pre-existing PRs. Alerts2–4are fixed without dismissals, leaving25open CodeQL hints(10high/15medium). Test success, scanner success and finding closure are separate claims. Existing4low build-tool audit entries remain documented; no complete bug-free/security/physical-device/production certification is asserted.
 
 ## Subsequent theme regression — actual defect fixed, new CI pending
 

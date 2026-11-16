@@ -58,6 +58,11 @@ test("only maintainer PR review exceptions and the approved private App can bypa
       integration_id: 15368,
     },
     { context: "PR metadata", integration_id: 15368 },
+    { context: "CodeQL (javascript-typescript)", integration_id: 15368 },
+    { context: "CodeQL (python)", integration_id: 15368 },
+    { context: "CodeQL (actions)", integration_id: 15368 },
+    { context: "Dependency review", integration_id: 15368 },
+    { context: "CodeQL", integration_id: 57789 },
   ]);
   for (const policy of [history, review, checks])
     assert.deepEqual(policy.conditions.ref_name, {

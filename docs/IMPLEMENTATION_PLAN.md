@@ -7,8 +7,31 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Preserve all32 migrations, M7/M8 resource/privacy boundaries, the complete master-specification ledger and accepted incoming Demo/Help/Tour source from PR16/main `e75f55d`.
 - [x] Record exact `9c42730` CI43794921492 as **failed**:316 SQL cases,26 actual business API suites and real restart persistence passed;92/94 browser journeys passed and both global-calendar DE→EN journeys failed. Earlier29-migration failures remain historical evidence in WORKLOG.
 - [x] Reproduce the dialog-loss regression and correct only semantic calendar range handling in `bf09f19`;12 Calendar cases, TypeScript, lint and formatting pass. Equal-range language signals preserve the same detail; real navigation still clears it and introduces no duplicate range queries.
+- [x] Resolve the App/Shell/Demo integration while preserving actor-bound private state, current inbox/quiet preferences, announcement banners, all M7/M8 routes and the extracted Preferences component; TypeScript, focused lint/format and 78 tests across nine affected files passed.
+- [x] Preserve incoming PR13 English documentation, roadmap/changelog/decision notes and the 36-label catalogue without replacing M7/M8 APIs, ACLs, the complete remaining ledger or failed-run history.
+- [x] Record current functional preflight: 372 tests across 57 files; coverage S57.65/B52.32/F49.11/L59.46%, all configured floors passed. The corrected source has no complete native acceptance yet; its final combined SHA is not asserted here.
+- [x] Measure the current compiler inventory: 135 reachable modules, 34 routes, 286 runtime exports and zero connectivity/export/link/asset errors; collect 106 authored business browser cases plus two built-PWA cases without collection errors. Discovery does not mark those journeys passed.
 - [ ] Complete integration checks and a fresh full isolated run of the combined M7/M8/Demo/Help source, then observe both exact application and retained-data CI gates. Do not reuse individual branch or pre-merge counts as combined acceptance.
 - [ ] After the tested product merge, execute the actual main-only maintenance-App workflow proof. Preserve the independently strengthened14 required checks, mandatory signatures and review-only Maintain/Admin PR exception; do not restore an older nine-check policy. Review-hold decisions for separate PR13/19 remain separate from this product gate.
+
+## PR13 documentation-branch acceptance history
+
+- [x] Confirm prior exact-head quality, security, full application/native and corrected metadata success.
+- [x] Integrate current main e75f55d after PR16; retain both documentation histories and the complete guided-demo implementation.
+- [ ] Observe fresh exact-source quality/security/application/native and metadata checks; merge PR13 only when every required gate passes, as explicitly authorised by the user. The live PR is the final acceptance record.
+
+## English documentation and repository verification continuation
+
+The user requests English general documentation, detailed contribution/issue/PR instructions, an explicit roadmap and useful notes, current/historical labels, protected main and continued direct merge authority. Work is isolated on `codex/english-documentation-governance` from accepted main `1341b16`; concurrent role/welcome-tour changes in the original checkout are preserved.
+
+- [x] Translate the remaining general guides, forms, security policy and 30 label descriptions into English, preserving bilingual application behaviour, authored content and the verbatim specification.
+- [x] Add a [documentation index](README.md), discoverable [roadmap](../ROADMAP.md), [changelog](../CHANGELOG.md) and [decision notes](decisions/README.md); correct stale M6-pending prose using recorded accepted evidence.
+- [x] Read back all three active rules after concurrent02:33UTC activation; synchronize source JSON without changing live settings. Maintain/Admin review exceptions are PR-only; all 14 strict current-base checks apply without human bypass. Preserve separate maintenance-App promotion/source-delivery work. This current snapshot supersedes earlier dormant-rule/governance descriptions below.
+- [x] Read back all eleven existing PRs, including active #10; every PR already has one type, one risk and at least one area label. Preserve classifications and the nine original labels.
+- [x] Extend delivered documentation verification to roadmap/change notes and local heading fragments so translated navigation is checked.
+- [x] Record actual local checks, safe full-command refusal, verified English-label readback and signed publication on [PR #13](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/13). All six quality gates and the four Security jobs passed on first head `8e14e9e`; the latest complete application/native acceptance is recorded by the PR's exact-source checks, not inferred from this checkbox. No bug-free certification, new product module, hosted/production change or real mail is implied by this increment.
+
+The full product and operational ledger remains below. Those PR13 checks concern its documentation branch and do not certify the M7/M8 integration, which is tracked separately above.
 
 ## Guided exploration and practical help
 

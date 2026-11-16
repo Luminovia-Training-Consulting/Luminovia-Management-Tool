@@ -2,23 +2,25 @@
 
 Start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue guide](ISSUE_GUIDE.md), [pull-request guide](PULL_REQUEST_GUIDE.md) and [documentation index](README.md). The public Luminovia Website repository is a separate read-only brand reference.
 
+<a id="rules-for-main"></a>
+
 ## Active rule layers
 
-The user's final instruction is precise: **Maintain and Repository-admin accounts may merge through PRs without another person's review; CI and signatures remain mandatory.** Source configurations under `.github/rulesets/` match the live rules read back after applying that correction.
+The user's final instruction is precise: **Maintain and Repository-admin accounts may merge through PRs without another person's review; CI and signatures remain mandatory.** Source configurations under `.github/rulesets/` record the live readback. Committing JSON does not activate a rule: the [server rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. Activation at 02:33 UTC and strengthening at 02:45 UTC on 16 November 2026 supersede earlier disabled-rule and unrestricted-human-bypass snapshots. This documentation integration makes no server change.
 
-| Layer                 | Live ID    | Source                                           | Exceptions                                                                                                                                             |
-| --------------------- | ---------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| History and integrity | `27315671` | [history.json](../.github/rulesets/history.json) | None.                                                                                                                                                  |
-| PRs and review        | `27329000` | [review.json](../.github/rulesets/review.json)   | Maintain (`RepositoryRole:2`) and Repository admin (`RepositoryRole:5`) through PRs only; private maintenance App `5776881` for technical maintenance. |
-| Verified checks       | `27329142` | [checks.json](../.github/rulesets/checks.json)   | Only private maintenance App `5776881`; no human-role bypass.                                                                                          |
+| Layer                 | Live ID    | Source                                           | Exceptions                                                                                                                                                                  |
+| --------------------- | ---------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| History and integrity | `27315671` | [history.json](../.github/rulesets/history.json) | None.                                                                                                                                                                       |
+| PRs and review        | `27329000` | [review.json](../.github/rulesets/review.json)   | Maintain (`RepositoryRole:2`) and Repository admin (`RepositoryRole:5`) through PRs only; private maintenance App `5776881` with `always` for scoped technical maintenance. |
+| Verified checks       | `27329142` | [checks.json](../.github/rulesets/checks.json)   | Only private maintenance App `5776881` with `always`; no human-role bypass.                                                                                                 |
 
-All three rulesets are active. The history layer preserves deletion protection, non-fast-forward protection, valid signatures, the existing deployment rule and code-quality errors. A maintainer review exception does not bypass this separate layer or CI. Ordinary contributors still require independent approval, current last-push approval and the other configured review conditions. A PR-only exception requires a PR; it also bypasses the other conditions within that particular review ruleset.
+All three rulesets are active. The history layer preserves deletion protection, non-fast-forward protection, valid signatures, the existing deployment rule (with an empty environment list) and code-quality errors. A maintainer review exception does not bypass this separate layer or CI. Ordinary contributors still require independent approval, current last-push approval and the other configured review conditions. A PR-only exception requires a PR; it also bypasses the other conditions within that particular review ruleset.
 
 The actual GitHub rule UI displayed **Maintain** and **Repository admin**, while the corresponding API returned IDs `2` and `5`. The official REST schema supports `RepositoryRole` with `bypass_mode: pull_request` but does not publish a numeric built-in-role table. [REST schema](https://docs.github.com/en/rest/repos/rules?apiVersion=2026-03-10#update-a-repository-ruleset), [rule layering](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets#about-rule-layering), [documented schema gap](https://github.com/github/rest-api-description/issues/7111).
 
 ## Required checks and Auto-Merge
 
-All nine required contexts are bound to GitHub Actions integration `15368`:
+The first 13 of 14 required contexts are bound to GitHub Actions integration `15368`:
 
 - Build
 - Typecheck
@@ -29,8 +31,14 @@ All nine required contexts are bound to GitHub Actions integration `15368`:
 - verify
 - Actual isolated selfhost image compatibility
 - PR metadata
+- CodeQL (javascript-typescript)
+- CodeQL (python)
+- CodeQL (actions)
+- Dependency review
 
-Checks require an up-to-date base and are not waived on branch creation. Independent CodeQL and Dependency Review are additional security signals; their exact publication relationship is described in [CI_QUALITY](CI_QUALITY.md). Passing a scan is not a claim that all warnings have disappeared.
+The fourteenth, generated `CodeQL` finding check, is bound to integration `57789`. Successful scanner jobs alone do not satisfy that separately generated findings result. All 14 remain compulsory for human merges.
+
+Checks require an up-to-date base and are not waived on branch creation. CodeQL and Dependency Review are required merge checks; their separate relationship to development publication is described in [CI_QUALITY](CI_QUALITY.md). The release job continues to use its explicit `ci.yml` dependencies, and the development installer requires successful exact-main CI. The earlier PR11 direct merge while checks ran proved the former configuration, not a bypass of the current required-check rule. Passing a scan is not a claim that all warnings have disappeared.
 
 Repository `allow_auto_merge` is enabled. Auto-Merge is selected per suitable PR and waits for the active rules; it is not an approval or a test bypass. For the reviewed exact head:
 
@@ -40,6 +48,26 @@ gh pr merge NUMBER --repo Luminovia-Training-Consulting/Luminovia-Management-Too
 ```
 
 Use the actual PR number and full head SHA. Maintainer review exceptions do not turn failed or missing CI checks into success. Never disable checks to make a merge finish.
+
+<a id="activation-still-pending"></a>
+
+## Current enforcement and maintenance path
+
+The legacy fragment above remains for previously published links. Review and check enforcement are now **active**, as confirmed by both ruleset details and the effective-main endpoint. The three source JSON files were synchronized to that readback without a remote mutation.
+
+The earlier actual [protected-branch probe](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43755067933) showed the standard token's bot-user bypass was insufficient. The private maintenance App is a different integration (`5776881`, selected installation `182397724`); the active rules now grant that exact App bypass. GitHub Actions `15368` identifies the required check producer, not the maintenance bypass actor.
+
+Actual App registration, scoped configuration and the protected token/signature proof are recorded below. They do not establish that the new main-only workflow has been delivered or run. This task records the live exception without expanding App permissions. Preserve the repository-scoped short-lived-token path, successful full verification and signed/base-bound promotion checks; do not substitute a broadly privileged personal token or assume standard `GITHUB_TOKEN` now bypasses the rules. Earlier disabled-state entries in historical work logs describe their recorded time.
+
+Read-only checks, using an authenticated account with access:
+
+```bash
+gh api repos/Luminovia-Training-Consulting/Luminovia-Management-Tool/rulesets
+gh api repos/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules/branches/main
+gh api repos/Luminovia-Training-Consulting/Luminovia-Management-Tool/rulesets/27315671
+```
+
+The effective branch endpoint returns active rules; inspect the individual ruleset to see its bypass actors. Organisation-wide administration was not available with the existing token in the earlier audit; no organisation or other repository policy change is claimed. See GitHub's [ruleset and bypass documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository) and [rules API](https://docs.github.com/en/rest/repos/rules).
 
 ## Repository-scoped maintenance App
 
@@ -72,8 +100,39 @@ gh workflow run daily-maintenance.yml \
 
 Observe the actual run and its cleanup. Candidate and combined verification precede maintenance promotion; exact-main application and retained-data checks still gate the development release. This mechanism is not production deployment approval. [Maintenance controls](HOSTINGER_AUTOMATIC_UPDATES.md).
 
-## Labels and historical PRs
+<a id="labels-and-historical-prs"></a>
 
-The managed catalogue contains **35 labels**: eight types, 24 areas and three risk levels; nine original GitHub labels are preserved. The five new areas cover API contracts, security, performance, accessibility and design. Each PR needs exactly one `type:*`, exactly one `risk:*` and at least one relevant `area:*`. Add areas from the actual diff and preserve existing labels. Status labels and inflated label counts are not substitutes for review or tests.
+## Labels and metadata validation
 
-The [PR guide](PULL_REQUEST_GUIDE.md) explains classification. Historical/current label audits and actual check results are recorded in [WORKLOG](WORKLOG.md) and [QA_RESULTS](QA_RESULTS.md).
+[labels.json](../.github/labels.json) contains 36 managed labels. Nine original GitHub labels remain available. Each PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. Additional labels outside those three namespaces are allowed; unknown values in the three managed categories are rejected. See [label selection](PULL_REQUEST_GUIDE.md#pull-request-labels).
+
+The [metadata workflow](../.github/workflows/pr-metadata.yml) also responds to label changes. It reads the current labels, checks repository/PR/head identity and treats all text as data. It installs no dependencies and requests only `contents: read` and `pull-requests: read`. Its regressions are discovered by `./portal test`:
+
+```bash
+node --test scripts/runtime-pr-metadata.test.mjs scripts/runtime-documentation.test.mjs
+```
+
+External authors normally cannot label a PR. Include proposed labels in the description; a Maintainer applies them. Missing metadata must not be concealed behind an invented successful status. Workflow changes also need review because normal PR workflows execute the proposed source.
+
+All eleven original PRs (#1–#11) were initially read back and classified. During parallel work the repository grew to 19 PRs and five new area labels plus `merge:hold`. The source catalogue now includes those actual live labels so the existing validator accepts the current classifications. Labels and their meanings are preserved; a stop label is not removed merely to make a PR mergeable.
+
+The 36 managed entries are eight types, 24 areas, three risk levels and `merge:hold`; the latter is a review stop, not permission or a replacement for those categories. Keep it until its stated concern is addressed. The five specific areas cover API contracts, security, performance, accessibility and design. Classify actual diffs and preserve existing accurate labels; historical/current audits and check results are in [WORKLOG](WORKLOG.md) and [QA_RESULTS](QA_RESULTS.md).
+
+## Git tags and development packages
+
+Labels classify issues and PRs; Git tags identify immutable commits. Existing signed annotated development milestones include:
+
+| Tag                                 | Accepted merge commit                      | Scope                                                                                  |
+| ----------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `milestone/m3-accounts-commission`  | `00db7c9630dbf413000feab7ec7e0c2f56cb5b3a` | Accounts, profiles, clients and revenue allocation; PR #3.                             |
+| `milestone/m4-cbw-templates`        | `b9cdcc89758451bc8258f3a9f173e95ee1a23736` | Building-block templates, avatars and comments; PR #4.                                 |
+| `milestone/m5-system-audit`         | `bb322746d3cf18b1a0f1eae0eaa96450d26e26cd` | Functional and performance corrections; PR #5.                                         |
+| `milestone/m6-connected-operations` | `dc8e9a7e65c96076038bf7067791676578d121d4` | Taxonomy, availability, lifecycle/capacity, dashboard, notifications and audit; PR #8. |
+
+These tags are development acceptance markers, not production approval or semantic versions. Do not move or replace published tags. The existing `cms-dev-*` tags belong to immutable development releases after successful main CI; pushing a `milestone/*` tag does not trigger those release jobs. [Changelog](../CHANGELOG.md) records user-visible changes; [roadmap](../ROADMAP.md) records remaining work.
+
+## Public and private reports
+
+Use English for new issues, pull requests and contributor-facing documentation. Application interfaces remain German/English and authored content retains its language. Use the [issue chooser](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/issues/new/choose) for ordinary bugs, features and questions. Blank issues are disabled in that UI in favour of structured forms; this is not an Issue API access restriction.
+
+Private vulnerability reporting is enabled; follow [SECURITY](../SECURITY.md). Secret Scanning and Push Protection were separately enabled and read back in the earlier quality task; private reporting alone would not enable them. No new App, key, paid service, invitation, real email or hosting/production change was made in this documentation task.

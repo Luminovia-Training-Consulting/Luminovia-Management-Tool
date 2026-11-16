@@ -1,10 +1,12 @@
 # Creating, reviewing and merging pull requests
 
-> Status on 16 November 2026: the history, review and required-check rules are active. Maintainers and repository administrators have a **PR-only review exception**; required CI and commit signatures remain mandatory. Auto-merge is enabled and remains subject to those requirements. [Current rules and operational evidence](GITHUB_WORKFLOW.md).
+> Status read back on 16 November 2026 after 02:45 UTC: review and required-check rules are active. Maintainers and administrators may bypass independent review through a PR, but must wait for all fourteen required checks against the current base. The maintenance App has a separate `always` exception. [Current rule and App delivery status](GITHUB_WORKFLOW.md#activation-still-pending).
 
 This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
-The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). The source catalogue [labels.json](../.github/labels.json) now contains 35 managed labels; nine original GitHub labels are also preserved. The [documentation index](README.md) links current architecture, feature guides, test evidence and operations.
+The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). These historical merges did not themselves activate server-side review rules; the current live activation is described below. The source catalogue [labels.json](../.github/labels.json) now contains 36 managed labels; nine original GitHub labels are also preserved.
+
+The [documentation index](README.md) links current architecture, feature guides, test evidence and operations.
 
 ## Branch and title
 
@@ -55,11 +57,13 @@ Choose every area that is materially affected. The original area labels remain a
 | `area:accessibility` | Keyboard, focus, screen-reader and contrast work            |
 | `area:design`        | Brand, layout, typography and colour system                 |
 
-A documentation change receives `area:docs` and any relevant documented area; general contribution rules also use `area:github`. A test does not need every label used by the whole system. A feature with a migration should include the product and technical areas it actually changes. The 35 managed labels comprise eight types, 24 areas and three risk levels; additional original GitHub labels do not replace a required category.
+A documentation change receives `area:docs` and any relevant documented area; general contribution rules also use `area:github`. A test does not need every label used by the whole system. A feature with a migration should include the product and technical areas it actually changes. The 36 managed labels comprise eight types, 24 areas, three risk levels and the `merge:hold` stop signal; nine original GitHub labels remain available. Additional labels do not replace a required category.
 
 Apply the five additional areas based on the actual diff. Use `area:api` for changed interface contracts or documented RPC/OpenAPI functions; `area:backend` still describes server implementation. Add `area:security` to the affected area for actual protection or permission changes. It is not a second type label: a `type:feature` can change security boundaries, while `type:security` identifies a coordinated security fix as the main purpose.
 
 `area:performance` requires a concrete change to query, loading or cache behaviour; an incidental index or an existing full-system test is insufficient. `area:accessibility` identifies actual keyboard, focus, screen-reader or contrast work. `area:design` describes visible design changes; a theme contrast fix can need both labels. Preserve existing labels when they remain accurate. Select labels for the reviewable scope, not to use every available category.
+
+`merge:hold` records a maintainer review stop. Preserve it until the stated concern is addressed; it grants no permission and does not replace required checks.
 
 | Risk          | Meaning                                                                                             |
 | ------------- | --------------------------------------------------------------------------------------------------- |
@@ -93,20 +97,28 @@ Ordinary contributors need a pull request and at least one approval from another
 
 Maintainers and repository administrators have a role-based **PR-only exception to review** (`pull_request`, repository roles 2 and 5). They may merge a PR without another person's approval, but must still satisfy required CI and commit signatures. This exception does not authorise a direct push to `main` or bypass the required-check rule. Ordinary write access alone receives no review exception. The exception follows the person performing the merge, not the PR author.
 
-The active check rule requires all nine GitHub Actions checks, bound to the expected Actions App (`15368`) and an up-to-date base:
+All fourteen required checks must pass against the current base. Ordinary write access grants no review exception; GitHub may require an explicit bypass action for an authorised maintainer:
 
 - `Build`, `Typecheck`, `Lint`, `Formatting` and `Code quality` check compilation, rules, style and actual source connections.
 - `Tests and coverage` runs unit/component tests with complete frontend source coverage reporting and enforced thresholds.
 - `verify` runs the complete real application/SQL/API/browser/PWA/maintenance suites; `Actual isolated selfhost image compatibility` checks real runtime behaviour and retained data.
 - `PR metadata` checks required labels.
+- `CodeQL (javascript-typescript)`, `CodeQL (python)` and `CodeQL (actions)` run the separate language-specific security analyses; `Dependency review` rejects newly introduced vulnerable dependencies.
+- The generated `CodeQL` finding check evaluates the uploaded security findings separately from successful scanner execution.
 
-The history rule has no bypass actors and preserves required signatures, deletion protection and non-fast-forward protection. The separate private maintenance App (`5776881`) has only the documented technical review/check exception for its controlled workflow; it has no signature/history exception. Maintainer/Admin roles are not bypass actors in the check or history rules. See [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md) for the active configuration, App scope and actual operational evidence.
+The first thirteen statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. All fourteen are required for merging. See [CI_QUALITY](CI_QUALITY.md).
 
-[CI_QUALITY](CI_QUALITY.md) explains the checks, full-source V8 coverage and enforced thresholds. The separate CodeQL Security workflow analyses security patterns; its findings and reviewed baseline are documented in [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md). A successful scanner job does not mean every finding has been resolved. Coverage, SQL, Edge and browser checks remain distinct evidence rather than an invented combined coverage percentage.
+If main changes, update the PR as required and wait for checks against the current base. The history/signature ruleset has no bypass actors, including for maintainers, administrators and the maintenance App. The maintenance App, integration `5776881`, has its own `always` exception on the review and required-check rules. Server-side activation and that exception do not prove the App workflow is already delivered on main; see the [current rule and App delivery status](GITHUB_WORKFLOW.md#activation-still-pending).
+
+[CI_QUALITY](CI_QUALITY.md) explains full-source V8 coverage and thresholds; [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md) distinguishes successful scanning from resolved findings. SQL, Edge, browser and unit coverage remain separate evidence.
 
 ## Merge and publication
 
-Review the description, labels, exact-commit checks and open conversations before merging. Maintainers and administrators may use their PR-only review exception after the required checks pass; other contributors need the independent approval as well. Signatures remain required for everyone. Auto-merge is enabled, but it waits for the applicable requirements rather than bypassing them. A changed PR head needs its own current checks.
+Maintainers and administrators can merge a PR without an independent approval through their review exception once the fourteen required checks and current-base requirement are satisfied. Check the description, labels, tests and unresolved conversations first. Pending operational approvals remain separate from repository merge eligibility.
+
+The separate Security outcomes are required for PR merge eligibility. Release publication still follows the explicit dependencies in `ci.yml`; the ruleset does not add them as release-job dependencies.
+
+Signatures remain mandatory for every actor. Repository Auto-Merge availability is enabled, but it waits for applicable requirements; a changed PR head needs its own current checks. An App exception is not a human author review exemption, and no proposed automatic-promotion workflow is considered delivered merely because its branch exists.
 
 A merge can start the existing development release process. Its immutable `cms-dev-*` packages and hosted migration checks remain separate. Production operation, real data, SMTP, DNS and risky maintenance need the appropriate separate approvals. Claim a hosted installation only when actual operational evidence exists.
 
