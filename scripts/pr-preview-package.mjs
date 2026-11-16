@@ -17,8 +17,10 @@ export function createPreviewPackage({
   runId,
   runAttempt,
   number,
+  profile = "standard",
 }) {
   if (
+    !["docs", "standard", "full"].includes(profile) ||
     !isAbsolute(output) ||
     !shaPattern.test(headSha) ||
     !shaPattern.test(testedSha) ||
@@ -92,6 +94,13 @@ export function createPreviewPackage({
         ),
       )
       .digest("hex"),
+    verification_profile: profile,
+    verification_scope:
+      profile === "docs"
+        ? "pr-quality-runtime-edge"
+        : profile === "full"
+          ? "pr-full-application-native-postgresql"
+          : "pr-quality-runtime-edge-postgresql",
     hosted: false,
   };
   writeFileSync(
@@ -114,6 +123,9 @@ try {
     `Luminovia PR #${number}: local application preview / lokale Anwendungsvorschau
 
 This package contains committed source from tested revision ${testedSha}.
+Verification profile / Pruefumfang: ${profile}.
+PostgreSQL suites / SQL-Pruefungen: ${profile === "docs" ? "not run for documentation-only changes / bei reinen Dokumentationsaenderungen nicht ausgefuehrt" : "included / enthalten"}.
+Full Auth/Storage/browser/PWA/retained-data acceptance: ${profile === "full" ? "included / enthalten" : "main/manual only / nur main/manuell"}.
 PR head: ${headSha}. It is a downloadable local preview, not a hosted website.
 It contains no live backend connection, generated account passwords or QA traces.
 Review PR source before running it: contributor code executes on your computer.
@@ -151,6 +163,10 @@ if (
 ) {
   try {
     const output = process.argv[2];
+    if (!["docs", "standard", "full"].includes(process.env.CI_PROFILE))
+      throw new Error(
+        "An explicit verified CI profile is required for the preview package CLI.",
+      );
     const manifest = createPreviewPackage({
       output,
       headSha: process.env.PR_HEAD_SHA,
@@ -158,6 +174,7 @@ if (
       runId: Number(process.env.GITHUB_RUN_ID),
       runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
       number: Number(process.env.PR_NUMBER),
+      profile: process.env.CI_PROFILE,
     });
     console.log(
       `Local preview package ready for PR #${manifest.pull_request}; no hosted site was deployed.`,
