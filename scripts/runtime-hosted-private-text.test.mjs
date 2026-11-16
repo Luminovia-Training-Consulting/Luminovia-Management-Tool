@@ -25,6 +25,13 @@ import { join } from "node:path";
 import test from "node:test";
 import { readHostedPrivateText } from "./testing/hosted-private-text.mjs";
 
+// Preserve the operator-facing refusal instead of exposing a new syscall/path error.
+const privateFileRefusal = {
+  name: "AssertionError",
+  code: "ERR_ASSERTION",
+  message: "Private configuration must be an exclusive regular file (0600)",
+};
+
 /** Own only this random temporary directory and remove it after the case. */
 function fixture(t) {
   const directory = mkdtempSync(join(tmpdir(), "portal-hosted-private-text-"));
@@ -43,7 +50,7 @@ function withDescriptors(operation, overrides = {}) {
   const descriptors = [];
   Object.assign(fs, overrides, {
     openSync: (...args) => {
-      const descriptor = originals.openSync(...args);
+      const descriptor = (overrides.openSync ?? originals.openSync)(...args);
       descriptors.push(descriptor);
       return descriptor;
     },
@@ -90,6 +97,30 @@ test("missing input remains ENOENT and creates no configuration or replacement s
   assert.deepEqual(readdirSync(directory), []);
 });
 
+test("unrelated open errors propagate unchanged without allocating a descriptor", (t) => {
+  const { file } = fixture(t);
+  writeFileSync(file, "fictional retained bytes", { mode: 0o600 });
+  for (const code of ["EACCES", "EIO"]) {
+    const failure = Object.assign(new Error("fictional open refusal"), {
+      code,
+    });
+    const descriptors = withDescriptors(
+      () =>
+        assert.throws(
+          () => readHostedPrivateText(file),
+          (error) => error === failure,
+        ),
+      {
+        openSync: () => {
+          throw failure;
+        },
+      },
+    );
+    assert.deepEqual(descriptors, []);
+  }
+  assert.equal(readFileSync(file, "utf8"), "fictional retained bytes");
+});
+
 test("owner-only readable modes retain their bytes and mode while group or other access still rejects", (t) => {
   const { file } = fixture(t);
   writeFileSync(file, "fictional private text", { mode: 0o600 });
@@ -106,10 +137,7 @@ test("owner-only readable modes retain their bytes and mode while group or other
     chmodSync(file, mode);
     assertClosed(
       withDescriptors(() =>
-        assert.throws(
-          () => readHostedPrivateText(file),
-          /Private configuration must be an exclusive regular file \(0600\)/,
-        ),
+        assert.throws(() => readHostedPrivateText(file), privateFileRefusal),
       ),
     );
     assert.equal(statSync(file).mode & 0o777, mode);
@@ -167,7 +195,7 @@ test("leaf and dangling symlinks fail without reading or creating their targets"
   writeFileSync(target, "fictional retained bytes", { mode: 0o600 });
   for (const destination of [target, join(directory, "absent.env")]) {
     symlinkSync(destination, file);
-    assert.throws(() => readHostedPrivateText(file), { code: "ELOOP" });
+    assert.throws(() => readHostedPrivateText(file), privateFileRefusal);
     rmSync(file);
   }
   assert.equal(readFileSync(target, "utf8"), "fictional retained bytes");
@@ -178,7 +206,7 @@ test("a directory is rejected and its opened descriptor is closed", (t) => {
   const { directory } = fixture(t);
   assertClosed(
     withDescriptors(() =>
-      assert.throws(() => readHostedPrivateText(directory), /regular file/),
+      assert.throws(() => readHostedPrivateText(directory), privateFileRefusal),
     ),
   );
 });
@@ -205,7 +233,7 @@ test("FIFO and Unix socket inodes reject without waiting for a peer or opening a
         "-e",
         `import assert from 'node:assert/strict';
          import {readHostedPrivateText} from ${JSON.stringify(new URL("./testing/hosted-private-text.mjs", import.meta.url).href)};
-         assert.throws(() => readHostedPrivateText(process.argv[1]));`,
+         assert.throws(() => readHostedPrivateText(process.argv[1]), ${JSON.stringify(privateFileRefusal)});`,
         path,
       ],
       { encoding: "utf8", timeout: 2000 },
@@ -219,22 +247,28 @@ for (const boundary of ["fstatSync", "readFileSync"])
   test(`${boundary} errors propagate unchanged and still close the actual descriptor`, (t) => {
     const { file } = fixture(t);
     writeFileSync(file, "fictional retained bytes", { mode: 0o600 });
-    const failure = Object.assign(new Error("fictional read boundary error"), {
-      code: "EIO",
-    });
-    assertClosed(
-      withDescriptors(
-        () =>
-          assert.throws(
-            () => readHostedPrivateText(file),
-            (error) => error === failure,
-          ),
+    // ENXIO/ELOOP are mapped only at open; errors after opening remain unchanged.
+    for (const code of ["EIO", "ENXIO", "ELOOP"]) {
+      const failure = Object.assign(
+        new Error("fictional read boundary error"),
         {
-          [boundary]: () => {
-            throw failure;
-          },
+          code,
         },
-      ),
-    );
+      );
+      assertClosed(
+        withDescriptors(
+          () =>
+            assert.throws(
+              () => readHostedPrivateText(file),
+              (error) => error === failure,
+            ),
+          {
+            [boundary]: () => {
+              throw failure;
+            },
+          },
+        ),
+      );
+    }
     assert.equal(readFileSync(file, "utf8"), "fictional retained bytes");
   });
