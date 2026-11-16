@@ -1122,3 +1122,87 @@ test("native review blocking can use the approved App exception only after every
   for (const mergeable_state of ["dirty", "unknown", "unstable"])
     await expectBlocked({ pr: { mergeable_state } }, "merge-not-clean");
 });
+
+test("the HTTP client permits Git compare's three-dot delimiter and rejects normalized repository escapes", async () => {
+  const calls = [];
+  const client = githubClient("fictional-read-token", async (url) => {
+    calls.push(url);
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "diverged" }),
+    };
+  });
+  const path = `${prefix}/compare/${head}...${merge}`;
+  assert.deepEqual(await client(path), { status: "diverged" });
+  assert.deepEqual(calls, [`https://api.github.com${path}`]);
+  calls.length = 0;
+  for (const invalid of [
+    `${prefix}/../evil/pulls/31`,
+    `${prefix}/%2e%2e/evil/pulls/31`,
+    `${prefix}/%2E./evil/pulls/31`,
+    `${prefix}/..\\evil/pulls/31`,
+    "https://evil.invalid/repos/other/project/pulls/31",
+    "//evil.invalid/repos/other/project/pulls/31",
+  ])
+    await assert.rejects(
+      client(invalid),
+      /Invalid or incomplete GitHub response/,
+    );
+  assert.deepEqual(calls, []);
+});
+
+test("the composed router, HTTP clients and full merge process handle compares and preserve token boundaries", async () => {
+  const source = fixture({
+    open: [pullRequest(), { number: 32, head: { sha: merged } }],
+    compareStatus: "diverged",
+  });
+  const sent = [];
+  // Exercise the public HTTP boundary as well as domain orchestration. A direct
+  // request-function fixture alone would miss URL validation/routing regressions.
+  const fetcher = async (url, options) => {
+    const parsed = new URL(url);
+    assert.equal(parsed.origin, "https://api.github.com");
+    sent.push({
+      path: parsed.pathname,
+      method: options.method,
+      authorization: options.headers.Authorization,
+    });
+    const data = await source.request(parsed.pathname + parsed.search, {
+      method: options.method,
+      ...(options.body ? { body: JSON.parse(options.body) } : {}),
+    });
+    return {
+      ok: true,
+      status: data === null ? 204 : 200,
+      json: async () => {
+        assert.notEqual(data, null, "204 dispatch responses have no JSON body");
+        return structuredClone(data);
+      },
+    };
+  };
+  const request = routeRequests(
+    githubClient("fictional-read-token", fetcher),
+    githubClient("fictional-app-token", fetcher),
+  );
+  const result = await processPullRequest(request, 31, catalogue, {
+    apply: true,
+  });
+  assert.equal(result.promoted, true);
+  assert.equal(result.merged, true);
+  assert.equal(result.commit, merge);
+  assert.ok(
+    sent.some((call) => call.path === `${prefix}/compare/${merged}...${merge}`),
+  );
+  for (const call of sent)
+    assert.equal(
+      call.authorization,
+      call.method === "GET"
+        ? "Bearer fictional-read-token"
+        : "Bearer fictional-app-token",
+    );
+  assert.deepEqual(
+    source.writes().map(({ method }) => method),
+    ["PATCH", "POST", "POST"],
+  );
+});

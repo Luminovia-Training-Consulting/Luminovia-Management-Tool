@@ -74,10 +74,17 @@ export function evaluateChecks(checks, head) {
 export function githubClient(token, fetcher = fetch) {
   assert(typeof token === "string" && token.length > 0);
   return async (path, { method = "GET", body } = {}) => {
-    assert(path.startsWith(`${prefix}/`) && !path.includes(".."));
+    assert(typeof path === "string" && path.startsWith(`${prefix}/`));
+    const url = new URL(path, "https://api.github.com");
+    // Git compare uses a literal three-dot delimiter. Reject actual repository
+    // traversal after URL normalization rather than rejecting that delimiter.
+    assert(
+      url.origin === "https://api.github.com" &&
+        url.pathname.startsWith(`${prefix}/`),
+    );
     let response;
     try {
-      response = await fetcher(`https://api.github.com${path}`, {
+      response = await fetcher(url.href, {
         method,
         redirect: "error",
         signal: AbortSignal.timeout(15_000),
