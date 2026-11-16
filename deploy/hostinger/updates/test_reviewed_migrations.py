@@ -159,6 +159,20 @@ class ReviewedPolicyTests(unittest.TestCase):
 
 
 class ReviewedFileTests(unittest.TestCase):
+    def test_created_plan_and_consumed_record_have_exact_mode_despite_restrictive_umask(self):
+        with reviewed_fixture() as (updater, _archive, _manifest, path, plan, _manifest_path):
+            fresh_path = path.with_name("restrictive-umask.json")
+            previous = os.umask(0o777)
+            try:
+                updater.write_reviewed_migration_plan(fresh_path, plan)
+                self.assertEqual(updater.read_reviewed_migration_plan(fresh_path), plan)
+                updater.consume_reviewed_migration_plan(plan)
+            finally:
+                os.umask(previous)
+            consumed = path.parent / "used" / (plan["id"] + ".json")
+            self.assertEqual(fresh_path.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(consumed.stat().st_mode & 0o777, 0o600)
+
     def test_requires_root_owned_private_single_link_regular_file_and_safe_directories(self):
         with reviewed_fixture() as (updater, _archive, _manifest, path, _plan, _manifest_path):
             self.assertEqual(path.stat().st_mode & 0o777, 0o600)
@@ -229,6 +243,29 @@ class ReviewedFileTests(unittest.TestCase):
 
 
 class ReviewedLifecycleTests(unittest.TestCase):
+    def test_plan_expiring_during_final_network_check_cannot_be_consumed(self):
+        with reviewed_fixture() as (updater, archive, _manifest, path, plan, manifest_path), contextlib.ExitStack() as cleanup:
+            expired = dt.datetime.fromisoformat(plan["expiresAt"]) + dt.timedelta(seconds=1)
+            class ExpiredClock(dt.datetime):
+                @classmethod
+                def now(cls, tz=None):
+                    return expired if tz else expired.replace(tzinfo=None)
+            original = updater.verify_reviewed_release_identity
+            calls = 0
+            def slow_network(manifest):
+                nonlocal calls
+                original(manifest)
+                calls += 1
+                if calls == 2:
+                    cleanup.enter_context(patch.object(u.dt, "datetime", ExpiredClock))
+            updater.verify_reviewed_release_identity = slow_network
+            with self.assertRaisesRegex(u.UpdateError, "expired_or_invalid_time"):
+                updater.once(package=archive, manifest_path=manifest_path, reviewed_migration_plan=path)
+            self.assertIn("restore-checkpoint", updater.calls)
+            self.assertEqual(updater.sql_sources, [])
+            self.assertFalse((path.parent / "used" / (plan["id"] + ".json")).exists())
+            self.assertFalse(updater.maintenance.exists())
+
     def test_success_uses_normal_checkpoint_health_and_single_use_fencing(self):
         with reviewed_fixture() as (updater, archive, manifest, path, plan, manifest_path):
             result = updater.once(package=archive, manifest_path=manifest_path, reviewed_migration_plan=path)

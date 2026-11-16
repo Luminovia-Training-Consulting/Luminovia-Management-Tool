@@ -335,6 +335,18 @@ def fsync_directory(path):
         os.close(descriptor)
 
 
+def validate_reviewed_plan_time(plan):
+    """Check lifetime again at consumption after potentially slow network calls."""
+    try:
+        issued = dt.datetime.fromisoformat(plan["createdAt"])
+        expires = dt.datetime.fromisoformat(plan["expiresAt"])
+        current = dt.datetime.now(dt.timezone.utc)
+        if issued.tzinfo is None or expires.tzinfo is None or not 0 < (expires - issued).total_seconds() <= REVIEWED_PLAN_MAX_TTL or issued > current or current >= expires:
+            raise ValueError()
+    except (KeyError, ValueError, TypeError) as error:
+        raise UpdateError("reviewed_plan_expired_or_invalid_time") from error
+
+
 def history_inventory(history):
     """Keep source fingerprints, never database credentials or application rows."""
     if not isinstance(history, dict) or not history or len(history) > 4096:
@@ -600,6 +612,7 @@ class Updater:
         except OSError as error:
             raise UpdateError("reviewed_plan_output_already_exists_or_unsafe") from error
         with os.fdopen(descriptor, "w", encoding="utf8") as stream:
+            os.fchmod(stream.fileno(), 0o600)
             json.dump(plan, stream, sort_keys=True, indent=2, allow_nan=False)
             stream.write("\n")
             stream.flush()
@@ -635,14 +648,7 @@ class Updater:
                 raise ValueError()
         except (ValueError, TypeError, AttributeError) as error:
             raise UpdateError("invalid_reviewed_plan_format") from error
-        try:
-            issued = dt.datetime.fromisoformat(plan["createdAt"])
-            expires = dt.datetime.fromisoformat(plan["expiresAt"])
-            current = dt.datetime.now(dt.timezone.utc)
-            if issued.tzinfo is None or expires.tzinfo is None or not 0 < (expires - issued).total_seconds() <= REVIEWED_PLAN_MAX_TTL or issued > current or current >= expires:
-                raise ValueError()
-        except (ValueError, TypeError) as error:
-            raise UpdateError("reviewed_plan_expired_or_invalid_time") from error
+        validate_reviewed_plan_time(plan)
         consumed = self.control / "reviewed-migrations" / "used" / (plan["id"] + ".json")
         if consumed.exists() or consumed.is_symlink():
             raise UpdateError("reviewed_plan_already_consumed")
@@ -673,10 +679,14 @@ class Updater:
         path = directory / (plan["id"] + ".json")
         value = {"format": "luminovia-consumed-migration-plan-v1", "id": plan["id"], "planSha256": canonical_digest(plan), "fromCommit": plan["fromCommit"], "targetCommit": plan["targetCommit"], "manifestSha256": plan["manifestSha256"], "historySha256": plan["historySha256"], "consumedAt": now()}
         try:
+            # A slow last release check must not extend approval lifetime. Only
+            # the exclusive local reservation follows this check, no network.
+            validate_reviewed_plan_time(plan)
             descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
         except OSError as error:
             raise UpdateError("reviewed_plan_already_consumed_or_unsafe") from error
         with os.fdopen(descriptor, "w", encoding="utf8") as stream:
+            os.fchmod(stream.fileno(), 0o600)
             json.dump(value, stream, sort_keys=True, indent=2)
             stream.write("\n")
             stream.flush()
