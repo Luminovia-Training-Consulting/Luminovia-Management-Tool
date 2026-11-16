@@ -19,7 +19,11 @@ assert.equal(
 );
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
-async function runFixture({ failPersistence = false, failSeed = false } = {}) {
+async function runFixture({
+  failPersistence = false,
+  failSeed = false,
+  failBrowser = false,
+} = {}) {
   const calls = [],
     reports = [];
   const bindings = {
@@ -52,7 +56,14 @@ async function runFixture({ failPersistence = false, failSeed = false } = {}) {
     cleanEnvironment,
     assertLocalDocker: async () => "unix:///var/run/docker.sock",
     command: async (file, args, options) => {
-      calls.push({ file, args, env: { ...options.env }, cwd: options.cwd });
+      calls.push({
+        file,
+        args,
+        env: { ...options.env },
+        cwd: options.cwd,
+        timeoutMs: options.timeoutMs,
+        signal: options.signal,
+      });
       if (
         args.includes("scripts/runtime-persistence-check.mjs") &&
         failPersistence
@@ -60,6 +71,8 @@ async function runFixture({ failPersistence = false, failSeed = false } = {}) {
         throw new Error("Fictional retained-data failure");
       if (args.includes("scripts/local-seed.mjs") && failSeed)
         throw new Error("Fictional commercial bootstrap failure");
+      if (args.includes("test:e2e") && failBrowser)
+        throw new Error("Fictional browser aggregate deadline");
       return "";
     },
     process: {
@@ -173,4 +186,65 @@ test("failed commercial bootstrap stops SQL/API acceptance while retaining owned
     result.reports.some((report) => report.value.startsWith("PASS\n")),
     false,
   );
+});
+
+// Execute the real orchestration, verifying the child process contract rather
+// than a source-text constant: this must not extend other stages or filter tests.
+test("only the complete browser command receives the expanded aggregate budget", async () => {
+  const result = await runFixture();
+  assert.equal(result.error, undefined);
+  const browser = result.calls.filter((call) => call.args.includes("test:e2e"));
+  assert.equal(browser.length, 1);
+  assert.deepEqual(browser[0].args, [
+    "run",
+    "test:e2e",
+    "--",
+    "--grep-invert",
+    "built PWA",
+  ]);
+  assert.equal(browser[0].timeoutMs, 1800000);
+  assert.ok(browser[0].signal instanceof AbortSignal);
+  assert.equal(
+    result.calls.filter((call) => call.timeoutMs === 1800000).length,
+    1,
+  );
+  const stages = result.calls.filter(
+    (call) => call.signal === browser[0].signal,
+  );
+  assert.ok(stages.length > 10);
+  for (const stage of stages)
+    assert.equal(stage.timeoutMs, stage === browser[0] ? 1800000 : 1200000);
+});
+
+test("a browser deadline still fails acceptance, skips build/PWA and performs owned cleanup", async () => {
+  const result = await runFixture({ failBrowser: true });
+  assert.match(result.error?.message, /browser aggregate deadline/);
+  assert.equal(
+    result.calls.some((call) => call.args.includes("build")),
+    false,
+  );
+  assert.equal(
+    result.calls.some((call) => call.args.includes("tests/e2e/pwa.spec.ts")),
+    false,
+  );
+  for (const script of [
+    "scripts/runtime-test-preview.mjs",
+    "scripts/runtime-cli.mjs",
+  ])
+    assert.ok(
+      result.calls.some(
+        (call) => call.args.includes(script) && call.args.includes("stop"),
+      ),
+    );
+  assert.ok(
+    result.calls.some(
+      (call) =>
+        call.args.includes("--project-id") && call.args.includes("--no-backup"),
+    ),
+  );
+  assert.equal(
+    result.reports.some((report) => report.value.startsWith("PASS\n")),
+    false,
+  );
+  assert.ok(result.reports.some((report) => report.value.startsWith("FAIL\n")));
 });

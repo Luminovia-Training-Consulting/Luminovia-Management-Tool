@@ -112,12 +112,12 @@ try {
     .replaceAll(":5173", ":5273");
   writeFileSync(configPath, config);
   /** Runs one named stage in the isolated snapshot with a timeout and shared cancellation signal. */
-  const step = async (label, file, args, extra = {}) => {
+  const step = async (label, file, args, extra = {}, timeoutMs = 1200000) => {
     console.log(`\n[TEST] ${label}`);
     return await command(file, args, {
       cwd: scratch,
       env: { ...env, ...extra },
-      timeoutMs: 1200000,
+      timeoutMs,
       signal: cancellation.signal,
     });
   };
@@ -321,13 +321,15 @@ try {
     ...(process.env.CI === "true" ? ["--with-deps"] : []),
     "chromium",
   ]);
-  await step("Desktop- und Mobilbrowser", "npm", [
-    "run",
-    "test:e2e",
-    "--",
-    "--grep-invert",
-    "built PWA",
-  ]);
+  // CI43858966704 passed 136/142 cases before this aggregate's former 20m cap.
+  // Only the whole browser command gets 30m; all individual tests stay bounded.
+  await step(
+    "Desktop- und Mobilbrowser",
+    "npm",
+    ["run", "test:e2e", "--", "--grep-invert", "built PWA"],
+    {},
+    1800000,
+  );
   await step("Produktions-Build", "npm", ["run", "build"]);
   // The test supervisor serves the built artifact from a separate, owned preview.
   await step("Gebautes PWA starten", process.execPath, [
