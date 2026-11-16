@@ -1,32 +1,46 @@
 # GitHub administration and contribution workflow
 
+> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Maintainers/admins may bypass review through a PR only; nobody can bypass the 15 mandatory CI/security checks or up-to-date testing. The maintenance App has no rule exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
+
 Contributors should start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue guide](ISSUE_GUIDE.md) and the [pull request guide](PULL_REQUEST_GUIDE.md). This page explains the administrative sources and the boundaries of rule exceptions. Public contribution guidance and new contribution discussions use English; the product interface remains German and English.
 
 ## Rules for `main`
 
-The JSON files under `.github/rulesets/` reflect the repository configuration that was actually read back from GitHub. Files alone do not activate a rule; the [server-side rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. The current instruction replaces the earlier personal PR-only exception: **maintainers and administrators may merge directly at any time and bypass rules when necessary.**
+The JSON files under `.github/rulesets/` are snapshots of the configuration read back from GitHub. Files alone do not activate protection; the [server-side rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. All three policies are active:
 
-| Rule                          | Source                                           | Current status                                                                                                                                                                                         |
-| ----------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Branch Protection             | [history.json](../.github/rulesets/history.json) | Active: signatures, deletion/force-push restrictions and existing deployment/code-quality rules. Existing `always` exceptions for repository roles `maintain` (ID 2) and `admin` (ID 5) are preserved. |
-| Main pull requests and review | [review.json](../.github/rulesets/review.json)   | Prepared but still disabled: PR, one independent approval, latest-push approval and resolved conversations. Both roles have `always` instead of the earlier personal PR-only exception.                |
-| Main verified checks          | [checks.json](../.github/rulesets/checks.json)   | Prepared but still disabled: complete application, native selfhost compatibility, metadata and the new build/quality/coverage checks; both roles have `always`.                                        |
+| Rule                          | Source                                           | Enforcement and exceptions                                                                                                                                                  |
+| ----------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Branch Protection             | [history.json](../.github/rulesets/history.json) | Signatures, deletion/force-push restrictions and existing deployment/code-quality rules. No bypass actors.                                                                  |
+| Main pull requests and review | [review.json](../.github/rulesets/review.json)   | PR, one independent approval, latest-push approval and resolved conversations. Only human repository roles `maintain` (ID 2) and `admin` (ID 5) have `pull_request` bypass. |
+| Main verified checks          | [checks.json](../.github/rulesets/checks.json)   | All 15 required application/native, quality/coverage, metadata and security checks; strict up-to-date testing. No bypass actors.                                            |
 
-`always` applies to the person acting with an actual Maintainer/Admin role, regardless of the PR author, self-review or pending/failed checks. GitHub may require an explicit bypass action in its interface. A maintainer merge still starts checks; it does not make them artificially pass. Automatic publication and VPS installation still wait for the successful complete `ci.yml` run; the separate Security workflow provides additional analysis and is not another release gate. Ordinary write access does not receive this bypass. No additional people were invited or roles assigned.
+The human review exception applies to the person performing a PR merge. It does not permit direct pushes or skipped, failed or pending mandatory checks. Ordinary write access and the maintenance App receive no review exception. The App must satisfy independent approval, latest-push approval and conversation resolution before GitHub can merge its PR. No identity, including an administrator or the App, can bypass the required-check rules. Administrators retain permission to edit repository settings; the current rules govern normal push and merge operations.
+
+PR18 introduces the `PR preview package` job after native verification. It is now also a required Actions check, so all 15 PR checks must finish successfully before a merge. The main-only release job and separate preview-metadata workflow are not substituted for these PR checks.
+
+The App's previous `always` exceptions were removed from both review and check rules and the effective rules were read back. The GitHub Actions integration 15368 and CodeQL integration 57789 identify the required checks' producers, not bypass actors. CI and coverage details are in [CI_QUALITY](CI_QUALITY.md).
 
 ## Activation still pending
 
-The additional review/check rules (IDs 27329000/27329142) remain deliberately disabled. Activating them without verification would block the existing signed daily direct promotion using the standard `GITHUB_TOKEN`. The Maintainer/Admin exception in the active rule already applies; the additional requirements for other contributors are **not yet enforced server-side**.
+**Rule activation is complete.** This section tracks the separate operational delivery of PR-based maintenance, not a reason to disable protection.
 
-The earlier real test [43755067933](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43755067933) showed that a bot-user exception does not reliably bypass the temporary PR/missing-check rule for the standard token. Its temporary rules and branches were removed. The general GitHub Actions App 15368 remains the verified source of status checks, not an assumed bypass identity.
+The existing private **Luminovia Portal Maintenance** App has integration ID 5776881 and selected installation 182397724. The protected `maintenance-signing` environment already contains the App ID and private-key secret and restricts deployment to `main`. After explicit user confirmation, both the App registration and installation grant `contents/actions/pull_requests: write`. The installation remains limited to the single Luminovia-Management-Tool repository. Requesting a permission in a workflow does not grant it to the installation. Successful short-lived token creation and actual PR workflow execution remain acceptance steps; no completed App publication is claimed here.
 
-The latest inventory confirmed that the private **Luminovia Portal Maintenance** App exists, with integration ID 5776881, a `selected` installation 182397724 and `contents/actions: write`. The earlier general statement that no App exists is outdated. This task did not prove the exact selected repository scope or a working installation-token promotion; the required repository variables/secrets and App workflow have not been confirmed as fully configured on current main.
+The new publisher validates the tested dependency-only patch, creates or reuses its deterministic separate branch, verifies the signed commit and exact parent, and opens or reuses the matching PR. It applies `type:dependencies`, `area:devops` and `risk:high`, then requests native auto-merge. The App token starts normal PR CI without the extra workflow approval associated with a `GITHUB_TOKEN`-created PR. Native auto-merge still waits for independent review and every required check. If GitHub already reports the PR clean and ready, the publisher may use the regular PR merge endpoint with the exact expected head SHA; all native protections still apply. It cannot change `main` directly or substitute a pre-merge main workflow dispatch for PR checks.
 
-Before later activation: coordinate the existing App setup, verify its actual repository scope and short-lived token, execute the protected signing/promotion test, adopt the App workflow and precise App exception together, and only then activate and read back the additional rules. Maintainer/Admin `always` remains in place. No App, private key or paid feature was newly registered for this CI task.
+While another open same-repository `codex/daily-maintenance-*` PR carries the maintenance marker, the publisher refuses to open a second update PR and reports `maintenance_existing_pr_requires_resolution`. It does not rewrite or close reviewed or human-edited PRs. If main has advanced and the existing PR is outdated, a maintainer closes it; the next daily scan retests and regenerates the candidate against actual current main. Strict up-to-date CI prevents an old-base merge.
 
-Effective main rules and repository roles were read through REST/GraphQL; the existing token could not list organisation-wide rules. This configuration does not claim to change other repositories or the organisation.
+After protected delivery, the manual diagnostic can verify the App against real GitHub endpoints without merging a candidate:
 
-References: [rulesets and exceptions](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository), [Rules API](https://docs.github.com/en/rest/repos/rules). Checks and coverage are explained in [CI_QUALITY](CI_QUALITY.md).
+```sh
+gh workflow run daily-maintenance.yml --ref main -f signature_probe_only=true
+```
+
+It creates a signed temporary branch and labelled draft PR, confirms their identity, closes the draft and deletes its branch. It never enables auto-merge or calls the merge endpoint for the diagnostic. Acceptance requires confirmed cleanup and unchanged main; unknown or edited resources remain visible for inspection. Normal PR CI may start for the probe commit, independently of the already required full source acceptance.
+
+The former standard-token direct-main path is rejected by the active rules. Keep that failure closed until the PR workflow is delivered and tested. An unchanged daily scan skips privileged publication entirely. A deliberately absent release does not trigger another main CI run; the former retry-main command and its Actions-write token scope have been removed. Publication requires its own explicit approval under the local-first delivery policy. Do not restore App bypasses to make old promotion code work.
+
+References: [rulesets and exceptions](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository), [Rules API](https://docs.github.com/en/rest/repos/rules), [workflow token events](https://docs.github.com/en/actions/concepts/security/github_token).
 
 ## PR preview packages and deployment records
 
