@@ -2,7 +2,7 @@
  * Shared desktop/mobile shell for navigation, search, notifications and preferences.
  * Loaded capabilities shape visible actions and guidance; the backend authorizes access.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -44,11 +44,15 @@ import "../features/workbench/i18n";
 import "../features/workbench/finance-i18n";
 import { Preferences } from "../components/preferences";
 import { PortalTour } from "../features/help/tour";
+import { OfflineSchedule } from "../features/calendar/offline";
+import { clearOfflineSchedule } from "../features/calendar/offline-store";
+import { useOnline } from "../lib/online";
 export { Preferences } from "../components/preferences";
 /** Render private navigation and the actor-scoped tour; confirm sign-out before clearing private queries. */
 export function Shell() {
   const { t } = useTranslation();
   const { session } = useAuth();
+  const actor = session!.user.id;
   const navigate = useNavigate();
   const client = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
@@ -58,6 +62,16 @@ export function Shell() {
   const profile = useQuery(profileQuery(session!.user.id));
   const permissions = useQuery(permissionsQuery(session!.user.id));
   const roles = useQuery(userRolesQuery(session!.user.id));
+  const online = useOnline();
+  const profileDenied =
+    profile.data?.active === false || (profile.isSuccess && !profile.data);
+  const minimalOffline =
+    !online && !profileDenied && (profile.isPending || profile.isError);
+  // A known inactive/missing profile never falls back to an old snapshot. This
+  // clears only the opt-in schedule; native Auth/session semantics stay intact.
+  useEffect(() => {
+    if (profileDenied) void clearOfflineSchedule().catch(() => {});
+  }, [profileDenied, actor]);
   const teaching =
     roles.data?.some((role) =>
       ["owner", "admin", "lecturer", "senior_lecturer"].includes(role),
@@ -223,7 +237,7 @@ export function Shell() {
             />
           </form>
           <div className="topbar-actions">
-            {profile.data && (
+            {profile.data?.active && !minimalOffline && (
               <NotificationsMenu
                 id={session!.user.id}
                 zone={profile.data.time_zone}
@@ -268,7 +282,21 @@ export function Shell() {
         </header>
         <main id="main" className="main-content" tabIndex={-1}>
           {signoutFailed && <Notice kind="error">{t("error")}</Notice>}
-          {profile.isPending ? (
+          {profileDenied ? (
+            <Notice kind="error">{t("profileMissing")}</Notice>
+          ) : minimalOffline ? (
+            <>
+              <Notice>
+                {t("calendarSubscriptions:offlineProfileUnavailable")}
+              </Notice>
+              <OfflineSchedule
+                key={`offline-shell-${session!.user.id}`}
+                actor={session!.user.id}
+                zone={profile.data?.time_zone ?? "UTC"}
+                minimal
+              />
+            </>
+          ) : profile.isPending ? (
             <Loading />
           ) : profile.isError ? (
             <ErrorState retry={() => void profile.refetch()} />

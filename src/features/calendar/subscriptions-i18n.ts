@@ -24,6 +24,8 @@ const de = {
   rotateHint:
     "Eine Erneuerung macht die bisherige Adresse ungültig. Ersetze die Adresse anschließend auch in deinem Kalenderprogramm.",
   offlineTitle: "Unterrichtsplan offline bereithalten",
+  offlineProfileUnavailable:
+    "Dein aktuelles Profil kann nicht geprüft werden, solange du offline bist. Hier ist ausschließlich die ausdrücklich gespeicherte Unterrichtsvorschau dieses angemeldeten Kontos verfügbar.",
   offlineHelp:
     "Speichere ausdrücklich eine reduzierte Vorschau deiner nächsten30Tage für dieses Konto. Nur bestätigte Unterrichtstitel, Zeiten und Zeitzonen bleiben bis zu siebenTage auf diesem Gerät. Private Termine, Links, Kontakte, Dateien, Honorare und Nachrichten werden nicht gespeichert.",
   offlineRefresh: "Unterrichtsplan für offline speichern",
@@ -64,6 +66,8 @@ const en: Record<keyof typeof de, string> = {
   rotateHint:
     "Renewing invalidates the previous address. Replace the address in your calendar application afterwards.",
   offlineTitle: "Keep your teaching schedule offline",
+  offlineProfileUnavailable:
+    "Your current profile cannot be checked while you are offline. Only this signed-in account's explicitly saved teaching preview is available here.",
   offlineHelp:
     "Explicitly save a reduced preview of your next30days for this account. Only confirmed teaching titles, times and time zones remain on this device for up to seven days. Private events, links, contacts, files, fees and messages are excluded.",
   offlineRefresh: "Save teaching schedule offline",

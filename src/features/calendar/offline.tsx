@@ -19,9 +19,11 @@ import "./subscriptions-i18n";
 export function OfflineSchedule({
   actor,
   zone,
+  minimal = false,
 }: {
   actor: string;
   zone: string;
+  minimal?: boolean;
 }) {
   const { t, i18n } = useTranslation("calendarSubscriptions"),
     online = useOnline();
@@ -67,15 +69,19 @@ export function OfflineSchedule({
   const save = useMutation({ mutationFn: () => refreshOfflineSchedule(actor) }),
     clear = useMutation({ mutationFn: clearOfflineSchedule });
   return (
-    <details className="panel">
+    <details className="panel" open={minimal || undefined}>
       <summary>{t("offlineTitle")}</summary>
       <p>{t("offlineHelp")}</p>
-      <Button
-        disabled={!online || save.isPending || clear.isPending}
-        onClick={() => save.mutate()}
-      >
-        {t("offlineRefresh")}
-      </Button>{" "}
+      {!minimal && (
+        <>
+          <Button
+            disabled={!online || save.isPending || clear.isPending}
+            onClick={() => save.mutate()}
+          >
+            {t("offlineRefresh")}
+          </Button>{" "}
+        </>
+      )}
       <Button
         variant="secondary"
         disabled={clear.isPending}
@@ -97,7 +103,7 @@ export function OfflineSchedule({
             {t("offlineAsOf")}:{" "}
             {dateTime(snapshot.saved_at, i18n.language, zone)} ·{" "}
             {t("offlineExpiry")}:{" "}
-            {dateTime(snapshot.expires_at, i18n.language, zone)}
+            {dateTime(snapshot.expires_at, i18n.language, zone)} · {zone}
           </p>
           {snapshot.items.length ? (
             <ul>
