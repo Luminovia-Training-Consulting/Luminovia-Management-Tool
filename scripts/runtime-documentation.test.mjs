@@ -44,7 +44,6 @@ test("repository documentation links and heading fragments resolve", async () =>
     "CONTRIBUTING.md",
     "SECURITY.md",
     "ROADMAP.md",
-    "CHANGELOG.md",
   ];
   /** Collects delivered Markdown documents recursively for local link validation. */
   async function walk(directory) {
@@ -134,7 +133,6 @@ test("public guidance and current catalogue contain no historical customer ident
     "SECURITY.md",
     "data/course-building-blocks.json",
     "ROADMAP.md",
-    "CHANGELOG.md",
   ];
   async function collect(directory) {
     for (const item of await readdir(directory, { withFileTypes: true })) {

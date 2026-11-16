@@ -6,11 +6,11 @@ This policy applies only to the authorised self-hosted development instance at <
 
 The newer daily request extends this original application-release mechanism. See [daily verified maintenance](../deploy/hostinger/maintenance/README.md) and [complete encrypted recovery](../deploy/hostinger/backups/README.md). Stable npm/Node/JSR and active selfhost images receive independent full-test gates, signed fixed-file promotion and exact-main CI. Full updates now keep public access closed through private health and can restore a validated physical checkpoint before public writes resume; a database rewind after public activation remains forbidden. Transient network retries do not permanently suppress a release. The existing static/controller-only zero-restart path remains.
 
-The new complete backup includes all connectable databases, role passwords and server/TLS/Vault/JWT configuration missing from the older update-only backup. Its age identity stays off-server. Native daily timers coordinate complete backup, official OS packages and necessary reboots under the same host lock. Installation/first-live acceptance is recorded in WORKLOG; source implementation alone is not proof that a timer or purchase is active. Paid Hostinger off-site full-VM backup is separate and awaits its specific approval. The operating rules below describe the current installed controller; explicitly dated acceptance sections retain their historical scope.
+The new complete backup includes all connectable databases, role passwords and server/TLS/Vault/JWT configuration missing from the older update-only backup. Its age identity stays off-server. Native daily timers coordinate complete backup, official OS packages and necessary reboots under the same host lock. Installation/first-live acceptance is recorded in QA_RESULTS; source implementation alone is not proof that a timer or purchase is active. Paid Hostinger off-site full-VM backup is separate and awaits its specific approval. The operating rules below describe the versioned controller contract; the dated acceptance sections record past observations. They do not establish the currently installed commit or live timer state. Inspect the instance read-only before a separately authorised operation.
 
-## Installed acceptance — 15 November 2026 UTC
+## Last recorded installed acceptance — 15 November 2026 UTC
 
-Signed main `bb322746` passed [exact CI43753910114](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43753910114) and immutable release verification. The normal five-minute timer installed it automatically at 20:04:30UTC, including forward migration20261115180559 (18 total). All 10 containers / 9 healthchecks and actual post-install Auth/MFA/mail/recovery/RLS/scanning/50 claims/private-file/WSS checks passed. The preceding11448e4 maintenance release, reviewed M4 transition and real VM physical rollback drill also passed; see [WORKLOG](WORKLOG.md).
+Signed main `bb322746` passed [exact CI43753910114](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43753910114) and immutable release verification. The normal five-minute timer installed it automatically at 20:04:30UTC, including forward migration20261115180559 (18 total). All 10 containers / 9 healthchecks and actual post-install Auth/MFA/mail/recovery/RLS/scanning/50 claims/private-file/WSS checks passed. The preceding11448e4 maintenance release, reviewed M4 transition and real VM physical rollback drill also passed; see [QA evidence](QA_RESULTS.md).
 
 Complete backup 02:00 UTC, GitHub dependency maintenance 02:41 UTC, official OS 03:00 UTC and necessary reboot 03:30 UTC are configured; all server timers are enabled/active. The latest actual complete set restored successfully at 20:13:18UTC:3 databases / 1,990 files, credentials, permissions, all 18 SQL sources and physical configuration/key/document bytes. Running kernel 7.3.0-9 still awaits the scheduled necessary boot into installed 7.3.0-10; post-boot acceptance is not claimed. Recurring paid provider/off-site backup is not activated.
 
@@ -22,11 +22,15 @@ The prepared [release builder](../deploy/hostinger/updates/package.mjs) requires
 
 `cms-release.tar.gz` and `cms-release.json` are **not published as an atomic pair**. A late collision or I/O error can leave an unpaired final archive. That attempt is a failure: stop, inspect the output and artifact ownership, and retry in a fresh owned output directory after resolving the cause. Never blindly remove final files or foreign/unverified files to make a retry pass. An archive alone, an erroring build or a successful unit test is not a valid release pair.
 
+Failure cleanup removes only the builder's private attempt directory. It never unlinks a final output name, because another writer may already have replaced that directory entry.
+
+The focused package suite passes 31 cases, including real competing producers, exact archive hashes, preserved permissions, descriptor failures and late-collision recovery. These results belong to the isolated quality correction, not an installed or published release. See [QA evidence](QA_RESULTS.md) for its source boundary.
+
 This local hardening and its tests authorise no release or deployment. Publication retains its separate authorised manual workflow and exact-current-source gates; no installed update, provider activation or production outcome is inferred.
 
 ## What is updated
 
-The GitHub `Portal checks` workflow runs the complete isolated application verification plus release/updater/proxy checks. An explicitly authorised manual run on `main`, selecting `publish_release=true` and its exact current SHA through `expected_commit`, builds the CMS frontend with the two public repository variables `CMS_SUPABASE_URL` and `CMS_SUPABASE_PUBLISHABLE_KEY`. It packages the frontend, application Edge Functions, complete migration history and reviewed, digest-pinned runtime configuration. No server environment, SSH key, database password or service-role key is sent to GitHub.
+The GitHub `Portal checks` workflow publishes only after an explicitly authorised manual dispatch on `main` with `publish_release=true` and the exact current SHA in `expected_commit`. Pushes, merges, ordinary manual verification and daily-maintenance verification do not publish a CMS release. The dispatch must pass quality/coverage and complete application/native verification before building the CMS frontend with the two public repository variables `CMS_SUPABASE_URL` and `CMS_SUPABASE_PUBLISHABLE_KEY`. It packages the frontend, application Edge Functions, complete migration history and reviewed, digest-pinned runtime configuration. No server environment, SSH key, database password or service-role key is sent to GitHub.
 
 The workflow creates a draft, uploads both `cms-release.tar.gz` and `cms-release.json`, and only then publishes the immutable prerelease tagged `cms-dev-<full source SHA>`. Repository immutable releases are enabled. The VPS downloads public artifacts directly; it does not need a GitHub token or a fresh clone.
 
@@ -62,7 +66,7 @@ The state and journal contain commit IDs and reason codes, not credential values
 
 Initial adoption uses a root-owned private state with `bootstrapApproved: true`, allowing the first real GitHub release to be adopted without inventing a current commit. A successful installation records `currentCommit` and clears that flag. The installed control program updates itself only from the same verified release. Unit/timer or OS policy changes remain a reviewed operator task.
 
-Current operational evidence and the actual first GitHub installation are recorded in [WORKLOG](WORKLOG.md). Development SMTP remains internal Mailpit; 100 GB capacity, recurring encrypted off-site retention and production operations remain separate work.
+Current operational evidence and the actual first GitHub installation are recorded in [QA evidence](QA_RESULTS.md). Development SMTP remains internal Mailpit; 100 GB capacity, recurring encrypted off-site retention and production operations remain separate work.
 
 ## Reviewed initial M3 history exception
 

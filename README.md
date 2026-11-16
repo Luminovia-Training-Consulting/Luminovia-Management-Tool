@@ -1,271 +1,76 @@
 # Luminovia Portal
 
-Public fictional practice and bilingual guidance: [Guided demo and help](docs/GUIDED_DEMO_AND_HELP.md) (`/demo`, `/help`, and the signed-in Portal tour).
+A bilingual German/English management application for Luminovia Training & Consulting. The React/TypeScript PWA connects teaching offers and atomic whole-block claims with courses, calendars, private collaboration, scanned documents and contract/invoice tracking.
 
-A real React/TypeScript Progressive Web App for Luminovia Training & Consulting. The local system connects invitation-only Supabase Auth, administrator MFA, bilingual profiles/evidence, teaching jobs and atomic allocation, calendar, private realtime chat, scanned files, wiki/forum, customers/courses and contract/invoice tracking. Individual client accounts, optional enrolled learners, safe course ratings, profile/invoice labels and server-enforced, privately configured role-specific compensation extend these workflows. Course building blocks become provenance-linked course templates and referenced teaching offers; secure scanned profile pictures and staff comments connect the same application. The M6 source adds taxonomy administration, private availability, audited job lifecycle and explicit lecturer positions, personal dashboard previews, notification preferences/inbox and a reduced administrative audit reader. It is **not the complete production product yet**. See the [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the entire outstanding scope.
+This repository contains the application and its local/self-hosted tooling. The public [Luminovia website](https://luminovia.org/) is a separate brand reference. Development acceptance does not establish production readiness.
 
-The accepted M7/M8 application source adds paginated file/job discovery, private saved views and file organisation, structured chat mentions, quiet hours, versioned announcements, global-calendar administration, purpose-scoped course/offer choices and explicit evidence tied to an exact certificate version. Accepted Main17 `4cc20874` additionally connects [course preparation and learning workspaces](docs/COURSE_LEARNING_WORKSPACE.md), [private tasks and reusable workflows](docs/WORKBENCH.md), [teaching-time records and financial views](docs/TIMESHEETS_FINANCE_CONTROL_CENTER.md), recipient-specific assignment handover, waitlists, personal dashboard controls and a qualification passport. Its [smart-operations scope guide](docs/SMART_OPERATIONS_SPEC.md) distinguishes implemented source from the remaining full product scope.
+## Run locally
 
-Accepted Main24 `99add7de` adds the [Course Readiness Centre](docs/COURSE_READINESS.md), [teaching-delivery evidence](docs/TEACHING_DELIVERY.md), [replacement marketplace](docs/REPLACEMENT_MARKETPLACE.md) and [internal support desk](docs/SUPPORT_DESK.md), including their operational inbox integration. Accepted Main12 `2c7d326` adds connected Board keyboard controls and expanded source-bound API/browser acceptance work. Accepted Main25 `4f7f6c06` adds [private Website-enquiry intake and management](docs/WEBSITE_ENQUIRIES.md), gateway/runtime integration and its source-bound tests. This quality integration preserves **all 69 released main SQL migrations byte-for-byte**, including the unchanged prior 68; the public Website is not activated or connected by source acceptance. Calendar subscriptions and an explicit minimal offline teaching preview, plus opt-in email/Web Push outboxes and workers, are present in the accepted source. Provider activation, installed worker timers and real desktop/mobile delivery require separate operational acceptance. This quality branch's own exact-head system/browser/native/security/package checks govern merge; historical passes below do not replace that gate. The [documentation index](docs/README.md) is the central developer entry point; the [implementation plan](docs/IMPLEMENTATION_PLAN.md) retains the entire outstanding scope.
+Use Linux, the Node version in [.node-version](.node-version), npm, Docker Engine and Docker Compose. Complete acceptance also requires Python 3, util-linux `flock`, and `age`/`age-keygen`. See [prerequisites and troubleshooting](docs/LOCAL_DEVELOPMENT.md) before the first start.
 
-The user's [Universal Master Prompt](docs/UNIVERSAL_MASTER_PROMPT.txt) is preserved verbatim and is the authoritative project specification. On continuation, read [WORKLOG](docs/WORKLOG.md) first, then the plan and [AGENTS.md](AGENTS.md). The public Website repository is a read-only brand reference; it has not been changed.
-
-## Requirements
-
-- Linux (CachyOS locally, Ubuntu in CI), Node.js 26 LTS (tested with 26.13.1), npm, Docker Engine and the Docker Compose plugin supporting [healthcheck `start_interval`](https://docs.docker.com/reference/compose-file/services/#healthcheck) (Compose 2.20.2 or later). Python 3, Linux util-linux `flock` and official `age`/`age-keygen` 1.x (tested 1.3.2) are additionally required by the complete local release/update verification.
-- Loopback ports 5173, 54321, 54322 and 54324 available. Local Docker services require several GB of disk space.
-- Supabase CLI 3.1.0 and Deno 2.9.6 are pinned development dependencies; inspect their `--help` before database/remote operations.
-
-## Start and test the latest GitHub version separately
-
-```bash
-./portal github start   # fetch the latest main commit and start its separate preview
-./portal github test    # verify the latest main commit in a fully isolated environment
-```
-
-Open the preview at **http://127.0.0.1:5373**. The launcher fetches `origin/main` from the fixed project repository into a managed checkout and displays its exact commit ID. Your working files and normal development data on `5173`/`543xx` are preserved. The preview has its own Supabase API on `56321`, PostgreSQL on `56322` and Mailpit on `56324`; its accounts, passwords, MFA and files survive stop/start and permitted forward updates. `./portal github` is shorthand for `start`.
-
-```bash
-./portal github status        # saved commit ID, service status and URLs
-./portal github credentials   # deliberately display the original fictional preview password
-./portal github update        # update while preserving preview data
-./portal github stop          # stop only the preview, preserving its data
-```
-
-`github test` uses a separate test checkout and does not update a running preview. Fetch errors are reported; an old version is never presented as the latest source. Rewritten historical migrations or changes requiring review are stopped before unintended application. Prerequisites, memory needs and the concrete local migration plan are documented in the [GitHub preview guide](docs/GITHUB_LOCAL_PREVIEW.md).
-
-## Start locally with one command
-
-Development and testing run on the local PC by default. Use `./portal check` for
-fast quality, coverage and build feedback while editing, then `./portal test` for
-complete isolated acceptance before delivery. Use `./portal github test` for freshly fetched `main`, and
-`./portal github` for a persistent latest-main preview. These need no GitHub
-deployment or self-hosted Actions runner. Automatic GitHub quality/security
-checks remain; CMS releases and PR deployment records require an explicit manual
-publication action.
-
-```bash
+```sh
+git clone https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool.git
+cd Luminovia-Management-Tool
 ./portal start
 ```
 
-The command installs locked npm dependencies when needed and starts the complete local system: PostgreSQL, Supabase Auth/Storage/Realtime, Edge Functions, malware scanner, Mailpit and React/Vite. It applies new migrations without resetting data. Fictional examples are created only during the first empty initialization.
+Open [the local portal](http://127.0.0.1:5173). The launcher installs locked dependencies when needed and starts PostgreSQL, Supabase Auth/Storage/Realtime, Edge Functions, Mailpit, the scanner and Vite. It preserves existing data. First initialization seeds fictional accounts; use `./portal credentials` to display their original local password. Local authentication emails go to [Mailpit](http://127.0.0.1:54324).
 
-Open <http://127.0.0.1:5173>. Local emails are captured only in [Mailpit](http://127.0.0.1:54324). A fresh empty installation creates eleven fictional lecturers, `lecturer01@example.invalid` through `lecturer11@example.invalid`, plus `admin@example.invalid`, `participant@example.invalid`, `carina@example.invalid` (platform-owner demo) and `client@example.invalid` (client demo). These are separate fictional Auth accounts; real invitees set their own passwords.
-
-```bash
-./portal credentials   # deliberately display the original local test password
-./portal status        # service status and URLs
-./portal stop          # stop while preserving data
-./portal restart       # restart while preserving data
+```sh
+./portal status
+./portal stop          # Stop owned services; retain data
+./portal restart
 ```
 
-Passwords, MFA, profile changes, verifications, suspensions, jobs, calendars and actual Storage files survive stop/start. Normal startup does not reset profiles or passwords. Credentials remain in the protected, ignored `.local/ACCOUNTS.txt`; server keys never enter Git or the browser bundle. Administrators enroll MFA through the real security dialog.
+The development API uses port `54321`. Private runtime state and credentials stay in ignored `.local/`; do not share them in issues or screenshots. A persistent volume is not a backup.
 
-`./portal up` stays attached to the terminal; Ctrl+C stops services without deleting their data. Background startup remains active until `./portal stop`. First startup downloads images and initializes scanner signatures. The scanner has a 4 GB RAM limit; simultaneous development and verification need enough memory for two independent local stacks.
+## Preview the latest main
 
-See [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) for operation, troubleshooting and persistence boundaries. A Docker volume provides persistent local storage, not an external backup.
-
-## Current development and acceptance status
-
-Accepted main `4f7f6c06` supplies Main25's enquiry intake alongside the earlier application, with **69 released SQL migrations** and the previous 68 unchanged. The current local working composition passes **697 frontend cases/91 files**, **358 runtime/maintenance cases**, eight production enquiry Edge-handler Deno cases, full TypeScript/ESLint/actionlint/source-workflow formatting, three-file production Edge lint and the production/PWA build with **89 precache entries**. Whole-source frontend V8 coverage is **66.70% statements / 62.08% branches / 56.69% functions / 68.84% lines**. Both lifecycle/notification APIs separately meet **100% in all four metrics**; their unchanged **65 focused cases** are included in the frontend total. The 358-case run includes the 17 new Deno HTTP cases and real rustls CA:FALSE fixture; the package suite separately passes **31/31 in 10.2 seconds**. The compiler inventory records **200 modules / 48 routes / 56 links / 190 RPCs / one Edge call with zero issues**. These local results do not establish global 100% coverage or complete current application/native acceptance.
-
-Historical `a084859d` Portal run `43895937202`, bound to Main12 base `2c7d326`, passed native compatibility and **158 desktop/mobile browser cases plus four built-PWA cases**. Its system result is not used as a complete pass here, and none of those old-base outcomes verifies this Main25 composition. Fresh exact-head/current-base full system, browser, native retained-data, security and preview-package gates remain required: **all 15 required contexts plus the separate actual browser execution prerequisite**. Remote ancestry must be verified and preserved normally before signed publication and the assigned Ready transition with fresh full verification. Readiness and holds remain coordinator-managed; accepted Main does not yet machine-enforce the hold label. The [work log](docs/WORKLOG.md) records source-bound evidence. Public Website activation, provider/device delivery, controller/App-merge operation, release and production approval remain separate outcomes.
-
-### Historical source-bound checkpoints
-
-**Historical Main12 local checkpoint:** Accepted main `2c7d326` includes Main12's Board keyboard and connected acceptance work, with all 68 released migrations unchanged. The local Main12 quality composition passes **690 frontend cases/90 files**, **341 unique runtime/maintenance cases** (260 runtime + 81 maintenance), full TypeScript/ESLint/actionlint, source/workflow formatting and the production/PWA build with **86 precache entries**. Whole-source frontend V8 coverage is **66.57% statements / 61.98% branches / 56.92% functions / 68.70% lines**, including the new Board module. The **65 focused lifecycle/notification API cases** are included in that frontend total; both unchanged API sources separately meet **100% in all four metrics**. The compiler inventory records **197 modules / 46 routes with zero issues**. The package-concurrency source fix is integrated as signed `5c8444d`, with 31/31 package cases passing in 6.78 seconds and the post-package 341-case runtime/maintenance run passing in 9.18 seconds. These local results do not establish global 100% coverage or complete application/native acceptance.
-
-**Historical b904/remote265 workflow:** Earlier Portal run `43888804218` remains bound to `b9043df` against pre-Main12 base `99add7de`. Its [native compatibility job](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43888804218/job/133375514530) passed retained-data verification, but system/browser were cancelled at 15:10 UTC after remote merge `2659618` changed the PR head. There was no complete green run or verification of this later Main12/package union. The foreign `2659618` workflow fails on undefined test helpers; Root restores the affected files to tested `5c8444d` while preserving ancestry and passing 37 focused union cases. Fresh exact-head/current-base system/browser/native/security/package CI remains required. PR19 stays Draft with native auto-merge disabled and the hold marker until its gates and assigned slot are ready; accepted Main12 does not yet machine-enforce that label. A later assigned Ready transition must start fresh full verification. The PR25 priority and source-bound evidence are recorded in [WORKLOG](docs/WORKLOG.md). Provider activation, physical-device delivery, release and production readiness remain separate outcomes.
-
-**Historical cancelled 62-migration workflow:** The older 62-migration CI at `8541920` passed 144 application browsers, four built-PWA cases, security and the native SQL-worker step. System/native verification was cancelled at 14:28 UTC after external head update `f9fedf9`; the dependent preview failed its cancelled prerequisites. That run is not accepted and does not certify this 68-migration composition. Fresh exact-head/current-base system, browser, native retained-data, security and preview-package gates remain required. After external auto-merge re-enablement at 14:36:20 UTC, Root disabled it again and converted PR19 to Draft at 14:38 UTC; the readback recorded Draft, no auto-merge request and head `f9fedf9`. Draft is the technical guard for PR19, alongside the `merge:hold` coordination marker, until the final source gates and assigned slot are ready. Current accepted Main24 does not yet machine-enforce that label. The signed merged source can be published as Draft; switching to Ready later must start fresh full verification. The PR25 priority/reservation and normal ancestry reconciliation are recorded in [WORKLOG](docs/WORKLOG.md). Source presence does not prove provider activation, physical-device delivery or production readiness.
-
-For prepared quality source `7daaa7b`, the [complete application verification](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43856176156/job/133261500689) passes **529 unit/component tests across 66 files**, **116 desktop/mobile browser cases** and **2 built-PWA cases**. Whole-source frontend V8 coverage is **65.52% statements / 59.99% branches / 56.66% functions / 67.59% lines**. The lifecycle and notification API modules each meet 100% in all four metrics; those are file-specific figures, not global or whole-system coverage.
-
-All 15 required checks passed for that exact source against base `c0622a7`, including the [native compatibility job](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43856176156/job/133280975777) and [PR preview package](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43856176156/job/133286134935). Native verification retained 36→36 migrations, accepted financial records and private runtime data, with checked cleanup. This documentation descendant and future combined Main revisions still need their own applicable exact-head gates and permitted merge. These results do not establish a production release, default-branch controller execution or native App merge. Current delivery reservations and dated review-policy readbacks are recorded in [WORKLOG](docs/WORKLOG.md) and the [implementation plan](docs/IMPLEMENTATION_PLAN.md).
-
-**Historical archive-correction checkpoint:** `c808caa` passed **515 frontend cases / 65 files**, **51 focused file cases**, types/lint/format/compiler checks and the production/PWA build. The preceding accepted publication-control integration passed **100 runtime cases**. A deterministic regression was red before the archive-read fix and green afterwards. Head `0b615a7` correctly failed 111/112 application browsers; it is not reported as accepted. At that checkpoint, integration with main `e88df84`, including the neutral catalogue and its unchanged released 27-migration prefix, still required fresh verification. These figures describe that historical revision, not the prepared quality source above.
-
-**Historical complete 32-migration result:** exact [CI43794921492](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43794921492) and local source `9c42730` failed acceptance. All 316 SQL cases, 26 actual business API suites, 46 Edge tests and real restart persistence passed; business browsers finished **92 passed / 2 failed out of 94**. Both global-calendar journeys lost the open detail after DE→EN. Build/PWA and native selfhost acceptance were not reached. Earlier failed runs remain in [WORKLOG](docs/WORKLOG.md).
-
-Signed correction `bf09f19` preserves details for identical visible ranges. Its regression failed before the fix, then all 12 Calendar component cases, TypeScript, focused lint and formatting passed. The App/Shell merge passed another 78 focused tests across nine files. Accepted [PR16](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/16), main `e75f55d`, adds the public guided demo/help and authenticated tour; its independent acceptance does not certify the combined M7/M8 source.
-
-**Historical functional preflight passed 372/372 tests across 57 files**, with all configured V8 coverage floors satisfied: statements 57.65%, branches 52.32%, functions 49.11%, lines 59.46%. That checkpoint's compiler inventory found 135 reachable modules and 34 routes without connectivity/export errors. Browser collection discovers 106 business cases plus two built-PWA cases; collection is not execution or a pass. A fresh full isolated and exact-source CI acceptance of the corrected integration remains pending. The historical 342-test/128-module/32-route snapshots below are revision-specific, not the measured counts of this integration.
-
-**M6 passed complete local and exact-commit CI acceptance before merging.** [PR #8](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/8) merged as `dc8e9a7` after actual Auth/MFA, Storage, permission, concurrency, browser, PWA and stop/start persistence checks. The subsequent reproduced theme-contrast fix passed both exact CI gates before [PR #9](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/9) merged as `9c2103b`. Application acceptance and the separate retained-data selfhost-image verification are recorded; they do not establish complete production readiness.
-
-Separately, the incoming Main checkpoint `1341b16` passed [all nine CI jobs](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43788369925): 197 unit/component tests, 234 SQL cases, 18 actual business API suites, 72 desktop/mobile browser cases, persistence, built-PWA and real selfhost compatibility. These historical results do not verify the later M7/M8 integration.
-
-**The pre-merge M7/M8 source with the file-dialog correction passed preflight; complete native 32-migration acceptance and exact CI for the integrated source remain pending.** At `1adc134`, 316 Vitest cases passed in 53 files. The compiler inventory found 128 reachable modules and 32 routes without graph errors; an actual replay of 32 migrations inventoried 155 public RPCs. These counts belong to that source revision and do not automatically apply after integration with Main. Focused database/Edge checks are recorded in the feature guides. They do not replace a complete Auth, Storage, scanner, browser and retained-data run. Authored API/browser cases count as passed only after actual execution. [QA_RESULTS](docs/QA_RESULTS.md) and [WORKLOG](docs/WORKLOG.md) hold the actual evidence.
-
-Connected features and their limits are documented in [Files](docs/FILES.md), [job discovery and saved views](docs/JOB_DISCOVERY.md), [chat and mentions](docs/CHAT.md), [notifications and quiet hours](docs/NOTIFICATIONS.md) and [announcements](docs/ANNOUNCEMENTS.md). M8 adds [purpose-scoped offer/course choices](docs/JOB_PICKERS.md), [global calendar publications](docs/CALENDAR.md) and [qualification evidence and history](docs/QUALIFICATIONS.md). Remaining product scope and acceptance work stay in the complete plan.
-
-The contribution guides merged in [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the independent GitHub preview launcher in [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). The catalogue contains 36 managed labels alongside nine preserved GitHub defaults. Public contribution guidance, issue forms and pull request instructions use English. The later live readback confirms the review layer active after its 16 November 2026 13:38 UTC update, with the sole personal PR-only exception for `CarinaSchoppe` (GitHub user 29256704). All 15 strict checks and the history/signature layer retain no bypass actors; Maintain/Admin roles and the maintenance App have no review exception. Root made no repository-setting change. The earlier disabled-layer notes are dated history; the current checkpoint is recorded in [WORKLOG](docs/WORKLOG.md), alongside the [GitHub administration guide](docs/GITHUB_WORKFLOW.md).
-
-## Implemented routes
-
-| Route                                 | Function                                                                                                                                                                                      |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/demo`, `/demo/*`                    | Public, explicitly fictional25-module guided practice; in-memory exercises never perform real business mutations.                                                                             |
-| `/help`                               | Public bilingual searchable workflows, module deep links and practical recovery guidance.                                                                                                     |
-| `/login`                              | Real email/password sign-in and password recovery; no public signup.                                                                                                                          |
-| `/auth/callback`                      | Explicit one-time invitation acceptance; PKCE recovery callback.                                                                                                                              |
-| `/auth/password`                      | Set a password after an authenticated invite/recovery.                                                                                                                                        |
-| `/`                                   | Personal job suggestions, calendar/chat/notification/file previews, own contract receipts and capability-scoped management follow-ups.                                                        |
-| `/jobs`, `/jobs/:id`                  | Server-paged search/sorting, own saved views, exact detail, localised sessions/fees, terms acceptance and atomic allocation.                                                                  |
-| `/calendar`                           | Private appointments, confirmed assignments, visible-window global-event pages and explicit MFA-protected draft/publication/archive.                                                          |
-| `/profile`                            | DE/EN biography, contact/timezone, expertise, private CV/certificate uploads and consent to share one exact certificate version per topic.                                                    |
-| `/chats`                              | Private DMs, staff/group/course rooms; realtime, structured mentions, scanned files and purpose-scoped participant-course choices.                                                            |
-| `/files`                              | Server-paged search, own tags/folders; scanning, authorised exact-file dialogs/downloads, history, replace/archive and scoped offer choice.                                                   |
-| `/wiki`, `/forum`                     | Safe rich text/code, drafts/publication/revisions; threads, replies, accepted answers, subscriptions and moderation.                                                                          |
-| `/clients`                            | MFA/capability-protected customer records, private contacts/notes, tags and archive.                                                                                                          |
-| `/courses`                            | Reusable templates, actual runs/sessions, safe duplication and explicit publication.                                                                                                          |
-| `/learning`, `/courses/:id/workspace` | Current enrolled/assigned course resources, shared preparation, selected contact, exact material receipts, attendance, Q&A, own notebook, feedback, quizzes and protected completion records. |
-| `/workbench`                          | Own tasks, permission-scoped shared operations, versioned workflow templates, private favourites and explainable offer recommendations.                                                       |
-| `/timesheets`                         | Own actual teaching-time drafts, confirmed submission and permission/MFA-scoped review/history; accepted compensation stays unchanged.                                                        |
-| `/control-center`                     | Current-capability-scoped operational and financial projections with source links; no automatic business confirmation.                                                                        |
-| `/readiness`, `/readiness/:id`        | Permission-scoped course preparation, requirements, authorised resources, instructions and readiness projections.                                                                             |
-| `/delivery`                           | Versioned teaching-delivery evidence, immutable submissions, authorised review/customer confirmation and existing invoice links.                                                              |
-| `/replacements`                       | Current eligible full-block replacement offers and exact reviewed consent; the original assignment remains confirmed until an atomic handover.                                                |
-| `/support`, `/support/:id`            | Own support requests/replies and capability/MFA-scoped handling, private internal notes and dedicated scanned attachments.                                                                    |
-| `/enquiries`                          | Permission-scoped private Website enquiries, consent records, responsibility/clarification, customer linking and course-planning conversion; public Website activation remains separate.      |
-| `/contracts`                          | Executed PDF versions/hashes, master/addendum chain, private downloads and receipt history. A receipt is not an e-signature.                                                                  |
-| `/finance`                            | Accepted-assignment earnings, scanned invoice PDFs, review, partial/full payments and authorised CSV with separate currencies.                                                                |
-| `/search`                             | Permission-aware jobs, documents, messages, safe wiki/forum results and minimal chat contacts.                                                                                                |
-| `/security`                           | Real Auth TOTP enrollment/challenge; administrative actions require AAL2 at the database.                                                                                                     |
-| `/admin`                              | Atomic course/job creation, publication/archive, lecturer invitations.                                                                                                                        |
-| `/people`, `/people/:id`              | Safe lecturer directory, own labels/expertise, actual upcoming/current/past courses and authorised anonymised ratings.                                                                        |
-| `/my-reviews`                         | Optional learners review actual completed enrolled courses; management enrols and moderates with MFA.                                                                                         |
-| `/client`                             | Own-organisation course requests/full fee, commissioned spend and assigned lecturers.                                                                                                         |
-| `/admin/accounts`                     | Versioned account API-backed role assignment, separate invitations, scoped client memberships and linked profile/status management.                                                           |
-| `/admin/people`                       | Search people, review explicitly shared certificate evidence/history, attest expertise with UTC expiry and suspend/reactivate accounts.                                                       |
-| `/topics`                             | DE/EN topic/tool/programming-language hierarchy, aliases, authorized related templates and MFA-protected versioned CRUD/archive.                                                              |
-| `/availability`                       | Own private available/unavailable windows; explicit reduced sharing with MFA management and transaction-safe assignment conflict checks.                                                      |
-| `/notifications`                      | Own cursor-paged inbox, current-authorized links, read/unread state and explicit due-reminder refresh.                                                                                        |
-| `/announcements`                      | Current audience-authorised DE/EN publications, cursor pages and own revision-specific acknowledgement; up to three shell banners.                                                            |
-| `/settings`                           | Own versioned notification preferences and timezone-aware in-app quiet hours; inbox and critical receipts remain available.                                                                   |
-| `/admin/audit`                        | MFA/current `audit.read` capability, bounded metadata search/filter/cursor pages and an exact reviewed action allowlist.                                                                      |
-| `/admin/announcements`                | Current capability/MFA, immutable revisions, separate drafts, publish/archive/recover and bounded search; no background scheduler.                                                            |
-
-New standalone administrative offers support 1–20 explicitly priced lecturer positions. Each position covers the whole offered block; existing, client-originated and course-originated offers retain their original single-position budget. Every session is reserved in one PostgreSQL transaction. Qualification validity, executed-contract prerequisites, remaining capacity, job/deadline/terms status and private calendar/unavailable-window/confirmed-assignment conflicts are checked server-side. Accepted rates/currency/terms remain immutable snapshots. Requests are idempotent and competing jobs for the same lecturer are serialised. Future uninvoiced assignments can be cancelled as a whole block, preserving history; an audited explicit reopening permits a replacement to claim. Started or invoiced work requires separate review. The management Kanban cannot drag a lecturer into confirmation. See [JOB_LIFECYCLE](docs/JOB_LIFECYCLE.md).
-
-Admins gain no access to others' private appointments, availability notes, DMs or contract documents through these additions. Shared availability is explicitly opt-in; the audit view excludes private action families and all detail payloads. Explicit refresh remains available for contract/session reminders. The separate [email](docs/NOTIFICATION_MAIL_OPERATIONS.md) and [Web Push](docs/WEB_PUSH.md) workers require reviewed private configuration and activation; their source does not establish an operating background service or successful real delivery.
-
-Downloading another lecturer's qualification evidence requires current `qualifications.verify` and MFA plus an active explicit evidence binding to one certificate version. It grants no general CV, contract or certificate-library access; the separate existing `users.manage`/MFA CV permission and manual qualification attestation remain. Course/offer pickers return purpose-authorised metadata, not additional financial or job-detail rights. The administrative Kanban still shows the newest **500** offers with an explicit limit notice; it is separate from paginated marketplace discovery. Global-event management is bounded to the visible calendar window. See the [permission architecture](docs/ARCHITECTURE.md) and individual feature guides for exact limits.
-
-The authenticated **Portal tour** explains only destinations available to the current account and navigates after explicit choice. Pause/resume/restart stores only validated per-account step/status in browser session storage; it grants no permissions and confirms no business actions. [Guided demo, tour and help boundaries](docs/GUIDED_DEMO_AND_HELP.md).
-
-German/English and light/dark/system preferences persist locally. Ordinary server-query data stay in memory and the service worker precaches static application assets. The separate [calendar offline preview](docs/CALENDAR_CONNECTIONS.md) saves only an explicitly requested minimal own teaching snapshot, with visible expiry and account/logout clearing; it may be stale and never confirms an assignment. The push worker retains only a minimal account/device binding, with no private content or authentication token. Claims, messages, file operations and all other mutations require online server confirmation. The PWA provides an offline shell and explicit connection state; it does not pretend offline actions succeeded.
-
-## GitHub checks and coverage
-
-Separate Build, Typecheck, Lint, Formatting, Code quality and Tests and coverage tasks complement the existing real SQL/API/browser/selfhost checks. Run `npm run test:coverage` for full-source frontend V8 reports and regression thresholds. Coverage reports measure the included frontend source; they do not establish universal bug freedom or 100% whole-system coverage. [CI_QUALITY](docs/CI_QUALITY.md) records check and coverage evidence, while [GITHUB_WORKFLOW](docs/GITHUB_WORKFLOW.md#rules-for-main) owns the current strict rule policy.
-
-## Stack and layout
-
-React + TypeScript + Vite, Tailwind v4, shadcn-style Radix/CVA primitives, Lucide, React Router, TanStack Query, React Hook Form/Zod, i18next and FullCalendar/Luxon. Supabase PostgreSQL/Auth/Edge Functions are the backend; no extra application server. Tiptap/lowlight provide safe wiki/forum editing; private Supabase Storage and an internal ClamAV service process uploads. Advanced administration and remaining product scope are recorded in the plan.
-
-- `src/features/`: functional areas; `src/components/ui/`: reusable primitives; `src/lib/`: shared API/types/localisation/time handling.
-- `supabase/migrations/`: relational schema, RLS, capability checks, locked claim/admin routines and audit.
-- `supabase/functions/`: bounded audited invitations and authenticated document upload/download with actual ClamAV scanning.
-- `supabase/templates/invite.html`: bilingual token-hash invitation template compatible with PKCE clients.
-- `scripts/local-*`: isolated fictional setup and real HTTP checks; `scripts/db-*`: real PostgreSQL adversarial/concurrency tests.
-- `tests/e2e/`: real Auth/API browser flows, accessibility and built-PWA tests.
-
-Dependencies are exact-pinned with `package-lock.json`. All FullCalendar packages use matching version 6.1.22. Security overrides pin patched `glob` and `minimatch`; see [security checklist](docs/SECURITY_PRIVACY_CHECKLIST.md) for remaining build-tool advisories. Use `npm ci`, not an unreviewed blanket `audit fix --force`.
-
-## Run complete verification with one command
-
-For fast edit feedback, run `./portal check` first. It runs local quality,
-coverage and a synthetic-config production build without starting Docker
-services or publishing a package. Complete business acceptance still uses:
-
-```bash
-./portal test
+```sh
+./portal github        # Fetch exact latest main into a separate persistent preview
+./portal github status
+./portal github stop
 ```
 
-The command uses a sanitized temporary checkout, a random independent Supabase project and separate ports/volumes. It preserves normal development data and accounts. Checks cover source, types, formatting, dependencies, Edge Functions, actual SQL/RLS/concurrency, HTTP/invitation/Mailpit workflows, desktop/mobile browsers and the built offline PWA. A real stop/start check compares passwords, MFA, profile, private event and actual Storage object bytes.
+Open [the separate preview](http://127.0.0.1:5373); its API uses `56321`. It preserves its own accounts and files and leaves normal development data alone. `./portal github test` checks freshly fetched main in a separate QA checkout. Fetch failures and migrations requiring review stop explicitly. See [preview ownership and updates](docs/GITHUB_LOCAL_PREVIEW.md).
 
-Reports and protected failure artifacts stay under `.local/tests/<run>/`. Only the isolated test stack is removed afterwards. Individual npm/SQL/API checks remain available for focused debugging; run mutating integration checks inside the isolated environment. New scripts must respect the URL/container variables documented in [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md).
+## What the application covers
 
-Executed results and limits are recorded in [QA_RESULTS](docs/QA_RESULTS.md) and [WORKLOG](docs/WORKLOG.md). Local browser/PWA checks do not establish physical iOS/Safari installation or acceptance on a later host. CMS development packages require an authorised manual `Portal checks` run on `main`, `publish_release=true`, the exact current `main` SHA in `expected_commit` and all existing verification gates. Ordinary pushes, merges and manual verification runs do not publish a release.
+| Workflow                                                                           | Guide                                                                                                                                                                                            |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Teaching offers, filters, saved views, confirmed claims, cancellation and handover | [Jobs](docs/JOB_DISCOVERY.md), [lifecycle](docs/JOB_LIFECYCLE.md), [handover](docs/ASSIGNMENT_HANDOVER.md)                                                                                       |
+| Templates, customer runs, learning resources, readiness and teaching delivery      | [Courses](docs/COURSE_BUILDING_BLOCKS.md), [workspace](docs/COURSE_LEARNING_WORKSPACE.md), [readiness](docs/COURSE_READINESS.md), [delivery](docs/TEACHING_DELIVERY.md)                          |
+| Personal/global calendar, availability, ICS and read-only connections              | [Calendar](docs/CALENDAR.md), [availability](docs/AVAILABILITY.md), [connections](docs/CALENDAR_CONNECTIONS.md)                                                                                  |
+| Private chat, scanned files, wiki/forum and scoped search                          | [Chat](docs/CHAT.md), [files](docs/FILES.md), [knowledge](docs/KNOWLEDGE_SECURITY.md)                                                                                                            |
+| Accounts, qualifications, private compensation, contracts and finance              | [Accounts API](docs/API_REFERENCE.md), [qualifications](docs/QUALIFICATIONS.md), [pricing](docs/DELEGATED_ROLES_PRICING.md), [commercial boundaries](docs/COMMERCIAL_SECURITY.md)                |
+| Dashboard, inbox, preferences, announcements and operational tools                 | [Dashboard](docs/PERSONAL_DASHBOARD.md), [notifications](docs/NOTIFICATIONS.md), [support](docs/SUPPORT_DESK.md), [private enquiries](docs/WEBSITE_ENQUIRIES.md), [workbench](docs/WORKBENCH.md) |
 
-## Staging and production
+Public `/demo` offers fictional in-memory practice; `/help` provides searchable bilingual guidance. Signed-in users have a separate welcome guide and permission-aware tour. Demo actions do not create business records. Start with the [user guide](docs/USER_GUIDE.md) or [complete documentation index](docs/README.md).
 
-The actual **self-hosted development instance** runs at **https://cms.luminovia.org** on the existing Hostinger **KVM 1**. The frontend, Supabase Database/Auth/Storage/Realtime/Edge and ClamAV share this VPS. The user explicitly declined a capacity upgrade; approximately 100 GB of documents is a future target. Current quotas are 10 GiB total and 1 GiB per owner. Test emails are captured in internal Mailpit. See [setup, private configuration, verification and operation](docs/HOSTINGER_DEVELOPMENT.md).
+PostgreSQL permissions and current resource membership are authoritative. Claims require online confirmation of all sessions, and accepted terms and compensation remain immutable. Private DMs, calendars and contracts have no blanket administrator read bypass. Files pass quarantine/scanning before authorized exact-version access. The browser receives only the public Supabase configuration, never service credentials.
 
-The existing VPS updater checks every five minutes for successfully tested immutable GitHub releases from `main`; its timer has not been changed by the local-first workflow. New releases are now published only by explicit manual request, so normal merges no longer supply it with automatic updates. [Automatic development updates](docs/HOSTINGER_AUTOMATIC_UPDATES.md) cover backups, migrations, runtime configuration and atomic frontend promotion; server credentials remain on the VPS. Major or risky database changes require reviewed maintenance. Ubuntu security updates are enabled automatically.
+## Develop and verify
 
-The VPS uses the pinned PostgreSQL 17.12 image. After its controlled patch, all eight CMS API groups passed again, including 50 concurrent claims with one complete winner, the unchanged private file with the saved password, and actual WSS delivery/revocation. An off-server database-plus-file backup was restored in isolation using both the original image and the reviewed 17.12 candidate. The [verified pins and actual results](deploy/hostinger/selfhost/postgres-upgrade-provenance.json) are recorded.
-
-Caddy mounts the stable `/opt/luminovia-portal/www` directory: `current` points to the active frontend release, while shared immutable assets remain available to existing clients. Data and secret configuration stay outside this web directory.
-
-The following managed-backend notes describe an earlier deployment option, not the current self-hosted instance. Production approval with real users/SMTP, larger capacity and recurring off-site retention remains separate. The public marketing site has not been changed.
-
-Use separate approved staging and production Supabase projects. Frontend build variables are `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` only. Never use server secret/service-role credentials in a `VITE_` variable. Disable signup, configure exact callback URLs, install the custom invitation template, configure approved SMTP, bootstrap the first admin through a controlled server process and require MFA. See [DEPLOYMENT_RUNBOOK](docs/DEPLOYMENT_RUNBOOK.md) for migration, invitation reconciliation, hosting headers, backups of **database plus Storage objects**, restore/rollback and release gates.
-
-`public/.htaccess` is an undeployed Apache/LiteSpeed reference template; the current VPS serves the portal through Caddy. Test its SPA rewrite, no-referrer/CSP/security/cache headers on the actual target host and adapt `connect-src` for an approved custom Supabase domain. Redact authentication query strings in hosting/access logs. A local Vite preview does not exercise Apache headers.
-
-Stop managed local services with `./portal stop`; database and actual Storage files are retained. Do not use `--no-backup` for development data.
-
-## Documentation
-
-[Agent working guide](AGENTS.md) · [SQL migration reading guide](docs/MIGRATION_GUIDE.md). Maintain the comprehensive English source comments with their actual contracts and preserve released migration bytes.
-
-[Central developer documentation index](docs/README.md) — reading order, architecture, feature guides, APIs, test evidence, security and operations. The [user guide](docs/USER_GUIDE.md) explains connected account workflows.
-
-[Roadmap](ROADMAP.md) · [Changelog](CHANGELOG.md) · [Decision notes](docs/decisions/README.md) · [Guided demo, help and tour](docs/GUIDED_DEMO_AND_HELP.md)
-
-[Developer guide](docs/DEVELOPER_GUIDE.md) · [Architecture](docs/ARCHITECTURE.md) · [ERD](docs/ERD.md) · [Generated API reference](docs/API_REFERENCE.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [Product scope](docs/PRODUCT_SPEC.md) · [Brand](docs/BRAND_DESIGN_SYSTEM.md)
-
-[Files](docs/FILES.md) · [Job discovery](docs/JOB_DISCOVERY.md) · [Job lifecycle/capacity](docs/JOB_LIFECYCLE.md) · [Job/course pickers](docs/JOB_PICKERS.md) · [Calendar](docs/CALENDAR.md) · [Qualifications](docs/QUALIFICATIONS.md)
-
-[Chat](docs/CHAT.md) · [Notifications/quiet hours](docs/NOTIFICATIONS.md) · [Announcements](docs/ANNOUNCEMENTS.md) · [Dashboard](docs/DASHBOARD.md) · [GitHub preview](docs/GITHUB_LOCAL_PREVIEW.md)
-
-[Smart-operations scope and limits](docs/SMART_OPERATIONS_SPEC.md) · [Course learning workspace](docs/COURSE_LEARNING_WORKSPACE.md) · [Workbench](docs/WORKBENCH.md) · [Timesheets and Control Center](docs/TIMESHEETS_FINANCE_CONTROL_CENTER.md)
-
-[Personal teaching day](docs/PERSONAL_DASHBOARD.md) · [Assignment handover](docs/ASSIGNMENT_HANDOVER.md) · [Qualification passport](docs/QUALIFICATION_PASSPORT.md) · [Calendar connections/offline preview](docs/CALENDAR_CONNECTIONS.md) · [Email operations](docs/NOTIFICATION_MAIL_OPERATIONS.md) · [Web Push](docs/WEB_PUSH.md)
-
-[Course templates](docs/COURSE_BUILDING_BLOCKS.md) · [Profile pictures](docs/PROFILE_AVATARS.md) · [Comments](docs/RESOURCE_COMMENTS.md) · [Taxonomy](docs/TAXONOMY.md) · [Availability](docs/AVAILABILITY.md) · [Administration audit](docs/ADMIN_AUDIT.md) · [User guide](docs/USER_GUIDE.md)
-
-[System audit](docs/SYSTEM_AUDIT.md) · [Functional audit](docs/FUNCTIONAL_CODE_AUDIT.md) · [Security review](docs/BACKEND_SECURITY_REVIEW.md) · [Test plan](docs/TEST_PLAN.md) · [Executed QA results](docs/QA_RESULTS.md)
-
-[CI quality and coverage](docs/CI_QUALITY.md) · [Code scanning baseline review](docs/CODE_SCANNING_TRIAGE.md) · [GitHub rules and maintenance App](docs/GITHUB_WORKFLOW.md)
-
-[Personal welcome guide](docs/WELCOME_GUIDE.md) · [Checked local PR preview packages](docs/PR_PREVIEWS.md).
-
-## Contributing on GitHub
-
-[CONTRIBUTING](CONTRIBUTING.md) explains setup, branches, tests and the path to merge. The [issue guide](docs/ISSUE_GUIDE.md) covers bugs, questions and proposals; the [pull request guide](docs/PULL_REQUEST_GUIDE.md) explains required labels, review and CI. The shared catalogue contains 36 managed labels; every PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. The later live readback confirms the review rule active after its 16 November 2026 13:38 UTC update, with only CarinaSchoppe's personal PR-only review exception; no maintainer/admin role or App exception exists. Required CI and signatures have no bypass. [WORKLOG](docs/WORKLOG.md) records the latest operating checkpoint; the [GitHub administration guide](docs/GITHUB_WORKFLOW.md) retains policy history, auto-merge and the maintenance App permission boundary. Use English for issues, pull requests and community documentation; product UI strings remain German/English. Report vulnerabilities through the private route in [SECURITY](SECURITY.md).
-
-The prepared [native automatic-merge controller](docs/AUTO_MERGE.md) integrates accepted Main25; its three-phase execution-evidence guards are implemented locally, while its own exact-source CI, merge and successful default-branch execution are still required. It requires independent current-head review and native `clean` mergeability for every candidate, including Carina-authored, maintainer/admin and App-authored PRs. It uses native PR merging with an expected head SHA, never a main-ref or force update, and makes no exact-test-merge-SHA guarantee. The read-only metadata proof is not a completed automatic merge or application acceptance. The prepared controller refuses Drafts and `merge:hold`; current accepted Main25 does not yet machine-enforce that label, so Draft guards PR19 during coordination.
-
-The [contributor list](CONTRIBUTORS.md) records verified attribution and links to the current GitHub contributor graph. Source comments explain permission, transaction and recovery contracts; the complete A–N product scope remains in the plan. Merging and verification do not themselves authorise release publication, installation or production work; follow their separate owning controls.
-
-Repository license: GNU GPLv3; the authentic Space Grotesk font retains its included OFL notice. Brand assets remain Luminovia assets.
-
-## Verified M6 checkpoint
-
-[PR #8](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/8) merged after the complete application and native retained-data CI passed: 177 source tests, 234 PostgreSQL cases, 18 actual business API suites, 70 desktop/mobile workflows and two built-PWA checks. [Exact evidence, screenshots and remaining acceptance boundaries](docs/QA_RESULTS.md).
-
-## Account and revenue APIs
-
-[Current delegated roles and private pricing](docs/DELEGATED_ROLES_PRICING.md) · [Foundational account/revenue specification](docs/ACCOUNTS_REVENUE_SPEC.md) · [Generated platform API reference](docs/API_REFERENCE.md) · [Server audit](docs/ACCOUNTS_PLATFORM_AUDIT.md). The source reference inventories public RPCs from an actual disposable migration replay; an inventory proves the interface exists, not that every branch has passed native end-to-end acceptance.
-
-New role-priced offers require a confidential compensation policy configured by authorised Administration with current MFA. The server captures the policy for each offer and returns only the current actor's permitted quote; later policy changes do not rewrite accepted amounts. Public source provides no business-percentage default. Customer total and platform amounts remain in private tables and never appear in lecturer job/claim/invoice responses. Legacy accepted net fees stay unchanged, and unknown historical customer totals remain unknown. Income/payment status is tracking data; no bank transfer or tax calculation is initiated.
-
-The account facade `/functions/v1/accounts/v1/` supports own profile, bounded administrative account search, roles, activation, organisation grants and idempotent invitations. Its OpenAPI is `/functions/v1/accounts/openapi.json`; all existing domain features remain accessible through the same JWT's documented Supabase RPCs and document gateway. Administrative actions require current database capabilities and MFA. New fixtures are insert-only and are created automatically only in an empty local bootstrap; existing populated instances are never silently reseeded.
-
-## Course building blocks and developer checks
-
-Course templates are reusable across customers. Create customer organisations in **Customers**, then associate each actual course run with its selected organisation. Invited client accounts receive access through explicit organisation memberships and current server permissions. Public documentation, examples and screenshots use customer-neutral descriptions or clearly fictional organisations; real customer names and records stay out of the repository.
-
-All 24 supplied source PDFs are represented by 22 canonical building blocks and 24 hashed source revisions. LPC3/LPC4 retain both document variants; a source file is never silently dropped or duplicated as another course. The catalogue stores teaching content and exact filename/hash/page/date references, with original source authors and unrelated metadata excluded. Original PDF binaries and local personal paths are not published. New migrations install missing canonical templates without rewriting existing edited templates.
-
-Open **Courses → Course building blocks**, plan an actual run with the selected customer and sessions, then choose **Create teaching offer**. Content and session references come from that run; the form reuses the standard fee/terms editor. The server rejects a changed source preview or duplicate active offer and preserves the accepted agreement. See [COURSE_BUILDING_BLOCKS](docs/COURSE_BUILDING_BLOCKS.md) for original-source verification and safe later editions.
-
-```bash
-node scripts/code-integrity.mjs --exports
-./portal test
+```sh
+npm ci
+./portal check        # Fast quality, coverage and build; no service stack
+./portal test         # Complete isolated local acceptance of this checkout
 ```
 
-The compiler-based inventory detects disconnected frontend modules, genuinely unused runtime exports, unresolved relative imports, invalid literal routes/assets and transitive RPC wrappers. The complete command also checks delivered documentation links, real database/API bindings, Auth/MFA errors, actual desktop/mobile business journeys and the inherited offline updater/release/Caddy/Envoy guards. CI invokes this same command rather than a separate smaller local test subset. The [M4 migration review](docs/REVIEWED_M4_MIGRATIONS.md) describes the hosted operator gate; a merged source release does not assert those migrations are installed. These checks describe executed coverage; the outstanding complete product and hosted/manual gates remain in the plan.
+The complete command uses its own fictional data, credentials, ports and cleanup. Coordinate shared QA ownership; never stop another checkout's services. Unit tests and builds alone do not prove Auth, Storage, concurrency, browser, retained-data or physical-device behavior. [Testing](docs/TEST_PLAN.md), [CI profiles](docs/CI_QUALITY.md), [functional acceptance](docs/FUNCTIONAL_ACCEPTANCE.md) and [recorded QA](docs/QA_RESULTS.md) describe the separate evidence.
+
+The lifecycle and notification client APIs have 100% file-specific coverage gates; whole-source coverage is measured separately. The [native merge controller](docs/AUTO_MERGE.md) binds all required checks, actual system/browser/native execution, current-source security and independent review before its native merge request. It never rewrites the main ref or bypasses repository rules.
+
+For a frontend build, set the public `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` values; [developer setup](docs/DEVELOPER_GUIDE.md) explains configuration. Synthetic values verify compilation only.
+
+The frontend uses React, TypeScript, Vite, Tailwind/shadcn-style primitives, Router, TanStack Query, React Hook Form/Zod and i18next. Supabase supplies Auth, PostgreSQL, Storage, Realtime and Edge Functions; no separate business application server is required. See [architecture](docs/ARCHITECTURE.md), [data model](docs/ERD.md), [API reference](docs/API_REFERENCE.md) and [migration guide](docs/MIGRATION_GUIDE.md).
+
+## Scope, contribution and operation
+
+The [product specification](docs/PRODUCT_SPEC.md), original [master brief](docs/UNIVERSAL_MASTER_PROMPT.txt) and [roadmap](ROADMAP.md) retain the full target and remaining requirements. Feature guides describe source behavior; exact PR checks establish acceptance of a particular revision. This README deliberately carries no rolling test totals or hosted-installation claim.
+
+Read [CONTRIBUTING](CONTRIBUTING.md) before opening an English issue or pull request. The [contributor list](CONTRIBUTORS.md) records verified attribution; the [pull request guide](docs/PULL_REQUEST_GUIDE.md) explains the shared type/area/risk labels and current merge gates. Application UI changes need German and English. Report vulnerabilities through the private channel in [SECURITY](SECURITY.md). Use fictional data and customer-neutral examples throughout.
+
+A merge does not publish a CMS release or hosted PR deployment. Publication requires the explicit manual controls in [the runbook](docs/DEPLOYMENT_RUNBOOK.md) and [CI guide](docs/CI_QUALITY.md). Production, hosting/DNS changes, risky data operations and real-message delivery need their own authorization.
+
+Licensed under [GNU GPLv3](LICENSE); bundled assets retain their notices and [brand provenance](docs/BRAND_DESIGN_SYSTEM.md).

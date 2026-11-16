@@ -119,4 +119,4 @@ scanned upload, paging, course deduplication, DE/EN, dark mode, axe, viewport fi
 and ordinary-account query exclusion. These native API/browser cases have not yet
 run for M8. Existing M7 acceptance does not cover this migration. Record the final
 canonical and retained-data results in [QA_RESULTS](QA_RESULTS.md) and
-[WORKLOG](WORKLOG.md); no production or external delivery is claimed here.
+[QA results](QA_RESULTS.md); no production or external delivery is claimed here.

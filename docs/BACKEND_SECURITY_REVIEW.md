@@ -1,6 +1,6 @@
 # Backend review — integrated local portal
 
-Last updated: 2026-11-15. This records the implemented boundary and observed local checks through migrations `20261115121732`–`20261115132410`, in addition to the M1 foundation. It is not production approval or a legal-compliance claim. The isolated complete `./portal test` run is recorded separately in the work log/QA results; authored browser tests are not counted here as executed.
+Last updated: 2026-11-15. This records the implemented boundary and observed local checks through migrations `20261115121732`–`20261115132410`, in addition to the M1 foundation. It is not production approval or a legal-compliance claim. The isolated complete `./portal test` run is recorded separately in QA results; authored browser tests are not counted here as executed.
 
 ## Authorisation boundary
 
@@ -86,7 +86,7 @@ The SPA keeps PKCE for login and recovery. The custom bilingual invite template 
 ## Verification
 
 - `node scripts/db-rpc-tests.mjs`: 25 passed against a disposable real PostgreSQL database within the local Supabase container. The suite recreates all migration files and uses real PostgreSQL roles/RLS with test `auth.uid()`/`auth.jwt()` stubs. It includes 50 independent concurrent eligible claim transactions (exactly one confirmed and 49 filled), all-or-nothing five-session allocation, notification deduplication, retry behavior, inter-job and appointment races, eligibility and contract coverage, immutable commercial snapshots, privacy, forged writes, role metadata, inactive accounts, MFA and invitation rate limits. This is not an HTTP Auth-token verification test.
-- QA separately passed real local Auth/Data API tests, the real Edge invitation with exactly one Mailpit email, custom token-hash onboarding through a real browser, and PKCE password recovery. See the work log for actual commands and browser results.
+- QA separately passed real local Auth/Data API tests, the real Edge invitation with exactly one Mailpit email, custom token-hash onboarding through a real browser, and PKCE password recovery. See QA results for actual commands and browser results.
 - `npx --no-install supabase db lint --schema public,private --fail-on warning`: no schema errors after fixing an unused SQL variable.
 - `npx --no-install supabase db advisors --type all --level warn --fail-on warn`: no warning/error issues after replacing per-row Auth policy calls with initplan subqueries. Informational advice is not covered by this threshold.
 - `npx --yes deno test supabase/functions/invite-lecturer/handler_test.ts`: seven passed, covering validation, origin/auth/feature gates, reservation ordering, idempotency, rate-limit responses and uncertain failures.
@@ -94,16 +94,16 @@ The SPA keeps PKCE for login and recovery. The custom bilingual invite template 
 
 Integrated backend checks executed locally on 2026-11-15 before the canonical isolated full-stack run:
 
-| Boundary | Actual local evidence |
-| --- | --- |
-| Chat | `chat-db-tests.mjs`: 17 real PostgreSQL checks; `chat-api-check.mjs`: actual Auth/REST and websocket member-delivery/removal/suspension checks passed |
-| Wiki/forum | `knowledge-db-tests.mjs`: 14 real PostgreSQL checks; `knowledge-api-check.mjs`: actual Auth/REST and enrolled/verified TOTP author/publish/moderation checks passed |
-| Contracts/finance | `commercial-db-tests.mjs`: 14 real PostgreSQL checks, including two-manager payment race; `commercial-api-check.mjs`: actual Auth/TOTP, Storage, ClamAV PDF scan, receipt, claim, invoice, partial/full/void tracking and old-version bytes checks passed |
-| Document reservation regressions | `documents-db-tests.mjs`: 8 real disposable PostgreSQL checks passed, including creation/replacement retry identity, exact target rejection, on-behalf permissions, two-manager and self-plus-manager concurrent owner-quota races, direct-write denial and suspended retry denial |
-| Original claim/security regressions | `db-rpc-tests.mjs`: all 25 passed again after the latest-contract/suspension change |
-| Full integrated SQL schema | Final lint and all advisors at warning threshold exited 0 with no findings; targeted ESLint for all six chat/knowledge/commercial test scripts exited 0 |
+| Boundary                            | Actual local evidence                                                                                                                                                                                                                                                              |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chat                                | `chat-db-tests.mjs`: 17 real PostgreSQL checks; `chat-api-check.mjs`: actual Auth/REST and websocket member-delivery/removal/suspension checks passed                                                                                                                              |
+| Wiki/forum                          | `knowledge-db-tests.mjs`: 14 real PostgreSQL checks; `knowledge-api-check.mjs`: actual Auth/REST and enrolled/verified TOTP author/publish/moderation checks passed                                                                                                                |
+| Contracts/finance                   | `commercial-db-tests.mjs`: 14 real PostgreSQL checks, including two-manager payment race; `commercial-api-check.mjs`: actual Auth/TOTP, Storage, ClamAV PDF scan, receipt, claim, invoice, partial/full/void tracking and old-version bytes checks passed                          |
+| Document reservation regressions    | `documents-db-tests.mjs`: 8 real disposable PostgreSQL checks passed, including creation/replacement retry identity, exact target rejection, on-behalf permissions, two-manager and self-plus-manager concurrent owner-quota races, direct-write denial and suspended retry denial |
+| Original claim/security regressions | `db-rpc-tests.mjs`: all 25 passed again after the latest-contract/suspension change                                                                                                                                                                                                |
+| Full integrated SQL schema          | Final lint and all advisors at warning threshold exited 0 with no findings; targeted ESLint for all six chat/knowledge/commercial test scripts exited 0                                                                                                                            |
 
-The disposable SQL harness replays all migration files and uses real PostgreSQL roles/RLS with compatible Auth helper stubs; it does not substitute for issued-token HTTP tests. API checks use genuinely issued local sessions/TOTP and UUID-scoped fictional fixtures, with cleanup that preserves existing development data. Files/customer/course checks and the final integrated browser/accessibility/persistence results are recorded by their owning QA entries in `WORKLOG.md` and the operational feature documents. These statements do not turn unexecuted browser tests into acceptance.
+The disposable SQL harness replays all migration files and uses real PostgreSQL roles/RLS with compatible Auth helper stubs; it does not substitute for issued-token HTTP tests. API checks use genuinely issued local sessions/TOTP and UUID-scoped fictional fixtures, with cleanup that preserves existing development data. Files/customer/course checks and the final integrated browser/accessibility/persistence results are recorded by their owning QA entries in `QA_RESULTS.md` and the operational feature documents. These statements do not turn unexecuted browser tests into acceptance.
 
 ## Remaining acceptance
 
