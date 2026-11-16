@@ -14,6 +14,18 @@ Current user priority: verify real connected user functions and repair missing b
 - [x] Push signed reviewable source as draft PR12, preserving concurrent independent product changes.
 - [ ] Observe complete exact-source CI/native compatibility and reduced artifact, then record final remote acceptance. All6quality/coverage gates, metadata and Security including independently generated CodeQL pass; full CI remains in progress. No production/hosted deployment belongs to this request.
 
+## English community information
+
+The current language request covers public security/contribution documentation, GitHub issue/PR forms and guidance, managed label descriptions and PR metadata feedback. Isolated branch `codex/english-community-guides` preserves concurrent application work and the full product ledger below.
+
+- [x] Translate community entry points and their setup/developer/CI/security guidance into English; preserve commands, actual permission/release boundaries and the authoritative specification.
+- [x] Keep issue form IDs, default labels, required fields and PR label identifiers stable; translate human-visible text and section links.
+- [x] Translate and read back all30managed label descriptions without changing IDs/names/colours/assignments; preserve9default labels.
+- [x] Translate metadata-validation feedback and adapt its two message assertions; all8existing behavior tests pass.
+- [x] Complete integrated formatting, file/link and translated-anchor validation, plus all8metadata behavior tests. Deliver the English surface through the signed repository commit; live publication is verified separately.
+
+New contribution discussions use English. Product UI remains German/English, existing authored content retains its language, and all outstanding product/production requirements remain in the ledger.
+
 ## GitHub quality, coverage and maintainer merge continuation
 
 Current request: visible compilation/type/style/quality/security/coverage tasks, Dependabot and uninterrupted direct Maintainer merges. Work is isolated on `codex/github-quality-checks` from current accepted main9c2103b; no business migration, normal preview, VPS or production mutation belongs to this slice.

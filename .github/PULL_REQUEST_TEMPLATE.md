@@ -1,37 +1,37 @@
-## Problem und Verhalten
+## Problem and resulting behavior
 
-<!-- Welches konkrete Problem löst die Änderung? Beschreibe das resultierende Verhalten; bei Fehlern gern mit einem kurzen Vorher-/Nachher-Beispiel. -->
+<!-- What concrete problem does this change solve? Describe the resulting behavior. For a bug fix, a short before/after example is helpful. -->
 
-## Zugehöriges Issue
+## Related issue
 
-<!-- „Closes #123“ nur verwenden, wenn der PR das Issue vollständig erledigt. Sonst „Related to #123“. Bei einer kleinen eigenständigen Korrektur kurz begründen, warum kein Issue nötig war. -->
+<!-- Use "Closes #123" only if this PR fully resolves the issue. Otherwise use "Related to #123". For a small standalone fix, briefly explain why no issue was needed. -->
 
-## Änderungen
+## Changes
 
-<!-- Nenne die für das Review wesentlichen Änderungen und betroffenen Rollen/Abläufe. -->
+<!-- Describe the changes and affected roles or workflows that matter to a reviewer. -->
 
-## Tatsächlich ausgeführte Prüfungen
+## Checks actually performed
 
-<!-- Befehl, Ergebnis und relevanten Umfang angeben. Nicht ausgeführte oder fehlgeschlagene Prüfungen ausdrücklich nennen. Ein geschriebener Test ist noch kein bestandener Testlauf. -->
+<!-- Include the command, result and relevant scope. Explicitly identify checks that failed or were not run. A written test is not a passed test run. -->
 
-| Prüfung/Befehl | Ergebnis und Umfang |
-| -------------- | ------------------- |
-|                |                     |
+| Check or command | Result and scope |
+| ---------------- | ---------------- |
+|                  |                  |
 
-## Darstellung und besondere Auswirkungen
+## UI and other significant effects
 
-<!-- Nur relevante Punkte ausfüllen; übrige Punkte mit „nicht betroffen“ kennzeichnen oder entfernen.
-- UI: Screenshots mit fiktiven Daten, Desktop/Mobil, DE/EN, Hell/Dunkel und Tastaturbedienung.
-- Datenbank/API: neue Migrationen, Berechtigungen, bestehende Daten und akzeptierte Termine/Honorare.
-- Betrieb: notwendige Konfiguration, Update-/Rollback-Verfahren und verbleibende Risiken.
-Ein gemergter PR ist keine Freigabe für Produktion oder riskante Datenmigrationen.
+<!-- Complete only the relevant points; mark others as "not affected" or remove them.
+- UI: screenshots with fictional data, desktop/mobile, DE/EN, light/dark and keyboard access.
+- Database/API: new migrations, permissions, existing data and accepted sessions/fees.
+- Operations: required configuration, update/rollback procedure and remaining risks.
+A merged PR does not authorize production deployment or risky data migrations.
 -->
 
-## Vor dem Review
+## Before review
 
-- [ ] Ich habe [CONTRIBUTING](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/CONTRIBUTING.md) und den [PR-Leitfaden](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/PULL_REQUEST_GUIDE.md) beachtet.
-- [ ] Die Änderung enthält keine Geheimnisse, privaten Dokumente oder personenbezogenen Testdaten.
-- [ ] Tests und Dokumentation passen zur Änderung; verbleibende Lücken sind oben benannt.
-- [ ] Genau ein `type:*`, genau ein `risk:*` und mindestens ein `area:*` sind gesetzt. Bei einem Fork-PR ohne Labelrechte bitte Maintainer um die Einordnung bitten.
+- [ ] I have followed [CONTRIBUTING](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/CONTRIBUTING.md) and the [pull request guide](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/PULL_REQUEST_GUIDE.md).
+- [ ] This change contains no secrets, private documents or personal test data.
+- [ ] Tests and documentation match the change; remaining gaps are listed above.
+- [ ] Exactly one `type:*`, exactly one `risk:*` and at least one `area:*` label are set. For a fork PR without label access, ask a maintainer to classify it.
 
-<!-- Pflichtprüfungen der CI gelten für alle. Reguläre Beiträge brauchen eine unabhängige Freigabe; CarinaSchoppe hat eine ausdrücklich begrenzte Review-Ausnahme über Pull Requests. -->
+<!-- Maintainers and administrators have an ALWAYS exception for direct merges, including while reviews or checks are pending. Release publication still requires successful CI. Additional review/check enforcement rules remain disabled until the maintenance app's protected update path is verified; see docs/GITHUB_WORKFLOW.md for the current server configuration. -->

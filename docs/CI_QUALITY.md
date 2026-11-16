@@ -1,52 +1,52 @@
-# GitHub-Prüfungen, Sicherheit und Coverage
+# GitHub checks, security and coverage
 
-Die Workflows laufen bei Pull Requests und auf `main`; eine manuelle Ausführung ist ebenfalls möglich. Sie benötigen keine VPS-Zugangsdaten, privaten Supabase-Schlüssel oder Produktionsdaten. Die bestehenden realen Anwendungs-/Datenbank-/API-/Browserprüfungen bleiben erhalten.
+Workflows run for pull requests and `main`; manual execution is also available. They need no VPS credentials, private Supabase keys or production data. Existing real application/database/API/browser checks remain in place.
 
-## Sichtbare Aufgaben
+## Visible checks
 
-| Check                                        | Tatsächliche Prüfung                                                                                                                             |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Build                                        | Produktionskompilierung und PWA-Build mit ausschließlich synthetischer öffentlicher Supabase-Konfiguration. Kein Zugriff auf eine echte Instanz. |
-| Typecheck                                    | TypeScript-Projektprüfung mit `npm run typecheck`.                                                                                               |
-| Lint                                         | ESLint ohne erlaubte Warnungen.                                                                                                                  |
-| Formatting                                   | Bestehende Quellformatierung und GitHub-Konfigurationen.                                                                                         |
-| Code quality                                 | Vorhandene compilerbasierte Prüfung erreichbarer Module, Exporte und Verbindungen.                                                               |
-| Tests and coverage                           | Alle Vitest-Unit-/Komponententests, V8-Coverage und echte Mindestwerte; HTML/LCOV/JSON als herunterladbare Artefakte.                            |
-| verify                                       | `./portal test`: real isolierte SQL/RLS/API/Edge-/Browser-/PWA-, Sicherheits-, Wiederanlauf- und Wartungsprüfungen.                              |
-| Actual isolated selfhost image compatibility | Echte gepinnte Supabase-Images und Datenübernahme aus dem vorherigen Quellstand.                                                                 |
-| PR metadata                                  | Aktuelle PR-Labels und passende Repository-/Commitidentität.                                                                                     |
+| Check                                        | What it verifies                                                                                                             |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Build                                        | Production compilation and PWA build using only synthetic public Supabase configuration. It does not access a real instance. |
+| Typecheck                                    | TypeScript project checks through `npm run typecheck`.                                                                       |
+| Lint                                         | ESLint with no warnings allowed.                                                                                             |
+| Formatting                                   | Existing source formatting and GitHub configuration.                                                                         |
+| Code quality                                 | Existing compiler-based checks for reachable modules, exports and connections.                                               |
+| Tests and coverage                           | All Vitest unit/component tests, V8 coverage and enforced thresholds; downloadable HTML/LCOV/JSON artifacts.                 |
+| verify                                       | `./portal test`: real isolated SQL/RLS/API/Edge/browser/PWA, security, restart and maintenance checks.                       |
+| Actual isolated selfhost image compatibility | Real pinned Supabase images and retained data from the previous source revision.                                             |
+| PR metadata                                  | Current PR labels and matching repository/commit identity.                                                                   |
 
-Der Releasejob benötigt die schnellen Qualitätsgates und beide vollständigen Anwendungs-/Selfhost-Gates. Ein früher Maintainer-Merge kann die Repo-Regeln umgehen, veröffentlicht aber kein fehlgeschlagenes Paket. Die VPS-Automatik prüft weiterhin den erfolgreichen gesamten exakten Main-CI-Lauf.
+The release job requires the fast quality gates and both complete application/selfhost gates. An early maintainer merge may bypass repository rules but does not publish a failed package. VPS automation still verifies that the entire CI run for the exact main commit succeeded.
 
-[CodeQL](../.github/workflows/security.yml) analysiert zusätzlich JavaScript/TypeScript, Python und GitHub Actions bei PRs/Main und montags um 05:23 UTC (15:23 Brisbane). Das ist statische Sicherheitsanalyse, kein Ersatz für tatsächliche RLS-/Auth-/Dateizugriffstests. Erkenntnisse stehen unter GitHubs Security/Code scanning; ein erfolgreich abgeschlossener Scan allein bedeutet nicht, dass keine Warnungen vorliegen. Dieser separate Security-Workflow ist derzeit kein zusätzlicher Release-`needs`-Gate; die Veröffentlichungsbedingungen stehen ausdrücklich im `ci.yml`.
+[CodeQL](../.github/workflows/security.yml) additionally analyses JavaScript/TypeScript, Python and GitHub Actions on PRs/main and on Mondays at 05:23 UTC (15:23 Brisbane). This is static security analysis, not a replacement for real RLS/auth/file-access tests. Findings appear under GitHub Security/Code scanning; a successfully completed scan does not by itself mean there are no warnings. This separate Security workflow is currently not an additional release `needs` gate; publication conditions are explicitly defined in `ci.yml`.
 
-## Coverage ausführen und richtig lesen
+## Running and interpreting coverage
 
 ```bash
 npm ci
 npm run test:coverage
 ```
 
-Der Bericht liegt lokal in `coverage/index.html`, maschinenlesbar in `coverage/coverage-summary.json` und `coverage/lcov.info`. In GitHub Actions steht der Coverage-Bericht beim jeweiligen Lauf unter Artifacts zur Verfügung. `coverage/` ist bewusst nicht versioniert.
+The local HTML report is `coverage/index.html`; machine-readable output is in `coverage/coverage-summary.json` and `coverage/lcov.info`. In GitHub Actions, download the coverage report from the run's Artifacts section. `coverage/` is intentionally not versioned.
 
-Erfasst werden **alle ausführbaren `src`-TS/TSX-Dateien und `scripts/public-config.ts`**, auch nicht importierte Module. Tests, Testsetup und Deklarationen sind ausgeschlossen. Die V8-Abdeckung stammt aus Unit-/Komponententests; SQL, Edge, Python/Node-Wartung und echte Browserabläufe werden nicht zu einer erfundenen Gesamtzahl zusammengerechnet.
+Coverage includes **all executable `src` TS/TSX files and `scripts/public-config.ts`**, including modules not imported by tests. Tests, test setup and declarations are excluded. V8 coverage comes from unit/component tests; SQL, Edge, Python/Node maintenance and real browser workflows are not combined into an invented overall percentage.
 
-Die erste vollständige Messung mit den ergänzten Fällen besteht mit **197 Tests in 46 Dateien**: Statements 47,09 %, Branches 41,61 %, Functions 37,07 %, Lines 48,89 % über 106 erfasste Quelldateien. Die globalen Mindestwerte 46,5/41/36,5/48 begrenzen Rückschritte gegenüber dieser ehrlichen Basis mit kleiner Messreserve. Ungetestete UI-Pfade bleiben sichtbar; eine beliebige 80%-Vorgabe wird nicht durch Ausschluss dieser Dateien hergestellt.
+The first complete measurement with the additional cases passed **197 tests in 46 files**: statements 47.09%, branches 41.61%, functions 37.07%, lines 48.89% across 106 source files. Global thresholds 46.5/41/36.5/48 limit regressions against this measured baseline with a small allowance for variation. Untested UI paths remain visible; files are not excluded to manufacture an arbitrary 80% result.
 
-Kritische Teilbereiche haben strengere Gates: 100 % für Browser-Key-Konfiguration, Zeitzonen-/DST-/Datumslogik und Terminplanung; hohe eigene Statement-/Branch-/Function-/Line-Grenzen für Dateitransfer und sichere Wissensinhalte. Die exakten Werte stehen in [vite.config.ts](../vite.config.ts). Künftige Verbesserungen erhöhen die gemessene Abdeckung; Mindestwerte werden nicht automatisch abgesenkt.
+Critical areas have stricter gates: 100% for browser-key configuration, time-zone/DST/date logic and scheduling; separate high statement/branch/function/line thresholds for file transfer and safe knowledge content. Exact values are in [vite.config.ts](../vite.config.ts). Future improvements should raise measured coverage; thresholds are not automatically lowered.
 
-Neue echte Fälle prüfen unter anderem Uploads erst nach Online-/Auth-Bestätigung, Fortschritt höchstens 95 % vor bestätigtem Clean-Status, Quarantäne/Timeout/Retry-Kontext, versionsgenaue `no-store`-Downloads sowie die Ablehnung geheimer Browser-Schlüssel. Der Testlauf braucht dafür keine echte Benutzer- oder Kundendatei.
+New real cases check uploads only after online/auth confirmation, progress capped at 95% until clean status is confirmed, quarantine/timeouts/retry context, exact-version `no-store` downloads and rejection of secret browser keys. The test run needs no real user or customer file.
 
-## Dependabot und Sicherheitsfunktionen
+## Dependabot and security features
 
-[dependabot.yml](../.github/dependabot.yml) ergänzt Updates für SHA-gepinnte GitHub Actions (montags 04:17 UTC / 14:17 Brisbane) und npm-Sicherheitskorrekturen (tägliche Konfiguration 04:47 UTC / 14:47 Brisbane). Normale npm-/Node-/JSR-/Container-Versionen bleiben beim bestehenden täglichen vollständigen Kandidatenprüfpfad; so arbeiten nicht zwei unkoordinierte Systeme an denselben regulären Updates. Vitest und `@vitest/*` werden dort als gemeinsame exakte Peer-Familie behandelt.
+[dependabot.yml](../.github/dependabot.yml) adds updates for SHA-pinned GitHub Actions (Mondays 04:17 UTC / 14:17 Brisbane) and npm security fixes (daily configuration 04:47 UTC / 14:47 Brisbane). Regular npm/Node/JSR/container versions remain with the existing daily full candidate-verification path, avoiding two uncoordinated systems handling the same regular updates. Vitest and `@vitest/*` are treated there as one family with matching exact peers.
 
-Dependabot-PRs erhalten passende vorhandene Typ-/Bereichs-/Risikolabels und laufen durch dieselben Prüfungen. Es gibt keinen pauschalen Auto-Merge ungeprüfter Abhängigkeiten. Dependabot-Alerts waren bereits aktiv; Security-Update-PRs sowie Secret Scanning und Push Protection sind jetzt auf dem öffentlichen Repository aktiviert und ausgelesen. Der zunächst deaktivierte Dependency Graph wurde auf der Repository-Einstellungsseite aktiviert; die echte Dependency-Review-Wiederholung und der Vergleich der12geänderten Abhängigkeiten bestanden. Es wurde kein kostenpflichtiger Dienst hinzugebucht. Der vollständige npm-Audit meldet weiterhin die vier bereits dokumentierten niedrigen Build-Tool-Befunde in der unveränderten `deepmerge`/Workbox-Kette; der Produktionsaudit ist separat. Dependency review bewertet neu eingeführte Befunde und erklärt diese Altlast nicht für behoben.
+Dependabot PRs receive suitable existing type/area/risk labels and run through the same checks. There is no blanket automatic merge of unverified dependencies. Dependabot alerts were already enabled; security-update PRs, Secret Scanning and Push Protection have now been enabled and read back on the public repository. The initially disabled dependency graph was enabled in repository settings; the real Dependency Review retry and comparison of 12 changed dependencies passed. No paid service was added. Full npm audit still reports the four previously documented low-severity build-tool findings in the unchanged `deepmerge`/Workbox chain; the production audit is separate. Dependency review evaluates newly introduced findings and does not declare this existing debt fixed.
 
-## Maintainer und serverseitige Regeln
+## Maintainers and server-side rules
 
-Maintainer und Administratoren erhalten `always`-Ausnahmen; gewöhnliche Schreibrechte erhalten keinen Bypass. Die aktive Regel hatte diese Rollen bereits. Die beiden zusätzlich vorbereiteten Review-/Checkregeln wurden mit derselben aktuellen Anweisung synchronisiert, bleiben bis zum bewiesenen Wartungs-App-Pfad deaktiviert. Details und tatsächlicher Aktivierungsstand: [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md).
+Maintainers and administrators receive `always` exceptions; ordinary write access does not receive a bypass. The active rule already included these roles. The two additional prepared review/check rules were synchronised with the same current instruction but remain disabled until the maintenance App path is proven. See [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md) for details and actual activation status.
 
-Die Einrichtung wurde in [PR11](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/11) gemergt. Alle sechs neuen Qualitäts-/Coverage-Aufgaben und der korrigierte Sicherheitslauf bestanden am tatsächlichen PR-Stand; der Maintainer-Merge gelang auch während laufender Langtests. Hauptzweigprüfungen laufen anschließend erneut und bleiben die Veröffentlichungsbedingung. Scanner-Job und erzeugter CodeQL-Befundcheck wurden getrennt geprüft; der anfängliche Test-Fixture-Befund wurde durch exakte URL-Origin-Prüfung behoben. Der erste komplette Main-Scan meldet zusätzlich vorhandene Betriebs-/Testskripthinweise. Sie sind in [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md) einzeln eingeordnet; ein erfolgreicher PR-Diffscan bedeutet keinen warnungsfreien Main-Scan.
+The setup was merged through [PR11](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/11). All six new quality/coverage checks and the corrected security run passed on the actual PR revision; the maintainer merge succeeded while the long-running tests were still active. Main checks then run again and remain a publication condition. The scanner job and generated CodeQL findings check were verified separately; the initial test-fixture finding was fixed by checking the exact URL origin. The first complete main scan additionally reports existing operations/test-script findings. They are individually assessed in [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md); a successful PR-diff scan does not imply a main scan without warnings.
 
-Offizielle Grundlagen: [GitHub CodeQL](https://docs.github.com/en/code-security/code-scanning/introduction-to-code-scanning/about-code-scanning-with-codeql), [Dependabot](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependabot-version-updates), [Vitest-Coverage](https://vitest.dev/guide/coverage.html). Exakte ausgeführte Prüfungen und GitHub-Läufe werden im [WORKLOG](WORKLOG.md) dokumentiert.
+Official references: [GitHub CodeQL](https://docs.github.com/en/code-security/code-scanning/introduction-to-code-scanning/about-code-scanning-with-codeql), [Dependabot](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependabot-version-updates), [Vitest coverage](https://vitest.dev/guide/coverage.html). Exact executed checks and GitHub runs are recorded in [WORKLOG](WORKLOG.md).
