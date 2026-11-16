@@ -1,10 +1,10 @@
 # Creating, reviewing and merging pull requests
 
-> Status read back on 16 November 2026 after 02:33 UTC: review and required-check rules are active. Maintainers and administrators may bypass independent review through a PR, but must wait for all nine required checks against the current base. The maintenance App has a separate `always` exception. [Current rule and App delivery status](GITHUB_WORKFLOW.md#activation-still-pending).
+> Status read back on 16 November 2026 after 02:45 UTC: review and required-check rules are active. Maintainers and administrators may bypass independent review through a PR, but must wait for all fourteen required checks against the current base. The maintenance App has a separate `always` exception. [Current rule and App delivery status](GITHUB_WORKFLOW.md#activation-still-pending).
 
 This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
-The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). These historical merges did not themselves activate server-side review rules; the current live activation is described below. The source catalogue [labels.json](../.github/labels.json) now contains 30 managed labels; nine original GitHub labels are also preserved.
+The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). These historical merges did not themselves activate server-side review rules; the current live activation is described below. The source catalogue [labels.json](../.github/labels.json) now contains 36 managed labels; nine original GitHub labels are also preserved.
 
 ## Branch and title
 
@@ -35,7 +35,7 @@ Every pull request needs **exactly one type label**, **at least one area label**
 | `type:security`     | Coordinate a security fix; never use a public PR as the initial vulnerability report |
 | `type:dependencies` | Update reviewed dependencies                                                         |
 
-Choose every area that is materially affected. The original area labels remain available: `area:frontend`, `area:backend`, `area:database`, `area:auth`, `area:files`, `area:finance`, `area:courses`, `area:devops` and `area:github`. Ten additional areas provide more specific classifications:
+Choose every area that is materially affected. The original area labels remain available: `area:frontend`, `area:backend`, `area:database`, `area:auth`, `area:files`, `area:finance`, `area:courses`, `area:devops` and `area:github`. Additional areas provide more specific classifications:
 
 | Area                 | Use                                                     |
 | -------------------- | ------------------------------------------------------- |
@@ -50,7 +50,17 @@ Choose every area that is materially affected. The original area labels remain a
 | `area:docs`          | Guides, API references and operational documentation    |
 | `area:taxonomy`      | Topics, tools, programming languages and hierarchies    |
 
-A documentation change receives `area:docs` and any relevant documented area; general contribution rules also use `area:github`. A test does not need every label used by the whole system. A feature with a migration should include the product and technical areas it actually changes. The 30 managed labels comprise eight types, 19 areas and three risk levels; additional original GitHub labels do not replace a required category.
+The expanded catalogue also includes:
+
+| Area                 | Use                                                        |
+| -------------------- | ---------------------------------------------------------- |
+| `area:api`           | Account/domain APIs, RPC contracts and integration clients |
+| `area:security`      | Authorisation, protected data and security hardening       |
+| `area:accessibility` | Keyboard access, accessible controls and WCAG checks       |
+| `area:design`        | Luminovia branding, layout and visual design               |
+| `area:performance`   | Loading, query budgets, caching and runtime performance    |
+
+A documentation change receives `area:docs` and any relevant documented area; general contribution rules also use `area:github`. A test does not need every label used by the whole system. A feature with a migration should include the product and technical areas it actually changes. The 36 managed labels comprise eight types, 24 areas, three risk levels and the `merge:hold` stop signal; nine original GitHub labels remain available. `merge:hold` records a maintainer review stop. Preserve it until the stated concern is addressed; it grants no permission and does not replace required checks. Additional labels do not replace a required category.
 
 | Risk          | Meaning                                                                                             |
 | ------------- | --------------------------------------------------------------------------------------------------- |
@@ -84,18 +94,24 @@ The active contributor rules require a pull request and at least one approval fr
 
 Maintainers and administrators have a role-based `pull_request` exception on the review rule. They may bypass independent review when merging a PR, including their own PR. This exception does not allow direct pushes to `main` or bypass the separate required-check rule. Ordinary write access alone grants no review exception. GitHub may require an explicit bypass action in the merge dialog.
 
-All nine required checks must pass against the current base:
+All fourteen required checks must pass against the current base:
 
 - `Build`, `Typecheck`, `Lint`, `Formatting` and `Code quality` check compilation, rules, style and actual source connections.
 - `Tests and coverage` runs unit/component tests with complete frontend source coverage reporting and enforced thresholds.
 - `verify` runs the complete real application/SQL/API/browser/PWA/maintenance suites; `Actual isolated selfhost image compatibility` checks real runtime behaviour and retained data.
-- `PR metadata` checks required labels. CodeQL analyses security patterns in a separate workflow; it is not one of these nine required statuses. See [CI_QUALITY](CI_QUALITY.md).
+- `PR metadata` checks required labels.
+- `CodeQL (javascript-typescript)`, `CodeQL (python)` and `CodeQL (actions)` run the separate language-specific security analyses; `Dependency review` rejects newly introduced vulnerable dependencies.
+- The generated `CodeQL` finding check evaluates the uploaded security findings separately from successful scanner execution.
 
-If main changes, update the PR as required and wait for checks against the current base. The history ruleset's Maintainer/Admin `always` exception does not override the separate active review/check rules. The maintenance App, integration `5776881`, has its own `always` exception on those two rules. Server-side activation and that exception do not prove the App workflow is already delivered on main; see the [current rule and App delivery status](GITHUB_WORKFLOW.md#activation-still-pending).
+The first thirteen statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. All fourteen are required for merging. See [CI_QUALITY](CI_QUALITY.md).
+
+If main changes, update the PR as required and wait for checks against the current base. The history/signature ruleset has no bypass actors, including for maintainers, administrators and the maintenance App. The maintenance App, integration `5776881`, has its own `always` exception on the review and required-check rules. Server-side activation and that exception do not prove the App workflow is already delivered on main; see the [current rule and App delivery status](GITHUB_WORKFLOW.md#activation-still-pending).
 
 ## Merge and publication
 
-Maintainers and administrators can merge a PR without an independent approval through their review exception once the nine required checks and current-base requirement are satisfied. Check the description, labels, tests and unresolved conversations first. Pending operational approvals remain separate from repository merge eligibility.
+Maintainers and administrators can merge a PR without an independent approval through their review exception once the fourteen required checks and current-base requirement are satisfied. Check the description, labels, tests and unresolved conversations first. Pending operational approvals remain separate from repository merge eligibility.
+
+The separate Security outcomes are required for PR merge eligibility. Release publication still follows the explicit dependencies in `ci.yml`; the ruleset does not add them as release-job dependencies.
 
 A merge can start the existing development release process. Its immutable `cms-dev-*` packages and hosted migration checks remain separate. Production operation, real data, SMTP, DNS and risky maintenance need the appropriate separate approvals. Claim a hosted installation only when actual operational evidence exists.
 

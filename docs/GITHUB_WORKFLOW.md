@@ -4,17 +4,17 @@ Contributors should start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue gu
 
 ## Rules for `main`
 
-The JSON files in `.github/rulesets/` mirror the actual repository configuration. Committing JSON does not activate a rule: [server rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. **The concurrent activation on 16 November at 02:33 UTC supersedes the earlier disabled-rule and unrestricted-human-bypass snapshots.** This documentation task reads and records the live state; it does not weaken or change server settings.
+The JSON files in `.github/rulesets/` mirror the actual repository configuration. Committing JSON does not activate a rule: [server rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. **The concurrent activation at 02:33 UTC and extension at 02:45 UTC on 16 November supersede the earlier disabled-rule and unrestricted-human-bypass snapshots.** This documentation task reads and records the live state; it does not weaken or change server settings.
 
-| Ruleset                                   | Source                                           | Effective state after activation                                                                                                                                                                        |
-| ----------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Branch Protection, `27315671`             | [history.json](../.github/rulesets/history.json) | Active: signatures, deletion/force-push protection and existing code-quality/deployment rules. The deployment environment list is empty. Maintain/Admin `always` exceptions apply to this ruleset only. |
-| Main pull requests and review, `27329000` | [review.json](../.github/rulesets/review.json)   | Active: PR, one independent approval, last-push approval and resolved conversations. Maintain (role 2)/Admin (role 5) have **PR-only** bypass; maintenance App `5776881` has `always`.                  |
-| Main verified checks, `27329142`          | [checks.json](../.github/rulesets/checks.json)   | Active: all nine required application/native/metadata/build/quality/coverage checks and strict current-base verification. Only App `5776881` has `always`; **no human bypass** is configured.           |
+| Ruleset                                   | Source                                           | Effective state after activation                                                                                                                                                                                   |
+| ----------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Branch Protection, `27315671`             | [history.json](../.github/rulesets/history.json) | Active: signatures, deletion/force-push protection and existing code-quality/deployment rules. The deployment environment list is empty. No bypass actors are configured: signatures/history apply to every actor. |
+| Main pull requests and review, `27329000` | [review.json](../.github/rulesets/review.json)   | Active: PR, one independent approval, last-push approval and resolved conversations. Maintain (role 2)/Admin (role 5) have **PR-only** bypass; maintenance App `5776881` has `always`.                             |
+| Main verified checks, `27329142`          | [checks.json](../.github/rulesets/checks.json)   | Active: all 14 required application/native/metadata/build/quality/coverage/security checks and strict current-base verification. Only App `5776881` has `always`; **no human bypass** is configured.               |
 
-Maintainers and Administrators can merge their own PRs without a separate approving reviewer by using the PR-only review exception, but must wait for every required check on the current source and base. The history exception does not override the review/check rules. Ordinary Write access does not gain either human-role exception. No collaborator or repository role was added by this documentation task.
+Maintainers and Administrators can merge their own PRs without a separate approving reviewer by using the PR-only review exception, but must wait for all 14 required checks on the current source and base. History/signature rules have no bypass actors. Ordinary Write access does not gain either human-role exception. No collaborator or repository role was added by this documentation task.
 
-The development release and automatic VPS installer independently require successful full `ci.yml`. The separate Security workflow is additional analysis; its execution and finding outcome are both inspected during review. [CI quality](CI_QUALITY.md) explains the gates. The earlier PR11 direct merge during running checks proved the former configuration, not a bypass of today's active required-check rules.
+The development release and automatic VPS installer independently require successful full `ci.yml`. The three language-specific CodeQL analyses, Dependency review and generated CodeQL finding result are required PR merge checks. The first four come from GitHub Actions15368; generated CodeQL comes from Advanced Security57789. The main development release still uses the explicit dependency graph in `ci.yml`; merging and publication have distinct gates. [CI quality](CI_QUALITY.md) explains the gates. The earlier PR11 direct merge during running checks proved the former configuration, not a bypass of today's active required-check rules.
 
 <a id="activation-still-pending"></a>
 
@@ -38,7 +38,7 @@ The effective branch endpoint returns active rules; inspect the individual rules
 
 ## Labels and metadata validation
 
-[labels.json](../.github/labels.json) contains 30 managed labels. Nine original GitHub labels remain available. Each PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. Additional unprefixed labels are allowed; unknown values in the three managed categories are rejected. See [label selection](PULL_REQUEST_GUIDE.md#pull-request-labels).
+[labels.json](../.github/labels.json) contains 36 managed labels. Nine original GitHub labels remain available. Each PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. Additional labels outside those three namespaces are allowed; unknown values in the three managed categories are rejected. See [label selection](PULL_REQUEST_GUIDE.md#pull-request-labels).
 
 The [metadata workflow](../.github/workflows/pr-metadata.yml) also responds to label changes. It reads the current labels, checks repository/PR/head identity and treats all text as data. It installs no dependencies and requests only `contents: read` and `pull-requests: read`. Its regressions are discovered by `./portal test`:
 
@@ -48,7 +48,7 @@ node --test scripts/runtime-pr-metadata.test.mjs scripts/runtime-documentation.t
 
 External authors normally cannot label a PR. Include proposed labels in the description; a Maintainer applies them. Missing metadata must not be concealed behind an invented successful status. Workflow changes also need review because normal PR workflows execute the proposed source.
 
-All eleven existing PRs (#1–#11), including open #10, were read back during this task and already had the required categories. Their existing labels are preserved. Updating descriptions in the catalogue does not rename or remove those classifications.
+All eleven original PRs (#1–#11) were initially read back and classified. During parallel work the repository grew to 19 PRs and five new area labels plus `merge:hold`. The source catalogue now includes those actual live labels so the existing validator accepts the current classifications. Labels and their meanings are preserved; a stop label is not removed merely to make a PR mergeable.
 
 ## Git tags and development packages
 
