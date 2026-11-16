@@ -668,3 +668,7 @@ A private experimental database that applied earlier unmerged identifiers needs 
 3. Comment new tables, functions, lock ordering, actor/MFA checks, `search_path`, versioning/idempotency and grants directly in the new SQL source. New internal helpers need explicit EXECUTE revokes; do not broadly expand wrapper/definer boundaries.
 4. Check a fresh replay, actual RLS/concurrency and the affected Auth/API/browser flows. Updating an existing database and preserving actual Storage bytes require separate evidence. Use the existing isolated full verification command and document the stages actually reached.
 5. Update the API reference only through its intended actual replay; also update this guide, feature documentation and PR validation evidence. Hosted migrations follow the existing operations and approval path.
+
+## Job briefing migration
+
+[Job briefing contacts and references](../supabase/migrations/20261116163013_job_briefing_contacts_references.sql) adds private briefing and request records after the accepted migration prefix. Current actor and job access determine the disclosed projection; see [JOB_BRIEFING](JOB_BRIEFING.md).

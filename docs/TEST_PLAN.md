@@ -90,3 +90,8 @@ Run counts and failures remain in QA_RESULTS. The combined full command and exac
 ## M5 system and performance regressions
 
 Check blocked/full preference storage during actual boot and language/theme changes; bounded idle/scan/stuck-scan metadata loads; actor/abort/revocation and exact document-version bytes; immutable avatar focus/reconnect behavior; failed chat receipts and bounded realtime bursts without delayed old callbacks. Exercise finite schedules at SQL and actual HTTP boundaries with complete rollback and preserved accepted work. Validate Office files with real ZIP cases and label synthetic resource measurements honestly. Real child-process timeout/cancellation and stop-acknowledgement fixtures must be discovered by the same complete command. [System audit and evidence scope](SYSTEM_AUDIT.md).
+
+
+## Optional job contact/reference checks
+
+The job-briefing SQL/API/browser entry points cover empty existing jobs, current management MFA, explicit reference publication, default confirmed-assignee contact visibility, optional offer-viewer release, cancellation/current-role revocation, strict closed payloads and URL/email/bounds, stable retries/concurrent CAS, safe duplication/archive, and unchanged accepted money/terms. Desktop/mobile tests exercise actual editing, online claim/cancellation-driven refresh, literal authored text, safe links, German/English, dark theme and axe. Unit tests cover retained drafts, denied-data hiding, explicit reload, network/offline refusal and confirmed versions. Run only through the documented disposable fixtures; ordinary development data are outside these mutating checks.
