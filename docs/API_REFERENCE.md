@@ -18,13 +18,13 @@ The versioned account facade is /functions/v1/accounts/v1 with its machine-reada
 | PUT/DELETE | /users/{id}/organisations/{organisationId} | Scoped client access/revocation |
 | POST | /invitations | Reserved/idempotent role-bound invitation |
 
-Browser Origins are allowlisted; authenticated CLI clients can omit Origin. Bearer authentication remains required for account data. Errors return safe error codes and proper status; failed/uncertain writes are not reported as success. Self/last-admin protection spans role and status changes. Invitation timeout retains its ledger for reconciliation and never automatically resends.
+Browser Origins are allowlisted; authenticated CLI clients can omit Origin. Bearer authentication remains required for account data. Errors return safe error codes and proper status; failed/uncertain writes are not reported as success. Self/equal/higher/last-admin protection spans role and status changes. Role entries carry assignable and account entries carry can_assign_roles/can_change_active; company financial membership grants remain administrative. Invitation timeout retains its ledger for reconciliation and never automatically resends.
 
 ## Native domain operations
 
 Use POST /rest/v1/rpc/{function} with JSON argument names shown below, the public apikey and the same bearer JWT, or supabase.rpc(function,args). Read-only tables are also available through the Data API with their explicit grants/RLS. Server-only completion functions are unavailable to authenticated clients. The legacy invite-lecturer endpoint and reserve/complete wrappers share the new ledger for compatibility; new multi-role integrations use the account API.
 
-Client requests and new commission jobs use gross_amount/gross_total_amount. Legacy create_job remains a net-compensation compatibility operation; it does not fabricate unknown customer revenue. Lecturers' jobs/claims/invoice responses contain net compensation. Only admin/owner gross capabilities and own-organisation client projections expose relevant gross values. Money stays in original currency. Payment RPCs record tracking entries, not bank transfers.
+Client requests and new commission jobs use gross_amount/gross_total_amount. Legacy create_job remains a net-compensation compatibility operation; it does not fabricate unknown customer revenue. Role-priced offers store zero sentinels in raw jobs price columns. Use job_offers() for the current actor-specific quote and its terms_version; Management receives null protected prices. Accepted claims and invoices contain immutable net compensation. Only admin/owner gross capabilities and own-organisation client projections expose relevant gross values. Money stays in original currency. configure_compensation_policy and commission_offer_policy require current Administration MFA; no real policy defaults are committed in this public source. Policy changes apply to future offers and captured offer rates remain private. Personal welcome progress RPCs accept no target user ID. Payment RPCs record tracking entries, not bank transfers.
 
 Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comments, jobs/claims/calendar, chats/wiki/forum, contracts/invoices/payments and client/revenue operations are included in this generated inventory. Use the feature security documents for exact resource eligibility.
 
@@ -62,9 +62,11 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | commercial_access | none | jsonb | Authenticated; resource/capability checks apply |
 | commercial_people | none | TABLE(id uuid, display_name text) | Authenticated; resource/capability checks apply |
 | commission_access | none | jsonb | Authenticated; resource/capability checks apply |
+| commission_offer_policy | p_job_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | commission_report | p_organisation_id uuid | TABLE(job_id uuid, claim_id uuid, organisation_id uuid, organisation_name text, title text, status text, currency text, gross_amount numeric, gross_total_amount numeric, platform_percent numeric, platform_total_amount numeric, lecturer_net_amount numeric, lecturer_net_total_amount numeric, lecturer_id uuid, lecturer_name text, accepted_at timestamp with time zone, pricing_model text, capacity integer) | Authenticated; resource/capability checks apply |
 | complete_account_invitation | p_invitation_id uuid, p_user_id uuid, p_display_name text, p_success boolean | void | Server-only |
 | complete_invitation | p_invitation_id uuid, p_user_id uuid, p_display_name text, p_success boolean | void | Server-only |
+| configure_compensation_policy | p_regular_percent numeric, p_senior_percent numeric, p_expected_version integer | jsonb | Authenticated; resource/capability checks apply |
 | contract_records | p_all boolean | TABLE(id uuid, user_id uuid, user_name text, title text, kind text, parent_contract_id uuid, status text, effective_from timestamp with time zone, expires_at timestamp with time zone, version integer, document_version_id uuid, document_id uuid, sha256 text, acknowledged_at timestamp with time zone, created_at timestamp with time zone) | Authenticated; resource/capability checks apply |
 | course_enrolments | p_course_run_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | course_run_job_defaults | p_course_run_id uuid | jsonb | Authenticated; resource/capability checks apply |
@@ -94,6 +96,7 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | forum_thread | p_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | forum_threads_list | p_search text, p_category_id uuid, p_include_archived boolean | TABLE(id uuid, title text, category_id uuid, category_label_de text, category_label_en text, owner_id uuid, owner_name text, locked boolean, pinned boolean, archived boolean, accepted_post_id uuid, post_count bigint, subscribed boolean, created_at timestamp with time zone, updated_at timestamp with time zone) | Authenticated; resource/capability checks apply |
 | get_my_permissions | none | text[] | Authenticated; resource/capability checks apply |
+| get_welcome_progress | none | jsonb | Authenticated; resource/capability checks apply |
 | global_calendar_events | p_from timestamp with time zone, p_to timestamp with time zone, p_manage boolean, p_search text, p_before_at timestamp with time zone, p_before_id uuid, p_limit integer | jsonb | Authenticated; resource/capability checks apply |
 | invoice_payments | p_invoice_id uuid | TABLE(id uuid, amount numeric, currency text, paid_at timestamp with time zone, reference text, recorded_by_name text, created_at timestamp with time zone, voided_at timestamp with time zone, void_reason text) | Authenticated; resource/capability checks apply |
 | invoice_records | p_all boolean | TABLE(id uuid, user_id uuid, user_name text, number text, issued_on date, due_on date, currency text, total_amount numeric, paid_amount numeric, status text, document_id uuid, document_version_id uuid, claim_ids uuid[], created_at timestamp with time zone, note text, paid_at timestamp with time zone, labels text[]) | Authenticated; resource/capability checks apply |
@@ -103,6 +106,7 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | job_detail | p_job_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | job_discovery | p_filters jsonb, p_cursor jsonb, p_limit integer | jsonb | Authenticated; resource/capability checks apply |
 | job_lifecycle | p_job_id uuid | jsonb | Authenticated; resource/capability checks apply |
+| job_offers | none | jsonb | Authenticated; resource/capability checks apply |
 | job_picker | p_purpose text, p_search text, p_cursor jsonb, p_limit integer, p_selected_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | knowledge_access | none | jsonb | Authenticated; resource/capability checks apply |
 | knowledge_categories | p_kind text | TABLE(id uuid, kind text, slug text, label_de text, label_en text, archived boolean) | Authenticated; resource/capability checks apply |
@@ -160,6 +164,7 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | save_profile_details | p_payload jsonb | void | Authenticated; resource/capability checks apply |
 | save_qualification_evidence | p_topic_id uuid, p_version_id uuid, p_expected_version integer, p_request_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | save_taxonomy_topic | p_id uuid, p_payload jsonb, p_version integer | uuid | Authenticated; resource/capability checks apply |
+| save_welcome_progress | p_step text, p_status text, p_expected_version integer | jsonb | Authenticated; resource/capability checks apply |
 | save_wiki_page | p_id uuid, p_title text, p_locale text, p_category_id uuid, p_content jsonb, p_status text, p_expected_version integer | jsonb | Authenticated; resource/capability checks apply |
 | saved_job_views | none | jsonb | Authenticated; resource/capability checks apply |
 | send_message | p_room_id uuid, p_body text, p_client_id uuid, p_document_id uuid | uuid | Authenticated; resource/capability checks apply |

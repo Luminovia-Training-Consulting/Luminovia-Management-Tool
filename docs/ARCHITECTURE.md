@@ -1,6 +1,6 @@
 # Architecture and decisions
 
-Status: the accepted M6 application baseline contains 24 migrations; its executed local/CI evidence is recorded in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md). M7 adds five migrations (29 total); M8 adds three more (32 total) for scoped pickers, global-event publication and exact-version qualification evidence. The next combined 32-migration gate also includes the M7 file-dialog correction. Focused checks and authored native Auth/API/browser cases are not a completed combined acceptance or production approval. Migration source and owning tests define actual schema behavior; [ERD](ERD.md) maps physical relations and [API_REFERENCE](API_REFERENCE.md) inventories interfaces. The full target remains [PRODUCT_SPEC](PRODUCT_SPEC.md) and the authoritative [master prompt](UNIVERSAL_MASTER_PROMPT.txt). Hosted installation state is a separate operational record in [HOSTINGER_DEVELOPMENT](HOSTINGER_DEVELOPMENT.md) and [WORKLOG](WORKLOG.md); local source does not prove deployment.
+Status: released main `fabd71a` contains 26 immutable baseline migrations, including private role pricing and own welcome progress. This branch integrates that accepted baseline with the incoming M7/M8 discovery, collaboration and resource-management extensions. The source inventory has 35 SQL files, including the eight renamed M7/M8 sources and the final additive role-aware discovery migration. Its combined API inventory, replay/upgrade behavior and complete acceptance must be confirmed from the actual database replay; earlier 24-, 29- and 32-migration evidence remains source-bound history in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md). Migration SQL and owning tests define schema behavior; [ERD](ERD.md) maps physical relations and [API_REFERENCE](API_REFERENCE.md) inventories interfaces. The complete target remains [PRODUCT_SPEC](PRODUCT_SPEC.md) and the authoritative [master prompt](UNIVERSAL_MASTER_PROMPT.txt). Current primary documentation/version checks are in [REFERENCE_SOURCES](REFERENCE_SOURCES.md). Hosted installation state is a separate operational record in [HOSTINGER_DEVELOPMENT](HOSTINGER_DEVELOPMENT.md); source integration does not prove deployment or production acceptance.
 
 ## ADR-001 — separate private portal and static frontend
 
@@ -14,7 +14,7 @@ TanStack Query manages remote state through `@supabase/supabase-js`; no duplicat
 
 M1 public API contract (subject to migration ownership): `get_my_permissions()` returns capability names; own `profiles` uses `id`, `display_name`, `bio_de`, `bio_en`, `phone`, `time_zone`, `locale`, `active` with restricted self-edit fields. `topics` and `lecturer_topics` distinguish self-selected expertise from protected verification. Jobs expose nested `job_sessions`/`job_requirements`. `set_job_status(p_job_id, p_status)` allows audited draft/published/archived transitions and refuses silent changes to filled work. `claim_job(p_job_id, p_idempotency_key, p_terms_version)` returns a truthful status and optional claim ID. `create_job(p_payload jsonb)` requires `jobs.manage` and AAL2 and creates the complete supported block atomically. Private events stay owner-only. Check backend notes for the final full payload, validation and result codes before adding callers.
 
-Current routes include Auth, dashboard, jobs/detail, calendar, chats, files, knowledge, client/people/course and commercial screens. M6 adds `/topics`, `/availability`, `/notifications`, `/settings` and `/admin/audit`; M7 adds `/announcements` and `/admin/announcements`. The actual route definitions are in `src/app/app.tsx`; a route or navigation item is not evidence that the full target module is complete.
+Current routes include Auth, dashboard, jobs/detail, calendar, chats, files, knowledge, client/people/course and commercial screens. M6 adds `/topics`, `/availability`, `/notifications`, `/settings` and `/admin/audit`; M7 adds `/announcements` and `/admin/announcements`. PR18 also adds the own-account `/welcome` guide and private compensation administration. The actual route definitions are in `src/app/app.tsx`; a route or navigation item is not evidence that the full target module is complete.
 
 Feature flow: component → validated form/query/mutation → Supabase Auth/data API/RPC → permission/RLS + constraints → committed database records → query invalidation/refetch. Claims, messages and uploads show success only after server confirmation. A failed write never becomes a local confirmed allocation.
 
@@ -26,7 +26,7 @@ User self-service edits must not change identity, verified qualification fields,
 
 ## ADR-004 — PostgreSQL owns claims and scheduling
 
-The original M1 single-position API remains compatible. M6 adds explicit capacity 1–20 for new standalone per-position administrative offers. Existing offers, CBW run offers and client requests retain their capacity-one commercial meaning. `claim_job` still authenticates the current actor, checks qualifications, the applicable contract and current terms, locks the lecturer scheduling boundary and job, and allocates every session atomically. Confirmed claims are unique per job/lecturer, confirmed count cannot exceed capacity, and only unreleased intervals participate in the per-lecturer exclusion constraint. The final free position closes the offer. No UI drag operation confirms a booking.
+The original M1 single-position API remains compatible. M6 adds explicit capacity 1–20 for new standalone per-position administrative offers. Existing offers, catalogue-linked course offers and client requests retain their capacity-one commercial meaning. `claim_job` still authenticates the current actor, checks qualifications, the applicable contract and current terms, locks the lecturer scheduling boundary and job, and allocates every session atomically. Confirmed claims are unique per job/lecturer, confirmed count cannot exceed capacity, and only unreleased intervals participate in the per-lecturer exclusion constraint. The final free position closes the offer. No UI drag operation confirms a booking.
 
 Accepted compensation, currency, contract, sessions and revenue remain immutable history. `cancel_job_assignment` requires current management permission/MFA and an explicit reason, refuses started or invoiced work, releases the complete interval block and updates intended course-room membership. Cancellation closes the offer to `draft`; replacement requires the separate audited `manage_job_offer` reopen action. Existing other confirmed positions remain accepted. Invoice submission and cancellation share the lecturer mutex, preventing a late invoice from attaching to a concurrently cancelled claim. These operations record tracking/audit state, not bank refunds or transfers. See [JOB_LIFECYCLE](JOB_LIFECYCLE.md).
 
@@ -118,7 +118,7 @@ Staff discussions use one resource-comment implementation for jobs and course te
 
 Profile pictures reuse clean immutable private document versions. The editor rasterises a bounded metadata-free PNG; the server independently validates its structure/dimensions and actual ClamAV result. A separate selected-avatar projection uses current person visibility, and the file gateway rechecks selection/access after retrieving bytes. Generic personal-document ACLs remain unchanged. Actor-bound Blob URLs are memory-only and revoked on identity/version/offline/unmount changes.
 
-[Developer guide](DEVELOPER_GUIDE.md), [CBW details](CBW_TEMPLATES.md), [comment contract](RESOURCE_COMMENTS.md), [avatar boundary](PROFILE_AVATARS.md) and [functional audit](FUNCTIONAL_CODE_AUDIT.md) record the owning implementation and verification. Compiler-based source/export/RPC and documentation-link checks supplement actual SQL/API/browser tests; they do not replace runtime authorisation.
+[Developer guide](DEVELOPER_GUIDE.md), [course-building-block details](CBW_TEMPLATES.md), [comment contract](RESOURCE_COMMENTS.md), [avatar boundary](PROFILE_AVATARS.md) and [functional audit](FUNCTIONAL_CODE_AUDIT.md) record the owning implementation and verification. Compiler-based source/export/RPC and documentation-link checks supplement actual SQL/API/browser tests; they do not replace runtime authorisation.
 
 ## ADR-015 — shared local QA ownership and bounded revalidation
 
@@ -148,6 +148,14 @@ Money bounds/sorting require an explicit currency; rate comparisons additionally
 require a unit. Date filters use actual session overlap with local calendar-day
 boundaries in the selected IANA zone. Availability filtering never reserves work
 or replaces the online claim checks.
+
+The final role-aware discovery migration uses the current actor's authorized quote
+for discovery bounds, ordering, detail and dashboard-suggestion projections; its
+cursor fingerprint binds the actor's role/tier and policy context. The complete
+integrated database/API test result is still required. Raw zero sentinels
+are storage placeholders, not a free teaching offer or a comparison price. Every
+claim still requires consent to the exact server-returned quote and current role;
+management discovery must not reveal protected compensation.
 
 `private.document_organisation` stores each account's tags/virtual folder for an
 accessible document. It changes no shared filename, bytes, Storage path or access
@@ -313,24 +321,28 @@ edit event history. Privileged account/version purges have documented cascade
 semantics for controlled cleanup; this is not a retention UI or tamper-proof archive
 claim. See [QUALIFICATIONS](QUALIFICATIONS.md) and physical keys in [ERD](ERD.md).
 
+## ADR-022 — delegated authority and private role pricing
+
+Current database authority restricts account mutations to subordinate roles and targets, including invitation completion. Management receives role-assignment authority without the financial authority to grant company budgets. Company invitations may omit an organisation; only Administration can attach the financial membership. Role removal revokes old memberships. The same lifecycle lock serializes membership/role changes, and a profile lock serializes claims against changes to the claimant's role.
+
+Commercial policy is private operational data because repository source is public. An empty RLS-enabled private singleton is configured through an administrative MFA/CAS endpoint. New offers capture both private role percentages and the policy version; global changes affect future offers. Old accepted claims/revenue remain immutable. Raw role-priced job amounts are zero sentinels, while `job_offers()` returns the current lecturer's net quote or null protected Management pricing. Role-discriminated consent versions and complete UI quote fingerprints prevent unreviewed changes to the accepted amount. [Owning contract](DELEGATED_ROLES_PRICING.md).
+
+## ADR-023 — personal introduction and untrusted PR previews
+
+Welcome progress is private presentation state, accessed only by target-free own-account RPCs. Versioned online writes implement step changes, pause/resume, skip and restart. Server roles/permissions select the explanatory steps; the guide cannot grant authority or complete business actions. The shell resets protected caches when server-returned authority changes. [Guide](WELCOME_GUIDE.md).
+
+PR packaging runs with read-only permissions after complete application/native checks. A separate trusted default-branch metadata writer has deployment write authority and never executes contribution code or artifacts. Its URL links the actual runnable package. The packaged launcher leaves the canonical archive/source intact and creates an owned private runtime with unique database volumes and separate ports. `source_head` and `tested_revision` are distinct manifest fields; a dynamic association with a newer PR head cannot make an old run current. No hosted per-PR backend or production deployment is implied. [Preview contract](PR_PREVIEWS.md).
+
 ## Current scope and evidence boundaries
 
-The 24 accepted M6 migrations remain unchanged. The five M7 additions are
-`20261115230301_chat_structured_mentions`,
-`20261115230604_file_discovery_personal_organisation`,
-`20261115230702_job_discovery_and_saved_views`,
-`20261115231704_notification_attention_preferences` and
-`20261115232824_portal_announcements`. Their private tables use RLS and revoke
+The 26 published baseline migrations remain byte-identical. The incoming M7 additions provide structured chat mentions, private personal file organisation, bounded job discovery and saved views, attention preferences and announcements. Their private tables use RLS and revoke
 direct PUBLIC/anon/authenticated access. Public invoker wrappers call scoped
 private implementations with empty search paths and explicit authenticated
 execution grants; pure internal trigger/filter helpers revoke browser execution. Private routines
 needed by public wrappers retain their own current-actor/resource checks. Service credentials remain server-only. [ERD](ERD.md) records physical
 keys and exceptions rather than inferring grants from schema placement.
 
-M8 adds `20261116003728_scoped_administrative_job_pickers`,
-`20261116003733_global_calendar_publications` and
-`20261116004358_qualification_evidence_and_attestation_history`, bringing source to
-32 migrations without replacing any earlier applied source. The picker is a
+The three incoming M8 extensions provide scoped administrative job pickers, explicit global-calendar publications and qualification evidence/attestation history. Their chronological source links are recorded in [MIGRATION_GUIDE](MIGRATION_GUIDE.md). The 35-file candidate keeps the accepted 26-file prefix and appends these eight extensions plus the role-aware discovery correction; the released prefix must not be replaced or interleaved. The picker is a
 projection; calendar extends the existing event table plus one private request
 ledger; qualification adds four private relations. New private tables use RLS and
 revoke direct browser access. See [JOB_PICKERS](JOB_PICKERS.md),
@@ -341,7 +353,7 @@ search and resource lists retain their own documented bounds; neither M7 nor M8
 raises the global 1,000-row setting. Automatic substitute orchestration, richer
 resource/knowledge attachments, scheduled publication/delivery, real approved SMTP,
 ICS/invitations, retention/erasure and production-scale/platform acceptance remain
-product work. The next combined 32-migration native Auth/API/browser/PWA and
+product work. The next combined native Auth/API/browser/PWA and
 retained-data gate must exercise interactions with the M7 file-dialog correction.
 Focused SQL/component/Edge passes and earlier milestone results do not establish
 that combined result. Current actual outcomes belong in [QA_RESULTS](QA_RESULTS.md) and

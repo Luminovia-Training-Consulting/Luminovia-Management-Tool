@@ -32,7 +32,7 @@ Optional links accept only `https://` with ASCII DNS names or a complete IPv4 ad
 
 ## API and permissions
 
-Additive migration created with the actually pinned Supabase CLI: `20261116003733_global_calendar_publications.sql`. Existing `global_events` rows and IDs remain; description, link, archive state and version/update metadata are added.
+Additive migration created with the actually pinned Supabase CLI: `20261116022736_global_calendar_publications.sql`. Existing `global_events` rows and IDs remain; description, link, archive state and version/update metadata are added.
 
 | RPC                                                                                     | Purpose                                                                                                                                                    |
 | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |

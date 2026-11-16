@@ -24,6 +24,7 @@ export const profileQuery = (id: string) =>
 export const permissionsQuery = (id: string) =>
   queryOptions({
     queryKey: ["permissions", id],
+    refetchInterval: 30000,
     queryFn: async () => {
       const { data, error } = await db().rpc("get_my_permissions");
       if (error) throw error;

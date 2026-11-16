@@ -11,7 +11,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { MemoryRouter, Link } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import {
   QueryClient,
   QueryClientProvider,
@@ -37,10 +37,10 @@ vi.mock("../auth/auth-context", () => ({
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => fake }));
 vi.mock("../commercial/revenue", () => ({ FinancialSummaryCards: () => null }));
-vi.mock("../jobs/jobs", () => ({
-  JobCard: ({ job }: { job: { id: string; title: string } }) => (
-    <Link to={`/jobs/${job.id}`}>{job.title}</Link>
-  ),
+// Exercise the real lightweight card and its restricted-price contract without
+// importing unrelated marketplace detail mutations into dashboard tests.
+vi.mock("../jobs/jobs", async () => ({
+  JobCard: (await import("../jobs/card")).JobCard,
 }));
 
 const clients: QueryClient[] = [];
@@ -179,8 +179,10 @@ beforeEach(async () => {
       abortSignal: () => builder,
       then: (resolve: (result: unknown) => unknown) =>
         Promise.resolve({
-          data: fake.rpcData[name],
-          error: fake.errors[name] ?? null,
+          data: name === "job_offers" ? fake.tables.jobs : fake.rpcData[name],
+          error:
+            fake.errors[name] ??
+            (name === "job_offers" ? fake.errors.jobs : null),
         }).then(resolve),
     };
     return builder;
@@ -265,6 +267,16 @@ const rpcCalls = (name: string) =>
   fake.calls.filter((call) => call.method === "rpc" && call.table === name);
 
 describe("role-aware dashboard previews", () => {
+  it("accepts a restricted suggestion without inventing a zero-price compensation", async () => {
+    (fake.rpcData.job_dashboard as { suggestions: unknown[] }).suggestions = [
+      job("restricted quote", { amount: null, total_amount: null }),
+    ];
+    setup();
+    expect(await screen.findByText("Fictional restricted quote")).toBeVisible();
+    expect(screen.getByText("Honorar geschützt")).toBeVisible();
+    expect(screen.queryByText(/0,00/)).not.toBeInTheDocument();
+    expect(rpcCalls("job_dashboard")).toHaveLength(1);
+  });
   it("combines own calendar, messages, personal contract receipts and bounded clean metadata", async () => {
     fake.tables.personal_events = [
       ...(fake.tables.personal_events as unknown[]),
@@ -349,6 +361,7 @@ describe("role-aware dashboard previews", () => {
         ),
       ).toBe(false);
       expect(rpcCalls("contract_records")).toHaveLength(0);
+      expect(rpcCalls("job_offers")).toHaveLength(0);
       expect(
         screen.queryByRole("region", {
           name: "Meine offenen Vertragsbestätigungen",

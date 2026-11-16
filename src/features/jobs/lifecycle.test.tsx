@@ -140,6 +140,20 @@ function setup(meta = empty, write?: Parameters<typeof mock>[1]) {
   );
   return client;
 }
+it("shows the server maximum across lecturer tiers instead of multiplying the viewer's own quote", async () => {
+  setup({ ...empty, capacity: 3, max_net_budget: 219.03 });
+  expect(
+    await screen.findByText(/Maximale Dozierendenvergütung: 219,03/),
+  ).toBeVisible();
+  expect(screen.queryByText(/600,00/)).not.toBeInTheDocument();
+});
+it("honours an explicitly protected budget without falling back to a cached personal quote", async () => {
+  setup({ ...empty, capacity: 3, max_net_budget: null });
+  await screen.findByRole("heading", { name: "Zuweisung und Auftragsverlauf" });
+  expect(
+    screen.queryByText(/Maximale Dozierendenvergütung/),
+  ).not.toBeInTheDocument();
+});
 it("requires an explicit reason and server confirmation before releasing an own assignment", async () => {
   const meta = structuredClone(assigned);
   setup(meta, (name) => {

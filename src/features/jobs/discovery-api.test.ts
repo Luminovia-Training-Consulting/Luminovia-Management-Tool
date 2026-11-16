@@ -1,3 +1,4 @@
+/** DTO and paging regressions ensure restricted/current quotes are not replaced by zero or another account context. */
 import { describe, it, expect } from "vitest";
 import {
   defaultJobFilters,
@@ -10,6 +11,60 @@ import {
   jobDetailQuery,
 } from "./discovery-api";
 describe("discovery data contracts", () => {
+  it("preserves a restricted null quote while rejecting coerced strings and resetting known role pages", () => {
+    const item = {
+      id: "d7000000-0000-4000-8000-000000000001",
+      title: "Fictional quote",
+      description: "",
+      customer_name: "Fictional",
+      delivery_type: "online",
+      location: "",
+      time_zone: "Europe/Berlin",
+      status: "published",
+      amount: null,
+      total_amount: null,
+      currency: "EUR",
+      rate_unit: "fixed_total",
+      terms: "Fictional",
+      terms_version: 31,
+      requires_contract: false,
+      claim_deadline: null,
+      capacity: 1,
+      capacity_basis: "single_position",
+      created_at: "2099-01-01T00:00:00Z",
+      job_sessions: [],
+      job_requirements: [],
+      confirmed_count: 0,
+      open_positions: 1,
+    };
+    const page = {
+      items: [item],
+      has_more: false,
+      next_cursor: null,
+      as_of: "2099-01-01T00:00:00Z",
+      filters: defaultJobFilters,
+    };
+    expect(discoveryPageSchema.parse(page).items[0].total_amount).toBeNull();
+    for (const invalid of ["0", "", undefined, true, [], {}, -1, Infinity, NaN])
+      expect(
+        discoveryPageSchema.safeParse({
+          ...page,
+          items: [{ ...item, amount: invalid, total_amount: invalid }],
+        }).success,
+      ).toBe(false);
+    expect(
+      discoveryPageSchema.parse({
+        ...page,
+        items: [{ ...item, amount: 0, total_amount: 0 }],
+      }).items[0].total_amount,
+    ).toBe(0);
+    expect(
+      jobDiscoveryQuery("same-account", defaultJobFilters, "lecturer").queryKey,
+    ).not.toEqual(
+      jobDiscoveryQuery("same-account", defaultJobFilters, "senior_lecturer")
+        .queryKey,
+    );
+  });
   it("round trips deep links with combined original currency/unit/date/topic filters", () => {
     const filters = jobFiltersSchema.parse({
       q: "literal %_ <script>",

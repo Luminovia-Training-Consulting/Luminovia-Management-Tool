@@ -4,6 +4,8 @@ Checked items describe evidenced local controls, not a production certification.
 
 ## Current evidence
 
+The current role/pricing/guide extension adds separately executed SQL/Edge/component checks for subordinate authority, admin-only company financial grants, private policy snapshots, role-bound consent and own welcome progress. Actual business percentages are not committed to public source. Its complete native/browser evidence is recorded in the latest [QA_RESULTS](QA_RESULTS.md) checkpoint; the older counts below remain historical. [Current private pricing boundary](DELEGATED_ROLES_PRICING.md).
+
 | Boundary | Local result | Remaining acceptance |
 | --- | --- | --- |
 | Schema/permissions | Ten migrations replayed by the fresh complete local command; 43 public tables, none without RLS; SQL lint/advisors clean | Managed-stage configuration/advisors and load review |

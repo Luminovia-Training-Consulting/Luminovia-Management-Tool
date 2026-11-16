@@ -1,3 +1,4 @@
+/** Server-filtered offers and own saved views; observed roles scope quote-bearing pages. */
 import { useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
@@ -474,7 +475,11 @@ export function JobDiscovery() {
   const parsed = filtersFromParams(params),
     filters = parsed.success ? parsed.data : null;
   const query = useInfiniteQuery({
-    ...jobDiscoveryQuery(actor, filters ?? defaultJobFilters),
+    ...jobDiscoveryQuery(
+      actor,
+      filters ?? defaultJobFilters,
+      [...(roles.data ?? [])].sort().join(","),
+    ),
     enabled: staff && Boolean(filters),
   });
   const items = [
@@ -497,6 +502,7 @@ export function JobDiscovery() {
   return (
     <>
       <PageHeading title={t("title")} description={t("help")} />
+      <p className="muted">{t("feeHelp")}</p>
       <SavedViews
         key={actor}
         actor={actor}

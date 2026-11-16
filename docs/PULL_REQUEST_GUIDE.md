@@ -1,6 +1,6 @@
 # Creating, reviewing and merging pull requests
 
-> Status read back on 16 November 2026 after 02:45 UTC: review and required-check rules are active. Maintainers and administrators may bypass independent review through a PR, but must wait for all fourteen required checks against the current base. The maintenance App has a separate `always` exception. [Current rule and App delivery status](GITHUB_WORKFLOW.md#activation-still-pending).
+> Current policy on 16 November 2026: review and required-check rules are active. Maintainers and administrators may bypass independent review through a PR, but must wait for all fifteen required checks, including the PR preview package, against the current base. The earlier 02:45 UTC readback had fourteen contexts; it is historical. The current required-check rule has no bypass actors; earlier App exception/probe records remain historical. [Current rule and App delivery status](GITHUB_WORKFLOW.md#activation-still-pending).
 
 This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
@@ -97,24 +97,25 @@ Ordinary contributors need a pull request and at least one approval from another
 
 Maintainers and repository administrators have a role-based **PR-only exception to review** (`pull_request`, repository roles 2 and 5). They may merge a PR without another person's approval, but must still satisfy required CI and commit signatures. This exception does not authorise a direct push to `main` or bypass the required-check rule. Ordinary write access alone receives no review exception. The exception follows the person performing the merge, not the PR author.
 
-All fourteen required checks must pass against the current base. Ordinary write access grants no review exception; GitHub may require an explicit bypass action for an authorised maintainer:
+All fifteen required checks must pass against the current base. Ordinary write access grants no review exception; GitHub may require an explicit bypass action for an authorised maintainer:
 
 - `Build`, `Typecheck`, `Lint`, `Formatting` and `Code quality` check compilation, rules, style and actual source connections.
 - `Tests and coverage` runs unit/component tests with complete frontend source coverage reporting and enforced thresholds.
 - `verify` runs the complete real application/SQL/API/browser/PWA/maintenance suites; `Actual isolated selfhost image compatibility` checks real runtime behaviour and retained data.
 - `PR metadata` checks required labels.
+- `PR preview package` packages the tested committed source only after the complete application and native checks; its downloadable local package is not a hosted portal.
 - `CodeQL (javascript-typescript)`, `CodeQL (python)` and `CodeQL (actions)` run the separate language-specific security analyses; `Dependency review` rejects newly introduced vulnerable dependencies.
 - The generated `CodeQL` finding check evaluates the uploaded security findings separately from successful scanner execution.
 
-The first thirteen statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. All fourteen are required for merging. See [CI_QUALITY](CI_QUALITY.md).
+Fourteen statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. All fifteen are required for merging. See [CI_QUALITY](CI_QUALITY.md).
 
-If main changes, update the PR as required and wait for checks against the current base. The history/signature ruleset has no bypass actors, including for maintainers, administrators and the maintenance App. The maintenance App, integration `5776881`, has its own `always` exception on the review and required-check rules. Server-side activation and that exception do not prove the App workflow is already delivered on main; see the [current rule and App delivery status](GITHUB_WORKFLOW.md#activation-still-pending).
+If main changes, update the PR as required and wait for checks against the current base. The history/signature ruleset has no bypass actors, including for maintainers, administrators and the maintenance App. The current required-check rule has no bypass actors, including Apps. An earlier accepted App configuration or signature probe does not grant a current CI exception or prove that its workflow is delivered on main. Any App workflow must satisfy the live rule and its narrowly scoped authorization; see the [rule and App delivery history](GITHUB_WORKFLOW.md#activation-still-pending).
 
 [CI_QUALITY](CI_QUALITY.md) explains full-source V8 coverage and thresholds; [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md) distinguishes successful scanning from resolved findings. SQL, Edge, browser and unit coverage remain separate evidence.
 
 ## Merge and publication
 
-Maintainers and administrators can merge a PR without an independent approval through their review exception once the fourteen required checks and current-base requirement are satisfied. Check the description, labels, tests and unresolved conversations first. Pending operational approvals remain separate from repository merge eligibility.
+Maintainers and administrators can merge a PR without an independent approval through their review exception once the fifteen required checks and current-base requirement are satisfied. Check the description, labels, tests and unresolved conversations first. Pending operational approvals remain separate from repository merge eligibility.
 
 The separate Security outcomes are required for PR merge eligibility. Release publication still follows the explicit dependencies in `ci.yml`; the ruleset does not add them as release-job dependencies.
 
@@ -131,3 +132,5 @@ After merging, update the issue resolution when needed and track remaining tasks
 The read-only metadata workflow executes only this repository's current main code and catalogue, including for fork PRs. It does not execute proposed contribution code, install dependencies or use write credentials. Automatic checks apply to open PR events; closed PR label edits do not restart this gate. Add new managed labels to the shared catalogue before applying them.
 
 A deliberate historical check can be dispatched from main with a positive PR number. It re-reads current labels and records the actual historical head, without rerunning or rewriting its past application acceptance. See [metadata operation](GITHUB_WORKFLOW.md#labels-and-metadata-validation) and [the executed repair evidence](PR_CI_REPAIR_20261116.md).
+
+The gated [PR preview package and deployment record](PR_PREVIEWS.md) provides an owned, locally runnable application preview after the complete checks. Its artifact URL is not a hosted portal URL.

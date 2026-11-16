@@ -26,7 +26,7 @@ No separate application server or external notification service is introduced.
 
 ## Persistence and public APIs
 
-Migration `20261115230301_chat_structured_mentions.sql` is additive. All earlier
+Migration `20261116022730_chat_structured_mentions.sql` is additive. All earlier
 delivered migrations stay unchanged.
 
 | API                                                                                            | Contract                                                                                                                                            |

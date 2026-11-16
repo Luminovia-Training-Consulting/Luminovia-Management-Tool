@@ -2,6 +2,74 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Current joint PR10/PR13 integration with released PR18
+
+- [x] Preserve both original PR10/PR13 histories, the English roadmap/decision/index structure and the reviewed Calendar, file-menu and PWA-title corrections from the incoming source.
+- [x] Resolve documentation conflicts with accepted main `fabd71a`, retaining the private policy, subordinate authority, own welcome progress and PR-preview boundaries alongside the complete M7/M8 ledger.
+- [x] Inventory 35 SQL files: the 26 byte-identical released files, eight byte-identical M7/M8 sources renamed after that prefix and one additive role-aware discovery migration.
+- [x] Replay35migrations in the owned networkless SQL fixture, pass6role-aware and9discovery groups, and regenerate the actual160-function API reference. Native upgrade/retention remains a separate pending gate.
+- [ ] Complete source and focused regressions, then the combined isolated Auth/API/desktop/mobile/PWA and native retained-data acceptance. Earlier source-specific passes below do not certify this integration.
+- [ ] Publish the signed combined head and observe all 15 current required checks, including `PR preview package`, before the coordinated merge. Review exceptions never bypass CI or signatures.
+
+The current required-check policy has 15 contexts. Older 14-check readbacks below remain historical evidence; use current server rules and exact-head results. Production, hosted installation and other operational approvals remain separate.
+
+## PR18 complete-CI repair
+
+- [x] Correct the missing disposable compensation bootstrap after real retention, with explicit owned QA identity and three executable orchestration regressions.
+- [x] Cover candidate-only settings after the older native-selfhost baseline upgrades and passes retention/readiness; preserve no-policy normal startup.
+- [x] Integrate current main e75f55d, retaining account welcome, Portal tour and public help/demo.
+- [x] Observe actual application/quality/security success on21959fa:249unit/component tests,88desktop/mobile cases,2built-PWA cases, real retention/SQL/API and checked cleanup.
+- [x] Reproduce native replay refusal for the pending Welcome migration, add its atomic envelope without changing released history, and pass the actual24→26local selfhost retention/API/TLS/cleanup rehearsal against the prepared incoming main source.
+- [x] Integrate actual PR20/PR15 main43504b8 without losing private-pricing behavior, source comments or MFA fixture guards; normalized source review and native rehearsal passed.
+- [ ] Complete exact final-head GitHub application/native-selfhost/preview-package CI and record the observed result. No production action is part of this CI repair; do not bypass coordinated main merge holds.
+
+## Current continuation — private roles/pricing, welcome guide and PR previews
+
+The latest request supersedes the earlier shared compensation default. Work is isolated on `codex/pr-preview-welcome-roles` from `1341b16`; existing accepted business history and the full module ledger below remain in scope. Actual business percentages are private Administration configuration because the source repository is public.
+
+- [x] Implement and separately test subordinate role delegation, guest access and self/equal/higher protection across role/activation/invitation APIs; company budget memberships remain Administration-only.
+- [x] Implement private versioned compensation configuration, captured offer policies, role-scoped quotes and server-bound consent; retain accepted claims/invoices and legacy history.
+- [x] Add administration setup and accurate per-offer preview, permission-scoped role controls and own quote rendering; 215 frontend tests and the existing coverage floors pass before full acceptance.
+- [x] Add a DE/EN sequential welcome guide with own persistent progress, pause/resume/skip/restart and permission-aware links; focused frontend/SQL checks pass.
+- [x] Add read-only gated local PR packages and a separate trusted GitHub Deployment metadata publisher, with real artifact URLs, stale-run/expiry cleanup and no production-host connection.
+- [ ] Finish exact-source combined native Auth/API/desktop/mobile/PWA/retained-data acceptance; fix any actual failures without weakening assertions.
+- [ ] Publish the signed PR and observe exact-head quality/security/application/native outcomes and real downloadable artifact; record a first-PR metadata bootstrap only if actually run.
+- [ ] A continuously hosted URL per PR requires separately configured isolated hosting/backend. The implemented artifact deployment does not claim such a service.
+- [ ] Production policy setup/migration/deployment is a separate operational step; this request does not authorise production or real email changes.
+
+[Roles and private pricing](DELEGATED_ROLES_PRICING.md), [welcome guide](WELCOME_GUIDE.md), [PR previews](PR_PREVIEWS.md). The verbatim original specification remains preserved; these explicit user extensions update its operating details without dropping any remaining modules.
+
+## English community information
+
+> Historical accepted-main checkpoint. Its counts and former rules describe that source snapshot; current merge eligibility is the 15-check policy stated above.
+
+The current language request covers public security/contribution documentation, GitHub issue/PR forms and guidance, managed label descriptions and PR metadata feedback. Isolated branch `codex/english-community-guides` preserves concurrent application work and the full product ledger below.
+
+- [x] Translate community entry points and their setup/developer/CI/security guidance into English; preserve commands, actual permission/release boundaries and the authoritative specification.
+- [x] Keep issue form IDs, default labels, required fields and PR label identifiers stable; translate human-visible text and section links.
+- [x] Translate and read back all30managed label descriptions without changing IDs/names/colours/assignments; preserve9default labels.
+- [x] Translate metadata-validation feedback and adapt its two message assertions; all8existing behavior tests pass.
+- [x] Complete integrated formatting, file/link and translated-anchor validation, plus all8metadata behavior tests. Deliver the English surface through the signed repository commit; live publication is verified separately.
+
+New contribution discussions use English. Product UI remains German/English, existing authored content retains its language, and all outstanding product/production requirements remain in the ledger.
+
+## GitHub quality, coverage and maintainer merge continuation
+
+> Historical accepted-main checkpoint. Its counts and former rules describe that source snapshot; current merge eligibility is the 15-check policy stated above.
+
+Current request: visible compilation/type/style/quality/security/coverage tasks, Dependabot and uninterrupted direct Maintainer merges. Work is isolated on `codex/github-quality-checks` from current accepted main9c2103b; no business migration, normal preview, VPS or production mutation belongs to this slice.
+
+- [x] Preserve existing full application/native-selfhost/release and daily maintenance paths; add explicit quality/coverage gates and reports with no private credentials.
+- [x] Measure all executable frontend source honestly, including untested modules;197unit/component cases pass,48.89%lines with baseline-preserving global and stronger critical-file gates.
+- [x] Coordinate exact Vitest/coverage peers in daily discovery; actual plan regression includes simultaneous changes despite unrelated upstream failures.
+- [x] Enable/read back free Dependabot security updates, Secret Scanning and Push Protection; preserve existing alerts and add appropriate update configuration.
+- [x] Read back current Maintainer/Admin ALWAYS; synchronize both dormant review/check rules and source JSON with the same current role preference and9check names. No roles/invitations/Appkeys added.
+- [x] Complete local workflow/format/build/guard checks and actual exact-head PRquality/coverage/security acceptance; PR11 merged as6648651, proving direct Maintainer merge while full checks run. Main repeats the complete application/native/release gates; its actual outcome is taken from CI and the operational evidence record, not assumed from this checkbox.
+
+The first whole-main CodeQL baseline reports existing warnings beyond the earlier PR diff; [bounded triage](CODE_SCANNING_TRIAGE.md) records actual contexts, three tested small hardenings and remaining local-reader/scanner/Origin follow-up. No false zero-finding or complete security-certification claim is made.
+
+The additional PR-/check rules remain disabled until the independently prepared maintenance App has a proven token/promotion path; current effective Maintainer/Admin merge freedom is already present. The older personal PR-only preference below is superseded. Full remaining product scope stays unchanged.
+
 ## Current combined acceptance after Demo/Help integration
 
 - [x] Preserve all32 migrations, M7/M8 resource/privacy boundaries, the complete master-specification ledger and accepted incoming Demo/Help/Tour source from PR16/main `e75f55d`.
@@ -12,7 +80,7 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Record current functional preflight: 372 tests across 57 files; coverage S57.65/B52.32/F49.11/L59.46%, all configured floors passed. The corrected source has no complete native acceptance yet; its final combined SHA is not asserted here.
 - [x] Measure the current compiler inventory: 135 reachable modules, 34 routes, 286 runtime exports and zero connectivity/export/link/asset errors; collect 106 authored business browser cases plus two built-PWA cases without collection errors. Discovery does not mark those journeys passed.
 - [ ] Complete integration checks and a fresh full isolated run of the combined M7/M8/Demo/Help source, then observe both exact application and retained-data CI gates. Do not reuse individual branch or pre-merge counts as combined acceptance.
-- [ ] After the tested product merge, execute the actual main-only maintenance-App workflow proof. Preserve the independently strengthened14 required checks, mandatory signatures and review-only Maintain/Admin PR exception; do not restore an older nine-check policy. Review-hold decisions for separate PR13/19 remain separate from this product gate.
+- [ ] After the tested product merge, execute the actual main-only maintenance-App workflow proof. Preserve the current 15 required checks, including PR preview package, mandatory signatures and review-only Maintain/Admin PR exception; do not restore an older nine-check policy. Review-hold decisions for separate PR13/19 remain separate from this product gate.
 
 ## PR13 documentation-branch acceptance history
 

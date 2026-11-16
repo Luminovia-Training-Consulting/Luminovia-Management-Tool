@@ -1,6 +1,6 @@
 # Reading and safely extending SQL migrations
 
-This guide explains the **32 immutable SQL files in the current application source** without changing their bytes. Accepted migrations form part of the local preview, update and recovery fingerprints. Even an added SQL comment would produce a different source hash. New migrations are added separately; extend this guide and the relevant feature guides when that happens.
+This guide inventories **35 SQL files: 26 immutable released baseline migrations and nine incoming extensions**. The eight M7/M8 files are renamed after the released prefix without changing their bytes; the final additive migration binds discovery to the current role-specific quote. Accepted SQL forms part of local preview, update and recovery fingerprints, so even an added comment changes source identity. File identity/order checks do not replace a fresh or retained-data database replay; the combined API inventory is generated from that actual replay before delivery. New business changes use separate additive migrations and matching guide updates.
 
 The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API inventory. [ERD](ERD.md), [DEVELOPER_GUIDE](DEVELOPER_GUIDE.md) and the relevant feature guides explain how the parts connect.
 
@@ -188,7 +188,7 @@ Test entry point: [availability-db-tests.mjs](../scripts/availability-db-tests.m
 
 Source: [20261115210814_job_capacity_and_board.sql](../supabase/migrations/20261115210814_job_capacity_and_board.sql).
 
-Only new offers explicitly priced per position receive 1–20 positions. Legacy, client and CBW offers retain their single-position meaning. `claim_job` locks the person and offer, checks available positions and reserves every session atomically. Lifecycle, cancellation, invoice review and client/revenue projections account for active positions while preserving history.
+Only new offers explicitly priced per position receive 1–20 positions. Legacy, client and catalogue-linked course offers retain their single-position meaning. `claim_job` locks the person and offer, checks available positions and reserves every session atomically. Lifecycle, cancellation, invoice review and client/revenue projections account for active positions while preserving history.
 
 Test entry point: [jobs-capacity-db-tests.mjs](../scripts/jobs-capacity-db-tests.mjs).
 
@@ -200,9 +200,27 @@ Requires the current `audit.read` capability and MFA; only explicitly reviewed a
 
 Test entry point: [admin-audit-db-tests.mjs](../scripts/admin-audit-db-tests.mjs).
 
-### 25. Versioned structured chat mentions
+### 25. Subordinate roles and private role-specific compensation
 
-Source: [20261115230301_chat_structured_mentions.sql](../supabase/migrations/20261115230301_chat_structured_mentions.sql).
+Source: [20261116020953_delegated_roles_and_private_role_pricing.sql](../supabase/migrations/20261116020953_delegated_roles_and_private_role_pricing.sql).
+
+Current database authority controls the assignable role catalogue, account lifecycle and invitation completion. Management can assign subordinate roles; self, equal and higher targets remain protected. Guest provides no business capability. Company budget memberships stay administrative, and incompatible staff/company combinations cannot combine private gross and net access.
+
+Administration configures a private versioned compensation policy with current MFA; no business percentages are seeded. Commissioned offers capture their policy and keep raw public price sentinels at zero. `job_offers()` returns only the current actor's net quote, and claim consent binds that quote to the current role. Later role/policy changes do not rewrite accepted revenue, compensation or invoice history. Legacy net-only offers keep their original meaning.
+
+Test entry points: [delegated-pricing-db-tests.mjs](../scripts/delegated-pricing-db-tests.mjs), [commission-api-check.mjs](../scripts/commission-api-check.mjs) and [roles-pricing.spec.ts](../tests/e2e/roles-pricing.spec.ts). [Detailed operating rules](DELEGATED_ROLES_PRICING.md).
+
+### 26. Personal welcome progress
+
+Source: [20261116021008_welcome_guide_progress.sql](../supabase/migrations/20261116021008_welcome_guide_progress.sql).
+
+Own-account invoker RPCs read and version personal step/status state in the unexposed private schema. There is no target-user parameter or administrative bypass. Advancing, pausing or skipping the guide grants no role, MFA level or completed business action. The new source includes an outer BEGIN/COMMIT transaction so retained-data replay records the exact SQL and its history entry atomically; the native migration inventory regression checks this contract for every file.
+
+Test entry points: [welcome-db-tests.mjs](../scripts/welcome-db-tests.mjs), [welcome-api-check.mjs](../scripts/welcome-api-check.mjs), [welcome-guide.spec.ts](../tests/e2e/welcome-guide.spec.ts) and [selfhost-candidate-check.test.mjs](../deploy/hostinger/maintenance/selfhost-candidate-check.test.mjs). [Welcome guide](WELCOME_GUIDE.md).
+
+### 27. Versioned structured chat mentions
+
+Source: [20261115230301_chat_structured_mentions.sql](../supabase/migrations/20261116022730_chat_structured_mentions.sql).
 
 Adds message content versions, version-bound mention targets and actor/request retry records without removing the earlier message APIs. A mention is an explicit selection of at most 20 distinct current, active, role-eligible room members; text resembling `@name` is not authorization. Message send/edit and the selected mentions commit together. Edits use the expected content version, the existing sender/edit-window rules and a payload-bound retry identity. Profile/role, room and member locks protect the membership checks against concurrent revocation. Reads and history retain current room access; first explicit mentions can renew a notice or override a room mute, while the global notification category and attention rules still apply.
 
@@ -210,9 +228,9 @@ Private version/request tables have RLS and no browser table grants; internal tr
 
 Test entry point: [chat-mentions-db-tests.mjs](../scripts/chat-mentions-db-tests.mjs).
 
-### 26. Server-paged files and private personal organisation
+### 28. Server-paged files and private personal organisation
 
-Source: [20261115230604_file_discovery_personal_organisation.sql](../supabase/migrations/20261115230604_file_discovery_personal_organisation.sql).
+Source: [20261115230604_file_discovery_personal_organisation.sql](../supabase/migrations/20261116022731_file_discovery_personal_organisation.sql).
 
 `document_discovery` applies literal filename search, owner/kind/job filters and own tag/folder filters before paging by descending `(created_at,id)`. Each page contains at most 100 rows and rechecks `can_access_document`; paging does not raise the Data API row cap or provide an enduring download grant. The separate `document_organisation` rows belong to an account/document pair, with their own RLS and no direct authenticated table grants. Tags and virtual folders are personal annotations, not shared document metadata or Storage paths.
 
@@ -220,9 +238,9 @@ Saving annotations locks the active profile, then the document, then the account
 
 Test entry point: [files-discovery-db-tests.mjs](../scripts/files-discovery-db-tests.mjs).
 
-### 27. Bounded job discovery, summaries and own saved views
+### 29. Bounded job discovery, summaries and own saved views
 
-Source: [20261115230702_job_discovery_and_saved_views.sql](../supabase/migrations/20261115230702_job_discovery_and_saved_views.sql).
+Source: [20261115230702_job_discovery_and_saved_views.sql](../supabase/migrations/20261116022732_job_discovery_and_saved_views.sql).
 
 Adds server-side literal discovery, validated criteria/sorts, exact job resolution, scoped assignment titles and dashboard summaries. The discovery cursor binds its sort position to the normalized filter fingerprint; pages permit 1–100 offers and recheck the current lecturer or `jobs.manage` capability/MFA boundary. Commercial projections retain their existing net/gross permissions. Search, summaries and a selected job do not confirm claim eligibility or reserve any session.
 
@@ -230,19 +248,19 @@ Saved views contain only the current account's normalized criteria, with RLS, pr
 
 Test entry point: [job-discovery-db-tests.mjs](../scripts/job-discovery-db-tests.mjs).
 
-### 28. Own in-app attention preferences
+### 30. Own in-app attention preferences
 
-Source: [20261115231704_notification_attention_preferences.sql](../supabase/migrations/20261115231704_notification_attention_preferences.sql).
+Source: [20261115231704_notification_attention_preferences.sql](../supabase/migrations/20261116022733_notification_attention_preferences.sql).
 
-Adds a separate private daily quiet-period preference using explicit IANA time zones and local minute boundaries, including overnight/DST behavior. It leaves the existing four category switches independent. `notification_inbox` retains its prior arguments and adds the server-calculated `quiet_active` and, only while quiet, `attention_count`. Quiet hours change the bell's attention count, not the retained unread events or explicit read state. Binding claim/cancellation/contract notices remain counted; migration 29 adds currently readable important announcements.
+Adds a separate private daily quiet-period preference using explicit IANA time zones and local minute boundaries, including overnight/DST behavior. It leaves the existing four category switches independent. `notification_inbox` retains its prior arguments and adds the server-calculated `quiet_active` and, only while quiet, `attention_count`. Quiet hours change the bell's attention count, not the retained unread events or explicit read state. Binding claim/cancellation/contract notices remain counted; the announcement migration below adds currently readable important announcements.
 
 Own preference writes lock the active profile, serialize first saves through an account-bound transaction lock and use the preference row/CAS version, initially 0 without a stored row. Forged actor fields, equal endpoints and invalid times/zones are rejected. Direct table access and anonymous helper/API execution remain closed. This migration supplies no SMTP, push or delivery scheduler. See [NOTIFICATIONS](NOTIFICATIONS.md).
 
 Test entry point: [attention-db-tests.mjs](../scripts/attention-db-tests.mjs).
 
-### 29. Immutable announcement drafts, publication and acknowledgements
+### 31. Immutable announcement drafts, publication and acknowledgements
 
-Source: [20261115232824_portal_announcements.sql](../supabase/migrations/20261115232824_portal_announcements.sql).
+Source: [20261115232824_portal_announcements.sql](../supabase/migrations/20261116022734_portal_announcements.sql).
 
 Adds `announcements.manage` to the existing owner/admin/management roles and private, RLS-protected announcement, revision, publication, acknowledgement and retry records. Draft revisions and publication records are immutable. Saving a bilingual draft preserves the separately published text, role audience and finite display window. Active readers must satisfy the current publication, archive, audience and time checks; management uses the current capability and MFA rather than a client-supplied role.
 
@@ -250,9 +268,9 @@ Management locks the acting profile/roles, rechecks permission, then applies req
 
 Test entry point: [announcements-db-tests.mjs](../scripts/announcements-db-tests.mjs).
 
-### 30. Purpose-bound administrative job and course pickers
+### 32. Purpose-bound administrative job and course pickers
 
-Source: [20261116003728_scoped_administrative_job_pickers.sql](../supabase/migrations/20261116003728_scoped_administrative_job_pickers.sql).
+Source: [20261116003728_scoped_administrative_job_pickers.sql](../supabase/migrations/20261116022735_scoped_administrative_job_pickers.sql).
 
 `job_picker` returns bounded metadata for two closed purposes: `job_attachment` requires current `jobs.manage`/MFA; `participant_course` requires current `courses.manage`/MFA. These match the existing file-registration and channel-management actions. The course projection contains template/organisation/schedule metadata and one representative real job binding per course run, without exposing that job's hidden commercial text. The helper does not silently apply lecturer marketplace, contract or claim-qualification gates to administrative choices.
 
@@ -260,9 +278,9 @@ Literal search and cursor fingerprints bind purpose/search to stable job/run ord
 
 Test entry point: [job-picker-db-tests.mjs](../scripts/job-picker-db-tests.mjs).
 
-### 31. Published global-calendar management
+### 33. Published global-calendar management
 
-Source: [20261116003733_global_calendar_publications.sql](../supabase/migrations/20261116003733_global_calendar_publications.sql).
+Source: [20261116003733_global_calendar_publications.sql](../supabase/migrations/20261116022736_global_calendar_publications.sql).
 
 Extends the existing global-event rows with versions, archive state and a private request ledger. The global read policy permits ordinary active accounts only explicitly published, nonarchived events; `courses.manage`/MFA permits management of drafts. The range API enforces finite intervals of at most 93 days, bounded literal search, stable cursors and pages of 1–100 events. Descriptions remain authored plain text; optional HTTPS links and instants/IANA zones are validated before saving or publishing.
 
@@ -270,15 +288,25 @@ The volatile mutation locks the actor profile before its current permission chec
 
 Test entry point: [calendar-global-db-tests.mjs](../scripts/calendar-global-db-tests.mjs).
 
-### 32. Explicit qualification evidence and attestation history
+### 34. Explicit qualification evidence and attestation history
 
-Source: [20261116004358_qualification_evidence_and_attestation_history.sql](../supabase/migrations/20261116004358_qualification_evidence_and_attestation_history.sql).
+Source: [20261116004358_qualification_evidence_and_attestation_history.sql](../supabase/migrations/20261116022737_qualification_evidence_and_attestation_history.sql).
 
 Adds private RLS-protected topic state, evidence bindings, decision/history events and request records. A lecturer explicitly shares an own clean personal certificate version for a selected topic; the sharing grant identifies that exact version rather than whichever replacement is newest. Current `qualifications.verify`/MFA authorizes targeted review and download, replacing blanket foreign-certificate access. The existing separate `users.manage`/MFA CV exception and contract/finance scopes remain intact. Upload registration also stops another account's certificate upload. Existing manual `verify_lecturer_topic` delegates to the same attestation/history core.
 
 Mutations lock the active actor profile before fresh role/permission checks, then serialize request and selected-topic/state/evidence locks with CAS. Exact retries return currently sanitized state, not old private metadata. Withdrawal, topic removal or file archiving ends the prior download grant; re-adding a topic does not restore it. History grants no historical byte access, and old verifications receive no invented retrospective events. The Edge gateway rechecks the narrow evidence binding around Storage retrieval. Evidence sharing/upload does not itself verify a qualification or change accepted claim snapshots. See [QUALIFICATIONS](QUALIFICATIONS.md) and [FILES](FILES.md).
 
 Test entry point: [qualifications-db-tests.mjs](../scripts/qualifications-db-tests.mjs).
+
+### 35. Role-aware prospective job discovery
+
+Source: [20261116045609_role_aware_job_discovery.sql](../supabase/migrations/20261116045609_role_aware_job_discovery.sql).
+
+Adds private quote/context helpers and replaces only the latest discovery candidate, item and page implementations. Role-priced offers derive the current lecturer's prospective amount and consent version from each offer's captured private policy. Actors without lecturer eligibility receive no alternative prospective quote. Legacy net-only offers retain their original amounts, and accepted claims/revenue are not rewritten. The internal helpers have explicit execution revokes and current active-actor/read checks.
+
+Price bounds and sorting use those authorized amounts instead of the raw public zero sentinels. Unknown quotes remain null in items, fail money bounds and use only internal ordering sentinels. Detail and dashboard suggestions share the item projection. The cursor fingerprint additionally binds the actor's role/tier and current policy context, so an old monetary order cannot silently continue after authority changes. Paging remains bounded and claim eligibility/reservation remains the existing online transaction.
+
+Test entry points: [role-aware-job-discovery-db-tests.mjs](../scripts/role-aware-job-discovery-db-tests.mjs), [role-aware-job-discovery-api-check.mjs](../scripts/role-aware-job-discovery-api-check.mjs) and [job-discovery-db-tests.mjs](../scripts/job-discovery-db-tests.mjs). Their presence is not a claim that the final integrated native checks have passed. See [JOB_DISCOVERY](JOB_DISCOVERY.md) and [DELEGATED_ROLES_PRICING](DELEGATED_ROLES_PRICING.md).
 
 ## The critical data flows
 
@@ -291,7 +319,7 @@ Test entry point: [qualifications-db-tests.mjs](../scripts/qualifications-db-tes
 ## Before changing SQL
 
 1. Find the definition, later replacements, triggers, RLS/grants and every API caller. An internal trigger or documented RPC without a browser import is not automatically dead code.
-2. Create a **new additive migration** with the installed Supabase CLI. Do not rewrite existing SQL files, production history or accepted snapshots.
+2. Create a **new additive migration** with the installed Supabase CLI. Include an explicit outer BEGIN/COMMIT envelope for exact-source atomic history replay. Do not rewrite released SQL files, production history or accepted snapshots.
 3. Comment new tables, functions, lock ordering, actor/MFA checks, `search_path`, versioning/idempotency and grants directly in the new SQL source. New internal helpers need explicit EXECUTE revokes; do not broadly expand wrapper/definer boundaries.
 4. Check a fresh replay, actual RLS/concurrency and the affected Auth/API/browser flows. Updating an existing database and preserving actual Storage bytes require separate evidence. Use the existing isolated full verification command and document the stages actually reached.
 5. Update the API reference only through its intended actual replay; also update this guide, feature documentation, plan and work log. Hosted migrations follow the existing operations and approval path.

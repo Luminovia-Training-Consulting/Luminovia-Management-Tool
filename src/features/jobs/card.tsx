@@ -1,3 +1,4 @@
+/** Actor-authorized marketplace card; hidden compensation never becomes a zero-price offer. */
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
@@ -5,6 +6,7 @@ import type { Job } from "../../lib/types";
 import { dateTime, money } from "../../lib/dates";
 import "./lifecycle-i18n";
 import "../commercial/platform-i18n";
+/** Render the server's current quote and earliest session without inferring protected prices. */
 export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
   const { t, i18n } = useTranslation();
   const lifeText = useTranslation("jobLifecycle").t;
@@ -41,7 +43,9 @@ export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
       <div className="job-card-bottom">
         <div>
           <strong>
-            {money(job.total_amount, job.currency, i18n.language)}
+            {job.total_amount === null
+              ? priceText("privateCompensation")
+              : money(job.total_amount, job.currency, i18n.language)}
           </strong>
           <small>
             {priceText("lecturerShare")} · {lifeText("perPosition")} ·{" "}

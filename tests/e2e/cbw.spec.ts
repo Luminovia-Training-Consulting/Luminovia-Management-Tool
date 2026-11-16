@@ -191,7 +191,7 @@ test("CBW source template plans ten real sessions and one linked net-only teachi
       .single(),
   );
   expect(created.course_run_id).toBe(run.id);
-  expect(created.total_amount).toBe(500);
+  expect(created.total_amount).toBe(0);
   expect(created.job_sessions).toHaveLength(10);
   expect(
     created.job_sessions
@@ -216,7 +216,7 @@ test("CBW source template plans ten real sessions and one linked net-only teachi
     await login(lecturerPage, teacher.email);
     await lecturerPage.goto(`/jobs/${created.id}`);
     await expect(lecturerPage.locator(".claim-panel .amount")).toHaveText(
-      /500,00/,
+      /310,00/,
     );
     await expect(lecturerPage.getByText(/1\.000,00/)).toHaveCount(0);
     await expect(
@@ -246,7 +246,7 @@ test("CBW source template plans ten real sessions and one linked net-only teachi
         .eq("job_id", created.id),
     );
     expect(claims).toHaveLength(1);
-    expect(claims[0].total_amount).toBe(500);
+    expect(claims[0].total_amount).toBe(310);
     expect(claims[0].assignment_sessions).toHaveLength(10);
     await a11y(lecturerPage);
     await lecturerPage.screenshot({

@@ -2,13 +2,27 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
-## Current functional preflight — complete acceptance still pending
+## Current joint PR10/PR13 integration — acceptance pending
+
+This source merges accepted main `fabd71a` with the incoming M7/M8 implementation and English documentation history. The 35-file candidate retains the 26 byte-identical released migrations, appends the eight byte-identical renamed M7/M8 files and the additive role-aware discovery correction. The generated API inventory and actual replay/upgrade behavior must still be verified from the combined database. No current complete native, browser, PWA or retained-data pass is claimed here. The 372-test preflight and the failed 32-migration runs below retain their exact earlier source scope.
+
+The acceptance gate is the final combined revision: appropriate source/focused regressions, complete isolated Auth/SQL/API/desktop/mobile/PWA execution, actual retained-data selfhost verification and all 15 required GitHub checks, including `PR preview package`. A source merge, authored test or old individual branch pass cannot substitute for those results. Hosted installation and production acceptance remain separate.
+
+## Historical PR18 extension checkpoint — combined acceptance then pending
+
+[PR18](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/18) preserves accepted M6 and all historical commercial records. The current combined run is a separate gate. Focused frontend:215cases/49files, S48.61/B43.47/F38.76/L50.43%; lint/type/format/build and the source graph pass. Preview/runtime/community guard combination passes36cases; three additional execution-based QA bootstrap cases pass.
+
+Actual signed-source `a55089b` local `.local/tests/98a4eba3/RESULT.txt` and [CI43795741418](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43795741418) both return **exit1** after all26migrations, schema lint/advisors, **257 individual SQL cases**, genuine retained password/MFA/profile/private-event/Storage bytes and four actual API suites. The first commissioned course-offer API correctly rejects missing private policy. The QA bootstrap had been filtered out by intentionally sanitized nested startup; the corrected runner explicitly seeds its fictional policy with its own QA identity after the persistence proof. No normal development or production policy is chosen by seeding. Native API/browser/build-PWA completion is still required after this test-environment correction.
+
+Earlier CI43794432854 exposed wrapper fixture dependence on the outer QA port overlay, fixed and covered by an actual nested-process regression. CI43794974281 exposed legacy test expectations that allowed one equal-role administrator suspension; assertions now require both denied and both accounts unchanged. No permission/assertion was relaxed to accept either behavior. Current captured-offer duplication, role-bound consent, private configuration and stale-policy UI reload have independent regressions. Source/test existence and previous milestone acceptance are not labelled complete acceptance for this extension.
+
+## Historical M7 functional preflight — complete acceptance then pending
 
 The integrated functional source including PR16 Demo/Help/Tour, the Calendar correction and scoped picker passed `npm run test:coverage`: **372/372 tests across 57 files**, exit 0. Measured coverage: statements **57.65%**, branches **52.32%**, functions **49.11%**, lines **59.46%**; every configured floor passed. No new complete native pass or final merged-source SHA is claimed by this preflight. The separate PR19 automatic-merge implementation is not included.
 
 The current compiler inventory contains **135 reachable modules, 34 routes and 286 runtime exports**, with no unreachable modules, unresolved imports, unused runtime exports, broken literal links or missing assets. Playwright collection in explicit local test mode discovers **106 business cases plus two built-PWA cases**, with no collection errors. Those cases are authored/discovered, not passed current-source native acceptance.
 
-## Current 32-migration CI — Calendar failures, corrected integration pending
+## Historical 32-migration CI — Calendar failures, corrected integration then pending
 
 Exact source `9c42730` failed complete acceptance in [CI43794921492](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43794921492). All **316 PostgreSQL cases, 26 actual business API suites, 46 Edge tests and real restart persistence passed**. The local run also exited 1 with the same two Calendar failures in `.local/tests/cf7ffa12/RESULT.txt` (9.8 minutes); runtime guards 56, operational Node guards 61 and Python guards 76 passed. Business browsers finished **92 passed / 2 failed out of 94**: both desktop/mobile global-calendar journeys lost the published-event detail after the DE→EN switch. Build/PWA and the native selfhost acceptance were not reached. This is a failed complete gate, not a full pass.
 

@@ -187,6 +187,68 @@ it("submits combined filters once instead of requesting every typed character an
     state.rpc.mock.calls.filter(([n]) => n === "job_discovery"),
   ).toHaveLength(3);
 });
+it("hides old quote pages immediately after an observed role change and starts without their cursor", async () => {
+  const client = setup();
+  const user = userEvent.setup();
+  await screen.findByRole("link", { name: "Fictional discovery 1" });
+  await user.click(
+    screen.getByRole("button", { name: "Weitere Aufträge laden" }),
+  );
+  await screen.findByRole("link", { name: "Fictional discovery 2" });
+
+  const previous = state.rpc.getMockImplementation()!;
+  let finish!: (value: unknown) => void;
+  const currentRole = new Promise((resolve) => {
+    finish = resolve;
+  });
+  state.rpc.mockImplementation(
+    (name: string, args: Record<string, unknown>) => {
+      if (name !== "job_discovery") return previous(name, args);
+      return Object.assign(currentRole, { abortSignal: () => currentRole });
+    },
+  );
+  await act(async () => {
+    client.setQueryData(["user-roles", state.actor], ["senior_lecturer"]);
+  });
+  // Wait for the observer to consume the role, not its deferred price response.
+  // The old tier must already be absent while the new first page is pending.
+  await waitFor(() =>
+    expect(
+      state.rpc.mock.calls.filter(([name]) => name === "job_discovery"),
+    ).toHaveLength(3),
+  );
+  expect(
+    screen.queryByRole("link", { name: "Fictional discovery 1" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: "Fictional discovery 2" }),
+  ).not.toBeInTheDocument();
+  expect(
+    state.rpc.mock.calls
+      .filter(([name]) => name === "job_discovery")
+      .at(-1)?.[1].p_cursor,
+  ).toBeNull();
+  await act(async () =>
+    finish({
+      data: {
+        items: [
+          { ...job(), title: "Fictional current tier", terms_version: 32 },
+        ],
+        has_more: false,
+        next_cursor: null,
+        as_of: "2040-01-01T00:00:00Z",
+        filters: defaultJobFilters,
+      },
+      error: null,
+    }),
+  );
+  expect(
+    await screen.findByRole("link", { name: "Fictional current tier" }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("link", { name: "Fictional discovery 2" }),
+  ).not.toBeInTheDocument();
+});
 it("requires original currency before monetary requests and does not send invalid filters", async () => {
   setup();
   await screen.findByRole("link", { name: "Fictional discovery 1" });
