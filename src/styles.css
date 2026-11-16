@@ -224,9 +224,8 @@ summary:focus-visible {
   font-weight: 650;
   border: 1px solid transparent;
   border-radius: 10px;
-  transition:
-    background 0.16s,
-    transform 0.16s;
+  /* Theme foreground/background pairs must change in the same frame. */
+  transition: transform 0.16s;
   text-align: center;
   white-space: normal;
 }
