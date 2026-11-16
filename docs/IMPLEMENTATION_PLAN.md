@@ -4,7 +4,9 @@
 
 - [x] Apply the user's direct priority change: PR12 now precedes the earlier feature queue. Merge after current required checks without renewed approval; do not import unaccepted PR17 source.
 - [x] Reconcile actual PR34 main `c5281002`, preserving conservative scope routing, full PR12 classification, parallel native/application work, independent SQL workers and all 36 published migration bytes. Retain the measured 50-minute full-application allowance and source/browser evidence.
-- [ ] Complete the acceptance-upload interaction fix and routing regression, preserve the parallel remote reconciliation plus both complete ledgers, run focused local checks and publish the signed final branch.
+- [x] Complete the acceptance-upload interaction fix with actual red-to-green workflow regression (ten scope cases); retain cancelled full-run evidence and strict missing-report errors. Preserve the parallel remote reconciliation and both complete ledgers.
+- [x] Pass combined local source checks: 515 frontend/65 files and all coverage/type/lint/format/compiler/build gates, 130 runtime cases without skips, actionlint/format/diff checks; derive full from the actual 27 changed paths. No app/API/browser/dependency/migration bytes change over accepted3daf.
+- [ ] Publish the coherent signed final branch and observe its exact-head/current-base complete CI; prior3daf acceptance remains source-specific evidence.
 - [ ] Require and inspect all 15 final-head/current-base checks, actual full-profile application/native reports and exact preview binding, then perform and verify the normal PR12 merge. No production or release dispatch.
 
 ## Current accepted functional checkpoint and ordered delivery

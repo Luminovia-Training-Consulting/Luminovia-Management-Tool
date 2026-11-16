@@ -1,5 +1,11 @@
 # QA evidence — 2026-11-16
 
+## Final PR34 combined local acceptance
+
+The normal signed main/remote reconciliation retains all accepted histories and immutable 36-migration bytes; app/API/browser/dependency source is unchanged over accepted3daf. Actual source-derived routing is full for 27 changed paths. The upload-condition regression was red on the original actual workflow and passes after the bounded fix: ten cases cover reduced skipped/unstarted applications and full success/failure/cancellation, with unchanged exact summary allowlist and strict missing-evidence errors.
+
+Combined local `./portal check` passes 515 frontend cases/65 files and all coverage floors (S65.18/B59.74/F56.60/L67.28%), types/lint/format/compiler checks and production/PWA build (66 precache entries/2799.81 KiB). All 130 runtime cases pass with zero skips; actionlint/workflow formatting/whitespace checks pass. Private logs: `.local/full-functional/main34-source-check.log` and `main34-runtime.log`. This is source/controller acceptance, not a new complete service run. Fresh final-head/current-base full application/native/security/package CI remains required before the explicitly prioritised PR12 merge.
+
 ## Accepted PR34 integration: final full-profile verification pending
 
 The user explicitly prioritised PR12 first. Actual main `c5281002` contains accepted PR34's conservative CI scope routing and two independent pinned SQL workers, with no application/API/dependency/migration change. PR12 remains full because it changes scripts/tests/workflows; the canonical source/browser acceptance and actual native retention still run. The measured 50-minute application allowance is retained. The review identified an upload interaction with reduced profiles; its focused correction must preserve incomplete full-run evidence and the missing-evidence failure boundary.

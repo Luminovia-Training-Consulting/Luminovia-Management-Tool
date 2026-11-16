@@ -1,5 +1,13 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — final PR34 reconciliation and actual routing regression
+
+Both actual main `c5281002` and the independently written remote reconciliation `3d765786` are preserved by normal signed merges, together with both complete ledgers. Application/API/browser/dependency bytes remain unchanged from accepted3daf and all 36 published SQL files match main. The canonical source fingerprint/browser inventory stays intact, the measured full-job allowance remains 50 minutes, and the source classifier derives full for all 27 actual changed paths.
+
+The new workflow regression reads and evaluates the actual summary-upload condition. Before the fix it fails because docs/skipped incorrectly uploads a nonexistent report. After the correction all ten scope cases pass: success, failure and cancellation of an actual full application retain the safe summary; skipped/unstarted applications do not upload; missing required evidence still fails. Existing exact safe paths, hidden-file handling and artifact-error behavior remain unchanged.
+
+Actual final combined local checks pass `./portal check` (515 frontend/65 files, all coverage floors S65.18/B59.74/F56.60/L67.28%, type/lint/format/compiler checks and production/PWA build), all 130 runtime cases without skips, workflow formatting/actionlint and whitespace checks. Private logs are `.local/full-functional/main34-source-check.log` and `main34-runtime.log`. These source/controller checks complement the accepted3daf full service/browser/native proof; they do not preclaim final-current-head CI. Publish the coherent signed source, require actual full-profile application/native/security/preview acceptance on the current base, then merge PR12 first as directly requested. No unmerged PR17 feature, new shared-PC run or publication dispatch is included.
+
 ## 16 November 2026 — PR12 explicitly prioritised; accepted PR34 integrated
 
 The user directly chose to advance PR12 first, superseding its earlier PR17 → PR24 → PR25 hold. Complete the coherent signed branch update and merge after fresh final-head/current-base checks; no further merge confirmation is required. Unmerged PR17 source is not imported.
