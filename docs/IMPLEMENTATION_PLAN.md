@@ -2,6 +2,13 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## PR18 complete-CI repair
+
+- [x] Correct the missing disposable compensation bootstrap after real retention, with explicit owned QA identity and three executable orchestration regressions.
+- [x] Cover candidate-only settings after the older native-selfhost baseline upgrades and passes retention/readiness; preserve no-policy normal startup.
+- [x] Integrate current main e75f55d, retaining account welcome, Portal tour and public help/demo.
+- [ ] Observe exact-head complete quality/security/application/native-selfhost/preview-package results on PR18 and record actual evidence. No production or merge action is part of this CI repair.
+
 ## Current continuation — private roles/pricing, welcome guide and PR previews
 
 The latest request supersedes the earlier shared compensation default. Work is isolated on `codex/pr-preview-welcome-roles` from `1341b16`; existing accepted business history and the full module ledger below remain in scope. Actual business percentages are private Administration configuration because the source repository is public.
@@ -17,6 +24,18 @@ The latest request supersedes the earlier shared compensation default. Work is i
 - [ ] Production policy setup/migration/deployment is a separate operational step; this request does not authorise production or real email changes.
 
 [Roles and private pricing](DELEGATED_ROLES_PRICING.md), [welcome guide](WELCOME_GUIDE.md), [PR previews](PR_PREVIEWS.md). The verbatim original specification remains preserved; these explicit user extensions update its operating details without dropping any remaining modules.
+
+## Guided exploration and practical help
+
+User requested a complete bilingual guided experience, safe fictional test system, practical problem explanations and a tested PR/merge. Work is isolated on `codex/guided-demo-help`; unrelated original roles/preview/welcome-checklist changes remain outside this PR.
+
+- [x] Public fictional demo for all25current portal modules, guided route sequence and meaningful in-memory exercises; explicit simulation labels, reset/reload erasure, DE/EN and shared themes.
+- [x] Authenticated permission-aware Portal tour with explicit navigation, pause/resume/restart and per-account session progress; unchanged server permissions, MFA and online confirmation.
+- [x] Public searchable bilingual help with practical workflows, module deep links, general recovery and entry points from login/tour/errors.
+- [x] Source checks, production build, actual public desktop/mobile acceptance, initial whole-source coverage above unchanged gates and precise usage/security documentation. See WORKLOG for executed counts and remaining exact-source checks.
+- Integration and the user-authorised merge are tracked on [PR16](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/16). Its exact-head full application/native retained-data/security checks and merge state are the acceptance record. No production deployment is implied.
+
+[Guided demo and help](GUIDED_DEMO_AND_HELP.md) complements the full target below. These educational simulations do not mark any unimplemented business module complete and do not replace the independent account welcome checklist.
 
 ## English community information
 
