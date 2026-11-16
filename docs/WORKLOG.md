@@ -42,12 +42,6 @@ Independent owner evidence passes 8 fresh/populated-upgrade groups with first-fo
 
 The current local synthetic public-only production/PWA compilation also passes with 73 public precache entries. This is a build, not the built-PWA browser stage skipped by the failed full run.
 
-## 16 November 2026 — independent accounting delivery
-
-`codex/accounting-delivery` reuses signed64de5d7 as5ce04c7 on the current main/first-four operational parent, without the earlier incidental enquiry dependency. Routes, bilingual navigation and committed job-state invalidation connect `/accounting`. The never-released accounting SQL was regenerated with the installed CLI as20261116055506, retaining identical SQL bytes and following the operational forward version; all26released files remain unchanged. No bank transfer, real invoice, tax determination or importer conformity is invented.
-
-Actual local source passes293frontend cases/60files, TypeScript, ESLint and formatting, with unchanged coverage gates S52.55/B48.31/F42.63/L54.43%. Ten accounting PostgreSQL groups and39operational non-trigger strict diagnostics pass with zero warnings/errors. After preserving the final first-four forward migration,8fresh/populated-upgrade groups and41strict operational bodies also pass. API inventory was regenerated from actual migrations:161public functions. Actual native Auth/ClamAV/API/browser fixtures are authored but not counted as executed; the shared complete-PC queue is owned by other feature tasks after the prior run released it. The ten compiler-integrity/documentation guards and synthetic public-only production/PWA compilation also pass (75 public precache entries). A focused draft PR can be reviewed while its actual native/CI evidence completes.
-
 ## 16 November 2026 — local canonical result and bounded private-access corrections
 
 Owned local run `9a6558c9` tested the frozen `e34a5bf` source through all SQL, actual Auth/MFA/HTTP/Storage/ClamAV and invitation/Mailpit stages successfully. All four new operational API suites passed. Browser acceptance finished **95/96 passed**, including all eight new desktop/mobile readiness, delivery, marketplace and support cases and the accepted role/welcome cases. The whole command remains **FAIL**: the desktop public-help page was blank after 32 asset requests failed with `ERR_NETWORK_CHANGED`. The trace shows transport failures, not a false business result. Production build/PWA stages were not reached. The owned stack/scratch cleaned normally and the shared QA slot was released to the coordinator's next queued owner.

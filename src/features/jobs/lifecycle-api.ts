@@ -125,7 +125,6 @@ export async function refreshJobState(client: QueryClient) {
       "delivery",
       "replacements",
       "replacement-assignments",
-      "accounting",
     ].map((key) => client.invalidateQueries({ queryKey: [key] })),
   );
 }
