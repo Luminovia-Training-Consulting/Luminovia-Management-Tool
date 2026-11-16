@@ -118,6 +118,24 @@ function setup(route = "/jobs/job-a", list = false) {
   return client;
 }
 describe("safe marketplace interactions", () => {
+  it("shows restricted compensation without turning an unavailable amount into a zero-price offer", async () => {
+    const client = setup();
+    await act(async () =>
+      client.setQueryData(["jobs", "detail", "lecturer-a", "job-a"], {
+        ...job,
+        amount: null,
+        total_amount: null,
+      }),
+    );
+    expect(await screen.findByText("Honorar geschützt")).toBeVisible();
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Konditionen akzeptieren" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Auftrag übernehmen" }),
+    ).toBeDisabled();
+    expect(screen.queryByText("0,00 €")).not.toBeInTheDocument();
+  });
   it("requires new consent when an offer version changes during a refetch", async () => {
     const user = userEvent.setup();
     const client = setup();
@@ -142,6 +160,38 @@ describe("safe marketplace interactions", () => {
       rpc.mock.calls.filter(([name]) => name === "claim_job"),
     ).toHaveLength(0);
   });
+  it.each([
+    { amount: 301, total_amount: 1505 },
+    { currency: "AUD" as const },
+    { rate_unit: "per_hour" as const },
+  ])(
+    "requires new consent when the displayed quote changes without a version change: %j",
+    async (quote) => {
+      const user = userEvent.setup();
+      const client = setup();
+      await user.click(
+        screen.getByRole("checkbox", { name: "Konditionen akzeptieren" }),
+      );
+      expect(
+        screen.getByRole("button", { name: "Auftrag übernehmen" }),
+      ).toBeEnabled();
+      await act(async () => {
+        client.setQueryData(["jobs", "detail", "lecturer-a", "job-a"], {
+          ...job,
+          ...quote,
+        });
+      });
+      await waitFor(() =>
+        expect(screen.getByRole("checkbox")).not.toBeChecked(),
+      );
+      expect(
+        screen.getByRole("button", { name: "Auftrag übernehmen" }),
+      ).toBeDisabled();
+      expect(
+        rpc.mock.calls.filter(([name]) => name === "claim_job"),
+      ).toHaveLength(0);
+    },
+  );
   it("renders the authorized empty session-range response without a catalogue preload", () => {
     setup("/jobs?from=2027-01-05&to=2027-01-06", true);
     expect(

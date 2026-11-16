@@ -656,7 +656,7 @@ try {
       "1",
     );
   });
-  await test("Self-deactivation and removal of last active admin are blocked", async () => {
+  await test("Self-deactivation and subordinate authority cannot remove the sole active administrator", async () => {
     await assert.rejects(
       as(admin, `select public.set_user_active('${admin}',false)`, "aal2"),
       /Self-deactivation/,
@@ -667,14 +667,20 @@ try {
     );
     await assert.rejects(
       as(manager, `select public.set_user_active('${admin}',false)`, "aal2"),
-      /last active administrator/,
+      /Only subordinate account activation may be changed/,
     );
     assert.equal(
       await sql(`select active from public.profiles where id='${admin}'`),
       "t",
     );
+    assert.equal(
+      await sql(
+        "select count(distinct r.user_id) from public.user_roles r join public.profiles p on p.id=r.user_id where r.role in ('admin','owner') and p.active",
+      ),
+      "1",
+    );
   });
-  await test("Concurrent admins cannot both suspend one another", async () => {
+  await test("Concurrent equal administrators cannot suspend either protected account", async () => {
     const a = randomUUID(),
       b = randomUUID();
     await sql(
@@ -684,13 +690,24 @@ try {
       as(a, `select public.set_user_active('${b}',false)`, "aal2"),
       as(b, `select public.set_user_active('${a}',false)`, "aal2"),
     ]);
-    assert.equal(r.filter((x) => x.status === "fulfilled").length, 1);
-    assert.equal(r.filter((x) => x.status === "rejected").length, 1);
+    assert.equal(r.filter((x) => x.status === "fulfilled").length, 0);
+    assert.equal(r.filter((x) => x.status === "rejected").length, 2);
+    for (const result of r)
+      assert.match(
+        result.reason.message,
+        /Only subordinate account activation may be changed/,
+      );
     assert.equal(
       await sql(
         `select count(*) from public.profiles where id in ('${a}','${b}') and active`,
       ),
-      "1",
+      "2",
+    );
+    assert.equal(
+      await sql(
+        `select count(*) from public.audit_events where resource_id in ('${a}','${b}') and action='user.deactivated'`,
+      ),
+      "0",
     );
   });
   console.log(

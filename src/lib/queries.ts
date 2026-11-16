@@ -1,5 +1,5 @@
 /**
- * Shared profile, current-capability, expertise, offer, claim and private-event queries. Actor
+ * Shared profile, current-capability, expertise, claim and private-event queries. Actor
  * keys prevent cache mixing; RLS/RPCs remain the authoritative access boundary.
  */
 import { queryOptions } from "@tanstack/react-query";
@@ -23,6 +23,7 @@ export const profileQuery = (id: string) =>
 export const permissionsQuery = (id: string) =>
   queryOptions({
     queryKey: ["permissions", id],
+    refetchInterval: 30000,
     queryFn: async () => {
       const { data, error } = await db().rpc("get_my_permissions");
       if (error) throw error;

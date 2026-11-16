@@ -179,8 +179,10 @@ beforeEach(async () => {
       abortSignal: () => builder,
       then: (resolve: (result: unknown) => unknown) =>
         Promise.resolve({
-          data: fake.rpcData[name],
-          error: fake.errors[name] ?? null,
+          data: name === "job_offers" ? fake.tables.jobs : fake.rpcData[name],
+          error:
+            fake.errors[name] ??
+            (name === "job_offers" ? fake.errors.jobs : null),
         }).then(resolve),
     };
     return builder;
@@ -349,6 +351,7 @@ describe("role-aware dashboard previews", () => {
         ),
       ).toBe(false);
       expect(rpcCalls("contract_records")).toHaveLength(0);
+      expect(rpcCalls("job_offers")).toHaveLength(0);
       expect(
         screen.queryByRole("region", {
           name: "Meine offenen Vertragsbestätigungen",

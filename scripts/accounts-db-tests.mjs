@@ -250,7 +250,7 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
             [
               "fictional-client@example.invalid",
               "Client",
-              "admin",
+              "lecturer",
               null,
               inviteKey,
             ],
@@ -263,16 +263,22 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
         rpc(
           manager,
           "reserve_account_invitation",
-          ["another@example.invalid", "Client", "client", org, randomUUID()],
+          [
+            "another@example.invalid",
+            "Client",
+            "management",
+            null,
+            randomUUID(),
+          ],
           "aal2",
         ),
-        /Role assignment permission/,
+        /Only subordinate invitation/,
       );
       await assert.rejects(
         rpc(
           admin,
           "reserve_account_invitation",
-          ["bad@example.invalid", "Client", "client", null, randomUUID()],
+          ["bad@example.invalid", "Client", "lecturer", org, randomUUID()],
           "aal2",
         ),
         /Valid client organisation/,

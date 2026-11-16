@@ -79,6 +79,12 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
   if (state.isError) return <ErrorState retry={() => void state.refetch()} />;
   const info = state.data;
   const capacity = info.capacity ?? job.capacity ?? 1;
+  const maxNetBudget =
+    info.max_net_budget !== undefined
+      ? info.max_net_budget
+      : job.total_amount === null
+        ? null
+        : (Math.round(Number(job.total_amount) * 100) * capacity) / 100;
   const confirmedCount =
     info.confirmed_count ??
     info.claims.filter((claim) => claim.status === "confirmed").length;
@@ -140,14 +146,12 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
       </div>
       {info.can_manage && (
         <p>
-          <strong>
-            {t("maxNetBudget")}:{" "}
-            {money(
-              (Math.round(Number(job.total_amount) * 100) * capacity) / 100,
-              job.currency,
-              i18n.language,
-            )}
-          </strong>
+          {maxNetBudget !== null && (
+            <strong>
+              {t("maxNetBudget")}:{" "}
+              {money(maxNetBudget, job.currency, i18n.language)}
+            </strong>
+          )}
           {info.gross_budget !== undefined && info.gross_budget !== null && (
             <>
               {" "}

@@ -1,6 +1,6 @@
 # Reading and safely extending SQL migrations
 
-This guide maps the **47 ordered SQL sources through `20261116044535_own_qualification_passport.sql`** without changing their bytes. The earlier 24-source foundation remains intact; eight M7/M8 sources and fifteen smart-operations sources extend it. This is a source checkpoint, not an assertion that a hosted database has applied all 47 or that the current combined acceptance has passed. Accepted migrations form part of the local preview, update and recovery fingerprints. Even an added SQL comment would produce a different source hash. New migrations are added separately; extend this guide and the relevant feature guides when that happens.
+This guide maps the **49 ordered SQL sources through `20261116044535_own_qualification_passport.sql`** without changing their bytes. The earlier 24-source foundation remains intact; two PR18 sources, eight M7/M8 sources and fifteen smart-operations sources extend it. This is a source checkpoint, not an assertion that a hosted database has applied all 49 or that the current combined acceptance has passed. Accepted migrations form part of the local preview, update and recovery fingerprints. Even an added SQL comment would produce a different source hash. New migrations are added separately; extend this guide and the relevant feature guides when that happens.
 
 The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API inventory. [ERD](ERD.md), [DEVELOPER_GUIDE](DEVELOPER_GUIDE.md) and the relevant feature guides explain how the parts connect.
 
@@ -200,7 +200,25 @@ Requires the current `audit.read` capability and MFA; only explicitly reviewed a
 
 Test entry point: [admin-audit-db-tests.mjs](../scripts/admin-audit-db-tests.mjs).
 
-### 25. Private email preferences and committed-event outbox
+### 25. Subordinate roles and private role-specific compensation
+
+Source: [20261116020953_delegated_roles_and_private_role_pricing.sql](../supabase/migrations/20261116020953_delegated_roles_and_private_role_pricing.sql).
+
+Current database authority controls the assignable role catalogue, account lifecycle and invitation completion. Management can assign subordinate roles; self, equal and higher targets remain protected. Guest provides no business capability. Company budget memberships stay administrative, and incompatible staff/company combinations cannot combine private gross and net access.
+
+Administration configures a private versioned compensation policy with current MFA; no business percentages are seeded. Commissioned offers capture their policy and keep raw public price sentinels at zero. `job_offers()` returns only the current actor's net quote, and claim consent binds that quote to the current role. Later role/policy changes do not rewrite accepted revenue, compensation or invoice history. Legacy net-only offers keep their original meaning.
+
+Test entry points: [delegated-pricing-db-tests.mjs](../scripts/delegated-pricing-db-tests.mjs), [commission-api-check.mjs](../scripts/commission-api-check.mjs) and [roles-pricing.spec.ts](../tests/e2e/roles-pricing.spec.ts). [Detailed operating rules](DELEGATED_ROLES_PRICING.md).
+
+### 26. Personal welcome progress
+
+Source: [20261116021008_welcome_guide_progress.sql](../supabase/migrations/20261116021008_welcome_guide_progress.sql).
+
+Own-account invoker RPCs read and version personal step/status state in the unexposed private schema. There is no target-user parameter or administrative bypass. Advancing, pausing or skipping the guide grants no role, MFA level or completed business action. The new source includes an outer BEGIN/COMMIT transaction so retained-data replay records the exact SQL and its history entry atomically; the native migration inventory regression checks this contract for every file.
+
+Test entry points: [welcome-db-tests.mjs](../scripts/welcome-db-tests.mjs), [welcome-api-check.mjs](../scripts/welcome-api-check.mjs), [welcome-guide.spec.ts](../tests/e2e/welcome-guide.spec.ts) and [selfhost-candidate-check.test.mjs](../deploy/hostinger/maintenance/selfhost-candidate-check.test.mjs). [Welcome guide](WELCOME_GUIDE.md).
+
+### 27. Private email preferences and committed-event outbox
 
 Source: [20261116021141_notification_email_outbox.sql](../supabase/migrations/20261116021141_notification_email_outbox.sql).
 
@@ -208,7 +226,7 @@ Own email/quiet-hour/zone preferences are versioned and disabled by default. Not
 
 Test entry point: [notification-delivery-db-tests.mjs](../scripts/notification-delivery-db-tests.mjs).
 
-### 26. Private dashboard layout and teaching-day preparation
+### 28. Private dashboard layout and teaching-day preparation
 
 Source: [20261116021232_personal_dashboard_and_teaching_day.sql](../supabase/migrations/20261116021232_personal_dashboard_and_teaching_day.sql).
 
@@ -216,7 +234,7 @@ Own allowed widget order/visibility uses CAS. Teaching-day data derives current 
 
 Test entry point: [dashboard-personal-db-tests.mjs](../scripts/dashboard-personal-db-tests.mjs).
 
-### 27. Bounded own calendar-file projection
+### 29. Bounded own calendar-file projection
 
 Source: [20261116022220_calendar_file_export.sql](../supabase/migrations/20261116022220_calendar_file_export.sql).
 
@@ -224,7 +242,7 @@ The security-invoker export reads only current-owner confirmed/unreleased alloca
 
 Test entry point: [calendar-export-db-tests.mjs](../scripts/calendar-export-db-tests.mjs).
 
-### 28. Explicit staff-directory contact visibility
+### 30. Explicit staff-directory contact visibility
 
 Source: [20261116022729_staff_contact_visibility.sql](../supabase/migrations/20261116022729_staff_contact_visibility.sql).
 
@@ -232,7 +250,7 @@ Own email/phone consent defaults off and uses current identity/CAS. The separate
 
 Test entry point: [staff-contact-db-tests.mjs](../scripts/staff-contact-db-tests.mjs).
 
-### 29. Version-bound structured chat recipients
+### 31. Version-bound structured chat recipients
 
 Source: [20261116022730_chat_structured_mentions.sql](../supabase/migrations/20261116022730_chat_structured_mentions.sql).
 
@@ -240,7 +258,7 @@ Current room recipients, message/recipient versions, author correction history a
 
 Test entry point: [chat-mentions-db-tests.mjs](../scripts/chat-mentions-db-tests.mjs).
 
-### 30. Paged file discovery and private personal organisation
+### 32. Paged file discovery and private personal organisation
 
 Source: [20261116022731_file_discovery_personal_organisation.sql](../supabase/migrations/20261116022731_file_discovery_personal_organisation.sql).
 
@@ -248,7 +266,7 @@ Server keyset discovery applies current document permission before returning a p
 
 Test entry point: [files-discovery-db-tests.mjs](../scripts/files-discovery-db-tests.mjs).
 
-### 31. Paged job discovery and own saved views
+### 33. Paged job discovery and own saved views
 
 Source: [20261116022732_job_discovery_and_saved_views.sql](../supabase/migrations/20261116022732_job_discovery_and_saved_views.sql).
 
@@ -256,7 +274,7 @@ Job discovery uses complete cursors and validated server filters; saved views be
 
 Test entry point: [job-discovery-db-tests.mjs](../scripts/job-discovery-db-tests.mjs).
 
-### 32. Own in-app attention windows
+### 34. Own in-app attention windows
 
 Source: [20261116022733_notification_attention_preferences.sql](../supabase/migrations/20261116022733_notification_attention_preferences.sql).
 
@@ -264,7 +282,7 @@ Versioned own quiet-window preferences alter in-app attention, not underlying no
 
 Test entry point: [attention-db-tests.mjs](../scripts/attention-db-tests.mjs).
 
-### 33. Explicit published announcement revisions
+### 35. Explicit published announcement revisions
 
 Source: [20261116022734_portal_announcements.sql](../supabase/migrations/20261116022734_portal_announcements.sql).
 
@@ -272,7 +290,7 @@ Private draft and published revision lifecycles separate editing from audience/w
 
 Test entry point: [announcements-db-tests.mjs](../scripts/announcements-db-tests.mjs).
 
-### 34. Purpose-scoped administrative job choices
+### 36. Purpose-scoped administrative job choices
 
 Source: [20261116022735_scoped_administrative_job_pickers.sql](../supabase/migrations/20261116022735_scoped_administrative_job_pickers.sql).
 
@@ -280,7 +298,7 @@ Checked picker projections replace unpaged job choices for file attachments and 
 
 Test entry point: [job-picker-db-tests.mjs](../scripts/job-picker-db-tests.mjs).
 
-### 35. Versioned global-event publication
+### 37. Versioned global-event publication
 
 Source: [20261116022736_global_calendar_publications.sql](../supabase/migrations/20261116022736_global_calendar_publications.sql).
 
@@ -288,7 +306,7 @@ Extends the existing global-events lifecycle with explicit draft/publish/unpubli
 
 Test entry point: [calendar-global-db-tests.mjs](../scripts/calendar-global-db-tests.mjs).
 
-### 36. Explicit exact qualification evidence and attestation history
+### 38. Explicit exact qualification evidence and attestation history
 
 Source: [20261116022737_qualification_evidence_and_attestation_history.sql](../supabase/migrations/20261116022737_qualification_evidence_and_attestation_history.sql).
 
@@ -296,7 +314,7 @@ Own consent binds an exact clean personal certificate version/hash to a selected
 
 Test entry point: [qualifications-db-tests.mjs](../scripts/qualifications-db-tests.mjs).
 
-### 37. Waitlist interest and atomic explicit substitution
+### 39. Waitlist interest and atomic explicit substitution
 
 Source: [20261116031429_assignment_waitlist_and_substitution.sql](../supabase/migrations/20261116031429_assignment_waitlist_and_substitution.sql).
 
@@ -304,7 +322,7 @@ Private waitlist rows record interest without reserving capacity. Substitution p
 
 Test entry point: [assignment-handover-db-tests.mjs](../scripts/assignment-handover-db-tests.mjs).
 
-### 38. Device opt-in and committed Web Push delivery
+### 40. Device opt-in and committed Web Push delivery
 
 Source: [20261116031533_web_push_notifications.sql](../supabase/migrations/20261116031533_web_push_notifications.sql).
 
@@ -312,7 +330,7 @@ A private configuration singleton, owner-bound provider subscriptions and occurr
 
 Test entry point: [web-push-db-tests.mjs](../scripts/web-push-db-tests.mjs).
 
-### 39. Shared course and participant learning workspace
+### 41. Shared course and participant learning workspace
 
 Source: [20261116031728_course_learning_workspace.sql](../supabase/migrations/20261116031728_course_learning_workspace.sql).
 
@@ -320,7 +338,7 @@ Adds scoped preparation/contact settings, exact material/report resources and re
 
 Test entry point: [course-workspace-db-tests.mjs](../scripts/course-workspace-db-tests.mjs).
 
-### 40. Private favourites, versioned tasks and reusable workflows
+### 42. Private favourites, versioned tasks and reusable workflows
 
 Source: [20261116032008_personal_workbench_and_tasks.sql](../supabase/migrations/20261116032008_personal_workbench_and_tasks.sql).
 
@@ -328,7 +346,7 @@ Private/operations tasks retain CAS history, exact creation retries and bounded 
 
 Test entry point: [workbench-db-tests.mjs](../scripts/workbench-db-tests.mjs).
 
-### 41. Audited teaching time, printable finance facts and Control Center
+### 43. Audited teaching time, printable finance facts and Control Center
 
 Source: [20261116032842_timesheets_finance_and_control_center.sql](../supabase/migrations/20261116032842_timesheets_finance_and_control_center.sql).
 
@@ -336,7 +354,7 @@ Timesheets bind actual assignment sessions, bounded intervals/breaks, nonoverlap
 
 Test entry point: [timesheets-finance-db-tests.mjs](../scripts/timesheets-finance-db-tests.mjs).
 
-### 42. Revocable private calendar capabilities
+### 44. Revocable private calendar capabilities
 
 Source: [20261116034053_private_calendar_subscriptions.sql](../supabase/migrations/20261116034053_private_calendar_subscriptions.sql).
 
@@ -344,7 +362,7 @@ Own creation/rotation/revocation binds CAS/retry keys and stores only a token ha
 
 Test entry point: [calendar-subscriptions-db-tests.mjs](../scripts/calendar-subscriptions-db-tests.mjs).
 
-### 43. Current-permission unified search
+### 45. Current-permission unified search
 
 Source: [20261116034638_permission_aware_unified_search.sql](../supabase/migrations/20261116034638_permission_aware_unified_search.sql).
 
@@ -352,7 +370,7 @@ Adds a checked paginated union across the actual authorized modules, with kind/t
 
 Test entry point: [unified-search-db-tests.mjs](../scripts/unified-search-db-tests.mjs).
 
-### 44. Cross-feature notification targets and delivery rechecks
+### 46. Cross-feature notification targets and delivery rechecks
 
 Source: [20261116040854_smart_operations_notifications.sql](../supabase/migrations/20261116040854_smart_operations_notifications.sql).
 
@@ -360,7 +378,7 @@ Replaces earlier target/category/prepare/reminder/attention definitions with the
 
 Test entry point: [smart-notifications-db-tests.mjs](../scripts/smart-notifications-db-tests.mjs).
 
-### 45. Direct current-authorisation task lookup
+### 47. Direct current-authorisation task lookup
 
 Source: [20261116041354_workbench_direct_task_lookup.sql](../supabase/migrations/20261116041354_workbench_direct_task_lookup.sql).
 
@@ -368,7 +386,7 @@ Resolves an explicit task deep link through the same current task/source-message
 
 Test entry point: [workbench-db-tests.mjs](../scripts/workbench-db-tests.mjs).
 
-### 46. Versioned customer teaching briefs and immutable request snapshots
+### 48. Versioned customer teaching briefs and immutable request snapshots
 
 Source: [20261116042100_client_request_brief_and_history.sql](../supabase/migrations/20261116042100_client_request_brief_and_history.sql).
 
@@ -376,7 +394,7 @@ Adds explicit whole teaching units of 45/60 minutes, required-document descripti
 
 Test entry point: [client-request-brief-db-tests.mjs](../scripts/client-request-brief-db-tests.mjs).
 
-### 47. Own qualification passport facts
+### 49. Own qualification passport facts
 
 Source: [20261116044535_own_qualification_passport.sql](../supabase/migrations/20261116044535_own_qualification_passport.sql).
 
@@ -422,7 +440,7 @@ The reviewed updater plan is an operating-controller extension, not a migration.
 ## Before changing SQL
 
 1. Find the definition, later replacements, triggers, RLS/grants and every API caller. An internal trigger or documented RPC without a browser import is not automatically dead code.
-2. Create a **new additive migration** with the installed Supabase CLI. Do not rewrite existing SQL files, production history or accepted snapshots.
+2. Create a **new additive migration** with the installed Supabase CLI. Include an explicit outer BEGIN/COMMIT envelope for exact-source atomic history replay. Do not rewrite released SQL files, production history or accepted snapshots.
 3. Comment new tables, functions, lock ordering, actor/MFA checks, `search_path`, versioning/idempotency and grants directly in the new SQL source. New internal helpers need explicit EXECUTE revokes; do not broadly expand wrapper/definer boundaries.
 4. Check a fresh replay, actual RLS/concurrency and the affected Auth/API/browser flows. Updating an existing database and preserving actual Storage bytes require separate evidence. Use the existing isolated full verification command and document the stages actually reached.
 5. Update the API reference only through its intended actual replay; also update this guide, feature documentation, plan and work log. Hosted migrations follow the existing operations and approval path.
