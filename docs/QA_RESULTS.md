@@ -2,7 +2,15 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
-## Functional tests with PR18 roles/pricing — combined full acceptance pending
+## Accepted0950506 functional source; newer main integration pending
+
+Signed09505062fa403542e64e36183d492f9c5a0c91aa passed all15required checks in [CI43808553155](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43808553155). Actual application/native/preview completion:05:37:12/05:43:24/05:43:33UTC. The source-bound report records **72passed stages;94application+2built-PWA browser cases with zero skips/retries**. Other totals:249frontend/52files,92runtime,42Edge,76Python,62operatingNode,257regular PostgreSQL groups+1legacy refusal,19real business API suites;63precache entries/2708.06KiB.
+
+Native26-migration/20-suite acceptance preserves password/MFA/roles/private event/scanned bytes and passes actual TLS/WebSockets/50claims/Mailpit/cleanup. No image change or hosted installation is inferred. Security/metadata/separate CodeQL all pass;0annotations/new PR code-scanning alerts remain distinct from baseline dependency warnings. Safe artifact14200467458: `.local/functional-ci/pr12-0950506/6cbbfc50/acceptance.json`, source digest `1ae4017ad3f0f783c585321f3bf344cee740b0dd327b42005bfd8ffa3203ccea`. Preview14201096149's actual archive matches manifest digest `d047aac1edab159e89d26aeaaf3000ea9913c6db8b21cd03e7e3bf5d557570ec`; no package execution/publication was performed.
+
+Subsequent actual main0a6002a5 contains new guided-experience source. It and the necessary PR27 publication-control candidate are prepared locally; `./portal check` passes254frontend cases/52files and build, all102runtime checks pass, and real discovery inventories94browser cases/28files. These are not a new full combined pass. The attempted earlier local full command was refused before startup by another checkout's legitimate QA lock; no competing process was stopped. Complete local acceptance, actual PR27 main ancestry and exact final15CIgates remain pending before merge. Earlier failures/successes below retain their own source scope.
+
+## Earlier PR18 integration preparation — historical pending checkpoint
 
 Current combined source incorporates actual PR18 mainfabd71a, merged05:09:15UTC after its14required checks and independent26-migration/20-suite native acceptance passed. The actual-main merge changes no tree bytes over our signed correctedf010721 source before this evidence update. All migration/dependency bytes match accepted PR18; fresh full acceptance of this functional branch remains pending.
 

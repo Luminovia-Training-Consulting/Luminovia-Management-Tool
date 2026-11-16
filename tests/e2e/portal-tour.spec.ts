@@ -11,6 +11,8 @@ test("a real lecturer follows the permission-aware portal tour without changing 
   page,
 }) => {
   const teacher = await actor("Fictional guided portal lecturer", "lecturer");
+  const accessEndpoint = "**/rest/v1/rpc/get_my_permissions";
+  await page.route(accessEndpoint, (route) => route.abort("failed"));
   await login(page, teacher.email);
   const guide = page.getByRole("region", {
     name: "Portal-Rundgang",
@@ -20,7 +22,17 @@ test("a real lecturer follows the permission-aware portal tour without changing 
     name: "Portal-Rundgang",
     exact: true,
   });
+  await expect(guide.getByRole("alert")).toContainText(
+    "Die Zugriffsrechte konnten nicht geladen werden",
+  );
+  await expect(launch).toBeDisabled();
+  await page.unroute(accessEndpoint);
+  await guide
+    .getByRole("button", { name: "Zugriffsrechte erneut laden", exact: true })
+    .click();
   await expect(launch).toBeEnabled();
+  await expect(launch).toBeFocused();
+  await expect(guide.getByRole("alert")).toHaveCount(0);
   await launch.click();
   await expect(guide.getByText(/Du bist im echten Portal/)).toBeVisible();
   const section = guide.getByRole("combobox", {

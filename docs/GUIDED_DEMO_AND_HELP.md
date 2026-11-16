@@ -34,3 +34,7 @@ Open **Help & guides** at `/help` for searchable instructions and practical reco
 ## Verification
 
 `npm test`, `npm run test:coverage`, `npm run typecheck`, `npm run lint`, `npm run format:check` and `node scripts/code-integrity.mjs --exports` cover source quality and regression checks. `npx playwright test --config scripts/guided-demo-playwright.config.ts` runs public desktop/mobile browser checks against a separate frontend with synthetic configuration, without a database. It aborts and fails attempted backend calls in fresh public sessions. The same browser specification also runs inside the ordinary complete `./portal test` CI workflow, which separately verifies real authenticated business behavior and retained data. Actual outcomes are recorded in WORKLOG; this command list is not itself a pass record.
+
+Follow-up functional/dead-code review and concrete regression evidence: [GUIDED_EXPERIENCE_AUDIT](GUIDED_EXPERIENCE_AUDIT.md).
+
+The separate account-specific `/welcome` checklist persists its own progress through server-confirmed writes. Automatic welcome content is shown only while the live Portal tour is inactive. On `/welcome` and `/welcome/`, the live tour keeps its stored step but hides its controls so the two walkthroughs do not compete. Neither walkthrough advances or completes the other's state; the manual welcome route is deliberately not a live-tour stop.
