@@ -1,5 +1,9 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — PR33 distinguishes source policy from current activation
+
+Read-only live GitHub rules show history27315671 and checks27329142 active, with all15producer-bound required checks and no bypass, while review27329000 is disabled and retains the personal PR-only actor entry. This PR changes no live rule. The governance guide now identifies its active three-layer JSON as a reviewed source snapshot instead of falsely claiming current review enforcement. The restored public anchor and all49focused review/documentation/metadata/publication-policy tests still pass. Earlier source-bound acceptance and historical server readbacks remain explicitly separate from current activation; all-open-PR delivery follows the actual rules without weakening them.
+
 ## 16 November 2026 — PR33 current-main integration and stable governance anchor
 
 The user expressly authorises reviewing and merging all currently open PRs, superseding old queue reservations. Integrated actual accepted main7fbdb95/PR36, preserving the full current plan and earlier speed/English-documentation checkpoints. Restored the public active-rule-layers anchor removed by the older branch; the existing executable documentation guard reproduced the broken reference and now passes. All49 focused personal-review/documentation/metadata/publication-policy cases and governance-page formatting pass. No live rule, workflow, application, migration or deployment is changed by this correction. Fresh final-head mandatory remote checks and the protected merge remain pending until observed.

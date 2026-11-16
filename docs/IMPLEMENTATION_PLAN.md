@@ -7,7 +7,7 @@ This explicit instruction supersedes the older Maintain/Admin review exceptions 
 - [x] Limit the review actor allowlist to personal `User:29256704` in `pull_request` mode; every other user, repository role and App needs ordinary independent review.
 - [x] Correct current contribution/PR/issue/CI/index guidance and add an automatically discovered source-policy guard. Demonstrate the old role allowlist fails, then pass 28 policy and 12 existing metadata/documentation cases (40 total).
 - [x] Deliver the signed isolated source as separate draft PR33, preserve the accepted local-first PR27 Main ancestry and record the earlier lifecycle-fixture CI failure plus its actual Main correction;47 merged-source targeted checks pass.
-- [ ] Observe fresh exact-head/current-base required CI and merge after the reserved PR10 delivery. Source/local checks alone do not prove full product acceptance, publication or deployment.
+- [ ] Observe fresh exact-head/current-base required CI and merge sequentially under the latest all-open-PR instruction, preserving active feature ownership. Source/local checks alone do not prove full product acceptance, publication or deployment.
 
 All remaining product requirements and historical evidence below are preserved. This task changes no application, SQL, workflow, real data or live repository setting.
 
