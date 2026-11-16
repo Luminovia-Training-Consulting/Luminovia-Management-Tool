@@ -2,6 +2,10 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## M7 second combined run — actual dialog defect reproduced and corrected
+
+Source `8fe3e19`: detached launcher **exit 1**, private report `.local/tests/1aab5e9e/RESULT.txt`. All native migration/285 SQL/23 API/invitation/restart checks passed again; browsers **85/86** (9.9 minutes). Exact CI43782621640 reproduced file-dialog loss in both browser projects (84/86, 14.6 minutes). Trace: a delayed new filter unmounted the captured dialog before any archive RPC. Native test steps and their timeouts remain unchanged. New deterministic regressions reproduce the original lifetime defect; exact-resource revalidation also covers successful empty responses after room-access withdrawal. The final combined 32-migration source still requires a complete new native gate and exact CI. Build/PWA was not reached by these failed checkpoints.
+
 ## M7 first combined run — 84/86 browsers, corrected fixture, rerun required
 
 Frozen source `eaefea5` returned **exit 1**, explicitly captured by the detached launcher in `.local/m7-test-01.exit`; private report `.local/tests/b026ab59/RESULT.txt`. All 29 migrations, 285 PostgreSQL cases, 23 actual business API suites, real Edge/Mailpit and real password/MFA/profile/calendar/Storage restart preservation passed. Chromium completed **84 passed / 2 failed / zero skipped** (7.8 minutes). Both failures came from mixed notification-fixture row shapes producing a NULL ID before the quiet-hour UI journey. Explicit IDs now fix the fixture without relaxing its assertions. Build/PWA was not reached. Full corrected-source verification and exact PR CI remain required.

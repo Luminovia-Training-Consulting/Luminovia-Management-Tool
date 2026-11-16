@@ -2,6 +2,18 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — second M7 run exposed an actual file-dialog lifetime defect
+
+The complete corrected-source run on `8fe3e19` returned **exit 1**, recorded in `.local/m7-test-02.exit` and `.local/tests/1aab5e9e/RESULT.txt`. All 29 migrations, 285 SQL cases, 23 actual business API suites, real invitation and restart preservation passed again. Desktop/mobile finished **85 passed / 1 failed / zero skipped** in 9.9 minutes. Exact CI43782621640 independently reproduced the same defect on both projects (84 passed / 2 failed, 14.6 minutes). Build/PWA was not reached.
+
+The native trace proves a delayed filter response unmounted DocumentList after its archive dialog had opened; no archive RPC was sent. The same lifetime also discarded personal-organisation drafts. Two deterministic RTL cases failed before the production correction; preserving the child and current captured operations fixed them while new filter pages still supply only their own rows. Permission/DTO errors continue to remove protected children. Further independent review identified successful empty pages after resource-level revocation, so the final integration also requires a bounded, actor-scoped exact-target revalidation before retaining a captured dialog. No arbitrary sleep, forced click, native test change or per-test deadline increase replaces either issue.
+
+The overall CI job budget grows from 30 to 40 minutes for the expanded 32-migration, native API and browser gate; request, individual test and stage timeouts remain unchanged. The three M8 slices and approved App workflow will join this corrected source in PR10 for the next combined acceptance, including their interaction with all older suites.
+
+A local convenience executable `luminovia-portal` now invokes the preserved M6 launcher from any directory. Actual `luminovia-portal github status` confirmed the independent ready preview on5373/563xx, now updated with exit0 to accepted main9c2103b. No normal checkout or data was reset. Its portable repository commands remain `./portal github` and `./portal github test`.
+
+The production dependency audit passed with zero reported vulnerabilities. The complete audit retains one upstream unpatched low-severity build dependency advisory represented by four audit entries; [scope and exact locked path](DEPENDENCY_AUDIT.md) are documented and the existing alert remains open. No forced PWA downgrade or false dismissal was applied.
+
 ## 16 November 2026 — real protected App probe passed; source activation prepared
 
 A repository-only App token passed the actual signature helper on a temporary branch under required review, an intentionally absent required check, and an independent signature rule without a bypass. GitHub verified commit `003a597c90b98c964df25aa8f5d148bf7b2d233e` as valid. The equivalent human direct write was rejected by both PR/check requirements; main remained `9c2103b`. All owned temporary rules/branches and the token were cleaned. Safe machine evidence is in `maintenance-app-protected-probe.json`; private key material is outside Git.
