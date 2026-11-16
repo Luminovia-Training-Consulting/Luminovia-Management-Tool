@@ -434,6 +434,10 @@ function DocumentList({
     onSuccess: async (_result, input) => {
       if (input.archive)
         setOpenMenuId((previous) => (previous === input.id ? null : previous));
+      // Invalidation alone reuses an initial fetch that has no cached data.
+      // Cancel pre-commit reads explicitly so their older snapshot cannot
+      // restore an archived row or an earlier filename after this write.
+      await client.cancelQueries({ queryKey: ["documents"] });
       await client.invalidateQueries({ queryKey: ["documents"] });
       setSelected((previous) => (previous?.id === input.id ? null : previous));
     },

@@ -505,6 +505,99 @@ it("restores only the open menu ID when its authorized row returns after the rea
     vi.useRealTimers();
   }
 });
+it("discards an initial filter response started before the confirmed archive and replaces it with a post-commit read", async () => {
+  const record = { ...item(), personal_tags: ["visible-filter"] };
+  let finishStale!: (value: unknown) => void;
+  const stale = new Promise((resolve) => {
+    finishStale = resolve;
+  });
+  let finishArchive!: (value: unknown) => void;
+  const archive = new Promise((resolve) => {
+    finishArchive = resolve;
+  });
+  let committed = false;
+  let filteredReads = 0;
+  let staleSignal: AbortSignal | undefined;
+  state.rpc.mockImplementation((name, args) => {
+    if (name === "rename_document") return archive;
+    if (name !== "document_discovery") throw Error("Unexpected RPC");
+    if (!args.p_tag)
+      return response({ items: [record], has_more: false, next_cursor: null });
+    filteredReads++;
+    if (filteredReads === 1)
+      return Object.assign(stale, {
+        abortSignal(signal: AbortSignal) {
+          staleSignal = signal;
+          return this;
+        },
+      });
+    // Only a new request after the server acknowledgement may establish the
+    // current empty result. The first response retains its pre-commit snapshot.
+    expect(committed).toBe(true);
+    return response({ items: [], has_more: false, next_cursor: null });
+  });
+  const { client } = mount();
+  await screen.findByText(record.original_name);
+  vi.useFakeTimers();
+  try {
+    const dialog = openCaptured("archive", record.original_name);
+    await drainTargetQueries();
+    fireEvent.change(screen.getByLabelText("Eigenes Tag filtern"), {
+      target: { value: "visible-filter" },
+    });
+    await advanceFilter();
+    await drainTargetQueries();
+    const filterQuery = client
+      .getQueryCache()
+      .findAll({ queryKey: ["documents", actor, "discovery"] })
+      .find(
+        (query) =>
+          (query.queryKey.at(-1) as { tag: string }).tag === "visible-filter",
+      )!;
+    expect(filterQuery.state.data).toBeUndefined();
+    expect(filterQuery.state.fetchStatus).toBe("fetching");
+    const confirm = within(dialog).getByRole("button", {
+      name: "Archivieren",
+    });
+    expect(confirm).toBeEnabled();
+    fireEvent.click(confirm);
+    await drainTargetQueries();
+    expect(
+      state.rpc.mock.calls.filter(([name]) => name === "rename_document"),
+    ).toEqual([
+      [
+        "rename_document",
+        { p_id: record.id, p_name: record.original_name, p_delete: true },
+      ],
+    ]);
+    await act(async () => {
+      committed = true;
+      finishArchive({ data: null, error: null });
+    });
+    await drainTargetQueries();
+    await act(async () => {
+      finishStale({
+        data: { items: [record], has_more: false, next_cursor: null },
+        error: null,
+      });
+    });
+    await drainTargetQueries();
+    await drainTargetQueries();
+    expect(screen.queryByText(record.original_name)).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(staleSignal?.aborted).toBe(true);
+    expect(filteredReads).toBe(2);
+    expect(filterQuery.state.data).toMatchObject({
+      pages: [{ items: [] }],
+      pageParams: [null],
+    });
+    expect(
+      state.rpc.mock.calls.filter(([name]) => name === "rename_document"),
+    ).toHaveLength(1);
+  } finally {
+    vi.useRealTimers();
+  }
+});
 it("keeps only one menu open and ignores delayed native toggle events from the previously open row", async () => {
   state.rpc.mockReturnValue(
     response({ items: [item(), item(1)], has_more: false, next_cursor: null }),

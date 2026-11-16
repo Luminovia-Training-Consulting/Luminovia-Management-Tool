@@ -1,5 +1,15 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — final PR10 CI exposed a pre-archive initial-read race
+
+Exact final CI43823638639 on signed0b615a7 is **failed**, not accepted: all preceding source/SQL/API/restart stages passed, but111/112application browsers passed. Mobile file discovery reached archive confirmation and then retained one filename at line166. Build/PWA and the separate native/preview stages were not reached. The earlier complete PC/CI passes on eee73e4 remain source-bound history rather than a permit for this failed head.
+
+A new deterministic component regression reproduces that exact visible-row symptom before the fix: hold a new filter's first response with no cached data, confirm the real archive mutation, acknowledge it, then release the older read. TanStack invalidation can reuse an in-flight initial request; the old snapshot restores the archived row. After a successful rename/archive acknowledgement, explicitly cancelling the existing plural documents query boundary before its normal invalidation now forces a new post-commit read. Exact-ID ACL checks use the separate singular document key and remain untouched. There is no optimistic deletion, permission change or assertion reduction; a newer unrelated dialog/draft retains its existing ID guard.
+
+The focused regression changed from red to green. All51discovery/version/polling component cases pass, including late response cancellation, exactly one mutation, a genuinely new post-commit empty read, revoked targets and newer sibling drafts. The browser scenario additionally waits for the actually applied one-file filter rather than an already visible personal tag, then requires the exact archive RPC acknowledgement before the unchanged zero-filename assertion. No sleep, forced click, retry or timeout increase is introduced.
+
+Actual `./portal check` on this correction passes515frontend cases/65files with S65.42/B59.94/F56.61/L67.52%, unchanged floors, types/lint/format/compiler checks and production/PWA build. Independent bounded review reports no additional issue; all26released migrations, API/permissions and publication controls remain unchanged. The new signed correction requires its own complete exact-head GitHub application/native/security/package acceptance. Further shared-PC service runs respect the already reserved PR31/12 slots; no foreign process or data is altered.
+
 ## 16 November 2026 — PR10 accepted publication-control ancestry and final verification
 
 PR27 actually merged at07:21:44UTC as `e048edb7785bb40c29ddc2d5a76bd40b02580062`, after all15checks on485ac16. This integration takes only that accepted main ancestry into PR10's already accepted `eee73e42f47ad65b08e6befe63742d79ca4d88bf`. The manual exact-SHA publication gate and manual-only deployment metadata are preserved. Both plan histories and the stable active-rule-layers documentation anchor survive the two text conflicts. No other pending feature PR or live GitHub rule is imported/changed.

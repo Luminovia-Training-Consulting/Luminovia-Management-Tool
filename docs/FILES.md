@@ -30,6 +30,8 @@ Only actually opened targets receive a bounded exact-metadata check through the 
 
 A previously blocked filename must not reappear from an old search cache or a merely appended page. Only an actually new complete response from the current observer can renew this quarantine. Network and version conflicts preserve permitted drafts; `42501` discards the original target. Late successes or failures from an old operation do not close a different draft opened in the meantime. There are neither per-result-row queries nor an additional polling loop.
 
+After an acknowledged rename/archive write, the file lists explicitly cancel reads started before that acknowledgement and then fetch current results. Invalidation alone can reuse an initial filter request with no cached data, allowing an older pre-archive snapshot to restore a deleted row. A deterministic held-response regression reproduced this and now proves the old request is aborted, exactly one write occurs and a new post-commit read determines the empty result. The independent exact-resource ACL query is not cancelled. All 51 focused discovery/version/polling cases pass on this correction; its complete current-head native results are recorded separately.
+
 This correction was reproduced first and checked by **47 passing file-component cases** with controlled transport barriers, cache/paging/focus transitions and exact write counts. Native complete acceptance remains separately recorded in [QA_RESULTS](QA_RESULTS.md).
 
 ## Preserved file pipeline

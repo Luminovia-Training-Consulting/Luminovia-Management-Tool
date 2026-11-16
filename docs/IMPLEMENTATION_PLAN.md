@@ -1,5 +1,13 @@
 # Persistent implementation plan
 
+## PR10 current archive-race correction
+
+- [x] Record exact0b615a7CI43823638639 as failed111/112application browsers; do not substitute older complete passes.
+- [x] Reproduce the pre-commit initial-filter response restoring an archived row, then explicitly cancel old documents reads before the post-ACK refresh.
+- [x] Preserve exact-resource ACL checks, independent newer drafts and exactly-one-mutation assertions; pass51focused component cases and515frontend cases through actual `./portal check`.
+- [x] Synchronise the native browser fixture with the applied filter and exact server archive acknowledgement; keep final zero-filename assertion and all original timeouts.
+- [ ] Observe fresh complete current-head application/native/security/package CI, then merge PR10 normally on its exclusive accepted-main position.
+
 ## PR10 final accepted-base merge gate
 
 - [x] Complete local isolated acceptance on eee73e4:514frontend,30additional SQL suites,28business APIs plus invitation,112application+2built-PWA browsers, restart retention and checked cleanup; PASS/exit0.

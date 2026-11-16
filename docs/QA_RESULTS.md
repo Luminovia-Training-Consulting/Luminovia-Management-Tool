@@ -1,5 +1,9 @@
 # QA evidence — 2026-11-16
 
+## PR10 final-CI archive race
+
+CI43823638639 on0b615a7 failed111/112application browsers at mobile file discovery's final zero-filename assertion after archive confirmation. Earlier SQL/API/restart stages passed; build/PWA/native/preview acceptance was not reached. The new held-initial-response component regression reproduces the row returning after server acknowledgement. Explicit cancellation before list invalidation corrects that product race; all51focused cases and515frontend cases/coverage plus the actual local source/build command pass. The browser fixture also awaits the applied filter and exact archive RPC acknowledgement, without changing the final deletion assertion, retries or timeouts. New complete exact-head CI remains mandatory. Earlier eee73e4 local/CI/native acceptance is retained as historical evidence only.
+
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
 ## Current joint PR10/PR13 integration — acceptance pending
