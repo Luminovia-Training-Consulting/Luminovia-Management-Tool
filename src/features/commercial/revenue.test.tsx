@@ -1,3 +1,8 @@
+/**
+ * Regressions proving a missing gross-price capability triggers neither requests nor rendering
+ * of private revenue data. Mocked capability projections do not establish native access
+ * controls.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

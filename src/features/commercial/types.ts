@@ -1,12 +1,20 @@
+/**
+ * DTOs for commercial capabilities, contract versions, fees, invoices and payments. Document
+ * versions and accepted claims retain distinct references so template changes cannot reinterpret
+ * old agreements.
+ */
+/** Current commercial view/manage capabilities, not a UI role hierarchy. */
 export interface CommercialAccess {
   can_submit_invoice: boolean;
   can_manage_contracts: boolean;
   can_manage_finance: boolean;
 }
+/** Authorized person selection for commercial administration forms. */
 export interface CommercialPerson {
   id: string;
   display_name: string;
 }
+/** Exact contract version with clean document reference, validity and receipt state. */
 export interface ContractRecord {
   id: string;
   user_id: string;
@@ -24,6 +32,7 @@ export interface ContractRecord {
   acknowledged_at: string | null;
   created_at: string;
 }
+/** Fee projection from accepted agreements, retaining original currency and confirmed billing stage. */
 export interface EarningRecord {
   claim_id: string;
   job_id: string;
@@ -40,6 +49,7 @@ export interface EarningRecord {
   stage: "expected" | "completed" | "invoiced" | "paid";
   invoice_id: string | null;
 }
+/** Invoice projection with exact PDF version, server-calculated totals and review/payment state. */
 export interface InvoiceRecord {
   labels: string[];
   id: string;
@@ -59,6 +69,7 @@ export interface InvoiceRecord {
   note: string | null;
   paid_at: string | null;
 }
+/** An individual recorded payment or its auditable reversal. */
 export interface InvoicePayment {
   id: string;
   amount: number;

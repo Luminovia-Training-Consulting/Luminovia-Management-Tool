@@ -1,3 +1,7 @@
+/**
+ * One attachment backed by the existing document projection. Current access errors replace
+ * retained metadata; downloads still use the authenticated file gateway.
+ */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -8,6 +12,7 @@ import { Button } from "../../components/ui/button";
 import { Notice } from "../../components/common";
 import { documentQuery, saveDownload } from "./api";
 import "./i18n";
+/** Load the attached document row and download its explicitly selected clean version. */
 export function DocumentAttachment({ documentId }: { documentId: string }) {
   const { t } = useTranslation("files");
   const online = useOnline();

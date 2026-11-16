@@ -1,3 +1,7 @@
+/**
+ * Regressions for scan completion, exact PDF versions and retained upload retry identity.
+ * Controlled transport does not replace real scanning/Storage checks.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -10,6 +14,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(done: (document: PortalDocument | null) => void) {
   render(
     <QueryClientProvider

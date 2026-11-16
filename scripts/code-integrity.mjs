@@ -1,3 +1,7 @@
+/**
+ * Static frontend connection checks using TypeScript syntax and symbols.
+ * Inspects routes, local imports, assets, export usage and RPC names without starting the app.
+ */
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,12 +10,14 @@ import ts from "typescript";
 const extensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".json", ".css"];
 const script = /\.(?:tsx?|jsx?|mjs)$/;
 const excluded = /(?:^|\/)test(?:\/|$)|\.(?:test|spec)\.[^.]+$|\.d\.ts$/;
+/** Collects files recursively; later filters decide which belong to the frontend graph. */
 function filesUnder(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
     return entry.isDirectory() ? filesUnder(path) : [path];
   });
 }
+/** Resolves relative imports against delivered extensions and index files. */
 function localTarget(file, specifier) {
   const target = resolve(dirname(file), specifier);
   return [
@@ -20,6 +26,7 @@ function localTarget(file, specifier) {
     ...extensions.map((extension) => join(target, `index${extension}`)),
   ].find((candidate) => existsSync(candidate) && statSync(candidate).isFile());
 }
+/** Reads only statically identifiable JSX attributes; dynamic values are not invented. */
 function attribute(node, name) {
   if (!ts.isJsxOpeningElement(node) && !ts.isJsxSelfClosingElement(node))
     return null;
@@ -38,7 +45,12 @@ function attribute(node, name) {
   return null;
 }
 
-/** Follow code/type and literal lazy imports; server/tool entry points are separate graphs. */
+/**
+ * Follows code/type and literal lazy imports from the frontend entry point.
+ * JSX routes, links and assets are checked only when their values are static;
+ * this syntax graph does not evaluate routing or execute server/tool entry points.
+ */
+
 export function auditFrontend(root) {
   const source = join(root, "src");
   const files = filesUnder(source).filter(
@@ -59,14 +71,17 @@ export function auditFrontend(root) {
       true,
     );
     const imports = new Set();
+    /** Attaches each finding to its actual source position for an inspectable diagnostic. */
     const location = (node) =>
       `${relative(root, file)}:${ast.getLineAndCharacterOfPosition(node.getStart()).line + 1}`;
+    /** Records relative source connections and reports unresolved references. */
     const registerImport = (node, specifier) => {
       if (!specifier.startsWith(".")) return;
       const target = localTarget(file, specifier);
       if (!target) unresolved.push({ source: location(node), specifier });
       else imports.add(target);
     };
+    /** Carries the enclosing JSX route path into nested Route declarations. */
     function visit(node, routeBase = "") {
       if (
         (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
@@ -130,18 +145,24 @@ export function auditFrontend(root) {
     modules.set(file, imports);
   }
   const visited = new Set();
+  /** Traverses the module graph with a visited set so import cycles cannot recurse indefinitely. */
   function follow(file) {
     if (visited.has(file)) return;
     visited.add(file);
     for (const dependency of modules.get(file) ?? []) follow(dependency);
   }
   follow(join(source, "main.tsx"));
-  const routePatterns = [...routes].map(
-    (route) =>
-      new RegExp(
-        `^${route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/:[^/]+/g, "[^/]+")}/?$`,
-      ),
-  );
+  const routePatterns = [...routes].map((route) => {
+    // React Router's terminal splat includes its base path and descendants.
+    // Keep the separator inside the optional group: /demo/* must not match
+    // /demography. Other stars remain escaped literals, not global wildcards.
+    const splat = route.endsWith("/*");
+    const base = splat ? route.slice(0, -2) : route;
+    const pattern = base
+      .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      .replace(/:[^/]+/g, "[^/]+");
+    return new RegExp(`^${pattern}${splat ? "(?:/.*)?" : "/?"}$`);
+  });
   const invalidLinks = links.filter(({ path }) => {
     const pathname = path.split(/[?#]/)[0];
     return (
@@ -167,6 +188,7 @@ export function auditFrontend(root) {
   };
 }
 
+/** Builds the compiler program and symbol resolution for actual source references. */
 function sourceProgram(root) {
   const files = filesUnder(join(root, "src")).filter(
     (file) =>
@@ -189,9 +211,11 @@ function sourceProgram(root) {
 
 /** Compiler references distinguish a disconnected export from a helper used
  * inside its own module. Import/export declarations alone do not count as use. */
+
 export function scanRuntimeExports(root) {
   const { checker, sources } = sourceProgram(root);
   const tracked = new Map();
+  /** Resolves aliases and shorthand references to the actual compiler symbol. */
   const symbol = (node) => {
     const value = ts.isShorthandPropertyAssignment(node.parent)
       ? checker.getShorthandAssignmentValueSymbol(node.parent)
@@ -232,11 +256,29 @@ export function scanRuntimeExports(root) {
     }
   }
   for (const source of sources) {
+    /** Counts symbol uses outside import/export declarations and the definition itself. */
     function visit(node) {
+      // TypeScript also classifies a class's `extends Base<T>` as a type node,
+      // although evaluating Base is required at runtime. Keep that expression
+      // and discard only its erased generic arguments (and implements clauses).
+      if (
+        ts.isExpressionWithTypeArguments(node) &&
+        ts.isHeritageClause(node.parent) &&
+        node.parent.token === ts.SyntaxKind.ExtendsKeyword &&
+        (ts.isClassDeclaration(node.parent.parent) ||
+          ts.isClassExpression(node.parent.parent))
+      ) {
+        visit(node.expression);
+        return;
+      }
       if (
         ts.isImportDeclaration(node) ||
         ts.isExportDeclaration(node) ||
-        ts.isExportAssignment(node)
+        ts.isExportAssignment(node) ||
+        // Type queries/annotations are erased by the compiler. Counting
+        // `type Signature = typeof unused` would disguise an unused export.
+        // A JavaScript `typeof value` expression remains a runtime reference.
+        ts.isTypeNode(node)
       )
         return;
       if (ts.isIdentifier(node)) {
@@ -262,26 +304,32 @@ export function scanRuntimeExports(root) {
 
 /** Discover forwarding wrappers by symbols, so renamed imports/new domain helpers
  * cannot silently fall outside the actual database binding check. */
+
 export function scanFrontendRpcReferences(root) {
   const { checker, sources } = sourceProgram(root);
   const calls = [];
   const wrappers = new Map();
+  /** Resolves renamed imports to the underlying function or parameter symbol. */
   const symbol = (node) => {
     const value = checker.getSymbolAtLocation(node);
     return value && value.flags & ts.SymbolFlags.Alias
       ? checker.getAliasedSymbol(value)
       : value;
   };
+  /** Collects call expressions for the later direct-call and wrapper analysis. */
   function collect(node, source) {
     if (ts.isCallExpression(node)) calls.push({ node, source });
     ts.forEachChild(node, (child) => collect(child, source));
   }
   for (const source of sources) collect(source, source);
+  /** Recognises a direct call connection from the syntax and symbol contract. */
   const direct = (call) =>
     ts.isPropertyAccessExpression(call.expression) &&
     call.expression.name.text === "rpc";
+  /** Finds the wrapper parameter position that forwards the RPC name. */
   const argumentIndex = (call) =>
     direct(call) ? 0 : wrappers.get(symbol(call.expression));
+  /** Finds the function context that actually forwards this RPC reference. */
   function forwardingFunction(argument) {
     const target = symbol(argument);
     if (!target || !ts.isIdentifier(argument)) return null;
@@ -331,6 +379,8 @@ export function scanFrontendRpcReferences(root) {
   return references;
 }
 
+// Importing this module runs no audit; direct CLI execution prints diagnostics
+// and reports broken static connections through the exit status.
 if (
   process.argv[1] &&
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)

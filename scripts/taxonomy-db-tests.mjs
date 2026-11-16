@@ -15,6 +15,7 @@ await withTestDatabase(
     await sql(
       `insert into auth.users(id,email) values ${[admin, manager, lecturer, outsider].map((id) => `('${id}','${id}@example.invalid')`).join(",")};insert into public.user_roles(user_id,role) values('${admin}','admin'),('${manager}','management'),('${lecturer}','lecturer'),('${outsider}','client');`,
     );
+    /** Calls the business database API under the fixture's controlled identity/MFA claims. */
     const rpc = async (who, name, args = [], aal = "aal2") => {
       const result = await actor(
         who,
@@ -27,6 +28,7 @@ await withTestDatabase(
         return result;
       }
     };
+    /** Creates this module's fictional inputs; authoritative validation remains on the server. */
     const payload = (label, parent = null) => ({
       label_de: label,
       label_en: `EN ${label}`,
@@ -36,9 +38,11 @@ await withTestDatabase(
       description_de: "Fiktive Beschreibung",
       description_en: "Fictional description",
     });
+    /** Creates a catalogue entry with an optional parent as AAL2 management, requiring initial version 0. */
     const save = (label, parent = null) =>
       rpc(admin, "save_taxonomy_topic", [null, payload(label, parent), 0]);
     let checks = 0;
+    /** Counts and reports a case only after all of its assertions have completed successfully. */
     const check = async (name, fn) => {
       await fn();
       checks++;

@@ -1,3 +1,7 @@
+/**
+ * PostgreSQL regression groups for scanned avatars and current viewing permissions.
+ * Real migrations define the contract; controlled role/MFA claims exercise it independently of the UI.
+ */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
@@ -14,6 +18,7 @@ await withTestDatabase("avatars_test", async ({ sql, actor }) => {
     run = randomUUID(),
     job = randomUUID(),
     claim = randomUUID();
+  /** Calls the business database API under the fixture's controlled identity/MFA claims. */
   const rpc = async (who, name, args = [], aal = "aal1") => {
     const result = await actor(
       who,
@@ -22,6 +27,7 @@ await withTestDatabase("avatars_test", async ({ sql, actor }) => {
     );
     return result ? JSON.parse(result) : null;
   };
+  /** Creates a selected image version and scan state to test SQL read rules independently of the scanner. */
   const image = async (who, kind = "avatar", status = "clean") => {
     const r = JSON.parse(
       await actor(
@@ -35,6 +41,7 @@ await withTestDatabase("avatars_test", async ({ sql, actor }) => {
     return r;
   };
   let count = 0;
+  /** Counts and reports a case only after all of its assertions have completed successfully. */
   const check = async (name, fn) => {
     await fn();
     count++;

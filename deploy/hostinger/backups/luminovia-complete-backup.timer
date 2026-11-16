@@ -1,3 +1,4 @@
+# Schedule daily encrypted backup attempts in UTC. This local timer does not prove off-site retention or a successful restore drill.
 [Unit]
 Description=Luminovia complete encrypted recovery backup every 24 hours
 

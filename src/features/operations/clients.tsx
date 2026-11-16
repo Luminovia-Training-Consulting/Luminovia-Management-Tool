@@ -1,3 +1,7 @@
+/**
+ * Customer directory with authorized contacts, internal notes and organization settings. Shared
+ * metadata and private business fields keep their separate table permissions.
+ */
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -29,6 +33,7 @@ import {
   type Organisation,
   type Contact,
 } from "./data";
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const orgSchema = z.object({
   name: z.string().trim().min(1).max(200),
   country: z.string().max(100),
@@ -39,6 +44,7 @@ const orgSchema = z.object({
   private_notes: z.string().max(8000),
   archived: z.boolean(),
 });
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const contactSchema = z.object({
   name: z.string().trim().min(1).max(120),
   position: z.string().max(120),
@@ -47,6 +53,7 @@ const contactSchema = z.object({
   notes: z.string().max(4000),
   archived: z.boolean(),
 });
+/** Validate organization metadata and await the owning create/update RPC. */
 function OrganisationForm({
   original,
   notes,
@@ -128,6 +135,7 @@ function OrganisationForm({
     </form>
   );
 }
+/** Edit organization contacts under their existing private data permissions. */
 function ContactForm({
   original,
   organisation,
@@ -202,6 +210,7 @@ function ContactForm({
     </form>
   );
 }
+/** Compose organization details, permitted contacts and separately stored internal notes. */
 function ClientWorkspace({ actor }: { actor: string }) {
   const { t } = useTranslation("operations");
   const orgs = useQuery(orgQuery(actor));
@@ -422,6 +431,7 @@ function ClientWorkspace({ actor }: { actor: string }) {
     </>
   );
 }
+/** Coordinate search/selection in the authorized organization directory. */
 export function ClientsPage() {
   const { t } = useTranslation("operations");
   const { session } = useAuth();

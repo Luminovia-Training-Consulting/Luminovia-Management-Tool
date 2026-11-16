@@ -1,8 +1,12 @@
+/**
+ * Native password sign-in and recovery requests. Validation/online notices support the UI; only
+ * Supabase Auth can establish a session. Public demo/help links provide guidance without sign-in.
+ */
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { db, isConfigured } from "../../lib/supabase";
@@ -10,7 +14,9 @@ import { useAuth } from "./auth-context";
 import { Button } from "../../components/ui/button";
 import { Field, Loading, Notice } from "../../components/common";
 import { useOnline } from "../../lib/online";
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({ email: z.email(), password: z.string().min(1) });
+/** Use native sign-in and recovery requests with separate form states. */
 export function Login() {
   const { t } = useTranslation();
   const { session, loading } = useAuth();
@@ -165,6 +171,12 @@ export function Login() {
             </form>
           )}
           <p className="fine-print">{t("invitationNote")}</p>
+          <div className="login-learning-links">
+            <Button asChild variant="secondary">
+              <Link to="/demo">{t("tryDemo")}</Link>
+            </Button>
+            <Link to="/help">{t("helpGuides")}</Link>
+          </div>
         </div>
       </section>
     </div>

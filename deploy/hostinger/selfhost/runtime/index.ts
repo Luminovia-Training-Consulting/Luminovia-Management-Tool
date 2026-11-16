@@ -1,3 +1,6 @@
+/**
+ * Selfhost Edge router based on the documented Supabase template. Load only known portal functions; JWT checks and bounded worker restarts complement each handler's Auth/RLS checks.
+ */
 import * as jose from 'jsr:@panva/jose@6.2.17'
 import { startMemoryPressureLoop } from './memory-pressure.ts'
 
@@ -55,6 +58,7 @@ const ERROR_CORS_HEADERS = {
   'Access-Control-Expose-Headers': 'sb-error-code',
 }
 
+// Return stable router codes and browser-readable error headers; business handlers retain their own responses.
 function getFunctionErrorResponse({ code, message, status }: FunctionFailure): Response {
   return Response.json(
     { code, message },
@@ -68,6 +72,7 @@ function getFunctionErrorResponse({ code, message, status }: FunctionFailure): R
   )
 }
 
+// Associate an unhandled router error with a random reference and return a bounded client error.
 function onError(e: unknown): Response {
   const ref = crypto.randomUUID()
   console.error(`unhandled error in request handler (ref: ${ref})`, e)
@@ -78,6 +83,7 @@ function onError(e: unknown): Response {
   })
 }
 
+// Preserve the worker response, adding the diagnostic code only for server errors.
 function handleWorkerResponse(response: Response): Response {
   if (response.status < 500) return response
 
@@ -100,6 +106,7 @@ function handleWorkerResponse(response: Response): Response {
   })
 }
 
+// Map actual Edge Runtime errors to their documented HTTP statuses/error codes.
 function resolveRuntimeError(e: unknown): FunctionFailure {
   // These error classes are supplied by Edge Runtime, rather than stock Deno.
   if (e instanceof Deno.errors.InvalidWorkerCreation) {
@@ -150,6 +157,7 @@ function resolveRuntimeError(e: unknown): FunctionFailure {
 
 // NOTE:(kallebysantos) We don't check for valid keys but just the bare array parsing,
 // let this for 'jose' lib verification
+// Check only JWKS container structure; jose performs cryptographic key/signature validation.
 export function parseJwks(raw: string | undefined): jose.JSONWebKeySet | null {
   if (!raw) return null
   try {
@@ -172,6 +180,7 @@ export function parseJwks(raw: string | undefined): jose.JSONWebKeySet | null {
  * @param req - The HTTP request object
  * @returns The JWT token string or an authentication failure
  */
+// Accept exactly one nonempty bearer value; decide key compatibility separately afterward.
 function extractBearerToken(authHeader: string | null): string | null {
   const tokenParts = (authHeader ?? '').trim().split(/\s+/)
   const [bearer, token] = tokenParts
@@ -181,6 +190,7 @@ function extractBearerToken(authHeader: string | null): string | null {
   return token
 }
 
+// Prefer the caller's JWT and use the gateway compatibility value only in the intended key path.
 function getAuthToken(req: Request): string | AuthFailure {
   const authHeader = req.headers.get('authorization')
   const sbApiKeyCompatibilityToken = req.headers.get('sb-api-key')
@@ -210,6 +220,7 @@ function getAuthToken(req: Request): string | AuthFailure {
   return token
 }
 
+// Return stable 401 JSON with the compatibility field and error code clients still need.
 function getAuthErrorResponse({ code, message = 'Invalid JWT' }: AuthFailure) {
   return Response.json(
     {
@@ -228,6 +239,7 @@ function getAuthErrorResponse({ code, message = 'Invalid JWT' }: AuthFailure) {
   )
 }
 
+// Verify a legacy JWT with the server-side symmetric key; missing configuration fails closed.
 async function isValidLegacyJWT(jwt: string): Promise<AuthFailure | null> {
   if (!JWT_SECRET) {
     console.error('JWT_SECRET not available for HS256 token verification')
@@ -246,6 +258,7 @@ async function isValidLegacyJWT(jwt: string): Promise<AuthFailure | null> {
   return null
 }
 
+// Verify an asymmetric JWT against the locally configured public key set.
 async function isValidJWT(jwt: string): Promise<AuthFailure | null> {
   if (!LOCAL_JWKS) {
     console.error('JWKS not available for ES256/RS256 token verification')
@@ -276,6 +289,7 @@ async function isValidJWT(jwt: string): Promise<AuthFailure | null> {
  * @param jwt - The JWT token string to verify
  * @returns Authentication failure details, or null when verification succeeds
  */
+// Select only supported verification paths from the protected algorithm header; decoding alone is not verification.
 async function isValidHybridJWT(jwt: string): Promise<AuthFailure | null> {
   let jwtAlgorithm: string | undefined
   try {

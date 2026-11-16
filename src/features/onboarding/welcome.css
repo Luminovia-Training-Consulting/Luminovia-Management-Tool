@@ -1,0 +1,74 @@
+.welcome-guide {
+  margin-bottom: 1.5rem;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  border: 1px solid var(--line);
+  border-radius: 1.5rem;
+  background: var(--surface);
+  max-width: 64rem;
+}
+.welcome-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.welcome-heading > svg {
+  flex-shrink: 0;
+  margin-top: 0.4rem;
+  color: var(--brand);
+}
+.welcome-heading h1,
+.welcome-heading h2 {
+  margin: 0 0 0.5rem;
+}
+.welcome-heading p,
+.welcome-step p {
+  max-width: 75ch;
+  line-height: 1.7;
+}
+.welcome-counter {
+  margin: 1.5rem 0 0.5rem;
+  font-weight: 600;
+}
+.welcome-guide progress {
+  width: 100%;
+  height: 0.5rem;
+  accent-color: var(--brand);
+}
+.welcome-step {
+  margin: 1.5rem 0;
+}
+.welcome-step h2,
+.welcome-step h3 {
+  margin-bottom: 0.5rem;
+}
+.welcome-actions,
+.welcome-secondary-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.welcome-secondary-actions {
+  margin-top: 0.75rem;
+}
+.welcome-home {
+  display: inline-block;
+  margin-top: 1rem;
+  text-decoration: underline;
+}
+@media (max-width: 640px) {
+  .welcome-guide {
+    border-radius: 1rem;
+  }
+  .welcome-heading {
+    gap: 0.75rem;
+  }
+  .welcome-secondary-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .welcome-secondary-actions .button {
+    justify-content: flex-start;
+    text-align: left;
+    white-space: normal;
+  }
+}

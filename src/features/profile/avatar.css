@@ -1,3 +1,8 @@
+/**
+ * Raster images, initials fallback and own editor at defined avatar sizes, using shared brand
+ * colours and surface variables.
+ */
+/* Fixed image/initials geometry prevents profile shifts during authenticated downloads. */
 .profile-avatar {
   display: inline-flex;
   align-items: center;
@@ -23,6 +28,7 @@
   height: 100%;
   object-fit: cover;
 }
+/* Keep own selection/upload controls separate from the general person image. */
 .avatar-editor {
   display: flex;
   align-items: flex-start;
@@ -32,6 +38,7 @@
 .avatar-editor > div {
   min-width: 0;
 }
+
 @media (max-width: 640px) {
   .avatar-editor {
     flex-direction: column;

@@ -1,3 +1,4 @@
+# Development ingress serves the static app and explicitly allowed backend routes. Private API responses are not cached; the maintenance marker fences backend requests before data changes.
 {
 	admin off
 	# No access log: invitation/recovery query strings must never enter logs.
@@ -13,6 +14,7 @@
 		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' wss://{$PORTAL_DOMAIN}; worker-src 'self'; frame-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
 	}
 	route {
+		# Apply no-store to private business responses; block Auth administration routes and check maintenance before proxying.
 		handle_path /backend/* {
 			route {
 				header >Cache-Control "no-store, private"
@@ -40,6 +42,7 @@
 				respond 404
 			}
 		}
+		# Expose only the two intended Auth templates, not arbitrary directory contents.
 		handle_path /mail-templates/* {
 			route {
 				root * /mail-templates
@@ -49,6 +52,7 @@
 				respond 404
 			}
 		}
+		# Public hashed assets may be cached long term; private downloads must not use this route.
 		handle /assets/* {
 			route {
 				root * /srv
@@ -56,6 +60,7 @@
 				file_server
 			}
 		}
+		# Versioned public Workbox files use the same immutable cache policy.
 		handle /workbox-*.js {
 			route {
 				root * /srv
@@ -63,6 +68,7 @@
 				file_server
 			}
 		}
+		# Preserve SPA deep links while keeping the app shell and service worker revalidatable for updates.
 		handle {
 			route {
 				root * /srv/current

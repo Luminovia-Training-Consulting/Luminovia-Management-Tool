@@ -44,6 +44,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
         "Clean own lifecycle organisations",
       );
   });
+  /** Binds the requested lifecycle action to the job, expected version and retry identity. */
   const req = (job, action, version, payload = {}, key = randomUUID()) => ({
     p_job_id: job,
     p_action: action,
@@ -83,6 +84,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
     "Create real lifecycle offer",
   );
   jobs.push(job);
+  /** Records the fixture job's run, template and organisation IDs for later scoped cleanup. */
   const track = async (id) => {
     const j = await checked(
       service.from("jobs").select("course_run_id").eq("id", id).single(),

@@ -1,3 +1,7 @@
+/**
+ * Published OpenAPI contract for the account HTTP API. Schemas describe input/output; handlers and current database functions still enforce permissions/MFA.
+ */
+// Define a JSON response for the published HTTP contract.
 const jsonResponse = (schema: unknown = { type: "object" }) => ({
   description: "Confirmed server result",
   content: { "application/json": { schema } },
@@ -8,6 +12,7 @@ const errors = {
   "403": { description: "Capability and verified MFA required" },
   "503": { description: "Unavailable; no success is implied" },
 };
+// Describe a required JSON request body without implying runtime authorization.
 const jsonBody = (schema: unknown) => ({
   required: true,
   content: { "application/json": { schema } },
@@ -30,6 +35,9 @@ const role = {
     "lecturer",
     "client",
     "participant",
+    "guest",
+    "guest",
+    "guest",
   ],
 };
 export const accountOpenApi = {

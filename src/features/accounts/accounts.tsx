@@ -1,9 +1,14 @@
+/**
+ * Account directory and controlled role/activation changes. Load current permissions before
+ * using the accounts API; a visible role selector or submitted user ID grants no authority.
+ */
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
 import { InviteForm } from "../admin/invite";
+import { commissionAccessQuery } from "../commercial/commission-api";
 import { permissionsQuery } from "../../lib/queries";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
@@ -19,11 +24,12 @@ import {
 import {
   accountListQuery,
   accountRequest,
-  accountRoles,
+  accountRoleCatalogQuery,
   type AccountPerson,
   type AccountRole,
 } from "./api";
 import "./i18n";
+/** Keep search/page drafts and confirmed account changes scoped to the current actor. */
 function AccountsDirectory({
   actorId,
   canAssign,
@@ -42,9 +48,22 @@ function AccountsDirectory({
   const [organisation, setOrganisation] = useState("");
   const [confirm, setConfirm] = useState(false);
   const accounts = useQuery(accountListQuery(actorId, search, offset));
+  const clientAccess = useQuery({
+    ...commissionAccessQuery(actorId),
+    enabled: canAssign,
+  });
+  const canLinkOrganisations = Boolean(
+    clientAccess.data?.can_manage_client_memberships,
+  );
+  const catalog = useQuery({
+    ...accountRoleCatalogQuery(actorId),
+    enabled: canAssign,
+  });
+  const assignableRoles =
+    catalog.data?.filter((entry) => entry.assignable) ?? [];
   const organisations = useQuery({
     queryKey: ["account-organisations", actorId],
-    enabled: canAssign && selected !== null,
+    enabled: canLinkOrganisations && selected !== null,
     queryFn: async () => {
       const result = await db()
         .from("organisations")
@@ -57,7 +76,7 @@ function AccountsDirectory({
   });
   const membership = useQuery({
     queryKey: ["account-memberships", actorId, selected?.id],
-    enabled: canAssign && selected !== null,
+    enabled: canLinkOrganisations && selected !== null,
     queryFn: async () => {
       const result = await db()
         .from("client_organisation_memberships")
@@ -132,9 +151,10 @@ function AccountsDirectory({
                   {t("manageProfile")}
                 </Link>
               </div>
-              {canAssign && (
+              {canAssign && person.can_assign_roles && (
                 <Button
                   variant="secondary"
+                  disabled={catalog.isPending || catalog.isError || !online}
                   onClick={() => {
                     setSelected(person);
                     setRoles(person.roles);
@@ -166,6 +186,9 @@ function AccountsDirectory({
         </div>
         {change.isSuccess && <Notice>{t("saved")}</Notice>}
       </section>
+      {catalog.isError && canAssign && (
+        <ErrorState retry={() => void catalog.refetch()} />
+      )}
       <InviteForm allRoles canAssignRoles={canAssign} />
       <Dialog
         open={selected !== null}
@@ -178,7 +201,7 @@ function AccountsDirectory({
         <p>{t("roleHint")}</p>
         <fieldset className="account-roles">
           <legend>{t("role")}</legend>
-          {accountRoles.map((role) => (
+          {assignableRoles.map(({ role }) => (
             <label key={role}>
               <input
                 type="checkbox"
@@ -207,7 +230,7 @@ function AccountsDirectory({
         {change.isError && !confirm && (
           <Notice kind="error">{t("error")}</Notice>
         )}
-        {roles.includes("client") && (
+        {roles.includes("client") && canLinkOrganisations && (
           <section>
             <h3>{t("organisation")}</h3>
             <p>{t("organisationHint")}</p>
@@ -307,6 +330,7 @@ function AccountsDirectory({
     </>
   );
 }
+/** Load current account capabilities before the directory and distinguish failed checks from missing permission. */
 export function AccountsPage() {
   const { session } = useAuth();
   const { t } = useTranslation("accounts");

@@ -1,3 +1,7 @@
+/**
+ * Regressions for cent-exact shares, capacity offers and unchanged historical gross values. Pure
+ * projection tests do not replace native commercial permission checks.
+ */
 import { describe, expect, it } from "vitest";
 import {
   splitFee,
@@ -5,6 +9,7 @@ import {
   type CommissionRecord,
 } from "./commission-api";
 import { parseInvoiceLabels } from "./api";
+/** Create a fictional commission record with explicit overrides for boundary cases. */
 function record(overrides: Partial<CommissionRecord> = {}): CommissionRecord {
   return {
     job_id: crypto.randomUUID(),

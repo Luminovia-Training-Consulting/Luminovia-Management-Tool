@@ -1,3 +1,6 @@
+/**
+ * Allow files by actual bytes, extension and declared MIME. Normalize display names and encode download headers; an accepted format is not a clean malware result.
+ */
 import {fileTypeFromBuffer} from 'npm:file-type@22.3.0';
 export const MAX_FILE_SIZE=100*1024*1024;
 const supported:Record<string,string[]>={
@@ -11,6 +14,7 @@ const macroProjectName = new TextEncoder().encode('vbaproject.bin');
 /** Preserve the case-insensitive VBA marker deny rule without turning an entire
  * allowed 100 MiB ZIP into two large Unicode strings. ASCII filenames can be
  * compared directly in the existing byte buffer with constant extra memory. */
+// Search the byte buffer directly for the VBA project marker instead of decoding the entire allowed Office ZIP into large Unicode copies.
 function containsMacroProject(bytes:Uint8Array):boolean {
  for(let at=0;at<=bytes.length-macroProjectName.length;at++){
   if(bytes[at]!==0x76&&bytes[at]!==0x56)continue;
@@ -24,7 +28,9 @@ function containsMacroProject(bytes:Uint8Array):boolean {
  }
  return false;
 }
+// Strip path components/control characters and bound the normalized display name.
 export function safeName(name:string){return name.normalize('NFC').split(/[\\/]/).pop()!.replace(/[\u0000-\u001f\u007f]/g,'').trim().slice(0,200);}
+// Compare magic bytes, extension and declared MIME; reject known VBA project markers.
 export async function validateFile(bytes:Uint8Array,name:string,declared:string):Promise<string>{
  if(bytes.length<1||bytes.length>MAX_FILE_SIZE)throw new Error('file_size');
  const extension=name.split('.').pop()?.toLowerCase()??'';
@@ -38,4 +44,5 @@ export async function validateFile(bytes:Uint8Array,name:string,declared:string)
  if(['docx','xlsx','pptx'].includes(extension)&&containsMacroProject(bytes))throw new Error('unsupported_type');
  return actual;
 }
+// Encode the sanitized name as an RFC 5987 download parameter without raw unquoted header values.
 export function downloadDisposition(name:string){return `attachment; filename*=UTF-8''${encodeURIComponent(safeName(name)).replace(/['()*]/g,char=>`%${char.charCodeAt(0).toString(16).toUpperCase()}`)}`;}

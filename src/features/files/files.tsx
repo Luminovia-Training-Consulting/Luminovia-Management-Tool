@@ -1,3 +1,7 @@
+/**
+ * File centre with drop uploads, version-bound previews and history. Blob URLs belong to the
+ * displayed version and are disposed; upload progress alone is not scan clearance.
+ */
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -36,6 +40,7 @@ import {
 } from "./api";
 import "./i18n";
 import "./files.css";
+/** Map upload failures to the known translated UI keys. */
 function fileError(error: unknown) {
   const code = error instanceof Error ? error.message : "";
   return [
@@ -47,6 +52,7 @@ function fileError(error: unknown) {
     ? code
     : "error";
 }
+/** Keep file selection and retry identity together; clear the draft only after successful upload/scan completion. */
 export function FileUpload({
   context,
   onDone,
@@ -156,6 +162,7 @@ export function FileUpload({
     </div>
   );
 }
+/** Bind metadata and bytes to the same version and dispose Blob URLs created by late responses. */
 function Preview({ file }: { file: PortalDocument }) {
   const { t } = useTranslation("files");
   const [url, setUrl] = useState("");
@@ -194,6 +201,7 @@ function Preview({ file }: { file: PortalDocument }) {
     <p>{t("noPreview")}</p>
   );
 }
+/** Load authorized history and offer downloads only for clean versions. */
 function Versions({ file }: { file: PortalDocument }) {
   const { t, i18n } = useTranslation("files");
   const online = useOnline();
@@ -255,6 +263,7 @@ function Versions({ file }: { file: PortalDocument }) {
     </>
   );
 }
+/** Display authorized files with previews, history, renaming and explicit archival. */
 function DocumentList({ files }: { files: PortalDocument[] }) {
   const { t, i18n } = useTranslation("files");
   const { session } = useAuth();
@@ -474,6 +483,7 @@ function DocumentList({ files }: { files: PortalDocument[] }) {
     </>
   );
 }
+/** Bind files to a specific business context using the shared upload/list contract. */
 export function SubjectDocuments({
   ownerId,
   kind,
@@ -487,6 +497,7 @@ export function SubjectDocuments({
   if (files.isError) return <ErrorState />;
   return <DocumentList files={files.data} />;
 }
+/** Separate pre-/post-claim job materials and expose administrative uploads only as the applicable UI action. */
 export function JobDocuments({
   jobId,
   canManage,
@@ -531,6 +542,7 @@ export function JobDocuments({
     </section>
   );
 }
+/** Filter the currently loaded file set by name/context; complete server-side discovery remains separate work. */
 export function FilesPage() {
   const { t } = useTranslation("files");
   const { session } = useAuth();
