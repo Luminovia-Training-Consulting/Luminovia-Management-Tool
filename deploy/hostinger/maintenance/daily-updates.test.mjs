@@ -3,6 +3,7 @@
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
@@ -32,7 +33,6 @@ import {
 } from "./daily-updates.mjs";
 import {
   promote,
-  retryMainChecks,
   signatureProbe,
   validateFileChange,
   validatePatch,
@@ -765,135 +765,914 @@ test("promotion refuses script, source, publisher, PG and nonregistry lockfile m
   }
 });
 
-test("signed promotion checks exact parent and dispatches exact main CI; main drift cannot mutate", async () => {
-  const context = await fixture();
-  try {
-    const plan = await imagePlan(context);
-    await applyPlan(plan, ["docker-rest"], context.root);
-    const patch = await exportCandidate(
-        plan,
-        "combined",
-        "passed",
-        context.root,
-      ),
-      commit = "b".repeat(40),
-      calls = [];
-    const api = async (path, options = {}) => {
-      calls.push({ path, options });
-      if (path.endsWith("/branches/main"))
-        return { commit: { sha: context.base } };
-      if (path === "/graphql") {
-        assert.equal(
-          options.body.variables.input.expectedHeadOid,
-          context.base,
+/** Model the GitHub boundaries rather than accepting arbitrary API writes. */
+/** Stateful, network-free GitHub transcript for the publisher. The fixture
+ * models lost responses after server mutations and rejects unexpected routes,
+ * allowing retries to prove idempotency without touching a real repository. */
+function publisherApi(context, patch, options = {}) {
+  const repository = "Luminovia-Training-Consulting/Luminovia-Management-Tool";
+  const prefix = "/repos/" + repository;
+  const commit = "b".repeat(40);
+  const calls = [];
+  const state = {
+    head: options.existingHead ?? null,
+    pr: null,
+    failureUsed: false,
+  };
+  let branch;
+  const failOnce = (step) => {
+    if (options.failOnce === step && !state.failureUsed) {
+      state.failureUsed = true;
+      throw new Error("Fictional lost response after " + step);
+    }
+  };
+  const api = async (path, request = {}) => {
+    calls.push({ path, request });
+    const method = request.method ?? "GET";
+    if (path === prefix + "/branches/main") {
+      assert.equal(method, "GET");
+      return { commit: { sha: options.main ?? context.base } };
+    }
+    if (path.startsWith(prefix + "/git/ref/heads/")) {
+      assert.equal(method, "GET");
+      branch = path.slice((prefix + "/git/ref/heads/").length);
+      assert.match(
+        branch,
+        /^codex\/daily-maintenance-[a-f0-9]{12}-[a-f0-9]{24}$/,
+      );
+      return state.head === null
+        ? null
+        : { ref: "refs/heads/" + branch, object: { sha: state.head } };
+    }
+    if (path === prefix + "/git/refs") {
+      assert.equal(method, "POST");
+      assert.equal(request.body.ref, "refs/heads/" + branch);
+      assert.equal(request.body.sha, context.base);
+      assert.equal(state.head, null);
+      state.head = context.base;
+      failOnce("branch-created");
+      return { ref: request.body.ref, object: { sha: state.head } };
+    }
+    if (path === prefix + "/git/commits/" + state.head) {
+      assert.equal(method, "GET");
+      return {
+        sha: state.head,
+        verification: {
+          verified: options.verified !== false,
+          reason: options.verified === false ? "unsigned" : "valid",
+        },
+        parents: [{ sha: options.parent ?? context.base }],
+      };
+    }
+    if (path === prefix + "/compare/" + context.base + "..." + state.head) {
+      assert.equal(method, "GET");
+      return {
+        status: "ahead",
+        total_commits: options.totalCommits ?? 1,
+        files:
+          options.files ??
+          patch.files.map((item) => {
+            const bytes = Buffer.from(item.contents, "base64");
+            return {
+              filename: item.path,
+              status: "modified",
+              sha: createHash("sha1")
+                .update("blob " + bytes.length + "\0")
+                .update(bytes)
+                .digest("hex"),
+            };
+          }),
+      };
+    }
+    if (path === prefix + "/pulls?state=open&base=main&per_page=100") {
+      assert.equal(method, "GET");
+      return options.stalePr
+        ? [
+            {
+              number: 29,
+              head: {
+                ref: "codex/daily-maintenance-older-candidate",
+                repo: { full_name: repository },
+              },
+              body: "<!-- luminovia-maintenance:fictional-older-digest -->",
+            },
+          ]
+        : state.pr?.state === "open"
+          ? [structuredClone(state.pr)]
+          : [];
+    }
+    if (path.startsWith(prefix + "/pulls?state=all&head=")) {
+      assert.equal(method, "GET");
+      assert.equal(
+        new URL(path, "https://api.github.com").searchParams.get("head"),
+        repository.split("/")[0] + ":" + branch,
+      );
+      return state.pr ? [structuredClone(state.pr)] : [];
+    }
+    if (path === prefix + "/pulls" && method === "POST") {
+      assert.equal(state.pr, null);
+      assert.equal(request.body.head, branch);
+      assert.equal(request.body.base, "main");
+      state.pr = {
+        number: 31,
+        node_id: "PR_fictional",
+        state: "open",
+        draft: false,
+        body: request.body.body,
+        head: { sha: state.head, ref: branch, repo: { full_name: repository } },
+        base: { ref: "main", repo: { full_name: repository } },
+        labels: [],
+        mergeable: options.clean === true,
+        mergeable_state: options.clean ? "clean" : "blocked",
+      };
+      failOnce("pr-created");
+      return structuredClone(state.pr);
+    }
+    if (path === prefix + "/pulls/31") {
+      assert.equal(method, "GET");
+      assert(state.pr);
+      const current = structuredClone(state.pr);
+      if (options.classificationChanged && current.labels.length > 0)
+        current.labels.push({ name: "risk:low" });
+      return current;
+    }
+    if (path === prefix + "/pulls/31/merge") {
+      assert.equal(method, "PUT");
+      assert.deepEqual(request.body, { sha: commit, merge_method: "merge" });
+      if (options.mergeError)
+        throw new Error("Fictional native rule rejection");
+      state.pr.state = "closed";
+      state.pr.merged = true;
+      return { merged: true, sha: "c".repeat(40) };
+    }
+    if (path === "/graphql") {
+      assert.equal(method, "POST");
+      const { query, variables } = request.body;
+      if (query.includes("createCommitOnBranch")) {
+        const input = variables.input;
+        assert.equal(input.branch.repositoryNameWithOwner, repository);
+        assert.equal(input.branch.branchName, branch);
+        assert.equal(input.expectedHeadOid, context.base);
+        assert.equal(state.head, context.base);
+        assert.deepEqual(
+          input.fileChanges.additions,
+          patch.files.map(({ path, contents }) => ({ path, contents })),
         );
-        assert.equal(options.body.variables.input.branch.branchName, "main");
+        state.head = commit;
+        failOnce("signed-commit");
         return { data: { createCommitOnBranch: { commit: { oid: commit } } } };
       }
-      if (path.includes("/git/commits/"))
+      if (query.includes("repository(owner:"))
         return {
-          verification: { verified: true, reason: "valid" },
-          parents: [{ sha: context.base }],
+          data: {
+            repository: Object.fromEntries(
+              ["type", "area", "risk"].map((key, index) => [
+                key,
+                {
+                  id: "L_" + key,
+                  name: ["type:dependencies", "area:devops", "risk:high"][
+                    index
+                  ],
+                },
+              ]),
+            ),
+          },
         };
-      assert.equal(options.body.inputs.expected_commit, commit);
-      return null;
-    };
+      if (query.includes("addLabelsToLabelable")) {
+        assert(
+          query.includes("labelable{... on PullRequest{id}}"),
+          "Labelable has no id field; require the actual PullRequest fragment.",
+        );
+        assert.deepEqual(variables.input, {
+          labelableId: "PR_fictional",
+          labelIds: ["L_type", "L_area", "L_risk"],
+        });
+        state.pr.labels = ["type:dependencies", "area:devops", "risk:high"].map(
+          (name) => ({ name }),
+        );
+        failOnce("labels");
+        return {
+          data: { addLabelsToLabelable: { labelable: { id: "PR_fictional" } } },
+        };
+      }
+      if (query.includes("enablePullRequestAutoMerge")) {
+        assert.deepEqual(variables.input, {
+          pullRequestId: "PR_fictional",
+          expectedHeadOid: commit,
+          mergeMethod: "MERGE",
+        });
+        state.pr.auto_merge = { merge_method: "merge" };
+        failOnce("queued");
+        return {
+          data: {
+            enablePullRequestAutoMerge: {
+              pullRequest: {
+                id: "PR_fictional",
+                number: 31,
+                state: "OPEN",
+                headRefOid: commit,
+                autoMergeRequest: { mergeMethod: "MERGE" },
+              },
+            },
+          },
+        };
+      }
+    }
+    assert.fail("Unexpected publisher API boundary: " + method + " " + path);
+  };
+  return { api, calls, state };
+}
+/** Build one fictional dependency-only candidate from the disposable Git
+ * baseline; no container, upstream package or business database is changed. */
+async function publishingCandidate(context) {
+  const plan = await imagePlan(context);
+  await applyPlan(plan, ["docker-rest"], context.root);
+  return exportCandidate(plan, "combined", "passed", context.root);
+}
+/** Isolate API mutations from evidence reads so stale/rejected fixtures can
+ * assert that no PR, branch or main write escaped the relevant guard. */
+function publicationWrites(source) {
+  return source.calls.filter(
+    ({ request }) => request.method && request.method !== "GET",
+  );
+}
+
+test("publication creates a signed isolated candidate PR, labels it and queues native gated auto-merge", async () => {
+  const context = await fixture();
+  try {
+    const patch = await publishingCandidate(context);
+    const source = publisherApi(context, patch);
+    const result = await promote(patch, {
+      root: context.root,
+      api: source.api,
+    });
     assert.equal(
-      (await promote(patch, { root: context.root, api })).commit,
-      commit,
+      result.status,
+      "maintenance_pr_waiting_for_required_checks_and_review",
     );
-    assert.equal(calls.length, 4);
-    const stale = [];
-    assert.deepEqual(
-      await promote(patch, {
-        root: context.root,
-        api: async (path) => {
-          stale.push(path);
-          return { commit: { sha: "c".repeat(40) } };
-        },
-      }),
-      { status: "stale_candidate_main_moved" },
+    assert.equal(result.commit, "b".repeat(40));
+    assert.equal(result.pullRequest, 31);
+    assert.equal(
+      source.calls.filter(({ path }) => path.endsWith("/pulls")).length,
+      1,
     );
-    assert.equal(stale.length, 1);
-    patch.files[0].sha256 = "d".repeat(64);
-    assert.throws(() => validatePatch(patch, context.root));
+    assert(
+      publicationWrites(source).every(
+        ({ path, request }) =>
+          !path.includes("/actions/") &&
+          !path.endsWith("/heads/main") &&
+          request.method !== "DELETE",
+      ),
+    );
+    const count = publicationWrites(source).length;
+    const repeat = await promote(
+      { ...patch, files: [...patch.files].reverse() },
+      { root: context.root, api: source.api },
+    );
+    assert.deepEqual(repeat, result);
+    assert.equal(
+      publicationWrites(source).length,
+      count,
+      "A retry must not create a branch, commit, PR or queue twice.",
+    );
   } finally {
     await context.cleanup();
   }
 });
 
-test("signature probe cleans only its new branch on both success and verification failure", async () => {
-  for (const verified of [true, false]) {
-    const calls = [];
-    let branch;
-    const api = async (path, options = {}) => {
-      calls.push({ path, options });
-      if (path.endsWith("/branches/main"))
-        return { commit: { sha: "a".repeat(40) } };
-      if (options.method === "DELETE") {
-        assert(path.endsWith(branch));
-        return null;
-      }
-      if (path.endsWith("/git/refs")) {
-        branch = options.body.ref.slice("refs/heads/".length);
-        assert(branch.startsWith("codex/maintenance-signature-probe-"));
-        return {};
-      }
-      if (path === "/graphql")
-        return {
-          data: { createCommitOnBranch: { commit: { oid: "b".repeat(40) } } },
-        };
-      return {
-        verification: { verified, reason: verified ? "valid" : "unsigned" },
-        parents: [{ sha: "a".repeat(40) }],
-      };
-    };
-    if (verified) assert.equal((await signatureProbe(api)).status, "passed");
-    else
-      await assert.rejects(signatureProbe(api), /signature was not verified/);
-    assert.equal(
-      calls.filter((item) => item.options.method === "DELETE").length,
-      1,
+test("publication rejects stale/invalid candidates before mutation and refuses mismatched existing branch content", async () => {
+  const context = await fixture();
+  try {
+    const patch = await publishingCandidate(context);
+    const stale = publisherApi(context, patch, { main: "c".repeat(40) });
+    assert.deepEqual(
+      await promote(patch, { root: context.root, api: stale.api }),
+      { status: "stale_candidate_main_moved" },
     );
+    assert.deepEqual(publicationWrites(stale), []);
+    const malformed = structuredClone(patch);
+    malformed.files[0].sha256 = "d".repeat(64);
+    await assert.rejects(
+      promote(malformed, { root: context.root, api: stale.api }),
+    );
+    assert.equal(stale.calls.length, 1);
+    for (const options of [
+      { verified: false },
+      { parent: "c".repeat(40) },
+      { files: [] },
+      {
+        files: [
+          {
+            filename: patch.files[0].path,
+            status: "modified",
+            sha: "d".repeat(40),
+          },
+        ],
+      },
+      { totalCommits: 2 },
+    ]) {
+      const source = publisherApi(context, patch, {
+        existingHead: "b".repeat(40),
+        ...options,
+      });
+      await assert.rejects(
+        promote(patch, { root: context.root, api: source.api }),
+      );
+      assert.deepEqual(
+        publicationWrites(source),
+        [],
+        "Existing unverified/mismatched content must never be overwritten or queued.",
+      );
+    }
+  } finally {
+    await context.cleanup();
   }
 });
 
-test("a daily no-change run retries failed final main CI without duplicating active or released checks", async () => {
-  for (const scenario of ["failed", "running", "released"]) {
-    const calls = [],
-      commit = "a".repeat(40);
-    const api = async (path, options = {}) => {
-      calls.push({ path, options });
-      if (path.endsWith("/branches/main")) return { commit: { sha: commit } };
-      if (path.includes("/releases/tags/"))
-        return scenario === "released"
-          ? { immutable: true, draft: false }
-          : null;
-      if (path.includes("/runs?"))
-        return {
-          workflow_runs: [
-            {
-              head_sha: commit,
-              status: scenario === "running" ? "in_progress" : "completed",
-              conclusion: "failure",
-            },
-          ],
-        };
-      assert.equal(options.body.inputs.expected_commit, commit);
+test("an older open maintenance PR holds new publication without editing or accumulating reviewed candidates", async () => {
+  const context = await fixture();
+  try {
+    const patch = await publishingCandidate(context);
+    const source = publisherApi(context, patch, { stalePr: true });
+    assert.deepEqual(
+      await promote(patch, { root: context.root, api: source.api }),
+      {
+        status: "maintenance_existing_pr_requires_resolution",
+        pullRequest: 29,
+      },
+    );
+    assert.deepEqual(publicationWrites(source), []);
+  } finally {
+    await context.cleanup();
+  }
+});
+
+test("publication safely resumes each lost mutation response without duplicate PRs or overwriting branch edits", async () => {
+  const context = await fixture();
+  try {
+    const patch = await publishingCandidate(context);
+    for (const failOnce of [
+      "branch-created",
+      "signed-commit",
+      "pr-created",
+      "labels",
+      "queued",
+    ]) {
+      const source = publisherApi(context, patch, { failOnce });
+      await assert.rejects(
+        promote(patch, { root: context.root, api: source.api }),
+        /Fictional lost response/,
+      );
+      const result = await promote(patch, {
+        root: context.root,
+        api: source.api,
+      });
+      assert.equal(
+        result.status,
+        "maintenance_pr_waiting_for_required_checks_and_review",
+      );
+      assert.equal(
+        source.calls.filter(
+          ({ path, request }) =>
+            path.endsWith("/pulls") && request.method === "POST",
+        ).length,
+        1,
+      );
+      assert.equal(
+        source.calls.filter(({ request }) =>
+          request.body?.query?.includes("createCommitOnBranch"),
+        ).length,
+        1,
+      );
+    }
+  } finally {
+    await context.cleanup();
+  }
+});
+
+test("publication respects closed/draft PRs and changed identity or classification", async () => {
+  const context = await fixture();
+  try {
+    const patch = await publishingCandidate(context);
+    for (const change of [
+      (pr) => {
+        pr.state = "closed";
+      },
+      (pr) => {
+        pr.state = "closed";
+        pr.merged = true;
+      },
+      (pr) => {
+        pr.draft = true;
+      },
+      (pr) => {
+        pr.head.sha = "c".repeat(40);
+      },
+      (pr) => {
+        pr.body = "Maintainer changed ownership marker";
+      },
+      (pr) => {
+        pr.labels = [{ name: "risk:low" }];
+      },
+    ]) {
+      const source = publisherApi(context, patch);
+      await promote(patch, { root: context.root, api: source.api });
+      change(source.state.pr);
+      const before = publicationWrites(source).length;
+      const expectedReject =
+        source.state.pr.head.sha !== "b".repeat(40) ||
+        !source.state.pr.body.includes("luminovia-maintenance:") ||
+        source.state.pr.labels.some(({ name }) => name === "risk:low");
+      if (expectedReject)
+        await assert.rejects(
+          promote(patch, { root: context.root, api: source.api }),
+        );
+      else
+        assert.match(
+          (await promote(patch, { root: context.root, api: source.api }))
+            .status,
+          /maintenance_pr_(closed|merged|on_hold)/,
+        );
+      assert.equal(publicationWrites(source).length, before);
+    }
+  } finally {
+    await context.cleanup();
+  }
+});
+
+test("classification changed after label confirmation cannot queue or merge the PR", async () => {
+  const context = await fixture();
+  try {
+    const patch = await publishingCandidate(context);
+    const source = publisherApi(context, patch, {
+      classificationChanged: true,
+      clean: true,
+    });
+    await assert.rejects(
+      promote(patch, { root: context.root, api: source.api }),
+      /labels changed before auto-merge/,
+    );
+    assert(
+      !source.calls.some(
+        ({ path, request }) =>
+          path.endsWith("/merge") ||
+          request.body?.query?.includes("enablePullRequestAutoMerge"),
+      ),
+    );
+  } finally {
+    await context.cleanup();
+  }
+});
+
+test("a clean maintenance PR uses the head-conditioned native merge and native rejection cannot be reported as success", async () => {
+  const context = await fixture();
+  try {
+    const patch = await publishingCandidate(context);
+    for (const mergeError of [false, true]) {
+      const source = publisherApi(context, patch, { clean: true, mergeError });
+      const result = promote(patch, { root: context.root, api: source.api });
+      if (mergeError) await assert.rejects(result, /native rule rejection/);
+      else assert.equal((await result).status, "maintenance_pr_merged");
+      assert(
+        !source.calls.some(({ request }) =>
+          request.body?.query?.includes("enablePullRequestAutoMerge"),
+        ),
+      );
+      assert(!source.calls.some(({ path }) => path.includes("/actions/")));
+    }
+  } finally {
+    await context.cleanup();
+  }
+});
+
+test("the real promote CLI reaches the PR publisher and never writes main or dispatches main CI", async () => {
+  const context = await fixture();
+  try {
+    const patch = await publishingCandidate(context);
+    const directory = resolve(context.root, "deploy/hostinger/maintenance");
+    await mkdir(directory, { recursive: true });
+    for (const name of ["promote.mjs", "daily-updates.mjs"])
+      await writeFile(
+        resolve(directory, name),
+        await readFile(new URL(name, import.meta.url)),
+      );
+    const patchFile = resolve(context.root, "candidate.json"),
+      loader = resolve(context.root, "fictional-github.mjs"),
+      transcript = resolve(context.root, "api-transcript.json");
+    await writeFile(patchFile, JSON.stringify(patch));
+    await writeFile(
+      loader,
+      `import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
+import {writeFileSync} from "node:fs";
+const publisherApi=${publisherApi.toString()};
+const source=publisherApi(${JSON.stringify({ base: context.base })},${JSON.stringify(patch)});
+globalThis.fetch=async(url,request)=>{const target=new URL(url);assert.equal(target.origin,"https://api.github.com");try{const result=await source.api(target.pathname+target.search,{method:request.method,body:request.body===undefined?undefined:JSON.parse(request.body)});return new Response(JSON.stringify(result),{status:result===null?404:200});}finally{writeFileSync(${JSON.stringify(transcript)},JSON.stringify(source.calls));}};
+`,
+    );
+    const output = execFileSync(
+      process.execPath,
+      [
+        "--import",
+        loader,
+        resolve(directory, "promote.mjs"),
+        "promote",
+        patchFile,
+      ],
+      {
+        cwd: context.root,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          GH_TOKEN: "fictional-offline-test-token",
+          GITHUB_STEP_SUMMARY: "",
+        },
+      },
+    );
+    assert.equal(
+      JSON.parse(output).status,
+      "maintenance_pr_waiting_for_required_checks_and_review",
+    );
+    const calls = JSON.parse(await readFile(transcript, "utf8"));
+    assert(
+      calls.some(
+        ({ path, request }) =>
+          path.endsWith("/pulls") && request.method === "POST",
+      ),
+    );
+    assert(
+      calls.some(({ request }) =>
+        request.body?.query?.includes("enablePullRequestAutoMerge"),
+      ),
+    );
+    assert(!calls.some(({ path }) => path.includes("/actions/")));
+    assert(
+      calls
+        .filter(({ path }) => path.endsWith("/main"))
+        .every(({ request }) => request.method === "GET"),
+    );
+  } finally {
+    await context.cleanup();
+  }
+});
+
+function signatureProbeApi(options = {}) {
+  const repository = "Luminovia-Training-Consulting/Luminovia-Management-Tool";
+  const prefix = "/repos/" + repository;
+  const base = "a".repeat(40),
+    commit = "b".repeat(40);
+  const state = {
+    pr: null,
+    branch: null,
+    head: null,
+    deleted: false,
+    mainReads: 0,
+  };
+  const calls = [];
+  const api = async (path, request = {}) => {
+    calls.push({ path, request });
+    const method = request.method ?? "GET";
+    if (path === prefix + "/branches/main") {
+      assert.equal(method, "GET");
+      return {
+        commit: {
+          sha:
+            options.failAt === "main-moved" && state.mainReads++ > 0
+              ? "c".repeat(40)
+              : base,
+        },
+      };
+    }
+    if (
+      path.startsWith(
+        prefix + "/git/ref/heads/codex/maintenance-signature-probe-",
+      )
+    ) {
+      assert.equal(method, "GET");
+      state.branch = path.slice((prefix + "/git/ref/heads/").length);
+      if (options.preflightExisting && state.head === null) state.head = base;
+      if (options.failAt === "branch-moved" && state.head !== null)
+        state.head = "c".repeat(40);
+      return state.head === null
+        ? null
+        : { ref: "refs/heads/" + state.branch, object: { sha: state.head } };
+    }
+    if (path === prefix + "/git/refs") {
+      assert.equal(method, "POST");
+      assert.equal(request.body.sha, base);
+      state.branch = request.body.ref.slice("refs/heads/".length);
+      assert.match(
+        state.branch,
+        /^codex\/maintenance-signature-probe-[a-f0-9-]{36}$/,
+      );
+      state.head = base;
+      if (options.failAt === "lost-ref")
+        throw new Error("Fictional lost ref creation response");
+      return {};
+    }
+    if (path === "/graphql") {
+      assert.equal(method, "POST");
+      assert(
+        request.body.query.includes("createCommitOnBranch"),
+        "Probe must never enable auto-merge.",
+      );
+      const input = request.body.variables.input;
+      assert.equal(input.branch.branchName, state.branch);
+      assert.equal(input.expectedHeadOid, base);
+      state.head = commit;
+      if (options.failAt === "lost-signature")
+        throw new Error("Fictional lost signed-commit response");
+      return { data: { createCommitOnBranch: { commit: { oid: commit } } } };
+    }
+    if (path === prefix + "/git/commits/" + commit) {
+      assert.equal(method, "GET");
+      return {
+        verification: {
+          verified: options.failAt !== "verify",
+          reason: options.failAt === "verify" ? "unsigned" : "valid",
+        },
+        parents: [{ sha: base }],
+      };
+    }
+    if (path === prefix + "/pulls" && method === "POST") {
+      assert.equal(request.body.head, state.branch);
+      assert.equal(request.body.base, "main");
+      assert.equal(request.body.draft, true);
+      assert.match(
+        request.body.body,
+        /<!-- luminovia-maintenance-pr-probe:[a-f0-9-]{36} -->/,
+      );
+      if (options.failAt === "create-pr")
+        throw new Error("Fictional PR creation refusal");
+      state.pr = {
+        number: 47,
+        state: "open",
+        draft: true,
+        body: request.body.body,
+        head: {
+          ref: state.branch,
+          sha: commit,
+          repo: { full_name: repository },
+        },
+        base: { ref: "main", repo: { full_name: repository } },
+        labels: [],
+      };
+      if (options.failAt === "lost-create")
+        throw new Error("Fictional lost PR creation response");
+      return structuredClone(state.pr);
+    }
+    if (path.startsWith(prefix + "/pulls?state=all&head=")) {
+      assert.equal(method, "GET");
+      assert.equal(
+        new URL(path, "https://api.github.com").searchParams.get("head"),
+        repository.split("/")[0] + ":" + state.branch,
+      );
+      const matches = state.pr ? [structuredClone(state.pr)] : [];
+      if (options.foreignPr)
+        matches.push({
+          ...structuredClone(state.pr),
+          number: 99,
+          body: "Foreign marker; never close this PR",
+        });
+      return matches;
+    }
+    if (path === prefix + "/issues/47/labels") {
+      assert.equal(method, "POST");
+      assert.deepEqual(request.body, {
+        labels: ["type:tests", "area:github", "risk:low"],
+      });
+      if (options.failAt === "labels")
+        throw new Error("Fictional PR label refusal");
+      state.pr.labels = request.body.labels.map((name) => ({ name }));
+      return structuredClone(state.pr.labels);
+    }
+    if (path === prefix + "/pulls/47") {
+      assert(state.pr);
+      if (method === "PATCH") {
+        assert.deepEqual(request.body, { state: "closed" });
+        if (options.failAt === "close")
+          throw new Error("Fictional PR close refusal");
+        state.pr.state = "closed";
+      } else assert.equal(method, "GET");
+      const observed = structuredClone(state.pr);
+      if (options.failAt === "readback-labels") observed.labels = [];
+      if (options.failAt === "pr-identity-changed")
+        observed.body = "Maintainer changed probe identity; preserve it";
+      return observed;
+    }
+    if (path === prefix + "/git/refs/heads/" + state.branch) {
+      assert.equal(method, "DELETE");
+      if (options.failAt === "delete")
+        throw new Error("Fictional branch cleanup refusal");
+      state.deleted = true;
+      state.head = null;
       return null;
-    };
-    const result = await retryMainChecks(api);
+    }
+    assert.fail("Unexpected probe boundary: " + method + " " + path);
+  };
+  return { api, calls, state };
+}
+
+test("signing/PR probe confirms its draft and labels, closes only that PR, removes its branch and leaves main unchanged", async () => {
+  const source = signatureProbeApi();
+  const result = await signatureProbe(source.api);
+  assert.deepEqual(result, {
+    status: "passed",
+    commit: "b".repeat(40),
+    probePullRequest: 47,
+    mainUnchanged: true,
+    temporaryPrClosed: true,
+    temporaryBranchCleaned: true,
+  });
+  assert.equal(source.state.pr.state, "closed");
+  assert.equal(source.state.deleted, true);
+  const close = source.calls.findIndex(
+    ({ path, request }) =>
+      path.endsWith("/pulls/47") && request.method === "PATCH",
+  );
+  const cleanup = source.calls.findIndex(
+    ({ request }) => request.method === "DELETE",
+  );
+  assert(close >= 0 && cleanup > close);
+  assert(
+    !source.calls.some(
+      ({ path }) => path.includes("/actions/") || path.endsWith("/merge"),
+    ),
+  );
+  assert(
+    source.calls
+      .filter(({ path }) => path.endsWith("/main"))
+      .every(({ request }) => !request.method || request.method === "GET"),
+  );
+});
+
+test("probe failure cleans proved resources, preserves altered or unverified state and never reports unconfirmed cleanup as passed", async () => {
+  for (const failAt of [
+    "verify",
+    "lost-ref",
+    "lost-signature",
+    "branch-moved",
+    "pr-identity-changed",
+    "create-pr",
+    "lost-create",
+    "labels",
+    "readback-labels",
+    "close",
+    "delete",
+    "main-moved",
+  ]) {
+    const source = signatureProbeApi({
+      failAt,
+      foreignPr: failAt === "lost-create",
+    });
+    await assert.rejects(signatureProbe(source.api));
     assert.equal(
-      result.status,
-      scenario === "failed"
-        ? "retried_unreleased_main_checks"
-        : scenario === "running"
-          ? "exact_main_checks_already_running"
-          : "current_main_already_released",
+      source.state.deleted,
+      ![
+        "delete",
+        "verify",
+        "lost-signature",
+        "branch-moved",
+        "pr-identity-changed",
+      ].includes(failAt),
     );
-    assert.equal(
-      calls.filter((item) => item.options.method === "POST").length,
-      scenario === "failed" ? 1 : 0,
+    if (
+      [
+        "lost-create",
+        "labels",
+        "readback-labels",
+        "delete",
+        "main-moved",
+      ].includes(failAt)
+    )
+      assert.equal(source.state.pr.state, "closed");
+    assert(
+      !source.calls.some(
+        ({ path, request }) =>
+          path.endsWith("/pulls/99") && request.method === "PATCH",
+      ),
+      "Lost-response recovery must never close a foreign PR.",
     );
+    if (failAt === "verify")
+      assert(!source.calls.some(({ path }) => path.endsWith("/pulls")));
+  }
+});
+
+test("probe preflight preserves an existing UUID ref without any mutation", async () => {
+  const source = signatureProbeApi({ preflightExisting: true });
+  await assert.rejects(signatureProbe(source.api), /ref already exists/);
+  assert.equal(source.state.deleted, false);
+  assert(
+    !source.calls.some(
+      ({ request }) => request.method && request.method !== "GET",
+    ),
+  );
+});
+
+test("real signature-probe CLI reaches draft PR/label/cleanup paths without queueing or merging", async () => {
+  const context = await fixture();
+  try {
+    const directory = resolve(context.root, "deploy/hostinger/maintenance");
+    await mkdir(directory, { recursive: true });
+    for (const name of ["promote.mjs", "daily-updates.mjs"])
+      await writeFile(
+        resolve(directory, name),
+        await readFile(new URL(name, import.meta.url)),
+      );
+    const loader = resolve(context.root, "probe-github.mjs"),
+      transcript = resolve(context.root, "probe-api.json");
+    await writeFile(
+      loader,
+      `import assert from "node:assert/strict";\nimport {writeFileSync} from "node:fs";\nconst signatureProbeApi=${signatureProbeApi.toString()};\nconst source=signatureProbeApi();\nglobalThis.fetch=async(url,request)=>{const target=new URL(url);assert.equal(target.origin,"https://api.github.com");try{const result=await source.api(target.pathname+target.search,{method:request.method,body:request.body===undefined?undefined:JSON.parse(request.body)});return result===null?new Response(null,{status:request.method==="GET"?404:204}):new Response(JSON.stringify(result),{status:200});}finally{writeFileSync(${JSON.stringify(transcript)},JSON.stringify(source.calls));}};\n`,
+    );
+    const output = execFileSync(
+      process.execPath,
+      [
+        "--import",
+        loader,
+        resolve(directory, "promote.mjs"),
+        "signature-probe",
+      ],
+      {
+        cwd: context.root,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          GH_TOKEN: "fictional-offline-test-token",
+          GITHUB_STEP_SUMMARY: "",
+        },
+      },
+    );
+    const observed = JSON.parse(output);
+    assert.equal(observed.status, "passed");
+    assert.equal(observed.probePullRequest, 47);
+    assert.equal(observed.temporaryPrClosed, true);
+    assert.equal(observed.temporaryBranchCleaned, true);
+    const calls = JSON.parse(await readFile(transcript, "utf8"));
+    assert(
+      calls.some(
+        ({ path, request }) =>
+          path.endsWith("/issues/47/labels") && request.method === "POST",
+      ),
+    );
+    assert(
+      calls.some(
+        ({ path, request }) =>
+          path.endsWith("/pulls/47") && request.method === "PATCH",
+      ),
+    );
+    assert(
+      !calls.some(
+        ({ path, request }) =>
+          path.endsWith("/merge") ||
+          request.body?.query?.includes("enablePullRequestAutoMerge"),
+      ),
+    );
+  } finally {
+    await context.cleanup();
+  }
+});
+
+// Exercise the retired command through the real CLI: intentionally unpublished main
+// must never be mistaken for failed CI and trigger another remote workflow.
+test("the retired retry-main CLI fails without any GitHub request", async () => {
+  const root = await mkdtemp(resolve(tmpdir(), "luminovia-no-main-retry-"));
+  try {
+    const loader = resolve(root, "reject-network.mjs");
+    const transcript = resolve(root, "unexpected-request.json");
+    await writeFile(
+      loader,
+      `import {writeFileSync} from "node:fs";
+globalThis.fetch=async(url)=>{writeFileSync(${JSON.stringify(transcript)},String(url));throw new Error("Unexpected GitHub request");};
+`,
+    );
+    assert.throws(
+      () =>
+        execFileSync(
+          process.execPath,
+          [
+            "--import",
+            loader,
+            resolve(ROOT, "deploy/hostinger/maintenance/promote.mjs"),
+            "retry-main",
+          ],
+          {
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "pipe"],
+            env: {
+              ...process.env,
+              GH_TOKEN: "fictional-offline-test-token",
+              GITHUB_STEP_SUMMARY: "",
+            },
+          },
+        ),
+      (error) =>
+        error.status === 1 &&
+        error.stdout === "" &&
+        /private response withheld/.test(error.stderr),
+    );
+    await assert.rejects(readFile(transcript), { code: "ENOENT" });
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });
