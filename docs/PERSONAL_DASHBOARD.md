@@ -10,7 +10,7 @@ The existing preview cards can be hidden, shown and ordered for the current acco
 
 `teaching_day` returns only the active current lecturer's own confirmed, unreleased assignment sessions overlapping today in the profile's IANA time zone. Both day boundaries are calculated independently, preserving DST transitions. The preview is bounded to 100 sessions; the day/zone and a refresh control are visible. Role withdrawal, cancellation and transferred/released intervals remove the session and its shared context on the next read. A safe HTTPS teaching link or venue and the original assignment details remain available.
 
-The additive `20261116052704_teaching_day_course_workspace.sql` extends this existing RPC without changing the released `20261116021232` source or its public wrapper/grants. For a linked nonarchived course, each session additionally includes:
+The additive `20261116091027_teaching_day_course_workspace.sql` extends this existing RPC without changing the released `20261116091009` source or its public wrapper/grants. For a linked nonarchived course, each session additionally includes:
 
 - The actual course-run ID and link to `/courses/:id/workspace`.
 - Only the deliberately selected `course_workspace_settings.contact_id`, from the exact course organisation, with name/email/phone. Archived contacts/organisations are excluded. No first-contact fallback, internal notes, personal-profile contact or general customer-directory grant is introduced. The UI uses the existing safe mailto/tel helpers.
@@ -31,4 +31,4 @@ Actual focused checks for this extension: five disposable PostgreSQL groups pass
 
 `scripts/dashboard-personal-api-check.mjs` now asserts the real Auth/RPC shared contact/resource/count projection and exact scoped cleanup. `tests/e2e/dashboard-personal.spec.ts` now asserts the actual course contact, safe actions, shared progress, resource workspace link and absence of internal notes, alongside persisted private checklist/layout, reload, DE/EN, mobile/desktop and axe checks. These native cases are authored; their combined execution is owned by the current complete `./portal test` run. Reviewed-version metadata fixtures do not claim a new object transfer; the existing course workspace suite separately exercises real quarantine/ClamAV/Storage/exact-byte downloads.
 
-No hosted service, production record, private mailbox or external recipient is changed by this source extension. Current combined/retained-data/platform and activation outcomes belong in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
+No hosted service, production record, private mailbox or external recipient is changed by this source extension. Current combined/retained-data/platform and activation outcomes belong in [QA_RESULTS](QA_RESULTS.md).

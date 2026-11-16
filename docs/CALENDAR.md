@@ -56,6 +56,6 @@ PORTAL_DB_CONTAINER=<owned-test-container> node scripts/api-surface-db-tests.mjs
 ./portal test
 ```
 
-`calendar-global-api-check.mjs` is authored for actual Auth/MFA/REST checks; `calendar-global.spec.ts` adds desktop/mobile, publication/draft, description/link, DE/EN, offline write prevention, dark mode and axe. These native scenarios were **not executed** during focused implementation. Their acceptance and combined PWA/persistence/CI results are documented separately by the later complete run in `QA_RESULTS.md` and `WORKLOG.md`.
+`calendar-global-api-check.mjs` is authored for actual Auth/MFA/REST checks; `calendar-global.spec.ts` adds desktop/mobile, publication/draft, description/link, DE/EN, offline write prevention, dark mode and axe. These native scenarios were **not executed** during focused implementation. Their acceptance and combined PWA/persistence/CI results are documented separately by the later complete run in `QA_RESULTS.md`.
 
 This does not mark global-event attachments, invitations, background reminders, SMTP/push delivery, automatic publication, ICS subscriptions or private-event drag editing complete. They remain in the full master-prompt plan. Production services, real people and the public website were not changed.

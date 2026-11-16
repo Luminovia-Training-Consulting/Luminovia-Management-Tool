@@ -1,5 +1,11 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — PR31 reconciled with accepted documentation main
+
+Accepted PR38/main `bcba673` updates documentation and the generated API format. Resolved the integration conflicts while preserving the briefing contract and the user-required work log and plan. Regenerated the API reference from an isolated actual 70-migration replay: 254 public application functions, excluding extension-owned functions. The owned database/container were verified removed. The existing 69→70 upgrade, briefing12 and lifecycle12 database proof remains source-bound; SQL bodies did not change.
+
+After integration `./portal check` passes 695 frontend cases/91 files, unchanged coverage floors, types/lint/format/compiler and production/PWA build. The combined candidate and documentation suite passes16 cases. Fresh current-head full system/browser/native/security/package CI is required; no new complete native acceptance is claimed. No production or real mail action occurred.
+
 ## 17 November 2026 — PR31 retained-upgrade repair
 
 CI43903766171 passed SQL/RLS but the actual retained native upgrade failed because the unpublished briefing migration preceded accepted PR25/main `4f7f6c0`. Created `20261116163013_job_briefing_contacts_references.sql` with the installed CLI and moved the exact unreleased SQL bytes after the 69 accepted files; all accepted blobs are unchanged. Updated current documentation links and added a regression for the accepted enquiry/briefing order. No runtime permissions or assertions were weakened.

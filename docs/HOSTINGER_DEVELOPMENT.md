@@ -1,12 +1,12 @@
 # Hostinger self-hosted development instance
 
-Updated 16 November 2026, Australia/Brisbane. This is an actual development/setup deployment, not acceptance for 100 GB or 15–25 production users.
+This guide describes the configured development environment and preserves dated installation evidence. Its hosted observations were not refreshed by the 17 November documentation audit. The repository has advanced beyond the recorded deployed revision; use read-only state/health inspection before an authorised operation. No 100 GB or 15–25-user production acceptance is implied.
 
-## Current accepted operation
+## Last recorded hosted acceptance — 15 November 2026 UTC
 
 Main `bb322746`/18 source-verified application migrations was installed automatically at 2026-11-15T20:04:30UTC after exact CI43753910114 and immutable release checks. PostgreSQL 17.12 and all 10 required containers / 9 healthchecks are healthy, with no OOM/manual-recovery/maintenance flag. REST 16.5, Realtime 2.161.0, Storage 1.95.0, Edge 1.79.1, Envoy 1.40.2, Mailpit 1.33.1 and JSR jose 6.2.17 were genuinely tested together on retained data before rollout. All runtime pins remain immutable; incompatible TypeScript 7/FullCalendar 7 candidates are held.
 
-The five-minute release timer and daily complete backup 02 UTC, official OS 03 UTC and necessary reboot 03:30 UTC timers are enabled/active; GitHub component discovery runs 02:41 UTC. The actual20:10:56UTC encrypted complete set passed native desktop recovery20:13:18UTC:all 3 databases/1,990 files, credentials/RLS/source history/configuration/JWT/Vault/TLS/key/document bytes. A real VM physical checkpoint rollback also passed. See [automatic updates](HOSTINGER_AUTOMATIC_UPDATES.md), [complete backups](../deploy/hostinger/backups/README.md) and exact [WORKLOG](WORKLOG.md) evidence.
+The five-minute release timer and daily complete backup 02 UTC, official OS 03 UTC and necessary reboot 03:30 UTC timers are enabled/active; GitHub component discovery runs 02:41 UTC. The actual20:10:56UTC encrypted complete set passed native desktop recovery20:13:18UTC:all 3 databases/1,990 files, credentials/RLS/source history/configuration/JWT/Vault/TLS/key/document bytes. A real VM physical checkpoint rollback also passed. See [automatic updates](HOSTINGER_AUTOMATIC_UPDATES.md), [complete backups](../deploy/hostinger/backups/README.md) and exact [QA evidence](QA_RESULTS.md) evidence.
 
 Only the public age recipient is on the VPS. Daily complete sets are local, with up to 3 adaptive generations/5GiBreserve; desktop copies have been downloaded manually for recovery testing. Recurring off-site/provider daily full-VM retention is **not activated** and its priced approval remains pending. A future necessary boot into installed kernel7.3.0-10 is scheduled;7.3.0-9 still runs and actual boot acceptance is untested.
 
@@ -46,7 +46,7 @@ Public and anonymous signup, phone signup and phone MFA are disabled. Admin chan
 
 SMTP points to private **Mailpit**, not a real mail recipient/provider. Invitations and recovery messages are captured on the VM; nothing is sent to real people. This is deliberate development configuration and must be replaced with separately approved transactional mail settings before real onboarding.
 
-All eighteen application migrations are applied with source verification in `supabase_migrations.schema_migrations`. `deploy/hostinger/apply-migrations.mjs --development-vps` refuses drift, requires initialized Auth/Storage/Realtime, and never resets data or seeds accounts. It explicitly reapplies development quotas, so it is not a production maintenance command.
+At the recorded `bb322746` installation, eighteen application migrations were applied with source verification in `supabase_migrations.schema_migrations`. That is a hosted historical count, not the current repository inventory; see [MIGRATION_GUIDE](MIGRATION_GUIDE.md). `deploy/hostinger/apply-migrations.mjs --development-vps` refuses drift, requires initialized Auth/Storage/Realtime, and never resets data or seeds accounts. It explicitly reapplies development quotas, so it is not a production maintenance command.
 
 The current instance allocates **10 GiB total / 1 GiB per owner**, counting all document versions, including archived/rejected/quarantined versions. Server-only `private.document_storage_limits` controls those allocations. The source maximum is 100 MiB per file; this ceiling does not establish a successful 100 MiB load test on KVM 1. Uploads are scanned on private TCP; scan failure leaves them quarantined. Neither a logical quota nor an application limit increases the VM's physical disk.
 
@@ -64,7 +64,7 @@ docker compose --project-directory /opt/luminovia-portal/source/deploy/hostinger
 
 `restart: unless-stopped` and the enabled Docker service preserve operation across normal restarts. Persistent application data are outside the source directory. Never use `down --volumes`, remove data directories, reinstall the VM or reset the database as routine cleanup.
 
-Current test and persistence/backup results are recorded in WORKLOG after actual execution. The offline validators do not replace hosted acceptance. Production still requires complete product/release scope, real SMTP, off-site retention, monitoring, supported-client checks and recovery acceptance.
+Current test and persistence/backup results are recorded in QA_RESULTS after actual execution. The offline validators do not replace hosted acceptance. Production still requires complete product/release scope, real SMTP, off-site retention, monitoring, supported-client checks and recovery acceptance.
 
 ## Historical setup checks — superseded counts retained as dated evidence
 
@@ -78,7 +78,7 @@ The actual WSS check passed again after the PostgreSQL patch on the canonical CM
 
 `node deploy/hostinger/backup.mjs --development-vps --quiescent` created an actual off-site database and object backup while development writes were quiescent. `node deploy/hostinger/restore-check.mjs --latest-development-vps` restored that backup into its original pinned 17.6 image and passed exact source roles/memberships/grantor/options, RLS, permissions, migration history, table counts, quotas and every object hash. Before the live patch, `--latest-development-vps-upgrade` restored the same backup into the exact reviewed 17.12 candidate and additionally compared all eleven stored migration SQL sources with repository files. The retained 114-byte private object matched its original SHA-256.
 
-These are actual networkless local PostgreSQL recovery drills, with no published ports; owned temporary containers/volumes and extracted files were removed. They never restore over the VPS. The helper explicitly accepts only the reviewed 17.6 and 17.12 immutable images; normal recovery follows the image recorded in the backup manifest, and backup records the actual running image/version. An arbitrary candidate or floating tag is rejected. The initial PG17 bootstrap-role replay issue is fixed and documented in WORKLOG.
+These are actual networkless local PostgreSQL recovery drills, with no published ports; owned temporary containers/volumes and extracted files were removed. They never restore over the VPS. The helper explicitly accepts only the reviewed 17.6 and 17.12 immutable images; normal recovery follows the image recorded in the backup manifest, and backup records the actual running image/version. An arbitrary candidate or floating tag is rejected. The initial PG17 bootstrap-role replay issue is fixed and documented in QA_RESULTS.
 
 A logical restore rebuilds indexes and does not alone establish safe in-place engine compatibility. Check actual database/explicit collation versions and the official release's index/extension requirements before each reviewed engine patch; rebuild affected indexes before refreshing a changed collation version. The 17.12 candidate and actual updated VM both matched the existing default collation. HTTP/Auth/Storage/Realtime acceptance was performed separately on the updated VM as recorded above.
 

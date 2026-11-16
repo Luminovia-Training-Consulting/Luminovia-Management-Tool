@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## PR31 after accepted documentation main — 17 November 2026
+
+- [x] Integrate accepted PR38/main `bcba673`, preserve the briefing contract, and regenerate the API reference from the actual 70-migration replay (254 application functions).
+- [x] Recheck 695 frontend tests and source/build/coverage gates plus 16 candidate/documentation checks; all 69 accepted migration bytes and the unreleased briefing body remain unchanged.
+- [ ] Run current-head full CI and address any real failures; merge only after all required checks succeed and current main is integrated.
+
 ## PR31 retained-upgrade repair — 17 November 2026
 
 - [x] Place the byte-identical unpublished briefing migration after all 69 accepted SQL sources and guard its order.
@@ -514,7 +520,7 @@ The current required-check policy has 15 contexts. Older 14-check readbacks belo
 > Historical PR21 acceptance notes follow. PR18 and PR21 have since merged; they do not impose a current merge hold. The active joint integration is recorded above.
 
 - [x] Translate the remaining general guides, forms, security policy and 30 label descriptions into English, preserving bilingual application behaviour, authored content and the verbatim specification.
-- [x] Add a [documentation index](README.md), discoverable [roadmap](../ROADMAP.md), [changelog](../CHANGELOG.md) and [decision notes](decisions/README.md); correct stale M6-pending prose using recorded accepted evidence.
+- [x] Add a [documentation index](README.md), discoverable [roadmap](../ROADMAP.md), changelog and [decision notes](decisions/README.md); correct stale M6-pending prose using recorded accepted evidence.
 - [x] Read back all three active rules after concurrent02:33UTC activation; synchronize source JSON without changing live settings. Maintain/Admin review exceptions are PR-only; all 14 strict current-base checks apply without human bypass. Preserve separate maintenance-App promotion/source-delivery work. This current snapshot supersedes earlier dormant-rule/governance descriptions below.
 - [x] Read back all eleven existing PRs, including active #10; every PR already has one type, one risk and at least one area label. Preserve classifications and the nine original labels.
 - [x] Extend delivered documentation verification to roadmap/change notes and local heading fragments so translated navigation is checked.
@@ -685,7 +691,7 @@ No new application migration, production deployment or reduction of the remainin
 The user requests English general documentation, detailed contribution/issue/PR instructions, an explicit roadmap and useful notes, current/historical labels, protected main and continued direct merge authority. Work is isolated on `codex/english-documentation-governance` from accepted main `1341b16`; concurrent role/welcome-tour changes in the original checkout are preserved.
 
 - [x] Translate the remaining general guides, forms, security policy and 30 label descriptions into English, preserving bilingual application behaviour, authored content and the verbatim specification.
-- [x] Add a [documentation index](README.md), discoverable [roadmap](../ROADMAP.md), [changelog](../CHANGELOG.md) and [decision notes](decisions/README.md); correct stale M6-pending prose using recorded accepted evidence.
+- [x] Add a [documentation index](README.md), discoverable [roadmap](../ROADMAP.md), changelog and [decision notes](decisions/README.md); correct stale M6-pending prose using recorded accepted evidence.
 - [x] Read back all three active rules after concurrent02:33UTC activation; synchronize source JSON without changing live settings. Maintain/Admin review exceptions are PR-only; all 14 strict current-base checks apply without human bypass. Preserve separate maintenance-App promotion/source-delivery work. This current snapshot supersedes earlier dormant-rule/governance descriptions below.
 - [x] Read back all eleven existing PRs, including active #10; every PR already has one type, one risk and at least one area label. Preserve classifications and the nine original labels.
 - [x] Extend delivered documentation verification to roadmap/change notes and local heading fragments so translated navigation is checked.
@@ -774,7 +780,7 @@ The incoming PR17 history recorded the following earlier pending instruction whe
 The user requests English general documentation, detailed contribution/issue/PR instructions, an explicit roadmap and useful notes, current/historical labels, protected main and continued direct merge authority. Work is isolated on `codex/english-documentation-governance` from accepted main `1341b16`; concurrent role/welcome-tour changes in the original checkout are preserved.
 
 - [x] Translate the remaining general guides, forms, security policy and 30 label descriptions into English, preserving bilingual application behaviour, authored content and the verbatim specification.
-- [x] Add a [documentation index](README.md), discoverable [roadmap](../ROADMAP.md), [changelog](../CHANGELOG.md) and [decision notes](decisions/README.md); correct stale M6-pending prose using recorded accepted evidence.
+- [x] Add a [documentation index](README.md), discoverable [roadmap](../ROADMAP.md), changelog and [decision notes](decisions/README.md); correct stale M6-pending prose using recorded accepted evidence.
 - [x] Read back all three active rules after concurrent02:33UTC activation; synchronize source JSON without changing live settings. Maintain/Admin review exceptions are PR-only; all 14 strict current-base checks apply without human bypass. Preserve separate maintenance-App promotion/source-delivery work. This current snapshot supersedes earlier dormant-rule/governance descriptions below.
 - [x] Read back all eleven existing PRs, including active #10; every PR already has one type, one risk and at least one area label. Preserve classifications and the nine original labels.
 - [x] Extend delivered documentation verification to roadmap/change notes and local heading fragments so translated navigation is checked.
