@@ -1,5 +1,11 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — first exact maintenance PR acceptance and coordinated merge hold
+
+Signed PR22 head8c50852 passed all14required checks. Exact application/native CI[43799650463](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43799650463) passed226unit/component cases,84desktop/mobile browser cases,2built-PWA cases and checked cleanup. The independent real ten-service selfhost job passed24migrations,19actual API suites,50claims, TLS/WebSockets and retained password/MFA/private event/scanned bytes with cleanup. This proves that source checkpoint, not a future combined branch.
+
+The explicitly authorised coordination from chat01a1df82-c7ec-7681-8687-900cec4892e8 requests no main merges until PR15 is complete. Main has independently advanced through PR20/d4c1f49; strict protection therefore correctly requires updating PR22 even though its old-base checks are green. No main merge is attempted during the hold. PR15 is left untouched. Read-only merge preview identifies two source/documentation conflicts to resolve in the owned maintenance branch after that release; preserve both its English comments/MFA fixtures and the new PR-only publisher. Added helpers now carry English caller/evidence-boundary comments in preparation for that accepted repository instruction. Immediate next actions: wait for PR15's coordinated release, integrate actual main once, run final combined checks, merge only after all14pass, then exercise the existing App signature probe on protected main.
+
 ## 16 November 2026 — maintenance App has no bypass; PR publisher and audit
 
 Latest user instruction extends PR-only/current-green-CI requirements to the maintenance App and requests a functional/dead-code audit of these changes. Work is isolated on `codex/main-protection-verification-20261116` from main `e75f55d`, preserving unrelated application branches. Live REST mutations removed App5776881 from rules27329000 and27329142, followed by exact readback: history/check bypass lists are empty, review retains only human maintain2/admin5 in pull_request mode. All3policies remain active and all14strict check requirements remain. This supersedes the App exception recorded below. No direct main push or trial failing merge was attempted.

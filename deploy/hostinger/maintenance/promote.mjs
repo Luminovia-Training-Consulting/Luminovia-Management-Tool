@@ -320,6 +320,9 @@ async function createSignedCommit(branch, base, additions, headline, api) {
 }
 const maintenanceLabels = ["type:dependencies", "area:devops", "risk:high"];
 const promotionPrefix = "/repos/" + REPOSITORY;
+/** Match GitHub's Git blob ID for already validated base64 bytes. SHA-1 is
+ * required by this repository's Git object format; this is not a password or
+ * authenticity primitive. Parent/signature checks separately bind the commit. */
 function gitBlobSha(contents) {
   const bytes = Buffer.from(contents, "base64");
   return createHash("sha1")
@@ -327,6 +330,9 @@ function gitBlobSha(contents) {
     .update(bytes)
     .digest("hex");
 }
+/** Check the remote branch against the exact tested patch before publishing.
+ * Reject extra parents/files, changed bytes and unverified signatures rather
+ * than overwriting an existing branch that a person may have edited. */
 async function verifyMaintenanceCommit(commit, patch, api) {
   assert(/^[a-f0-9]{40}$/.test(commit));
   const verification = await api(promotionPrefix + "/git/commits/" + commit);
@@ -362,6 +368,9 @@ async function verifyMaintenanceCommit(commit, patch, api) {
   }
   assert(expected.size === 0);
 }
+/** Bind every later mutation to this repository, main target, deterministic
+ * branch, tested head and ownership marker. Recheck after label writes so a
+ * concurrent edit cannot silently redirect the auto-merge request. */
 function verifyMaintenancePr(pr, branch, commit, marker) {
   assert(
     Number.isSafeInteger(pr?.number) &&
@@ -380,6 +389,9 @@ function verifyMaintenancePr(pr, branch, commit, marker) {
     "Maintenance PR identity or tested candidate changed.",
   );
 }
+/** Add the existing catalogue labels with the App's PR permission. Existing
+ * type/risk choices are checked, never silently replaced; remote readback in
+ * promote confirms classification before any native merge operation. */
 async function labelMaintenancePr(pr, api) {
   const labels = new Set(pr.labels.map((label) => label.name));
   assert(

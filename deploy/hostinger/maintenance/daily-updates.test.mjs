@@ -762,6 +762,9 @@ test("promotion refuses script, source, publisher, PG and nonregistry lockfile m
 });
 
 /** Model the GitHub boundaries rather than accepting arbitrary API writes. */
+/** Stateful, network-free GitHub transcript for the publisher. The fixture
+ * models lost responses after server mutations and rejects unexpected routes,
+ * allowing retries to prove idempotency without touching a real repository. */
 function publisherApi(context, patch, options = {}) {
   const repository = "Luminovia-Training-Consulting/Luminovia-Management-Tool";
   const prefix = "/repos/" + repository;
@@ -975,11 +978,15 @@ function publisherApi(context, patch, options = {}) {
   };
   return { api, calls, state };
 }
+/** Build one fictional dependency-only candidate from the disposable Git
+ * baseline; no container, upstream package or business database is changed. */
 async function publishingCandidate(context) {
   const plan = await imagePlan(context);
   await applyPlan(plan, ["docker-rest"], context.root);
   return exportCandidate(plan, "combined", "passed", context.root);
 }
+/** Isolate API mutations from evidence reads so stale/rejected fixtures can
+ * assert that no PR, branch or main write escaped the relevant guard. */
 function publicationWrites(source) {
   return source.calls.filter(
     ({ request }) => request.method && request.method !== "GET",
