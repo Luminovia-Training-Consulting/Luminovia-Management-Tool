@@ -2,9 +2,9 @@
 
 ## Delivery status
 
-This controller-only follow-up is prepared against accepted main `fabd71a7`. Its own exact-source CI, merge and successful default-branch execution remain required before it can be described as an accepted running controller. Repository auto-merge availability and active branch rules do not prove controller delivery. Results from another product or quality branch do not certify this change.
+This prepared controller-only source integrates main `0a6002a5`. Its own exact-source CI, merge and successful default-branch execution remain required before it can be described as an accepted running controller. Repository auto-merge availability and active branch rules do not prove controller delivery. Results from another product or quality branch do not certify this change.
 
-The live rules have been read back: **15 required checks, strict current-base enforcement and no CI bypass; a PR-only review exception for human Maintain/Repository-admin accounts; no App review exception; and no history/signature bypass**. The matching source snapshots are linked in [GitHub administration](GITHUB_WORKFLOW.md#rules-for-main). This implementation does not change those server rules or grant a new exception.
+The live rules have been read back: **15 required checks, strict current-base enforcement and no CI bypass; a personal PR-only review exception solely for `CarinaSchoppe` (user `29256704`), with no role-based exception; no App review exception; and no history/signature bypass**. The matching source snapshots are linked in [GitHub administration](GITHUB_WORKFLOW.md#rules-for-main). This implementation does not change those server rules or grant a new exception.
 
 ## Prepared workflow and credential boundaries
 
@@ -27,7 +27,7 @@ Every automatically merged candidate must satisfy all of the following:
 - GitHub's native `mergeable_state` is **`clean`**. An approval does not override native blocking for unresolved conversations, stale reviews, latest-push approval or other branch requirements. An outstanding change request blocks the controller.
 - No other open PR head is contained in the candidate, including a draft or held PR. Combined work must not silently consume another pending change.
 
-**The controller has no author-based review exemption.** Maintainer-authored, administrator-authored, writer-authored, external and automated PRs all follow the independent-review and native-clean path above. The human Maintain/Admin PR-only exception remains available to an appropriately authorised person performing a native merge; it is not inherited by the App acting for that person.
+**The controller has no author-based review exemption.** Maintainer-authored, administrator-authored, writer-authored, external and automated PRs all follow the independent-review and native-clean path above. Only `CarinaSchoppe` (user `29256704`) retains a personal PR-only exception when performing a native merge. It is not inherited by the App; the controller grants no author, user, role or workflow-actor exception, including for Carina-authored PRs.
 
 ## Actual push provenance
 
@@ -63,4 +63,4 @@ A real read-only inspection uses an existing authorised token in `GH_TOKEN`, the
 
 The successful [read-only metadata proof, run 43809731348](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43809731348), checked access to the 15 required checks, CodeQL records, the source push and current pusher permissions using the standard restricted Actions token. The probe used signed fixture commit `f7f0bee`; its owned temporary branch was removed. It performed no App write or main write. This proves metadata access; it does **not** prove a native automatic merge, controller acceptance, full application acceptance or deployment.
 
-The final fixed query, including immutable Bot IDs, also passed [actual read-only Actions run43814730991](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43814730991) on signed fixture `2d0abce`. It checked GraphQL's bare `dependabot` login against REST's `dependabot[bot]` identity using the same numeric ID and ordinary read permissions. The owned fixture branch was removed. This remains a metadata-access proof, not an App merge or application deployment.
+The final fixed query, including immutable Bot IDs, also passed [actual read-only Actions run 43814730991](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43814730991) on signed fixture `2d0abce`. It checked GraphQL's bare `dependabot` login against REST's `dependabot[bot]` identity using the same numeric ID and ordinary read permissions. The owned fixture branch was removed. This remains a metadata-access proof, not an App merge or application deployment.

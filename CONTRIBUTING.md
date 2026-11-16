@@ -1,6 +1,6 @@
 # Contributing to Luminovia Portal
 
-> Live policy verified on 16 November 2026: all 15 required checks and signatures are mandatory, with no CI or history bypass. Human Maintain/Repository-admin accounts have a PR-only review exception; the maintenance App has no review exception. The native automatic-merge controller is prepared and still needs its own exact-source CI, merge and default-branch execution. [Current rules and delivery boundary](docs/GITHUB_WORKFLOW.md#rules-for-main).
+> Live policy verified on 16 November 2026: all 15 required checks and signatures are mandatory, with no CI or history bypass. Only `CarinaSchoppe` (user `29256704`) has a personal PR-only review exception; repository roles and the maintenance App have none. The native automatic-merge controller is prepared and still needs its own exact-source CI, merge and default-branch execution. [Current rules and delivery boundary](docs/GITHUB_WORKFLOW.md#rules-for-main).
 
 Welcome! This guide explains how to turn an idea or bug report into a tested, reviewable change. **Use English for issues, pull requests and contributor-facing documentation.** Application interface changes must provide both German and English strings; authored course content keeps its original language.
 
@@ -70,9 +70,9 @@ Every PR needs exactly one `type:*` label, at least one `area:*` label and exact
 
 Ordinary contributors need an independent current-head approval, resolved conversations, latest-push approval and all 15 current required checks. New changes invalidate earlier approval under the active review policy. No human or App account may bypass the required-check or history/signature rules.
 
-Human Maintain and Repository-admin accounts have a `pull_request` exception in the review ruleset only. An authorised person can use that exception while merging a PR, including their own; it does not allow a direct push to `main` or an early merge before required checks pass. The exception follows the person performing the merge, not the PR author. Ordinary write access and the maintenance App have no such exception.
+Only `CarinaSchoppe` (immutable user ID `29256704`) has a personal `pull_request` exception in the review ruleset. It applies when that exact user performs a native PR merge, including their own, and grants no direct-main push or early merge before required checks pass. The exception is not attached to the PR author and cannot be inherited by another account or App. Maintain/Admin roles, ordinary write access and the maintenance App grant no review exception.
 
-The prepared [native automatic-merge controller](docs/AUTO_MERGE.md) uses the ordinary reviewed path for **every** PR, including maintainer/admin and App-authored work: an independent approval of the exact head and native `clean` mergeability. Reviewer independence uses the actual source push bound to the CI check suite, not the workflow actor, retry initiator or commit email. Missing push evidence grants no exception; contradictory evidence blocks the candidate.
+The prepared [native automatic-merge controller](docs/AUTO_MERGE.md) uses the ordinary reviewed path for **every** PR, including Carina-authored, maintainer/admin and App-authored work: an independent approval of the exact head and native `clean` mergeability. Reviewer independence uses the actual source push bound to the CI check suite, not the workflow actor, retry initiator or commit email. Missing push evidence grants no exception; contradictory evidence blocks the candidate.
 
 All 15 required contexts are listed in [GitHub administration](docs/GITHUB_WORKFLOW.md#required-checks-and-native-auto-merge). They include the complete application/native checks, PR preview package and separate CodeQL findings result. A successful unit run, scanner job or preview artifact does not replace the other gates. Coverage reports describe measured source and do not promise universal bug freedom or 100% whole-system coverage.
 

@@ -4,14 +4,15 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 ## Native verified auto-merge follow-up
 
-This bounded quality slice starts from accepted main `fabd71a7` and retains every product requirement in the ledger below. Its native App identity has no check/review bypass; human Maintain/Admin PR exceptions remain personal. The independent course-session precision and critical form-regression slice is prepared separately against accepted main. Expanded M7/M8 discovery and quiet-notification work retains its own product requirements and acceptance.
+This bounded quality slice starts from accepted main `fabd71a7` and retains every product requirement in the ledger below. Its native App identity has no check/review bypass; only Carina has the personal PR-only review exception; broad Maintain/Admin role exceptions are removed. The independent course-session precision and critical form-regression slice is prepared separately against accepted main. Expanded M7/M8 discovery and quiet-notification work retains its own product requirements and acceptance.
 
 - [x] Read back actual live rules and synchronize source snapshots: fifteen strict checks, no App check/review exception, no history/signature bypass. No server rules changed.
 - [x] Prove actual read-only Actions-token access to exact suite/push identity, current pusher permission, live contexts and code-scanning data in isolated run43809731348; remove the owned fixture branch.
 - [x] Make `merge:hold` block both automatic and trusted-main manual metadata validation; twelve metadata cases pass.
 - [x] Complete native PR merging, exact suite/push and reviewer independence, live-context drift rejection and true CLI credential-boundary regressions; 63 targeted cases pass, including actual GraphQL/REST Bot identity forms.
 - [x] Add 49 critical lifecycle/notification API cases; 298 frontend cases pass on Main26, 119 sources, S51.28/B46.15/F41.66/L53.00%; both API modules 100% and floors raised without exclusions.
-- [ ] Run relevant local source/runtime/unit/build checks, publish the signed bounded PR and observe every required exact-head check.
+- [x] Integrate accepted main `0a6002a5`; pass 139 runtime cases and 303 frontend cases across 119 sources, S51.41/B46.33/F41.73/L53.11%. Read back the latest personal review exception: User 29256704 only, PR-only.
+- [ ] Complete final source/build checks, publish the signed bounded PR and observe every required exact-head check.
 - [ ] Integrate through the coordinated merge order and read back the actual merged state. Source preparation and the metadata proof do not establish that delivery.
 
 ## Coordinated PR18 integration

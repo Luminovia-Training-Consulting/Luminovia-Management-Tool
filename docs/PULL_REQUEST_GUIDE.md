@@ -1,6 +1,6 @@
 # Creating, reviewing and merging pull requests
 
-> Live policy verified on 16 November 2026: all 15 checks and signatures are mandatory without CI/history bypass. Human Maintain/Admin accounts have a PR-only review exception; the App has no review exception. The native controller remains prepared until its own exact-source CI, merge and default-branch execution. [Current rules and delivery status](GITHUB_WORKFLOW.md#rules-for-main).
+> Live policy verified on 16 November 2026: all 15 checks and signatures are mandatory without CI/history bypass. Only `CarinaSchoppe` (user `29256704`) has a personal PR-only review exception; Maintain/Admin roles and the App have none. The native controller remains prepared until its own exact-source CI, merge and default-branch execution. [Current rules and delivery status](GITHUB_WORKFLOW.md#rules-for-main).
 
 This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
@@ -87,7 +87,7 @@ Use `./portal github test` for an independent test of current `main`. `./portal 
 
 The active ordinary review path requires an independent approval of the exact current head, latest-push approval and resolved conversations. A changed head invalidates earlier approval. All 15 required checks must pass against the applicable current base; neither people nor Apps have a check or history/signature bypass. [Exact contexts and producer Apps](GITHUB_WORKFLOW.md#required-checks-and-native-auto-merge).
 
-Human Maintain and Repository-admin accounts may use their PR-only exception in the review ruleset when personally merging a PR. That exception follows the acting person, not the PR author. It does not allow direct-main writes or bypass any required check. Ordinary writers and the maintenance App have no review exception.
+Only `CarinaSchoppe` (immutable user ID `29256704`) may use the personal PR-only review exception when performing a native PR merge. It does not follow the PR author or a repository role, and grants no direct-main write or required-check bypass. Maintain/Admin roles, ordinary writers and the maintenance App have no review exception. The automatic controller still requires the ordinary reviewed path for every candidate, including Carina-authored work.
 
 The prepared [verified native controller](AUTO_MERGE.md) requires independent current-head approval and GitHub's native `clean` state for **all** candidates. A human author's role grants the App no exemption. The reviewer must have current writer/admin authority and be independent of the author and any proven source pusher. Actual source pushes are bound to the exact CI check suite; a workflow actor, retry/reopen event or commit email is not push authority. Missing push evidence grants no exemption; contradictory evidence blocks the candidate.
 
