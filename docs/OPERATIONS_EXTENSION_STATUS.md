@@ -1,5 +1,13 @@
 # Seven additional operational modules
 
+## Current continuation — actual accepted Main17, final PR24 checks
+
+PR17 has actually merged as main `4cc20874edc1f865b71106b7bb1299e16fec5aad`. PR24 retains all 62 published SQL files byte-for-byte and adds six pending operational files (68 total). Application, SQL, E2E, database helper, generated API and package/lock bytes remain exactly those of the complete local `2c850` pass. The full local result covered 674 frontend cases, all 68 migrations and real APIs, 150 application browsers, 4 built-PWA cases and checked cleanup; it is not a repeated full pass of the newer executor.
+
+Accepted Main36 phase routing and Main17’s 30-minute aggregate browser budget are now integrated. Separate current phase/executor verification passes 146 runtime cases and 3 documentation cases. Final current-head full system, browser, actual native, security and package CI remains required before PR24 merges, with all 15 required contexts and the browser phase gating the package. Ordinary `./portal test` remains complete. PR25 stays separately stacked after the actual PR24 merge and must prove its own final source.
+
+Accounting remains excluded through signed revert `31d4e9` while preserving remote `9bfa7f2` ancestry and its original source for separate later delivery. Both complete product ledgers, authority-race fixes, current resource/privacy boundaries, personal Carina-only PR review exception and manual-only publication remain intact. Earlier continuations and checkpoint/table outcomes below retain their historical source scope; their former unmerged-PR17 states and queue holds do not describe current main.
+
 ## Current continuation — local candidate composition before accepted PR17
 
 The explicitly authorised local preparation combines PR24 checkpoint `d4e2954` with frozen PR17 source `dd646f91ece7eb136f776597d04e67b27bf72b60`. Accepted main remains `c0622a7`; the delivery order is PR17 → PR24 → PR25. The 68-file candidate retains the 62 PR17-prefix bodies exactly and places six byte-identical operational bodies after them through CLI-created versions `20261116121554`, `20261116121556`, `20261116121558`, `20261116121600`, `20261116121603` and `20261116121605`. The four operational modules and four observed authority-race corrections remain present.

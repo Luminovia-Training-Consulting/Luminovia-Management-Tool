@@ -104,9 +104,8 @@ jobs:
     # A broken scope job must fail this required gate instead of skipping it.
     if: always() && !cancelled()
     runs-on: ubuntu-latest
-    # With 62 migrations and 43 APIs, run43851414028 reached browsers after 31m
-    # and then hit the former 40m job limit. Keep every request/test/stage deadline;
-    # this outer budget lets the complete browser/build/PWA gate finish.
+    # Full PR17 acceptance reached browsers after 31m on run43858966704.
+    # Retain room for the complete suite; individual test deadlines stay fixed.
     timeout-minutes: 60
     steps:
       - name: Require a successful recognized scope

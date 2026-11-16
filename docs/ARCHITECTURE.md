@@ -2,7 +2,7 @@
 
 ## Combined operational architecture — local candidate
 
-This local candidate combines accepted main `c0622a7`, frozen PR17 source `dd646f91ece7eb136f776597d04e67b27bf72b60` and PR24’s four operational modules. It contains 68 SQL files: 36 released main migrations, 26 PR17 candidate additions and six PR24 additions ordered after that candidate prefix. All 62 candidate-prefix bodies remain byte-identical. PR17 has not yet been accepted onto main; actual-main binding and complete current-source application/native acceptance remain required. [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md) retain the distinct historical outcomes.
+This PR24 integration includes actual accepted Main17 `4cc20874edc1f865b71106b7bb1299e16fec5aad` and the four operational modules. Its 68 SQL files consist of 62 byte-identical published main migrations and six pending PR24 additions. Application, SQL and E2E source remains identical to the complete local `2c850` pass; accepted Main36 runner routing and Main17’s 30-minute aggregate browser budget are integrated separately. Current executor/phase checks do not constitute a repeated full run. Final current-head full system, browser, native and all 15 required CI checks remain mandatory. [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md) retain source-bound outcomes.
 
 Course readiness is a live resource-scoped SQL projection; no authoritative percentage is writable. Private per-run settings, tasks and instruction receipts bind current schedules/assignments and actual accessible clean material. Teaching delivery uses editable unsubmitted drafts and immutable submitted revisions/review history, leaving accepted prices/invoices unchanged. A replacement calls the existing claim implementation within a rollback-safe handover transaction and preserves the original until success. Support uses ticket ownership or explicit MFA support authority, with separate filtered internal messages and dedicated frozen attachments. No capability grants unrelated private calendar/chat/contracts. New wrappers remain invoker functions; private tables retain RLS and no browser table access. Online confirmation remains mandatory. General API responses and private files are not cached; ADR-026 documents the separately opted-in minimal own teaching snapshot. [Actual implementation/evidence/limits](OPERATIONS_EXTENSION_STATUS.md).
 
@@ -345,14 +345,14 @@ PR packaging runs with read-only permissions after complete application/native c
 
 ## Current scope and evidence boundaries
 
-All 36 published main migrations remain byte-identical. The existing M7 additions provide structured chat mentions, private personal file organisation, bounded job discovery and saved views, attention preferences and announcements. Their private tables use RLS and revoke
+All 62 published main migrations remain byte-identical. The existing M7 additions provide structured chat mentions, private personal file organisation, bounded job discovery and saved views, attention preferences and announcements. Their private tables use RLS and revoke
 direct PUBLIC/anon/authenticated access. Public invoker wrappers call scoped
 private implementations with empty search paths and explicit authenticated
 execution grants; pure internal trigger/filter helpers revoke browser execution. Private routines
 needed by public wrappers retain their own current-actor/resource checks. Service credentials remain server-only. [ERD](ERD.md) records physical
 keys and exceptions rather than inferring grants from schema placement.
 
-The published M8 extensions provide scoped administrative job pickers, explicit global-calendar publications and qualification evidence/attestation history. Their chronological source links are recorded in [MIGRATION_GUIDE](MIGRATION_GUIDE.md); still-undelivered PR17 sources follow the published prefix without changing released bytes. The picker is a
+The published M8 extensions provide scoped administrative job pickers, explicit global-calendar publications and qualification evidence/attestation history. Their chronological source links are recorded in [MIGRATION_GUIDE](MIGRATION_GUIDE.md); the now-published PR17 sources follow the earlier 36-file prefix without changing released bytes. The picker is a
 projection; calendar extends the existing event table plus one private request
 ledger; qualification adds four private relations. New private tables use RLS and
 revoke direct browser access. See [JOB_PICKERS](JOB_PICKERS.md),
