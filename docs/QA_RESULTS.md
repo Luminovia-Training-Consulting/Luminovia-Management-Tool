@@ -18,7 +18,7 @@ The latest continuation evidence is first. Older M1 results below remain histori
 
 The new isolated integration preserves PR13's English additions and actual main0a6002a. All22focused documentation/metadata/integrity guards, targeted ESLint, formatting and whitespace checks pass; application, released migrations, dependencies and workflows match main exactly. Current source rule snapshots match15mandatory checks with strict current base, no history/check bypass and only Maintain/Admin PR-only review exceptions. Earlier14-check/App-exception readbacks below describe historical configurations.
 
-PR23's actual main merge and fresh final-head GitHub application/native/security/package acceptance remain pending; focused passes and earlier full runs do not substitute for those results. No production, hosting, real email or persistent business data was changed by this correction.
+The prepared final composition includes signed PR23 d448fab. All29focused documentation/metadata/catalogue/integrity cases pass, including the combined heading/link/privacy checks and the new root documentation. Application, migrations, dependencies, workflows and browser cases remain byte-identical to d448fab. Fresh final-head GitHub application/native/security/package acceptance remains pending; focused passes and earlier full runs do not substitute for those results. No production, hosting, real email or persistent business data was changed by this correction.
 
 ## English documentation and repository verification
 

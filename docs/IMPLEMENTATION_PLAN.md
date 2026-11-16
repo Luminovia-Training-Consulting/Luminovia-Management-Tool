@@ -7,7 +7,7 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Resolve PR13 against actual main0a6002a, preserving both full product/evidence ledgers and accepted roles/welcome/help/metadata work.
 - [x] Reconcile current rule snapshots and contributor guides to15mandatory checks, no history/check/App bypass and Maintain/Admin PR-only review exceptions; preserve released SQL and application/workflow/dependency source. The older14-check/App-exception snapshots below are historical.
 - [x] Pass22focused documentation/metadata/integrity guards, targeted lint, formatting and diff checks.
-- [ ] Incorporate PR23's actual accepted main merge, preserving neutral content and additive migration.
+- [x] Integrate signed PR23 d448fab directly, preserving neutral content, its additive migration and both original PR heads in the final normal-merge ancestry.
 - [ ] Observe all15required checks on final PR13 source/current base, then merge directly under Carina's latest explicit instruction. The former coordination hold is superseded by that instruction.
 
 ## PR13 current-base acceptance

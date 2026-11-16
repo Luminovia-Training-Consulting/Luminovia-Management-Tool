@@ -8,7 +8,7 @@ Carina explicitly requested resolving PR13/PR23 conflicts and merging both direc
 
 The source rule snapshots and current contribution guides are reconciled with actual server readback: 15 required context/producer pairs, strict current base, no history/check bypass actors, and only Maintain/Admin PR-only review exceptions. Earlier fourteen-check/App-exception entries below are historical and grant no present exception. This correction changes no live rule and imports no unmerged PR10 product or maintenance source. The latest direct user instruction supersedes the old coordination hold; merge remains conditional on all required final-head checks.
 
-Executed before publication: all22documentation/metadata/integrity guards, targeted ESLint, formatting and whitespace checks pass. Actual main application/dependency/workflow/migration paths are byte-identical. PR23's actual main merge will be incorporated before final PR13 acceptance so its customer-neutral catalogue and migration remain authoritative. Final GitHub acceptance and merge are pending and belong to the live PR record.
+Executed before publication: all22documentation/metadata/integrity guards, targeted ESLint, formatting and whitespace checks pass. Actual main application/dependency/workflow/migration paths are byte-identical. The prepared PR13 composition now includes signed PR23 d448fab directly, preserving its customer-neutral catalogue and migration. Final required checks cover this complete composition; a normal merge retains both original PR heads in main ancestry. Final GitHub acceptance and merge are pending and belong to the live PR record.
 
 ## 16 November 2026 — PR13 current-base verification and authorised merge
 
