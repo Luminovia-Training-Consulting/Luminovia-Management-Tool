@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -318,25 +318,306 @@ async function createSignedCommit(branch, base, additions, headline, api) {
   );
   return commit;
 }
+const maintenanceLabels = ["type:dependencies", "area:devops", "risk:high"];
+const promotionPrefix = "/repos/" + REPOSITORY;
+function gitBlobSha(contents) {
+  const bytes = Buffer.from(contents, "base64");
+  return createHash("sha1")
+    .update("blob " + bytes.length + "\0")
+    .update(bytes)
+    .digest("hex");
+}
+async function verifyMaintenanceCommit(commit, patch, api) {
+  assert(/^[a-f0-9]{40}$/.test(commit));
+  const verification = await api(promotionPrefix + "/git/commits/" + commit);
+  assert(
+    verification.sha === commit &&
+      verification.verification?.verified === true &&
+      verification.verification?.reason === "valid" &&
+      verification.parents?.length === 1 &&
+      verification.parents[0].sha === patch.baseCommit,
+    "Existing maintenance branch is not the signed tested candidate.",
+  );
+  const comparison = await api(
+    promotionPrefix + "/compare/" + patch.baseCommit + "..." + commit,
+  );
+  assert(
+    comparison.total_commits === 1 &&
+      comparison.status === "ahead" &&
+      Array.isArray(comparison.files) &&
+      comparison.files.length === patch.files.length,
+    "Maintenance branch changed files outside its tested candidate.",
+  );
+  const expected = new Map(
+    patch.files.map((item) => [item.path, gitBlobSha(item.contents)]),
+  );
+  for (const file of comparison.files) {
+    assert(
+      expected.has(file.filename) &&
+        expected.get(file.filename) === file.sha &&
+        ["added", "modified"].includes(file.status),
+      "Maintenance branch contents differ from the tested candidate.",
+    );
+    expected.delete(file.filename);
+  }
+  assert(expected.size === 0);
+}
+function verifyMaintenancePr(pr, branch, commit, marker) {
+  assert(
+    Number.isSafeInteger(pr?.number) &&
+      pr.number > 0 &&
+      typeof pr.node_id === "string" &&
+      pr.node_id.length > 0 &&
+      pr.head?.sha === commit &&
+      pr.head.ref === branch &&
+      pr.head.repo?.full_name === REPOSITORY &&
+      pr.base?.ref === "main" &&
+      pr.base.repo?.full_name === REPOSITORY &&
+      typeof pr.body === "string" &&
+      pr.body.includes(marker) &&
+      ["open", "closed"].includes(pr.state) &&
+      Array.isArray(pr.labels),
+    "Maintenance PR identity or tested candidate changed.",
+  );
+}
+async function labelMaintenancePr(pr, api) {
+  const labels = new Set(pr.labels.map((label) => label.name));
+  assert(
+    [...labels].every((name) => typeof name === "string") &&
+      [...labels]
+        .filter((name) => name.startsWith("type:"))
+        .every((name) => name === maintenanceLabels[0]) &&
+      [...labels]
+        .filter((name) => name.startsWith("risk:"))
+        .every((name) => name === maintenanceLabels[2]),
+    "Maintenance PR classification was changed; preserve the reviewed labels.",
+  );
+  if (maintenanceLabels.every((name) => labels.has(name))) return;
+  const [owner, name] = REPOSITORY.split("/");
+  const response = await api("/graphql", {
+    method: "POST",
+    body: {
+      query:
+        'query($owner:String!,$name:String!){repository(owner:$owner,name:$name){type:label(name:"type:dependencies"){id name} area:label(name:"area:devops"){id name} risk:label(name:"risk:high"){id name}}}',
+      variables: { owner, name },
+    },
+  });
+  assert(!response.errors, "Maintenance PR label lookup failed.");
+  const ids = ["type", "area", "risk"].map((key, index) => {
+    const label = response.data?.repository?.[key];
+    assert(
+      label?.name === maintenanceLabels[index] &&
+        typeof label.id === "string" &&
+        label.id.length > 0,
+      "A required maintenance label is unavailable.",
+    );
+    return label.id;
+  });
+  const labelled = await api("/graphql", {
+    method: "POST",
+    body: {
+      query:
+        "mutation($input:AddLabelsToLabelableInput!){addLabelsToLabelable(input:$input){labelable{... on PullRequest{id}}}}",
+      variables: { input: { labelableId: pr.node_id, labelIds: ids } },
+    },
+  });
+  assert(
+    !labelled.errors &&
+      labelled.data?.addLabelsToLabelable?.labelable?.id === pr.node_id,
+    "Maintenance PR labels were not confirmed.",
+  );
+}
+
+/** Publish the tested candidate on an isolated signed branch. Native PR
+ * auto-merge enforces current reviews and CI without any branch-rule bypass.
+ * A deterministic branch and exact-content verification make lost responses
+ * recoverable without overwriting edits or publishing duplicate pull requests. */
 export async function promote(patch, { root = ROOT, api = github } = {}) {
   validatePatch(patch, root);
-  const branch = await api("/repos/" + REPOSITORY + "/branches/main");
-  if (branch.commit?.sha !== patch.baseCommit)
+  const main = await api(promotionPrefix + "/branches/main");
+  assert(/^[a-f0-9]{40}$/.test(main.commit?.sha));
+  if (main.commit.sha !== patch.baseCommit)
     return { status: "stale_candidate_main_moved" };
-  const commit = await createSignedCommit(
-    "main",
-    patch.baseCommit,
-    patch.files.map((item) => ({ path: item.path, contents: item.contents })),
-    "chore: apply verified daily stable component updates",
-    api,
+  const digest = sha(
+    JSON.stringify({
+      base: patch.baseCommit,
+      files: [...patch.files]
+        .sort((a, b) => a.path.localeCompare(b.path))
+        .map(({ path, baseSha256, sha256 }) => ({ path, baseSha256, sha256 })),
+    }),
   );
-  // GITHUB_TOKEN pushes intentionally do not recursively trigger push workflows.
-  // Explicit dispatch checks the exact signed main revision again before release.
-  await api("/repos/" + REPOSITORY + "/actions/workflows/ci.yml/dispatches", {
-    method: "POST",
-    body: { ref: "main", inputs: { expected_commit: commit } },
+  const branch =
+    "codex/daily-maintenance-" +
+    patch.baseCommit.slice(0, 12) +
+    "-" +
+    digest.slice(0, 24);
+  const marker = "<!-- luminovia-maintenance:" + digest + " -->";
+  const open = await api(
+    promotionPrefix + "/pulls?state=open&base=main&per_page=100",
+  );
+  assert(
+    Array.isArray(open) && open.length < 100,
+    "The open PR inventory is incomplete; no maintenance PR was created.",
+  );
+  const unresolved = open.find(
+    (pr) =>
+      pr.head?.repo?.full_name === REPOSITORY &&
+      typeof pr.head.ref === "string" &&
+      pr.head.ref.startsWith("codex/daily-maintenance-") &&
+      pr.head.ref !== branch &&
+      typeof pr.body === "string" &&
+      pr.body.includes("<!-- luminovia-maintenance:"),
+  );
+  if (unresolved) {
+    assert(Number.isSafeInteger(unresolved.number) && unresolved.number > 0);
+    return {
+      status: "maintenance_existing_pr_requires_resolution",
+      pullRequest: unresolved.number,
+    };
+  }
+  let ref = await api(promotionPrefix + "/git/ref/heads/" + branch, {
+    allowMissing: true,
   });
-  return { status: "promoted_waiting_for_exact_main_ci", commit };
+  if (ref === null) {
+    ref = await api(promotionPrefix + "/git/refs", {
+      method: "POST",
+      body: { ref: "refs/heads/" + branch, sha: patch.baseCommit },
+    });
+  }
+  assert(
+    ref?.ref === "refs/heads/" + branch &&
+      /^[a-f0-9]{40}$/.test(ref.object?.sha),
+    "Maintenance branch identity was not confirmed.",
+  );
+  const commit =
+    ref.object.sha === patch.baseCommit
+      ? await createSignedCommit(
+          branch,
+          patch.baseCommit,
+          patch.files.map(({ path, contents }) => ({ path, contents })),
+          "chore: publish verified daily stable component updates",
+          api,
+        )
+      : ref.object.sha;
+  await verifyMaintenanceCommit(commit, patch, api);
+  const owner = REPOSITORY.split("/")[0];
+  const matches = await api(
+    promotionPrefix +
+      "/pulls?state=all&head=" +
+      encodeURIComponent(owner + ":" + branch) +
+      "&base=main&per_page=100",
+  );
+  assert(
+    Array.isArray(matches) && matches.length <= 1,
+    "Maintenance PR lookup is ambiguous; no duplicate was created.",
+  );
+  if (matches[0])
+    assert(
+      Number.isSafeInteger(matches[0].number) && matches[0].number > 0,
+      "Maintenance PR lookup returned an invalid number.",
+    );
+  let pr = matches[0]
+    ? await api(promotionPrefix + "/pulls/" + matches[0].number)
+    : null;
+  if (!pr)
+    pr = await api(promotionPrefix + "/pulls", {
+      method: "POST",
+      body: {
+        title: "chore: update verified stable components",
+        head: branch,
+        base: "main",
+        draft: false,
+        body:
+          marker +
+          "\n\nPublishes the signed candidate after independent component and combined application/retained-data checks. All required PR CI and independent review must pass before GitHub may merge it. No direct main update or rule bypass is used.\n",
+      },
+    });
+  verifyMaintenancePr(pr, branch, commit, marker);
+  const result = { branch, commit, pullRequest: pr.number };
+  if (pr.state === "closed")
+    return {
+      ...result,
+      status:
+        pr.merged === true ? "maintenance_pr_merged" : "maintenance_pr_closed",
+    };
+  if (pr.draft) return { ...result, status: "maintenance_pr_on_hold" };
+  await labelMaintenancePr(pr, api);
+  pr = await api(promotionPrefix + "/pulls/" + pr.number);
+  verifyMaintenancePr(pr, branch, commit, marker);
+  assert(
+    maintenanceLabels.every((name) =>
+      pr.labels.some((label) => label.name === name),
+    ) &&
+      pr.labels.every(
+        ({ name }) =>
+          typeof name === "string" &&
+          (!name.startsWith("type:") || name === maintenanceLabels[0]) &&
+          (!name.startsWith("risk:") || name === maintenanceLabels[2]),
+      ),
+    "Maintenance PR labels changed before auto-merge.",
+  );
+  if (pr.state !== "open" || pr.draft)
+    return { ...result, status: "maintenance_pr_on_hold" };
+  if (pr.auto_merge) {
+    assert(
+      pr.auto_merge.merge_method === "merge",
+      "Unexpected maintenance merge method.",
+    );
+    return {
+      ...result,
+      status: "maintenance_pr_waiting_for_required_checks_and_review",
+    };
+  }
+  if (pr.mergeable === true && pr.mergeable_state === "clean") {
+    const merged = await api(
+      promotionPrefix + "/pulls/" + pr.number + "/merge",
+      {
+        method: "PUT",
+        body: { sha: commit, merge_method: "merge" },
+      },
+    );
+    assert(
+      merged?.merged === true && /^[a-f0-9]{40}$/.test(merged.sha),
+      "Maintenance PR merge was not confirmed.",
+    );
+    return {
+      ...result,
+      status: "maintenance_pr_merged",
+      mergeCommit: merged.sha,
+    };
+  }
+  const queued = await api("/graphql", {
+    method: "POST",
+    body: {
+      query:
+        "mutation($input:EnablePullRequestAutoMergeInput!){enablePullRequestAutoMerge(input:$input){pullRequest{id number state headRefOid autoMergeRequest{mergeMethod}}}}",
+      variables: {
+        input: {
+          pullRequestId: pr.node_id,
+          expectedHeadOid: commit,
+          mergeMethod: "MERGE",
+        },
+      },
+    },
+  });
+  const observed = queued.data?.enablePullRequestAutoMerge?.pullRequest;
+  assert(
+    !queued.errors &&
+      observed?.id === pr.node_id &&
+      observed.number === pr.number &&
+      observed.headRefOid === commit &&
+      (observed.state === "MERGED" ||
+        (observed.state === "OPEN" &&
+          observed.autoMergeRequest?.mergeMethod === "MERGE")),
+    "Maintenance PR auto-merge was not confirmed.",
+  );
+  return {
+    ...result,
+    status:
+      observed.state === "MERGED"
+        ? "maintenance_pr_merged"
+        : "maintenance_pr_waiting_for_required_checks_and_review",
+  };
 }
 export async function signatureProbe(api = github) {
   const main = await api("/repos/" + REPOSITORY + "/branches/main");

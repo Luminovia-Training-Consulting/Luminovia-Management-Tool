@@ -1,5 +1,20 @@
 # Persistent implementation plan
 
+## Current continuation — App PR-only maintenance and audited execution
+
+This latest user instruction removes the maintenance App exception as well. It supersedes the earlier human-only verification and historical ALWAYS guidance. All remaining product modules below remain in scope.
+
+- [x] Remove App5776881 from live review/check bypass lists and read back all3active policies; checks/history have no exceptions, only human maintain/admin retain PR-only review exceptions.
+- [x] Replace direct daily main promotion with exact signed dependency-only branch/PR publication and native required-review/CI auto-merge; never mutate the main ref or substitute pre-merge dispatch for PR CI.
+- [x] Verify deterministic retries/lost responses, changed signatures/parents/blobs/PR identity, stale candidate and existing reviewed-PR preservation, plus the real CLI command path with network-free fictional fixtures.
+- [x] Wire protected main-only selected-repository short-lived App tokens and the missing official age prerequisites for full candidate tests; update current guides and rule snapshots.
+- [x] Run lint/type/source-connection/coverage/build/workflow checks and49Node+13Python offline guards;226unit/component cases pass with existing floors. No frontend runtime module or export is statically unconnected.
+- [x] Complete independent final review; correct the invalid GraphQL interface selection and remove unsupported hold-label behavior. All20maintenance groups pass, including a concurrent classification-change rejection.
+- [ ] Complete signed PR delivery and exact-head full/security/native CI; record actual runs and any failures before merge.
+- [ ] Confirm the existing App's additional pull_requests:write scope at browser action time, verify installation/token scope and actual App-created PR/signature/CI. The configured environment key/ID alone is not execution proof.
+
+No App review exemption is restored: automated PRs need normal independent approval/latest-push approval and resolved conversations as well as all14required checks. An outdated open maintenance PR must be explicitly resolved before regeneration; no reviewed content is overwritten. The unmerged direct-ref auto-merger in PR19 is not part of this implementation.
+
 ## Current human main-protection verification — 16 November 2026
 
 - [x] Verify active live history/review/check rules: humans require a PR, maintain/admin can skip independent review, all14 checks remain mandatory even for CarinaSchoppe, and the PR must be up to date.
