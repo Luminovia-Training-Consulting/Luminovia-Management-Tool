@@ -56,6 +56,39 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
   const second = await reserve(owner, document.document_id);
 
   await check(
+    "A reviewed job purge includes its briefing and request records",
+    async () => {
+      const job = randomUUID();
+      await sql(`insert into public.jobs(id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms) values(${q(job)},'Fictional briefing job','Fictional organisation','online','archived',50,50,'EUR','fixed_total','Fictional terms');
+      insert into private.job_briefings(job_id,version,contact_name) values(${q(job)},1,'Fictional contact');
+      insert into private.job_briefing_requests(actor_id,request_id,job_id,expected_version,request_payload,saved_version) values(${q(admin)},${q(randomUUID())},${q(job)},0,'{}'::jsonb,1);`);
+      const preview = await plan("job", job);
+      assert.equal(preview.can_confirm, true);
+      assert.equal(preview.counts["private.job_briefings"], 1);
+      assert.equal(preview.counts["private.job_briefing_requests"], 1);
+      const op = await confirm(preview),
+        execution = await permit(op);
+      await worker("apply", key(op, execution));
+      await worker("complete", `${key(op, execution)},true,true`);
+      assert.equal(
+        await sql(
+          `select count(*) from private.job_briefings where job_id=${q(job)}`,
+        ),
+        "0",
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from private.job_briefing_requests where job_id=${q(job)}`,
+        ),
+        "0",
+      );
+      assert.equal(
+        await sql(`select count(*) from public.jobs where id=${q(job)}`),
+        "0",
+      );
+    },
+  );
+  await check(
     "Private registry and service work stay inaccessible; AAL2 and exact ownership are authoritative",
     async () => {
       assert.deepEqual(

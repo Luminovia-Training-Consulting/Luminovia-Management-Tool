@@ -8,7 +8,7 @@ The running database reflects **all migrations applied in order**. A later `crea
 
 ## Permanent deletion extension
 
-PR35 follows all 69 accepted sources with three CLI-created migrations: `20261116152708_permanent_resource_deletion.sql`, `20261116152710_company_job_deletion_authority.sql` and `20261116152712_deletion_smart_operations_dependencies.sql` (72 sources in this integration). No accepted source is renamed or edited. The typed deletion registry, actor-bound reviewed plans, execution permits, upload leases and exact Storage fences preserve current private-resource and immutable commercial boundaries. Company deletion requires consistent current organisation ownership; former lecturer history grants no staff file access.
+PR35 follows all 70 accepted sources with three CLI-created migrations: `20261116173902_permanent_resource_deletion.sql`, `20261116173905_company_job_deletion_authority.sql` and `20261116173907_deletion_smart_operations_dependencies.sql` (73 sources in this integration). No accepted source is renamed or edited. The typed deletion registry, actor-bound reviewed plans, execution permits, upload leases and exact Storage fences preserve current private-resource and immutable commercial boundaries. Company deletion requires consistent current organisation ownership; former lecturer history grants no staff file access.
 
 The document helper retains its original OID/ACL and delegates to the exact installed support/qualification implementation through a fully revoked private clone. The dependency repair explicitly owns accepted housekeeping and request histories while retaining shared-evidence and uncertain-delivery blockers. Both foreign-key catalogue walks have deterministic ordering, so valid planner choices cannot create a false stale scope. The actual accepted-prefix upgrade fixture derives its baseline from the complete source inventory and verifies retained support/notification/enquiry helper identity and ACLs. Source replay does not by itself prove native Auth/Storage/browser acceptance. See [PERMANENT_DELETION](PERMANENT_DELETION.md).
 
@@ -674,3 +674,7 @@ A private experimental database that applied earlier unmerged identifiers needs 
 3. Comment new tables, functions, lock ordering, actor/MFA checks, `search_path`, versioning/idempotency and grants directly in the new SQL source. New internal helpers need explicit EXECUTE revokes; do not broadly expand wrapper/definer boundaries.
 4. Check a fresh replay, actual RLS/concurrency and the affected Auth/API/browser flows. Updating an existing database and preserving actual Storage bytes require separate evidence. Use the existing isolated full verification command and document the stages actually reached.
 5. Update the API reference only through its intended actual replay; also update this guide, feature documentation and PR validation evidence. Hosted migrations follow the existing operations and approval path.
+
+## Job briefing migration
+
+[Job briefing contacts and references](../supabase/migrations/20261116163013_job_briefing_contacts_references.sql) adds private briefing and request records after the accepted migration prefix. Current actor and job access determine the disclosed projection; see [JOB_BRIEFING](JOB_BRIEFING.md).

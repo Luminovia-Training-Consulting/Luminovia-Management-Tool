@@ -287,3 +287,7 @@ Choose **Create teaching offer** to use the existing course as the basis for an 
 Under **My profile**, choose a PNG, JPEG or WebP profile picture. The editor explains the square centre crop. The new picture becomes selected only after confirmed processing and storage; a rejected image does not replace the existing one. **Remove profile picture** clears the current selection. Authorised team/course contacts can see the selected image; it is not published as a public Internet file. Initials appear offline and editing is disabled.
 
 Templates and individual jobs have **Comments & teaching notes** for the authorised teaching team. Write a question or teaching note, edit your own posts or withdraw them with confirmation. Management can hide/restore posts with MFA and a reason. A version conflict signals an intervening change; review the current post before continuing. Comments do not change accepted fees or assignment terms and remain separate from client/participant accounts.
+
+## Optional contacts and job references
+
+Open a job and use **Contact and job reference** to add an optional external brief/link and contact details. The creation confirmation also links directly to this section. Contact details default to confirmed assignees; management can deliberately release the entered details to authorised offer viewers. Private customer-directory entries are not shared automatically. Editing requires current management MFA; an explicit reload resolves a version conflict. [Details](JOB_BRIEFING.md).

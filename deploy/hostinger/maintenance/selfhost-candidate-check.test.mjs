@@ -404,6 +404,26 @@ test("every actual application migration can be atomically replayed with its exa
   }
 });
 
+test("job briefing upgrade follows the accepted enquiry migration", () => {
+  // An empty database accepts interleaving, but a retained installation cannot
+  // replay a newly introduced version older than its applied migration history.
+  const names = readdirSync(resolve("supabase/migrations"))
+    .filter((name) => /^\d{14}_.+\.sql$/.test(name))
+    .sort();
+  const enquiry = names.find((name) =>
+    name.endsWith("_website_enquiry_intake.sql"),
+  );
+  const briefing = names.filter((name) =>
+    name.endsWith("_job_briefing_contacts_references.sql"),
+  );
+  assert.ok(enquiry);
+  assert.equal(briefing.length, 1);
+  assert(
+    briefing[0] > enquiry,
+    "Briefing must follow the accepted enquiry migration",
+  );
+});
+
 test("M4 candidate source stages all discovered API suites and exact catalogue assets without replacing retained runtime data", (t) => {
   const directory = mkdtempSync(join(tmpdir(), "candidate-source-fixture-"));
   t.after(() => rmSync(directory, { recursive: true, force: true }));

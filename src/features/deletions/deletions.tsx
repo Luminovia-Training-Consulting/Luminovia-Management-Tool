@@ -230,6 +230,8 @@ function resourceLabel(
     invitation_requests: "invitationRecords",
     claim_events: "assignmentHistory",
     job_lifecycle_requests: "jobChangeRecords",
+    job_briefings: "jobBriefings",
+    job_briefing_requests: "jobBriefingRequests",
     client_course_requests: "companyCourseRequests",
     job_commission_offers: "jobPricingRecords",
     course_run_job_requests: "courseJobRecords",

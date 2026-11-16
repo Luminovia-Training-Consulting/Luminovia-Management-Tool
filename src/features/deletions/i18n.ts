@@ -45,6 +45,14 @@ const pairs: Record<string, [string, string]> = {
   invitationRecords: ["Einladungsnachweise", "Invitation records"],
   assignmentHistory: ["Zuweisungsverlauf", "Assignment history"],
   jobChangeRecords: ["Gespeicherte Auftragsänderungen", "Recorded job changes"],
+  jobBriefings: [
+    "Auftragsinformationen und Kontakte",
+    "Job information and contacts",
+  ],
+  jobBriefingRequests: [
+    "Gespeicherte Änderungen der Auftragsinformationen",
+    "Recorded job information changes",
+  ],
   companyCourseRequests: [
     "Kursanfragen des Unternehmens",
     "Company course requests",

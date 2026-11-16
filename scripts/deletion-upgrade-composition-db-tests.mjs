@@ -124,6 +124,42 @@ await withTestDatabase(
     for (const migration of upgrades)
       await sql(await readFile(new URL(migration, directory), "utf8"));
     await check(
+      "Accepted job briefing records enter the reviewed deletion scope",
+      async () => {
+        const briefingJob = randomUUID();
+        const request = randomUUID();
+        await sql(`insert into public.jobs(id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms) values(${q(briefingJob)},'Fictional briefing job','Fictional organisation','online','archived',50,50,'EUR','fixed_total','Fictional terms');
+        insert into private.job_briefings(job_id,version,contact_name) values(${q(briefingJob)},1,'Fictional contact');
+        insert into private.job_briefing_requests(actor_id,request_id,job_id,expected_version,request_payload,saved_version) values(${q(staff)},${q(request)},${q(briefingJob)},0,'{}'::jsonb,1);`);
+        const snapshot = JSON.parse(
+          await sql(
+            `select private.deletion_snapshot('job',${q(briefingJob)})`,
+          ),
+        );
+        assert.equal(snapshot.counts["private.job_briefings"], 1);
+        assert.equal(snapshot.counts["private.job_briefing_requests"], 1);
+        assert(
+          !snapshot.blockers.some((entry) =>
+            ["private.job_briefings", "private.job_briefing_requests"].includes(
+              entry.kind,
+            ),
+          ),
+        );
+        await sql(
+          `update private.job_briefings set contact_name='Changed fictional contact' where job_id=${q(briefingJob)}`,
+        );
+        const changed = JSON.parse(
+          await sql(
+            `select private.deletion_snapshot('job',${q(briefingJob)})`,
+          ),
+        );
+        assert.notEqual(
+          snapshot.hashes["private.job_briefings"],
+          changed.hashes["private.job_briefings"],
+        );
+      },
+    );
+    await check(
       "Forward upgrade preserves support and notification source/OID/ACL and clones the exact accepted document gate",
       async () => {
         assert.deepEqual(
