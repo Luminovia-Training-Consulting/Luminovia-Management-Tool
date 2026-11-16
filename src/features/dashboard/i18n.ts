@@ -37,7 +37,53 @@ const pairs: Record<string, [string, string]> = {
     "No confirmed teaching sessions today.",
   ],
   openTeachingLink: ["Unterrichtslink öffnen", "Open teaching link"],
-  courseDocuments: ["Freigegebene Kursdateien", "Available course files"],
+  courseContact: ["Freigegebener Kundenkontakt", "Shared customer contact"],
+  noSelectedCourseContact: [
+    "Für diesen Kurs wurde noch kein Kontakt freigegeben.",
+    "No contact has been selected for this course.",
+  ],
+  sharedPreparation: [
+    "Gemeinsame Kursvorbereitung",
+    "Shared course preparation",
+  ],
+  sharedPreparationProgress: [
+    "{{done}} von {{total}} Vorbereitungspunkten erledigt",
+    "{{done}} of {{total}} preparation items complete",
+  ],
+  sharedPreparationHint: [
+    "Gemeinsamer Kursstand; deine persönliche Vorbereitung folgt separat darunter.",
+    "Shared course progress; your private preparation is separate below.",
+  ],
+  noSharedPreparation: [
+    "Noch keine gemeinsame Checkliste vorhanden.",
+    "No shared checklist has been created.",
+  ],
+  sharedCourseResources: [
+    "Vereinbarte Materialien und Berichte",
+    "Agreed materials and reports",
+  ],
+  noSharedCourseResources: [
+    "Keine Kursfassungen für dich freigegeben.",
+    "No course versions are shared with you.",
+  ],
+  sharedMaterial: ["Material", "Material"],
+  sharedReport: ["Bericht", "Report"],
+  moreSharedResources: [
+    "{{count}} weitere freigegebene Fassung(en) im Kursbereich.",
+    "{{count}} more shared version(s) in the course workspace.",
+  ],
+  openCourseWorkspace: [
+    "Kursbereich und alle freigegebenen Fassungen öffnen",
+    "Open course workspace and all shared versions",
+  ],
+  moreJobDocuments: [
+    "Weitere Auftragsunterlagen öffnen",
+    "Open remaining assignment files",
+  ],
+  courseDocuments: [
+    "Auftragsunterlagen (Vorschau)",
+    "Assignment files (preview)",
+  ],
   noCourseDocuments: [
     "Keine freigegebenen Kursdateien vorhanden.",
     "No available course files.",

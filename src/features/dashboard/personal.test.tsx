@@ -12,7 +12,11 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "../../lib/i18n";
 import { PersonalizedWidgets, TeachingDayWidget } from "./personal";
-import { defaultDashboardPreferences, teachingLink } from "./personal-api";
+import {
+  defaultDashboardPreferences,
+  teachingLink,
+  teachingDaySchema,
+} from "./personal-api";
 
 const fake = vi.hoisted(() => ({
   rpc: vi.fn(),
@@ -93,6 +97,63 @@ const cards = {
   files: <section aria-label="Files fixture">Files fixture</section>,
 };
 describe("personal dashboard", () => {
+  it("shows explicitly shared contact, exact resource links and shared progress without changing private checkbox state", async () => {
+    const payload = day(),
+      run = "27e70a15-c7e3-4234-ad6b-d810610be31b";
+    Object.assign(payload.sessions[0], {
+      course_run_id: run,
+      course_contact: {
+        name: "Fictional selected contact",
+        email: "course@example.invalid",
+        phone: "+49 40 123",
+      },
+      shared_preparation: { done: 1, total: 2 },
+      course_resources: [
+        {
+          id: "e980ed88-5a96-435f-afb6-2abb01faef88",
+          version_id: "50cbe43b-6594-4299-b876-a4c81273911b",
+          name: "Agreed original V1.pdf",
+          sha256: "a".repeat(64),
+          category: "material",
+        },
+      ],
+      course_resource_count: 12,
+    });
+    fake.responses.teaching_day = payload;
+    mount(<TeachingDayWidget actor="actor-a" />);
+    expect(
+      await screen.findByRole("link", { name: "course@example.invalid" }),
+    ).toHaveAttribute("href", "mailto:course%40example.invalid");
+    expect(screen.getByRole("link", { name: "+49 40 123" })).toHaveAttribute(
+      "href",
+      "tel:+4940123",
+    );
+    expect(
+      screen.getByText("1 von 2 Vorbereitungspunkten erledigt"),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Agreed original V1.pdf" }),
+    ).toHaveAttribute("href", `/courses/${run}/workspace`);
+    expect(
+      screen.getByText("11 weitere freigegebene Fassung(en) im Kursbereich."),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("checkbox", {
+        name: "Unterlagen geprüft und vorbereitet",
+      }),
+    ).not.toBeChecked();
+    await act(async () => {
+      await i18n.changeLanguage("en");
+    });
+    expect(screen.getByText("1 of 2 preparation items complete")).toBeVisible();
+  });
+  it("treats legacy payloads as unavailable shared context rather than fabricated completed preparation", () => {
+    const parsed = teachingDaySchema.parse(day()).sessions[0];
+    expect(parsed.course_run_id).toBeNull();
+    expect(parsed.course_contact).toBeNull();
+    expect(parsed.shared_preparation).toBeNull();
+    expect(parsed.course_resources).toEqual([]);
+  });
   it("loads saved hidden cards and persists reordered draft only after server confirmation", async () => {
     const user = userEvent.setup();
     fake.responses.dashboard_preferences = {

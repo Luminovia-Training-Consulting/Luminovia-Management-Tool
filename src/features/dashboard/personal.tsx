@@ -1,3 +1,4 @@
+/** Own dashboard layout and daily teaching context: private checklist stays distinct from scoped shared course facts. */
 import { useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -21,6 +22,7 @@ import {
   type TeachingDay,
   type WidgetId,
 } from "./personal-api";
+import { contactEmailLink, contactPhoneLink } from "../profile/contact-api";
 import "./i18n";
 import "./widgets.css";
 
@@ -31,6 +33,7 @@ const widgetLabels: Record<WidgetId, string> = {
   files: "recentDocuments",
   followups: "followUps",
 };
+/** Retain the own layout draft and expected version until a confirmed save or explicit reload. */
 function LayoutEditor({
   actor,
   initial,
@@ -159,6 +162,7 @@ function LayoutEditor({
     </form>
   );
 }
+/** Apply only confirmed presentation preferences; each contained widget retains its resource boundary. */
 export function PersonalizedWidgets({
   actor,
   widgets,
@@ -218,6 +222,7 @@ export function PersonalizedWidgets({
     </>
   );
 }
+/** Store only this claimant’s private preparation; shared course progress remains independent. */
 function Preparation({
   actor,
   session,
@@ -270,6 +275,76 @@ function Preparation({
     </fieldset>
   );
 }
+/** Show only the explicit selected course contact and exact shared-version preview returned by SQL. */
+function TeachingCourseContext({
+  session,
+}: {
+  session: TeachingDay["sessions"][number];
+}) {
+  const { t } = useTranslation("dashboard");
+  if (!session.course_run_id) return null;
+  const contact = session.course_contact,
+    email = contact ? contactEmailLink(contact.email) : null,
+    phone = contact ? contactPhoneLink(contact.phone) : null;
+  const workspace = `/courses/${session.course_run_id}/workspace`;
+  return (
+    <div className="teaching-course-context">
+      <h3>{t("courseContact")}</h3>
+      {contact ? (
+        <address>
+          <strong>{contact.name}</strong>
+          {contact.email && (
+            <p>{email ? <a href={email}>{contact.email}</a> : contact.email}</p>
+          )}
+          {contact.phone && (
+            <p>{phone ? <a href={phone}>{contact.phone}</a> : contact.phone}</p>
+          )}
+        </address>
+      ) : (
+        <p className="muted">{t("noSelectedCourseContact")}</p>
+      )}
+      <h3>{t("sharedPreparation")}</h3>
+      <p>
+        {session.shared_preparation?.total
+          ? t("sharedPreparationProgress", session.shared_preparation)
+          : t("noSharedPreparation")}
+      </p>
+      <p className="muted dashboard-widget-hint">
+        {t("sharedPreparationHint")}
+      </p>
+      <h3>{t("sharedCourseResources")}</h3>
+      {session.course_resources.length ? (
+        <ul>
+          {session.course_resources.map((resource) => (
+            <li key={resource.id}>
+              <Link to={workspace}>{resource.name}</Link>
+              <small>
+                {t(
+                  resource.category === "report"
+                    ? "sharedReport"
+                    : "sharedMaterial",
+                )}
+              </small>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">{t("noSharedCourseResources")}</p>
+      )}
+      {session.course_resource_count > session.course_resources.length && (
+        <p>
+          {t("moreSharedResources", {
+            count:
+              session.course_resource_count - session.course_resources.length,
+          })}
+        </p>
+      )}
+      <Link to={workspace}>{t("openCourseWorkspace")}</Link>
+    </div>
+  );
+}
+
+/** Render the fresh own-day preview; current permissions remain authoritative on linked screens. */
 export function TeachingDayWidget({ actor }: { actor: string }) {
   const { t, i18n } = useTranslation("dashboard");
   const query = useQuery(teachingDayQuery(actor));
@@ -330,6 +405,7 @@ export function TeachingDayWidget({ actor }: { actor: string }) {
                     ) : (
                       session.location && <p>{session.location}</p>
                     )}
+                    <TeachingCourseContext session={session} />
                     <h3>{t("courseDocuments")}</h3>
                     {session.documents.length ? (
                       <ul>
@@ -345,6 +421,12 @@ export function TeachingDayWidget({ actor }: { actor: string }) {
                       </ul>
                     ) : (
                       <p className="muted">{t("noCourseDocuments")}</p>
+                    )}
+                    {(session.document_count ?? session.documents.length) >
+                      session.documents.length && (
+                      <Link to={`/jobs/${session.job_id}`}>
+                        {t("moreJobDocuments")}
+                      </Link>
                     )}
                     <Preparation actor={actor} session={session} />
                   </li>
