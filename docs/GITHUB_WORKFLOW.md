@@ -14,6 +14,10 @@ see [PR_PREVIEWS](PR_PREVIEWS.md). The existing VPS polling timer is unchanged.
 
 <a id="rules-for-main"></a>
 
+<a id="active-rule-layers"></a>
+
+## Reviewed rule layers
+
 The JSON files under `.github/rulesets/` are versioned snapshots. The review source now matches the personal `User:29256704` (`CarinaSchoppe`) exception in `pull_request` mode; history/check sources retain the exact verified configuration. Files alone do not activate protection; the [server-side rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. The latest readback confirms all three policies active:
 
 | Rule                          | Source                                           | Enforcement and exceptions                                                                                                                                                  |
@@ -24,7 +28,7 @@ The JSON files under `.github/rulesets/` are versioned snapshots. The review sou
 
 The personal review exception applies only when Carina's own account performs the PR merge. Its exact actor entry is `{"actor_id":29256704,"actor_type":"User","bypass_mode":"pull_request"}`. PR authorship, pusher identity, repository roles and Apps do not inherit that exception. All other accounts, including maintainers and administrators, must satisfy independent approval, latest-push approval and conversation resolution. Nobody, including Carina, may push directly to `main` or skip mandatory checks or signatures. No actor has a bypass in the separate history or required-check rules. Administrators retain permission to edit repository settings; the current rules govern normal push and merge operations.
 
-The `PR preview package` job follows quality, coverage, runtime/Edge and isolated SQL acceptance. The source-derived profile uses explicit documentation-only verification, two independent SQL workers for ordinary UI work, or full native/application acceptance for sensitive/unknown changes. Main/manual always uses full acceptance, with independent jobs in parallel; selector failure cannot skip the required gates. It is now also a required Actions check, so all 15 PR checks must finish successfully before a merge. The main-only release job and separate preview-metadata workflow are not substituted for these PR checks.
+The `PR preview package` job follows quality, coverage, runtime/Edge and isolated SQL acceptance. The source-derived profile uses explicit documentation-only verification, two independent SQL workers for ordinary UI work, or full native/application acceptance for sensitive/unknown changes. Sensitive PRs run system/SQL/API and all desktop/mobile/PWA stages on separate freshly owned stacks; the preview gate requires both phase results to succeed. Main/manual/local complete acceptance retains its original single-stack sequence. Main/manual always uses full acceptance, with independent jobs in parallel; selector failure cannot skip the required gates. It is now also a required Actions check, so all 15 PR checks must finish successfully before a merge. The main-only release job and separate preview-metadata workflow are not substituted for these PR checks.
 
 The App's earlier `always` exceptions and the former Maintain/Admin review exceptions are historical; none is present in the current policy. The restored live readback confirms exactly one personal PR-only review exception and empty check/history bypass lists. The GitHub Actions integration 15368 and CodeQL integration 57789 identify the required checks' producers, not bypass actors. CI and coverage details are in [CI_QUALITY](CI_QUALITY.md).
 
