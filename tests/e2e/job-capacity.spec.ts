@@ -147,6 +147,19 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
         .single(),
     ),
   ).toEqual({ status: "draft", terms_version: created.terms_version });
+  // aria-grabbed clears before the real cancellation animation completes.
+  // A new pickup must wait for that lifecycle, not for an arbitrary delay or
+  // incidental database/network latency between the two keyboard gestures.
+  await page.evaluate(async () => {
+    await Promise.all(
+      document
+        .getAnimations()
+        .filter(
+          (animation) => animation.effect?.getTiming().iterations !== Infinity,
+        )
+        .map((animation) => animation.finished.catch(() => undefined)),
+    );
+  });
   await handle.focus();
   await page.keyboard.press("Space");
   await expect(handle).toHaveAttribute("aria-grabbed", "true");
