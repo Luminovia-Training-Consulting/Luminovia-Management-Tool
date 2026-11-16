@@ -1,5 +1,9 @@
 # QA evidence — 2026-11-16
 
+## Actual PR29 main: documentation-only local reconciliation
+
+Actual main `c0622a763127081a7b5be092ce2782253991c6a5` contributes six English role/pricing/ownership guides and ledgers. Both histories and all 36 published migration bytes are retained. Combined local documentation/privacy guards pass three cases; application, test, dependency and operating bytes remain identical to published `1dd3c9e`. Its current CI continues independently; no full pass is inferred for this later documentation composition. The explicit shared-PC/main queue and Draft/no-auto-merge state remain unchanged.
+
 ## Exact 68af64e CI: 120 application browsers passed, full gate cancelled
 
 [CI43840712518](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43840712518) was cancelled at its aggregate 40-minute job deadline. The uploaded private summary `.local/functional-ci/pr12-68af64e/560f1466/acceptance.json` has source fingerprint `27713b432d78dc5c176e3ddc6b07466cde8a5183f7317ceb31e33cd3ff46986b`, 90 passed stages and one running PWA stage. All 31 discovered SQL-script stages, 28 business API stages, real invitation/retention and 120 application browser cases passed (17.6 minutes, zero skips/retries); production build passed. PWA completion, runner-owned cleanup, separate native retention and preview acceptance were not reached or verified. This is not a complete pass.
@@ -29,6 +33,27 @@ SignedE7cab0d passed actual PC `./portal test`, run1aacef6d,07:33:30.406–07:49
 CI43824413347 passed all15gates on exactE7:application07:51:11UTC,native07:57:08UTC,preview07:57:18UTC. Its fingerprint matches PC exactly: `e8250d5a2a494d08691292c9bdfd33e55ab4d4ea7038e9ecb5d556323e595720`. Counts:254frontend/102runtime/42Edge/76Python/72operatingNode,258SQLgroups,19APIs,94+2browsers; native26migrations/20suites with actual retained Auth/MFA/private-event/scanned bytes and cleanup. Reports/package verification: `.local/functional-ci/pr12-e7cab0d/`.
 
 Subsequent actualPR13maine88df84c introduces neutral-catalogue migration27. Its local integration passes254frontend/build,105runtime,20native/updater guards,3documentation/privacy groups and4controlled-HTML real-Chromium pointer/layout cases; the last4exercise no backend/Auth and record no separate pageerror listener. Earlier isolatedPG14+12acceptance remains bound to068b603/26migrations. No later full native/SQL/current-head pass is invented. ExplicitPR10-first priority keeps PR12 Draft and reserves shared QA; further own acceptance resumes afterwards.
+## Released discovery English documentation — current-source verification
+
+PR #29 now follows accepted main `1de544d` and its 36 released migrations, including actual paginated/actor-priced discovery. Earlier head 3ed9a24 passed all 15 required checks against e88 main (Portal 43831170474/Security 43831170707), including 92 business browsers, 2 built-PWA cases and native 27 migrations/20 API suites with retained data/cleanup. That is a source-specific historical pass, not current-base acceptance after PR10.
+
+Fresh `./portal check` exits 0 with type/lint/source+GitHub-format/compiler gates, **515/515 cases across 65 files**, configured floors unchanged/met (S65.42/B59.94/F56.61/L67.52) and synthetic-public-config build. The PWA has 66 public precache entries / 2798.90 KiB. All **102/102 runtime cases**, **20/20 focused documentation/heading/privacy/catalogue/metadata cases**, technical-guide formatting and diff checks pass. These are source/mock/build checks; this documentation pass does not invent a new local native Auth/SQL/browser result.
+
+All runtime/API/SQL/dependency/workflow bytes and the complete actual-main ledgers remain unchanged; only six English documentation files differ. All 36 SQL source files preserve their identities. Final actual Auth/SQL/browser/retained-image and all 15 current-source check outcomes plus the assigned queue slot govern the actual merge in the live [PR #29](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/29). No publication is dispatched.
+
+## Historical e88 English quote documentation — local verification
+
+[PR #29](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/29) now preserves accepted main `e88df84`, including the completed local-first/English/customer-neutral deliveries and all 27 migration files. Only five documentation files differ. Fresh `./portal check` exits 0: typecheck, lint, source/GitHub formatting, source connectivity, **254/254 frontend cases in 52 files**, unchanged coverage floors (S51.15/B46.15/F41.61/L52.96) and synthetic-public-config build. The built PWA has 63 public precache entries / 2707.70 KiB. All **98/98 runtime cases** pass, including delivered documentation/heading/privacy/catalogue/metadata guards. Technical-guide formatting and diff checks pass.
+
+All runtime, dependency, workflow, SQL and generated API bytes match that accepted main. Its complete plan/work-log/QA bodies are preserved verbatim. The older 254/87 case figures below remain their own checkpoints. Complete actual Auth/SQL/browser/retained-image and all 15 current-head checks are separate required evidence in the live PR. Draft status follows the active delivery queue; no release/deployment is dispatched.
+
+## Historical English role-pricing clarification — local checkpoints
+
+The documentation branch starts at actual main `0a6002a` with 26 released migrations. `npx --no-install vitest run src/features/jobs/jobs.test.tsx src/features/jobs/lifecycle.test.tsx src/features/commercial/compensation-policy.test.tsx src/features/accounts/accounts.test.tsx` passed **23/23 tests in four files**. `node --test scripts/runtime-documentation.test.mjs scripts/runtime-pr-metadata.test.mjs` passed **12/12**. These existing component fixtures validate their mocked boundaries; the text review separately followed the actual current SQL, quote DTOs, request and budget code. No explicit zero-price component case or new native SQL/API/browser result is invented.
+
+After integrating actual main `319ab69`, fresh `npm run test:coverage` exits 0 with **254/254 cases across 52 files** and S51.15/B46.15/F41.61/L52.96%, meeting the configured floors. `node --test scripts/runtime-*.test.mjs` exits 0 with **87/87**; the focused documentation/metadata combination remains **12/12**, and both changed-guide file/heading probes pass. No application, migration or generated API byte differs from that main. [PR #29](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/29) owns the eventual complete exact-head acceptance; local source/mock results do not replace native gates.
+
+No product source, dependency, workflow or SQL migration changes belong to the increment. Complete exact-head CI, actual selfhost retained-data checks and all 15 required merge outcomes remain separate gates. The earlier extension failures and milestone counts below describe their recorded revisions, not a failure or a fresh full pass of this documentation-only source.
 
 ## PR10 final-CI archive race
 

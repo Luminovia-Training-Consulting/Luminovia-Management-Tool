@@ -1,5 +1,10 @@
 # Persistent implementation plan
 
+## Current documentation-only main reconciliation
+
+- [x] Retain actual PR29 main `c0622a7`, both histories, current English quote/consent/retry guidance and all 36 immutable released migration bytes; application/test/dependency/operating bytes remain identical to published `1dd3c9e`. Three documentation/privacy guards pass.
+- [ ] Let exact-1dd complete CI finish, preserve its actual result and integrate later genuinely accepted main before the released final publication/current-base acceptance. No competing shared-PC run or premature main merge.
+
 ## Current functional delivery after accepted PR10 main
 
 - [x] Diagnose exact `68af64e` CI cancellation: 90 passed stages including 31 SQL scripts, 28 business API stages and 120 application browsers; the 40-minute job budget cut off PWA execution. Preserve incomplete evidence and increase only the aggregate CI budget to 50 minutes, with every individual deadline/assertion unchanged.
@@ -33,6 +38,14 @@
 - [x] Pass combined local source/build acceptance with254frontend cases/52files,102runtime cases,23maintenance guards and16focused publication/GitHub/documentation guards; workflow/diff checks pass. No new full PC/native pass is inferred.
 - [ ] Complete the coordinated full PC slot naturally, preserve actual logs/exit/cleanup, and integrate PR27's actual main plus any required newer main before final exact-head15-check acceptance.
 - [ ] Keep PR12's temporary draft state and no-auto-merge instruction until its reserved merge is released; no source/QA work waits for a larger collected branch.
+## English quote/discovery documentation — released PR10 continuation
+
+- [x] Integrate accepted main `1de544d` and preserve all 36 released SQL sources, neutral naming, operator guidance and complete actual-main histories.
+- [x] Replace obsolete unpaged/future wording with actual shipped actor quotes, monetary filtering/order, cursor context, exact consent and current SQL/query/DTO/UI ownership in the role, discovery and migration guides.
+- [x] Pass fresh `./portal check` (515 frontend cases/65 files, unchanged coverage floors and build), 102 runtime cases, 20 focused documentation/privacy/catalogue/metadata cases and technical-guide formatting; deliver the signed bounded update through [PR #29](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/29).
+- [ ] Complete all 15 exact-current-head required checks and the assigned actual merge. Preserve queue-controlled Draft; no additional routine user approval is required.
+
+The earlier 3ed9a24 all-green checkpoint applies only to its e88 base. All remaining product and operational scope in the ledger below remains required.
 
 ## PR10 current accepted Main13 checkpoint
 
