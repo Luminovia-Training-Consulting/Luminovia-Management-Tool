@@ -1,6 +1,13 @@
 # Persistent implementation plan
 
-## Current functional delivery after protected-maintenance main
+## Current functional delivery after explicit-publication main
+
+- [x] Incorporate actual PR27 maine048edb7 after its15green checks. Executable source remains byte-identical to locally checked068b603; published guidance retains manual exact-SHA publication plus all15strict gates without bypass.
+- [x] Complete isolated local PostgreSQL suites:commission14groups and lifecycle12groups, each26migrations, real late-reader/claim assertions, exit0 and verified owned DB/container cleanup; private0600evidence retained. This is SQL-auth-helper acceptance, not native Auth/browser proof.
+- [x] Preserve full exact05b2c0dapplication/native/preview acceptance:72stages,94browser+2PWA with zero skips/retries,258SQL/19APIs and26migration/20suite native retained-data checks. Later remote3c88334 is preserved without losing the corrected guidance.
+- [ ] Run the complete PC acceptance after PR31's reserved repetition naturally cleans up, then reconcile genuinely newer actual main and complete final15current-head checks. Keep temporary Draft/no-auto-merge state until the reserved merge is released.
+
+## Earlier functional delivery after protected-maintenance main
 
 - [x] Integrate actual main319ab69f locally, preserving explicit-publication controls and all functional/quote-race repairs. Resolve three guidance conflicts in favour of mandatory15checks/current-base protection plus separately authorised publication.
 - [x] Pass combined local source/build acceptance with254frontend cases/52files,102runtime cases,23maintenance guards and16focused publication/GitHub/documentation guards; workflow/diff checks pass. No new full PC/native pass is inferred.
@@ -69,6 +76,7 @@ Other proposed PR21/22/26 group work remains separate from this frozen functiona
 
 ## Current direction — local PC testing and explicit publication
 
+- Final integration follows actual main319ab69 through verified remote mergef24eae9. Prior head30075c9 passed all15required checks (88browser/2PWA plus real26-migration/20-suite native retention); current f24local checks pass254frontend/95runtime/23maintenance cases. Correct the three retained governance contradictions once, preserving manual publication controls, then use PR27's fresh exact-head checks and actual merge record. Other feature development remains independent.
 - [x] Add `./portal check` for fast local source/coverage/build feedback, retaining complete isolated `./portal test` and latest-main `./portal github test`.
 - [x] Keep automatic quality/security/application/native gates; make CMS publication an explicit exact-SHA manual choice and PR deployment metadata manual-only.
 - [x] Notify the 16 other active project Codex chats and preserve the local-first rule in `AGENTS.md` and operator/contribution guides.
