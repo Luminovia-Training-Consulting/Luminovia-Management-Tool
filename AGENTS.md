@@ -133,6 +133,13 @@ CMS releases merely to test a change. Publication requires an explicit user
 request and the manual workflow controls described in
 [PR_PREVIEWS](docs/PR_PREVIEWS.md) and [CI_QUALITY](docs/CI_QUALITY.md).
 
+Complete each agent's bounded feature in its own worktree, test it locally with
+the relevant unit, integration and actual functional checks, then sign, commit,
+push and prepare its own focused PR. Do not block development on a shared
+integration branch or a blanket source freeze. Merge finished PRs sequentially
+after their current required CI succeeds; coordinate actual main-merge collisions
+while preserving independent feature development and all existing gates.
+
 [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) documents prerequisites, ports and
 ownership rules. Use the Node version in `.node-version` and exact
 `package-lock.json` dependencies through `npm ci`. Full operating/recovery checks
@@ -185,6 +192,10 @@ physical PWA installation, mail delivery or production readiness.
 - Delegate bounded independent paths; one agent integrates the results. Do not stop
   foreign processes, reset files or stage unrelated changes. Recheck branch, diff
   and remote before committing and pushing.
+- For every requested change, create signed commits, push the branch and prepare a
+  pull request. Carina authorises merging promptly once all required CI checks on
+  the current revision succeed; do not request the same approval again. Respect
+  explicit instructions to hold a merge or leave a particular PR unmerged.
 - Sign commits. Describe the change and purpose plainly; preserve published tags
   and release/maintenance gates. [PULL_REQUEST_GUIDE](docs/PULL_REQUEST_GUIDE.md)
   explains labels and PR content; [GITHUB_WORKFLOW](docs/GITHUB_WORKFLOW.md) records
