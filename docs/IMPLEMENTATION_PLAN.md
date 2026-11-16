@@ -15,6 +15,19 @@ This bounded quality slice starts from accepted main `fabd71a7` and retains ever
 - [ ] Complete final source/build checks, publish the signed bounded PR and observe every required exact-head check.
 - [ ] Integrate through the coordinated merge order and read back the actual merged state. Source preparation and the metadata proof do not establish that delivery.
 
+## Complete-evidence automatic merge continuation
+
+> Historical PR19 source record: the native follow-up above supersedes the earlier App-exception, direct-ref and fourteen-check design. These measurements apply only to the revision recorded here.
+
+- [x] Audit existing repository/PR/test/documentation state without changing concurrent worktrees.
+- [x] Add49meaningful lifecycle/inbox regressions;246unit/component tests pass,49.05%whole-source lines; two additional100%critical API gates retain all source in coverage.
+- [x] Implement trusted-main workflow, current complete workflow/check/security provenance, draft/hold/review/indirect-PR safeguards, exact signed tested-commit fast-forward and independent missing-main-check reconciliation.
+- [x] Prove signed GitHub promotion and concurrent-target refusal in owned temporary PR14; clean fixture branches; preserve main/application data.
+- [x] Reuse only the existing protected repo-scoped maintenance App for tightly routed promotion writes; preserve currently active server rules and ordinary maintenance paths. Addmerge:hold and precise contribution/operating documentation.
+- [ ] Complete exact-source full application/security/native CI, review results and perform the authorised merge on [PR #19](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/19); inspect its durable final checks/merge record on continuation. Workflow-file permissions or native rules must fail closed; do not broaden App rights silently.
+
+Full product/module scope and independently ongoing PR acceptance remain unchanged.
+
 ## Coordinated PR18 integration
 
 The owner-approved PR18 head0675bb9 is integrated on the owned PR21 branch, preserving all audit fixes and both guidance systems. Local combined checks pass254frontend/87runtime cases with no disconnected modules/exports; migration bytes and dependencies match the owner source. The explicit PR18 main-merge hold is respected. Include the actual resulting main merge before the final push, then require all current-head quality/security/application/native and PR-preview-package gates before immediate merge.
