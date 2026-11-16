@@ -1,3 +1,8 @@
+/**
+ * Small calendar, activity, file and contract previews sharing query observers. Errors outrank
+ * retained data; the dashboard does not start a second background fetch of complete inbox
+ * history.
+ */
 import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -22,12 +27,14 @@ import { recentDocumentsQuery, nextPersonalEventsQuery } from "./api";
 import "./i18n";
 import "./widgets.css";
 
+/** Minimal shared query state for independent widget loading/error presentation. */
 interface State {
   isPending: boolean;
   isError: boolean;
   isFetching?: boolean;
   refetch: () => unknown;
 }
+/** Prioritize errors over retained data and offer a targeted refetch for this widget. */
 function WidgetState({
   state,
   children,
@@ -59,12 +66,14 @@ function WidgetState({
     );
   return children;
 }
+/** Confirmed appointment interval with an optional job link for the dashboard preview. */
 export interface CalendarAssignment {
   id: string;
   starts_at: string;
   ends_at: string;
   job?: { id: string; title: string };
 }
+/** Merge own private events and confirmed assignments, discard past entries and bound the preview. */
 export function DashboardCalendarPreview({
   actor,
   zone,
@@ -145,6 +154,7 @@ export function DashboardCalendarPreview({
     </section>
   );
 }
+/** Observe shared inbox/room queries without starting another background history fetch. */
 function Activity({ actor, zone }: { actor: string; zone: string }) {
   const { t, i18n } = useTranslation("dashboard");
   // The same preview key is observed by the shell. Do not add an inbox-history
@@ -212,6 +222,7 @@ function Activity({ actor, zone }: { actor: string; zone: string }) {
     </section>
   );
 }
+/** Show only the actor's currently relevant contract acknowledgements, not another person's contract state. */
 function PendingContracts({ actor, zone }: { actor: string; zone: string }) {
   const { t, i18n } = useTranslation("dashboard");
   const contracts = useQuery(contractsQuery(actor, false));
@@ -261,6 +272,7 @@ function PendingContracts({ actor, zone }: { actor: string; zone: string }) {
     </section>
   );
 }
+/** Show a small permitted metadata preview; actual downloads retain independent authorization. */
 function RecentDocuments({ actor, zone }: { actor: string; zone: string }) {
   const { t, i18n } = useTranslation("dashboard");
   const files = useQuery(recentDocumentsQuery(actor));
@@ -294,6 +306,7 @@ function RecentDocuments({ actor, zone }: { actor: string; zone: string }) {
     </section>
   );
 }
+/** Compose personal previews and capability-aware next actions without a second data store. */
 export function DashboardWidgets({
   actor,
   zone,

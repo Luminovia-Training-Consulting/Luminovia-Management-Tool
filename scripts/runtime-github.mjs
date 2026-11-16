@@ -1,3 +1,7 @@
+/**
+ * Manages an owned local GitHub preview pinned to exact main SHAs.
+ * Ownership, unchanged migration history and reviewed transitions protect its persistent development data.
+ */
 import { createHash } from "node:crypto";
 import {
   chmodSync,
@@ -23,10 +27,12 @@ import { githubPreviewConfig } from "./runtime-github-config.mjs";
 
 const repository =
   "https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool.git";
+/** Calculates a stable content fingerprint; a hash does not replace resource authorisation. */
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const shaPattern = /^[a-f0-9]{40}$/;
 const migrationPattern = /^supabase\/migrations\/\d{14}_[a-z0-9_]+\.sql$/;
 
+/** Requires an owned real directory without symlinks and keeps the preview area private. */
 function ownedDirectory(path) {
   let info = lstatSync(path, { throwIfNoEntry: false });
   if (!info) {
@@ -41,12 +47,14 @@ function ownedDirectory(path) {
     throw new Error("Unowned or symlinked GitHub preview directory refused.");
   chmodSync(path, 0o700);
 }
+/** Reads only an owned regular file; symlinked or foreign state is rejected by the ownership checks. */
 function regularFile(path) {
   const info = lstatSync(path);
   if (!info.isFile() || info.isSymbolicLink() || info.uid !== process.getuid())
     throw new Error("Unowned or symlinked GitHub preview file refused.");
   return readFileSync(path, "utf8");
 }
+/** Decodes the checked private record while preserving a clear error boundary. */
 function jsonFile(path) {
   const source = regularFile(path);
   try {
@@ -55,6 +63,7 @@ function jsonFile(path) {
     throw new Error("Invalid private GitHub preview JSON record.");
   }
 }
+/** Removes Git variables that redirect commands and disables interactive credential prompts. */
 function gitEnvironment() {
   const env = cleanEnvironment();
   for (const key of Object.keys(env))
@@ -66,6 +75,7 @@ function gitEnvironment() {
       delete env[key];
   return { ...env, GIT_TERMINAL_PROMPT: "0" };
 }
+/** Also removes Git/npm tokens before starting the local runtime fetched from GitHub. */
 function runtimeEnvironment() {
   const env = cleanEnvironment();
   for (const key of Object.keys(env))
@@ -89,6 +99,7 @@ print(json.dumps(results))`;
 /** One private clone per launcher checkout. Fixture transport is deliberately
  * internal-only: the CLI never accepts a URL, ref, checkout path or token. */
 export class GitHubPreview {
+  /** Binds clone, project and owner to this checkout; the test transport exception accepts only temporary file fixtures. */
   constructor({ checkout = root, fixtureRepository } = {}) {
     this.checkout = realpathSync(checkout);
     this.repository = repository;
@@ -116,6 +127,7 @@ export class GitHubPreview {
       project: this.project,
     };
   }
+  /** Registers the private preview owner and rejects an existing unregistered source tree. */
   initialise() {
     ownedDirectory(join(this.checkout, ".local"));
     ownedDirectory(this.base);
@@ -131,6 +143,7 @@ export class GitHubPreview {
       privateWrite(file, JSON.stringify(this.owner));
     }
   }
+  /** Serialises preview commands with the owned kernel lock and releases it in finally. */
   async locked(operation) {
     this.initialise();
     let release;
@@ -153,6 +166,7 @@ export class GitHubPreview {
       release();
     }
   }
+  /** Runs Git without repository hooks and without passing arbitrary transport diagnostics to the caller. */
   async git(args, cwd = this.source) {
     return await command(
       "git",
@@ -171,6 +185,7 @@ export class GitHubPreview {
       );
     });
   }
+  /** Validates the recorded source SHA and configuration hash before use. */
   state() {
     const file = join(this.base, "source.json");
     if (!existsSync(file)) return null;
@@ -179,6 +194,7 @@ export class GitHubPreview {
       throw new Error("Invalid GitHub preview source record.");
     return state;
   }
+  /** Checks remote, HEAD, overlay hash and edits; manually changed source is never overwritten. */
   async validateSource() {
     if (!existsSync(this.source)) return;
     ownedDirectory(this.source);
@@ -219,6 +235,7 @@ export class GitHubPreview {
         "Preview contains edited or untracked source; preserve your changes before updating.",
       );
   }
+  /** Repairs only the recorded checkout/overlay write interruption window; this is not database rollback. */
   async recoverTransition() {
     const path = join(this.base, "transition.json");
     if (!existsSync(path)) return;
@@ -266,6 +283,7 @@ export class GitHubPreview {
     );
     unlinkSync(path);
   }
+  /** Pins latest main to an exact SHA, checks history/migrations and builds a source-bound review plan. */
   async fetchLatest() {
     this.initialise();
     if (!existsSync(this.source)) {
@@ -407,9 +425,11 @@ export class GitHubPreview {
     );
     return plan;
   }
+  /** Checks private preview files recursively before starting that source's CLI with a sanitised environment. */
   async runtime(action, directory = this.source) {
     for (const name of [".env.local", ".env.test.local"])
       if (existsSync(join(directory, name))) regularFile(join(directory, name));
+    /** Checks ownership and absence of symlinks throughout the private runtime tree. */
     const inspect = (path) => {
       const info = lstatSync(path);
       if (info.isSymbolicLink() || info.uid !== process.getuid())
@@ -429,6 +449,7 @@ export class GitHubPreview {
       },
     );
   }
+  /** Requires the exact plan digest for reviewed migrations and records the source transition so it can resume. */
   async apply(plan, accepted) {
     if (plan.review.length && accepted !== plan.digest)
       throw new Error(
@@ -464,6 +485,7 @@ export class GitHubPreview {
     );
     await this.runtime("start");
   }
+  /** Tests the same exact SHA in a separate managed worktree without switching the persistent preview. */
   async testLatest(plan) {
     const directory = join(this.base, `test-${plan.sha}`);
     // Validate even dangling symlinks before Git receives the target path.
@@ -503,6 +525,7 @@ export class GitHubPreview {
     await this.runtime("test", directory);
     console.log(`Testprotokolle: ${directory}/.local/tests/`);
   }
+  /** Shows the recorded source revision and only an actual supervisor state matching this session. */
   status() {
     this.initialise();
     const source = this.state();
@@ -536,6 +559,7 @@ export class GitHubPreview {
   }
 }
 
+/** Validates the small allowed CLI command set; arbitrary remotes, tokens and target paths are not options. */
 export async function githubPreviewCommand(args = []) {
   const action = args[0] ?? "start";
   const accepted =

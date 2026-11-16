@@ -1,3 +1,8 @@
+/**
+ * Regressions for direct account changes, retained local state for the same actor and the public
+ * Auth callback. Focused SDK/DOM fixtures do not replace the separate real
+ * Auth/RLS/Storage/browser acceptance suite.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -92,6 +97,7 @@ afterEach(() => {
   state.actor = "actor-a";
   state.callback = null;
 });
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(path = "/") {
   vi.stubGlobal(
     "matchMedia",
@@ -116,6 +122,7 @@ function setup(path = "/") {
   );
   return { client, user: userEvent.setup() };
 }
+/** Emit the native Auth event fixture and wait for the resulting React state updates. */
 async function sessionEvent(event: AuthChangeEvent, actor: string) {
   await act(async () => {
     state.actor = actor;

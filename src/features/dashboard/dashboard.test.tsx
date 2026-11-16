@@ -1,3 +1,7 @@
+/**
+ * Regressions for bounded personal previews, denied access, actor changes and shared query
+ * observers. Controlled UI data do not replace native permission checks.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   act,
@@ -40,9 +44,11 @@ vi.mock("../jobs/jobs", () => ({
 }));
 
 const clients: QueryClient[] = [];
+/** Create an instant relative to test time so preview filtering is not tied to a fixed date. */
 function ahead(days: number) {
   return new Date(Date.now() + days * 86400000).toISOString();
 }
+/** Create a fictional offer with explicit variants for dashboard filtering/previews. */
 function job(id: string, extra: Record<string, unknown> = {}) {
   return {
     id,
@@ -186,10 +192,12 @@ afterEach(() => {
   for (const client of clients.splice(0)) client.clear();
   vi.useRealTimers();
 });
+/** Observe the shell's actual inbox key to detect extra dashboard requests. */
 function SharedShellObserver() {
   useQuery(notificationPreviewQuery(fake.actor));
   return null;
 }
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(onlyWidgets = false, sharedObserver = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: 15000 } },

@@ -1,5 +1,10 @@
+/**
+ * Visibility-filtered people, course, review and enrollment projections. Own details and shared
+ * profiles remain separate; target person IDs are not proof of permission.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
+/** Intentionally shared expertise projection with verification status. */
 export interface PublicTopic {
   id: string;
   label_de: string;
@@ -7,6 +12,7 @@ export interface PublicTopic {
   kind: string;
   verified: boolean;
 }
+/** Permitted people-directory summary without private contract/contact data. */
 export interface PersonSummary {
   id: string;
   display_name: string;
@@ -20,6 +26,7 @@ export interface PersonSummary {
   rating_average: number;
   review_count: number;
 }
+/** Extended authorized profile view for the selected person. */
 export interface PersonDetails extends Omit<
   PersonSummary,
   "rating_average" | "review_count"
@@ -27,12 +34,14 @@ export interface PersonDetails extends Omit<
   teaching_experience: string;
   can_moderate: boolean;
 }
+/** Own additional experience, language, country and label fields. */
 export interface ProfileDetails {
   country: string;
   languages: string[];
   teaching_experience: string;
   labels: string[];
 }
+/** Permitted teaching history with an explicit course-opening capability. */
 export interface TaughtCourse {
   can_open: boolean;
   course_run_id: string;
@@ -43,6 +52,7 @@ export interface TaughtCourse {
   state: "upcoming" | "current" | "past";
   topic_ids: string[];
 }
+/** Authorized course review with edit/withdrawal state. */
 export interface CourseReview {
   id: string;
   course_run_id: string;
@@ -58,6 +68,7 @@ export interface CourseReview {
   hidden: boolean;
   moderation_reason: string;
 }
+/** Server-confirmed reviewable course/lecturer relationship and any existing own review. */
 export interface ReviewableCourse {
   course_run_id: string;
   title: string;
@@ -74,12 +85,14 @@ export interface ReviewableCourse {
     deleted: boolean;
   } | null;
 }
+/** Administrative projection of an explicit course enrollment. */
 export interface Enrolment {
   user_id: string;
   display_name: string;
   status: "enrolled" | "completed" | "removed";
   updated_at: string;
 }
+/** Use the shared native client and propagate business/access errors from people RPCs. */
 export async function peopleRpc<T>(
   name: string,
   parameters: Record<string, unknown> = {},
@@ -88,6 +101,7 @@ export async function peopleRpc<T>(
   if (error) throw error;
   return data as T;
 }
+/** Read the permitted directory by search, label and topic with actor-scoped caching. */
 export const peopleDirectoryQuery = (
   actor: string,
   search: string,
@@ -103,24 +117,28 @@ export const peopleDirectoryQuery = (
         p_topic_id: topic || null,
       }),
   });
+/** Read the authorized target profile; actor partitions caches while the server checks target visibility. */
 export const personQuery = (actor: string, target: string) =>
   queryOptions({
     queryKey: ["person", actor, target],
     queryFn: () =>
       peopleRpc<PersonDetails>("person_profile", { p_user_id: target }),
   });
+/** Read only the selected person's teaching history permitted for the caller. */
 export const profileCoursesQuery = (actor: string, target: string) =>
   queryOptions({
     queryKey: ["profile-courses", actor, target],
     queryFn: () =>
       peopleRpc<TaughtCourse[]>("profile_courses", { p_user_id: target }),
   });
+/** Read visible reviews without exposing private course relationships. */
 export const reviewsQuery = (actor: string, target: string) =>
   queryOptions({
     queryKey: ["lecturer-reviews", actor, target],
     queryFn: () =>
       peopleRpc<CourseReview[]>("lecturer_reviews", { p_user_id: target }),
   });
+/** Split comma lists, bound count/length and reject controls before saving own profile labels. */
 export function labelText(value: string, maximum = 20, length = 40): string[] {
   const values = value
     .split(",")

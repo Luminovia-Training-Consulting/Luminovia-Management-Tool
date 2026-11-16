@@ -1,3 +1,6 @@
+/**
+ * Container readiness probe for the scanner gateway's configured localhost health URL. Success does not validate a particular upload.
+ */
 import { readToken } from "./server.mjs";
 
 try {

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SQL-only entry point for real RPC cases, lint and advisors.
+# The canonical full runner supplies its own disposable project context.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 node scripts/db-rpc-tests.mjs

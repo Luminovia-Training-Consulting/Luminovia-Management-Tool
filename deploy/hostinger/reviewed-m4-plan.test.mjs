@@ -1,3 +1,6 @@
+/**
+ * Deterministic source-bound M4 planning cases check exact history, release inventory and digest without mutating hosted data.
+ */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import {
@@ -20,10 +23,12 @@ import {
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const context = await loadM4ReviewContext();
+// Build the exact historical state for the successful or deliberately corrupted plan case.
 const history = (full = false) =>
   [...context.baseline, ...(full ? context.pending : [])].map(
     ({ version, source }) => ({ version, source }),
   );
+// Build the synthetic release inventory whose individual fields the cases modify.
 function manifest() {
   const sources = [...context.baseline, ...context.pending];
   return {
@@ -46,6 +51,7 @@ function manifest() {
     ],
   };
 }
+// Join this fixture's history and synthetic manifest for the read-only planner.
 const plan = (h = history(), m = manifest()) =>
   createM4ReviewPlan({ history: h, manifest: m }, context);
 test("exact14 to17 plan reports the two blocked migration reasons without changing automatic policy", () => {

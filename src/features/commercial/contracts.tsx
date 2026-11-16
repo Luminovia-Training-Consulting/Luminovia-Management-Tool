@@ -1,3 +1,7 @@
+/**
+ * Register executed contract PDFs, view own versions and acknowledge receipt. Contracts
+ * reference exact clean versions; acknowledgement is not an electronic signature.
+ */
 import { useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -37,6 +41,7 @@ import type { ContractRecord } from "./types";
 import { CommercialPdfUpload } from "./pdf-upload";
 import "./i18n";
 import "./commercial.css";
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
   user: z.string().uuid(),
   title: z.string().trim().min(1).max(200),
@@ -45,6 +50,7 @@ const schema = z.object({
   effective: z.string().min(1),
   expires: z.string(),
 });
+/** Register contract metadata against an already confirmed clean PDF version. */
 function RegisterContract({
   actor,
   zone,
@@ -246,6 +252,7 @@ function RegisterContract({
     </form>
   );
 }
+/** Display contract version/validity and perform an explicit receipt acknowledgement. */
 function ContractCard({
   actor,
   contract,
@@ -437,6 +444,7 @@ function ContractCard({
     </article>
   );
 }
+/** Choose own or permitted administrative contract views using commercial capabilities. */
 export function ContractsPage() {
   const { t } = useTranslation("commercial");
   const { session } = useAuth();

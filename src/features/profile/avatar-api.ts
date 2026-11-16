@@ -1,11 +1,18 @@
+/**
+ * Version-bound avatar selection, authenticated byte reads and bounded image preparation. Check
+ * encoded dimensions before browser decode; rerasterized PNG uploads still require server
+ * scanning.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 
+/** Reference the explicitly selected clean avatar version without general document sharing. */
 interface AvatarSelection {
   version_id: string;
   updated_at: string;
 }
+/** Read the profile_avatar server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const avatarQuery = (actor: string, target: string) =>
   queryOptions({
     queryKey: ["avatar", actor, target],
@@ -22,6 +29,7 @@ export const avatarQuery = (actor: string, target: string) =>
     gcTime: 0,
   });
 
+/** Select an already clean own document version as avatar, or clear selection with null. */
 export async function selectAvatar(versionId: string | null) {
   requireOnline();
   const result = await db().rpc("set_profile_avatar", {
@@ -30,6 +38,7 @@ export async function selectAvatar(versionId: string | null) {
   if (result.error) throw result.error;
 }
 
+/** Read permitted PNG bytes through the authenticated gateway with AbortSignal and no HTTP cache. */
 export async function readAvatar(
   target: string,
   signal: AbortSignal,
@@ -57,9 +66,10 @@ export async function readAvatar(
   return await response.blob();
 }
 
-/** Check encoded dimensions before asking the browser to decode the image.
- * The output is a newly rasterised PNG; EXIF, filenames and other source
- * metadata are not copied into the private, scanned avatar document. */
+/**
+ * Read bounded encoded PNG/JPEG/WebP dimensions before browser decode. The later prepareAvatar
+ * stage rasterizes new PNG bytes without copying source filenames or metadata.
+ */
 export function sourceImageSize(
   bytes: Uint8Array,
   mime: string,
@@ -133,6 +143,7 @@ export function sourceImageSize(
   return [width, height];
 }
 
+/** Rasterize the checked image into a centred PNG of at most 512 pixels and close the ImageBitmap even on failure. */
 export async function prepareAvatar(file: File): Promise<File> {
   if (
     file.size < 1 ||
@@ -141,6 +152,8 @@ export async function prepareAvatar(file: File): Promise<File> {
   )
     throw new Error("avatar_image_invalid");
   sourceImageSize(new Uint8Array(await file.arrayBuffer()), file.type);
+  // Check encoding/pixel budgets before allowing browser decode.
+  // Independently recheck the decoded dimensions afterwards.
   const image = await createImageBitmap(file);
   try {
     if (
@@ -175,6 +188,8 @@ export async function prepareAvatar(file: File): Promise<File> {
       ),
     );
     if (blob.size > 2 * 1024 * 1024) throw new Error("avatar_image_invalid");
+    // New PNG bytes copy neither the original filename nor EXIF metadata.
+    // The result is still an unverified upload until the actual server scan succeeds.
     return new File([blob], "avatar.png", { type: "image/png" });
   } finally {
     image.close();

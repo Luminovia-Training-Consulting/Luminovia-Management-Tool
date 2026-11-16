@@ -1,3 +1,7 @@
+/**
+ * Regressions for language initialization when preference storage is missing or blocked. Storage
+ * fixtures do not establish Auth persistence.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 
 afterEach(() => {

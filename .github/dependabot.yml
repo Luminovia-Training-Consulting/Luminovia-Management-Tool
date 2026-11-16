@@ -1,3 +1,5 @@
+# Action pins receive regular update PRs. Regular npm versions use the full
+# daily candidate-verification path; npm security updates remain separate.
 version: 2
 updates:
   - package-ecosystem: github-actions

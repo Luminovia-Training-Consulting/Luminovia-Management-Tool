@@ -5,11 +5,13 @@ import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
 
 await withTestDatabase("notification_test", async ({ sql, actor }) => {
   const [teacher, peer, admin] = Array.from({ length: 3 }, randomUUID);
+  /** Calls the business database API under the fixture's controlled identity/MFA claims. */
   const rpc = async (who, name, args = []) => {
     const value = await actor(who, `select public.${name}(${args.join(",")})`);
     return JSON.parse(value);
   };
   let checks = 0;
+  /** Counts and reports a case only after all of its assertions have completed successfully. */
   const check = async (name, run) => {
     await run();
     console.log(`PASS ${name}`);
@@ -271,6 +273,7 @@ await withTestDatabase("notification_test", async ({ sql, actor }) => {
       const dueSession = randomUUID(),
         releasedSession = randomUUID(),
         dueContract = randomUUID();
+      /** Creates controlled confirmed or released allocations for notification/reminder checks. */
       const seedSession = async (id, who, start, end, released = false) => {
         const job = randomUUID(),
           claim = randomUUID();

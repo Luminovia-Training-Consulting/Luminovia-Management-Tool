@@ -1,3 +1,7 @@
+/**
+ * Real temporary Git repositories check the local preview/update contract.
+ * Fictional runtime programs exercise ownership, source protection and persistence without hosted services.
+ */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { execFileSync, spawn } from "node:child_process";
@@ -42,6 +46,7 @@ additional_redirect_urls = ["http://127.0.0.1:5173/auth/callback"]
 inspector_port = 8083
 `;
 
+/** Runs Git only inside the currently owned temporary fixture repository. */
 function git(directory, ...args) {
   return execFileSync(
     "git",
@@ -79,6 +84,7 @@ if(action==='test'){
 console.log('fixture '+action);
 `;
 
+/** Creates a temporary upstream, seed checkout and launcher with a fictional runtime; tests own subsequent cleanup. */
 function fixture() {
   const directory = mkdtempSync(join(tmpdir(), "portal-github-fixture-"));
   const remote = join(directory, "remote.git");
@@ -105,6 +111,7 @@ function fixture() {
     join(checkout, "deploy/hostinger/updates/updater.py"),
   );
   git(seed, "remote", "add", "origin", pathToFileURL(remote).href);
+  /** Creates the next fictional source revision whose exact SHA is checked by the preview contract. */
   function commit(message = "fixture source") {
     git(seed, "add", ".");
     git(seed, "commit", "--quiet", "-m", message);
@@ -124,6 +131,7 @@ function fixture() {
     first,
     preview,
     commit,
+    /** Removes resources created by this run; cleanup must not hide a business assertion failure. */
     cleanup() {
       rmSync(directory, { recursive: true, force: true });
     },

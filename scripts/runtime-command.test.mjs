@@ -1,3 +1,7 @@
+/**
+ * Real child-process regressions for timeouts, cancellation and failed startup.
+ * A zero exit after SIGTERM or a process still alive must not falsely report success.
+ */
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";

@@ -1,14 +1,21 @@
+/**
+ * Private gross/platform/net projections and cent-exact display helpers. Legacy net-only offers
+ * keep unknown gross values as null; a local preview never replaces an accepted server snapshot.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
+/** Server-derived capabilities for gross-price management, client memberships and course requests. */
 export interface CommissionAccess {
   can_manage_gross: boolean;
   can_manage_client_memberships: boolean;
   can_request: boolean;
 }
+/** Client-portal organization permitted for the current actor. */
 export interface ClientOrganisation {
   id: string;
   name: string;
 }
+/** Client-request projection with original prices, sessions and actual publication/allocation state. */
 export interface ClientRequest {
   id: string;
   organisation_id: string;
@@ -31,6 +38,7 @@ export interface ClientRequest {
   assigned_lecturers?: { id: string; display_name: string }[];
   created_at: string;
 }
+/** Price/claim projection with explicitly nullable historical gross values. */
 export interface CommissionRecord {
   job_id: string;
   claim_id: string | null;
@@ -51,6 +59,7 @@ export interface CommissionRecord {
   accepted_at: string | null;
   capacity?: number;
 }
+/** Organization/currency summary of confirmed client projections. */
 export interface ClientSpend {
   organisation_id: string;
   organisation_name: string;
@@ -62,6 +71,7 @@ export interface ClientSpend {
   gross_assigned_amount: number;
   teachers: { id: string; display_name: string }[];
 }
+/** Separate cache scopes for access, organizations, requests, revenue and client spending. */
 export const commissionKeys = {
   access: (actor: string) => ["commission-access", actor] as const,
   organisations: (actor: string) => ["client-organisations", actor] as const,
@@ -69,6 +79,7 @@ export const commissionKeys = {
   report: (actor: string) => ["commission-report", actor] as const,
   spend: (actor: string) => ["client-spend", actor] as const,
 };
+/** Read the commission_access server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const commissionAccessQuery = (actor: string) =>
   queryOptions({
     queryKey: commissionKeys.access(actor),
@@ -79,6 +90,7 @@ export const commissionAccessQuery = (actor: string) =>
     },
     staleTime: 1000,
   });
+/** Read the client_organisations server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const clientOrganisationsQuery = (actor: string) =>
   queryOptions({
     queryKey: commissionKeys.organisations(actor),
@@ -88,6 +100,7 @@ export const clientOrganisationsQuery = (actor: string) =>
       return (data ?? []) as ClientOrganisation[];
     },
   });
+/** Read the client_requests server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const clientRequestsQuery = (
   actor: string,
   organisation: string | null = null,
@@ -103,6 +116,7 @@ export const clientRequestsQuery = (
     },
     refetchInterval: 10000,
   });
+/** Read the commission_report server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const commissionReportQuery = (
   actor: string,
   organisation: string | null = null,
@@ -117,6 +131,7 @@ export const commissionReportQuery = (
       return (data ?? []) as CommissionRecord[];
     },
   });
+/** Read the client_spend_summary server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const clientSpendQuery = (actor: string) =>
   queryOptions({
     queryKey: commissionKeys.spend(actor),
@@ -128,6 +143,8 @@ export const clientSpendQuery = (actor: string) =>
   });
 /** Platform share rounds to cents first; the lecturer receives the exact remainder. */
 export function splitFee(gross: number, percent: number) {
+  // Integer cents and percentage basis points prevent divergent remainders
+  // between the two shares of a display-only preview.
   const cents = Math.round(gross * 100);
   const bps = Math.round(percent * 100);
   if (
@@ -147,6 +164,7 @@ export function splitFee(gross: number, percent: number) {
     lecturer: (cents - platform) / 100,
   };
 }
+/** Count offers once per job/capacity and accepted claims individually; count unknown gross values separately. */
 export function revenueTotals(rows: CommissionRecord[]) {
   const quotedJobs = new Set<string>();
   const groups = new Map<
@@ -185,6 +203,8 @@ export function revenueTotals(rows: CommissionRecord[]) {
     if (row.claim_id) {
       group.lecturer += Math.round(Number(row.lecturer_net_total_amount) * 100);
       group.count++;
+      // Bei alten reinen Nettoangeboten existiert keine belegte Bruttohistorie.
+      // Missing values stay unknown instead of being reverse-calculated.
       if (row.gross_total_amount === null || row.platform_total_amount === null)
         group.unknown++;
       else {

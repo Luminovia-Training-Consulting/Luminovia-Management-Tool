@@ -1,8 +1,13 @@
+/**
+ * PostgreSQL regression groups for resource-specific comments and reasoned moderation.
+ * Real migrations define the contract; controlled role/MFA claims exercise it independently of the UI.
+ */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
 
 let checks = 0;
+/** Counts and reports a case only after all of its assertions have completed successfully. */
 const check = async (name, run) => {
   await run();
   checks++;
@@ -26,6 +31,7 @@ await withTestDatabase("comments_test", async ({ sql, actor }) => {
  insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,time_zone,status,amount,total_amount,currency,rate_unit,terms) values
  ('${job}','${run}','Fictional discussion','Fictional academy','online','Europe/Berlin','published',100,100,'EUR','fixed_total','Immutable net terms'),
  ('${draft}',null,'Private draft','Fictional academy','online','Europe/Berlin','draft',100,100,'EUR','fixed_total','Immutable draft terms');`);
+  /** Calls the business database API under the fixture's controlled identity/MFA claims. */
   const rpc = (who, name, args = [], aal = "aal1") =>
     actor(
       who,

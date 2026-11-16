@@ -1,18 +1,25 @@
+/**
+ * Browser workflows for sign-in, profiles, whole-block claims and immediate permission checks.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
+ */
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { createClient } from '@supabase/supabase-js';
 import { createHmac, randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { readPrivateJson, writePrivateJson } from '../../scripts/testing/private-state.mjs';
 
 const configured = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.E2E_PASSWORD);
 test.skip(!configured, 'Real local Supabase fixtures required. Run scripts/local-start.sh and scripts/local-seed.mjs.');
 
+/** Creates a local SDK test client with its own nonpersistent Auth session. */
 function localClient(key: string) {
   const url = process.env.SUPABASE_URL!;
   if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(url).hostname)) throw new Error('E2E mutation fixtures only permit loopback Supabase.');
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
+/** Creates the administrative fixture client; its key stays outside the browser application. */
 const service = () => localClient(process.env.SUPABASE_SERVICE_ROLE_KEY!);
+/** Signs the fictional identity into a real session for API checks outside the browser. */
 async function signInApi(email: string) {
   const client = localClient(process.env.SUPABASE_ANON_KEY!);
   const { data, error } = await client.auth.signInWithPassword({ email, password: process.env.E2E_PASSWORD! });
@@ -20,6 +27,7 @@ async function signInApi(email: string) {
   expect(data.user).toBeTruthy();
   return { client, user: data.user! };
 }
+/** Signs this test actor in through the visible form and waits for confirmed navigation. */
 async function login(page: Page, email = process.env.E2E_LECTURER_EMAIL!) {
   await page.goto('/login');
   await page.getByLabel('E-Mail', { exact: true }).fill(email);
@@ -27,6 +35,7 @@ async function login(page: Page, email = process.env.E2E_LECTURER_EMAIL!) {
   await page.getByRole('button', { name: 'Anmelden', exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
 }
+/** Checks the rendered state with axe; this does not replace manual accessibility acceptance. */
 async function a11y(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   await page.evaluate(async () => {
@@ -41,6 +50,7 @@ async function a11y(page: Page) {
   }));
   expect(violations).toEqual([]);
 }
+/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
 function totp(secret: string) {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
   const bits = [...secret.replace(/=+$/, '').toUpperCase()].map((char) => alphabet.indexOf(char).toString(2).padStart(5, '0')).join('');
@@ -188,12 +198,13 @@ test('language changes preserve input, themes render accessibly, offline mutatio
   await expect(page.getByRole('button', { name: 'Save profile', exact: true })).toBeEnabled();
 });
 
+/** Raises the real browser administration session to AAL2 with TOTP before privileged forms are used. */
 async function adminSession(page: Page) {
   const statePath = '.local/e2e-admin-totp.json';
   const { client } = await signInApi(process.env.E2E_ADMIN_EMAIL!);
   const { data: factors, error } = await client.auth.mfa.listFactors();
   expect(error).toBeNull();
-  let state: { factorId: string; secret: string } | null = existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) : null;
+  let state: { factorId: string; secret: string } | null = readPrivateJson(statePath);
   if (!factors!.totp.some((factor) => factor.id === state?.factorId)) state = null;
   await login(page, process.env.E2E_ADMIN_EMAIL!);
   await page.goto('/security');
@@ -206,8 +217,7 @@ async function adminSession(page: Page) {
     expect(enrollment.id).toBeTruthy();
     expect(enrollment.totp?.secret).toBeTruthy();
     state = { factorId: enrollment.id, secret: enrollment.totp.secret };
-    mkdirSync('.local', { recursive: true, mode: 0o700 });
-    writeFileSync(statePath, JSON.stringify(state), { mode: 0o600 });
+    writePrivateJson(statePath, state);
   }
   await page.getByLabel('Sechsstelliger Code', { exact: true }).fill(totp(state!.secret));
   await page.getByRole('button', { name: 'Code bestätigen', exact: true }).click();

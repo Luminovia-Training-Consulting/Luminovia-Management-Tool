@@ -1,3 +1,7 @@
+/**
+ * Public return route for invitations and recovery. Process actual Auth state or the invitation
+ * token and navigate only after confirmed completion.
+ */
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -6,6 +10,7 @@ import { useAuth } from "./auth-context";
 import { useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { Loading, Notice } from "../../components/common";
+/** Complete the native invitation/recovery callback and leave a retryable state on failure. */
 export function AuthCallback() {
   const { t } = useTranslation();
   const { session, loading, error } = useAuth();

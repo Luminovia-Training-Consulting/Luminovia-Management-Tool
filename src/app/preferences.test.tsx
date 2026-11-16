@@ -1,3 +1,7 @@
+/**
+ * Regressions for language/theme changes when browser storage is blocked. DOM fixtures isolate
+ * preference behavior; full browser acceptance remains separate.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Preferences } from "./shell";
@@ -11,6 +15,7 @@ afterEach(() => {
   delete document.documentElement.dataset.theme;
 });
 
+/** Simulate the system colour-scheme notification without changing operating-system settings. */
 function systemDark() {
   vi.stubGlobal("matchMedia", () => ({
     matches: true,

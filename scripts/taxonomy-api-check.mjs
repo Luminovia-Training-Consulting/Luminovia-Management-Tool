@@ -34,6 +34,7 @@ await withApiFixture(
         );
       }
     });
+    /** Creates this module's fictional inputs; authoritative validation remains on the server. */
     const payload = (label) => ({
       label_de: label,
       label_en: `EN ${label}`,
@@ -63,6 +64,7 @@ await withApiFixture(
       ).error,
     );
     await mfa(manager.client);
+    // Parent/child records are created through the real API; their references must stay stable after later archival.
     const parent = await checked(
       manager.client.rpc("save_taxonomy_topic", {
         p_id: null,
@@ -99,6 +101,7 @@ await withApiFixture(
         .insert({ template_id: template, topic_id: child }),
       "Link same real topic identity",
     );
+    // Discovery combines alias filtering with current resource permissions without revealing private templates.
     const query = {
       p_search: `Alias-${suffix}`,
       p_kind: "tool",

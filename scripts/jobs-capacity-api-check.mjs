@@ -95,6 +95,7 @@ await withApiFixture(
       }
       commit;`);
     });
+    // Shared fixture factory: complete session blocks, input terms, current version and owned cleanup IDs.
     const base = Date.now() + 180 * 86400000,
       sessions = (offset = 0) =>
         [0, 1].map((day) => ({
@@ -137,6 +138,7 @@ await withApiFixture(
         return id;
       };
     let checks = 0;
+    /** Reports success only after the preceding real assertions have completed. */
     const pass = (message) => {
       checks++;
       console.log(`PASS ${message}`);
@@ -397,6 +399,7 @@ await withApiFixture(
       "fifty concurrent HTTP calls commit exactly three distinct lecturers, six intervals and three deduplicated notifications",
     );
 
+    // Checks totals and client reports independently against confirmed positions and original currencies.
     const summary = async (expectedIds) => {
         const rows = await checked(
             client.client.rpc("client_spend_summary"),
