@@ -1,6 +1,6 @@
 # Luminovia Portal
 
-A real React/TypeScript Progressive Web App for Luminovia Training & Consulting. The local system connects invitation-only Supabase Auth, administrator MFA, bilingual profiles/evidence, teaching jobs and atomic allocation, calendar, private realtime chat, scanned files, wiki/forum, customers/courses and contract/invoice tracking. Individual client accounts, optional enrolled learners, safe course ratings, profile/invoice labels and a server-enforced default 50/50 commission model extend these workflows. CBW building blocks become provenance-linked course templates and referenced teaching offers; secure scanned profile pictures and staff comments connect the same application. The M6 source adds taxonomy administration, private availability, audited job lifecycle and explicit lecturer positions, personal dashboard previews, notification preferences/inbox and a reduced administrative audit reader. It is **not the complete production product yet**. See the [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the entire outstanding scope.
+A real React/TypeScript Progressive Web App for Luminovia Training & Consulting. The local system connects invitation-only Supabase Auth, administrator MFA, bilingual profiles/evidence, teaching jobs and atomic allocation, calendar, private realtime chat, scanned files, wiki/forum, customers/courses and contract/invoice tracking. Individual client accounts, optional enrolled learners, safe course ratings, profile/invoice labels and a server-enforced default 50/50 commission model extend these workflows. CBW building blocks become provenance-linked course templates and referenced teaching offers; secure scanned profile pictures and staff comments connect the same application. The accepted M6 baseline adds taxonomy administration, private availability, audited job lifecycle and explicit lecturer positions, personal dashboard previews, notification preferences/inbox and a reduced administrative audit reader. The M7 source connects paginated file/job discovery, personal file tags/folders and saved views, structured chat mentions, in-app quiet hours and versioned announcements; its complete native acceptance is running. It is **not the complete production product yet**. See the [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the entire outstanding scope.
 
 The user's [Universal Master Prompt](docs/UNIVERSAL_MASTER_PROMPT.txt) is preserved verbatim and is the authoritative project specification. On continuation, read [WORKLOG](docs/WORKLOG.md) first, then [AGENTS.md](AGENTS.md) and the plan. The public Website repository is a read-only brand reference; it has not been changed.
 
@@ -9,6 +9,24 @@ The user's [Universal Master Prompt](docs/UNIVERSAL_MASTER_PROMPT.txt) is preser
 - Linux (CachyOS locally, Ubuntu in CI), Node.js 26 LTS (tested with 26.13.1), npm, Docker Engine and the Docker Compose plugin supporting [healthcheck `start_interval`](https://docs.docker.com/reference/compose-file/services/#healthcheck) (Compose 2.20.2 or later). Python 3, Linux util-linux `flock` and official `age`/`age-keygen` 1.x (tested 1.3.2) are additionally required by the complete local release/update verification.
 - Loopback ports 5173, 54321, 54322 and 54324 available. Local Docker services require several GB of disk space.
 - Supabase CLI 3.1.0 and Deno 2.9.6 are pinned development dependencies; inspect their `--help` before database/remote operations.
+
+## Den neuesten GitHub-Stand separat starten und testen
+
+```bash
+./portal github start   # neuesten main-Commit abrufen und eigene Vorschau starten
+./portal github test    # neuesten main-Commit vollständig isoliert testen
+```
+
+Die Vorschau öffnest du unter **http://127.0.0.1:5373**. Der Starter holt `origin/main` aus dem festgelegten Projekt-Repository in eine verwaltete Arbeitskopie und zeigt die exakte Commit-ID. Deine Entwicklungsdateien und normalen Daten auf `5173`/`543xx` bleiben erhalten. Die Vorschau hat eine eigene Supabase-Umgebung auf `563xx` und behält ihre eigenen Konten, Passwörter, MFA und Dateien bei Stop/Start und zulässigen Vorwärtsupdates. `./portal github` ist die Kurzform für `start`.
+
+```bash
+./portal github status        # gespeicherte Commit-ID, Dienststatus und URLs
+./portal github credentials   # ursprüngliches fiktives Vorschaupasswort anzeigen
+./portal github update        # neuesten Stand datenerhaltend übernehmen
+./portal github stop          # nur die Vorschau datenerhaltend stoppen
+```
+
+`github test` verwendet eine getrennte Testarbeitskopie und aktualisiert keine laufende Vorschau. Abruffehler werden gemeldet; eine alte Version wird nicht als neuester Stand ausgegeben. Geänderte historische oder prüfbedürftige Migrationen werden vor einer unbeabsichtigten Übernahme angehalten. Voraussetzungen, Speicherbedarf und der genaue lokale Migrationsplan stehen im [GitHub-Testleitfaden](docs/GITHUB_LOCAL_PREVIEW.md).
 
 ## Lokal mit einem Befehl starten
 
@@ -35,41 +53,47 @@ Die vollständigen Betriebsdetails, Fehlerbehebung und Persistenzgrenzen stehen 
 
 ## Aktueller Entwicklungs- und Abnahmestand
 
-Die neuen M6-Funktionen verbinden Datenbank, API und Oberfläche. Gezielte Komponenten-, Datenbank-, Berechtigungs- und Nebenläufigkeitsprüfungen sind in den jeweiligen Modulunterlagen dokumentiert. **Die vollständige kombinierte native M6-Abnahme mit tatsächlicher Auth, Storage, Browsern, Persistenz und exaktem CI-Stand steht noch aus.** Geschriebene API-/Browserfälle zählen erst nach ihrem tatsächlichen Lauf als bestanden; frühere M3–M5-Ergebnisse ersetzen diese neue Abnahme nicht. Maßgeblich bleiben [QA_RESULTS](docs/QA_RESULTS.md) und [WORKLOG](docs/WORKLOG.md).
+**M6 ist vollständig lokal und im exakten CI-Stand abgenommen und gemergt.** [PR #8](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/8) wurde als `dc8e9a7` übernommen: tatsächliche Auth/MFA-, Storage-, Berechtigungs-, Nebenläufigkeits-, Browser- und PWA-Prüfungen sowie der Stop/Start-Persistenznachweis bestanden. Der Folgefix für den reproduzierten Theme-Kontrastfehler wurde nach beiden exakten CI-Gates mit [PR #9](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/9) als `9c2103b` gemergt. Die Anwendungstests und der getrennte Test der selbst gehosteten Images mit Datenerhalt sind dokumentiert; daraus folgt keine vollständige Produktivfreigabe.
 
-Die Beitragsunterlagen wurden mit [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`) und der unabhängige GitHub-Vorschaustarter mit [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`) gemergt. Diese Lieferungen bestätigen nicht die noch offene M6-Produktabnahme. Der Labelkatalog umfasst 30 verwaltete Labels; die neun ursprünglichen GitHub-Labels bleiben erhalten. Die gesonderte Aktivierung der Review-/Merge-Regeln ist im [GitHub-Betriebsleitfaden](docs/GITHUB_WORKFLOW.md) dokumentiert.
+**M7 ist ein verbundener Quellstand mit bestandenem Preflight; die vollständige native Abnahme läuft noch.** Lint, Typen und Formatierung sowie 240 Vitest-Fälle bestanden. Die Compilerprüfung erfasst 119 erreichbare Module und 32 Routen ohne unaufgelöste Imports, unerreichbare Module oder unbenutzte Laufzeitexports; der echte Replay der 29 Migrationen inventarisiert 146 öffentliche RPCs. Gezielte Datenbankprüfungen sind in den Modulunterlagen festgehalten. Geschriebene API-/Browserfälle zählen erst nach ihrem tatsächlichen vollständigen Lauf als bestanden. Maßgeblich bleiben [QA_RESULTS](docs/QA_RESULTS.md) und [WORKLOG](docs/WORKLOG.md).
+
+Die M7-Funktionsgrenzen erklären die Leitfäden für [Dateien](docs/FILES.md), [Auftragssuche und gespeicherte Ansichten](docs/JOB_DISCOVERY.md), [Chat und Erwähnungen](docs/CHAT.md), [Benachrichtigungen und Ruhezeiten](docs/NOTIFICATIONS.md) sowie [Ankündigungen](docs/ANNOUNCEMENTS.md). Kurs-/Wiki-/Forenressourcen, beleggebundene Qualifikationsverifikation und weitere offene Anforderungen bleiben im vollständigen Plan sichtbar.
+
+Die Beitragsunterlagen wurden mit [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`) und der unabhängige GitHub-Vorschaustarter mit [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`) gemergt. Der Labelkatalog umfasst 30 verwaltete Labels; die neun ursprünglichen GitHub-Labels bleiben erhalten. Die gesonderte Aktivierung der Review-/Merge-Regeln ist im [GitHub-Betriebsleitfaden](docs/GITHUB_WORKFLOW.md) dokumentiert.
 
 ## Implemented routes
 
-| Route                    | Function                                                                                                                            |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `/login`                 | Real email/password sign-in and password recovery; no public signup.                                                                |
-| `/auth/callback`         | Explicit one-time invitation acceptance; PKCE recovery callback.                                                                    |
-| `/auth/password`         | Set a password after an authenticated invite/recovery.                                                                              |
-| `/`                      | Personal job suggestions, calendar/chat/notification/file previews, own contract receipts and capability-scoped management follow-ups. |
-| `/jobs`, `/jobs/:id`     | Combined filters, localised sessions/fees, exact-version terms acceptance and atomic allocation.                                    |
-| `/calendar`              | Private appointments, confirmed assignments, published global events and month/week/day/agenda views.                               |
-| `/profile`               | Persisted DE/EN biography, contact/timezone, expertise and private CV/certificate uploads.                                          |
-| `/chats`                 | Private DMs, staff/group and separate lecturer/participant course rooms; realtime messages, files, membership and read/mute state.  |
-| `/files`                 | Quarantined/scanned private files, upload progress, authorised download/preview, history, replace, rename and archive.              |
-| `/wiki`, `/forum`        | Safe rich text/code, drafts/publication/revisions; threads, replies, accepted answers, subscriptions and moderation.                |
-| `/clients`               | MFA/capability-protected customer records, private contacts/notes, tags and archive.                                                |
-| `/courses`               | Reusable templates, actual runs/sessions, safe duplication and explicit publication.                                                |
-| `/contracts`             | Executed PDF versions/hashes, master/addendum chain, private downloads and receipt history. A receipt is not an e-signature.        |
-| `/finance`               | Accepted-assignment earnings, scanned invoice PDFs, review, partial/full payments and authorised CSV with separate currencies.      |
-| `/search`                | Permission-aware jobs, documents, messages, safe wiki/forum results and minimal chat contacts.                                      |
-| `/security`              | Real Auth TOTP enrollment/challenge; administrative actions require AAL2 at the database.                                           |
-| `/admin`                 | Atomic course/job creation, publication/archive, lecturer invitations.                                                              |
-| `/people`, `/people/:id` | Safe lecturer directory, own labels/expertise, actual upcoming/current/past courses and authorised anonymised ratings.              |
-| `/my-reviews`            | Optional learners review actual completed enrolled courses; management enrols and moderates with MFA.                               |
-| `/client`                | Own-organisation course requests/full fee, commissioned spend and assigned lecturers.                                               |
-| `/admin/accounts`        | Versioned account API-backed role assignment, separate invitations, scoped client memberships and linked profile/status management. |
-| `/admin/people`          | Search people, attest declared expertise with UTC expiry, suspend/reactivate accounts with named confirmation.                      |
-| `/topics`               | DE/EN topic/tool/programming-language hierarchy, aliases, authorized related templates and MFA-protected versioned CRUD/archive. |
-| `/availability`         | Own private available/unavailable windows; explicit reduced sharing with MFA management and transaction-safe assignment conflict checks. |
-| `/notifications`        | Own cursor-paged inbox, current-authorized links, read/unread state and explicit due-reminder refresh. |
-| `/settings`             | Own versioned notification preferences; optional categories never disable committed-work receipts. |
-| `/admin/audit`          | MFA/current `audit.read` capability, bounded metadata search/filter/cursor pages and an exact reviewed action allowlist. |
+| Route                    | Function                                                                                                                                  |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `/login`                 | Real email/password sign-in and password recovery; no public signup.                                                                      |
+| `/auth/callback`         | Explicit one-time invitation acceptance; PKCE recovery callback.                                                                          |
+| `/auth/password`         | Set a password after an authenticated invite/recovery.                                                                                    |
+| `/`                      | Personal job suggestions, calendar/chat/notification/file previews, own contract receipts and capability-scoped management follow-ups.    |
+| `/jobs`, `/jobs/:id`     | Server-paged search/sorting, own saved views, exact detail, localised sessions/fees, terms acceptance and atomic allocation.              |
+| `/calendar`              | Private appointments, confirmed assignments, published global events and month/week/day/agenda views.                                     |
+| `/profile`               | Persisted DE/EN biography, contact/timezone, expertise and private CV/certificate uploads.                                                |
+| `/chats`                 | Private DMs, staff/group/course rooms; realtime, structured mentions, scanned drag/drop files, membership/moderation and read/mute state. |
+| `/files`                 | Server-paged search, own tags/folders; quarantine/scanning, upload progress, authorised download/preview, history, replace/archive.       |
+| `/wiki`, `/forum`        | Safe rich text/code, drafts/publication/revisions; threads, replies, accepted answers, subscriptions and moderation.                      |
+| `/clients`               | MFA/capability-protected customer records, private contacts/notes, tags and archive.                                                      |
+| `/courses`               | Reusable templates, actual runs/sessions, safe duplication and explicit publication.                                                      |
+| `/contracts`             | Executed PDF versions/hashes, master/addendum chain, private downloads and receipt history. A receipt is not an e-signature.              |
+| `/finance`               | Accepted-assignment earnings, scanned invoice PDFs, review, partial/full payments and authorised CSV with separate currencies.            |
+| `/search`                | Permission-aware jobs, documents, messages, safe wiki/forum results and minimal chat contacts.                                            |
+| `/security`              | Real Auth TOTP enrollment/challenge; administrative actions require AAL2 at the database.                                                 |
+| `/admin`                 | Atomic course/job creation, publication/archive, lecturer invitations.                                                                    |
+| `/people`, `/people/:id` | Safe lecturer directory, own labels/expertise, actual upcoming/current/past courses and authorised anonymised ratings.                    |
+| `/my-reviews`            | Optional learners review actual completed enrolled courses; management enrols and moderates with MFA.                                     |
+| `/client`                | Own-organisation course requests/full fee, commissioned spend and assigned lecturers.                                                     |
+| `/admin/accounts`        | Versioned account API-backed role assignment, separate invitations, scoped client memberships and linked profile/status management.       |
+| `/admin/people`          | Search people, attest declared expertise with UTC expiry, suspend/reactivate accounts with named confirmation.                            |
+| `/topics`                | DE/EN topic/tool/programming-language hierarchy, aliases, authorized related templates and MFA-protected versioned CRUD/archive.          |
+| `/availability`          | Own private available/unavailable windows; explicit reduced sharing with MFA management and transaction-safe assignment conflict checks.  |
+| `/notifications`         | Own cursor-paged inbox, current-authorized links, read/unread state and explicit due-reminder refresh.                                    |
+| `/announcements`         | Current audience-authorised DE/EN publications, cursor pages and own revision-specific acknowledgement; up to three shell banners.        |
+| `/settings`              | Own versioned notification preferences and timezone-aware in-app quiet hours; inbox and critical receipts remain available.               |
+| `/admin/audit`           | MFA/current `audit.read` capability, bounded metadata search/filter/cursor pages and an exact reviewed action allowlist.                  |
+| `/admin/announcements`   | Current capability/MFA, immutable revisions, separate drafts, publish/archive/recover and bounded search; no background scheduler.        |
 
 New standalone administrative offers support 1–20 explicitly priced lecturer positions. Each position covers the whole offered block; existing, client-originated and CBW/course-originated offers retain their original single-position budget. Every session is reserved in one PostgreSQL transaction. Qualification validity, executed-contract prerequisites, remaining capacity, job/deadline/terms status and private calendar/unavailable-window/confirmed-assignment conflicts are checked server-side. Accepted rates/currency/terms remain immutable snapshots. Requests are idempotent and competing jobs for the same lecturer are serialised. Future uninvoiced assignments can be cancelled as a whole block, preserving history; an audited explicit reopening permits a replacement to claim. Started or invoiced work requires separate review. The management Kanban cannot drag a lecturer into confirmation. See [JOB_LIFECYCLE](docs/JOB_LIFECYCLE.md).
 
@@ -89,16 +113,6 @@ React + TypeScript + Vite, Tailwind v4, shadcn-style Radix/CVA primitives, Lucid
 - `tests/e2e/`: real Auth/API browser flows, accessibility and built-PWA tests.
 
 Dependencies are exact-pinned with `package-lock.json`. All FullCalendar packages use matching version 6.1.22. Security overrides pin patched `glob` and `minimatch`; see [security checklist](docs/SECURITY_PRIVACY_CHECKLIST.md) for remaining build-tool advisories. Use `npm ci`, not an unreviewed blanket `audit fix --force`.
-
-## Den neuesten GitHub-Stand separat ausprobieren
-
-```bash
-./portal github
-```
-
-Der Starter holt den aktuellen Hauptzweig in eine eigene verwaltete Arbeitskopie und startet ihn unter **http://127.0.0.1:5373** mit eigener Supabase-API `56321`, PostgreSQL `56322` und Mailpit `56324`. Die normale Entwicklung auf `5173`/`543xx` und ihre Daten bleiben erhalten. Auch die Vorschau behält ihre eigenen Konten, Passwörter, MFA und Dateien bei Stop/Start und zulässigen Vorwärtsupdates. Geänderte historische oder prüfbedürftige Migrationen werden vor einer unbeabsichtigten Übernahme angehalten; der Leitfaden erklärt den konkreten lokalen Migrationsplan.
-
-`./portal github test` prüft den neuesten Commit separat, ohne eine laufende Vorschau zu aktualisieren. Weitere Befehle, Voraussetzungen und der konkrete Umgang mit prüfbedürftigen Migrationen stehen im [GitHub-Testleitfaden](docs/GITHUB_LOCAL_PREVIEW.md).
 
 ## Mit einem Befehl vollständig testen
 
@@ -132,7 +146,13 @@ Stoppe verwaltete lokale Dienste mit `./portal stop`; Datenbank und tatsächlich
 
 ## Documentation
 
-[System audit](docs/SYSTEM_AUDIT.md) · [Developer guide](docs/DEVELOPER_GUIDE.md) · [Functional audit](docs/FUNCTIONAL_CODE_AUDIT.md) · [CBW templates](docs/CBW_TEMPLATES.md) · [Profile pictures](docs/PROFILE_AVATARS.md) · [Comments](docs/RESOURCE_COMMENTS.md) · [Taxonomy](docs/TAXONOMY.md) · [Availability](docs/AVAILABILITY.md) · [Job lifecycle/capacity](docs/JOB_LIFECYCLE.md) · [Dashboard](docs/DASHBOARD.md) · [Notifications](docs/NOTIFICATIONS.md) · [Administration audit](docs/ADMIN_AUDIT.md) · [GitHub preview](docs/GITHUB_LOCAL_PREVIEW.md) · [Product scope](docs/PRODUCT_SPEC.md) · [Architecture](docs/ARCHITECTURE.md) · [ERD](docs/ERD.md) · [Brand](docs/BRAND_DESIGN_SYSTEM.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [Security review](docs/BACKEND_SECURITY_REVIEW.md) · [Test plan](docs/TEST_PLAN.md) · [User guide](docs/USER_GUIDE.md)
+[Developer guide](docs/DEVELOPER_GUIDE.md) · [Architecture](docs/ARCHITECTURE.md) · [ERD](docs/ERD.md) · [Generated API reference](docs/API_REFERENCE.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [Product scope](docs/PRODUCT_SPEC.md) · [Brand](docs/BRAND_DESIGN_SYSTEM.md)
+
+[Files](docs/FILES.md) · [Job discovery](docs/JOB_DISCOVERY.md) · [Job lifecycle/capacity](docs/JOB_LIFECYCLE.md) · [Chat](docs/CHAT.md) · [Notifications/quiet hours](docs/NOTIFICATIONS.md) · [Announcements](docs/ANNOUNCEMENTS.md) · [Dashboard](docs/DASHBOARD.md) · [GitHub preview](docs/GITHUB_LOCAL_PREVIEW.md)
+
+[CBW templates](docs/CBW_TEMPLATES.md) · [Profile pictures](docs/PROFILE_AVATARS.md) · [Comments](docs/RESOURCE_COMMENTS.md) · [Taxonomy](docs/TAXONOMY.md) · [Availability](docs/AVAILABILITY.md) · [Administration audit](docs/ADMIN_AUDIT.md) · [User guide](docs/USER_GUIDE.md)
+
+[System audit](docs/SYSTEM_AUDIT.md) · [Functional audit](docs/FUNCTIONAL_CODE_AUDIT.md) · [Security review](docs/BACKEND_SECURITY_REVIEW.md) · [Test plan](docs/TEST_PLAN.md) · [Executed QA results](docs/QA_RESULTS.md)
 
 ## Mitwirken auf GitHub
 
@@ -146,7 +166,7 @@ Repository license: GNU GPLv3; the authentic Space Grotesk font retains its incl
 
 ## Account and revenue APIs
 
-[Account/revenue specification](docs/ACCOUNTS_REVENUE_SPEC.md) · [Generated platform API reference](docs/API_REFERENCE.md) · [Server audit](docs/ACCOUNTS_PLATFORM_AUDIT.md). The current source reference inventories 125 public RPCs from an actual disposable migration replay; an inventory proves the interface exists, not that every branch has passed native end-to-end acceptance.
+[Account/revenue specification](docs/ACCOUNTS_REVENUE_SPEC.md) · [Generated platform API reference](docs/API_REFERENCE.md) · [Server audit](docs/ACCOUNTS_PLATFORM_AUDIT.md). The current source reference inventories 146 public RPCs from an actual disposable migration replay; an inventory proves the interface exists, not that every branch has passed native end-to-end acceptance.
 
 New commission offers default to 50% platform / 50% lecturer; only admin/owner can change the percentage. Customer total and platform amounts remain in private tables and never appear in lecturer job/claim/invoice responses. Legacy accepted net fees stay unchanged, and unknown historical customer totals remain unknown. Income/payment status is tracking data; no bank transfer or tax calculation is initiated.
 

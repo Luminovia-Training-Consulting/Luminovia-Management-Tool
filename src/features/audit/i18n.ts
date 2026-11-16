@@ -41,6 +41,7 @@ const de = {
     job: "Aufträge",
     claim: "Zuweisungen",
     taxonomy: "Themenkatalog",
+    announcement: "Ankündigungen",
   },
 };
 const en = {
@@ -85,6 +86,7 @@ const en = {
     job: "Jobs",
     claim: "Assignments",
     taxonomy: "Topic catalogue",
+    announcement: "Announcements",
   },
 };
 i18n.addResourceBundle("de", "adminAudit", de);

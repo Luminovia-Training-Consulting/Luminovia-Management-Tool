@@ -2,6 +2,12 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## M7 first combined run — 84/86 browsers, corrected fixture, rerun required
+
+Frozen source `eaefea5` returned **exit 1**, explicitly captured by the detached launcher in `.local/m7-test-01.exit`; private report `.local/tests/b026ab59/RESULT.txt`. All 29 migrations, 285 PostgreSQL cases, 23 actual business API suites, real Edge/Mailpit and real password/MFA/profile/calendar/Storage restart preservation passed. Chromium completed **84 passed / 2 failed / zero skipped** (7.8 minutes). Both failures came from mixed notification-fixture row shapes producing a NULL ID before the quiet-hour UI journey. Explicit IDs now fix the fixture without relaxing its assertions. Build/PWA was not reached. Full corrected-source verification and exact PR CI remain required.
+
+Visually inspected passing journeys from this run: [file centre](screenshots/m7-desktop-file-centre.png), [structured chat mention and scanned attachment](screenshots/m7-desktop-chat-mentions.png), [desktop announcement](screenshots/m7-desktop-announcements.png), [mobile announcement](screenshots/m7-mobile-announcements.png). These images do not turn the two failing journeys into passes.
+
 ## M7 source preflight — not full acceptance
 
 Integrated current source passed lint/type/format,240Vitest cases across50files and compiler connectivity (119modules/32routes; zero unreachable/unresolved/unused runtime exports). Actual disposable29-migration replay generated146public functions. Narrow module SQL groups passed (files6,jobs9,mentions11,attention9,announcements16); temporary minimal Auth identities are not real Auth/TOTP acceptance. Actual API/browser definitions are authored. The complete native isolated M7 command and exact application/retained-image CI remain pending; no M7deployment/merge or fullpass is claimed.

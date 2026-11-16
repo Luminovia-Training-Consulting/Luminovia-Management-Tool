@@ -39,12 +39,14 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
   await checked(
     service.from("notifications").insert([
       ...Array.from({ length: 17 }, () => ({
+        id: randomUUID(),
         user_id: owner.id,
         kind: "chat_message",
         resource_id: randomUUID(),
       })),
       ...critical,
       {
+        id: randomUUID(),
         user_id: peer.id,
         kind: "claim_confirmed",
         resource_id: randomUUID(),

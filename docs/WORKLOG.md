@@ -2,6 +2,14 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — first complete M7 run: native gates passed, browser fixture corrected
+
+The detached launcher captured an actual **exit 1** for signed source `eaefea5` in `.local/m7-test-01.exit`; report `.local/tests/b026ab59/RESULT.txt`. Cleanup completed. This is a failed checkpoint, not complete M7 acceptance.
+
+Passed before the failure: source lint/types/format, 240 Vitest cases in 50 files, runtime/Edge/operating guards, all 29 migrations and advisors, real Auth/MFA/profile/private-event/Storage stop/start persistence, **285 PostgreSQL cases**, **23 actual business API suites**, and the real Edge/Mailpit invitation. Chromium completed **84 passed / 2 failed / zero skipped** in 7.8 minutes. Both failures were the new quiet-hours fixture before its UI assertions: a mixed-shape bulk notification insert supplied `id` on only three rows, causing REST to send NULL for the others (`23502`). Every row now receives an explicit UUID; no assertion, retry policy or production permission was weakened. The announcement API clock fixture independently now uses actual PostgreSQL UTC time with a 30-minute margin. Missing DE/EN announcement audit-group labels were also supplied.
+
+Actual file, chat and announcement desktop/mobile screenshots were visually inspected and selected images are retained below. They belong to passing journeys in this otherwise failed run. Build/PWA was not reached. A fresh complete canonical run on the corrected frozen source is required, followed by exact PR application and retained-data CI. The original development stack and official latest-main preview were not targeted.
+
 ## 16 November 2026 — M6 follow-up accepted; complete M7 test starts
 
 PR9 exact head3c55678 passed application CI43777971815 and actual isolated selfhost compatibility, with valid metadata. It merged as9c2103b83c6097ef92faa0bddf18e59aef18a5e6 at2026-11-16T00:30:00Z. The M7 branch now includes that actual main ancestry and preserves both sets of evidence below. Signed M7 source b45d468 is saved remotely; source remains frozen for the full detached local gate. Later pending statements below are historical checkpoints.
