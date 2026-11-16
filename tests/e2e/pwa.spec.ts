@@ -105,6 +105,10 @@ test("built PWA cold offline page reads only its opted-in schedule and purges it
   let current = page;
   const starts = new Date(Date.now() + 2 * 86400000).toISOString(),
     ends = new Date(Date.now() + 2 * 86400000 + 3600000).toISOString();
+  // Keep a real private event inside the export horizon, on a separate day.
+  // The production calendar guard correctly rejects an assignment overlap.
+  const privateStarts = new Date(Date.now() + 4 * 86400000).toISOString(),
+    privateEnds = new Date(Date.now() + 4 * 86400000 + 3600000).toISOString();
   // Read the actual dedicated IDB store without retaining any Auth tokens or
   // introducing a browser-only assignment confirmation in the fixture.
   const snapshot = () =>
@@ -194,8 +198,8 @@ test("built PWA cold offline page reads only its opted-in schedule and purges it
           id: privateEvent,
           user_id: owner.id,
           title: "PRIVATE APPOINTMENT",
-          starts_at: starts,
-          ends_at: ends,
+          starts_at: privateStarts,
+          ends_at: privateEnds,
           time_zone: "Europe/Berlin",
         }),
     );
