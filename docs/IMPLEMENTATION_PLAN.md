@@ -2,6 +2,26 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Functional acceptance integration — publication control first
+
+- [x] Keep published0950506 and its full CI unchanged while preparing necessary PR27ec29bc5 locally; preserve its original head and every functional/privacy/evidence assertion.
+- [x] Pass actual combined local `./portal check` with249frontend cases/52files and build, all100runtime cases with zero skips, actionlint and diff checks. No backend/QA service was started.
+- [ ] Observe actual0950506 full application/native/PWA outcome, without inventing a pass or pushing cosmetic changes during that run.
+- [ ] Incorporate PR27's actual main after its reserved first merge; its explicit exact-SHA publication guard must be present before PR12 merges.
+- [ ] Push one necessary signed integration, pass all15current exact-head required gates and merge the completed functional PR according to the direct user instruction. No release/preview-publication dispatch belongs to this task.
+
+Other proposed PR21/22/26 group work remains separate from this frozen functional scope. The complete outstanding product/platform requirements below remain required.
+
+## Current direction — local PC testing and explicit publication
+
+- [x] Add `./portal check` for fast local source/coverage/build feedback, retaining complete isolated `./portal test` and latest-main `./portal github test`.
+- [x] Keep automatic quality/security/application/native gates; make CMS publication an explicit exact-SHA manual choice and PR deployment metadata manual-only.
+- [x] Notify the 16 other active project Codex chats and preserve the local-first rule in `AGENTS.md` and operator/contribution guides.
+- [x] Run the actual fast local command (249 frontend tests and build pass), focused publication/orchestration regressions and workflow validation. Cancel the old automatic main publication run and temporarily disable the old metadata publisher, with real server readback.
+- [ ] Complete the signed PR, exact required CI and coordinated user-authorised merge; then re-enable the manual-only metadata workflow and verify main's publication guard.
+
+The VPS polling timer and normal/hosted data are unchanged. This direction supersedes historical automatic release/publication descriptions below; it does not remove any product, security or release acceptance requirements.
+
 ## Current functional/integration completion audit
 
 Current delivery instruction: signed commit→push→prepared PR→direct merge after current full CI. Actual PR15 main43504b8 and subsequently accepted PR18 mainfabd71a (merged05:09:15UTC) are incorporated on the owned PR12 branch. All incoming roles/private pricing/welcome/preview functions and our functional assertions are preserved; migration/dependency bytes match accepted PR18. Local92runtime/249frontend cases and type/lint/format/actionlint/unchanged coverage floors pass. The published be1run failed89/90browser cases at a desktop navigation-readiness race; signedf010721 corrects it with a genuine desktop/mobile Chromium diagnostic. Push the final combined source and require fresh exact-head application/native/security acceptance, then merge PR12 without another approval question. Production remains separate.

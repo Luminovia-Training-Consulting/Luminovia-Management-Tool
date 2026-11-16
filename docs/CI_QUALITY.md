@@ -2,6 +2,13 @@
 
 Workflows run for pull requests and `main`; manual execution is also available. They need no VPS credentials, private Supabase keys or production data. Existing real application/database/API/browser checks remain in place.
 
+Development and testing use the local PC by default. `./portal check` runs fast
+quality, coverage and build checks without starting services; `./portal test`
+provides complete isolated acceptance of the working source before delivery, `./portal github test` verifies freshly fetched `main` locally,
+and `./portal github` starts a separate persistent preview. No GitHub deployment
+or self-hosted Actions runner is needed. GitHub checks remain independent
+verification; a successful check or merge is not a publication request.
+
 ## Visible checks
 
 | Check                                        | What it verifies                                                                                                             |
@@ -16,7 +23,18 @@ Workflows run for pull requests and `main`; manual execution is also available. 
 | Actual isolated selfhost image compatibility | Real pinned Supabase images and retained data from the previous source revision.                                             |
 | PR metadata                                  | Current PR labels and matching repository/commit identity.                                                                   |
 
-The release job requires the fast quality gates and both complete application/selfhost gates. An early maintainer merge may bypass repository rules but does not publish a failed package. VPS automation still verifies that the entire CI run for the exact main commit succeeded.
+The release job runs only for an authorised manual `Portal checks` dispatch on
+`main` with `publish_release=true` and the exact current `main` SHA supplied as
+`expected_commit`. Pushes, ordinary manual verification and daily-maintenance
+verification do not publish releases. The fast quality gates and both complete
+application/selfhost gates remain required; an early maintainer merge does not
+publish a failed package. VPS automation still verifies that the entire CI run
+for the exact main commit succeeded. The existing five-minute VPS polling timer
+is unchanged; changing publication policy does not claim a hosted timer change.
+
+The `PR preview deployments` workflow is manual-only. The verified downloadable
+PR package remains an artifact, independent of optional deployment metadata.
+See [PR_PREVIEWS](PR_PREVIEWS.md) for that explicit publication and cleanup path.
 
 [CodeQL](../.github/workflows/security.yml) additionally analyses JavaScript/TypeScript, Python and GitHub Actions on PRs/main and on Mondays at 05:23 UTC (15:23 Brisbane). This is static security analysis, not a replacement for real RLS/auth/file-access tests. Findings appear under GitHub Security/Code scanning; a successfully completed scan does not by itself mean there are no warnings. This separate Security workflow is currently not an additional release `needs` gate; publication conditions are explicitly defined in `ci.yml`.
 

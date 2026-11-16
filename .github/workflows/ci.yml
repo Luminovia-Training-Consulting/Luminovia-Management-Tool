@@ -1,5 +1,6 @@
 # Main acceptance: fast quality gates, the real isolated application, then
-# actual selfhost images. Only a successful main revision is packaged.
+# actual selfhost images. Publishing additionally requires an explicit manual
+# request bound to the exact main revision; ordinary checks never publish.
 name: Portal checks
 on:
   push:
@@ -8,9 +9,14 @@ on:
   workflow_dispatch:
     inputs:
       expected_commit:
-        description: Exact main revision promoted by daily maintenance
+        description: Exact main SHA to verify; required when publishing a release
         required: false
         type: string
+      publish_release:
+        description: Publish this exact verified main revision for the CMS development updater
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
 concurrency:
@@ -165,16 +171,27 @@ jobs:
             echo 'Review the contributor source, unpack portal-source.tar.gz and run node preview.mjs start on Linux with Node and Docker. This wrapper uses separate data volumes and ports. Read README.txt and portal/docs/PR_PREVIEWS.md first.'
           } >> "$GITHUB_STEP_SUMMARY"
   release-cms:
-    # Development release with an immutable commit tag. This gate depends on all
-    # application gates, including after a direct maintainer merge.
+    # Explicit development release with an immutable commit tag. Main pushes,
+    # ordinary verification and daily maintenance cannot enable this gate.
+    # The exact reviewed SHA still passes every application gate in this run.
     name: Publish tested CMS update
     needs: [quality, coverage, verify, verify-selfhost]
-    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_release == true && github.ref == 'refs/heads/main' && inputs.expected_commit == github.sha
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: write
     steps:
+      - name: Confirm explicit exact-revision publication request
+        env:
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+          PUBLISH_RELEASE: ${{ inputs.publish_release }}
+        run: |
+          test "$PUBLISH_RELEASE" = true
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$GITHUB_REF" = refs/heads/main
+          test -n "$EXPECTED_COMMIT"
+          test "$EXPECTED_COMMIT" = "$GITHUB_SHA"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -205,7 +222,7 @@ jobs:
               exit 0
             fi
           else
-            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --draft --prerelease --title "CMS development $GITHUB_SHA" --notes "Automatically built from a successfully verified main commit."
+            gh release create "$RELEASE_TAG" --target "$GITHUB_SHA" --draft --prerelease --title "CMS development $GITHUB_SHA" --notes "Explicitly published from this successfully verified main commit."
           fi
           gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/cms-release/cms-release.tar.gz" "$RUNNER_TEMP/cms-release/cms-release.json" --clobber
           gh release edit "$RELEASE_TAG" --draft=false
