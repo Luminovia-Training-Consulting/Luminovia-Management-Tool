@@ -10,34 +10,34 @@ The user's [Universal Master Prompt](docs/UNIVERSAL_MASTER_PROMPT.txt) is preser
 - Loopback ports 5173, 54321, 54322 and 54324 available. Local Docker services require several GB of disk space.
 - Supabase CLI 3.1.0 and Deno 2.9.6 are pinned development dependencies; inspect their `--help` before database/remote operations.
 
-## Lokal mit einem Befehl starten
+## Start locally with one command
 
 ```bash
 ./portal start
 ```
 
-Der Befehl installiert bei Bedarf die gesperrten npm-Abhängigkeiten und startet das vollständige lokale System: PostgreSQL, Supabase Auth/Storage/Realtime, Edge Functions, Malware-Scanner, Mailpit und React/Vite. Neue Migrationen werden ohne Daten-Reset angewendet. Fiktive Beispieldaten werden nur bei der ersten leeren Initialisierung erzeugt.
+The command installs locked npm dependencies when needed and starts the complete local system: PostgreSQL, Supabase Auth/Storage/Realtime, Edge Functions, malware scanner, Mailpit and React/Vite. It applies new migrations without resetting data. Fictional examples are created only during the first empty initialization.
 
-Öffne <http://127.0.0.1:5173>. Lokale E-Mails werden ausschließlich in [Mailpit](http://127.0.0.1:54324) abgefangen. Bei einer neuen, leeren Initialisierung heißen die elf fiktiven Dozierenden `lecturer01@example.invalid` bis `lecturer11@example.invalid`; zusätzlich gibt es `admin@example.invalid`, `participant@example.invalid`, `carina@example.invalid` (Plattformleitungs-Demo) und `client@example.invalid` (Auftraggeber-Demo). Das sind getrennte fiktive Auth-Konten; echte Einladungen vergeben eigene Passwörter.
+Open <http://127.0.0.1:5173>. Local emails are captured only in [Mailpit](http://127.0.0.1:54324). A fresh empty installation creates eleven fictional lecturers, `lecturer01@example.invalid` through `lecturer11@example.invalid`, plus `admin@example.invalid`, `participant@example.invalid`, `carina@example.invalid` (platform-owner demo) and `client@example.invalid` (client demo). These are separate fictional Auth accounts; real invitees set their own passwords.
 
 ```bash
-./portal credentials   # ursprüngliches lokales Testpasswort bewusst anzeigen
-./portal status        # Dienststatus und URLs
-./portal stop          # datenerhaltend stoppen
-./portal restart       # datenerhaltend neu starten
+./portal credentials   # deliberately display the original local test password
+./portal status        # service status and URLs
+./portal stop          # stop while preserving data
+./portal restart       # restart while preserving data
 ```
 
-Passwörter, MFA, Profiländerungen, Verifizierungen, Sperren, Aufträge, Kalender und tatsächliche Storage-Dateien bleiben bei Stop/Start erhalten. Der normale Start setzt keine Profile oder Passwörter zurück. Zugangsdaten stehen in der geschützten, ignorierten `.local/ACCOUNTS.txt`; Server-Schlüssel gelangen weder in Git noch in das Browser-Bundle. Admins richten MFA im echten Sicherheitsdialog ein.
+Passwords, MFA, profile changes, verifications, suspensions, jobs, calendars and actual Storage files survive stop/start. Normal startup does not reset profiles or passwords. Credentials remain in the protected, ignored `.local/ACCOUNTS.txt`; server keys never enter Git or the browser bundle. Administrators enroll MFA through the real security dialog.
 
-`./portal up` bleibt im Terminal; Ctrl+C stoppt die Dienste datenerhaltend. Der Hintergrundstart bleibt bis `./portal stop` aktiv. Der erste Start benötigt Image-Downloads und Scanner-Signaturinitialisierung. Der Scanner ist auf 4GB RAM begrenzt; paralleler Entwicklungs- und Testbetrieb benötigt Speicher für zwei getrennte lokale Stacks.
+`./portal up` stays attached to the terminal; Ctrl+C stops services without deleting their data. Background startup remains active until `./portal stop`. First startup downloads images and initializes scanner signatures. The scanner has a 4 GB RAM limit; simultaneous development and verification need enough memory for two independent local stacks.
 
-Die vollständigen Betriebsdetails, Fehlerbehebung und Persistenzgrenzen stehen in [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md). Ein Docker-Volume ist dauerhafte lokale Speicherung, jedoch kein externes Backup.
+See [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) for operation, troubleshooting and persistence boundaries. A Docker volume provides persistent local storage, not an external backup.
 
-## Aktueller Entwicklungs- und Abnahmestand
+## Current development and acceptance status
 
-Die neuen M6-Funktionen verbinden Datenbank, API und Oberfläche. Gezielte Komponenten-, Datenbank-, Berechtigungs- und Nebenläufigkeitsprüfungen sind in den jeweiligen Modulunterlagen dokumentiert. **Die vollständige kombinierte native M6-Abnahme mit tatsächlicher Auth, Storage, Browsern, Persistenz und exaktem CI-Stand steht noch aus.** Geschriebene API-/Browserfälle zählen erst nach ihrem tatsächlichen Lauf als bestanden; frühere M3–M5-Ergebnisse ersetzen diese neue Abnahme nicht. Maßgeblich bleiben [QA_RESULTS](docs/QA_RESULTS.md) und [WORKLOG](docs/WORKLOG.md).
+M6 connects the database, APIs and interface. Its complete application and native retained-data acceptance passed before [PR #8](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/8) merged. The later accepted `1341b16` checkpoint passed [all nine Main CI jobs](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43788369925), including 197 unit/component tests, 234 SQL cases, 18 actual business API suites, 72 desktop/mobile browser cases, persistence, built-PWA checks and real selfhost compatibility. New revisions need their own verification; these results do not imply complete production acceptance. See [QA_RESULTS](docs/QA_RESULTS.md) and [WORKLOG](docs/WORKLOG.md).
 
-Die Beitragsunterlagen wurden mit [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`) und der unabhängige GitHub-Vorschaustarter mit [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`) gemergt. Diese Lieferungen bestätigen nicht die noch offene M6-Produktabnahme. Der Labelkatalog umfasst 30 verwaltete Labels; die neun ursprünglichen GitHub-Labels bleiben erhalten. Die gesonderte Aktivierung der Review-/Merge-Regeln ist im [GitHub-Betriebsleitfaden](docs/GITHUB_WORKFLOW.md) dokumentiert.
+The contribution guides merged in [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the independent GitHub preview launcher in [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). The catalogue contains 30 managed labels alongside nine preserved GitHub defaults. Public contribution guidance, issue forms and pull request instructions use English. The [GitHub administration guide](docs/GITHUB_WORKFLOW.md) distinguishes active Maintainer/Admin exceptions from the additional review/check rules still awaiting activation.
 
 ## Implemented routes
 
@@ -94,53 +94,53 @@ React + TypeScript + Vite, Tailwind v4, shadcn-style Radix/CVA primitives, Lucid
 
 Dependencies are exact-pinned with `package-lock.json`. All FullCalendar packages use matching version 6.1.22. Security overrides pin patched `glob` and `minimatch`; see [security checklist](docs/SECURITY_PRIVACY_CHECKLIST.md) for remaining build-tool advisories. Use `npm ci`, not an unreviewed blanket `audit fix --force`.
 
-## Den neuesten GitHub-Stand separat ausprobieren
+## Try the latest GitHub version separately
 
 ```bash
 ./portal github
 ```
 
-Der Starter holt den aktuellen Hauptzweig in eine eigene verwaltete Arbeitskopie und startet ihn unter **http://127.0.0.1:5373** mit eigener Supabase-API `56321`, PostgreSQL `56322` und Mailpit `56324`. Die normale Entwicklung auf `5173`/`543xx` und ihre Daten bleiben erhalten. Auch die Vorschau behält ihre eigenen Konten, Passwörter, MFA und Dateien bei Stop/Start und zulässigen Vorwärtsupdates. Geänderte historische oder prüfbedürftige Migrationen werden vor einer unbeabsichtigten Übernahme angehalten; der Leitfaden erklärt den konkreten lokalen Migrationsplan.
+The launcher fetches the current Main branch into a separate managed checkout and starts it at **http://127.0.0.1:5373**, with its own Supabase API on `56321`, PostgreSQL on `56322` and Mailpit on `56324`. Normal development on `5173`/`543xx` and its data are preserved. The preview also retains its own accounts, passwords, MFA and files across stop/start and allowed forward updates. Rewritten historical migrations or changes requiring review are stopped before unintended application; the guide explains the concrete local migration plan.
 
-`./portal github test` prüft den neuesten Commit separat, ohne eine laufende Vorschau zu aktualisieren. Weitere Befehle, Voraussetzungen und der konkrete Umgang mit prüfbedürftigen Migrationen stehen im [GitHub-Testleitfaden](docs/GITHUB_LOCAL_PREVIEW.md).
+`./portal github test` verifies the latest commit separately without updating a running preview. See the [GitHub preview guide](docs/GITHUB_LOCAL_PREVIEW.md) for commands, prerequisites and migration review.
 
-## Mit einem Befehl vollständig testen
+## Run complete verification with one command
 
 ```bash
 ./portal test
 ```
 
-Der Befehl verwendet einen bereinigten temporären Checkout, einen zufälligen eigenen Supabase-Projektnamen und separate Ports/Volumes. Entwicklungsdaten und laufende Entwicklungskonten werden nicht zurückgesetzt oder von den Tests verändert. Er prüft Code/Typen/Formatierung/Abhängigkeiten, Edge Functions, reale SQL-/RLS-/Nebenläufigkeit, tatsächliche HTTP-/Einladungs-/Mailpit-Abläufe, Desktop/Mobilbrowser und die gebaute Offline-PWA. Eine echte Stop/Start-Prüfung vergleicht Passwort, MFA, Profil, privaten Termin und tatsächliche Storage-Objektbytes.
+The command uses a sanitized temporary checkout, a random independent Supabase project and separate ports/volumes. It preserves normal development data and accounts. Checks cover source, types, formatting, dependencies, Edge Functions, actual SQL/RLS/concurrency, HTTP/invitation/Mailpit workflows, desktop/mobile browsers and the built offline PWA. A real stop/start check compares passwords, MFA, profile, private event and actual Storage object bytes.
 
-Berichte und geschützte Fehlerartefakte liegen unter `.local/tests/<run>/`. Nur der isolierte Teststack wird danach entfernt. Die einzelnen npm-/SQL-/API-Prüfungen bleiben für gezieltes Debugging vorhanden; führe mutierende Integrationsprüfungen innerhalb der isolierten Testumgebung aus. Neue Testskripte müssen die in [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) beschriebenen URL-/Container-Variablen beachten.
+Reports and protected failure artifacts stay under `.local/tests/<run>/`. Only the isolated test stack is removed afterwards. Individual npm/SQL/API checks remain available for focused debugging; run mutating integration checks inside the isolated environment. New scripts must respect the URL/container variables documented in [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md).
 
-Ausgeführte Ergebnisse und Grenzen werden in [QA_RESULTS](docs/QA_RESULTS.md) und [WORKLOG](docs/WORKLOG.md) festgehalten. Lokale Browser/PWA-Checks ersetzen keine physische iOS/Safari-Installation oder Prüfung des späteren Hosts. CI hat keine Produktivveröffentlichung.
+Executed results and limits are recorded in [QA_RESULTS](docs/QA_RESULTS.md) and [WORKLOG](docs/WORKLOG.md). Local browser/PWA checks do not establish physical iOS/Safari installation or acceptance on a later host. CI publishes development packages, not a production release.
 
 ## Staging and production
 
-Die tatsächliche **selbst gehostete Entwicklungsinstanz** läuft unter **https://cms.luminovia.org** auf dem vorhandenen Hostinger **KVM 1**. Frontend, Supabase-Datenbank/Auth/Storage/Realtime/Edge und ClamAV liegen auf diesem VPS. Der Nutzer hat ein Upgrade ausdrücklich abgelehnt; ungefähr 100 GB Dokumente sind ein späteres Ausbauziel. Aktuell gelten 10 GiB Gesamt- und 1 GiB Besitzerkontingent. Test-E-Mails werden ausschließlich intern in Mailpit erfasst. [Einrichtung, geschützte Konfiguration, Tests und Betrieb](docs/HOSTINGER_DEVELOPMENT.md).
+The actual **self-hosted development instance** runs at **https://cms.luminovia.org** on the existing Hostinger **KVM 1**. The frontend, Supabase Database/Auth/Storage/Realtime/Edge and ClamAV share this VPS. The user explicitly declined a capacity upgrade; approximately 100 GB of documents is a future target. Current quotas are 10 GiB total and 1 GiB per owner. Test emails are captured in internal Mailpit. See [setup, private configuration, verification and operation](docs/HOSTINGER_DEVELOPMENT.md).
 
-Der VPS prüft alle fünf Minuten auf erfolgreich getestete, unveränderliche GitHub-Versionen von `main`. Sicherungen, Migrationen, Laufzeitkonfiguration und atomare Web-Umschaltung gehören zum [automatischen Entwicklungsupdate](docs/HOSTINGER_AUTOMATIC_UPDATES.md); Serverzugangsdaten bleiben auf dem VPS. Größere/riskante Datenbankwechsel erfordern eine geprüfte Wartung. Ubuntu-Sicherheitsupdates sind automatisch aktiv.
+The VPS checks every five minutes for successfully tested immutable GitHub releases from `main`. [Automatic development updates](docs/HOSTINGER_AUTOMATIC_UPDATES.md) cover backups, migrations, runtime configuration and atomic frontend promotion; server credentials remain on the VPS. Major or risky database changes require reviewed maintenance. Ubuntu security updates are enabled automatically.
 
-Auf dem VPS läuft die fest gepinnte PostgreSQL 17.12-Version. Nach dem kontrollierten Patch bestanden erneut alle acht CMS-API-Prüfgruppen, 50 gleichzeitige Buchungsversuche mit genau einem vollständigen Gewinner, die unveränderte private Datei mit bestehendem Passwort sowie tatsächliche WSS-Zustellung und Rechteentzug. Eine externe Datenbank-plus-Datei-Sicherung wurde isoliert sowohl mit dem ursprünglichen Image als auch vorab mit dem 17.12-Kandidaten erfolgreich wiederhergestellt. Die [geprüften Pins und tatsächlichen Ergebnisse](deploy/hostinger/selfhost/postgres-upgrade-provenance.json) sind dokumentiert.
+The VPS uses the pinned PostgreSQL 17.12 image. After its controlled patch, all eight CMS API groups passed again, including 50 concurrent claims with one complete winner, the unchanged private file with the saved password, and actual WSS delivery/revocation. An off-server database-plus-file backup was restored in isolation using both the original image and the reviewed 17.12 candidate. The [verified pins and actual results](deploy/hostinger/selfhost/postgres-upgrade-provenance.json) are recorded.
 
-Caddy verwendet das stabile Verzeichnis `/opt/luminovia-portal/www`: `current` zeigt auf die aktive Frontend-Auslieferung, gemeinsam vorgehaltene unveränderliche Assets bleiben für bereits geöffnete Clients erreichbar. Daten und geheime Konfiguration liegen außerhalb dieses Webverzeichnisses.
+Caddy mounts the stable `/opt/luminovia-portal/www` directory: `current` points to the active frontend release, while shared immutable assets remain available to existing clients. Data and secret configuration stay outside this web directory.
 
-Die folgenden Hinweise zum früher vorgesehenen verwalteten Backend sind keine Beschreibung dieser selbst gehosteten Instanz. Eine vollständige Produktivfreigabe mit echten Nutzern/SMTP, größerer Kapazität und wiederkehrender externer Sicherung bleibt gesondert erforderlich. Die öffentliche Marketing-Website wurde nicht geändert.
+The following managed-backend notes describe an earlier deployment option, not the current self-hosted instance. Production approval with real users/SMTP, larger capacity and recurring off-site retention remains separate. The public marketing site has not been changed.
 
 Use separate approved staging and production Supabase projects. Frontend build variables are `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` only. Never use server secret/service-role credentials in a `VITE_` variable. Disable signup, configure exact callback URLs, install the custom invitation template, configure approved SMTP, bootstrap the first admin through a controlled server process and require MFA. See [DEPLOYMENT_RUNBOOK](docs/DEPLOYMENT_RUNBOOK.md) for migration, invitation reconciliation, hosting headers, backups of **database plus Storage objects**, restore/rollback and release gates.
 
-`public/.htaccess` is an un-deployed Apache/LiteSpeed reference template; the current VPS serves the portal through Caddy. Its SPA rewrite, no-referrer/CSP/security/cache headers must be tested on that actual host; adapt `connect-src` for an approved custom Supabase domain. Redact authentication query strings in hosting/access logs. A local Vite preview does not exercise Apache headers.
+`public/.htaccess` is an undeployed Apache/LiteSpeed reference template; the current VPS serves the portal through Caddy. Test its SPA rewrite, no-referrer/CSP/security/cache headers on the actual target host and adapt `connect-src` for an approved custom Supabase domain. Redact authentication query strings in hosting/access logs. A local Vite preview does not exercise Apache headers.
 
-Stoppe verwaltete lokale Dienste mit `./portal stop`; Datenbank und tatsächliche Storage-Dateien bleiben erhalten. Verwende für Entwicklungsdaten kein `--no-backup`.
+Stop managed local services with `./portal stop`; database and actual Storage files are retained. Do not use `--no-backup` for development data.
 
 ## Documentation
 
 [System audit](docs/SYSTEM_AUDIT.md) · [Developer guide](docs/DEVELOPER_GUIDE.md) · [Functional audit](docs/FUNCTIONAL_CODE_AUDIT.md) · [CBW templates](docs/CBW_TEMPLATES.md) · [Profile pictures](docs/PROFILE_AVATARS.md) · [Comments](docs/RESOURCE_COMMENTS.md) · [Taxonomy](docs/TAXONOMY.md) · [Availability](docs/AVAILABILITY.md) · [Job lifecycle/capacity](docs/JOB_LIFECYCLE.md) · [Dashboard](docs/DASHBOARD.md) · [Notifications](docs/NOTIFICATIONS.md) · [Administration audit](docs/ADMIN_AUDIT.md) · [GitHub preview](docs/GITHUB_LOCAL_PREVIEW.md) · [Product scope](docs/PRODUCT_SPEC.md) · [Architecture](docs/ARCHITECTURE.md) · [ERD](docs/ERD.md) · [Brand](docs/BRAND_DESIGN_SYSTEM.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [Security review](docs/BACKEND_SECURITY_REVIEW.md) · [Test plan](docs/TEST_PLAN.md) · [User guide](docs/USER_GUIDE.md)
 
-## Mitwirken auf GitHub
+## Contributing on GitHub
 
-Der [Beitragsleitfaden](CONTRIBUTING.md) erklärt Einrichtung, Branches, Tests und den Weg bis zum Merge. Der [Issue-Leitfaden](docs/ISSUE_GUIDE.md) hilft bei Fehlern und Vorschlägen; der [PR-Leitfaden](docs/PULL_REQUEST_GUIDE.md) beschreibt Pflichtlabels, Review und CI. Deutsch und Englisch sind willkommen. Sicherheitslücken werden über einen privaten Meldeweg behandelt.
+[CONTRIBUTING](CONTRIBUTING.md) explains setup, branches, tests and the path to merge. The [issue guide](docs/ISSUE_GUIDE.md) covers bugs, questions and proposals; the [pull request guide](docs/PULL_REQUEST_GUIDE.md) explains required labels, review and CI. Use English for issues, pull requests and community documentation. Product UI strings remain German/English. Report vulnerabilities through the private route in [SECURITY](SECURITY.md).
 
 Repository license: GNU GPLv3; the authentic Space Grotesk font retains its included OFL notice. Brand assets remain Luminovia assets.
 

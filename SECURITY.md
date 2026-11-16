@@ -1,9 +1,13 @@
-# Sicherheitsprobleme melden
+# Security policy
 
-Bitte melde vermutete Schwachstellen über [GitHubs private Sicherheitsmeldung](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/security/advisories/new). Diese Funktion ist für dieses öffentliche Repository aktiviert. Öffentliche Issues und PRs eignen sich erst nach abgestimmter Offenlegung.
+## Reporting a vulnerability
 
-Beschreibe betroffene Version oder Commit, Voraussetzungen, erwartetes und beobachtetes Verhalten sowie eine minimale Reproduktion mit fiktiven Daten. Lade keine echten Zugangsdaten, Token, Kundendaten, Rechnungen oder privaten Dateien hoch. Nutze ausschließlich eigene oder ausdrücklich freigegebene Testumgebungen.
+Report suspected vulnerabilities through [GitHub's private vulnerability reporting](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/security/advisories/new). This feature is enabled for this public repository. Use public issues or pull requests for security details only after coordinated disclosure.
 
-Der aktuelle Entwicklungsstand auf `main` wird gepflegt. Historische Meilenstein-Tags dokumentieren frühere Stände und sind keine Zusage eigener Wartungszweige. Es gibt noch keine freigegebene Produktionsversion.
+Include the affected version or commit, prerequisites, expected and observed behavior, and a minimal reproduction using fictional data. Do not upload real credentials, tokens, customer records, invoices or private files. Test only in environments you own or are explicitly authorized to assess.
 
-Weitere Hinweise stehen im [Issue-Leitfaden](docs/ISSUE_GUIDE.md#sicherheitsprobleme-melden). Die technischen Entwicklungsgrenzen und offenen Freigaben stehen in der [Sicherheitsdokumentation](docs/SECURITY_PRIVACY_CHECKLIST.md).
+## Supported versions
+
+The current development version on `main` is maintained. Historical milestone tags document earlier checkpoints; they do not promise separate maintenance branches. No production version has been approved yet.
+
+See the [issue guide](docs/ISSUE_GUIDE.md#reporting-security-vulnerabilities) for reporting guidance and the [security checklist](docs/SECURITY_PRIVACY_CHECKLIST.md) for technical development boundaries and outstanding acceptance requirements.
