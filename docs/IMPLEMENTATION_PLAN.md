@@ -2,6 +2,18 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Guided exploration and practical help
+
+User requested a complete bilingual guided experience, safe fictional test system, practical problem explanations and a tested PR/merge. Work is isolated on `codex/guided-demo-help`; unrelated original roles/preview/welcome-checklist changes remain outside this PR.
+
+- [x] Public fictional demo for all25current portal modules, guided route sequence and meaningful in-memory exercises; explicit simulation labels, reset/reload erasure, DE/EN and shared themes.
+- [x] Authenticated permission-aware Portal tour with explicit navigation, pause/resume/restart and per-account session progress; unchanged server permissions, MFA and online confirmation.
+- [x] Public searchable bilingual help with practical workflows, module deep links, general recovery and entry points from login/tour/errors.
+- [x] Source checks, production build, actual public desktop/mobile acceptance, initial whole-source coverage above unchanged gates and precise usage/security documentation. See WORKLOG for executed counts and remaining exact-source checks.
+- [ ] Observe final exact PR full application/native retained-data/security checks and complete the authorised merge; final PR status is authoritative. No production deployment is implied.
+
+[Guided demo and help](GUIDED_DEMO_AND_HELP.md) complements the full target below. These educational simulations do not mark any unimplemented business module complete and do not replace the independent account welcome checklist.
+
 ## English community information
 
 The current language request covers public security/contribution documentation, GitHub issue/PR forms and guidance, managed label descriptions and PR metadata feedback. Isolated branch `codex/english-community-guides` preserves concurrent application work and the full product ledger below.
