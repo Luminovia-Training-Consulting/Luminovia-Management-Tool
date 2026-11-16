@@ -1,3 +1,6 @@
+/**
+ * Zweiteiliger nativer Upgrade-Zeuge: legt vor dem Wechsel eigene Konten/MFA/Objektbytes an und prüft danach denselben Bestand. Das private Ledger verknüpft beide Phasen; Zugangsdaten werden nicht veröffentlicht.
+ */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash, createHmac, randomUUID } from "node:crypto";
@@ -23,6 +26,7 @@ assert.deepEqual(Object.keys(metadata.NetworkSettings.Networks), [
 process.loadEnvFile(".env.test.local");
 const url = new URL(process.env.SUPABASE_URL);
 assert(url.protocol === "https:" && url.hostname === "127.0.0.1" && url.port);
+// Erzeugt einen zustandslosen SDK-Client für die isolierte Kandidateninstanz.
 const make = (key) =>
   createClient(url.href, key, {
     auth: {
@@ -32,12 +36,15 @@ const make = (key) =>
     },
   });
 const service = make(process.env.SUPABASE_SERVICE_ROLE_KEY);
+// Berechnet einen stabilen SHA-256-Fingerabdruck für den folgenden Quellen-/Artefaktvergleich.
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
+// Bricht bei einem echten SDK-Fehler ab, statt eine leere Antwort als erfolgreichen Nachweis zu behandeln.
 async function checked(promise) {
   const result = await promise;
   assert.equal(result.error, null);
   return result.data;
 }
+// Berechnet den zeitabhängigen Code des ausschließlich für diese Probe angelegten MFA-Faktors.
 function totp(secret) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "")]

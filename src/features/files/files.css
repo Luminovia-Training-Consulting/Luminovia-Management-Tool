@@ -1,3 +1,6 @@
+/**
+ * Dateiauswahl, Uploadfortschritt, Listen und versionsgebundene Vorschauen. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ */
 .file-drop {
   display: flex;
   flex-direction: column;
@@ -29,6 +32,7 @@
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+/* Netzwerkfortschritt ist sichtbar, aber die finale Freigabe bleibt an die echte Serverantwort gebunden. */
 .upload-progress {
   display: flex;
   flex-direction: column;
@@ -40,6 +44,7 @@
   width: 100%;
   accent-color: var(--brand);
 }
+/* Dateizeilen gruppieren Name, Metadaten, Scanstatus und explizite Aktionen. */
 .document-list {
   display: flex;
   flex-direction: column;
@@ -130,6 +135,7 @@
   width: 190px;
   border-radius: 12px;
 }
+/* Vorschaudimensionen begrenzen die Anzeige der bereits authentifiziert geladenen Blob-Bytes. */
 .file-preview-image {
   max-height: 70vh;
   max-width: 100%;
@@ -140,6 +146,7 @@
   height: 65vh;
   border: 1px solid var(--line);
 }
+/* Historische Dateiversionen behalten eigene Metadaten und Downloadaktionen. */
 .document-versions li {
   display: flex;
   align-items: center;
@@ -165,6 +172,7 @@
   font-family: monospace;
   font-size: 9px !important;
 }
+/* Kompakte Anhänge verwenden dieselbe Dateisprache wie das Dateizentrum. */
 .document-attachment {
   display: flex;
   align-items: center;
@@ -201,6 +209,7 @@
   font-weight: 600;
   margin-bottom: 15px;
 }
+/* Layoutanpassung (max-width: 600px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
 @media (max-width: 600px) {
   .document-list > li {
     flex-wrap: wrap;
@@ -240,6 +249,7 @@
 .people-profile .profile-evidence h2 {
   font-size: 18px;
 }
+/* Layoutanpassung (max-width: 800px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
 @media (max-width: 800px) {
   .profile-evidence {
     grid-template-columns: 1fr;

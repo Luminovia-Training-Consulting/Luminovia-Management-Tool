@@ -1,3 +1,6 @@
+/**
+ * Auftragseditor für freie Angebote und Angebote aus einem konkreten Kurslauf. Der überprüfte Kursquellenstand bleibt während der Eingabe stabil; echte Termine und Preise werden beim Speichern serverseitig geprüft.
+ */
 import { useRef, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -38,6 +41,7 @@ import {
   Notice,
   PageHeading,
 } from "../../components/common";
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const schema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().max(10000),
@@ -69,7 +73,9 @@ const schema = z.object({
     .min(1)
     .max(60),
 });
+/** Formularwerte direkt aus dem zugehörigen Validierungsschema, damit Eingabe- und TypeScript-Vertrag übereinstimmen. */
 type Values = z.infer<typeof schema>;
+/** Erstellt ein vollständiges Angebot und bindet bei Kursübernahme die überprüfte Quellenrevision an den Serveraufruf. */
 function JobForm({
   courseRun: initialSource,
 }: {
@@ -682,6 +688,7 @@ function JobForm({
     </form>
   );
 }
+/** Wählt freien Angebotsentwurf oder servergeladenen Kursquellenstand anhand der Route und aktuellen Rechte. */
 export function AdminPage() {
   const { t } = useTranslation();
   const courseText = useTranslation("courseOffer").t;

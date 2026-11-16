@@ -1,3 +1,7 @@
+/**
+ * PostgreSQL-Regressionsgruppen für versionierte Bearbeitung, Stornierung und ausdrückliche Wiederöffnung.
+ * Die Testdatenbank spielt echte Migrationen ein; Rollen-/MFA-Claims prüfen den Datenvertrag unabhängig von der UI.
+ */
 /** Real PostgreSQL lifecycle/revenue/availability regression cases. Native
  * Auth, Storage and realtime are verified separately by the actual API suite. */
 import assert from "node:assert/strict";
@@ -13,6 +17,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
     `insert into auth.users(id,email) values('${admin}','lifecycle-admin@example.invalid'),('${teacher}','lifecycle-teacher@example.invalid'),('${peer}','lifecycle-peer@example.invalid'),('${participant}','lifecycle-participant@example.invalid');insert into public.user_roles(user_id,role) values('${admin}','admin'),('${teacher}','lecturer'),('${peer}','lecturer'),('${participant}','participant');`,
   );
   let day = 1;
+  /** Erzeugt die fiktiven Eingabedaten dieses Prüfmoduls; die tatsächliche Validierung bleibt beim Server. */
   const payload = () => ({
     title: "Fictional lifecycle teaching block",
     customer_name: "Fictional lifecycle customer",
@@ -28,6 +33,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
       ends_at: new Date(Date.UTC(2039, 0, day + n, 9)).toISOString(),
     })),
   });
+  /** Erzeugt den nächsten kontrollierten veröffentlichten Auftrag und verschiebt Folgetermine, damit unabhängige Gruppen nicht kollidieren. */
   const create = async () => {
     const result = await actor(
       admin,
@@ -37,6 +43,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
     day += 3;
     return result;
   };
+  /** Ruft die tatsächliche Claim-RPC auf; nur das Datenbankergebnis bestätigt eine vollständige Zuweisung. */
   const claim = async (job, who = teacher, key = randomUUID()) => {
     const version = await sql(
       `select terms_version from public.jobs where id='${job}'`,
@@ -45,14 +52,17 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
       await actor(who, `select public.claim_job('${job}','${key}',${version})`),
     );
   };
+  /** Liest den tatsächlichen versionierten Verwaltungszustand vor dem nächsten Vergleich. */
   const state = async (job, who = admin, aal = "aal2") =>
     JSON.parse(await actor(who, `select public.job_lifecycle('${job}')`, aal));
+  /** Sendet eine explizite Lebenszyklusaktion mit Version und Wiederholungskennung an den Datenbankvertrag. */
   const action = async (job, type, values = {}, key = randomUUID(), version) =>
     actor(
       admin,
       `select public.manage_job_offer('${job}',${quoteSql(type)},${version ?? (await state(job)).version},'${key}',${quoteSql(JSON.stringify(values))}::jsonb)`,
       "aal2",
     );
+  /** Storniert eine bestimmte Annahme mit tatsächlicher Identität und verlangt die zugehörige Serverprüfung. */
   const cancel = async (
     id,
     who = teacher,
@@ -65,6 +75,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
       `select public.cancel_job_assignment('${id}',${quoteSql(reason)},'${key}')`,
       aal,
     );
+  /** Zählt und meldet einen Fall erst, wenn sämtliche zugehörigen Assertions erfolgreich abgeschlossen sind. */
   const check = async (name, fn) => {
     await fn();
     checks++;
@@ -237,12 +248,14 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
     "Every genuine reopening renews its optional notice; exact retries and disabled preferences do not",
     async () => {
       const job = await create();
+      /** Liest die konkrete Meldung der Testperson, um Lesestatus und Wiederöffnungshistorie getrennt zu prüfen. */
       const notice = async () =>
         JSON.parse(
           await sql(
             `select to_jsonb(n) from public.notifications n where user_id='${teacher}' and kind='job_reopened' and resource_id='${job}'`,
           ),
         );
+      /** Bestätigt die konkret geprüfte Meldung als gelesen statt nur einen Browserzähler zu ändern. */
       const markRead = async () =>
         actor(
           teacher,
@@ -251,6 +264,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
       const originalPreferences = JSON.parse(
         await actor(teacher, "select public.notification_preferences()"),
       );
+      /** Ändert die Kategoriepräferenz der Testperson für den nachfolgenden Meldungsgrenztest. */
       const setUpdates = async (enabled) => {
         const current = JSON.parse(
           await actor(teacher, "select public.notification_preferences()"),
@@ -476,6 +490,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
       const org = await sql(
         `select organisation_id from private.job_commission_offers where job_id='${job}'`,
       );
+      /** Liest den geprüften Bestandszustand für Vergleiche vor und nach einer konkurrierenden oder abgelehnten Aktion. */
       const summary = async () =>
         JSON.parse(
           await actor(
@@ -535,6 +550,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
   await check(
     "Invoice submission serializes with cancellation after its accepted-claim check",
     async () => {
+      /** Legt die kontrollierte Rechnungsfixture zu einer angenommenen Position für den Stornierungs-/Rechnungswettlauf an. */
       const prepareInvoice = async (claimId) => {
         const document = randomUUID(),
           version = randomUUID(),

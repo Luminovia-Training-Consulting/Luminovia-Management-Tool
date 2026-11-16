@@ -1,4 +1,9 @@
+/**
+ * Erzeugt das begrenzte Konfigurationsoverlay der separaten GitHub-Vorschau.
+ * Projektkennung und Loopback-Ports werden getrennt; verschachtelte QA-/Vorschauoverlays werden abgewiesen.
+ */
 /** The preview changes only local service identity and loopback ports. */
+/** Erzeugt ausschließlich das bekannte Loopback-/Projekt-Overlay und lehnt inkompatible oder schon überlagerte Quellen ab. */
 export function githubPreviewConfig(source, project) {
   if (!/^luminovia-portal-github-[a-f0-9]{12}$/.test(project))
     throw new Error("Invalid owned GitHub preview project.");

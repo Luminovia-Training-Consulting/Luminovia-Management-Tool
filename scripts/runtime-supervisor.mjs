@@ -1,3 +1,7 @@
+/**
+ * Besitzt den lokalen Dienstverbund und schreibt seinen bestätigten Lebenszyklus.
+ * Migrationen, Scanner, Edge und Vite werden in Reihenfolge gestartet und datenerhaltend beendet.
+ */
 import { spawn } from "node:child_process";
 import { appendFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -32,6 +36,7 @@ privateDirectory();
 const config = projectConfig();
 const logPath = join(runtimeDir, "runtime.log");
 privateWrite(logPath, "");
+/** Schreibt ausschließlich redigierte Laufzeitausgabe in die private Logdatei. */
 const log = (text) => appendFileSync(logPath, redact(text), { mode: 0o600 });
 const startedAt = new Date().toISOString();
 let phase = "starting";
@@ -41,6 +46,7 @@ let scannerTouched = false;
 let migrations;
 let network;
 const children = [];
+/** Bindet jeden Zustand an Supervisor-PID, Sitzung und Startzeit. */
 const state = (extra) =>
   writeState({
     pid: process.pid,
@@ -54,10 +60,12 @@ const state = (extra) =>
     url: config.site,
     ...extra,
   });
+/** Persistiert den aktuellen Startschritt, damit CLI und private Diagnose denselben Fortschritt zeigen. */
 function stage(message) {
   log(message + "\n");
   state({ message });
 }
+/** Prüft einen lokalen Port vor dem Start, ohne einen vorhandenen Listener zu beenden. */
 async function available(port) {
   await new Promise((resolve, reject) => {
     const server = createServer();
@@ -71,6 +79,7 @@ async function available(port) {
     server.listen(port, "127.0.0.1", () => server.close(resolve));
   });
 }
+/** Stoppt eigene Kindprozesse und Dienste in ihrem Aufräumpfad und schreibt erst danach den Endzustand. */
 async function stop(exitCode = 0) {
   if (stopping) return;
   stopping = true;
@@ -121,6 +130,7 @@ async function stop(exitCode = 0) {
 }
 process.on("SIGTERM", () => void stop());
 process.on("SIGINT", () => void stop());
+/** Startet ein vom Supervisor besessenes Hintergrundprogramm und bindet dessen Ausgabe an das redigierte Protokoll. */
 function background(file, args, env) {
   const child = spawn(file, args, {
     cwd: root,

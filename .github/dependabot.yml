@@ -1,3 +1,5 @@
+# Actions-Pins erhalten normale Update-PRs. Reguläre npm-Versionen gehören zum
+# vollständigen täglichen Kandidatenpfad; npm-Sicherheitskorrekturen bleiben separat.
 version: 2
 updates:
   - package-ecosystem: github-actions

@@ -1,3 +1,6 @@
+/**
+ * Kundenverzeichnis mit berechtigten Kontakten, internen Notizen und Organisationseinstellungen. Gemeinsame Stammdaten und private Geschäftsangaben verwenden ihre bestehenden getrennten Tabellenrechte.
+ */
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -29,6 +32,7 @@ import {
   type Organisation,
   type Contact,
 } from "./data";
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const orgSchema = z.object({
   name: z.string().trim().min(1).max(200),
   country: z.string().max(100),
@@ -39,6 +43,7 @@ const orgSchema = z.object({
   private_notes: z.string().max(8000),
   archived: z.boolean(),
 });
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const contactSchema = z.object({
   name: z.string().trim().min(1).max(120),
   position: z.string().max(120),
@@ -47,6 +52,7 @@ const contactSchema = z.object({
   notes: z.string().max(4000),
   archived: z.boolean(),
 });
+/** Validiert Organisationsstammdaten und wartet für Anlage/Änderung auf die zuständige RPC. */
 function OrganisationForm({
   original,
   notes,
@@ -128,6 +134,7 @@ function OrganisationForm({
     </form>
   );
 }
+/** Bearbeitet Kontaktangaben im Kontext einer Organisation unter deren bestehenden privaten Datenrechten. */
 function ContactForm({
   original,
   organisation,
@@ -202,6 +209,7 @@ function ContactForm({
     </form>
   );
 }
+/** Verbindet Organisationsdetails, freigegebene Kontakte und getrennt gespeicherte interne Notizen. */
 function ClientWorkspace({ actor }: { actor: string }) {
   const { t } = useTranslation("operations");
   const orgs = useQuery(orgQuery(actor));
@@ -422,6 +430,7 @@ function ClientWorkspace({ actor }: { actor: string }) {
     </>
   );
 }
+/** Steuert Suche und Auswahl im berechtigten Organisationsverzeichnis. */
 export function ClientsPage() {
   const { t } = useTranslation("operations");
   const { session } = useAuth();

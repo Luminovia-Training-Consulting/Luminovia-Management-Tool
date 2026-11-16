@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für berechtigte Auditansicht, explizite Filter-/Cursorwechsel und fehlgeschlagene Zugriffe. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -46,6 +49,7 @@ const data = {
   actions: ["job.lifecycle.published", "taxonomy.created"],
 };
 const clients: QueryClient[] = [];
+/** Bildet einen awaitbaren SDK-Response samt Kettenmethode nach, ohne einen echten Backendzugriff auszuführen. */
 function response(data: unknown, error: unknown = null) {
   return Object.assign(Promise.resolve({ data, error }), {
     abortSignal() {
@@ -53,6 +57,7 @@ function response(data: unknown, error: unknown = null) {
     },
   });
 }
+/** Mountet den echten Fachscreen mit isoliertem Cache und kontrollierten SDK-Antworten. */
 function mount() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },

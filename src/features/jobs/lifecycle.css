@@ -1,3 +1,6 @@
+/**
+ * Angebotsaktionen, Claimhistorie und explizite Bestätigungsdialoge. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ */
 .job-lifecycle {
   margin-block: 1.5rem;
 }
@@ -8,6 +11,7 @@
   flex-wrap: wrap;
   gap: 0.65rem;
 }
+/* Kapazität und freie/angenommene Plätze stehen als eigener überprüfbarer Verwaltungsbereich. */
 .job-life-capacity {
   display: flex;
   flex-wrap: wrap;
@@ -29,6 +33,7 @@
 .job-life-form > button {
   justify-self: start;
 }
+/* Vergangene Claims und Freigaben bleiben als Historie lesbar statt aus dem Angebot zu verschwinden. */
 .job-life-history {
   display: grid;
   gap: 1rem;

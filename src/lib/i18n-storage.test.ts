@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für Sprachinitialisierung bei fehlender oder gesperrter Präferenzablage. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 
 afterEach(() => {

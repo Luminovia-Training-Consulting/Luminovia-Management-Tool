@@ -1,8 +1,12 @@
+/**
+ * Gemeinsamer Themen-/Tool-/Sprachenkatalog mit validierten Aliasdaten und Versionsschutz. Speichern und Archivieren erhalten bestehende Kennungen; der Server prüft Hierarchie, MFA und aktuelle Verwaltungsrechte.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 
+/** Versionierter Katalogeintrag mit Hierarchie, Aliasen und Archivstand. */
 export interface TaxonomyTopic {
   id: string;
   label_de: string;
@@ -16,6 +20,7 @@ export interface TaxonomyTopic {
   version: number;
   related_courses: { id: string; title: string }[];
 }
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 export const taxonomyFormSchema = z.object({
   label_de: z.string().trim().min(1).max(120),
   label_en: z.string().trim().min(1).max(120),
@@ -25,8 +30,10 @@ export const taxonomyFormSchema = z.object({
   description_de: z.string().max(4000),
   description_en: z.string().max(4000),
 });
+/** Validierter Katalogentwurf vor Normalisierung der Aliasliste. */
 export type TaxonomyFormValues = z.infer<typeof taxonomyFormSchema>;
 
+/** Validiert Katalogdaten, normalisiert eindeutige Aliasse und lehnt verbotene Steuerzeichen ab. */
 export function taxonomyPayload(values: TaxonomyFormValues) {
   const parsed = taxonomyFormSchema.parse(values);
   const controlText = (value: string) =>
@@ -53,6 +60,7 @@ export function taxonomyPayload(values: TaxonomyFormValues) {
   return { ...parsed, parent_id: parsed.parent_id || null, aliases };
 }
 
+/** Lädt die Serverprojektion über taxonomy_catalogue und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const taxonomyQuery = (
   actor: string,
   search = "",
@@ -81,6 +89,7 @@ export const taxonomyQuery = (
     staleTime: 15000,
   });
 
+/** Übermittelt einen neuen oder versioniert vorhandenen Katalogeintrag an die MFA-geschützte RPC. */
 export async function saveTaxonomyTopic(
   topic: TaxonomyTopic | null,
   values: TaxonomyFormValues,
@@ -94,6 +103,7 @@ export async function saveTaxonomyTopic(
   if (result.error) throw result.error;
   return result.data as string;
 }
+/** Archiviert beziehungsweise reaktiviert gegen die erwartete Version, ohne historische Referenzen umzuhängen. */
 export async function setTaxonomyArchived(
   topic: TaxonomyTopic,
   archived: boolean,

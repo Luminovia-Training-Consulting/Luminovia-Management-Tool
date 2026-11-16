@@ -1,3 +1,7 @@
+/**
+ * Gemeinsame Fixtures für echte Auth-/REST-/RPC-/Storage-Prüfungen.
+ * Nur das kanonische Zufallstestprojekt ist zulässig; Ressourcen werden vor ihren fiktiven Konten aufgeräumt.
+ */
 /** Real API fixtures belong only to the canonical disposable project, never dev. */
 import assert from "node:assert/strict";
 import { randomUUID, createHmac } from "node:crypto";
@@ -5,6 +9,7 @@ import { readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
 
+/** Berechnet den aktuellen sechsstelligen TOTP aus dem fiktiven MFA-Geheimnis; keine Codes protokollieren. */
 function totp(secret) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "").toUpperCase()]
@@ -24,12 +29,14 @@ function totp(secret) {
     .toString()
     .padStart(6, "0");
 }
+/** Wertet den tatsächlichen SDK-Erfolg aus und gibt erst danach dessen Daten zurück. */
 async function checked(request, label = "API operation") {
   const { data, error } = await request;
   assert.equal(error, null, `${label}: ${error?.message}`);
   return data;
 }
 
+/** Prüft Testmodus, Zufallsprojekt und API-Port vor jeder Mutation und sammelt Fachfehler sowie Cleanupfehler getrennt. */
 export async function withApiFixture(run) {
   assert.equal(
     process.env.PORTAL_TEST_MODE,
@@ -55,6 +62,7 @@ export async function withApiFixture(run) {
     "55321",
     "Dedicated canonical API port required.",
   );
+  /** Erzeugt einen getrennten SDK-Client ohne persistierte oder automatisch erneuerte Testsitzung. */
   const make = (key) =>
     createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -64,6 +72,7 @@ export async function withApiFixture(run) {
     users = [],
     cleanups = [];
   const suffix = randomUUID();
+  /** Sendet SQL an die eigene Testdatenbank und lässt jeden psql-Fehler den Prüflauf ablehnen. */
   const sql = (text) =>
     new Promise((resolve, reject) => {
       const child = spawn(
@@ -96,6 +105,7 @@ export async function withApiFixture(run) {
       );
       child.stdin.end(text);
     });
+  /** Erstellt eine fiktive Auth-Identität, weist ihre Fixture-Rolle zu und meldet einen getrennten flüchtigen Client an. */
   const actor = async (name, role) => {
     assert.match(name, /^[a-z][a-z0-9-]{0,40}$/i);
     const email = `m4-${name}-${suffix}@example.invalid`;
@@ -130,6 +140,7 @@ export async function withApiFixture(run) {
     );
     return { id: result.user.id, email, client };
   };
+  /** Verifiziert einen echten TOTP-Faktor, damit privilegierte Prüfaufrufe tatsächlich AAL2 verwenden. */
   const mfa = async (client) => {
     const factor = await checked(
       client.auth.mfa.enroll({
@@ -146,6 +157,7 @@ export async function withApiFixture(run) {
       "Verify real TOTP",
     );
   };
+  // Fachfehler bleiben erhalten, während abhängige Ressourcen vor Kanälen und Konten in umgekehrter Reihenfolge verschwinden.
   let failure;
   let result;
   const cleanupErrors = [];
@@ -195,6 +207,7 @@ export async function withApiFixture(run) {
         }
     }
   }
+  // Auch ein fachlich erfolgreicher Lauf darf bei unvollständigem Cleanup keinen Erfolg melden.
   if (cleanupErrors.length)
     throw new AggregateError(
       failure ? [failure, ...cleanupErrors] : cleanupErrors,

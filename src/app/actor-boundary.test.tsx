@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für direkte Kontowechsel, erhaltenen lokalen Zustand bei gleichem Akteur und den öffentlichen Auth-Callback. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -92,6 +95,7 @@ afterEach(() => {
   state.actor = "actor-a";
   state.callback = null;
 });
+/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
 function setup(path = "/") {
   vi.stubGlobal(
     "matchMedia",
@@ -116,6 +120,7 @@ function setup(path = "/") {
   );
   return { client, user: userEvent.setup() };
 }
+/** Löst das native Auth-Ereignisfixture aus und wartet auf die dadurch ausgelösten React-Zustandsänderungen. */
 async function sessionEvent(event: AuthChangeEvent, actor: string) {
   await act(async () => {
     state.actor = actor;

@@ -1,7 +1,11 @@
+/**
+ * Begrenzte persönliche Vorschauqueries für jüngste saubere Dateien und kommende eigene Termine. Die Startseite lädt keine vollständigen Datei- oder Kalenderhistorien und prüft Datensicht über die bestehenden RLS-Abfragen.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import type { PersonalEvent } from "../../lib/types";
 
+/** Begrenzte Dateimetadaten für die Startseite ohne private Dateibytes. */
 export interface RecentDocument {
   id: string;
   original_name: string;
@@ -10,6 +14,7 @@ export interface RecentDocument {
 
 // Keep the existing invalidation prefixes, but fetch only bounded preview
 // metadata instead of loading the file centre or a whole calendar history.
+/** Lädt die berechtigten documents-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const recentDocumentsQuery = (actor: string) =>
   queryOptions({
     queryKey: ["documents", actor, "dashboard-recent"],
@@ -29,6 +34,7 @@ export const recentDocumentsQuery = (actor: string) =>
     retry: false,
   });
 
+/** Lädt die berechtigten personal_events-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const nextPersonalEventsQuery = (actor: string) =>
   queryOptions({
     queryKey: ["events", actor, "dashboard-next"],

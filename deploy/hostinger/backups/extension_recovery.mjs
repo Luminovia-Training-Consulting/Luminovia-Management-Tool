@@ -1,3 +1,6 @@
+/**
+ * Stellt den geprüften Erweiterungszustand samt ACLs und Funktionseinstellungen nach einem logischen Restore wieder her. Versions-/Hashprüfungen verhindern, dass ein beliebiges neues Extension-Inventar als gleichwertig gilt.
+ */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -5,6 +8,7 @@ import { resolve } from "node:path";
 import { collectCommand } from "../backup.mjs";
 
 // Public original installer bytes only. Never called against a live container.
+// Installiert ausschließlich den gesicherten, geprüften Erweiterungskatalog und kontrolliert die verfügbare Version.
 export async function installExtensionRecovery(
   database,
   requested,
@@ -84,6 +88,7 @@ export async function installExtensionRecovery(
   };
 }
 
+// Gleicht Restore-bedingte ACL-Darstellung an das erwartete Inventar an; unerwartete Privilegien werden nicht still akzeptiert.
 export async function canonicalizePrivileges(database, actual, expected) {
   const descriptors = [];
   const ids = new Map();
@@ -121,6 +126,7 @@ export async function canonicalizePrivileges(database, actual, expected) {
 // later ALTER FUNCTION settings. Replay the captured settings only for genuine
 // extension members; ordinary application functions must survive pg_restore
 // unchanged and are checked without this repair.
+// Setzt gesicherte Funktionseinstellungen nur für die erwarteten Erweiterungsfunktionen zurück.
 export async function restoreExtensionFunctionSettings(
   database,
   source,

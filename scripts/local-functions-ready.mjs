@@ -1,3 +1,7 @@
+/**
+ * Prüft Bereitschaft des tatsächlichen lokalen Einladungshandlers.
+ * Nur dessen erwartete anonyme Ablehnung zählt; eine erfolgreiche Gateway-OPTIONS-Antwort genügt nicht.
+ */
 import { setTimeout as delay } from "node:timers/promises";
 
 process.loadEnvFile(".env.test.local");

@@ -1,3 +1,6 @@
+/**
+ * Zusätzliche Strukturprüfung für kanonische kleine PNG-Profilbilder. Prüft Header, CRCs, erlaubte Chunks und begrenzte entpackte Scanlines; der verpflichtende Malware-Scan bleibt ein eigener Schritt.
+ */
 export const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
 const MAX_AVATAR_EDGE = 512;
 const signature = [137, 80, 78, 71, 13, 10, 26, 10];
@@ -7,11 +10,13 @@ const table = Uint32Array.from({ length: 256 }, (_, value) => {
     crc = crc & 1 ? 0xedb88320 ^ (crc >>> 1) : crc >>> 1;
   return crc >>> 0;
 });
+// Berechnet die PNG-Chunk-Prüfsumme über Typ und Nutzbytes, um manipulierte Chunks zu erkennen.
 export function crc32(bytes: Uint8Array): number {
   let crc = 0xffffffff;
   for (const byte of bytes) crc = table[(crc ^ byte) & 255] ^ (crc >>> 8);
   return (crc ^ 0xffffffff) >>> 0;
 }
+// Erzeugt den stabilen Strukturfehler ohne Bytes oder private Dateiinhalte in der Fehlermeldung.
 function invalid(): never {
   throw new Error("avatar_image_invalid");
 }
@@ -19,6 +24,7 @@ function invalid(): never {
 /** Canonical browser output only: small RGB/RGBA PNG, no textual/EXIF/profile
  * chunks, correct CRCs and bounded decoded scanlines. ClamAV remains mandatory;
  * image structure validation is an additional boundary, not a scan substitute. */
+// Validiert das begrenzte kanonische PNG einschließlich entpackter Zeilenlänge; fremde Metadatenchunks werden nicht übernommen.
 export async function validateAvatar(bytes: Uint8Array): Promise<void> {
   if (bytes.length > MAX_AVATAR_SIZE || bytes.length < 57) invalid();
   if (!signature.every((value, i) => bytes[i] === value)) invalid();

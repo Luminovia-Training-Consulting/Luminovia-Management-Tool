@@ -1,3 +1,7 @@
+/**
+ * Echte Auth-/HTTP-Prüfung für private Verfügbarkeit und ausdrücklich geteilte Zeitfenster.
+ * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
+ */
 /** Real native Auth/MFA/REST availability; never normal or hosted project data. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -38,6 +42,7 @@ await withApiFixture(async ({ service, actor, mfa, checked, sql, defer }) => {
         service.from("organisations").delete().eq("id", organisation),
       );
   });
+  // Eigene Notizen und Fenster bleiben zunächst privat, selbst gegenüber Administration.
   const body = {
     kind: "available",
     starts_at: "2061-05-01T08:00:00Z",
@@ -46,6 +51,7 @@ await withApiFixture(async ({ service, actor, mfa, checked, sql, defer }) => {
     notes: "Fictional private note NEVER IN MANAGEMENT",
     share_with_management: false,
   };
+  /** Sendet den geprüften Entwurf mit dessen Versions-/Identitätsbezug an die zuständige API. */
   const save = (who, key, payload, version = 0) =>
     who.client.rpc("save_lecturer_availability", {
       p_id: key,
@@ -86,6 +92,7 @@ await withApiFixture(async ({ service, actor, mfa, checked, sql, defer }) => {
       })
     ).error,
   );
+  // MFA allein teilt keine Kalenderdaten: erst die ausdrückliche Freigabe öffnet die reduzierte Projektion.
   await mfa(admin.client);
   assert.deepEqual(
     await checked(
@@ -118,6 +125,7 @@ await withApiFixture(async ({ service, actor, mfa, checked, sql, defer }) => {
     [],
   );
   assert.equal((await save(teacher, id, body, 1)).error?.code, "40001");
+  // Eine private Sperrzeit muss den echten Claim atomar ablehnen, ohne eine Teilzuweisung zu hinterlassen.
   const interval = {
     starts_at: "2061-05-02T08:00:00Z",
     ends_at: "2061-05-02T09:00:00Z",
@@ -210,6 +218,7 @@ await withApiFixture(async ({ service, actor, mfa, checked, sql, defer }) => {
         .eq("id", id)
     ).error,
   );
+  // Bereits ausgegebene Tokens dürfen nach tatsächlicher Kontosperrung keine Rechte behalten.
   await checked(
     service.from("profiles").update({ active: false }).eq("id", teacher.id),
   );

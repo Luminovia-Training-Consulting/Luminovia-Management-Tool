@@ -1,6 +1,11 @@
+/**
+ * Misst echte berechnete Schaltflächenfarben unmittelbar beim Themewechsel.
+ * Die Leuchtdichteformel und der erste Zwischenzustand prüfen auch kurzzeitige Kontrastverluste.
+ */
 import type { Page } from "@playwright/test";
 
 /** Sample the first computed state, not a later settled animation frame. */
+/** Liest die echten ersten berechneten Farben beim Themewechsel und stellt den ursprünglichen DOM-Zustand anschließend wieder her. */
 export async function sampleThemeContrast(page: Page) {
   return await page.evaluate(async () => {
     await document.fonts.ready;
@@ -11,6 +16,7 @@ export async function sampleThemeContrast(page: Page) {
     fixture.innerHTML =
       '<button type="button" class="button button-primary">Primary action</button><button type="button" class="button button-secondary">Secondary action</button>';
     document.body.append(fixture);
+    /** Wandelt opake RGB-Kanäle gemäß sRGB in relative Leuchtdichte um; transparente oder fremde Farbmodelle scheitern. */
     const luminance = (color: string) => {
       if (!/^rgba?\(/.test(color))
         throw new Error(
@@ -25,6 +31,7 @@ export async function sampleThemeContrast(page: Page) {
       });
       return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
     };
+    /** Liest Vorder-/Hintergrundfarbe jedes Prüfbuttons synchron, bevor ein späterer Animationszustand den Befund verdeckt. */
     const sample = (theme: string) =>
       [...fixture.querySelectorAll("button")].map((button) => {
         const style = getComputedStyle(button);

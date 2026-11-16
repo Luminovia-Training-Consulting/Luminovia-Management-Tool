@@ -1,3 +1,7 @@
+/**
+ * Auslieferbarer OpenAPI-Vertrag der Account-HTTP-API. Die Schemata beschreiben Eingaben und Antworten; Berechtigung und MFA werden weiterhin durch Handler und aktuelle Datenbankfunktionen erzwungen.
+ */
+// Definiert eine JSON-Antwort für den auslieferbaren HTTP-Vertrag.
 const jsonResponse = (schema: unknown = { type: "object" }) => ({
   description: "Confirmed server result",
   content: { "application/json": { schema } },
@@ -8,6 +12,7 @@ const errors = {
   "403": { description: "Capability and verified MFA required" },
   "503": { description: "Unavailable; no success is implied" },
 };
+// Definiert einen verpflichtenden JSON-Requestbody, ohne daraus eine Laufzeit-Autorisierung abzuleiten.
 const jsonBody = (schema: unknown) => ({
   required: true,
   content: { "application/json": { schema } },

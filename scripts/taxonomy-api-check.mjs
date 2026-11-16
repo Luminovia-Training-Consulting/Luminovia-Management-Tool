@@ -1,3 +1,7 @@
+/**
+ * Echte Auth-/HTTP-Prüfung für gemeinsame Themenhierarchie, Aliasnamen und archivierte Einträge.
+ * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
+ */
 /** Actual local Auth/MFA/REST taxonomy journey, guarded by the canonical fixture. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -34,6 +38,7 @@ await withApiFixture(
         );
       }
     });
+    /** Erzeugt die fiktiven Eingabedaten dieses Prüfmoduls; die tatsächliche Validierung bleibt beim Server. */
     const payload = (label) => ({
       label_de: label,
       label_en: `EN ${label}`,
@@ -63,6 +68,7 @@ await withApiFixture(
       ).error,
     );
     await mfa(manager.client);
+    // Eltern-/Kinddaten werden über die echte API angelegt; Referenzen müssen bei späterer Archivierung stabil bleiben.
     const parent = await checked(
       manager.client.rpc("save_taxonomy_topic", {
         p_id: null,
@@ -99,6 +105,7 @@ await withApiFixture(
         .insert({ template_id: template, topic_id: child }),
       "Link same real topic identity",
     );
+    // Entdeckung kombiniert Aliasfilter und aktuelle Ressourcenrechte, ohne private Vorlagen mitzuteilen.
     const query = {
       p_search: `Alias-${suffix}`,
       p_kind: "tool",

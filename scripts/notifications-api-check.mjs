@@ -1,3 +1,7 @@
+/**
+ * Echte Auth-/HTTP-Prüfung für eigene Meldungen, Lesestatus und Kategorieeinstellungen.
+ * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
+ */
 /** Actual Auth/REST notification preferences, ownership, cursor and revocation. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -21,6 +25,7 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, url }) => {
         `delete from public.chat_message_revisions where message_id in(select id from public.messages where room_id=${q(room)});delete from public.message_reactions where message_id in(select id from public.messages where room_id=${q(room)});delete from public.messages where room_id=${q(room)};delete from public.chat_members where room_id=${q(room)};delete from public.chat_rooms where id=${q(room)};`,
       );
   });
+  // Eine fremde Inbox und mehr Datensätze als eine Seite machen Isolation und Cursorfehler beobachtbar.
   const rows = Array.from({ length: 45 }, () => ({
     id: randomUUID(),
     user_id: owner.id,
@@ -29,17 +34,15 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, url }) => {
   }));
   const foreign = randomUUID();
   await checked(
-    service
-      .from("notifications")
-      .insert([
-        ...rows,
-        {
-          id: foreign,
-          user_id: peer.id,
-          kind: "activity",
-          resource_id: randomUUID(),
-        },
-      ]),
+    service.from("notifications").insert([
+      ...rows,
+      {
+        id: foreign,
+        user_id: peer.id,
+        kind: "activity",
+        resource_id: randomUUID(),
+      },
+    ]),
     "Create scoped fictional inboxes",
   );
   const page = await checked(
@@ -62,6 +65,7 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, url }) => {
     new Set([...page.items, ...next.items].map((item) => item.id)).size,
     40,
   );
+  // Ein gemischter eigener/fremder Stapel muss vollständig scheitern, ohne eigene Meldungen teilweise zu ändern.
   const forged = await owner.client.rpc("mark_notifications", {
     p_ids: [rows[0].id, foreign],
     p_read: true,
@@ -85,16 +89,15 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, url }) => {
     ).items.length,
     0,
   );
+  // Nach dem gelesenen as_of eintreffende Meldungen dürfen durch späteres Sammellesen nicht verschwinden.
   const late = randomUUID();
   await checked(
-    service
-      .from("notifications")
-      .insert({
-        id: late,
-        user_id: owner.id,
-        kind: "activity",
-        resource_id: randomUUID(),
-      }),
+    service.from("notifications").insert({
+      id: late,
+      user_id: owner.id,
+      kind: "activity",
+      resource_id: randomUUID(),
+    }),
     "Create later arrival",
   );
   await checked(
@@ -129,6 +132,7 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, url }) => {
     job_updates: false,
     reminders: true,
   };
+  // Zwei echte gleichzeitige Updates benutzen dieselbe Version: genau eines muss gewinnen.
   const saves = await Promise.all(
     [1, 2].map(() =>
       owner.client.rpc("save_notification_preferences", {
@@ -162,13 +166,11 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, url }) => {
     "22023",
   );
   await checked(
-    service
-      .from("notifications")
-      .insert({
-        user_id: owner.id,
-        kind: "chat_message",
-        resource_id: randomUUID(),
-      }),
+    service.from("notifications").insert({
+      user_id: owner.id,
+      kind: "chat_message",
+      resource_id: randomUUID(),
+    }),
     "Insert optional disabled event",
   );
   assert.ok(

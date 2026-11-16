@@ -1,3 +1,6 @@
+/**
+ * Schaltet nur den mit dem aktuellen Kandidatenbesitzer markierten Scanner für Ausfalltests. Containername allein genügt nicht; Docker-Metadaten müssen Projekt und Besitzer bestätigen.
+ */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 
@@ -7,6 +10,7 @@ assert.deepEqual(process.argv.slice(2), ["start"]);
 const owner = process.env.PORTAL_CANDIDATE_OWNER;
 assert.match(owner ?? "", /^luminovia-portal-test-[a-f0-9]{24}$/);
 const name = `portal_scanner_${owner}`;
+// Ruft Docker ohne Shellinterpolation auf; Zielcontainer und Besitzer werden getrennt überprüft.
 const docker = (args) =>
   execFileSync("docker", args, {
     encoding: "utf8",

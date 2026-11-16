@@ -1,3 +1,7 @@
+/**
+ * Gemeinsame DTOs des ursprünglichen Profil-/Auftrags-/Kalendervertrags. ISO-Instants, IANA-Zonen und akzeptierte Konditionen werden getrennt gehalten; Featureerweiterungen ergänzen ihre Typen im zuständigen Modul.
+ */
+/** Eigene Profilstammdaten einschließlich Anzeigezone; kein Ersatz für aktuelle Rollen-/Capability-Abfragen. */
 export interface Profile {
   id: string;
   display_name: string;
@@ -8,6 +12,7 @@ export interface Profile {
   locale: string;
   active: boolean;
 }
+/** Gemeinsamer Expertiseeintrag mit DE/EN-Bezeichnung und optionaler Archiv-/Hierarchiereferenz. */
 export interface Topic {
   id: string;
   label_de: string;
@@ -20,18 +25,21 @@ export interface Topic {
   description_de?: string;
   description_en?: string;
 }
+/** Ausgewählte Qualifikation mit getrenntem Managementprüfstatus und Ablaufdatum. */
 export interface Expertise {
   user_id: string;
   topic_id: string;
   verified: boolean;
   valid_until: string | null;
 }
+/** Ein konkreter Angebotstermin als Start-/Endinstant. */
 export interface JobSession {
   id: string;
   job_id: string;
   starts_at: string;
   ends_at: string;
 }
+/** Aktuelle Angebotsprojektion einschließlich Konditionsversion, Kapazitätsbasis und zugehörigen Terminen. */
 export interface Job {
   capacity?: number;
   capacity_basis?: "single_position" | "per_position";
@@ -54,6 +62,7 @@ export interface Job {
   job_sessions: JobSession[];
   job_requirements: { topic_id: string }[];
 }
+/** Akzeptierter Zuweisungssnapshot mit eigenem Honorar und reservierten Terminintervallen. */
 export interface Claim {
   id: string;
   job_id: string;
@@ -73,6 +82,7 @@ export interface Claim {
     ends_at: string;
   }[];
 }
+/** Eigener privater Kalendertermin mit Instants und beabsichtigter Anzeigezone. */
 export interface PersonalEvent {
   id: string;
   user_id: string;

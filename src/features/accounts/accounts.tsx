@@ -1,3 +1,6 @@
+/**
+ * Kontoverzeichnis und kontrollierte Rollen-/Aktivierungsänderungen. Das UI lädt erst aktuelle Rechte und verwendet die Accounts-API; weder der sichtbare Rollenwähler noch eine Benutzer-ID erteilt Berechtigungen.
+ */
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +27,7 @@ import {
   type AccountRole,
 } from "./api";
 import "./i18n";
+/** Hält Such-/Seitenentwürfe und bestätigte Kontoänderungen im aktuellen Akteurskontext. */
 function AccountsDirectory({
   actorId,
   canAssign,
@@ -307,6 +311,7 @@ function AccountsDirectory({
     </>
   );
 }
+/** Lädt aktuelle Konto-Capabilities vor der Verzeichnisansicht und trennt Fehler von fehlenden Rechten. */
 export function AccountsPage() {
   const { session } = useAuth();
   const { t } = useTranslation("accounts");

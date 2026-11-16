@@ -1,5 +1,9 @@
+/**
+ * Sichtbarkeitsgefilterte Personen-, Kurs-, Review- und Einschreibungsprojektionen. Eigene Details und geteiltes Profil bleiben getrennt; personenbezogene Ziel-IDs sind keine Berechtigungsnachweise.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
+/** Bewusst geteilte Expertiseprojektion einschließlich überprüftem Status. */
 export interface PublicTopic {
   id: string;
   label_de: string;
@@ -7,6 +11,7 @@ export interface PublicTopic {
   kind: string;
   verified: boolean;
 }
+/** Freigegebene Personenübersicht ohne private Vertrags-/Kontaktdaten. */
 export interface PersonSummary {
   id: string;
   display_name: string;
@@ -20,6 +25,7 @@ export interface PersonSummary {
   rating_average: number;
   review_count: number;
 }
+/** Erweiterte erlaubte Profilansicht der ausgewählten Person. */
 export interface PersonDetails extends Omit<
   PersonSummary,
   "rating_average" | "review_count"
@@ -27,12 +33,14 @@ export interface PersonDetails extends Omit<
   teaching_experience: string;
   can_moderate: boolean;
 }
+/** Eigene zusätzliche Profildaten für Erfahrung, Sprachen, Land und Labels. */
 export interface ProfileDetails {
   country: string;
   languages: string[];
   teaching_experience: string;
   labels: string[];
 }
+/** Freigegebene Unterrichtshistorie mit ausdrücklich ausgewiesener Öffnungserlaubnis. */
 export interface TaughtCourse {
   can_open: boolean;
   course_run_id: string;
@@ -43,6 +51,7 @@ export interface TaughtCourse {
   state: "upcoming" | "current" | "past";
   topic_ids: string[];
 }
+/** Berechtigte Kursbewertung mit Änderungs-/Rückzugsstand. */
 export interface CourseReview {
   id: string;
   course_run_id: string;
@@ -58,6 +67,7 @@ export interface CourseReview {
   hidden: boolean;
   moderation_reason: string;
 }
+/** Vom Server bestätigte bewertbare Kurs-/Dozierendenbeziehung samt vorhandenem eigenen Review. */
 export interface ReviewableCourse {
   course_run_id: string;
   title: string;
@@ -74,12 +84,14 @@ export interface ReviewableCourse {
     deleted: boolean;
   } | null;
 }
+/** Verwaltungsprojektion einer expliziten Kurseinschreibung. */
 export interface Enrolment {
   user_id: string;
   display_name: string;
   status: "enrolled" | "completed" | "removed";
   updated_at: string;
 }
+/** Verwendet den gemeinsamen nativen Client und propagiert Fach-/Rechtefehler aus Personen-RPCs. */
 export async function peopleRpc<T>(
   name: string,
   parameters: Record<string, unknown> = {},
@@ -88,6 +100,7 @@ export async function peopleRpc<T>(
   if (error) throw error;
   return data as T;
 }
+/** Lädt die freigegebene Personenprojektion für Suchtext, Label und Thema mit getrenntem Akteurscache. */
 export const peopleDirectoryQuery = (
   actor: string,
   search: string,
@@ -103,24 +116,28 @@ export const peopleDirectoryQuery = (
         p_topic_id: topic || null,
       }),
   });
+/** Lädt die erlaubte Profilansicht des Ziels; actor trennt Caches und target wird serverseitig auf Sichtbarkeit geprüft. */
 export const personQuery = (actor: string, target: string) =>
   queryOptions({
     queryKey: ["person", actor, target],
     queryFn: () =>
       peopleRpc<PersonDetails>("person_profile", { p_user_id: target }),
   });
+/** Lädt nur die für den Aufrufer freigegebene Unterrichtshistorie der ausgewählten Person. */
 export const profileCoursesQuery = (actor: string, target: string) =>
   queryOptions({
     queryKey: ["profile-courses", actor, target],
     queryFn: () =>
       peopleRpc<TaughtCourse[]>("profile_courses", { p_user_id: target }),
   });
+/** Lädt die berechtigt sichtbaren Bewertungen der ausgewählten Person statt private Kursbeziehungen offenzulegen. */
 export const reviewsQuery = (actor: string, target: string) =>
   queryOptions({
     queryKey: ["lecturer-reviews", actor, target],
     queryFn: () =>
       peopleRpc<CourseReview[]>("lecturer_reviews", { p_user_id: target }),
   });
+/** Zerlegt Kommalisten, begrenzt Anzahl/Länge und verwirft Steuerzeichen vor dem Speichern eigener Profillabels. */
 export function labelText(value: string, maximum = 20, length = 40): string[] {
   const values = value
     .split(",")

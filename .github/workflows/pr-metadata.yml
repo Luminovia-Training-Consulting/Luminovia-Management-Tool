@@ -1,3 +1,4 @@
+# Labels werden als Daten aus der API gelesen, niemals als Shell-Programm ausgeführt.
 name: Pull request metadata
 on:
   pull_request:

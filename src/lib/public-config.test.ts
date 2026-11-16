@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für öffentliche Buildkonfiguration und Ablehnung privater oder falsch klassifizierter Schlüssel. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { describe, expect, it } from "vitest";
 import { validatePublicConfig } from "../../scripts/public-config";
 const jwt = (role: string) =>

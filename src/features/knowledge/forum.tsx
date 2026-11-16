@@ -1,3 +1,6 @@
+/**
+ * Forum mit Themen, Antworten, akzeptierter Antwort, Abonnements und sichtbarer Moderation. Neue Beiträge und Aktionen warten auf Serverbestätigung und aktualisieren nur die betroffenen Query-Bereiche.
+ */
 import { useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -48,10 +51,12 @@ import { KnowledgeEditor } from "./editor";
 import { CategoryManager } from "./categories";
 import "./i18n";
 import "./knowledge.css";
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const threadSchema = z.object({
   title: z.string().trim().min(1).max(200),
   category: z.string().min(1),
 });
+/** Legt ein validiertes Forumthema mit normalisiertem Erstbeitrag über den Serververtrag an. */
 function CreateThread({
   actor,
   categories,
@@ -161,6 +166,7 @@ function CreateThread({
     </form>
   );
 }
+/** Hält Antwortinhalt lokal und meldet erst nach bestätigtem Posten einen erfolgreichen Beitrag. */
 function ReplyForm({ actor, thread }: { actor: string; thread: ForumThread }) {
   const { t } = useTranslation("knowledge");
   const online = useOnline();
@@ -223,6 +229,7 @@ function ReplyForm({ actor, thread }: { actor: string; thread: ForumThread }) {
     </form>
   );
 }
+/** Rendert einen erlaubten Beitrag mit eigenen Änderungen und zulässigen Moderations-/Antwortaktionen. */
 function ForumPostView({
   actor,
   thread,
@@ -512,6 +519,7 @@ function ForumPostView({
     </article>
   );
 }
+/** Verbindet Thema, paginierte Beiträge und bestätigte Abonnement-/Moderationsaktionen. */
 function ForumThreadView({
   actor,
   id,
@@ -685,6 +693,7 @@ function ForumThreadView({
     </>
   );
 }
+/** Zeigt freigegebene Moderationsmeldungen und deren explizite Bearbeitung. */
 function Reports({
   actor,
   open,
@@ -767,6 +776,7 @@ function Reports({
     </Dialog>
   );
 }
+/** Steuert Kategorie-/Themenauswahl, Suche und autorisierte Moderation des Forums. */
 export function ForumPage() {
   const { t, i18n } = useTranslation("knowledge");
   const online = useOnline();

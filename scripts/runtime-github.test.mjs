@@ -1,3 +1,7 @@
+/**
+ * Echte temporäre Git-Repositories prüfen den lokalen Vorschau- und Updatevertrag.
+ * Fiktive Laufzeitprogramme belegen Besitz, Quellschutz und Datenerhalt ohne gehostete Dienste.
+ */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { execFileSync, spawn } from "node:child_process";
@@ -42,6 +46,7 @@ additional_redirect_urls = ["http://127.0.0.1:5173/auth/callback"]
 inspector_port = 8083
 `;
 
+/** Führt Git ausschließlich im jeweils eigenen temporären Fixture-Repository aus. */
 function git(directory, ...args) {
   return execFileSync(
     "git",
@@ -79,6 +84,7 @@ if(action==='test'){
 console.log('fixture '+action);
 `;
 
+/** Erzeugt temporäres Upstream-Repository, Seed-Checkout und Launcher mit fiktivem Laufzeitprogramm; die Tests besitzen das spätere Cleanup. */
 function fixture() {
   const directory = mkdtempSync(join(tmpdir(), "portal-github-fixture-"));
   const remote = join(directory, "remote.git");
@@ -105,6 +111,7 @@ function fixture() {
     join(checkout, "deploy/hostinger/updates/updater.py"),
   );
   git(seed, "remote", "add", "origin", pathToFileURL(remote).href);
+  /** Erzeugt den nächsten fiktiven Quellstand, dessen genaue SHA im Vorschauvertrag geprüft wird. */
   function commit(message = "fixture source") {
     git(seed, "add", ".");
     git(seed, "commit", "--quiet", "-m", message);
@@ -124,6 +131,7 @@ function fixture() {
     first,
     preview,
     commit,
+    /** Entfernt die vom Prüflauf erzeugten Ressourcen; Aufräumen darf keinen fachlichen Testfehler verbergen. */
     cleanup() {
       rmSync(directory, { recursive: true, force: true });
     },

@@ -1,3 +1,6 @@
+/**
+ * Profilbildanzeige und eigener Avatar-Editor mit lokalem Fallback. Objekt-URLs bleiben an Akteur, Ziel und Auswahl gebunden und werden bei Austausch, Offlinezustand oder Unmount freigegeben.
+ */
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -15,6 +18,7 @@ import {
 import "./avatar-i18n";
 import "./avatar.css";
 
+/** Zeigt nur zur aktiven Identität/Selektion passende Avatarbytes und fällt bei fehlender Freigabe auf Initialen zurück. */
 export function Avatar({
   userId,
   name,
@@ -81,6 +85,7 @@ export function Avatar({
   );
 }
 
+/** Verbindet lokale Bildaufbereitung, echten Scan-Upload und versionsgebundene eigene Avatarauswahl. */
 export function AvatarEditor({ name }: { name: string }) {
   const { session } = useAuth();
   const { t } = useTranslation("avatar");

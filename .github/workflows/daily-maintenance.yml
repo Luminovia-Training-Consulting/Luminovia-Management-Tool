@@ -1,3 +1,5 @@
+# Tägliche Komponentenpflege: jeden Kandidaten einzeln prüfen, die Kombination
+# erneut prüfen und nur einen quellengebundenen erfolgreichen Stand promoten.
 name: Daily verified component maintenance
 on:
   schedule:
@@ -34,6 +36,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: node deploy/hostinger/maintenance/promote.mjs signature-probe
   discover:
+    # Ermittelt Kandidaten aus öffentlichem Quellstand; keine Änderung an main/VPS.
     if: inputs.signature_probe_only != true
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -60,6 +63,8 @@ jobs:
           retention-days: 14
           if-no-files-found: error
   candidates:
+    # Ein Fehlschlag wird als Ergebnis exportiert und darf andere Kandidaten nicht
+    # verdecken. continue-on-error ist keine Freigabe eines fehlgeschlagenen Updates.
     needs: discover
     if: needs.discover.outputs.has_candidates == 'true'
     runs-on: ubuntu-latest
@@ -126,6 +131,7 @@ jobs:
           retention-days: 14
           if-no-files-found: error
   combined:
+    # Einzelerfolge beweisen keine gemeinsame Kompatibilität; deshalb erneute Abnahme.
     if: always() && needs.discover.result == 'success'
     needs: [discover, candidates]
     runs-on: ubuntu-latest
@@ -182,6 +188,8 @@ jobs:
           retention-days: 14
           if-no-files-found: error
   fallback:
+    # Falls die Kombination scheitert, sucht der bestehende Plan einen erneut
+    # prüfbaren kleineren Satz. Fehlgeschlagene Ergebnisse werden nicht umetikettiert.
     if: always() && needs.discover.result == 'success' && needs.combined.result == 'failure'
     needs: [discover, candidates, combined]
     runs-on: ubuntu-latest

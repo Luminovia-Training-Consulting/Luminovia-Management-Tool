@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Operatorinstaller für die täglichen OS-/Rebootfenster mit Backupfrische und gemeinsamer Wartungssperre. Die generierten Units sind Teil des Betriebsvertrags; ihr Installieren ist eine gesonderte Serveraktion.
 # Distribution-supported stable updates; no release upgrade or new repository.
 set -euo pipefail
 

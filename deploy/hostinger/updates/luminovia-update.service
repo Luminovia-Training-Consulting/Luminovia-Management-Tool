@@ -1,3 +1,4 @@
+# Ein begrenzter Updaterversuch unter gemeinsamer Wartungssperre. Secrets bleiben in privaten Instanzdateien; der Timer allein garantiert weder eine erfolgreiche CI noch eine Installation.
 [Unit]
 Description=Install a verified Luminovia CMS release from GitHub
 Wants=network-online.target docker.service

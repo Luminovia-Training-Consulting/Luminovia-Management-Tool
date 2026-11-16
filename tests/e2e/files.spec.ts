@@ -1,3 +1,7 @@
+/**
+ * Browserabläufe für echte gescannte private Bytes, Vorschau und exakte Dokumentversionen.
+ * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ */
 import { test, expect, type Request } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
@@ -6,6 +10,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Run through ./portal test in its isolated database.",
 );
+/** Meldet die konkrete Testperson über die sichtbaren Anmeldefelder an und wartet auf die bestätigte Navigation. */
 async function login(page: import("@playwright/test").Page) {
   await page.goto("/login");
   await page
@@ -89,6 +94,7 @@ test("real private upload is scanned, downloaded, versioned and archived through
   await page.waitForLoadState("networkidle");
   const idleReads: string[] = [];
   const navigations: string[] = [];
+  /** Zählt tatsächliche Dateimetadaten-Requests, um unnötiges Polling statt bloßer Timeraufrufe zu erfassen. */
   const countReads = (request: Request) => {
     if (
       request.method() === "GET" &&

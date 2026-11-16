@@ -1,3 +1,6 @@
+/**
+ * Bruttopreis-/Verteilungseditor, lokale Honorarvorschau und Veröffentlichung von Kundenanfragen. Die Vorschau erklärt Cent-Rundung; verbindliche Preise, Versionsprüfung und akzeptierte Snapshots bleiben in PostgreSQL.
+ */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -20,6 +23,7 @@ import {
 } from "./commission-api";
 import "./platform-i18n";
 import "./platform.css";
+/** Erklärt die lokale Cent-Aufteilung eines Angebots ohne einen verbindlichen Serversnapshot vorzutäuschen. */
 export function FeeSplitPreview({
   gross,
   percent,
@@ -56,6 +60,7 @@ export function FeeSplitPreview({
     </div>
   );
 }
+/** Bearbeitet nur die nach aktuellen Rechten und Angebotsstand zulässige Preis-/Verteilungsinformation. */
 function EditPrice({
   actor,
   job,
@@ -176,6 +181,7 @@ function EditPrice({
     </form>
   );
 }
+/** Lädt die berechtigte Preisprojektion und bietet nur für bearbeitbare Angebote den Preisdialog. */
 export function JobPricingPanel({ job }: { job: Job }) {
   const { t } = useTranslation("platform");
   const { session } = useAuth();
@@ -238,6 +244,7 @@ export function JobPricingPanel({ job }: { job: Job }) {
     </section>
   );
 }
+/** Erstellt aus einer geprüften Kundenanfrage ein echtes Angebot über die Veröffentlichungs-RPC. */
 export function PublishClientRequest({
   actor,
   request,

@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für wörtlichen unvertrauten Text, Autorgrenzen, bestätigte Änderungen und verborgene gelöschte Inhalte. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   cleanup,
@@ -30,6 +33,7 @@ const message: ChatMessage = {
   document_id: null,
   reactions: [],
 };
+/** Rendert eine echte Nachrichtenblase mit isoliertem Cache und wählbarem fiktiven Autor. */
 function bubble(value: ChatMessage = message, actor = "lecturer-a") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

@@ -1,3 +1,6 @@
+/**
+ * Kommentarthread mit eigenem Bearbeiten/Rückzug und begründeter Moderation. Aktuelle Ressourcenberechtigung wird separat geladen; ein Rechtefehler darf keinen alten Kommentarbestand als weiterhin zugänglich präsentieren.
+ */
 import { useId, useRef, useState } from "react";
 import {
   useInfiniteQuery,
@@ -27,7 +30,9 @@ import {
 import "./i18n";
 import "./comments.css";
 
+/** Explizit getrennte eigene Änderung, eigener Rückzug und begründete Moderation. */
 type EditAction = "edit" | "withdraw" | "moderate";
+/** Verbindet eine Kommentarzeile mit eigenen Bearbeitungs- oder begründeten Moderationsaktionen. */
 function CommentEntry({
   row,
   canEdit,
@@ -222,6 +227,7 @@ function CommentEntry({
   );
 }
 
+/** Lädt berechtigte Kommentarseiten und erhält Anfrage-/Versionsschutz bei Änderungen. */
 function CommentThread({
   actor,
   kind,
@@ -360,6 +366,7 @@ function CommentThread({
 }
 
 /** Remount drafts on resource/actor navigation; private text cannot cross contexts. */
+/** Prüft den aktuellen Ressourcenkontext, bevor ein kommentierbarer Thread angezeigt wird. */
 export function ResourceComments({
   kind,
   resourceId,

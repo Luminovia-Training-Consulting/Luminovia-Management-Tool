@@ -1,3 +1,6 @@
+/**
+ * Kanbanspalten, Drag-Griffe und Dropfeedback für die Angebotsverwaltung. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ */
 .offer-board-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -31,11 +34,13 @@
 .offer-column-archived h3 {
   background: var(--coral);
 }
+/* Dropfeedback markiert nur das gerade zulässige Ziel; Persistenz folgt erst der Serverantwort. */
 .offer-column-target {
   border-color: var(--brand);
   outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
+/* Karten halten Detailverknüpfung und expliziten Drag-/Tastaturgriff voneinander getrennt. */
 .offer-card {
   padding: 0.8rem;
   margin-bottom: 0.75rem;
@@ -69,11 +74,13 @@
 .offer-card-dragging {
   opacity: 0.6;
 }
+/* Layoutanpassung (max-width: 1000px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
 @media (max-width: 1000px) {
   .offer-board-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+/* Layoutanpassung (max-width: 640px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
 @media (max-width: 640px) {
   .offer-board-grid {
     grid-template-columns: minmax(0, 1fr);

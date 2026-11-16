@@ -1,3 +1,6 @@
+/**
+ * Entschlüsselt und prüft ein vollständiges Recovery-Set in privaten temporären Pfaden. Stellt alle gesicherten Datenbanken und Dateiinventare in isolierten Ressourcen wieder her und bereinigt ausschließlich eigene Prüfressourcen.
+ */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile, writeFile, rm, mkdir } from "node:fs/promises";
@@ -13,8 +16,11 @@ import {
 import { verifyRecoveredCredentials } from "./credential_recovery.mjs";
 import { verifyRestoredRecoveryInventory } from "./postgres_recovery_witness.mjs";
 const here = dirname(fileURLToPath(import.meta.url));
+// Quotiert einen SQL-Bezeichner einschließlich eingebetteter Anführungszeichen.
 const identifier = (s) => '"' + s.replaceAll('"', '""') + '"';
+// Quotiert ausschließlich einen SQL-Textwert; Objektbezeichner benötigen ihren eigenen Quoting-Pfad.
 const literal = (s) => "'" + s.replaceAll("'", "''") + "'";
+// Normalisiert nur die explizit bekannten operatorabhängigen Textfelder für einen reproduzierbaren Restore-Vergleich.
 const normalize = (text, operator) =>
   text
     .split("\n")
@@ -29,6 +35,7 @@ const normalize = (text, operator) =>
     )
     .sort();
 
+// Entschlüsselt in ein eigenes privates Verzeichnis, stellt Datenbanken/Erweiterungen/Rollen wieder her und prüft Bytes sowie Zugänge vor der kontrollierten Bereinigung.
 export async function restoreComplete({
   backup,
   identity,

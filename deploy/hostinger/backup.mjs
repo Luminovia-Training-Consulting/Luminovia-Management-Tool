@@ -1,3 +1,6 @@
+/**
+ * Manuell aufgerufene Sicherung der Entwicklungsinstanz: Datenbank, Rollen und tatsächliche Storage-Dateien erhalten getrennte Artefakte mit Prüfsummen. Private Ausgaben bleiben unter .local; dies ersetzt keine wiederkehrende externe Sicherung.
+ */
 import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
@@ -57,6 +60,7 @@ export const summarySQL = `select json_build_object(
 
 // No credential is placed in argv or a temporary source file. Binary data is
 // streamed directly through SSH to a mode0600 file, with bounded stderr capture.
+// Startet einen kontrollierten Kindprozess mit getrennten Streams und begrenzter Fehlerausgabe; das Ergebnis wartet auf den tatsächlichen Prozessabschluss.
 export function startCommand(
   program,
   args,
@@ -98,6 +102,7 @@ export function startCommand(
   return { child, completed };
 }
 
+// Sammelt die Ausgabe eines begrenzten Kommandos und erhält dessen Fehlerstatus.
 export async function collectCommand(program, args, options = {}) {
   const { child, completed } = startCommand(program, args, options);
   const chunks = [];
@@ -114,6 +119,7 @@ export async function collectCommand(program, args, options = {}) {
   return Buffer.concat(chunks).toString("utf8").trim();
 }
 
+// Erzeugt die festen SSH-Argumente für den freigegebenen Entwicklungsserver, ohne eine interaktive Anmeldung zu starten.
 function sshArgs(command) {
   return [
     "-o",
@@ -131,6 +137,7 @@ function sshArgs(command) {
   ];
 }
 
+// Hasht das vollständige Artefakt als Stream, damit große Backups nicht im RAM landen.
 export async function fileDigest(file) {
   const hash = createHash("sha256");
   let bytes = 0;
@@ -141,6 +148,7 @@ export async function fileDigest(file) {
   return { sha256: hash.digest("hex"), bytes };
 }
 
+// Schreibt einen Kommandostream exklusiv in ein privates Artefakt und akzeptiert es erst nach erfolgreichem Prozessabschluss.
 async function streamArtifact(directory, name, command, input) {
   const output = resolve(directory, name);
   const { child, completed } = startCommand("ssh", sshArgs(command), { input });
@@ -192,6 +200,7 @@ except Exception:
  sys.stderr.write('Storage inventory failed; private details withheld.\\n');sys.exit(1)
 `;
 
+// Aggregiert das zeilenweise Dateiinventar und prüft seine Byte-/Hashangaben.
 export async function inventoryTotals(file) {
   let pending = "";
   let files = 0;
@@ -226,6 +235,7 @@ export async function inventoryTotals(file) {
   return { files, bytes };
 }
 
+// Erzeugt ein privates vollständiges Entwicklungsbackup mit getrennten Dump-/Storage-Artefakten und abschließendem Manifest; fehlgeschlagene Teilergebnisse werden nicht als vollständig ausgewiesen.
 export async function createDevelopmentBackup({ quiescent = false } = {}) {
   if (quiescent !== true)
     throw new Error(

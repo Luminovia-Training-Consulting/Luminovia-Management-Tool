@@ -2,6 +2,17 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Comprehensive code comments and agent guide
+
+Requested directly on `main`: explain the maintained code throughout and provide a project-specific `AGENTS.md`, using OpenXLR's guide as a structural reference. Work uses a dedicated main worktree so the original checkout's concurrent feature changes remain separate. The independent English community commit `3256d1a` is preserved; contributor guidance remains English and source commentary uses German.
+
+- [x] Annotate all 170 frontend files, all 104 launcher/script/browser-test files, maintained Edge/operating code and root build/CI/configuration entry points with purposes, contracts and important flow/security/resource explanations.
+- [x] Expand `AGENTS.md` with the actual ownership map, reading order, business/security invariants, commands, collaboration/Git rules, comprehensive-comment policy and operational boundaries.
+- [x] Explain all 24 released migrations in [MIGRATION_GUIDE](MIGRATION_GUIDE.md); preserve their exact bytes, vendor provenance, JSON/lockfiles, generated data and assets.
+- [x] Compare executable syntax/literals, CSS rules and parsed/active configuration against current main; run frontend coverage, type/lint/build, runtime, Edge and offline operating checks with no behavioral changes.
+
+The full product ledger below remains unchanged. This source-documentation slice does not certify native/browser/selfhost or production acceptance; exact-main CI runs its existing gates after publication.
+
 ## English community information
 
 The current language request covers public security/contribution documentation, GitHub issue/PR forms and guidance, managed label descriptions and PR metadata feedback. Isolated branch `codex/english-community-guides` preserves concurrent application work and the full product ledger below.

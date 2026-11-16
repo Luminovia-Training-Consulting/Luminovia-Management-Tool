@@ -1,3 +1,4 @@
+# Isolierte Updaterfälle mit fiktiven Releases und temporärer Installation. Die FakeUpdater-Grenze zeichnet Mutationen auf; Archive, Dateisystem, Sperren und Zustandswechsel bleiben echte lokale Operationen.
 """Offline update-policy and real archive/filesystem/lock regression tests."""
 
 import copy
@@ -25,6 +26,7 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
+# Erzeugt einen synthetischen Release-/Archivbestand, dessen Bytes und Manifest kontrolliert variiert werden können.
 def fixture(directory, *, extra=None, members=None):
     files = {
         "site/index.html": b"<html>current CMS release</html>",
@@ -58,6 +60,7 @@ def fixture(directory, *, extra=None, members=None):
     return archive, manifest, files
 
 
+# Erzeugt ausschließlich die eigene temporäre Installationsstruktur dieses Falls.
 def instance(directory):
     root = Path(directory) / "instance"
     (root / "private").mkdir(parents=True)
@@ -69,6 +72,7 @@ def instance(directory):
     return root
 
 
+# Legt das bekannte alte Runtimeinventar an, damit echte Dateivergleiche Updatearten unterscheiden können.
 def installed_runtime(root, files):
     for name, contents in files.items():
         if name.startswith("site/"):
@@ -78,6 +82,7 @@ def installed_runtime(root, files):
         destination.write_bytes(contents)
 
 
+# Injiziert Downloadantworten, ohne einen echten Release oder Serverzustand zu verändern.
 def network_candidate(updater, archive, manifest):
     u.atomic_json(updater.state_file, {"bootstrapApproved": True})
     updater.candidate = lambda: {"status": "candidate", "commit": COMMIT, "assets": {"cms-release.json": "manifest", "cms-release.tar.gz": "archive"}}
@@ -89,6 +94,7 @@ def network_candidate(updater, archive, manifest):
     updater.download = download
 
 
+# Ersetzt externe System-/Dockeraktionen durch aufgezeichnete Fixtureoperationen; die echte Updaterzustandsmaschine bleibt aktiv.
 class FakeUpdater(u.Updater):
     def __init__(self, root):
         super().__init__(root)
@@ -155,6 +161,7 @@ class FakeUpdater(u.Updater):
             raise u.UpdateError("static_release_health_failed")
 
 
+# Archivfälle prüfen reale temporäre Bytes und gefährliche Einträge vor dem ersten Installationsschreiben.
 class ArchiveTests(unittest.TestCase):
     def test_real_archive_verifies_every_byte_without_extractall(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -216,6 +223,7 @@ class ArchiveTests(unittest.TestCase):
                 u.validate_manifest(manifest)
 
 
+# Prüft exakte historische Quellen, SQL-Quoting und die konservativen automatischen Migrationsgrenzen.
 class MigrationTests(unittest.TestCase):
     def test_sql_quoting_history_and_advisory_lock_preserve_exact_source(self):
         source = "-- begin; in a comment must not receive the lock\nBEGIN;\nCREATE FUNCTION public.example() RETURNS text LANGUAGE sql AS $$ SELECT 'regexp$' || 'delete from examples' $$;\nGRANT SELECT, UPDATE, DELETE ON public.example_table TO authenticated;\nCOMMIT;\n"
@@ -251,6 +259,7 @@ class MigrationTests(unittest.TestCase):
                 updater.plan_migrations(target, manifest)
 
 
+# GitHub-Fixtures müssen den aktuellen Main-Commit, unveränderlichen Release und tatsächlich erfolgreiche CI gemeinsam beweisen.
 class ReleaseTests(unittest.TestCase):
     def test_only_immutable_current_main_successful_push_ci_is_eligible(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -333,6 +342,7 @@ class ReleaseTests(unittest.TestCase):
                     updater.api("/branches/main")
 
 
+# Prüft Reihenfolge, Rückkehrpfade und Mutationszäune der echten Updaterzustandsmaschine mit eigenen lokalen Dateibäumen.
 class InstallationTests(unittest.TestCase):
     def test_registry_pull_outage_backs_off_before_mutation_then_installs_after_deadline(self):
         for failed_kind in ("backend", "web"):
@@ -772,6 +782,7 @@ class InstallationTests(unittest.TestCase):
             updater = u.Updater(instance(directory))
             env = {"SUPABASE_PUBLIC_URL": "https://cms.luminovia.org/backend", "SUPABASE_PUBLISHABLE_KEY": KEY, "PORTAL_APP_ORIGIN": "https://cms.luminovia.org"}
             address = "172.19.0.5"
+            # Führt den übergebenen Prozess ohne Shell aus und übernimmt einen echten Fehlerstatus.
             def command(arguments):
                 if arguments[-2] == "{{json .State}}":
                     return json.dumps({"Running": True, "Paused": False, "OOMKilled": False, "Health": {"Status": "healthy"}}).encode()

@@ -1,3 +1,6 @@
+/**
+ * Suchbares Personenverzeichnis und freigegebene Profilansicht mit Kursen und Bewertungen. Direktnachrichten nutzen die bestehende DM-RPC, und Moderation verlangt eine begründete eigenständige Aktion.
+ */
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -27,6 +30,7 @@ import {
 } from "./api";
 import "./i18n";
 import "./people.css";
+/** Filtert die freigegebene Personenprojektion nach Suchtext, Label und Expertise statt private Profile clientseitig zusammenzuführen. */
 export function PeopleDirectory() {
   const { t, i18n } = useTranslation("people");
   const { session } = useAuth();
@@ -134,6 +138,7 @@ export function PeopleDirectory() {
     </>
   );
 }
+/** Fordert eine begründete Moderationsaktion an, ohne eine Bewertung im Browser still zu löschen. */
 function ModerateReview({ review }: { review: CourseReview }) {
   const { t } = useTranslation("people");
   const online = useOnline();
@@ -192,6 +197,7 @@ function ModerateReview({ review }: { review: CourseReview }) {
     </>
   );
 }
+/** Kombiniert freigegebene Profildetails, Kurse und Reviews und startet echte autorisierte Direktnachrichten. */
 export function PersonProfile() {
   const { id = "" } = useParams();
   const { t, i18n } = useTranslation("people");

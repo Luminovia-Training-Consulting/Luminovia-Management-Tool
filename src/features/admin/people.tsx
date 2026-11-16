@@ -1,3 +1,6 @@
+/**
+ * Verwaltung von Qualifikationsprüfung, Ablaufdatum und Kontosperre. Änderungen erfordern eine bestätigte Serverantwort und aktualisieren betroffene Queries; private Profildaten folgen weiterhin ihren Datenbankrechten.
+ */
 import { ProfileEvidence } from "../files/profile-evidence";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -24,10 +27,14 @@ import {
   PageHeading,
 } from "../../components/common";
 
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const expirySchema = z.object({ valid_until: z.string() });
+/** Formularwerte direkt aus dem zugehörigen Validierungsschema, damit Eingabe- und TypeScript-Vertrag übereinstimmen. */
 type ExpiryValues = z.infer<typeof expirySchema>;
+/** Bewusst überprüfter Zielname und gewünschter Aktivierungsstatus für den Bestätigungsdialog. */
 type AccountChange = { id: string; name: string; active: boolean };
 
+/** Speichert geprüften Qualifikationsstatus und Ablaufdatum über den vorgesehenen Verwaltungsvertrag. */
 function ExpertiseReview({
   profile,
   expertise,
@@ -177,6 +184,7 @@ function ExpertiseReview({
   );
 }
 
+/** Lädt Verwaltungsprofile, Expertise und Kontostatus; Sperren benötigen eine explizite Bestätigung für die ausgewählte Person. */
 function PeopleDirectory({ actorId }: { actorId: string }) {
   const { t, i18n } = useTranslation();
   const online = useOnline();
@@ -443,6 +451,7 @@ function PeopleDirectory({ actorId }: { actorId: string }) {
   );
 }
 
+/** Öffnet das Verwaltungsverzeichnis erst nach erfolgreich geladenen Berechtigungen. */
 export function PeopleAdminPage() {
   const { t } = useTranslation();
   const { session } = useAuth();

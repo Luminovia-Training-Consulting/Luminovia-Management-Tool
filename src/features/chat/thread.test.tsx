@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für sichtbarkeitsgebundene Lesebestätigung und erneute Versuche nach unsicherem Abschluss. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -78,6 +81,7 @@ it("retains exactly one composer and its unsent draft across room-list refreshes
   }
 });
 
+/** Erzeugt einen isolierten echten Thread mit fiktiver Nachrichtenhistorie und kontrollierten Lesebestätigungen. */
 function populatedThread() {
   HTMLElement.prototype.scrollIntoView = vi.fn();
   const client = new QueryClient({

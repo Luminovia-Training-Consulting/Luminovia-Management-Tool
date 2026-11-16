@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für aktive Auswahl und Erhalt bereits referenzierter archivierter Themen. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { describe, expect, it } from "vitest";
 import { selectableTopics } from "./selection";
 describe("active taxonomy choices and historical removals", () => {

@@ -1,3 +1,6 @@
+/**
+ * Account-HTTP-Fälle mit injizierter Auth/RPC/Zustellung und fiktiven UUIDs. Prüfen Methoden, Eingaben, aktuelle Aufruferweitergabe und den Reservierungsvertrag; native Auth/RLS wird separat geprüft.
+ */
 import assert from "node:assert/strict";
 import {
   createAccountHandler,
@@ -7,6 +10,7 @@ import {
 import { accountOpenApi } from "./openapi.ts";
 const id = "44444444-4444-4444-8444-444444444444";
 const key = "55555555-5555-4555-8555-555555555555";
+// Erzeugt ausschließlich einen kontrollierten lokalen/injizierten Fixturebestand; externe Systemantworten bleiben gezielt austauschbar.
 function fixture(overrides: Partial<AccountDependencies> = {}) {
   const calls: string[] = [];
   const handler = createAccountHandler({

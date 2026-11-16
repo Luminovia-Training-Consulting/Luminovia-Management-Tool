@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für persönliche begrenzte Vorschauen, Rechtefehler, Akteurswechsel und gemeinsame Querybeobachter. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   act,
@@ -40,9 +43,11 @@ vi.mock("../jobs/jobs", () => ({
 }));
 
 const clients: QueryClient[] = [];
+/** Erzeugt einen relativ zur Testzeit zukünftigen Instant, damit Vorschaufilter nicht von einem festen heutigen Datum abhängen. */
 function ahead(days: number) {
   return new Date(Date.now() + days * 86400000).toISOString();
 }
+/** Erzeugt ein fiktives Angebot mit gezielten Varianten für Dashboardfilter und -vorschauen. */
 function job(id: string, extra: Record<string, unknown> = {}) {
   return {
     id,
@@ -186,10 +191,12 @@ afterEach(() => {
   for (const client of clients.splice(0)) client.clear();
   vi.useRealTimers();
 });
+/** Beobachtet denselben echten Inbox-Queryschlüssel wie die Shell, um zusätzliche Dashboardabrufe zu erkennen. */
 function SharedShellObserver() {
   useQuery(notificationPreviewQuery(fake.actor));
   return null;
 }
+/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
 function setup(onlyWidgets = false, sharedObserver = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: 15000 } },

@@ -1,3 +1,6 @@
+/**
+ * Capability-geschützte Umsatzdarstellung mit getrennten Währungsgruppen. Angebot, angenommener Umsatz und historisch unbekannte Bruttowerte werden sichtbar getrennt gehalten.
+ */
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -21,6 +24,7 @@ import {
 } from "./commission-api";
 import "./platform-i18n";
 import "./platform.css";
+/** Lädt die erlaubte Umsatzprojektion und hält unbekannte historische Bruttowerte sichtbar. */
 export function RevenuePanel() {
   const { t, i18n } = useTranslation("platform");
   const common = useTranslation().t;
@@ -202,6 +206,7 @@ export function RevenuePanel() {
     </section>
   );
 }
+/** Zeigt gruppierte Originalwährungswerte der übergebenen autorisierten Zusammenfassung. */
 export function FinancialSummaryCards() {
   const { t, i18n } = useTranslation("platform");
   const { session } = useAuth();

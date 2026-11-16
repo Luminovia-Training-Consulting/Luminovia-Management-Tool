@@ -1,3 +1,6 @@
+/**
+ * Zeitfenstereditor und getrennte Darstellung eigener beziehungsweise geteilter Verfügbarkeit. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ */
 .availability-range {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -9,6 +12,7 @@
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
   gap: 20px;
 }
+/* Fensterkarten unterscheiden verfügbare und blockierte Intervalle auch über ihren Inhalt. */
 .availability-card {
   min-width: 0;
   border-top: 5px solid #b8edd9;
@@ -41,6 +45,7 @@
   gap: 12px;
   flex-wrap: wrap;
 }
+/* Editorfelder bleiben als eine zusammenhängende Aktion mit sichtbaren Konflikthinweisen gruppiert. */
 .availability-form {
   display: grid;
   gap: 16px;
@@ -48,6 +53,7 @@
 .availability-form textarea {
   min-height: 110px;
 }
+/* Layoutanpassung (max-width: 640px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
 @media (max-width: 640px) {
   .availability-range {
     grid-template-columns: 1fr;

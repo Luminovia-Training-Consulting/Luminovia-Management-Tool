@@ -1,7 +1,12 @@
+/**
+ * Synthetische PNG-Bausteine mit echten CRC-/Deflate-Daten für erlaubte und manipulierte Profilbilder. Die Tests prüfen Strukturgrenzen und sind kein Ersatz für ClamAV.
+ */
 import { crc32, validateAvatar } from "./avatar.ts";
+// Lässt eine konkrete Fixturebedingung als echten Testfehler scheitern; es gibt keinen stillen Erfolgsersatz.
 function assert(value: unknown, message = "assertion failed"): asserts value {
   if (!value) throw new Error(message);
 }
+// Verbindet nur die synthetischen Bytefragmente des PNG-Testbildes.
 function join(...parts: Uint8Array[]) {
   const result = new Uint8Array(
     parts.reduce((size, part) => size + part.length, 0),
@@ -13,6 +18,7 @@ function join(...parts: Uint8Array[]) {
   }
   return result;
 }
+// Erzeugt einen synthetischen PNG-Chunk mit passender CRC als Ausgangspunkt gezielter Manipulation.
 function chunk(type: string, bytes: Uint8Array) {
   const result = new Uint8Array(bytes.length + 12),
     view = new DataView(result.buffer);
@@ -22,6 +28,7 @@ function chunk(type: string, bytes: Uint8Array) {
   view.setUint32(8 + bytes.length, crc32(result.subarray(4, 8 + bytes.length)));
   return result;
 }
+// Baut ein echtes kleines synthetisches PNG mit Deflate-Nutzdaten für die Strukturprüfung.
 async function image(
   width = 1,
   height = 1,
@@ -49,6 +56,7 @@ async function image(
     chunk("IEND", new Uint8Array()),
   );
 }
+// Verlangt die tatsächliche Ablehnung des übergebenen Vorgangs und prüft gegebenenfalls den stabilen Fehlergrund.
 async function rejects(bytes: Uint8Array) {
   let failed = false;
   try {

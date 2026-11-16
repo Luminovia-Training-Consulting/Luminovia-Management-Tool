@@ -1,3 +1,6 @@
+/**
+ * Native Passwortanmeldung und Anforderung einer Passwortwiederherstellung. Validierung und Online-Hinweise verbessern die Bedienung; eine Session entsteht ausschließlich durch Supabase Auth.
+ */
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -10,7 +13,9 @@ import { useAuth } from "./auth-context";
 import { Button } from "../../components/ui/button";
 import { Field, Loading, Notice } from "../../components/common";
 import { useOnline } from "../../lib/online";
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const schema = z.object({ email: z.email(), password: z.string().min(1) });
+/** Verwendet native Auth-Anmeldung und Recoveryanforderung mit voneinander getrennten Formularzuständen. */
 export function Login() {
   const { t } = useTranslation();
   const { session, loading } = useAuth();

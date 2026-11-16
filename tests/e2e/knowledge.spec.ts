@@ -1,3 +1,7 @@
+/**
+ * Browserabläufe für getrennte Wiki-Entwürfe, veröffentlichte Fassungen und Forumsmoderation.
+ * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ */
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { createClient } from "@supabase/supabase-js";
@@ -7,6 +11,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Knowledge writes run only in the isolated ./portal test stack.",
 );
+/** Erzeugt den SDK-Prüfclient; die jeweilige Kontositzung muss ausdrücklich angemeldet werden. */
 function client(key: string) {
   const url = process.env.SUPABASE_URL!;
   if (!["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname))
@@ -15,12 +20,14 @@ function client(key: string) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+/** Erzeugt den administrativen Fixtureclient; dessen Schlüssel bleibt außerhalb der Browseranwendung. */
 const service = () => client(process.env.SUPABASE_SERVICE_ROLE_KEY!);
 interface Account {
   id: string;
   email: string;
   name: string;
 }
+/** Erstellt eine fiktive Testperson für getrennte Browser-/API-Sitzungen und das spätere gezielte Cleanup. */
 async function account(
   role: "lecturer" | "admin",
   label: string,
@@ -48,6 +55,7 @@ async function account(
   ).toBeNull();
   return { id, email, name };
 }
+/** Meldet die konkrete Testperson über die sichtbaren Anmeldefelder an und wartet auf die bestätigte Navigation. */
 async function login(page: Page, user: Account) {
   await page.goto("/login");
   await page.getByLabel("E-Mail", { exact: true }).fill(user.email);
@@ -57,6 +65,7 @@ async function login(page: Page, user: Account) {
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
 }
+/** Berechnet den aktuellen sechsstelligen TOTP aus dem fiktiven MFA-Geheimnis; keine Codes protokollieren. */
 function totp(secret: string) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "").toUpperCase()]
@@ -75,6 +84,7 @@ function totp(secret: string) {
     .toString()
     .padStart(6, "0");
 }
+/** Hebt die tatsächliche Testsitzung über Auth/TOTP auf AAL2 statt Privilegien im Browser zu simulieren. */
 async function adminMfa(page: Page, user: Account) {
   await login(page, user);
   await page.goto("/security");
@@ -99,6 +109,7 @@ async function adminMfa(page: Page, user: Account) {
     }),
   ).toBeVisible();
 }
+/** Prüft den gerenderten Zustand mit axe; dies ersetzt keine manuelle Barrierefreiheitsabnahme. */
 async function a11y(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   const result = await new AxeBuilder({ page })

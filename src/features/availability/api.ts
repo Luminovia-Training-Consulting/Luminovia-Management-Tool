@@ -1,9 +1,13 @@
+/**
+ * Private Verfügbarkeitsfenster, bewusst reduzierte Managementfreigabe und versionierte Änderungen. Bestehende exakte Instants bleiben bei reinen Metadatenänderungen erhalten; neue lokale Zeiten müssen eindeutig auflösbar sein.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { DateTime } from "luxon";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 import { validZone, zonedInstant } from "../../lib/dates";
+/** Eigener versionierter Zeitraum mit privater Notiz und ausdrücklicher Managementfreigabe. */
 export interface AvailabilityWindow {
   id: string;
   user_id: string;
@@ -15,10 +19,12 @@ export interface AvailabilityWindow {
   share_with_management: boolean;
   version: number;
 }
+/** Reduzierte Managementprojektion ohne private Notizen oder bearbeitbare Versionsinformation. */
 export type SharedAvailabilityWindow = Omit<
   AvailabilityWindow,
   "notes" | "share_with_management" | "version"
 > & { display_name: string };
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 export const availabilitySchema = z.object({
   kind: z.enum(["available", "unavailable"]),
   starts_at: z.string().min(1),
@@ -27,7 +33,9 @@ export const availabilitySchema = z.object({
   notes: z.string().max(2000),
   share_with_management: z.boolean(),
 });
+/** Aus dem Formularschema abgeleiteter Entwurf vor der Umrechnung lokaler Zeiten in Instants. */
 export type AvailabilityValues = z.infer<typeof availabilitySchema>;
+/** Validiert Fensterdaten und bewahrt unveränderte exakte Instants, die ein minutenweises Formular nicht verlustfrei repräsentiert. */
 export function availabilityPayload(
   values: AvailabilityValues,
   previous?: Pick<AvailabilityWindow, "starts_at" | "ends_at" | "time_zone">,
@@ -55,6 +63,7 @@ export function availabilityPayload(
     throw new Error("invalid-time");
   return { ...parsed, starts_at: starts, ends_at: ends };
 }
+/** Begrenzt lokale inklusive Datumseingaben auf ein gültiges halboffenes UTC-Lesefenster. */
 export function availabilityRange(from: string, to: string, zone: string) {
   const start = DateTime.fromISO(from, { zone }).startOf("day"),
     end = DateTime.fromISO(to, { zone }).plus({ days: 1 }).startOf("day");
@@ -67,6 +76,7 @@ export function availabilityRange(from: string, to: string, zone: string) {
     return null;
   return { from: start.toUTC().toISO()!, to: end.toUTC().toISO()! };
 }
+/** Lädt die Serverprojektion über my_availability und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const myAvailabilityQuery = (actor: string, from: string, to: string) =>
   queryOptions({
     queryKey: ["availability", actor, from, to],
@@ -79,6 +89,7 @@ export const myAvailabilityQuery = (actor: string, from: string, to: string) =>
     },
     staleTime: 15000,
   });
+/** Lädt die Serverprojektion über shared_availability und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const sharedAvailabilityQuery = (
   actor: string,
   from: string,
@@ -95,6 +106,7 @@ export const sharedAvailabilityQuery = (
     },
     staleTime: 15000,
   });
+/** Übermittelt eigene Fensterdaten samt erwarteter Version; die RPC entscheidet über Konflikte und aktuelle Rechte. */
 export async function saveAvailability(
   id: string,
   version: number,
@@ -102,6 +114,8 @@ export async function saveAvailability(
   previous?: AvailabilityWindow,
 ) {
   requireOnline();
+  // Nutzeridentität und Konfliktprüfung kommen aus der nativen Serversession.
+  // Die erwartete Version verhindert das Überschreiben eines neueren Fensterstands.
   const { data, error } = await db().rpc("save_lecturer_availability", {
     p_id: id,
     p_payload: availabilityPayload(values, previous),
@@ -110,6 +124,7 @@ export async function saveAvailability(
   if (error) throw error;
   return data as string;
 }
+/** Entfernt das angegebene eigene Fenster nur gegen seine erwartete Version und bei echter Onlineantwort. */
 export async function removeAvailability(window: AvailabilityWindow) {
   requireOnline();
   const { error } = await db().rpc("remove_lecturer_availability", {

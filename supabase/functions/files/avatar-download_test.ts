@@ -1,3 +1,6 @@
+/**
+ * Auswahl-/Widerrufsfälle mit injizierten Dokument-/Versions-/Storage-Antworten. Prüfen insbesondere die erneute Sichtbarkeitsprüfung nach dem Lesen, bevor irgendein Profilbildbyte zurückgegeben wird.
+ */
 import { selectedAvatarBytes } from "./avatar-download.ts";
 const png = Uint8Array.from(
   atob(
@@ -5,9 +8,11 @@ const png = Uint8Array.from(
   ),
   (c) => c.charCodeAt(0),
 );
+// Lässt eine konkrete Fixturebedingung als echten Testfehler scheitern; es gibt keinen stillen Erfolgsersatz.
 function assert(value: unknown, message = "assertion failed"): asserts value {
   if (!value) throw new Error(message);
 }
+// Verlangt die tatsächliche Ablehnung des übergebenen Vorgangs und prüft gegebenenfalls den stabilen Fehlergrund.
 async function rejects(request: Promise<unknown>, message: string) {
   try {
     await request;
@@ -17,6 +22,7 @@ async function rejects(request: Promise<unknown>, message: string) {
   }
   throw new Error("Expected the avatar read to be denied");
 }
+// Erzeugt ausschließlich einen kontrollierten lokalen/injizierten Fixturebestand; externe Systemantworten bleiben gezielt austauschbar.
 function fixture() {
   let current: string | null = "selected",
     visible = true,

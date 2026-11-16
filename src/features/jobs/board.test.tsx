@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für bestätigte Boardübergänge und Verbot eines Drag-basierten Claim-Erfolgs. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import {
   cleanup,
@@ -50,6 +53,7 @@ const initial = [
     can_transition: false,
   },
 ];
+/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
 function setup(
   write: (
     args: Record<string, unknown>,

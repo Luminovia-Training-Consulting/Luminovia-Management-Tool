@@ -1,3 +1,6 @@
+/**
+ * Passwortänderung nach authentifiziertem Einladung-/Recovery-Ablauf. Die Eingabe wird lokal validiert und erst nach erfolgreicher Auth-Antwort als gespeichert angezeigt.
+ */
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -7,9 +10,11 @@ import { db } from "../../lib/supabase";
 import { Button } from "../../components/ui/button";
 import { Field, Notice, PageHeading } from "../../components/common";
 import { useOnline } from "../../lib/online";
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const schema = z.object({
   password: z.string().min(12).regex(/[A-Z]/).regex(/[a-z]/).regex(/[0-9]/),
 });
+/** Ändert das Passwort der aktuellen Auth-Session und bestätigt ausschließlich die erfolgreiche SDK-Antwort. */
 export function Password() {
   const { t } = useTranslation();
   const online = useOnline();

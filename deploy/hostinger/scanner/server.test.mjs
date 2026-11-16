@@ -1,3 +1,6 @@
+/**
+ * Echte lokale HTTP-/TCP-Protokollfälle mit fiktivem Token und injiziertem Scanadapter. Prüfen Größen, Fristen, Authentifizierung und Fehlerbehandlung; keine produktiven Scannerzugänge werden geladen.
+ */
 import assert from "node:assert/strict";
 import { once } from "node:events";
 import { request as httpRequest } from "node:http";
@@ -7,8 +10,10 @@ import { createClamavScanner, MAX_BYTES } from "./clamav.mjs";
 import { createScannerServer, readToken } from "./server.mjs";
 
 const token = "a".repeat(64); // Fictional unit-test value, never a deployment token.
+// Erzeugt einen frischen fiktiven clamd-Versionsstring für den lokalen Protokolltest.
 const version = () => `ClamAV 1.4.3/27820/${new Date().toUTCString()}`;
 
+// Startet nur den lokalen HTTP-Testserver und registriert dessen Schließen beim Testbesitzer.
 async function start(t, options = {}) {
   let calls = 0;
   const scanner = options.scanner ?? {
@@ -29,6 +34,7 @@ async function start(t, options = {}) {
   return { server, url, calls: () => calls };
 }
 
+// Sendet fiktive lokale Uploadbytes mit expliziten Testheadern an den eigenen HTTP-Server.
 function upload(url, body = "fictional lesson", extra = {}) {
   return fetch(`${url}/scan`, {
     method: "POST",
@@ -279,6 +285,7 @@ test("token configuration requires one long secret source", () => {
   assert.equal(readToken({ PORTAL_SCANNER_TOKEN: token }), token);
 });
 
+// Simuliert das echte lokale VERSION-/INSTREAM-Protokoll, damit Teilframes, Antworten und Verbindungsfehler beobachtbar sind.
 async function fakeClamd(
   t,
   { reply = "stream: OK\0", signature = version(), silent = false } = {},

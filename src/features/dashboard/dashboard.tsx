@@ -1,3 +1,6 @@
+/**
+ * Persönliche Startseite mit passenden Angeboten, bestätigten Einsätzen und Fachwidgets. Kennzahlen werden aus den geladenen autorisierten Projektionen abgeleitet; Managementansichten folgen aktuellen Capabilities.
+ */
 import { useState } from "react";
 import { FinancialSummaryCards } from "../commercial/revenue";
 import { Link } from "react-router-dom";
@@ -24,6 +27,7 @@ import { ErrorState, Loading, TextLink } from "../../components/common";
 import { validZone } from "../../lib/dates";
 import { DashboardCalendarPreview, DashboardWidgets } from "./widgets";
 import "./i18n";
+/** Stellt persönliche Einstiege, echte Angebote und bestätigte Zuweisungen aus den gemeinsamen Queries zusammen. */
 export function Dashboard() {
   const { t, i18n } = useTranslation();
   const [openedAt] = useState(() => Date.now());

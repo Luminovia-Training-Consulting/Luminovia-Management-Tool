@@ -1,11 +1,17 @@
+/**
+ * Bindet ein späteres PostgreSQL-Image an seinen tatsächlich abgeschlossenen Kompatibilitätsnachweis und exakte historische Migrationsquellen. Ein Tag oder eine passende Major-Version allein reicht dafür nicht.
+ */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+// Berechnet SHA-256; verglichen werden exakte Bytes statt nur Versionsbezeichnungen.
 const sha = (value) => createHash("sha256").update(value).digest("hex");
 const imagePattern =
   /^supabase\/postgres:17\.\d+\.\d+\.\d+@sha256:[a-f0-9]{64}$/;
 const proofPath =
   "opt/luminovia-portal/source/deploy/hostinger/selfhost/postgres-candidate-proof.json";
+// Bindet Reihenfolge, Pfade und Quellenhashes des Migrationsinventars an einen Digest.
 const inventoryHash = (inventory) => sha(JSON.stringify(inventory));
+// Prüft die enge Struktur und Reihenfolge eines Migrationsinventars vor dessen Verwendung als Recovery-Beleg.
 const validInventory = (entries) =>
   Array.isArray(entries) &&
   entries.length > 0 &&
@@ -22,6 +28,7 @@ const validInventory = (entries) =>
 
 // This is an explicit recovery witness from an authenticated complete set,
 // never a global allowlist update or permission to pull arbitrary latest tags.
+// Erlaubt ein späteres Image nur mit exakt passendem abgeschlossenem Kompatibilitätsbeleg und unveränderter historischer Quellenkette.
 export function validateRecoveryImageWitness(image, catalog) {
   assert(
     imagePattern.test(image),
@@ -108,6 +115,7 @@ export function validateRecoveryImageWitness(image, catalog) {
   return image;
 }
 
+// Liest die tatsächliche wiederhergestellte Migrationshistorie und vergleicht sie mit dem Recovery-Katalog.
 export async function verifyRestoredRecoveryInventory(database, catalog) {
   const expected = catalog.postgresRecoveryEvidence?.appliedMigrationInventory;
   if (!expected) return false; // Original approved historical backup format.

@@ -1,3 +1,6 @@
+/**
+ * Darstellung einzelner Nachrichten mit sicheren Textlinks, Reaktionen und eigenen Bearbeitungsaktionen. Sichtbare Autor-/Zeitregeln sind Bedienlogik; die Chat-RPC validiert jede Änderung erneut.
+ */
 import { Fragment, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -13,9 +16,12 @@ import { Dialog } from "../../components/ui/dialog";
 import { chatKeys } from "./api";
 import type { ChatMessage } from "./types";
 import "./i18n";
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const editSchema = z.object({ body: z.string().max(8000) });
+/** Begrenzte schnelle Emoji-Auswahl; der Server validiert jede tatsächliche Reaktionsänderung. */
 const quickReactions = ["👍", "❤️", "🎉", "💡", "👀", "✅"];
 /** Text is never interpreted as HTML. Only explicit HTTP(S) links become anchors. */
+/** Teilt Nachrichtentext in sicheren Text und erlaubte Linkziele, ohne Nachrichtentext als HTML auszuwerten. */
 export function MessageText({ body }: { body: string }) {
   return (
     <>
@@ -43,6 +49,7 @@ export function MessageText({ body }: { body: string }) {
     </>
   );
 }
+/** Zeigt Nachricht, Reaktionen und zulässige Bearbeitung an und wartet für Änderungen auf die jeweilige RPC. */
 export function MessageBubble({
   message,
   actor,

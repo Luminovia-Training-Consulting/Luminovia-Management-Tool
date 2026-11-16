@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für Knoten-/Linkallowlist, Struktur-/Größenbegrenzung und Ablehnung ausführbarer Ziele. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { describe, expect, it } from "vitest";
 import {
   contentIsValid,

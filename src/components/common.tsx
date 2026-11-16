@@ -1,3 +1,6 @@
+/**
+ * Geteilte, übersetzte Lade-, Fehler-, Hinweis- und Formularbausteine. Die Feldkomponente verknüpft native Controls mit Labels und Beschreibungen, ohne Formularhandler oder Refs zu ersetzen.
+ */
 import {
   Children,
   cloneElement,
@@ -9,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { AlertCircle, ArrowRight, LoaderCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Link } from "react-router-dom";
+/** Meldet einen übersetzten Ladezustand als höfliche Statusänderung für assistive Technik. */
 export function Loading() {
   const { t } = useTranslation();
   return (
@@ -18,6 +22,7 @@ export function Loading() {
     </div>
   );
 }
+/** Zeigt einen Fehler als Alert und ergänzt nur dann einen Wiederholungsbutton, wenn der Aufrufer eine Aktion liefert. */
 export function ErrorState({ retry }: { retry?: () => void }) {
   const { t } = useTranslation();
   return (
@@ -32,10 +37,12 @@ export function ErrorState({ retry }: { retry?: () => void }) {
     </div>
   );
 }
+/** Nur die nativen ID-/ARIA-Attribute, die Field beim zugänglichen Verknüpfen ergänzen darf. */
 type FieldControlProps = Pick<
   AriaAttributes,
   "aria-describedby" | "aria-invalid"
 > & { id?: string };
+/** Verbindet genau ein natives Eingabefeld mit Label, Hinweis und Validierungsfehler und erhält vorhandene Handler/Refs. */
 export function Field({
   id,
   label,
@@ -92,6 +99,7 @@ export function Field({
     </div>
   );
 }
+/** Setzt eine konsistente Seitenüberschrift mit optionaler Beschreibung und fachlicher Aktion. */
 export function PageHeading({
   eyebrow,
   title,
@@ -114,6 +122,7 @@ export function PageHeading({
     </div>
   );
 }
+/** Rendert einen internen Routerlink mit gemeinsamem visuellen Richtungshinweis. */
 export function TextLink({
   to,
   children,
@@ -128,6 +137,7 @@ export function TextLink({
     </Link>
   );
 }
+/** Verwendet für Fehler eine Alert-Rolle und für bestätigte Ergebnisse eine Status-Rolle. */
 export function Notice({
   children,
   kind = "success",

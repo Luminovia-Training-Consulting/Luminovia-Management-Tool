@@ -1,3 +1,4 @@
+# Temporäre Installationen prüfen echte Kopien und Verzeichnistausch samt injizierten Prozessfehlern. Kritisch ist der Erhalt beider Datenstände, wenn Wiederherstellung oder erneute Healthprüfung scheitern.
 """Offline real-copy/rename recovery tests; no running Docker or VPS targeted."""
 
 import datetime as dt
@@ -13,6 +14,7 @@ from unittest.mock import patch
 import atomic_recovery as recovery
 
 
+# Eigener Dateisystembestand für Verzeichnistausch und Rückkehr; Prozessaufrufe werden gezielt protokolliert/injiziert.
 class Installation:
     def __init__(self, directory):
         self.root = Path(directory) / "instance"
@@ -50,6 +52,7 @@ class Installation:
             self.mounts.setdefault(name, []).append(entry)
             self.paths[identity] = source
 
+    # Führt den übergebenen Prozess ohne Shell aus und übernimmt einen echten Fehlerstatus.
     def command(self, args, **kwargs):
         self.calls.append(tuple(args))
         if args[:2] == ["docker", "info"]:
@@ -97,6 +100,7 @@ class Installation:
         self.compose("web", ["up", "-d", "--wait", "--force-recreate", "--no-deps", "web", *(("clamav",) if include_clamav else ())])
 
 
+# Prüft echten physischen Dateierhalt und die geschlossene API-Grenze bei jeder simulierten Wiederherstellungsstörung.
 class AtomicRecoveryTests(unittest.TestCase):
     def test_real_copy_and_directory_swap_restore_pg_keys_storage_mailpit_and_preserve_failed_data(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -1,3 +1,6 @@
+/**
+ * Eigene Verfügbarkeitsplanung und ausdrücklich geteilte Zeitfenster. Der Editor unterscheidet Versionskonflikte und Terminüberschneidungen, während die Datenbank Zuweisungsrennen atomar verhindert.
+ */
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { DateTime } from "luxon";
@@ -35,11 +38,13 @@ import {
 } from "./api";
 import "./i18n";
 import "./availability.css";
+/** Unterscheidet Intervallkonflikt (23P01), veraltete Version (40001) und sonstige Fehler für die passenden UI-Texte. */
 function failure(error: unknown) {
   const code =
     typeof error === "object" && error && "code" in error ? error.code : null;
   return code === "23P01" ? "conflict" : code === "40001" ? "stale" : "error";
 }
+/** Bearbeitet ein Zeitfenster lokal und übernimmt erst nach bestätigtem Speichern den neuen Serverstand. */
 function AvailabilityForm({
   item,
   zone,
@@ -153,6 +158,7 @@ function AvailabilityForm({
     </form>
   );
 }
+/** Verbindet ausgewählten Zeitraum, eigene Fenster und ausdrücklich reduzierte Managementfreigaben. */
 function ReadyAvailability({
   actor,
   zone,
@@ -394,6 +400,7 @@ function ReadyAvailability({
     </>
   );
 }
+/** Lädt Profilzone und Capabilities als Grundlage der Verfügbarkeitsansicht. */
 export function AvailabilityPage() {
   const { session } = useAuth(),
     actor = session!.user.id;

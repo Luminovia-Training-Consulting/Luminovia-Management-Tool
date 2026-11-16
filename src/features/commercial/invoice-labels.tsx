@@ -1,3 +1,6 @@
+/**
+ * Begrenzter Editor für Rechnungslabels. Labels dienen der Organisation und verändern keine angenommenen Gebühren, Rechnungspositionen oder Zahlungsbeträge.
+ */
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -10,6 +13,7 @@ import { Field, Notice } from "../../components/common";
 import { commercialKeys, parseInvoiceLabels } from "./api";
 import type { InvoiceRecord } from "./types";
 import "./platform-i18n";
+/** Speichert begrenzte Rechnungslabels über die Fach-RPC und aktualisiert danach die Rechnungsdaten. */
 export function InvoiceLabels({
   actor,
   invoice,

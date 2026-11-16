@@ -1,3 +1,6 @@
+/**
+ * Einzelner Dateianhang über die vorhandene Dokumentprojektion. Aktuelle Zugriffsfehler ersetzen alte Metadaten; Downloads laufen weiterhin über das authentifizierte Dateigateway.
+ */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -8,6 +11,7 @@ import { Button } from "../../components/ui/button";
 import { Notice } from "../../components/common";
 import { documentQuery, saveDownload } from "./api";
 import "./i18n";
+/** Lädt genau den angehängten Dokumentdatensatz und lädt dessen konkret ausgewählte saubere Version herunter. */
 export function DocumentAttachment({ documentId }: { documentId: string }) {
   const { t } = useTranslation("files");
   const online = useOnline();

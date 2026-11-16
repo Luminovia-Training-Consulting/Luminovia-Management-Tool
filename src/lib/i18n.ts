@@ -1,3 +1,6 @@
+/**
+ * Gemeinsames DE/EN-Wörterbuch und Initialisierung des aktiven Sprachzustands. Übersetzungsschlüssel steuern ausschließlich UI-Texte; verfasste Fachinhalte bleiben in ihrer ursprünglichen Sprache.
+ */
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { readPreference, writePreference } from "./preferences";
@@ -478,6 +481,8 @@ const pairs: Record<string, [string, string]> = {
   collapse: ["Navigation einklappen", "Collapse navigation"],
   expand: ["Navigation ausklappen", "Expand navigation"],
 };
+// Statische UI-Ressourcen; Variablen und Pluralformen folgen dem gemeinsamen
+// i18next-Vertrag des jeweiligen Fachnamensraums.
 const de = Object.fromEntries(Object.entries(pairs).map(([k, v]) => [k, v[0]]));
 const en = Object.fromEntries(Object.entries(pairs).map(([k, v]) => [k, v[1]]));
 const saved = readPreference("language");

@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für fehlende Organisationscapability ohne Abfrage privater Kontakte oder Notizen. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

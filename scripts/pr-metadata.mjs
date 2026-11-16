@@ -1,3 +1,7 @@
+/**
+ * Prüft aktuelle PR-Identität und die gemeinsamen Pflichtkategorien für Labels.
+ * Ereignisfelder bleiben Daten; Repository und API-Ziel werden nicht aus frei gelieferten URLs übernommen.
+ */
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -5,10 +9,12 @@ import { fileURLToPath } from "node:url";
 const repository = "Luminovia-Training-Consulting/Luminovia-Management-Tool";
 const categories = ["type", "risk", "area"];
 
+/** Bricht bei ungültiger Metadatenbedingung mit einer gezielten Meldung ab. */
 function requireMetadata(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+/** Validiert den gemeinsamen Katalog einschließlich eindeutiger Namen und aller Pflichtkategorien. */
 function allowedLabels(catalogue) {
   requireMetadata(
     Array.isArray(catalogue),
@@ -33,6 +39,7 @@ function allowedLabels(catalogue) {
   return names;
 }
 
+/** Bindet PR-Nummer, Zielrepository und vollständige Commit-SHA an die erwartete Identität. */
 function checkIdentity(pullRequest, number) {
   requireMetadata(
     pullRequest &&
@@ -44,6 +51,7 @@ function checkIdentity(pullRequest, number) {
   );
 }
 
+/** Lehnt fremde oder ungeeignete Ereignisse vor jedem Netzwerkzugriff ab. */
 function checkEventIdentity(event, context) {
   requireMetadata(
     context.eventName === "pull_request" &&
@@ -57,6 +65,7 @@ function checkEventIdentity(event, context) {
 }
 
 /** Validate metadata only. PR titles, bodies and label names are never commands. */
+/** Prüft aktuelle Labels gegen den Katalog und lehnt einen inzwischen überholten PR-Head ab. */
 export function validatePullRequestMetadata(event, catalogue, context = {}) {
   checkEventIdentity(event, context);
   const pullRequest = context.livePullRequest ?? event.pull_request;
@@ -109,6 +118,7 @@ export function validatePullRequestMetadata(event, catalogue, context = {}) {
   };
 }
 
+/** Liest das Ereignis, bestätigt die aktuelle REST-Identität und gibt ausschließlich validierte Klassifikationen aus. */
 async function main() {
   requireMetadata(
     process.env.GITHUB_EVENT_PATH,

@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für referenzierte Kursangebote, unveränderte überprüfte Quellen und wiederholbare finanzielle Eingaben. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -84,6 +87,7 @@ afterEach(() => {
   cleanup();
   cache.clear();
 });
+/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
 function setup() {
   return render(
     <QueryClientProvider client={cache}>

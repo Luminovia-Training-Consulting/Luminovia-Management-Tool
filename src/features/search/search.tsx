@@ -1,3 +1,6 @@
+/**
+ * Explizit ausgelöste globale Suche mit begrenztem URL-Suchtext. Nur die sichere Suchprojektion des Servers liefert Ergebnisse; private Entwürfe und fremde Ressourcen werden nicht im Browser zu einem Vollindex zusammenkopiert.
+ */
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -7,6 +10,7 @@ import { useAuth } from "../auth/auth-context";
 import { db } from "../../lib/supabase";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Loading, PageHeading } from "../../components/common";
+/** Sichere Suchprojektion mit Titel, Vorschau und serverbestimmtem Ziel. */
 interface Result {
   id: string;
   kind: string;
@@ -14,6 +18,7 @@ interface Result {
   detail: string;
   url: string;
 }
+/** Übernimmt den Suchentwurf erst beim ausdrücklichen Absenden in den aktiven Suchzustand. */
 function SearchForm({
   query,
   onSearch,
@@ -48,6 +53,7 @@ function SearchForm({
     </form>
   );
 }
+/** Begrenzt den URL-Suchtext und fordert ab zwei Zeichen die berechtigungsgefilterte Serversuche an. */
 export function PortalSearch() {
   const { t } = useTranslation();
   const { session } = useAuth();

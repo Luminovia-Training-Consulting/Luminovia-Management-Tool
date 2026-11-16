@@ -1,3 +1,6 @@
+/**
+ * Wiki-/Forumliste und konsistente strukturierte Editor-/Leseansicht. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ */
 .knowledge-page-actions {
   display: flex;
   gap: 8px;
@@ -6,6 +9,7 @@
 .knowledge-page-actions .button {
   font-size: 12px;
 }
+/* Desktopverzeichnis und tatsächlicher Artikel-/Threadbereich teilen einen flexiblen Arbeitsraum. */
 .knowledge-workspace {
   display: grid;
   grid-template-columns: 305px minmax(0, 1fr);
@@ -199,6 +203,7 @@
   color: var(--muted);
   margin-bottom: 25px;
 }
+/* Editorrahmen und Toolbar bleiben von normalisierten verfassten Inhalten getrennt. */
 .knowledge-editor {
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -238,6 +243,7 @@
   padding: 5px;
   font-size: 10px;
 }
+/* Gemeinsame Lesetypografie für gespeicherte erlaubte Editorstrukturen. */
 .knowledge-prose {
   padding: 22px;
   min-height: 210px;
@@ -404,6 +410,7 @@
   flex-direction: column;
   gap: 18px;
 }
+/* Forenbeiträge halten Autor, Inhalt und zulässige Antwort-/Moderationsaktionen zusammen. */
 .forum-post {
   padding: 25px;
 }
@@ -500,6 +507,7 @@
 .forum-reports-list .form-actions {
   margin-top: 10px;
 }
+/* Layoutanpassung (max-width: 1200px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
 @media (max-width: 1200px) {
   .knowledge-workspace {
     grid-template-columns: 260px minmax(0, 1fr);
@@ -538,6 +546,7 @@
     font-size: 27px;
   }
 }
+/* Layoutanpassung (max-width: 960px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
 @media (max-width: 960px) {
   .knowledge-workspace {
     grid-template-columns: 225px minmax(0, 1fr);
@@ -580,6 +589,7 @@
     padding: 7px 8px;
   }
 }
+/* Layoutanpassung (max-width: 760px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
 @media (max-width: 760px) {
   .knowledge-workspace {
     display: block;

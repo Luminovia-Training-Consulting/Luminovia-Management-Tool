@@ -1,3 +1,7 @@
+/**
+ * Prüft lokale Markdownverweise gegen tatsächlich vorhandene Repositorydateien.
+ * Beispielcode in Fences ist keine Navigation; externe Verweise werden hier nicht abgefragt.
+ */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile, readdir, access } from "node:fs/promises";
@@ -5,6 +9,7 @@ import { dirname, resolve } from "node:path";
 
 test("repository documentation links resolve to delivered local files", async () => {
   const files = ["README.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md"];
+  /** Sammelt die tatsächlich gelieferten Markdownunterlagen rekursiv für die lokale Linkprüfung. */
   async function walk(directory) {
     for (const item of await readdir(directory, { withFileTypes: true })) {
       const path = `${directory}/${item.name}`;

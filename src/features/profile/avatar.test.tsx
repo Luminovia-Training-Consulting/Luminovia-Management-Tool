@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für an Identität gebundene Avatarbytes, Offlinezustand und Objekt-URL-Lebensdauer. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import {
@@ -42,6 +45,7 @@ afterEach(() => {
   focusManager.setFocused(undefined);
   onlineManager.setOnline(true);
 });
+/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
 function setup() {
   const create = vi
     .fn()

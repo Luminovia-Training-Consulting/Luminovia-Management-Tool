@@ -1,3 +1,7 @@
+/**
+ * Regressionen für CBW-Extraktion, Quellenhashes und deterministische Katalogidentitäten.
+ * Fiktive Dokumenttexte prüfen den Importvertrag ohne persönliche Originalunterlagen.
+ */
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -9,6 +13,7 @@ import {
 } from "./cbw-catalogue.mjs";
 
 const catalogue = JSON.parse(readFileSync(cataloguePath, "utf8"));
+/** Erzeugt fiktiven PDF-Extraktionstext mit steuerbarem Kurzzeichen, Lehrplan und Revisionsdatum; private Randangaben dürfen nicht im Katalog landen. */
 const fixture = (
   code = "LPC3",
   syllabus = "- Shell-Umgebung\n- Skripte\n",

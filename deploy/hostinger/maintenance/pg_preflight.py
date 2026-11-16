@@ -1,3 +1,4 @@
+# Prüft ein gleiches PostgreSQL-Major-Image ausschließlich gegen eine private Kopie des angehaltenen Clusters. Der Kandidat erhält keine Netzwerkports und niemals den aktiven Originalcluster als Mount.
 """Validate a same-major engine against a private, stopped-cluster copy.
 
 The active source cluster is never mounted into the candidate. This hook runs
@@ -29,11 +30,13 @@ class PreflightError(Exception):
     pass
 
 
+# Akzeptiert ausschließlich einen unveränderlichen PostgreSQL-17-Pin; andere Majors bleiben eine eigene Migration.
 def validate_image(image):
     if not isinstance(image, str) or not IMAGE.fullmatch(image):
         raise PreflightError("postgres_major_or_unpinned_image_requires_migration")
 
 
+# Verweigert externe Tablespaces, Symlinks und Spezialdateien vor dem Kopieren eines Clusters.
 def assert_plain_tree(path):
     path = Path(path)
     if path.is_symlink() or not path.is_dir() or any(p.is_symlink() for p in path.parents):
@@ -43,6 +46,7 @@ def assert_plain_tree(path):
             raise PreflightError("postgres_external_tablespace_or_special_file_requires_review")
 
 
+# Erzeugt ausschließlich serverseitige Aggregate; Datensätze, Rollenpasswörter und Definitionen verlassen die Datenbank nur als Hashes.
 def fingerprint_sql():
     # Row values, role password hashes and definitions remain in the server-side
     # aggregate; only their digests leave PostgreSQL. Physical OIDs are retained.
@@ -73,10 +77,12 @@ COMMIT;
 """
 
 
+# Bindet das kanonisch sortierte Prüfobjekt an SHA-256 für den Ergebnisbeleg.
 def canonical(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
+# Prüft nach Quieszenz und frischem Backup eine eigene netzlose Clusterkopie; der alte Datenbankdienst wird vor dem Kandidatenstart fortgesetzt.
 def run_preflight(updater, tree, candidate_image):
     validate_image(candidate_image)
     root = Path(updater.root).resolve()
@@ -162,6 +168,7 @@ def run_preflight(updater, tree, candidate_image):
         if not ready:
             raise PreflightError("postgres_candidate_not_ready")
 
+        # Fragt ausschließlich den eigenen Kandidatencontainer mit begrenzter Laufzeit und ON_ERROR_STOP ab.
         def sql(query, database="postgres"):
             raw = updater.command(["docker", "exec", "-i", name, "psql", "-U", "supabase_admin", "-d", database,
                 "-X", "-qAt", "-v", "ON_ERROR_STOP=1"], data=query.encode(), timeout=120).decode().strip()

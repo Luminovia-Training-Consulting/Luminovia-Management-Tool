@@ -1,3 +1,6 @@
+/**
+ * Einladungsfälle mit injizierten Abhängigkeiten prüfen Origin, Auth, Größen und idempotente Reservierung. Erfolgs- und Fehlerantworten dürfen keinen zweiten Versand nach einem unklaren ersten Ergebnis auslösen.
+ */
 import {createHandler,parseBody,type InviteDependencies} from './handler.ts';
 function equal(a:unknown,b:unknown){if(JSON.stringify(a)!==JSON.stringify(b))throw new Error(`Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);}
 const key='11111111-1111-4111-8111-111111111111', body={email:'lecturer@example.test',idempotency_key:key};

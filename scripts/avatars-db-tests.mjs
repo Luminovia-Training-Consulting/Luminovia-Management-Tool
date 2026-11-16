@@ -1,3 +1,7 @@
+/**
+ * PostgreSQL-Regressionsgruppen für gescannte Profilbilder und deren aktuelle Sichtbarkeit.
+ * Die Testdatenbank spielt echte Migrationen ein; Rollen-/MFA-Claims prüfen den Datenvertrag unabhängig von der UI.
+ */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
@@ -14,6 +18,7 @@ await withTestDatabase("avatars_test", async ({ sql, actor }) => {
     run = randomUUID(),
     job = randomUUID(),
     claim = randomUUID();
+  /** Ruft die fachliche Datenbank-API unter den kontrollierten Identitäts-/MFA-Claims der Fixture auf. */
   const rpc = async (who, name, args = [], aal = "aal1") => {
     const result = await actor(
       who,
@@ -22,6 +27,7 @@ await withTestDatabase("avatars_test", async ({ sql, actor }) => {
     );
     return result ? JSON.parse(result) : null;
   };
+  /** Legt eine gezielt gewählte Bildversion samt Scanstatus an, um die SQL-Leseregeln unabhängig vom Scanner zu prüfen. */
   const image = async (who, kind = "avatar", status = "clean") => {
     const r = JSON.parse(
       await actor(
@@ -35,6 +41,7 @@ await withTestDatabase("avatars_test", async ({ sql, actor }) => {
     return r;
   };
   let count = 0;
+  /** Zählt und meldet einen Fall erst, wenn sämtliche zugehörigen Assertions erfolgreich abgeschlossen sind. */
   const check = async (name, fn) => {
     await fn();
     count++;

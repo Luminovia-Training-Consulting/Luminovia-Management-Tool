@@ -1,3 +1,6 @@
+/**
+ * Begrenzte persönliche Vorschauwidgets und deren Lade-/Fehlerzustände. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ */
 .dashboard-widgets {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
@@ -29,6 +32,7 @@
   line-height: 1.6;
   margin: 0 0 14px;
 }
+/* Die Fachvorschauen unterscheiden sich durch Pastellränder innerhalb derselben Kartengeometrie. */
 .dashboard-calendar {
   border-top-color: var(--yellow);
 }
@@ -41,6 +45,7 @@
 .dashboard-followups {
   border-top-color: var(--coral);
 }
+/* Kurze begrenzte Vorschaulisten umbrechen lange Titel ohne horizontales Abschneiden. */
 .dashboard-preview-list {
   list-style: none;
   padding: 0;
@@ -88,6 +93,7 @@
   border-top: 1px solid var(--line);
   font-size: 0.9rem;
 }
+/* Ein lokaler Widgetfehler erhält Platz und Wiederholungsaktion, ohne die gesamte Startseite zu verstecken. */
 .dashboard-widget-error {
   font-size: 0.86rem;
   color: var(--muted);
@@ -115,6 +121,7 @@
   color: var(--muted);
   margin: -4px 0 14px;
 }
+/* Layoutanpassung (max-width: 600px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
 @media (max-width: 600px) {
   .dashboard-widget {
     padding: 18px;

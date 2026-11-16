@@ -1,3 +1,6 @@
+/**
+ * Öffentlicher Rückweg für Einladung und Wiederherstellung. Der Callback verarbeitet den tatsächlichen Auth-Zustand beziehungsweise Einladungstoken und navigiert erst nach bestätigtem Abschluss weiter.
+ */
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -6,6 +9,7 @@ import { useAuth } from "./auth-context";
 import { useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { Loading, Notice } from "../../components/common";
+/** Schließt den tatsächlichen Einladung-/Recovery-Auth-Rückweg ab und bietet bei Fehlern einen wiederholbaren Zustand. */
 export function AuthCallback() {
   const { t } = useTranslation();
   const { session, loading, error } = useAuth();

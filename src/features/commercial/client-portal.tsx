@@ -1,3 +1,6 @@
+/**
+ * Organisationsbezogene Kursanfragen und Ausgabenansicht für Kundenkonten. Mitgliedschaften begrenzen die verfügbaren Organisationen; Veröffentlichung und Dozierendenzuweisung sind eigene serverseitige Abläufe.
+ */
 import { useRef, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -39,6 +42,7 @@ import {
 import { PublishClientRequest } from "./pricing";
 import "./platform-i18n";
 import "./platform.css";
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const schema = z.object({
   organisation: z.string().uuid(),
   title: z.string().trim().min(1).max(200),
@@ -63,6 +67,7 @@ const schema = z.object({
     .min(1)
     .max(60),
 });
+/** Erstellt eine organisationsgebundene Kursanfrage aus lokalen Termin- und Preisentwürfen. */
 function RequestForm({
   actor,
   organisations,
@@ -398,6 +403,7 @@ function RequestForm({
     </form>
   );
 }
+/** Zeigt den bestätigten Anfragestand und passende Folgeaktionen für diese Organisation. */
 function RequestCard({
   actor,
   request,
@@ -544,6 +550,7 @@ function RequestCard({
     </article>
   );
 }
+/** Verbindet freigegebene Kundenorganisationen, Anfragen und die eigene Ausgabenprojektion. */
 export function ClientPortalPage() {
   const { t, i18n } = useTranslation("platform");
   const { session } = useAuth();

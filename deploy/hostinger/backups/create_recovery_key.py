@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Einmalige private Recovery-Identität auf dem Desktop; der VPS benötigt nur den getrennten öffentlichen Empfänger. Der Schlüssel wird weder ausgegeben noch in den versionierten Checkout geschrieben.
 """Create an off-VPS recovery identity once; print no key material."""
 import argparse
 import json
@@ -11,6 +12,7 @@ import sys
 from complete_backup import BackupError, private_dir, private_file
 
 
+# Erzeugt/prüft ausschließlich eine ignorierte private Desktopidentität; vorhandene Empfänger müssen exakt zu derselben Identität passen.
 def create(directory, *, keygen="age-keygen"):
     if os.geteuid() == 0:
         raise BackupError("generate_recovery_identity_only_as_desktop_user")

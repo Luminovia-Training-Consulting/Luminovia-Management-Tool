@@ -1,12 +1,17 @@
+/**
+ * Isolierte Recovery-Zeugenfälle mit fiktiven Image-Digests und Migrationsinventaren. Manipulierte Historie, unvollständige Nachweise und falsche Images müssen vor einem Restore abgewiesen werden.
+ */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
 import { checkedDatabaseImage } from "../restore-check.mjs";
 import { verifyRestoredRecoveryInventory } from "./postgres_recovery_witness.mjs";
+// Berechnet einen stabilen SHA-256-Fingerabdruck für den folgenden Quellen-/Artefaktvergleich.
 const hash = (v) => createHash("sha256").update(v).digest("hex");
 const target = "supabase/postgres:17.13.0.000@sha256:" + "a".repeat(64);
 const source = "supabase/postgres:17.12.0.000@sha256:" + "b".repeat(64);
 // Fictional guard fixtures only: no newer image is downloaded or claimed tested.
+// Erzeugt einen fiktiven abgeschlossenen Image-/Migrationszeugen; die Unitfixture behauptet keinen heruntergeladenen Kandidaten.
 function witness() {
   const first = {
     path: "supabase/migrations/20260101000000_first.sql",

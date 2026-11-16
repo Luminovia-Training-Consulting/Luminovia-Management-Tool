@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für versionierte Verwaltungsaktionen, bestätigte Stornierung und stabile Anfragekennungen. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import {
   cleanup,
@@ -92,6 +95,7 @@ const assigned: JobLifecycle = {
     },
   ],
 };
+/** Konfiguriert den überprüften Lebenszyklusstand und gezielte Schreibantworten des SDK-Fixtures. */
 function mock(
   meta: JobLifecycle,
   write: (
@@ -110,10 +114,12 @@ function mock(
     },
   );
 }
+/** Macht die tatsächliche Routerposition nach einer bestätigten Lebenszyklusaktion sichtbar. */
 function CurrentLocation() {
   const location = useLocation();
   return <output aria-label="route">{location.pathname}</output>;
 }
+/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
 function setup(meta = empty, write?: Parameters<typeof mock>[1]) {
   mock(meta, write);
   const client = new QueryClient({

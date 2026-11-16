@@ -1,9 +1,13 @@
+/**
+ * Authentifiziertes HTTP-Gateway vor dem privaten clamd. Begrenzt Header, Uploadgröße, Parallelität und Laufzeit; nur ein expliziter ClamAV-Befund wird als Scanergebnis ausgegeben.
+ */
 import { createHash, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { pathToFileURL } from "node:url";
 import { createClamavScanner, MAX_BYTES, validateVersion } from "./clamav.mjs";
 
+// Lädt ausschließlich den serverseitigen Gateway-Token und verweigert eine unbrauchbare Konfiguration.
 export function readToken(environment = process.env) {
   const value = environment.PORTAL_SCANNER_TOKEN;
   const file = environment.PORTAL_SCANNER_TOKEN_FILE;
@@ -16,10 +20,12 @@ export function readToken(environment = process.env) {
   return token;
 }
 
+// Bildet Bearerwerte auf gleich lange SHA-256-Puffer ab, damit timingSafeEqual keinen direkten Längenvergleich des Tokens benötigt.
 function digest(value) {
   return createHash("sha256").update(value).digest();
 }
 
+// Schreibt die begrenzte JSON-Antwort samt explizitem HTTP-Status und Sicherheitsheadern.
 function json(response, status, value, extraHeaders = {}) {
   if (response.destroyed || response.writableEnded) return;
   response.writeHead(status, {
@@ -31,11 +37,13 @@ function json(response, status, value, extraHeaders = {}) {
   response.end(JSON.stringify(value));
 }
 
+// Beendet eine abgewiesene Request-Verbindung nach der Antwort, damit Restbytes nicht als weiterer Upload fortgesetzt werden.
 function closeAfterReply(request, response) {
   response.setHeader("Connection", "close");
   response.once("finish", () => request.destroy());
 }
 
+// Zählt echte rohe Headerfelder; zusammengeführte Headerwerte würden doppelte Auth-/Längenangaben verdecken.
 function headerCount(request, name) {
   let count = 0;
   for (let index = 0; index < request.rawHeaders.length; index += 2) {
@@ -44,6 +52,7 @@ function headerCount(request, name) {
   return count;
 }
 
+// Erzeugt das begrenzte Scan-Gateway mit injizierbarem Adapter, Authentifizierung und kontrollierter Belegung.
 export function createScannerServer({
   token,
   scanner = createClamavScanner(),

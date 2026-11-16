@@ -1,3 +1,7 @@
+/**
+ * Browserabläufe für persönliche Aktivitätsvorschau ohne fremde private Termine.
+ * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
@@ -14,6 +18,7 @@ test.skip(
   "Dashboard fixture writes require the canonical disposable project.",
 );
 
+/** Erzeugt einen kontrollierten privaten Termin der angegebenen Testperson für den Dashboard-Isolationsvergleich. */
 function appointment(user: string, title: string) {
   const start = new Date(Date.now() + 2 * 86400000);
   return {

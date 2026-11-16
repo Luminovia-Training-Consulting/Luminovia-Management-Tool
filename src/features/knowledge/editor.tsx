@@ -1,3 +1,6 @@
+/**
+ * Tiptap-Editor und lesende Darstellung mit begrenzten Erweiterungen und Codehervorhebung. Inhalt passiert die gemeinsame Normalisierung; freies, ungeprüftes HTML wird nicht als Speicherformat eingeführt.
+ */
 import { useState } from "react";
 import {
   EditorContent,
@@ -28,7 +31,9 @@ import { Dialog } from "../../components/ui/dialog";
 import { Field, Notice } from "../../components/common";
 import { emptyDocument, normalizedDocument, safeLink } from "./content";
 import "./i18n";
+/** Gemeinsame Syntaxhervorhebung der ausdrücklich geladenen Code-Sprachen. */
 const lowlight = createLowlight(common);
+/** Begrenzte Editorfunktionen passend zum normalisierten Speichervertrag. */
 const extensions = [
   StarterKit.configure({
     codeBlock: false,
@@ -60,6 +65,7 @@ const extensions = [
     },
   }).configure({ lowlight, defaultLanguage: "plaintext" }),
 ];
+/** Bindet Tiptap an kontrollierten normalisierten Inhalt und unterstützt denselben Vertrag beim Lesen und Bearbeiten. */
 export function KnowledgeEditor({
   value,
   onChange,
@@ -92,8 +98,12 @@ export function KnowledgeEditor({
         class: "knowledge-prose",
       },
     },
+    // Auch vom Editor erzeugte JSON-Daten laufen wieder durch dieselbe Allowlist
+    // wie geladene Inhalte; Erweiterungen können den Speichervertrag nicht still erweitern.
     onUpdate: ({ editor }) => onChange?.(normalizedDocument(editor.getJSON())),
   });
+  // Nur die benötigten Toolbarattribute beobachten, statt bei jeder Transaktion
+  // den gesamten React-Editorbaum erneut zu rendern.
   const active = useEditorState({
     editor,
     selector: ({ editor }) => ({

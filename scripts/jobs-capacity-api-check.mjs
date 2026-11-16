@@ -1,3 +1,7 @@
+/**
+ * Echte Auth-/HTTP-Prüfung für mehrere vollständige Auftragsplätze und deren unveränderliche Annahmen.
+ * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
+ */
 /** Real Auth/MFA/REST capacity proof. SQL is used only for owned fixture cleanup. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -95,6 +99,7 @@ await withApiFixture(
       }
       commit;`);
     });
+    // Gemeinsame Fixturefabrik: vollständige Terminblöcke, Eingabekonditionen, aktuelle Version und eigene Cleanup-IDs.
     const base = Date.now() + 180 * 86400000,
       sessions = (offset = 0) =>
         [0, 1].map((day) => ({
@@ -137,6 +142,7 @@ await withApiFixture(
         return id;
       };
     let checks = 0;
+    /** Meldet Erfolg erst nach der jeweils vorhergehenden tatsächlichen Prüfung. */
     const pass = (message) => {
       checks++;
       console.log(`PASS ${message}`);
@@ -397,6 +403,7 @@ await withApiFixture(
       "fifty concurrent HTTP calls commit exactly three distinct lecturers, six intervals and three deduplicated notifications",
     );
 
+    // Summen und Kundenberichte werden unabhängig aus bestätigten Positionen und ursprünglichen Währungen geprüft.
     const summary = async (expectedIds) => {
         const rows = await checked(
             client.client.rpc("client_spend_summary"),

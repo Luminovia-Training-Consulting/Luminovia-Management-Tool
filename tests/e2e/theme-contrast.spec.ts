@@ -1,3 +1,7 @@
+/**
+ * Browserabläufe für lesbare Aktionsbeschriftung im ersten berechneten Themezustand.
+ * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ */
 import { expect, test } from "@playwright/test";
 import { sampleThemeContrast } from "./helpers/theme-contrast";
 

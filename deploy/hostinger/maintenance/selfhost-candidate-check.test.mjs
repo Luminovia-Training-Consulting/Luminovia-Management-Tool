@@ -1,3 +1,6 @@
+/**
+ * Statische und dateibasierte Kandidatentests für Isolation, eindeutige Besitzer und übernommene Fixtures. Der gesonderte native Kandidatenlauf muss echte Auth-/Storage-Persistenz beweisen.
+ */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
@@ -28,6 +31,7 @@ const scope = {
   network: project + "-backend",
   directory: "/tmp/fictional-candidate-fixture",
 };
+// Erzeugt ausschließlich einen kontrollierten lokalen/injizierten Fixturebestand; externe Systemantworten bleiben gezielt austauschbar.
 function fixture() {
   const services = Object.fromEntries(
     [

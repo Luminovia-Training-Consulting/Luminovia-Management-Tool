@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für normalisierte selbst verfasste Profillabels ohne rollenartige Autorisierung. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { describe, expect, it } from "vitest";
 import { labelText } from "./api";
 describe("self-authored profile labels", () => {

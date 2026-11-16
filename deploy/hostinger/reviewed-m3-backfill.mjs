@@ -1,3 +1,6 @@
+/**
+ * Quellgebundener, ausdrücklich geprüfter M3-Übergang für einen historischen Entwicklungsbestand. Die festgehaltenen Hashes begrenzen den Sonderpfad; gewöhnliche spätere Migrationen verwenden ihn nicht.
+ */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { lstat, readFile, readdir, writeFile } from "node:fs/promises";
@@ -45,18 +48,22 @@ const baselineVersions = [
   "20261115132410",
   "20261115142130",
 ];
+// Berechnet einen stabilen SHA-256-Fingerabdruck für den folgenden Quellen-/Artefaktvergleich.
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const historySQL =
   "select coalesce(json_agg(json_build_object('version',version,'source',statements[1]) order by version),'[]'::json)::text from supabase_migrations.schema_migrations;";
+// Quotiert den SQL-Textwert für die gespeicherte, unveränderte Historienquelle.
 function quoted(value) {
   return "'" + value.replaceAll("'", "''") + "'";
 }
+// Wählt einen Dollar-Quote-Begrenzer, der in der konkreten Quelle nicht vorkommt.
 function dollar(value, suffix) {
   const delimiter = "$reviewed_m3_" + suffix + "$";
   assert(!value.includes(delimiter), "Unexpected reviewed source delimiter.");
   return delimiter + value + delimiter;
 }
 
+// Liest die fest erwarteten historischen Migrationsquellen und verifiziert ihre bekannten Hashes.
 export async function loadReviewedSources(root = repository) {
   const sources = [];
   for (const item of reviewedMigrations) {
@@ -105,6 +112,7 @@ do $verify$ declare r record; actual text; begin
 end; $verify$;
 `;
 
+// Erzeugt den engen Übergang samt Sperren und Bestandsprüfungen; bekannte historische Quellen werden nicht umgeschrieben.
 export function buildBackfillSQL(pending, history) {
   assert(
     pending.length > 0 &&
@@ -154,6 +162,7 @@ export function buildBackfillSQL(pending, history) {
   return sql + preserveAfterSQL + "NOTIFY pgrst, 'reload schema';\nCOMMIT;\n";
 }
 
+// Wendet den ausdrücklich geprüften Übergang nur unter den vorgesehenen Bestands-/Backupbedingungen an.
 export async function applyReviewedBackfill(sql, root = repository) {
   const sources = await loadReviewedSources(root);
   const history = JSON.parse(await sql(historySQL));
@@ -213,6 +222,7 @@ export async function applyReviewedBackfill(sql, root = repository) {
   };
 }
 
+// Prüft den Übergang zunächst im wiederhergestellten privaten Datenbestand.
 export async function backfillRestoreCheck(directory) {
   const { actual, manifest } = await inspectBackup(directory);
   let database;
@@ -310,6 +320,7 @@ export async function backfillRestoreCheck(directory) {
   }
 }
 
+// Führt SQL über den fest begrenzten Entwicklungszugang aus, ohne ein frei wählbares Datenbankziel einzuführen.
 async function developmentSql(input) {
   return collectCommand(
     "ssh",

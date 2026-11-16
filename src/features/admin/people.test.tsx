@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für Capabilitygrenzen, gezielte Expertiseprüfung und ausdrücklich bestätigte Kontosperren. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import {
   act,
   cleanup,
@@ -107,6 +110,7 @@ afterEach(() => {
   cleanup();
   client.clear();
 });
+/** Rendert die tatsächliche Seite in ihrem Router-/Query-Kontext für die folgenden Bedienprüfungen. */
 function page() {
   render(
     <QueryClientProvider client={client}>
@@ -116,6 +120,7 @@ function page() {
     </QueryClientProvider>,
   );
 }
+/** Wählt gezielt die fiktive Dozierendenzeile, bevor eine Verwaltungsänderung geprüft wird. */
 async function selectLecturer() {
   await userEvent.click(
     await screen.findByRole("button", {

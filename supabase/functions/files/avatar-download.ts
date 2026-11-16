@@ -1,5 +1,9 @@
+/**
+ * Eng begrenzter Profilbild-Lesepfad über die aktuell sichtbare Auswahl. Gibt Bytes einer exakten sauberen Version zurück, ohne allgemeine Leserechte auf persönliche Dokumente oder Storage-URLs zu vergeben.
+ */
 import { MAX_AVATAR_SIZE, validateAvatar } from "./avatar.ts";
 
+// Serverseitig gelesene exakte Version; der Status und Dokumentbezug werden vor Byteausgabe erneut geprüft.
 interface AvatarVersion {
   id: string;
   document_id: string;
@@ -8,12 +12,14 @@ interface AvatarVersion {
   mime_type: string;
   size_bytes: number;
 }
+// Minimaler Eigentümer-/Artvertrag für den besonderen Profilbildpfad.
 interface AvatarDocument {
   owner_id: string;
   scope: string;
   kind: string;
   deleted_at: string | null;
 }
+// Injizierte Schnittstelle zwischen aktueller Benutzersicht und serverseitigem Lesen der ausgewählten Objektbytes.
 interface AvatarDependencies {
   selection: (target: string) => Promise<{ version_id: string } | null>;
   version: (id: string) => Promise<AvatarVersion | null>;
@@ -24,6 +30,7 @@ interface AvatarDependencies {
 /** No Storage URL or general personal-document grant is returned. The caller
  * adapter uses the user's SQL projection for selection/visibility, and a
  * server-only client solely for reading the selected exact clean object. */
+// Prüft die sichtbare Auswahl und exakte saubere PNG-Version, liest deren Bytes und bestätigt dieselbe Auswahl unmittelbar vor der Rückgabe erneut.
 export async function selectedAvatarBytes(
   target: string,
   dependencies: AvatarDependencies,

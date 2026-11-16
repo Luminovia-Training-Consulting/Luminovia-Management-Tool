@@ -1,3 +1,7 @@
+/**
+ * Browserabläufe für eigene Inbox und dauerhaft bestätigte DE-/EN-Einstellungen.
+ * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ */
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";

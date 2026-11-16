@@ -1,3 +1,7 @@
+/**
+ * Browserabläufe für Sprach-/Theme-Bedienung bei blockierter Browserablage.
+ * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ */
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 

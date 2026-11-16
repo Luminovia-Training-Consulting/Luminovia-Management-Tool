@@ -1,3 +1,6 @@
+/**
+ * Gemeinsamer PDF-Upload für kaufmännische Dokumente. An die Fachform wird ausschließlich eine saubere, konkrete Dokumentversion zurückgegeben; Dateiname oder ausgewählte lokale Bytes allein genügen nicht.
+ */
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -7,6 +10,7 @@ import { useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { Notice } from "../../components/common";
 import "./i18n";
+/** Wählt und lädt ein PDF und meldet erst die bestätigte saubere Dokumentversion an das übergeordnete Formular. */
 export function CommercialPdfUpload({
   kind,
   ownerId,

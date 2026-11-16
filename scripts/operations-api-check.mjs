@@ -1,3 +1,7 @@
+/**
+ * Echte Auth-/HTTP-Prüfung für private Kundendaten sowie wiederverwendbare Kurse und Durchführungen.
+ * Fiktive getrennte Identitäten prüfen bestätigte API-Ergebnisse und negative Zugriffe; keine Browser-Mocks.
+ */
 import assert from "node:assert/strict";
 import { randomUUID, createHmac } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
@@ -11,6 +15,7 @@ assert.ok(
   url && ["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname),
   "Operations tests only use loopback Supabase",
 );
+/** Erzeugt einen getrennten SDK-Client ohne persistierte oder automatisch erneuerte Testsitzung. */
 const make = (key) =>
   createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -24,11 +29,13 @@ const jobs = [];
 const clients = [];
 const tag = randomUUID();
 let count = 0;
+/** Wertet den tatsächlichen SDK-Erfolg aus und gibt erst danach dessen Daten zurück. */
 async function checked(request, label) {
   const { data, error } = await request;
   assert.equal(error, null, `${label}: ${error?.message}`);
   return data;
 }
+/** Erzeugt getrennte fiktive Konten und meldet sie über Auth an; ihre Kennungen dienen nur der Fixture. */
 async function fixture(role) {
   const email = `operations-${role}-${tag}@example.invalid`;
   const result = await checked(
@@ -55,6 +62,7 @@ async function fixture(role) {
   );
   return { client, id: result.user.id };
 }
+/** Berechnet den aktuellen TOTP der Fixture für die echte MFA-Challenge. */
 function code(secret) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "")]
@@ -70,6 +78,7 @@ function code(secret) {
     .toString()
     .padStart(6, "0");
 }
+/** Führt eine benannte Prüfgruppe aus; fehlgeschlagene Assertions müssen den Lauf abbrechen. */
 async function test(name, fn) {
   await fn();
   count++;
@@ -448,27 +457,25 @@ try {
     job = randomUUID();
     jobs.push(job);
     await checked(
-      service
-        .from("jobs")
-        .insert({
-          id: job,
-          course_run_id: run,
-          title: `Bound assignment ${tag}`,
-          description: "Fictional accepted assignment",
-          customer_name: base.name,
-          delivery_type: "online",
-          location: "Online",
-          time_zone: "Europe/Berlin",
-          status: "published",
-          amount: 500,
-          total_amount: 1000,
-          currency: "EUR",
-          rate_unit: "per_day",
-          terms: "Fixed accepted terms",
-          terms_version: 1,
-          requires_contract: false,
-          created_by: admin.id,
-        }),
+      service.from("jobs").insert({
+        id: job,
+        course_run_id: run,
+        title: `Bound assignment ${tag}`,
+        description: "Fictional accepted assignment",
+        customer_name: base.name,
+        delivery_type: "online",
+        location: "Online",
+        time_zone: "Europe/Berlin",
+        status: "published",
+        amount: 500,
+        total_amount: 1000,
+        currency: "EUR",
+        rate_unit: "per_day",
+        terms: "Fixed accepted terms",
+        terms_version: 1,
+        requires_contract: false,
+        created_by: admin.id,
+      }),
       "Create scoped job",
     );
     const courseSessions = await checked(
@@ -476,16 +483,14 @@ try {
       "Get bound sessions",
     );
     await checked(
-      service
-        .from("job_sessions")
-        .insert(
-          courseSessions.map((s) => ({
-            job_id: job,
-            course_session_id: s.id,
-            starts_at: s.starts_at,
-            ends_at: s.ends_at,
-          })),
-        ),
+      service.from("job_sessions").insert(
+        courseSessions.map((s) => ({
+          job_id: job,
+          course_session_id: s.id,
+          starts_at: s.starts_at,
+          ends_at: s.ends_at,
+        })),
+      ),
       "Link job sessions",
     );
     const claim = await checked(

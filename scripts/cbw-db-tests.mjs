@@ -1,3 +1,7 @@
+/**
+ * PostgreSQL-Regressionsgruppen für provenienzgebundene CBW-Vorlagen und daraus geplante Aufträge.
+ * Die Testdatenbank spielt echte Migrationen ein; Rollen-/MFA-Claims prüfen den Datenvertrag unabhängig von der UI.
+ */
 /** Real isolated PostgreSQL checks for reviewed CBW sources and run-backed offers. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -28,6 +32,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
         `(${q(id)},${q(name === "stranger" ? "participant" : name)})`,
     )
     .join(",")};`);
+  /** Ruft die fachliche Datenbank-API unter den kontrollierten Identitäts-/MFA-Claims der Fixture auf. */
   const rpc = async (who, name, args = [], aal = "aal1") => {
     const invocation = `public.${name}(${args.map((v) => (v === null ? "null" : typeof v === "number" || typeof v === "boolean" ? String(v) : q(typeof v === "object" ? JSON.stringify(v) : v))).join(",")})`;
     const value = await actor(
@@ -44,6 +49,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
     }
   };
   let count = 0;
+  /** Zählt und meldet einen Fall erst, wenn sämtliche zugehörigen Assertions erfolgreich abgeschlossen sind. */
   const check = async (name, action) => {
     await action();
     count++;
@@ -57,6 +63,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
   await sql(
     `insert into public.organisations(id,name) values(${q(org)},'Fictional CBW Academy');insert into public.client_organisation_memberships(user_id,organisation_id) values(${q(ids.client)},${q(org)});`,
   );
+  /** Plant eine tatsächliche Durchführung aus der referenzierten Vorlage, statt nur einen Bildschirmzustand zu setzen. */
   const createRun = async (templateId = template, offset = 0) => {
     const start = new Date(Date.now() + (100 + offset) * 86400000);
     start.setUTCHours(8, 0, 0, 0);
@@ -83,6 +90,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
       "aal2",
     );
   };
+  /** Erzeugt Konditionen zur genauen Quellenrevision; die Datenbank muss veraltete Referenzen ablehnen. */
   const financial = (revision, gross = true) => ({
     source_revision: revision,
     ...(gross

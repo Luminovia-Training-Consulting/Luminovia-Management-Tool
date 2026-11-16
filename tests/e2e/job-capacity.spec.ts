@@ -1,3 +1,7 @@
+/**
+ * Browserabläufe für ganze Auftragsplätze und zugängliche autorisierte Boardaktionen.
+ * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {
@@ -59,6 +63,7 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
     name: "Auftragsboard",
     exact: true,
   });
+  /** Lokalisiert genau den erzeugten Auftrag im Board, damit fremde Fixturekarten die Prüfung nicht erfüllen. */
   const card = () => board.locator(`[data-offer-id="${created.id}"]`);
   await expect(card()).toBeVisible();
   const handle = card().getByRole("button", {

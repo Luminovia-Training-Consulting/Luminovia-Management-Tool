@@ -1,3 +1,6 @@
+/**
+ * Lesbare Provenienz von CBW-Bausteinen und Einstieg in vorlagenbasierte Kursplanung. Quellenhash und fachliche Referenz werden angezeigt; ursprüngliche Unterrichts-PDFs werden dadurch nicht veröffentlicht.
+ */
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { BookOpen, FileCheck2 } from "lucide-react";
@@ -16,6 +19,7 @@ import "./i18n";
 import "./building-blocks.css";
 import { jobBuildingBlockQuery } from "./building-blocks-api";
 
+/** Zeigt den kanonischen CBW-Baustein und seine referenzierten Quelleninformationen. */
 export function BuildingBlockReference({
   buildingBlockId,
   sourceId,
@@ -65,6 +69,7 @@ export function BuildingBlockReference({
   ) : null;
 }
 
+/** Lädt die geschützte Quellenkette des einen Auftrags und rendert sie nur bei vorhandener Referenz. */
 export function JobBuildingBlockReference({ jobId }: { jobId: string }) {
   const { session } = useAuth();
   const reference = useQuery(jobBuildingBlockQuery(session!.user.id, jobId));
@@ -79,6 +84,7 @@ export function JobBuildingBlockReference({ jobId }: { jobId: string }) {
   ) : null;
 }
 
+/** Stellt unterschiedliche Originalfassungen mit Herkunftsmetadaten dar, ohne Originaldateien zu kopieren. */
 export function BuildingBlockSources({
   block,
   sourceId,
@@ -150,6 +156,7 @@ export function BuildingBlockSources({
   );
 }
 
+/** Erlaubt die Auswahl bestehender kanonischer Bausteine für eine neue Kursvorlage oder Durchführung. */
 export function BuildingBlockCards({
   blocks,
   canManage,
@@ -202,6 +209,7 @@ export function BuildingBlockCards({
   );
 }
 
+/** Bietet den berechtigten Einstieg in ein Angebot aus genau diesem Kurslauf. */
 export function CourseRunOfferLink({ runId }: { runId: string }) {
   const { t } = useTranslation("operations");
   return (

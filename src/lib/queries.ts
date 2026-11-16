@@ -1,3 +1,6 @@
+/**
+ * Geteilte Basisqueries für Profil, aktuelle Rechte, Expertise, Angebote, Claims und private Termine. Personenbezogene Schlüssel verhindern Datenvermischung; RLS/RPCs sind die verbindliche Autorisierungsgrenze.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "./supabase";
 import type {
@@ -8,6 +11,7 @@ import type {
   Expertise,
   PersonalEvent,
 } from "./types";
+/** Lädt die berechtigten profiles-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const profileQuery = (id: string) =>
   queryOptions({
     queryKey: ["profile", id],
@@ -21,6 +25,7 @@ export const profileQuery = (id: string) =>
       return data as Profile | null;
     },
   });
+/** Lädt die Serverprojektion über get_my_permissions und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const permissionsQuery = (id: string) =>
   queryOptions({
     queryKey: ["permissions", id],
@@ -30,6 +35,7 @@ export const permissionsQuery = (id: string) =>
       return (data ?? []) as string[];
     },
   });
+/** Lädt die berechtigten topics-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. */
 export const topicsQuery = queryOptions({
   queryKey: ["topics"],
   queryFn: async () => {
@@ -41,6 +47,7 @@ export const topicsQuery = queryOptions({
     return data as Topic[];
   },
 });
+/** Lädt die berechtigten lecturer_topics-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const expertiseQuery = (id: string) =>
   queryOptions({
     queryKey: ["expertise", id],
@@ -53,6 +60,7 @@ export const expertiseQuery = (id: string) =>
       return data as Expertise[];
     },
   });
+/** Lädt die berechtigten jobs-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. */
 export const jobsQuery = queryOptions({
   queryKey: ["jobs"],
   queryFn: async () => {
@@ -64,6 +72,7 @@ export const jobsQuery = queryOptions({
     return data as Job[];
   },
 });
+/** Lädt die berechtigten job_claims-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const claimsQuery = (id: string) =>
   queryOptions({
     queryKey: ["claims", id],
@@ -78,6 +87,7 @@ export const claimsQuery = (id: string) =>
       return data as Claim[];
     },
   });
+/** Lädt die berechtigten personal_events-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const eventsQuery = (id: string) =>
   queryOptions({
     queryKey: ["events", id],
@@ -92,6 +102,7 @@ export const eventsQuery = (id: string) =>
     },
   });
 
+/** Lädt die berechtigten user_roles-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const userRolesQuery = (id: string) =>
   queryOptions({
     queryKey: ["user-roles", id],

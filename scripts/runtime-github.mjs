@@ -1,3 +1,7 @@
+/**
+ * Verwaltet eine eigene, an exakte main-SHAs gebundene lokale GitHub-Vorschau.
+ * Besitz, unveränderte Migrationen und geprüfte Übergänge schützen deren persistente Entwicklungsdaten.
+ */
 import { createHash } from "node:crypto";
 import {
   chmodSync,
@@ -23,10 +27,12 @@ import { githubPreviewConfig } from "./runtime-github-config.mjs";
 
 const repository =
   "https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool.git";
+/** Berechnet einen stabilen Inhaltsfingerabdruck; ein Hash ersetzt keine Ressourcenberechtigung. */
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const shaPattern = /^[a-f0-9]{40}$/;
 const migrationPattern = /^supabase\/migrations\/\d{14}_[a-z0-9_]+\.sql$/;
 
+/** Verlangt ein eigenes echtes Verzeichnis ohne Symlink und hält den Vorschaubereich privat. */
 function ownedDirectory(path) {
   let info = lstatSync(path, { throwIfNoEntry: false });
   if (!info) {
@@ -41,12 +47,14 @@ function ownedDirectory(path) {
     throw new Error("Unowned or symlinked GitHub preview directory refused.");
   chmodSync(path, 0o700);
 }
+/** Liest nur eine eigene reguläre Datei; symlinkbasierte oder fremde Zustände werden abgewiesen. */
 function regularFile(path) {
   const info = lstatSync(path);
   if (!info.isFile() || info.isSymbolicLink() || info.uid !== process.getuid())
     throw new Error("Unowned or symlinked GitHub preview file refused.");
   return readFileSync(path, "utf8");
 }
+/** Dekodiert den geprüften privaten Datensatz und bewahrt eine verständliche Fehlergrenze. */
 function jsonFile(path) {
   const source = regularFile(path);
   try {
@@ -55,6 +63,7 @@ function jsonFile(path) {
     throw new Error("Invalid private GitHub preview JSON record.");
   }
 }
+/** Entfernt umleitende Git-Variablen und verhindert interaktive Zugangsdialoge im verwalteten Ablauf. */
 function gitEnvironment() {
   const env = cleanEnvironment();
   for (const key of Object.keys(env))
@@ -66,6 +75,7 @@ function gitEnvironment() {
       delete env[key];
   return { ...env, GIT_TERMINAL_PROMPT: "0" };
 }
+/** Entfernt zusätzlich Git-/npm-Tokens vor dem Start der aus GitHub geladenen lokalen Laufzeit. */
 function runtimeEnvironment() {
   const env = cleanEnvironment();
   for (const key of Object.keys(env))
@@ -89,6 +99,7 @@ print(json.dumps(results))`;
 /** One private clone per launcher checkout. Fixture transport is deliberately
  * internal-only: the CLI never accepts a URL, ref, checkout path or token. */
 export class GitHubPreview {
+  /** Bindet Clone, Projekt und Besitzer an diesen Checkout; die Testtransportausnahme akzeptiert nur temporäre file-Fixtures. */
   constructor({ checkout = root, fixtureRepository } = {}) {
     this.checkout = realpathSync(checkout);
     this.repository = repository;
@@ -116,6 +127,7 @@ export class GitHubPreview {
       project: this.project,
     };
   }
+  /** Registriert den privaten Vorschaubesitzer und lehnt einen bereits vorhandenen unregistrierten Quellbaum ab. */
   initialise() {
     ownedDirectory(join(this.checkout, ".local"));
     ownedDirectory(this.base);
@@ -131,6 +143,7 @@ export class GitHubPreview {
       privateWrite(file, JSON.stringify(this.owner));
     }
   }
+  /** Serialisiert Vorschaubefehle mit der eigenen Kernel-Sperre und gibt diese im finally-Pfad frei. */
   async locked(operation) {
     this.initialise();
     let release;
@@ -153,6 +166,7 @@ export class GitHubPreview {
       release();
     }
   }
+  /** Führt Git ohne Repositoryhooks und ohne Weitergabe beliebiger Transportdiagnosen aus. */
   async git(args, cwd = this.source) {
     return await command(
       "git",
@@ -171,6 +185,7 @@ export class GitHubPreview {
       );
     });
   }
+  /** Validiert aufgezeichnete Quell-SHA und Konfigurationshash vor jeder Verwendung. */
   state() {
     const file = join(this.base, "source.json");
     if (!existsSync(file)) return null;
@@ -179,6 +194,7 @@ export class GitHubPreview {
       throw new Error("Invalid GitHub preview source record.");
     return state;
   }
+  /** Prüft Remote, HEAD, Overlayhash und Änderungen; manuell bearbeitete Quellen werden nicht überschrieben. */
   async validateSource() {
     if (!existsSync(this.source)) return;
     ownedDirectory(this.source);
@@ -219,6 +235,7 @@ export class GitHubPreview {
         "Preview contains edited or untracked source; preserve your changes before updating.",
       );
   }
+  /** Repariert ausschließlich das aufgezeichnete Checkout-/Overlay-Schreibfenster, ohne Datenbankrollback zu behaupten. */
   async recoverTransition() {
     const path = join(this.base, "transition.json");
     if (!existsSync(path)) return;
@@ -266,6 +283,7 @@ export class GitHubPreview {
     );
     unlinkSync(path);
   }
+  /** Bindet den neuesten main an eine genaue SHA, prüft Historie und Migrationen und erstellt einen quellgebundenen Prüfplan. */
   async fetchLatest() {
     this.initialise();
     if (!existsSync(this.source)) {
@@ -407,9 +425,11 @@ export class GitHubPreview {
     );
     return plan;
   }
+  /** Prüft private Vorschaudateien rekursiv vor dem Start der dazugehörigen CLI mit bereinigter Umgebung. */
   async runtime(action, directory = this.source) {
     for (const name of [".env.local", ".env.test.local"])
       if (existsSync(join(directory, name))) regularFile(join(directory, name));
+    /** Prüft rekursiv Besitzer und Symlinkfreiheit des privaten Laufzeitbaums. */
     const inspect = (path) => {
       const info = lstatSync(path);
       if (info.isSymbolicLink() || info.uid !== process.getuid())
@@ -429,6 +449,7 @@ export class GitHubPreview {
       },
     );
   }
+  /** Verlangt bei prüfpflichtigen Migrationen den exakten Plandigest und schreibt den Quellwechsel wiederaufnehmbar. */
   async apply(plan, accepted) {
     if (plan.review.length && accepted !== plan.digest)
       throw new Error(
@@ -464,6 +485,7 @@ export class GitHubPreview {
     );
     await this.runtime("start");
   }
+  /** Prüft dieselbe genaue SHA in einem separaten verwalteten Worktree, ohne die persistente Vorschau umzuschalten. */
   async testLatest(plan) {
     const directory = join(this.base, `test-${plan.sha}`);
     // Validate even dangling symlinks before Git receives the target path.
@@ -503,6 +525,7 @@ export class GitHubPreview {
     await this.runtime("test", directory);
     console.log(`Testprotokolle: ${directory}/.local/tests/`);
   }
+  /** Zeigt den aufgezeichneten Quellstand und nur einen zur Sitzung passenden tatsächlichen Supervisorzustand. */
   status() {
     this.initialise();
     const source = this.state();
@@ -536,6 +559,7 @@ export class GitHubPreview {
   }
 }
 
+/** Validiert den kleinen erlaubten CLI-Befehlsumfang; frei gewählte Remotes, Tokens oder Zielpfade sind keine Optionen. */
 export async function githubPreviewCommand(args = []) {
   const action = args[0] ?? "start";
   const accepted =

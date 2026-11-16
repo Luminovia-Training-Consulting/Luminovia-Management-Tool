@@ -1,3 +1,7 @@
+/**
+ * Schützt die festen QA-Ports über alle Checkouts desselben Linux-Benutzers.
+ * Der Kernel hält die Sperre; ein alter PID-Eintrag darf sie weder stehlen noch dauerhaft blockieren.
+ */
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
@@ -16,6 +20,7 @@ import { createServer } from "node:net";
 
 /** Older checkouts do not yet acquire the shared lock. Refuse their occupied
  * ports before proxy fixtures or stack startup, without touching any listener. */
+/** Prüft feste Loopback-Ports vor jedem Testdienststart und lässt vorhandene Listener vollständig in Ruhe. */
 export async function assertTestPortsAvailable(
   ports = [5273, 55321, 55322, 55324, 4273],
 ) {
@@ -39,6 +44,7 @@ export async function assertTestPortsAvailable(
 /** All checkouts share fixed loopback QA ports, so the owning lock must span
  * worktrees. The kernel owns its lifetime: stale PID metadata cannot retain or
  * steal it, and SIGKILL releases it without a racy lock-directory deletion. */
+/** Hält den gemeinsamen Lock-Inode über den offenen Deskriptor; Freigabe schließt ihn, statt ihn racy zu löschen. */
 export function acquireTestLock({
   directory = join(tmpdir(), `luminovia-portal-qa-${process.getuid()}`),
   checkout = process.cwd(),

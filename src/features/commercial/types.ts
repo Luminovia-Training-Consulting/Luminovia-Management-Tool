@@ -1,12 +1,18 @@
+/**
+ * DTOs für kommerzielle Rechte, Vertragsstände, Honorare, Rechnungen und Zahlungen. Dokumentversionen und akzeptierte Claim-Daten sind eigene Referenzen, damit spätere Vorlagenänderungen alte Vereinbarungen nicht umdeuten.
+ */
+/** Aktuelle kommerzielle Sicht-/Verwaltungsrechte, nicht aus einer UI-Rollenhierarchie abgeleitet. */
 export interface CommercialAccess {
   can_submit_invoice: boolean;
   can_manage_contracts: boolean;
   can_manage_finance: boolean;
 }
+/** Berechtigte Personenauswahl für kommerzielle Verwaltungsformulare. */
 export interface CommercialPerson {
   id: string;
   display_name: string;
 }
+/** Konkrete Vertragsfassung samt sauberer Dokumentversion, Gültigkeit und Empfangsstand. */
 export interface ContractRecord {
   id: string;
   user_id: string;
@@ -24,6 +30,7 @@ export interface ContractRecord {
   acknowledged_at: string | null;
   created_at: string;
 }
+/** Honorarprojektion aus akzeptierten Vereinbarungen mit Originalwährung und bestätigtem Abrechnungsstadium. */
 export interface EarningRecord {
   claim_id: string;
   job_id: string;
@@ -40,6 +47,7 @@ export interface EarningRecord {
   stage: "expected" | "completed" | "invoiced" | "paid";
   invoice_id: string | null;
 }
+/** Rechnungsprojektion mit exakter PDF-Version, serverermittelten Summen und Prüf-/Zahlungsstatus. */
 export interface InvoiceRecord {
   labels: string[];
   id: string;
@@ -59,6 +67,7 @@ export interface InvoiceRecord {
   note: string | null;
   paid_at: string | null;
 }
+/** Einzelne gebuchte beziehungsweise nachvollziehbar zurückgenommene Zahlung. */
 export interface InvoicePayment {
   id: string;
   amount: number;

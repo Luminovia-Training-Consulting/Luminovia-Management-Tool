@@ -1,3 +1,4 @@
+# Listener-Vorlage mit festen App-API-Routen und API-Key-Kompatibilitätsfiltern. Eingebettete Lua-Werte werden aus privater Konfiguration gerendert; Browserrollen und Fachrechte bleiben im Handler/DB-Vertrag.
 # Derived from pinned upstream: app APIs only, no Studio/meta, no request access log.
 resources:
 - '@type': type.googleapis.com/envoy.config.listener.v3.Listener

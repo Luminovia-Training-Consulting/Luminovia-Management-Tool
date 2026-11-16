@@ -1,3 +1,7 @@
+/**
+ * Kanonischer Gesamtprüflauf in eigenem Snapshot, Zufallsprojekt und eigenen Dienstports.
+ * Jede Stufe muss tatsächlich bestehen; Fehler und Aufräumfehler bleiben im privaten Ergebnisbericht sichtbar.
+ */
 import {
   cpSync,
   mkdirSync,
@@ -68,6 +72,7 @@ const env = cleanEnvironment({
 let failure;
 let localDockerReady = false;
 const cancellation = new AbortController();
+/** Bricht die aktuelle Stufe ab; der äußere finally-Pfad bleibt für das Aufräumen zuständig. */
 const cancel = () => {
   console.log("Test wird abgebrochen; isolierte Dienste werden aufgeräumt …");
   cancellation.abort();
@@ -98,6 +103,7 @@ try {
       entry.isDirectory() ? "dir" : "file",
     );
   }
+  // Nur die wegwerfbare Kopie erhält Testkennung und Testports; normale Entwicklungsquellen bleiben unverändert.
   const configPath = join(scratch, "supabase/config.toml");
   let config = readFileSync(configPath, "utf8");
   config = config
@@ -105,6 +111,7 @@ try {
     .replaceAll("543", "553")
     .replaceAll(":5173", ":5273");
   writeFileSync(configPath, config);
+  /** Führt genau eine beschriftete Stufe im isolierten Snapshot mit Timeout und gemeinsamem Abbruchsignal aus. */
   const step = async (label, file, args, extra = {}) => {
     console.log(`\n[TEST] ${label}`);
     return await command(file, args, {
@@ -134,6 +141,7 @@ try {
   const functions = join(scratch, "supabase/functions");
   const handlerTests = [];
   const entries = [];
+  /** Entdeckt gelieferte Edge-Einstiege und Tests rekursiv, damit neue Funktionen nicht unbemerkt ungeprüft bleiben. */
   function find(path) {
     for (const entry of readdirSync(path, { withFileTypes: true })) {
       const child = join(path, entry.name);

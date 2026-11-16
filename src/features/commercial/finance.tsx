@@ -1,3 +1,6 @@
+/**
+ * Honorare, claimbasierte Rechnungen, Prüfung und einzelne Zahlungen. Beträge und Zuordnung folgen bestätigten Serverdatensätzen; Rücknahmen benötigen ihre eigene nachvollziehbare Aktion.
+ */
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,11 +47,13 @@ import { RevenuePanel } from "./revenue";
 import "./i18n";
 import "./platform-i18n";
 import "./commercial.css";
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const invoiceSchema = z.object({
   number: z.string().trim().min(1).max(80),
   issued: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
+/** Verknüpft eine saubere Rechnungs-PDF-Version mit ausgewählten, servergeprüften akzeptierten Einsätzen. */
 function SubmitInvoice({
   actor,
   zone,
@@ -246,6 +251,7 @@ function SubmitInvoice({
     </form>
   );
 }
+/** Erfasst die begründete Rücknahme einer Zahlung als eigenständige Serveraktion. */
 function VoidPayment({
   actor,
   payment,
@@ -301,6 +307,7 @@ function VoidPayment({
     </form>
   );
 }
+/** Lädt die berechtigte Zahlungshistorie der einen Rechnung und zeigt Rücknahmen nachvollziehbar an. */
 function PaymentHistory({
   actor,
   invoice,
@@ -378,11 +385,13 @@ function PaymentHistory({
     </>
   );
 }
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const paymentSchema = z.object({
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/),
   paidAt: z.string().min(1),
   reference: z.string().trim().max(200),
 });
+/** Validiert einen Zahlungsentwurf und lässt den Server Restbetrag und Rechnungsstatus prüfen. */
 function RecordPayment({
   actor,
   invoice,
@@ -504,6 +513,7 @@ function RecordPayment({
     </form>
   );
 }
+/** Übermittelt die explizite Rechnungsprüfung beziehungsweise Ablehnung mit dem vorgesehenen Fachvertrag. */
 function ReviewInvoice({
   actor,
   invoice,
@@ -580,6 +590,7 @@ function ReviewInvoice({
     </form>
   );
 }
+/** Stellt bestätigte Rechnung, PDF-Version, Prüfstatus und passende Zahlungsaktionen zusammen. */
 function InvoiceCard({
   actor,
   invoice,
@@ -730,6 +741,7 @@ function InvoiceCard({
     </article>
   );
 }
+/** Rendert autorisierte Honorardatensätze mit Originalwährung und bestätigtem Abrechnungsstand. */
 function EarningsTable({
   rows,
   manager,
@@ -784,6 +796,7 @@ function EarningsTable({
     </div>
   );
 }
+/** Verbindet Rechte, Honorare, Rechnungen, Export und Zahlungsaktionen im aktuellen Akteurskontext. */
 export function FinancePage() {
   const { t, i18n } = useTranslation("commercial");
   const platformText = useTranslation("platform").t;

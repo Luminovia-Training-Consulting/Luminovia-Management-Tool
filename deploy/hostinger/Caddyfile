@@ -1,3 +1,4 @@
+# Öffentliche Entwicklungsgrenze: statischer Apprahmen und eng freigegebene Backendrouten. Private API-Antworten bleiben ungecached; die Wartungsmarkierung sperrt Backendrequests vor Datenänderungen.
 {
 	admin off
 	# No access log: invitation/recovery query strings must never enter logs.
@@ -13,6 +14,7 @@
 		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' wss://{$PORTAL_DOMAIN}; worker-src 'self'; frame-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests"
 	}
 	route {
+		# Private Fachantworten erhalten no-store; Auth-Verwaltungsrouten und aktive Wartung werden vor dem Proxy geprüft.
 		handle_path /backend/* {
 			route {
 				header >Cache-Control "no-store, private"
@@ -40,6 +42,7 @@
 				respond 404
 			}
 		}
+		# Nur die beiden vorgesehenen Authvorlagen sind öffentlich abrufbar; kein beliebiger Verzeichnisinhalt.
 		handle_path /mail-templates/* {
 			route {
 				root * /mail-templates
@@ -49,6 +52,7 @@
 				respond 404
 			}
 		}
+		# Gehasht benannte öffentliche Assets dürfen lange gespeichert werden; private Downloads gehören nicht in diesen Pfad.
 		handle /assets/* {
 			route {
 				root * /srv
@@ -56,6 +60,7 @@
 				file_server
 			}
 		}
+		# Versionsgebundene öffentliche Workboxdateien teilen die unveränderliche Assetpolitik.
 		handle /workbox-*.js {
 			route {
 				root * /srv
@@ -63,6 +68,7 @@
 				file_server
 			}
 		}
+		# SPA-Fallback erhält Deep Links; Appshell und Service Worker werden zur Updatefähigkeit nicht dauerhaft gecached.
 		handle {
 			route {
 				root * /srv/current

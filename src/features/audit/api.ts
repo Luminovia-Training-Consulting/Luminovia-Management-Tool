@@ -1,9 +1,13 @@
+/**
+ * Zeitlich begrenzte, cursorbasierte Lese-API für freigegebene Administrationsereignisse. Datumseingaben werden in der beabsichtigten Zone zu UTC-Grenzen; die RPC entscheidet über MFA, Capability und erlaubte Ereignisse.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { DateTime } from "luxon";
 import { db } from "../../lib/supabase";
 import { validZone } from "../../lib/dates";
 import { requireOnline } from "../../lib/online";
 
+/** Bewusst reduzierte Ereignisprojektion ohne freie Payloads oder vertrauliche Dokumentinhalte. */
 export interface AuditEvent {
   id: string;
   actor_name: string;
@@ -11,10 +15,12 @@ export interface AuditEvent {
   resource_id: string | null;
   created_at: string;
 }
+/** Stabile Position über Zeitstempel und ID, auch wenn mehrere Ereignisse denselben Zeitpunkt teilen. */
 export interface AuditCursor {
   at: string;
   id: string;
 }
+/** Eine autorisierte Auditseite samt Fortsetzung, angewendetem Zeitfenster und erlaubten Aktionen. */
 export interface AuditPage {
   items: AuditEvent[];
   has_more: boolean;
@@ -23,6 +29,7 @@ export interface AuditPage {
   to: string;
   actions: string[];
 }
+/** Aktiv übernommener Auditfilter; zone bewahrt die Bedeutung lokaler Kalendertage. */
 export interface AuditFilter {
   from: string;
   to: string;
@@ -30,6 +37,7 @@ export interface AuditFilter {
   search: string;
   zone: string;
 }
+/** Wandelt inklusive lokale Kalendertage in ein halboffenes UTC-Fenster mit maximal 93 Tagen um. */
 export function auditRange(from: string, to: string, zone: string) {
   if (
     !validZone(zone) ||
@@ -51,6 +59,7 @@ export function auditRange(from: string, to: string, zone: string) {
     return null;
   return { from: start.toUTC().toISO()!, to: end.toUTC().toISO()! };
 }
+/** Lädt die Serverprojektion über admin_audit_events und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const auditEventsQuery = (
   actor: string,
   filter: AuditFilter,

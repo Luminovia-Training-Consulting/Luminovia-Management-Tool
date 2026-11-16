@@ -1,3 +1,5 @@
+# Statische Analyse getrennt von der Laufzeitabnahme. Ein erfolgreicher Scannerjob
+# bedeutet nicht, dass vorhandene Befunde behoben sind; Triage bleibt erforderlich.
 name: Security analysis
 on:
   push:
@@ -14,6 +16,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   codeql:
+    # Die drei Sprachen umfassen auch Betriebswerkzeuge und Actions-Vertrauensgrenzen.
     name: CodeQL (${{ matrix.language }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -39,6 +42,7 @@ jobs:
         with:
           category: /language:${{ matrix.language }}
   dependency-review:
+    # Bewertet den PR-Unterschied, während npm audit den aktuellen Paketbaum prüft.
     name: Dependency review
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest

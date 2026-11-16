@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für centgenaue Aufteilung, Kapazitätsangebote und unverfälschte historische Bruttowerte. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { describe, expect, it } from "vitest";
 import {
   splitFee,
@@ -5,6 +8,7 @@ import {
   type CommissionRecord,
 } from "./commission-api";
 import { parseInvoiceLabels } from "./api";
+/** Erzeugt einen fiktiven Provisionsdatensatz mit expliziten Überschreibungen für Grenzfälle. */
 function record(overrides: Partial<CommissionRecord> = {}): CommissionRecord {
   return {
     job_id: crypto.randomUUID(),

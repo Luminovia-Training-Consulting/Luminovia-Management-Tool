@@ -1,3 +1,7 @@
+/**
+ * Startet eigene kurzlebige Caddy-Fixtures und prüft echte HTTP-Grenzen.
+ * Wartungszaun, Frontend und API werden über die gelieferte Proxykonfiguration untersucht.
+ */
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -33,6 +37,7 @@ const env = cleanEnvironment();
 let passed = 0;
 let failure;
 const cleanupFailures = [];
+/** Startet ausschließlich die Argumentliste der temporären Proxyfixture und bewahrt deren Fehlerstatus. */
 function docker(args) {
   return execFileSync("docker", args, {
     encoding: "utf8",
@@ -42,11 +47,13 @@ function docker(args) {
     maxBuffer: 4 * 1024 * 1024,
   }).trim();
 }
+/** Schreibt Konfiguration und Antwortdateien in das eigene temporäre Proxyfixture-Verzeichnis. */
 function file(name, value) {
   const path = join(directory, name);
   mkdirSync(join(path, ".."), { recursive: true });
   writeFileSync(path, value, { mode: 0o644 });
 }
+/** Zählt und meldet einen Fall erst, wenn sämtliche zugehörigen Assertions erfolgreich abgeschlossen sind. */
 function check(name, run) {
   return Promise.resolve()
     .then(run)
@@ -144,6 +151,7 @@ createServer(async(req,res)=>{let body='';for await(const chunk of req)body+=chu
   const binding = docker(["port", caddy, "8080/tcp"]);
   assert.match(binding, /^127\.0\.0\.1:\d+$/);
   const base = `http://${binding}`;
+  /** Sendet echte HTTP-Anfragen an den eigenen Loopback-Proxy mit kontrolliertem Hostheader, ohne Redirects automatisch zu folgen. */
   const request = (path, options = {}) =>
     fetch(base + path, {
       ...options,

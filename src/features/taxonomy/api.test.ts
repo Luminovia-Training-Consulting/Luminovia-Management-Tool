@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für Aliasvalidierung, Akteurscache und echte Request-Abbruchweitergabe. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { describe, expect, it, vi } from "vitest";
 import { taxonomyPayload, taxonomyQuery } from "./api";
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));

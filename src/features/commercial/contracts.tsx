@@ -1,3 +1,6 @@
+/**
+ * Registrierung ausgeführter Vertrags-PDFs, persönliche Einsicht und Empfangsbestätigung. Dokumente verweisen auf eine konkrete saubere Version; die Bestätigung wird nicht als elektronische Signatur behandelt.
+ */
 import { useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -37,6 +40,7 @@ import type { ContractRecord } from "./types";
 import { CommercialPdfUpload } from "./pdf-upload";
 import "./i18n";
 import "./commercial.css";
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const schema = z.object({
   user: z.string().uuid(),
   title: z.string().trim().min(1).max(200),
@@ -45,6 +49,7 @@ const schema = z.object({
   effective: z.string().min(1),
   expires: z.string(),
 });
+/** Registriert Vertragsmetadaten gegen eine bereits bestätigte saubere PDF-Version. */
 function RegisterContract({
   actor,
   zone,
@@ -246,6 +251,7 @@ function RegisterContract({
     </form>
   );
 }
+/** Zeigt Vertragsversion und Gültigkeit und führt eine explizite Empfangsbestätigung aus. */
 function ContractCard({
   actor,
   contract,
@@ -437,6 +443,7 @@ function ContractCard({
     </article>
   );
 }
+/** Wählt anhand kommerzieller Rechte eigene oder zugelassene Verwaltungsansichten der Verträge. */
 export function ContractsPage() {
   const { t } = useTranslation("commercial");
   const { session } = useAuth();

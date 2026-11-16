@@ -1,7 +1,11 @@
+/**
+ * Erzeugt lokale Wochentag-Terminvorlagen ohne Sommerzeit-Normalisierung. Die hier verwendete UTC-Zone dient nur kalendarischer Datumsarithmetik; die eigentliche Kurszone wird später beim Instanterzeugen angewendet.
+ */
 import { DateTime } from "luxon";
 
 // Generate wall-clock suggestions only. Saving still validates each exact
 // instant against the chosen IANA zone, including DST ambiguity/gap rejection.
+/** Erzeugt gültige lokale Montag-bis-Freitag-Termine und weist ungültige Startdaten, Uhrzeiten oder Tageszahlen ab. */
 export function weekdaySessions(
   startDate: string,
   startsAt: string,

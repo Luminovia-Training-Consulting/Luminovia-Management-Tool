@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für kodierte Bilddimensionen und begrenzte sichere Browseraufbereitung. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 import { sourceImageSize } from "./avatar-api";

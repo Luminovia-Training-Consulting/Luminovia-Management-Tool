@@ -96,6 +96,8 @@ Keep components, DTOs and queries in the feature module that owns them. Share ac
 
 Comment on the reason for a lock, important ordering, the authorization contract, version/retry handling or memory cleanup directly beside the code. Types and clear names describe the data; security/architecture documents explain broader decisions. Update comments when behavior changes. Document known limits instead of returning success from unimplemented branches.
 
+Comprehensive German source commentary now covers maintained frontend modules, tests, Edge handlers, runtime tools and operating configuration. Keep file purposes, function/component/hook contracts and important control-flow explanations current; preserve useful existing English comments and directives. The [agent guide](../AGENTS.md) maps ownership, commands and invariants. Released migration bytes remain unchanged because preview/update checks bind their hashes; the [SQL migration guide](MIGRATION_GUIDE.md) explains all 24 historical files and their replacement order. JSON/lockfiles, generated data, binary assets and the vendored upstream snapshot retain their own formats and provenance.
+
 Create additive migrations with the actually installed CLI (`npx --no-install supabase migration new NAME`). Do not modify migrations that have already been delivered. Check new tables, indexes, constraints, RLS and grants together with their UI/API. Avoid a second source of truth for accepted compensation, confirmed sessions or author identities.
 
 ## Loading behavior and runtime reliability

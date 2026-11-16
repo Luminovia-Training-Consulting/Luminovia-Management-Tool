@@ -1,3 +1,6 @@
+/**
+ * TOTP-Einrichtung, Challenge und Faktorverwaltung für die aktuelle Session. QR-Code und Verifikationszustand bleiben lokal; neue privilegierte Rechte werden nach erfolgreicher MFA erneut vom Backend gelesen.
+ */
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -9,6 +12,7 @@ import { db } from "../../lib/supabase";
 import { Button } from "../../components/ui/button";
 import { Field, Loading, Notice, PageHeading } from "../../components/common";
 import { useOnline } from "../../lib/online";
+/** Verwaltet TOTP-Enrollment und Challenges, ohne einen ungeprüften Faktor als bestätigte MFA auszugeben. */
 export function Security() {
   const { t } = useTranslation();
   const online = useOnline();

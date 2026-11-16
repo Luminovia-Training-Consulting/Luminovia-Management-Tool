@@ -1,3 +1,6 @@
+/**
+ * Native Kompatibilitätsprüfung des vollständigen selbst gehosteten Stacks in einem eigenen Compose-Projekt. Erhält Testdaten über den Imagewechsel und prüft Auth/API/Storage statt nur Containerstart oder statische YAML.
+ */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomBytes, createHash } from "node:crypto";
@@ -42,8 +45,10 @@ const expectedServices = [
   "web",
 ].sort();
 const immutable = /^[A-Za-z0-9./_-]+(?::[A-Za-z0-9._-]+)?@sha256:[a-f0-9]{64}$/;
+// Berechnet einen stabilen SHA-256-Fingerabdruck für den folgenden Quellen-/Artefaktvergleich.
 const hash = (data) => createHash("sha256").update(data).digest("hex");
 
+// Verifiziert Projektname, Ports, Mounts und private Konfiguration vor dem Start des isolierten Kandidaten.
 export function assertCandidateConfiguration(configuration, scope) {
   assert.match(scope.project, /^luminovia-portal-test-[a-f0-9]{24}$/);
   assert.equal(scope.network, scope.project + "-backend");
@@ -110,6 +115,7 @@ export function assertCandidateConfiguration(configuration, scope) {
   );
 }
 
+// Verknüpft die exakte Migrationsquelle mit einem echten Historieneintrag, statt nur die Versionsnummer zu speichern.
 export function migrationWithHistory(filename, source) {
   assert.match(filename, /^\d{14}_[a-z0-9_]+\.sql$/);
   assert(
@@ -123,6 +129,7 @@ export function migrationWithHistory(filename, source) {
   return source.replace(/commit;\s*$/i, () => record + "COMMIT;\n");
 }
 
+// Kopiert nur zulässige Quelldateien ohne private Daten oder laufzeitfremde Checkout-Artefakte.
 function copySource(source, target) {
   const info = lstatSync(source);
   assert(!info.isSymbolicLink(), "Candidate source symlinks are refused.");
@@ -142,6 +149,7 @@ function copySource(source, target) {
   }
 }
 
+// Legt einen eigenen Kandidatenbaum mit den tatsächlichen Quellen für die native Probe an.
 export function stageCandidateSource(sourceRoot, scratch) {
   for (const item of [
     "scripts",
@@ -171,6 +179,7 @@ export function stageCandidateSource(sourceRoot, scratch) {
   );
 }
 
+// Entdeckt die tatsächlich vorhandenen API-Prüfprogramme des Kandidaten.
 export function candidateApiSuites(sourceRoot) {
   const scripts = join(sourceRoot, "scripts");
   return [
@@ -184,6 +193,7 @@ export function candidateApiSuites(sourceRoot) {
   });
 }
 
+// Passt ausschließlich den expliziten isolierten Projekt-/Portvertrag der Testfixture an.
 export function adaptCandidateApiFixture(source, { project, apiPort }) {
   assert.match(project, /^luminovia-portal-test-[a-f0-9]{24}$/);
   assert(Number.isInteger(apiPort) && apiPort > 1024 && apiPort <= 65535);
@@ -205,6 +215,7 @@ export function adaptCandidateApiFixture(source, { project, apiPort }) {
     .replace(client, identity + client);
 }
 
+// Reserviert vorübergehend einen freien Loopback-Port für die isolierte Probe.
 async function availablePort() {
   const server = createServer();
   await new Promise((done, fail) =>
@@ -215,6 +226,7 @@ async function availablePort() {
   return port;
 }
 
+// Startet eigene Compose-Ressourcen, prüft Bestand vor/nach dem Wechsel und räumt ausschließlich anhand des Besitzvertrags auf.
 export async function checkCandidate({
   baselineRoot,
   candidateRoot = root,

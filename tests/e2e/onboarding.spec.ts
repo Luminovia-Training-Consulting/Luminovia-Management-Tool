@@ -1,3 +1,7 @@
+/**
+ * Browserabläufe für tatsächliche Einladungs-/Recoverylinks aus lokalem Mailpit.
+ * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ */
 import { test, expect } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";

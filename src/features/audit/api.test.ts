@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für zeitlich begrenzte Auditfenster mit echten zonierten Datumsgrenzen. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { describe, expect, it } from "vitest";
 import { auditEventsQuery, auditRange } from "./api";
 

@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für sichere Inboxziele, bestätigte Lesestände und erhaltene Entwürfe bei Versionskonflikten. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import {
   act,
   cleanup,
@@ -102,6 +105,7 @@ afterEach(() => {
   clients.splice(0).forEach((client) => client.clear());
   vi.clearAllMocks();
 });
+/** Rendert die untersuchte Komponente mit den für diesen Test notwendigen lokalen Providern. */
 function view(component: React.ReactNode) {
   const client = new QueryClient({
     defaultOptions: {

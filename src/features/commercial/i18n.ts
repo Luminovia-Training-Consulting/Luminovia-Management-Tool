@@ -1,3 +1,6 @@
+/**
+ * DE/EN-Oberflächentexte für commercial. Die Registrierung erweitert i18next beim Modulimport; verfasste Fachinhalte werden nicht automatisch übersetzt.
+ */
 import i18n from "../../lib/i18n";
 const pairs: Record<string, [string, string]> = {
   noDocument: [

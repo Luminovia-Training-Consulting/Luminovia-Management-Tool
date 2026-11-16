@@ -1,3 +1,6 @@
+/**
+ * Kategorieverwaltung für Wiki beziehungsweise Forum. Lokale Validierung unterstützt den Editor; Persistenz und Moderationsberechtigung werden durch die jeweiligen RPCs entschieden.
+ */
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -12,6 +15,7 @@ import { Dialog } from "../../components/ui/dialog";
 import { categoriesQuery, knowledgeKeys } from "./api";
 import type { KnowledgeCategory } from "./types";
 import "./i18n";
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const schema = z.object({
   slug: z
     .string()
@@ -22,6 +26,7 @@ const schema = z.object({
   label_en: z.string().trim().min(1).max(120),
   archived: z.boolean(),
 });
+/** Validiert den Kategorieentwurf und übermittelt die passende Wiki-/Forum-Verwaltungsaktion. */
 function CategoryForm({
   actor,
   kind,
@@ -110,6 +115,7 @@ function CategoryForm({
     </form>
   );
 }
+/** Zeigt die freigegebenen Kategorien und bindet ihren Editor an den gewählten Wissensbereich. */
 export function CategoryManager({
   actor,
   kind,

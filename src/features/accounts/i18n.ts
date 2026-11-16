@@ -1,4 +1,9 @@
+/**
+ * DE/EN-Oberflächentexte für accounts. Die Registrierung erweitert i18next beim Modulimport; verfasste Fachinhalte werden nicht automatisch übersetzt.
+ */
 import i18n from "../../lib/i18n";
+// Statische UI-Ressourcen; Variablen und Pluralformen folgen dem gemeinsamen
+// i18next-Vertrag des jeweiligen Fachnamensraums.
 const de = {
   title: "Konten & Zugänge",
   invited:

@@ -1,3 +1,6 @@
+/**
+ * Erstellt das prüfbare CMS-Entwicklungsrelease aus genau einem Commit. Erlaubte Pfade, exakte Datei-/Migrationshashes, öffentliche Buildwerte und gepinnte Runtime-Images werden vor dem Packen validiert.
+ */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -53,8 +56,10 @@ const OPTIONAL_FILES = [
   "deploy/hostinger/backups/luminovia-complete-backup.timer",
 ];
 
+// Berechnet einen stabilen SHA-256-Fingerabdruck für den folgenden Quellen-/Artefaktvergleich.
 const hash = (data) => createHash("sha256").update(data).digest("hex");
 
+// Begrenzt jeden Archivpfad auf die feste App-Allowlist und verweigert Traversal sowie private Checkoutpfade.
 function safePath(name) {
   if (
     !name ||
@@ -79,6 +84,7 @@ function safePath(name) {
   }
 }
 
+// Prüft jeden Pfadbestandteil auf Symlinks und die Quelldatei auf regulären Typ und erlaubte Größe.
 function plainFile(path, sourceRoot) {
   const rel = relative(sourceRoot, path);
   if (rel === ".." || rel.startsWith(".." + sep) || rel.startsWith(sep)) {
@@ -96,6 +102,7 @@ function plainFile(path, sourceRoot) {
   return info;
 }
 
+// Sammelt nur zulässige Dateien eines erlaubten Quellbaums und verhindert doppelte Archivziele.
 function collectTree(
   sourceRoot,
   sourceDirectory,
@@ -127,6 +134,7 @@ function collectTree(
   visit(directory, "");
 }
 
+// Liest pro Compose-Dienst den unveränderlichen Digest-Pin aus der tatsächlichen Quelle.
 function serviceImages(text) {
   const result = [];
   let service;
@@ -144,6 +152,7 @@ function serviceImages(text) {
   return result;
 }
 
+// Verknüpft den bekannten Dienstsatz und PostgreSQL-Nachweise mit den exakten Release-Migrationen.
 function runtimeMetadata(sourceRoot, migrations) {
   const images = [
     ...serviceImages(
@@ -262,6 +271,7 @@ function runtimeMetadata(sourceRoot, migrations) {
   };
 }
 
+// Verweigert bekannte serverseitige Geheimnismuster vor dem Einpacken in ein verteilbares Release.
 function assertNoCredentials(data, source, publicKey, forbiddenValues) {
   const text = data.toString("utf8");
   if (
@@ -306,6 +316,7 @@ function assertNoCredentials(data, source, publicKey, forbiddenValues) {
     throw new Error("Secret key cannot be public build configuration.");
 }
 
+// Prüft Buildkonfiguration, Quelleninventar und Runtime-Vertrag und erzeugt erst danach Manifest und Archiv.
 export function createRelease(options) {
   const sourceRoot = realpathSync(resolve(options.sourceRoot ?? "."));
   const output = resolve(options.outputDirectory);

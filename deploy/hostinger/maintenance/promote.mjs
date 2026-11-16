@@ -1,3 +1,6 @@
+/**
+ * Promotet ausschließlich geprüfte Änderungen aus der festen Wartungs-Allowlist. Vergleicht den erwarteten Main-Basiscommit vor dem signierten GitHub-Commit; ein veralteter Kandidat darf parallele Arbeit nicht überschreiben.
+ */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
@@ -23,6 +26,7 @@ import {
   validatePgProof,
 } from "./daily-updates.mjs";
 
+// Begrenzt einen einzelnen Kandidatendiff auf erlaubte Dateien und die zugehörigen Updatewerte.
 export function validateFileChange(
   path,
   before,
@@ -136,6 +140,7 @@ export function validateFileChange(
     );
   }
 }
+// Prüft Quellenbasis, Kandidatenstruktur und alle Änderungen vor einem GitHub-Schreibzugriff.
 export function validatePatch(patch, root = ROOT) {
   assert(
     patch.schemaVersion === 1 &&
@@ -261,6 +266,7 @@ export function validatePatch(patch, root = ROOT) {
     );
   }
 }
+// Begrenzt den GitHub-Aufruf auf die benötigte API und gibt Fehler ohne ein scheinbar erfolgreiches Teilergebnis weiter.
 export async function github(
   path,
   { method = "GET", body, allowMissing = false } = {},
@@ -285,6 +291,7 @@ export async function github(
   );
   return response.status === 204 ? null : response.json();
 }
+// Erzeugt den signierten Commit auf der überprüften Basis und liest den Signaturnachweis zurück.
 async function createSignedCommit(branch, base, additions, headline, api) {
   const response = await api("/graphql", {
     method: "POST",
@@ -318,6 +325,8 @@ async function createSignedCommit(branch, base, additions, headline, api) {
   );
   return commit;
 }
+// Prüft den aktuellen Main-Stand erneut und aktualisiert nur den unveralteten, vollständig validierten Kandidaten.
+// Die finale Branchaktualisierung bleibt an dieselbe zuvor geprüfte Basis gebunden; paralleles Main gewinnt gegenüber einem veralteten Patch.
 export async function promote(patch, { root = ROOT, api = github } = {}) {
   validatePatch(patch, root);
   const branch = await api("/repos/" + REPOSITORY + "/branches/main");
@@ -338,6 +347,7 @@ export async function promote(patch, { root = ROOT, api = github } = {}) {
   });
   return { status: "promoted_waiting_for_exact_main_ci", commit };
 }
+// Prüft die tatsächliche Signaturfähigkeit des aktuellen GitHub-Schreibpfads auf einem begrenzten Probe-Ref.
 export async function signatureProbe(api = github) {
   const main = await api("/repos/" + REPOSITORY + "/branches/main");
   const base = main.commit?.sha;
@@ -377,6 +387,7 @@ export async function signatureProbe(api = github) {
       });
   }
 }
+// Fordert nur die CI für den aktuell erwarteten Main-Commit an; ein Workflowstart allein ist noch kein bestandener Lauf.
 export async function retryMainChecks(api = github) {
   const branch = await api("/repos/" + REPOSITORY + "/branches/main");
   const commit = branch.commit?.sha;
@@ -406,6 +417,7 @@ export async function retryMainChecks(api = github) {
   });
   return { status: "retried_unreleased_main_checks", commit };
 }
+// Verarbeitet nur die dokumentierten Unterbefehle und gibt Fehler als fehlgeschlagenen Prozessabschluss weiter.
 async function cli() {
   const [operation, file] = process.argv.slice(2);
   const result =

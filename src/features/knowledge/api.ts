@@ -1,3 +1,6 @@
+/**
+ * Actor-bezogene Wissensqueries für Kategorien, Wiki und Forum. Veröffentlichte Inhalte, eigene Entwürfe, Revisionen und Moderationsberichte behalten getrennte Serverprojektionen.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import type {
@@ -9,6 +12,7 @@ import type {
   WikiPageRecord,
   WikiRevision,
 } from "./types";
+/** Einheitliche akteursbezogene Cachepräfixe für Wissen, Revisionen, Forum und gezielte Revalidierung. */
 export const knowledgeKeys = {
   access: (actor: string) => ["knowledge-access", actor] as const,
   categories: (actor: string, kind: string) =>
@@ -16,6 +20,7 @@ export const knowledgeKeys = {
   wiki: (actor: string) => ["wiki", actor] as const,
   forum: (actor: string) => ["forum", actor] as const,
 };
+/** Lädt die Serverprojektion über knowledge_access und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const knowledgeAccessQuery = (actor: string) =>
   queryOptions({
     queryKey: knowledgeKeys.access(actor),
@@ -26,6 +31,7 @@ export const knowledgeAccessQuery = (actor: string) =>
     },
     staleTime: 1000,
   });
+/** Lädt die Serverprojektion über knowledge_categories und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const categoriesQuery = (actor: string, kind: "wiki" | "forum") =>
   queryOptions({
     queryKey: knowledgeKeys.categories(actor, kind),
@@ -37,6 +43,7 @@ export const categoriesQuery = (actor: string, kind: "wiki" | "forum") =>
       return (data ?? []) as KnowledgeCategory[];
     },
   });
+/** Lädt die Serverprojektion über wiki_pages_list und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const wikiListQuery = (
   actor: string,
   search: string,
@@ -64,6 +71,7 @@ export const wikiListQuery = (
       return (data ?? []) as WikiPageRecord[];
     },
   });
+/** Lädt die Serverprojektion über wiki_page und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const wikiPageQuery = (actor: string, id: string) =>
   queryOptions({
     queryKey: [...knowledgeKeys.wiki(actor), "page", id],
@@ -74,6 +82,7 @@ export const wikiPageQuery = (actor: string, id: string) =>
     },
     refetchOnWindowFocus: false,
   });
+/** Lädt die Serverprojektion über wiki_page_history und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const wikiHistoryQuery = (actor: string, id: string) =>
   queryOptions({
     queryKey: [...knowledgeKeys.wiki(actor), "history", id],
@@ -83,6 +92,7 @@ export const wikiHistoryQuery = (actor: string, id: string) =>
       return (data ?? []) as WikiRevision[];
     },
   });
+/** Lädt die Serverprojektion über forum_threads_list und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const forumListQuery = (
   actor: string,
   search: string,
@@ -107,6 +117,7 @@ export const forumListQuery = (
       return (data ?? []) as ForumThread[];
     },
   });
+/** Lädt die Serverprojektion über forum_thread und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const forumThreadQuery = (actor: string, id: string) =>
   queryOptions({
     queryKey: [...knowledgeKeys.forum(actor), "thread", id],
@@ -116,6 +127,7 @@ export const forumThreadQuery = (actor: string, id: string) =>
       return data as ForumThread | null;
     },
   });
+/** Lädt die Serverprojektion über forum_posts und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const forumPostsQuery = (actor: string, id: string) =>
   queryOptions({
     queryKey: [...knowledgeKeys.forum(actor), "posts", id],
@@ -127,6 +139,7 @@ export const forumPostsQuery = (actor: string, id: string) =>
       return (data ?? []) as ForumPost[];
     },
   });
+/** Lädt die Serverprojektion über forum_reports und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const forumReportsQuery = (actor: string) =>
   queryOptions({
     queryKey: [...knowledgeKeys.forum(actor), "reports"],

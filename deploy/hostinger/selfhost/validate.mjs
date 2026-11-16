@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+/**
+ * Prüft gerenderte Selfhost-Konfiguration, Images und echte Gateway-Grenzen mit synthetischen Werten. Temporäre Dateien gehören nur dieser Probe; es wird keine bestehende Instanz konfiguriert.
+ */
 /** Offline cryptography, permissions and Docker Compose boundary validation. */
 import assert from "node:assert/strict";
 import { createHash, createHmac, createPublicKey, verify } from "node:crypto";

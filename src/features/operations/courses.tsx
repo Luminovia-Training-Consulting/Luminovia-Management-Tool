@@ -1,3 +1,6 @@
+/**
+ * Wiederverwendbare Kursvorlagen und konkrete Durchführungen mit echten Terminen. Vorlageninhalt, Teilnehmerverwaltung, Kursveröffentlichung und Auftragsangebot bleiben fachlich getrennte Schritte.
+ */
 import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
 import { useState } from "react";
@@ -44,6 +47,7 @@ import {
   CourseRunOfferLink,
 } from "./building-blocks";
 import { weekdaySessions } from "./schedule";
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const templateSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().max(12000),
@@ -52,6 +56,7 @@ const templateSchema = z.object({
   topic_ids: z.array(z.string()),
   archived: z.boolean(),
 });
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const runSchema = z.object({
   template_id: z.uuid(),
   organisation_id: z.string(),
@@ -67,6 +72,7 @@ const runSchema = z.object({
     .min(1)
     .max(60),
 });
+/** Bearbeitet wiederverwendbare Inhaltsvorlagen getrennt von konkreten Kunden und Terminserien. */
 function TemplateForm({
   original,
   onDone,
@@ -162,6 +168,7 @@ function TemplateForm({
     </form>
   );
 }
+/** Plant eine Durchführung aus einer Vorlage mit konkreten lokalen Zeiten, Kunde und Durchführungsart. */
 function RunForm({
   original,
   templates,
@@ -430,6 +437,7 @@ function RunForm({
     </form>
   );
 }
+/** Verbindet Inhaltsvorlagen, Durchführungen und bewusst ausgelöste Publikations-/Kopieraktionen. */
 export function CoursesPage() {
   const { t, i18n } = useTranslation("operations");
   const { session } = useAuth();

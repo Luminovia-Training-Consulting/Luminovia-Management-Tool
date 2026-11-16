@@ -1,3 +1,6 @@
+/**
+ * Aktiver Chatverlauf mit Suche, Historie, Lesestand, Stummschaltung und Mitgliederdialog. Verlorener Zugriff verdrängt auch bereits geladene Inhalte; sichtbare Nachrichten werden nur online und im sichtbaren Tab als gelesen gemeldet.
+ */
 import { useEffect, useRef, useState } from "react";
 import {
   useInfiniteQuery,
@@ -32,6 +35,7 @@ import { MessageBubble } from "./message";
 import { useChatRealtime } from "./realtime";
 import type { ChatRoom } from "./types";
 import "./i18n";
+/** Bindet Historie, Lesestand, Suche, Realtime und Anhänge an genau einen aktiven Raum. */
 export function ChatThread({
   actor,
   room,
@@ -64,6 +68,8 @@ export function ChatThread({
   const latest = ordered[ordered.length - 1];
   const marked = useRef("");
   const end = useRef<HTMLDivElement>(null);
+  // Raumverwaltung ist keine allgemeine Admin-Lesefreigabe für private DMs.
+  // Diese UI-Regel folgt den getrennten Raumarten; jede Aktion prüft der Server erneut.
   const canManage =
     room.kind !== "dm" &&
     room.kind !== "general" &&
@@ -90,6 +96,8 @@ export function ChatThread({
   });
   const mark = read.mutate;
   useEffect(() => {
+    // Eine Suchhistorie oder ein unsichtbarer Tab bestätigt keine neue Lektüre.
+    // Die Referenz verhindert nur gleichzeitige Duplikate; onError macht sie wiederholbar.
     const observeRead = () => {
       if (
         !latest ||
@@ -126,6 +134,8 @@ export function ChatThread({
     onSuccess: () =>
       client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
   });
+  // Widerruf hat Vorrang vor einer vorher erfolgreichen Historienantwort.
+  // Die noch vorhandenen Querydaten dürfen diesen Zustand nicht überdecken.
   const lost = revoked || chatAccessDenied(messages.error);
   if (lost)
     return (

@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für Scanabschluss, konkrete PDF-Versionen und erhaltene Upload-Retry-Kennung. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -10,6 +13,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
+/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
 function setup(done: (document: PortalDocument | null) => void) {
   render(
     <QueryClientProvider

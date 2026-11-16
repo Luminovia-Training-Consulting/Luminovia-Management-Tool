@@ -1,3 +1,6 @@
+/**
+ * Glockenzähler, Inboxzeilen und persönliche Kategorieauswahl. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ */
 .notification-count {
   display: inline-grid;
   min-width: 1.25rem;
@@ -26,6 +29,7 @@
   margin: 0;
   padding: 0;
 }
+/* Titel, Datum, sicheres Ziel und bestätigte Leseaktion bleiben in einer Meldungszeile. */
 .notification-row {
   display: flex;
   flex-wrap: wrap;
@@ -46,6 +50,7 @@
 .notification-row small {
   color: var(--muted);
 }
+/* Ungelesen erhält Rand und Hintergrund zusätzlich zum tatsächlichen Lesestatus im Inhalt. */
 .notification-row.notification-unread {
   border-inline-start: 3px solid var(--brand);
   background: var(--blue-soft);
@@ -61,6 +66,7 @@
   max-width: 70ch;
   line-height: 1.6;
 }
+/* Optionale Kategorien werden als beschriftete native Checkboxgruppe dargestellt. */
 .notification-preferences fieldset {
   border: 0;
   padding: 0;
@@ -86,6 +92,7 @@
 .notification-preferences > .notice {
   margin-block: 1rem;
 }
+/* Layoutanpassung (max-width: 600px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
 @media (max-width: 600px) {
   .inbox-toolbar {
     align-items: stretch;

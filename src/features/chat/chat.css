@@ -1,8 +1,12 @@
+/**
+ * Raum-/Threadlayout, Nachrichten, Composer und mobile Einzelansicht des Chats. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ */
 .chat-page-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 9px;
 }
+/* Desktop: Raumwahl und aktiver Verlauf nebeneinander, beide ohne intrinsischen horizontalen Überlauf. */
 .chat-workspace {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
@@ -78,6 +82,7 @@
   line-height: 1.5;
   margin-top: 5px;
 }
+/* Raumzeilen halten Auswahl, Ungelesenzahl und Raumart getrennt sichtbar. */
 .chat-room-list {
   display: flex;
   flex-direction: column;
@@ -226,6 +231,7 @@
   top: -20px;
   color: var(--brand);
 }
+/* Aktiver Gesprächsbereich mit eigener scrollbarer Historie. */
 .chat-thread {
   display: flex;
   flex-direction: column;
@@ -333,6 +339,7 @@
   margin: 0;
   list-style: none;
 }
+/* Nachrichten behalten Autor, Zeit, Text und bestätigte Anhänge als zusammenhängenden Eintrag. */
 .chat-message {
   display: flex;
   gap: 10px;
@@ -494,6 +501,7 @@
   justify-content: center;
   margin-bottom: 18px;
 }
+/* Verbleibender Entwurf, Uploadstatus und Versandaktionen bilden einen gemeinsamen Composer. */
 .chat-composer {
   padding: 14px 24px 17px;
   border-top: 1px solid var(--line);
@@ -672,6 +680,7 @@
   max-height: 170px;
   overflow-y: auto;
 }
+/* Layoutanpassung (max-width: 1150px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
 @media (max-width: 1150px) {
   .chat-workspace {
     grid-template-columns: 260px minmax(0, 1fr);
@@ -708,6 +717,7 @@
     display: none;
   }
 }
+/* Layoutanpassung (max-width: 900px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
 @media (max-width: 900px) {
   .chat-workspace {
     grid-template-columns: 225px minmax(0, 1fr);
@@ -753,6 +763,7 @@
     min-width: 100px;
   }
 }
+/* Layoutanpassung (max-width: 760px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
 @media (max-width: 760px) {
   .chat-workspace {
     display: block;

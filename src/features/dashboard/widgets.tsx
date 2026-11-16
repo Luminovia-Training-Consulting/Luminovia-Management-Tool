@@ -1,3 +1,6 @@
+/**
+ * Kleine Kalender-, Aktivitäts-, Datei- und Vertragsvorschauen mit geteilten Query-Beobachtern. Fehler haben Vorrang vor behaltenen Daten; das Dashboard startet keine zweite Hintergrundabfrage der gesamten Inboxhistorie.
+ */
 import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -22,12 +25,14 @@ import { recentDocumentsQuery, nextPersonalEventsQuery } from "./api";
 import "./i18n";
 import "./widgets.css";
 
+/** Kleinster gemeinsamer Queryzustand für isolierte Lade-/Fehlerdarstellung eines Widgets. */
 interface State {
   isPending: boolean;
   isError: boolean;
   isFetching?: boolean;
   refetch: () => unknown;
 }
+/** Gibt Fehlern Vorrang vor behaltenen Daten und bietet einen gezielten Neuabruf für dieses Widget. */
 function WidgetState({
   state,
   children,
@@ -59,12 +64,14 @@ function WidgetState({
     );
   return children;
 }
+/** Bestätigtes Terminintervall mit optionaler Auftragsverknüpfung für die Startseitenvorschau. */
 export interface CalendarAssignment {
   id: string;
   starts_at: string;
   ends_at: string;
   job?: { id: string; title: string };
 }
+/** Mischt eigene Privattermine und bestätigte Einsätze, filtert vergangene Einträge und begrenzt die Vorschau. */
 export function DashboardCalendarPreview({
   actor,
   zone,
@@ -145,6 +152,7 @@ export function DashboardCalendarPreview({
     </section>
   );
 }
+/** Beobachtet geteilte Inbox-/Raumqueries ohne eine zweite Hintergrundabfrage der Historie zu starten. */
 function Activity({ actor, zone }: { actor: string; zone: string }) {
   const { t, i18n } = useTranslation("dashboard");
   // The same preview key is observed by the shell. Do not add an inbox-history
@@ -212,6 +220,7 @@ function Activity({ actor, zone }: { actor: string; zone: string }) {
     </section>
   );
 }
+/** Zeigt nur eigene aktuell relevante Vertragsbestätigungen und keine fremden Vertragsstände. */
 function PendingContracts({ actor, zone }: { actor: string; zone: string }) {
   const { t, i18n } = useTranslation("dashboard");
   const contracts = useQuery(contractsQuery(actor, false));
@@ -261,6 +270,7 @@ function PendingContracts({ actor, zone }: { actor: string; zone: string }) {
     </section>
   );
 }
+/** Zeigt eine kleine freigegebene Metadatenvorschau; der eigentliche Download bleibt separat autorisiert. */
 function RecentDocuments({ actor, zone }: { actor: string; zone: string }) {
   const { t, i18n } = useTranslation("dashboard");
   const files = useQuery(recentDocumentsQuery(actor));
@@ -294,6 +304,7 @@ function RecentDocuments({ actor, zone }: { actor: string; zone: string }) {
     </section>
   );
 }
+/** Verbindet persönliche Vorschauen und capabilityabhängige Folgeaktionen ohne eigene Zweitdatenbank. */
 export function DashboardWidgets({
   actor,
   zone,

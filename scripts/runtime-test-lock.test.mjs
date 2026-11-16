@@ -1,3 +1,7 @@
+/**
+ * Echte Prozesse und Listener prüfen checkoutübergreifende QA-Ausschließung.
+ * Fremde Listener bleiben bestehen; Prozessende gibt die Kernel-Sperre ohne PID-Vertrauen frei.
+ */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";

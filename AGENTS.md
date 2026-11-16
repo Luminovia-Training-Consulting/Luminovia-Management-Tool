@@ -1,27 +1,204 @@
-# Luminovia Portal — project instructions
+# Working on Luminovia Portal with an agent
 
-## Start and continuation
+This repository contains the **Luminovia Management Tool / Luminovia Portal**,
+a working bilingual application for Luminovia Training & Consulting. The public
+company website is a separate project. Contributors remain responsible for
+understanding, testing and documenting their changes, including agent-assisted work.
+[CONTRIBUTING.md](CONTRIBUTING.md) contains the full contribution guidelines.
 
-1. Read `docs/WORKLOG.md` first, then `docs/IMPLEMENTATION_PLAN.md`.
-2. Read `docs/UNIVERSAL_MASTER_PROMPT.txt`. This is the user's complete authoritative product specification, preserved verbatim. Do not replace its scope with an MVP or a design prototype.
-3. Inspect the current source, Git status and actual owning migrations/tests before continuing. Preserve working code and unrelated changes.
-4. Select and complete a useful vertical slice, run the relevant checks, and update the work log and plan with actual results and immediate next actions.
+## Before changing anything
 
-## Project boundaries
+1. Read [WORKLOG](docs/WORKLOG.md) first, then
+   [IMPLEMENTATION_PLAN](docs/IMPLEMENTATION_PLAN.md).
+2. Read [UNIVERSAL_MASTER_PROMPT.txt](docs/UNIVERSAL_MASTER_PROMPT.txt).
+   It preserves the complete product specification. Accepted later decisions and
+   their boundaries are recorded in the plan and work log. Do not replace the
+   target with an MVP, a design prototype or decorative placeholders.
+3. Inspect `git status --short --branch`, `git remote -v` and `git worktree list`.
+   Read the actual owning source, migrations and tests. A historical work-log
+   entry does not establish current behavior or deployment state.
+4. Read [DEVELOPER_GUIDE](docs/DEVELOPER_GUIDE.md),
+   [ARCHITECTURE](docs/ARCHITECTURE.md), [ERD](docs/ERD.md) and the relevant feature
+   guides in `docs/`. [README](README.md) explains the runnable entry points.
+5. Complete a coherent, reviewable slice. Preserve working code, persistent data
+   and unrelated changes. Update the work log, plan and affected feature/runbook
+   documentation with actual results and immediate next actions.
 
-- Work in this separate `Luminovia-Management-Tool` repository. The public `Website` repository and `https://luminovia.org` are read-only brand references.
-- Do not deploy to production, change production data, DNS or hosting, send emails to real people, register services or make purchases without appropriate user authorisation.
-- Use React, TypeScript, Vite, Tailwind/shadcn/ui and Supabase as specified. Do not introduce an additional application server without a demonstrated requirement.
-- Server-side database permissions are authoritative. Never use editable user metadata or browser-submitted role/user IDs for authorisation. Never put Supabase service-role/secret keys in client code, Git, logs or screenshots.
-- All job claims require online database confirmation. No optimistic confirmation, browser-only auth, routine approval queue, partial multi-day allocation or editable accepted commercial snapshots.
-- Do not expose lecturer contracts, private calendar events or private messages through an administrator-wide bypass.
-- All UI strings must support German and English; authored content stays in its authored language. Store time instants and preserve intended IANA time zones.
-- Keep the full target scope in the plan even when a milestone implements only a subset. Label implemented, tested, blocked, untested and pending honestly. Never invent tests, sent invitations, deployed URLs, hardware/platform acceptance or legal compliance.
-- Use fictional data only for development/tests. Do not copy personal CVs or customer records from brand sources.
-- Brand assets and provenance are in `public/brand` and `docs/BRAND_DESIGN_SYSTEM.md`. Keep the seven-colour palette and official logo.
+## Where things are
 
-## Collaboration and deliverables
+| Path                                                                            | Responsibility and entry point                                                                                           |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `src/main.tsx`                                                                  | React entry point and shared providers.                                                                                  |
+| `src/app/app.tsx`, `src/app/shell.tsx`                                          | Router, protected identity boundary, navigation, search, language, theme and sign-out.                                   |
+| `src/features/auth/`                                                            | Supabase session, invitation/recovery, password and MFA.                                                                 |
+| `src/features/jobs/`, `src/features/admin/`                                     | Offers, claim UI, lifecycle/Kanban, publication and invitations.                                                         |
+| `src/features/operations/`, `src/features/taxonomy/`                            | Organisations, templates, runs/sessions and the topic catalogue.                                                         |
+| `src/features/profile/`, `src/features/people/`, `src/features/accounts/`       | Profiles/evidence, people directory, roles and account administration.                                                   |
+| `src/features/calendar/`, `src/features/availability/`                          | Private events, confirmed assignments, published events and explicitly shared availability.                              |
+| `src/features/chat/`, `src/features/comments/`                                  | Membership-scoped messages, realtime and resource discussions.                                                           |
+| `src/features/files/`                                                           | Upload, scan status, exact versions, preview/download and attachments.                                                   |
+| `src/features/knowledge/`, `src/features/search/`                               | Wiki/forum, safe editor content and permission-filtered discovery.                                                       |
+| `src/features/commercial/`                                                      | Contracts, invoices, original currencies and client/platform/lecturer shares.                                            |
+| `src/features/dashboard/`, `src/features/notifications/`, `src/features/audit/` | Personal summaries, own inbox/preferences and reduced administrative audit projection.                                   |
+| `src/lib/`                                                                      | Types, query keys, browser client, dates/time zones and localisation.                                                    |
+| `src/components/`, `src/styles.css`                                             | UI primitives, shared fields/states and global styles; feature styles live beside their modules.                         |
+| `supabase/migrations/`                                                          | Released SQL history: schema, constraints, RLS, grants, transactions and RPCs. [Reading guide](docs/MIGRATION_GUIDE.md). |
+| `supabase/functions/`                                                           | File/avatar gateway, account HTTP API and invitation handling.                                                           |
+| `supabase/config.toml`, `supabase/templates/`                                   | Local service/Auth configuration and bilingual authentication emails.                                                    |
+| `portal`, `scripts/runtime-*.mjs`                                               | Local startup, process/network ownership, persistent GitHub preview and isolated verification.                           |
+| `scripts/*-db-tests.mjs`, `scripts/*-api-check.mjs`, `scripts/testing/`         | Actual PostgreSQL/Auth/REST/Storage/Realtime fixtures and checked cleanup.                                               |
+| `tests/e2e/`, `src/**/*.test.*`                                                 | Real desktop/mobile browser journeys and unit/component regressions.                                                     |
+| `deploy/hostinger/`                                                             | Selfhost development, scanner, update packages, backups and recovery.                                                    |
+| `deploy/hostinger/supabase/upstream/`                                           | Provenance-bound upstream source; not an ordinary local editing surface.                                                 |
+| `.github/`                                                                      | CI/security, daily component maintenance, Dependabot, PR/issue templates and governance sources.                         |
+| `public/brand/`, `data/`                                                        | Official brand assets/provenance and versioned catalogue data.                                                           |
+| `.local/`                                                                       | Ignored private runtime/QA state and credentials. Never publish it.                                                      |
 
-Delegate bounded independent work when useful and integrate it into a coherent application. Maintain the documented architecture, migration history, persistent plan, actual test evidence and operational runbook. Keep credentials out of all deliverables.
+## Architecture and business invariants
 
-The user's teaching-material format rules apply if this project later produces course materials: slide scripts as PPTX with full German speaker text and moderation notes, other text and student assignments as PDF (assignments fillable), no Word delivery. Those curriculum output rules do not convert software documentation or source files into PDFs.
+- Keep React, TypeScript, Vite, Tailwind/shadcn primitives, Router, TanStack Query,
+  React Hook Form/Zod and Supabase. Do not add another application server without
+  a demonstrated requirement. The existing internal scanner and local controllers
+  are not an alternative business API.
+- PostgreSQL is authoritative. Current database roles, resource membership, MFA,
+  precise grants and RLS decide access. Editable `user_metadata`, browser-submitted
+  roles/user IDs and hidden navigation items never grant authority.
+- Public RPC wrappers remain `security invoker`. Necessary privileged implementations
+  live in the private schema, check the actual actor, set an explicit search path
+  and restrict EXECUTE. New functions receive PUBLIC execution rights by default;
+  inspect and explicitly revoke unwanted grants.
+- Confirm claims only after a successful online database response. Reserve every
+  session of a block atomically; validate capacity, qualifications, contract,
+  deadlines, conflicts and retries server-side. No routine approval queue,
+  partial booking, drag-to-confirm or browser-only success.
+- Accepted fees, currency, shares, contract versions and session snapshots remain
+  immutable. New per-position capacity must not reinterpret legacy single-position,
+  client or CBW budgets. Receipt acknowledgement is not an electronic signature.
+- Private calendars/availability notes, DMs, evidence, contracts and invoices have
+  no blanket administrator read bypass. Current permissions also apply to file
+  bytes, search results, realtime delivery and repeated requests.
+- Use the existing private reservation/quarantine/scan model for files. Clean bytes
+  belong to an exact version. Do not substitute public buckets, permanent download
+  URLs or offline caches of private responses.
+- New UI strings need German and English; authored content stays in its authored
+  language. Store instants and the intended IANA time zone. Exercise Europe/Berlin
+  DST and Australia/Brisbane explicitly.
+- Keep server state in identity-scoped queries. Preserve Auth ordering protection,
+  query clearing and router remount on identity change. Dispose realtime channels,
+  timers and Blob URLs with their owner. Refreshing the same actor's token must
+  not unnecessarily erase form drafts.
+- Preserve the seven brand colours, official logo and provenance in
+  [BRAND_DESIGN_SYSTEM](docs/BRAND_DESIGN_SYSTEM.md). Check DE/EN, light/dark,
+  desktop/mobile, keyboard use and visible loading/error/empty states.
+
+## Comments are part of the source
+
+Carina requests comprehensive code comments. Maintain them with every change:
+
+- Every maintained source/test/configuration file explains its purpose and place
+  in the application. Functions, components, hooks and important data contracts
+  describe their purpose, caller contract and significant side effects.
+- Explain data flow, permission boundaries, lock order, idempotency, versioning,
+  error paths and resource disposal beside the owning code. Tests explain the
+  protected behavior and fixture/isolation boundary.
+- New source explanations use clear German, consistent with the existing code
+  commentary. Preserve useful existing comments, licences, directives and upstream
+  attribution. Comments must match the actual implementation; do not merely repeat
+  names or claim unverified security guarantees.
+- Public contributor guidance, issues and PRs use English, following
+  [CONTRIBUTING.md](CONTRIBUTING.md). This does not translate application content.
+- Do not insert invalid comments into JSON, lockfiles, generated API/catalogue data
+  or binary assets. Explain their contract in the owning documentation. Update
+  third-party source only through a deliberate upstream maintenance change.
+- Released SQL migrations remain **byte-identical**, even during a comment pass.
+  Their hashes participate in preview/update verification. Use
+  [MIGRATION_GUIDE](docs/MIGRATION_GUIDE.md) for historical explanations. Business
+  changes require a new additive migration created with the installed CLI.
+
+## Start and check locally
+
+[LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) documents prerequisites, ports and
+ownership rules. Use the Node version in `.node-version` and exact
+`package-lock.json` dependencies through `npm ci`. Full operating/recovery checks
+also require Docker/Compose, Python 3, Linux `flock` and `age`/`age-keygen`.
+
+```sh
+npm ci
+./portal start                 # Persistent own development: 5173 / API 54321
+./portal status
+./portal stop                  # Stop owned services; preserve data volumes
+./portal github                # Separate latest-main preview: 5373 / API 56321
+./portal github status
+
+npm run typecheck
+npm run lint
+npm run format:check
+npx --no-install prettier --check .github
+node scripts/code-integrity.mjs --exports
+npm run test:coverage
+node --test scripts/runtime-*.test.mjs
+./portal test                  # Canonical complete isolated acceptance
+```
+
+`npm run build` requires public `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_PUBLISHABLE_KEY` values. Synthetic build values as used by
+[ci.yml](.github/workflows/ci.yml) verify compilation, not backend access.
+For targeted Vitest checks use `npx --no-install vitest run PATH`.
+Do not point mutating SQL/API/Playwright checks at ordinary development data;
+the complete runner owns a separate stack on `5273`/`553xx`.
+
+On failure, read `.local/tests/<run>/RESULT.txt` and the first relevant trace.
+Correct the cause; do not replace it with weaker assertions, removed gates,
+silent retries or arbitrary sleeps. Record commands, results, checked revision
+and stages not reached. Unit/AST/build passes do not prove native data upgrades,
+physical PWA installation, mail delivery or production readiness.
+[TEST_PLAN](docs/TEST_PLAN.md), [QA_RESULTS](docs/QA_RESULTS.md) and
+[CI_QUALITY](docs/CI_QUALITY.md) explain the separate evidence.
+
+## Git, parallel agents and delivery
+
+- Normally use a separate `codex/` branch/worktree. If Carina explicitly requests
+  `main`, follow that task-specific instruction. Never switch branches in a working
+  directory concurrently used by another agent. Use separate worktrees and explicit
+  working directories.
+- Delegate bounded independent paths; one agent integrates the results. Do not stop
+  foreign processes, reset files or stage unrelated changes. Recheck branch, diff
+  and remote before committing and pushing.
+- Sign commits. Describe the change and purpose plainly; preserve published tags
+  and release/maintenance gates. [PULL_REQUEST_GUIDE](docs/PULL_REQUEST_GUIDE.md)
+  explains labels and PR content; [GITHUB_WORKFLOW](docs/GITHUB_WORKFLOW.md) records
+  actual server-side rules. A prepared ruleset is not necessarily active.
+- Check dependencies and compatible peer families together. Do not add blanket
+  `audit fix --force` or version upgrades to an unrelated task.
+- Main CI can publish a development release after full acceptance; the existing
+  development updater can consume it. Claim an installation only after observing
+  it. Production approval remains separate.
+- Report concrete changes, executed checks, remaining limits and commit/PR links.
+  Preserve the complete open product scope and honest next actions in the plan/log.
+
+## Systems, data and publication
+
+- Work in `Luminovia-Management-Tool`. The public `Website` repository and
+  `https://luminovia.org` are read-only brand references.
+- Without appropriate authorisation, do not deploy production, change production
+  data/DNS/hosting, register services, make purchases or message real people.
+  Existing CMS development is separate from production; access must fit the current
+  task and operational runbook.
+- Supabase service/secret keys, Auth tokens, passwords, QR codes and private traces
+  never belong in browser code, Git, logs or screenshots. Tests use fictional
+  people/data and internal Mailpit, not copied CVs or customer records.
+- Never reset ordinary databases/volumes. Process termination and cleanup require
+  proven ownership; backup/restore and migration flows retain their review gates.
+  Follow [DEPLOYMENT_RUNBOOK](docs/DEPLOYMENT_RUNBOOK.md) and
+  [HOSTINGER_AUTOMATIC_UPDATES](docs/HOSTINGER_AUTOMATIC_UPDATES.md).
+- Never invent privacy/legal compliance, signature enforceability, sent invitations,
+  complete security or tests that were not executed.
+
+## If this project later produces teaching materials
+
+Slide scripts are PPTX only, with complete German speaker text and moderation notes.
+Other text/solutions are PDF; student assignments are fillable PDF only, with no Word
+files or Word folders delivered. Preserve Carina's existing folder structures.
+Linux LPC3/LPC4 deliveries belong entirely in their respective existing `V1/` course
+folders, including `V1/General`. These curriculum rules do not turn software
+documentation or source files into PDFs.

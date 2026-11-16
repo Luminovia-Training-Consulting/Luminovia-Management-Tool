@@ -1,3 +1,4 @@
+# Pollt auf ein tatsächlich geprüftes unveränderliches Main-Release. Der Updater selbst entscheidet anhand CI, Zustand und Wartungszäunen, ob eine Installation zulässig ist.
 [Unit]
 Description=Check for verified CMS updates every five minutes
 

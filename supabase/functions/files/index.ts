@@ -1,3 +1,6 @@
+/**
+ * Authentifiziertes Datei-Gateway: Reservierung unter Aufruferrechten, unveränderliche Quarantänebytes, Scan und gezielte Freigabe. Downloads prüfen die aktuelle Ressourcenberechtigung vor und nach dem Storage-Lesen.
+ */
 import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {scan} from './clamav.ts';
 import {validateAvatar} from './avatar.ts';
@@ -6,16 +9,21 @@ import {downloadDisposition,MAX_FILE_SIZE,safeName,validateFile} from './validat
 const url=Deno.env.get('SUPABASE_URL')??'';
 const anon=Deno.env.get('SUPABASE_ANON_KEY')??'';
 const secret=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')??'';
+// Der Verwaltungsclient liest/schreibt nur nach expliziten caller-bezogenen Berechtigungsprüfungen.
 const service=createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}});
 const origins=(Deno.env.get('PORTAL_ALLOWED_ORIGINS')??'').split(',').map(v=>v.trim()).filter(Boolean);
+// Prüft das UUID-Format einer fremden Eingabe; eine gültige Kennung verleiht keine Zugriffsrechte.
 const uuid=(value:unknown):value is string=>typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+// Durch die caller-bezogene RLS-Abfrage sichtbare Dokumentmetadaten; der Serviceclient allein darf Sichtbarkeit nicht bestimmen.
 interface Document {id:string;owner_id:string;scope:string;kind:string;room_id:string|null;job_id:string|null;original_name:string;mime_type:string;size_bytes:number;status:string;current_version_id:string;deleted_at:string|null}
+// Begrenzt die tatsächlich eingelesenen Uploadbytes; der unzuverlässige Content-Length-Header ist nur eine frühe Vorprüfung.
 async function bounded(request:Request,limit:number):Promise<Uint8Array>{
  if(Number(request.headers.get('content-length')??0)>limit)throw new Error('file_size');
  const reader=request.body?.getReader();if(!reader)return new Uint8Array();let size=0;const chunks:Uint8Array[]=[];
  while(true){const {value,done}=await reader.read();if(done)break;size+=value.length;if(size>limit){await reader.cancel();throw new Error('file_size');}chunks.push(value);}
  const all=new Uint8Array(size);let at=0;for(const part of chunks){all.set(part,at);at+=part.length;}return all;
 }
+// Ein Request besitzt seinen Benutzerclient; Authzustand und fremde Sessions werden nicht zwischen Requests geteilt.
 Deno.serve(async(request:Request)=>{
  const origin=request.headers.get('origin')??'';
  const headers:Record<string,string>={'Cache-Control':'no-store, private','Pragma':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','Vary':'Origin'};
@@ -33,6 +41,7 @@ Deno.serve(async(request:Request)=>{
   const profile=await user.from('profiles').select('id,active').eq('id',actor).maybeSingle();
   if(profile.error||!profile.data?.active)return json(403,{error:'access_denied'});
   const visible=async(id:string)=>{const r=await user.from('documents').select('*').eq('id',id).maybeSingle();if(r.error||!r.data)throw new Error('access_denied');return r.data as Document;};
+  // Uploadpfad: zuerst begrenzte echte Bytes/Formate, dann eine durch die Datenbank genehmigte konkrete Version.
   if(request.headers.get('content-type')?.startsWith('multipart/form-data')){
    const raw=await bounded(request,MAX_FILE_SIZE+16384);
    const form=await new Response(new Uint8Array(raw),{headers:{'Content-Type':request.headers.get('content-type')!}}).formData();
@@ -47,6 +56,7 @@ Deno.serve(async(request:Request)=>{
    if(kind==='avatar')await validateAvatar(bytes);
    const roomId=form.get('room_id')||null;const jobId=form.get('job_id')||null;const replaceId=form.get('replace_id')||null;const ownerId=form.get('owner_id')||null;
    if((roomId&&!uuid(roomId))||(jobId&&!uuid(jobId))||(replaceId&&!uuid(replaceId))||(ownerId&&!uuid(ownerId)))return json(400,{error:'invalid_request'});
+   // Eigentümer-/Scope-Eingaben sind nur Zielangaben. Aktuelle Rechte, Quote und Idempotenz werden im RPC geprüft.
    const reserved=await user.rpc('reserve_document',{p_name:name,p_mime:mime,p_size:bytes.length,p_scope:scope,p_kind:kind,p_room_id:roomId,p_job_id:jobId,p_client_id:clientId,p_replace_id:replaceId,p_owner_id:ownerId});
    if(reserved.error)return json(403,{error:'upload_not_allowed'});
    const reservation=reserved.data as {document_id:string;version_id:string;object_path:string;status:string};
@@ -55,9 +65,11 @@ Deno.serve(async(request:Request)=>{
    if(doc.current_version_id!==reservation.version_id)return json(409,{error:'version_superseded'});
    const requestedVersion=await user.from('document_versions').select('sha256').eq('id',reservation.version_id).eq('document_id',doc.id).maybeSingle();
    if(requestedVersion.error||!requestedVersion.data)return json(503,{error:'upload_failed'});
+   // Dieselbe Reservierung darf bei einem Retry keine anderen Nutzbytes erhalten.
    if(requestedVersion.data.sha256&&requestedVersion.data.sha256!==incomingDigest)return json(409,{error:'idempotency_conflict'});
    if(doc.status==='clean'){if(!requestedVersion.data.sha256)return json(503,{error:'upload_failed'});return json(200,{document:doc});}
    if(doc.status==='rejected')return json(422,{error:'scan_rejected',document_id:doc.id});
+   // Quarantäne ist kein freigegebener Downloadbereich; upsert:false schützt die reservierten Objektbytes.
    const upload=await service.storage.from('portal-quarantine').upload(reservation.object_path,bytes,{contentType:mime,upsert:false,cacheControl:'0'});
    if(upload.error&&upload.error.message!=='The resource already exists'&&String((upload.error as {statusCode?:string}).statusCode)!=='409')return json(503,{error:'upload_failed'});
    // Always scan the immutable stored object, including after an uncertain retry.
@@ -70,6 +82,7 @@ Deno.serve(async(request:Request)=>{
    if(kind==='avatar')await validateAvatar(storedBytes);
    await service.from('document_versions').update({status:'scanning'}).eq('id',reservation.version_id);
    await service.from('documents').update({status:'scanning'}).eq('id',doc.id).eq('current_version_id',reservation.version_id);
+   // Ein Scannerausfall bleibt scan_error. Nur ein tatsächlich sauberer Befund erreicht den Freigabepfad.
    let verdict:{clean:boolean;version:string};
    try{verdict=await scan(storedBytes,Deno.env.get('PORTAL_CLAMAV_HOST')??'',Number(Deno.env.get('PORTAL_CLAMAV_PORT')??3310),{url:Deno.env.get('PORTAL_SCANNER_URL'),token:Deno.env.get('PORTAL_SCANNER_TOKEN')});}
    catch{
@@ -84,6 +97,7 @@ Deno.serve(async(request:Request)=>{
     return json(422,{error:'scan_rejected',document_id:doc.id});
    }
    await visible(doc.id); // Membership can change while an upload is being scanned.
+   // Nach dem langen Scan nochmals Zugriffe prüfen und exakt die geprüften gespeicherten Bytes übernehmen.
    const clean=await service.storage.from('portal-clean').upload(reservation.object_path,storedBytes,{contentType:mime,upsert:false,cacheControl:'0'});
    if(clean.error&&String((clean.error as {statusCode?:string}).statusCode)!=='409')return json(503,{error:'upload_failed'});
    const version=await service.from('document_versions').update({status:'clean',sha256:digest,scanner_version:verdict.version}).eq('id',reservation.version_id);
@@ -95,6 +109,7 @@ Deno.serve(async(request:Request)=>{
    return json(200,{document:await visible(doc.id)});
   }
   const data=JSON.parse(new TextDecoder().decode(await bounded(request,4096))) as {action?:string;id?:string;version_id?:string;user_id?:string};
+  // Profilbilder verwenden die eng begrenzte Auswahlsicht; daraus entsteht keine allgemeine Berechtigung auf persönliche Dateien.
   if(data.action==='avatar'){
    if(!uuid(data.user_id))return json(400,{error:'invalid_request'});
    const bytes=await selectedAvatarBytes(data.user_id,{
@@ -123,6 +138,7 @@ Deno.serve(async(request:Request)=>{
   }
   if(data.action!=='download'||!uuid(data.id)||(data.version_id&&!uuid(data.version_id)))return json(400,{error:'invalid_request'});
   const doc=await visible(data.id);
+  // Downloads binden die gewünschte Version an genau das aktuell sichtbare Dokument und verlangen clean.
   const version=await user.from('document_versions').select('id,object_path,status,original_name,mime_type').eq('id',data.version_id??doc.current_version_id).eq('document_id',doc.id).maybeSingle();
   if(version.error||!version.data||version.data.status!=='clean')return json(409,{error:'file_not_clean'});
   const file=await service.storage.from('portal-clean').download(version.data.object_path);
@@ -130,6 +146,7 @@ Deno.serve(async(request:Request)=>{
   await visible(doc.id); // Recheck revocation immediately before returning any bytes.
   await service.from('audit_events').insert({actor_id:actor,action:'document.downloaded',resource_id:doc.id});
   return new Response(file.data,{headers:{...headers,'Content-Type':version.data.mime_type,'Content-Disposition':downloadDisposition(version.data.original_name),'Content-Security-Policy':"default-src 'none'; sandbox"}});
+ // Stabile erlaubte Fehlercodes enthalten keine Storagepfade, Tokens oder internen Providerantworten.
  }catch(error){
   const code=error instanceof Error?error.message:'';
   return json(code==='access_denied'?403:code==='avatar_unavailable'?404:code==='file_size'?413:code==='unsupported_type'?415:400,{error:['access_denied','avatar_unavailable','file_size','unsupported_type','avatar_image_invalid'].includes(code)?code:'invalid_request'});

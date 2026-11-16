@@ -1,3 +1,7 @@
+/**
+ * Prüft echte Auth-/MFA-/Profil-/Kalender- und Storage-Persistenz über Stopp und Neustart.
+ * Ein eigener fiktiver Prüfnutzer und genaue Objektbytes unterscheiden Datenbestand von bloßer Dienstbereitschaft.
+ */
 import assert from "node:assert/strict";
 import { randomUUID, createHmac } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
@@ -18,6 +22,7 @@ assert.ok(
 const service = createClient(url.href, env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
+/** Erzeugt einen getrennten flüchtigen Auth-Client für die tatsächliche Passwort- und MFA-Persistenzprüfung. */
 const anon = () =>
   createClient(url.href, env.SUPABASE_ANON_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -33,11 +38,13 @@ let fixtureProfile;
 let fixtureExpertise;
 let probeFailure;
 const cleanupFailures = [];
+/** Wertet den tatsächlichen SDK-Erfolg aus und gibt erst danach dessen Daten zurück. */
 async function checked(promise, label) {
   const { data, error } = await promise;
   assert.equal(error, null, `${label}: ${error?.message}`);
   return data;
 }
+/** Berechnet den aktuellen TOTP der Fixture für die echte MFA-Challenge. */
 function code(secret) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "")]
@@ -240,6 +247,7 @@ try {
 } catch (error) {
   probeFailure = error;
 } finally {
+  /** Entfernt die vom Prüflauf erzeugten Ressourcen; Aufräumen darf keinen fachlichen Testfehler verbergen. */
   const cleanup = async (operation, label) => {
     try {
       await checked(operation, label);

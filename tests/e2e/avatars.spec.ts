@@ -1,3 +1,7 @@
+/**
+ * Browserabläufe für kanonische gescannte Profilbilder nach echter Verarbeitung.
+ * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import sharp from "sharp";

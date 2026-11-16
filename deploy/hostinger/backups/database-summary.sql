@@ -1,3 +1,4 @@
+-- Read-only-Inventar für die vollständige Wiederherstellungsprüfung. Erfasst tatsächliche Tabellenzahlen, RLS, ACLs, Funktionen und Datenbankeinstellungen; sensible Zeileninhalte werden nicht als Bericht ausgegeben.
 select json_build_object(
  'database',current_database(),
  'server_version',current_setting('server_version'),

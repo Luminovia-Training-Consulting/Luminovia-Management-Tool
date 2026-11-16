@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für echte Claimstatusanzeige, Konditionszustimmung und sichere Wiederholungskennungen. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -48,6 +51,7 @@ const job: Job = {
   ],
   job_requirements: [],
 };
+/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
 function setup(route = "/jobs/job-a", list = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },

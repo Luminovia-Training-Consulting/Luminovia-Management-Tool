@@ -1,13 +1,18 @@
+# Reproduzierbare Abhängigkeiten und gebaute öffentliche Anwendung.
 node_modules/
 dist/
+# Lokale Schlüssel/Session-Fixtures bleiben privat; nur die öffentliche Vorlage teilen.
 .env*
 !.env.example
+# CLI-Zustand gehört zur jeweiligen Arbeitskopie, nicht zur Migration als Quelle.
 supabase/.temp/
 supabase/.branches/
+# QA-Berichte und Laufzeitdateien können private fiktive Konten/Traces enthalten.
 coverage/
 test-results/
 playwright-report/
 .local/
+# Compiler- und Python-Zwischendateien sind keine Lieferartefakte.
 *.tsbuildinfo
 __pycache__/
 *.pyc

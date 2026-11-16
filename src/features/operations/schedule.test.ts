@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für Wochentagserzeugung und ungültige Datum-/Uhrzeit-/Tageszahlangaben. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { describe, it, expect } from "vitest";
 import { weekdaySessions } from "./schedule";
 import { zonedInstant } from "../../lib/dates";

@@ -1,3 +1,7 @@
+/**
+ * Gemeinsame Vite-/Vitest-Konfiguration: öffentliche Buildwerte, statische PWA
+ * und isolierte Komponentenprüfungen. Private Backenddaten gehören in keinen Cache.
+ */
 import { defineConfig } from "vitest/config";
 import { loadEnv } from "vite";
 import { validatePublicConfig } from "./scripts/public-config.ts";
@@ -5,6 +9,8 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig(({ mode }) => {
+  // VITE_-Werte landen im Browserbundle. Die gemeinsame Prüfung weist dort
+  // privilegierte Schlüssel ab und verlangt im Produktionsmodus echte Angaben.
   const env = loadEnv(mode, process.cwd(), "VITE_");
   validatePublicConfig(
     env.VITE_SUPABASE_URL,
@@ -16,6 +22,8 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       VitePWA({
+        // Ein vorhandenes Formular soll nicht durch ein sofort aktiviertes
+        // Service-Worker-Update verschwinden; die Oberfläche bietet das Update an.
         registerType: "prompt",
         includeAssets: ["icons/*.png", "brand/*.woff2", "brand/*.webp"],
         manifest: {
@@ -40,6 +48,8 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
+          // Nur gebaute öffentliche Dateien vorhalten. Für authentifizierte
+          // API-/Storage-Antworten ist bewusst keine Laufzeitcache-Regel definiert.
           globPatterns: ["**/*.{js,css,html,woff2,png,webp,ico}"],
           navigateFallback: "/index.html",
           cleanupOutdatedCaches: true,
@@ -62,6 +72,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     test: {
+      // Diese Suite nutzt DOM-/SDK-Fixtures. Native Auth, SQL und Browserabläufe
+      // werden zusätzlich durch den verwalteten ./portal-test-Lauf geprüft.
       environment: "jsdom",
       setupFiles: "./src/test/setup.ts",
       include: ["src/**/*.test.{ts,tsx}"],
@@ -100,6 +112,7 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    // Nur die Warnschwelle für Bundlegröße; dies hebt kein fachliches Testgate auf.
     build: { chunkSizeWarningLimit: 1000 },
   };
 });

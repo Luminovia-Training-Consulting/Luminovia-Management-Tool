@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für gebündelte Revalidierung, Raumwechsel und sofortigen Cacheentzug nach Mitgliedschaftswiderruf. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -48,6 +51,7 @@ afterEach(() => {
   vi.clearAllMocks();
   state.channels = [];
 });
+/** Macht Verbindungs-/Widerrufzustand des echten Realtime-Hooks im Test-DOM beobachtbar. */
 function Status({ actor, room }: { actor: string; room: string }) {
   const value = useChatRealtime(actor, room);
   return (
@@ -56,6 +60,7 @@ function Status({ actor, room }: { actor: string; room: string }) {
     </p>
   );
 }
+/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
 function setup() {
   vi.useFakeTimers();
   const client = new QueryClient({
@@ -73,6 +78,7 @@ function setup() {
   const view = render(element());
   return { client, invalidate, view, element };
 }
+/** Ruft einen registrierten Kanalhandler mit fiktivem Payload auf; es wird kein echter WebSocket geöffnet. */
 function emit(
   channel: TestChannel,
   event = "messages:INSERT",
@@ -80,6 +86,7 @@ function emit(
 ) {
   act(() => channel.handlers.get(event)!(payload));
 }
+/** Bewegt die kontrollierte Testuhr innerhalb von act, damit Timerupdates vor Assertions verarbeitet werden. */
 async function advance(ms = 200) {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(ms);

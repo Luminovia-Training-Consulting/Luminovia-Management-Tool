@@ -1,9 +1,14 @@
+/**
+ * DTOs für Wissensrechte, Kategorien, Wiki-/Revisionsstände und Forumobjekte. Entwurfs-/Publikationszustand sowie Moderationsdaten bleiben explizit und werden nicht aus der bloßen Route abgeleitet.
+ */
 import type { JSONContent } from "@tiptap/react";
+/** Aktuelle Lese-/Autoren-/Moderationsfähigkeiten für die Wissensbereiche. */
 export interface KnowledgeAccess {
   can_author: boolean;
   can_publish_wiki: boolean;
   can_moderate_forum: boolean;
 }
+/** Freigegebene Kategorie mit bewusst getrennten DE/EN-Navigationslabels. */
 export interface KnowledgeCategory {
   id: string;
   kind: "wiki" | "forum";
@@ -12,6 +17,7 @@ export interface KnowledgeCategory {
   label_en: string;
   archived: boolean;
 }
+/** Wiki-Metadaten und erlaubter aktueller Inhalts-/Publikationsstand. */
 export interface WikiPageRecord {
   id: string;
   title: string;
@@ -28,6 +34,7 @@ export interface WikiPageRecord {
   updated_at: string;
   content: JSONContent;
 }
+/** Unveränderlicher gespeicherter Wiki-Versionsstand für die zugelassene Historienansicht. */
 export interface WikiRevision {
   version: number;
   title: string;
@@ -37,6 +44,7 @@ export interface WikiRevision {
   published: boolean;
   content: JSONContent;
 }
+/** Themenprojektion einschließlich sichtbarem Moderations-/Abonnementzustand. */
 export interface ForumThread {
   id: string;
   title: string;
@@ -54,6 +62,7 @@ export interface ForumThread {
   created_at: string;
   updated_at: string;
 }
+/** Freigegebener Forumsbeitrag mit strukturierter Inhaltsdarstellung und Autor-/Änderungsinformationen. */
 export interface ForumPost {
   id: string;
   thread_id: string;
@@ -65,6 +74,7 @@ export interface ForumPost {
   deleted_at: string | null;
   version: number;
 }
+/** Berechtigte Moderationsmeldung, die nicht zum allgemeinen Foruminhalt gehört. */
 export interface ForumReport {
   id: string;
   post_id: string;

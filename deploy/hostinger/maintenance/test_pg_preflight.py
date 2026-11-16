@@ -1,3 +1,4 @@
+# Kontrollierte Prozess-/Compose-Fixtures prüfen die Vorbedingungen und Reihenfolge der privaten Clusterprobe. Diese Unitfälle ersetzen nicht den gesonderten nativen Image-/Bestandstest.
 import datetime as dt
 import json
 from pathlib import Path
@@ -11,6 +12,7 @@ PIN = "supabase/postgres:17.12.0.000@sha256:" + "a" * 64
 SNAPSHOT = {"tables": [{"name": "public.fixture", "rows": 1, "hash": "original"}], "roles": "protected", "memberships": "same", "policies": "same", "functions": "same"}
 
 
+# Kontrolliertes Cluster-/Compose-Inventar zeichnet Start-/Stop-/Kopierreihenfolge ohne Zugriff auf echte Daten auf.
 class Fixture:
     def __init__(self, root):
         self.root = Path(root)
@@ -45,6 +47,7 @@ class Fixture:
             return json.dumps({"services": {"db": {"image": PIN, "environment": {"POSTGRES_PASSWORD": "fixture-private-password"}, "command": ["postgres", "-c", "shared_buffers=128MB"]}}}).encode()
         return b""
 
+    # Führt den übergebenen Prozess ohne Shell aus und übernimmt einen echten Fehlerstatus.
     def command(self, args, **kwargs):
         self.calls.append(tuple(args))
         if args[:2] == ["docker", "inspect"]:
@@ -79,6 +82,7 @@ class Fixture:
         return b""
 
 
+# Prüft die Vorbedingungen und Fehlerpfade des privaten Same-Major-Checks.
 class PreflightTests(unittest.TestCase):
     def test_major_and_mutable_images_refused(self):
         for image in ["supabase/postgres:latest", PIN.replace(":17.", ":18.")]:

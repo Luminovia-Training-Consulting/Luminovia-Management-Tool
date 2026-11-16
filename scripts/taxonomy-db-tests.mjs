@@ -1,3 +1,7 @@
+/**
+ * PostgreSQL-Regressionsgruppen für gemeinsame Themenhierarchie, Aliasnamen und archivierte Einträge.
+ * Die Testdatenbank spielt echte Migrationen ein; Rollen-/MFA-Claims prüfen den Datenvertrag unabhängig von der UI.
+ */
 /** Real temporary PostgreSQL checks. Native Auth is covered separately. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -15,6 +19,7 @@ await withTestDatabase(
     await sql(
       `insert into auth.users(id,email) values ${[admin, manager, lecturer, outsider].map((id) => `('${id}','${id}@example.invalid')`).join(",")};insert into public.user_roles(user_id,role) values('${admin}','admin'),('${manager}','management'),('${lecturer}','lecturer'),('${outsider}','client');`,
     );
+    /** Ruft die fachliche Datenbank-API unter den kontrollierten Identitäts-/MFA-Claims der Fixture auf. */
     const rpc = async (who, name, args = [], aal = "aal2") => {
       const result = await actor(
         who,
@@ -27,6 +32,7 @@ await withTestDatabase(
         return result;
       }
     };
+    /** Erzeugt die fiktiven Eingabedaten dieses Prüfmoduls; die tatsächliche Validierung bleibt beim Server. */
     const payload = (label, parent = null) => ({
       label_de: label,
       label_en: `EN ${label}`,
@@ -36,9 +42,11 @@ await withTestDatabase(
       description_de: "Fiktive Beschreibung",
       description_en: "Fictional description",
     });
+    /** Legt einen neuen Katalogeintrag mit optionalem Elternbezug als AAL2-Verwaltung und erwarteter Anfangsversion 0 an. */
     const save = (label, parent = null) =>
       rpc(admin, "save_taxonomy_topic", [null, payload(label, parent), 0]);
     let checks = 0;
+    /** Zählt und meldet einen Fall erst, wenn sämtliche zugehörigen Assertions erfolgreich abgeschlossen sind. */
     const check = async (name, fn) => {
       await fn();
       checks++;

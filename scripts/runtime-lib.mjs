@@ -1,3 +1,7 @@
+/**
+ * Gemeinsame lokale Prozess-, Konfigurations- und Persistenzbausteine der Portal-CLI.
+ * Private Dateien, bereinigte Umgebungen und bestätigte Prozessenden bilden die Laufzeitgrenzen.
+ */
 import { spawn, execFileSync } from "node:child_process";
 import {
   readFileSync,
@@ -16,10 +20,12 @@ export const root = resolve(import.meta.dirname, "..");
 export const runtimeDir = join(root, ".local");
 export const stateFile = join(runtimeDir, "runtime.json");
 export const runtimeVersion = 3;
+/** Erstellt das private Verzeichnis und setzt auch für einen bereits vorhandenen Pfad Modus 0700. */
 export function privateDirectory(path = runtimeDir) {
   mkdirSync(path, { recursive: true, mode: 0o700 });
   chmodSync(path, 0o700);
 }
+/** Liest einfache lokale KEY=VALUE-Zeilen als Daten, ohne Shellauswertung oder Interpolation. */
 export function readEnvFile(path) {
   if (!existsSync(path)) return {};
   return Object.fromEntries(
@@ -32,6 +38,7 @@ export function readEnvFile(path) {
       }),
   );
 }
+/** Erhält identische Dateiinhalte oder ersetzt sie über eine private temporäre Datei; Zielmodus bleibt 0600. */
 export function privateWrite(path, content) {
   if (existsSync(path) && readFileSync(path, "utf8") === content) {
     chmodSync(path, 0o600);
@@ -42,6 +49,7 @@ export function privateWrite(path, content) {
   renameSync(temporary, path);
   chmodSync(path, 0o600);
 }
+/** Liest den Laufzeitzustand best effort; fehlende oder ungültige Dateien bedeuten keinen bestätigten Prozess. */
 export function readState() {
   try {
     return JSON.parse(readFileSync(stateFile, "utf8"));
@@ -49,10 +57,12 @@ export function readState() {
     return null;
   }
 }
+/** Persistiert den strukturierten Supervisorzustand ausschließlich in der privaten Laufzeitablage. */
 export function writeState(state) {
   privateDirectory();
   privateWrite(stateFile, JSON.stringify(state, null, 2) + "\n");
 }
+/** Bestätigt PID, Supervisorpfad und Sitzung, damit eine wiederverwendete fremde PID nicht übernommen wird. */
 export function processIsOurs(state) {
   if (
     !Number.isInteger(state?.pid) ||
@@ -76,6 +86,7 @@ export function processIsOurs(state) {
     return false;
   }
 }
+/** Entfernt geerbte Dienst-/Cloud-Zugangsdaten vor lokalen Unterprozessen und ergänzt nur explizite Werte. */
 export function cleanEnvironment(extra = {}) {
   const env = Object.fromEntries(
     Object.entries(process.env).filter(
@@ -87,6 +98,7 @@ export function cleanEnvironment(extra = {}) {
   );
   return { ...env, ...extra };
 }
+/** Redigiert bekannte Schlüssel-/JWT-/Datenbankmuster und gespeicherte lokale Geheimnisse vor einer Protokollausgabe. */
 export function redact(value) {
   let text = String(value)
     .replace(
@@ -111,6 +123,7 @@ export function redact(value) {
     .replace(/\bsb_(?:secret|publishable)_[A-Za-z0-9_-]+\b/g, "[redacted key]")
     .replace(/postgres(?:ql)?:\/\/[^\s"']+/g, "postgresql://[redacted]");
 }
+/** Startet eine eigene Prozessgruppe, sammelt begrenzte Ausgabe und bestätigt Erfolg erst nach tatsächlichem close. */
 export async function command(
   file,
   args,
@@ -137,6 +150,7 @@ export async function command(
     let termination;
     let forceTimer;
     let spawnError;
+    /** Signalisiert ausschließlich die eigene Prozessgruppe und toleriert ein bereits beendetes Kind. */
     const kill = (signal) => {
       if (finished) return;
       try {
@@ -146,6 +160,7 @@ export async function command(
         /* already exited */
       }
     };
+    /** Merkt Timeout oder Abbruch und eskaliert erst nach der begrenzten SIGTERM-Frist. */
     const terminate = (cause) => {
       if (finished || termination) return;
       termination = cause;
@@ -154,9 +169,11 @@ export async function command(
       // tool ignores SIGTERM. An AbortError alone is not proof of termination.
       forceTimer = setTimeout(() => kill("SIGKILL"), killGraceMs);
     };
+    /** Markiert den aktiven Befehl als abgebrochen; ein anschließender Null-Exit darf das nicht in Erfolg umdeuten. */
     const cancel = () => terminate("cancelled");
     const timer = setTimeout(() => terminate("timed out"), timeoutMs);
     signal?.addEventListener("abort", cancel, { once: true });
+    /** Begrenzt die gesammelte Unterprozessausgabe, bis der abschließende Protokollpfad sie redigiert. */
     const receive = (data) => {
       output = (output + data.toString()).slice(-1000000);
     };
@@ -194,11 +211,14 @@ export async function command(
     });
   });
 }
+/** Verwendet genau die installierte lokale Supabase-CLI durch denselben kontrollierten Prozessrunner. */
 export function supabase(args, options = {}) {
   return command(join(root, "node_modules/.bin/supabase"), args, options);
 }
+/** Liest Projektkennung und lokale Dienstports aus der tatsächlich verwendeten TOML-Konfiguration. */
 export function projectConfig(cwd = root) {
   const text = readFileSync(join(cwd, "supabase/config.toml"), "utf8");
+  /** Begrenzt die Konfigurationssuche auf den jeweiligen TOML-Abschnitt. */
   const section = (name) =>
     text.match(new RegExp(`\\[${name}\\]([\\s\\S]*?)(?=\\n\\[|$)`))?.[1] ?? "";
   return {
@@ -209,6 +229,7 @@ export function projectConfig(cwd = root) {
     site: section("auth").match(/^site_url\s*=\s*"([^"]+)"/m)?.[1],
   };
 }
+/** Lehnt Remoteziele, eingebettete Zugangsdaten und fremde Protokolle für lokale HTTP-Prüfungen ab. */
 export function localUrl(value, label = "URL") {
   const url = new URL(value);
   if (
@@ -220,6 +241,7 @@ export function localUrl(value, label = "URL") {
     throw new Error(`${label} must be a credential-free loopback HTTP URL.`);
   return url;
 }
+/** Wartet begrenzt auf den verlangten tatsächlichen HTTP-Status statt allein auf einen gestarteten Prozess. */
 export async function waitForHttp(
   url,
   { timeoutMs = 45000, status = 200 } = {},
@@ -238,6 +260,7 @@ export async function waitForHttp(
     `Local service did not become ready at ${new URL(url).origin}.`,
   );
 }
+/** Prüft die tatsächlich installierten Abhängigkeiten gegen den Lockfilevertrag und installiert bei Bedarf reproduzierbar. */
 export async function ensureDependencies() {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
   const lock = JSON.parse(
@@ -273,6 +296,7 @@ export async function ensureDependencies() {
   );
 }
 
+/** Bestätigt einen lokalen Docker-Endpunkt vor Dienstmutationen; Remote-Daemons sind kein zulässiges Testziel. */
 export async function assertLocalDocker() {
   const host =
     (!process.env.DOCKER_CONTEXT && process.env.DOCKER_HOST) ||
@@ -311,6 +335,7 @@ export async function assertLocalDocker() {
   return host;
 }
 
+/** Bindet den Startupzustand an sortierte vollständige Migrationsquellen und lehnt unfertige Quellen ab. */
 export function migrationDigest(cwd = root) {
   const path = join(cwd, "supabase/migrations");
   const hash = createHash("sha256");

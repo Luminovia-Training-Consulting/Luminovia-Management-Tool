@@ -1,3 +1,7 @@
+/**
+ * Prüft die lokale Einladungsfunktion mit echtem Auth/MFA und abgefangener Mailpit-Nachricht.
+ * Die Zustellung bleibt im lokalen Testsystem; reale Empfänger gehören nicht zu diesen Fixtures.
+ */
 import assert from "node:assert/strict";
 import { createHmac, randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
@@ -9,17 +13,20 @@ assert.ok(
   url && ["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname),
   "Only local disposable projects are permitted",
 );
+/** Legt die fachliche Fixture über den hier geprüften Datenvertrag an. */
 const create = (key) =>
   createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 const service = create(process.env.SUPABASE_SERVICE_ROLE_KEY);
 const admin = create(process.env.SUPABASE_ANON_KEY);
+/** Wertet den tatsächlichen SDK-Erfolg aus und gibt erst danach dessen Daten zurück. */
 async function checked(request, label) {
   const { data, error } = await request;
   assert.equal(error, null, `${label}: ${error?.message}`);
   return data;
 }
+/** Berechnet den aktuellen sechsstelligen TOTP aus dem fiktiven MFA-Geheimnis; keine Codes protokollieren. */
 function totp(secret) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "").toUpperCase()]

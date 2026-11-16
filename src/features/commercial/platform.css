@@ -1,3 +1,7 @@
+/**
+ * Kundenportal, Honoraraufteilung und getrennte Umsatzkarten. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ */
+/* Lokale Honoraraufteilung als zusammengehörige Vorschau, getrennt von bestätigten Reports. */
 .platform-split {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -26,6 +30,7 @@
 .platform-pricing h2 {
   font-size: 1.2rem;
 }
+/* Organisations-/Währungsgruppen werden in eigenständigen Karten gezeigt. */
 .platform-spend-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
@@ -65,6 +70,7 @@
 .platform-revenue {
   margin: 1.6rem 0 2rem;
 }
+/* Kundenanfrage mit ursprünglichen Termin-/Preisangaben und bestätigtem Status. */
 .platform-request-card {
   padding: 1.3rem;
   min-width: 0;
@@ -145,6 +151,7 @@
 .platform-request-form .form-row {
   flex-wrap: wrap;
 }
+/* Layoutanpassung (max-width: 600px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
 @media (max-width: 600px) {
   .platform-split {
     grid-template-columns: 1fr;
@@ -176,6 +183,7 @@
   }
 }
 
+/* Metadatenlabels organisieren die Rechnung und sind keine Preis- oder Zahlungsaktionen. */
 .platform-invoice-labels {
   display: flex;
   flex-wrap: wrap;

@@ -1,6 +1,10 @@
+/**
+ * Quellenbindung zwischen CBW-Vorlagen, tatsächlichen Kursläufen und daraus erstellten Angeboten. Eine Quellenrevision erlaubt dem Server, veraltete Angebotsentwürfe zurückzuweisen statt Termine still auszutauschen.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 
+/** Überprüfter Kursquellenstand für einen neuen Auftrag, einschließlich serverseitig vergleichbarer Quellenrevision. */
 export interface CourseRunJobDefaults {
   source_revision: string;
   course_run_id: string;
@@ -23,6 +27,7 @@ export interface CourseRunJobDefaults {
     ends_at: string;
   }[];
 }
+/** Lädt die Serverprojektion über course_run_job_defaults und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const courseRunJobDefaultsQuery = (actor: string, runId: string) =>
   queryOptions({
     queryKey: ["operations", "run-job-defaults", actor, runId],
@@ -35,11 +40,13 @@ export const courseRunJobDefaultsQuery = (actor: string, runId: string) =>
     },
   });
 
+/** Berechtigte Provenienzprojektion eines Auftrags zur ursprünglichen Baustein-/Vorlagenquelle. */
 export interface JobBuildingBlockSource {
   template_id: string;
   building_block_id: string;
   source_id: string;
 }
+/** Lädt die Serverprojektion über job_building_block_reference und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const jobBuildingBlockQuery = (actor: string, jobId: string) =>
   queryOptions({
     queryKey: ["operations", "job-building-block", actor, jobId],

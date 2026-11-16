@@ -1,3 +1,6 @@
+/**
+ * Nachrichtenentwurf mit validiertem Text, Anhängen und bestätigtem Versand. Anfragekennungen bleiben für Wiederholungen erhalten; hochgeladene Dokumente werden erst nach Scanfreigabe referenziert.
+ */
 import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -12,8 +15,11 @@ import { Button } from "../../components/ui/button";
 import { uploadDocument } from "../files/api";
 import { chatKeys } from "./api";
 import "./i18n";
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const messageSchema = z.object({ body: z.string().max(8000) });
+/** Dateiauswahlhilfe des Browsers; MIME, Magic Bytes, Größe und Scan werden unabhängig davon auf dem Server geprüft. */
 const acceptedFiles = ".pdf,.png,.jpg,.jpeg,.webp,.txt,.docx,.xlsx,.pptx";
+/** Sendet Text und saubere Anhänge mit einer wiederholbaren Operation; lokale Eingaben bleiben bis zur Bestätigung erhalten. */
 export function MessageComposer({
   actor,
   room,
@@ -25,6 +31,8 @@ export function MessageComposer({
   const online = useOnline();
   const client = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
+  // Versand- und Uploadkennung gehören zu getrennten Operationen. Bei unklarem
+  // Abschluss behält derselbe Inhalt seine Kennung; geänderte Eingaben beginnen neu.
   const retry = useRef<{ signature: string; key: string } | null>(null);
   const uploadRetry = useRef<{ signature: string; key: string } | null>(null);
   const [attachment, setAttachment] = useState<{

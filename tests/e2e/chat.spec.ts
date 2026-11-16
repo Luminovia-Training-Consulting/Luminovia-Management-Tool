@@ -1,3 +1,7 @@
+/**
+ * Browserabläufe für echte private Nachrichten und Mitgliedschaftsentzug in bereits verbundenen Browsern.
+ * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ */
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { createClient } from "@supabase/supabase-js";
@@ -9,6 +13,7 @@ test.skip(
   !isolated,
   "Chat journeys mutate only the isolated ./portal test environment.",
 );
+/** Erzeugt einen lokalen SDK-Prüfclient mit eigener flüchtiger Auth-Sitzung. */
 function localClient(key: string) {
   const url = process.env.SUPABASE_URL!;
   if (
@@ -20,12 +25,14 @@ function localClient(key: string) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+/** Erzeugt den administrativen Fixtureclient; dessen Schlüssel bleibt außerhalb der Browseranwendung. */
 const service = () => localClient(process.env.SUPABASE_SERVICE_ROLE_KEY!);
 interface Account {
   id: string;
   email: string;
   name: string;
 }
+/** Erstellt eine fiktive Testperson für getrennte Browser-/API-Sitzungen und das spätere gezielte Cleanup. */
 async function account(label: string): Promise<Account> {
   const tag = randomUUID().slice(0, 8);
   const email = `chat-${label}-${tag}@example.invalid`;
@@ -48,6 +55,7 @@ async function account(label: string): Promise<Account> {
   expect(role.error).toBeNull();
   return { id, email, name };
 }
+/** Meldet die konkrete Testperson über die sichtbaren Anmeldefelder an und wartet auf die bestätigte Navigation. */
 async function login(page: Page, user: Account) {
   await page.goto("/login");
   await page.getByLabel("E-Mail", { exact: true }).fill(user.email);
@@ -61,6 +69,7 @@ async function login(page: Page, user: Account) {
     page.getByRole("heading", { name: "Chats", exact: true }),
   ).toBeVisible();
 }
+/** Prüft den gerenderten Zustand mit axe; dies ersetzt keine manuelle Barrierefreiheitsabnahme. */
 async function a11y(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   expect(
@@ -82,6 +91,7 @@ async function a11y(page: Page) {
     })),
   ).toEqual([]);
 }
+/** Wartet auf den beobachtbaren Realtime-Verbindungszustand, bevor eine tatsächliche Zustellung geprüft wird. */
 async function connected(page: Page) {
   await expect(page.locator("[data-realtime-status]")).toHaveAttribute(
     "data-realtime-status",
@@ -89,6 +99,7 @@ async function connected(page: Page) {
     { timeout: 20_000 },
   );
 }
+/** Sendet Text über den sichtbaren Composer und wartet auf das bestätigte UI-Ergebnis. */
 async function send(page: Page, body: string) {
   await page.getByLabel("Deine Nachricht", { exact: true }).fill(body);
   await page
@@ -96,6 +107,7 @@ async function send(page: Page, body: string) {
     .click();
   await expect(page.getByText(body, { exact: true })).toBeVisible();
 }
+/** Öffnet eine weitere Browserseite im ausdrücklich übergebenen Kontext der jeweiligen Testidentität. */
 async function secondPage(context: BrowserContext, user: Account) {
   const page = await context.newPage();
   await login(page, user);

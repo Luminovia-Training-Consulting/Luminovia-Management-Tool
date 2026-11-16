@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für Sprach-/Farbschemawechsel bei blockiertem Browserstorage. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Preferences } from "./shell";
@@ -11,6 +14,7 @@ afterEach(() => {
   delete document.documentElement.dataset.theme;
 });
 
+/** Simuliert die System-Farbschemameldung ohne echte Betriebssystemeinstellungen zu verändern. */
 function systemDark() {
   vi.stubGlobal("matchMedia", () => ({
     matches: true,

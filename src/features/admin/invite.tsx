@@ -1,3 +1,6 @@
+/**
+ * Einladungsformular mit validierten Eingaben und wiederverwendbarer Anfragekennung. Ein unsicherer Netzwerkabschluss wird nicht als versandte Einladung ausgegeben; Status und erlaubte Rollen kommen aus dem Serververtrag.
+ */
 import { useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -12,13 +15,16 @@ import { db } from "../../lib/supabase";
 import { accountRequest, accountRoles } from "../accounts/api";
 import "../accounts/i18n";
 
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const schema = z.object({
   email: z.string().trim().email().max(254),
   display_name: z.string().trim().max(120),
   role: z.enum(accountRoles),
   organisation_id: z.string(),
 });
+/** Formularwerte direkt aus dem zugehörigen Validierungsschema, damit Eingabe- und TypeScript-Vertrag übereinstimmen. */
 type Values = z.infer<typeof schema>;
+/** Erlaubte bestätigte Statuswerte des dauerhaften Einladung-/Reservierungsprotokolls. */
 const serverStatuses = [
   "sent",
   "already_sent",
@@ -27,13 +33,16 @@ const serverStatuses = [
   "idempotency_conflict",
   "failed",
 ] as const;
+/** Bekannte Versand- und lokale Fehlerzustände; keiner davon behauptet bei unklarer Antwort einen Versand. */
 type ResultStatus =
   | (typeof serverStatuses)[number]
   | "permission_required"
   | "disabled"
   | "origin_denied"
   | "unavailable";
+/** Begrenzte Einladungsergebnisform mit bekanntem Status statt ungeprüfter Antwortdaten. */
 type Result = { status: ResultStatus };
+/** Normalisierte fachliche Eingaben zur Wiedererkennung derselben Einladung bei einer Wiederholung. */
 const signature = (values: Partial<Values>) =>
   JSON.stringify([
     values.email?.trim().toLowerCase() ?? "",
@@ -41,6 +50,7 @@ const signature = (values: Partial<Values>) =>
     values.role ?? "lecturer",
     values.organisation_id ?? "",
   ]);
+/** Begrenzt fremde Antwortdaten auf bekannte Einladungsstatus; unbekannte Antworten werden kein Erfolg. */
 function resultFrom(value: unknown): Result {
   if (!value || typeof value !== "object") return { status: "unavailable" };
   const data = value as Record<string, unknown>;
@@ -62,6 +72,7 @@ function resultFrom(value: unknown): Result {
 /** The parent shows this form only to actors with users.manage/users.invite.
  * The Edge Function and PostgreSQL repeat the permission and MFA checks.
  */
+/** Validiert Einladung und Rolle, erhält Retry-Identität und zeigt ausschließlich den bestätigten Versandstatus. */
 export function InviteForm({
   allRoles = false,
   canAssignRoles = false,

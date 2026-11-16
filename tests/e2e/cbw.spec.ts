@@ -1,3 +1,7 @@
+/**
+ * Browserabläufe für CBW-Quellenvorlagen, geplante Sitzungen und netto sichtbare Annahmen.
+ * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ */
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
@@ -13,6 +17,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "CBW writes require the canonical disposable project.",
 );
+/** Prüft den gerenderten Zustand mit axe; dies ersetzt keine manuelle Barrierefreiheitsabnahme. */
 async function a11y(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   const scan = await new AxeBuilder({ page })

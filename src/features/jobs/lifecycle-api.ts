@@ -1,7 +1,11 @@
+/**
+ * Versionierte Lebenszyklus-/Kapazitätsaktionen und zugehörige Query-Revalidierung. Anfragekennungen stützen sichere Wiederholungen; die Datenbank entscheidet über Status, Slots, Stornierung und unveränderliche Claimhistorie.
+ */
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 
+/** Zugänglicher Claim mit freigegebenem Verlauf und exakten belegten beziehungsweise freigegebenen Intervallen. */
 export interface LifecycleClaim {
   id: string;
   lecturer_id: string;
@@ -16,6 +20,7 @@ export interface LifecycleClaim {
   }[];
   events: { type: string; created_at: string; reason: string | null }[];
 }
+/** Aktueller Verwaltungsstand eines Angebots mit Versionsschutz und getrennten Claimhistorien. */
 export interface JobLifecycle {
   version: number;
   capacity?: number;
@@ -30,6 +35,7 @@ export interface JobLifecycle {
   claims: LifecycleClaim[];
 }
 
+/** Beantragt eine Kapazitätsänderung mit erwarteter Angebotsversion und wiederverwendbarer Anfragekennung. */
 export async function setCapacity(
   job: string,
   capacity: number,
@@ -46,6 +52,7 @@ export async function setCapacity(
   if (error) throw error;
   return data as string;
 }
+/** Lädt die Serverprojektion über job_lifecycle und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const lifecycleQuery = (actor: string, job: string) =>
   queryOptions({
     queryKey: ["job-lifecycle", actor, job],
@@ -58,6 +65,7 @@ export const lifecycleQuery = (actor: string, job: string) =>
     },
   });
 
+/** Sendet genau eine versionierte Angebotsaktion; Rückgabestatus und Nebenwirkungen werden serverseitig entschieden. */
 export async function manageOffer(input: {
   job: string;
   action: "draft" | "published" | "archived" | "reopen" | "edit" | "duplicate";
@@ -77,6 +85,7 @@ export async function manageOffer(input: {
   return data as string;
 }
 
+/** Beantragt die begründete Stornierung des vollständigen Claims mit eigener Retry-Identität. */
 export async function cancelAssignment(
   claim: string,
   reason: string,
@@ -94,6 +103,7 @@ export async function cancelAssignment(
 
 /** Refresh only state affected by job publication/allocation, rather than every
  * mounted profile, file, directory and knowledge query in the application. */
+/** Invalidiert nur fachlich von Veröffentlichung/Zuweisung betroffene Querybereiche statt sämtlicher gemounteter Daten. */
 export async function refreshJobState(client: QueryClient) {
   await Promise.all(
     [

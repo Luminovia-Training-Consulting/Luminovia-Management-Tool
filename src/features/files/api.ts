@@ -1,6 +1,10 @@
+/**
+ * Authentifizierter Dateitransfer, konkrete Dokumentversionen und statusabhängige Metadatenqueries. Nur eine bestätigte saubere Serverantwort beendet den Upload; private Bytes werden mit no-store geladen und bleiben außerhalb des PWA-Caches.
+ */
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 import { queryOptions } from "@tanstack/react-query";
+/** Berechtigte Dokumentmetadaten einschließlich Scope, Scanstatus und konkreter aktueller Versions-ID. */
 export interface PortalDocument {
   id: string;
   owner_id: string;
@@ -17,6 +21,7 @@ export interface PortalDocument {
   created_at: string;
   deleted_at: string | null;
 }
+/** Beantragter Dateikontext und optionale Retry-/Ersetzungsreferenzen; alle Beziehungen werden serverseitig geprüft. */
 export interface UploadContext {
   scope: PortalDocument["scope"];
   roomId?: string;
@@ -26,9 +31,12 @@ export interface UploadContext {
   replaceId?: string;
   clientId?: string;
 }
+/** Dateiauswahlhilfe des Browsers; MIME, Magic Bytes, Größe und Scan werden unabhängig davon auf dem Server geprüft. */
 export const acceptedFiles =
   ".pdf,.png,.jpg,.jpeg,.webp,.txt,.docx,.xlsx,.pptx";
+/** Frühe Browsergrenze von 100 MiB; verbindliche Uploadlimits gelten zusätzlich am Gateway. */
 export const maximumFileSize = 100 * 1024 * 1024;
+/** Prüft den Browser-Onlinestatus und liest das aktuelle native Access-Token für das Dateigateway. */
 async function authHeaders() {
   requireOnline();
   const { data, error } = await db().auth.getSession();
@@ -38,8 +46,10 @@ async function authHeaders() {
     apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
   };
 }
+/** Authentifiziertes Dateigateway desselben konfigurierten Supabase-Backends statt einer öffentlichen Storage-URL. */
 const endpoint = () =>
   `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/files`;
+/** Überträgt Bytes mit Fortschritt bis 95 Prozent und meldet 100 Prozent erst nach bestätigter sauberer Serverantwort. */
 export async function uploadDocument(
   file: File,
   context: UploadContext,
@@ -66,6 +76,8 @@ export async function uploadDocument(
     xhr.timeout = 90000;
     for (const [key, value] of Object.entries(headers))
       xhr.setRequestHeader(key, value);
+    // Der Netzwerktransfer umfasst den serverseitigen Scan nicht. Deshalb wird
+    // der übertragene Anteil vor der bestätigten clean-Antwort auf 95 Prozent begrenzt.
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable)
         onProgress?.(Math.min(95, Math.round((e.loaded / e.total) * 95)));
@@ -75,6 +87,8 @@ export async function uploadDocument(
     xhr.onload = () => {
       try {
         const result = JSON.parse(xhr.responseText);
+        // Weder HTTP 2xx allein noch ein vorhandener Dokumentdatensatz ist
+        // Scanfreigabe: nur der explizite saubere Status darf den Upload abschließen.
         if (
           xhr.status >= 200 &&
           xhr.status < 300 &&
@@ -90,10 +104,13 @@ export async function uploadDocument(
     xhr.send(form);
   });
 }
+/** Lädt aktuelle oder ausdrücklich gewählte Versionsbytes über eine erneut autorisierte no-store-Anfrage. */
 export async function downloadDocument(
   id: string,
   versionId?: string,
 ): Promise<Blob> {
+  // Die gewählte Versions-ID verhindert, dass Austausch zwischen Liste und
+  // Download einen alten Dateinamen mit neuen Bytes kombiniert.
   const response = await fetch(endpoint(), {
     method: "POST",
     headers: { ...(await authHeaders()), "Content-Type": "application/json" },
@@ -111,6 +128,7 @@ export async function downloadDocument(
   }
   return await response.blob();
 }
+/** Erzeugt aus bestätigten Dateibytes einen temporären Browserdownload und gibt die Objekt-URL wieder frei. */
 export async function saveDownload(
   id: string,
   name: string,
@@ -126,6 +144,7 @@ export async function saveDownload(
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/** Erkennt verweigerten Metadatenzugriff, um weitere automatische Abrufe dieses Queryzustands zu stoppen. */
 function documentAccessDenied(error: unknown) {
   return Boolean(
     error &&
@@ -137,10 +156,12 @@ function documentAccessDenied(error: unknown) {
 // Scan progress is temporary; settled metadata does not need a request for every
 // attachment every five seconds. Focus/reconnect and mutation invalidation still
 // revalidate immediately, and every byte download keeps its server access check.
+/** Schwacher, querylebensdauergebundener Zeitmarker für Scanpolling; enthält keine zweite Kopie privater Dokumente. */
 const scanWindows = new WeakMap<
   object,
   { signature: string; started: number }
 >();
+/** Fragt ausstehende Scans höchstens zwei Minuten schnell ab und kehrt danach zum langsamen Metadatenrhythmus zurück. */
 function documentRefreshInterval(
   query: object,
   files:
@@ -171,6 +192,7 @@ function documentRefreshInterval(
   // The weak key follows the real query lifecycle, without a second data cache.
   return Date.now() - window.started < 120000 ? 3000 : 60000;
 }
+/** Lädt die berechtigten documents-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const documentQuery = (actor: string, id: string) =>
   queryOptions({
     queryKey: ["document", actor, id],
@@ -195,6 +217,7 @@ export const documentQuery = (actor: string, id: string) =>
             query.state.error,
           ),
   });
+/** Lädt die berechtigten documents-Datensätze über den nativen Client und propagiert Lese-/Rechtefehler. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const documentsQuery = (
   actor: string,
   owner?: string,

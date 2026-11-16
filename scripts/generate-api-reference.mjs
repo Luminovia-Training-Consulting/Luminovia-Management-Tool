@@ -1,3 +1,7 @@
+/**
+ * Erzeugt die API-Referenz aus tatsächlich wiedergegebenen PostgreSQL-Migrationen.
+ * Dokumentierte Signaturen und Grants stammen aus dem temporären Datenbankkatalog.
+ */
 import { writeFile } from "node:fs/promises";
 import { withTestDatabase } from "./testing/database.mjs";
 await withTestDatabase("api_reference", async ({ sql }) => {

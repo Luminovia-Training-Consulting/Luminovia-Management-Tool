@@ -1,3 +1,6 @@
+/**
+ * Lesemaske des Administrationsprotokolls mit explizit übernommenen Filtern. Entwurf und aktive Abfrage bleiben getrennt, damit Datumseingaben keine unkontrollierten Historienabrufe auslösen.
+ */
 import { useId, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DateTime } from "luxon";
@@ -23,6 +26,7 @@ import {
 import "./i18n";
 import "./audit.css";
 
+/** Übernimmt Filter bewusst und navigiert über servergelieferte Tupelcursor statt einen gesamten Auditbestand zu laden. */
 function AuditReader({ actor, zone }: { actor: string; zone: string }) {
   const { t, i18n } = useTranslation("adminAudit"),
     online = useOnline(),
@@ -214,6 +218,7 @@ function AuditReader({ actor, zone }: { actor: string; zone: string }) {
     </>
   );
 }
+/** Lädt Audit-Capability und Anzeigezone, bevor freigegebene Verwaltungsereignisse angefragt werden. */
 export function AdminAuditPage() {
   const { t } = useTranslation("adminAudit"),
     { session } = useAuth(),

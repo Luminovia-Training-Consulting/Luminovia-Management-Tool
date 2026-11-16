@@ -1,8 +1,12 @@
+/**
+ * Überwacht den Speicher des Edge-Routers und beendet bei Speicherdruck Idle-Worker. Konfigurationsgrenzen und zeitbegrenztes Cleanup verhindern eine unbegrenzte zusätzliche Aufräumschleife.
+ */
 const CHECK_INTERVAL_MS = 1_000
 const PRESSURE_THRESHOLD = 0.8
 const CLEANUP_TIMEOUT_MS = 1_000
 const RETRY_INTERVAL_MS = 5_000
 
+// Akzeptiert nur sichere ganzzahlige cgroup-Bytewerte innerhalb der vorgegebenen Untergrenze.
 function parseBytes(value: string, minimum: number): number {
   const bytes = Number(value)
   if (!/^\d+$/.test(value) || !Number.isSafeInteger(bytes) || bytes < minimum) {
@@ -11,6 +15,7 @@ function parseBytes(value: string, minimum: number): number {
   return bytes
 }
 
+// Plant den nächsten Zyklus erst nach Abschluss des laufenden; nicht vorhandene/gesperrte cgroup-Dateien deaktivieren diese optionale Überwachung.
 export function startMemoryPressureLoop(): void {
   let errorReported = false
   let activeReported = false

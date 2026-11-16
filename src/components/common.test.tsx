@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für native Feldlabels, ARIA-Beschreibungen und Fehlerverknüpfung ohne verlorene Handler. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import type { ReactElement } from "react";

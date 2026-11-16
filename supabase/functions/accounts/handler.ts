@@ -1,3 +1,6 @@
+/**
+ * HTTP-Vertrag für Kontenverwaltung. Fachliche RPCs laufen mit dem Bearer-Token des Aufrufers; nur die separat injizierte Einladungszustellung/-komplettierung verwendet serverseitige Verwaltungsrechte.
+ */
 export const roles = [
   "owner",
   "admin",
@@ -7,7 +10,9 @@ export const roles = [
   "client",
   "participant",
 ] as const;
+// Erlaubte fachliche Zielrollen; die gewählte Rolle ist eine Eingabe und keine Aussage über Rechte des Aufrufers.
 export type AccountRole = (typeof roles)[number];
+// Validierter Versandauftrag mit dauerhaftem Wiederholungsschlüssel und gegebenenfalls Organisationsbindung.
 export interface Invitation {
   email: string;
   display_name: string;
@@ -15,10 +20,12 @@ export interface Invitation {
   organisation_id: string | null;
   idempotency_key: string;
 }
+// Begrenzte RPC-Antwort; interne Fehlermeldungen werden nicht an HTTP-Clients weitergereicht.
 interface RpcResult {
   data: unknown;
   error?: { code?: string } | null;
 }
+// Trennt caller-bezogene Datenbankoperationen von den ausschließlich serverseitigen Versand-/Abschlussrechten.
 export interface AccountDependencies {
   origins: string[];
   appOrigin: string;
@@ -38,12 +45,15 @@ export interface AccountDependencies {
   ) => Promise<void>;
   openapi: unknown;
 }
+// Prüft das UUID-Format einer fremden Eingabe; eine gültige Kennung verleiht keine Zugriffsrechte.
 const uuid = (value: unknown): value is string =>
   typeof value === "string" &&
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+// Akzeptiert nur JSON-Objekte als Payloadbasis; Arrays und null erhalten keinen Feldvertrag.
 function object(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
+// Normalisiert eine erlaubte Einladungsstruktur und bindet Clientkonten an genau eine gültige Organisation.
 export function parseInvitation(value: unknown): Invitation | null {
   if (
     !object(value) ||
@@ -86,6 +96,7 @@ export function parseInvitation(value: unknown): Invitation | null {
     idempotency_key,
   };
 }
+// Begrenzt die tatsächlich gelesenen JSON-Bytes zusätzlich zum Content-Length-Header und verweigert ungültiges UTF-8.
 async function body(request: Request): Promise<unknown> {
   if (
     !request.headers
@@ -123,6 +134,7 @@ async function body(request: Request): Promise<unknown> {
     throw new Error("invalid_request");
   }
 }
+// Verdrahtet Methoden und Payloads mit caller-bezogenen RPCs; Datenbankfehler werden ohne interne Details in stabile HTTP-Antworten übersetzt.
 export function createAccountHandler(deps: AccountDependencies) {
   return async (request: Request): Promise<Response> => {
     const origin = request.headers.get("origin") ?? "";
@@ -183,6 +195,7 @@ export function createAccountHandler(deps: AccountDependencies) {
         }
         return response(200, result.data);
       };
+      // Eigenes Profil und Verwaltung behalten denselben caller-bezogenen RPC-Pfad; Ziel-IDs ersetzen nie den Actor.
       if (path === "/v1/me") {
         if (request.method === "GET") return await call("account_me");
         if (request.method === "PATCH") {
@@ -267,6 +280,7 @@ export function createAccountHandler(deps: AccountDependencies) {
           return response(503, { error: "invitations_disabled" });
         const invitation = parseInvitation(await body(request));
         if (!invitation) return response(400, { error: "invalid_request" });
+        // Der gemeinsame dauerhafte Reservierungsvertrag wird vor der externen Zustellung erfolgreich abgeschlossen.
         const reserved = await deps.rpc(token, "reserve_account_invitation", {
           p_email: invitation.email,
           p_display_name: invitation.display_name,
@@ -285,6 +299,7 @@ export function createAccountHandler(deps: AccountDependencies) {
           status: string;
           invitation_id?: string;
         };
+        // Wiederholungen und Drosselung liefern den vorhandenen Zustand zurück und lösen keinen neuen Versand aus.
         if (result.status !== "reserved")
           return response(
             result.status === "throttled"
@@ -314,6 +329,7 @@ export function createAccountHandler(deps: AccountDependencies) {
             invitation_id: result.invitation_id,
           });
         }
+        // Scheitert erst dieser Abschluss, bleibt die bereits versandte Einladung gegen automatische Duplikate reserviert.
         await deps.completeInvitation(
           result.invitation_id,
           userId,

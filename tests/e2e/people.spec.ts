@@ -1,3 +1,7 @@
+/**
+ * Browserabläufe für geteilte Profile, Kurshistorie und eingeschriebene Bewertungen.
+ * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ */
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
@@ -12,6 +16,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Profile workflows require the isolated ./portal test project.",
 );
+/** Prüft den gerenderten Zustand mit axe; dies ersetzt keine manuelle Barrierefreiheitsabnahme. */
 async function a11y(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   const scan = await new AxeBuilder({ page })

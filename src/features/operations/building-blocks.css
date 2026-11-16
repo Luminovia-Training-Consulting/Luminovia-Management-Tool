@@ -1,3 +1,6 @@
+/**
+ * CBW-Provenienz, Quellenfassungen und bausteinbasierte Kursauswahl. Farben und gemeinsame Oberflächenwerte stammen aus den globalen Brandvariablen.
+ */
 /* Source references remain readable on narrow screens without shortening the
    byte hash or silently turning a local filename into a broken public link. */
 .building-block-reference {
@@ -16,6 +19,7 @@
   font-size: 13px;
   line-height: 1.7;
 }
+/* Herkunftsdatei und vollständiger Hash bleiben lesbar; lokale Dateinamen werden keine erfundenen öffentlichen Links. */
 .building-block-sources {
   display: grid;
   gap: 14px;
@@ -50,6 +54,7 @@
   line-height: 1.75;
   font-size: 14px;
 }
+/* Wochentag-Vorschläge bleiben ein expliziter Planungsbereich vor echten Termininstants. */
 .operations-schedule-planner {
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -88,6 +93,7 @@
 .building-block-cards h2 {
   overflow-wrap: anywhere;
 }
+/* Layoutanpassung (max-width: 650px): Passt Abstände, Spalten und Navigation an diesen Bildschirmbereich an. */
 @media (max-width: 650px) {
   .building-block-reference {
     padding: 15px;

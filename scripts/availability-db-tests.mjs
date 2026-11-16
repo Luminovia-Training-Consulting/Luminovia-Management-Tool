@@ -1,3 +1,7 @@
+/**
+ * PostgreSQL-Regressionsgruppen für private Verfügbarkeit und ausdrücklich geteilte Zeitfenster.
+ * Die Testdatenbank spielt echte Migrationen ein; Rollen-/MFA-Claims prüfen den Datenvertrag unabhängig von der UI.
+ */
 /** Availability's actual mutex, privacy and atomic claim boundaries. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -12,6 +16,7 @@ await withTestDatabase(
     await sql(
       `insert into auth.users(id,email) values ${[teacher, peer, admin, participant].map((id) => `('${id}','${id}@example.invalid')`).join(",")};insert into public.user_roles(user_id,role) values('${teacher}','lecturer'),('${peer}','lecturer'),('${admin}','admin'),('${participant}','participant');update public.profiles set display_name='Fictional available teacher',phone='PRIVATE CONTACT' where id='${teacher}'`,
     );
+    /** Ruft die fachliche Datenbank-API unter den kontrollierten Identitäts-/MFA-Claims der Fixture auf. */
     const rpc = async (who, name, args = [], aal = "aal1") => {
       const value = await actor(
         who,
@@ -24,6 +29,7 @@ await withTestDatabase(
         return value;
       }
     };
+    /** Erzeugt ein kontrolliertes Zeitfenster samt Typ, Freigabeflag und ausdrücklich privaten Notizen für den Projektionsvergleich. */
     const window = (from, to, kind = "available", shared = false) => ({
       kind,
       starts_at: from,
@@ -32,8 +38,10 @@ await withTestDatabase(
       notes: "PRIVATE availability note",
       share_with_management: shared,
     });
+    /** Sendet den geprüften Entwurf mit dessen Versions-/Identitätsbezug an die zuständige API. */
     const save = (id, payload, version = 0, who = teacher) =>
       rpc(who, "save_lecturer_availability", [id, payload, version]);
+    /** Erzeugt einen veröffentlichten fiktiven Auftrag zu den übergebenen Terminen für den Claim-/Sperrzeitenkonflikt. */
     const create = async (sessions) =>
       rpc(
         admin,
@@ -55,6 +63,7 @@ await withTestDatabase(
         ],
         "aal2",
       );
+    /** Ruft die tatsächliche Claim-RPC auf; nur das Datenbankergebnis bestätigt eine vollständige Zuweisung. */
     const claim = async (job) =>
       rpc(teacher, "claim_job", [
         job,
@@ -64,6 +73,7 @@ await withTestDatabase(
         ),
       ]);
     let count = 0;
+    /** Zählt und meldet einen Fall erst, wenn sämtliche zugehörigen Assertions erfolgreich abgeschlossen sind. */
     const check = async (name, fn) => {
       await fn();
       count++;

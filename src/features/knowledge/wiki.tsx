@@ -1,3 +1,6 @@
+/**
+ * Wiki-Listen, Artikelanzeige, Entwurfsbearbeitung und Versionshistorie. Gespeicherter Entwurf und veröffentlichte Fassung sind getrennte Zustände, sodass Bearbeiten keine unbemerkte Veröffentlichung bewirkt.
+ */
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -41,11 +44,13 @@ import { KnowledgeEditor } from "./editor";
 import { CategoryManager } from "./categories";
 import "./i18n";
 import "./knowledge.css";
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const metadata = z.object({
   title: z.string().trim().min(1).max(200),
   locale: z.enum(["de", "en"]),
   category: z.string().min(1),
 });
+/** Speichert normalisierten Inhalt und Metadaten als explizite Entwurfs-/Publikationsaktion. */
 function WikiForm({
   actor,
   record,
@@ -223,6 +228,7 @@ function WikiForm({
     </form>
   );
 }
+/** Zeigt die erlaubte Fassung samt Versionshistorie und getrenntem Bearbeitungszustand. */
 function WikiArticle({
   actor,
   id,
@@ -364,6 +370,7 @@ function WikiArticle({
     </article>
   );
 }
+/** Steuert Wiki-Suche, Kategorieauswahl und Artikelroute anhand der autorisierten Serverlisten. */
 export function WikiPage() {
   const { t, i18n } = useTranslation("knowledge");
   const online = useOnline();

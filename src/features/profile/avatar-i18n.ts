@@ -1,3 +1,6 @@
+/**
+ * DE/EN-Oberflächentexte für avatar. Die Registrierung erweitert i18next beim Modulimport; verfasste Fachinhalte werden nicht automatisch übersetzt.
+ */
 import i18n from "../../lib/i18n";
 const pairs: Record<string, [string, string]> = {
   title: ["Profilbild", "Profile picture"],

@@ -1,3 +1,7 @@
+/**
+ * Browserabläufe für gemeinsame Themenhierarchie und auf Entdeckung begrenzte Dozierendenrechte.
+ * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ */
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
@@ -13,6 +17,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Taxonomy mutations belong to the disposable canonical stack.",
 );
+/** Prüft den gerenderten Zustand mit axe; Tastatur- und Datenabläufe behalten eigene Assertions. */
 async function accessibility(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   const result = await new AxeBuilder({ page })

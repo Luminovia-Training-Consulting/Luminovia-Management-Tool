@@ -1,3 +1,7 @@
+/**
+ * Lokale Sicherheitsregressionen für Docker-Bindings, Umgebungen, Protokolle und Prozessbesitz.
+ * Die Fixtures prüfen konkrete Schutzgrenzen statt eine allgemeine Sicherheitszertifizierung zu behaupten.
+ */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {

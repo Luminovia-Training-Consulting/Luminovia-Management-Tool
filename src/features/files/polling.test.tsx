@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für begrenztes schnelles Scanpolling und langsame Revalidierung bei stabilen Metadaten. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import {
   act,
@@ -79,10 +82,12 @@ afterEach(() => {
   state.signals = [];
   state.hold = false;
 });
+/** Beobachtet die echte Dateilistenquery, damit ihre Pollingintervalle unabhängig vom Anhangs-UI messbar sind. */
 function List() {
   const files = useQuery(documentsQuery(state.actor));
   return <p>{files.data?.length ?? 0} files</p>;
 }
+/** Rendert die zu prüfende Oberfläche mit lokalen Provider-/Routerfixtures und einem isolierten QueryClient. */
 function setup(list = false) {
   vi.useFakeTimers();
   const client = new QueryClient({
@@ -99,6 +104,7 @@ function setup(list = false) {
   const view = render(element());
   return { client, view, element };
 }
+/** Bewegt die kontrollierte Testuhr innerhalb von act, damit Timerupdates vor Assertions verarbeitet werden. */
 async function advance(ms = 1) {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(ms);

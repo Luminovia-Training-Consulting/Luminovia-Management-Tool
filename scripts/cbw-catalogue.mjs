@@ -1,3 +1,7 @@
+/**
+ * Extrahiert fachliche CBW-Bausteine mit stabiler Identität und Quellenprovenienz.
+ * Der Katalog enthält Referenzen und Hashes; die Originalunterlagen werden nicht veröffentlicht.
+ */
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve, basename } from "node:path";
@@ -8,16 +12,21 @@ export const cataloguePath = new URL(
   "../data/cbw-building-blocks.json",
   import.meta.url,
 );
+/** Berechnet einen stabilen Inhaltsfingerabdruck; ein Hash ersetzt keine Ressourcenberechtigung. */
 const hash = (value) => createHash("sha256").update(value).digest("hex");
+/** Leitet die kanonische UUID deterministisch aus dem fachlichen Schlüssel ab, damit wiederholter Import referenzstabil bleibt. */
 export function stableCatalogueId(value) {
   const hex = hash(`luminovia-cbw:${value}`);
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
+/** Normalisiert das aus der Quelle gelesene deutsche Datum in die Katalogdarstellung. */
 const isoDate = (value) => value.split(".").reverse().join("-");
+/** Vereinheitlicht PDF-Extraktionsabstände, ohne die fachliche Reihenfolge zu verändern. */
 const tidy = (value) => value.replace(/\s+/g, " ").trim();
 
 // Only the curriculum section is imported. Names, book prices, ISBNs and room
 // preparation are not course content, and page furniture is not a syllabus item.
+/** Liest eine einzelne Quellenfassung und erhält Dateiname, Hash und fachliche Metadaten für deren Provenienz. */
 export function extractBuildingBlock(text, fileName, sha256) {
   const code = /Kurzzeichen:\s*([A-Z0-9]+)/.exec(text)?.[1];
   const title = tidy(
@@ -98,6 +107,7 @@ export function extractBuildingBlock(text, fileName, sha256) {
   };
 }
 
+/** Führt Quellen nach fachlichem Baustein zusammen und erhält unterschiedliche Originalfassungen separat. */
 export function buildCatalogue(files) {
   const grouped = new Map();
   for (const input of [...files].sort((a, b) =>
@@ -156,6 +166,7 @@ export function buildCatalogue(files) {
   };
 }
 
+/** Rendert reproduzierbare SQL-Katalogdaten mit maskierten Literalen für den kontrollierten Import. */
 export function renderCatalogueSql(catalogue) {
   const json = JSON.stringify(catalogue);
   // Both levels quote generated SQL: source data must not close either the

@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für MFA-Challenge-/Enrollmentfehler und wiederholbare Bedienzustände. SDK-/DOM-Fixtures isolieren den Browservertrag; echte RLS-, Auth-, Storage- und Browserabnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -48,6 +51,7 @@ beforeEach(() => {
   });
 });
 afterEach(cleanup);
+/** Rendert die untersuchte Komponente mit den für diesen Test notwendigen lokalen Providern. */
 function view() {
   render(
     <MemoryRouter>

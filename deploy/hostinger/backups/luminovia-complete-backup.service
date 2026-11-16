@@ -1,3 +1,4 @@
+# Ein vollständiger verschlüsselter Backuplauf mit eigenem Rückkehr-/Cleanupvertrag. Die ausführende Anwendung bestätigt tatsächliche Sets und Frische, nicht allein Systemd.
 [Unit]
 Description=Luminovia complete encrypted recovery backup
 Requires=docker.service

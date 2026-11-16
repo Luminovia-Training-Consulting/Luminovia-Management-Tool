@@ -1,8 +1,12 @@
+/**
+ * Deno-Einstieg der Dozierendeneinladung. Autorisierung und Reservierung nutzen das tatsächliche Benutzer-JWT; nur Versand und Abschluss greifen auf serverseitige Auth-Verwaltungsrechte zu.
+ */
 import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {createHandler} from './handler.ts';
 const url=Deno.env.get('SUPABASE_URL')??'';
 const anon=Deno.env.get('SUPABASE_ANON_KEY')??'';
 const secret=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')??'';
+// Bindet Autorisierung und Reservierung an das echte JWT des Aufrufers statt an den Serviceclient.
 const client=(token:string)=>createClient(url,anon,{global:{headers:{Authorization:`Bearer ${token}`}},auth:{persistSession:false,autoRefreshToken:false}});
 const service=createClient(url,secret,{auth:{persistSession:false,autoRefreshToken:false}});
 const appOrigin=Deno.env.get('PORTAL_APP_ORIGIN')??'';

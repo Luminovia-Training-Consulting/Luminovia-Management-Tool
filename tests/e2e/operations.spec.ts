@@ -1,3 +1,7 @@
+/**
+ * Browserabläufe für Kundendirectory, Kursvorlagen und sichere unveröffentlichte Kopien.
+ * Die Assertions prüfen tatsächliche Oberfläche und Serverantworten; ihre Ausführung ersetzt keine manuelle Plattformabnahme.
+ */
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { createClient } from "@supabase/supabase-js";
@@ -7,6 +11,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Operations workflows run only through the isolated ./portal test command.",
 );
+/** Erzeugt den lokalen Fixtureclient nach den hier gesetzten Testzielgrenzen. */
 function api(key: string) {
   const url = process.env.SUPABASE_URL!;
   if (!["localhost", "127.0.0.1", "[::1]"].includes(new URL(url).hostname))
@@ -15,6 +20,7 @@ function api(key: string) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+/** Meldet die konkrete Testperson über die sichtbaren Anmeldefelder an und wartet auf die bestätigte Navigation. */
 async function login(page: Page, email = process.env.E2E_LECTURER_EMAIL!) {
   await page.goto("/login");
   await page.getByLabel("E-Mail", { exact: true }).fill(email);
@@ -24,6 +30,7 @@ async function login(page: Page, email = process.env.E2E_LECTURER_EMAIL!) {
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
 }
+/** Prüft den gerenderten Zustand mit axe; dies ersetzt keine manuelle Barrierefreiheitsabnahme. */
 async function a11y(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   const scan = await new AxeBuilder({ page })
@@ -39,6 +46,7 @@ async function a11y(page: Page) {
     })),
   ).toEqual([]);
 }
+/** Berechnet den aktuellen TOTP der Fixture für die echte MFA-Challenge. */
 function code(secret: string) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "")]

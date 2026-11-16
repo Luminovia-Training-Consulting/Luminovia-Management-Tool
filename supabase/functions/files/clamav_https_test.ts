@@ -1,3 +1,6 @@
+/**
+ * Injizierte HTTPS-Scannerantworten prüfen Fristen, Redirectverbot, Größen und Signaturalter. Testwerte enthalten keine echten Gatewaygeheimnisse; Timeoutfälle behalten die reale Abbruchlogik.
+ */
 import { type HttpsScannerConfig, scan } from "./clamav.ts";
 
 const bytes = new TextEncoder().encode("Fictional scan input");
@@ -5,11 +8,15 @@ const config = {
   url: "https://scanner.example.invalid/scan",
   token: "test_".padEnd(64, "a"),
 };
+// Erzeugt einen zur Testlaufzeit frischen fiktiven ClamAV-Signaturzeitstempel.
 const freshVersion = () => "ClamAV 1.4.3/12345/" + new Date().toUTCString();
+// Erzeugt die kontrollierte JSON-Scannerantwort für die folgenden Protokollfälle.
 const response = (value: unknown) => Response.json(value);
+// Lässt eine konkrete Fixturebedingung als echten Testfehler scheitern; es gibt keinen stillen Erfolgsersatz.
 function assert(value: unknown, message = "assertion failed"): asserts value {
   if (!value) throw new Error(message);
 }
+// Verlangt die tatsächliche Ablehnung des übergebenen Vorgangs und prüft gegebenenfalls den stabilen Fehlergrund.
 async function rejects(work: () => Promise<unknown>, expected?: string) {
   try {
     await work();
@@ -24,6 +31,7 @@ async function rejects(work: () => Promise<unknown>, expected?: string) {
   }
   throw new Error("expected rejection");
 }
+// Injiziert ausschließlich die vorgegebene Scannerantwort und behält die echte Adaptervalidierung bei.
 const fetchWith = (value: Response) =>
   (() => Promise.resolve(value)) as typeof fetch;
 

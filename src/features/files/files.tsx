@@ -1,3 +1,6 @@
+/**
+ * Dateizentrum, Drag-and-drop-Upload, versionsgebundene Vorschau und Historie. Blob-URLs gehören zur dargestellten Version und werden freigegeben; Uploadfortschritt allein bedeutet noch keine Scanfreigabe.
+ */
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -36,6 +39,7 @@ import {
 } from "./api";
 import "./i18n";
 import "./files.css";
+/** Begrenzt serverseitige Uploadfehlermeldungen auf bekannte übersetzte UI-Schlüssel. */
 function fileError(error: unknown) {
   const code = error instanceof Error ? error.message : "";
   return [
@@ -47,6 +51,7 @@ function fileError(error: unknown) {
     ? code
     : "error";
 }
+/** Hält Dateiauswahl und Retry-Kennung zusammen und leert den Entwurf erst nach erfolgreichem Scan-/Uploadabschluss. */
 export function FileUpload({
   context,
   onDone,
@@ -156,6 +161,7 @@ export function FileUpload({
     </div>
   );
 }
+/** Bindet Metadaten und geladene Bytes an dieselbe Dokumentversion und räumt verspätet entstandene Blob-URLs auf. */
 function Preview({ file }: { file: PortalDocument }) {
   const { t } = useTranslation("files");
   const [url, setUrl] = useState("");
@@ -194,6 +200,7 @@ function Preview({ file }: { file: PortalDocument }) {
     <p>{t("noPreview")}</p>
   );
 }
+/** Lädt die berechtigte Dokumenthistorie und bietet Downloads ausschließlich für saubere Versionen an. */
 function Versions({ file }: { file: PortalDocument }) {
   const { t, i18n } = useTranslation("files");
   const online = useOnline();
@@ -255,6 +262,7 @@ function Versions({ file }: { file: PortalDocument }) {
     </>
   );
 }
+/** Zeigt autorisierte Dateien mit Vorschau, Historie, Umbenennung und expliziter Archivierung. */
 function DocumentList({ files }: { files: PortalDocument[] }) {
   const { t, i18n } = useTranslation("files");
   const { session } = useAuth();
@@ -474,6 +482,7 @@ function DocumentList({ files }: { files: PortalDocument[] }) {
     </>
   );
 }
+/** Bindet Dateien an einen konkreten Fachkontext und verwendet den gemeinsamen Upload-/Listenvertrag. */
 export function SubjectDocuments({
   ownerId,
   kind,
@@ -487,6 +496,7 @@ export function SubjectDocuments({
   if (files.isError) return <ErrorState />;
   return <DocumentList files={files.data} />;
 }
+/** Trennt Vor-/Nach-Claim-Material eines Auftrags und zeigt Verwaltungsuploads nur als passende UI-Aktion. */
 export function JobDocuments({
   jobId,
   canManage,
@@ -531,6 +541,7 @@ export function JobDocuments({
     </section>
   );
 }
+/** Filtert die aktuell geladene Dateimenge nach Name und Kontext; vollständige serverseitige Discovery ist ein separater Ausbau. */
 export function FilesPage() {
   const { t } = useTranslation("files");
   const { session } = useAuth();

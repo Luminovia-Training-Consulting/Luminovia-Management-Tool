@@ -1,8 +1,12 @@
+/**
+ * Lebensdauergebundene Realtime-Subscription für genau einen Akteur und Raum. Ereignisse bündeln autorisierte Refetches; ein beobachteter Mitgliedschaftsentzug verwirft Raumdaten sofort und stoppt ausstehende Aktualisierungen.
+ */
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import { chatKeys } from "./api";
 /** Realtime payloads are notifications only. Authorised RPCs remain the source of truth. */
+/** Beobachtet einen Raum, bündelt Refetchhinweise und räumt Timer/Subscription beim Akteurs- oder Raumwechsel auf. */
 export function useChatRealtime(actor: string, room: string | undefined) {
   const client = useQueryClient();
   const [status, setStatus] = useState<"connecting" | "connected" | "retrying">(

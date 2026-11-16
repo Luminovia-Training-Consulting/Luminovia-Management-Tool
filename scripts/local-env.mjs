@@ -1,3 +1,7 @@
+/**
+ * Leitet private lokale Testkonfiguration aus dem tatsächlichen CLI-Dienststatus ab.
+ * Öffentliche Browserwerte und serverseitige Testschlüssel bleiben getrennt; vorhandene Passwörter werden erhalten.
+ */
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { randomBytes } from "node:crypto";

@@ -1,3 +1,6 @@
+/**
+ * Reiner Planer für den geprüften M4-Übergang. Bindet vorhandene Historie, neue Migrationsquellen und Release-Inventar zu einem überprüfbaren Digest, ohne dadurch selbst einen Server zu ändern.
+ */
 /** Bounded, read-only M4 operator-review plan. This file never runs SQL, SSH,
  * Docker or an updater and is not an automatic migration-policy exception. */
 import assert from "node:assert/strict";
@@ -8,7 +11,9 @@ import { fileURLToPath } from "node:url";
 import { reviewedMigrations as m3 } from "./reviewed-m3-backfill.mjs";
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+// Berechnet den Fingerabdruck für die quellgebundene Vergleichs-/Prüfentscheidung.
 const digest = (value) => createHash("sha256").update(value).digest("hex");
+// Normalisiert eine fest erwartete Migrationsdatei samt SHA-256 für den Quellenvergleich.
 const migration = ([file, sha256]) => ({
   file,
   version: file.slice(0, 14),
@@ -96,6 +101,7 @@ export const reviewedM4 = Object.freeze([
   },
 ]);
 
+// Lädt die tatsächlich versionierten M4-Quellen und prüft alle festgehaltenen Herkunftshashes.
 export async function loadM4ReviewContext(root = repository) {
   const expected = [...m4Baseline, ...reviewedM4];
   const directory = resolve(root, "supabase/migrations");
@@ -141,6 +147,7 @@ export async function loadM4ReviewContext(root = repository) {
   });
 }
 
+// Verweigert veränderte, fehlende oder unerwartete historische Migrationsquellen.
 export function validateM4History(history, context) {
   assert(Array.isArray(history), "Expected exported migration history array.");
   assert(
@@ -179,6 +186,7 @@ export function validateM4History(history, context) {
   return history.length === 17;
 }
 
+// Bindet die bestätigte Basishistorie und das Release-Inventar zu einem überprüfbaren Übergangsplan.
 export function createM4ReviewPlan({ history, manifest }, context) {
   const completed = validateM4History(history, context);
   assert(

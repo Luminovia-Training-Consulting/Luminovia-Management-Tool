@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für private Fenster, ausdrücklich reduzierte Managementfreigabe und versionierte Formularänderungen. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -25,6 +28,7 @@ const row: AvailabilityWindow = {
   share_with_management: false,
   version: 1,
 };
+/** Bildet einen awaitbaren SDK-Response samt Kettenmethode nach, ohne einen echten Backendzugriff auszuführen. */
 function response(data: unknown, error: unknown = null) {
   return Object.assign(Promise.resolve({ data, error }), {
     abortSignal() {
@@ -76,6 +80,7 @@ afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
+/** Mountet den echten Fachscreen mit isoliertem Cache und kontrollierten SDK-Antworten. */
 function mount() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

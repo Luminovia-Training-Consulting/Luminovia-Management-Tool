@@ -1,3 +1,6 @@
+/**
+ * Kontaktwahl, Gruppenerstellung und sichtbare Mitgliedschaftsverwaltung. Direktnachrichten, allgemeiner Lehrteamraum und Kursräume behalten ihre unterschiedlichen Verwaltungsregeln.
+ */
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -14,10 +17,12 @@ import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { chatContactsQuery, chatKeys, chatMembersQuery } from "./api";
 import type { ChatContact, ChatRoom } from "./types";
 import "./i18n";
+/** Verwendet den freigegebenen Anzeigenamen oder den übersetzten Fallback für unbenannte Kontakte. */
 const contactName = (
   contact: Pick<ChatContact, "display_name">,
   fallback: string,
 ) => contact.display_name || fallback;
+/** Bietet eine kontrollierte Auswahl aus den bereits autorisiert geladenen Kontakten. */
 export function ContactPicker({
   actor,
   open,
@@ -109,12 +114,14 @@ export function ContactPicker({
     </Dialog>
   );
 }
+/** Lokale Eingabegrenzen des Fachformulars; Rechte, Fremdschlüssel und verbindliche Zustandsregeln prüft der Server zusätzlich. */
 const groupSchema = z.object({
   title: z.string().trim().min(1).max(120),
   kind: z.enum(["topic", "participant_course"]),
   job: z.string(),
   members: z.array(z.string()).max(60),
 });
+/** Erstellt eine explizite Gruppe mit ausgewählten Mitgliedern über den Chat-Serververtrag. */
 export function CreateGroup({
   actor,
   canManageCourses,
@@ -268,6 +275,7 @@ export function CreateGroup({
     </Dialog>
   );
 }
+/** Zeigt aktuelle Mitgliedschaften und bietet nur passende, serverseitig geprüfte Verwaltungsaktionen an. */
 export function MembersPanel({
   actor,
   room,
@@ -449,6 +457,7 @@ export function MembersPanel({
     </>
   );
 }
+/** Ordnet der fachlichen Raumart ein rein visuelles Symbol zu. */
 export function RoomIcon({
   kind,
   size = 20,

@@ -1,3 +1,6 @@
+/**
+ * Vitest-Regressionen für fehlende Brutto-Capability ohne Abruf oder Anzeige privater Umsatzdaten. Lokale SDK-/DOM-Fixtures isolieren den Browservertrag; echte Datenbank-/API-Abnahme bleibt Teil des separaten Gesamtprüflaufs.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

@@ -1,3 +1,6 @@
+/**
+ * Management-Kanban für versionierte Angebotszustände. Drag-and-drop und Tastaturauswahl rufen denselben Serververtrag auf; gefüllte Angebote entstehen durch echte Claims und sind kein frei wählbares Drag-Ziel.
+ */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -19,8 +22,11 @@ import { manageOffer } from "./lifecycle-api";
 import "./lifecycle-i18n";
 import "./board.css";
 
+/** Feste Darstellung der Angebotszustände; die Spalte filled bleibt serverabgeleitet. */
 const statuses = ["draft", "published", "filled", "archived"] as const;
+/** Die vier sichtbaren Boardspalten; manuell veränderbar ist nur deren erlaubte Teilmenge. */
 type Status = (typeof statuses)[number];
+/** Reduzierte autorisierte Boardprojektion mit Version und expliziter Übergangserlaubnis. */
 interface BoardOffer {
   id: string;
   title: string;
@@ -30,8 +36,10 @@ interface BoardOffer {
   confirmed_count: number;
   can_transition: boolean;
 }
+/** Begrenzt manuelle Angebotsübergänge auf Entwurf, veröffentlicht und archiviert; gefüllt folgt echten Claims. */
 const mutableStatus = (s: string): s is Exclude<Status, "filled"> =>
   s === "draft" || s === "published" || s === "archived";
+/** Registriert zulässige Drop-Ziele und stellt gefüllte Angebote bewusst nicht als Übergangsziel bereit. */
 function Column({
   status,
   children,
@@ -58,11 +66,13 @@ function Column({
     </section>
   );
 }
+/** Daten und gemeinsame Aktion für Maus-/Tastaturbedienung derselben Angebotskarte. */
 type CardProps = {
   offer: BoardOffer;
   disabled: boolean;
   change: (offer: BoardOffer, status: Exclude<Status, "filled">) => void;
 };
+/** Verwendet für Tastaturauswahl und Drag-Griff dieselben erlaubten Angebotszustände. */
 function CardContent({
   offer,
   disabled,
@@ -112,6 +122,7 @@ function CardContent({
     </>
   );
 }
+/** Registriert nur eine tatsächlich bewegliche Angebotskarte als Draggable mit eigenem Griff. */
 function MovableCard(props: CardProps) {
   const { offer, disabled } = props;
   const { ref, handleRef, isDragging } = useDraggable({
@@ -129,6 +140,7 @@ function MovableCard(props: CardProps) {
     </article>
   );
 }
+/** Erhält historische Karten als gewöhnliche Artikel/Links ohne künstliche Drag-Button-Semantik. */
 function Card(props: CardProps) {
   // Historical/accepted cards never register as draggables: this also avoids
   // adding synthetic button/tab semantics around their ordinary detail link.
@@ -142,6 +154,7 @@ function Card(props: CardProps) {
 }
 /** One server-scoped batch, no per-card polling or optimistic status changes.
  * A drag is only a versioned publication request, never an assignment. */
+/** Lädt einen servergefilterten Batch und bestätigt jeden Versionsübergang online ohne optimistischen Kartenwechsel. */
 export function OfferBoard() {
   const { session } = useAuth();
   const { t } = useTranslation();

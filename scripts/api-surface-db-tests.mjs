@@ -1,3 +1,7 @@
+/**
+ * Verknüpft compilerermittelte Frontend-RPCs mit einer frisch migrierten Testdatenbank.
+ * Prüft dabei Ausführungsrechte, RLS und die Trennung öffentlicher API und privater Implementierungen.
+ */
 /** Bind delivered frontend RPC references to the actual replayed database surface. */
 import assert from "node:assert/strict";
 import { dirname, resolve } from "node:path";

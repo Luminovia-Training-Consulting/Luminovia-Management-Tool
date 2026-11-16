@@ -1,14 +1,20 @@
+/**
+ * Private Brutto-/Plattform-/Netto-Projektionen und centgenaue Anzeigehilfen. Historische Nettoangebote behalten unbekannte Bruttowerte als null; eine lokale Vorschau ersetzt keinen akzeptierten Serversnapshot.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
+/** Serverermittelte Capabilities für Bruttoverwaltung, Kundenmitgliedschaften und Kursanfragen. */
 export interface CommissionAccess {
   can_manage_gross: boolean;
   can_manage_client_memberships: boolean;
   can_request: boolean;
 }
+/** Für den aktuellen Akteur freigegebene Organisation im Kundenportal. */
 export interface ClientOrganisation {
   id: string;
   name: string;
 }
+/** Serverprojektion einer Kundenanfrage mit Originalpreisen, Terminen und tatsächlichem Veröffentlichungs-/Zuweisungsstand. */
 export interface ClientRequest {
   id: string;
   organisation_id: string;
@@ -31,6 +37,7 @@ export interface ClientRequest {
   assigned_lecturers?: { id: string; display_name: string }[];
   created_at: string;
 }
+/** Eine Preis-/Claimprojektion mit ausdrücklich nullable historischen Bruttowerten. */
 export interface CommissionRecord {
   job_id: string;
   claim_id: string | null;
@@ -51,6 +58,7 @@ export interface CommissionRecord {
   accepted_at: string | null;
   capacity?: number;
 }
+/** Organisations- und währungsbezogene Zusammenfassung bestätigter Kundenprojektionen. */
 export interface ClientSpend {
   organisation_id: string;
   organisation_name: string;
@@ -62,6 +70,7 @@ export interface ClientSpend {
   gross_assigned_amount: number;
   teachers: { id: string; display_name: string }[];
 }
+/** Getrennte Cachebereiche für Zugriffsrechte, Organisationen, Anfragen, Umsatz und Kundenausgaben. */
 export const commissionKeys = {
   access: (actor: string) => ["commission-access", actor] as const,
   organisations: (actor: string) => ["client-organisations", actor] as const,
@@ -69,6 +78,7 @@ export const commissionKeys = {
   report: (actor: string) => ["commission-report", actor] as const,
   spend: (actor: string) => ["client-spend", actor] as const,
 };
+/** Lädt die Serverprojektion über commission_access und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const commissionAccessQuery = (actor: string) =>
   queryOptions({
     queryKey: commissionKeys.access(actor),
@@ -79,6 +89,7 @@ export const commissionAccessQuery = (actor: string) =>
     },
     staleTime: 1000,
   });
+/** Lädt die Serverprojektion über client_organisations und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const clientOrganisationsQuery = (actor: string) =>
   queryOptions({
     queryKey: commissionKeys.organisations(actor),
@@ -88,6 +99,7 @@ export const clientOrganisationsQuery = (actor: string) =>
       return (data ?? []) as ClientOrganisation[];
     },
   });
+/** Lädt die Serverprojektion über client_requests und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const clientRequestsQuery = (
   actor: string,
   organisation: string | null = null,
@@ -103,6 +115,7 @@ export const clientRequestsQuery = (
     },
     refetchInterval: 10000,
   });
+/** Lädt die Serverprojektion über commission_report und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const commissionReportQuery = (
   actor: string,
   organisation: string | null = null,
@@ -117,6 +130,7 @@ export const commissionReportQuery = (
       return (data ?? []) as CommissionRecord[];
     },
   });
+/** Lädt die Serverprojektion über client_spend_summary und propagiert deren Fehler an den Queryzustand. Der Cache ist an den jeweiligen Akteur beziehungsweise die abgefragte Person gebunden. */
 export const clientSpendQuery = (actor: string) =>
   queryOptions({
     queryKey: commissionKeys.spend(actor),
@@ -127,7 +141,10 @@ export const clientSpendQuery = (actor: string) =>
     },
   });
 /** Platform share rounds to cents first; the lecturer receives the exact remainder. */
+/** Rundet zuerst den Plattformanteil in Cent; das Dozierendenhonorar erhält den exakten verbleibenden Centbetrag. */
 export function splitFee(gross: number, percent: number) {
+  // Ganze Cent und Prozent-Basispunkte vermeiden divergierende Restbeträge
+  // zwischen den beiden Anteilen einer bloßen Anzeigevorschau.
   const cents = Math.round(gross * 100);
   const bps = Math.round(percent * 100);
   if (
@@ -147,6 +164,7 @@ export function splitFee(gross: number, percent: number) {
     lecturer: (cents - platform) / 100,
   };
 }
+/** Summiert Angebote einmal je Auftrag/Kapazität und angenommene Claims einzeln; unbekannte Bruttowerte bleiben separat gezählt. */
 export function revenueTotals(rows: CommissionRecord[]) {
   const quotedJobs = new Set<string>();
   const groups = new Map<
@@ -185,6 +203,8 @@ export function revenueTotals(rows: CommissionRecord[]) {
     if (row.claim_id) {
       group.lecturer += Math.round(Number(row.lecturer_net_total_amount) * 100);
       group.count++;
+      // Bei alten reinen Nettoangeboten existiert keine belegte Bruttohistorie.
+      // Fehlende Werte zählen als unbekannt und werden nicht rückgerechnet.
       if (row.gross_total_amount === null || row.platform_total_amount === null)
         group.unknown++;
       else {

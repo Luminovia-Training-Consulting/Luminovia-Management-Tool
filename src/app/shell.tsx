@@ -1,3 +1,6 @@
+/**
+ * Gemeinsamer Desktop-/Mobilrahmen mit Navigation, Suche, Meldungen und Sprache/Farbschema. Sichtbare Aktionen folgen den geladenen Capabilities; verbindliche Zugriffsprüfungen bleiben im Backend.
+ */
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -35,6 +38,7 @@ import { permissionsQuery, profileQuery, userRolesQuery } from "../lib/queries";
 import { Button } from "../components/ui/button";
 import { ErrorState, Loading, Notice } from "../components/common";
 import { readPreference, writePreference } from "../lib/preferences";
+/** Hält Sprache und Farbschema aktiv, reagiert auf Systemfarben und speichert die Auswahl nur best effort. */
 export function Preferences() {
   const { t, i18n } = useTranslation();
   const [theme, setTheme] = useState(() => {
@@ -84,6 +88,7 @@ export function Preferences() {
     </div>
   );
 }
+/** Rendert die aktuelle Navigation und gemeinsame Bedienung; Abmelden leert private Zustände erst entlang des echten Auth-Ablaufs. */
 export function Shell() {
   const { t } = useTranslation();
   const { session } = useAuth();
@@ -319,6 +324,7 @@ export function Shell() {
     </div>
   );
 }
+/** Führt aus einer Auftragsdetailansicht zurück zur Auftragsübersicht. */
 export function BackLink() {
   const { t } = useTranslation();
   return (

@@ -1,3 +1,6 @@
+/**
+ * Deterministische Planfälle für den source-gebundenen M4-Übergang. Prüfen exakte Basishistorie, Release-Inventar und bestätigten Digest ohne einen gehosteten Datenbestand zu verändern.
+ */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import {
@@ -20,10 +23,12 @@ import {
 
 const repository = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const context = await loadM4ReviewContext();
+// Baut den genau erwarteten historischen Zustand für den folgenden positiven oder gezielt beschädigten Planfall.
 const history = (full = false) =>
   [...context.baseline, ...(full ? context.pending : [])].map(
     ({ version, source }) => ({ version, source }),
   );
+// Baut das synthetische Releaseinventar, dessen einzelne Felder die Tests gezielt verändern.
 function manifest() {
   const sources = [...context.baseline, ...context.pending];
   return {
@@ -46,6 +51,7 @@ function manifest() {
     ],
   };
 }
+// Verbindet die jeweilige Fixturehistorie mit dem synthetischen Manifest für den reinen Planer.
 const plan = (h = history(), m = manifest()) =>
   createM4ReviewPlan({ history: h, manifest: m }, context);
 test("exact14 to17 plan reports the two blocked migration reasons without changing automatic policy", () => {
