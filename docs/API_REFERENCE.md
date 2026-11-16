@@ -34,6 +34,10 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | account_me | none | jsonb | Authenticated; resource/capability checks apply |
 | account_role_catalog | none | jsonb | Authenticated; resource/capability checks apply |
 | account_users | p_search text, p_limit integer, p_offset integer | jsonb | Authenticated; resource/capability checks apply |
+| accounting_access | none | jsonb | Authenticated; resource/capability checks apply |
+| accounting_customer_claims | none | jsonb | Authenticated; resource/capability checks apply |
+| accounting_export | p_id uuid | jsonb | Authenticated; resource/capability checks apply |
+| accounting_invoices | p_source text, p_before_at timestamp with time zone, p_before_id uuid, p_limit integer | jsonb | Authenticated; resource/capability checks apply |
 | acknowledge_contract | p_contract_id uuid, p_sha256 text, p_client_id uuid | uuid | Authenticated; resource/capability checks apply |
 | acknowledge_course_instructions | p_course_run_id uuid, p_instruction_version integer, p_request_id uuid | uuid | Authenticated; resource/capability checks apply |
 | add_forum_post | p_thread_id uuid, p_content jsonb, p_client_id uuid | uuid | Authenticated; resource/capability checks apply |
@@ -67,6 +71,7 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | course_enrolments | p_course_run_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | course_readiness | p_course_run_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | course_run_job_defaults | p_course_run_id uuid | jsonb | Authenticated; resource/capability checks apply |
+| create_accounting_export | p_source text, p_invoice_ids uuid[], p_request_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | create_capacity_job | p_payload jsonb, p_capacity integer, p_request_id uuid, p_organisation_id uuid, p_platform_percent numeric | uuid | Authenticated; resource/capability checks apply |
 | create_chat_group | p_title text, p_member_ids uuid[], p_kind text, p_job_id uuid | uuid | Authenticated; resource/capability checks apply |
 | create_client_request | p_organisation_id uuid, p_payload jsonb, p_client_id uuid | uuid | Authenticated; resource/capability checks apply |
@@ -124,8 +129,10 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | profile_courses | p_user_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | publish_client_request | p_request_id uuid, p_platform_percent numeric, p_terms text, p_requires_contract boolean, p_claim_deadline timestamp with time zone | uuid | Authenticated; resource/capability checks apply |
 | react_to_message | p_message_id uuid, p_emoji text, p_remove boolean | void | Authenticated; resource/capability checks apply |
+| record_customer_invoice_payment | p_invoice_id uuid, p_amount text, p_paid_at timestamp with time zone, p_reference text, p_request_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | record_invoice_payment | p_invoice_id uuid, p_amount numeric, p_paid_at timestamp with time zone, p_reference text, p_client_id uuid | uuid | Authenticated; resource/capability checks apply |
 | refresh_my_notifications | none | integer | Authenticated; resource/capability checks apply |
+| register_customer_invoice | p_payload jsonb, p_request_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | register_executed_contract | p_user_id uuid, p_title text, p_document_version_id uuid, p_effective_from timestamp with time zone, p_expires_at timestamp with time zone, p_kind text, p_parent_id uuid, p_client_id uuid | uuid | Authenticated; resource/capability checks apply |
 | remove_lecturer_availability | p_id uuid, p_version integer | void | Authenticated; resource/capability checks apply |
 | rename_document | p_id uuid, p_name text, p_delete boolean | void | Authenticated; resource/capability checks apply |
@@ -138,6 +145,7 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | reserve_invitation | p_email text, p_idempotency_key uuid | jsonb | Authenticated; resource/capability checks apply |
 | resolve_forum_report | p_report_id uuid, p_resolved boolean | void | Authenticated; resource/capability checks apply |
 | resource_comments | p_kind text, p_id uuid, p_before_at timestamp with time zone, p_before_id uuid, p_limit integer | jsonb | Authenticated; resource/capability checks apply |
+| reverse_customer_invoice_payment | p_invoice_id uuid, p_payment_id uuid, p_reason text, p_request_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | review_delivery | p_session_id uuid, p_expected_version integer, p_action text, p_note text, p_request_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | review_invoice | p_invoice_id uuid, p_status text, p_note text | void | Authenticated; resource/capability checks apply |
 | reviewable_courses | none | jsonb | Authenticated; resource/capability checks apply |

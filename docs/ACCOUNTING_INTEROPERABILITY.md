@@ -1,6 +1,6 @@
 # Accounting interoperability
 
-Status: source implemented on `codex/accounting-interoperability` from `d4c1f49`. Focused SQL, strict PL/pgSQL body checks and unit/component results are recorded below. Shared navigation, exact combined browser/API acceptance, CI, independent review, merge and development installation remain separate integration gates. This guide does not claim production approval or a certified accounting importer.
+Status: separately deliverable source is integrated on `codex/accounting-delivery` with current main and the first-four operational modules, without a website-intake dependency. Navigation and shared job-state invalidation are connected. Focused evidence is recorded below; actual Auth/scanner/browser/CI/merge/installation remain distinct gates. This guide does not claim production approval or a certified accounting importer.
 
 ## What is recorded and exported
 

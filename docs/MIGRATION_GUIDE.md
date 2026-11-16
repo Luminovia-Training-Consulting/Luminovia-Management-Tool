@@ -258,6 +258,14 @@ Preserves the prior resolver and composes readiness/support/delivery/replacement
 
 Strict non-trigger body diagnostics are additionally checked by [operations-lint-db-tests.mjs](../scripts/operations-lint-db-tests.mjs); canonical SQL lint/advisor/trigger and actual Auth/browser checks remain mandatory. [The extension ledger](OPERATIONS_EXTENSION_STATUS.md) distinguishes executed focused checks from full acceptance and release status.
 
+### 33. Accounting snapshots and external customer invoice evidence (pending)
+
+Source: [20261116055506_accounting_interoperability.sql](../supabase/migrations/20261116055506_accounting_interoperability.sql).
+
+Current owner/finance/customer authority controls immutable JSON/CSV snapshots with exact decimal strings and original currencies. Supplied customer invoice PDFs/totals remain distinct from accepted customer charges; unknown tax stays unknown. Payments/reversals track known events without bank transfers. Dedicated PDFs intercept the current document predicate before delegating its captured, noncallable predecessor, preserving support/evidence gates and the original RLS predicate OID. Unsupported e-invoice formats refuse explicitly. This feature has no website-intake prerequisite; its pending CLI-generated version follows the operational forward migration and must be checked against actual main before installation.
+
+Tests: [accounting-db-tests.mjs](../scripts/accounting-db-tests.mjs), [accounting-lint-db-tests.mjs](../scripts/accounting-lint-db-tests.mjs), [accounting-api-check.mjs](../scripts/accounting-api-check.mjs). [Interoperability evaluation](ACCOUNTING_INTEROPERABILITY.md).
+
 ## The critical data flows
 
 **A job is claimed:** browser draft and idempotency key → public `claim_job` invoker → latest private implementation → current actor, locks, contract/qualification/capacity/time-conflict checks → immutable claim/schedule/revenue snapshots, memberships and notifications → transaction commit → confirmed UI. An error cannot leave a partially successful multi-day booking. Kanban calls permitted lifecycle actions; dragging a card does not create a claim.

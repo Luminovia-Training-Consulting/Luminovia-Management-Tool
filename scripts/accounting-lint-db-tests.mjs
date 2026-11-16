@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
 const source = await readFile(
   new URL(
-    "../supabase/migrations/20261116041209_accounting_interoperability.sql",
+    "../supabase/migrations/20261116055506_accounting_interoperability.sql",
     import.meta.url,
   ),
   "utf8",
