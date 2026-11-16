@@ -11,7 +11,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { MemoryRouter, Link } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import {
   QueryClient,
   QueryClientProvider,
@@ -37,10 +37,10 @@ vi.mock("../auth/auth-context", () => ({
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => fake }));
 vi.mock("../commercial/revenue", () => ({ FinancialSummaryCards: () => null }));
-vi.mock("../jobs/jobs", () => ({
-  JobCard: ({ job }: { job: { id: string; title: string } }) => (
-    <Link to={`/jobs/${job.id}`}>{job.title}</Link>
-  ),
+// Exercise the real lightweight card and its restricted-price contract without
+// importing unrelated marketplace detail mutations into dashboard tests.
+vi.mock("../jobs/jobs", async () => ({
+  JobCard: (await import("../jobs/card")).JobCard,
 }));
 
 const clients: QueryClient[] = [];
@@ -51,7 +51,24 @@ function ahead(days: number) {
 /** Create a fictional offer with explicit variants for dashboard filtering/previews. */
 function job(id: string, extra: Record<string, unknown> = {}) {
   return {
-    id,
+    id: crypto.randomUUID(),
+    description: "Fictional source",
+    customer_name: "Fictional customer",
+    delivery_type: "online",
+    location: "",
+    time_zone: "Europe/Berlin",
+    amount: 100,
+    total_amount: 100,
+    currency: "EUR",
+    rate_unit: "fixed_total",
+    terms: "Fictional terms",
+    terms_version: 1,
+    requires_contract: false,
+    capacity: 1,
+    capacity_basis: "single_position",
+    created_at: ahead(-1),
+    confirmed_count: 0,
+    open_positions: 1,
     title: `Fictional ${id}`,
     status: "published",
     claim_deadline: null,
@@ -95,6 +112,16 @@ beforeEach(async () => {
     ],
   };
   fake.rpcData = {
+    job_dashboard: {
+      open_count: 0,
+      assignment_count: 0,
+      next_session_count: 0,
+      matching: false,
+      suggestions: [],
+      next_assignments: [],
+      management: null,
+      as_of: ahead(0),
+    },
     get_my_permissions: [],
     notification_inbox: {
       items: [
@@ -215,7 +242,17 @@ function setup(onlyWidgets = false, sharedObserver = false) {
             zone="Europe/Berlin"
             staff={fake.roles.includes("lecturer")}
             clientAccount={fake.roles.includes("client")}
-            jobs={fake.tables.jobs as never[]}
+            jobCounts={
+              (
+                fake.rpcData.job_dashboard as {
+                  management: {
+                    drafts: number;
+                    expired: number;
+                    upcoming: number;
+                  } | null;
+                }
+              ).management ?? undefined
+            }
           />
         ) : (
           <Dashboard />
@@ -230,6 +267,16 @@ const rpcCalls = (name: string) =>
   fake.calls.filter((call) => call.method === "rpc" && call.table === name);
 
 describe("role-aware dashboard previews", () => {
+  it("accepts a restricted suggestion without inventing a zero-price compensation", async () => {
+    (fake.rpcData.job_dashboard as { suggestions: unknown[] }).suggestions = [
+      job("restricted quote", { amount: null, total_amount: null }),
+    ];
+    setup();
+    expect(await screen.findByText("Fictional restricted quote")).toBeVisible();
+    expect(screen.getByText("Honorar geschützt")).toBeVisible();
+    expect(screen.queryByText(/0,00/)).not.toBeInTheDocument();
+    expect(rpcCalls("job_dashboard")).toHaveLength(1);
+  });
   it("combines own calendar, messages, personal contract receipts and bounded clean metadata", async () => {
     fake.tables.personal_events = [
       ...(fake.tables.personal_events as unknown[]),
@@ -325,15 +372,13 @@ describe("role-aware dashboard previews", () => {
       ).not.toBeInTheDocument();
     },
   );
-  it("only management capability reveals follow-ups from already visible jobs", async () => {
+  it("only management capability reveals authorized server aggregate follow-ups", async () => {
     fake.rpcData.get_my_permissions = ["jobs.manage"];
-    fake.tables.jobs = [
-      job("draft", { status: "draft" }),
-      job("soon", {
-        job_sessions: [{ starts_at: ahead(3), ends_at: ahead(3.1) }],
-      }),
-      job("late", { claim_deadline: ahead(-1) }),
-    ];
+    (fake.rpcData.job_dashboard as { management: unknown }).management = {
+      drafts: 1,
+      expired: 1,
+      upcoming: 1,
+    };
     setup(true);
     const followups = await screen.findByRole("region", {
       name: "Verwaltung: nächste Schritte",
@@ -358,17 +403,26 @@ describe("role-aware dashboard previews", () => {
       ),
     ).toBe(true);
   });
-  it("verified expertise prioritises suggestions while past deadlines stay out of open offers", async () => {
-    fake.tables.lecturer_topics = [
-      { topic_id: "python", verified: true, valid_until: ahead(1) },
-    ];
-    fake.tables.jobs = [
-      job("expired", { claim_deadline: ahead(-1) }),
-      job("unmatched", { job_requirements: [{ topic_id: "java" }] }),
-      job("matched", { job_requirements: [{ topic_id: "python" }] }),
-    ];
+  it("renders authoritative matching suggestions without loading the full catalogue", async () => {
+    fake.rpcData.job_dashboard = {
+      open_count: 1057,
+      assignment_count: 0,
+      next_session_count: 0,
+      matching: true,
+      suggestions: [job("matched")],
+      next_assignments: [],
+      management: null,
+      as_of: ahead(0),
+    };
     setup();
     expect(await screen.findByText("Fictional matched")).toBeVisible();
+    expect(rpcCalls("job_dashboard")).toHaveLength(1);
+    expect(
+      fake.calls.filter(
+        (call) => call.method === "from" && call.table === "jobs",
+      ),
+    ).toHaveLength(0);
+    expect(screen.getByText("1057", { exact: true })).toBeVisible();
     expect(screen.queryByText("Fictional unmatched")).not.toBeInTheDocument();
     expect(screen.queryByText("Fictional expired")).not.toBeInTheDocument();
     expect(

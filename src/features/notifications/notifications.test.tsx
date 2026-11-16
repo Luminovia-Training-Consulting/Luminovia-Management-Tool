@@ -5,6 +5,7 @@
 import {
   act,
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -31,6 +32,13 @@ const state = vi.hoisted(() => ({
   online: true,
   rejectMark: false,
   staleSave: false,
+  attention: {
+    enabled: false,
+    start_time: "22:00",
+    end_time: "07:00",
+    time_zone: "UTC",
+    version: 0,
+  },
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: state.rpc }) }));
 vi.mock("../auth/auth-context", () => ({
@@ -69,6 +77,13 @@ beforeEach(async () => {
   state.online = true;
   state.rejectMark = false;
   state.staleSave = false;
+  state.attention = {
+    enabled: false,
+    start_time: "22:00",
+    end_time: "07:00",
+    time_zone: "UTC",
+    version: 0,
+  };
   await i18n.changeLanguage("de");
   state.rpc.mockImplementation(
     (name: string, payload?: Record<string, unknown>) => {
@@ -84,7 +99,19 @@ beforeEach(async () => {
         };
       else if (name === "notification_preferences")
         result.data = { ...initialPreferences };
-      else if (name === "save_notification_preferences")
+      else if (name === "attention_preferences")
+        result.data = { ...state.attention };
+      else if (name === "save_attention_preferences") {
+        if (payload?.p_expected_version !== state.attention.version)
+          result = { data: null, error: { code: "40001", message: "stale" } };
+        else {
+          state.attention = {
+            ...(payload?.p_payload as Omit<typeof state.attention, "version">),
+            version: state.attention.version + 1,
+          };
+          result.data = { ...state.attention };
+        }
+      } else if (name === "save_notification_preferences")
         result = state.staleSave
           ? { data: null, error: { code: "40001", message: "stale" } }
           : {
@@ -125,6 +152,26 @@ describe("connected notification inbox", () => {
   it.each([
     [],
     { items: [], unread_count: -1, as_of: "2026-11-15T11:00:00Z" },
+    {
+      items: [],
+      unread_count: 20,
+      quiet_active: true,
+      as_of: "2026-11-15T11:00:00Z",
+    },
+    {
+      items: [],
+      unread_count: 20,
+      quiet_active: false,
+      attention_count: 3,
+      as_of: "2026-11-15T11:00:00Z",
+    },
+    {
+      items: [],
+      unread_count: 20,
+      quiet_active: true,
+      attention_count: 21,
+      as_of: "2026-11-15T11:00:00Z",
+    },
     {
       items: [{ ...notice, href: "//foreign.example.invalid" }],
       unread_count: 1,
@@ -277,7 +324,9 @@ describe("versioned notification preferences", () => {
     );
     await waitFor(() => expect(chat).toBeChecked());
     expect(
-      within(screen.getByRole("group")).getAllByRole("checkbox"),
+      within(
+        screen.getByRole("group", { name: "Benachrichtigungen" }),
+      ).getAllByRole("checkbox"),
     ).toHaveLength(4);
   });
 });
@@ -309,4 +358,140 @@ it("opening the inbox closes the native notification popover", async () => {
     await screen.findByRole("link", { name: "Alle Benachrichtigungen" }),
   );
   await waitFor(() => expect(menu).not.toHaveAttribute("open"));
+});
+
+describe("effective quiet-hour settings", () => {
+  it("retains an unsaved time/checkbox across language changes and saves its independent version", async () => {
+    view(<SettingsPage />);
+    const enabled = await screen.findByRole("checkbox", {
+      name: "Tägliche Ruhezeit aktivieren",
+    });
+    const start = screen.getByLabelText("Beginn der Ruhezeit");
+    await userEvent.click(enabled);
+    fireEvent.change(start, { target: { value: "21:30" } });
+    await act(() => i18n.changeLanguage("en"));
+    expect(screen.getByLabelText("Quiet hours start")).toBe(start);
+    expect(start).toHaveValue("21:30");
+    expect(
+      screen.getByRole("checkbox", { name: "Enable daily quiet hours" }),
+    ).toBeChecked();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Save quiet hours" }),
+    );
+    expect(await screen.findByText("Quiet hours saved.")).toBeVisible();
+    expect(state.rpc).toHaveBeenCalledWith("save_attention_preferences", {
+      p_payload: {
+        enabled: true,
+        start_time: "21:30",
+        end_time: "07:00",
+        time_zone: "UTC",
+      },
+      p_expected_version: 0,
+    });
+    expect(
+      state.rpc.mock.calls.filter(
+        ([name]) => name === "save_notification_preferences",
+      ),
+    ).toHaveLength(0);
+  });
+  it("a stale server version keeps the quiet draft until explicit reload", async () => {
+    view(<SettingsPage />);
+    const enabled = await screen.findByRole("checkbox", {
+      name: "Tägliche Ruhezeit aktivieren",
+    });
+    await userEvent.click(enabled);
+    state.attention = {
+      enabled: false,
+      start_time: "23:00",
+      end_time: "06:00",
+      time_zone: "Europe/Berlin",
+      version: 2,
+    };
+    await userEvent.click(
+      screen.getByRole("button", { name: "Ruhezeiten speichern" }),
+    );
+    expect(
+      await screen.findByText(
+        /Die Ruhezeiten wurden zwischenzeitlich geändert/,
+      ),
+    ).toBeVisible();
+    expect(enabled).toBeChecked();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Aktuelle Ruhezeiten laden" }),
+    );
+    await waitFor(() => expect(enabled).not.toBeChecked());
+    expect(screen.getByLabelText("Beginn der Ruhezeit")).toHaveValue("23:00");
+    expect(screen.getByLabelText("Zeitzone der Ruhezeit")).toHaveValue(
+      "Europe/Berlin",
+    );
+  });
+  it("offline edits remain a local draft and cannot issue a preference mutation", async () => {
+    state.online = false;
+    view(<SettingsPage />);
+    await userEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "Tägliche Ruhezeit aktivieren",
+      }),
+    );
+    const save = screen.getByRole("button", { name: "Ruhezeiten speichern" });
+    expect(save).toBeDisabled();
+    await userEvent.click(save);
+    expect(
+      state.rpc.mock.calls.filter(
+        ([name]) => name === "save_attention_preferences",
+      ),
+    ).toHaveLength(0);
+  });
+  it("invalid editable zones show a useful error instead of sending or confirming them", async () => {
+    view(<SettingsPage />);
+    await screen.findByRole("checkbox", {
+      name: "Tägliche Ruhezeit aktivieren",
+    });
+    const zone = screen.getByLabelText("Zeitzone der Ruhezeit");
+    await userEvent.clear(zone);
+    await userEvent.type(zone, "Not/AZone");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Ruhezeiten speichern" }),
+    );
+    expect(
+      await screen.findByText(
+        "Prüfe Uhrzeiten und Zeitzone, zum Beispiel Europe/Berlin.",
+      ),
+    ).toBeVisible();
+    expect(
+      state.rpc.mock.calls.filter(
+        ([name]) => name === "save_attention_preferences",
+      ),
+    ).toHaveLength(0);
+  });
+  it("the quiet bell preserves the full inbox counter and exposes only critical attention without acknowledging anything", async () => {
+    const request = Promise.resolve({
+      data: {
+        items: [],
+        unread_count: 20,
+        quiet_active: true,
+        attention_count: 3,
+        as_of: "2026-11-15T11:00:00Z",
+      },
+      error: null,
+    });
+    state.rpc.mockReturnValueOnce(
+      Object.assign(request, { abortSignal: () => request }),
+    );
+    view(<NotificationsMenu id="actor-a" zone="UTC" />);
+    expect(await screen.findByText("3")).toBeVisible();
+    expect(
+      screen.getByLabelText(
+        "Benachrichtigungen: 3 wichtige ungelesene Meldungen; Ruhezeit aktiv; 20 insgesamt ungelesen",
+      ),
+    ).toBeVisible();
+    expect(
+      clients
+        .at(-1)!
+        .getQueryData(notificationPreviewQuery("actor-a").queryKey),
+    ).toMatchObject({ unread_count: 20, attention_count: 3 });
+    expect(
+      state.rpc.mock.calls.filter(([name]) => name === "mark_notifications"),
+    ).toHaveLength(0);
+  });
 });

@@ -16,22 +16,22 @@ The source fingerprint identifies the actual copied bytes, including uncommitted
 
 This maps the authoritative specification A–N to executable evidence. Each row describes the **implemented slice**. The full remaining feature list in [IMPLEMENTATION_PLAN](IMPLEMENTATION_PLAN.md) is still required; these suite associations do not claim that every target feature or every branch already exists or is covered.
 
-| Module                            | Real API/database suites under `scripts/`                                                         | Browser files under `tests/e2e/`                               |
-| --------------------------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| A Dashboard/navigation/search     | `local-api`, `notifications-api`, per-domain permission cases                                     | `dashboard`, `search`, `preferences`, `portal`                 |
-| B Accounts/Auth/profiles          | `accounts`, `profiles`, `avatars` API/DB; actual invitation                                       | `accounts`, `onboarding`, `people`, `avatars`, `portal`        |
-| C Topic/tool/language catalogue   | `taxonomy` API/DB                                                                                 | `taxonomy`                                                     |
-| D Customers and contacts          | `operations-api`, `commission` API/DB                                                             | `operations`, `commission`                                     |
-| E Courses/runs/sessions           | `operations-api`, `course-building-blocks`, `profiles` API/DB                                                        | `operations`, `course-building-blocks`, `people`, `calendar`                      |
-| F Jobs/claims/capacity/lifecycle  | core `db-rpc`, `schedule-db`, `local-api`, `jobs-capacity`, `jobs-lifecycle`, `commission` API/DB | `portal`, `job-capacity`, `job-lifecycle`, `course-building-blocks`, `commission` |
-| G Personal/global calendar        | core `db-rpc`, `schedule-db`, `availability` API/DB                                               | `calendar`, `portal`, `availability`, `dashboard`              |
-| H Private/group/course chat       | `chat` API/DB with actual WebSockets/revocation                                                   | `chat`, `search`                                               |
-| I Private scanned/versioned files | `documents`, `avatars`, `chat`, `commercial` API/DB                                               | `files`, `avatars`, `chat`, `commercial`, `search`             |
-| J Personal contracts              | `commercial` API/DB; live qualification/contract claim prerequisites                              | `commercial`, `commission`                                     |
-| K Wiki/forum                      | `knowledge` API/DB                                                                                | `knowledge`, `search`                                          |
-| L Compensation/invoices/payments  | `commercial`, `commission` API/DB                                                                 | `commercial`, `commission`                                     |
-| M Inbox/preferences/reminders     | `notifications` API/DB; domain deduplication cases                                                | `notifications`, `dashboard`, `job-lifecycle`                  |
-| N Administration/audit            | `accounts`, `admin-audit`, `taxonomy`, `comments` API/DB                                          | `accounts`, `admin-audit`, `taxonomy`, `comments`, `portal`    |
+| Module | Real API/database suites under `scripts/` | Browser files under `tests/e2e/` |
+| --- | --- | --- |
+| A Dashboard/navigation/search | `local-api`, `notifications`, `attention`, `job-discovery` and domain permission cases | `dashboard`, `search`, `preferences`, `portal`, `attention` |
+| B Accounts/Auth/profiles | `accounts`, `profiles`, `avatars`, `qualifications` API/DB; actual invitation | `accounts`, `onboarding`, `people`, `avatars`, `qualifications`, `portal` |
+| C Topic/tool/language catalogue | `taxonomy`, `qualifications` API/DB | `taxonomy`, `qualifications` |
+| D Customers and contacts | `operations-api`, `commission` API/DB | `operations`, `commission` |
+| E Courses/runs/sessions | `operations-api`, `course-building-blocks`, `profiles`, `calendar-global` API/DB | `operations`, `course-building-blocks`, `people`, `calendar`, `calendar-global` |
+| F Jobs/claims/capacity/lifecycle | core `db-rpc`, `schedule-db`, `local-api`, `jobs-capacity`, `jobs-lifecycle`, `commission`, `job-discovery`, `role-aware-job-discovery`, `job-picker` API/DB | `portal`, `job-capacity`, `job-lifecycle`, `course-building-blocks`, `commission`, `job-discovery`, `job-pickers` |
+| G Personal/global calendar | core `db-rpc`, `schedule-db`, `availability`, `calendar-global` API/DB | `calendar`, `calendar-global`, `portal`, `availability`, `dashboard` |
+| H Private/group/course chat | `chat`, `chat-mentions` API/DB with actual WebSockets/revocation | `chat`, `chat-mentions`, `search` |
+| I Private scanned/versioned files | `documents`, `files-discovery`, `avatars`, `chat`, `commercial`, `qualifications` API/DB | `files`, `file-discovery`, `avatars`, `chat`, `commercial`, `search`, `qualifications` |
+| J Personal contracts | `commercial`, `commission`, `qualifications` API/DB; live claim prerequisites | `commercial`, `commission`, `qualifications` |
+| K Wiki/forum | `knowledge` API/DB | `knowledge`, `search` |
+| L Compensation/invoices/payments | `commercial`, `commission` API/DB | `commercial`, `commission` |
+| M Inbox/preferences/reminders | `notifications`, `attention`, `announcements` API/DB; domain deduplication | `notifications`, `attention`, `announcements`, `dashboard`, `job-lifecycle` |
+| N Administration/audit | `accounts`, `admin-audit`, `taxonomy`, `comments`, `job-picker`, `announcements`, `qualifications` API/DB | `accounts`, `admin-audit`, `taxonomy`, `comments`, `job-pickers`, `announcements`, `qualifications`, `portal` |
 
 SQL discovery includes every `*-db-tests.mjs`; API discovery includes every `*-api-check.mjs`. The core database runner and real Edge invitation run separately. HTTP tests use actual Auth-issued identities and genuine MFA, rather than trusting role metadata or faking RPC success.
 
@@ -51,7 +51,7 @@ Independent CI also exposed the old board keyboard's fixed10px/100-arrow limitat
 
 ## Limits and required continuation
 
-Current automated browser acceptance is desktop/mobile Chromium emulation. It is not physical Android/iOS installation, Safari/Firefox, complete manual accessibility, production load, real external SMTP, legal/privacy certification or production deployment. A passed existing slice does not implement outstanding saved views, resource models, structured mentions, scheduled delivery, announcements, permission editing, retention or the other full-specification requirements. Every new function must extend its connected database/API/browser journey and pass a new combined run.
+Current automated browser acceptance is desktop/mobile Chromium emulation. It is not physical Android/iOS installation, Safari/Firefox, complete manual accessibility, production load, real external SMTP, legal/privacy certification or production deployment. Actual Main10 now includes personal saved job views, structured mentions, file discovery, attention preferences, announcements, scoped pickers, calendar publications and qualification evidence, with the connected suites above. Its own acceptance remains source-specific; the combined functional branch needs fresh validation. Remaining resource-booking models, scheduled delivery, permission editing, retention and other full-specification obligations stay in the implementation plan. Every new function must extend its connected database/API/browser journey and pass a new combined run.
 
 Actual counts and pass/fail history belong in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
 
