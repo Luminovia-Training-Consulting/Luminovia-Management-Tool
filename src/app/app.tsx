@@ -1,6 +1,6 @@
 /**
- * SPA routes, global error boundary and PWA notices. Public Auth callbacks remain outside the
- * protected user-keyed subtree; feature pages load on demand.
+ * SPA routes, global error boundary and PWA notices. Public Auth, demo and help routes stay
+ * outside the protected user-keyed subtree; feature pages load on demand.
  */
 import { Component, lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Outlet, Route, Routes, useParams } from "react-router-dom";
@@ -33,7 +33,16 @@ const AdminAuditPage = lazy(() =>
     default: module.AdminAuditPage,
   })),
 );
-
+const DemoPage = lazy(() =>
+  import("../features/demo/demo").then((module) => ({
+    default: module.DemoPage,
+  })),
+);
+const HelpCenter = lazy(() =>
+  import("../features/help/help").then((module) => ({
+    default: module.HelpCenter,
+  })),
+);
 const AvailabilityPage = lazy(() =>
   import("../features/availability/availability").then((module) => ({
     default: module.AvailabilityPage,
@@ -183,13 +192,15 @@ function AppNotices() {
     </>
   );
 }
-/** Compose public Auth routes and protected feature pages under the shared Suspense boundary. */
+/** Compose public Auth/demo/help routes and protected feature pages under one Suspense boundary. */
 export function App() {
   return (
     <>
       <AppNotices />
       <Suspense fallback={<Loading />}>
         <Routes>
+          <Route path="/demo/*" element={<DemoPage />} />
+          <Route path="/help" element={<HelpCenter />} />
           <Route
             path="/login"
             element={

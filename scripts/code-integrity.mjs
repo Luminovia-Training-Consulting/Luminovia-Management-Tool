@@ -45,7 +45,11 @@ function attribute(node, name) {
   return null;
 }
 
-/** Follow code/type and literal lazy imports; server/tool entry points are separate graphs. */
+/**
+ * Follows code/type and literal lazy imports from the frontend entry point.
+ * JSX routes, links and assets are checked only when their values are static;
+ * this syntax graph does not evaluate routing or execute server/tool entry points.
+ */
 
 export function auditFrontend(root) {
   const source = join(root, "src");
@@ -77,7 +81,7 @@ export function auditFrontend(root) {
       if (!target) unresolved.push({ source: location(node), specifier });
       else imports.add(target);
     };
-    /** Visits syntax nodes while retaining their route or symbol context. */
+    /** Carries the enclosing JSX route path into nested Route declarations. */
     function visit(node, routeBase = "") {
       if (
         (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
@@ -148,12 +152,17 @@ export function auditFrontend(root) {
     for (const dependency of modules.get(file) ?? []) follow(dependency);
   }
   follow(join(source, "main.tsx"));
-  const routePatterns = [...routes].map(
-    (route) =>
-      new RegExp(
-        `^${route.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/:[^/]+/g, "[^/]+")}/?$`,
-      ),
-  );
+  const routePatterns = [...routes].map((route) => {
+    // React Router's terminal splat includes its base path and descendants.
+    // Keep the separator inside the optional group: /demo/* must not match
+    // /demography. Other stars remain escaped literals, not global wildcards.
+    const splat = route.endsWith("/*");
+    const base = splat ? route.slice(0, -2) : route;
+    const pattern = base
+      .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      .replace(/:[^/]+/g, "[^/]+");
+    return new RegExp(`^${pattern}${splat ? "(?:/.*)?" : "/?"}$`);
+  });
   const invalidLinks = links.filter(({ path }) => {
     const pathname = path.split(/[?#]/)[0];
     return (
@@ -247,7 +256,7 @@ export function scanRuntimeExports(root) {
     }
   }
   for (const source of sources) {
-    /** Visits syntax nodes while retaining their route or symbol context. */
+    /** Counts symbol uses outside import/export declarations and the definition itself. */
     function visit(node) {
       if (
         ts.isImportDeclaration(node) ||
@@ -283,14 +292,14 @@ export function scanFrontendRpcReferences(root) {
   const { checker, sources } = sourceProgram(root);
   const calls = [];
   const wrappers = new Map();
-  /** Resolves aliases and shorthand references to the actual compiler symbol. */
+  /** Resolves renamed imports to the underlying function or parameter symbol. */
   const symbol = (node) => {
     const value = checker.getSymbolAtLocation(node);
     return value && value.flags & ts.SymbolFlags.Alias
       ? checker.getAliasedSymbol(value)
       : value;
   };
-  /** Collects actual symbol references for the RPC connection under inspection. */
+  /** Collects call expressions for the later direct-call and wrapper analysis. */
   function collect(node, source) {
     if (ts.isCallExpression(node)) calls.push({ node, source });
     ts.forEachChild(node, (child) => collect(child, source));
@@ -353,6 +362,8 @@ export function scanFrontendRpcReferences(root) {
   return references;
 }
 
+// Importing this module runs no audit; direct CLI execution prints diagnostics
+// and reports broken static connections through the exit status.
 if (
   process.argv[1] &&
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)

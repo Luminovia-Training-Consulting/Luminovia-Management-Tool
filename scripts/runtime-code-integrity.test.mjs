@@ -15,17 +15,23 @@ import {
 } from "./code-integrity.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+// The delivered-source checks inspect the checkout; temporary counterexamples
+// below isolate analyser behavior and always remove their own fixture directory.
 const report = auditFrontend(root);
+// Compiler symbols must show use beyond a declaration or a re-export alone.
 test("delivered runtime exports have actual production references beyond their import/export declaration", () => {
   assert.deepEqual(
     scanRuntimeExports(root).filter((item) => !item.local && !item.external),
     [],
   );
 });
+// Both lazy and type imports participate in this static connectivity graph.
 test("every delivered frontend module is reachable from the real entry point, including lazy/type imports", () => {
   assert.deepEqual(report.unreachable, []);
 });
 
+// Synthetic TypeScript is analysed without executing a backend request. Renamed
+// wrappers and non-first name parameters count; authored text and comments do not.
 test("RPC discovery follows renamed/transitive wrappers and parameter positions, ignoring source-text lookalikes", () => {
   const fixture = mkdtempSync(join(tmpdir(), "luminovia-rpc-probe-"));
   try {
@@ -74,13 +80,17 @@ test("RPC discovery follows renamed/transitive wrappers and parameter positions,
     rmSync(fixture, { recursive: true, force: true });
   }
 });
+// Existence checks cover statically declared local paths, not remote resources.
 test("all relative frontend imports and literal public image assets resolve", () => {
   assert.deepEqual(report.unresolved, []);
   assert.deepEqual(report.missingAssets, []);
 });
+// Static internal links must fit the route patterns collected from delivered JSX.
 test("literal internal navigation targets are registered application routes", () => {
   assert.deepEqual(report.invalidLinks, []);
 });
+// Prove the guard detects deliberate breakage rather than only accepting the
+// delivered tree. The orphan remains present for the independent export scan.
 test("integrity guard identifies an orphan, missing lazy import and disconnected link without deleting files", () => {
   const fixture = mkdtempSync(join(tmpdir(), "luminovia-integrity-probe-"));
   try {
@@ -106,6 +116,65 @@ test("integrity guard identifies an orphan, missing lazy import and disconnected
       broken.invalidLinks.map((entry) => entry.path),
       ["/unregistered"],
     );
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});
+
+// Compare exact accepted/rejected paths for splats, nested parameters, escaped
+// punctuation and query/hash suffixes. A catch-all must not hide broken links.
+test("terminal splats accept their base and descendants without accepting adjacent or wrong static paths", () => {
+  const fixture = mkdtempSync(join(tmpdir(), "luminovia-splat-probe-"));
+  try {
+    mkdirSync(join(fixture, "src"));
+    const valid = [
+      "/demo",
+      "/demo/",
+      "/demo/jobs",
+      "/demo/admin/accounts",
+      "/demo/jobs?module=jobs#practice",
+      "/docs/v1.0",
+      "/docs/v1.0/intro",
+      "/teams/alpha/demo",
+      "/teams/alpha/demo/files/one",
+      "/jobs/offer-a",
+      "/jobs/offer-a/",
+      "/settings",
+    ];
+    const invalid = [
+      "/demography",
+      "/demos/jobs",
+      "/demo-other/jobs",
+      "/docs/v1x0/intro",
+      "/teams/alpha/demography",
+      "/teams/alpha/other/files",
+      "/teams//demo",
+      "/jobs",
+      "/jobs/offer-a/unregistered",
+      "/settings/nested",
+      "/unregistered",
+    ];
+    writeFileSync(
+      join(fixture, "src/main.tsx"),
+      `
+      const view = <>
+        <Route path="/demo/*" />
+        <Route path="/docs/v1.0/*" />
+        <Route path="/teams"><Route path=":teamId/demo/*" /></Route>
+        <Route path="/jobs/:id" />
+        <Route path="/settings" />
+        <Route path="*" />
+        ${[...valid, ...invalid].map((path) => `<Link to=${JSON.stringify(path)} />`).join("\n")}
+      </>;
+    `,
+    );
+    const observed = auditFrontend(fixture);
+    assert.deepEqual(
+      observed.invalidLinks.map((entry) => entry.path),
+      invalid,
+    );
+    assert.ok(observed.routes.includes("/teams/:teamId/demo/*"));
+    assert.deepEqual(observed.unreachable, []);
   } finally {
     rmSync(fixture, { recursive: true, force: true });
   }

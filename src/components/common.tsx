@@ -23,7 +23,7 @@ export function Loading() {
     </div>
   );
 }
-/** Expose the error as an alert; offer retry only when the caller supplies an action. */
+/** Announce the error and link public recovery guidance; retry exists only when the caller supplies an action. */
 export function ErrorState({ retry }: { retry?: () => void }) {
   const { t } = useTranslation();
   return (
@@ -35,6 +35,9 @@ export function ErrorState({ retry }: { retry?: () => void }) {
           {t("retry")}
         </Button>
       )}
+      <a className="text-link" href="/help?topic=troubleshooting">
+        {t("errorHelp")}
+      </a>
     </div>
   );
 }

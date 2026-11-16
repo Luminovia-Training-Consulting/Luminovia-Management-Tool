@@ -2476,3 +2476,11 @@ legend {
 .account-roles input {
   width: auto;
 }
+/* Keep public practice/help links reachable alongside the sign-in form on narrow screens. */
+.login-learning-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.3rem;
+}
