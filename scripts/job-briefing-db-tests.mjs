@@ -260,6 +260,21 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
         "https://example.invalid/a\nb",
         "https://example.invalid:65536",
         "https://example.invalid:0",
+        "https://[:::]/brief",
+        "https://[1:2:3:4:5:6:7]/brief",
+        "https://[1:2:3:4:5:6:7:8:9]/brief",
+        "https://[::1/64]/brief",
+        "https://example.invalid/a\\b",
+        "https://example.invalid/a\u00a0b",
+        "https://example.invalid/a\ufeffb",
+        "https://999.999.999.999/brief",
+        "https://256.0.0.1/brief",
+        "https://1.2.3.09/brief",
+        "https://example.123/brief",
+        "https://example.0x12/brief",
+        "https://example.0x/brief",
+        "https://0x100000000/brief",
+        "https://münchen.example.invalid/brief",
       ]) {
         await assert.rejects(
           save(job, { ...payload, reference_url: url }),
@@ -273,6 +288,8 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
         { contact_name: "x".repeat(121) },
         { contact_email: "bad@example.invalid\nBcc:evil@example.invalid" },
         { contact_email: "invalid" },
+        { contact_email: "person\u00a0name@example.invalid" },
+        { contact_email: "person\ufeffname@example.invalid" },
         { contact_email: "x".repeat(255) },
         { contact_phone: "123\r\n456" },
         { contact_phone: "1".repeat(51) },
@@ -282,14 +299,20 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
         await assert.rejects(save(job, { ...payload, ...extra }), /22023/);
       }
       assert.equal((await get(job)).version, 0);
-      await save(job, {
-        ...payload,
-        reference_url: "http://[::1]:8443/reference",
-      });
-      assert.equal(
-        (await get(job)).reference_url,
+      let version = 0;
+      for (const reference_url of [
         "http://[::1]:8443/reference",
-      );
+        "https://[2001:db8::1]/reference",
+        "http://127.0.0.1:8080/reference",
+        "https://xn--mnchen-3ya.example.invalid/reference",
+        "https://example.invalid/a%20b",
+      ]) {
+        const saved = await save(job, { ...payload, reference_url }, version);
+        version++;
+        assert.equal(saved.reference_url, reference_url);
+        assert.doesNotThrow(() => new URL(saved.reference_url));
+        assert.equal((await get(job)).reference_url, reference_url);
+      }
     },
   );
 

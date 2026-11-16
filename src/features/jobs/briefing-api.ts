@@ -85,6 +85,11 @@ export interface JobBriefingData extends BriefingValues {
   can_edit: boolean;
 }
 const responseSchema = briefingValuesSchema.extend({
+  // PostgreSQL validates stored links, but its authority parser is not the
+  // browser's complete WHATWG/IDNA implementation. Keep a bounded raw value
+  // readable/editable if those parsers ever differ; rendering separately uses
+  // briefingWebUrl, so an unparseable destination can never become a link.
+  reference_url: z.string().max(2048),
   version: z.number().int().nonnegative(),
   has_contact: z.boolean(),
   contact_visible: z.boolean(),
@@ -141,6 +146,11 @@ export async function saveBriefing(
 ): Promise<JobBriefingData> {
   requireOnline();
   const payload = briefingValuesSchema.parse(values);
+  // Send the URL parser's canonical authority (including IDNA/IPv4 spelling) so
+  // PostgreSQL can enforce an ASCII authority without rejecting valid IDN input.
+  // The same reviewed draft always produces the same idempotency-bound payload.
+  if (payload.reference_url)
+    payload.reference_url = briefingWebUrl(payload.reference_url)!;
   const { data, error } = await db().rpc("save_job_briefing", {
     p_job_id: job,
     p_expected_version: version,

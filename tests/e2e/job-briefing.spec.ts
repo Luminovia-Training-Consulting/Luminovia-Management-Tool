@@ -28,12 +28,10 @@ test("optional external reference and contact are saved, shown after claim and h
     job = randomUUID(),
     courseSession = randomUUID();
   await checked(
-    service
-      .from("course_templates")
-      .insert({
-        id: template,
-        title: "Fictional optional-reference curriculum",
-      }),
+    service.from("course_templates").insert({
+      id: template,
+      title: "Fictional optional-reference curriculum",
+    }),
   );
   await checked(
     service
@@ -43,44 +41,38 @@ test("optional external reference and contact are saved, shown after claim and h
   const starts = "2053-05-10T08:00:00Z",
     ends = "2053-05-10T09:00:00Z";
   await checked(
-    service
-      .from("course_sessions")
-      .insert({
-        id: courseSession,
-        course_run_id: run,
-        starts_at: starts,
-        ends_at: ends,
-      }),
+    service.from("course_sessions").insert({
+      id: courseSession,
+      course_run_id: run,
+      starts_at: starts,
+      ends_at: ends,
+    }),
   );
   await checked(
-    service
-      .from("jobs")
-      .insert({
-        id: job,
-        course_run_id: run,
-        title: "Fictional referenced teaching assignment",
-        customer_name: "Fictional customer",
-        description: "Optional customer-specific briefing",
-        delivery_type: "online",
-        time_zone: "Europe/Berlin",
-        status: "published",
-        amount: 100,
-        total_amount: 100,
-        currency: "EUR",
-        rate_unit: "fixed_total",
-        terms: "Immutable original fictional agreement",
-        requires_contract: false,
-      }),
+    service.from("jobs").insert({
+      id: job,
+      course_run_id: run,
+      title: "Fictional referenced teaching assignment",
+      customer_name: "Fictional customer",
+      description: "Optional customer-specific briefing",
+      delivery_type: "online",
+      time_zone: "Europe/Berlin",
+      status: "published",
+      amount: 100,
+      total_amount: 100,
+      currency: "EUR",
+      rate_unit: "fixed_total",
+      terms: "Immutable original fictional agreement",
+      requires_contract: false,
+    }),
   );
   await checked(
-    service
-      .from("job_sessions")
-      .insert({
-        job_id: job,
-        course_session_id: courseSession,
-        starts_at: starts,
-        ends_at: ends,
-      }),
+    service.from("job_sessions").insert({
+      job_id: job,
+      course_session_id: courseSession,
+      starts_at: starts,
+      ends_at: ends,
+    }),
   );
   await adminLogin(page, manager);
   await page.goto(`/jobs/${job}#job-briefing`);
@@ -140,7 +132,17 @@ test("optional external reference and contact are saved, shown after claim and h
     briefing.getByRole("link", { name: "Originalausschreibung", exact: true }),
   ).toHaveAttribute("href", reference);
   await expect(briefing.locator("script")).toHaveCount(0);
-  const context = await browser.newContext();
+  // A second account needs an independent session, but must retain the current
+  // project's mobile/desktop layout and runner-owned URL for relative navigation.
+  const project = testInfo.project.use;
+  const context = await browser.newContext({
+    baseURL: project.baseURL,
+    viewport: page.viewportSize(),
+    isMobile: project.isMobile,
+    hasTouch: project.hasTouch,
+    deviceScaleFactor: project.deviceScaleFactor,
+    userAgent: project.userAgent,
+  });
   try {
     const lecturer = await context.newPage();
     await login(lecturer, teacher.email);

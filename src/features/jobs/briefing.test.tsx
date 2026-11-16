@@ -11,6 +11,7 @@ import i18n from "../../lib/i18n";
 import { JobBriefing } from "./briefing";
 import {
   briefingKey,
+  briefingQuery,
   briefingValues,
   briefingValuesSchema,
   briefingWebUrl,
@@ -383,6 +384,9 @@ it("validates URLs, optional clearing and closed payloads before any actual muta
     "https://example.invalid:",
     "https://%65xample.invalid/path",
     "https://example.invalid:0/path",
+    "https://[:::]/brief",
+    "https://example.invalid/a\\b",
+    "https://999.999.999.999/brief",
   ])
     expect(briefingWebUrl(url)).toBeNull();
   expect(briefingWebUrl("https://example.invalid/reference?q=1#details")).toBe(
@@ -408,6 +412,51 @@ it("validates URLs, optional clearing and closed payloads before any actual muta
   await expect(
     saveBriefing("job-a", 0, "request-b", briefingValues(empty)),
   ).rejects.toThrow("offline");
+});
+
+it("keeps a browser-unparseable stored reference readable and repairable without rendering a link", async () => {
+  server = {
+    ...empty,
+    version: 1,
+    reference_url: "https://[:::]/brief",
+    reference_description: "Retain this authored explanation",
+  };
+  const client = new QueryClient();
+  clients.push(client);
+  const data = await client.fetchQuery(briefingQuery(state.actor, "job-a"));
+  expect(data.reference_url).toBe(server.reference_url);
+  setup(data);
+  expect(screen.getByText(server.reference_description)).toBeVisible();
+  expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  await userEvent.click(
+    screen.getByRole("button", { name: "Kontakt oder Webverweis bearbeiten" }),
+  );
+  expect(screen.getByLabelText("Weblink zum Auftrag")).toHaveValue(
+    server.reference_url,
+  );
+  expect(
+    screen.getByRole("button", { name: "Angaben speichern" }),
+  ).toBeDisabled();
+});
+
+it("canonicalizes IDN and valid shorthand IPv4 before binding the save request", async () => {
+  for (const [authored, canonical] of [
+    ["https://bücher.example/brief", "https://xn--bcher-kva.example/brief"],
+    ["http://127.1/brief", "http://127.0.0.1/brief"],
+  ]) {
+    server = { ...empty, version: 1, reference_url: canonical };
+    const result = await saveBriefing("job-a", 0, "request-a", {
+      ...briefingValues(empty),
+      reference_url: authored,
+    });
+    expect(result.reference_url).toBe(canonical);
+    expect(state.rpc).toHaveBeenLastCalledWith(
+      "save_job_briefing",
+      expect.objectContaining({
+        p_payload: expect.objectContaining({ reference_url: canonical }),
+      }),
+    );
+  }
 });
 
 it("rejects a structurally valid but unadvanced write response as unconfirmed", async () => {

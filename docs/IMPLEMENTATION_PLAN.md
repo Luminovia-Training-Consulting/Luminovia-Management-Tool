@@ -7,7 +7,8 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Implement optional per-job reference URL/label/description and contact channels with deliberate after-claim/default or authorised-offer visibility.
 - [x] Add private RLS storage, current role/MFA/resource checks, immutable commercial separation, strict validation and versioned/idempotent saves.
 - [x] Add the DE/EN detail editor and post-create shortcut; 260 frontend tests and 12 isolated PostgreSQL groups pass.
-- [ ] Complete actual Auth/API, desktop/mobile/DE/EN/dark accessibility and retained-data acceptance locally; fix concrete failures without relaxing gates.
+- [x] Pass the actual local ten-service native26→27 retained-data rehearsal and all21 Auth/API/invitation suites on585c883; repeat affected verification for subsequent fixes.
+- [ ] Complete desktop/mobile/DE/EN/dark accessibility and full local browser acceptance; fix concrete failures without relaxing gates.
 - [ ] Deliver signed commits/push/prepared PR, observe exact required green CI and hand merge sequencing to the authorised coordinator. Do not trigger deployment/release workflows.
 
 ## PR18 complete-CI repair

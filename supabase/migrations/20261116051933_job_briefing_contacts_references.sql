@@ -111,6 +111,8 @@ declare
   contact_description text;
   visibility text;
   authority text;
+  host_name text;
+  address pg_catalog.inet;
   port text;
   saved integer;
 begin
@@ -154,19 +156,53 @@ begin
     or length(contact_description) > 2000 or visibility not in ('after_claim', 'offer_viewers')
     or reference_label ~ '[[:cntrl:]]' or contact_name ~ '[[:cntrl:]]'
     or contact_email ~ '[[:cntrl:]]' or contact_phone ~ '[[:cntrl:]]'
+    or contact_email ~ U&'[\00A0\1680\2000-\200A\2028\2029\202F\205F\3000\FEFF]'
     or (contact_email <> '' and contact_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$') then
     raise exception 'Invalid job briefing values' using errcode = '22023';
   end if;
-  -- This URL is rendered as a link, never fetched by the server. Restrict schemes,
-  -- authority, credentials, whitespace/control characters and impossible ports.
+  -- This URL is rendered as a link, never fetched by the server. The client
+  -- canonicalizes IDNs/numeric shorthand with URL() before calling this RPC.
+  -- Require an ASCII DNS authority here and separately validate IP literals:
+  -- a regex alone accepts malformed IPv6 or numeric hosts URL() cannot parse.
   if reference_url <> '' then
-    if reference_url !~* '^https?://([[:alnum:]]([[:alnum:].-]*[[:alnum:]])?|\[[0-9a-f:]+\])(:[0-9]{1,5})?([/?#][^[:space:][:cntrl:]]*)?$' then
+    if pg_catalog.strpos(reference_url, pg_catalog.chr(92)) > 0
+      or reference_url ~ U&'[\00A0\1680\2000-\200A\2028\2029\202F\205F\3000\FEFF]'
+      or reference_url !~* '^https?://([a-z0-9]([a-z0-9.-]*[a-z0-9])?|\[[0-9a-f:]+\])(:[0-9]{1,5})?([/?#][^[:space:][:cntrl:]]*)?$' then
       raise exception 'Invalid job reference URL' using errcode = '22023';
     end if;
     authority := substring(reference_url from '^[^:]+://([^/?#]+)');
     port := substring(authority from ':([0-9]+)$');
     if port is not null and (port::integer < 1 or port::integer > 65535) then
       raise exception 'Invalid job reference URL port' using errcode = '22023';
+    end if;
+    if left(authority, 1) = '[' then
+      host_name := substring(authority from '^\[([^]]+)\]');
+      begin
+        address := host_name::pg_catalog.inet;
+      exception when invalid_text_representation then
+        raise exception 'Invalid job reference IPv6 address' using errcode = '22023';
+      end;
+      if pg_catalog.family(address) <> 6 then
+        raise exception 'Invalid job reference IPv6 address' using errcode = '22023';
+      end if;
+    else
+      host_name := regexp_replace(authority, ':[0-9]+$', '');
+      -- WHATWG treats a numeric final label as an IPv4 address, including hex
+      -- spellings. Accept only canonical decimal dotted quads, not an apparently
+      -- ordinary DNS label that the browser subsequently rejects as invalid IP.
+      if host_name ~ '(^|[.])([0-9]+|0[xX][0-9a-fA-F]*)$' then
+        if host_name !~ '^(0|[1-9][0-9]{0,2})([.](0|[1-9][0-9]{0,2})){3}$' then
+          raise exception 'Invalid job reference IPv4 address' using errcode = '22023';
+        end if;
+        begin
+          address := host_name::pg_catalog.inet;
+        exception when invalid_text_representation then
+          raise exception 'Invalid job reference IPv4 address' using errcode = '22023';
+        end;
+        if pg_catalog.family(address) <> 4 then
+          raise exception 'Invalid job reference IPv4 address' using errcode = '22023';
+        end if;
+      end if;
     end if;
   end if;
   -- Retry identity is serialized before the job lock, including cross-job reuse.
