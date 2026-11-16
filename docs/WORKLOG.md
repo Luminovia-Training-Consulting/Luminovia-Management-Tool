@@ -1,5 +1,13 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — independent forward resolver and PR24 delivery
+
+Signed bounded commit4a9f205 was reused as d212383. Its CLI-generated032nd migration preserves the current resolver OID, current-authority first-four destinations and an owner-only trusted base/smart fallback. Optional enquiry/amendment discovery is exact-signature and fails closed when absent. If directed substitutions already exist, successful acceptance cancels competing open marketplace offers transactionally; historical repair is idempotent and explicitly attributed. It neither requires PR17 nor changes mail/push categories. Future modules that overwrite this resolver must preserve the integration in their own newer migration.
+
+Independent owner evidence passes8fresh/populated-upgrade groups with first-four only,8with P2-only overlays and10with pinned committedPR17+P2, including zero strict function/trigger diagnostics, grants, rollback and repair. Missing combined prerequisites were actually refused. The source is delivered independently; separate compatibility scripts do not impose a development freeze. The integrating worktree also reran the normal fresh/populated-upgrade suite successfully (8 groups) and strict diagnostics across32operational non-trigger bodies with zero warnings/errors. The final full current-head CI remains required after push; main merging stays reserved to the coordinator after PR27.
+
+The current local synthetic public-only production/PWA compilation also passes with73public precache entries. This is a build, not the built-PWA browser stage skipped by the failed full run.
+
 ## 16 November 2026 — local canonical result and bounded private-access corrections
 
 Owned local run `9a6558c9` tested the frozen `e34a5bf` source through all SQL, actual Auth/MFA/HTTP/Storage/ClamAV and invitation/Mailpit stages successfully. All four new operational API suites passed. Browser acceptance finished **95/96 passed**, including all eight new desktop/mobile readiness, delivery, marketplace and support cases and the accepted role/welcome cases. The whole command remains **FAIL**: the desktop public-help page was blank after 32 asset requests failed with `ERR_NETWORK_CHANGED`. The trace shows transport failures, not a false business result. Production build/PWA stages were not reached. The owned stack/scratch cleaned normally and the shared QA slot was released to the coordinator's next queued owner.
