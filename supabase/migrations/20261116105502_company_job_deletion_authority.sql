@@ -83,14 +83,15 @@ begin
  return result;
 end;$$;
 
--- Preserve lifecycle payloads and accepted snapshots; only its access gate changes.
+-- Preserve the latest captured senior-cost bound, budget redaction and accepted
+-- lifecycle payloads. Only the current-role resource access gate changes.
 create or replace function private.job_lifecycle(p_job_id uuid) returns jsonb language plpgsql stable security definer set search_path='' as $$
 declare j public.jobs; manager boolean:=private.has_permission('jobs.manage');
 begin
  if not private.actor_active() then raise exception 'Authentication required' using errcode='42501';end if;
  select * into j from public.jobs where id=p_job_id;
  if j.id is null or not private.can_read_job(j.id) then raise exception 'Job access denied' using errcode='42501';end if;
- return jsonb_build_object('version',j.lifecycle_version,'capacity',j.capacity,'capacity_basis',j.capacity_basis,'confirmed_count',(select count(*) from public.job_claims where job_id=j.id and status='confirmed'),'open_positions',case when j.status='published' then j.capacity-(select count(*) from public.job_claims where job_id=j.id and status='confirmed') else 0 end,'can_set_capacity',manager and j.capacity_basis='per_position' and not exists(select 1 from public.job_claims where job_id=j.id),'gross_budget',case when private.has_permission('finance.gross.read') then (select gross_total_amount*j.capacity from private.job_commission_offers where job_id=j.id) end,'can_manage',manager,'can_edit',manager and not exists(select 1 from public.job_claims c where c.job_id=j.id),
+ return jsonb_build_object('version',j.lifecycle_version,'capacity',j.capacity,'capacity_basis',j.capacity_basis,'confirmed_count',(select count(*) from public.job_claims where job_id=j.id and status='confirmed'),'open_positions',case when j.status='published' then j.capacity-(select count(*) from public.job_claims where job_id=j.id and status='confirmed') else 0 end,'can_set_capacity',manager and j.capacity_basis='per_position' and not exists(select 1 from public.job_claims where job_id=j.id),'gross_budget',case when private.has_permission('finance.gross.read') then (select gross_total_amount*j.capacity from private.job_commission_offers where job_id=j.id) end,'max_net_budget',case when exists(select 1 from private.job_commission_offers where job_id=j.id and pricing_mode='role_split') then case when private.has_permission('finance.gross.read') then (select round(gross_total_amount*senior_percent/100,2)*j.capacity from private.job_commission_offers where job_id=j.id) end else j.total_amount*j.capacity end,'can_manage',manager,'can_edit',manager and not exists(select 1 from public.job_claims c where c.job_id=j.id),
  'can_duplicate',manager and private.has_permission('courses.manage') and not exists(select 1 from public.job_sessions where job_id=j.id and starts_at<=now()) and (not exists(select 1 from private.job_commission_offers o where o.job_id=j.id) or private.has_permission('finance.gross.read')),
  'claims',coalesce((select jsonb_agg(jsonb_build_object('id',c.id,'lecturer_id',c.lecturer_id,'lecturer_name',p.display_name,'status',c.status,'created_at',c.created_at,
  'can_cancel',c.status='confirmed' and not exists(select 1 from public.invoice_items i where i.claim_id=c.id) and (select min(s.starts_at) from public.assignment_sessions s where s.claim_id=c.id)>now(),

@@ -1,6 +1,10 @@
 /** Register bilingual irreversible-deletion guidance without translating authored target labels. */
 import i18n from "../../lib/i18n";
 const pairs: Record<string, [string, string]> = {
+  protectedPaymentHistory: [
+    "Gebuchte Zahlungen bleiben erhalten; nutze die dokumentierte Stornierung",
+    "Posted payments are retained; use the audited void action",
+  ],
   auditAttributions: [
     "Verlaufseinträge bleiben ohne Personenzuordnung erhalten",
     "History entries retained without account attribution",

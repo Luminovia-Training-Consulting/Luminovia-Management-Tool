@@ -198,6 +198,7 @@ function resourceLabel(
 ) {
   const raw = kind.split(".").at(-1) ?? kind;
   const aliases: Record<string, string> = {
+    protected_payment_history: "protectedPaymentHistory",
     audit_attributions: "auditAttributions",
     pending_personal_deletions: "pendingPersonalDeletions",
     profiles: "account",

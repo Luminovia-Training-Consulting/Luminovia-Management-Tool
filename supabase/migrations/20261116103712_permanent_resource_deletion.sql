@@ -18,8 +18,8 @@ create table private.deletion_operations (
  id uuid primary key default gen_random_uuid(), actor_id uuid not null,
  request_id uuid not null, plan_id uuid not null unique,
  kind text not null,target_id uuid not null,scope jsonb not null,
- objects jsonb not null default '[]',authority text not null,
- target_rank integer,organisation_id uuid,authorization_context jsonb not null default '{}',
+ objects jsonb not null default '[]'::jsonb,authority text not null,
+ target_rank integer,organisation_id uuid,authorization_context jsonb not null default '{}'::jsonb,
  status text not null default 'pending' check(status in('pending','failed','completed')),
  applied boolean not null default false,created_at timestamptz not null default clock_timestamp(),
  completed_at timestamptz,unique(actor_id,request_id)
@@ -31,7 +31,7 @@ create table private.deletion_permits (
  actor_id uuid not null,expires_at timestamptz not null default clock_timestamp()+interval '2 minutes'
 );
 create table private.deletion_upload_leases (
- id uuid primary key default gen_random_uuid(),document_id uuid not null,version_id uuid not null,
+ id uuid primary key default gen_random_uuid(),document_id uuid not null,version_id uuid not null unique,
  created_at timestamptz not null default clock_timestamp()
 );
 create table private.deletion_storage_fences(bucket text not null,path text not null,primary key(bucket,path));
@@ -94,7 +94,7 @@ create function private.deletion_add_scope(p_scope jsonb,p_table text,p_predicat
 $$;
 
 create function private.deletion_scope(p_kind text,p_id uuid) returns jsonb language plpgsql stable security definer set search_path='' as $$
-declare result jsonb:='[]';root text:=private.deletion_registry()->>p_kind;entry jsonb;ref record;pred text;join_sql text;i integer:=0;
+declare result jsonb:='[]'::jsonb;root text:=private.deletion_registry()->>p_kind;entry jsonb;ref record;pred text;join_sql text;i integer:=0;
 begin
  if root is null or p_id is null then raise exception 'Unknown deletion kind' using errcode='22023';end if;
  result=private.deletion_add_scope(result,root,format('x.id=%L::uuid',p_id));
@@ -151,7 +151,7 @@ begin
 end;$$;
 
 create function private.deletion_snapshot(p_kind text,p_id uuid) returns jsonb language plpgsql stable security definer set search_path='' as $$
-declare scope jsonb:=private.deletion_scope(p_kind,p_id);entry jsonb;ref record;counts jsonb:='{}';hashes jsonb:='{}';blockers jsonb:='[]';n bigint;digest text;join_sql text;excluded text;root text:=private.deletion_registry()->>p_kind;present boolean;
+declare scope jsonb:=private.deletion_scope(p_kind,p_id);entry jsonb;ref record;counts jsonb:='{}'::jsonb;hashes jsonb:='{}'::jsonb;blockers jsonb:='[]'::jsonb;n bigint;digest text;join_sql text;excluded text;root text:=private.deletion_registry()->>p_kind;present boolean;
 begin
  execute format('select exists(select 1 from %s x where x.id=$1)',root) into present using p_id;
  if not present then raise exception 'Deletion target unavailable' using errcode='22023';end if;
@@ -169,6 +169,11 @@ begin
    if n>0 then blockers=blockers||jsonb_build_array(jsonb_build_object('code','referenced','kind',ref.child,'count',n));end if;
   end loop;
  end loop;
+ if p_kind='payment' then
+  -- Booked and voided payment records are retained financial history. Corrections
+  -- use the existing audited void operation, never physical removal.
+  blockers=blockers||jsonb_build_array(jsonb_build_object('code','referenced','kind','protected_payment_history','count',1));
+ end if;
  if p_kind='account' then
   select count(*),md5(coalesce(string_agg(md5(to_jsonb(a)::text),'' order by md5(to_jsonb(a)::text)),'')) into n,digest from public.audit_events a where a.actor_id=p_id;
   counts=counts||jsonb_build_object('audit_attributions',n);hashes=hashes||jsonb_build_object('audit_attributions',digest);
@@ -224,13 +229,13 @@ begin
 end;$$;
 
 create function private.deletion_access() returns jsonb language plpgsql stable security definer set search_path='' as $$
-declare kinds jsonb:='[]';manager boolean:=private.has_permission('users.manage') and private.deletion_admin(auth.uid());
+declare kinds jsonb:='[]'::jsonb;manager boolean:=private.has_permission('users.manage') and private.deletion_admin(auth.uid());
 begin
  if not private.actor_active() then raise exception 'Active login required' using errcode='42501';end if;
  if coalesce(auth.jwt()->>'aal','')='aal2' then
   if manager then select jsonb_agg(key order by key) into kinds from jsonb_object_keys(private.deletion_registry()) key;
   else
-   kinds='["document","personal_event","availability","saved_job_view","message","chat_room"]';
+   kinds='["document","personal_event","availability","saved_job_view","message","chat_room"]'::jsonb;
    if private.has_permission('users.roles.manage') then kinds=kinds||'"account"'::jsonb;end if;
    if private.has_permission('contracts.manage') then kinds=kinds||'"contract"'::jsonb;end if;
    if private.has_permission('finance.manage') then kinds=kinds||'["invoice","payment"]'::jsonb;end if;
@@ -240,14 +245,14 @@ begin
  return jsonb_build_object('can_admin',manager,'kinds',kinds);
 end;$$;
 create function private.deletion_resources(p_kind text,p_query text default '',p_cursor text default null,p_limit integer default 30) returns jsonb language plpgsql stable security definer set search_path='' as $$
-declare root text:=private.deletion_registry()->>p_kind;items jsonb:='[]';entry record;last_id uuid;more boolean:=false;
+declare root text:=private.deletion_registry()->>p_kind;items jsonb:='[]'::jsonb;resource_id uuid;last_id uuid;more boolean:=false;
 begin
  if not private.actor_active() then raise exception 'Active login required' using errcode='42501';end if;
  if root is null or p_query is null or length(p_query)>120 or p_limit is null or p_limit not between 1 and 100 then raise exception 'Invalid deletion list' using errcode='22023';end if;
  if p_cursor is not null then last_id=p_cursor::uuid;end if;
- for entry in execute format('select x.id from %s x where ($1::uuid is null or x.id>$1) and private.deletion_authorized($2,x.id) and position(lower($3) in lower(private.deletion_label($2,x.id)||'' ''||x.id::text))>0 order by x.id limit $4',root) using last_id,p_kind,p_query,p_limit+1 loop
+ for resource_id in execute format('select x.id from %s x where ($1::uuid is null or x.id>$1) and private.deletion_authorized($2,x.id) and position(lower($3) in lower(private.deletion_label($2,x.id)||'' ''||x.id::text))>0 order by x.id limit $4',root) using last_id,p_kind,p_query,p_limit+1 loop
   if jsonb_array_length(items)=p_limit then more=true;exit;end if;
-  items=items||jsonb_build_array(jsonb_build_object('id',entry.id,'kind',p_kind,'label',private.deletion_label(p_kind,entry.id),'owner_label','','can_delete',true));last_id=entry.id;
+  items=items||jsonb_build_array(jsonb_build_object('id',resource_id,'kind',p_kind,'label',private.deletion_label(p_kind,resource_id),'owner_label','','can_delete',true));last_id=resource_id;
  end loop;
  return jsonb_build_object('items',items,'next_cursor',case when more then last_id::text end);
 exception when invalid_text_representation then raise exception 'Invalid deletion cursor' using errcode='22023';
@@ -262,7 +267,7 @@ begin
 end;$$;
 
 create function private.deletion_confirm(p_plan_id uuid,p_request_id uuid,p_confirmation text) returns jsonb language plpgsql security definer set search_path='' as $$
-declare plan private.deletion_plans;o private.deletion_operations;snapshot jsonb;objects jsonb:='[]';entry jsonb;part jsonb;mode text;org uuid;target_rank integer;context jsonb:='{}';
+declare plan private.deletion_plans;o private.deletion_operations;snapshot jsonb;objects jsonb:='[]'::jsonb;entry jsonb;part jsonb;mode text;org uuid;target_rank integer;context jsonb:='{}'::jsonb;
 begin
  if not private.actor_active() or coalesce(auth.jwt()->>'aal','')<>'aal2' then raise exception 'Active login and MFA required' using errcode='42501';end if;
  if p_confirmation is distinct from 'DELETE' or p_request_id is null then raise exception 'Explicit deletion confirmation required' using errcode='22023';end if;
@@ -390,6 +395,7 @@ begin
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('permanent-deletion',0));
  perform 1 from public.documents where id=p_document_id for share;
  if not found or private.deletion_document_fenced(p_document_id) or not exists(select 1 from public.document_versions where id=p_version_id and document_id=p_document_id) then raise exception 'Upload target unavailable' using errcode='55000';end if;
+ if exists(select 1 from private.deletion_upload_leases where version_id=p_version_id) then raise exception 'Upload version already has an active writer' using errcode='55000';end if;
  insert into private.deletion_upload_leases(document_id,version_id) values(p_document_id,p_version_id) returning id into lease;return lease;
 end;$$;
 create function public.deletion_upload_begin(p_document_id uuid,p_version_id uuid) returns uuid language sql security invoker set search_path='' as $$select private.deletion_upload_begin(p_document_id,p_version_id);$$;
@@ -430,14 +436,14 @@ begin
  return private.deletion_operation_view(o.id)||jsonb_build_object('objects',o.objects,'auth_user_id',case when o.kind='account' then o.target_id end,'pending_uploads',private.deletion_pending_uploads(o.scope));
 end;$$;
 create function private.deletion_apply(p_operation_id uuid,p_permit_id uuid) returns jsonb language plpgsql security definer set search_path='' as $$
-declare o private.deletion_operations:=private.deletion_require_permit(p_operation_id,p_permit_id);remaining jsonb;next_remaining jsonb;entry jsonb;progress boolean;root text;affected_job_id uuid;job public.jobs;other_claims integer;
+declare o private.deletion_operations:=private.deletion_require_permit(p_operation_id,p_permit_id);remaining jsonb;next_remaining jsonb;entry jsonb;progress boolean;affected_job_id uuid;affected_lecturer_id uuid;job public.jobs;other_claims integer;
 begin
  if o.applied or o.status='completed' then return private.deletion_operation_view(o.id);end if;
+ if o.kind='payment' then raise exception 'Payment history must be corrected through audited voiding' using errcode='23503';end if;
  if private.deletion_pending_uploads(o.scope)>0 then raise exception 'Upload cleanup pending' using errcode='55000';end if;
  perform set_config('private.deletion_operation',o.id::text,true);
- root=private.deletion_registry()->>o.kind;
  if o.kind='assignment' then
-  select c.job_id into affected_job_id from public.job_claims c where c.id=o.target_id;
+  select c.job_id,c.lecturer_id into affected_job_id,affected_lecturer_id from public.job_claims c where c.id=o.target_id;
   select * into job from public.jobs where id=affected_job_id for update;
  end if;
  -- Resolve the document/version cycle without modifying retained commercial
@@ -447,7 +453,7 @@ begin
  end loop;
  remaining=o.scope;
  while jsonb_array_length(remaining)>0 loop
-  progress=false;next_remaining='[]';
+  progress=false;next_remaining='[]'::jsonb;
   for entry in select value from jsonb_array_elements(remaining) with ordinality e(value,n) order by n desc loop
    begin
     execute format('delete from %s x where %s',entry->>'table',entry->>'predicate');progress=true;
@@ -457,16 +463,25 @@ begin
   if not progress then raise exception 'Protected deletion dependency changed' using errcode='23503';end if;
   remaining=next_remaining;
  end loop;
+ if affected_job_id is not null then
+  -- Match cancellation's room-before-member lock order. A historical claim
+  -- deletion cannot revoke a newer confirmed allocation for the same lecturer.
+  perform 1 from public.chat_rooms where job_id=affected_job_id and kind='lecturer_course' for update;
+  if not exists(select 1 from public.job_claims where job_id=affected_job_id and lecturer_id=affected_lecturer_id and status='confirmed') then
+   update public.chat_members m set removed_at=clock_timestamp() from public.chat_rooms r where r.job_id=affected_job_id and r.kind='lecturer_course' and m.room_id=r.id and m.user_id=affected_lecturer_id and m.removed_at is null;
+   update public.chat_rooms r set owner_id=(select other.lecturer_id from public.job_claims other join public.chat_members member on member.room_id=r.id and member.user_id=other.lecturer_id and member.removed_at is null where other.job_id=affected_job_id and other.status='confirmed' and private.chat_staff(other.lecturer_id) order by other.created_at,other.id limit 1) where r.job_id=affected_job_id and r.kind='lecturer_course' and r.owner_id=affected_lecturer_id;
+  end if;
+ end if;
  if affected_job_id is not null and job.status<>'archived' then
   select count(*) into other_claims from public.job_claims where job_claims.job_id=affected_job_id and status='confirmed';
-  update public.jobs set status=case when other_claims=0 then 'draft' when other_claims>=job.capacity then 'filled' else 'published' end where id=affected_job_id;
+  update public.jobs set status=case when other_claims=0 then 'draft' when job.status in('published','filled') then case when other_claims>=job.capacity then 'filled' else 'published' end else job.status end where id=affected_job_id;
   insert into public.audit_events(actor_id,action,resource_id,details) values((select actor_id from private.deletion_permits where id=p_permit_id),'assignment.deletion.applied',affected_job_id,jsonb_build_object('operation_id',o.id,'remaining_confirmed',other_claims));
  end if;
  update private.deletion_operations set applied=true where id=o.id;
  return private.deletion_operation_view(o.id);
 end;$$;
 create function private.deletion_complete(p_operation_id uuid,p_permit_id uuid,p_storage_removed boolean,p_auth_removed boolean) returns jsonb language plpgsql security definer set search_path='' as $$
-declare o private.deletion_operations:=private.deletion_require_permit(p_operation_id,p_permit_id);present boolean;entry jsonb;
+declare o private.deletion_operations:=private.deletion_require_permit(p_operation_id,p_permit_id);present boolean;
 begin
  if o.status='completed' then return private.deletion_operation_view(o.id);end if;
  if not o.applied or private.deletion_pending_uploads(o.scope)>0 or p_storage_removed is distinct from true then raise exception 'Deletion cleanup pending' using errcode='55000';end if;
@@ -477,7 +492,7 @@ begin
   execute 'select exists(select 1 from storage.objects s join jsonb_array_elements($1) o on s.bucket_id=o->>''bucket'' and s.name=o->>''path'')' into present using o.objects;
   if present then raise exception 'Storage deletion pending' using errcode='55000';end if;
  end if;
- update private.deletion_operations set status='completed',completed_at=clock_timestamp(),objects='[]' where id=o.id;
+ update private.deletion_operations set status='completed',completed_at=clock_timestamp(),objects='[]'::jsonb where id=o.id;
  delete from private.deletion_permits where operation_id=o.id and id<>p_permit_id;
  delete from private.deletion_plans where id=o.plan_id;
  insert into public.audit_events(actor_id,action,resource_id,details) values((select actor_id from private.deletion_permits where id=p_permit_id),'resource.deletion.completed',o.target_id,jsonb_build_object('kind',o.kind,'operation_id',o.id));
@@ -518,5 +533,56 @@ grant execute on function private.deletion_document_fenced(uuid) to authenticate
 grant execute on function private.deletion_authorized(text,uuid) to authenticated;
 grant execute on function public.deletion_operations(),private.deletion_operations(),public.deletion_access(),private.deletion_access(),public.deletion_resources(text,text,text,integer),private.deletion_resources(text,text,text,integer),public.deletion_preview(text,uuid),private.deletion_preview(text,uuid),public.deletion_confirm(uuid,uuid,text),private.deletion_confirm(uuid,uuid,text),public.deletion_status(uuid),private.deletion_status(uuid),public.deletion_execution(uuid),private.deletion_execution(uuid) to authenticated;
 grant execute on function public.deletion_upload_begin(uuid,uuid),private.deletion_upload_begin(uuid,uuid),public.deletion_upload_end(uuid),private.deletion_upload_end(uuid),public._deletion_work(uuid,uuid),private.deletion_work(uuid,uuid),public._deletion_apply(uuid,uuid),private.deletion_apply(uuid,uuid),public._deletion_complete(uuid,uuid,boolean,boolean),private.deletion_complete(uuid,uuid,boolean,boolean) to service_role;
+
+-- Retained business audit events remain visible after actor deletion. The
+-- existing projection and filters expose no details or private content.
+create or replace function private.admin_audit_actions() returns text[] language sql immutable set search_path='' as $$
+ select array[
+ 'account.roles_changed','user.activated','user.deactivated','invitation.reserved','invitation.sent','invitation.failed','qualification.attested',
+ 'client.membership_added','client.membership_removed','client.request_submitted','client.request_published','client.request_cancelled','organisation.saved','organisation.contact.saved',
+ 'course.template.saved','course.template.duplicated','course.run.saved','course.run.duplicated','course.visibility.changed','course.run_offer_created','course.enrolment.changed',
+ 'job.created.draft','job.created.published','job.created.archived','job.status.draft','job.status.published','job.status.archived','job.commission_configured',
+ 'job.lifecycle.draft','job.lifecycle.published','job.lifecycle.archived','job.lifecycle.reopen','job.lifecycle.edit','job.lifecycle.duplicate','job.capacity_created','job.capacity_changed','claim.cancelled',
+ 'taxonomy.created','taxonomy.updated','taxonomy.archived','taxonomy.restored','announcement.draft_saved','announcement.published','announcement.archived','announcement.recovered','calendar.global_save','calendar.global_publish','calendar.global_unpublish','calendar.global_archive','calendar.global_recover','resource.deletion.confirmed','resource.deletion.completed','assignment.deletion.applied'
+ ]::text[];
+$$;
+
+create or replace function private.admin_audit_events(p_from timestamptz default null,p_to timestamptz default null,
+ p_action text default '',p_search text default '',p_before_at timestamptz default null,p_before_id uuid default null,p_limit integer default 40)
+returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare range_to timestamptz:=coalesce(p_to,now());range_from timestamptz;rows jsonb;more boolean;cursor jsonb;
+begin
+ if not private.has_permission('audit.read') then raise exception 'audit.read and verified MFA required' using errcode='42501';end if;
+ range_from:=coalesce(p_from,range_to-interval '30 days');
+ if not isfinite(range_from) or not isfinite(range_to) or range_from>=range_to
+  or range_to-range_from>interval '93 days 2 hours'
+  or p_action is null or (p_action<>'' and not(p_action=any(private.admin_audit_actions())))
+  or p_search is null or length(p_search)>160
+  or p_limit is null or p_limit not between 1 and 100
+  or ((p_before_at is null)<>(p_before_id is null))
+  or (p_before_at is not null and (not isfinite(p_before_at) or p_before_at<range_from or p_before_at>=range_to)) then
+  raise exception 'Invalid audit range, filter or cursor' using errcode='22023';
+ end if;
+ with page as materialized(
+  select e.id,coalesce(p.display_name,'') actor_name,e.action,e.resource_id,e.created_at
+  from public.audit_events e left join public.profiles p on p.id=e.actor_id
+  where e.created_at>=range_from and e.created_at<range_to
+   and e.action=any(private.admin_audit_actions())
+   -- Generic deletion events also cover private personal resources. Only the
+   -- explicitly curated business kinds enter this company-wide projection.
+   and (e.action not in('resource.deletion.confirmed','resource.deletion.completed') or e.details->>'kind'=any(array['account','job','assignment','organisation','organisation_contact','course_template','course_run','course_session','topic','building_block','announcement','global_event']))
+   and (p_action='' or e.action=p_action)
+   and (p_search='' or strpos(lower(e.action),lower(p_search))>0 or strpos(lower(coalesce(p.display_name,'')),lower(p_search))>0 or strpos(coalesce(e.resource_id::text,''),lower(p_search))>0)
+   and (p_before_at is null or (e.created_at,e.id)<(p_before_at,p_before_id))
+  order by e.created_at desc,e.id desc limit p_limit+1
+ ),visible as(
+  select * from page order by created_at desc,id desc limit p_limit
+ )select coalesce((select jsonb_agg(to_jsonb(v) order by v.created_at desc,v.id desc) from visible v),'[]'::jsonb),
+  (select count(*)>p_limit from page),
+  (select jsonb_build_object('at',v.created_at,'id',v.id) from visible v order by v.created_at,v.id limit 1)
+ into rows,more,cursor;
+ return jsonb_build_object('items',rows,'has_more',more,'next_cursor',case when more then cursor else null end,
+  'from',range_from,'to',range_to,'actions',private.admin_audit_actions());
+end;$$;
 
 commit;

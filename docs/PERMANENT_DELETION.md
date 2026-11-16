@@ -2,6 +2,8 @@
 
 User decision on 16 November 2026: confirmed deletion is permanent; no trash or restore. Scope is deletion only. Existing create/edit/role assignment remains in place; no other PR is merged by this task (the only stated exception is already merged PR13). Companies may delete only their own jobs under current database membership. Normal or production data is never touched by tests.
 
+The subsequent direct instruction authorises completing verification and merging PR35 once the current required checks and local acceptance pass. It does not authorise merging other PRs or deploying production.
+
 ## HTTP boundary
 
 Extend the existing `accounts/v1` Edge facade, keeping credentials server-only:
@@ -29,11 +31,15 @@ The implemented registry addresses UUID roots. Composite-key enrolment/settings 
 
 An account's native Auth and profile records must actually disappear. Protected business references block deletion explicitly; no inactive profile marker or restorable account substitutes for removal. Historical audit events retain a nullable cleared actor attribution, counted and fingerprinted in the preview; accepted business records remain protected. Confirming an account operation fences/deactivates the target before external cleanup so an old JWT cannot regain application access. Completion requires native identity absence, not suspension alone.
 
+Posted and voided payment records are retained financial history: previews explicitly block their physical purge and preserve the existing reasoned void/correction workflow. Assignment removal revokes the affected lecturer's course-room/file membership only when no current allocation still grants it; remaining lecturers and unrelated manual room ownership remain intact. Curated business audit entries survive account deletion with a reduced blank actor label, while private deletion activity and arbitrary details remain excluded from the global audit projection.
+
 For company job roots derive one consistent organisation from stored request/commission/run relationships. Never use display names or grant global jobs.manage. Accepted/invoiced/shared dependencies outside company deletion authority produce a typed blocker; no partial success. A company-specific projection supplies own-job targets without granting staff discussion/net-fee/private-contract access. Close the former-lecturer→client historical-claim bypass in general job read channels.
 
 ## Storage and uploads
 
 Exact all-version manifests cover portal-clean and portal-quarantine, including rejected/error/archive versions. Never purge by Storage owner or uploader prefix. Fence new reservations, promotions, database writes and metadata resurrection for confirmed targets; remove bytes only through Storage API. Use service-released upload leases. Do not report completed while any upload can still promote bytes; crashed/stalled work must remain a visible safe pending/failure state, never silently expire into success.
+
+One immutable version has at most one active writer lease. Existing objects are verified/read on retry instead of issuing conflicting uploads. Every new Storage byte write needs a definite acknowledgement before the lease is released; an unknown transport outcome retains its barrier even when the client promise has rejected. Storage metadata absence alone cannot establish that an accepted remote write or provider cleanup has finished.
 
 Shared SQL upload contract: `deletion_upload_begin(p_document_id,p_version_id)` service-only returns lease UUID after checking the document is not fenced; `deletion_upload_end(p_lease_id)` releases only server-owned lease after all awaited writes/cleanup. `_deletion_work` reports pending leases. Private document/Storage fence helpers must cover exact reserved paths; tests include a delayed promotion racing deletion and post-completion download404.
 

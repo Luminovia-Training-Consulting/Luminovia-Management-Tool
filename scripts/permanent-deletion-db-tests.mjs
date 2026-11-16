@@ -138,8 +138,40 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
   await sql(
     `insert into storage.objects values('portal-clean',${q(document.object_path)})`,
   );
-  const lease = await service(
+  let lease = await service(
     `select public.deletion_upload_begin(${q(document.document_id)},${q(second.version_id)})`,
+  );
+  await check(
+    "Only one active writer owns each immutable version; different versions and settled retries remain supported",
+    async () => {
+      await expectCode(
+        service(
+          `select public.deletion_upload_begin(${q(document.document_id)},${q(second.version_id)})`,
+        ),
+        "55000",
+      );
+      const oldVersionLease = await service(
+        `select public.deletion_upload_begin(${q(document.document_id)},${q(document.version_id)})`,
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from private.deletion_upload_leases where document_id=${q(document.document_id)}`,
+        ),
+        "2",
+      );
+      await service(
+        `select public.deletion_upload_end(${q(oldVersionLease)});select public.deletion_upload_end(${q(lease)})`,
+      );
+      lease = await service(
+        `select public.deletion_upload_begin(${q(document.document_id)},${q(second.version_id)})`,
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from private.deletion_upload_leases where document_id=${q(document.document_id)}`,
+        ),
+        "1",
+      );
+    },
   );
   await check(
     "Confirm fixes both-bucket all-version manifest and waits for an existing service-owned upload lease",
@@ -398,7 +430,20 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
       );
       const audit = randomUUID();
       await sql(
-        `insert into public.audit_events(id,actor_id,action,resource_id) values(${q(audit)},${q(unused)},'profile.updated',${q(unused)})`,
+        `insert into public.audit_events(id,actor_id,action,resource_id) values(${q(audit)},${q(unused)},'qualification.attested',${q(unused)})`,
+      );
+      const beforeAudit = await call(
+        admin,
+        "admin_audit_events",
+        `null,null,'qualification.attested',${q(unused)}`,
+      );
+      assert.equal(
+        beforeAudit.items.some(
+          (item) =>
+            item.id === audit &&
+            item.actor_name === "Fictional profile edited before deletion",
+        ),
+        true,
       );
       const p = await plan("account", unused);
       assert.equal(p.can_confirm, true);
@@ -428,6 +473,21 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
           `select actor_id is null from public.audit_events where id=${q(audit)}`,
         ),
         "t",
+      );
+      const afterAudit = await call(
+        admin,
+        "admin_audit_events",
+        `null,null,'qualification.attested',${q(unused)}`,
+      );
+      assert.equal(
+        afterAudit.items.some(
+          (item) => item.id === audit && item.actor_name === "",
+        ),
+        true,
+      );
+      assert.equal(
+        JSON.stringify(afterAudit).includes("Private authored profile"),
+        false,
       );
       assert.equal(
         (await call(admin, "deletion_status", q(op.operation_id))).status,
@@ -459,43 +519,88 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
     },
   );
   await check(
-    "Deleting one unbilled assignment preserves other complete confirmed allocations and bumps lifecycle",
+    "Assignment purge revokes only the removed lecturer's room/files, preserves manual ownership and other accepted allocations",
     async () => {
-      const job = randomUUID(),
-        claim = randomUUID(),
-        otherClaim = randomUUID();
-      await sql(`insert into public.jobs(id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms,capacity,capacity_basis) values(${q(job)},'Fictional two-position job','Fictional organisation','online','published',50,50,'EUR','fixed_total','Accepted terms',2,'per_position');
-      insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,status,amount,total_amount,currency,rate_unit,terms,terms_version) values
-      (${q(claim)},${q(job)},${q(owner)},${q(randomUUID())},'confirmed',50,50,'EUR','fixed_total','Accepted first snapshot',1),
-      (${q(otherClaim)},${q(job)},${q(other)},${q(randomUUID())},'confirmed',50,50,'EUR','fixed_total','Accepted second snapshot',1)`);
-      const prior = await sql(
-        `select lifecycle_version from public.jobs where id=${q(job)}`,
-      );
-      const op = await confirm(await plan("assignment", claim));
-      const ex = await permit(op);
-      await worker("apply", key(op, ex));
-      assert.equal(
-        (await worker("complete", `${key(op, ex)},true,true`)).status,
-        "completed",
-      );
-      assert.equal(
-        await sql(`select status from public.jobs where id=${q(job)}`),
-        "published",
-      );
-      assert.equal(
-        await sql(
-          `select terms from public.job_claims where id=${q(otherClaim)}`,
-        ),
-        "Accepted second snapshot",
-      );
-      assert.equal(
-        Number(
-          await sql(
-            `select lifecycle_version from public.jobs where id=${q(job)}`,
+      for (const manualOwner of [owner, admin]) {
+        const job = randomUUID(),
+          claim = randomUUID(),
+          otherClaim = randomUUID(),
+          room = randomUUID(),
+          file = randomUUID();
+        await sql(`insert into public.jobs(id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms,capacity,capacity_basis) values(${q(job)},'Fictional two-position job','Fictional organisation','online','published',50,50,'EUR','fixed_total','Accepted terms',2,'per_position');
+          insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,status,amount,total_amount,currency,rate_unit,terms,terms_version) values
+          (${q(claim)},${q(job)},${q(owner)},${q(randomUUID())},'confirmed',50,50,'EUR','fixed_total','Accepted first snapshot',1),
+          (${q(otherClaim)},${q(job)},${q(other)},${q(randomUUID())},'confirmed',50,50,'EUR','fixed_total','Accepted second snapshot',1);
+          insert into public.chat_rooms(id,job_id,kind,owner_id) values(${q(room)},${q(job)},'lecturer_course',${q(manualOwner)});
+          insert into public.chat_members(room_id,user_id) values(${q(room)},${q(owner)}),(${q(room)},${q(other)}),(${q(room)},${q(admin)});
+          insert into public.documents(id,owner_id,uploaded_by,scope,kind,room_id,original_name,mime_type,size_bytes,status,client_id) values(${q(file)},${q(owner)},${q(owner)},'room','chat',${q(room)},'Fictional restricted room file.txt','text/plain',100,'clean',${q(randomUUID())})`);
+        assert.equal(
+          await actor(
+            owner,
+            `select count(*) from public.documents where id=${q(file)}`,
           ),
-        ) > Number(prior),
-        true,
-      );
+          "1",
+        );
+        const prior = await sql(
+          `select lifecycle_version from public.jobs where id=${q(job)}`,
+        );
+        const op = await confirm(await plan("assignment", claim)),
+          ex = await permit(op);
+        await worker("apply", key(op, ex));
+        await worker("complete", `${key(op, ex)},true,true`);
+        assert.equal(
+          await sql(`select status from public.jobs where id=${q(job)}`),
+          "published",
+        );
+        assert.equal(
+          await sql(
+            `select terms from public.job_claims where id=${q(otherClaim)}`,
+          ),
+          "Accepted second snapshot",
+        );
+        assert.equal(
+          Number(
+            await sql(
+              `select lifecycle_version from public.jobs where id=${q(job)}`,
+            ),
+          ) > Number(prior),
+          true,
+        );
+        assert.equal(
+          await actor(
+            owner,
+            `select count(*) from public.chat_rooms where id=${q(room)}`,
+          ),
+          "0",
+        );
+        assert.equal(
+          await actor(
+            owner,
+            `select count(*) from public.documents where id=${q(file)}`,
+          ),
+          "0",
+        );
+        assert.equal(
+          await actor(
+            other,
+            `select count(*) from public.chat_rooms where id=${q(room)}`,
+          ),
+          "1",
+        );
+        assert.equal(
+          await actor(
+            other,
+            `select count(*) from public.documents where id=${q(file)}`,
+          ),
+          "1",
+        );
+        assert.equal(
+          await sql(
+            `select owner_id from public.chat_rooms where id=${q(room)}`,
+          ),
+          manualOwner === owner ? other : admin,
+        );
+      }
     },
   );
   await check(
@@ -641,6 +746,138 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
       await worker("apply", key(op, ex));
       await worker("complete", `${key(op, ex)},true,true`);
       assert.equal((await plan("account", personal)).can_confirm, true);
+    },
+  );
+  await check(
+    "Curated business deletion audit is visible without leaking private deletion activity or details",
+    async () => {
+      const target = randomUUID(),
+        secret = "Private details are not searchable or projected";
+      const business = [
+        "account",
+        "job",
+        "assignment",
+        "organisation",
+        "organisation_contact",
+        "course_template",
+        "course_run",
+        "course_session",
+        "topic",
+        "building_block",
+        "announcement",
+        "global_event",
+      ];
+      const privateKinds = [
+        "document",
+        "personal_event",
+        "availability",
+        "saved_job_view",
+        "chat_room",
+        "message",
+        "contract",
+        "invoice",
+        "payment",
+        "resource_comment",
+        "wiki_page",
+        "forum_thread",
+        "forum_post",
+        "course_review",
+      ];
+      const visible = [],
+        hidden = [];
+      for (const kind of [...business, ...privateKinds]) {
+        for (const action of [
+          "resource.deletion.confirmed",
+          "resource.deletion.completed",
+        ]) {
+          const id = randomUUID();
+          (business.includes(kind) ? visible : hidden).push(id);
+          await sql(
+            `insert into public.audit_events(id,actor_id,action,resource_id,details) values(${q(id)},${q(owner)},${q(action)},${q(target)},${q(JSON.stringify({ kind, secret }))}::jsonb)`,
+          );
+        }
+      }
+      const assignmentAudit = randomUUID();
+      visible.push(assignmentAudit);
+      await sql(
+        `insert into public.audit_events(id,actor_id,action,resource_id) values(${q(assignmentAudit)},${q(admin)},'assignment.deletion.applied',${q(target)})`,
+      );
+      const result = await call(
+        admin,
+        "admin_audit_events",
+        `null,null,'',${q(target)},null,null,100`,
+      );
+      assert.deepEqual(
+        new Set(result.items.map((item) => item.id)),
+        new Set(visible),
+      );
+      assert.equal(
+        result.items.some((item) => hidden.includes(item.id)),
+        false,
+      );
+      assert.equal(
+        result.actions.includes("resource.deletion.completed"),
+        true,
+      );
+      assert.equal(JSON.stringify(result).includes(secret), false);
+      assert.equal(
+        (
+          await call(
+            admin,
+            "admin_audit_events",
+            `null,null,'',${q(secret)},null,null,100`,
+          )
+        ).items.length,
+        0,
+      );
+      await expectCode(call(owner, "admin_audit_events"), "42501");
+    },
+  );
+  await check(
+    "Booked and voided payments cannot be purged or change invoice balances; audited void remains available",
+    async () => {
+      const invoice = randomUUID();
+      const file = await call(
+        owner,
+        "reserve_document",
+        `'Fictional payment invoice.pdf','application/pdf',100,'personal','invoice',null,null,${q(randomUUID())},null,null`,
+      );
+      await sql(`update public.document_versions set status='clean',sha256=repeat('b',64) where id=${q(file.version_id)};update public.documents set status='clean' where id=${q(file.document_id)};
+      insert into public.invoices(id,user_id,number,issued_on,due_on,currency,total_amount,document_version_id,status,client_id) values(${q(invoice)},${q(owner)},${q("Fictional-" + invoice)},current_date,current_date+30,'EUR',100,${q(file.version_id)},'approved',${q(randomUUID())})`);
+      const payment = await actor(
+        admin,
+        `select public.record_invoice_payment(${q(invoice)},40,now(),'Fictional partial payment',${q(randomUUID())})`,
+        "aal2",
+      );
+      const financialState = () =>
+        sql(
+          `select jsonb_build_object('paid_amount',coalesce((select sum(amount) from public.payment_records where invoice_id=i.id and voided_at is null),0),'balance',i.total_amount-coalesce((select sum(amount) from public.payment_records where invoice_id=i.id and voided_at is null),0),'status',i.status,'payments',(select jsonb_agg(to_jsonb(p) order by p.id) from public.payment_records p where p.invoice_id=i.id)) from public.invoices i where i.id=${q(invoice)}`,
+        ).then(JSON.parse);
+      const before = await financialState();
+      assert.equal(Number(before.paid_amount), 40);
+      assert.equal(Number(before.balance), 60);
+      const p = await plan("payment", payment);
+      assert.equal(p.can_confirm, false);
+      assert.equal(
+        p.blockers.some((item) => item.kind === "protected_payment_history"),
+        true,
+      );
+      await expectCode(confirm(p), "23503");
+      assert.deepEqual(await financialState(), before);
+      await actor(
+        admin,
+        `select public.void_invoice_payment(${q(payment)},'Fictional corrected tracking entry')`,
+        "aal2",
+      );
+      const after = await financialState();
+      assert.equal(Number(after.paid_amount), 0);
+      assert.equal(Number(after.balance), 100);
+      assert.equal(after.payments.length, 1);
+      assert.notEqual(after.payments[0].voided_at, null);
+      const voided = await plan("payment", payment);
+      assert.equal(voided.can_confirm, false);
+      await expectCode(confirm(voided), "23503");
+      assert.deepEqual(await financialState(), after);
     },
   );
 });

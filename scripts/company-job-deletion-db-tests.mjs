@@ -416,5 +416,88 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
       );
     },
   );
+
+  await check(
+    "Current lifecycle retains captured maximum-net budgets and exact role/assurance redaction",
+    async () => {
+      const admin = randomUUID(),
+        owner = randomUUID(),
+        manager = randomUUID(),
+        senior = randomUUID();
+      await sql(`insert into auth.users(id,email) values
+      (${q(admin)},'company-budget-admin@example.invalid'),(${q(owner)},'company-budget-owner@example.invalid'),
+      (${q(manager)},'company-budget-management@example.invalid'),(${q(senior)},'company-budget-senior@example.invalid');
+      insert into public.user_roles(user_id,role) values(${q(admin)},'admin'),(${q(owner)},'owner'),(${q(manager)},'management'),(${q(senior)},'senior_lecturer');`);
+      const rolePriced = await job({ runOrg: org, commissionOrg: org }),
+        legacy = await job();
+      // These deliberately fictional captured tiers differ from every global or
+      // requesting user's quote. The budget is the per-position senior ceiling,
+      // rounded to cents before multiplication, as in the accepted main contract.
+      await sql(`update public.jobs set status='published',capacity=3,capacity_basis='per_position' where id in(${q(rolePriced)},${q(legacy)});
+      update public.jobs set amount=91.37,total_amount=91.37 where id=${q(legacy)};
+      update private.job_commission_offers set pricing_mode='role_split',gross_amount=100.01,gross_total_amount=100.01,
+      regular_percent=37,senior_percent=73,policy_version=1 where job_id=${q(rolePriced)};`);
+      const read = (who, id, aal) =>
+        actor(who, `select public.job_lifecycle(${q(id)})`, aal).then(
+          JSON.parse,
+        );
+      const fields = [
+        "version",
+        "capacity",
+        "capacity_basis",
+        "confirmed_count",
+        "open_positions",
+        "can_set_capacity",
+        "gross_budget",
+        "max_net_budget",
+        "can_manage",
+        "can_edit",
+        "can_duplicate",
+        "claims",
+      ].sort();
+      for (const [who, aal, privileged] of [
+        [admin, "aal2", true],
+        [owner, "aal2", true],
+        [manager, "aal2", false],
+        [teacher, "aal1", false],
+        [senior, "aal1", false],
+        [admin, "aal1", false],
+        [owner, "aal1", false],
+      ]) {
+        const current = await read(who, rolePriced, aal);
+        assert.deepEqual(Object.keys(current).sort(), fields);
+        assert.equal(current.capacity, 3);
+        assert.equal(current.gross_budget, privileged ? 300.03 : null);
+        assert.equal(current.max_net_budget, privileged ? 219.03 : null);
+        assert.deepEqual(current.claims, []);
+        // Exact legacy net totals already belong to this authorized offer's
+        // commercial contract; adding company isolation must not reinterpret them.
+        const old = await read(who, legacy, aal);
+        assert.deepEqual(Object.keys(old).sort(), fields);
+        assert.equal(old.max_net_budget, 274.11);
+        assert.equal(old.gross_budget, null);
+      }
+      await assert.rejects(read(manager, rolePriced, "aal1"), /42501|denied/i);
+      await assert.rejects(read(company, rolePriced, "aal2"), /42501|denied/i);
+      const publicRate = JSON.parse(
+        await sql(
+          `select jsonb_build_object('amount',amount,'total_amount',total_amount) from public.jobs where id=${q(rolePriced)}`,
+        ),
+      );
+      assert.deepEqual(publicRate, { amount: 0, total_amount: 0 });
+      const projected = (await list()).find((row) => row.id === rolePriced);
+      assert(projected);
+      assert.deepEqual(
+        Object.keys(projected).sort(),
+        [
+          "id",
+          "title",
+          "organisation_id",
+          "organisation_name",
+          "can_delete",
+        ].sort(),
+      );
+    },
+  );
 });
 console.log(`\n${checks} company deletion isolation PostgreSQL groups passed.`);

@@ -80,10 +80,19 @@ Deno.serve(async(request:Request)=>{
    return await withUploadLease({
     begin:async()=>{const r=await service.rpc('deletion_upload_begin',{p_document_id:doc.id,p_version_id:reservation.version_id});if(r.error||typeof r.data!=='string')throw new Error('access_denied');return r.data;},
     end:async(lease)=>{const r=await service.rpc('deletion_upload_end',{p_lease_id:lease});if(r.error)throw new Error('deletion_unavailable');},
-   },async()=>{
+   },async(writes)=>{
    // Quarantine is not a download area; upsert:false protects reserved object bytes.
-   const upload=await service.storage.from('portal-quarantine').upload(reservation.object_path,bytes,{contentType:mime,upsert:false,cacheControl:'0'});
-   if(upload.error&&upload.error.message!=='The resource already exists'&&String((upload.error as {statusCode?:string}).statusCode)!=='409')return json(503,{error:'upload_failed'});
+   const quarantineExisting=await service.storage.from('portal-quarantine').info(reservation.object_path);
+   if(quarantineExisting.error){
+    if(!('code' in quarantineExisting.error)||quarantineExisting.error.code!=='NoSuchKey')return json(503,{error:'upload_failed'});
+    const acknowledgeQuarantine=writes.begin();
+    const upload=await service.storage.from('portal-quarantine').upload(reservation.object_path,bytes,{contentType:mime,upsert:false,cacheControl:'0'});
+    // Even409 can follow a byte write and asynchronous provider cleanup. Keep
+    // the barrier on any uncertain write; an ordinary retry reads existing
+    // immutable bytes instead of attempting another conflicting upload.
+    if(upload.error)return json(503,{error:'upload_failed'});
+    acknowledgeQuarantine();
+   }
    // Always scan the immutable stored object, including after an uncertain retry.
    const stored=await service.storage.from('portal-quarantine').download(reservation.object_path);
    if(stored.error||!stored.data)return json(503,{error:'upload_failed'});
@@ -110,8 +119,19 @@ Deno.serve(async(request:Request)=>{
    }
    await visible(doc.id); // Membership can change while an upload is being scanned.
    // Recheck access after the long scan and promote exactly the stored bytes that were scanned.
-   const clean=await service.storage.from('portal-clean').upload(reservation.object_path,storedBytes,{contentType:mime,upsert:false,cacheControl:'0'});
-   if(clean.error&&String((clean.error as {statusCode?:string}).statusCode)!=='409')return json(503,{error:'upload_failed'});
+   const cleanExisting=await service.storage.from('portal-clean').info(reservation.object_path);
+   if(cleanExisting.error){
+    if(!('code' in cleanExisting.error)||cleanExisting.error.code!=='NoSuchKey')return json(503,{error:'upload_failed'});
+    const acknowledgeClean=writes.begin();
+    const clean=await service.storage.from('portal-clean').upload(reservation.object_path,storedBytes,{contentType:mime,upsert:false,cacheControl:'0'});
+    if(clean.error)return json(503,{error:'upload_failed'});
+    acknowledgeClean();
+   }else{
+    const existingBytes=await service.storage.from('portal-clean').download(reservation.object_path);
+    if(existingBytes.error||!existingBytes.data)return json(503,{error:'upload_failed'});
+    const existingDigest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await existingBytes.data.arrayBuffer()))).map(b=>b.toString(16).padStart(2,'0')).join('');
+    if(existingDigest!==digest)return json(409,{error:'idempotency_conflict'});
+   }
    const version=await service.from('document_versions').update({status:'clean',sha256:digest,scanner_version:verdict.version}).eq('id',reservation.version_id);
    const update=await service.from('documents').update({status:'clean'}).eq('id',doc.id).eq('current_version_id',reservation.version_id).select('id').maybeSingle();
    if(!update.data)return json(409,{error:'version_superseded'});
