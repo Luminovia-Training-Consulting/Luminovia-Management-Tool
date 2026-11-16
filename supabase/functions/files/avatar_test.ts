@@ -1,7 +1,12 @@
+/**
+ * Synthetic PNG pieces with real CRC/Deflate data exercise valid and altered avatars. Structural tests do not replace ClamAV.
+ */
 import { crc32, validateAvatar } from "./avatar.ts";
+// Fail a specific fixture condition as a real test failure; never substitute silent success.
 function assert(value: unknown, message = "assertion failed"): asserts value {
   if (!value) throw new Error(message);
 }
+// Concatenate only the synthetic PNG fixture's byte fragments.
 function join(...parts: Uint8Array[]) {
   const result = new Uint8Array(
     parts.reduce((size, part) => size + part.length, 0),
@@ -13,6 +18,7 @@ function join(...parts: Uint8Array[]) {
   }
   return result;
 }
+// Build a synthetic PNG chunk with a matching CRC before deliberate mutations.
 function chunk(type: string, bytes: Uint8Array) {
   const result = new Uint8Array(bytes.length + 12),
     view = new DataView(result.buffer);
@@ -22,6 +28,7 @@ function chunk(type: string, bytes: Uint8Array) {
   view.setUint32(8 + bytes.length, crc32(result.subarray(4, 8 + bytes.length)));
   return result;
 }
+// Build a small synthetic PNG with real Deflate payload for structural validation.
 async function image(
   width = 1,
   height = 1,
@@ -49,6 +56,7 @@ async function image(
     chunk("IEND", new Uint8Array()),
   );
 }
+// Require the operation to reject and optionally check its stable failure reason.
 async function rejects(bytes: Uint8Array) {
   let failed = false;
   try {

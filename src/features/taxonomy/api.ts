@@ -1,8 +1,13 @@
+/**
+ * Shared topic/tool/language catalogue with validated aliases and versions. Save/archive
+ * preserves IDs; the server enforces hierarchy, MFA and current management capabilities.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 
+/** Versioned catalogue entry with hierarchy, aliases and archive state. */
 export interface TaxonomyTopic {
   id: string;
   label_de: string;
@@ -16,6 +21,7 @@ export interface TaxonomyTopic {
   version: number;
   related_courses: { id: string; title: string }[];
 }
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 export const taxonomyFormSchema = z.object({
   label_de: z.string().trim().min(1).max(120),
   label_en: z.string().trim().min(1).max(120),
@@ -25,8 +31,10 @@ export const taxonomyFormSchema = z.object({
   description_de: z.string().max(4000),
   description_en: z.string().max(4000),
 });
+/** Validated catalogue draft before alias normalization. */
 export type TaxonomyFormValues = z.infer<typeof taxonomyFormSchema>;
 
+/** Validate catalogue data, normalize unique aliases and reject forbidden controls. */
 export function taxonomyPayload(values: TaxonomyFormValues) {
   const parsed = taxonomyFormSchema.parse(values);
   const controlText = (value: string) =>
@@ -53,6 +61,7 @@ export function taxonomyPayload(values: TaxonomyFormValues) {
   return { ...parsed, parent_id: parsed.parent_id || null, aliases };
 }
 
+/** Read the taxonomy_catalogue server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const taxonomyQuery = (
   actor: string,
   search = "",
@@ -81,6 +90,7 @@ export const taxonomyQuery = (
     staleTime: 15000,
   });
 
+/** Submit a new or versioned existing entry to the MFA-protected RPC. */
 export async function saveTaxonomyTopic(
   topic: TaxonomyTopic | null,
   values: TaxonomyFormValues,
@@ -94,6 +104,7 @@ export async function saveTaxonomyTopic(
   if (result.error) throw result.error;
   return result.data as string;
 }
+/** Archive/reactivate against the expected version without redirecting historical references. */
 export async function setTaxonomyArchived(
   topic: TaxonomyTopic,
   archived: boolean,

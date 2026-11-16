@@ -1,3 +1,7 @@
+/**
+ * Regressions for initial-session/Auth-event ordering and clearing another actor's cached data.
+ * SDK fixtures test ordering; actual Auth/RLS/browser acceptance remains separate.
+ */
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -11,6 +15,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
+/** Expose the actual Auth context state to the assertions. */
 function State() {
   const state = useAuth();
   return (
@@ -23,6 +28,7 @@ function State() {
     </p>
   );
 }
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup() {
   let callback!: (event: AuthChangeEvent, session: Session | null) => void;
   let resolve!: (value: {

@@ -1,3 +1,7 @@
+/**
+ * Browser workflows for account roles, scoped invitations and confirmed status changes.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
+ */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";

@@ -1,3 +1,7 @@
+/**
+ * Browser workflows for personal activity previews without exposing other actors' private events.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
+ */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
@@ -14,6 +18,7 @@ test.skip(
   "Dashboard fixture writes require the canonical disposable project.",
 );
 
+/** Creates a controlled private event for this actor to verify dashboard isolation. */
 function appointment(user: string, title: string) {
   const start = new Date(Date.now() + 2 * 86400000);
   return {

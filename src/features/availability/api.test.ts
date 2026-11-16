@@ -1,3 +1,7 @@
+/**
+ * Regressions for unambiguous zoned windows, retained exact instants and request cancellation.
+ * Input/SDK fixtures do not replace real database conflict checks.
+ */
 import { describe, expect, it, vi } from "vitest";
 import {
   availabilityPayload,

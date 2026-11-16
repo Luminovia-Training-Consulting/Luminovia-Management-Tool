@@ -1,3 +1,6 @@
+/**
+ * Selection/revocation cases inject document/version/Storage responses. Recheck visibility after reading and before returning any avatar bytes.
+ */
 import { selectedAvatarBytes } from "./avatar-download.ts";
 const png = Uint8Array.from(
   atob(
@@ -5,9 +8,11 @@ const png = Uint8Array.from(
   ),
   (c) => c.charCodeAt(0),
 );
+// Fail a specific fixture condition as a real test failure; never substitute silent success.
 function assert(value: unknown, message = "assertion failed"): asserts value {
   if (!value) throw new Error(message);
 }
+// Require the operation to reject and optionally check its stable failure reason.
 async function rejects(request: Promise<unknown>, message: string) {
   try {
     await request;
@@ -17,6 +22,7 @@ async function rejects(request: Promise<unknown>, message: string) {
   }
   throw new Error("Expected the avatar read to be denied");
 }
+// Create controlled owned fixtures with replaceable external responses.
 function fixture() {
   let current: string | null = "selected",
     visible = true,

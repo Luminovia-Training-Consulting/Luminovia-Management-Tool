@@ -1,3 +1,6 @@
+/**
+ * Injected invitation cases exercise origin, Auth, limits and idempotent reservation. Success/failure handling must not send twice after an ambiguous first result.
+ */
 import {createHandler,parseBody,type InviteDependencies} from './handler.ts';
 function equal(a:unknown,b:unknown){if(JSON.stringify(a)!==JSON.stringify(b))throw new Error(`Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);}
 const key='11111111-1111-4111-8111-111111111111', body={email:'lecturer@example.test',idempotency_key:key};

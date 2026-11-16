@@ -1,3 +1,7 @@
+/**
+ * Native password sign-in and recovery requests. Validation/online notices support the UI; only
+ * Supabase Auth can establish a session. Public demo/help links provide guidance without sign-in.
+ */
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -10,7 +14,9 @@ import { useAuth } from "./auth-context";
 import { Button } from "../../components/ui/button";
 import { Field, Loading, Notice } from "../../components/common";
 import { useOnline } from "../../lib/online";
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({ email: z.email(), password: z.string().min(1) });
+/** Use native sign-in and recovery requests with separate form states. */
 export function Login() {
   const { t } = useTranslation();
   const { session, loading } = useAuth();
