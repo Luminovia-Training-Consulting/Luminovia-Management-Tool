@@ -1,3 +1,7 @@
+/**
+ * Reusable templates and actual course runs with concrete sessions. Content, participant
+ * management, course publication and job offers remain distinct operations.
+ */
 import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
 import { useState } from "react";
@@ -44,6 +48,7 @@ import {
   CourseRunOfferLink,
 } from "./building-blocks";
 import { weekdaySessions } from "./schedule";
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const templateSchema = z.object({
   title: z.string().trim().min(1).max(200),
   description: z.string().max(12000),
@@ -52,6 +57,7 @@ const templateSchema = z.object({
   topic_ids: z.array(z.string()),
   archived: z.boolean(),
 });
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const runSchema = z.object({
   template_id: z.uuid(),
   organisation_id: z.string(),
@@ -67,6 +73,7 @@ const runSchema = z.object({
     .min(1)
     .max(60),
 });
+/** Edit reusable content templates separately from particular customers and schedules. */
 function TemplateForm({
   original,
   onDone,
@@ -162,6 +169,7 @@ function TemplateForm({
     </form>
   );
 }
+/** Plan a run from a template with specific local times, customer and delivery mode. */
 function RunForm({
   original,
   templates,
@@ -430,6 +438,7 @@ function RunForm({
     </form>
   );
 }
+/** Combine templates/runs with explicitly requested publication/copy actions. */
 export function CoursesPage() {
   const { t, i18n } = useTranslation("operations");
   const { session } = useAuth();

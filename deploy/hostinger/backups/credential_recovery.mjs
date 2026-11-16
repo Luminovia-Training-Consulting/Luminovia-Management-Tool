@@ -1,3 +1,6 @@
+/**
+ * Check restored database/Auth credentials against captured configuration. Use secrets only for comparison, never in results or diagnostics.
+ */
 import assert from "node:assert/strict";
 import {
   createHash,
@@ -8,7 +11,9 @@ import {
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
+// Quote a SQL text value only; object identifiers need a separate quoting path.
 const literal = (s) => "'" + s.replaceAll("'", "''") + "'";
+// Reconstruct SCRAM proof from the captured password and compare only derived keys.
 export function verifiesScram(password, encoded) {
   const match =
     /^SCRAM-SHA-256\$(\d+):([A-Za-z0-9+/=]+)\$([A-Za-z0-9+/=]+):([A-Za-z0-9+/=]+)$/.exec(
@@ -37,6 +42,7 @@ export function verifiesScram(password, encoded) {
   );
 }
 
+// Verify expected service/Auth credentials in the restored data without printing passwords or hashes.
 export async function verifyRecoveredCredentials(
   database,
   temporary,

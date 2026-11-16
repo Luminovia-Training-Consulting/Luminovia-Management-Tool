@@ -1,5 +1,10 @@
+/**
+ * DTOs and actor-scoped reads for organizations, contacts, course sources, templates and course
+ * runs. Relational references keep reusable content separate from scheduled teaching.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
+/** Shared organization metadata from the permitted directory. */
 export interface Organisation {
   id: string;
   name: string;
@@ -10,6 +15,7 @@ export interface Organisation {
   tags: string[];
   archived_at: string | null;
 }
+/** Business contact in its separately authorized organization context. */
 export interface Contact {
   id: string;
   organisation_id: string;
@@ -20,6 +26,7 @@ export interface Contact {
   notes: string;
   archived_at: string | null;
 }
+/** Reusable course content without concrete sessions or copies of personal contracts. */
 export interface Template {
   id: string;
   title: string;
@@ -31,6 +38,7 @@ export interface Template {
   building_block_source_id: string | null;
   course_template_topics: { topic_id: string }[];
 }
+/** Exact original course revision with hash and provenance metadata. */
 export interface BuildingBlockSource {
   id: string;
   building_block_id: string;
@@ -42,6 +50,7 @@ export interface BuildingBlockSource {
   revision_on: string;
   is_primary: boolean;
 }
+/** Canonical course curriculum with separately retained original source revisions. */
 export interface BuildingBlock {
   id: string;
   provider: string;
@@ -58,6 +67,7 @@ export interface BuildingBlock {
   default_template_id: string;
   building_block_sources: BuildingBlockSource[];
 }
+/** Read building_blocks through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const buildingBlocksQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "building-blocks", actor],
@@ -70,6 +80,7 @@ export const buildingBlocksQuery = (actor: string) =>
       return data as BuildingBlock[];
     },
   });
+/** Actual run with customer, zone and concrete sessions, separate from its content template. */
 export interface CourseRun {
   id: string;
   template_id: string;
@@ -81,6 +92,7 @@ export interface CourseRun {
   archived_at: string | null;
   course_sessions: { id: string; starts_at: string; ends_at: string }[];
 }
+/** Read organisations through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const orgQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "organisations", actor],
@@ -93,6 +105,7 @@ export const orgQuery = (actor: string) =>
       return data as Organisation[];
     },
   });
+/** Read organisation_contacts through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const contactsQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "contacts", actor],
@@ -105,6 +118,10 @@ export const contactsQuery = (actor: string) =>
       return data as Contact[];
     },
   });
+/**
+ * Read organisation_private_details through the native client, propagate access/read failures
+ * and scope cached data to the actor and requested resource.
+ */
 export const notesQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "notes", actor],
@@ -116,6 +133,7 @@ export const notesQuery = (actor: string) =>
       return data as { organisation_id: string; private_notes: string }[];
     },
   });
+/** Read course_templates through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const templatesQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "templates", actor],
@@ -128,6 +146,7 @@ export const templatesQuery = (actor: string) =>
       return data as Template[];
     },
   });
+/** Read course_runs through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const runsQuery = (actor: string) =>
   queryOptions({
     queryKey: ["operations", "runs", actor],

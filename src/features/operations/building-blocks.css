@@ -1,3 +1,7 @@
+/**
+ * course provenance, source revisions and building-block course selection, using shared brand
+ * colours and surface variables.
+ */
 /* Source references remain readable on narrow screens without shortening the
    byte hash or silently turning a local filename into a broken public link. */
 .building-block-reference {
@@ -16,6 +20,7 @@
   font-size: 13px;
   line-height: 1.7;
 }
+/* Keep source filenames/full hashes readable; local filenames do not become invented public links. */
 .building-block-sources {
   display: grid;
   gap: 14px;
@@ -50,6 +55,7 @@
   line-height: 1.75;
   font-size: 14px;
 }
+/* Keep weekday suggestions in an explicit planning section before creating actual session instants. */
 .operations-schedule-planner {
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -88,6 +94,7 @@
 .building-block-cards h2 {
   overflow-wrap: anywhere;
 }
+
 @media (max-width: 650px) {
   .building-block-reference {
     padding: 15px;

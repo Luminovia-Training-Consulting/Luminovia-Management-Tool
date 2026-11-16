@@ -1,3 +1,7 @@
+/**
+ * Regressions for weekday generation and invalid date/time/day-count input. Pure calendar
+ * arithmetic does not replace session/claim database acceptance.
+ */
 import { describe, it, expect } from "vitest";
 import { weekdaySessions } from "./schedule";
 import { zonedInstant } from "../../lib/dates";

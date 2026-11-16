@@ -21,6 +21,7 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, url }) => {
         `delete from public.chat_message_revisions where message_id in(select id from public.messages where room_id=${q(room)});delete from public.message_reactions where message_id in(select id from public.messages where room_id=${q(room)});delete from public.messages where room_id=${q(room)};delete from public.chat_members where room_id=${q(room)};delete from public.chat_rooms where id=${q(room)};`,
       );
   });
+  // Another actor's inbox and more records than fit on one page make isolation and cursor errors observable.
   const rows = Array.from({ length: 45 }, () => ({
     id: randomUUID(),
     user_id: owner.id,
@@ -29,17 +30,15 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, url }) => {
   }));
   const foreign = randomUUID();
   await checked(
-    service
-      .from("notifications")
-      .insert([
-        ...rows,
-        {
-          id: foreign,
-          user_id: peer.id,
-          kind: "activity",
-          resource_id: randomUUID(),
-        },
-      ]),
+    service.from("notifications").insert([
+      ...rows,
+      {
+        id: foreign,
+        user_id: peer.id,
+        kind: "activity",
+        resource_id: randomUUID(),
+      },
+    ]),
     "Create scoped fictional inboxes",
   );
   const page = await checked(
@@ -62,6 +61,7 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, url }) => {
     new Set([...page.items, ...next.items].map((item) => item.id)).size,
     40,
   );
+  // A mixed batch of own and foreign records must fail entirely without partially changing the actor's own notifications.
   const forged = await owner.client.rpc("mark_notifications", {
     p_ids: [rows[0].id, foreign],
     p_read: true,
@@ -85,16 +85,15 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, url }) => {
     ).items.length,
     0,
   );
+  // Notices arriving after the recorded as_of must not disappear in a later bulk mark-read action.
   const late = randomUUID();
   await checked(
-    service
-      .from("notifications")
-      .insert({
-        id: late,
-        user_id: owner.id,
-        kind: "activity",
-        resource_id: randomUUID(),
-      }),
+    service.from("notifications").insert({
+      id: late,
+      user_id: owner.id,
+      kind: "activity",
+      resource_id: randomUUID(),
+    }),
     "Create later arrival",
   );
   await checked(
@@ -129,6 +128,7 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, url }) => {
     job_updates: false,
     reminders: true,
   };
+  // Two real simultaneous updates use the same version: exactly one must succeed.
   const saves = await Promise.all(
     [1, 2].map(() =>
       owner.client.rpc("save_notification_preferences", {
@@ -162,13 +162,11 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, url }) => {
     "22023",
   );
   await checked(
-    service
-      .from("notifications")
-      .insert({
-        user_id: owner.id,
-        kind: "chat_message",
-        resource_id: randomUUID(),
-      }),
+    service.from("notifications").insert({
+      user_id: owner.id,
+      kind: "chat_message",
+      resource_id: randomUUID(),
+    }),
     "Insert optional disabled event",
   );
   assert.ok(

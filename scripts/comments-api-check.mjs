@@ -1,3 +1,7 @@
+/**
+ * Real Auth/HTTP checks for resource-specific comments and reasoned moderation.
+ * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
+ */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
@@ -45,22 +49,20 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
       .insert({ id: run, template_id: template, published: true }),
   );
   await checked(
-    service
-      .from("jobs")
-      .insert({
-        id: job,
-        course_run_id: run,
-        title: "Fictional API discussion",
-        customer_name: "Fictional academy",
-        delivery_type: "online",
-        time_zone: "Europe/Berlin",
-        status: "published",
-        amount: 100,
-        total_amount: 100,
-        currency: "EUR",
-        rate_unit: "fixed_total",
-        terms: "Immutable accepted fee terms",
-      }),
+    service.from("jobs").insert({
+      id: job,
+      course_run_id: run,
+      title: "Fictional API discussion",
+      customer_name: "Fictional academy",
+      delivery_type: "online",
+      time_zone: "Europe/Berlin",
+      status: "published",
+      amount: 100,
+      total_amount: 100,
+      currency: "EUR",
+      rate_unit: "fixed_total",
+      terms: "Immutable accepted fee terms",
+    }),
   );
   for (const who of [client, learner])
     assert.equal(
@@ -84,6 +86,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
   );
   assert.equal(new Set(posted).size, 1);
   const id = posted[0];
+  /** Reads the business projection as a specific fixture identity to verify visibility and privacy. */
   const read = () =>
     checked(peer.client.rpc("resource_comments", { p_kind: "job", p_id: job }));
   assert.equal((await read())[0].body, body);

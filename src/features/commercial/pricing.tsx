@@ -1,3 +1,8 @@
+/**
+ * Gross-price/share editor, local compensation preview and client-request publication. The
+ * preview explains cent rounding; PostgreSQL owns binding prices, version checks and accepted
+ * snapshots.
+ */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -20,6 +25,7 @@ import {
 } from "./commission-api";
 import "./platform-i18n";
 import "./platform.css";
+/** Explain local cent allocation without presenting it as a binding server snapshot. */
 export function FeeSplitPreview({
   gross,
   percent,
@@ -56,6 +62,7 @@ export function FeeSplitPreview({
     </div>
   );
 }
+/** Edit only price/share fields permitted by current capabilities and offer state. */
 function EditPrice({
   actor,
   job,
@@ -176,6 +183,7 @@ function EditPrice({
     </form>
   );
 }
+/** Load the authorized price projection and offer the dialog only for editable offers. */
 export function JobPricingPanel({ job }: { job: Job }) {
   const { t } = useTranslation("platform");
   const { session } = useAuth();
@@ -238,6 +246,7 @@ export function JobPricingPanel({ job }: { job: Job }) {
     </section>
   );
 }
+/** Publish a reviewed client request as a real offer through the publication RPC. */
 export function PublishClientRequest({
   actor,
   request,

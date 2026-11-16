@@ -1,3 +1,7 @@
+/**
+ * Shared profile, current-capability, expertise, offer, claim and private-event queries. Actor
+ * keys prevent cache mixing; RLS/RPCs remain the authoritative access boundary.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "./supabase";
 import type {
@@ -8,6 +12,7 @@ import type {
   Expertise,
   PersonalEvent,
 } from "./types";
+/** Read profiles through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const profileQuery = (id: string) =>
   queryOptions({
     queryKey: ["profile", id],
@@ -21,6 +26,7 @@ export const profileQuery = (id: string) =>
       return data as Profile | null;
     },
   });
+/** Read the get_my_permissions server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const permissionsQuery = (id: string) =>
   queryOptions({
     queryKey: ["permissions", id],
@@ -30,6 +36,7 @@ export const permissionsQuery = (id: string) =>
       return (data ?? []) as string[];
     },
   });
+/** Read authorized topic rows through the native client and propagate read/access errors. */
 export const topicsQuery = queryOptions({
   queryKey: ["topics"],
   queryFn: async () => {
@@ -41,6 +48,7 @@ export const topicsQuery = queryOptions({
     return data as Topic[];
   },
 });
+/** Read lecturer_topics through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const expertiseQuery = (id: string) =>
   queryOptions({
     queryKey: ["expertise", id],
@@ -53,6 +61,7 @@ export const expertiseQuery = (id: string) =>
       return data as Expertise[];
     },
   });
+/** Read authorized offer rows through the native client and propagate read/access errors. */
 export const jobsQuery = queryOptions({
   queryKey: ["jobs"],
   queryFn: async () => {
@@ -64,6 +73,7 @@ export const jobsQuery = queryOptions({
     return data as Job[];
   },
 });
+/** Read job_claims through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const claimsQuery = (id: string) =>
   queryOptions({
     queryKey: ["claims", id],
@@ -78,6 +88,7 @@ export const claimsQuery = (id: string) =>
       return data as Claim[];
     },
   });
+/** Read personal_events through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const eventsQuery = (id: string) =>
   queryOptions({
     queryKey: ["events", id],
@@ -92,6 +103,7 @@ export const eventsQuery = (id: string) =>
     },
   });
 
+/** Read user_roles through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const userRolesQuery = (id: string) =>
   queryOptions({
     queryKey: ["user-roles", id],

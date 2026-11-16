@@ -28,6 +28,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
         `(${q(id)},${q(name === "stranger" ? "participant" : name)})`,
     )
     .join(",")};`);
+  /** Calls the business database API under the fixture's controlled identity/MFA claims. */
   const rpc = async (who, name, args = [], aal = "aal1") => {
     const invocation = `public.${name}(${args.map((v) => (v === null ? "null" : typeof v === "number" || typeof v === "boolean" ? String(v) : q(typeof v === "object" ? JSON.stringify(v) : v))).join(",")})`;
     const value = await actor(
@@ -44,6 +45,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
     }
   };
   let count = 0;
+  /** Counts and reports a case only after all of its assertions have completed successfully. */
   const check = async (name, action) => {
     await action();
     count++;
@@ -57,6 +59,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
   await sql(
     `insert into public.organisations(id,name) values(${q(org)},'Fictional course building-block Academy');insert into public.client_organisation_memberships(user_id,organisation_id) values(${q(ids.client)},${q(org)});`,
   );
+  /** Plans a real course run from the referenced template rather than merely setting a screen state. */
   const createRun = async (templateId = template, offset = 0) => {
     const start = new Date(Date.now() + (100 + offset) * 86400000);
     start.setUTCHours(8, 0, 0, 0);
@@ -83,6 +86,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
       "aal2",
     );
   };
+  /** Creates terms tied to the exact source revision; the database must reject stale references. */
   const financial = (revision, gross = true) => ({
     source_revision: revision,
     ...(gross

@@ -1,3 +1,7 @@
+/**
+ * Regressions for authorized audit views, explicit filter/cursor changes and denied access.
+ * Controlled responses test UI contracts; actual audit authorization is checked separately.
+ */
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -46,6 +50,7 @@ const data = {
   actions: ["job.lifecycle.published", "taxonomy.created"],
 };
 const clients: QueryClient[] = [];
+/** Model an awaitable SDK response with its chain method; this fixture makes no backend request. */
 function response(data: unknown, error: unknown = null) {
   return Object.assign(Promise.resolve({ data, error }), {
     abortSignal() {
@@ -53,6 +58,7 @@ function response(data: unknown, error: unknown = null) {
     },
   });
 }
+/** Mount the real feature screen with an isolated cache and controlled SDK responses. */
 function mount() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },

@@ -1,4 +1,10 @@
+/**
+ * DE/EN UI resources for the inbox namespace. Module import registers these strings with
+ * i18next; authored business content is not translated.
+ */
 import i18n from "../../lib/i18n";
+// Static UI resources use the namespace's shared interpolation and pluralization contract.
+// Authored content is separate from these i18next interface strings.
 const de = {
   title: "Benachrichtigungen",
   description:

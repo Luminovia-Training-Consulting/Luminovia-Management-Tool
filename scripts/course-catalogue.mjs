@@ -1,9 +1,15 @@
+/**
+ * Maintains the reviewed, customer-neutral course catalogue and its deterministic
+ * migration DML. Source PDF bytes stay outside the repository; their exact hashes
+ * and revision metadata retain provenance. This module never connects to a database.
+ */
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 
+/** Reviewed public curriculum artifact; customer organisations are configured on runs. */
 export const cataloguePath = new URL(
   "../data/course-building-blocks.json",
   import.meta.url,
@@ -11,6 +17,11 @@ export const cataloguePath = new URL(
 const migrationDirectory = new URL("../supabase/migrations/", import.meta.url);
 // Existing UUIDs are data identities. Recover them from the unchanged original
 // import instead of deriving new identities when public catalogue labels change.
+/**
+ * Reads the immutable first import to recover existing data identities. Resolving
+ * its version avoids putting a historical customer-derived filename in new guidance.
+ * Missing or unrecognised source fails closed rather than inventing replacement IDs.
+ */
 export function originalCatalogue() {
   const name = readdirSync(migrationDirectory).find((file) =>
     file.startsWith("20261115155208_"),
@@ -24,6 +35,8 @@ export function originalCatalogue() {
   return JSON.parse(match[2]);
 }
 const original = originalCatalogue();
+// A neutral label must not break templates, runs or accepted source references.
+// Only business keys absent from this original identity map use the new namespace.
 const existingIds = new Map(
   original.blocks.flatMap((block) => [
     [`block:${block.code}`, block.id],
@@ -36,17 +49,26 @@ const existingIds = new Map(
 );
 const continuationNotes =
   "LPC3/LPC4 sind die Bausteinnamen gemäß Kurzzeichen im Quelldokument. Die Dateinamen LPIC3/LPIC4 enthalten dieselben Bausteininhalte in einer neueren Layoutfassung. Die Einordnung folgt auf bereits absolvierte 101-500-Inhalte. Historische Titel und Inhalte bleiben als Quelle erkennbar.";
+/** Computes exact UTF-8/byte fingerprints; a digest is not an authorisation check. */
 const hash = (value) => createHash("sha256").update(value).digest("hex");
+/** Retains original UUIDs and deterministically names previously unseen catalogue keys. */
 export function stableCatalogueId(value) {
   if (existingIds.has(value)) return existingIds.get(value);
   const hex = hash(`luminovia-course-catalogue:${value}`);
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }
+/** Converts the German source date notation into the catalogue's ISO date notation. */
 const isoDate = (value) => value.split(".").reverse().join("-");
+/** Normalises layout whitespace without translating or reordering authored content. */
 const tidy = (value) => value.replace(/\s+/g, " ").trim();
 
 // Only the curriculum section is imported. Names, book prices, ISBNs and room
 // preparation are not course content, and page furniture is not a syllabus item.
+/**
+ * Parses one recognised text extraction into curriculum and exact source metadata.
+ * The caller supplies the hash of the PDF bytes; the CLI computes it before parsing.
+ * Incomplete sections or an invalid digest are rejected, never silently omitted.
+ */
 export function extractBuildingBlock(text, fileName, sha256) {
   const code = /Kurzzeichen:\s*([A-Z0-9]+)/.exec(text)?.[1];
   const title = tidy(
@@ -127,6 +149,11 @@ export function extractBuildingBlock(text, fileName, sha256) {
   };
 }
 
+/**
+ * Groups supplied revisions by their actual course code and rejects conflicting
+ * content under one identity. Every PDF remains a separate hashed source; the most
+ * recent document revision becomes primary without fabricating missing courses.
+ */
 export function buildCatalogue(files) {
   const grouped = new Map();
   for (const input of [...files].sort((a, b) =>
@@ -150,6 +177,8 @@ export function buildCatalogue(files) {
       continue;
     }
     const { source, ...content } = row;
+    // The reviewed continuation requirement is a project decision, not a claim
+    // that an historical source title proves current external exam coverage.
     const linuxContinuation = ["LPC3", "LPC4"].includes(row.code);
     grouped.set(row.code, {
       id: stableCatalogueId(`block:${row.code}`),
@@ -185,6 +214,11 @@ export function buildCatalogue(files) {
   };
 }
 
+/**
+ * Emits deterministic seed DML, not a database operation. Existing identities and
+ * authored template text are retained; only an unset default-template link is filled.
+ * Callers review generated SQL and add a new migration rather than rewriting history.
+ */
 export function renderCatalogueSql(catalogue) {
   const json = JSON.stringify(catalogue);
   // Both levels quote generated SQL: source data must not close either the
@@ -200,7 +234,16 @@ export function renderCatalogueSql(catalogue) {
   return `-- BEGIN GENERATED COURSE CATALOGUE\n-- Regenerate from reviewed source metadata with scripts/course-catalogue.mjs --sql.\ndo $course_import$\ndeclare catalogue jsonb := $course_catalogue$${json}$course_catalogue$::jsonb; block jsonb; source jsonb; primary_source uuid;\nbegin\n for block in select value from jsonb_array_elements(catalogue->'blocks') loop\n  insert into public.building_blocks(id,provider,code,title,description,syllabus,prerequisites,duration_days,duration_hours,theory_percent,practice_percent,notes) values((block->>'id')::uuid,block->>'provider',block->>'code',block->>'title',block->>'description',block->>'syllabus',block->>'prerequisites',(block->>'duration_days')::integer,(block->>'duration_hours')::numeric,(block->>'theory_percent')::integer,(block->>'practice_percent')::integer,block->>'notes') on conflict(id) do nothing;\n  for source in select value from jsonb_array_elements(block->'sources') loop\n   insert into public.building_block_sources(id,building_block_id,file_name,sha256,page_count,content_pages,created_on,revision_on,is_primary) values((source->>'id')::uuid,(block->>'id')::uuid,source->>'file_name',source->>'sha256',(source->>'page_count')::integer,array(select value::integer from jsonb_array_elements_text(source->'content_pages')),(source->>'created_on')::date,(source->>'revision_on')::date,(source->>'is_primary')::boolean) on conflict(id) do nothing;\n  end loop;\n  select id into primary_source from public.building_block_sources where building_block_id=(block->>'id')::uuid and is_primary;\n  insert into public.course_templates(id,title,description,syllabus,prerequisites,building_block_id,building_block_source_id) values((block->>'default_template_id')::uuid,(block->>'code')||' · '||(block->>'title'),block->>'description',block->>'syllabus',block->>'prerequisites',(block->>'id')::uuid,primary_source) on conflict(id) do nothing;\n  update public.building_blocks set default_template_id=(block->>'default_template_id')::uuid where id=(block->>'id')::uuid and default_template_id is null;\n end loop;\nend;$course_import$;\n-- END GENERATED COURSE CATALOGUE`;
 }
 
+/**
+ * Emits the forward neutralisation transaction against the immutable original
+ * catalogue. Exact original digests guard label replacements; used, saved, archived,
+ * topic-bearing or content-edited templates are left intact. Source versions and
+ * accepted commercial/session records are not rewritten. Hosted application still
+ * requires the existing reviewed maintenance/writer-stop procedure.
+ */
 export function renderNeutralCatalogueMigration(catalogue) {
+  // Retain only original value fingerprints in the new migration. A missing
+  // identity needs a separate edition review, not an assumed historical match.
   const rows = catalogue.blocks.map((block) => {
     const prior = original.blocks.find((row) => row.id === block.id);
     if (!prior)
@@ -268,6 +311,9 @@ ${renderCatalogueSql(catalogue)}
 commit;`;
 }
 
+// Importing this module exposes pure extract/render helpers plus the historical
+// identity read. Only direct CLI invocation may verify local PDFs or explicitly
+// replace the reviewed JSON artifact; no CLI branch applies SQL or changes a PDF.
 if (
   process.argv[1] &&
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)

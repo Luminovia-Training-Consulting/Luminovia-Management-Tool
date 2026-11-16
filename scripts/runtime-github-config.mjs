@@ -1,4 +1,9 @@
+/**
+ * Builds the bounded configuration overlay for the separate GitHub preview.
+ * Project identity and loopback ports stay separate; nested QA/preview overlays are rejected.
+ */
 /** The preview changes only local service identity and loopback ports. */
+/** Builds only the known loopback/project overlay and rejects incompatible or already overlaid source. */
 export function githubPreviewConfig(source, project) {
   if (!/^luminovia-portal-github-[a-f0-9]{12}$/.test(project))
     throw new Error("Invalid owned GitHub preview project.");

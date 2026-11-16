@@ -1,3 +1,6 @@
+/**
+ * Native recovery drill using a synthetic complete backup. Real age/PostgreSQL/file operations exercise recovery; normal instances and real accounts are not fixtures.
+ */
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, rm, writeFile, readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";

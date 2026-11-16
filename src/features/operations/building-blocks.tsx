@@ -1,3 +1,7 @@
+/**
+ * Readable course provenance and template-based course planning entry points. Display source
+ * hashes/references without publishing original teaching PDFs.
+ */
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { BookOpen, FileCheck2 } from "lucide-react";
@@ -16,6 +20,7 @@ import "./i18n";
 import "./building-blocks.css";
 import { jobBuildingBlockQuery } from "./building-blocks-api";
 
+/** Display the canonical course building block and its referenced provenance. */
 export function BuildingBlockReference({
   buildingBlockId,
   sourceId,
@@ -65,6 +70,7 @@ export function BuildingBlockReference({
   ) : null;
 }
 
+/** Read one job's protected source chain and render it only when a reference exists. */
 export function JobBuildingBlockReference({ jobId }: { jobId: string }) {
   const { session } = useAuth();
   const reference = useQuery(jobBuildingBlockQuery(session!.user.id, jobId));
@@ -79,6 +85,7 @@ export function JobBuildingBlockReference({ jobId }: { jobId: string }) {
   ) : null;
 }
 
+/** Show distinct original revisions with provenance metadata without copying source files. */
 export function BuildingBlockSources({
   block,
   sourceId,
@@ -147,6 +154,7 @@ export function BuildingBlockSources({
   );
 }
 
+/** Select existing canonical blocks for a new course template or run. */
 export function BuildingBlockCards({
   blocks,
   canManage,
@@ -197,6 +205,7 @@ export function BuildingBlockCards({
   );
 }
 
+/** Offer the authorized entry point for an offer derived from this specific course run. */
 export function CourseRunOfferLink({ runId }: { runId: string }) {
   const { t } = useTranslation("operations");
   return (

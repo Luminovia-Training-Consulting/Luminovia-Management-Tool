@@ -1,5 +1,9 @@
 # QA evidence — 2026-11-16
 
+## PR23 exact mobile failure and new diagnostic gate
+
+Run43800695806 on `c752498` failed82/84browser acceptance after226frontend,239PostgreSQL,18real API suites/Mailpit and native restart persistence passed. The two mobile course clicks were intercepted; full build/PWA were not reached and the separate native gate was skipped. Local real-React/fictional-API probes did not reproduce the cause. Added pointer readiness and safe geometry telemetry retain every original ordinary click/business assertion; the new native covered-target/scroll/capture regression passes on desktop/mobile. Main43504b8 is preserved. Current complete acceptance and the authorised merge are recorded on [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23); no fresh full pass is assumed here.
+
 ## Customer-neutral correction — independent main delivery in progress
 
 Original-checkout focused checks passed: 244 frontend cases/52 files; TypeScript/lint/format/build, catalogue/source/documentation guards, five real migration-preservation and16existing catalogue SQL groups. Eight branded screenshots were removed. That baseline included independently open role/pricing work and is not claimed as acceptance of the now isolated main-based delivery. Independent main-based source passes226coverage cases (51.44%lines), type/lint/format and23catalogue/documentation/release guards plus the adapted5+16PostgreSQL groups. [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23) owns the exact-source complete application/native/security outcomes and user-authorised merge record. The feature screenshot artifact contains only the six fictional building-block captures for visual review; no unobserved full pass is claimed by this submission record. The local complete command initially refused another checkout's active shared QA lock before startup.

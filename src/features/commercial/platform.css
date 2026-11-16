@@ -1,3 +1,8 @@
+/**
+ * Client portal, fee allocation and separate revenue cards, using shared brand colours and
+ * surface variables.
+ */
+/* Keep local fee allocation as one preview, separate from confirmed reports. */
 .platform-split {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -26,6 +31,7 @@
 .platform-pricing h2 {
   font-size: 1.2rem;
 }
+/* Show organization/currency groups in separate cards. */
 .platform-spend-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
@@ -65,6 +71,7 @@
 .platform-revenue {
   margin: 1.6rem 0 2rem;
 }
+/* Show client requests with original sessions/prices and confirmed status. */
 .platform-request-card {
   padding: 1.3rem;
   min-width: 0;
@@ -145,6 +152,7 @@
 .platform-request-form .form-row {
   flex-wrap: wrap;
 }
+
 @media (max-width: 600px) {
   .platform-split {
     grid-template-columns: 1fr;
@@ -176,6 +184,7 @@
   }
 }
 
+/* Metadata labels organize invoices; they are not pricing or payment operations. */
 .platform-invoice-labels {
   display: flex;
   flex-wrap: wrap;

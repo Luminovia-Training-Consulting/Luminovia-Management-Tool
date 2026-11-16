@@ -1,3 +1,7 @@
+/**
+ * Regressions for course extraction, source hashes and deterministic catalogue identities.
+ * Fictional document text tests the import contract without personal original documents.
+ */
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -11,6 +15,7 @@ import {
 } from "./course-catalogue.mjs";
 
 const catalogue = JSON.parse(readFileSync(cataloguePath, "utf8"));
+/** Creates fictional PDF extraction text with controlled code, syllabus and revision date; private marginal notes must not enter the catalogue. */
 const fixture = (
   code = "LPC3",
   syllabus = "- Shell-Umgebung\n- Skripte\n",

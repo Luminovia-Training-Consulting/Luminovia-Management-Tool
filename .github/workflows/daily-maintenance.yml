@@ -1,3 +1,5 @@
+# Daily component maintenance: verify each candidate, verify the combined set
+# again, and promote only a successful revision bound to its source.
 name: Daily verified component maintenance
 on:
   schedule:
@@ -34,6 +36,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: node deploy/hostinger/maintenance/promote.mjs signature-probe
   discover:
+    # Discover candidates from public source without changing main or the VPS.
     if: inputs.signature_probe_only != true
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -60,6 +63,8 @@ jobs:
           retention-days: 14
           if-no-files-found: error
   candidates:
+    # Export failures as results so one candidate does not hide the others.
+    # continue-on-error does not authorize promotion of a failed update.
     needs: discover
     if: needs.discover.outputs.has_candidates == 'true'
     runs-on: ubuntu-latest
@@ -126,6 +131,7 @@ jobs:
           retention-days: 14
           if-no-files-found: error
   combined:
+    # Individual passes do not prove combined compatibility; verify the union again.
     if: always() && needs.discover.result == 'success'
     needs: [discover, candidates]
     runs-on: ubuntu-latest
@@ -182,6 +188,8 @@ jobs:
           retention-days: 14
           if-no-files-found: error
   fallback:
+    # If the combined candidate fails, assemble another set from the existing
+    # plan and verify it again. Never relabel failed results as passes.
     if: always() && needs.discover.result == 'success' && needs.combined.result == 'failure'
     needs: [discover, candidates, combined]
     runs-on: ubuntu-latest

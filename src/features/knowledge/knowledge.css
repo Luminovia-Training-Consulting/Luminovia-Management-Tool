@@ -1,3 +1,7 @@
+/**
+ * Wiki/forum lists and consistent structured editing/read views, using shared brand colours and
+ * surface variables.
+ */
 .knowledge-page-actions {
   display: flex;
   gap: 8px;
@@ -6,6 +10,7 @@
 .knowledge-page-actions .button {
   font-size: 12px;
 }
+/* Share a flexible desktop workspace between the directory and actual article/thread. */
 .knowledge-workspace {
   display: grid;
   grid-template-columns: 305px minmax(0, 1fr);
@@ -199,6 +204,7 @@
   color: var(--muted);
   margin-bottom: 25px;
 }
+/* Keep the editor frame/toolbar separate from normalized authored content. */
 .knowledge-editor {
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -238,6 +244,7 @@
   padding: 5px;
   font-size: 10px;
 }
+/* Shared read typography for the stored allowed editor structures. */
 .knowledge-prose {
   padding: 22px;
   min-height: 210px;
@@ -404,6 +411,7 @@
   flex-direction: column;
   gap: 18px;
 }
+/* Keep author, content and permitted reply/moderation actions together per forum post. */
 .forum-post {
   padding: 25px;
 }
@@ -500,6 +508,7 @@
 .forum-reports-list .form-actions {
   margin-top: 10px;
 }
+
 @media (max-width: 1200px) {
   .knowledge-workspace {
     grid-template-columns: 260px minmax(0, 1fr);
@@ -538,6 +547,7 @@
     font-size: 27px;
   }
 }
+
 @media (max-width: 960px) {
   .knowledge-workspace {
     grid-template-columns: 225px minmax(0, 1fr);
@@ -580,6 +590,7 @@
     padding: 7px 8px;
   }
 }
+
 @media (max-width: 760px) {
   .knowledge-workspace {
     display: block;

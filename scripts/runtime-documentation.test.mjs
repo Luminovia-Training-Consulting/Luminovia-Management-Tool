@@ -1,3 +1,7 @@
+/**
+ * Checks local Markdown links against files actually delivered in the repository.
+ * Fenced examples are not navigation; external URLs are not fetched here.
+ */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile, readdir, access } from "node:fs/promises";
@@ -5,6 +9,7 @@ import { dirname, resolve } from "node:path";
 
 test("repository documentation links resolve to delivered local files", async () => {
   const files = ["README.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md"];
+  /** Collects delivered Markdown documents recursively for local link validation. */
   async function walk(directory) {
     for (const item of await readdir(directory, { withFileTypes: true })) {
       const path = `${directory}/${item.name}`;

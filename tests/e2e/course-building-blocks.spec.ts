@@ -1,5 +1,10 @@
+/**
+ * Browser workflows for course source templates, planned sessions and lecturer-visible net claims.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
+ */
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { assertPointerReady } from "./helpers/pointer-readiness";
 import { randomUUID } from "node:crypto";
 import {
   api,
@@ -13,6 +18,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Course writes require the canonical disposable project.",
 );
+/** Checks the rendered state with axe; this does not replace manual accessibility acceptance. */
 async function a11y(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   const scan = await new AxeBuilder({ page })
@@ -87,9 +93,12 @@ test("Course source template plans ten real sessions and one linked net-only tea
   });
   await page.getByLabel("Language", { exact: true }).selectOption("de");
   await page.getByLabel("Farbschema", { exact: true }).selectOption("light");
-  await page
-    .getByRole("button", { name: "Bausteindetails: LPC3", exact: true })
-    .click();
+  const sourceAction = page.getByRole("button", {
+    name: "Bausteindetails: LPC3",
+    exact: true,
+  });
+  await assertPointerReady(sourceAction, "course source details");
+  await sourceAction.click();
   const sourceDialog = page.getByRole("dialog", { name: /LPC3/ });
   await expect(
     sourceDialog.getByText("Bausteinbeschreibung-LPIC3.pdf", { exact: true }),

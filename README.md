@@ -138,6 +138,8 @@ Stop managed local services with `./portal stop`; database and actual Storage fi
 
 ## Documentation
 
+[Agent working guide](AGENTS.md) · [SQL migration reading guide](docs/MIGRATION_GUIDE.md). Maintained application, test and operating source includes comprehensive English comments; keep those contracts and explanations current with code changes.
+
 [System audit](docs/SYSTEM_AUDIT.md) · [Developer guide](docs/DEVELOPER_GUIDE.md) · [Functional audit](docs/FUNCTIONAL_CODE_AUDIT.md) · [Course building blocks](docs/COURSE_BUILDING_BLOCKS.md) · [Profile pictures](docs/PROFILE_AVATARS.md) · [Comments](docs/RESOURCE_COMMENTS.md) · [Taxonomy](docs/TAXONOMY.md) · [Availability](docs/AVAILABILITY.md) · [Job lifecycle/capacity](docs/JOB_LIFECYCLE.md) · [Dashboard](docs/DASHBOARD.md) · [Notifications](docs/NOTIFICATIONS.md) · [Administration audit](docs/ADMIN_AUDIT.md) · [GitHub preview](docs/GITHUB_LOCAL_PREVIEW.md) · [Product scope](docs/PRODUCT_SPEC.md) · [Architecture](docs/ARCHITECTURE.md) · [ERD](docs/ERD.md) · [Brand](docs/BRAND_DESIGN_SYSTEM.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [Security review](docs/BACKEND_SECURITY_REVIEW.md) · [Test plan](docs/TEST_PLAN.md) · [User guide](docs/USER_GUIDE.md)
 
 ## Contributing on GitHub

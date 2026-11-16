@@ -1,12 +1,17 @@
+/**
+ * Isolated recovery-witness cases use fictional image digests and migration inventories. Reject changed history, incomplete proof and wrong images before restoring.
+ */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
 import { checkedDatabaseImage } from "../restore-check.mjs";
 import { verifyRestoredRecoveryInventory } from "./postgres_recovery_witness.mjs";
+// Compute a stable SHA-256 digest for the source/artifact comparison.
 const hash = (v) => createHash("sha256").update(v).digest("hex");
 const target = "supabase/postgres:17.13.0.000@sha256:" + "a".repeat(64);
 const source = "supabase/postgres:17.12.0.000@sha256:" + "b".repeat(64);
 // Fictional guard fixtures only: no newer image is downloaded or claimed tested.
+// Build fictional completed image/migration proof; this unit fixture does not claim a downloaded candidate was tested.
 function witness() {
   const first = {
     path: "supabase/migrations/20260101000000_first.sql",
