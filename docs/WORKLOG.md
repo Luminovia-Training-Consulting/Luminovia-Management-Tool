@@ -2,6 +2,14 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — CI setup merged and direct Maintainer merge proved
+
+[PR11](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/11) merged as `664865190785c6894664b20420428cdbca699963` at2026-11-16T01:34:43UTC through the authenticated Maintainer/Admin identity, without another review and while the full application job was still running. This is an actual direct-merge proof, not only accepted ruleset JSON. All6new quality/coverage checks, PRmetadata and the exact corrected Security run had already passed. Maintainer merge freedom does not make incomplete tests green or bypass the separate release's successful whole-CI requirement.
+
+Corrected head `d9da3ac` Security run [43786318094](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43786318094) passed all3analyses and DependencyReview. The separately generated Advanced-Security CodeQL check also passed with0annotations. Each analysis is bound to actual PRmerge79c1220 (parents9c2103b/d9da3ac) and has0results. The earlier test-fixture URL finding is **fixed**, not dismissed; PRopen-alert list is empty. New quality run43786318059 passes Build/Typecheck/Lint/Formatting/Codequality/Coverage; retained full application/native acceptance is a separate long-running gate, not invented here.
+
+After the merge, configured workflows run again on exact main. Current/final machine-verifiable outcomes are on the [Main workflow page](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/workflows/ci.yml) and [Security workflow page](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/workflows/security.yml); the operational readback is retained in ignored `.local/github-quality/final-main-acceptance.json`. This documentation checkpoint does not label an unobserved future job successful. The implementation source remains unchanged by this evidence-only follow-up. No VPS or production mutation was performed in this GitHub slice.
+
 ## 16 November 2026 — GitHub quality, coverage and maintainer merges
 
 The current user request adds visible compilation, code quality, security, Dependabot and test-coverage tasks and replaces the earlier personal PR-only preference with uninterrupted direct Maintainer merges. Work starts from current signed accepted main9c2103b on `codex/github-quality-checks`, preserving M6, all24migrations, the complete product specification and existing release/daily/native-test mechanisms. This slice does not mutate the VPS, normal development/preview data or production.
