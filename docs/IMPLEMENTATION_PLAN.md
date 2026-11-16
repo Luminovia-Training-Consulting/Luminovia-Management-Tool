@@ -10,7 +10,7 @@ User requested a complete bilingual guided experience, safe fictional test syste
 - [x] Authenticated permission-aware Portal tour with explicit navigation, pause/resume/restart and per-account session progress; unchanged server permissions, MFA and online confirmation.
 - [x] Public searchable bilingual help with practical workflows, module deep links, general recovery and entry points from login/tour/errors.
 - [x] Source checks, production build, actual public desktop/mobile acceptance, initial whole-source coverage above unchanged gates and precise usage/security documentation. See WORKLOG for executed counts and remaining exact-source checks.
-- [ ] Observe final exact PR full application/native retained-data/security checks and complete the authorised merge; final PR status is authoritative. No production deployment is implied.
+- Integration and the user-authorised merge are tracked on [PR16](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/16). Its exact-head full application/native retained-data/security checks and merge state are the acceptance record. No production deployment is implied.
 
 [Guided demo and help](GUIDED_DEMO_AND_HELP.md) complements the full target below. These educational simulations do not mark any unimplemented business module complete and do not replace the independent account welcome checklist.
 
