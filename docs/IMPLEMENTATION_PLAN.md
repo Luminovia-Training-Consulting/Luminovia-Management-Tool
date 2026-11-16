@@ -9,7 +9,8 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Integrate current main e75f55d, retaining account welcome, Portal tour and public help/demo.
 - [x] Observe actual application/quality/security success on21959fa:249unit/component tests,88desktop/mobile cases,2built-PWA cases, real retention/SQL/API and checked cleanup.
 - [x] Reproduce native replay refusal for the pending Welcome migration, add its atomic envelope without changing released history, and pass the actual24→26local selfhost retention/API/TLS/cleanup rehearsal against the prepared incoming main source.
-- [ ] Observe native-selfhost/preview outcomes, integrate PR20/PR15 main without losing private-pricing behavior or source comments, and complete exact final-head CI. No production action is part of this CI repair; respect the independent PR15 main-merge hold.
+- [x] Integrate actual PR20/PR15 main43504b8 without losing private-pricing behavior, source comments or MFA fixture guards; normalized source review and native rehearsal passed.
+- [ ] Complete exact final-head GitHub application/native-selfhost/preview-package CI and record the observed result. No production action is part of this CI repair; do not bypass coordinated main merge holds.
 
 ## Current continuation — private roles/pricing, welcome guide and PR previews
 
