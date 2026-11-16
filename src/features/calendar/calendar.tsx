@@ -2,11 +2,17 @@ import { Link } from "react-router-dom";
 import "../availability/i18n";
 import { assignmentJobTitlesQuery } from "../jobs/discovery-api";
 import { runsQuery, templatesQuery } from "../operations/data";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import type { DatesSetArg } from "@fullcalendar/core";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
 import FullCalendar from "@fullcalendar/react";
@@ -19,7 +25,12 @@ import deLocale from "@fullcalendar/core/locales/de";
 import enLocale from "@fullcalendar/core/locales/en-gb";
 import { DateTime } from "luxon";
 import { useAuth } from "../auth/auth-context";
-import { claimsQuery, eventsQuery, profileQuery } from "../../lib/queries";
+import {
+  claimsQuery,
+  eventsQuery,
+  profileQuery,
+  permissionsQuery,
+} from "../../lib/queries";
 import { db } from "../../lib/supabase";
 import type { PersonalEvent } from "../../lib/types";
 import { validZone, zonedInstant } from "../../lib/dates";
@@ -33,6 +44,9 @@ import {
   Notice,
   PageHeading,
 } from "../../components/common";
+import { globalEventsQuery } from "./publications-api";
+import { GlobalEventDetails, GlobalEventManagement } from "./publications";
+import "./publications-i18n";
 const schema = z.object({
   title: z.string().trim().min(1).max(200),
   starts_at: z.string().min(1),
@@ -207,22 +221,34 @@ export function CalendarPage() {
     ...templatesQuery(session!.user.id),
     enabled: global,
   });
-  const globals = useQuery({
-    queryKey: ["global-events"],
-    queryFn: async () => {
-      const { data, error } = await db()
-        .from("global_events")
-        .select("*")
-        .eq("published", true);
-      if (error) throw error;
-      return data as {
-        id: string;
-        title: string;
-        starts_at: string;
-        ends_at: string;
-      }[];
-    },
+  const publicationText = useTranslation("calendarPublications").t;
+  const permissions = useQuery(permissionsQuery(session!.user.id));
+  const [range, setRange] = useState(() => {
+    const start = DateTime.utc().startOf("month").minus({ days: 7 });
+    return { from: start.toISO()!, to: start.plus({ days: 49 }).toISO()! };
   });
+  const globals = useInfiniteQuery({
+    ...globalEventsQuery(session!.user.id, range.from, range.to),
+    enabled: global,
+  });
+  const [globalID, setGlobalID] = useState<string | null>(null);
+  const globalRows = globals.isError
+    ? []
+    : [
+        ...new Map(
+          (globals.data?.pages ?? [])
+            .flatMap((page) => page.items)
+            .map((event) => [event.id, event]),
+        ).values(),
+      ];
+  const handleDatesSet = useCallback((info: DatesSetArg) => {
+    const next = { from: info.start.toISOString(), to: info.end.toISOString() };
+    setRange((previous) =>
+      previous.from === next.from && previous.to === next.to ? previous : next,
+    );
+    setGlobalID(null);
+  }, []);
+  const activeGlobal = globalRows.find((event) => event.id === globalID);
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<PersonalEvent | undefined>();
   const [message, setMessage] = useState("");
@@ -231,17 +257,13 @@ export function CalendarPage() {
   if (
     claims.isPending ||
     personal.isPending ||
-    (Boolean(claims.data?.length) && jobs.isPending) ||
-    globals.isPending ||
-    (global && (publicRuns.isPending || templates.isPending))
+    (Boolean(claims.data?.length) && jobs.isPending)
   )
     return <Loading />;
   if (
     claims.isError ||
     personal.isError ||
-    (Boolean(claims.data?.length) && jobs.isError) ||
-    globals.isError ||
-    (global && (publicRuns.isError || templates.isError))
+    (Boolean(claims.data?.length) && jobs.isError)
   )
     return (
       <ErrorState
@@ -259,7 +281,7 @@ export function CalendarPage() {
     );
   const events = global
     ? [
-        ...globals.data.map((e) => ({
+        ...globalRows.map((e) => ({
           id: e.id,
           title: e.title,
           start: e.starts_at,
@@ -267,7 +289,10 @@ export function CalendarPage() {
           color: "#1749b5",
           extendedProps: { kind: "global" },
         })),
-        ...(publicRuns.data ?? [])
+        ...(publicRuns.isError || templates.isError
+          ? []
+          : (publicRuns.data ?? [])
+        )
           .filter((run) => run.published && !run.archived_at)
           .flatMap((run) =>
             run.course_sessions.map((s) => ({
@@ -339,7 +364,7 @@ export function CalendarPage() {
             variant={global ? "default" : "ghost"}
             onClick={() => setGlobal(true)}
           >
-            {i18n.language === "de" ? "Globale Termine" : "Global events"}
+            {publicationText("global")}
           </Button>
         </div>
         <span className="badge">{zone}</span>
@@ -362,6 +387,7 @@ export function CalendarPage() {
             center: "title",
             right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth",
           }}
+          datesSet={handleDatesSet}
           events={events}
           height="auto"
           buttonIcons={false}
@@ -370,6 +396,10 @@ export function CalendarPage() {
           nowIndicator
           dayMaxEvents={3}
           eventClick={(info) => {
+            if (info.event.extendedProps.kind === "global") {
+              info.jsEvent.preventDefault();
+              setGlobalID(info.event.id);
+            }
             if (info.event.extendedProps.kind === "private") {
               setSelected(personal.data.find((e) => e.id === info.event.id));
               setOpen(true);
@@ -377,6 +407,54 @@ export function CalendarPage() {
           }}
         />
       </div>
+      {global && (
+        <div className="global-event-public-status">
+          {(publicRuns.isPending || templates.isPending) && <Loading />}
+          {(publicRuns.isError || templates.isError) && (
+            <ErrorState
+              retry={() => {
+                void publicRuns.refetch();
+                void templates.refetch();
+              }}
+            />
+          )}
+          {globals.isPending ? (
+            <Loading />
+          ) : globals.isError ? (
+            <ErrorState retry={() => void globals.refetch()} />
+          ) : (
+            <>
+              <p role="status">
+                {publicationText("loaded", { count: globalRows.length })}
+              </p>
+              {globals.hasNextPage && (
+                <Button
+                  disabled={!online || globals.isFetchingNextPage}
+                  onClick={() => void globals.fetchNextPage()}
+                >
+                  {publicationText("more")}
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+      {global &&
+        !permissions.isError &&
+        permissions.data?.includes("courses.manage") && (
+          <GlobalEventManagement
+            actor={session!.user.id}
+            from={range.from}
+            to={range.to}
+            zone={zone}
+          />
+        )}
+      {global && activeGlobal && (
+        <GlobalEventDetails
+          event={activeGlobal}
+          onClose={() => setGlobalID(null)}
+        />
+      )}
       <Dialog
         open={open}
         onOpenChange={setOpen}

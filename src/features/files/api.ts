@@ -93,14 +93,11 @@ export async function uploadDocument(
     xhr.send(form);
   });
 }
-export async function downloadDocument(
-  id: string,
-  versionId?: string | null,
-): Promise<Blob> {
+async function downloadFile(body: Record<string, unknown>): Promise<Blob> {
   const response = await fetch(endpoint(), {
     method: "POST",
     headers: { ...(await authHeaders()), "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "download", id, version_id: versionId }),
+    body: JSON.stringify(body),
     cache: "no-store",
   });
   if (!response.ok) {
@@ -114,12 +111,20 @@ export async function downloadDocument(
   }
   return await response.blob();
 }
-export async function saveDownload(
-  id: string,
+export async function downloadDocument(id: string, versionId?: string | null) {
+  return downloadFile({ action: "download", id, version_id: versionId });
+}
+export async function saveQualificationEvidence(
+  evidenceId: string,
   name: string,
-  versionId?: string | null,
 ) {
-  const blob = await downloadDocument(id, versionId);
+  const blob = await downloadFile({
+    action: "qualification_evidence_download",
+    evidence_id: evidenceId,
+  });
+  saveBlob(blob, name);
+}
+function saveBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -127,6 +132,14 @@ export async function saveDownload(
   link.rel = "noopener";
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+export async function saveDownload(
+  id: string,
+  name: string,
+  versionId?: string | null,
+) {
+  const blob = await downloadDocument(id, versionId);
+  saveBlob(blob, name);
 }
 
 function documentAccessDenied(error: unknown) {

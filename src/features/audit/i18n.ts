@@ -42,6 +42,7 @@ const de = {
     claim: "Zuweisungen",
     taxonomy: "Themenkatalog",
     announcement: "Ankündigungen",
+    calendar: "Globale Termine",
   },
 };
 const en = {
@@ -87,6 +88,7 @@ const en = {
     claim: "Assignments",
     taxonomy: "Topic catalogue",
     announcement: "Announcements",
+    calendar: "Global events",
   },
 };
 i18n.addResourceBundle("de", "adminAudit", de);

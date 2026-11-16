@@ -1,6 +1,6 @@
 # Architecture and decisions
 
-Status: the accepted M6 application baseline contains 24 migrations; its executed local/CI evidence is recorded in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md). The M7 source adds five additive migrations, bringing the source set to 29. Its focused checks and authored native Auth/API/browser tests are not a completed M7 canonical or production acceptance. Migration source and owning tests define actual schema behavior; [ERD](ERD.md) maps physical relations and [API_REFERENCE](API_REFERENCE.md) inventories interfaces. The full target remains [PRODUCT_SPEC](PRODUCT_SPEC.md) and the authoritative [master prompt](UNIVERSAL_MASTER_PROMPT.txt). Hosted installation state is a separate operational record in [HOSTINGER_DEVELOPMENT](HOSTINGER_DEVELOPMENT.md) and [WORKLOG](WORKLOG.md); local source does not prove deployment.
+Status: the accepted M6 application baseline contains 24 migrations; its executed local/CI evidence is recorded in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md). M7 adds five migrations (29 total); M8 adds three more (32 total) for scoped pickers, global-event publication and exact-version qualification evidence. The next combined 32-migration gate also includes the M7 file-dialog correction. Focused checks and authored native Auth/API/browser cases are not a completed combined acceptance or production approval. Migration source and owning tests define actual schema behavior; [ERD](ERD.md) maps physical relations and [API_REFERENCE](API_REFERENCE.md) inventories interfaces. The full target remains [PRODUCT_SPEC](PRODUCT_SPEC.md) and the authoritative [master prompt](UNIVERSAL_MASTER_PROMPT.txt). Hosted installation state is a separate operational record in [HOSTINGER_DEVELOPMENT](HOSTINGER_DEVELOPMENT.md) and [WORKLOG](WORKLOG.md); local source does not prove deployment.
 
 ## ADR-001 — separate private portal and static frontend
 
@@ -226,6 +226,93 @@ retroactive fanout. Old/unavailable inbox targets are redacted on fresh reads.
 Private bodies, role arrays and retry payloads are not public REST tables or
 administrative audit details. See [ANNOUNCEMENTS](ANNOUNCEMENTS.md).
 
+## ADR-019 — M8 purpose-scoped resource pickers
+
+`job_picker` replaces the final file/chat callers of the unpaged `jobsQuery`.
+It returns at most 100 metadata options (UI: 40), a purpose/search-bound cursor and
+one freshly resolved selected item. Literal search/paging loads on explicit demand;
+it never accumulates every page or requests a full session/commercial DTO.
+`job_attachment` requires current `jobs.manage`/MFA, matching upload registration.
+`participant_course` requires current `courses.manage`/MFA, independently of lecturer
+marketplace eligibility. Course results deduplicate by run and project template
+title, run organization, first course session/IANA zone and a short run reference.
+They do not project or search hidden job text or grant financial/job-detail rights.
+A real representative job UUID keeps `create_chat_group(p_job_id)` compatible.
+
+Personal upload and topic-chat flows start no privileged option query. A connected
+upload/create action appears only after exact selection validation; keeping the
+same native control during that request preserves keyboard focus without confirming
+an operation optimistically. Known permission denial hides the operation/options
+and refreshes surrounding capabilities; ordinary transport failure preserves a
+current draft. Existing file scanning, resource ACLs, channel uniqueness and claim
+transactions remain authoritative. The obsolete shared `jobsQuery` export is removed;
+the independent administrative board still discloses its newest-500 limit. See
+[JOB_PICKERS](JOB_PICKERS.md).
+
+## ADR-020 — bounded explicit global-event publication
+
+M8 extends existing `public.global_events`; it does not introduce another event
+catalogue or change private appointments into global records. `global_calendar_events`
+queries actual overlap with the visible FullCalendar window, at most 93 days,
+using `(updated_at,id)` cursor pages (UI 50, API at most 100). Ordinary active
+accounts see published, unarchived events only. `p_manage=true` requires current
+`courses.manage`/MFA. Existing authorized published-course sessions remain a separate
+integration with their existing bounds; their paging was not silently rewritten.
+
+`manage_global_event` takes the actor profile SHARE lock before a fresh current
+permission check, then exact request/event locks and observed-version checks.
+`private.global_event_requests` binds actor/request to exact parameters and the
+original result. Save creates a draft; editing published content also unpublishes
+it. Publish, unpublish, archive and recover are explicit actions; recovery returns
+an unpublished draft. This updates the same row, unlike announcements' separate
+immutable published-revision pointers. Description and validated HTTPS link are
+published content, not file attachments or fetched remote content. Finite instants,
+IANA zones, DST input validation and unchanged exact seconds are preserved. There
+is no scheduled publication, email/push worker or private-calendar bypass. See
+[CALENDAR](CALENDAR.md).
+
+## ADR-021 — self-shared exact qualification evidence
+
+`lecturer_topics` remains the current eligibility/verification record. Four private
+relations add current evidence/CAS state, exact evidence bindings, protected events
+and request fingerprints. No historical decisions are invented for old verifications.
+An eligible owner uploads through the existing personal certificate/scanner path,
+then explicitly shares one clean `document_versions.id` and SHA-256 for a selected
+topic. Upload/share does not verify eligibility. `own_qualification_certificates`
+pages only that account's clean certificate versions, including intentional older
+versions; it is not a reviewer-wide document/version listing.
+
+`qualification_review` and `qualification_history` require the owner or current
+`qualifications.verify`/MFA and an active eligible lecturer target. Review requires
+the current selected topic; history remains scoped to its owner/topic after
+deselection. `save_qualification_evidence` binds/withdraws with CAS and
+request identity. `attest_qualification` records an explicit manual or current
+shared-evidence decision. The unchanged `verify_lecturer_topic` signature delegates
+to this same decision/history core as a legacy manual attestation. Mutations lock
+the actor profile before fresh authorization, then the target/topic/state; role
+withdrawal cannot be bypassed by an earlier pre-lock permission result. Dirty review
+drafts retain their observed evidence/version and unchanged expiry retains exact
+seconds/milliseconds. Exact retries append no event and return the currently
+sanitized record, not stale withdrawn metadata.
+
+Qualification permission no longer grants blanket foreign certificate reads or
+foreign certificate uploads. Existing `users.manage`/MFA CV access, contract and
+finance capabilities retain their separate meanings; no new CV/contract/invoice
+right follows from qualification review. `qualification_evidence_access` resolves
+only the current shared binding. Files Edge action `qualification_evidence_download`
+checks caller authorization, exact clean version, owner/personal-certificate scope,
+size and SHA-256, retrieves bounded bytes with server authority, hashes them and
+rechecks the caller's current binding before release. No reusable Storage URL or
+access to replacement/all-version bytes is created.
+
+Withdrawal, replacement, document soft archive or expertise deselection ends the
+old evidence download. Re-adding a topic does not resurrect it. These actions do
+not revoke a previous verification or rewrite an accepted claim/fee/session;
+revocation of eligibility is an explicit management decision. Browser users cannot
+edit event history. Privileged account/version purges have documented cascade
+semantics for controlled cleanup; this is not a retention UI or tamper-proof archive
+claim. See [QUALIFICATIONS](QUALIFICATIONS.md) and physical keys in [ERD](ERD.md).
+
 ## Current scope and evidence boundaries
 
 The 24 accepted M6 migrations remain unchanged. The five M7 additions are
@@ -240,14 +327,22 @@ execution grants; pure internal trigger/filter helpers revoke browser execution.
 needed by public wrappers retain their own current-actor/resource checks. Service credentials remain server-only. [ERD](ERD.md) records physical
 keys and exceptions rather than inferring grants from schema placement.
 
-The old job picker used by file uploads and chat group creation remains on the
-compatible bounded `jobsQuery`; complete paginated picker integration is pending.
-The administrative job board honestly displays only the newest 500 offers. Global
-search and other modules retain their own bounds; M7 does not raise the global
-1,000-row setting. Scheduled publication/delivery, richer resource folders and
-knowledge attachments, complete substitute orchestration, retention/erasure and
-production-scale/platform acceptance remain product work. Existing authored M7
-native Auth/API/browser scenarios require a complete canonical execution; focused
-SQL/component passes and the earlier M6 acceptance do not establish that result.
-Current actual outcomes belong in [QA_RESULTS](QA_RESULTS.md) and
+M8 adds `20261116003728_scoped_administrative_job_pickers`,
+`20261116003733_global_calendar_publications` and
+`20261116004358_qualification_evidence_and_attestation_history`, bringing source to
+32 migrations without replacing any earlier applied source. The picker is a
+projection; calendar extends the existing event table plus one private request
+ledger; qualification adds four private relations. New private tables use RLS and
+revoke direct browser access. See [JOB_PICKERS](JOB_PICKERS.md),
+[CALENDAR](CALENDAR.md) and [QUALIFICATIONS](QUALIFICATIONS.md).
+
+The newest-500 administrative job board remains explicitly bounded. Other course,
+search and resource lists retain their own documented bounds; neither M7 nor M8
+raises the global 1,000-row setting. Automatic substitute orchestration, richer
+resource/knowledge attachments, scheduled publication/delivery, real approved SMTP,
+ICS/invitations, retention/erasure and production-scale/platform acceptance remain
+product work. The next combined 32-migration native Auth/API/browser/PWA and
+retained-data gate must exercise interactions with the M7 file-dialog correction.
+Focused SQL/component/Edge passes and earlier milestone results do not establish
+that combined result. Current actual outcomes belong in [QA_RESULTS](QA_RESULTS.md) and
 [WORKLOG](WORKLOG.md).
