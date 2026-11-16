@@ -5,6 +5,8 @@ separate from private chats and commercial documents. User-authored subjects,
 descriptions and replies retain their authored language; interface text is
 available in German and English and uses the existing theme and responsive shell.
 
+
+Ticket creation and updates hold the current caller profile while waiting for request/ticket locks. Updates recompute support authority after a profile wait, including the manager flag used for internal notes. Suspension or staff-role withdrawal that commits first prevents both a new restricted write and an otherwise successful stored-response retry.
 ## Access and lifecycle
 
 Every active signed-in account can open and search its own tickets at `/support`.

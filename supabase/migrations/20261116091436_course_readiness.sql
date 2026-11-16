@@ -293,6 +293,10 @@ language plpgsql security definer set search_path='' as $$
 declare cfg private.course_readiness_settings; payload jsonb; result uuid;
 begin
  if not private.has_permission('courses.manage') then raise exception 'Course management and MFA required' using errcode='42501';end if;
+ -- Serialize current caller authority with role/suspension changes before
+ -- waiting on course state or returning an earlier successful request.
+ perform 1 from public.profiles where id=auth.uid() and active for share;
+ if not found or not private.has_permission('courses.manage') then raise exception 'Course management and MFA required' using errcode='42501';end if;
  perform 1 from public.course_runs where id=p_course_run_id for share;
  if not found then raise exception 'Course unavailable' using errcode='42501';end if;
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('course-readiness:'||p_course_run_id::text,0));
@@ -313,6 +317,10 @@ language plpgsql security definer set search_path='' as $$
 declare task private.course_readiness_tasks; payload jsonb; result uuid; responsible uuid; due timestamptz;
 begin
  if not private.has_permission('courses.manage') then raise exception 'Course management and MFA required' using errcode='42501';end if;
+ -- Serialize current caller authority with role/suspension changes before
+ -- waiting on course state or returning an earlier successful request.
+ perform 1 from public.profiles where id=auth.uid() and active for share;
+ if not found or not private.has_permission('courses.manage') then raise exception 'Course management and MFA required' using errcode='42501';end if;
  perform 1 from public.course_runs where id=p_course_run_id for share;
  if not found then raise exception 'Course unavailable' using errcode='42501';end if;
  if p_payload is null or jsonb_typeof(p_payload)<>'object' or (select count(*) from jsonb_object_keys(p_payload))<>5
@@ -348,6 +356,10 @@ create function private.complete_readiness_task(p_task_id uuid,p_completed boole
 language plpgsql security definer set search_path='' as $$
 declare task private.course_readiness_tasks; payload jsonb; result uuid;
 begin
+ -- Read current authority after any profile-row wait and retain that grant
+ -- through the course gate, including idempotent request replies.
+ perform 1 from public.profiles where id=auth.uid() and active for share;
+ if not found or not private.actor_active() then raise exception 'Active account required' using errcode='42501';end if;
  select * into task from private.course_readiness_tasks where id=p_task_id;
  if not found or not private.readiness_access(task.course_run_id) or not(private.has_permission('courses.manage') or task.responsible_user_id=auth.uid()) then raise exception 'Task access denied' using errcode='42501';end if;
  if p_completed is null then raise exception 'Completion decision required' using errcode='22023';end if;
@@ -369,6 +381,10 @@ create function private.acknowledge_course_instructions(p_course_run_id uuid,p_i
 language plpgsql security definer set search_path='' as $$
 declare cfg private.course_readiness_settings; payload jsonb; result uuid;
 begin
+ -- Read current authority after any profile-row wait and retain that grant
+ -- through the course gate, including idempotent request replies.
+ perform 1 from public.profiles where id=auth.uid() and active for share;
+ if not found or not private.actor_active() then raise exception 'Active account required' using errcode='42501';end if;
  if not private.readiness_access(p_course_run_id) or not private.lecturer_actor() then raise exception 'Assigned lecturer required' using errcode='42501';end if;
  perform 1 from public.course_runs where id=p_course_run_id for share;
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('course-readiness:'||p_course_run_id::text,0));

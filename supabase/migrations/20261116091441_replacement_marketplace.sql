@@ -105,6 +105,7 @@ declare c public.job_claims; j public.jobs; prior private.replacement_requests; 
 begin
  if not private.actor_active() then raise exception 'Active account required' using errcode='42501';end if;
  perform 1 from public.profiles where id=auth.uid() and active for share;
+ if not found or not private.actor_active() then raise exception 'Active account required' using errcode='42501';end if;
  if p_request_id is null or p_reason is null or length(trim(p_reason)) not between 5 and 1000
  or p_mode is null or p_mode not in('open','selected') or p_invited_user_ids is null or p_emergency is null
  or cardinality(p_invited_user_ids)>50 or (p_mode='selected' and cardinality(p_invited_user_ids)=0)
@@ -145,6 +146,8 @@ begin
  if p_request_id is null or p_expected_version is null then raise exception 'Invalid replacement request' using errcode='22023';end if;
  payload=jsonb_build_object('action','cancel','offer',p_offer_id,'version',p_expected_version);
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('replacement:'||auth.uid()::text||p_request_id::text,0));
+ perform 1 from public.profiles where id=auth.uid() and active for share;
+ if not found or not private.actor_active() then raise exception 'Active account required' using errcode='42501';end if;
  select * into o from private.replacement_offers where id=p_offer_id for update;
  if o.id is null or not(exists(select 1 from public.job_claims where id=o.original_claim_id and lecturer_id=auth.uid()) and private.lecturer_actor() or private.has_permission('jobs.manage')) then raise exception 'Replacement access denied' using errcode='42501';end if;
  select * into prior from private.replacement_requests where actor_id=auth.uid() and request_id=p_request_id;
@@ -166,6 +169,12 @@ begin
  if p_request_id is null or p_expected_version is null or p_terms_version is null then raise exception 'Invalid replacement request' using errcode='22023';end if;
  payload=jsonb_build_object('action','claim','offer',p_offer_id,'version',p_expected_version,'terms_version',p_terms_version);
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('replacement:'||auth.uid()::text||p_request_id::text,0));
+ -- A request-gate wait may outlive suspension or role withdrawal. Hold the
+ -- current profile before disclosing a retained receipt or beginning handover;
+ -- administrative role/status mutations serialize on this same row.
+ perform 1 from public.profiles where id=auth.uid() and active for share;
+ if not found or not private.actor_active() then raise exception 'Active account required' using errcode='42501';end if;
+ if not private.lecturer_actor() then return jsonb_build_object('status','not_eligible');end if;
  select * into prior from private.replacement_requests where actor_id=auth.uid() and request_id=p_request_id;
  if found then
   if prior.payload<>payload then raise exception 'Replacement idempotency conflict' using errcode='22023';end if;

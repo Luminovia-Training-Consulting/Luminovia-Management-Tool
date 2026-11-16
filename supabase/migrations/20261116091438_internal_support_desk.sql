@@ -194,7 +194,10 @@ create function private.create_support_ticket(p_payload jsonb,p_request_id uuid)
 language plpgsql security definer set search_path='' as $$
 declare existing private.support_requests; ticket uuid; course uuid; claim uuid; organisation uuid;
 begin
- if not private.actor_active() then raise exception 'Support access denied' using errcode='42501'; end if;
+ -- The request gate can wait behind another transaction. Hold current account
+ -- activity through that wait before returning a prior ticket or creating one.
+ perform 1 from public.profiles where id=auth.uid() and active for share;
+ if not found or not private.actor_active() then raise exception 'Support access denied' using errcode='42501'; end if;
  if p_request_id is null or p_payload is null or jsonb_typeof(p_payload)<>'object'
  or exists(select 1 from jsonb_object_keys(p_payload) k where k not in ('title','description','category','course_run_id','claim_id','organisation_id'))
  or jsonb_typeof(p_payload->'title') is distinct from 'string' or length(trim(p_payload->>'title')) not between 1 and 200
@@ -223,6 +226,11 @@ create function private.update_support_ticket(p_ticket_id uuid,p_action text,p_p
 language plpgsql security definer set search_path='' as $$
 declare ticket private.support_tickets; existing private.support_requests; manager boolean:=private.has_permission('support.manage'); signature jsonb; target uuid; target_status text; reason text; internal boolean:=false; d public.documents; v public.document_versions;
 begin
+ -- Role/status updates lock this same profile. Re-evaluate the cached manager
+ -- flag only after that wait and retain authority through ticket/request locks.
+ perform 1 from public.profiles where id=auth.uid() and active for share;
+ if not found or not private.actor_active() then raise exception 'Support access denied' using errcode='42501';end if;
+ manager:=private.has_permission('support.manage');
  if not private.can_read_support(p_ticket_id) then raise exception 'Support access denied' using errcode='42501'; end if;
  if p_request_id is null or p_action is null or p_action not in ('reply','internal_note','status','assign','priority','reopen','links','attach') or p_payload is null or jsonb_typeof(p_payload)<>'object' or p_expected_version is null then raise exception 'Invalid support action' using errcode='22023'; end if;
  signature:=jsonb_build_object('ticket',p_ticket_id,'action',p_action,'payload',p_payload,'version',p_expected_version);
