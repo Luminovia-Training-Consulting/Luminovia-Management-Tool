@@ -66,6 +66,25 @@ Full product/module scope and independently ongoing PR acceptance remain unchang
 - [ ] Integrate PR27's actual accepted publication-control ancestry once its exclusive prior merge completes; no broad feature bundle is required.
 - [ ] Complete isolated local application and final exact-head application/native/security/package checks, then merge PR10 as directly authorised. Historical native and source-level passes are not substituted for the final combined revision.
 
+## Local course integration with accepted Main27
+
+- [x] Integrate actual accepted `e88df84c46e9739eeeb4d98c6ff18a9c950e93ef`, preserving the customer-neutral catalogue/source/PDF history, all 27 published SQL sources and the independent precise-course/form-recovery work.
+- [x] Pass the permitted focused 54-case course/finance/wiki run, TypeScript, whole-tree ESLint, source formatting and compiler integrity checks on this composition; record actual results in WORKLOG. Direct main comparison confirms all 27 SQL blobs and catalogue data are unchanged.
+- [ ] Keep the PR10 QA/main priority: no new full local/backend/browser/native run, push, PR readiness, auto-merge or main merge during that window. The successful full `f11921b` evidence below remains historical, not a Main27 claim.
+
+## Main26 course precision and critical form recovery
+
+Independent delivery from exact main `fabd71a7958d7814c18e3403877e542c20c3bea2`; all 26 migrations, current server authority and the complete target ledger below are preserved. This slice contains no M7 product functionality or server/schema changes.
+
+- [x] Reproduce the actual unchanged-session truncation and known DST-fold save refusal before changing course source; both targeted cases fail on the original Main26 implementation.
+- [x] Preserve unchanged session endpoints by form-local original identity and zone; strictly parse edited/new endpoints, strip local identity from the RPC payload and compare PostgreSQL microseconds correctly.
+- [x] Pass 26 actual course component cases plus 28 finance/wiki failure-recovery cases, and the complete 303-test/55-file frontend suite. Measured coverage over 119 source files is S59.01/B53.55/F49.11/L61.23%; existing coverage gates/exclusions remain unchanged.
+- [x] Pass TypeScript, whole-tree ESLint, source formatting, compiler connectivity/export audit and synthetic production/PWA build.
+- [x] Integrate accepted guided-experience main `0a6002a5` with both ledgers preserved; rerun the full frontend suite: 308/308 tests, S59.11/B53.71/F49.17/L61.32%, 119 sources.
+- [x] Prepare a genuine PostgreSQL precision/atomicity contract and one real browser journey in both desktop/mobile projects; fix the discovered shared-fixture nullable typing without changing valid Auth/MFA or data-less writes. Strict E2E typing passes; actual SQL/browser execution is pending.
+- [x] Pass canonical local acceptance on signed f11921b: all SQL/RLS/concurrency stages, 19 actual API suites, real Edge/Mailpit, 90 desktop/mobile cases (both new precision cases) and 2 built-PWA cases; checked cleanup. Actual native-image and exact-head GitHub checks remain separate.
+- [ ] Publish the independently reviewed signed slice through its own PR; observe exact-head required security/application/native checks and merge only after their actual successful results. Local frontend acceptance does not certify SQL/API/browser/native or production behavior.
+
 ## Final PR13 delivery gates
 
 - [x] Integrate actual accepted main `e048edb` and preserve current PR23 `7767564` ancestry, all27migration sources, English/private-role guidance and both ledgers.
