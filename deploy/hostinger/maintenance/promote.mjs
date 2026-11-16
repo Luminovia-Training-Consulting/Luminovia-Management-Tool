@@ -1,9 +1,11 @@
 /**
- * Promote only verified changes from the fixed maintenance allowlist. Compare the expected main base before creating a signed commit so a stale candidate cannot overwrite concurrent work.
+ * Publish tested allowlisted maintenance changes as signed, deterministic PRs.
+ * Native review/CI rules govern the final merge; no direct main write is used.
+ * Verify the tested base and remote contents before resuming a partial publication.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -325,97 +327,349 @@ async function createSignedCommit(branch, base, additions, headline, api) {
   );
   return commit;
 }
-// Recheck current main and promote only a fully validated candidate whose base is still current.
-// Keep the final branch update bound to the checked base; a concurrent main update wins over a stale patch.
+const maintenanceLabels = ["type:dependencies", "area:devops", "risk:high"];
+const promotionPrefix = "/repos/" + REPOSITORY;
+/** Match GitHub's Git blob ID for already validated base64 bytes. SHA-1 is
+ * required by this repository's Git object format; this is not a password or
+ * authenticity primitive. Parent/signature checks separately bind the commit. */
+function gitBlobSha(contents) {
+  const bytes = Buffer.from(contents, "base64");
+  return createHash("sha1")
+    .update("blob " + bytes.length + "\0")
+    .update(bytes)
+    .digest("hex");
+}
+/** Check the remote branch against the exact tested patch before publishing.
+ * Reject extra parents/files, changed bytes and unverified signatures rather
+ * than overwriting an existing branch that a person may have edited. */
+async function verifyMaintenanceCommit(commit, patch, api) {
+  assert(/^[a-f0-9]{40}$/.test(commit));
+  const verification = await api(promotionPrefix + "/git/commits/" + commit);
+  assert(
+    verification.sha === commit &&
+      verification.verification?.verified === true &&
+      verification.verification?.reason === "valid" &&
+      verification.parents?.length === 1 &&
+      verification.parents[0].sha === patch.baseCommit,
+    "Existing maintenance branch is not the signed tested candidate.",
+  );
+  const comparison = await api(
+    promotionPrefix + "/compare/" + patch.baseCommit + "..." + commit,
+  );
+  assert(
+    comparison.total_commits === 1 &&
+      comparison.status === "ahead" &&
+      Array.isArray(comparison.files) &&
+      comparison.files.length === patch.files.length,
+    "Maintenance branch changed files outside its tested candidate.",
+  );
+  const expected = new Map(
+    patch.files.map((item) => [item.path, gitBlobSha(item.contents)]),
+  );
+  for (const file of comparison.files) {
+    assert(
+      expected.has(file.filename) &&
+        expected.get(file.filename) === file.sha &&
+        ["added", "modified"].includes(file.status),
+      "Maintenance branch contents differ from the tested candidate.",
+    );
+    expected.delete(file.filename);
+  }
+  assert(expected.size === 0);
+}
+/** Bind every later mutation to this repository, main target, deterministic
+ * branch, tested head and ownership marker. Recheck after label writes so a
+ * concurrent edit cannot silently redirect the auto-merge request. */
+function verifyMaintenancePr(pr, branch, commit, marker) {
+  assert(
+    Number.isSafeInteger(pr?.number) &&
+      pr.number > 0 &&
+      typeof pr.node_id === "string" &&
+      pr.node_id.length > 0 &&
+      pr.head?.sha === commit &&
+      pr.head.ref === branch &&
+      pr.head.repo?.full_name === REPOSITORY &&
+      pr.base?.ref === "main" &&
+      pr.base.repo?.full_name === REPOSITORY &&
+      typeof pr.body === "string" &&
+      pr.body.includes(marker) &&
+      ["open", "closed"].includes(pr.state) &&
+      Array.isArray(pr.labels),
+    "Maintenance PR identity or tested candidate changed.",
+  );
+}
+/** Add the existing catalogue labels with the App's PR permission. Existing
+ * type/risk choices are checked, never silently replaced; remote readback in
+ * promote confirms classification before any native merge operation. */
+async function labelMaintenancePr(pr, api) {
+  const labels = new Set(pr.labels.map((label) => label.name));
+  assert(
+    [...labels].every((name) => typeof name === "string") &&
+      [...labels]
+        .filter((name) => name.startsWith("type:"))
+        .every((name) => name === maintenanceLabels[0]) &&
+      [...labels]
+        .filter((name) => name.startsWith("risk:"))
+        .every((name) => name === maintenanceLabels[2]),
+    "Maintenance PR classification was changed; preserve the reviewed labels.",
+  );
+  if (maintenanceLabels.every((name) => labels.has(name))) return;
+  const [owner, name] = REPOSITORY.split("/");
+  const response = await api("/graphql", {
+    method: "POST",
+    body: {
+      query:
+        'query($owner:String!,$name:String!){repository(owner:$owner,name:$name){type:label(name:"type:dependencies"){id name} area:label(name:"area:devops"){id name} risk:label(name:"risk:high"){id name}}}',
+      variables: { owner, name },
+    },
+  });
+  assert(!response.errors, "Maintenance PR label lookup failed.");
+  const ids = ["type", "area", "risk"].map((key, index) => {
+    const label = response.data?.repository?.[key];
+    assert(
+      label?.name === maintenanceLabels[index] &&
+        typeof label.id === "string" &&
+        label.id.length > 0,
+      "A required maintenance label is unavailable.",
+    );
+    return label.id;
+  });
+  const labelled = await api("/graphql", {
+    method: "POST",
+    body: {
+      query:
+        "mutation($input:AddLabelsToLabelableInput!){addLabelsToLabelable(input:$input){labelable{... on PullRequest{id}}}}",
+      variables: { input: { labelableId: pr.node_id, labelIds: ids } },
+    },
+  });
+  assert(
+    !labelled.errors &&
+      labelled.data?.addLabelsToLabelable?.labelable?.id === pr.node_id,
+    "Maintenance PR labels were not confirmed.",
+  );
+}
+
+/** Publish the tested candidate on an isolated signed branch. Native PR
+ * auto-merge enforces current reviews and CI without any branch-rule bypass.
+ * A deterministic branch and exact-content verification make lost responses
+ * recoverable without overwriting edits or publishing duplicate pull requests. */
 export async function promote(patch, { root = ROOT, api = github } = {}) {
   validatePatch(patch, root);
-  const branch = await api("/repos/" + REPOSITORY + "/branches/main");
-  if (branch.commit?.sha !== patch.baseCommit)
+  const main = await api(promotionPrefix + "/branches/main");
+  assert(/^[a-f0-9]{40}$/.test(main.commit?.sha));
+  if (main.commit.sha !== patch.baseCommit)
     return { status: "stale_candidate_main_moved" };
-  const commit = await createSignedCommit(
-    "main",
-    patch.baseCommit,
-    patch.files.map((item) => ({ path: item.path, contents: item.contents })),
-    "chore: apply verified daily stable component updates",
-    api,
+  const digest = sha(
+    JSON.stringify({
+      base: patch.baseCommit,
+      files: [...patch.files]
+        .sort((a, b) => a.path.localeCompare(b.path))
+        .map(({ path, baseSha256, sha256 }) => ({ path, baseSha256, sha256 })),
+    }),
   );
   // The scoped App also triggers push CI. Explicit dispatch binds the exact
   // signed revision; the existing main concurrency group coalesces duplicate runs.
   await api("/repos/" + REPOSITORY + "/actions/workflows/ci.yml/dispatches", {
     method: "POST",
-    body: { ref: "main", inputs: { expected_commit: commit } },
+    body: {
+      query:
+        "mutation($input:EnablePullRequestAutoMergeInput!){enablePullRequestAutoMerge(input:$input){pullRequest{id number state headRefOid autoMergeRequest{mergeMethod}}}}",
+      variables: {
+        input: {
+          pullRequestId: pr.node_id,
+          expectedHeadOid: commit,
+          mergeMethod: "MERGE",
+        },
+      },
+    },
   });
-  return { status: "promoted_waiting_for_exact_main_ci", commit };
+  const observed = queued.data?.enablePullRequestAutoMerge?.pullRequest;
+  assert(
+    !queued.errors &&
+      observed?.id === pr.node_id &&
+      observed.number === pr.number &&
+      observed.headRefOid === commit &&
+      (observed.state === "MERGED" ||
+        (observed.state === "OPEN" &&
+          observed.autoMergeRequest?.mergeMethod === "MERGE")),
+    "Maintenance PR auto-merge was not confirmed.",
+  );
+  return {
+    ...result,
+    status:
+      observed.state === "MERGED"
+        ? "maintenance_pr_merged"
+        : "maintenance_pr_waiting_for_required_checks_and_review",
+  };
 }
-// Test actual signing capability through the current GitHub write path on an owned probe ref.
+// Exercise actual signing and PR permissions on an owned draft; never queue or merge it.
 export async function signatureProbe(api = github) {
-  const main = await api("/repos/" + REPOSITORY + "/branches/main");
+  const prefix = "/repos/" + REPOSITORY;
+  const main = await api(prefix + "/branches/main");
   const base = main.commit?.sha;
   assert(/^[a-f0-9]{40}$/.test(base));
-  const branch = "codex/maintenance-signature-probe-" + randomUUID();
-  let created = false;
+  const identity = randomUUID();
+  const branch = "codex/maintenance-signature-probe-" + identity;
+  const marker = "<!-- luminovia-maintenance-pr-probe:" + identity + " -->";
+  const labels = ["type:tests", "area:github", "risk:low"];
+  const refPath = prefix + "/git/ref/heads/" + branch;
+  assert(
+    (await api(refPath, { allowMissing: true })) === null,
+    "Temporary probe ref already exists; it was left untouched.",
+  );
+  let createAttempted = false;
+  let prCleanupIdentitySafe = true;
+  let temporaryBranchCleaned = false;
+  let prAttempted = false;
+  let commit, probePullRequest;
+  let temporaryPrClosed = false;
+  const ownedDraft = (pr) =>
+    Number.isSafeInteger(pr?.number) &&
+    pr.number > 0 &&
+    pr.draft === true &&
+    ["open", "closed"].includes(pr.state) &&
+    pr.head?.ref === branch &&
+    pr.head.sha === commit &&
+    pr.head.repo?.full_name === REPOSITORY &&
+    pr.base?.ref === "main" &&
+    pr.base.repo?.full_name === REPOSITORY &&
+    typeof pr.body === "string" &&
+    pr.body.includes(marker);
   try {
-    await api("/repos/" + REPOSITORY + "/git/refs", {
+    createAttempted = true;
+    await api(prefix + "/git/refs", {
       method: "POST",
       body: { ref: "refs/heads/" + branch, sha: base },
     });
-    created = true;
-    const commit = await createSignedCommit(
+    commit = await createSignedCommit(
       branch,
       base,
       [
         {
           path: "docs/MAINTENANCE_SIGNATURE_PROBE.txt",
           contents: Buffer.from(
-            "Temporary signed maintenance probe; main is unchanged.\n",
+            "Temporary signed maintenance PR probe; main is unchanged.\n",
           ).toString("base64"),
         },
       ],
-      "chore: verify automatic maintenance signing",
+      "chore: verify maintenance signing and PR permissions",
       api,
     );
-    return {
-      status: "passed",
-      commit,
-      mainUnchanged: true,
-      temporaryBranchCleaned: true,
-    };
+    prAttempted = true;
+    const pr = await api(prefix + "/pulls", {
+      method: "POST",
+      body: {
+        title: "test: verify temporary maintenance PR capability",
+        head: branch,
+        base: "main",
+        draft: true,
+        body:
+          marker +
+          "\n\nTemporary signing and PR-permission diagnostic. This draft is closed and its branch removed by the diagnostic; it must never be merged.\n",
+      },
+    });
+    assert(
+      ownedDraft(pr) && pr.state === "open",
+      "Temporary draft PR identity was not confirmed.",
+    );
+    probePullRequest = pr.number;
+    await api(prefix + "/issues/" + probePullRequest + "/labels", {
+      method: "POST",
+      body: { labels },
+    });
+    const observed = await api(prefix + "/pulls/" + probePullRequest);
+    assert(
+      ownedDraft(observed) &&
+        observed.state === "open" &&
+        Array.isArray(observed.labels) &&
+        labels.every((name) =>
+          observed.labels.some((label) => label.name === name),
+        ),
+      "Temporary draft PR and required labels were not confirmed.",
+    );
   } finally {
-    if (created)
-      await api("/repos/" + REPOSITORY + "/git/refs/heads/" + branch, {
-        method: "DELETE",
-      });
+    try {
+      if (prAttempted) {
+        prCleanupIdentitySafe = false;
+        let pr;
+        if (probePullRequest) {
+          pr = await api(prefix + "/pulls/" + probePullRequest);
+          assert(
+            ownedDraft(pr),
+            "Temporary PR changed; no unrelated PR was closed.",
+          );
+        } else {
+          // A successful create may lose its response. Recover only our exact
+          // marker, signed head and draft identity before closing any PR.
+          const matches = await api(
+            prefix +
+              "/pulls?state=all&head=" +
+              encodeURIComponent(REPOSITORY.split("/")[0] + ":" + branch) +
+              "&base=main&per_page=100",
+          );
+          assert(
+            Array.isArray(matches) && matches.length < 100,
+            "Temporary PR cleanup lookup was incomplete.",
+          );
+          const owned = matches.filter(ownedDraft);
+          assert(
+            owned.length <= 1,
+            "Temporary PR cleanup identity was ambiguous.",
+          );
+          pr = owned[0];
+          if (pr) probePullRequest = pr.number;
+          else prCleanupIdentitySafe = matches.length === 0;
+        }
+        if (pr) {
+          prCleanupIdentitySafe = true;
+          if (pr.state === "open")
+            pr = await api(prefix + "/pulls/" + pr.number, {
+              method: "PATCH",
+              body: { state: "closed" },
+            });
+          prCleanupIdentitySafe = ownedDraft(pr);
+          assert(
+            prCleanupIdentitySafe && pr.state === "closed",
+            "Temporary draft PR closure was not confirmed.",
+          );
+          temporaryPrClosed = true;
+        }
+      }
+    } finally {
+      if (createAttempted) {
+        const ref = await api(refPath, { allowMissing: true });
+        if (ref !== null) {
+          assert(
+            prCleanupIdentitySafe &&
+              ref?.ref === "refs/heads/" + branch &&
+              (ref.object?.sha === base ||
+                (commit && ref.object?.sha === commit)),
+            "Temporary probe identity or head changed; preserve it for inspection.",
+          );
+          await api(prefix + "/git/refs/heads/" + branch, { method: "DELETE" });
+        }
+        temporaryBranchCleaned = true;
+      }
+    }
   }
-}
-// Dispatch CI only for the expected current main commit; starting a workflow does not mean it passed.
-export async function retryMainChecks(api = github) {
-  const branch = await api("/repos/" + REPOSITORY + "/branches/main");
-  const commit = branch.commit?.sha;
-  assert(/^[a-f0-9]{40}$/.test(commit));
-  const release = await api(
-    "/repos/" + REPOSITORY + "/releases/tags/cms-dev-" + commit,
-    { allowMissing: true },
+  assert(
+    temporaryPrClosed &&
+      temporaryBranchCleaned &&
+      Number.isSafeInteger(probePullRequest),
   );
-  if (release?.immutable === true && !release.draft)
-    return { status: "current_main_already_released", commit };
-  const runs = await api(
-    "/repos/" +
-      REPOSITORY +
-      "/actions/workflows/ci.yml/runs?branch=main&head_sha=" +
-      commit +
-      "&per_page=10",
+  const after = await api(prefix + "/branches/main");
+  assert(
+    after.commit?.sha === base,
+    "Main changed during the diagnostic; no probe acceptance was recorded.",
   );
-  if (
-    runs.workflow_runs.some(
-      (run) => run.head_sha === commit && run.status !== "completed",
-    )
-  )
-    return { status: "exact_main_checks_already_running", commit };
-  await api("/repos/" + REPOSITORY + "/actions/workflows/ci.yml/dispatches", {
-    method: "POST",
-    body: { ref: "main", inputs: { expected_commit: commit } },
-  });
-  return { status: "retried_unreleased_main_checks", commit };
+  return {
+    status: "passed",
+    commit,
+    probePullRequest,
+    mainUnchanged: true,
+    temporaryPrClosed: true,
+    temporaryBranchCleaned: true,
+  };
 }
 // Handle only documented subcommands and propagate failures as a failed process exit.
 async function cli() {
@@ -423,11 +677,9 @@ async function cli() {
   const result =
     operation === "signature-probe"
       ? await signatureProbe()
-      : operation === "retry-main"
-        ? await retryMainChecks()
-        : operation === "promote"
-          ? await promote(JSON.parse(await readFile(file, "utf8")))
-          : null;
+      : operation === "promote"
+        ? await promote(JSON.parse(await readFile(file, "utf8")))
+        : null;
   assert(result, "Unknown promotion operation.");
   console.log(JSON.stringify(result));
   if (process.env.GITHUB_STEP_SUMMARY)

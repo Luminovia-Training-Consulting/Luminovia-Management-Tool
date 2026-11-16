@@ -1,5 +1,5 @@
 # Daily component maintenance: verify each candidate, verify the combined set
-# again, and promote only a successful revision bound to its source.
+# again, then publish a signed PR whose normal review and CI gates govern merge.
 name: Daily verified component maintenance
 on:
   schedule:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       signature_probe_only:
-        description: Verify GitHub Actions signed promotion without changing main
+        description: Verify maintenance App signing and draft PR access without changing main
         required: false
         default: false
         type: boolean
@@ -24,7 +24,7 @@ jobs:
     # stop a modified branch workflow from stealing a repository-level secret.
     environment: maintenance-signing
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -60,6 +60,24 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version-file: ".node-version"
+      - name: Require the existing maintenance App
+        env:
+          APP_ID: ${{ vars.MAINTENANCE_APP_ID }}
+        run: test "$APP_ID" = "5776881"
+      - name: Create a repository-scoped diagnostic token
+        id: maintenance-app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.MAINTENANCE_APP_ID }}
+          private-key: ${{ secrets.MAINTENANCE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Verify the existing App identity
+        env:
+          APP_SLUG: ${{ steps.maintenance-app-token.outputs.app-slug }}
+        run: test "$APP_SLUG" = "luminovia-portal-maintenance"
       - env:
           GH_TOKEN: ${{ steps.maintenance-app-token.outputs.token }}
         run: node deploy/hostinger/maintenance/promote.mjs signature-probe
@@ -134,6 +152,9 @@ jobs:
         id: dependencies
         run: npm ci
       - if: steps.apply.outputs.changed == 'true'
+        name: Install official backup encryption test dependency
+        run: sudo apt-get update -qq && sudo apt-get install -y age
+      - if: steps.apply.outputs.changed == 'true'
         id: application
         name: Complete candidate application verification
         run: ./portal test
@@ -197,6 +218,9 @@ jobs:
       - if: steps.assemble.outputs.changed == 'true'
         run: npm ci
       - if: steps.assemble.outputs.changed == 'true'
+        name: Install official backup encryption test dependency
+        run: sudo apt-get update -qq && sudo apt-get install -y age
+      - if: steps.assemble.outputs.changed == 'true'
         name: Verify assembled application combination
         run: ./portal test
       - if: steps.assemble.outputs.changed == 'true'
@@ -255,6 +279,9 @@ jobs:
           cache: npm
       - if: steps.assemble.outputs.changed == 'true'
         run: npm ci
+      - if: steps.assemble.outputs.changed == 'true'
+        name: Install official backup encryption test dependency
+        run: sudo apt-get update -qq && sudo apt-get install -y age
       - if: steps.assemble.outputs.changed == 'true'
         name: Verify the isolated fallback application
         run: ./portal test
@@ -327,7 +354,25 @@ jobs:
         with:
           name: maintenance-fallback
           path: ${{ runner.temp }}/maintenance-selected
-      - name: Sign tested main change and dispatch exact-revision CI
+      - name: Require the existing maintenance App
+        env:
+          APP_ID: ${{ vars.MAINTENANCE_APP_ID }}
+        run: test "$APP_ID" = "5776881"
+      - name: Create a repository-scoped maintenance PR token
+        id: maintenance-app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.MAINTENANCE_APP_ID }}
+          private-key: ${{ secrets.MAINTENANCE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Verify the existing App identity
+        env:
+          APP_SLUG: ${{ steps.maintenance-app-token.outputs.app-slug }}
+        run: test "$APP_SLUG" = "luminovia-portal-maintenance"
+      - name: Publish signed tested candidate as a protected pull request
         if: (needs.combined.result == 'success' && needs.combined.outputs.changed == 'true') || (needs.combined.result == 'failure' && needs.fallback.result == 'success' && needs.fallback.outputs.changed == 'true')
         env:
           GH_TOKEN: ${{ steps.maintenance-app-token.outputs.token }}
