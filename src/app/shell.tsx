@@ -253,15 +253,15 @@ export function Shell() {
             <Notice kind="error">{t("profileMissing")}</Notice>
           ) : (
             <>
-              <WelcomeGuideEntry />
-
               <PortalTour
                 key={session!.user.id}
                 actor={session!.user.id}
                 roles={roles.data ?? []}
                 permissions={permissions.data ?? []}
                 ready={permissions.isSuccess && roles.isSuccess}
-              />
+              >
+                <WelcomeGuideEntry />
+              </PortalTour>
               <Outlet />
             </>
           )}

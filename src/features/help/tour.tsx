@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Compass, CircleHelp } from "lucide-react";
@@ -59,11 +59,13 @@ export function PortalTour({
   roles,
   permissions,
   ready,
+  children,
 }: {
   actor: string;
   roles: readonly string[];
   permissions: readonly string[];
   ready: boolean;
+  children?: ReactNode;
 }) {
   const { i18n } = useTranslation();
   const text = guideText(copy, i18n.language);
@@ -78,7 +80,9 @@ export function PortalTour({
     modules.findIndex((module) => module.id === state.step),
   );
   const step = modules[index];
-  const active = ready && state.status === "active" && Boolean(step);
+  const manualWelcome = /^\/welcome\/?$/.test(location.pathname);
+  const active =
+    ready && !manualWelcome && state.status === "active" && Boolean(step);
   const update = (next: TourState) => {
     setState(next);
     storeTour(actor, next);
@@ -110,118 +114,121 @@ export function PortalTour({
     return () => window.removeEventListener("keydown", onEscape);
   }, [active, actor, state.step]);
   return (
-    <section
-      className={`portal-tour ${active ? "portal-tour-active" : ""}`}
-      aria-label={text.title}
-    >
-      <div className="portal-tour-entry">
-        <Button
-          ref={launcher}
-          variant="secondary"
-          disabled={!ready || !step}
-          onClick={() => visit(state.status === "paused" ? index : 0)}
-        >
-          <Compass size={18} aria-hidden="true" />
-          {state.status === "paused" ? text.resume : text.title}
-        </Button>
-        <Link to="/help" className="text-link">
-          <CircleHelp size={18} aria-hidden="true" />
-          {i18n.language.startsWith("de")
-            ? "Hilfe & Anleitungen"
-            : "Help & guides"}
-        </Link>
-        <Link to="/demo" className="text-link">
-          {text.demo}
-        </Link>
-      </div>
-      {!ready && <p role="status">{text.unavailable}</p>}
-      {state.status === "completed" && <p role="status">{text.done}</p>}
-      {active && step && (
-        <div className="portal-tour-content">
-          <p className="fine-print">{text.safe}</p>
-          <p aria-live="polite">
-            {text.count} {index + 1} / {modules.length}
-          </p>
-          <progress
-            value={index + 1}
-            max={modules.length}
-            aria-label={text.title}
-          />
-          <h2 tabIndex={-1} ref={heading}>
-            {guideText(step.title, i18n.language)}
-          </h2>
-          <p>{guideText(step.summary, i18n.language)}</p>
-          <ol>
-            {guideText(step.steps, i18n.language).map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ol>
-          <label className="portal-tour-jump">
-            {text.section}
-            <select
-              value={step.id}
-              onChange={(event) =>
-                visit(
-                  modules.findIndex(
-                    (module) => module.id === event.target.value,
-                  ),
-                )
-              }
-            >
-              {modules.map((module) => (
-                <option value={module.id} key={module.id}>
-                  {guideText(module.title, i18n.language)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="portal-tour-controls">
-            <Button
-              variant="secondary"
-              disabled={index === 0}
-              onClick={() => visit(index - 1)}
-            >
-              {text.back}
-            </Button>
-            {location.pathname !== step.path && (
-              <Button variant="secondary" onClick={() => navigate(step.path)}>
-                {text.open}
-              </Button>
-            )}
-            <Button
-              onClick={() => {
-                if (index + 1 === modules.length) {
-                  update({ status: "completed", step: step.id });
-                  launcher.current?.focus();
-                } else visit(index + 1);
-              }}
-            >
-              {index + 1 === modules.length ? text.finish : text.next}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                update({ status: "paused", step: step.id });
-                launcher.current?.focus();
-              }}
-            >
-              {text.pause}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                update(initialTour);
-                launcher.current?.focus();
-              }}
-            >
-              {text.close}
-            </Button>
-            <Link to={`/help?topic=${encodeURIComponent(step.id)}`}>
-              {text.help}
-            </Link>
-          </div>
+    <>
+      {!active && children}
+      <section
+        className={`portal-tour ${active ? "portal-tour-active" : ""}`}
+        aria-label={text.title}
+      >
+        <div className="portal-tour-entry">
+          <Button
+            ref={launcher}
+            variant="secondary"
+            disabled={!ready || !step}
+            onClick={() => visit(state.status === "paused" ? index : 0)}
+          >
+            <Compass size={18} aria-hidden="true" />
+            {state.status === "paused" ? text.resume : text.title}
+          </Button>
+          <Link to="/help" className="text-link">
+            <CircleHelp size={18} aria-hidden="true" />
+            {i18n.language.startsWith("de")
+              ? "Hilfe & Anleitungen"
+              : "Help & guides"}
+          </Link>
+          <Link to="/demo" className="text-link">
+            {text.demo}
+          </Link>
         </div>
-      )}
-    </section>
+        {!ready && <p role="status">{text.unavailable}</p>}
+        {state.status === "completed" && <p role="status">{text.done}</p>}
+        {active && step && (
+          <div className="portal-tour-content">
+            <p className="fine-print">{text.safe}</p>
+            <p aria-live="polite">
+              {text.count} {index + 1} / {modules.length}
+            </p>
+            <progress
+              value={index + 1}
+              max={modules.length}
+              aria-label={text.title}
+            />
+            <h2 tabIndex={-1} ref={heading}>
+              {guideText(step.title, i18n.language)}
+            </h2>
+            <p>{guideText(step.summary, i18n.language)}</p>
+            <ol>
+              {guideText(step.steps, i18n.language).map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ol>
+            <label className="portal-tour-jump">
+              {text.section}
+              <select
+                value={step.id}
+                onChange={(event) =>
+                  visit(
+                    modules.findIndex(
+                      (module) => module.id === event.target.value,
+                    ),
+                  )
+                }
+              >
+                {modules.map((module) => (
+                  <option value={module.id} key={module.id}>
+                    {guideText(module.title, i18n.language)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="portal-tour-controls">
+              <Button
+                variant="secondary"
+                disabled={index === 0}
+                onClick={() => visit(index - 1)}
+              >
+                {text.back}
+              </Button>
+              {location.pathname !== step.path && (
+                <Button variant="secondary" onClick={() => navigate(step.path)}>
+                  {text.open}
+                </Button>
+              )}
+              <Button
+                onClick={() => {
+                  if (index + 1 === modules.length) {
+                    update({ status: "completed", step: step.id });
+                    launcher.current?.focus();
+                  } else visit(index + 1);
+                }}
+              >
+                {index + 1 === modules.length ? text.finish : text.next}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  update({ status: "paused", step: step.id });
+                  launcher.current?.focus();
+                }}
+              >
+                {text.pause}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  update(initialTour);
+                  launcher.current?.focus();
+                }}
+              >
+                {text.close}
+              </Button>
+              <Link to={`/help?topic=${encodeURIComponent(step.id)}`}>
+                {text.help}
+              </Link>
+            </div>
+          </div>
+        )}
+      </section>
+    </>
   );
 }
