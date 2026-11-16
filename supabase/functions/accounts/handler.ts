@@ -9,6 +9,9 @@ export const roles = [
   "lecturer",
   "client",
   "participant",
+  "guest",
+  "guest",
+  "guest",
 ] as const;
 // Allowed target roles are input values, not evidence of the caller's authority.
 export type AccountRole = (typeof roles)[number];
@@ -85,7 +88,7 @@ export function parseInvitation(value: unknown): Invitation | null {
     !roles.includes(role as AccountRole) ||
     !uuid(idempotency_key) ||
     (organisation_id !== null && !uuid(organisation_id)) ||
-    (role === "client") !== (organisation_id !== null)
+    (role !== "client" && organisation_id !== null)
   )
     return null;
   return {

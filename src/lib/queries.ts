@@ -30,6 +30,7 @@ export const profileQuery = (id: string) =>
 export const permissionsQuery = (id: string) =>
   queryOptions({
     queryKey: ["permissions", id],
+    refetchInterval: 30000,
     queryFn: async () => {
       const { data, error } = await db().rpc("get_my_permissions");
       if (error) throw error;
@@ -64,11 +65,9 @@ export const expertiseQuery = (id: string) =>
 /** Read authorized offer rows through the native client and propagate read/access errors. */
 export const jobsQuery = queryOptions({
   queryKey: ["jobs"],
+  refetchInterval: 30000,
   queryFn: async () => {
-    const { data, error } = await db()
-      .from("jobs")
-      .select("*,job_sessions(*),job_requirements(topic_id)")
-      .order("created_at", { ascending: false });
+    const { data, error } = await db().rpc("job_offers");
     if (error) throw error;
     return data as Job[];
   },

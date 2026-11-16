@@ -108,3 +108,5 @@ A merge can start the existing development release process. Its immutable `cms-d
 Signed annotated `milestone/*` tags identify verified historical development states. They are not PR labels or a promise of a Semver or production version. Do not move existing tags; create tags only on the intended commit.
 
 After merging, update the issue resolution when needed and track remaining tasks separately. A new task must not silently expand the original acceptance criteria or be described as already completed.
+
+The gated [PR preview package and deployment record](PR_PREVIEWS.md) provides an owned, locally runnable application preview after the complete checks. Its artifact URL is not a hosted portal URL.

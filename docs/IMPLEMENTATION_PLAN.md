@@ -15,7 +15,8 @@ This latest user instruction removes the maintenance App exception as well. It s
 - [x] Observe all14required checks passing on exact PR22 checkpoint8c50852, including84browser/2PWA and the24migration/19suite native retained-data run. Main advanced afterward, so this is not a current-base merge permit.
 - [x] Honour the authorised PR15 merge hold and integrate its actual merged43504b8main once. Both conflicts preserve current PR-only behavior plus incoming English comments,35labels and MFA fixtures;32focused guards and independent review pass.
 - [x] Extend the existing manual diagnostic with real draft-PR creation/labels/closure and owned-ref cleanup;23maintenance groups plus11metadata/1documentation pass. Unknown or externally changed resources are preserved; no diagnostic merge is attempted.
-- [ ] Honour the subsequently authorised PR18 merge hold, integrate its actual released main, then observe all15checks on the final combined PR22 head. The intentionally cancelled8176724interim run and prior8c50852checks do not satisfy this acceptance.
+- [x] Honour the subsequently authorised PR18 merge hold and integrate actualfabd71amain without conflicts, retaining its private pricing/welcome26migrations and QA fixtures. Fresh249frontend/75targeted Node cases pass.
+- [ ] Observe all15checks on the final combined PR22 head; the intentionally cancelled8176724interim run and prior8c50852checks do not satisfy this acceptance.
 - [x] Add PR18's actual successful PR preview package job as the15thmandatory Actions check, with strict up-to-date enforcement and no bypasses; synchronize current guides.
 - [ ] Verify actual short-lived App token/signature/PR CI after the source reaches protected main. The configured environment key/ID and installed scopes alone are not execution proof.
 
@@ -31,6 +32,32 @@ No App review exemption is restored: automated PRs need normal independent appro
 This current instruction supersedes historical ALWAYS/disabled guidance below. The full product ledger remains required. Admins retain settings-edit authority, but ordinary merges and pushes must satisfy the active rules.
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
+
+## PR18 complete-CI repair
+
+- [x] Correct the missing disposable compensation bootstrap after real retention, with explicit owned QA identity and three executable orchestration regressions.
+- [x] Cover candidate-only settings after the older native-selfhost baseline upgrades and passes retention/readiness; preserve no-policy normal startup.
+- [x] Integrate current main e75f55d, retaining account welcome, Portal tour and public help/demo.
+- [x] Observe actual application/quality/security success on21959fa:249unit/component tests,88desktop/mobile cases,2built-PWA cases, real retention/SQL/API and checked cleanup.
+- [x] Reproduce native replay refusal for the pending Welcome migration, add its atomic envelope without changing released history, and pass the actual24→26local selfhost retention/API/TLS/cleanup rehearsal against the prepared incoming main source.
+- [x] Integrate actual PR20/PR15 main43504b8 without losing private-pricing behavior, source comments or MFA fixture guards; normalized source review and native rehearsal passed.
+- [ ] Complete exact final-head GitHub application/native-selfhost/preview-package CI and record the observed result. No production action is part of this CI repair; do not bypass coordinated main merge holds.
+
+## Current continuation — private roles/pricing, welcome guide and PR previews
+
+The latest request supersedes the earlier shared compensation default. Work is isolated on `codex/pr-preview-welcome-roles` from `1341b16`; existing accepted business history and the full module ledger below remain in scope. Actual business percentages are private Administration configuration because the source repository is public.
+
+- [x] Implement and separately test subordinate role delegation, guest access and self/equal/higher protection across role/activation/invitation APIs; company budget memberships remain Administration-only.
+- [x] Implement private versioned compensation configuration, captured offer policies, role-scoped quotes and server-bound consent; retain accepted claims/invoices and legacy history.
+- [x] Add administration setup and accurate per-offer preview, permission-scoped role controls and own quote rendering; 215 frontend tests and the existing coverage floors pass before full acceptance.
+- [x] Add a DE/EN sequential welcome guide with own persistent progress, pause/resume/skip/restart and permission-aware links; focused frontend/SQL checks pass.
+- [x] Add read-only gated local PR packages and a separate trusted GitHub Deployment metadata publisher, with real artifact URLs, stale-run/expiry cleanup and no production-host connection.
+- [ ] Finish exact-source combined native Auth/API/desktop/mobile/PWA/retained-data acceptance; fix any actual failures without weakening assertions.
+- [ ] Publish the signed PR and observe exact-head quality/security/application/native outcomes and real downloadable artifact; record a first-PR metadata bootstrap only if actually run.
+- [ ] A continuously hosted URL per PR requires separately configured isolated hosting/backend. The implemented artifact deployment does not claim such a service.
+- [ ] Production policy setup/migration/deployment is a separate operational step; this request does not authorise production or real email changes.
+
+[Roles and private pricing](DELEGATED_ROLES_PRICING.md), [welcome guide](WELCOME_GUIDE.md), [PR previews](PR_PREVIEWS.md). The verbatim original specification remains preserved; these explicit user extensions update its operating details without dropping any remaining modules.
 
 ## Comprehensive code comments and agent guide
 
