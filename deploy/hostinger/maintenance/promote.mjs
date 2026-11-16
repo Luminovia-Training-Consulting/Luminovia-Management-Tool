@@ -640,45 +640,174 @@ export async function promote(patch, { root = ROOT, api = github } = {}) {
         : "maintenance_pr_waiting_for_required_checks_and_review",
   };
 }
-// Test actual signing capability through the current GitHub write path on an owned probe ref.
+// Exercise actual signing and PR permissions on an owned draft; never queue or merge it.
 export async function signatureProbe(api = github) {
-  const main = await api("/repos/" + REPOSITORY + "/branches/main");
+  const prefix = "/repos/" + REPOSITORY;
+  const main = await api(prefix + "/branches/main");
   const base = main.commit?.sha;
   assert(/^[a-f0-9]{40}$/.test(base));
-  const branch = "codex/maintenance-signature-probe-" + randomUUID();
-  let created = false;
+  const identity = randomUUID();
+  const branch = "codex/maintenance-signature-probe-" + identity;
+  const marker = "<!-- luminovia-maintenance-pr-probe:" + identity + " -->";
+  const labels = ["type:tests", "area:github", "risk:low"];
+  const refPath = prefix + "/git/ref/heads/" + branch;
+  assert(
+    (await api(refPath, { allowMissing: true })) === null,
+    "Temporary probe ref already exists; it was left untouched.",
+  );
+  let createAttempted = false;
+  let prCleanupIdentitySafe = true;
+  let temporaryBranchCleaned = false;
+  let prAttempted = false;
+  let commit, probePullRequest;
+  let temporaryPrClosed = false;
+  const ownedDraft = (pr) =>
+    Number.isSafeInteger(pr?.number) &&
+    pr.number > 0 &&
+    pr.draft === true &&
+    ["open", "closed"].includes(pr.state) &&
+    pr.head?.ref === branch &&
+    pr.head.sha === commit &&
+    pr.head.repo?.full_name === REPOSITORY &&
+    pr.base?.ref === "main" &&
+    pr.base.repo?.full_name === REPOSITORY &&
+    typeof pr.body === "string" &&
+    pr.body.includes(marker);
   try {
-    await api("/repos/" + REPOSITORY + "/git/refs", {
+    createAttempted = true;
+    await api(prefix + "/git/refs", {
       method: "POST",
       body: { ref: "refs/heads/" + branch, sha: base },
     });
-    created = true;
-    const commit = await createSignedCommit(
+    commit = await createSignedCommit(
       branch,
       base,
       [
         {
           path: "docs/MAINTENANCE_SIGNATURE_PROBE.txt",
           contents: Buffer.from(
-            "Temporary signed maintenance probe; main is unchanged.\n",
+            "Temporary signed maintenance PR probe; main is unchanged.\n",
           ).toString("base64"),
         },
       ],
-      "chore: verify automatic maintenance signing",
+      "chore: verify maintenance signing and PR permissions",
       api,
     );
-    return {
-      status: "passed",
-      commit,
-      mainUnchanged: true,
-      temporaryBranchCleaned: true,
-    };
+    prAttempted = true;
+    const pr = await api(prefix + "/pulls", {
+      method: "POST",
+      body: {
+        title: "test: verify temporary maintenance PR capability",
+        head: branch,
+        base: "main",
+        draft: true,
+        body:
+          marker +
+          "\n\nTemporary signing and PR-permission diagnostic. This draft is closed and its branch removed by the diagnostic; it must never be merged.\n",
+      },
+    });
+    assert(
+      ownedDraft(pr) && pr.state === "open",
+      "Temporary draft PR identity was not confirmed.",
+    );
+    probePullRequest = pr.number;
+    await api(prefix + "/issues/" + probePullRequest + "/labels", {
+      method: "POST",
+      body: { labels },
+    });
+    const observed = await api(prefix + "/pulls/" + probePullRequest);
+    assert(
+      ownedDraft(observed) &&
+        observed.state === "open" &&
+        Array.isArray(observed.labels) &&
+        labels.every((name) =>
+          observed.labels.some((label) => label.name === name),
+        ),
+      "Temporary draft PR and required labels were not confirmed.",
+    );
   } finally {
-    if (created)
-      await api("/repos/" + REPOSITORY + "/git/refs/heads/" + branch, {
-        method: "DELETE",
-      });
+    try {
+      if (prAttempted) {
+        prCleanupIdentitySafe = false;
+        let pr;
+        if (probePullRequest) {
+          pr = await api(prefix + "/pulls/" + probePullRequest);
+          assert(
+            ownedDraft(pr),
+            "Temporary PR changed; no unrelated PR was closed.",
+          );
+        } else {
+          // A successful create may lose its response. Recover only our exact
+          // marker, signed head and draft identity before closing any PR.
+          const matches = await api(
+            prefix +
+              "/pulls?state=all&head=" +
+              encodeURIComponent(REPOSITORY.split("/")[0] + ":" + branch) +
+              "&base=main&per_page=100",
+          );
+          assert(
+            Array.isArray(matches) && matches.length < 100,
+            "Temporary PR cleanup lookup was incomplete.",
+          );
+          const owned = matches.filter(ownedDraft);
+          assert(
+            owned.length <= 1,
+            "Temporary PR cleanup identity was ambiguous.",
+          );
+          pr = owned[0];
+          if (pr) probePullRequest = pr.number;
+          else prCleanupIdentitySafe = matches.length === 0;
+        }
+        if (pr) {
+          prCleanupIdentitySafe = true;
+          if (pr.state === "open")
+            pr = await api(prefix + "/pulls/" + pr.number, {
+              method: "PATCH",
+              body: { state: "closed" },
+            });
+          prCleanupIdentitySafe = ownedDraft(pr);
+          assert(
+            prCleanupIdentitySafe && pr.state === "closed",
+            "Temporary draft PR closure was not confirmed.",
+          );
+          temporaryPrClosed = true;
+        }
+      }
+    } finally {
+      if (createAttempted) {
+        const ref = await api(refPath, { allowMissing: true });
+        if (ref !== null) {
+          assert(
+            prCleanupIdentitySafe &&
+              ref?.ref === "refs/heads/" + branch &&
+              (ref.object?.sha === base ||
+                (commit && ref.object?.sha === commit)),
+            "Temporary probe identity or head changed; preserve it for inspection.",
+          );
+          await api(prefix + "/git/refs/heads/" + branch, { method: "DELETE" });
+        }
+        temporaryBranchCleaned = true;
+      }
+    }
   }
+  assert(
+    temporaryPrClosed &&
+      temporaryBranchCleaned &&
+      Number.isSafeInteger(probePullRequest),
+  );
+  const after = await api(prefix + "/branches/main");
+  assert(
+    after.commit?.sha === base,
+    "Main changed during the diagnostic; no probe acceptance was recorded.",
+  );
+  return {
+    status: "passed",
+    commit,
+    probePullRequest,
+    mainUnchanged: true,
+    temporaryPrClosed: true,
+    temporaryBranchCleaned: true,
+  };
 }
 // Dispatch CI only for the expected current main commit; starting a workflow does not mean it passed.
 export async function retryMainChecks(api = github) {

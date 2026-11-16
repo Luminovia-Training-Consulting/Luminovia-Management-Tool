@@ -18,6 +18,8 @@ After the normal PR merge, main CI again verifies the application and actual sel
 
 To pause a pending maintenance PR durably, convert it to draft or close it. Disabling native auto-merge alone cancels the current queue, but a later publisher retry can enable it again. No custom hold label is interpreted.
 
+The manual `signature_probe_only` input checks the existing App credentials through a signed temporary branch and a real draft PR. It confirms PR classification, closes the draft and removes its branch; it never queues the diagnostic PR for merge. Its output identifies the probe PR/commit for operator inspection. Lost branch/PR responses are recovered only through the exact owned identity; existing refs, changed heads or unconfirmed commits are preserved for inspection and never reported as a successful cleanup. Normal PR workflows may start for that temporary commit; observing or canceling those diagnostic runs is separate from claiming complete application acceptance. The application source must already have passed its own required checks.
+
 ## PostgreSQL and automatic recovery
 
 PostgreSQL stays on the supported Supabase 17 series. A future 17.x pin needs a real retained-data candidate proof bound to both image digests and the exact migration inventory. PostgreSQL 18 requires a separately designed major migration. An unavailable or incompatible latest candidate is held visibly rather than labelled installed.

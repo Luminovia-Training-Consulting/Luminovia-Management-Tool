@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       signature_probe_only:
-        description: Verify maintenance App signing on a temporary branch without changing main
+        description: Verify maintenance App signing and draft PR access without changing main
         required: false
         default: false
         type: boolean
@@ -19,10 +19,12 @@ concurrency:
   cancel-in-progress: false
 jobs:
   signature-probe:
+    # Create/close an owned draft PR to verify real App signing and PR access.
+    # It is never queued for merge and does not update main.
     if: github.event_name == 'workflow_dispatch' && inputs.signature_probe_only && github.repository == 'Luminovia-Training-Consulting/Luminovia-Management-Tool' && github.ref == 'refs/heads/main'
     environment: maintenance-signing
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -37,7 +39,7 @@ jobs:
         env:
           APP_ID: ${{ vars.MAINTENANCE_APP_ID }}
         run: test "$APP_ID" = "5776881"
-      - name: Create a repository-scoped signing token
+      - name: Create a repository-scoped diagnostic token
         id: maintenance-app-token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
@@ -46,6 +48,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-contents: write
+          permission-pull-requests: write
       - name: Verify the existing App identity
         env:
           APP_SLUG: ${{ steps.maintenance-app-token.outputs.app-slug }}

@@ -1317,39 +1317,320 @@ globalThis.fetch=async(url,request)=>{const target=new URL(url);assert.equal(tar
   }
 });
 
-test("signature probe cleans only its new branch on both success and verification failure", async () => {
-  for (const verified of [true, false]) {
-    const calls = [];
-    let branch;
-    const api = async (path, options = {}) => {
-      calls.push({ path, options });
-      if (path.endsWith("/branches/main"))
-        return { commit: { sha: "a".repeat(40) } };
-      if (options.method === "DELETE") {
-        assert(path.endsWith(branch));
-        return null;
-      }
-      if (path.endsWith("/git/refs")) {
-        branch = options.body.ref.slice("refs/heads/".length);
-        assert(branch.startsWith("codex/maintenance-signature-probe-"));
-        return {};
-      }
-      if (path === "/graphql")
-        return {
-          data: { createCommitOnBranch: { commit: { oid: "b".repeat(40) } } },
-        };
+function signatureProbeApi(options = {}) {
+  const repository = "Luminovia-Training-Consulting/Luminovia-Management-Tool";
+  const prefix = "/repos/" + repository;
+  const base = "a".repeat(40),
+    commit = "b".repeat(40);
+  const state = {
+    pr: null,
+    branch: null,
+    head: null,
+    deleted: false,
+    mainReads: 0,
+  };
+  const calls = [];
+  const api = async (path, request = {}) => {
+    calls.push({ path, request });
+    const method = request.method ?? "GET";
+    if (path === prefix + "/branches/main") {
+      assert.equal(method, "GET");
       return {
-        verification: { verified, reason: verified ? "valid" : "unsigned" },
-        parents: [{ sha: "a".repeat(40) }],
+        commit: {
+          sha:
+            options.failAt === "main-moved" && state.mainReads++ > 0
+              ? "c".repeat(40)
+              : base,
+        },
       };
-    };
-    if (verified) assert.equal((await signatureProbe(api)).status, "passed");
-    else
-      await assert.rejects(signatureProbe(api), /signature was not verified/);
+    }
+    if (
+      path.startsWith(
+        prefix + "/git/ref/heads/codex/maintenance-signature-probe-",
+      )
+    ) {
+      assert.equal(method, "GET");
+      state.branch = path.slice((prefix + "/git/ref/heads/").length);
+      if (options.preflightExisting && state.head === null) state.head = base;
+      if (options.failAt === "branch-moved" && state.head !== null)
+        state.head = "c".repeat(40);
+      return state.head === null
+        ? null
+        : { ref: "refs/heads/" + state.branch, object: { sha: state.head } };
+    }
+    if (path === prefix + "/git/refs") {
+      assert.equal(method, "POST");
+      assert.equal(request.body.sha, base);
+      state.branch = request.body.ref.slice("refs/heads/".length);
+      assert.match(
+        state.branch,
+        /^codex\/maintenance-signature-probe-[a-f0-9-]{36}$/,
+      );
+      state.head = base;
+      if (options.failAt === "lost-ref")
+        throw new Error("Fictional lost ref creation response");
+      return {};
+    }
+    if (path === "/graphql") {
+      assert.equal(method, "POST");
+      assert(
+        request.body.query.includes("createCommitOnBranch"),
+        "Probe must never enable auto-merge.",
+      );
+      const input = request.body.variables.input;
+      assert.equal(input.branch.branchName, state.branch);
+      assert.equal(input.expectedHeadOid, base);
+      state.head = commit;
+      if (options.failAt === "lost-signature")
+        throw new Error("Fictional lost signed-commit response");
+      return { data: { createCommitOnBranch: { commit: { oid: commit } } } };
+    }
+    if (path === prefix + "/git/commits/" + commit) {
+      assert.equal(method, "GET");
+      return {
+        verification: {
+          verified: options.failAt !== "verify",
+          reason: options.failAt === "verify" ? "unsigned" : "valid",
+        },
+        parents: [{ sha: base }],
+      };
+    }
+    if (path === prefix + "/pulls" && method === "POST") {
+      assert.equal(request.body.head, state.branch);
+      assert.equal(request.body.base, "main");
+      assert.equal(request.body.draft, true);
+      assert.match(
+        request.body.body,
+        /<!-- luminovia-maintenance-pr-probe:[a-f0-9-]{36} -->/,
+      );
+      if (options.failAt === "create-pr")
+        throw new Error("Fictional PR creation refusal");
+      state.pr = {
+        number: 47,
+        state: "open",
+        draft: true,
+        body: request.body.body,
+        head: {
+          ref: state.branch,
+          sha: commit,
+          repo: { full_name: repository },
+        },
+        base: { ref: "main", repo: { full_name: repository } },
+        labels: [],
+      };
+      if (options.failAt === "lost-create")
+        throw new Error("Fictional lost PR creation response");
+      return structuredClone(state.pr);
+    }
+    if (path.startsWith(prefix + "/pulls?state=all&head=")) {
+      assert.equal(method, "GET");
+      assert.equal(
+        new URL(path, "https://api.github.com").searchParams.get("head"),
+        repository.split("/")[0] + ":" + state.branch,
+      );
+      const matches = state.pr ? [structuredClone(state.pr)] : [];
+      if (options.foreignPr)
+        matches.push({
+          ...structuredClone(state.pr),
+          number: 99,
+          body: "Foreign marker; never close this PR",
+        });
+      return matches;
+    }
+    if (path === prefix + "/issues/47/labels") {
+      assert.equal(method, "POST");
+      assert.deepEqual(request.body, {
+        labels: ["type:tests", "area:github", "risk:low"],
+      });
+      if (options.failAt === "labels")
+        throw new Error("Fictional PR label refusal");
+      state.pr.labels = request.body.labels.map((name) => ({ name }));
+      return structuredClone(state.pr.labels);
+    }
+    if (path === prefix + "/pulls/47") {
+      assert(state.pr);
+      if (method === "PATCH") {
+        assert.deepEqual(request.body, { state: "closed" });
+        if (options.failAt === "close")
+          throw new Error("Fictional PR close refusal");
+        state.pr.state = "closed";
+      } else assert.equal(method, "GET");
+      const observed = structuredClone(state.pr);
+      if (options.failAt === "readback-labels") observed.labels = [];
+      if (options.failAt === "pr-identity-changed")
+        observed.body = "Maintainer changed probe identity; preserve it";
+      return observed;
+    }
+    if (path === prefix + "/git/refs/heads/" + state.branch) {
+      assert.equal(method, "DELETE");
+      if (options.failAt === "delete")
+        throw new Error("Fictional branch cleanup refusal");
+      state.deleted = true;
+      state.head = null;
+      return null;
+    }
+    assert.fail("Unexpected probe boundary: " + method + " " + path);
+  };
+  return { api, calls, state };
+}
+
+test("signing/PR probe confirms its draft and labels, closes only that PR, removes its branch and leaves main unchanged", async () => {
+  const source = signatureProbeApi();
+  const result = await signatureProbe(source.api);
+  assert.deepEqual(result, {
+    status: "passed",
+    commit: "b".repeat(40),
+    probePullRequest: 47,
+    mainUnchanged: true,
+    temporaryPrClosed: true,
+    temporaryBranchCleaned: true,
+  });
+  assert.equal(source.state.pr.state, "closed");
+  assert.equal(source.state.deleted, true);
+  const close = source.calls.findIndex(
+    ({ path, request }) =>
+      path.endsWith("/pulls/47") && request.method === "PATCH",
+  );
+  const cleanup = source.calls.findIndex(
+    ({ request }) => request.method === "DELETE",
+  );
+  assert(close >= 0 && cleanup > close);
+  assert(
+    !source.calls.some(
+      ({ path }) => path.includes("/actions/") || path.endsWith("/merge"),
+    ),
+  );
+  assert(
+    source.calls
+      .filter(({ path }) => path.endsWith("/main"))
+      .every(({ request }) => !request.method || request.method === "GET"),
+  );
+});
+
+test("probe failure cleans proved resources, preserves altered or unverified state and never reports unconfirmed cleanup as passed", async () => {
+  for (const failAt of [
+    "verify",
+    "lost-ref",
+    "lost-signature",
+    "branch-moved",
+    "pr-identity-changed",
+    "create-pr",
+    "lost-create",
+    "labels",
+    "readback-labels",
+    "close",
+    "delete",
+    "main-moved",
+  ]) {
+    const source = signatureProbeApi({
+      failAt,
+      foreignPr: failAt === "lost-create",
+    });
+    await assert.rejects(signatureProbe(source.api));
     assert.equal(
-      calls.filter((item) => item.options.method === "DELETE").length,
-      1,
+      source.state.deleted,
+      ![
+        "delete",
+        "verify",
+        "lost-signature",
+        "branch-moved",
+        "pr-identity-changed",
+      ].includes(failAt),
     );
+    if (
+      [
+        "lost-create",
+        "labels",
+        "readback-labels",
+        "delete",
+        "main-moved",
+      ].includes(failAt)
+    )
+      assert.equal(source.state.pr.state, "closed");
+    assert(
+      !source.calls.some(
+        ({ path, request }) =>
+          path.endsWith("/pulls/99") && request.method === "PATCH",
+      ),
+      "Lost-response recovery must never close a foreign PR.",
+    );
+    if (failAt === "verify")
+      assert(!source.calls.some(({ path }) => path.endsWith("/pulls")));
+  }
+});
+
+test("probe preflight preserves an existing UUID ref without any mutation", async () => {
+  const source = signatureProbeApi({ preflightExisting: true });
+  await assert.rejects(signatureProbe(source.api), /ref already exists/);
+  assert.equal(source.state.deleted, false);
+  assert(
+    !source.calls.some(
+      ({ request }) => request.method && request.method !== "GET",
+    ),
+  );
+});
+
+test("real signature-probe CLI reaches draft PR/label/cleanup paths without queueing or merging", async () => {
+  const context = await fixture();
+  try {
+    const directory = resolve(context.root, "deploy/hostinger/maintenance");
+    await mkdir(directory, { recursive: true });
+    for (const name of ["promote.mjs", "daily-updates.mjs"])
+      await writeFile(
+        resolve(directory, name),
+        await readFile(new URL(name, import.meta.url)),
+      );
+    const loader = resolve(context.root, "probe-github.mjs"),
+      transcript = resolve(context.root, "probe-api.json");
+    await writeFile(
+      loader,
+      `import assert from "node:assert/strict";\nimport {writeFileSync} from "node:fs";\nconst signatureProbeApi=${signatureProbeApi.toString()};\nconst source=signatureProbeApi();\nglobalThis.fetch=async(url,request)=>{const target=new URL(url);assert.equal(target.origin,"https://api.github.com");try{const result=await source.api(target.pathname+target.search,{method:request.method,body:request.body===undefined?undefined:JSON.parse(request.body)});return result===null?new Response(null,{status:request.method==="GET"?404:204}):new Response(JSON.stringify(result),{status:200});}finally{writeFileSync(${JSON.stringify(transcript)},JSON.stringify(source.calls));}};\n`,
+    );
+    const output = execFileSync(
+      process.execPath,
+      [
+        "--import",
+        loader,
+        resolve(directory, "promote.mjs"),
+        "signature-probe",
+      ],
+      {
+        cwd: context.root,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          GH_TOKEN: "fictional-offline-test-token",
+          GITHUB_STEP_SUMMARY: "",
+        },
+      },
+    );
+    const observed = JSON.parse(output);
+    assert.equal(observed.status, "passed");
+    assert.equal(observed.probePullRequest, 47);
+    assert.equal(observed.temporaryPrClosed, true);
+    assert.equal(observed.temporaryBranchCleaned, true);
+    const calls = JSON.parse(await readFile(transcript, "utf8"));
+    assert(
+      calls.some(
+        ({ path, request }) =>
+          path.endsWith("/issues/47/labels") && request.method === "POST",
+      ),
+    );
+    assert(
+      calls.some(
+        ({ path, request }) =>
+          path.endsWith("/pulls/47") && request.method === "PATCH",
+      ),
+    );
+    assert(
+      !calls.some(
+        ({ path, request }) =>
+          path.endsWith("/merge") ||
+          request.body?.query?.includes("enablePullRequestAutoMerge"),
+      ),
+    );
+  } finally {
+    await context.cleanup();
   }
 });
 
