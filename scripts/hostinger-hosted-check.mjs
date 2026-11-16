@@ -14,7 +14,11 @@ import {
 import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { root } from "./runtime-lib.mjs";
-import { readHostedPrivateText as privateRead } from "./testing/hosted-private-text.mjs";
+import {
+  hostedDownloadRequest,
+  hostedPublicApiKey,
+  readHostedPrivateText as privateRead,
+} from "./testing/hosted-private-text.mjs";
 
 // This is deliberately separate from the loopback-only local mutation suites.
 // Only this named, fictional, self-hosted development installation is accepted.
@@ -138,6 +142,9 @@ assert(
   environment.SERVICE_ROLE_KEY && environment.SUPABASE_PUBLISHABLE_KEY,
   "Server and public API configuration required",
 );
+// Only this classified public key may leave the private configuration for public
+// clients/headers. Administrative credentials and real actor sessions keep their existing boundaries.
+const publicApiKey = hostedPublicApiKey(environment.SUPABASE_PUBLISHABLE_KEY);
 /** Creates a separate SDK client without persistent sessions or automatic session refresh. */
 const make = (url, key) =>
   createClient(url, key, {
@@ -149,7 +156,7 @@ const make = (url, key) =>
   });
 const service = make(privateApi.href, environment.SERVICE_ROLE_KEY);
 /** Creates the unprivileged public-key client for actual hosted permission checks. */
-const publicClient = () => make(api, environment.SUPABASE_PUBLISHABLE_KEY);
+const publicClient = () => make(api, publicApiKey);
 const clients = [];
 /** Persists the private operator ledger so owned resources can be recovered after interruption. */
 const save = () =>
@@ -440,7 +447,7 @@ async function headers(actor) {
   );
   return {
     Origin: target,
-    apikey: environment.SUPABASE_PUBLISHABLE_KEY,
+    apikey: publicApiKey,
     Authorization: `Bearer ${session.access_token}`,
   };
 }
@@ -474,7 +481,7 @@ async function download(actor, id) {
   return fetch(api + "/functions/v1/files", {
     method: "POST",
     headers: { ...(await headers(actor)), "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "download", id }),
+    body: JSON.stringify(hostedDownloadRequest(id)),
     signal: AbortSignal.timeout(60000),
   });
 }
@@ -923,7 +930,7 @@ try {
     "public Auth JWKS exposes verification keys without symmetric/private signing material",
     async () => {
       const response = await fetch(api + "/auth/v1/.well-known/jwks.json", {
-        headers: { apikey: environment.SUPABASE_PUBLISHABLE_KEY },
+        headers: { apikey: publicApiKey },
         signal: AbortSignal.timeout(30000),
       });
       assert.equal(response.status, 200);
@@ -1065,7 +1072,7 @@ try {
         assert.equal(invitationLink.searchParams.get("type"), "invite");
         assert(invitationLink.searchParams.get("token_hash"));
         const memory = new Map();
-        const client = createClient(api, environment.SUPABASE_PUBLISHABLE_KEY, {
+        const client = createClient(api, publicApiKey, {
           auth: {
             flowType: "pkce",
             persistSession: true,
@@ -1250,7 +1257,7 @@ try {
         method: "OPTIONS",
         headers: {
           Origin: target,
-          apikey: environment.SUPABASE_PUBLISHABLE_KEY,
+          apikey: publicApiKey,
           "Access-Control-Request-Method": "POST",
           "Access-Control-Request-Headers": "authorization,apikey,content-type",
         },
@@ -1265,7 +1272,7 @@ try {
         method: "POST",
         headers: {
           Origin: "https://untrusted.example.invalid",
-          apikey: environment.SUPABASE_PUBLISHABLE_KEY,
+          apikey: publicApiKey,
           "Content-Type": "application/json",
         },
         body: "{}",
@@ -1277,7 +1284,7 @@ try {
         method: "POST",
         headers: {
           Origin: target,
-          apikey: environment.SUPABASE_PUBLISHABLE_KEY,
+          apikey: publicApiKey,
           "Content-Type": "application/json",
         },
         body: "{}",

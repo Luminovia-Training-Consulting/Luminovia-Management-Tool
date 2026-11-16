@@ -5,6 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
+import { createHmac } from "node:crypto";
 import fs from "node:fs";
 import {
   chmodSync,
@@ -23,7 +24,12 @@ import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { readHostedPrivateText } from "./testing/hosted-private-text.mjs";
+import {
+  hostedDownloadRequest,
+  hostedPublicApiKey,
+  readHostedPrivateText,
+} from "./testing/hosted-private-text.mjs";
+import { createConfiguration } from "../deploy/hostinger/selfhost/generate-env.mjs";
 
 // Preserve the operator-facing refusal instead of exposing a new syscall/path error.
 const privateFileRefusal = {
@@ -31,6 +37,131 @@ const privateFileRefusal = {
   code: "ERR_ASSERTION",
   message: "Private configuration must be an exclusive regular file (0600)",
 };
+
+/** Generate fictional key material using the actual selfhost generator, without writing files or creating accounts. */
+function publicConfigurationFixture() {
+  return createConfiguration({
+    portalOrigin: "https://fictional.example.invalid",
+    apiOrigin: "https://fictional.example.invalid/backend",
+    dataDirectory: "/tmp/fictional-hosted-key-fixture",
+  }).server;
+}
+
+/** Sign isolated classification fixtures; this key is unrelated to any actual hosted installation. */
+function legacyKey(payload, header = { alg: "HS256", typ: "JWT" }) {
+  const data = [header, payload]
+    .map((part) => Buffer.from(JSON.stringify(part)).toString("base64url"))
+    .join(".");
+  return (
+    data +
+    "." +
+    createHmac("sha256", "fictional-classification-fixture-only")
+      .update(data)
+      .digest("base64url")
+  );
+}
+
+test("generated opaque public keys and different-checksum compatible keys retain every original byte", () => {
+  const configuration = publicConfigurationFixture();
+  const generated = configuration.SUPABASE_PUBLISHABLE_KEY;
+  for (const value of [generated, generated.slice(0, -8) + "________"])
+    assert.equal(hostedPublicApiKey(value), value);
+  // The gateway treats the whole key as an exact string. All 64 base64url
+  // characters must survive, including bits a decode/re-encode could discard.
+  for (const character of "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_") {
+    const value =
+      "sb_publishable_" + character.repeat(22) + "_" + character.repeat(8);
+    assert.equal(hostedPublicApiKey(value), value);
+  }
+});
+
+test("generated legacy anon HS256 keys retain encoding, optional metadata and exact signatures", () => {
+  const configuration = publicConfigurationFixture();
+  for (const value of [
+    configuration.ANON_KEY,
+    legacyKey({ role: "anon" }, { alg: "HS256" }),
+    legacyKey(
+      { role: "anon", iss: "fictional", note: "Prüfung", iat: 1, exp: 2 },
+      { alg: "HS256", typ: "JWT", kid: "fictional-key-id" },
+    ),
+  ])
+    assert.equal(hostedPublicApiKey(value), value);
+});
+
+test("key classification leaves legacy signature authentication to the server", () => {
+  const original = legacyKey({ role: "anon" });
+  const differentSignature =
+    original.slice(0, original.lastIndexOf(".") + 1) + "A".repeat(43);
+  assert.equal(hostedPublicApiKey(differentSignature), differentSignature);
+});
+
+test("private, session, malformed or non-public configuration never becomes a public API key or an error disclosure", () => {
+  const configuration = publicConfigurationFixture();
+  for (const value of [
+    undefined,
+    null,
+    {},
+    [],
+    configuration.SUPABASE_SECRET_KEY,
+    configuration.SERVICE_ROLE_KEY,
+    configuration.ANON_KEY_ASYMMETRIC,
+    legacyKey({ role: "authenticated", sub: "fictional-user" }),
+    legacyKey({ role: "service_role" }),
+    legacyKey({ role: "anon" }, { alg: "none", typ: "JWT" }),
+    legacyKey({ role: "anon" }, { alg: "HS256", typ: "other" }),
+    legacyKey({ role: "anon" }, null),
+    legacyKey({ role: "anon" }, []),
+    legacyKey(null),
+    legacyKey([]),
+    legacyKey({}),
+    "header.not-json.signature",
+    "sb_publishable_invalid",
+    configuration.SUPABASE_PUBLISHABLE_KEY + "\n",
+    " " + configuration.SUPABASE_PUBLISHABLE_KEY,
+    configuration.SUPABASE_PUBLISHABLE_KEY + "\r\nforged: header",
+  ])
+    assert.throws(
+      () => hostedPublicApiKey(value),
+      (error) => {
+        assert.equal(
+          error.message,
+          "A public Supabase publishable or legacy anon HS256 key is required.",
+        );
+        assert.equal(error.cause, undefined);
+        if (typeof value === "string")
+          assert.equal(String(error).includes(value), false);
+        return true;
+      },
+    );
+});
+
+test("download requests retain exact UUID identities with only the existing action and ID fields", () => {
+  for (const id of [
+    "00000000-0000-0000-0000-000000000000",
+    "ABCDEF01-00AB-4CDE-8F01-0123456789AB",
+    "ffffffff-ffff-ffff-ffff-ffffffffffff",
+  ])
+    assert.deepEqual(hostedDownloadRequest(id), {
+      action: "download",
+      id: id.toLowerCase(),
+    });
+});
+
+test("invalid private-ledger download values fail without disclosing their contents", () => {
+  for (const value of [
+    undefined,
+    null,
+    { id: "fictional-private-record" },
+    [],
+    "fictional-private-record",
+    "00000000-0000-0000-0000-000000000000\n",
+    "00000000-0000-0000-0000-000000000000/../private",
+  ])
+    assert.throws(
+      () => hostedDownloadRequest(value),
+      (error) => error.message === "A hosted document UUID is required.",
+    );
+});
 
 /** Own only this random temporary directory and remove it after the case. */
 function fixture(t) {
@@ -150,14 +281,22 @@ test("private hardlinks and a non-private parent retain the existing file-only p
   writeFileSync(file, "fictional retained text", { mode: 0o600 });
   const alias = join(directory, "retained-link.env");
   linkSync(file, alias);
-  assert.equal(statSync(file).nlink, 2);
-  assertClosed(
-    withDescriptors(() =>
-      assert.equal(readHostedPrivateText(alias), "fictional retained text"),
-    ),
+  const descriptor = fs.openSync(
+    file,
+    fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK,
   );
-  assert.equal(statSync(directory).mode & 0o777, 0o755);
-  assert.equal(readFileSync(file, "utf8"), "fictional retained text");
+  try {
+    assert.equal(fs.fstatSync(descriptor).nlink, 2);
+    assertClosed(
+      withDescriptors(() =>
+        assert.equal(readHostedPrivateText(alias), "fictional retained text"),
+      ),
+    );
+    assert.equal(statSync(directory).mode & 0o777, 0o755);
+    assert.equal(readFileSync(descriptor, "utf8"), "fictional retained text");
+  } finally {
+    fs.closeSync(descriptor);
+  }
 });
 
 test("a pathname replaced after descriptor inspection cannot substitute different private bytes", (t) => {
