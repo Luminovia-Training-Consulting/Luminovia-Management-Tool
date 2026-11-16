@@ -135,10 +135,12 @@ async function sessionEvent(event: AuthChangeEvent, actor: string) {
 it("clears real Shell local search state when a native Auth event changes actor without sign-out", async () => {
   const { client, user } = setup();
   await screen.findByText("Fictional workspace");
-  await user.type(
-    screen.getByLabelText("Stellen durchsuchen"),
-    "Private actor A search draft",
-  );
+  // The persisted desktop rail starts compact, so open its search control first.
+  await user.click(screen.getByRole("button", { name: "Stellen durchsuchen" }));
+  const search = screen
+    .getByRole("complementary")
+    .querySelector<HTMLInputElement>("#sidebar-global-search")!;
+  await user.type(search, "Private actor A search draft");
   client.setQueryData(
     ["private", "actor-a"],
     "Previously authorised private query",
@@ -146,19 +148,20 @@ it("clears real Shell local search state when a native Auth event changes actor 
   await sessionEvent("SIGNED_IN", "actor-b");
   await screen.findByText("Fictional workspace");
   expect(client.getQueryData(["private", "actor-a"])).toBeUndefined();
-  expect(screen.getByLabelText("Stellen durchsuchen")).toHaveValue("");
+  expect(document.querySelector("#mobile-global-search")).toHaveValue("");
 });
 it("preserves protected local drafts on same-actor token refresh and rerenders", async () => {
   const { user } = setup();
   await screen.findByText("Fictional workspace");
-  await user.type(
-    screen.getByLabelText("Stellen durchsuchen"),
-    "Same actor draft",
-  );
+  await user.click(screen.getByRole("button", { name: "Stellen durchsuchen" }));
+  const search = screen
+    .getByRole("complementary")
+    .querySelector<HTMLInputElement>("#sidebar-global-search")!;
+  await user.type(search, "Same actor draft");
   await sessionEvent("TOKEN_REFRESHED", "actor-a");
-  expect(screen.getByLabelText("Stellen durchsuchen")).toHaveValue(
-    "Same actor draft",
-  );
+  expect(
+    screen.getByRole("complementary").querySelector("#sidebar-global-search"),
+  ).toHaveValue("Same actor draft");
 });
 it("keeps the public invitation/recovery callback mounted when Auth establishes another actor", async () => {
   const { user } = setup("/auth/callback");

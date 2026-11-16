@@ -329,8 +329,11 @@ describe("role-aware dashboard previews", () => {
     expect(await screen.findByText("Fictional handout.txt")).toBeVisible();
     expect(await screen.findByText("Fictional course update")).toBeVisible();
     expect(
-      screen.getByRole("heading", { name: /Schön, dass du da bist/ }),
+      screen.getByRole("region", { name: "Arbeitsbereich" }),
     ).toBeVisible();
+    expect(
+      screen.queryByText("Dein Raum für gute Lehre."),
+    ).not.toBeInTheDocument();
   });
   it("access errors hide retained file metadata instead of showing a stale private title", async () => {
     const { client } = setup();
