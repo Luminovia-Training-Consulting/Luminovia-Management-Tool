@@ -215,15 +215,35 @@ export function adaptCandidateApiFixture(source, { project, apiPort }) {
     .replace(client, identity + client);
 }
 
-// Temporarily reserve a free loopback port for the isolated probe.
-async function availablePort() {
-  const server = createServer();
-  await new Promise((done, fail) =>
-    server.once("error", fail).listen(0, "127.0.0.1", done),
-  );
-  const port = server.address().port;
-  await new Promise((done) => server.close(done));
-  return port;
+// Hold the complete port group while selecting it: an OS may immediately reuse
+// an ephemeral port after close. Release every owned listener together, including
+// earlier reservations when a later bind fails. Compose subsequently owns binds;
+// this selector cannot reserve ports across the handoff to Docker.
+export async function availableCandidatePorts(createListener = createServer) {
+  const listeners = [];
+  try {
+    const ports = {};
+    for (const name of ["public", "api", "mail"]) {
+      const listener = createListener();
+      listeners.push(listener);
+      await new Promise((done, fail) =>
+        listener.once("error", fail).listen(0, "127.0.0.1", done),
+      );
+      ports[name] = listener.address().port;
+    }
+    return ports;
+  } finally {
+    await Promise.all(
+      listeners
+        .filter((listener) => listener.listening)
+        .map(
+          (listener) =>
+            new Promise((done, fail) =>
+              listener.close((error) => (error ? fail(error) : done())),
+            ),
+        ),
+    );
+  }
 }
 
 // Start owned Compose resources, verify data before/after upgrading, and clean up only resources covered by the ownership contract.
@@ -433,11 +453,7 @@ export async function checkCandidate({
       join(scratch, "supabase/config.toml"),
       `project_id = "${project}"\n`,
     );
-    const ports = {
-      public: await availablePort(),
-      api: await availablePort(),
-      mail: await availablePort(),
-    };
+    const ports = await availableCandidatePorts();
     assert.equal(new Set(Object.values(ports)).size, 3);
     const origin = "https://127.0.0.1:" + ports.public;
     const generated = createConfiguration({

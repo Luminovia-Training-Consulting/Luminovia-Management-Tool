@@ -57,6 +57,13 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 The latest explicit user decision is authoritative: only `CarinaSchoppe` (GitHub User29256704) receives the sole personal review-ruleset exception. The latest readback sets `bypass_mode: always` only on that review ruleset and includes CodeQL, code-quality and Copilot-review rules. All15CI checks and verified signatures remain mandatory; history/check bypass lists are empty. Source snapshots mirror the designated owner's confirmed live update. Older role-based, unrestricted or disabled-rule entries below are dated development history, not instructions to restore those configurations. PR27 has the next main merge, followed by this independent PR13 conflict resolution; feature work does not wait for a large aggregate branch.
 
+## Native candidate port-selection correction
+
+- [x] Reproduce legal immediate ephemeral-port reuse deterministically; preserve simultaneous three-port uniqueness and loopback ownership boundaries.
+- [x] Hold all three reservation listeners until selection completes, and release partial groups on bind failure; retain the existing uniqueness assertion without retries or timeout changes.
+- [x] Pass11candidate cases, including real TCP group/rebind cleanup and rejection of an isolated old-algorithm mutant, plus targeted lint/format/whitespace checks.
+- [ ] Repeat required complete native retained-data CI on the integrated signed source before the authorised PR merges; local socket fixtures do not establish complete native acceptance.
+
 ## PR13/PR23 requested conflict correction
 
 - [x] Resolve PR13 against actual main0a6002a, preserving both full product/evidence ledgers and accepted roles/welcome/help/metadata work.
