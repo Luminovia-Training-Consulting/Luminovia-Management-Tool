@@ -76,6 +76,8 @@ The independent 49 lifecycle/notification API cases pass on the Main26 source: 2
 
 After integrating accepted main `0a6002a5791ba5921b5825dd31b9db0b7e563fab`, the actual full local runtime suite passes **139/139 cases**. Full frontend coverage passes **303 tests / 54 files**, 119 sources: S51.41/B46.33/F41.73/L53.11%, including both API modules at 100% in all four categories. This newer current-source run supersedes the earlier 298-case Main26 baseline. The current native controller still requires independent current-head approval for every author; it does not inherit Carina's personal server-side exception.
 
+The already published PR19 head `491f98f` (original feature plus accepted main0a) was merged into this implementation rather than overwritten. Its older delivery entry is retained below as historical evidence, with an explicit supersession notice for the direct-ref/App-exception design. Accepted protected-maintenance main `319ab69f` was then integrated with both operational guides preserved. All139runtime cases, full ESLint, TypeScript, source formatting and compiler integrity/export checks pass on that assembled source. Main319 changes no frontend source, public-config module or lockfile relative to the already measured0a assembly, so the303-case frontend/coverage result still measures the same executable frontend tree. The synthetic production/PWA build also passes. PR19 remains a draft in the external sequential merge queue; no automatic merge is enabled.
+
 ## 16 November 2026 — complete-evidence automatic merging and regression coverage
 
 > Historical PR19 source record: the native follow-up above supersedes the earlier App-exception, direct-ref and fourteen-check design. These measurements apply only to the revision recorded here.

@@ -50,7 +50,9 @@ This bounded quality slice starts from accepted main `fabd71a7` and retains ever
 - [x] Complete native PR merging, exact suite/push and reviewer independence, live-context drift rejection and true CLI credential-boundary regressions; 63 targeted cases pass, including actual GraphQL/REST Bot identity forms.
 - [x] Add 49 critical lifecycle/notification API cases; 298 frontend cases pass on Main26, 119 sources, S51.28/B46.15/F41.66/L53.00%; both API modules 100% and floors raised without exclusions.
 - [x] Integrate accepted main `0a6002a5`; pass 139 runtime cases and 303 frontend cases across 119 sources, S51.41/B46.33/F41.73/L53.11%. Read back the latest personal review exception: User 29256704 only, PR-only.
-- [ ] Complete final source/build checks, publish the signed bounded PR and observe every required exact-head check.
+- [x] Preserve the current published PR19 ancestry and integrate protected-maintenance main319; repeat139runtime/source checks and pass the synthetic production/PWA build.
+- [ ] Publish the signed bounded implementation to PR19 as a draft for the sequential queue; observe all15current exact-head checks and use its assigned merge slot.
+
 - [ ] Integrate through the coordinated merge order and read back the actual merged state. Source preparation and the metadata proof do not establish that delivery.
 
 ## Complete-evidence automatic merge continuation
