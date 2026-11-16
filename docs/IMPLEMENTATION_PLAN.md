@@ -1,7 +1,5 @@
 # Persistent implementation plan
 
-Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
-
 ## Main26 course precision and critical form recovery
 
 Independent delivery from exact main `fabd71a7958d7814c18e3403877e542c20c3bea2`; all 26 migrations, current server authority and the complete target ledger below are preserved. This slice contains no M7 product functionality or server/schema changes.
@@ -14,6 +12,58 @@ Independent delivery from exact main `fabd71a7958d7814c18e3403877e542c20c3bea2`;
 - [x] Prepare a genuine PostgreSQL precision/atomicity contract and one real browser journey in both desktop/mobile projects; fix the discovered shared-fixture nullable typing without changing valid Auth/MFA or data-less writes. Strict E2E typing passes; actual SQL/browser execution is pending.
 - [ ] Run the canonical local isolated acceptance on the committed current source and record the actual SQL/API/browser/PWA results before publishing.
 - [ ] Publish the independently reviewed signed slice through its own PR; observe exact-head required security/application/native checks and merge only after their actual successful results. Local frontend acceptance does not certify SQL/API/browser/native or production behavior.
+
+## Independent maintenance delivery after source-freeze release
+
+- [x] Honour the latest instruction to finish PR22 separately; preserve other source branches and the proposed group worktree. Earlier group/freeze entries below are historical.
+- [x] Remove the obsolete no-change retry-main helper/CLI/workflow path and publisher Actions-write token scope; unchanged scans skip privileged publication, while tested changed candidates retain native PR/review/CI protection.
+- [x] Pass31local maintenance/candidate tests, including real CLI failure/no-network acceptance, plus lint/type/workflow/diff checks; re-read live15-check/no-App-bypass and main-only signing-environment configuration.
+- [ ] Sign/push the scoped final correction, pass all15exact-current-head checks, complete coordinated normal PR merge and verify the real App diagnostic creates/labels/closes its owned draft and removes its branch while main stays unchanged. No release/deployment is authorised by this diagnostic.
+
+## Current continuation — App PR-only maintenance and audited execution
+
+This latest user instruction removes the maintenance App exception as well. It supersedes the earlier human-only verification and historical ALWAYS guidance. All remaining product modules below remain in scope.
+
+- [x] Remove App5776881 from live review/check bypass lists and read back all3active policies; checks/history have no exceptions, only human maintain/admin retain PR-only review exceptions.
+- [x] Replace direct daily main promotion with exact signed dependency-only branch/PR publication and native required-review/CI auto-merge; never mutate the main ref or substitute pre-merge dispatch for PR CI.
+- [x] Verify deterministic retries/lost responses, changed signatures/parents/blobs/PR identity, stale candidate and existing reviewed-PR preservation, plus the real CLI command path with network-free fictional fixtures.
+- [x] Wire protected main-only selected-repository short-lived App tokens and the missing official age prerequisites for full candidate tests; update current guides and rule snapshots.
+- [x] Run lint/type/source-connection/coverage/build/workflow checks and49Node+13Python offline guards;226unit/component cases pass with existing floors. No frontend runtime module or export is statically unconnected.
+- [x] Complete independent final review; correct the invalid GraphQL interface selection and remove unsupported hold-label behavior. All20maintenance groups pass, including a concurrent classification-change rejection.
+- [x] Deliver signed [PR22](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/22); its durable GitHub record owns final exact-head full/security/native CI and merge acceptance. All15checks must pass before merging; an open PR is not a passed full run.
+- [x] Obtain explicit action-time confirmation and grant the existing App only additional pull_requests:write; UI confirms one selected repository and REST confirms the installed permissions, with no rule bypass.
+- [x] Observe all14required checks passing on exact PR22 checkpoint8c50852, including84browser/2PWA and the24migration/19suite native retained-data run. Main advanced afterward, so this is not a current-base merge permit.
+- [x] Honour the authorised PR15 merge hold and integrate its actual merged43504b8main once. Both conflicts preserve current PR-only behavior plus incoming English comments,35labels and MFA fixtures;32focused guards and independent review pass.
+- [x] Extend the existing manual diagnostic with real draft-PR creation/labels/closure and owned-ref cleanup;23maintenance groups plus11metadata/1documentation pass. Unknown or externally changed resources are preserved; no diagnostic merge is attempted.
+- [x] Honour the subsequently authorised PR18 merge hold and integrate actualfabd71amain without conflicts, retaining its private pricing/welcome26migrations and QA fixtures. Fresh249frontend/75targeted Node cases pass.
+- [ ] Observe all15checks on the final combined PR22 head; the intentionally cancelled8176724interim run and prior8c50852checks do not satisfy this acceptance.
+- [x] Add PR18's actual successful PR preview package job as the15thmandatory Actions check, with strict up-to-date enforcement and no bypasses; synchronize current guides.
+- [ ] Verify actual short-lived App token/signature/PR CI after the source reaches protected main. The configured environment key/ID and installed scopes alone are not execution proof.
+
+No App review exemption is restored: automated PRs need normal independent approval/latest-push approval and resolved conversations as well as all15required checks. An outdated open maintenance PR must be explicitly resolved before regeneration; no reviewed content is overwritten. The unmerged direct-ref auto-merger in PR19 is not part of this implementation.
+
+## Earlier human-only verification — superseded on 16 November 2026
+
+- [x] Verify active live history/review/check rules: humans require a PR, maintain/admin can skip independent review, all14 checks remain mandatory even for CarinaSchoppe, and the PR must be up to date.
+- [x] Preserve the existing separate maintenance App exception; record its exact scope without claiming a working token/promotion path.
+- [x] Synchronize the three rule JSON snapshots with authenticated live readback in isolated codex/main-protection-verification-20261116; make no application or repository-setting mutation where the requested setting is already active.
+- [ ] Replace standard-token direct daily main promotion with a verified protected PR path. Current strict rules reject direct promotion safely; do not disable protection to restore it.
+
+This current instruction supersedes historical ALWAYS/disabled guidance below. The full product ledger remains required. Admins retain settings-edit authority, but ordinary merges and pushes must satisfy the active rules.
+
+Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
+
+## Current direction — local PC testing and explicit publication
+
+- Final integration follows actual main319ab69 through verified remote mergef24eae9. Prior head30075c9 passed all15required checks (88browser/2PWA plus real26-migration/20-suite native retention); current f24local checks pass254frontend/95runtime/23maintenance cases. Correct the three retained governance contradictions once, preserving manual publication controls, then use PR27's fresh exact-head checks and actual merge record. Other feature development remains independent.
+- [x] Add `./portal check` for fast local source/coverage/build feedback, retaining complete isolated `./portal test` and latest-main `./portal github test`.
+- [x] Keep automatic quality/security/application/native gates; make CMS publication an explicit exact-SHA manual choice and PR deployment metadata manual-only.
+- [x] Notify the 16 other active project Codex chats and preserve the local-first rule in `AGENTS.md` and operator/contribution guides.
+- [x] Run the actual fast local command (249 frontend tests before integration;254on current-main integration and build pass), all95integrated offline runtime tests and workflow validation. Cancel the old automatic main publication run and temporarily disable the old metadata publisher, with real server readback.
+- Signed [PR27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27) owns the exact required CI and coordinated user-authorised merge record. After its actual merge, re-enable the manual-only metadata workflow and verify main's publication guard. The first run was cancelled after PR21 advanced main; current-main integration preserves both feature histories.
+- [x] Reproduce the existing50-way lifecycle fixture's disappearing-offer consent lookup from the actual failed run, capture real actor quotes before racing and add a deterministic late-reader case; all12real PostgreSQL groups pass in a fresh disposable local container. Fresh signed-head CI remains the merge gate.
+
+The VPS polling timer and normal/hosted data are unchanged. This direction supersedes historical automatic release/publication descriptions below; it does not remove any product, security or release acceptance requirements.
 
 ## Coordinated PR18 integration
 

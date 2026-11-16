@@ -1,22 +1,48 @@
 # GitHub checks, security and coverage
 
+> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Only `CarinaSchoppe` (User 29256704) has a personal `pull_request` exception in the review rules. Nobody can bypass the 15 mandatory CI/security checks or strict up-to-date testing. The history/check rules and maintenance App have no bypass exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
+
 Workflows run for pull requests and `main`; manual execution is also available. They need no VPS credentials, private Supabase keys or production data. Existing real application/database/API/browser checks remain in place.
+
+Development and testing use the local PC by default. `./portal check` runs fast
+quality, coverage and build checks without starting services; `./portal test`
+provides complete isolated acceptance of the working source before delivery, `./portal github test` verifies freshly fetched `main` locally,
+and `./portal github` starts a separate persistent preview. No GitHub deployment
+or self-hosted Actions runner is needed. GitHub checks remain independent
+verification; a successful check or merge is not a publication request.
 
 ## Visible checks
 
-| Check                                        | What it verifies                                                                                                             |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Build                                        | Production compilation and PWA build using only synthetic public Supabase configuration. It does not access a real instance. |
-| Typecheck                                    | TypeScript project checks through `npm run typecheck`.                                                                       |
-| Lint                                         | ESLint with no warnings allowed.                                                                                             |
-| Formatting                                   | Existing source formatting and GitHub configuration.                                                                         |
-| Code quality                                 | Existing compiler-based checks for reachable modules, exports and connections.                                               |
-| Tests and coverage                           | All Vitest unit/component tests, V8 coverage and enforced thresholds; downloadable HTML/LCOV/JSON artifacts.                 |
-| verify                                       | `./portal test`: real isolated SQL/RLS/API/Edge/browser/PWA, security, restart and maintenance checks.                       |
-| Actual isolated selfhost image compatibility | Real pinned Supabase images and retained data from the previous source revision.                                             |
-| PR metadata                                  | Current PR labels and matching repository/commit identity.                                                                   |
+| Check                                                             | What it verifies                                                                                                             |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Build                                                             | Production compilation and PWA build using only synthetic public Supabase configuration. It does not access a real instance. |
+| Typecheck                                                         | TypeScript project checks through `npm run typecheck`.                                                                       |
+| Lint                                                              | ESLint with no warnings allowed.                                                                                             |
+| Formatting                                                        | Existing source formatting and GitHub configuration.                                                                         |
+| Code quality                                                      | Existing compiler-based checks for reachable modules, exports and connections.                                               |
+| Tests and coverage                                                | All Vitest unit/component tests, V8 coverage and enforced thresholds; downloadable HTML/LCOV/JSON artifacts.                 |
+| verify                                                            | `./portal test`: real isolated SQL/RLS/API/Edge/browser/PWA, security, restart and maintenance checks.                       |
+| Actual isolated selfhost image compatibility                      | Real pinned Supabase images and retained data from the previous source revision.                                             |
+| PR preview package                                                | Package the committed tested application and upload its real runnable local preview artifact; required before PR merge.      |
+| PR metadata                                                       | Current PR labels and matching repository/commit identity.                                                                   |
+| CodeQL (javascript-typescript), CodeQL (python), CodeQL (actions) | Completion of each configured language analysis.                                                                             |
+| Dependency review                                                 | Newly introduced vulnerable dependencies on the PR.                                                                          |
+| CodeQL                                                            | Generated findings check, separate from successful scanner execution.                                                        |
 
-The release job requires the fast quality gates and both complete application/selfhost gates. An early maintainer merge may bypass repository rules but does not publish a failed package. VPS automation still verifies that the entire CI run for the exact main commit succeeded.
+All 15 listed checks are mandatory before a PR can merge. The strict rule also requires the PR to be up to date with `main`. Neither maintainers, administrators nor the maintenance App can bypass these checks.
+
+The release job runs only for an authorised manual `Portal checks` dispatch on
+`main` with `publish_release=true` and the exact current `main` SHA supplied as
+`expected_commit`. Pushes, ordinary manual verification and daily-maintenance
+verification do not publish releases. The fast quality gates and both complete
+application/selfhost gates remain required; failed checks do not produce a
+publication package. VPS automation still verifies that the entire CI run
+for the exact main commit succeeded. The existing five-minute VPS polling timer
+is unchanged; changing publication policy does not claim a hosted timer change.
+
+The `PR preview deployments` workflow is manual-only. The verified downloadable
+PR package remains an artifact, independent of optional deployment metadata.
+See [PR_PREVIEWS](PR_PREVIEWS.md) for that explicit publication and cleanup path.
 
 [CodeQL](../.github/workflows/security.yml) additionally analyses JavaScript/TypeScript, Python and GitHub Actions on PRs/main and on Mondays at 05:23 UTC (15:23 Brisbane). This is static security analysis, not a replacement for real RLS/auth/file-access tests. Findings appear under GitHub Security/Code scanning; a successfully completed scan does not by itself mean there are no warnings. This separate Security workflow is currently not an additional release `needs` gate; publication conditions are explicitly defined in `ci.yml`.
 
@@ -45,8 +71,8 @@ Dependabot PRs receive suitable existing type/area/risk labels and run through t
 
 ## Maintainers and server-side rules
 
-Maintainers and administrators receive `always` exceptions; ordinary write access does not receive a bypass. The active rule already included these roles. The two additional prepared review/check rules were synchronised with the same current instruction but remain disabled until the maintenance App path is proven. See [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md) for details and actual activation status.
+The history, review and required-check rules are active. The only current review bypass actor is `CarinaSchoppe` (User 29256704), with mode `pull_request`; it does not allow direct pushes or skipped checks. Maintainer or administrator role membership alone grants no review exception. Other contributors and the maintenance App must satisfy the independent/latest-push review and resolved-conversation rules as well as every check. The history and required-check rules have no bypass actors, and the App has no bypass entry in any policy. Versioned JSON snapshots can predate the current live exception; the server-side rules are authoritative. [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md) documents the readback and remaining operational App setup.
 
-The setup was merged through [PR11](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/11). All six new quality/coverage checks and the corrected security run passed on the actual PR revision; the maintainer merge succeeded while the long-running tests were still active. Main checks then run again and remain a publication condition. The scanner job and generated CodeQL findings check were verified separately; the initial test-fixture finding was fixed by checking the exact URL origin. The first complete main scan additionally reports existing operations/test-script findings. They are individually assessed in [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md); a successful PR-diff scan does not imply a main scan without warnings.
+The initial quality setup was merged through [PR11](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/11) under the previous policy, which allowed an early maintainer merge while long-running tests were active. That historical result is not the current merge policy. The scanner job and generated CodeQL findings check were verified separately; the initial test-fixture finding was fixed by checking the exact URL origin. The first complete main scan additionally reported existing operations/test-script findings. They are individually assessed in [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md); a successful PR-diff scan does not imply a main scan without warnings.
 
 Official references: [GitHub CodeQL](https://docs.github.com/en/code-security/code-scanning/introduction-to-code-scanning/about-code-scanning-with-codeql), [Dependabot](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependabot-version-updates), [Vitest coverage](https://vitest.dev/guide/coverage.html). Exact executed checks and GitHub runs are recorded in [WORKLOG](WORKLOG.md).

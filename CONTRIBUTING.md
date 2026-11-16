@@ -1,6 +1,6 @@
 # Contributing to Luminovia Portal
 
-> Status as of 16 November 2026: Maintainers and administrators have a permanent `always` exception for direct merges. Additional review/check requirements for other contributors remain prepared but disabled until the maintenance App path has been verified. [Current activation status](docs/GITHUB_WORKFLOW.md#activation-still-pending).
+> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Only `CarinaSchoppe` (User 29256704) has a personal `pull_request` exception in the review rules. Nobody can bypass the 15 mandatory CI/security checks or strict up-to-date testing. The history/check rules and maintenance App have no bypass exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
 
 Welcome! This guide explains how to turn an idea or bug report into a tested, reviewable change. **Use English for issues, pull requests and contributor-facing documentation.** Application interface changes must provide both German and English strings; authored course content keeps its original language.
 
@@ -50,6 +50,15 @@ Keep each branch focused on one coherent change. Use meaningful, signed commits 
 
 During development, run focused checks such as `npm test`, `npm run test:coverage`, `npm run lint` and `npm run typecheck` after installing dependencies. The [CI and coverage guide](docs/CI_QUALITY.md) explains checks, reports and thresholds. `./portal test` is the canonical complete acceptance command. Understand a check's target and resources before running it, and do not publish unredacted private test artifacts.
 
+Local PC verification is the default. Use `./portal check` for fast quality,
+coverage and build feedback while editing, then `./portal test` for complete
+isolated acceptance of your working source before delivery;
+`./portal github test` fetches and verifies current `main` in a separate local
+checkout, while `./portal github` opens its persistent preview. No GitHub
+deployment or self-hosted Actions runner is needed. Coordinate the shared QA lock
+with other agents and never stop a foreign stack to obtain its ports. Automatic
+GitHub quality/security checks remain in place.
+
 ## 4. Preserve the domain contracts
 
 - **Permissions:** The database and API decide access. Test other accounts, revoked permissions and rejected requests; hiding a button is insufficient.
@@ -68,15 +77,20 @@ Every PR needs exactly one `type:*` label, at least one `area:*` label and exact
 
 ## Review and merge
 
-The normal contribution process uses a pull request, an independent approving review, resolved conversations and current passing checks. New changes invalidate earlier approvals where the prepared review policy is enforced.
+Changes to `main` require a pull request. Other contributors, including the maintenance App, need an independent approving review, approval of the latest push and resolved review conversations. New pushes dismiss stale approvals; self-approval is insufficient. The only current review exception is personal to `CarinaSchoppe` (User 29256704), with bypass mode `pull_request`. It permits bypassing review through a PR, not direct pushes or bypassing required checks. Maintainer or administrator role membership alone grants no review exception.
 
-Maintainers and administrators have an explicit role-based exception and may **merge directly at any time**, including while reviews or checks are pending or failing. This replaces the former personal PR-only exception. Ordinary write access does not grant this bypass. The exception applies to the acting person; GitHub may require an explicit bypass action. Review and clear test evidence remain the recommended workflow.
+All 15 mandatory checks must pass for the current revision, and the PR must be up to date with `main`. These include Build, Typecheck, Lint, Formatting, Code quality, Tests and coverage, `verify`, `Actual isolated selfhost image compatibility`, `PR preview package`, `PR metadata`, the three CodeQL language analyses, Dependency review and the generated CodeQL findings check. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes. Missing, pending or failed required checks block every merger, including administrators and the maintenance App.
 
-Build, Typecheck, Lint, Formatting, Code quality and Tests and coverage run alongside `verify`, `Actual isolated selfhost image compatibility` and `PR metadata`. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes, CodeQL and Dependabot. The additional mandatory review/check rules for ordinary contributors remain disabled until the maintenance App path is verified; committed JSON alone does not prove active enforcement.
+Daily maintenance publishes a signed change on a separate branch and opens a PR labelled `type:dependencies`, `area:devops` and `risk:high`. Native auto-merge waits for the same checks and independent review; it grants no exception. App permission setup and actual workflow delivery must be verified separately from the already active rules. See [current operational status](docs/GITHUB_WORKFLOW.md#activation-still-pending).
 
-A direct maintainer merge does not skip publication checks: the development release job waits for its gates in `ci.yml`. Failed checks do not produce an approved installation package. The separate Security workflow provides additional analysis. The existing daily maintenance path remains unchanged until the App setup is coordinated; no unverified bot bypass is assumed.
-
-A merge may trigger the existing **development release automation**. Production installation, risky migrations, and changes to hosting, DNS or real data still require the relevant separate authorization. A GitHub merge does not replace that operational approval.
+A merge does not publish a development release or create PR deployment metadata.
+An authorised maintainer must explicitly dispatch `Portal checks` on `main` with
+`publish_release=true` and the exact current `main` SHA in `expected_commit`.
+Normal manual checks and daily-maintenance verification do not publish releases.
+PR deployment metadata has its own manual-only workflow; the verified local
+artifact remains downloadable without creating that record. Production
+installation, risky migrations, and changes to hosting, DNS or real data still
+require the relevant separate authorization. A GitHub merge does not replace it.
 
 ## Tags and releases
 
