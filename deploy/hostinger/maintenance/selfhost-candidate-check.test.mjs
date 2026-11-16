@@ -1,5 +1,5 @@
 /**
- * Static/filesystem candidate cases exercise isolation, unique ownership and carried fixtures. The separate native run must prove actual Auth/Storage persistence.
+ * Filesystem/socket candidate cases exercise isolation, unique ownership and carried fixtures. The separate native run must prove actual Auth/Storage persistence.
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -14,10 +14,12 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
+import { createServer } from "node:net";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import {
   adaptCandidateApiFixture,
+  allocateCandidatePorts,
   assertCandidateConfiguration,
   candidateApiSuites,
   checkCandidate,
@@ -25,6 +27,95 @@ import {
   ownershipLabel,
   stageCandidateSource,
 } from "./selfhost-candidate-check.mjs";
+
+// These helpers touch only test-owned loopback sockets, with no Docker services
+// or application stack. Rebinding proves the allocator released OS resources.
+const listen = (server, port = 0) =>
+  new Promise((done, fail) =>
+    server.once("error", fail).listen(port, "127.0.0.1", done),
+  );
+const close = (server) =>
+  new Promise((done, fail) =>
+    server.close((error) => {
+      if (error && error.code !== "ERR_SERVER_NOT_RUNNING") fail(error);
+      else done();
+    }),
+  );
+
+test("candidate ports are distinct while all three real leases are held and are released on success", async (t) => {
+  const listeners = [];
+  const held = [];
+  t.after(() => Promise.all(listeners.map(close)));
+  const ports = await allocateCandidatePorts(() => {
+    const server = createServer();
+    listeners.push(server);
+    server.once("listening", () => {
+      // Capture actual bound addresses before allocator cleanup. At least one
+      // observation must contain all three simultaneous, distinct reservations.
+      held.push(
+        listeners
+          .filter((listener) => listener.listening)
+          .map((listener) => listener.address()),
+      );
+    });
+    return server;
+  });
+  const simultaneous = held.find((addresses) => addresses.length === 3);
+  assert(simultaneous, "All three ports must be reserved at the same time.");
+  assert(simultaneous.every((address) => address.address === "127.0.0.1"));
+  assert.equal(new Set(simultaneous.map(({ port }) => port)).size, 3);
+  assert.deepEqual(
+    Object.values(ports),
+    simultaneous.map(({ port }) => port),
+  );
+  assert(listeners.every((server) => !server.listening));
+  for (const port of Object.values(ports)) {
+    const rebound = createServer();
+    try {
+      await listen(rebound, port);
+    } finally {
+      await close(rebound);
+    }
+  }
+});
+
+test("candidate port bind failure releases earlier leases and preserves an unrelated listener", async (t) => {
+  const blocker = createServer();
+  const listeners = [];
+  let firstPort;
+  t.after(() => Promise.all([blocker, ...listeners].map(close)));
+  await listen(blocker);
+  const occupiedPort = blocker.address().port;
+  await assert.rejects(
+    allocateCandidatePorts(() => {
+      const server = createServer();
+      listeners.push(server);
+      if (listeners.length === 1)
+        server.once("listening", () => {
+          firstPort = server.address().port;
+        });
+      else {
+        // Force a genuine EADDRINUSE on the second owned socket, after the first
+        // lease exists. No global network API or other process is modified.
+        const originalListen = server.listen;
+        t.mock.method(server, "listen", function (_port, host, done) {
+          return originalListen.call(this, occupiedPort, host, done);
+        });
+      }
+      return server;
+    }),
+    { code: "EADDRINUSE" },
+  );
+  assert.equal(typeof firstPort, "number");
+  assert(listeners.every((server) => !server.listening));
+  assert(blocker.listening, "Cleanup must not close an unrelated listener.");
+  const rebound = createServer();
+  try {
+    await listen(rebound, firstPort);
+  } finally {
+    await close(rebound);
+  }
+});
 
 const project = "luminovia-portal-test-" + "a".repeat(24);
 const scope = {

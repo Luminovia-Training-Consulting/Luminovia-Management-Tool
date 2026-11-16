@@ -1,5 +1,9 @@
 # QA evidence — 2026-11-16
 
+## PR23 native setup: reproduced port allocation defect corrected
+
+Run43814253694/d448fab passed complete application verify, then native failed before services/migrations: serially released ephemeral ports produced only2distinct values for3roles. The fix retains all3loopback listeners until collection finishes, then closes all owned resources in finally. Ten unit cases pass, including two real-socket regressions for simultaneous uniqueness, rebinding, and genuine bind-failure cleanup without touching an unrelated listener. The existing uniqueness assertion and all gates remain. Combined maintenance/M4 guards pass41cases;89runtime,lint/type/format/compiler checks pass. Accepted main319ab69 is preserved; no new complete/native-PWA pass is claimed until current-head CI finishes. Draft/no-auto-merge and the explicit local-PC/main-merge queue remain in force.
+
 ## PR23 current-main local run: failed transport, own course flows passed
 
 Current-main0a6002a focused local checks pass254frontend/89runtime/type/lint/format/compiler inventory. Canonical3250296d is **FAIL**,90/92browsers: dashboard.desktop and a chat member's mobile context lost initial source/ReactDOM modules with `ERR_NETWORK_CHANGED`, leaving no login form before either business check began. All4course/source journeys pass;263SQL cases/groups,19real API suites plus Edge/Mailpit and restart persistence pass. Build/PWA were not reached. No permission assertion, retries0 or timeout was weakened.
