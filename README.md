@@ -14,6 +14,14 @@ The user's [Universal Master Prompt](docs/UNIVERSAL_MASTER_PROMPT.txt) is preser
 
 ## Start locally with one command
 
+Development and testing run on the local PC by default. Use `./portal check` for
+fast quality, coverage and build feedback while editing, then `./portal test` for
+complete isolated acceptance before delivery. Use `./portal github test` for freshly fetched `main`, and
+`./portal github` for a persistent latest-main preview. These need no GitHub
+deployment or self-hosted Actions runner. Automatic GitHub quality/security
+checks remain; CMS releases and PR deployment records require an explicit manual
+publication action.
+
 ```bash
 ./portal start
 ```
@@ -108,6 +116,10 @@ The launcher fetches the current Main branch into a separate managed checkout an
 
 ## Run complete verification with one command
 
+For fast edit feedback, run `./portal check` first. It runs local quality,
+coverage and a synthetic-config production build without starting Docker
+services or publishing a package. Complete business acceptance still uses:
+
 ```bash
 ./portal test
 ```
@@ -116,13 +128,13 @@ The command uses a sanitized temporary checkout, a random independent Supabase p
 
 Reports and protected failure artifacts stay under `.local/tests/<run>/`. Only the isolated test stack is removed afterwards. Individual npm/SQL/API checks remain available for focused debugging; run mutating integration checks inside the isolated environment. New scripts must respect the URL/container variables documented in [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md).
 
-Executed results and limits are recorded in [QA_RESULTS](docs/QA_RESULTS.md) and [WORKLOG](docs/WORKLOG.md). Local browser/PWA checks do not establish physical iOS/Safari installation or acceptance on a later host. CI publishes development packages, not a production release.
+Executed results and limits are recorded in [QA_RESULTS](docs/QA_RESULTS.md) and [WORKLOG](docs/WORKLOG.md). Local browser/PWA checks do not establish physical iOS/Safari installation or acceptance on a later host. CMS development packages require an authorised manual `Portal checks` run on `main`, `publish_release=true`, the exact current `main` SHA in `expected_commit` and all existing verification gates. Ordinary pushes, merges and manual verification runs do not publish a release.
 
 ## Staging and production
 
 The actual **self-hosted development instance** runs at **https://cms.luminovia.org** on the existing Hostinger **KVM 1**. The frontend, Supabase Database/Auth/Storage/Realtime/Edge and ClamAV share this VPS. The user explicitly declined a capacity upgrade; approximately 100 GB of documents is a future target. Current quotas are 10 GiB total and 1 GiB per owner. Test emails are captured in internal Mailpit. See [setup, private configuration, verification and operation](docs/HOSTINGER_DEVELOPMENT.md).
 
-The VPS checks every five minutes for successfully tested immutable GitHub releases from `main`. [Automatic development updates](docs/HOSTINGER_AUTOMATIC_UPDATES.md) cover backups, migrations, runtime configuration and atomic frontend promotion; server credentials remain on the VPS. Major or risky database changes require reviewed maintenance. Ubuntu security updates are enabled automatically.
+The existing VPS updater checks every five minutes for successfully tested immutable GitHub releases from `main`; its timer has not been changed by the local-first workflow. New releases are now published only by explicit manual request, so normal merges no longer supply it with automatic updates. [Automatic development updates](docs/HOSTINGER_AUTOMATIC_UPDATES.md) cover backups, migrations, runtime configuration and atomic frontend promotion; server credentials remain on the VPS. Major or risky database changes require reviewed maintenance. Ubuntu security updates are enabled automatically.
 
 The VPS uses the pinned PostgreSQL 17.12 image. After its controlled patch, all eight CMS API groups passed again, including 50 concurrent claims with one complete winner, the unchanged private file with the saved password, and actual WSS delivery/revocation. An off-server database-plus-file backup was restored in isolation using both the original image and the reviewed 17.12 candidate. The [verified pins and actual results](deploy/hostinger/selfhost/postgres-upgrade-provenance.json) are recorded.
 

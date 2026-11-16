@@ -2,6 +2,14 @@
 
 Contributors should start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue guide](ISSUE_GUIDE.md) and the [pull request guide](PULL_REQUEST_GUIDE.md). This page explains the administrative sources and the boundaries of rule exceptions. Public contribution guidance and new contribution discussions use English; the product interface remains German and English.
 
+Current publication policy: use `./portal check` for fast local feedback and
+`./portal test` for complete local acceptance. Ordinary PR/main activity keeps
+its GitHub quality/security checks but creates no automatic deployment record or
+CMS release. Releases require an authorised manual `Portal checks` dispatch on
+`main`, `publish_release=true`, the exact current `main` SHA in `expected_commit`
+and every existing release gate. PR metadata publication/cleanup is manual-only;
+see [PR_PREVIEWS](PR_PREVIEWS.md). The existing VPS polling timer is unchanged.
+
 ## Rules for `main`
 
 The current server readback and matching source JSON replace the earlier disabled-rule and broad-`always` snapshots. The [server-side rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative; committing JSON alone does not activate or change a rule.
@@ -78,7 +86,7 @@ References: [rulesets and exceptions](https://docs.github.com/en/repositories/co
 
 ## PR preview packages and deployment records
 
-After complete quality, coverage, application and native acceptance, PRs produce a seven-day source package for a complete local preview. A separate trusted default-branch publisher updates GitHub Deployments using actual current PR, workflow and artifact metadata. Contribution code receives no write token or hosting secrets. The deployment URL opens the downloadable package; successful publication does not claim a hosted website. Closed, superseded and expired previews become inactive. The packaged launcher uses owned local database identities and distinct ports. See [PR previews](PR_PREVIEWS.md) for permissions, local operation and first activation.
+After complete quality, coverage, application and native acceptance, PRs produce a seven-day source package for a complete local preview. The artifact remains available without a Deployment record. Only an authorised manual `PR preview deployments` dispatch on `main` with `action=publish`, the exact `run_id` and `run_attempt` asks the trusted default-branch publisher to create metadata. Its default `action=cleanup` deactivates stale/closed/expired records without publishing a new one; no PR event or schedule runs that cleanup automatically. Contribution code receives no write token or hosting secrets. The deployment URL opens the downloadable package; successful publication does not claim a hosted website. The packaged launcher uses owned local database identities and distinct ports. See [PR previews](PR_PREVIEWS.md) for permissions and local operation.
 
 ## Labels and metadata validation
 
