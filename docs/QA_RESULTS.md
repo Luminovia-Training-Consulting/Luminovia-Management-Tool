@@ -2,11 +2,31 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
-## Smart operations — focused source acceptance, combined gate pending
+## Smart operations — complete local acceptance passed
+
+Frozen application source `d7d3c580e64d0fdd1f7bfdde606f50966ec74e76` passed `./portal test` at **2026-11-16 03:04:52 UTC / 13:04:52 Australia/Brisbane**. The command and its independent launcher both returned **exit 0** after owned cleanup. Private report: `.local/tests/b9d31627/RESULT.txt`; complete transcript/exit: `.local/smart-operations-test.log` and `.local/smart-operations-test.exit`.
+
+| Check | Actual result |
+| --- | --- |
+| Frontend/source | 219 Vitest cases in 51 files; TypeScript, ESLint, formatting and source/export checks passed |
+| Runtime/Edge | 52 Node runtime checks; 42 Edge tests and three entry-point typechecks |
+| Mail/operating guards | 33 SMTP Python cases, 76 existing operating Python cases, 61 operating Node cases; actual Envoy/Caddy boundaries |
+| Database | All 28 migrations, lint/advisors and 272 PostgreSQL cases/groups, including the legacy taxonomy refusal case |
+| Auth/business APIs | All 23 actual Auth/REST/Storage/WebSocket suites; real Python worker to loopback SMTP acceptance/uncertainty/opt-out; Edge/Mailpit invitation |
+| Persistence | Password, verified MFA, profile/zone, private event and exact private Storage bytes survived stop/start |
+| Browsers | 80 passed, zero failed/skipped, desktop/mobile Chromium, 7.1 minutes; new dashboard/contact/email/ICS and retained previous workflows |
+| Build/PWA | 57 public precache entries, 2629.79 KiB; two built-PWA offline/private-cache tests passed in 2.5 seconds |
+| Cleanup | Owned random stack/network/volumes/locks removed; normal development records were not targeted |
+
+The desktop/mobile [personal dashboard](screenshots/desktop-chromium-dashboard-personal.png), [mobile dashboard](screenshots/mobile-chromium-dashboard-personal.png), [contact settings](screenshots/desktop-chromium-staff-contact-settings.png) and [mobile contact settings](screenshots/mobile-chromium-staff-contact-settings.png) were visually inspected. All data are fictional. Coverage checkpoint: 218 cases, S49.61/B43.42/F40.25/L51.48%; one subsequently added positive download case brings the complete-command count to 219. No coverage floor was lowered.
+
+GitHub quality, dependency review and all three CodeQL analyses passed on the current application head; the separate full application/native retained-image outcomes must be read from [PR 17](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/17), not inferred from the local run. Real mailbox authentication/delivery, installed SMTP timer, physical PWA/calendar import, full remaining product scope and production remain separate gates. Credential-free verified TLS 1.3 connections on Hostinger ports 465/587 passed without AUTH or message submission.
+
+### Earlier focused checkpoint
 
 Isolated `codex/smart-notifications-and-dashboard` preserves concurrently developed preview/role work. New source: durable email/quiet hours/SMTP worker, personal dashboard/Teaching Day/preparation, staff contact opt-in and fresh private calendar downloads. Native focused groups: email17, dashboard9, contact8, calendar4; prior notification15and central API6also pass.218Vitest/51files pass; V8 S49.61/B43.42/F40.25/L51.48%. SMTP33Python cases pass, including actual loopback protocols and bounded alarm failures. Typecheck/lint/format/export integrity and synthetic public-config production/PWA build pass (57entries/2629.78KiB). API reference139functions comes from an actual28migration replay.
 
-The first complete-command attempts refused the legitimately occupied cross-checkout QA lock before services. No new REST/E2E/native-retained result is inferred from written tests or the historical M6acceptance. Current whole-command outcome must be appended after execution. Real Hostinger authentication/delivery, installed timer, physical PWA/Google/Outlook import and production are not claimed.
+The first complete-command attempts refused the legitimately occupied cross-checkout QA lock before services. Run 1 later failed on the new calendar test fixture's account cleanup; run 2 was deliberately cancelled for an asynchronous checkbox test correction. Both are recorded in WORKLOG and are superseded for local application acceptance by the successful frozen-source run above; neither failed/cancelled command is relabelled successful.
 
 ## Subsequent theme regression — actual defect fixed, new CI pending
 

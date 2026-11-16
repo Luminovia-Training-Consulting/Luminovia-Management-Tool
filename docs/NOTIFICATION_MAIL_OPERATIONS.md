@@ -8,6 +8,8 @@ Official Hostinger configuration, checked on 16 November 2026: `smtp.hostinger.c
 
 Sources: [Hostinger email configuration](https://www.hostinger.com/support/1575756-how-to-get-email-account-configuration-details-for-hostinger-email/) and [Hostinger application setup](https://www.hostinger.com/support/4305847-set-up-hostinger-email-on-your-applications-and-devices/).
 
+A separate credential-free connection check on 16 November 2026 reached both ports from the development machine with verified TLS 1.3 (465 implicit TLS; 587 STARTTLS). It performed EHLO/TLS only, never AUTH or message submission. This proves that machine's connection at that time, not VPS egress, mailbox credentials, quotas or inbox delivery.
+
 ## Configuration and activation
 
 The reviewed templates are in [deploy/hostinger/notification-mail](../deploy/hostinger/notification-mail/). Adapt the backend URL to the actual private gateway; the example port is a placeholder, not evidence of a running listener. The existing VPS uses `/opt/luminovia-portal/source`, with private environment files outside `www`. A future operator can copy `worker.env.example` to `/opt/luminovia-portal/private/notification-mail.env`, owned by root with mode `0600`, and supply the server-only service-role key and mailbox password privately. Never use a `VITE_` variable or commit a filled environment file. A blank/unconfigured credential fails closed.
