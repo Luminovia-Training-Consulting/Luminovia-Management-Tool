@@ -1,5 +1,13 @@
 # Initial CodeQL baseline review
 
+## Corrected hosted request fields and incremental PR gate
+
+The exact f0f6fae PR analysis2175760898 reports eight findings: the new filesystem assertion race47 and seven inherited Main flows21/23/24/25/26/27/37 in the modified hosted checker. Six concern SUPABASE_PUBLISHABLE_KEY from the private configuration entering API-key headers; only one concerns the persisted document UUID. No password, actor-session or service-key rewrite is required to address those reported paths.
+
+Signed b87559b applies a checked immutable public-key value, preserves documented opaque and legacy anon HS256 formats and exact valid bytes, canonicalizes the document UUID and reads test assertions through one descriptor. The [actual unchanged Security43854357861](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43854357861) succeeds: full JavaScript2175865634 reports 12 inherited results, Python/Actions report zero, no analysis errors or warnings, and none of those eight reported findings remains. No alerts are dismissed and no query/path exclusion is added. Current exact PR-ref analysis still must pass zero findings before merge; this branch result does not substitute for that gate.
+
+The remaining inherited IDs are41,40,29,20,18,17,16,13,11,9,8,7. The legacy hosted HTTP-to-file hint17 therefore remains; it is not represented as closed. The separate local-scanner11 audit identifies an env-file update requiring its own mode/ownership/ACL/write-denial/concurrent-writer decision and tests; no incomplete scanner rewrite is added to this PR. Current source-bound results below preserve their historical counts.
+
 ## Quality follow-up: actual Main and corrected candidate-probe comparison
 
 On 16 November 2026, actual accepted main `1de544d872706eebc95a942a1956254ed87ae40d` full JavaScript analysis 2175076823 reports 25 results. Prepared quality PR19 source `e49862b` reports four new findings in its exact incremental PR analysis 2175179721: a candidate-ledger path-check/read race and three candidate-probe file/network dataflows. That source is not security-accepted despite its separate passing complete local application test.

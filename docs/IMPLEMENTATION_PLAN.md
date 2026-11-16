@@ -1,5 +1,15 @@
 # Persistent implementation plan
 
+## Current corrected PR19 gate
+
+- [x] Record actual f0 CodeQL eight-finding and Commission fixture failures; do not substitute successful prior-source or scanner-job results.
+- [x] Apply compatible public-key/UUID/descriptor-assertion correction; pass 17 focused and 265 combined Node cases. Observe actual b875 Security43854357861 with 12 inherited full-tree findings and none of those eight, preserving all queries and mandatory gates.
+- [x] Reproduce the late quote-reader TypeError against real PostgreSQL17.11 with emulated Auth; capture all ten actor quotes before the unchanged race, add deterministic snapshot assertions and pass 15 SQL groups with owned cleanup.
+- [x] Preserve all 36 released SQL and business source, actual Main29 documentation and the complete future product ledger; inspect analogous claim groups without finding another quote-inside-race callchain.
+- [ ] Observe all 15 fresh exact-head/current-base checks on the corrected PR source, including actual application and retained-financial native execution and generated incremental CodeQL success.
+- [ ] Follow the assigned Main/shared-QA order; integrate only actually accepted later Main and prove relevant combined acceptance without weakening global/per-file coverage, claims, review or signatures.
+- [ ] Complete the permitted PR19 merge and separately observe trusted-Main controller execution; native App merging remains distinct from metadata and runtime proofs.
+
 ## Current native checkpoint and descriptor safeguards
 
 - [x] Observe exact e498/fd0 GitHub application 116 browser + 2 PWA and actual 36→36 retained-data native acceptance with 29 API suites, real 50-way claims and owned cleanup.
