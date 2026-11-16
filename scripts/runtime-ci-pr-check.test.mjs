@@ -1,6 +1,7 @@
 /** PR suite discovery and fail-closed orchestration; no real Docker or network. */
 import assert from "node:assert/strict";
 import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import test from "node:test";
 import { prCheckPlan, runPrCheck, runPrSqlChecks } from "./ci-pr-check.mjs";
 import { root } from "./runtime-lib.mjs";
@@ -35,6 +36,30 @@ test("PR plans include every SQL/runtime suite and Edge entry without repeating 
     "./portal test",
   ])
     assert(!args.includes(duplicate), duplicate);
+});
+
+// Generated Deno commands must have the same font-only read capability as
+// canonical complete acceptance, not a blanket filesystem/network grant.
+test("PR Edge tests receive only the course PDF asset read capability", () => {
+  const plan = prCheckPlan();
+  const denoTests = plan.guards.filter(
+    ([, args]) => args.includes("test") && args.includes("--allow-env"),
+  );
+  assert.equal(denoTests.length, 1);
+  const args = denoTests[0][1];
+  assert.deepEqual(
+    args.filter((argument) => argument.startsWith("--allow-read")),
+    [
+      `--allow-read=${join(root, "supabase/functions/course-documents/assets")}`,
+    ],
+  );
+  for (const unrestricted of [
+    "--allow-read",
+    "--allow-all",
+    "-A",
+    "--allow-net",
+  ])
+    assert(!args.includes(unrestricted), unrestricted);
 });
 
 test("PR guards stop at the failing command, remove inherited backend/GitHub credentials and never start Docker", async () => {
@@ -134,6 +159,45 @@ test("PR SQL replays every existing suite in one pinned networkless image and re
   );
   assert.equal(fixture.calls.filter(({ args }) => args[0] === "run").length, 1);
   assert.equal(fixture.calls.at(-1).args[0], "rm");
+});
+
+// Execute the orchestration and inspect the SQL actually sent before its first
+// suite. Diagnostic/LOAD tests need a local operator; public API roles must not
+// inherit its login/superuser capability in these isolated raw clusters.
+test("raw SQL workers bootstrap their diagnostic operator before running any suite", async () => {
+  const fixture = sqlFixture();
+  await runPrCheck("sql", fixture);
+  const bootstrapIndex = fixture.calls.findIndex(
+    ({ file, args }) =>
+      file === "docker" &&
+      args[0] === "exec" &&
+      args.includes("psql") &&
+      args.at(-1).includes("create role anon"),
+  );
+  assert(bootstrapIndex >= 0);
+  const firstSuiteIndex = fixture.calls.findIndex(
+    ({ file }) => file === process.execPath,
+  );
+  assert(firstSuiteIndex > bootstrapIndex);
+  const bootstrap = fixture.calls[bootstrapIndex].args.at(-1);
+  const definitions = new Map(
+    bootstrap
+      .split(";")
+      .filter((statement) => statement.trim())
+      .map((statement) => {
+        const parsed = statement.trim().match(/^create role ([a-z_]+) (.+)$/i);
+        assert(
+          parsed,
+          "The owned bootstrap must contain only explicit role definitions",
+        );
+        return [parsed[1], parsed[2].toLowerCase().split(/\s+/).sort()];
+      }),
+  );
+  assert.equal(definitions.size, 4);
+  assert.deepEqual(definitions.get("anon"), ["nologin"]);
+  assert.deepEqual(definitions.get("authenticated"), ["nologin"]);
+  assert.deepEqual(definitions.get("service_role"), ["bypassrls", "nologin"]);
+  assert.deepEqual(definitions.get("supabase_admin"), ["login", "superuser"]);
 });
 
 test("SQL failure/cancellation stops later suites but still cleans the exact owned container", async () => {

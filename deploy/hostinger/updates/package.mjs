@@ -1,15 +1,22 @@
 /**
- * Build a verifiable CMS development release from one commit. Validate allowed paths, exact file/migration hashes, public build values and pinned images before packaging.
+ * Build a verifiable CMS development release from one tracked commit. Validate
+ * allowed paths, exact file/migration hashes, public build values and pinned
+ * images; worker artifacts retain locked dependencies and license evidence.
  */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
+  closeSync,
+  constants,
   existsSync,
   lstatSync,
+  fstatSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readFileSync,
+  readSync,
   readdirSync,
   realpathSync,
   rmSync,
@@ -18,6 +25,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isBuiltin } from "node:module";
 
 export const REPOSITORY =
   "Luminovia-Training-Consulting/Luminovia-Management-Tool";
@@ -55,6 +63,230 @@ const OPTIONAL_FILES = [
   "deploy/hostinger/backups/luminovia-complete-backup.service",
   "deploy/hostinger/backups/luminovia-complete-backup.timer",
 ];
+const WORKER_FILES = [
+  ...["notification-mail", "notification-push"].flatMap((kind) => [
+    `deploy/hostinger/${kind}/luminovia-${kind}.service`,
+    `deploy/hostinger/${kind}/luminovia-${kind}.timer`,
+    `deploy/hostinger/${kind}/worker.env.example`,
+  ]),
+];
+
+// The finite worker has no proxy option. Excluding an unused optional proxy
+// implementation avoids native Kerberos/runtime npm dependencies. Standard
+// web-push encryption/VAPID/request generation remain the exact locked source.
+const BUILD_PUSH = String.raw`
+import {rolldown} from 'rolldown';
+const bundle=await rolldown({input:'scripts/notification-push-worker.mjs',platform:'node',external:id=>id.startsWith('node:'),plugins:[{name:'luminovia-no-proxy',resolveId(id){if(id==='https-proxy-agent')return '\0luminovia-no-proxy';},load(id){if(id==='\0luminovia-no-proxy')return 'export class HttpsProxyAgent { constructor() { throw new Error("Proxy support is disabled in the finite Luminovia worker"); } }';}}]});
+try{const result=await bundle.generate({format:'esm',codeSplitting:false,comments:false,legalComments:'none'});if(result.output.length!==1||result.output[0].type!=='chunk')throw new Error('single_worker_chunk_required');const chunk=result.output[0];process.stdout.write(JSON.stringify({code:chunk.code,modules:Object.keys(chunk.modules),imports:chunk.imports,dynamicImports:chunk.dynamicImports}));}finally{await bundle.close();}
+`;
+
+/** Open a worker input once and validate/read that descriptor, never a checked
+ * path again. Nonblocking/no-follow opens reject links and cannot hang on FIFOs;
+ * the finite read and post-read metadata check reject replacement/in-place edits.
+ */
+function readWorkerInput(path) {
+  if (
+    !Number.isInteger(constants.O_NOFOLLOW) ||
+    !Number.isInteger(constants.O_NONBLOCK)
+  )
+    throw new Error("Secure worker input descriptor flags are unavailable.");
+  const descriptor = openSync(
+    path,
+    constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+  );
+  try {
+    const before = fstatSync(descriptor, { bigint: true });
+    if (!before.isFile() || before.size > BigInt(MAX_FILE_BYTES))
+      throw new Error("Worker input must be a bounded regular file.");
+    const size = Number(before.size);
+    const bytes = Buffer.alloc(size + 1);
+    let count = 0;
+    while (count < bytes.length) {
+      const received = readSync(
+        descriptor,
+        bytes,
+        count,
+        bytes.length - count,
+        null,
+      );
+      if (!received) break;
+      count += received;
+    }
+    const after = fstatSync(descriptor, { bigint: true });
+    if (
+      count !== size ||
+      after.size !== before.size ||
+      after.mtimeNs !== before.mtimeNs ||
+      after.ctimeNs !== before.ctimeNs
+    )
+      throw new Error("Worker input changed while reading.");
+    return bytes.subarray(0, count);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+/** Bundle only reviewed worker paths; runtime imports and provenance fail closed. */
+function workerArtifacts(sourceRoot, tracked) {
+  const sourceNames = [
+    "scripts/notification-push-worker.mjs",
+    "scripts/notification-mail-worker.py",
+    "package-lock.json",
+    "package.json",
+  ];
+  const sources = sourceNames.map((path) => {
+    plainFile(join(sourceRoot, path), sourceRoot);
+    if (tracked && !tracked.has(path))
+      throw new Error("Worker source is not tracked by release commit.");
+    return { path, sha256: hash(readWorkerInput(join(sourceRoot, path))) };
+  });
+  const lock = JSON.parse(
+    readWorkerInput(join(sourceRoot, "package-lock.json")).toString("utf8"),
+  );
+  if (lock.packages?.["node_modules/web-push"]?.version !== "4.0.0")
+    throw new Error("Reviewed exact web-push lock version required.");
+  const generated = JSON.parse(
+    execFileSync(process.execPath, ["--input-type=module", "-e", BUILD_PUSH], {
+      cwd: sourceRoot,
+      stdio: ["ignore", "pipe", "pipe"],
+      maxBuffer: MAX_FILE_BYTES,
+      timeout: 60000,
+    }).toString(),
+  );
+  if (
+    !generated.code ||
+    generated.imports.some((name) => !isBuiltin(name)) ||
+    generated.dynamicImports.length
+  )
+    throw new Error("Push worker must be standalone with Node builtins only.");
+  const artifacts = new Map();
+  const dependencies = new Map();
+  for (const module of generated.modules) {
+    if (module.startsWith("\0")) continue;
+    const normalized = module.split(sep).join("/");
+    const marker = normalized.lastIndexOf("/node_modules/");
+    if (marker < 0) {
+      if (
+        realpathSync(module) !==
+        realpathSync(join(sourceRoot, "scripts/notification-push-worker.mjs"))
+      )
+        throw new Error("Unexpected worker source module.");
+      continue;
+    }
+    const suffix = normalized.slice(marker + 14),
+      segments = suffix.split("/"),
+      name = segments[0].startsWith("@")
+        ? segments.slice(0, 2).join("/")
+        : segments[0];
+    const packageRoot = normalized.slice(0, marker + 14) + name;
+    const metadata = JSON.parse(
+      readWorkerInput(join(packageRoot, "package.json")).toString("utf8"),
+    );
+    const candidates = Object.entries(lock.packages ?? {}).filter(
+      ([path, value]) =>
+        (path === `node_modules/${name}` ||
+          path.endsWith(`/node_modules/${name}`)) &&
+        value.version === metadata.version,
+    );
+    if (
+      metadata.name !== name ||
+      !candidates.length ||
+      !candidates[0][1].integrity ||
+      new Set(candidates.map(([, item]) => item.integrity)).size !== 1
+    )
+      throw new Error("Worker dependency is missing exact lock integrity.");
+    let record = dependencies.get(name);
+    if (!record) {
+      record = {
+        name,
+        version: metadata.version,
+        integrity: candidates[0][1].integrity,
+        license: metadata.license,
+        modules: [],
+      };
+      dependencies.set(name, record);
+      const licenses = readdirSync(packageRoot).filter((file) =>
+        /^(?:licen[cs]e|copying|copyright)(?:[.-].*)?$/i.test(file),
+      );
+      if (!licenses.length && name === "http_ece") {
+        const fallback =
+          "deploy/hostinger/notification-push/licenses/http_ece-LICENSE.txt";
+        plainFile(join(sourceRoot, fallback), sourceRoot);
+        if (tracked && !tracked.has(fallback))
+          throw new Error("Worker license fallback is not tracked.");
+        const bytes = readWorkerInput(join(sourceRoot, fallback));
+        if (
+          hash(bytes) !==
+          "717363ac0c7f0883042868db171cfed1f4b423119249eac9bce5131291017ea8"
+        )
+          throw new Error("Reviewed http_ece license source differs.");
+        artifacts.set(fallback, bytes);
+        record.licenseSource =
+          "https://raw.githubusercontent.com/martinthomson/encrypted-content-encoding/v1.2.1/LICENSE";
+      } else if (!licenses.length)
+        throw new Error("Worker dependency license is missing.");
+      for (const file of licenses) {
+        const licensePath = join(packageRoot, file);
+        artifacts.set(
+          `deploy/hostinger/notification-push/licenses/${name.replaceAll("/", "_")}-${file.replaceAll(" ", "_")}`,
+          readWorkerInput(licensePath),
+        );
+      }
+    }
+    record.modules.push({
+      path: relative(packageRoot, module).split(sep).join("/"),
+      sha256: hash(readWorkerInput(module)),
+    });
+  }
+  const toolRoot = realpathSync(join(sourceRoot, "node_modules/rolldown"));
+  const tool = JSON.parse(
+    readWorkerInput(join(toolRoot, "package.json")).toString("utf8"),
+  );
+  if (tool.version !== lock.packages?.["node_modules/rolldown"]?.version)
+    throw new Error("Worker bundler differs from lockfile.");
+  artifacts.set(
+    "deploy/hostinger/notification-push/licenses/rolldown-LICENSE",
+    readWorkerInput(join(toolRoot, "LICENSE")),
+  );
+  artifacts.set(
+    "deploy/hostinger/notification-push/worker.mjs",
+    Buffer.from(generated.code),
+  );
+  artifacts.set(
+    "deploy/hostinger/notification-push/provenance.json",
+    Buffer.from(
+      JSON.stringify(
+        {
+          schemaVersion: 1,
+          format: "luminovia-standalone-push-worker-v1",
+          sources,
+          tool: {
+            name: tool.name,
+            version: tool.version,
+            integrity: lock.packages["node_modules/rolldown"].integrity,
+          },
+          proxySupport: false,
+          imports: generated.imports,
+          dependencies: [...dependencies.values()]
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .map((record) => ({
+              ...record,
+              modules: record.modules.sort((a, b) =>
+                a.path.localeCompare(b.path),
+              ),
+            })),
+          bundleSha256: hash(Buffer.from(generated.code)),
+        },
+        null,
+        2,
+      ) + "\n",
+    ),
+  );
+  for (const source of sources)
+    if (hash(readWorkerInput(join(sourceRoot, source.path))) !== source.sha256)
+      throw new Error("Worker source changed during packaging.");
+  return artifacts;
+}
 
 // Compute a stable SHA-256 digest for the source/artifact comparison.
 const hash = (data) => createHash("sha256").update(data).digest("hex");
@@ -421,7 +653,7 @@ export function createRelease(options) {
   if (
     !Array.isArray(forbiddenValues) ||
     forbiddenValues.some(
-      (value) => typeof value !== "string" || value.length < 12,
+      (value) => typeof value !== "string" || value.length < 8,
     )
   ) {
     throw new Error("Invalid private-value exclusion configuration.");
@@ -436,13 +668,27 @@ export function createRelease(options) {
   let total = 0;
   let configuredBundle = false;
   try {
-    for (const [name, path] of [...collected].sort(([a], [b]) =>
-      a.localeCompare(b),
-    )) {
+    for (const file of WORKER_FILES) {
+      plainFile(join(sourceRoot, file), sourceRoot);
+      collected.set(file, join(sourceRoot, file));
+    }
+    collected.set(
+      "deploy/hostinger/notification-mail/worker.py",
+      join(sourceRoot, "scripts/notification-mail-worker.py"),
+    );
+    const generated = workerArtifacts(sourceRoot, tracked);
+    for (const [name, path] of [
+      ...collected,
+      ...[...generated.keys()].map((name) => [name, null]),
+    ].sort(([a], [b]) => a.localeCompare(b))) {
       safePath(name);
-      const info = plainFile(path, sourceRoot);
+      const info =
+        path === null
+          ? { size: generated.get(name).length, mode: 0o644 }
+          : plainFile(path, sourceRoot);
       if (
         tracked &&
+        path !== null &&
         !name.startsWith("site/") &&
         !tracked.has(relative(sourceRoot, path).split(sep).join("/"))
       ) {
@@ -450,7 +696,7 @@ export function createRelease(options) {
           "Runtime input is not tracked by the release source commit.",
         );
       }
-      const data = readFileSync(path);
+      const data = path === null ? generated.get(name) : readFileSync(path);
       total += data.length;
       if (total > MAX_TOTAL_BYTES || data.length !== info.size)
         throw new Error("Release input changed or exceeded its size bound.");
@@ -567,6 +813,11 @@ if (
       "SUPABASE_SECRET_KEY",
       "POSTGRES_PASSWORD",
       "JWT_SECRET",
+      "SMTP_PASS",
+      "PORTAL_NOTIFICATION_SMTP_PASSWORD",
+      "PORTAL_NOTIFICATION_SERVICE_KEY",
+      "PORTAL_PUSH_SERVICE_KEY",
+      "PORTAL_PUSH_VAPID_PRIVATE_KEY",
     ]
       .map((key) => process.env[key])
       .filter(Boolean);

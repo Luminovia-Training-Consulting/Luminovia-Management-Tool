@@ -1,3 +1,6 @@
+/** Effective in-app attention settings remain distinct from the email channel's
+ * separately persisted quiet hours, including after locale changes and reload.
+ */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
@@ -56,27 +59,38 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
   try {
     await login(page, owner.email);
     await page.goto("/settings");
-    await page
+    // Use the actual named attention region; the email channel has an equally
+    // valid "Quiet hours time zone" field with an independent server contract.
+    const quietSettings = page.getByRole("region", {
+      name: /^(Ruhezeiten|Quiet hours)$/,
+    });
+    await quietSettings
       .getByLabel("Tägliche Ruhezeit aktivieren", { exact: true })
       .check();
-    await page.getByLabel("Beginn der Ruhezeit", { exact: true }).fill(start);
-    await page.getByLabel("Ende der Ruhezeit", { exact: true }).fill(end);
-    await page.getByLabel("Zeitzone der Ruhezeit", { exact: true }).fill("UTC");
+    await quietSettings
+      .getByLabel("Beginn der Ruhezeit", { exact: true })
+      .fill(start);
+    await quietSettings
+      .getByLabel("Ende der Ruhezeit", { exact: true })
+      .fill(end);
+    await quietSettings
+      .getByLabel("Zeitzone der Ruhezeit", { exact: true })
+      .fill("UTC");
     await page.getByLabel("Sprache", { exact: true }).selectOption("en");
     await expect(
-      page.getByLabel("Quiet hours start", { exact: true }),
+      quietSettings.getByLabel("Quiet hours start", { exact: true }),
     ).toHaveValue(start);
     await expect(
-      page.getByLabel("Quiet hours end", { exact: true }),
+      quietSettings.getByLabel("Quiet hours end", { exact: true }),
     ).toHaveValue(end);
     await expect(
-      page.getByLabel("Quiet hours time zone", { exact: true }),
+      quietSettings.getByLabel("Quiet hours time zone", { exact: true }),
     ).toHaveValue("UTC");
-    await page
+    await quietSettings
       .getByRole("button", { name: "Save quiet hours", exact: true })
       .click();
     await expect(
-      page.getByText("Quiet hours saved.", { exact: true }),
+      quietSettings.getByText("Quiet hours saved.", { exact: true }),
     ).toBeVisible();
     const bell = page.locator(".notification-menu > summary");
     await expect(bell).toHaveAttribute(
@@ -85,22 +99,30 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
     );
     await page.reload();
     await expect(
-      page.getByLabel("Enable daily quiet hours", { exact: true }),
+      quietSettings.getByLabel("Enable daily quiet hours", { exact: true }),
     ).toBeChecked();
     await expect(
-      page.getByLabel("Quiet hours start", { exact: true }),
+      quietSettings.getByLabel("Quiet hours start", { exact: true }),
     ).toHaveValue(start);
     await expect(
-      page.getByRole("button", { name: "Save quiet hours", exact: true }),
+      quietSettings.getByRole("button", {
+        name: "Save quiet hours",
+        exact: true,
+      }),
     ).toBeDisabled();
     await context.setOffline(true);
-    await page
+    await quietSettings
       .getByLabel("Enable daily quiet hours", { exact: true })
       .uncheck();
     await expect(
-      page.getByRole("button", { name: "Save quiet hours", exact: true }),
+      quietSettings.getByRole("button", {
+        name: "Save quiet hours",
+        exact: true,
+      }),
     ).toBeDisabled();
-    await page.getByLabel("Enable daily quiet hours", { exact: true }).check();
+    await quietSettings
+      .getByLabel("Enable daily quiet hours", { exact: true })
+      .check();
     await context.setOffline(false);
     await page.getByLabel("Theme", { exact: true }).selectOption("dark");
     await page.goto("/notifications");
@@ -159,14 +181,14 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
       /3 important unread updates.*20 unread in total/,
     );
     await page.goto("/settings");
-    await page
+    await quietSettings
       .getByLabel("Enable daily quiet hours", { exact: true })
       .uncheck();
-    await page
+    await quietSettings
       .getByRole("button", { name: "Save quiet hours", exact: true })
       .click();
     await expect(
-      page.getByText("Quiet hours saved.", { exact: true }),
+      quietSettings.getByText("Quiet hours saved.", { exact: true }),
     ).toBeVisible();
     await expect(bell).toHaveAttribute(
       "aria-label",

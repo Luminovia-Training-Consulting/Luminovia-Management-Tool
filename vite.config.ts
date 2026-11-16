@@ -48,6 +48,8 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
+          importScripts: ["/push-sw.js"],
+
           // Precache built public files only. Authenticated API/Storage responses
           // deliberately have no runtime-caching rule.
           globPatterns: ["**/*.{js,css,html,woff2,png,webp,ico}"],
