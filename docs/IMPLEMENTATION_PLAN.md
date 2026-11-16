@@ -10,15 +10,16 @@ This latest user instruction removes the maintenance App exception as well. It s
 - [x] Wire protected main-only selected-repository short-lived App tokens and the missing official age prerequisites for full candidate tests; update current guides and rule snapshots.
 - [x] Run lint/type/source-connection/coverage/build/workflow checks and49Node+13Python offline guards;226unit/component cases pass with existing floors. No frontend runtime module or export is statically unconnected.
 - [x] Complete independent final review; correct the invalid GraphQL interface selection and remove unsupported hold-label behavior. All20maintenance groups pass, including a concurrent classification-change rejection.
-- [x] Deliver signed [PR22](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/22); its durable GitHub record owns final exact-head full/security/native CI and merge acceptance. All14checks must pass before merging; an open PR is not a passed full run.
+- [x] Deliver signed [PR22](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/22); its durable GitHub record owns final exact-head full/security/native CI and merge acceptance. All15checks must pass before merging; an open PR is not a passed full run.
 - [x] Obtain explicit action-time confirmation and grant the existing App only additional pull_requests:write; UI confirms one selected repository and REST confirms the installed permissions, with no rule bypass.
 - [x] Observe all14required checks passing on exact PR22 checkpoint8c50852, including84browser/2PWA and the24migration/19suite native retained-data run. Main advanced afterward, so this is not a current-base merge permit.
 - [x] Honour the authorised PR15 merge hold and integrate its actual merged43504b8main once. Both conflicts preserve current PR-only behavior plus incoming English comments,35labels and MFA fixtures;32focused guards and independent review pass.
 - [x] Extend the existing manual diagnostic with real draft-PR creation/labels/closure and owned-ref cleanup;23maintenance groups plus11metadata/1documentation pass. Unknown or externally changed resources are preserved; no diagnostic merge is attempted.
-- [ ] Honour the subsequently authorised PR18 merge hold, integrate its actual released main, then observe all14checks on the final combined PR22 head. The intentionally cancelled8176724interim run and prior8c50852checks do not satisfy this acceptance.
+- [ ] Honour the subsequently authorised PR18 merge hold, integrate its actual released main, then observe all15checks on the final combined PR22 head. The intentionally cancelled8176724interim run and prior8c50852checks do not satisfy this acceptance.
+- [x] Add PR18's actual successful PR preview package job as the15thmandatory Actions check, with strict up-to-date enforcement and no bypasses; synchronize current guides.
 - [ ] Verify actual short-lived App token/signature/PR CI after the source reaches protected main. The configured environment key/ID and installed scopes alone are not execution proof.
 
-No App review exemption is restored: automated PRs need normal independent approval/latest-push approval and resolved conversations as well as all14required checks. An outdated open maintenance PR must be explicitly resolved before regeneration; no reviewed content is overwritten. The unmerged direct-ref auto-merger in PR19 is not part of this implementation.
+No App review exemption is restored: automated PRs need normal independent approval/latest-push approval and resolved conversations as well as all15required checks. An outdated open maintenance PR must be explicitly resolved before regeneration; no reviewed content is overwritten. The unmerged direct-ref auto-merger in PR19 is not part of this implementation.
 
 ## Earlier human-only verification — superseded on 16 November 2026
 

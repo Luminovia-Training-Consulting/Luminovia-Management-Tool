@@ -1,5 +1,9 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — require the newly added PR preview package too
+
+PR18's new PR preview package job is an actual successful Actions check on0675bb9, following full application/native verification. Added this exact context under integration15368to active checks rule27329142and read it back: all15PR checks are required with strict current-base testing and no bypass actors. This strengthens the latest user's complete-CI requirement as the incoming pipeline grows; it does not change the PR18 merge hold or relax any requirement. Current guides and source JSON now show15. Earlier14-check acceptance records remain historical evidence of the then-current configuration. The main-only release job and workflow_run preview metadata are separate post-PR operations, not substitute check results.
+
 ## 16 November 2026 — PR18 coordination and real App PR capability diagnostic
 
 A second explicitly user-authorised coordination hold gives PR18's exact0675bb9acceptance priority. The owned interim Portal run43804613884on8176724was intentionally cancelled after its quality/security/metadata checks passed, because merging PR18 would require a new current-base full acceptance anyway. This is not a failed application check or a claimed full pass. The earlier fully accepted8c50852checkpoint remains recorded below. PR18's source branch is left unchanged; final maintenance integration waits for its actual main merge and release.

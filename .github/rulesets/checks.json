@@ -70,6 +70,10 @@
           {
             "context": "CodeQL",
             "integration_id": 57789
+          },
+          {
+            "context": "PR preview package",
+            "integration_id": 15368
           }
         ]
       }

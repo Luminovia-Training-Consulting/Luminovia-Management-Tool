@@ -1,6 +1,6 @@
 # GitHub administration and contribution workflow
 
-> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Maintainers/admins may bypass review through a PR only; nobody can bypass the 14 mandatory CI/security checks or up-to-date testing. The maintenance App has no rule exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
+> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Maintainers/admins may bypass review through a PR only; nobody can bypass the 15 mandatory CI/security checks or up-to-date testing. The maintenance App has no rule exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
 
 Contributors should start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue guide](ISSUE_GUIDE.md) and the [pull request guide](PULL_REQUEST_GUIDE.md). This page explains the administrative sources and the boundaries of rule exceptions. Public contribution guidance and new contribution discussions use English; the product interface remains German and English.
 
@@ -12,9 +12,11 @@ The JSON files under `.github/rulesets/` are snapshots of the configuration read
 | ----------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Branch Protection             | [history.json](../.github/rulesets/history.json) | Signatures, deletion/force-push restrictions and existing deployment/code-quality rules. No bypass actors.                                                                  |
 | Main pull requests and review | [review.json](../.github/rulesets/review.json)   | PR, one independent approval, latest-push approval and resolved conversations. Only human repository roles `maintain` (ID 2) and `admin` (ID 5) have `pull_request` bypass. |
-| Main verified checks          | [checks.json](../.github/rulesets/checks.json)   | All 14 required application/native, quality/coverage, metadata and security checks; strict up-to-date testing. No bypass actors.                                            |
+| Main verified checks          | [checks.json](../.github/rulesets/checks.json)   | All 15 required application/native, quality/coverage, metadata and security checks; strict up-to-date testing. No bypass actors.                                            |
 
 The human review exception applies to the person performing a PR merge. It does not permit direct pushes or skipped, failed or pending mandatory checks. Ordinary write access and the maintenance App receive no review exception. The App must satisfy independent approval, latest-push approval and conversation resolution before GitHub can merge its PR. No identity, including an administrator or the App, can bypass the required-check rules. Administrators retain permission to edit repository settings; the current rules govern normal push and merge operations.
+
+PR18 introduces the `PR preview package` job after native verification. It is now also a required Actions check, so all 15 PR checks must finish successfully before a merge. The main-only release job and separate preview-metadata workflow are not substituted for these PR checks.
 
 The App's previous `always` exceptions were removed from both review and check rules and the effective rules were read back. The GitHub Actions integration 15368 and CodeQL integration 57789 identify the required checks' producers, not bypass actors. CI and coverage details are in [CI_QUALITY](CI_QUALITY.md).
 
