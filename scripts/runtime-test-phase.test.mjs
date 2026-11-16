@@ -228,7 +228,7 @@ async function runFixture({
 /** Represent actual executed commands independently of the phase planner. */
 const commands = (result) =>
   result.calls
-    .filter((call) => call.timeoutMs === 1200000)
+    .filter((call) => call.signal !== undefined)
     .map(({ file, args }) => [file, args]);
 const contains = (result, value) =>
   result.calls.some(({ args }) => args.includes(value));
@@ -445,9 +445,9 @@ test("system and browser phases preserve the complete command partition, duplica
 test("browser phase gets its own snapshot, retained real services and explicit owned policy before browser acceptance", async () => {
   const browser = await runFixture({ args: ["--phase", "browser"] });
   assert.ifError(browser.error);
-  const relevant = browser.calls.filter(
-    ({ timeoutMs }) => timeoutMs === 1200000,
-  );
+  // Owned stage calls carry cancellation even when a measured aggregate has
+  // a different bound; cleanup commands deliberately use separate deadlines.
+  const relevant = browser.calls.filter(({ signal }) => signal !== undefined);
   assert.deepEqual(
     relevant.slice(0, 4).map(({ args }) => args[0]),
     [

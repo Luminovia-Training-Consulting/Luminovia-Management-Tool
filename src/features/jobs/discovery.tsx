@@ -1,4 +1,5 @@
 /** Server-filtered offers and own saved views; observed roles scope quote-bearing pages. */
+import { MyJobWaitlist, SubstitutionOffers } from "./lifecycle-extra";
 import { useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
@@ -502,6 +503,8 @@ export function JobDiscovery() {
   return (
     <>
       <PageHeading title={t("title")} description={t("help")} />
+      <SubstitutionOffers />
+      <MyJobWaitlist />
       <p className="muted">{t("feeHelp")}</p>
       <SavedViews
         key={actor}
