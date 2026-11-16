@@ -1,5 +1,12 @@
 # Persistent implementation plan
 
+## Current all-PR merge continuation — PR12
+
+- [x] Integrate actually accepted PR36/main `7fbdb956` through normal ancestry; preserve both ledgers, phase isolation, strict browser evidence and all 36 released migration files.
+- [ ] Complete local source/orchestration checks and final current-head system/browser/native/security/package CI; merge sequentially through the central coordinator after required checks pass.
+
+Earlier checkpoint evidence and the complete product scope below remain unchanged.
+
 ## Current priority: deliver PR12 first
 
 - [x] Apply the user's direct priority change: PR12 now precedes the earlier feature queue. Merge after current required checks without renewed approval; do not import unaccepted PR17 source.
@@ -55,6 +62,16 @@
 - [x] Pass combined local source/build acceptance with254frontend cases/52files,102runtime cases,23maintenance guards and16focused publication/GitHub/documentation guards; workflow/diff checks pass. No new full PC/native pass is inferred.
 - [ ] Complete the coordinated full PC slot naturally, preserve actual logs/exit/cleanup, and integrate PR27's actual main plus any required newer main before final exact-head15-check acceptance.
 - [ ] Keep PR12's temporary draft state and no-auto-merge instruction until its reserved merge is released; no source/QA work waits for a larger collected branch.
+
+## Full PR acceptance critical path — further authorised continuation
+
+- [x] Measure two-worker SQL5m07s, complete native/retained-data success, and historical full browser13.9m versus13s Chromium setup; preserve canonical SQL lint/advisor and native-engine checks.
+- [x] Route sensitive PR system and browser acceptance onto separate owned runners; preserve main/manual/local complete acceptance and all existing required context names.
+- [x] Pass56focused phase/bootstrap/snapshot/safety/worker/scope/preview/policy cases and38actual shell boundary/routing cases; validate launcher normalization, complete stage partition, fresh service/persistence/seed setup and failure/cancellation cleanup. Scoped lint/format/compiler connectivity/actionlint pass; actual Docker/complete child-process evidence remains pending CI.
+- [ ] Publish signed exact source, observe every final-head system/browser/native/security/package gate, measure actual wall time, and complete the user-authorised protected merge.
+
+The complete product scope and earlier actual-source evidence below remain in force.
+
 ## Safe development-speed improvements — explicit continuation
 
 - [x] Observe signed608687f/PR34 Portal43855915270 success in11m36s (approximately59%less than28m),351actual SQL groups and every required context; fix missing metadata labels and observe green43856170205.
@@ -62,8 +79,8 @@
 - [x] Add conservative actual-merge docs/standard/full selection, full sensitive/unknown/main/manual acceptance, early independent jobs and required-gate preflights that fail on scope errors or fast non-PR profiles.
 - [x] Preserve source/rules/dependencies/migrations, all15required statuses, coverage/security/release requirements; make preview evidence profile explicit and reject missing CLI profile.
 - [x] Pass26focused local scope/worker/routing/preview/governance cases and scoped lint/format/actionlint; record local subprocess/Docker limitations and independent read-only review.
-- [ ] Publish final signed source, verify exact remote bytes, pass actual SQL-worker plus full application/native/security/package CI and measure the new SQL duration.
-- [ ] Perform the expressly authorised protected PR34 merge only when every final-current-head check passes; observe main acceptance separately without dispatching a release.
+- [x] Publish signed8f29147 and verify13exact remote blobs; Portal43860971674 passes complete SQL/native/application/security/package gates in32m35s, including SQL5m07s,114desktop/mobile and2built-PWA cases.
+- [x] Observe the user-performed protected PR34 merge after every final-head check passed: signedmain c528100. Main acceptance is a separate run; no release was dispatched.
 
 This continuation preserves the complete remaining product scope and prior source-bound evidence below.
 
@@ -215,7 +232,6 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 Other proposed PR21/22/26 group work remains separate from this frozen functional scope. The complete outstanding product/platform requirements below remain required.
 
-
 ## Current joint PR10/PR13 integration with released PR18
 
 - [x] Preserve both original PR10/PR13 histories, the English roadmap/decision/index structure and the reviewed Calendar, file-menu and PWA-title corrections from the incoming source.
@@ -332,9 +348,6 @@ Current user priority: verify real connected user functions and repair missing b
 - [x] Accept the corrected board in exact-source full CI/native verification on signed1e72507:all68 stages,234SQL/all18APIs/78application+2PWA,zero skips/retries;actual retained password/MFA/roles/private event/scanned bytes/TLS/WebSockets/50claims/cleanup passed. Local run04 safely refused a competing checkout's QA lock; no local pass is invented. First77/78 CI failure remains historical. [Exact results](QA_RESULTS.md).
 - [x] Preserve per-project failure evidence without miscounting a passed sibling browser;7 focused guards include genuine Playwright skip/focus/single-project-failure probes. Application/migrations/journeys remain unchanged after accepted1e72507; final PR checks are independently inspectable. No production/hosted deployment belongs to this request.
 - [ ] Correct the independent be1ef25 desktop search-navigation readiness race (89/90cases passed; no skip/retry), then accept the final roles-integrated source in complete application/native/security CI before direct merge.
-
-
-
 
 ## Coordinated PR18 integration
 
