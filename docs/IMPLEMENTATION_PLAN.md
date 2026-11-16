@@ -5,7 +5,8 @@
 - [x] Integrate actual main `1de544d872706eebc95a942a1956254ed87ae40d`, retaining all 36 published migration bytes, both histories, manual publication controls and the complete functional acceptance matrix.
 - [x] Pass relevant combined source checks: 515 frontend cases/65 files and coverage/build, 109 runtime cases, three documentation/privacy cases, actionlint and whitespace checks. Preserve the strict source fingerprint and browser-inventory guards.
 - [x] Retain the actual E7 full-PC and all-15-check CI results as source-specific evidence, with matching source fingerprints and checked owned cleanup.
-- [ ] Complete bounded owned PostgreSQL verification on the frozen 36-migration composition; record the actual migration ceiling separately for the historical catalogue-preservation regression.
+- [x] Complete bounded owned PostgreSQL on frozen `ddb8485`: commission 14 groups and lifecycle 12 groups, each all 36 migrations; historical catalogue-preservation five groups on its exact 24-file baseline plus the one neutral-catalogue migration. Record the initial own PID-limit failure, one justified complete lifecycle rerun, unchanged source and checked cleanup separately from native Auth acceptance.
+- [x] Independently inventory all 38 browser files/both projects: 120 application cases plus two PWA cases. Discovery alone is not executed acceptance; initial fixture-incomplete discovery was rejected, not counted as a pass.
 - [ ] Keep PR12 Draft/no-auto-merge while the explicit merge/shared-PC queue serves PR17, then PR24 and PR25. Do not launch a competing shared full-PC run.
 - [ ] Reconcile later actually merged main where necessary, prepare the signed PR update and require all 15 fresh exact-head/current-base checks before the released normal merge. Full remaining product/platform acceptance stays open; no publication dispatch is included.
 

@@ -1,5 +1,13 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — frozen 36-migration SQL integration verified
+
+Signed `ddb848564753ea5a89b326d649708c69385475c5` passes the actual owned PostgreSQL commission suite (14 groups, all 36 migrations) and lifecycle suite (12 groups, all 36 migrations). The historical catalogue-preservation upgrade separately passes five groups: 24 baseline migrations through `20261115213550`, then only `20261116032005`. Its intentionally historical replay is not described as a 36-migration upgrade. Real ten-way/fifty-way concurrency, reviewed consent, exact winners and immutable financial assertions remain unchanged.
+
+The initial lifecycle attempt failed after six groups when PostgreSQL could not fork under the own container's 256-PID ceiling. One justified whole-suite repetition with only that own ceiling raised to 512 passed all 12 groups; the first failure remains recorded. Source, memory, CPU and assertions were unchanged. Both pinned PostgreSQL containers used network `none`, no hostports, 768 MiB/one CPU and private tmpfs. Evidence confirms removed test databases/containers and unchanged source; SQL Auth helpers are emulated, so this is not native Auth/HTTP acceptance. Private mode-0600 evidence is `.local/full-functional/independent-sql/6dc8d65c52-result.json` and `232fcc59c2-result.json`.
+
+Independent browser discovery on the same source validates 38 files and both projects: 120 application cases plus two PWA cases. This backend-free inventory uses explicit noncredential placeholders and executes no journey. Earlier ad-hoc discovery without required fixture configuration correctly failed the disabled-case guard; it is not a passing execution. A bounded independent source review found no actionable integration regression. Fresh exact-head full CI remains required; PR12 stays Draft and the shared-PC/actual-main queue remains PR17, then PR24 and PR25. No shared full run or publication was started.
+
 ## 16 November 2026 — functional acceptance reconciled with accepted PR10 main
 
 Actual PR10 merged as `1de544d872706eebc95a942a1956254ed87ae40d` at 09:04:25 UTC after its current-head checks passed. This local PR12 integration preserves that accepted ancestry, both development histories and all 36 published migration files byte for byte. No pending feature branch, database policy or publication control is substituted. The complete acceptance matrix now includes the accepted discovery, mentions, announcements, attention, qualification and global-calendar slices, while retaining the unimplemented full-specification follow-ups.

@@ -1,5 +1,13 @@
 # QA evidence — 2026-11-16
 
+## Frozen 36-migration composition: actual bounded SQL acceptance
+
+Signed `ddb848564753ea5a89b326d649708c69385475c5` passes commission 14 groups and lifecycle 12 groups on all 36 migrations, exit 0. The catalogue-preservation regression independently passes five groups on its intentional historical baseline of 24 migrations through `20261115213550`, followed only by `20261116032005`. No historical migration or production SQL was changed.
+
+The first lifecycle attempt failed at PostgreSQL fork after six groups under the own 256-PID ceiling. Exactly one complete repetition, with only the own container ceiling raised to 512, passes; source and real fifty-way race/assertions are unchanged. Both own pinned PostgreSQL 17.12 containers have no network or hostports, 768 MiB/one CPU/private tmpfs and checked database/container removal. Evidence is private mode 0600 under `.local/full-functional/independent-sql/6dc8d65c52-result.json` and `232fcc59c2-result.json`. SQL Auth helpers are emulated; native Auth/HTTP acceptance remains separate.
+
+Independent backend-free collection validates all 38 files/both browser projects: 120 application cases plus two PWA cases. No journey was executed by collection. Noncredential placeholders satisfy fixture-presence conditions only; earlier fixture-incomplete discovery correctly failed the no-disabled-case guard. Bounded source review found no actionable regression. Fresh complete exact-head CI remains pending, and PR12 remains Draft under the PR17 → PR24 → PR25 shared-PC/actual-main priority.
+
 ## Accepted PR10 main: combined source checks, full CI still pending
 
 The local functional-test branch now incorporates actual main `1de544d872706eebc95a942a1956254ed87ae40d` (PR10, merged 09:04:25 UTC). All 36 published migration files are byte-identical to that main. The runner preserves source hashing, independent complete browser discovery, no skips/retries and cleanup-before-PASS.
