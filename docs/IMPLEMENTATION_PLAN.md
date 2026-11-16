@@ -1,5 +1,51 @@
 # Persistent implementation plan
 
+## PR10 sequential merge continuation
+
+- [x] Preserve original PR10 and M7/English integration ancestry; reconcile actual accepted main319ab69 and its PR-based maintenance boundary without changing live settings.
+- [x] Independently reproduce the prepared mobile course-tab overflow, retain the scoped wrapping correction and pass both real Chromium layouts; retain file-menu access/refresh regressions.
+- [x] Pass 514 frontend cases with unchanged coverage floors, 92 runtime cases, 23 maintenance cases, types/lint/format/compiler checks and released26-migration byte preservation.
+- [ ] Integrate PR27's actual accepted publication-control ancestry once its exclusive prior merge completes; no broad feature bundle is required.
+- [ ] Complete isolated local application and final exact-head application/native/security/package checks, then merge PR10 as directly authorised. Historical native and source-level passes are not substituted for the final combined revision.
+
+## Independent maintenance delivery after source-freeze release
+
+- [x] Honour the latest instruction to finish PR22 separately; preserve other source branches and the proposed group worktree. Earlier group/freeze entries below are historical.
+- [x] Remove the obsolete no-change retry-main helper/CLI/workflow path and publisher Actions-write token scope; unchanged scans skip privileged publication, while tested changed candidates retain native PR/review/CI protection.
+- [x] Pass31local maintenance/candidate tests, including real CLI failure/no-network acceptance, plus lint/type/workflow/diff checks; re-read live15-check/no-App-bypass and main-only signing-environment configuration.
+- [ ] Sign/push the scoped final correction, pass all15exact-current-head checks, complete coordinated normal PR merge and verify the real App diagnostic creates/labels/closes its owned draft and removes its branch while main stays unchanged. No release/deployment is authorised by this diagnostic.
+
+## Current continuation — App PR-only maintenance and audited execution
+
+This latest user instruction removes the maintenance App exception as well. It supersedes the earlier human-only verification and historical ALWAYS guidance. All remaining product modules below remain in scope.
+
+- [x] Remove App5776881 from live review/check bypass lists and read back all3active policies; checks/history have no exceptions, only human maintain/admin retain PR-only review exceptions.
+- [x] Replace direct daily main promotion with exact signed dependency-only branch/PR publication and native required-review/CI auto-merge; never mutate the main ref or substitute pre-merge dispatch for PR CI.
+- [x] Verify deterministic retries/lost responses, changed signatures/parents/blobs/PR identity, stale candidate and existing reviewed-PR preservation, plus the real CLI command path with network-free fictional fixtures.
+- [x] Wire protected main-only selected-repository short-lived App tokens and the missing official age prerequisites for full candidate tests; update current guides and rule snapshots.
+- [x] Run lint/type/source-connection/coverage/build/workflow checks and49Node+13Python offline guards;226unit/component cases pass with existing floors. No frontend runtime module or export is statically unconnected.
+- [x] Complete independent final review; correct the invalid GraphQL interface selection and remove unsupported hold-label behavior. All20maintenance groups pass, including a concurrent classification-change rejection.
+- [x] Deliver signed [PR22](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/22); its durable GitHub record owns final exact-head full/security/native CI and merge acceptance. All15checks must pass before merging; an open PR is not a passed full run.
+- [x] Obtain explicit action-time confirmation and grant the existing App only additional pull_requests:write; UI confirms one selected repository and REST confirms the installed permissions, with no rule bypass.
+- [x] Observe all14required checks passing on exact PR22 checkpoint8c50852, including84browser/2PWA and the24migration/19suite native retained-data run. Main advanced afterward, so this is not a current-base merge permit.
+- [x] Honour the authorised PR15 merge hold and integrate its actual merged43504b8main once. Both conflicts preserve current PR-only behavior plus incoming English comments,35labels and MFA fixtures;32focused guards and independent review pass.
+- [x] Extend the existing manual diagnostic with real draft-PR creation/labels/closure and owned-ref cleanup;23maintenance groups plus11metadata/1documentation pass. Unknown or externally changed resources are preserved; no diagnostic merge is attempted.
+- [x] Honour the subsequently authorised PR18 merge hold and integrate actualfabd71amain without conflicts, retaining its private pricing/welcome26migrations and QA fixtures. Fresh249frontend/75targeted Node cases pass.
+- [ ] Observe all15checks on the final combined PR22 head; the intentionally cancelled8176724interim run and prior8c50852checks do not satisfy this acceptance.
+- [x] Add PR18's actual successful PR preview package job as the15thmandatory Actions check, with strict up-to-date enforcement and no bypasses; synchronize current guides.
+- [ ] Verify actual short-lived App token/signature/PR CI after the source reaches protected main. The configured environment key/ID and installed scopes alone are not execution proof.
+
+No App review exemption is restored: automated PRs need normal independent approval/latest-push approval and resolved conversations as well as all15required checks. An outdated open maintenance PR must be explicitly resolved before regeneration; no reviewed content is overwritten. The unmerged direct-ref auto-merger in PR19 is not part of this implementation.
+
+## Earlier human-only verification — superseded on 16 November 2026
+
+- [x] Verify active live history/review/check rules: humans require a PR, maintain/admin can skip independent review, all14 checks remain mandatory even for CarinaSchoppe, and the PR must be up to date.
+- [x] Preserve the existing separate maintenance App exception; record its exact scope without claiming a working token/promotion path.
+- [x] Synchronize the three rule JSON snapshots with authenticated live readback in isolated codex/main-protection-verification-20261116; make no application or repository-setting mutation where the requested setting is already active.
+- [ ] Replace standard-token direct daily main promotion with a verified protected PR path. Current strict rules reject direct promotion safely; do not disable protection to restore it.
+
+This current instruction supersedes historical ALWAYS/disabled guidance below. The full product ledger remains required. Admins retain settings-edit authority, but ordinary merges and pushes must satisfy the active rules.
+
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
 ## Current joint PR10/PR13 integration with released PR18
@@ -58,6 +104,41 @@ The latest request supersedes the earlier shared compensation default. Work is i
 - [ ] Production policy setup/migration/deployment is a separate operational step; this request does not authorise production or real email changes.
 
 [Roles and private pricing](DELEGATED_ROLES_PRICING.md), [welcome guide](WELCOME_GUIDE.md), [PR previews](PR_PREVIEWS.md). The verbatim original specification remains preserved; these explicit user extensions update its operating details without dropping any remaining modules.
+
+## Comprehensive code comments and agent guide
+
+Requested directly on `main`: explain the maintained code throughout and provide a project-specific `AGENTS.md`, using OpenXLR's guide as a structural reference. Work uses a dedicated review worktree so the original checkout's concurrent feature changes remain separate. The independent English community commit `3256d1a` is preserved; contributor guidance remains English and source commentary uses English.
+
+- [x] Annotate the original170frontend and104launcher/script/browser-test files, maintained Edge/operating code and root build/CI/configuration entry points with purposes, contracts and important flow/security/resource explanations. Preserve and annotate the incoming PR16 guided-demo/help main additions:183frontend and109launcher/script/browser-test files in total, including the two private fixture sources. Combined226frontend/63runtime/10publicbrowser cases pass locally; exact protected PR acceptance remains required.
+- [x] Expand `AGENTS.md` with the actual ownership map, reading order, business/security invariants, commands, collaboration/Git rules, comprehensive English-comment policy and operational boundaries; add a canonical `.github/copilot-instructions.md` entry point.
+- [x] Explain all 24 released migrations in [MIGRATION_GUIDE](MIGRATION_GUIDE.md); preserve their exact bytes, vendor provenance, JSON/lockfiles, generated data and assets.
+- [x] Compare executable syntax/literals, CSS rules and parsed/active configuration against current main at pure-comment checkpoint1055101; run frontend coverage, type/lint/build, runtime, Edge and offline operating checks.
+- [x] Harden only the existing private MFA test-state IO after the protected CodeQL gate re-flags it; ten real filesystem regression groups and all62combined runtime tests pass. Fresh exact-head full CI remains the acceptance source for this bounded harness exception.
+
+The full product ledger below remains unchanged. The protected PR additionally requires hardening the existing private MFA test-state file reader/writer after CodeQL re-flags its old race warning in the touched fixture. That bounded harness change receives real ownership/symlink/atomic-write regressions; application business behavior stays unchanged. Exact-head CodeQL and full application/selfhost CI remain acceptance gates, with no advance production/hosted claim.
+
+## Historical PR CI repair
+
+Requested PRs6/7/8/9/14/11 are already merged. Their final application checks and later metadata failures are distinguished in [the audit](PR_CI_REPAIR_20261116.md);14 is a cancelled temporary-base fixture, not a failed product merge.
+
+- [x] Reconcile the35managed labels with current GitHub usage; preserve existing names, colours, descriptions and assignments.
+- [x] Use current trusted main for the ordinary read-only metadata check, skip automatic closed-PR events and add a main-only manual historical check; retain strict categories, canonical identity and stale-head rejection.
+- [x] Pass12focused Node regressions plus workflow/format/link checks and real read-only label validation for all six PRs.
+- [ ] Publish the signed fix, observe exact-head CI, merge under the user's explicit instruction and execute all six historical checks through the merged main workflow.
+
+No new application migration, production deployment or reduction of the remaining product scope belongs to this repair.
+
+## Guided exploration and practical help
+
+User requested a complete bilingual guided experience, safe fictional test system, practical problem explanations and a tested PR/merge. Work is isolated on `codex/guided-demo-help`; unrelated original roles/preview/welcome-checklist changes remain outside this PR.
+
+- [x] Public fictional demo for all25current portal modules, guided route sequence and meaningful in-memory exercises; explicit simulation labels, reset/reload erasure, DE/EN and shared themes.
+- [x] Authenticated permission-aware Portal tour with explicit navigation, pause/resume/restart and per-account session progress; unchanged server permissions, MFA and online confirmation.
+- [x] Public searchable bilingual help with practical workflows, module deep links, general recovery and entry points from login/tour/errors.
+- [x] Source checks, production build, actual public desktop/mobile acceptance, initial whole-source coverage above unchanged gates and precise usage/security documentation. See WORKLOG for executed counts and remaining exact-source checks.
+- Integration and the user-authorised merge are tracked on [PR16](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/16). Its exact-head full application/native retained-data/security checks and merge state are the acceptance record. No production deployment is implied.
+
+[Guided demo and help](GUIDED_DEMO_AND_HELP.md) complements the full target below. These educational simulations do not mark any unimplemented business module complete and do not replace the independent account welcome checklist.
 
 ## English community information
 

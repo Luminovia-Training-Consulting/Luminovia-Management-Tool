@@ -1,29 +1,30 @@
 # GitHub checks, security and coverage
 
+> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Maintainers/admins may bypass review through a PR only; nobody can bypass the 15 mandatory CI/security checks or up-to-date testing. The maintenance App has no rule exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
+
 Workflows run for pull requests and `main`; manual execution is also available. They need no VPS credentials, private Supabase keys or production data. Existing real application/database/API/browser checks remain in place.
 
 ## Visible checks
 
-| Check                                        | What it verifies                                                                                                             |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Build                                        | Production compilation and PWA build using only synthetic public Supabase configuration. It does not access a real instance. |
-| Typecheck                                    | TypeScript project checks through `npm run typecheck`.                                                                       |
-| Lint                                         | ESLint with no warnings allowed.                                                                                             |
-| Formatting                                   | Existing source formatting and GitHub configuration.                                                                         |
-| Code quality                                 | Existing compiler-based checks for reachable modules, exports and connections.                                               |
-| Tests and coverage                           | All Vitest unit/component tests, V8 coverage and enforced thresholds; downloadable HTML/LCOV/JSON artifacts.                 |
-| verify                                       | `./portal test`: real isolated SQL/RLS/API/Edge/browser/PWA, security, restart and maintenance checks.                       |
-| Actual isolated selfhost image compatibility | Real pinned Supabase images and retained data from the previous source revision.                                             |
-| PR metadata                                  | Current PR labels and matching repository/commit identity.                                                                   |
-| CodeQL (javascript-typescript)               | Static security analysis of JavaScript and TypeScript.                                                                       |
-| CodeQL (python)                              | Static security analysis of Python.                                                                                          |
-| CodeQL (actions)                             | Static security analysis of GitHub Actions.                                                                                  |
-| Dependency review                            | Newly introduced dependency vulnerabilities in pull requests.                                                                |
-| CodeQL                                       | Generated findings check, separate from successful scanner execution.                                                        |
+| Check                                                             | What it verifies                                                                                                             |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Build                                                             | Production compilation and PWA build using only synthetic public Supabase configuration. It does not access a real instance. |
+| Typecheck                                                         | TypeScript project checks through `npm run typecheck`.                                                                       |
+| Lint                                                              | ESLint with no warnings allowed.                                                                                             |
+| Formatting                                                        | Existing source formatting and GitHub configuration.                                                                         |
+| Code quality                                                      | Existing compiler-based checks for reachable modules, exports and connections.                                               |
+| Tests and coverage                                                | All Vitest unit/component tests, V8 coverage and enforced thresholds; downloadable HTML/LCOV/JSON artifacts.                 |
+| verify                                                            | `./portal test`: real isolated SQL/RLS/API/Edge/browser/PWA, security, restart and maintenance checks.                       |
+| Actual isolated selfhost image compatibility                      | Real pinned Supabase images and retained data from the previous source revision.                                             |
+| PR preview package                                                | Package the committed tested application and upload its real runnable local preview artifact; required before PR merge.      |
+| PR metadata                                                       | Current PR labels and matching repository/commit identity.                                                                   |
+| CodeQL (javascript-typescript), CodeQL (python), CodeQL (actions) | Completion of each configured language analysis.                                                                             |
+| Dependency review                                                 | Newly introduced vulnerable dependencies on the PR.                                                                          |
+| CodeQL                                                            | Generated findings check, separate from successful scanner execution.                                                        |
 
-The release job requires the fast quality gates and both complete application/selfhost gates. The active required-check rule requires all fourteen checks against the current base before a human maintainer can merge a PR, including the separate Security outcomes. VPS automation still verifies that the entire CI run for the exact main commit succeeded.
+All 15 listed checks are mandatory before a PR can merge. The strict rule also requires the PR to be up to date with `main`. Neither maintainers, administrators nor the maintenance App can bypass these checks. After merging, the release job requires the fast quality gates and both complete application/selfhost gates again. VPS automation still verifies that the entire CI run for the exact main commit succeeded.
 
-[CodeQL](../.github/workflows/security.yml) additionally analyses JavaScript/TypeScript, Python and GitHub Actions on PRs/main and on Mondays at 05:23 UTC (15:23 Brisbane). This is static security analysis, not a replacement for real RLS/auth/file-access tests. Findings appear under GitHub Security/Code scanning; a successfully completed scan does not by itself mean there are no warnings. Its three language analyses, `Dependency review` and the generated `CodeQL` finding check are now required for PR merges. The thirteen workflow-produced statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. The separate Security workflow is not an additional release-job `needs` gate; publication conditions remain explicitly defined in `ci.yml`.
+[CodeQL](../.github/workflows/security.yml) additionally analyses JavaScript/TypeScript, Python and GitHub Actions on PRs/main and on Mondays at 05:23 UTC (15:23 Brisbane). This is static security analysis, not a replacement for real RLS/auth/file-access tests. Findings appear under GitHub Security/Code scanning; a successfully completed scan does not by itself mean there are no warnings. Its three language analyses, `Dependency review` and the generated `CodeQL` finding check are now required for PR merges. The fourteen workflow-produced statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. The separate Security workflow is not an additional release-job `needs` gate; publication conditions remain explicitly defined in `ci.yml`.
 
 ## Running and interpreting coverage
 
@@ -54,11 +55,9 @@ Dependabot PRs receive suitable existing type/area/risk labels and run through t
 
 ## Maintainers and server-side rules
 
-Live readback after 02:45 UTC on 16 November 2026 confirms that the review and required-check rules are active. Maintainers and administrators have `pull_request` bypass on the review rule only: they can bypass independent approval through a PR, but must wait for all fourteen checks against the current base. The required-check rule grants no human bypass. Ordinary write access grants no review exception. The history/signature rule has no bypass actors, including for maintainers, administrators or the maintenance App.
+The history, review and required-check rules are active. Human maintainers and administrators have a `pull_request` exception only in the review rules: they may merge a PR without an additional review, once all mandatory checks pass. They cannot push directly to `main`. Ordinary contributors and the maintenance App must satisfy the independent/latest-push review and resolved-conversation rules as well as every check. The App has no bypass actor entry in any policy. [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md) documents the readback and remaining operational App setup.
 
-The maintenance App, integration `5776881`, has `always` exceptions on review and checks. This configuration does not by itself prove its token/workflow delivery on current main. See [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md#activation-still-pending) for active rule settings, separate App evidence and remaining source delivery.
-
-The initial setup was merged through [PR11](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/11). All six new quality/coverage checks and the corrected security run passed on the actual PR revision; the maintainer merge succeeded while the long-running tests were still active under the earlier rules. That historical proof does not describe the current stricter required-check rule. Main checks then run again and remain a publication condition. The scanner job and generated CodeQL findings check were verified separately; the initial test-fixture finding was fixed by checking the exact URL origin. The first complete main scan additionally reports existing operations/test-script findings. They are individually assessed in [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md); a successful PR-diff scan does not imply a main scan without warnings.
+The initial quality setup was merged through [PR11](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/11) under the previous policy, which allowed an early maintainer merge while long-running tests were active. That historical result is not the current merge policy. The scanner job and generated CodeQL findings check were verified separately; the initial test-fixture finding was fixed by checking the exact URL origin. The first complete main scan additionally reported existing operations/test-script findings. They are individually assessed in [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md); a successful PR-diff scan does not imply a main scan without warnings.
 
 Official references: [GitHub CodeQL](https://docs.github.com/en/code-security/code-scanning/introduction-to-code-scanning/about-code-scanning-with-codeql), [Dependabot](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependabot-version-updates), [Vitest coverage](https://vitest.dev/guide/coverage.html). Exact executed checks and GitHub runs are recorded in [WORKLOG](WORKLOG.md).
 
@@ -66,4 +65,4 @@ The earlier English-guide branch CI covered its 24-migration baseline. It does n
 
 ## Current governance boundary
 
-All three rule layers are active. Maintain and Repository-admin roles have PR-only exceptions in the review ruleset. Human accounts have no CI or history/signature exception. The repository-scoped maintenance App has the separately tested technical review/check exception; it must still create valid signed commits and pass the candidate/exact-main release gates. [Current rules and evidence](GITHUB_WORKFLOW.md).
+The source policies retain all fifteen mandatory checks without a CI or history/signature exception. The accepted maintenance publisher creates a signed PR and must satisfy its required checks and review; it has no technical rule exception. Live server rules may change independently and must be read back before merging. [Current rules and evidence](GITHUB_WORKFLOW.md).

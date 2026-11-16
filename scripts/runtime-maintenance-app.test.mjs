@@ -1,3 +1,5 @@
+/** Preserve M7's credential-isolation regressions against the accepted PR-based
+ * maintenance publisher. Network fixtures cannot grant live GitHub privileges. */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -89,11 +91,8 @@ test("App credentials stay in main-only privileged jobs, exact repository tokens
     );
     assert.match(source, /^ {4}environment: maintenance-signing$/m);
     assert.match(source, /^ {4}permissions:\n {6}contents: read$/m);
-    assert.match(source, /if test "\$APP_ID" != "5776881"/);
-    assert.match(
-      source,
-      /if test "\$APP_SLUG" != "luminovia-portal-maintenance"/,
-    );
+    assert.match(source, /test "\$APP_ID" = "5776881"/);
+    assert.match(source, /test "\$APP_SLUG" = "luminovia-portal-maintenance"/);
     assert.match(
       source,
       /uses: actions\/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510/,
@@ -109,15 +108,16 @@ test("App credentials stay in main-only privileged jobs, exact repository tokens
     );
     assert.doesNotMatch(
       source,
-      /skip-token-revoke|permission-(administration|pull-requests|workflows|secrets|members|checks):/,
+      /skip-token-revoke|permission-(administration|actions|workflows|secrets|members|checks):/,
     );
     assert.equal((source.match(/permission-contents: write/g) ?? []).length, 1);
+    assert.equal((source.match(/permission-actions: write/g) ?? []).length, 0);
     assert.equal(
-      (source.match(/permission-actions: write/g) ?? []).length,
-      name === "promote" ? 1 : 0,
+      (source.match(/permission-pull-requests: write/g) ?? []).length,
+      1,
     );
     assert.ok(
-      source.indexOf("Verify the approved private App identity") <
+      source.indexOf("APP_SLUG") <
         source.indexOf("run: node deploy/hostinger/maintenance/promote.mjs"),
     );
     for (const match of source.matchAll(/GH_TOKEN: (.+)$/gm))
@@ -138,6 +138,7 @@ test("probe never attempts broad cleanup if branch creation is denied", async ()
       calls.push({ path, options });
       if (path.endsWith("/branches/main"))
         return { commit: { sha: "a".repeat(40) } };
+      if (path.includes("/git/ref/heads/")) return null;
       assert.equal(options.method, "POST");
       assert.match(
         options.body.ref,
@@ -147,23 +148,29 @@ test("probe never attempts broad cleanup if branch creation is denied", async ()
     }),
     /Fictional rules denied/,
   );
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 4);
   assert.ok(calls.every((c) => c.options.method !== "DELETE"));
 });
 test("probe cleans only its exact newly created branch after a signed-commit API failure and never dispatches main CI", async () => {
   const calls = [];
   let owned;
+  let created = false;
   await assert.rejects(
     signatureProbe(async (path, options = {}) => {
       calls.push({ path, options });
       if (path.endsWith("/branches/main"))
         return { commit: { sha: "a".repeat(40) } };
+      if (path.includes("/git/ref/heads/"))
+        return created
+          ? { ref: "refs/heads/" + owned, object: { sha: "a".repeat(40) } }
+          : null;
       if (options.method === "DELETE") {
         assert.ok(path.endsWith(owned));
         return null;
       }
       if (path.endsWith("/git/refs")) {
         owned = options.body.ref.slice("refs/heads/".length);
+        created = true;
         return {};
       }
       assert.equal(path, "/graphql");

@@ -1,12 +1,10 @@
 # Creating, reviewing and merging pull requests
 
-> Current policy on 16 November 2026: review and required-check rules are active. Maintainers and administrators may bypass independent review through a PR, but must wait for all fifteen required checks, including the PR preview package, against the current base. The earlier 02:45 UTC readback had fourteen contexts; it is historical. The current required-check rule has no bypass actors; earlier App exception/probe records remain historical. [Current rule and App delivery status](GITHUB_WORKFLOW.md#activation-still-pending).
+> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Maintainers/admins may bypass review through a PR only; nobody can bypass the 15 mandatory CI/security checks or up-to-date testing. The maintenance App has no rule exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
 
 This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
-The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). These historical merges did not themselves activate server-side review rules; the current live activation is described below. The source catalogue [labels.json](../.github/labels.json) now contains 36 managed labels; nine original GitHub labels are also preserved.
-
-The [documentation index](README.md) links current architecture, feature guides, test evidence and operations.
+The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). Those historical merges did not themselves activate server-side rules; all three protection policies are now active, as recorded in [GitHub administration](GITHUB_WORKFLOW.md). The source catalogue [labels.json](../.github/labels.json) now contains 36 managed labels; nine original GitHub labels are also preserved.
 
 ## Branch and title
 
@@ -93,33 +91,24 @@ Use `./portal github test` for an independent test of current `main`. `./portal 
 
 ## Review rules for `main`
 
-Ordinary contributors need a pull request and at least one approval from another authorised person. Self-approval does not count as independent review; new changes invalidate old approvals. Approval of the latest push must come from someone other than its author. Resolve review conversations before merging and address feedback against current code. The review rule is active.
+Every change to `main` requires a pull request. Ordinary contributors and the maintenance App need at least one independent approval, approval of the latest push and resolved review conversations. Self-approval does not count; new changes dismiss stale approvals. Maintainers and administrators may bypass review requirements while merging a PR. They cannot push directly to `main` or bypass required checks. The maintenance App has no exception.
 
-Maintainers and repository administrators have a role-based **PR-only exception to review** (`pull_request`, repository roles 2 and 5). They may merge a PR without another person's approval, but must still satisfy required CI and commit signatures. This exception does not authorise a direct push to `main` or bypass the required-check rule. Ordinary write access alone receives no review exception. The exception follows the person performing the merge, not the PR author.
-
-All fifteen required checks must pass against the current base. Ordinary write access grants no review exception; GitHub may require an explicit bypass action for an authorised maintainer:
+All 15 mandatory checks must pass for the current revision and the PR must be up to date with `main`:
 
 - `Build`, `Typecheck`, `Lint`, `Formatting` and `Code quality` check compilation, rules, style and actual source connections.
 - `Tests and coverage` runs unit/component tests with complete frontend source coverage reporting and enforced thresholds.
 - `verify` runs the complete real application/SQL/API/browser/PWA/maintenance suites; `Actual isolated selfhost image compatibility` checks real runtime behaviour and retained data.
 - `PR metadata` checks required labels.
-- `PR preview package` packages the tested committed source only after the complete application and native checks; its downloadable local package is not a hosted portal.
-- `CodeQL (javascript-typescript)`, `CodeQL (python)` and `CodeQL (actions)` run the separate language-specific security analyses; `Dependency review` rejects newly introduced vulnerable dependencies.
-- The generated `CodeQL` finding check evaluates the uploaded security findings separately from successful scanner execution.
+- `PR preview package` packages the exact tested source after application and native acceptance.
+- `CodeQL (javascript-typescript)`, `CodeQL (python)`, `CodeQL (actions)`, `Dependency review` and the generated `CodeQL` findings check enforce the security gates. See [CI_QUALITY](CI_QUALITY.md).
 
-Fourteen statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. All fifteen are required for merging. See [CI_QUALITY](CI_QUALITY.md).
+Missing, pending or failed required checks block merges for everyone. A newer main revision requires updating the PR and obtaining current test evidence again. The live server rules enforce this; source JSON alone is not proof of activation.
 
-If main changes, update the PR as required and wait for checks against the current base. The history/signature ruleset has no bypass actors, including for maintainers, administrators and the maintenance App. The current required-check rule has no bypass actors, including Apps. An earlier accepted App configuration or signature probe does not grant a current CI exception or prove that its workflow is delivered on main. Any App workflow must satisfy the live rule and its narrowly scoped authorization; see the [rule and App delivery history](GITHUB_WORKFLOW.md#activation-still-pending).
-
-[CI_QUALITY](CI_QUALITY.md) explains full-source V8 coverage and thresholds; [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md) distinguishes successful scanning from resolved findings. SQL, Edge, browser and unit coverage remain separate evidence.
+Daily maintenance uses a signed separate branch and a PR labelled `type:dependencies`, `area:devops` and `risk:high`. Requesting native auto-merge queues the PR until its independent review and required checks are satisfied. The [operational setup status](GITHUB_WORKFLOW.md#activation-still-pending) distinguishes implemented source from tested App permissions and a real workflow run.
 
 ## Merge and publication
 
-Maintainers and administrators can merge a PR without an independent approval through their review exception once the fifteen required checks and current-base requirement are satisfied. Check the description, labels, tests and unresolved conversations first. Pending operational approvals remain separate from repository merge eligibility.
-
-The separate Security outcomes are required for PR merge eligibility. Release publication still follows the explicit dependencies in `ci.yml`; the ruleset does not add them as release-job dependencies.
-
-Signatures remain mandatory for every actor. Repository Auto-Merge availability is enabled, but it waits for applicable requirements; a changed PR head needs its own current checks. An App exception is not a human author review exemption, and no proposed automatic-promotion workflow is considered delivered merely because its branch exists.
+Review the description, labels, tests and open conversations before merging. Use the regular PR merge operation or native auto-merge. GitHub enforces all mandatory checks even when a maintainer or administrator uses the PR-only review exception; direct branch updates are prohibited.
 
 A merge can start the existing development release process. Its immutable `cms-dev-*` packages and hosted migration checks remain separate. Production operation, real data, SMTP, DNS and risky maintenance need the appropriate separate approvals. Claim a hosted installation only when actual operational evidence exists.
 
