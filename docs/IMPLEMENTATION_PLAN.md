@@ -10,7 +10,7 @@ Independent delivery from exact main `fabd71a7958d7814c18e3403877e542c20c3bea2`;
 - [x] Pass TypeScript, whole-tree ESLint, source formatting, compiler connectivity/export audit and synthetic production/PWA build.
 - [x] Integrate accepted guided-experience main `0a6002a5` with both ledgers preserved; rerun the full frontend suite: 308/308 tests, S59.11/B53.71/F49.17/L61.32%, 119 sources.
 - [x] Prepare a genuine PostgreSQL precision/atomicity contract and one real browser journey in both desktop/mobile projects; fix the discovered shared-fixture nullable typing without changing valid Auth/MFA or data-less writes. Strict E2E typing passes; actual SQL/browser execution is pending.
-- [ ] Run the canonical local isolated acceptance on the committed current source and record the actual SQL/API/browser/PWA results before publishing.
+- [x] Pass canonical local acceptance on signed f11921b: all SQL/RLS/concurrency stages, 19 actual API suites, real Edge/Mailpit, 90 desktop/mobile cases (both new precision cases) and 2 built-PWA cases; checked cleanup. Actual native-image and exact-head GitHub checks remain separate.
 - [ ] Publish the independently reviewed signed slice through its own PR; observe exact-head required security/application/native checks and merge only after their actual successful results. Local frontend acceptance does not certify SQL/API/browser/native or production behavior.
 
 ## Independent maintenance delivery after source-freeze release
