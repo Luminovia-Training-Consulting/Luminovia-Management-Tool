@@ -35,6 +35,16 @@ const requiredChecks = new Map([
   ["CodeQL", 57789],
 ]);
 const prefix = `/repos/${repository}`;
+const acceptanceSteps = new Map([
+  ["verify", new Set(["Complete isolated local verification"])],
+  [
+    "Actual isolated selfhost image compatibility",
+    new Set([
+      "Complete isolated native selfhost verification",
+      'Run node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run --baseline-root "$RUNNER_TEMP/selfhost-baseline" --baseline-commit "$(git rev-parse HEAD^)" --proof-output "$RUNNER_TEMP/postgres-candidate-proof.json"',
+    ]),
+  ],
+]);
 // Sealed read-only query: changes require a new read-only token integration
 // check. The opaque suite identifier is JSON data, never executable query text.
 export const pushQuery =
@@ -318,14 +328,28 @@ export function githubClient(token, fetcher = fetch) {
  * fails instead of allowing an early green page to hide later evidence. */
 async function pages(request, path, key) {
   const items = [];
+  let jobCount;
   for (let page = 1; page <= 100; page++) {
     const response = await request(
       `${path}${path.includes("?") ? "&" : "?"}per_page=100&page=${page}`,
     );
     const batch = key ? response?.[key] : response;
     assert(Array.isArray(batch));
+    // The Actions jobs contract supplies the complete filtered cardinality.
+    // A short or changing response cannot hide another matching check URL.
+    if (key === "jobs") {
+      assert(
+        Number.isSafeInteger(response.total_count) && response.total_count >= 0,
+      );
+      jobCount ??= response.total_count;
+      assert(response.total_count === jobCount);
+    }
     items.push(...batch);
-    if (batch.length < 100) return items;
+    if (jobCount !== undefined) assert(items.length <= jobCount);
+    if (batch.length < 100) {
+      if (jobCount !== undefined) assert(items.length === jobCount);
+      return items;
+    }
   }
   throw new Error("GitHub pagination limit reached; no merge confirmed.");
 }
@@ -334,6 +358,65 @@ async function currentBase(request) {
   const ref = await request(`${prefix}/git/ref/heads/main`);
   assert(shaPattern.test(ref?.object?.sha));
   return ref.object.sha;
+}
+
+/** A green job context can hide a skipped acceptance step. Bind its actual
+ * successful step to the current check URL, canonical CI run and source head.
+ * filter=all callers retain legitimate green jobs from an earlier run attempt;
+ * a job ID is not a check-run ID. This is execution evidence, not command-body
+ * attestation: ordinary source review and native protection still apply. */
+function evaluateAcceptanceJobs(jobs, run, head, checks) {
+  if (
+    !Number.isSafeInteger(run.run_attempt) ||
+    run.run_attempt <= 0 ||
+    new Set(jobs.map((job) => job?.id)).size !== jobs.length
+  )
+    return blocked("acceptance-job-provenance");
+  for (const [name, names] of acceptanceSteps) {
+    const check = checks
+      .filter((item) => item.name === name && item.app?.id === 15368)
+      .sort((a, b) => b.id - a.id)[0];
+    if (!Number.isSafeInteger(check?.id) || check.id <= 0)
+      return blocked("acceptance-job-provenance");
+    const expectedCheck = `https://api.github.com${prefix}/check-runs/${check.id}`;
+    const matches = jobs.filter((job) => job?.check_run_url === expectedCheck);
+    if (matches.length !== 1) return blocked("acceptance-job-provenance");
+    const job = matches[0];
+    if (
+      !Number.isSafeInteger(job.id) ||
+      job.id <= 0 ||
+      job.run_id !== run.id ||
+      !Number.isSafeInteger(job.run_attempt) ||
+      job.run_attempt <= 0 ||
+      job.run_attempt > run.run_attempt ||
+      job.run_url !==
+        `https://api.github.com${prefix}/actions/runs/${run.id}` ||
+      job.head_sha !== head ||
+      job.name !== name ||
+      job.status !== "completed" ||
+      job.conclusion !== "success"
+    )
+      return blocked("acceptance-job-provenance");
+    if (
+      !Array.isArray(job.steps) ||
+      job.steps.some(
+        (step) =>
+          typeof step?.name !== "string" ||
+          !Number.isSafeInteger(step.number) ||
+          step.number <= 0,
+      ) ||
+      new Set(job.steps.map((step) => step.number)).size !== job.steps.length
+    )
+      return blocked("acceptance-steps");
+    const steps = job.steps.filter((step) => names.has(step.name));
+    if (
+      steps.length !== 1 ||
+      steps[0].status !== "completed" ||
+      steps[0].conclusion !== "success"
+    )
+      return blocked("acceptance-steps");
+  }
+  return { eligible: true };
 }
 
 /** Read-only candidate inspection. The apply path repeats it with fresh policy,
@@ -412,6 +495,8 @@ export async function inspectPullRequest(request, number, catalogue) {
       .sort((a, b) => b.id - a.id)[0];
     if (
       !run ||
+      !Number.isSafeInteger(run.id) ||
+      run.id <= 0 ||
       run.repository?.full_name !== repository ||
       run.path !== `.github/workflows/${workflow}` ||
       run.event !== "pull_request" ||
@@ -444,6 +529,14 @@ export async function inspectPullRequest(request, number, catalogue) {
     if (check.check_suite?.id !== selectedRuns.get(workflow).check_suite_id)
       return blocked("check-suite-provenance");
   }
+  const ciRun = selectedRuns.get("ci.yml");
+  const jobs = await pages(
+    request,
+    `${prefix}/actions/runs/${ciRun.id}/jobs?filter=all`,
+    "jobs",
+  );
+  const acceptance = evaluateAcceptanceJobs(jobs, ciRun, pr.head.sha, checks);
+  if (!acceptance.eligible) return acceptance;
   // Upload processing has a separate App/check. Bind actual analyses to the
   // signed merge commit as well, so an old same-head success cannot authorize it.
   const analyses = await pages(

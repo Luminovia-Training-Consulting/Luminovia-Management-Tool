@@ -139,6 +139,7 @@ function approval(overrides = {}) {
 function run(workflow, pr = pull(), overrides = {}) {
   return {
     id: 100,
+    run_attempt: 1,
     check_suite_id: suites[workflow],
     check_suite_node_id: "CS_" + suites[workflow],
     repository: { full_name: repository },
@@ -215,6 +216,31 @@ function mainRun(workflow, sha, overrides = {}) {
     status: "queued",
     ...overrides,
   };
+}
+
+/** Actions job IDs deliberately differ from check IDs. Only check_run_url binds
+ * these successful full-step executions to the required check evidence. */
+function acceptanceJobs(sha = head, runId = 100) {
+  return [
+    ["verify", "Complete isolated local verification"],
+    [
+      "Actual isolated selfhost image compatibility",
+      "Complete isolated native selfhost verification",
+    ],
+  ].map(([name, step], index) => ({
+    id: 7001 + index,
+    run_id: runId,
+    run_url: `https://api.github.com${prefix}/actions/runs/${runId}`,
+    run_attempt: 1,
+    head_sha: sha,
+    name,
+    status: "completed",
+    conclusion: "success",
+    check_run_url: `https://api.github.com${prefix}/check-runs/${checksFor(sha).find((check) => check.name === name).id}`,
+    steps: [
+      { name: step, number: 7, status: "completed", conclusion: "success" },
+    ],
+  }));
 }
 
 /** A fictional GitHub state machine, not a permissive generic HTTP stub.
@@ -303,6 +329,19 @@ function fixture(options = {}) {
       return {
         total_count: all.length,
         workflow_runs: structuredClone(all.slice((page - 1) * 100, page * 100)),
+      };
+    }
+    const jobsRun = route.match(/^\/actions\/runs\/([1-9][0-9]*)\/jobs$/)?.[1];
+    if (jobsRun) {
+      assert.equal(url.searchParams.get("filter"), "all");
+      const all =
+        options.jobInspections?.[inspection] ??
+        options.jobs ??
+        acceptanceJobs(active.head.sha, Number(jobsRun));
+      const page = Number(url.searchParams.get("page"));
+      return {
+        total_count: all.length,
+        jobs: structuredClone(all.slice((page - 1) * 100, page * 100)),
       };
     }
     if (route === "/code-scanning/analyses")
@@ -747,6 +786,214 @@ test("all candidates including admin authors require independent current-head ap
     { pr: { mergeable_state: "blocked" } },
     "native-review-blocked",
   );
+});
+
+test("green contexts cannot substitute for missing, skipped, failed or ambiguous actual acceptance steps", async () => {
+  for (const index of [0, 1]) {
+    for (const change of [
+      (job) => {
+        job.steps = [];
+      },
+      (job) => {
+        delete job.steps;
+      },
+      (job) => {
+        job.steps[0].conclusion = "skipped";
+      },
+      (job) => {
+        job.steps[0].conclusion = "failure";
+      },
+      (job) => {
+        job.steps[0].status = "in_progress";
+      },
+      (job) => {
+        job.steps[0].name = "Only echo a success message";
+      },
+      (job) => {
+        job.steps.push({ ...job.steps[0], number: 8 });
+      },
+      (job) => {
+        job.steps[0].number = 0;
+      },
+      (job) => {
+        job.steps.push({ name: "different", number: job.steps[0].number });
+      },
+    ]) {
+      const jobs = acceptanceJobs();
+      change(jobs[index]);
+      await blocked({ jobs }, "acceptance-steps");
+    }
+  }
+});
+
+test("full acceptance jobs must bind the selected canonical run, head, name and exact check URL", async () => {
+  for (const index of [0, 1]) {
+    for (const change of [
+      (job) => {
+        job.run_id = 101;
+      },
+      (job) => {
+        job.run_url = `https://api.github.com${prefix}/actions/runs/101`;
+      },
+      (job) => {
+        job.head_sha = merge;
+      },
+      (job) => {
+        job.name = "unrelated";
+      },
+      (job) => {
+        job.status = "queued";
+      },
+      (job) => {
+        job.conclusion = "failure";
+      },
+      (job) => {
+        job.check_run_url += "?forged=1";
+      },
+      (job) => {
+        job.check_run_url = job.check_run_url.replace(
+          repository,
+          "foreign/repository",
+        );
+      },
+      (job) => {
+        job.check_run_url = job.check_run_url.replace("https://", "http://");
+      },
+    ]) {
+      const jobs = acceptanceJobs();
+      change(jobs[index]);
+      await blocked({ jobs }, "acceptance-job-provenance");
+    }
+    const missing = acceptanceJobs();
+    missing.splice(index, 1);
+    await blocked({ jobs: missing }, "acceptance-job-provenance");
+    const duplicate = acceptanceJobs();
+    duplicate.push({ ...duplicate[index], id: 9999 });
+    await blocked({ jobs: duplicate }, "acceptance-job-provenance");
+  }
+  const sharedID = acceptanceJobs();
+  sharedID[1].id = sharedID[0].id;
+  await blocked({ jobs: sharedID }, "acceptance-job-provenance");
+});
+
+test("retained prior-attempt green jobs remain valid and job IDs are independent of check IDs", async () => {
+  const jobs = acceptanceJobs();
+  assert.notEqual(
+    jobs[0].id,
+    checksFor().find((check) => check.name === "verify").id,
+  );
+  const old = {
+    ...jobs[0],
+    id: 6000,
+    conclusion: "failure",
+    check_run_url: `https://api.github.com${prefix}/check-runs/6000`,
+  };
+  const source = httpFixture({
+    jobs: [old, ...jobs],
+    runs: { "ci.yml": [run("ci.yml", pull(), { run_attempt: 3 })] },
+  });
+  assert.equal(
+    (await processPullRequest(source.request, 31, catalogue, { apply: true }))
+      .nativeMerged,
+    true,
+  );
+});
+
+test("missing, invalid or future acceptance attempts cannot authorize a native merge", async () => {
+  for (const run_attempt of [undefined, null, "1", 0, -1, 1.5]) {
+    await blocked(
+      { runs: { "ci.yml": [run("ci.yml", pull(), { run_attempt })] } },
+      "acceptance-job-provenance",
+    );
+  }
+  for (const index of [0, 1]) {
+    for (const run_attempt of [undefined, null, "1", 0, -1, 1.5, 2]) {
+      const jobs = acceptanceJobs();
+      jobs[index].run_attempt = run_attempt;
+      await blocked({ jobs }, "acceptance-job-provenance");
+    }
+  }
+});
+
+test("all Actions job pages and the final inspection remain authoritative before any merge", async () => {
+  const jobs = acceptanceJobs();
+  const unrelated = Array.from({ length: 100 }, (_, i) => ({
+    id: 9000 + i,
+    check_run_url: `https://api.github.com${prefix}/check-runs/${9000 + i}`,
+  }));
+  const source = fixture({ jobs: [...unrelated, ...jobs] });
+  assert.equal(
+    (await inspectPullRequest(source.request, 31, catalogue)).eligible,
+    true,
+  );
+  assert.ok(
+    source.calls.some((call) =>
+      call.path.endsWith("/jobs?filter=all&per_page=100&page=2"),
+    ),
+  );
+  await blocked(
+    { jobs: [...jobs, ...unrelated.slice(0, 98), { ...jobs[0], id: 9999 }] },
+    "acceptance-job-provenance",
+  );
+  const changing = fixture({ jobs: [...unrelated, ...jobs] });
+  const changingCount = async (path, options) => {
+    const response = await changing.request(path, options);
+    if (path.endsWith("/jobs?filter=all&per_page=100&page=2"))
+      response.total_count++;
+    return response;
+  };
+  await assert.rejects(
+    processPullRequest(changingCount, 31, catalogue, { apply: true }),
+    /Invalid or incomplete GitHub response/,
+  );
+  assert.deepEqual(changing.writes(), []);
+  const bad = structuredClone(jobs);
+  bad[1].steps[0].conclusion = "skipped";
+  await blocked({ jobInspections: [jobs, bad] }, "acceptance-steps");
+});
+
+test("only the currently selected check URL counts, including after a same-run retry", async () => {
+  const checks = checksFor();
+  checks.push({ ...checks.find((check) => check.name === "verify"), id: 400 });
+  await blocked({ checks }, "acceptance-job-provenance");
+  const jobs = acceptanceJobs();
+  jobs[0].check_run_url = `https://api.github.com${prefix}/check-runs/400`;
+  assert.equal(
+    (await inspectPullRequest(fixture({ checks, jobs }).request, 31, catalogue))
+      .eligible,
+    true,
+  );
+});
+
+test("the exact legacy native step remains accepted while duplicate aliases and invalid CI IDs fail closed", async () => {
+  const jobs = acceptanceJobs();
+  jobs[1].steps[0].name =
+    'Run node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run --baseline-root "$RUNNER_TEMP/selfhost-baseline" --baseline-commit "$(git rev-parse HEAD^)" --proof-output "$RUNNER_TEMP/postgres-candidate-proof.json"';
+  assert.equal(
+    (await inspectPullRequest(fixture({ jobs }).request, 31, catalogue))
+      .eligible,
+    true,
+  );
+  jobs[1].steps.push({
+    name: "Complete isolated native selfhost verification",
+    number: 8,
+    status: "completed",
+    conclusion: "success",
+  });
+  await blocked({ jobs }, "acceptance-steps");
+  for (const id of [undefined, null, "100", -1, 0]) {
+    const source = fixture({
+      runs: { "ci.yml": [run("ci.yml", pull(), { id })] },
+    });
+    assert.deepEqual(await inspectPullRequest(source.request, 31, catalogue), {
+      eligible: false,
+      reason: "workflow-provenance",
+    });
+    assert.equal(
+      source.calls.some((call) => call.path.includes("/jobs?")),
+      false,
+    );
+  }
 });
 test("the actual immutable pusher cannot approve their own pushed contribution", async () => {
   await blocked({ reviews: [approval({ user: pusher })] }, "external-review");

@@ -330,6 +330,7 @@ function readyRoutes() {
           workflow_runs: [
             {
               id: 100,
+              run_attempt: 1,
               path: ".github/workflows/" + workflow,
               check_suite_id: suiteIds[workflow],
               check_suite_node_id: "CS_" + suiteIds[workflow],
@@ -352,6 +353,29 @@ function readyRoutes() {
         },
       ),
     ),
+    route(prefix + "/actions/runs/100/jobs?filter=all&per_page=100&page=1", {
+      total_count: 2,
+      jobs: [
+        ["verify", "Complete isolated local verification"],
+        [
+          "Actual isolated selfhost image compatibility",
+          "Complete isolated native selfhost verification",
+        ],
+      ].map(([name, step], index) => ({
+        id: 7001 + index,
+        run_id: 100,
+        run_url: `https://api.github.com${prefix}/actions/runs/100`,
+        run_attempt: 1,
+        head_sha: source,
+        name,
+        check_run_url: `https://api.github.com${prefix}/check-runs/${checks.find((check) => check.name === name).id}`,
+        status: "completed",
+        conclusion: "success",
+        steps: [
+          { name: step, number: 7, status: "completed", conclusion: "success" },
+        ],
+      })),
+    }),
     route(
       prefix +
         "/code-scanning/analyses?ref=refs%2Fpull%2F31%2Fmerge&per_page=100&page=1",
@@ -636,6 +660,89 @@ test("the actual ready CLI binds fixed GraphQL reads to the reader and only nati
       assert.equal(observed.merged, true);
     }
     assert.ok(result.calls.every((call) => call.method !== "PATCH"));
+  }
+});
+
+test("actual CLI refuses green acceptance checks whose mandatory application or native step was skipped", () => {
+  for (const index of [0, 1]) {
+    const routes = readyRoutes();
+    const jobs = routes.find((item) => item.path.includes("/jobs?filter=all"))
+      .data.jobs;
+    jobs[index].steps[0].conclusion = "skipped";
+    const result = runCli(routes, { apply: true });
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout), {
+      number: 31,
+      eligible: false,
+      reason: "acceptance-steps",
+    });
+    assert.ok(
+      result.calls.some((call) =>
+        call.path.endsWith("/jobs?filter=all&per_page=100&page=1"),
+      ),
+    );
+    assert.ok(result.calls.every((call) => call.credential === "read"));
+  }
+});
+
+test("actual CLI preserves the legacy successful native step from a retained earlier run attempt", () => {
+  const routes = readyRoutes();
+  routes.find((item) =>
+    item.path.includes("/workflows/ci.yml/runs?event=pull_request"),
+  ).data.workflow_runs[0].run_attempt = 3;
+  const jobs = routes.find((item) => item.path.includes("/jobs?filter=all"))
+    .data.jobs;
+  jobs[1].steps[0].name =
+    'Run node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run --baseline-root "$RUNNER_TEMP/selfhost-baseline" --baseline-commit "$(git rev-parse HEAD^)" --proof-output "$RUNNER_TEMP/postgres-candidate-proof.json"';
+  const result = runCli(routes, { apply: true });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).nativeMerged, true);
+  assert.ok(
+    result.calls
+      .filter((call) => call.path.includes("/jobs?"))
+      .every((call) => call.credential === "read"),
+  );
+});
+
+test("actual CLI rejects a foreign-run acceptance job even when its context and step are green", () => {
+  const routes = readyRoutes();
+  routes.find((item) =>
+    item.path.includes("/jobs?filter=all"),
+  ).data.jobs[0].run_id = 999;
+  const result = runCli(routes, { apply: true });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).reason, "acceptance-job-provenance");
+  assert.ok(result.calls.every((call) => call.credential === "read"));
+});
+
+test("actual CLI refuses unavailable or malformed Actions job evidence without leaking its response or using the writer", () => {
+  for (const response of [
+    { status: 403, raw: privateError },
+    { raw: "not-json-" + privateError },
+    { data: { jobs: null } },
+  ]) {
+    const routes = readyRoutes();
+    Object.assign(
+      routes.find((item) => item.path.includes("/jobs?filter=all")),
+      response,
+    );
+    const result = runCli(routes, { apply: true });
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, "");
+    assert.ok(result.calls.every((call) => call.credential === "read"));
+  }
+});
+
+test("actual CLI refuses incomplete, contradictory or missing Actions job cardinality before using the writer", () => {
+  for (const total_count of [undefined, null, "2", -1, 1, 3]) {
+    const routes = readyRoutes();
+    routes.find((item) =>
+      item.path.includes("/jobs?filter=all"),
+    ).data.total_count = total_count;
+    const result = runCli(routes, { apply: true });
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, "");
+    assert.ok(result.calls.every((call) => call.credential === "read"));
   }
 });
 

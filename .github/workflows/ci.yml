@@ -152,7 +152,8 @@ jobs:
         run: |
           mkdir -m 700 "$RUNNER_TEMP/selfhost-baseline"
           git archive HEAD^ | tar -x -C "$RUNNER_TEMP/selfhost-baseline"
-      - run: node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run --baseline-root "$RUNNER_TEMP/selfhost-baseline" --baseline-commit "$(git rev-parse HEAD^)" --proof-output "$RUNNER_TEMP/postgres-candidate-proof.json"
+      - name: Complete isolated native selfhost verification
+        run: node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run --baseline-root "$RUNNER_TEMP/selfhost-baseline" --baseline-commit "$(git rev-parse HEAD^)" --proof-output "$RUNNER_TEMP/postgres-candidate-proof.json"
   preview-package:
     name: PR preview package
     needs: [quality, coverage, verify, verify-selfhost]
