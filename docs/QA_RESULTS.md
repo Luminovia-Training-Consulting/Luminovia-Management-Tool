@@ -1,5 +1,11 @@
 # QA evidence — 2026-11-16
 
+## Actual68-migration main: combined local source acceptance
+
+Accepted PR24 main `99add7de` adds six migrations and four operational domains; all68staged migration blobs match accepted main. Actual combined checks pass674frontend cases/89files, unchanged coverage floors(S66.50/B61.95/F56.89/L68.65%), types/lint/format/compiler/build and all156runtime cases without skips; actionlint/own-diff checks pass. Precache86entries/3083.87KiB; logs `.local/full-functional/main24-source-check.log` and `main24-runtime.log`.
+
+Discovery validates54files/156application+4PWA cases but executes none. The matrix/source review records new operational/permission/forwarding slices without claiming their combined pass. Prior native68 proof belongs to accepted PR24's own source; priorRoot2f SQL/service proof remains62-migration history. Fresh final-head/current-base system/browser/native/parallel-SQL/security/preview acceptance is required before the directly prioritised PR12 merge. No new shared-PC stack or production/provider action.
+
 ## Actual 62-migration main: source/controller acceptance, fresh services pending
 
 Accepted PR17 main `4cc20874` now contains62published migration files, including26additions; all62 staged blobs equal main and the earlier36-file prefix is unchanged. The unified-search test keeps seven authorised hits/six sources and all privacy/literal/language/draft/URL/reload/navigation boundaries while validating the actual POST/DTO and person-profile link. Explicit E2E TypeScript/lint/format pass. Main's font asset read, SMTP tests and measured browser/system budgets remain alongside strict source/browser/phase/privacy/cancellation evidence.
