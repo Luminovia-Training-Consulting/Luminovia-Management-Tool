@@ -6,7 +6,7 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 The entire new request is preserved in [SMART_OPERATIONS_SPEC](SMART_OPERATIONS_SPEC.md): alerts/email/push, personal dashboard, quality management, search, timesheets, client/participant workflows, Control Center, replacements/waitlists, favourites/saved filters, calendar feeds, qualifications, forecasts, history, tasks and offline schedule. No pending feature is removed from the original module ledger below.
 
-Current isolated branch: `codex/smart-notifications-and-dashboard`, based on1341b16 in an independent worktree. Another chat owns preview/welcome/role work; its files/data stay outside this branch.
+Current isolated branch: `codex/smart-notifications-and-dashboard`, integrating accepted main `fabd71a`/PR18 in an independent worktree. All26 accepted migration sources are byte-identical. Full local development/functional testing is the default; no deployment/release workflow is invoked by preparing this feature PR. Independent PR27 owns those workflow switches. Other feature PRs retain their own delivery and integration evidence.
 
 - [x] Implement transactional email outbox, per-account email opt-in/quiet hours and service-only finite Hostinger SMTP worker; disabled server templates, no credential in deliverables.
 - [x] Implement private persisted dashboard card order/visibility, own Teaching Day and own assignment preparation checklist, with server ownership/version checks.
@@ -16,9 +16,12 @@ Current isolated branch: `codex/smart-notifications-and-dashboard`, based on1341
 - [ ] Observe separate current PR application/native retained-image CI and review status; no production acceptance is inferred from local success.
 - [ ] Activate reviewed SMTP/timer on the authorised target with privately supplied credentials, live authorised-recipient/provider proof and monitoring. Source completion does not mean live mail was sent.
 - [x] Implement source and focused checks for Push, waitlists/atomic substitutions, shared learning/customer workspaces, attendance/Q&A/notebook/feedback/quiz/PDF completion, timesheets/statements/forecasts/Control Center, tasks/templates/favourites/recommendations, revocable calendars/offline schedules and stable eleven-area search. These are source checkpoints, not combined acceptance.
-- [ ] Complete customer hours/document request briefs and exact reviewed existing-data rollout/worker distribution; integrate compatible current main and reviewed discovery/saved-view/evidence work without duplicating private-role changes.
+- [x] Complete customer teaching-hour/document briefs and immutable revision history; exact reviewed rollout controller and standalone worker distribution; integrate accepted private roles and reviewed discovery/saved-view/evidence source. Focused checks pass; installed/combined acceptance remains separate.
+- [x] Bind discovery and substitution to the recipient/current actor's captured-role quote; retain explicit monetary/terms consent, nullable private prices, role/policy-bound cursors and honest unknown forecast costs. Recheck withdrawal authority after concurrent role edits and return current assignment status on accepted retries.
+- [x] Connect Teaching Day to the current course, deliberately shared same-organisation customer contact, exact allowed materials/reports and shared preparation counts, preserving own private checklist and current confirmed-session authority.
 - [ ] Freeze and run the entire expanded source, actual Auth/API/desktop/mobile/PWA and native ten-service retained-data suites. Resolve every genuine failure; generate current API/architecture and honest acceptance records.
-- [ ] Finish PR17 only after all required exact-source checks, authorised merge coordination, verified merge/main readback and CMS development deployment. Activate private SMTP and Push timers; retain per-account/per-device consent. Physical mobile/desktop Push delivery requires a supported consenting device.
+- [ ] Publish signed PR17 after complete local feature acceptance, observe all15 current required exact-head checks and resolve actual merge collisions through central coordination. Verify the eventual merge/main readback; do not infer it from a push or green local tests.
+- [ ] Follow the user's explicit release preference before any CMS deployment or private SMTP/Push timer activation. Retain per-account/per-device consent. Physical mobile/desktop Push delivery requires a supported consenting device and remains a separate untested acceptance step.
 - [x] Actual self-addressed Hostinger465 TLS SMTP acceptance and IMAP993 receipt; that exact test's SPF/DKIM/DMARC pass. Automatic application timers are not yet installed.
 
 ## PR18 complete-CI repair

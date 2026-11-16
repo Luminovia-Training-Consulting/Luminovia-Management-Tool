@@ -2,6 +2,16 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## Expanded smart operations — current complete acceptance pending
+
+Current source includes accepted main `fabd71a`/PR18 and the expanded Push/waitlist/substitution, course/client/participant, workbench/tasks, timesheet/forecast/Control Center, calendar/offline, search and qualification-passport slices. All26 accepted main SQL sources retain exact bytes. The authoritative discovery bridge is `45609`, the role-aware substitution/forecast bridge is `45011`; later forward fixes preserve their history.
+
+Actual current frontend preflight: **502/502 unit/component cases in79files**, coverage S60.91/B56.17/F51.81/L62.94%, unchanged floors passed; TypeScript, ESLint and source connectivity passed. An initial parallel lint command raced coverage-directory regeneration; its sequential rerun returned exit0 after coverage finished. Teaching Day's new contact/course projection independently passed5 new and9 existing SQL groups,11 UI/contact cases and independent source review. The final accepted-retry receipt/authority fixes passed16 role-aware SQL groups (including both observed revocation lock races),5 job component cases and vulnerable-source negative controls. Actual REST/browser fixtures have been expanded but are not counted as passed until executed by the full run.
+
+The expanded full command on `d3355a0` returned **exit1** in private `.local/tests/ac0ca75f/RESULT.txt`:463unit cases passed/two failed, with subsequent database/API/browser/build stages not reached. The incorrect waitlist placement in the client/participant-denied branch has been corrected; current whole-unit preflight passes. The two earlier native diagnostics also remain failed: one found an incorrect anonymous405 fixture expectation (correct boundary is anonymous401/authenticated405); the next correctly refused out-of-order unpublished M7 migration identifiers. The byte-identical forward filename reconciliation is documented in [MIGRATION_GUIDE](MIGRATION_GUIDE.md#unreleased-branch-version-reconciliation). Fresh complete application and main26→candidate retained-data runs remain required.
+
+Real Hostinger SMTP465 acceptance and IMAP993 readback of exactly one self-addressed operational test succeeded; that message's SPF/DKIM/DMARC passed. This is provider proof, **not automatic application activation**. SMTP/Push timers and expanded source remain uninstalled. Physical desktop/mobile installation and actual Push delivery remain untested. Preparing this PR does not invoke any deployment/release workflow.
+
 ## Smart operations — complete local acceptance passed
 
 Frozen application source `d7d3c580e64d0fdd1f7bfdde606f50966ec74e76` passed `./portal test` at **2026-11-16 03:04:52 UTC / 13:04:52 Australia/Brisbane**. The command and its independent launcher both returned **exit 0** after owned cleanup. Private report: `.local/tests/b9d31627/RESULT.txt`; complete transcript/exit: `.local/smart-operations-test.log` and `.local/smart-operations-test.exit`.
