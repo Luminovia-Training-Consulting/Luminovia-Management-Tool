@@ -86,7 +86,9 @@ jobs:
     # The canonical local command owns its data/ports and verifies cleanup.
     needs: [quality, coverage]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The complete gate now covers 35 migrations and the expanded native/browser
+    # suite. Individual request, test and stage deadlines remain unchanged.
+    timeout-minutes: 40
     steps:
       - name: Verify explicitly requested revision
         env:

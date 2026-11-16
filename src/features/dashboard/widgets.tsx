@@ -18,7 +18,6 @@ import {
 import { Button } from "../../components/ui/button";
 import { TextLink } from "../../components/common";
 import { dateTime } from "../../lib/dates";
-import type { Job } from "../../lib/types";
 import { permissionsQuery } from "../../lib/queries";
 import { contractsQuery } from "../commercial/api";
 import { chatRoomsQuery } from "../chat/api";
@@ -312,46 +311,25 @@ export function DashboardWidgets({
   zone,
   staff,
   clientAccount,
-  jobs,
-  jobsAsOf,
+  jobCounts,
 }: {
   actor: string;
   zone: string;
   staff: boolean;
   clientAccount: boolean;
-  jobs: Job[];
-  jobsAsOf?: number;
+  jobCounts?: { drafts: number; expired: number; upcoming: number };
 }) {
   const { t } = useTranslation("dashboard");
   const permissions = useQuery(permissionsQuery(actor));
   const manage =
     !permissions.isError && Boolean(permissions.data?.includes("jobs.manage"));
-  const [openedAt] = useState(() => Date.now());
-  const now = Math.max(openedAt, permissions.dataUpdatedAt, jobsAsOf ?? 0);
-  const near = now + 14 * 86400000;
-  const drafts = jobs.filter((job) => job.status === "draft").length;
-  const expired = jobs.filter(
-    (job) =>
-      job.status === "published" &&
-      job.claim_deadline &&
-      Date.parse(job.claim_deadline) <= now,
-  ).length;
-  const upcoming = jobs.filter(
-    (job) =>
-      job.status === "published" &&
-      job.job_sessions.some(
-        (session) =>
-          Date.parse(session.starts_at) >= now &&
-          Date.parse(session.starts_at) < near,
-      ),
-  ).length;
   return (
     <>
       <div className="dashboard-widgets">
         <Activity actor={actor} zone={zone} />
         {staff && <PendingContracts actor={actor} zone={zone} />}
         <RecentDocuments actor={actor} zone={zone} />
-        {manage && (
+        {manage && jobCounts && (
           <section
             className="panel dashboard-widget dashboard-followups"
             aria-label={t("followUps")}
@@ -362,9 +340,9 @@ export function DashboardWidgets({
             </div>
             <p className="muted dashboard-widget-hint">{t("followUpHint")}</p>
             <ul className="dashboard-preview-list">
-              <li>{t("draftJobs", { count: drafts })}</li>
-              <li>{t("upcomingUnfilled", { count: upcoming })}</li>
-              <li>{t("expiringJobs", { count: expired })}</li>
+              <li>{t("draftJobs", { count: jobCounts.drafts })}</li>
+              <li>{t("upcomingUnfilled", { count: jobCounts.upcoming })}</li>
+              <li>{t("expiringJobs", { count: jobCounts.expired })}</li>
             </ul>
             <TextLink to="/admin">{t("manageJobs")}</TextLink>
           </section>

@@ -57,6 +57,7 @@ describe("confirmed chat composer", () => {
       p_body: "Entwurf bleibt erhalten",
       p_client_id: expect.any(String),
       p_document_id: null,
+      p_mention_ids: [],
     });
     expect(screen.getByLabelText("Deine Nachricht")).toHaveValue("");
   });
@@ -91,7 +92,7 @@ describe("confirmed chat composer", () => {
     await user.click(screen.getByRole("button", { name: "Nachricht senden" }));
     await screen.findByText("Nachricht gesendet.");
     expect(rpc).toHaveBeenCalledWith(
-      "send_message",
+      "send_message_with_mentions",
       expect.objectContaining({ p_document_id: "clean-document", p_body: "" }),
     );
   });

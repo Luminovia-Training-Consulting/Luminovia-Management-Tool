@@ -18,11 +18,25 @@ Matching jobs are determined after the publication transaction completes, using 
 
 The explicit reminder-refresh action creates idempotent notices for the actor's own confirmed, unreleased sessions within 24 hours and own active contracts expiring within 30 days. A server-side limit prevents repeated calculation within one minute. A changed preference permits immediate recalculation. Released historical allocations and revoked contracts do not produce current reminders.
 
-This version includes in-app notifications and manual reminder refresh. Automatic scheduling, quiet hours, email digests, web push and actual SMTP delivery remain further product work; they are not represented as existing features.
+This version includes in-app notifications and manual reminder refresh. The M7 source adds the in-app quiet hours described below; their complete native verification must be demonstrated separately. Automatic reminder/delivery scheduling, email digests, web push and actual SMTP delivery remain further product work; they are not represented as existing features.
+
+## Personal in-app quiet hours
+
+The second form at `/settings` stores an own daily quiet period with an enable switch, start, end and IANA zone. Language changes preserve its draft. Its separate save button is **Save quiet hours**; the four existing category switches and their original API/version contract remain independent.
+
+Quiet hours affect only the attention shown by the **bell counter**. During the active window, it continues counting unread binding booking, cancellation and new-contract notices. The connected announcements module additionally includes explicitly important, currently authorised portal announcements; archived, expired or no-longer-authorised revisions do not count. The inbox and its preview still contain every authorised notification; nothing is deleted, discarded, moved or automatically marked read. For example, 17 optional notifications plus three important receipts remain 20 unread notifications, while the bell counts three important notices. Its accessible label also states the active quiet period and complete unread count. Disabling quiet hours returns the bell to the full count. Only an explicit read/unread action changes read state.
+
+The start is inclusive and the end exclusive. Different endpoints may span midnight. Actual local clock minutes in the selected IANA zone govern the rule: skipped DST minutes do not occur; both occurrences of a repeated minute use the same quiet-hours rule. No server or browser clock is changed. A saved quiet period retains its explicitly selected zone. Before anything is saved, the default uses the current own profile zone with a disabled 22:00–07:00 window.
+
+The server calculates `quiet_active` from its current time when the inbox is fetched. `attention_count` is added only during an active window. The complete `unread_count` remains unchanged. The shell uses its existing 30-second interval and normal revalidation; the interface claims neither millisecond-precise transitions nor additional delivery technology. This feature is **not** SMTP, email, push or background-delivery scheduling.
+
+The additive migration `20261116080737_notification_attention_preferences.sql` creates a separate private preferences table. `attention_preferences()` reads only the current active account. Before the first save, the own version is 0 without creating a row. `save_attention_preferences(p_payload, p_expected_version)` accepts exactly `enabled`, `start_time`, `end_time` and `time_zone`; the account comes from `auth.uid()`. An account-bound transaction lock also serialises concurrent first saves. Stale versions are rejected with `40001`; the draft remains until explicitly reloaded. Unknown fields, invalid times/zones and equal endpoints are rejected. Ordinary accounts, administrators and existing suspended sessions receive no other person's quiet hours. Direct table access and anonymous function execution are not granted.
+
+`scripts/attention-db-tests.mjs` checks SQL boundaries, including actual IANA/DST cases. The additional **authored** scenarios `scripts/attention-api-check.mjs` and `tests/e2e/attention.spec.ts` cover actual Auth/REST accounts, initial and subsequent version conflicts, unchanged category preferences, 17 optional plus three important notices, account/admin/suspension boundaries and explicit read state. Browser cases include UI save/reload, DE/EN drafts, offline operation, dark mode, mobile width and axe. Actual native execution and results still belong in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md); the existence of these files does not claim a passed run.
 
 ## API and verification
 
-The five public functions are `notification_inbox`, `mark_notifications`, `notification_preferences`, `save_notification_preferences` and `refresh_my_notifications`. Complete parameters are in [API_REFERENCE](API_REFERENCE.md). Focused checks:
+The existing inbox/category contract comprises the five public functions `notification_inbox`, `mark_notifications`, `notification_preferences`, `save_notification_preferences` and `refresh_my_notifications`. The two attention RPCs described above extend this contract. Complete parameters are in [API_REFERENCE](API_REFERENCE.md). Focused checks:
 
 ```bash
 npx vitest run src/features/notifications

@@ -4,6 +4,46 @@
  */
 import i18n from "../../lib/i18n";
 const pairs: Record<string, [string, string]> = {
+  mentionPeople: ["Personen erwähnen", "Mention people"],
+  selectedMentions: ["Ausgewählte Erwähnungen", "Selected mentions"],
+  mentionedPeople: ["Erwähnte Personen", "Mentioned people"],
+  removeMention: [
+    "Erwähnung von {{name}} entfernen",
+    "Remove mention of {{name}}",
+  ],
+  currentMembers: [
+    "Aktuelle Mitglieder dieser Unterhaltung",
+    "Current conversation members",
+  ],
+  noMentionMembers: [
+    "Keine weiteren Mitglieder verfügbar.",
+    "No other members available.",
+  ],
+  mentionHint: [
+    "Wähle bis zu 20 aktuelle Mitglieder. Die erste Erwähnung pro Nachricht benachrichtigt sie auch bei stummem Raum; ihre globalen Einstellungen gelten weiterhin. Getippte @Namen senden keine Erwähnung.",
+    "Select up to 20 current members. The first mention per message notifies them even in a muted room; their global preferences still apply. Typed @names do not create mentions.",
+  ],
+  dropHint: [
+    "Eine Datei hier ablegen oder mit der Dateiauswahl anhängen.",
+    "Drop one file here or use the file picker.",
+  ],
+  oneFileDrop: [
+    "Bitte genau eine Datei ablegen.",
+    "Please drop exactly one file.",
+  ],
+  moderateDelete: ["Gruppenbeitrag moderieren", "Moderate group message"],
+  groupModerationPolicy: [
+    "Gruppenverantwortliche und berechtigte, dem Raum angehörende Moderierende können Beiträge entfernen. Private Direktnachrichten bleiben auf ihre Mitglieder beschränkt.",
+    "Group owners and authorized moderators who belong to this room may remove messages. Private direct messages remain restricted to their members.",
+  ],
+  moderationHint: [
+    "Als berechtigtes Gruppenmitglied kannst du diesen Beitrag entfernen. Der Vorgang wird protokolliert; der Löschhinweis bleibt sichtbar.",
+    "As an authorized group member you may remove this message. The action is recorded and a deletion notice remains visible.",
+  ],
+  editConflict: [
+    "Die Nachricht wurde inzwischen geändert. Schließe die Bearbeitung und öffne sie erneut, um den aktuellen Stand zu laden.",
+    "The message changed. Close and reopen the editor to load the current version.",
+  ],
   title: ["Chats", "Chats"],
   intro: [
     "Austausch, der verbindet. Für dein Team, deine Themen und deine Kurse.",
