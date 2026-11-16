@@ -1,3 +1,5 @@
+/** Structured-mention edit/retry and moderation regressions retain real routing
+ * for the message-to-task link; fictional RPC fixtures never authorize access. */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   act,
@@ -10,6 +12,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 import i18n from "../../lib/i18n";
 import { MessageComposer } from "./composer";
 import { MessageBubble } from "./message";
@@ -28,7 +31,9 @@ function view(element: React.ReactNode) {
   });
   clients.push(client);
   const wrap = (node: React.ReactNode) => (
-    <QueryClientProvider client={client}>{node}</QueryClientProvider>
+    <QueryClientProvider client={client}>
+      <MemoryRouter>{node}</MemoryRouter>
+    </QueryClientProvider>
   );
   const result = render(wrap(element));
   return {

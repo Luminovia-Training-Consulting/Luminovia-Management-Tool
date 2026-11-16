@@ -1,5 +1,6 @@
 # Reproducible dependencies and the built public application.
 node_modules/
+node_modules
 dist/
 # Keep local keys/session fixtures private; share only the public template.
 .env*
