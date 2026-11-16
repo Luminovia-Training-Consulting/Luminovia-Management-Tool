@@ -178,6 +178,7 @@ it("revalidates the selected exact ID before exposing the connected operation", 
   expect(screen.getByLabelText("Auftrag für die Datei")).toBe(choice);
   expect(choice).toBeEnabled();
   expect(choice).toHaveFocus();
+  expect(choice).not.toHaveAccessibleDescription();
   expect(
     screen.queryByLabelText("Selected operation draft"),
   ).not.toBeInTheDocument();
@@ -194,6 +195,9 @@ it("revalidates the selected exact ID before exposing the connected operation", 
   );
   await screen.findByLabelText("Selected operation draft");
   expect(screen.getByLabelText("Auftrag für die Datei")).toHaveValue(first.id);
+  expect(choice).toHaveAccessibleDescription(
+    /Fictional permitted course.*Fictional organisation.*Ohne Termin.*Europe\/Berlin.*Durchlauf 00000001/,
+  );
   expect(
     screen.getByRole("option", { name: /Fictional permitted course/ }),
   ).toBeVisible();
@@ -231,6 +235,10 @@ it("hides selected private content on42501 and keeps denial through a later netw
     </JobPicker>,
   );
   await screen.findByLabelText("Private retained draft");
+  const descriptionID = screen
+    .getByLabelText("Auftrag für die Datei")
+    .getAttribute("aria-describedby");
+  expect(document.getElementById(descriptionID!)).toBeVisible();
   client.setQueryData(["permissions", "actor"], ["jobs.manage"]);
   error = { code: "42501", message: "Revoked" };
   await act(async () => {
@@ -244,6 +252,7 @@ it("hides selected private content on42501 and keeps denial through a later netw
   expect(
     screen.queryByRole("option", { name: /Fictional permitted/ }),
   ).not.toBeInTheDocument();
+  expect(document.getElementById(descriptionID!)).toBeNull();
   expect(client.getQueryState(["permissions", "actor"])?.isInvalidated).toBe(
     true,
   );
@@ -465,6 +474,9 @@ it("keeps one choice per course run for an old job binding and localizes its exp
   expect(
     within(choose).getByRole("option", { name: /Europe\/Berlin/ }),
   ).toHaveTextContent("Durchlauf 00000001");
+  expect(choose).toHaveAccessibleDescription(
+    /Fictional permitted course.*Fictional organisation.*2060.*Europe\/Berlin.*Durchlauf 00000001/,
+  );
   await act(async () => {
     await i18n.changeLanguage("en");
   });
@@ -474,5 +486,8 @@ it("keeps one choice per course run for an old job binding and localizes its exp
   expect(
     within(choose).getByRole("option", { name: /Europe\/Berlin/ }),
   ).toHaveTextContent("Run 00000001");
+  expect(choose).toHaveAccessibleDescription(
+    /Fictional permitted course.*Fictional organisation.*2060.*Europe\/Berlin.*Run 00000001/,
+  );
   expect(state.rpc).toHaveBeenCalledTimes(1);
 });

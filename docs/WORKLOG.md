@@ -1,5 +1,16 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — corrected combined source and English guides
+
+The second local32 command on frozen `9c42730` returned **exit1**, private report `.local/tests/cf7ffa12/RESULT.txt`: all32 migrations,316SQL cases,26 real business API suites,46Edge tests and actual Auth/MFA/profile/private-event/Storage restart passed; application browsers92/94 passed (9.8minutes). Exact CI43794921492 independently reproduced the same two global-calendar locale failures (92/94,11.7minutes). Neither failed command reached built-PWA acceptance or the separate selfhost job.
+
+A new component regression reproduced the actual lost dialog before the fix. Signed `bf09f19` preserves identical-range FullCalendar callbacks and their query key through locale changes, while real navigation clears selection; all12 calendar cases pass, including rapid A→B→A and no-extra-query checks. Native browser steps/timeouts are unchanged. Visual review of six real desktop/mobile images confirmed the missing dialog and truncated course-choice metadata. The latter now has an exact-authorised, wrapping accessible summary without another request; all9 picker cases pass, including pending/denied description removal. Singular event-count wording is corrected.
+
+Preserved accepted main `e75f55d` (PR16 demo/help/tour) and signed PR13 `f214b069` (English governance, roadmap/decisions,36-label catalogue and exact14-check source). The active server rules were not changed by this integration. The main-only maintenance App workflow probe is still pending after acceptance. An index-bound English translation patch was applied to six feature guides without dropping any existing link target; the current English index already retains all prior module links. User-authorised cross-chat coordination keeps PR19's separately tested review-boundary fix and later course/test work independent of this source freeze.
+
+Current combined preflight passes **372 unit/component cases in57files**, V8S57.65/B52.32/F49.11/L59.46 and every configured floor. Lint, TypeScript, formatting,14 targeted documentation/metadata/App checks and compiler connectivity pass:135reachable modules,34routes,286runtime exports, no detected unresolved/unreachable/unused source, broken literal links or missing literal assets. Collection discovers106 application browser cases plus2 separately built-PWA cases; authored cases are not claimed as passed. The next frozen-source complete local and exact CI application/selfhost gates remain required before merge.
+
+
 ## 16 November 2026 — English-guide integration and current functional preflight
 
 The primary merge integrates PR13 source `f214b069` into the 32-migration M7/M8 implementation, accepted PR16 Demo/Help/Tour and signed Calendar correction `bf09f19`. English guide/index structure, roadmap, changelog and decision notes are retained alongside every M7/M8 module link, API/privacy boundary, complete master-specification follow-up and earlier failed-run history. The current catalogue has 36 managed labels plus nine preserved defaults; all 14 required checks and mandatory signatures remain current policy. This bounded documentation resolution changes no product source, service, production data or live setting.

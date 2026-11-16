@@ -1,143 +1,61 @@
-# Kalender: private Termine, Aufträge und veröffentlichte globale Ereignisse
+# Calendar: private events, assignments and published global events
 
-`/calendar` bietet Monats-, Wochen-, Tages- und Listenansicht in der persönlichen
-IANA-Zeitzone. Eigene private Termine bleiben bearbeitbar; bestätigte Zuweisungen
-verlinken auf den konkreten Auftrag. Die Titelabfrage lädt nur eigene bestätigte
-Auftragskennungen. Verfügbarkeit und Sperrzeiten bleiben ein eigener verbundener
-Ablauf unter `/availability`.
+`/calendar` offers month, week, day and list views in the personal IANA time zone. Own private events remain editable; confirmed allocations link to the specific job. The title query loads only the actor's own confirmed job identifiers. Availability and blocked periods remain a separate connected workflow at `/availability`.
 
-## Gemeinsamer Kalender
+## Shared calendar
 
-**Globale Termine** zeigt ausdrücklich veröffentlichte, nicht archivierte globale
-Ereignisse sowie die weiterhin autorisierten veröffentlichten Kursdurchführungen.
-Private Termine werden nicht in diesen Kalender übernommen. Die Darstellung
-verwendet die Profilzeitzone; die Ereignisdetails nennen zusätzlich die gespeicherte
-Ereigniszeitzone, die Beschreibung und gegebenenfalls einen ausdrücklich
-anklickbaren HTTPS-Link. Beschreibungen sind einfacher Text, kein HTML.
+**Global events** shows explicitly published, unarchived global events and the still-authorised published course runs. Private appointments are not copied into this calendar. The display uses the profile time zone; event details additionally show the stored event zone, description and, where present, an explicitly clickable HTTPS link. Descriptions are plain text, not HTML.
 
-Globale Ereignisse werden ausschließlich für den tatsächlich sichtbaren
-FullCalendar-Zeitraum abgefragt. Anfang ist einschließlich, Ende ausschließlich;
-ein Ereignis muss den Zeitraum wirklich überschneiden. Wechsel von Monat/Woche/Tag
-oder Vor-/Zurücknavigation verändert die Abfrage über `datesSet`, ohne den Kalender
-neu einzuhängen. Ein Fenster ist auf höchstens 93 Tage begrenzt. 50 Ergebnisse pro
-Seite, explizites **Weitere Termine laden** und `(updated_at,id)` als eindeutiger
-absteigender Cursor verhindern eine stille Vollkatalogabfrage oder die frühere
-Verwechslung der globalen REST-Grenze von 1.000 Zeilen mit einem vollständigen
-Bestand. Die angezeigte Zahl bezeichnet geladene globale Ereignisse, nicht die
-separat eingeblendeten Kurssitzungen.
+Global events are queried only for the actually visible FullCalendar range. The start is inclusive and the end exclusive; an event must actually overlap the range. Switching month/week/day or navigating backwards/forwards changes the query through `datesSet` without remounting the calendar. A window is limited to 93 days. Pages of 50 results, an explicit **Load more events** action and `(updated_at,id)` as a unique descending cursor prevent a silent full-catalogue fetch or the former confusion of the global 1,000-row REST limit with a complete inventory. The displayed number counts loaded global events, excluding separately displayed course sessions.
 
-Die bestehende Kursdurchführungs-/Vorlagenabfrage behält ihre eigene Ressourcen-
-Autorisierung und ihre bisherige Integration. Sie wurde hier nicht ebenfalls zu
-einer neuen paginierten Kurs-API umgebaut. Eigene private Termine und bestätigte
-Zuweisungen behalten ihre vorhandenen Abfragen. Es gibt keine automatische
-Hintergrundschleife über andere Kalenderzeiträume.
+The existing course-run/template query retains its own resource authorisation and integration. It has not also been converted into a new paginated course API here. Own private events and confirmed allocations keep their existing queries. There is no automatic background loop over other calendar ranges.
 
-## Globale Termine verwalten
+## Manage global events
 
-Konten mit **aktueller `courses.manage`-Berechtigung und MFA/AAL2** sehen im globalen
-Kalender eine Verwaltung für den sichtbaren Zeitraum. Sie können:
+Accounts with **current `courses.manage` permission and MFA/AAL2** see management controls for the visible global-calendar range. They can:
 
-- einen Termin mit Titel, Beschreibung, Anfang/Ende, IANA-Zeitzone und optionalem
-  HTTPS-Link als Entwurf anlegen;
-- einen beobachteten Entwurf bearbeiten und ausdrücklich veröffentlichen;
-- eine Veröffentlichung zurücknehmen;
-- einen Termin archivieren und als unveröffentlichten Entwurf wiederherstellen;
-- im Zeitfenster wörtlich nach Titel/Beschreibung suchen und Folgeseiten laden.
+- Create a draft with title, description, start/end, IANA zone and optional HTTPS link.
+- Edit an observed draft and explicitly publish it.
+- Withdraw publication.
+- Archive an event and recover it as an unpublished draft.
+- Search literally by title/description within the time window and load subsequent pages.
 
-**Speichern ist ausdrücklich ein Entwurf.** Eine Bearbeitung eines veröffentlichten
-Termins nimmt dessen Veröffentlichung zurück. Erst ein erneuter Klick auf
-**Veröffentlichen** macht den gespeicherten Stand sichtbar. Bei Archivierung bleibt
-die UUID mit ihrer Versions-/Anfragehistorie erhalten. Wiederherstellung veröffentlicht
-nichts automatisch. Das unterscheidet sich bewusst vom getrennten unveröffentlichten
-Revisionsmodell der Ankündigungen. Die Oberfläche erklärt diesen Ablauf vor dem
-Speichern. Ein außerhalb des sichtbaren Zeitfensters gespeicherter Termin erscheint
-nach Navigation in sein Zeitfenster.
+**Saving explicitly creates a draft.** Editing a published event withdraws its publication. Only another click on **Publish** makes the saved version visible. Archiving preserves the UUID and its version/request history. Recovery publishes nothing automatically. This intentionally differs from the separate unpublished-revision model for announcements. The interface explains this workflow before saving. An event saved outside the visible time window appears after navigating to its window.
 
-Jede Änderung verwendet eine beobachtete Version und eine stabile Anfrage-UUID.
-Unveränderte Wiederholung nach verlorener Antwort liefert denselben bestätigten
-Serverstand. Unterschiedlicher Inhalt mit derselben Anfrage-UUID wird abgewiesen;
-konkurrierende Versionen überschreiben einander nicht. Bei einem Versionskonflikt
-bleibt der Entwurf zur Prüfung bestehen. Nach einem autoritativen Rechteentzug
-werden private Liste und Dialog sofort ausgeblendet, auch während weiterer
-Netzwerkfehler. Nur eine erfolgreiche autorisierte Aktualisierung öffnet wieder
-eine saubere Ansicht. Offline werden keine Schreibvorgänge bestätigt.
+Every change uses an observed version and a stable request UUID. An unchanged retry after a lost response returns the same confirmed server state. Different content with the same request UUID is rejected; concurrent versions do not overwrite one another. A version conflict preserves the draft for review. Authoritative access revocation immediately hides the private list and dialog, including during subsequent network failures. Only a successful authorised refresh opens a clean view again. Writes are not confirmed offline.
 
-## Zeit und Links
+## Time and links
 
-Datenbankwerte sind endliche absolute Zeitpunkte mit gespeicherter IANA-Zeitzone.
-Neue API-Nutzdaten enthalten einen ausdrücklichen UTC-/Offsetanteil und vierstellige
-Jahre. Die Formulareingabe wird zonenbezogen umgerechnet. Nicht existierende
-Ortszeiten beim DST-Sprung und mehrdeutige neue Ortszeiten beim Rücksprung werden
-abgewiesen. Unveränderte bestehende Zeitfelder behalten ihre exakten Sekunden und
-bereits eindeutig gespeicherten DST-Offsets bei reinen Textänderungen.
+Database values are finite absolute instants with a stored IANA zone. New API payloads contain an explicit UTC/offset component and four-digit years. Form input is converted according to its zone. Nonexistent local times during the DST jump and ambiguous new local times during the fallback are rejected. Unchanged existing time fields retain their exact seconds and already unambiguously stored DST offsets during text-only edits.
 
-Optionale Links akzeptieren ausschließlich `https://` mit ASCII-DNS-Namen oder
-vollständiger IPv4-Adresse und gültigem optionalem Port. Zugangsdaten, Leer-/Steuer-
-zeichen, Backslashes, ungültige Hosts/Ports und andere Protokolle werden server-
-und clientseitig abgewiesen. Der Browser öffnet Links mit `noopener noreferrer`.
-Die Plattform lädt das Ziel nicht serverseitig und behauptet keine Prüfung seiner
-Erreichbarkeit oder externen Inhalte.
+Optional links accept only `https://` with ASCII DNS names or a complete IPv4 address and a valid optional port. Credentials, whitespace/control characters, backslashes, invalid hosts/ports and other protocols are rejected server-side and client-side. The browser opens links with `noopener noreferrer`. The platform does not fetch the destination server-side or claim to check its availability or external content.
 
-## API und Berechtigungen
+## API and permissions
 
-Additive, mit dem tatsächlich gepinnten Supabase CLI angelegte Migration:
-`20261116003733_global_calendar_publications.sql`. Bestehende `global_events`-Zeilen
-und IDs bleiben erhalten; ergänzt werden Beschreibung, Link, Archivstatus und
-Versions-/Aktualisierungsmetadaten.
+Additive migration created with the actually pinned Supabase CLI: `20261116003733_global_calendar_publications.sql`. Existing `global_events` rows and IDs remain; description, link, archive state and version/update metadata are added.
 
-| RPC                                                                                     | Zweck                                                                                                                                                                |
-| --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `global_calendar_events(p_from,p_to,p_manage,p_search,p_before_at,p_before_id,p_limit)` | Autorisierte Überlappung im begrenzten Zeitraum; maximal 100 Datensätze, `has_more` und Tuple-Cursor. `p_manage=true` benötigt aktuelle Verwaltungsberechtigung/MFA. |
-| `manage_global_event(p_id,p_action,p_expected_version,p_request_id,p_payload)`          | Versionierte/idempotente Aktionen `save`, `publish`, `unpublish`, `archive`, `recover`. Neue Entwürfe verwenden `p_id=null`, Version 0.                              |
+| RPC                                                                                     | Purpose                                                                                                                                                    |
+| --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `global_calendar_events(p_from,p_to,p_manage,p_search,p_before_at,p_before_id,p_limit)` | Authorised overlap within a bounded range; at most 100 records, `has_more` and a tuple cursor. `p_manage=true` requires current management permission/MFA. |
+| `manage_global_event(p_id,p_action,p_expected_version,p_request_id,p_payload)`          | Versioned/idempotent `save`, `publish`, `unpublish`, `archive`, `recover` actions. New drafts use `p_id=null`, version 0.                                  |
 
-Öffentliche Funktionen sind Invoker-Einstiege zu privaten Implementierungen mit
-leerem Suchpfad. Interne Hilfsfunktionen sind nicht für PUBLIC/anon/authenticated
-ausführbar. Die private Anfragehistorie hat RLS und keine Browser-Tabellenrechte.
-Normale aktive Auftraggeber-/Teilnahme-/Dozierendenkonten dürfen nur die aktuellen
-Veröffentlichungen lesen. Direkte Tabellenabfragen bleiben ebenfalls durch RLS
-begrenzt. Ein `p_manage`-Flag, fremde UUIDs oder veränderbare JWT-Nutzermetadaten
-vergeben keine Rechte.
+Public functions are invoker entry points into private implementations with an empty search path. Internal helpers are not executable by PUBLIC/anon/authenticated. Private request history has RLS and no browser table grants. Ordinary active client/participant/lecturer accounts may read only current publications. Direct table queries remain RLS-bound. A `p_manage` flag, foreign UUIDs or editable JWT user metadata grant no permissions.
 
-Schreibzugriffe sperren zuerst das eigene Profil `FOR SHARE`. Die ausdrücklich
-VOLATILE-Implementierung prüft danach in einem eigenen Statement aktuelle Rollen,
-Aktivierung und MFA, bevor sie Anfrage-/Ereignissperren erwirbt. Die bestehende
-Rollenverwaltung sperrt dasselbe Profil `FOR UPDATE`; ein bereits laufender
-Rollenentzug gewinnt dadurch vor einem wartenden Schreibzugriff. Auf private
-Kalender anderer Personen gibt es keinen administrativen Bypass.
+Writes first lock the actor's profile `FOR SHARE`. The explicitly VOLATILE implementation then checks current roles, activation and MFA in a separate statement before acquiring request/event locks. Existing role management locks the same profile `FOR UPDATE`; an already-running role revocation therefore wins before a waiting write. There is no administrative bypass into other people's private calendars.
 
-Die Auditprojektion ergänzt genau `calendar.global_save`, `calendar.global_publish`,
-`calendar.global_unpublish`, `calendar.global_archive`, `calendar.global_recover`
-und bewahrt die bestehende Allowlist einschließlich Ankündigungen. Der Viewer
-liefert weiterhin ausschließlich Akteursname, Aktion, Ressourcen-UUID und Zeitpunkt;
-Beschreibungen, URLs und JSON-Details werden nicht weitergegeben.
+The audit projection adds exactly `calendar.global_save`, `calendar.global_publish`, `calendar.global_unpublish`, `calendar.global_archive`, `calendar.global_recover` and preserves the existing allowlist, including announcements. The viewer still returns only actor name, action, resource UUID and timestamp; descriptions, URLs and JSON details are not disclosed.
 
-## Prüfungen und Grenzen
+## Checks and boundaries
 
-Tatsächlich fokussiert ausgeführt: **11 RTL-/Unitfälle**, **9 PostgreSQL-Testgruppen**
-in eigenen temporären UUID-Datenbanken und **6 generische API-Flächenprüfungen**.
-Geprüft sind mehr als 1.000 gleichzeitige Sortierwerte, vollständige Seiten,
-Berechtigungen/MFA, echte konkurrierende CAS-Updates, ein kontrollierter öffentlicher
-Rollenentzug gegen einen wartenden Schreibzugriff, sichere Links, endliche Grenzen,
-Archiv-/Veröffentlichungsablauf, private Kalendergrenzen und sichere Auditfilter.
-Frontendfälle prüfen erhaltene DE/EN-/CAS-Entwürfe, verlorene Antworten, Rechteentzug,
-DST und Bereichswechsel ohne Kalender-Remount.
+Actually executed focused checks: **11 RTL/unit cases**, **9 PostgreSQL groups** in owned temporary UUID databases and **6 generic API-surface groups**. Coverage includes more than 1,000 equal sort values, complete pages, permissions/MFA, actual concurrent CAS updates, controlled public role revocation against a waiting write, safe links, finite bounds, archive/publication workflow, private-calendar boundaries and safe audit filters. Frontend cases check preserved DE/EN/CAS drafts, lost responses, revocation, DST and range changes without remounting the calendar.
 
 ```bash
 npx vitest run src/features/calendar
-PORTAL_DB_CONTAINER=<eigener-testcontainer> node scripts/calendar-global-db-tests.mjs
-PORTAL_DB_CONTAINER=<eigener-testcontainer> node scripts/api-surface-db-tests.mjs
+PORTAL_DB_CONTAINER=<owned-test-container> node scripts/calendar-global-db-tests.mjs
+PORTAL_DB_CONTAINER=<owned-test-container> node scripts/api-surface-db-tests.mjs
 ./portal test
 ```
 
-`calendar-global-api-check.mjs` ist für tatsächliche Auth/MFA/REST-Prüfungen verfasst;
-`calendar-global.spec.ts` ergänzt Desktop/Mobil, Veröffentlichung/Entwurf,
-Beschreibung/Link, DE/EN, Offline-Schreibsperre, Dark Mode und axe. Diese nativen
-Szenarien wurden bei der fokussierten Implementierung **nicht ausgeführt**. Ihre
-Abnahme und kombinierte PWA-/Persistenz-/CI-Ergebnisse dokumentiert der spätere
-Gesamtlauf separat in `QA_RESULTS.md` und `WORKLOG.md`.
+`calendar-global-api-check.mjs` is authored for actual Auth/MFA/REST checks; `calendar-global.spec.ts` adds desktop/mobile, publication/draft, description/link, DE/EN, offline write prevention, dark mode and axe. These native scenarios were **not executed** during focused implementation. Their acceptance and combined PWA/persistence/CI results are documented separately by the later complete run in `QA_RESULTS.md` and `WORKLOG.md`.
 
-Hierdurch werden keine Datei-Anhänge an globalen Ereignissen, Einladungen,
-Hintergrund-Erinnerungen, SMTP-/Push-Zustellung, automatische Veröffentlichung,
-ICS-Abonnements oder private Drag-and-drop-Terminbearbeitung als fertig bezeichnet.
-Diese verbleiben im vollständigen Masterprompt-Plan. Produktivdienste, reale
-Personen und die öffentliche Website wurden nicht verändert.
+This does not mark global-event attachments, invitations, background reminders, SMTP/push delivery, automatic publication, ICS subscriptions or private-event drag editing complete. They remain in the full master-prompt plan. Production services, real people and the public website were not changed.

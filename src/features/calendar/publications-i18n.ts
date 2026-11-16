@@ -26,7 +26,8 @@ const entries = {
     "Keine Termine im angezeigten Zeitraum.",
     "No events in the displayed date range.",
   ],
-  loaded: ["{{count}} Termine geladen", "{{count}} events loaded"],
+  loaded_one: ["{{count}} Termin geladen", "{{count}} event loaded"],
+  loaded_other: ["{{count}} Termine geladen", "{{count}} events loaded"],
   error: [
     "Nicht gespeichert. Prüfe den aktuellen Stand und lade bei einem Versionskonflikt neu.",
     "Not saved. Check the current state and reload after a version conflict.",

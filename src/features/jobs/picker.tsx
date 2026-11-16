@@ -66,6 +66,17 @@ export function JobPicker({
   const choices = selected
     ? [selected, ...items.filter((item) => !sameChoice(item))]
     : items;
+  const choiceLabel = (item: JobPickerOption) =>
+    [
+      item.title,
+      item.customer_name,
+      `${item.starts_at ? dateTime(item.starts_at, i18n.language, item.time_zone) : t("unscheduled")} (${item.time_zone})`,
+      item.course_run_id &&
+        t("runReference", { id: item.course_run_id.slice(-8) }),
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  const summaryID = selected ? `${id}-selection` : undefined;
   const refresh = async () => {
     const result = await query.refetch();
     if (result.isSuccess) setDenied(false);
@@ -119,22 +130,21 @@ export function JobPicker({
             <select
               value={choices.some((item) => item.id === value) ? value : ""}
               onChange={(event) => onChange(event.target.value)}
+              aria-describedby={summaryID}
             >
               <option value="">{t("choose")}</option>
               {choices.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.title}
-                  {item.customer_name ? ` · ${item.customer_name}` : ""}
-                  {" · "}
-                  {item.starts_at
-                    ? `${dateTime(item.starts_at, i18n.language, item.time_zone)} (${item.time_zone})`
-                    : t("unscheduled")}
-                  {item.course_run_id &&
-                    ` · ${t("runReference", { id: item.course_run_id.slice(-8) })}`}
+                  {choiceLabel(item)}
                 </option>
               ))}
             </select>
           </Field>
+          {selected && (
+            <p id={summaryID} className="job-picker-selection muted">
+              {choiceLabel(selected)}
+            </p>
+          )}
           {pinned && <p className="muted">{t("selectionHint")}</p>}
           {!items.length && <p>{t("none")}</p>}
           <p className="muted">{t("loaded", { count: items.length })}</p>
