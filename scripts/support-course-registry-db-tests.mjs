@@ -10,11 +10,28 @@ import {
   runSupportCourseAbsenceChecks,
   runSupportCourseRegistryChecks,
 } from "./testing/support-course-registry.mjs";
+// Preserve the complete accepted predecessor when pending operational versions
+// are regenerated. Stable module suffixes identify the tested SQL boundaries.
+const migrationFiles = (
+  await readdir(new URL("../supabase/migrations/", import.meta.url))
+)
+  .filter((name) => name.endsWith(".sql"))
+  .sort();
+const readinessFiles = migrationFiles.filter((name) =>
+  name.endsWith("_course_readiness.sql"),
+);
+const supportFiles = migrationFiles.filter((name) =>
+  name.endsWith("_internal_support_desk.sql"),
+);
+assert.equal(readinessFiles.length, 1);
+assert.equal(supportFiles.length, 1);
+const readinessFile = readinessFiles[0],
+  supportFile = supportFiles[0],
+  predecessor = migrationFiles.filter((name) => name < readinessFile).at(-1);
+assert.ok(predecessor, "A complete accepted predecessor must be present.");
+assert.ok(readinessFile < supportFile);
 const support = await readFile(
-  new URL(
-    "../supabase/migrations/20261116034757_internal_support_desk.sql",
-    import.meta.url,
-  ),
+  new URL("../supabase/migrations/" + supportFile, import.meta.url),
   "utf8",
 );
 await withTestDatabase(
@@ -22,17 +39,14 @@ await withTestDatabase(
   async (fixture) => {
     await fixture.sql(
       await readFile(
-        new URL(
-          "../supabase/migrations/20261116034641_course_readiness.sql",
-          import.meta.url,
-        ),
+        new URL("../supabase/migrations/" + readinessFile, import.meta.url),
         "utf8",
       ),
     );
     await fixture.sql(support);
     await runSupportCourseAbsenceChecks(fixture);
   },
-  { migrationsThrough: "20261116021008" },
+  { migrationsThrough: predecessor.slice(0, 14) },
 );
 await withTestDatabase(
   "support_course_registry",
@@ -60,9 +74,7 @@ await withTestDatabase(
     for (const file of (
       await readdir(new URL("../supabase/migrations/", import.meta.url))
     )
-      .filter(
-        (name) => name.endsWith(".sql") && name.slice(0, 14) > "20261116034757",
-      )
+      .filter((name) => name.endsWith(".sql") && name > supportFile)
       .sort())
       await fixture.sql(
         await readFile(
@@ -77,5 +89,5 @@ await withTestDatabase(
       requireRealCourse: exists,
     });
   },
-  { migrationsThrough: "20261116034641" },
+  { migrationsThrough: readinessFile.slice(0, 14) },
 );

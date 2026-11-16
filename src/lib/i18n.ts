@@ -10,6 +10,7 @@ const pairs: Record<string, [string, string]> = {
   teachingDelivery: ["Leistungsnachweise", "Teaching delivery"],
   replacements: ["Ersatzbörse", "Replacements"],
   supportDesk: ["Support", "Support desk"],
+  announcements: ["Ankündigungen", "Announcements"],
   tryDemo: ["Demo mit Beispieldaten ausprobieren", "Try the sample-data demo"],
   helpGuides: ["Hilfe & Anleitungen", "Help & guides"],
   errorHelp: [

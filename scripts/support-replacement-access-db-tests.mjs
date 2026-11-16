@@ -14,8 +14,21 @@ import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
 
 const git = promisify(execFile);
 const sourceRoot = new URL("../", import.meta.url);
-const baseVersion = "20261116021008";
-const supportFile = "20261116034757_internal_support_desk.sql";
+// Replay the actual complete predecessor, including published qualification
+// privacy, before applying the still-pending operational modules in order.
+const replayFiles = (await readdir(new URL("supabase/migrations/", sourceRoot)))
+  .filter((name) => name.endsWith(".sql"))
+  .sort();
+const readinessFile = replayFiles.find((name) =>
+  name.endsWith("_course_readiness.sql"),
+);
+assert.ok(readinessFile, "The real readiness migration must be present.");
+const baseVersion = replayFiles
+  .filter((name) => name < readinessFile)
+  .at(-1)
+  ?.slice(0, 14);
+assert.ok(baseVersion, "A complete accepted predecessor must be present.");
+const supportFile = "20261116091438_internal_support_desk.sql";
 const combinedCommit = process.env.PORTAL_REVIEW_PR17_COMMIT;
 if (combinedCommit !== undefined && !/^[a-f0-9]{40}$/.test(combinedCommit))
   throw new Error(
@@ -113,14 +126,15 @@ for (const mode of modes) {
       for (const [file, body] of sources) {
         if (file === supportFile) {
           if (mode === "strict") {
-            // Deliberately strengthen only this disposable predecessor. This
-            // guards composition even when the optional PR17 Git object is not
-            // available in a canonical CI checkout; no history file is edited.
+            // Published qualification evidence is already stricter than the
+            // old blanket certificate permission. Strengthen the independent
+            // contract branch only in this disposable predecessor instead;
+            // no historical migration or installed policy is edited.
             const previous = await sql(
               "select pg_get_functiondef('private.can_access_document(uuid)'::regprocedure)",
             );
             const stronger = previous.replace(
-              /\s*or\s*\(d\.kind='certificate' and private\.has_permission\('qualifications\.verify'\)\)/,
+              /\s*or\s*\(d\.kind='contract' and private\.has_permission\('contracts\.read'\)\)/,
               "",
             );
             assert.notEqual(
@@ -237,9 +251,15 @@ update public.documents set current_version_id=${q(version)}where id=${q(documen
           const certificate = await file(source, { kind: "certificate" });
           await fileAccess(source, certificate, true);
           await fileAccess(outsider, certificate, false);
-          // Main's existing generic policy is preserved; a stricter installed
-          // evidence policy stays strict in both synthetic and real PR17 replay.
-          await fileAccess(manager, certificate, mode === "main", "aal2");
+          // Current main requires exact contextual qualification grants; the
+          // support wrapper must never restore a generic manager certificate read.
+          await fileAccess(manager, certificate, false, "aal2");
+          const contract = await file(source, { kind: "contract" });
+          await fileAccess(source, contract, true);
+          await fileAccess(outsider, contract, false);
+          // Prove an independently stricter installed predecessor survives,
+          // rather than merely asserting the already-strict certificate rule.
+          await fileAccess(manager, contract, mode !== "strict", "aal2");
         },
       );
       await check(

@@ -1,5 +1,63 @@
 # QA evidence — 2026-11-16
 
+## PR10 final-CI archive race
+
+CI43823638639 on0b615a7 failed111/112application browsers at mobile file discovery's final zero-filename assertion after archive confirmation. Earlier SQL/API/restart stages passed; build/PWA/native/preview acceptance was not reached. The new held-initial-response component regression reproduces the row returning after server acknowledgement. Explicit cancellation before list invalidation corrects that product race; all51focused cases and515frontend cases/coverage plus the actual local source/build command pass. The browser fixture also awaits the applied filter and exact archive RPC acknowledgement, without changing the final deletion assertion, retries or timeouts. New complete exact-head CI remains mandatory. Earlier eee73e4 local/CI/native acceptance is retained as historical evidence only.
+
+The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
+
+## Current joint PR10/PR13 integration — acceptance pending
+
+This source merges accepted main `fabd71a` with the incoming M7/M8 implementation and English documentation history. The 35-file candidate retains the 26 byte-identical released migrations, appends the eight byte-identical renamed M7/M8 files and the additive role-aware discovery correction. The generated API inventory and actual replay/upgrade behavior must still be verified from the combined database. No current complete native, browser, PWA or retained-data pass is claimed here. The 372-test preflight and the failed 32-migration runs below retain their exact earlier source scope.
+
+The acceptance gate is the final combined revision: appropriate source/focused regressions, complete isolated Auth/SQL/API/desktop/mobile/PWA execution, actual retained-data selfhost verification and all 15 required GitHub checks, including `PR preview package`. A source merge, authored test or old individual branch pass cannot substitute for those results. Hosted installation and production acceptance remain separate.
+
+## Historical PR18 extension checkpoint — combined acceptance then pending
+
+[PR18](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/18) preserves accepted M6 and all historical commercial records. The current combined run is a separate gate. Focused frontend:215cases/49files, S48.61/B43.47/F38.76/L50.43%; lint/type/format/build and the source graph pass. Preview/runtime/community guard combination passes36cases; three additional execution-based QA bootstrap cases pass.
+
+Actual signed-source `a55089b` local `.local/tests/98a4eba3/RESULT.txt` and [CI43795741418](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43795741418) both return **exit1** after all26migrations, schema lint/advisors, **257 individual SQL cases**, genuine retained password/MFA/profile/private-event/Storage bytes and four actual API suites. The first commissioned course-offer API correctly rejects missing private policy. The QA bootstrap had been filtered out by intentionally sanitized nested startup; the corrected runner explicitly seeds its fictional policy with its own QA identity after the persistence proof. No normal development or production policy is chosen by seeding. Native API/browser/build-PWA completion is still required after this test-environment correction.
+
+Earlier CI43794432854 exposed wrapper fixture dependence on the outer QA port overlay, fixed and covered by an actual nested-process regression. CI43794974281 exposed legacy test expectations that allowed one equal-role administrator suspension; assertions now require both denied and both accounts unchanged. No permission/assertion was relaxed to accept either behavior. Current captured-offer duplication, role-bound consent, private configuration and stale-policy UI reload have independent regressions. Source/test existence and previous milestone acceptance are not labelled complete acceptance for this extension.
+
+## Historical M7 functional preflight — complete acceptance then pending
+
+The integrated functional source including PR16 Demo/Help/Tour, the Calendar correction and scoped picker passed `npm run test:coverage`: **372/372 tests across 57 files**, exit 0. Measured coverage: statements **57.65%**, branches **52.32%**, functions **49.11%**, lines **59.46%**; every configured floor passed. No new complete native pass or final merged-source SHA is claimed by this preflight. The separate PR19 automatic-merge implementation is not included.
+
+The current compiler inventory contains **135 reachable modules, 34 routes and 286 runtime exports**, with no unreachable modules, unresolved imports, unused runtime exports, broken literal links or missing assets. Playwright collection in explicit local test mode discovers **106 business cases plus two built-PWA cases**, with no collection errors. Those cases are authored/discovered, not passed current-source native acceptance.
+
+## Historical 32-migration CI — Calendar failures, corrected integration then pending
+
+Exact source `9c42730` failed complete acceptance in [CI43794921492](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43794921492). All **316 PostgreSQL cases, 26 actual business API suites, 46 Edge tests and real restart persistence passed**. The local run also exited 1 with the same two Calendar failures in `.local/tests/cf7ffa12/RESULT.txt` (9.8 minutes); runtime guards 56, operational Node guards 61 and Python guards 76 passed. Business browsers finished **92 passed / 2 failed out of 94**: both desktop/mobile global-calendar journeys lost the published-event detail after the DE→EN switch. Build/PWA and the native selfhost acceptance were not reached. This is a failed complete gate, not a full pass.
+
+The focused regression failed before signed correction `bf09f19` and passed afterwards. All **12 Calendar component cases**, whole-tree TypeScript and focused lint/format passed. The App/Shell merge with accepted PR16/main `e75f55d` then passed **78 tests across nine affected files**, TypeScript and focused lint/format. These checks preserve same-range details, real navigation, account boundaries, announcements, current notifications/quiet hours, Demo, Help, Tour and Preferences; they do not establish complete acceptance of the combined source. A fresh full isolated run and exact-source application/security/retained-data CI remain pending.
+
+The older counts below, including **342 tests, 128 modules and 32 routes**, belong to their recorded pre-Demo revisions. They are not the measured counts or acceptance result of the current combined source. The 29-migration failures and successful M6 results remain separate historical evidence.
+
+## Historical pre-Demo source coverage — full native result then pending
+
+The pre-Demo integrated source passed **342/342 unit/component tests in54files** and every configured V8 coverage floor. Measured statements55.78%, branches50.40%, functions46.94%, lines57.60%; file API lines98.92%, functions96.29%. Reported source coverage includes all executable browser TS/TSX and public-config code; SQL, Edge and browser acceptance are separate. `./portal test` now executes this gate and preserves HTML/LCOV/JSON reports. A complete new native32 result is still required.
+
+## Combined 32-migration preflight — native acceptance still required
+
+Signed source `1adc134` passed **316 Vitest cases / 53 files**, lint and TypeScript. The source graph contains **128 reachable modules and 32 routes**, with no unreachable modules, unresolved imports, unused runtime exports, missing literal assets or broken literal routes. A real disposable migration replay inventories **155 public functions**. Focused module checks and independent reviews are recorded in WORKLOG; they do not replace actual Auth/Storage/browser integration.
+
+The next canonical run discovers 26 native business API suites, 94 business browser cases and 2 separately built-PWA cases. Its actual result and the exact application/retained-data CI must be recorded before complete acceptance. Earlier 29-migration failures below remain honest checkpoints. The open build-only advisory is documented in [DEPENDENCY_AUDIT](DEPENDENCY_AUDIT.md).
+
+## M7 second combined run — actual dialog defect reproduced and corrected
+
+Source `8fe3e19`: detached launcher **exit 1**, private report `.local/tests/1aab5e9e/RESULT.txt`. All native migration/285 SQL/23 API/invitation/restart checks passed again; browsers **85/86** (9.9 minutes). Exact CI43782621640 reproduced file-dialog loss in both browser projects (84/86, 14.6 minutes). Trace: a delayed new filter unmounted the captured dialog before any archive RPC. Native test steps and their timeouts remain unchanged. New deterministic regressions reproduce the original lifetime defect; exact-resource revalidation also covers successful empty responses after room-access withdrawal. The final combined 32-migration source still requires a complete new native gate and exact CI. Build/PWA was not reached by these failed checkpoints.
+
+## M7 first combined run — 84/86 browsers, corrected fixture, rerun required
+
+Frozen source `eaefea5` returned **exit 1**, explicitly captured by the detached launcher in `.local/m7-test-01.exit`; private report `.local/tests/b026ab59/RESULT.txt`. All 29 migrations, 285 PostgreSQL cases, 23 actual business API suites, real Edge/Mailpit and real password/MFA/profile/calendar/Storage restart preservation passed. Chromium completed **84 passed / 2 failed / zero skipped** (7.8 minutes). Both failures came from mixed notification-fixture row shapes producing a NULL ID before the quiet-hour UI journey. Explicit IDs now fix the fixture without relaxing its assertions. Build/PWA was not reached. Full corrected-source verification and exact PR CI remain required.
+
+Visually inspected passing journeys from this run: [file centre](screenshots/m7-desktop-file-centre.png), [structured chat mention and scanned attachment](screenshots/m7-desktop-chat-mentions.png), [desktop announcement](screenshots/m7-desktop-announcements.png), [mobile announcement](screenshots/m7-mobile-announcements.png). These images do not turn the two failing journeys into passes.
+
+## M7 source preflight — not full acceptance
+
+Integrated current source passed lint/type/format,240Vitest cases across50files and compiler connectivity (119modules/32routes; zero unreachable/unresolved/unused runtime exports). Actual disposable29-migration replay generated146public functions. Narrow module SQL groups passed (files6,jobs9,mentions11,attention9,announcements16); temporary minimal Auth identities are not real Auth/TOTP acceptance. Actual API/browser definitions are authored. The complete native isolated M7 command and exact application/retained-image CI remain pending; no M7deployment/merge or fullpass is claimed.
+
 ## Final local verification of the accepted-main composition
 
 `./portal check` passes TypeScript, ESLint, source/GitHub formatting, the compiler export graph, all254frontend tests in52files and the synthetic public-config production/PWA build (63precache entries). Coverage remains S51.15/B46.15/F41.61/L52.96% with unchanged floors. `node --test scripts/runtime-*.test.mjs` passes98cases without skips, including the14documentation/privacy/metadata cases. All12native candidate allocator/boundary cases pass; actionlint and resolved-document formatting/whitespace checks pass. All26previously released SQL blobs remain unchanged and the catalogue is the preserved27thmigration.
