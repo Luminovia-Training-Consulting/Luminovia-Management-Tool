@@ -5,6 +5,8 @@ separate from private chats and commercial documents. User-authored subjects,
 descriptions and replies retain their authored language; interface text is
 available in German and English and uses the existing theme and responsive shell.
 
+
+Ticket creation and updates hold the current caller profile while waiting for request/ticket locks. Updates recompute support authority after a profile wait, including the manager flag used for internal notes. Suspension or staff-role withdrawal that commits first prevents both a new restricted write and an otherwise successful stored-response retry.
 ## Access and lifecycle
 
 Every active signed-in account can open and search its own tickets at `/support`.
@@ -50,6 +52,35 @@ deletion is refused for this linked evidence; no new anonymous Storage access or
 reusable signed URL is introduced.
 The attachment's ticket permission is authoritative even for its original
 uploader: losing support authority or MFA removes restricted-evidence access.
+
+The document gate captures the exact previously installed private permission
+function in a definer-only helper and replaces the original function in place.
+Existing RLS policies retain their function OID. Non-support documents delegate
+to that captured policy, including a stricter qualification-evidence policy when
+installed; the support module does not recreate generic certificate privileges.
+The clone is not executable by anonymous, authenticated or service-role callers.
+Support attachment checks remain final: a denied internal attachment never falls
+back to its uploader's ordinary personal-document access.
+
+The focused `scripts/support-replacement-access-db-tests.mjs` regression runs
+eight actual SQL groups against current main plus the operational migrations and
+eight against an independently tightened predecessor in separate disposable UUID
+databases. It verifies predecessor body/OID preservation, effective clone grants,
+certificate metadata/version isolation, and internal attachment denial after MFA
+or staff-capability loss, including the original uploader. An additional exact
+local commit can be replayed without editing its history:
+
+```sh
+PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-extensions-20261116 \
+PORTAL_REVIEW_PR17_COMMIT=00eaa5249a163618887f72683da362e785a5957f \
+node scripts/support-replacement-access-db-tests.mjs
+```
+
+All 24 SQL groups passed with that pinned PR17 source, including its actual
+stricter qualification migration. The tests exercise the document/version RLS
+projections used by the authenticated file gateway; they do not assert a native
+HTTP download or actual Storage-byte transfer. Existing 12 support SQL groups
+and strict diagnostics for 30 operational PL/pgSQL implementations also passed.
 
 ## Notifications and reporting
 

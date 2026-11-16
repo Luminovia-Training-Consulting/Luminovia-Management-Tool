@@ -2,10 +2,11 @@
  * Shared desktop/mobile shell for navigation, search, notifications and preferences.
  * Loaded capabilities shape visible actions and guidance; the backend authorizes access.
  */
-import { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { AnnouncementBanners } from "../features/announcements/announcements";
 import {
   MessagesSquare,
   FolderOpen,
@@ -35,22 +36,45 @@ import {
   LifeBuoy,
   ArrowRightLeft,
   Inbox,
+  Compass,
 } from "lucide-react";
+import { WelcomeGuideEntry } from "../features/onboarding/welcome";
 import { NotificationsMenu } from "../features/notifications/notifications";
 import { Avatar } from "../features/profile/avatar";
 import { useAuth } from "../features/auth/auth-context";
+import { useAuthorizationRefresh } from "../features/auth/authorization-refresh";
 import { db } from "../lib/supabase";
 import { permissionsQuery, profileQuery, userRolesQuery } from "../lib/queries";
 import { Button } from "../components/ui/button";
 import { ErrorState, Loading, Notice } from "../components/common";
+import "../features/learning/i18n";
+import "../features/workbench/i18n";
+import "../features/workbench/finance-i18n";
 import { Preferences } from "../components/preferences";
 import { PortalTour } from "../features/help/tour";
+import { OfflineSchedule } from "../features/calendar/offline";
+import { clearOfflineSchedule } from "../features/calendar/offline-store";
+import { useOnline } from "../lib/online";
 export { Preferences } from "../components/preferences";
 /** Render private navigation and the actor-scoped tour; confirm sign-out before clearing private queries. */
 export function Shell() {
   const { t } = useTranslation();
   const { session } = useAuth();
+  const actor = session!.user.id;
   const navigate = useNavigate();
+  const location = useLocation();
+  const mobileMore = useRef<HTMLDetailsElement>(null);
+  // Native details survives route changes with the Shell. Close its overlay
+  // after every actual navigation, including query changes and browser back.
+  // Keep keyboard focus visible when its selected link becomes hidden, but do
+  // not take focus from a header search or another control outside the menu.
+  useEffect(() => {
+    const menu = mobileMore.current;
+    if (!menu?.open) return;
+    const focusInside = menu.contains(document.activeElement);
+    menu.open = false;
+    if (focusInside) menu.querySelector("summary")?.focus();
+  }, [location]);
   const client = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
   const [search, setSearch] = useState("");
@@ -59,6 +83,17 @@ export function Shell() {
   const profile = useQuery(profileQuery(session!.user.id));
   const permissions = useQuery(permissionsQuery(session!.user.id));
   const roles = useQuery(userRolesQuery(session!.user.id));
+  useAuthorizationRefresh(session!.user.id, roles.data, permissions.data);
+  const online = useOnline();
+  const profileDenied =
+    profile.data?.active === false || (profile.isSuccess && !profile.data);
+  const minimalOffline =
+    !online && !profileDenied && (profile.isPending || profile.isError);
+  // A known inactive/missing profile never falls back to an old snapshot. This
+  // clears only the opt-in schedule; native Auth/session semantics stay intact.
+  useEffect(() => {
+    if (profileDenied) void clearOfflineSchedule().catch(() => {});
+  }, [profileDenied, actor]);
   const teaching =
     roles.data?.some((role) =>
       ["owner", "admin", "lecturer", "senior_lecturer"].includes(role),
@@ -71,7 +106,10 @@ export function Shell() {
     roles.data?.some((role) =>
       ["owner", "admin", "participant"].includes(role),
     ) ?? false;
-  const manage = permissions.data?.includes("jobs.manage") ?? false;
+  const manage = Boolean(
+    permissions.data?.includes("jobs.manage") ||
+    permissions.data?.includes("announcements.manage"),
+  );
   const navigation = [
     { to: "/", icon: Home, label: "home" },
     ...(staff ? [{ to: "/jobs", icon: BriefcaseBusiness, label: "jobs" }] : []),
@@ -90,6 +128,20 @@ export function Shell() {
       ? [{ to: "/delivery", icon: ClipboardCheck, label: "teachingDelivery" }]
       : []),
     { to: "/support", icon: LifeBuoy, label: "supportDesk" },
+    { to: "/learning", icon: BookOpen, label: "learning:hub" },
+    { to: "/workbench", icon: FileCheck2, label: "workbench:title" },
+    ...(staff
+      ? [{ to: "/timesheets", icon: Wallet, label: "financeOps:timesheets" }]
+      : []),
+    ...(manage
+      ? [
+          {
+            to: "/control-center",
+            icon: Settings2,
+            label: "financeOps:controlCenter",
+          },
+        ]
+      : []),
     { to: "/people", icon: Users, label: "staffDirectory" },
     ...(clientPortalAccess
       ? [{ to: "/client", icon: Building2, label: "clientPortal" }]
@@ -110,6 +162,7 @@ export function Shell() {
     ...(staff ? [{ to: "/wiki", icon: BookOpen, label: "wiki" }] : []),
     ...(staff ? [{ to: "/forum", icon: MessageCircle, label: "forum" }] : []),
     { to: "/notifications", icon: MessageCircle, label: "notifications" },
+    { to: "/announcements", icon: MessageCircle, label: "announcements" },
     { to: "/topics", icon: BookOpen, label: "topics" },
     ...(staff
       ? [{ to: "/availability", icon: CalendarDays, label: "availability" }]
@@ -117,6 +170,8 @@ export function Shell() {
     { to: "/settings", icon: Settings2, label: "settings" },
     { to: "/profile", icon: UserRound, label: "profile" },
     { to: "/security", icon: ShieldCheck, label: "security" },
+    { to: "/help", icon: BookOpen, label: "helpGuides" },
+    { to: "/welcome", icon: Compass, label: "welcome:nav" },
     ...(manage ? [{ to: "/admin", icon: Settings2, label: "admin" }] : []),
   ];
   const mobilePrimary = [
@@ -218,14 +273,14 @@ export function Shell() {
             />
           </form>
           <div className="topbar-actions">
-            {profile.data && (
+            {profile.data?.active && !minimalOffline && (
               <NotificationsMenu
                 id={session!.user.id}
                 zone={profile.data.time_zone}
               />
             )}
             <Preferences />
-            <details className="mobile-more">
+            <details className="mobile-more" ref={mobileMore}>
               <summary aria-label={t("more")}>
                 <Menu size={20} />
               </summary>
@@ -263,7 +318,21 @@ export function Shell() {
         </header>
         <main id="main" className="main-content" tabIndex={-1}>
           {signoutFailed && <Notice kind="error">{t("error")}</Notice>}
-          {profile.isPending ? (
+          {profileDenied ? (
+            <Notice kind="error">{t("profileMissing")}</Notice>
+          ) : minimalOffline ? (
+            <>
+              <Notice>
+                {t("calendarSubscriptions:offlineProfileUnavailable")}
+              </Notice>
+              <OfflineSchedule
+                key={`offline-shell-${session!.user.id}`}
+                actor={session!.user.id}
+                zone={profile.data?.time_zone ?? "UTC"}
+                minimal
+              />
+            </>
+          ) : profile.isPending ? (
             <Loading />
           ) : profile.isError ? (
             <ErrorState retry={() => void profile.refetch()} />
@@ -271,13 +340,22 @@ export function Shell() {
             <Notice kind="error">{t("profileMissing")}</Notice>
           ) : (
             <>
+              <AnnouncementBanners actor={session!.user.id} />
               <PortalTour
                 key={session!.user.id}
                 actor={session!.user.id}
                 roles={roles.data ?? []}
                 permissions={permissions.data ?? []}
                 ready={permissions.isSuccess && roles.isSuccess}
-              />
+                failed={permissions.isError || roles.isError}
+                retrying={permissions.isFetching || roles.isFetching}
+                onRetry={() => {
+                  void permissions.refetch();
+                  void roles.refetch();
+                }}
+              >
+                <WelcomeGuideEntry />
+              </PortalTour>
               <Outlet />
             </>
           )}

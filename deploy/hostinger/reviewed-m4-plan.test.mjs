@@ -156,7 +156,7 @@ test("source pins reject changed/missing/unreviewed past source while a future M
     await rm(root, { recursive: true, force: true });
   }
 });
-test("the actual ordinary updater still rejects avatar constraint replacement and CBW DO, accepting comment DDL", () => {
+test("the actual ordinary updater still rejects avatar constraint replacement and course building-block DO, accepting comment DDL", () => {
   const script = `import importlib.util,json,sys\nspec=importlib.util.spec_from_file_location('review_guard',sys.argv[1]);u=importlib.util.module_from_spec(spec);spec.loader.exec_module(u)\nrows=[]\nfor item in json.load(sys.stdin):\n try:\n  u.compatible_migration(item['source']);rows.append(True)\n except u.UpdateError:\n  rows.append(False)\nprint(json.dumps(rows))\n`;
   const result = execFileSync(
     "python3",

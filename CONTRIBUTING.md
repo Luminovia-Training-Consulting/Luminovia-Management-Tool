@@ -1,6 +1,6 @@
 # Contributing to Luminovia Portal
 
-> Status as of 16 November 2026: Maintainers and administrators have a permanent `always` exception for direct merges. Additional review/check requirements for other contributors remain prepared but disabled until the maintenance App path has been verified. [Current activation status](docs/GITHUB_WORKFLOW.md#activation-still-pending).
+> Reviewed server snapshot on 16 November 2026 at 06:42:36 UTC: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception (`bypass_mode: pull_request`). No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. Live server rules are authoritative and may later differ. [Reviewed rule configuration](docs/GITHUB_WORKFLOW.md#active-rule-layers).
 
 Welcome! This guide explains how to turn an idea or bug report into a tested, reviewable change. **Use English for issues, pull requests and contributor-facing documentation.** Application interface changes must provide both German and English strings; authored course content keeps its original language.
 
@@ -34,7 +34,7 @@ git fetch upstream
 git switch -c fix/short-description upstream/main
 ```
 
-Keep each branch focused on one coherent change. Use meaningful, signed commits such as `fix: preserve invoice version on download` or `docs: explain local startup`. Credentials and real personal or customer data must not appear in commits, screenshots or test fixtures.
+Keep each branch focused on one coherent change. Use meaningful, signed commits such as `fix: preserve invoice version on download` or `docs: explain local startup`. Credentials, real customer names and real personal or customer data must not appear in public documentation, filenames, UI examples, commits, screenshots or test fixtures. Use customer-neutral terminology and clearly fictional organisations; configure actual customers privately in the application.
 
 ## 3. Develop and verify locally
 
@@ -49,6 +49,15 @@ Keep each branch focused on one coherent change. Use meaningful, signed commits 
 `start` runs the real local system and preserves its data. `test` uses separate temporary data to check components, database permissions, APIs, browsers and the built PWA. `stop` shuts down the managed development services without deleting their data. Tests do not reset the normal development database. First startup downloads images and needs enough RAM for the services and malware scanner.
 
 During development, run focused checks such as `npm test`, `npm run test:coverage`, `npm run lint` and `npm run typecheck` after installing dependencies. The [CI and coverage guide](docs/CI_QUALITY.md) explains checks, reports and thresholds. `./portal test` is the canonical complete acceptance command. Understand a check's target and resources before running it, and do not publish unredacted private test artifacts.
+
+Local PC verification is the default. Use `./portal check` for fast quality,
+coverage and build feedback while editing, then `./portal test` for complete
+isolated acceptance of your working source before delivery;
+`./portal github test` fetches and verifies current `main` in a separate local
+checkout, while `./portal github` opens its persistent preview. No GitHub
+deployment or self-hosted Actions runner is needed. Coordinate the shared QA lock
+with other agents and never stop a foreign stack to obtain its ports. Automatic
+GitHub quality/security checks remain in place.
 
 ## 4. Preserve the domain contracts
 
@@ -68,21 +77,26 @@ Every PR needs exactly one `type:*` label, at least one `area:*` label and exact
 
 ## Review and merge
 
-The normal contribution process uses a pull request, an independent approving review, resolved conversations and current passing checks. New changes invalidate earlier approvals where the prepared review policy is enforced.
+Changes to `main` require a pull request. Other contributors, including the maintenance App, need an independent approving review, approval of the latest push and resolved review conversations. New pushes dismiss stale approvals; self-approval is insufficient. The only current review exception is personal to `CarinaSchoppe` (User 29256704), with bypass mode `pull_request`. It permits bypassing review through a PR, not direct pushes or bypassing required checks. Maintainer or administrator role membership alone grants no review exception.
 
-Maintainers and administrators have an explicit role-based exception and may **merge directly at any time**, including while reviews or checks are pending or failing. This replaces the former personal PR-only exception. Ordinary write access does not grant this bypass. The exception applies to the acting person; GitHub may require an explicit bypass action. Review and clear test evidence remain the recommended workflow.
+Fourteen required check contexts are bound to GitHub Actions integration `15368`; the generated `CodeQL` finding check is bound to integration `57789`. All 15 mandatory checks must pass for the current revision, and the PR must be up to date with `main`. These include Build, Typecheck, Lint, Formatting, Code quality, Tests and coverage, `verify`, `Actual isolated selfhost image compatibility`, `PR preview package`, `PR metadata`, the three CodeQL language analyses, Dependency review and the generated CodeQL findings check. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes. Missing, pending or failed required checks block every merger, including administrators and the maintenance App.
 
-Build, Typecheck, Lint, Formatting, Code quality and Tests and coverage run alongside `verify`, `Actual isolated selfhost image compatibility` and `PR metadata`. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes, CodeQL and Dependabot. The additional mandatory review/check rules for ordinary contributors remain disabled until the maintenance App path is verified; committed JSON alone does not prove active enforcement.
+Daily maintenance publishes a signed change on a separate branch and opens a PR labelled `type:dependencies`, `area:devops` and `risk:high`. Native auto-merge waits for the same checks and independent review; it grants no exception. App permission setup and actual workflow delivery must be verified separately from the already active rules. See [current operational status](docs/GITHUB_WORKFLOW.md#activation-still-pending).
 
-A direct maintainer merge does not skip publication checks: the development release job waits for its gates in `ci.yml`. Failed checks do not produce an approved installation package. The separate Security workflow provides additional analysis. The existing daily maintenance path remains unchanged until the App setup is coordinated; no unverified bot bypass is assumed.
-
-A merge may trigger the existing **development release automation**. Production installation, risky migrations, and changes to hosting, DNS or real data still require the relevant separate authorization. A GitHub merge does not replace that operational approval.
+A merge does not publish a development release or create PR deployment metadata.
+An authorised maintainer must explicitly dispatch `Portal checks` on `main` with
+`publish_release=true` and the exact current `main` SHA in `expected_commit`.
+Normal manual checks and daily-maintenance verification do not publish releases.
+PR deployment metadata has its own manual-only workflow; the verified local
+artifact remains downloadable without creating that record. Production
+installation, risky migrations, and changes to hosting, DNS or real data still
+require the relevant separate authorization. A GitHub merge does not replace it.
 
 ## Tags and releases
 
-Labels classify issues and PRs. Git tags identify a particular commit. The signed annotated tags `milestone/m3-accounts-commission`, `milestone/m4-cbw-templates` and `milestone/m5-system-audit` mark accepted development checkpoints; they do not imply a complete product or production release.
+Labels classify issues and PRs. Git tags identify a particular commit. The signed M3 accounts/commission, M4 building-block and M5 system-audit checkpoints identify accepted development revisions; they do not imply a complete product or production release.
 
-Existing `cms-dev-*` tags belong to development release automation. Do not move or replace published tags. Maintainers attach new milestone/version tags to the exact verified commit; a PR label does not create a Git tag.
+Existing `cms-dev-*` tags identify immutable development packages created by explicit manual publication. Do not move or replace published tags. Maintainers attach new milestone/version tags to the exact verified commit; a PR label does not create a Git tag.
 
 ## License and collaboration
 

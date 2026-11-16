@@ -5,12 +5,13 @@ import { readFile } from "node:fs/promises";
 import { withTestDatabase, quoteSql } from "./testing/database.mjs";
 
 const sources = [
-  "20261116034641_course_readiness.sql",
-  "20261116034757_internal_support_desk.sql",
-  "20261116034812_replacement_marketplace.sql",
-  "20261116034826_attendance_delivery.sql",
-  "20261116035802_operations_notification_integration.sql",
-  "20261116041140_website_enquiry_intake.sql",
+  "20261116121554_course_readiness.sql",
+  "20261116121556_internal_support_desk.sql",
+  "20261116121558_replacement_marketplace.sql",
+  "20261116121600_attendance_delivery.sql",
+  "20261116121603_operations_notification_integration.sql",
+  "20261116121605_operational_module_notification_handover_integration.sql",
+  "20261116143242_website_enquiry_intake.sql",
 ];
 const names = new Set();
 for (const file of sources) {

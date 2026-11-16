@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { randomUUID, randomBytes, createHash } from "node:crypto";
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { withApiFixture } from "./testing/api.mjs";
 
 await withApiFixture(
@@ -75,10 +76,27 @@ await withApiFixture(
         );
       }
     });
+    // withApiFixture has already validated the canonical endpoint, or the native
+    // scratch adapter's exact project/origin and actual database ownership label.
+    // Carry that confirmed tuple to the listener rather than relaxing it to any
+    // loopback port. The child repeats the project/config/endpoint guards.
+    const confirmedProject =
+      /^project_id\s*=\s*"(luminovia-portal-test-[a-f0-9]+)"/m.exec(
+        readFileSync("supabase/config.toml", "utf8"),
+      )?.[1];
+    assert.ok(confirmedProject, "Confirmed isolated enquiry project required");
+    // Native candidate HTTPS uses its own fixture CA. Keep certificate and
+    // hostname validation enabled; Deno does not consume NODE_EXTRA_CA_CERTS.
+    const candidateCertificate = process.env.PORTAL_CANDIDATE_OWNER
+      ? process.env.NODE_EXTRA_CA_CERTS
+      : undefined;
     const child = spawn(
-      "./node_modules/.bin/deno",
+      // Run the installed binary directly: killing npm's synchronous Node shim
+      // leaves its Deno descendant and HTTP socket alive during fixture cleanup.
+      "./node_modules/deno/deno",
       [
         "run",
+        ...(candidateCertificate ? [`--cert=${candidateCertificate}`] : []),
         "--allow-env",
         "--allow-read=supabase/config.toml",
         "--allow-net=127.0.0.1,localhost,[::1]",
@@ -87,6 +105,8 @@ await withApiFixture(
       {
         env: {
           ...process.env,
+          PORTAL_ENQUIRY_TEST_API_ORIGIN: new URL(url).origin,
+          PORTAL_ENQUIRY_TEST_PROJECT: confirmedProject,
           PORTAL_WEBSITE_ENQUIRIES_ENABLED: "true",
           PORTAL_WEBSITE_INTEGRATION_TOKEN: token,
           PORTAL_WEBSITE_ORIGIN: "https://website.example.invalid",

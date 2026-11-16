@@ -19,9 +19,12 @@ export interface PortalDocument {
   mime_type: string;
   size_bytes: number;
   status: string;
-  current_version_id: string;
+  current_version_id: string | null;
   created_at: string;
   deleted_at: string | null;
+  personal_tags?: string[];
+  personal_folder?: string;
+  personal_version?: number;
 }
 /** Requested file context and optional retry/replacement references; the server validates every relationship. */
 export interface UploadContext {
@@ -106,17 +109,12 @@ export async function uploadDocument(
     xhr.send(form);
   });
 }
-/** Download current or explicitly selected version bytes through a reauthorized no-store request. */
-export async function downloadDocument(
-  id: string,
-  versionId?: string,
-): Promise<Blob> {
-  // The selected version ID prevents a replacement between listing and download
-  // from combining an old filename with newer bytes.
+/** Fetch authenticated gateway bytes with the exact request context and no browser cache. */
+async function downloadFile(body: Record<string, unknown>): Promise<Blob> {
   const response = await fetch(endpoint(), {
     method: "POST",
     headers: { ...(await authHeaders()), "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "download", id, version_id: versionId }),
+    body: JSON.stringify(body),
     cache: "no-store",
   });
   if (!response.ok) {
@@ -130,13 +128,23 @@ export async function downloadDocument(
   }
   return await response.blob();
 }
-/** Create a temporary browser download from confirmed bytes and release its object URL. */
-export async function saveDownload(
-  id: string,
+/** Download the selected version so replacement cannot silently substitute newer bytes. */
+export async function downloadDocument(id: string, versionId?: string | null) {
+  return downloadFile({ action: "download", id, version_id: versionId });
+}
+/** Download through the qualification binding, preserving its separately authorized exact version. */
+export async function saveQualificationEvidence(
+  evidenceId: string,
   name: string,
-  versionId?: string,
 ) {
-  const blob = await downloadDocument(id, versionId);
+  const blob = await downloadFile({
+    action: "qualification_evidence_download",
+    evidence_id: evidenceId,
+  });
+  saveBlob(blob, name);
+}
+/** Download confirmed bytes through a temporary object URL, then release that URL. */
+function saveBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -144,6 +152,15 @@ export async function saveDownload(
   link.rel = "noopener";
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+/** Download reviewed document bytes, then dispose the temporary browser URL. */
+export async function saveDownload(
+  id: string,
+  name: string,
+  versionId?: string | null,
+) {
+  const blob = await downloadDocument(id, versionId);
+  saveBlob(blob, name);
 }
 
 /** Recognize metadata access denial so this query state stops automatic refetching. */
@@ -181,7 +198,7 @@ function documentRefreshInterval(
   }
   const signature = JSON.stringify(
     pending
-      .map((file) => [file.id, file.status, file.current_version_id])
+      .map((file) => [file.id, file.status, file.current_version_id] as const)
       .sort((a, b) => a[0].localeCompare(b[0])),
   );
   let window = scanWindows.get(query);

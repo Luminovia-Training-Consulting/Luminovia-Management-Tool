@@ -196,6 +196,38 @@ await withTestDatabase("enquiries_test", async (fixture) => {
     },
   );
   await check(
+    "Accepted owner-only resolver and enquiry helper deny direct calls while the own inbox resolves enquiry links",
+    async () => {
+      for (const role of ["anon", "authenticated", "service_role"])
+        for (const name of [
+          "notification_target",
+          "enquiry_notification_target",
+        ])
+          await assert.rejects(
+            sql(
+              `set role ${role};select private.${name}('website_enquiry','${id}')`,
+            ),
+            /permission denied/,
+          );
+      const inbox = JSON.parse(
+        await actor(manager, "select public.notification_inbox()", "aal2"),
+      );
+      const notice = inbox.items.find(
+        (item) => item.kind === "website_enquiry",
+      );
+      assert.ok(
+        notice,
+        "Committed enquiry notification is present in the manager's own inbox",
+      );
+      assert.equal(notice.href, `/enquiries/${id}`);
+      assert.equal(notice.title, "");
+      const denied = JSON.parse(
+        await actor(lecturer, "select public.notification_inbox()", "aal2"),
+      );
+      assert.ok(!denied.items.some((item) => item.kind === "website_enquiry"));
+    },
+  );
+  await check(
     "Validation rejects unknown identity fields, malformed contacts, missing consent and invalid time zones",
     async () => {
       for (const body of [

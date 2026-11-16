@@ -2,6 +2,8 @@
 
 Authority: [Universal Master Prompt](UNIVERSAL_MASTER_PROMPT.txt), preserved verbatim from the user's attachment on 15 November 2026 (Australia/Brisbane). This document is its implementation map; it does not reduce the requested product scope. See [implementation plan](IMPLEMENTATION_PLAN.md) for actual completion status.
 
+The approved 16 November [smart operations extension](SMART_OPERATIONS_SPEC.md) additionally requires the full Control Center, personalized dashboard/Teaching Day, Hostinger email and optional mobile Push, waitlists/replacement workflows, timesheets, client/participant self-service, favourites, saved filters, calendar feeds, preparation, quality, forecasting and offline schedule. Its complete feature map distinguishes current source from remaining work; the original master prompt remains preserved verbatim.
+
 ## Product and operating model
 
 A private, bilingual German/English, responsive PWA for approximately eleven freelance lecturers, administrators/management and restricted course participants. Management publishes teaching jobs. An authenticated, eligible lecturer may claim an entire job immediately; the first committed database transaction wins. The claim requires no routine approval queue. Client/employer organisations have explicit individual client accounts and scoped memberships as approved on 16 November 2026; see [Accounts and commission extension](ACCOUNTS_REVENUE_SPEC.md).
@@ -10,7 +12,11 @@ Production target is `portal.luminovia.org` on compatible existing Hostinger sta
 
 ## Roles and privacy boundaries
 
-Users may hold several of `owner`, `admin`, `management`, `senior_lecturer`, `lecturer`, `client`, `participant`. Admin/owner can perform every business role function while sensitive capabilities require MFA and private resource boundaries remain intact. Permissions are granular capabilities checked in the database/API. Senior lecturer status alone confers no access to other lecturers' contracts/rates. A standard administrator cannot read private DMs or private personal calendar events through a blanket role bypass. Sensitive documents require explicit resource-level authorisation. Deactivation must revoke access even while an existing token is still valid.
+Users may hold compatible combinations of `owner`, `admin`, `management`, `senior_lecturer`, `lecturer`, `client`, `participant`, `guest`. Management may assign subordinate teaching/company/participant/guest roles; Administration may additionally assign Management. Self, equal and higher authority targets remain protected in role changes, invitations, organisation grants and account activation. Client and teaching/management functions use separate non-administrative accounts to avoid joining private gross and net projections. Guest grants no business capabilities. Sensitive capabilities require MFA and private resource boundaries remain intact. Senior lecturer status alone confers no access to other lecturers' contracts/rates. A standard administrator cannot read private DMs or private personal calendar events through a blanket role bypass. Sensitive documents require explicit resource-level authorisation. Deactivation must revoke access even while an existing token is still valid.
+
+The latest 16 November instruction supersedes the earlier shared compensation default: the teaching role determines compensation from a private, Administration-configured policy. Its actual business values must not be committed to this public repository or frontend bundles. Each offer captures its policy and each successful claim captures immutable accepted compensation. Do not infer missing historical client fees. See [delegated roles and private pricing](DELEGATED_ROLES_PRICING.md).
+
+New accounts receive a sequential, permission-aware DE/EN [welcome guide](WELCOME_GUIDE.md), with private server-persisted progress, pause/resume, skip and restart. All PRs retain the complete quality/security/application/native checks and a genuinely runnable [local preview package and GitHub deployment record](PR_PREVIEWS.md); a downloadable package is not a hosted preview website.
 
 ## Complete module scope
 

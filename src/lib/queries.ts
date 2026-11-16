@@ -1,18 +1,12 @@
 /**
- * Shared profile, current-capability, expertise, offer, claim and private-event queries. Actor
- * keys prevent cache mixing; RLS/RPCs remain the authoritative access boundary.
+ * Shared profile, current-capability, expertise, allocation and private-event
+ * queries. Feature-specific job discovery, exact details and pickers live in
+ * features/jobs; actor keys and current database permissions remain authoritative.
  */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "./supabase";
-import type {
-  Job,
-  Claim,
-  Topic,
-  Profile,
-  Expertise,
-  PersonalEvent,
-} from "./types";
-/** Read profiles through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
+import type { Claim, Topic, Profile, Expertise, PersonalEvent } from "./types";
+/** Read the requested profile under native RLS and key its cached result by identity. */
 export const profileQuery = (id: string) =>
   queryOptions({
     queryKey: ["profile", id],
@@ -30,6 +24,7 @@ export const profileQuery = (id: string) =>
 export const permissionsQuery = (id: string) =>
   queryOptions({
     queryKey: ["permissions", id],
+    refetchInterval: 30000,
     queryFn: async () => {
       const { data, error } = await db().rpc("get_my_permissions");
       if (error) throw error;
@@ -61,19 +56,7 @@ export const expertiseQuery = (id: string) =>
       return data as Expertise[];
     },
   });
-/** Read authorized offer rows through the native client and propagate read/access errors. */
-export const jobsQuery = queryOptions({
-  queryKey: ["jobs"],
-  queryFn: async () => {
-    const { data, error } = await db()
-      .from("jobs")
-      .select("*,job_sessions(*),job_requirements(topic_id)")
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    return data as Job[];
-  },
-});
-/** Read job_claims through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
+/** Read only the actor's currently confirmed allocations and immutable assignment-session snapshots. */
 export const claimsQuery = (id: string) =>
   queryOptions({
     queryKey: ["claims", id],

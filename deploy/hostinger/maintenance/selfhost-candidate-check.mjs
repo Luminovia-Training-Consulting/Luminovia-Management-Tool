@@ -215,15 +215,40 @@ export function adaptCandidateApiFixture(source, { project, apiPort }) {
     .replace(client, identity + client);
 }
 
-// Temporarily reserve a free loopback port for the isolated probe.
-async function availablePort() {
-  const server = createServer();
-  await new Promise((done, fail) =>
-    server.once("error", fail).listen(0, "127.0.0.1", done),
-  );
-  const port = server.address().port;
-  await new Promise((done) => server.close(done));
-  return port;
+// Hold all three loopback reservations together so the OS cannot return a port
+// released by an earlier allocation. The factory seam lets the socket regression
+// exercise a real bind failure; production always creates ordinary net servers.
+// An injected factory must return fresh, unbound servers owned by this call.
+// Return only after every temporary listener is closed, including partial failure.
+// Docker owns the subsequent binds; these reservations cannot span that handoff.
+export async function allocateCandidatePorts(createListener = createServer) {
+  const listeners = [];
+  try {
+    const ports = {};
+    for (const kind of ["public", "api", "mail"]) {
+      const server = createListener();
+      listeners.push(server);
+      await new Promise((done, fail) =>
+        server.once("error", fail).listen(0, "127.0.0.1", done),
+      );
+      ports[kind] = server.address().port;
+    }
+    return ports;
+  } finally {
+    await Promise.all(
+      listeners.map(
+        (server) =>
+          new Promise((done, fail) =>
+            server.close((error) => {
+              // A failed bind has no listening handle, but earlier leases still
+              // need closing. Other close errors must fail the native gate.
+              if (error && error.code !== "ERR_SERVER_NOT_RUNNING") fail(error);
+              else done();
+            }),
+          ),
+      ),
+    );
+  }
 }
 
 // Start owned Compose resources, verify data before/after upgrading, and clean up only resources covered by the ownership contract.
@@ -433,11 +458,7 @@ export async function checkCandidate({
       join(scratch, "supabase/config.toml"),
       `project_id = "${project}"\n`,
     );
-    const ports = {
-      public: await availablePort(),
-      api: await availablePort(),
-      mail: await availablePort(),
-    };
+    const ports = await allocateCandidatePorts();
     assert.equal(new Set(Object.values(ports)).size, 3);
     const origin = "https://127.0.0.1:" + ports.public;
     const generated = createConfiguration({
@@ -726,6 +747,9 @@ export async function checkCandidate({
       PORTAL_CANDIDATE_OWNER: project,
       PORTAL_DB_CONTAINER: "supabase_db_" + project,
       NODE_EXTRA_CA_CERTS: join(scratch, "certs/cert.pem"),
+      // The actual Python SMTP worker also calls the candidate HTTPS API.
+      // Trust only this fixture CA, retaining hostname/certificate checks.
+      SSL_CERT_FILE: join(scratch, "certs/cert.pem"),
     };
     console.log(
       "Candidate: baseline initialized; seeding and retaining real password/MFA/private event/scanned bytes.",
@@ -848,6 +872,13 @@ export async function checkCandidate({
       await new Promise((done) => setTimeout(done, 200));
     }
     assert(schemaReady, "Candidate REST schema did not finish loading.");
+    // The retained baseline can predate candidate-only commercial settings.
+    // Bootstrap fictional acceptance data only after the upgrade/retention proof,
+    // using the same exact owned project and environment as the API suites.
+    await run(process.execPath, [join(scratch, "scripts/local-seed.mjs")], {
+      env: childEnvironment,
+      timeout: 240000,
+    });
     console.log(
       "Candidate: TLS/public boundaries and complete migration replay passed; running actual API suites.",
     );

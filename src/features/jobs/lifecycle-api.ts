@@ -30,6 +30,7 @@ export interface JobLifecycle {
   open_positions?: number;
   can_set_capacity?: boolean;
   gross_budget?: number | null;
+  max_net_budget?: number | null;
   can_manage: boolean;
   can_edit: boolean;
   can_duplicate: boolean;
@@ -124,6 +125,11 @@ export async function refreshJobState(client: QueryClient) {
       "delivery",
       "replacements",
       "replacement-assignments",
+      "job-substitutions",
+      "job-waitlist",
+      "my-job-waitlist",
+      "substitution-candidates",
+      "teaching-day",
     ].map((key) => client.invalidateQueries({ queryKey: [key] })),
   );
 }

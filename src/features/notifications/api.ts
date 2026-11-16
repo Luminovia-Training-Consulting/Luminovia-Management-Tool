@@ -28,13 +28,26 @@ const notificationItemSchema = z.object({
     .nullable(),
   title: z.string(),
 });
-/** Validate the notification array, nonnegative unread count and timestamp before display. */
-const inboxPageSchema = z.object({
-  items: z.array(notificationItemSchema),
-  unread_count: z.number().int().nonnegative(),
-  as_of: z.string().datetime({ offset: true }),
-});
-/** Shared validation contract for optional categories and a positive version number. */
+/**
+ * Accept legacy inbox pages and validate quiet-hour attention when present.
+ * Active quiet summaries require a count bounded by the complete unread total;
+ * inactive/legacy pages omit that count. The server decides current visibility.
+ */
+const inboxPageSchema = z
+  .object({
+    items: z.array(notificationItemSchema),
+    unread_count: z.number().int().nonnegative(),
+    quiet_active: z.boolean().optional(),
+    attention_count: z.number().int().nonnegative().optional(),
+    as_of: z.string().datetime({ offset: true }),
+  })
+  .refine((page) =>
+    page.quiet_active === true
+      ? page.attention_count !== undefined &&
+        page.attention_count <= page.unread_count
+      : page.attention_count === undefined,
+  );
+/** Four category flags retain their independent positive CAS version; quiet-hour settings use a separate API. */
 export const notificationPreferencesSchema = z.object({
   chat: z.boolean(),
   forum: z.boolean(),

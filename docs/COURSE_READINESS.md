@@ -2,6 +2,8 @@
 
 The preparation centre extends existing course runs, confirmed assignments, contract versions, qualification attestations, scanned files and customer records. `/readiness` lists accessible preparations; `/readiness/:id` shows the checklist, authorised documents, meeting or venue, instructions and tasks. The dashboard widget reads the same server projection. It complements personal teaching preparation and does not replace that separate private workflow.
 
+
+Readiness writes lock the current caller profile before waiting for the course gate. Management permissions, active status and assigned-lecturer/task authority are read after any profile wait and remain protected through the mutation or retained request reply. A role/status change that commits first prevents a stale browser request from confirming preparation.
 ## Authoritative calculation
 
 No percentage or readiness state can be edited. PostgreSQL recalculates applicable checks from current records for every response. The percentage is the number of complete applicable checks divided by applicable checks, rounded to a whole percentage. Customer organisation and contact are distinct checks so missing contact information is visible.

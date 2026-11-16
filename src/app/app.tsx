@@ -18,8 +18,10 @@ import { isConfigured } from "../lib/supabase";
 import { useOnline } from "../lib/online";
 import { Button } from "../components/ui/button";
 import { Dashboard } from "../features/dashboard/dashboard";
+import { WelcomeGuidePage } from "../features/onboarding/welcome";
 import { Jobs, JobDetail } from "../features/jobs/jobs";
 import { ProfilePage } from "../features/profile/profile";
+import { AnnouncementsPage } from "../features/announcements/announcements";
 // Job/profile widgets already load this module; another lazy wrapper only adds
 // a loading boundary and cannot produce an independent route chunk.
 import { FilesPage } from "../features/files/files";
@@ -31,6 +33,11 @@ import {
 const AdminAuditPage = lazy(() =>
   import("../features/audit/audit").then((module) => ({
     default: module.AdminAuditPage,
+  })),
+);
+const AdminAnnouncementsPage = lazy(() =>
+  import("../features/announcements/admin").then((module) => ({
+    default: module.AdminAnnouncementsPage,
   })),
 );
 const DemoPage = lazy(() =>
@@ -133,6 +140,32 @@ const EnquiriesPage = lazy(() =>
     default: module.EnquiriesPage,
   })),
 );
+const LearningHubPage = lazy(() =>
+  import("../features/learning/learning").then((module) => ({
+    default: module.LearningHubPage,
+  })),
+);
+const WorkbenchPage = lazy(() =>
+  import("../features/workbench/workbench").then((module) => ({
+    default: module.WorkbenchPage,
+  })),
+);
+const TimesheetsPage = lazy(() =>
+  import("../features/workbench/timesheets").then((module) => ({
+    default: module.TimesheetsPage,
+  })),
+);
+const ControlCenterPage = lazy(() =>
+  import("../features/workbench/control-center").then((module) => ({
+    default: module.ControlCenterPage,
+  })),
+);
+const CourseWorkspacePage = lazy(() =>
+  import("../features/learning/learning").then((module) => ({
+    default: module.CourseWorkspacePage,
+  })),
+);
+
 const PortalSearch = lazy(() =>
   import("../features/search/search").then((module) => ({
     default: module.PortalSearch,
@@ -240,6 +273,7 @@ export function App() {
           <Route element={<Protected />}>
             <Route element={<Shell />}>
               <Route index element={<Dashboard />} />
+              <Route path="welcome" element={<WelcomeGuidePage />} />
               <Route path="jobs" element={<Jobs />} />
               <Route path="jobs/:id" element={<JobDetailRoute />} />
               <Route path="calendar" element={<CalendarPage />} />
@@ -262,6 +296,14 @@ export function App() {
               />
               <Route path="enquiries" element={<EnquiriesPage />} />
               <Route path="enquiries/:id" element={<EnquiriesPage />} />
+              <Route path="learning" element={<LearningHubPage />} />
+              <Route path="workbench" element={<WorkbenchPage />} />
+              <Route path="timesheets" element={<TimesheetsPage />} />
+              <Route path="control-center" element={<ControlCenterPage />} />
+              <Route
+                path="courses/:id/workspace"
+                element={<CourseWorkspacePage />}
+              />
               <Route path="contracts" element={<ContractsPage />} />
               <Route path="finance" element={<FinancePage />} />
               <Route path="wiki" element={<WikiPage />} />
@@ -269,6 +311,7 @@ export function App() {
               <Route path="files" element={<FilesPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="announcements" element={<AnnouncementsPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="topics" element={<TaxonomyPage />} />
               <Route path="availability" element={<AvailabilityPage />} />
@@ -279,6 +322,10 @@ export function App() {
                 <Route path="people" element={<PeopleAdminPage />} />
                 <Route path="accounts" element={<AccountsPage />} />
                 <Route path="audit" element={<AdminAuditPage />} />
+                <Route
+                  path="announcements"
+                  element={<AdminAnnouncementsPage />}
+                />
               </Route>
             </Route>
           </Route>

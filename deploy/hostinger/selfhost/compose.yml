@@ -308,6 +308,8 @@ services:
     - ../../../supabase/functions/accounts:/home/deno/functions/accounts:ro
     # Reviewed integration worker only; this adds no listener or separate service.
     - ../../../supabase/functions/website-enquiries:/home/deno/functions/website-enquiries:ro
+    - ../../../supabase/functions/course-documents:/home/deno/functions/course-documents:ro
+    - ../../../supabase/functions/calendar-feed:/home/deno/functions/calendar-feed:ro
     - deno-cache:/root/.cache/deno
     depends_on:
       api-gw:

@@ -200,7 +200,14 @@ try {
   assert.equal(auth.GOTRUE_MFA_TOTP_ENROLL_ENABLED, "true");
   assert.equal(auth.GOTRUE_MFA_TOTP_VERIFY_ENABLED, "true");
   assert.equal(auth.GOTRUE_MAILER_AUTOCONFIRM, "false");
-  const workers = ["files", "invite-lecturer", "accounts", "website-enquiries"];
+  const workers = [
+    "files",
+    "invite-lecturer",
+    "accounts",
+    "course-documents",
+    "calendar-feed",
+    "website-enquiries",
+  ];
   for (const worker of workers) {
     const mount = compose.services.functions.volumes.find(
       (volume) => volume.target === "/home/deno/functions/" + worker,
@@ -229,7 +236,7 @@ try {
   const router = readFileSync(resolve(here, "runtime/index.ts"), "utf8");
   assert(
     router.includes(
-      "const PORTAL_FUNCTIONS = new Set(['files', 'invite-lecturer', 'accounts', 'website-enquiries'])",
+      "const PORTAL_FUNCTIONS = new Set(['files', 'invite-lecturer', 'accounts', 'course-documents', 'calendar-feed', 'website-enquiries'])",
     ),
   );
   assert(router.includes("if (!PORTAL_FUNCTIONS.has(service_name))"));

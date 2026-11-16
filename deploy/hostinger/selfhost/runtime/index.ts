@@ -3,6 +3,7 @@
  */
 import * as jose from 'jsr:@panva/jose@6.2.17'
 import { startMemoryPressureLoop } from './memory-pressure.ts'
+import { logRuntimeFailure } from './safe-log.ts'
 
 console.log('main function started')
 startMemoryPressureLoop()
@@ -11,13 +12,13 @@ addEventListener('unhandledrejection', (ev) => {
   // Without preventDefault(), a floating rejection destroys the main worker and the process exits.
   // Sync throws inside timer callbacks are still fatal; wrap them in try/catch.
   ev.preventDefault()
-  console.error('unhandled promise rejection in main worker', ev.reason)
+  logRuntimeFailure('unhandled_rejection', ev.reason)
 })
 
 const MAX_WORKER_RETRIES = 3
 
 // Only reviewed application workers are executable, including through the private gateway.
-const PORTAL_FUNCTIONS = new Set(['files', 'invite-lecturer', 'accounts', 'website-enquiries'])
+const PORTAL_FUNCTIONS = new Set(['files', 'invite-lecturer', 'accounts', 'course-documents', 'calendar-feed', 'website-enquiries'])
 
 const JWT_SECRET = Deno.env.get('JWT_SECRET')
 const SUPABASE_JWKS = parseJwks(Deno.env.get('SUPABASE_JWKS'))
@@ -75,7 +76,7 @@ function getFunctionErrorResponse({ code, message, status }: FunctionFailure): R
 // Associate an unhandled router error with a random reference and return a bounded client error.
 function onError(e: unknown): Response {
   const ref = crypto.randomUUID()
-  console.error(`unhandled error in request handler (ref: ${ref})`, e)
+  logRuntimeFailure('request_handler_failed', e, ref)
   return getFunctionErrorResponse({
     code: RequestErrors.BootError,
     message: `Internal Server Error (ref: ${ref})`,
@@ -252,7 +253,7 @@ async function isValidLegacyJWT(jwt: string): Promise<AuthFailure | null> {
   try {
     await jose.jwtVerify(jwt, secretKey);
   } catch (e) {
-    console.error('Symmetric Legacy JWT verification error', e);
+    logRuntimeFailure('legacy_jwt_verification_failed', e);
     return { code: RequestErrors.InvalidLegacyJWT }
   }
   return null
@@ -268,7 +269,7 @@ async function isValidJWT(jwt: string): Promise<AuthFailure | null> {
   try {
     await jose.jwtVerify(jwt, LOCAL_JWKS);
   } catch (e) {
-    console.error('Asymmetric JWT verification error', e);
+    logRuntimeFailure('asymmetric_jwt_verification_failed', e);
     return { code: RequestErrors.InvalidAsymmetricJWT }
   }
 
@@ -295,7 +296,7 @@ async function isValidHybridJWT(jwt: string): Promise<AuthFailure | null> {
   try {
     jwtAlgorithm = jose.decodeProtectedHeader(jwt).alg
   } catch (e) {
-    console.error('JWT format error', e)
+    logRuntimeFailure('jwt_format_invalid', e)
     return {
       code: RequestErrors.InvalidTokenFormat,
       message: 'Invalid JWT format',
@@ -326,7 +327,15 @@ async function isValidHybridJWT(jwt: string): Promise<AuthFailure | null> {
 }
 
 Deno.serve({ onError }, async (req: Request) => {
-  if (req.method !== 'OPTIONS' && VERIFY_JWT) {
+  const url = new URL(req.url)
+  const { pathname } = url
+  const path_parts = pathname.split('/')
+  const service_name = path_parts[1]
+  // Only this exact read-only GET uses an owner-issued revocable capability.
+  // Its handler verifies the hash against current active ownership. All other
+  // methods, suffixes and reviewed functions retain the normal JWT boundary.
+  const capabilityFeed = service_name === 'calendar-feed' && pathname === '/calendar-feed' && req.method === 'GET'
+  if (req.method !== 'OPTIONS' && VERIFY_JWT && !capabilityFeed) {
     const token = getAuthToken(req)
     if (typeof token !== 'string') {
       return getAuthErrorResponse(token)
@@ -336,11 +345,6 @@ Deno.serve({ onError }, async (req: Request) => {
       return getAuthErrorResponse(authFailure)
     }
   }
-
-  const url = new URL(req.url)
-  const { pathname } = url
-  const path_parts = pathname.split('/')
-  const service_name = path_parts[1]
 
   if (!PORTAL_FUNCTIONS.has(service_name)) {
     return getFunctionErrorResponse({
@@ -369,7 +373,7 @@ Deno.serve({ onError }, async (req: Request) => {
         status: 404,
       })
     }
-    console.error(e)
+    logRuntimeFailure('worker_path_unavailable', e)
     return getFunctionErrorResponse({
       code: RequestErrors.BootError,
       message: 'Function failed to start (please check logs)',
@@ -378,7 +382,7 @@ Deno.serve({ onError }, async (req: Request) => {
   }
 
   // Local portal adaptation: future files can need more memory; this is a ceiling, not a reservation.
-  const memoryLimitMb = service_name === 'files' ? 1024 : 128
+  const memoryLimitMb = service_name === 'files' ? 1024 : service_name === 'course-documents' ? 512 : 128
   // Keep the wall clock above the 150s request idle timeout configured in Compose.
   const workerTimeoutMs = 400_000
   const requestAbsentTimeoutMs = 60_000
@@ -406,6 +410,7 @@ Deno.serve({ onError }, async (req: Request) => {
         workerTimeoutMs,
         context: { supervisor: { requestAbsentTimeoutMs } },
         noModuleCache,
+        staticPatterns: service_name === 'course-documents' ? ['/home/deno/functions/course-documents/assets/DejaVuSans.ttf'] : [],
         importMapPath,
         envVars,
       })
@@ -423,7 +428,7 @@ Deno.serve({ onError }, async (req: Request) => {
         return await callWorker(retryReq, retriesLeft - 1)
       }
 
-      console.error(e)
+      logRuntimeFailure('worker_fetch_failed', e)
       return getFunctionErrorResponse(resolveRuntimeError(e))
     }
   }

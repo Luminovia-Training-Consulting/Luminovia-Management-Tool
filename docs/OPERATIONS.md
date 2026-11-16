@@ -4,6 +4,8 @@ This slice extends the actual M1 organisation/template/run/session tables. It do
 
 ## Customer privacy and administration
 
+Customers are configurable organisation records; no named customer is a required installation, course provider or privileged role. Create each actual organisation privately, reuse teaching templates across organisations, and select the relevant customer for each dated course run. Client logins require explicit current organisation memberships; knowing a catalogue code or source reference does not create that membership. Public instructions and examples use neutral wording or fictional records.
+
 `organisations` contains business identity, industry, city, country/time zone, tags and a reversible archive timestamp. Private notes are in separate `organisation_private_details`; contact names, business email/phone and private notes are in `organisation_contacts`.
 
 - All writes require the database capability `organisations.manage`, a currently active actor and AAL2. RLS and column/table grants prevent direct caller writes.

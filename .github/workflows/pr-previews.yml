@@ -1,0 +1,49 @@
+# Optional metadata publication only. Local verification and the downloadable
+# PR artifact remain independent; normal PR/main activity creates no deployments.
+name: PR preview deployments
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Publish a reviewed local preview link or expire stale records
+        required: true
+        default: cleanup
+        type: choice
+        options:
+          - cleanup
+          - publish
+      run_id:
+        description: Completed Portal checks run ID; required for publication
+        required: false
+        type: string
+      run_attempt:
+        description: Exact completed run attempt; required for publication
+        required: false
+        type: string
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+  deployments: write
+concurrency:
+  group: pr-preview-record-${{ inputs.run_id || 'expiry' }}
+  cancel-in-progress: false
+jobs:
+  publish:
+    name: Record local PR preview
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Privileged metadata writer: ALWAYS use the trusted default branch.
+      # Never checkout a PR ref, install packages, restore a PR cache, download
+      # an artifact, execute contributor code or expose hosting credentials.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - name: Publish exact-head artifact status and expire stale previews
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/pr-preview-deployments.mjs

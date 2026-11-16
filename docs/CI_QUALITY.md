@@ -1,24 +1,100 @@
 # GitHub checks, security and coverage
 
-Workflows run for pull requests and `main`; manual execution is also available. They need no VPS credentials, private Supabase keys or production data. Existing real application/database/API/browser checks remain in place.
+> Reviewed server snapshot on 16 November 2026 at 06:42:36 UTC: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception (`bypass_mode: pull_request`). No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. Live server rules are authoritative and may later differ. [Reviewed rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
+
+Every PR retains quality/build, full-source unit coverage, CodeQL, dependency
+review and metadata. The checked-out two-parent merge determines the work below;
+labels and caller-supplied paths cannot select a cheaper profile. Missing Git
+history, invalid paths and unknown source locations conservatively select full.
+
+| Change profile                                                                                                                | Acceptance beyond quality/coverage/security                                                                                                                  |
+| ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Documentation/templates only                                                                                                  | Runtime/Edge/audit checks; no SQL or native run is claimed.                                                                                                  |
+| Ordinary frontend/static changes                                                                                              | Runtime/Edge/audit plus every existing SQL migration/RLS/race suite, split exhaustively between two separate digest-pinned, networkless PostgreSQL clusters. |
+| Backend, Auth, private file/chat access, shared app/cache code, dependencies, test/delivery infrastructure or unknown changes | All system/SQL/API and desktop/mobile/PWA stages on separate isolated runners, plus the actual native retained-data rehearsal and both SQL workers.          |
+| Every main push or manual run                                                                                                 | Complete unchanged application and native retained-data acceptance in parallel.                                                                              |
+
+The required verification jobs start after the small scope job instead of waiting
+for the quality matrix. Their first shell step independently rejects a failed,
+missing or invalid scope, and rejects every non-full main/manual profile. Thus a
+broken selector cannot convert a required check into a successful skipped job.
+No required context is removed and no threshold, race count or security assertion
+is reduced. A manual branch run remains available for full pre-merge acceptance.
+
+Sensitive PRs split the complete runner into explicit `--phase system` and
+`--phase browser` invocations. Each owns a fresh random stack, database, test
+snapshot, credentials, ports, lock and cleanup on a separate runner. Both start
+the real services and exercise persistence before seeding fictional commercial
+fixtures. The system phase retains every native SQL, lint/advisor, runtime,
+Edge, backup and real API check; the browser phase retains every desktop/mobile
+journey, production build and built-PWA check. Tests remain sequential inside each
+browser stack with no retries. Neither phase claims complete acceptance alone.
+The required preview gate rejects failure, cancellation, skipping or a missing
+result from either phase. Main/manual/local `./portal test` still executes the
+complete original sequence in one owned stack.
+
+Each SQL worker has its own engine, connection limit, random ownership label and
+UUID databases. No host ports/mounts or network are available. Cancellation stops
+the peer and both owned cleanup paths settle before failure is reported. Only the
+PR fixture disables JIT compilation; durability/transaction settings stay unchanged.
+Per-suite timings appear in logs and the job summary. SQL uses existing emulated
+Auth helpers; actual Auth/Storage/browser/PWA/retention is covered by the full profile.
+The historical selfhost check name is retained for required-check compatibility.
+Preview manifests and bilingual instructions record the actual verification profile.
+
+Publication still requires explicit exact-main approval and both complete gates.
+Local complete acceptance, daily maintenance and repository protections remain unchanged.
+Npm dependency caching and cancellation of superseded PR runs were already present;
+no credentials, database state or generated QA files are cached.
+
+Actual baseline [43827354265](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43827354265) took about28minutes, including21minutes application then6minutes native upgrade. The first optimized [PR34 run43855915270](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43855915270) on signed608687f passed in **11minutes36seconds**, approximately59%less elapsed time. Quality/coverage took26–48seconds, runtime/Edge/audit39seconds, and the serial SQL job10minutes30seconds with351PASS groups. All15required contexts passed after the missing metadata labels were corrected. The subsequent signed8f29147 run43860971674 also passed every required check, with two-worker SQL5m07s (about50%less than the earlier10m10.6s), complete native/retained-data acceptance and114desktop/mobile plus2built-PWA cases. Its sensitive-PR full run took32m35s. PR34 merged as signedmain c528100. The separate system/browser follow-up still requires its own exact-head acceptance and timing; these historical results do not accept that new phase split.
+
+Development and testing use the local PC by default. `./portal check` runs fast
+quality, coverage and build checks without starting services; `./portal test`
+provides complete isolated acceptance of the working source before delivery, `./portal github test` verifies freshly fetched `main` locally,
+and `./portal github` starts a separate persistent preview. No GitHub deployment
+or self-hosted Actions runner is needed. GitHub checks remain independent
+verification; a successful check or merge is not a publication request.
 
 ## Visible checks
 
-| Check                                        | What it verifies                                                                                                             |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Build                                        | Production compilation and PWA build using only synthetic public Supabase configuration. It does not access a real instance. |
-| Typecheck                                    | TypeScript project checks through `npm run typecheck`.                                                                       |
-| Lint                                         | ESLint with no warnings allowed.                                                                                             |
-| Formatting                                   | Existing source formatting and GitHub configuration.                                                                         |
-| Code quality                                 | Existing compiler-based checks for reachable modules, exports and connections.                                               |
-| Tests and coverage                           | All Vitest unit/component tests, V8 coverage and enforced thresholds; downloadable HTML/LCOV/JSON artifacts.                 |
-| verify                                       | `./portal test`: real isolated SQL/RLS/API/Edge/browser/PWA, security, restart and maintenance checks.                       |
-| Actual isolated selfhost image compatibility | Real pinned Supabase images and retained data from the previous source revision.                                             |
-| PR metadata                                  | Current PR labels and matching repository/commit identity.                                                                   |
+| Check                                                             | What it verifies                                                                                                                                                              |
+| ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build                                                             | Production compilation and PWA build using only synthetic public Supabase configuration. It does not access a real instance.                                                  |
+| Typecheck                                                         | TypeScript project checks through `npm run typecheck`.                                                                                                                        |
+| Lint                                                              | ESLint with no warnings allowed.                                                                                                                                              |
+| Formatting                                                        | Existing source formatting and GitHub configuration.                                                                                                                          |
+| Code quality                                                      | Existing compiler-based checks for reachable modules, exports and connections.                                                                                                |
+| Tests and coverage                                                | All Vitest unit/component tests, V8 coverage and enforced thresholds; downloadable HTML/LCOV/JSON artifacts.                                                                  |
+| verify                                                            | Docs/ordinary PR: runtime guards, Edge lint/types/tests and production audit. Sensitive PR: complete system/SQL/API phase. Main/manual: complete `./portal test`.             |
+| Isolated browser acceptance                                       | Sensitive PR: all desktop/mobile/build/PWA checks on a separate fresh stack. Other PRs explicitly record their narrower profile. Its success is required by the preview gate. |
+| Actual isolated selfhost image compatibility                      | Ordinary PR: two isolated PostgreSQL workers. Sensitive PR/main/manual: actual native images and retained data; docs records its narrower scope.                              |
+| PR preview package                                                | Package the committed tested application and upload its real runnable local preview artifact; required before PR merge.                                                       |
+| PR metadata                                                       | Current PR labels and matching repository/commit identity.                                                                                                                    |
+| CodeQL (javascript-typescript), CodeQL (python), CodeQL (actions) | Completion of each configured language analysis.                                                                                                                              |
+| Dependency review                                                 | Newly introduced vulnerable dependencies on the PR.                                                                                                                           |
+| CodeQL                                                            | Generated findings check, separate from successful scanner execution.                                                                                                         |
 
-The release job requires the fast quality gates and both complete application/selfhost gates. An early maintainer merge may bypass repository rules but does not publish a failed package. VPS automation still verifies that the entire CI run for the exact main commit succeeded.
+All 15 existing server-required contexts remain mandatory before a PR can merge. The additional browser phase is enforced through the required preview gate, which rejects a failed, skipped, cancelled or missing browser result; no repository rule is weakened. The strict rule also requires the PR to be up to date with `main`. Neither maintainers, administrators nor the maintenance App can bypass these checks.
 
-[CodeQL](../.github/workflows/security.yml) additionally analyses JavaScript/TypeScript, Python and GitHub Actions on PRs/main and on Mondays at 05:23 UTC (15:23 Brisbane). This is static security analysis, not a replacement for real RLS/auth/file-access tests. Findings appear under GitHub Security/Code scanning; a successfully completed scan does not by itself mean there are no warnings. This separate Security workflow is currently not an additional release `needs` gate; publication conditions are explicitly defined in `ci.yml`.
+The release job runs only for an authorised manual `Portal checks` dispatch on
+`main` with `publish_release=true` and the exact current `main` SHA supplied as
+`expected_commit`. Pushes, ordinary manual verification and daily-maintenance
+verification do not publish releases. The fast quality gates and both complete
+application/selfhost gates remain required; failed checks do not produce a
+publication package. VPS automation still verifies that the entire CI run
+for the exact main commit succeeded. The existing five-minute VPS polling timer
+is unchanged; changing publication policy does not claim a hosted timer change.
+
+The `PR preview deployments` workflow is manual-only. The verified downloadable
+PR package remains an artifact, independent of optional deployment metadata.
+See [PR_PREVIEWS](PR_PREVIEWS.md) for that explicit publication and cleanup path.
+
+[CodeQL](../.github/workflows/security.yml) additionally analyses JavaScript/TypeScript, Python and GitHub Actions on PRs/main and on Mondays at 05:23 UTC (15:23 Brisbane). This is static security analysis, not a replacement for real RLS/auth/file-access tests. Findings appear under GitHub Security/Code scanning; a successfully completed scan does not by itself mean there are no warnings. Its three language analyses, Dependency review and the generated CodeQL finding result are mandatory PR checks. Fourteen contexts are bound to GitHub Actions integration `15368`, and generated CodeQL to `57789`. This separate Security workflow is currently not an additional release `needs` gate; publication conditions are explicitly defined in `ci.yml`.
+
+## Current integration evidence boundary
+
+The combined PR13/PR23 source includes the customer-neutral course catalogue, related application/test changes and the additive 27th migration. It is not a documentation-only change. See [course building blocks](COURSE_BUILDING_BLOCKS.md) for the current catalogue paths and preservation contract. Earlier 24- or 26-migration results remain historical and do not accept this complete 27-migration composition. Documentation and metadata checks cover their own scope; the required PR suite must pass on the exact final source. Full application/browser/retained-data acceptance runs on main/manual and remains mandatory before any release.
 
 ## Running and interpreting coverage
 
@@ -31,7 +107,11 @@ The local HTML report is `coverage/index.html`; machine-readable output is in `c
 
 Coverage includes **all executable `src` TS/TSX files and `scripts/public-config.ts`**, including modules not imported by tests. Tests, test setup and declarations are excluded. V8 coverage comes from unit/component tests; SQL, Edge, Python/Node maintenance and real browser workflows are not combined into an invented overall percentage.
 
-The first complete measurement with the additional cases passed **197 tests in 46 files**: statements 47.09%, branches 41.61%, functions 37.07%, lines 48.89% across 106 source files. Global thresholds 46.5/41/36.5/48 limit regressions against this measured baseline with a small allowance for variation. Untested UI paths remain visible; files are not excluded to manufacture an arbitrary 80% result.
+The historical PR11 measurement with its additional cases passed **197 tests in 46 files**: statements 47.09%, branches 41.61%, functions 37.07%, lines 48.89% across 106 source files. Global thresholds 46.5/41/36.5/48 limit regressions against this measured baseline with a small allowance for variation. Untested UI paths remain visible; files are not excluded to manufacture an arbitrary 80% result.
+
+The 32-migration checkpoint before Demo integration, including the preserved PR11 cases and six additional download-contract regressions, passed **342 tests in 54 files**: statements **55.78%**, branches **50.40%**, functions **46.94%**, lines **57.60%**. File API coverage is **98.92% lines / 96.29% functions**; every configured global and critical-file threshold passed. This measured unit/component result is not complete native acceptance. The canonical `./portal test` now runs this same coverage command and retains its reports with the private test artifacts.
+
+The later functional preflight integrating accepted Main16/Demo source, the Calendar correction and the scoped picker fixes passed **372/372 Vitest cases in 57 files**: statements **57.65%**, branches **52.32%**, functions **49.11%**, lines **59.46%**; every configured floor passed. This is actual unit/component evidence for that functional checkpoint. Documentation integration and complete native acceptance still require a fresh combined run; these percentages are not an overall system-coverage or production claim.
 
 Critical areas have stricter gates: 100% for browser-key configuration, time-zone/DST/date logic and scheduling; separate high statement/branch/function/line thresholds for file transfer and safe knowledge content. Exact values are in [vite.config.ts](../vite.config.ts). Future improvements should raise measured coverage; thresholds are not automatically lowered.
 
@@ -45,8 +125,14 @@ Dependabot PRs receive suitable existing type/area/risk labels and run through t
 
 ## Maintainers and server-side rules
 
-Maintainers and administrators receive `always` exceptions; ordinary write access does not receive a bypass. The active rule already included these roles. The two additional prepared review/check rules were synchronised with the same current instruction but remain disabled until the maintenance App path is proven. See [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md) for details and actual activation status.
+The history, review and required-check rules are active. The only current review bypass actor is `CarinaSchoppe` (User 29256704), with mode `pull_request`; it does not allow direct pushes or skipped checks. Maintainer or administrator role membership alone grants no review exception. Other contributors and the maintenance App must satisfy the independent/latest-push review and resolved-conversation rules as well as every check. The history and required-check rules have no bypass actors, and the App has no bypass entry in any policy. The versioned JSON snapshots preserve the verified 06:42:36 UTC configuration, including the personal User exception; later server settings remain authoritative. [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md) documents the readback and remaining operational App setup.
 
-The setup was merged through [PR11](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/11). All six new quality/coverage checks and the corrected security run passed on the actual PR revision; the maintainer merge succeeded while the long-running tests were still active. Main checks then run again and remain a publication condition. The scanner job and generated CodeQL findings check were verified separately; the initial test-fixture finding was fixed by checking the exact URL origin. The first complete main scan additionally reports existing operations/test-script findings. They are individually assessed in [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md); a successful PR-diff scan does not imply a main scan without warnings.
+The initial quality setup was merged through [PR11](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/11) under the previous policy, which allowed an early maintainer merge while long-running tests were active. That historical result is not the current merge policy. The scanner job and generated CodeQL findings check were verified separately; the initial test-fixture finding was fixed by checking the exact URL origin. The first complete main scan additionally reported existing operations/test-script findings. They are individually assessed in [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md); a successful PR-diff scan does not imply a main scan without warnings.
 
 Official references: [GitHub CodeQL](https://docs.github.com/en/code-security/code-scanning/introduction-to-code-scanning/about-code-scanning-with-codeql), [Dependabot](https://docs.github.com/en/code-security/concepts/supply-chain-security/dependabot-version-updates), [Vitest coverage](https://vitest.dev/guide/coverage.html). Exact executed checks and GitHub runs are recorded in [WORKLOG](WORKLOG.md).
+
+The earlier English-guide branch CI covered its 24-migration baseline. It does not accept the later 32-migration product integration. Exact CI43794921492 on `9c42730` passed 316 SQL cases, 26 actual business API suites and restart persistence, but failed 2 of 94 browser journeys. The independent local run of the same `9c42730` source reproduced those two failures after the same 316 SQL/26 API/46 Edge checks and real restart persistence passed. Focused Calendar correction `bf09f19` passes 12 Calendar cases; the combined corrected 32-migration/Demo/guide source still needs a fresh complete run. See [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
+
+## Current governance boundary
+
+The source policies retain all fifteen mandatory checks without a CI or history/signature exception. The accepted maintenance publisher creates a signed PR and must satisfy its required checks and review; it has no technical rule exception. Live server rules may change independently and must be read back before merging. [Current rules and evidence](GITHUB_WORKFLOW.md).

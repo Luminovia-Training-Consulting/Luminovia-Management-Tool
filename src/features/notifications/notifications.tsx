@@ -14,6 +14,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
 import { Bell } from "lucide-react";
+import { PushSettings } from "./push-settings";
 import { useAuth } from "../auth/auth-context";
 import { Button } from "../../components/ui/button";
 import {
@@ -40,6 +41,9 @@ import {
 } from "./api";
 import "./i18n";
 import "./notifications.css";
+import { DeliverySettings } from "./delivery-settings";
+import { QuietHoursSettings } from "./attention-settings";
+import "./attention-i18n";
 
 /** Known notification kinds for translated labels; unknown kinds use the defined fallback. */
 const knownKinds = new Set([
@@ -62,6 +66,22 @@ const knownKinds = new Set([
   "delivery_disputed",
   "delivery_correction_requested",
   "delivery_customer_confirmed",
+  "job_waitlist_available",
+  "substitution_proposed",
+  "substitution_closed",
+  "task_assigned",
+  "task_due",
+  "timesheet_reviewed",
+  "qualification_expiring",
+  "course_preparation_updated",
+  "course_question",
+  "course_answer",
+  "course_resource_shared",
+  "course_quiz_published",
+  "course_attendance_updated",
+  "course_completion_issued",
+  "course_completion_revoked",
+  "portal_announcement",
 ]);
 /** Connect confirmed read-state mutations to targeted revalidation of the actor's inbox. */
 function useReadState(actor: string) {
@@ -129,7 +149,16 @@ export function NotificationsMenu({ id, zone }: { id: string; zone: string }) {
   const online = useOnline();
   const query = useQuery(notificationPreviewQuery(id));
   const mark = useReadState(id);
-  const count = query.isError ? 0 : (query.data?.unread_count ?? 0);
+  const { t: attentionText } = useTranslation("attention");
+  const count = query.isError
+    ? 0
+    : (query.data?.attention_count ?? query.data?.unread_count ?? 0);
+  const quiet = !query.isError && query.data?.quiet_active;
+  const countLabel = query.isError
+    ? t("unavailable")
+    : quiet
+      ? `${attentionText("criticalCount", { count })}; ${attentionText("active")}; ${attentionText("totalCount", { count: query.data?.unread_count ?? 0 })}`
+      : t("count", { count });
   const menu = useRef<HTMLDetailsElement>(null);
   const location = useLocation();
   useEffect(() => {
@@ -137,9 +166,7 @@ export function NotificationsMenu({ id, zone }: { id: string; zone: string }) {
   }, [location.pathname, location.search]);
   return (
     <details className="notification-menu" ref={menu}>
-      <summary
-        aria-label={`${t("title")}: ${query.isError ? t("unavailable") : t("count", { count })}`}
-      >
+      <summary aria-label={`${t("title")}: ${countLabel}`}>
         <Bell aria-hidden="true" size={21} />
         {count > 0 && (
           <span className="notification-count" aria-hidden="true">
@@ -376,6 +403,9 @@ export function SettingsPage() {
           }}
         />
       )}
+      <QuietHoursSettings />
+      <DeliverySettings actor={actor} />
+      <PushSettings key={actor} actor={actor} />
     </>
   );
 }

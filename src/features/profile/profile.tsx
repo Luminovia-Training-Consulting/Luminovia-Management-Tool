@@ -1,10 +1,14 @@
 /**
- * Own profile fields, time zone and expertise with evidence/avatar controls. Self-declared
- * expertise is not management verification; mutations invalidate the owning queries.
+ * Own profile fields, time zone and expertise with evidence/avatar controls.
+ * Self-declared expertise is separate from management verification; the own
+ * qualification card follows the current role gate and server permissions.
  */
+import { OwnQualificationEvidence } from "../qualifications/evidence";
 import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
 import { AvatarEditor } from "./avatar";
+import { OwnContactVisibility } from "./contact-visibility";
+import { OwnQualificationPassport } from "../qualifications/passport";
 import { OwnProfileDetails } from "../people/profile-details";
 import { ProfileEvidence } from "../files/profile-evidence";
 import { useState } from "react";
@@ -63,6 +67,9 @@ function ProfileForm({ profile }: { profile: Profile }) {
     },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["profile", profile.id] });
+      await client.invalidateQueries({
+        queryKey: ["contact-visibility", profile.id],
+      });
       setDone(true);
     },
   });
@@ -213,7 +220,17 @@ export function ProfilePage() {
         </section>
       </div>
       <OwnProfileDetails />
+      <OwnContactVisibility actor={session!.user.id} />
+      <OwnQualificationPassport
+        key={session!.user.id}
+        actor={session!.user.id}
+      />
       <ProfileEvidence ownerId={session!.user.id} />
+      <OwnQualificationEvidence
+        topics={topics.data.filter((topic) =>
+          expertise.data.some((value) => value.topic_id === topic.id),
+        )}
+      />
       <datalist id="time-zones">
         <option>Europe/Berlin</option>
         <option>Australia/Brisbane</option>

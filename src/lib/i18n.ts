@@ -11,6 +11,7 @@ const pairs: Record<string, [string, string]> = {
   replacements: ["Ersatzbörse", "Replacements"],
   supportDesk: ["Support", "Support desk"],
   websiteEnquiries: ["Website-Anfragen", "Website enquiries"],
+  announcements: ["Ankündigungen", "Announcements"],
   tryDemo: ["Demo mit Beispieldaten ausprobieren", "Try the sample-data demo"],
   helpGuides: ["Hilfe & Anleitungen", "Help & guides"],
   errorHelp: [

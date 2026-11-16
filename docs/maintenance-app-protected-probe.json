@@ -1,0 +1,18 @@
+{
+  "status": "passed",
+  "commit": "003a597c90b98c964df25aa8f5d148bf7b2d233e",
+  "mainUnchanged": true,
+  "temporaryBranchCleaned": true,
+  "app_id": 5776881,
+  "installation_id": 182397724,
+  "main_before": "9c2103b83c6097ef92faa0bddf18e59aef18a5e6",
+  "main_after": "9c2103b83c6097ef92faa0bddf18e59aef18a5e6",
+  "actual_human_direct_write_denied": true,
+  "required_review": 1,
+  "required_check_intentionally_absent": true,
+  "independent_signature_rule_without_bypass": true,
+  "verified": true,
+  "verification_reason": "valid",
+  "temporary_rulesets_cleaned": true,
+  "temporary_token_revoked": true
+}

@@ -1,7 +1,7 @@
 {
   "name": "Main verified checks",
   "target": "branch",
-  "enforcement": "disabled",
+  "enforcement": "active",
   "conditions": {
     "ref_name": {
       "exclude": [],
@@ -50,21 +50,34 @@
           {
             "context": "PR metadata",
             "integration_id": 15368
+          },
+          {
+            "context": "CodeQL (javascript-typescript)",
+            "integration_id": 15368
+          },
+          {
+            "context": "CodeQL (python)",
+            "integration_id": 15368
+          },
+          {
+            "context": "CodeQL (actions)",
+            "integration_id": 15368
+          },
+          {
+            "context": "Dependency review",
+            "integration_id": 15368
+          },
+          {
+            "context": "CodeQL",
+            "integration_id": 57789
+          },
+          {
+            "context": "PR preview package",
+            "integration_id": 15368
           }
         ]
       }
     }
   ],
-  "bypass_actors": [
-    {
-      "actor_id": 2,
-      "actor_type": "RepositoryRole",
-      "bypass_mode": "always"
-    },
-    {
-      "actor_id": 5,
-      "actor_type": "RepositoryRole",
-      "bypass_mode": "always"
-    }
-  ]
+  "bypass_actors": []
 }
