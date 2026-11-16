@@ -3,21 +3,165 @@
  * fixtures. These cases never start services or substitute for the native upgrade.
  */
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  linkSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
+import { readPrivateJson } from "../../../scripts/testing/private-state.mjs";
 import {
   assertFinancialWitness,
   assertRetainedFinancialWitness,
+  canonicalProbeUuid,
   createFinancialWitness,
   financialProbePdf,
   financialSnapshotSql,
+  writeUpgradeProbeLedger,
 } from "./candidate-upgrade-probe.mjs";
 
 // Deterministic fictional IDs make cross-record relationships visible without real accounts.
 const id = (n) => `f7000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 // Compare exact fixture bytes and accepted conditions without floating-point tolerances.
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
+
+/** Own only this private temporary directory; no test changes another checkout or starts a service. */
+function ledgerFixture(t) {
+  const directory = mkdtempSync(join(tmpdir(), "portal-financial-ledger-"));
+  chmodSync(directory, 0o700);
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  return {
+    directory,
+    file: join(directory, ".candidate-upgrade-probe.json"),
+    probe: {
+      owner: "luminovia-portal-test-" + "a".repeat(24),
+      documentId: id(77),
+      financial: fixture(),
+    },
+  };
+}
+
+test("document IDs accept exact UUID values and reject arbitrary file or HTTP strings without exposing them", () => {
+  for (const value of [
+    id(77),
+    "ABCDEF01-00AB-4CDE-8F01-0123456789AB",
+    "ffffffff-ffff-ffff-ffff-ffffffffffff",
+    "00000000-0000-0000-0000-000000000000",
+  ])
+    assert.equal(canonicalProbeUuid(value), value.toLowerCase());
+  for (const value of [
+    undefined,
+    null,
+    {},
+    [id(77)],
+    77,
+    "FICTIONAL_PRIVATE_BYTES",
+    id(77) + "\n",
+    id(77) + "/../../private",
+    "https://example.invalid/" + id(77),
+    id(77).slice(1),
+  ])
+    assert.throws(
+      () => canonicalProbeUuid(value),
+      (error) => error.message === "A canonical probe UUID is required.",
+    );
+});
+
+test("one complete bounded ledger round-trips through descriptor-based private reads and never overwrites earlier evidence", (t) => {
+  const { directory, file, probe } = ledgerFixture(t);
+  writeUpgradeProbeLedger(probe, directory);
+  assert.deepEqual(readPrivateJson(file), probe);
+  const info = statSync(file);
+  assert.equal(info.mode & 0o7777, 0o600);
+  assert.equal(info.uid, process.getuid());
+  assert.equal(info.nlink, 1);
+  assert.throws(() => writeUpgradeProbeLedger(probe, directory), {
+    code: "EEXIST",
+  });
+  assert.deepEqual(readPrivateJson(file), probe);
+});
+
+test("incomplete, oversized or malformed-document witnesses cannot create a ledger", (t) => {
+  const { directory, file, probe } = ledgerFixture(t);
+  for (const invalid of [
+    null,
+    {},
+    { ...probe, documentId: "FICTIONAL_PRIVATE_BYTES" },
+    { ...probe, financial: null },
+    { ...probe, extra: "x".repeat(64 * 1024) },
+  ]) {
+    assert.throws(() => writeUpgradeProbeLedger(invalid, directory));
+    assert.equal(existsSync(file), false);
+  }
+  assert.deepEqual(readdirSync(directory), []);
+});
+
+test("unsafe parents and pre-existing symlink or hardlink targets are preserved rather than followed or replaced", (t) => {
+  const { directory, file, probe } = ledgerFixture(t);
+  chmodSync(directory, 0o755);
+  assert.throws(
+    () => writeUpgradeProbeLedger(probe, directory),
+    /owned 0700 directory/,
+  );
+  assert.equal(existsSync(file), false);
+  chmodSync(directory, 0o700);
+  const retained = join(directory, "retained.json");
+  writeFileSync(retained, '{"retained":true}', { mode: 0o600 });
+  symlinkSync(retained, file);
+  assert.throws(() => writeUpgradeProbeLedger(probe, directory), {
+    code: "EEXIST",
+  });
+  assert.throws(() => readPrivateJson(file), { code: "ELOOP" });
+  rmSync(file);
+  linkSync(retained, file);
+  assert.throws(() => writeUpgradeProbeLedger(probe, directory), {
+    code: "EEXIST",
+  });
+  assert.throws(() => readPrivateJson(file), /one link/);
+  assert.equal(readFileSync(retained, "utf8"), '{"retained":true}');
+});
+
+test("an interrupted descriptor write removes its partial ledger before verification can accept it", (t) => {
+  const { directory, file, probe } = ledgerFixture(t);
+  // The child owns its built-in-module fault injection; other tests retain the real filesystem exports.
+  const child = spawnSync(
+    process.execPath,
+    [
+      "--input-type=module",
+      "-e",
+      `import assert from 'node:assert/strict';
+       import fs from 'node:fs';
+       import {syncBuiltinESMExports} from 'node:module';
+       import {writeUpgradeProbeLedger} from ${JSON.stringify(new URL("./candidate-upgrade-probe.mjs", import.meta.url).href)};
+       const write = fs.writeFileSync;
+       fs.writeFileSync = (descriptor, bytes) => {
+         write(descriptor, bytes.slice(0, 10));
+         throw new Error('fictional interrupted write');
+       };
+       syncBuiltinESMExports();
+       assert.throws(() => writeUpgradeProbeLedger(JSON.parse(process.argv[2]), process.argv[1]), /fictional interrupted write/);`,
+      directory,
+      JSON.stringify(probe),
+    ],
+    { encoding: "utf8", timeout: 10000 },
+  );
+  assert.equal(child.status, 0, child.stderr);
+  assert.equal(existsSync(file), false);
+  assert.equal(readPrivateJson(file), null);
+  assert.deepEqual(readdirSync(directory), []);
+});
+
 /** Complete fictional snapshots include both legacy net-only and captured commission history. */
 function fixture(commissions = true) {
   const claims = (commissions ? [4, 5] : [4]).map((n) => ({

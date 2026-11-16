@@ -4,8 +4,18 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash, createHmac, randomUUID } from "node:crypto";
-import { lstatSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  fstatSync,
+  fsyncSync,
+  lstatSync,
+  openSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { readPrivateJson } from "../../../scripts/testing/private-state.mjs";
 
 import { pathToFileURL } from "node:url";
 
@@ -40,6 +50,81 @@ function totp(secret) {
 }
 
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+const ledgerName = ".candidate-upgrade-probe.json";
+const maxLedgerBytes = 64 * 1024;
+
+/** Rebuild an exact UUID from bounded numeric components; private file bytes never become arbitrary request data. */
+export function canonicalProbeUuid(value) {
+  if (typeof value !== "string" || value.length !== 36 || !uuid.test(value))
+    throw new TypeError("A canonical probe UUID is required.");
+  const widths = [8, 4, 4, 4, 12];
+  return value
+    .split("-")
+    .map((part, index) =>
+      Number.parseInt(part, 16).toString(16).padStart(widths[index], "0"),
+    )
+    .join("-");
+}
+
+/** Persist one bounded complete witness in the pinned private directory; exclusive creation never replaces an earlier ledger. */
+export function writeUpgradeProbeLedger(probe, directory = process.cwd()) {
+  if (!probe || !/^luminovia-portal-test-[a-f0-9]{24}$/.test(probe.owner ?? ""))
+    throw new TypeError("An owned upgrade probe ledger is required.");
+  assertFinancialWitness(probe.financial);
+  const json = JSON.stringify({
+    ...probe,
+    documentId: canonicalProbeUuid(probe.documentId),
+  });
+  if (Buffer.byteLength(json) > maxLedgerBytes)
+    throw new Error("Private upgrade probe JSON exceeds its bounded size.");
+  const parent = openSync(
+    directory,
+    constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
+  );
+  try {
+    const info = fstatSync(parent);
+    if (
+      !info.isDirectory() ||
+      info.uid !== process.getuid() ||
+      (info.mode & 0o7777) !== 0o700
+    )
+      throw new Error("The upgrade probe requires an owned 0700 directory.");
+    const target = `/proc/self/fd/${parent}/${ledgerName}`;
+    const descriptor = openSync(
+      target,
+      constants.O_WRONLY |
+        constants.O_CREAT |
+        constants.O_EXCL |
+        constants.O_NOFOLLOW,
+      0o600,
+    );
+    let completed = false;
+    try {
+      const file = fstatSync(descriptor);
+      if (
+        !file.isFile() ||
+        file.uid !== process.getuid() ||
+        file.nlink !== 1 ||
+        (file.mode & 0o7777) !== 0o600
+      )
+        throw new Error("The upgrade probe requires an owned private file.");
+      writeFileSync(descriptor, json);
+      fsyncSync(descriptor);
+      fsyncSync(parent);
+      completed = true;
+    } finally {
+      try {
+        closeSync(descriptor);
+      } finally {
+        // A failed partial write must never remain available to the verify phase.
+        if (!completed) unlinkSync(target);
+      }
+    }
+  } finally {
+    closeSync(parent);
+  }
+}
+
 /** Exact fixture cents, without tolerances that could hide an altered accepted fee. */
 function cents(value) {
   const text = String(value);
@@ -520,8 +605,8 @@ export async function runUpgradeProbe(mode) {
     const document = (await result.json()).document;
     assert.equal(document.status, "clean");
     return {
-      id: document.id,
-      versionId: document.current_version_id,
+      id: canonicalProbeUuid(document.id),
+      versionId: canonicalProbeUuid(document.current_version_id),
       sha256: hash(bytes),
     };
   };
@@ -690,8 +775,8 @@ export async function runUpgradeProbe(mode) {
           },
           body: JSON.stringify({
             action: "download",
-            id: document.id,
-            version_id: document.versionId,
+            id: canonicalProbeUuid(document.id),
+            version_id: canonicalProbeUuid(document.versionId),
           }),
           signal: AbortSignal.timeout(90000),
         });
@@ -706,7 +791,6 @@ export async function runUpgradeProbe(mode) {
       }
     }
   };
-  const ledger = ".candidate-upgrade-probe.json";
   let financialReceipt;
   if (mode === "--create") {
     const id = randomUUID(),
@@ -802,29 +886,25 @@ export async function runUpgradeProbe(mode) {
       snapshotSha256: hash(JSON.stringify(financial)),
       foreignDenied: true,
     };
-    writeFileSync(
-      ledger,
-      JSON.stringify({
-        owner,
-        id: user.id,
-        email,
-        password,
-        factorId: factor.id,
-        secret: factor.totp.secret,
-        counter: Math.floor(Date.now() / 30000),
-        event,
-        documentId: document.id,
-        sha256: hash(bytes),
-        roles,
-        financial,
-        financialManager: manager.identity,
-        financialForeign: foreign.identity,
-      }),
-      { flag: "wx", mode: 0o600 },
-    );
+    writeUpgradeProbeLedger({
+      owner,
+      id: user.id,
+      email,
+      password,
+      factorId: factor.id,
+      secret: factor.totp.secret,
+      counter: Math.floor(Date.now() / 30000),
+      event,
+      documentId: canonicalProbeUuid(document.id),
+      sha256: hash(bytes),
+      roles,
+      financial,
+      financialManager: manager.identity,
+      financialForeign: foreign.identity,
+    });
   } else {
-    assert.equal(lstatSync(ledger).mode & 0o077, 0);
-    const probe = JSON.parse(readFileSync(ledger, "utf8"));
+    const probe = readPrivateJson(ledgerName);
+    assert(probe, "A complete private upgrade probe ledger is required.");
     assert.equal(probe.owner, owner);
     assertFinancialWitness(probe.financial);
     const client = make(process.env.SUPABASE_ANON_KEY);
@@ -885,7 +965,10 @@ export async function runUpgradeProbe(mode) {
           Authorization: "Bearer " + token,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ action: "download", id: probe.documentId }),
+        body: JSON.stringify({
+          action: "download",
+          id: canonicalProbeUuid(probe.documentId),
+        }),
         signal: AbortSignal.timeout(90000),
       });
     const response = await download(session.access_token);
