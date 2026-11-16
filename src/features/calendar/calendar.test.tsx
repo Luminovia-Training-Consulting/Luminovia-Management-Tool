@@ -17,6 +17,10 @@ const state = vi.hoisted(() => ({
   datesSetOnLocale: false,
   callbacks: [] as unknown[],
 }));
+// The real subscription panel remains mounted. Its independent metadata read
+// must not be mistaken for a global-range crawl or marketplace-title request.
+const calendarCalls = () =>
+  state.rpc.mock.calls.filter(([name]) => name !== "my_calendar_subscriptions");
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "actor" } } }),
 }));
@@ -141,9 +145,12 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 it("global published session links open the precise authorised course detail rather than an unselected catalogue", async () => {
-  state.rpc.mockImplementation(() => {
+  state.rpc.mockImplementation((name) => {
     const response = Promise.resolve({
-      data: { items: [], has_more: false, next_cursor: null },
+      data:
+        name === "my_calendar_subscriptions"
+          ? []
+          : { items: [], has_more: false, next_cursor: null },
       error: null,
     });
     return Object.assign(response, { abortSignal: () => response });
@@ -165,7 +172,8 @@ it("global published session links open the precise authorised course detail rat
   expect(
     await screen.findByRole("link", { name: "Published course" }),
   ).toHaveAttribute("href", "/courses?run=specific-course");
-  expect(state.rpc).toHaveBeenCalledTimes(1);
+  expect(calendarCalls()).toHaveLength(1);
+  expect(state.rpc).toHaveBeenCalledWith("my_calendar_subscriptions");
   expect(state.rpc).toHaveBeenCalledWith(
     "global_calendar_events",
     expect.objectContaining({ p_manage: false, p_limit: 50 }),
@@ -186,9 +194,12 @@ it("loads titles only for own confirmed assignment IDs rather than the entire ma
       ],
     },
   ];
-  state.rpc.mockImplementation(() => {
+  state.rpc.mockImplementation((name) => {
     const response = Promise.resolve({
-      data: [{ id: jobID, title: "Own old teaching block" }],
+      data:
+        name === "my_calendar_subscriptions"
+          ? []
+          : [{ id: jobID, title: "Own old teaching block" }],
       error: null,
     });
     return Object.assign(response, { abortSignal: () => response });
@@ -206,16 +217,19 @@ it("loads titles only for own confirmed assignment IDs rather than the entire ma
   expect(
     await screen.findByRole("link", { name: "Own old teaching block" }),
   ).toHaveAttribute("href", `/jobs/${jobID}`);
-  expect(state.rpc).toHaveBeenCalledTimes(1);
+  expect(calendarCalls()).toHaveLength(1);
   expect(state.rpc).toHaveBeenCalledWith("assignment_job_titles", {
     p_job_ids: [jobID],
   });
 });
 
 it("queries only the visible global range on navigation, without remounting or crawling other months", async () => {
-  state.rpc.mockImplementation(() => {
+  state.rpc.mockImplementation((name) => {
     const result = Promise.resolve({
-      data: { items: [], has_more: false, next_cursor: null },
+      data:
+        name === "my_calendar_subscriptions"
+          ? []
+          : { items: [], has_more: false, next_cursor: null },
       error: null,
     });
     return Object.assign(result, { abortSignal: () => result });
@@ -234,15 +248,15 @@ it("queries only the visible global range on navigation, without remounting or c
   const navigate = await screen.findByRole("button", {
     name: "Change visible range",
   });
-  expect(state.rpc).not.toHaveBeenCalled();
+  expect(calendarCalls()).toHaveLength(0);
   await user.click(
     await screen.findByRole("button", { name: "Globale Termine" }),
   );
   await screen.findByText("0 Termine geladen");
-  expect(state.rpc).toHaveBeenCalledTimes(1);
+  expect(calendarCalls()).toHaveLength(1);
   await user.click(navigate);
   await screen.findByText("0 Termine geladen");
-  expect(state.rpc).toHaveBeenCalledTimes(2);
+  expect(calendarCalls()).toHaveLength(2);
   expect(screen.getByRole("button", { name: "Change visible range" })).toBe(
     navigate,
   );
@@ -271,9 +285,12 @@ it("preserves the same global-event dialog/link across locale and equal-range si
     updated_at: "2060-01-01T00:00:00Z",
   };
   state.datesSetOnLocale = true;
-  state.rpc.mockImplementation(() => {
+  state.rpc.mockImplementation((name) => {
     const result = Promise.resolve({
-      data: { items: [event], has_more: false, next_cursor: null },
+      data:
+        name === "my_calendar_subscriptions"
+          ? []
+          : { items: [event], has_more: false, next_cursor: null },
       error: null,
     });
     return Object.assign(result, { abortSignal: () => result });
@@ -302,14 +319,14 @@ it("preserves the same global-event dialog/link across locale and equal-range si
   expect(
     within(dialog).getByRole("link", { name: "Weiterführenden Link öffnen" }),
   ).toHaveAttribute("href", event.link_url);
-  expect(state.rpc).toHaveBeenCalledTimes(1);
+  expect(calendarCalls()).toHaveLength(1);
   await act(() => i18n.changeLanguage("en"));
   expect(screen.getByRole("dialog")).toBe(dialog);
   expect(
     within(dialog).getByRole("link", { name: "Open related link" }),
   ).toHaveAttribute("rel", "noopener noreferrer");
   expect(within(dialog).getByText(event.description)).toBeInTheDocument();
-  expect(state.rpc).toHaveBeenCalledTimes(1);
+  expect(calendarCalls()).toHaveLength(1);
   await act(async () => {
     signal({
       start: new Date("2060-03-01T00:00Z"),
@@ -317,12 +334,12 @@ it("preserves the same global-event dialog/link across locale and equal-range si
     });
   });
   expect(screen.getByRole("dialog")).toBe(dialog);
-  expect(state.rpc).toHaveBeenCalledTimes(1);
+  expect(calendarCalls()).toHaveLength(1);
   await act(async () => {
     await client.invalidateQueries({ queryKey: ["global-events"] });
   });
   expect(screen.getByRole("dialog")).toBe(dialog);
-  expect(state.rpc).toHaveBeenCalledTimes(2);
+  expect(calendarCalls()).toHaveLength(2);
   expect(new Set(state.callbacks).size).toBe(1);
   await act(async () => {
     // FullCalendar can navigate A→B→A before React commits a render. Comparing
@@ -337,10 +354,10 @@ it("preserves the same global-event dialog/link across locale and equal-range si
     });
   });
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  expect(state.rpc).toHaveBeenCalledTimes(2);
+  expect(calendarCalls()).toHaveLength(2);
   await user.click(screen.getByText(event.title));
   expect(screen.getByRole("dialog")).toBeInTheDocument();
-  expect(state.rpc).toHaveBeenCalledTimes(2);
+  expect(calendarCalls()).toHaveLength(2);
   await act(async () => {
     signal({
       start: new Date("2060-04-10T00:00Z"),
@@ -348,7 +365,7 @@ it("preserves the same global-event dialog/link across locale and equal-range si
     });
   });
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  expect(state.rpc).toHaveBeenCalledTimes(3);
+  expect(calendarCalls()).toHaveLength(3);
   expect(state.rpc).toHaveBeenLastCalledWith(
     "global_calendar_events",
     expect.objectContaining({

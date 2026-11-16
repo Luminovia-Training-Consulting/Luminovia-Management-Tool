@@ -1,0 +1,33 @@
+.work-task-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+.work-task-list > li {
+  margin: 0;
+}
+.work-task-list label {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+}
+.work-task-list input[type="checkbox"] {
+  flex: 0 0 auto;
+}
+.work-task-list .preserve-whitespace {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.form-stack > fieldset {
+  display: grid;
+  gap: 0.8rem;
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.form-stack input,
+.form-stack textarea,
+.form-stack select {
+  max-width: 100%;
+}
