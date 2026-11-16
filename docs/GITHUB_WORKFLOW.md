@@ -6,15 +6,15 @@ Start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue guide](ISSUE_GUIDE.md)
 
 ## Active rule layers
 
-All three `main` rulesets were read back as **active** on 16 November 2026. Source configurations under `.github/rulesets/` mirror that readback. Committing JSON does not activate a rule: the [server rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. Earlier disabled-rule, unrestricted-human-bypass and App-exception snapshots describe their recorded time. This reconciliation changes no server settings.
+All three `main` rulesets were read back as **active** on 16 November 2026. Source configurations under `.github/rulesets/` mirror that readback. Committing JSON does not activate a rule: the [server rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. Earlier disabled-rule, role-based-review, unrestricted-human-bypass and App-exception snapshots describe their recorded time. This reconciliation changes no server settings.
 
-| Layer                 | Live ID    | Source                                           | Exceptions                                                                                |
-| --------------------- | ---------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| History and integrity | `27315671` | [history.json](../.github/rulesets/history.json) | None.                                                                                     |
-| PRs and review        | `27329000` | [review.json](../.github/rulesets/review.json)   | Maintain (`RepositoryRole:2`) and Repository admin (`RepositoryRole:5`) through PRs only. |
-| Verified checks       | `27329142` | [checks.json](../.github/rulesets/checks.json)   | None.                                                                                     |
+| Layer                 | Live ID    | Source                                           | Exceptions                                                |
+| --------------------- | ---------- | ------------------------------------------------ | --------------------------------------------------------- |
+| History and integrity | `27315671` | [history.json](../.github/rulesets/history.json) | None.                                                     |
+| PRs and review        | `27329000` | [review.json](../.github/rulesets/review.json)   | Only `CarinaSchoppe` (`User:29256704`), through PRs only. |
+| Verified checks       | `27329142` | [checks.json](../.github/rulesets/checks.json)   | None.                                                     |
 
-The history layer preserves deletion protection, non-fast-forward protection, valid signatures, the existing deployment rule with an empty environment list and code-quality errors. The review layer requires a PR, one independent approval, current last-push approval and resolved conversations. New pushes dismiss old approvals; code-owner review is not required. The PR-only role exception applies within the review layer, so a maintainer or administrator can merge their own PR without a separate approving review. It grants neither direct-main push permission nor a required-check or history exception. Ordinary Write access has no review exception. Administrators retain permission to edit settings; these rules govern normal push and merge operations.
+The history layer preserves deletion protection, non-fast-forward protection, valid signatures, the existing deployment rule with an empty environment list and code-quality errors. The review layer requires a PR, one independent approval, current last-push approval and resolved conversations. New pushes dismiss old approvals; code-owner review is not required. The personal PR-only exception applies within the review layer, so `CarinaSchoppe` (`User:29256704`) may merge a PR, including her own, without a separate approving review. It grants neither direct-main push permission nor a required-check or history exception. Other maintainers, administrators, users, bots and Apps have no review exception; repository roles confer none. Administrators retain permission to edit settings; these rules govern normal push and merge operations.
 
 ## Required checks and merge controls
 
@@ -37,13 +37,13 @@ Fourteen of the **15 required contexts** are bound to GitHub Actions integration
 
 The remaining generated `CodeQL` findings check is bound to integration `57789`. Successful scanner jobs alone do not satisfy that separate findings result. All fifteen checks are compulsory for every identity, require an up-to-date base and are not waived on branch creation. [CI quality](CI_QUALITY.md) explains the separate unit, application, retained-data and security evidence. A successful scan does not establish that all findings are fixed.
 
-Repository `allow_auto_merge` is enabled. Native Auto-Merge waits for applicable requirements; use it only within the task's authorized merge scope. Preserve coordinated holds and `merge:hold`, and verify the exact current head and base before merging. A maintainer review exception does not make missing or failed checks pass. Do not disable checks to make a merge finish. No collaborator or repository role was added by this reconciliation.
+Repository `allow_auto_merge` is enabled. Native Auto-Merge waits for applicable requirements; use it only within the task's authorized merge scope. Preserve coordinated holds and `merge:hold`, and verify the exact current head and base before merging. Carina's personal review exception does not make missing or failed checks pass. Do not disable checks to make a merge finish. No collaborator or repository role was added by this reconciliation.
 
 <a id="activation-still-pending"></a>
 
 ## Current enforcement and maintenance path
 
-The legacy fragment above is retained for published links; rule activation is complete. Required-check and history/signature rules have no bypass actors. The review rule has only the two human PR-only role exceptions. Maintenance App `5776881` has no review, check or history exception. GitHub Actions `15368` and CodeQL `57789` identify check producers, not bypass actors.
+The legacy fragment above is retained for published links; rule activation is complete. Required-check and history/signature rules have no bypass actors. The review rule has only the personal PR-only exception for `CarinaSchoppe` (`User:29256704`). No repository role, other user, bot or App has a review exception. Maintenance App `5776881` has no review, check or history exception. GitHub Actions `15368` and CodeQL `57789` identify check producers, not bypass actors.
 
 Current main contains daily component discovery, candidate verification and a promotion helper. These files do not prove that direct-main promotion can succeed under today's rules. It must fail closed if protection prevents it; do not restore an App exception or substitute a broadly privileged personal token. A replacement path must use a signed PR with the applicable review and exact-head checks. App registration or historical token/signature tests do not establish source delivery or successful operation under the current policy. See the [maintenance runbook](HOSTINGER_AUTOMATIC_UPDATES.md) for revision-specific evidence.
 

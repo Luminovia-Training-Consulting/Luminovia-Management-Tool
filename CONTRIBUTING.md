@@ -1,6 +1,6 @@
 # Contributing to Luminovia Portal
 
-> Current server policy on 16 November 2026: all fifteen required checks and valid signatures remain mandatory. Maintain and Repository-admin accounts may bypass review only through a pull request. No App has a review or required-check exception. [Current rule configuration](docs/GITHUB_WORKFLOW.md#active-rule-layers).
+> Current server policy on 16 November 2026: all fifteen required checks and valid signatures remain mandatory. Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception. No repository role, other user, bot or App has a review exception. No App has a required-check exception. [Current rule configuration](docs/GITHUB_WORKFLOW.md#active-rule-layers).
 
 Welcome! This guide explains how to turn an idea or bug report into a tested, reviewable change. **Use English for issues, pull requests and contributor-facing documentation.** Application interface changes must provide both German and English strings; authored course content keeps its original language.
 
@@ -70,11 +70,11 @@ Every PR needs exactly one `type:*` label, at least one `area:*` label and exact
 
 Ordinary contributors to `main` require a pull request, an independent approving review, resolved conversations and current passing checks. New changes dismiss earlier approvals, and the latest push must be approved by someone other than its pusher.
 
-Maintainers and administrators have a role-based `pull_request` exception to the review rule. They can merge their PR without an independent approval, but cannot use that exception to push directly to `main` or bypass the separate required-check rule. All fifteen checks must pass against the current base. Ordinary write access does not grant the review exception; GitHub may require an explicit bypass action for an authorised maintainer.
+Only `CarinaSchoppe` (`User:29256704`) has a personal `pull_request` exception to the review rule. She may merge a PR, including her own, without an independent approval, but cannot use that exception to push directly to `main` or bypass the separate required-check rule. All fifteen checks must pass against the current base. Other maintainers, administrators, users, bots and Apps require normal review; repository roles confer no review exception. GitHub may require an explicit bypass action for Carina.
 
 The fifteen required checks include Build, Typecheck, Lint, Formatting, Code quality, Tests and coverage, `verify`, `Actual isolated selfhost image compatibility`, `PR metadata`, `PR preview package`, three language-specific CodeQL analyses, `Dependency review` and the generated `CodeQL` finding check. Fourteen statuses are bound to GitHub Actions integration `15368`; the generated finding check is bound to integration `57789`. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes and Dependabot. A changed base may require updating the PR and waiting for new checks before merging.
 
-The required-check and history/signature rules have no bypass actors. The review rule grants only Maintain (`RepositoryRole:2`) and Repository admin (`RepositoryRole:5`) a PR-only exception. No App has a review or required-check exception. [GITHUB_WORKFLOW](docs/GITHUB_WORKFLOW.md#active-rule-layers) records the live configuration; historical App-token tests grant no current exception.
+The required-check and history/signature rules have no bypass actors. The review rule grants only `CarinaSchoppe` (`User:29256704`) the personal PR-only exception. No App has a review or required-check exception. [GITHUB_WORKFLOW](docs/GITHUB_WORKFLOW.md#active-rule-layers) records the live configuration; historical App-token tests grant no current exception.
 
 The development release job additionally waits for its gates in `ci.yml`. Failed checks do not produce an approved installation package. The separate Security workflow and generated finding check are also required for PR merging; release publication still follows its own explicit dependencies in `ci.yml`.
 

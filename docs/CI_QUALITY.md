@@ -53,7 +53,7 @@ Dependabot PRs receive suitable existing type/area/risk labels and run through t
 
 ## Maintainers and server-side rules
 
-Current server readback on 16 November 2026 confirms that all three rulesets are active with fifteen required statuses. Maintain and Repository-admin accounts have `pull_request` bypass on the review rule only: they may merge through a PR without an independent approval, but must wait for all fifteen checks against the current base. Ordinary write access grants no review exception. Required-check and history/signature rules have no bypass actors.
+Current server readback on 16 November 2026 confirms that all three rulesets are active with fifteen required statuses. Only `CarinaSchoppe` (`User:29256704`) has `pull_request` bypass on the review rule: she may merge through a PR without an independent approval, but must wait for all fifteen checks against the current base. Other maintainers, administrators, users, bots and Apps have no review exception; repository roles confer none. Required-check and history/signature rules have no bypass actors.
 
 No App has a review or required-check exception. Earlier App-token tests belong to their recorded historical rules. See [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md#active-rule-layers) for the current configuration.
 

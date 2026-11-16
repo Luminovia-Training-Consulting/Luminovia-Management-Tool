@@ -2,6 +2,10 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Current GitHub policy and PR13 delivery precedence
+
+The latest explicit user decision is authoritative: only `CarinaSchoppe` (GitHub User29256704) receives a personal PR-only review exception. All15CI checks and verified signatures remain mandatory; history/check bypass lists are empty. Source snapshots mirror the designated owner's confirmed live update. Older role-based, unrestricted or disabled-rule entries below are dated development history, not instructions to restore those configurations. PR27 has the next main merge, followed by this independent PR13 conflict resolution; feature work does not wait for a large aggregate branch.
+
 ## PR13 current-base acceptance
 
 - [x] Preserve prior exact-head acceptance as historical evidence; resolve the eight current conflicts and integrate accepted main through `0a6002a` without application or released-migration changes.

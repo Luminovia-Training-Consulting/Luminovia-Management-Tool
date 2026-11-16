@@ -1,6 +1,6 @@
 # Creating, reviewing and merging pull requests
 
-> Current server policy on 16 November 2026: all fifteen required checks and valid signatures remain mandatory. Maintain and Repository-admin accounts may bypass review only through a pull request. No App has a review or required-check exception. [Current rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
+> Current server policy on 16 November 2026: all fifteen required checks and valid signatures remain mandatory. Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception. No repository role, other user, bot or App has a review exception. No App has a required-check exception. [Current rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
 
 This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
@@ -87,7 +87,7 @@ Use `./portal github test` for an independent test of current `main`. `./portal 
 
 The active contributor rules require a pull request and at least one approval from another authorised person. Self-approval does not count as independent review; new changes dismiss old approvals. Approval of the latest push must come from someone other than its pusher. Resolve review conversations before merging and address feedback against current code.
 
-Maintainers and administrators have a role-based `pull_request` exception on the review rule. They may bypass independent review when merging a PR, including their own PR. This exception does not allow direct pushes to `main` or bypass the separate required-check rule. Ordinary write access alone grants no review exception. GitHub may require an explicit bypass action in the merge dialog.
+Only `CarinaSchoppe` (`User:29256704`) has a personal `pull_request` exception on the review rule. She may bypass independent review when merging a PR, including her own PR. This exception does not allow direct pushes to `main` or bypass the separate required-check rule. Other maintainers, administrators, users, bots and Apps have no review exception; repository roles confer none. GitHub may require an explicit bypass action for Carina in the merge dialog.
 
 All fifteen required checks must pass against the current base:
 
@@ -101,11 +101,11 @@ All fifteen required checks must pass against the current base:
 
 Fourteen statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. All fifteen are required for merging. See [CI_QUALITY](CI_QUALITY.md).
 
-If main changes, update the PR as required and wait for checks against the current base. The required-check and history/signature rulesets have no bypass actors. The review ruleset grants only Maintain (`RepositoryRole:2`) and Repository admin (`RepositoryRole:5`) a PR-only exception. No App has a review or required-check exception. Historical App-token tests grant no current merge authority; see the [current rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
+If main changes, update the PR as required and wait for checks against the current base. The required-check and history/signature rulesets have no bypass actors. The review ruleset grants only `CarinaSchoppe` (`User:29256704`) the personal PR-only exception. No App has a review or required-check exception. Historical App-token tests grant no current merge authority; see the [current rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
 
 ## Merge and publication
 
-Maintainers and administrators can merge a PR without an independent approval through their review exception once the fifteen required checks and current-base requirement are satisfied. Check the description, labels, tests and unresolved conversations first. Pending operational approvals remain separate from repository merge eligibility.
+Only `CarinaSchoppe` (`User:29256704`) may merge a PR without an independent approval through her personal review exception once the fifteen required checks and current-base requirement are satisfied. Other merge actors must satisfy the normal review requirements. Check the description, labels, tests and unresolved conversations first. Pending operational approvals remain separate from repository merge eligibility.
 
 The separate Security outcomes are required for PR merge eligibility. Release publication still follows the explicit dependencies in `ci.yml`; the ruleset does not add them as release-job dependencies.
 

@@ -6,7 +6,7 @@ This project records accepted development increments rather than inventing relea
 
 - Translate general contribution, developer, feature and operating documentation into English while retaining the bilingual application and literal authored examples.
 - Add the [documentation index](docs/README.md), [roadmap](ROADMAP.md) and [decision notes](docs/decisions/README.md).
-- Explain the newly active main history/review/check protection, PR-only Maintainer/Admin review exceptions and all 15 required checks accurately.
+- Explain the newly active main history/review/check protection, the sole personal PR-only review exception for `CarinaSchoppe` and all 15 required checks accurately.
 - Preserve the full product scope, existing PR labels and recorded acceptance boundaries.
 
 Validation and publication for this increment are recorded in its PR and work log; writing this entry is not a successful test or released version.
