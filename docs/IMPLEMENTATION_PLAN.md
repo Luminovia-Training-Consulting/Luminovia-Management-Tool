@@ -53,6 +53,7 @@ The latest request supersedes the earlier shared compensation default. Work is i
 - [ ] Production policy setup/migration/deployment is a separate operational step; this request does not authorise production or real email changes.
 
 [Roles and private pricing](DELEGATED_ROLES_PRICING.md), [welcome guide](WELCOME_GUIDE.md), [PR previews](PR_PREVIEWS.md). The verbatim original specification remains preserved; these explicit user extensions update its operating details without dropping any remaining modules.
+
 ## Comprehensive code comments and agent guide
 
 Requested directly on `main`: explain the maintained code throughout and provide a project-specific `AGENTS.md`, using OpenXLR's guide as a structural reference. Work uses a dedicated review worktree so the original checkout's concurrent feature changes remain separate. The independent English community commit `3256d1a` is preserved; contributor guidance remains English and source commentary uses English.

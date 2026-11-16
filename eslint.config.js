@@ -10,6 +10,8 @@ export default tseslint.config(
     // and generated/private files are excluded from local JS lint rules.
     ignores: [
       "dist",
+      // Tests replace this generated report tree; it contains no maintained source.
+      "coverage",
       ".local",
       "node_modules",
       "supabase/functions",
