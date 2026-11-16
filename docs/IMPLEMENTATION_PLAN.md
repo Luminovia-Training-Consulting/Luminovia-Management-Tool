@@ -1,5 +1,14 @@
 # Persistent implementation plan
 
+## Final Main25 remote-ancestry union — fresh full gates pending
+
+- [x] Preserve signed Main25 integration `c82a9d46000ac574c24c43405b30ca3bae6a703b` and verified remote `f725d6c2b0abf8b6062e823a78cc8e6cbe98587b` (16:01:22 UTC, parents `a084859d` / accepted Main25 `4f7f6c06`) through normal ancestry; both complete ordered histories and A–N scope remain preserved.
+- [x] Confirm every non-documentation file and README is byte-identical to tested Root `c82a9d4`; retain the actual 697/91 frontend, 358 runtime/maintenance, 31 package, eight Edge-handler, types/lint/build89 and graph200/48 local results. This is not the earlier `2659618` regression.
+- [x] Keep historical `a084859d`/Main12 native and 158 desktop/mobile plus four built-PWA passes separate from system cancellation after the `f725d6c` update; no complete or current 69-migration acceptance is inferred. Remote `f725d6c` is still Draft/no-auto-merge at this checkpoint.
+- [ ] Publish the final signed union normally, then perform the assigned Ready transition and obtain fresh full exact-head/current-base system/browser/native/security/preview-package evidence: all fifteen contexts plus actual browser execution remain required.
+
+PR25 is actually accepted and its priority complete; no future-feature or collective A–N completion gate is added. The package fix is integrated and complete. Isolated scanner #11 follow-up remains outside PR19 and does not become an additional delivery blocker, without weakening current security gates or claiming findings closed. Controller/App-merge operation, release/provider/device and production outcomes remain separate. All source-bound histories below are retained.
+
 ## Current local Main25 evidence — actual 69-migration source
 
 - [x] Preserve actually accepted Main25 `4f7f6c06fdcf4f81bd4ad051ecf1a123da52d824`, exactly 69 SQL sources and the unchanged prior 68-file prefix; retain both complete ordered histories and the full A–N target.
