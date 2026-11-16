@@ -1,3 +1,4 @@
+/** Displays one current authorized prospective quote; hidden compensation never becomes a zero fee. */
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
@@ -5,6 +6,7 @@ import type { Job } from "../../lib/types";
 import { dateTime, money } from "../../lib/dates";
 import "./lifecycle-i18n";
 import "../commercial/platform-i18n";
+/** Render only the supplied current quote; a null fee is a restricted value, not a price. */
 export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
   const { t, i18n } = useTranslation();
   const lifeText = useTranslation("jobLifecycle").t;
@@ -41,7 +43,9 @@ export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
       <div className="job-card-bottom">
         <div>
           <strong>
-            {money(job.total_amount, job.currency, i18n.language)}
+            {job.total_amount === null
+              ? priceText("privateCompensation")
+              : money(job.total_amount, job.currency, i18n.language)}
           </strong>
           <small>
             {priceText("lecturerShare")} · {lifeText("perPosition")} ·{" "}

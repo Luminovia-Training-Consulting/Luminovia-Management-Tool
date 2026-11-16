@@ -2,6 +2,8 @@ import i18n from "../../lib/i18n";
 const de = {
   title: "Aufträge finden",
   help: "Die Suche wird auf dem Server gegen deine aktuellen Rechte geprüft. Kalenderpassung ist keine Reservierung oder Zusage.",
+  feeHelp:
+    "Preisfilter und Sortierung verwenden dein aktuell berechtigtes Honorar. Geschützte Honorare bleiben leer und werden bei Preissortierung zuletzt angezeigt.",
   text: "Suchtext",
   customer: "Auftraggeber enthält",
   topics: "Alle ausgewählten Fachgebiete",
@@ -63,6 +65,8 @@ const de = {
 const en: Record<keyof typeof de, string> = {
   title: "Find teaching offers",
   help: "Server-side search checks your current access. Calendar fit is not a reservation or confirmation.",
+  feeHelp:
+    "Price filters and sorting use your currently authorized compensation. Restricted fees remain empty and sort last by price.",
   text: "Search text",
   customer: "Customer contains",
   topics: "All selected expertise",

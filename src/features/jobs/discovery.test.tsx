@@ -1,3 +1,4 @@
+/** Discovery integration fixtures separate own handover reads from saved-view mutations and require current role access. */
 import { afterEach, it, expect, vi } from "vitest";
 import {
   act,
@@ -121,9 +122,11 @@ function setup({
               },
               error: null,
             })
-          : name === "saved_job_views"
-            ? (readViews?.() ?? Promise.resolve({ data: views, error: null }))
-            : write(args);
+          : ["job_substitutions", "my_job_waitlist"].includes(name)
+            ? Promise.resolve({ data: [], error: null })
+            : name === "saved_job_views"
+              ? (readViews?.() ?? Promise.resolve({ data: views, error: null }))
+              : write(args);
       return Object.assign(response, { abortSignal: () => response });
     },
   );

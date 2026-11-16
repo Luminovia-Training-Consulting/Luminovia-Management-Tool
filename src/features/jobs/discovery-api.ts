@@ -1,3 +1,4 @@
+/** Current-actor discovery/detail/dashboard DTOs preserve restricted quotes as null, never zero. */
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
@@ -133,8 +134,8 @@ const jobSchema = z.object({
   location: z.string(),
   time_zone: z.string().refine(validZone),
   status: z.enum(["draft", "published", "filled", "archived"]),
-  amount: z.coerce.number().finite(),
-  total_amount: z.coerce.number().finite(),
+  amount: z.number().finite().nonnegative().nullable(),
+  total_amount: z.number().finite().nonnegative().nullable(),
   currency: z.enum(["EUR", "AUD"]),
   rate_unit: z.enum([
     "per_day",
@@ -189,9 +190,16 @@ export const discoveryPageSchema = z
         message: "Inconsistent discovery pagination",
       });
   });
-export const jobDiscoveryQuery = (actor: string, filters: JobFilters) =>
+/** Reset known role-context pages; server cursor checks remain authoritative for unobserved changes. */
+export const jobDiscoveryQuery = (
+  actor: string,
+  filters: JobFilters,
+  quoteContext = "",
+) =>
   infiniteQueryOptions({
-    queryKey: ["jobs", "discovery", actor, filters],
+    // Known role transitions reset infinite pages; SQL also binds opaque cursors
+    // to fresh role/policy context for changes the browser has not observed.
+    queryKey: ["jobs", "discovery", actor, filters, quoteContext],
     initialPageParam: null as JobCursor | null,
     queryFn: async ({ pageParam, signal }) => {
       const { data, error } = await db()
@@ -208,6 +216,7 @@ export const jobDiscoveryQuery = (actor: string, filters: JobFilters) =>
       page.has_more ? (page.next_cursor ?? undefined) : undefined,
     staleTime: 15000,
   });
+/** Validate the complete exact detail DTO, including a possibly restricted quote. */
 export const jobDetailQuery = (actor: string, id: string) =>
   queryOptions({
     queryKey: ["jobs", "detail", actor, id],
@@ -216,7 +225,7 @@ export const jobDetailQuery = (actor: string, id: string) =>
         .rpc("job_detail", { p_job_id: id })
         .abortSignal(signal);
       if (error) throw error;
-      return jobSchema.parse(data) as Job;
+      return jobSchema.parse(data);
     },
     enabled: Boolean(id),
   });
@@ -280,6 +289,7 @@ export interface JobDashboard {
   as_of: string;
 }
 const count = z.number().int().nonnegative();
+/** Share strict quote/null validation with marketplace items so suggestions never coerce restricted amounts. */
 export const jobDashboardQuery = (actor: string) =>
   queryOptions({
     queryKey: ["jobs", "dashboard", actor],
@@ -310,7 +320,7 @@ export const jobDashboardQuery = (actor: string) =>
             .nullable(),
           as_of: instant,
         })
-        .parse(data) as JobDashboard;
+        .parse(data);
     },
   });
 export const assignmentJobTitlesQuery = (actor: string, ids: string[]) =>

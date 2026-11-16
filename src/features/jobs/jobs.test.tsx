@@ -80,23 +80,28 @@ function setup(route = "/jobs/job-a", list = false) {
   });
   client.setQueryData(["user-roles", "lecturer-a"], ["lecturer"]);
   client.setQueryData(["saved-job-views", "lecturer-a"], []);
+  client.setQueryData(["job-substitutions", "lecturer-a", "inbox"], []);
+  client.setQueryData(["my-job-waitlist", "lecturer-a"], []);
   if (list) {
     const parsed = filtersFromParams(
       new URL(route, "https://example.invalid").searchParams,
     );
     if (!parsed.success) throw new Error("Invalid fixture filters");
-    client.setQueryData(jobDiscoveryQuery("lecturer-a", parsed.data).queryKey, {
-      pages: [
-        {
-          items: parsed.data.from ? [] : [job],
-          has_more: false,
-          next_cursor: null,
-          as_of: new Date().toISOString(),
-          filters: parsed.data,
-        },
-      ],
-      pageParams: [null],
-    });
+    client.setQueryData(
+      jobDiscoveryQuery("lecturer-a", parsed.data, "lecturer").queryKey,
+      {
+        pages: [
+          {
+            items: parsed.data.from ? [] : [job],
+            has_more: false,
+            next_cursor: null,
+            as_of: new Date().toISOString(),
+            filters: parsed.data,
+          },
+        ],
+        pageParams: [null],
+      },
+    );
   }
   client.setQueryData(["topics"], []);
   client.setQueryData(["claims", "lecturer-a"], []);
@@ -134,7 +139,8 @@ describe("safe marketplace interactions", () => {
     expect(
       screen.getByRole("button", { name: "Auftrag übernehmen" }),
     ).toBeDisabled();
-    expect(screen.queryByText("0,00 €")).not.toBeInTheDocument();
+    expect(screen.queryByText(/0,00/)).not.toBeInTheDocument();
+    expect(rpc.mock.calls.some(([name]) => name === "claim_job")).toBe(false);
   });
   it("requires new consent when an offer version changes during a refetch", async () => {
     const user = userEvent.setup();

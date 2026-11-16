@@ -11,7 +11,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { MemoryRouter, Link } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import {
   QueryClient,
   QueryClientProvider,
@@ -37,10 +37,10 @@ vi.mock("../auth/auth-context", () => ({
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => fake }));
 vi.mock("../commercial/revenue", () => ({ FinancialSummaryCards: () => null }));
-vi.mock("../jobs/jobs", () => ({
-  JobCard: ({ job }: { job: { id: string; title: string } }) => (
-    <Link to={`/jobs/${job.id}`}>{job.title}</Link>
-  ),
+// Use the real lightweight card so dashboard DTO/null handling is exercised;
+// avoid importing the unrelated marketplace detail/mutation module here.
+vi.mock("../jobs/jobs", async () => ({
+  JobCard: (await import("../jobs/card")).JobCard,
 }));
 
 const clients: QueryClient[] = [];
@@ -267,6 +267,16 @@ const rpcCalls = (name: string) =>
   fake.calls.filter((call) => call.method === "rpc" && call.table === name);
 
 describe("role-aware dashboard previews", () => {
+  it("accepts a restricted null suggestion without presenting the public zero sentinel as compensation", async () => {
+    (fake.rpcData.job_dashboard as { suggestions: unknown[] }).suggestions = [
+      job("restricted quote", { amount: null, total_amount: null }),
+    ];
+    setup();
+    expect(await screen.findByText("Fictional restricted quote")).toBeVisible();
+    expect(screen.getByText("Honorar geschützt")).toBeVisible();
+    expect(screen.queryByText(/0,00/)).not.toBeInTheDocument();
+    expect(rpcCalls("job_dashboard")).toHaveLength(1);
+  });
   it("combines own calendar, messages, personal contract receipts and bounded clean metadata", async () => {
     fake.tables.personal_events = [
       ...(fake.tables.personal_events as unknown[]),

@@ -1,3 +1,4 @@
+/** Server-filtered offers and private saved views; role transitions reset quote-bearing page state. */
 import { MyJobWaitlist, SubstitutionOffers } from "./lifecycle-extra";
 import { useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -475,7 +476,11 @@ export function JobDiscovery() {
   const parsed = filtersFromParams(params),
     filters = parsed.success ? parsed.data : null;
   const query = useInfiniteQuery({
-    ...jobDiscoveryQuery(actor, filters ?? defaultJobFilters),
+    ...jobDiscoveryQuery(
+      actor,
+      filters ?? defaultJobFilters,
+      [...(roles.data ?? [])].sort().join(","),
+    ),
     enabled: staff && Boolean(filters),
   });
   const items = [
@@ -491,8 +496,6 @@ export function JobDiscovery() {
     return (
       <>
         <PageHeading title={t("title")} />
-        <SubstitutionOffers />
-        <MyJobWaitlist />
         <Notice kind="error">{t("noAccess")}</Notice>
         <Link to="/">{common("goHome")}</Link>
       </>
@@ -500,6 +503,9 @@ export function JobDiscovery() {
   return (
     <>
       <PageHeading title={t("title")} description={t("help")} />
+      <SubstitutionOffers />
+      <MyJobWaitlist />
+      <p className="muted">{t("feeHelp")}</p>
       <SavedViews
         key={actor}
         actor={actor}
