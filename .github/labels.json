@@ -173,5 +173,10 @@
     "name": "area:design",
     "color": "7d88d8",
     "description": "Luminovia branding, layout and visual design."
+  },
+  {
+    "name": "merge:hold",
+    "color": "d93f0b",
+    "description": "Pause verified automatic merging while a maintainer resolves an outstanding concern."
   }
 ]

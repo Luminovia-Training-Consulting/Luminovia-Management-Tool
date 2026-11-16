@@ -38,7 +38,7 @@ rounding produces EUR 50.01 platform / EUR 50.00 lecturer for each accepted
 position. Accepted rows retain their own exact rounded amounts.
 
 `capacity_basis='per_position'` records this explicit meaning. All existing offers,
-customer requests and CBW/course-originated offers retain
+customer requests and course-originated offers retain
 `capacity_basis='single_position'`, capacity one, and their original budget.
 Existing customer totals are never multiplied retroactively. A new standalone
 one-position offer also uses the explicit per-position basis.

@@ -83,6 +83,10 @@
   flex: 1;
   min-width: 180px;
 }
+/* Long translated tab labels must not expand the mobile layout viewport. */
+.operations-toolbar .segmented {
+  flex-wrap: wrap;
+}
 .operations-toolbar > p {
   width: 100%;
   margin: 0;
