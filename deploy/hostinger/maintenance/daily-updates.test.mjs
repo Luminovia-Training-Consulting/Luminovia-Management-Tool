@@ -162,6 +162,47 @@ test("stable versions and ecosystem grouping reject prereleases and coordinate p
   assert.equal(packageGroup("react"), packageGroup("@types/react-dom"));
 });
 
+test("discovery upgrades the test runner and exact-peer coverage provider together", async () => {
+  const context = await fixture();
+  try {
+    const path = resolve(context.root, "package.json");
+    const pkg = JSON.parse(await readFile(path, "utf8"));
+    Object.assign(pkg.devDependencies, {
+      vitest: "5.0.0",
+      "@vitest/coverage-v8": "5.0.0",
+    });
+    await writeFile(path, JSON.stringify(pkg));
+    const plan = await discover(context.root, async (url) => {
+      const endpoint = new URL(url);
+      if (endpoint.origin !== "https://registry.npmjs.org")
+        throw new Error("Unrelated upstream is unavailable in this fixture.");
+      const name = decodeURIComponent(endpoint.pathname.split("/").at(-2));
+      return {
+        name,
+        version:
+          name === "vitest" || name === "@vitest/coverage-v8"
+            ? "5.1.0"
+            : (pkg.dependencies[name] ?? pkg.devDependencies[name]),
+      };
+    });
+    const npm = plan.components.filter((entry) => entry.kind === "npm");
+    assert.equal(npm.length, 1);
+    assert.deepEqual(
+      npm[0].changes.map(({ name, from, to }) => ({ name, from, to })),
+      [
+        { name: "vitest", from: "5.0.0", to: "5.1.0" },
+        { name: "@vitest/coverage-v8", from: "5.0.0", to: "5.1.0" },
+      ],
+    );
+    assert(
+      plan.held.length > 0,
+      "Independent upstream failures remain visible.",
+    );
+  } finally {
+    await context.cleanup();
+  }
+});
+
 test("daily discovery selects independent stable majors and rebuilt digests without inventing PG evidence", async () => {
   const context = await fixture();
   try {
@@ -178,8 +219,9 @@ test("daily discovery selects independent stable majors and rebuilt digests with
         ];
       if (url === "https://jsr.io/@panva/jose/meta.json")
         return { latest: "6.2.17", versions: { "6.2.17": {} } };
-      if (url.includes("registry.npmjs.org")) {
-        const name = decodeURIComponent(url.split("/").at(-2));
+      const endpoint = new URL(url);
+      if (endpoint.origin === "https://registry.npmjs.org") {
+        const name = decodeURIComponent(endpoint.pathname.split("/").at(-2));
         return { name, version: name === "typescript" ? "2.0.0" : "1.0.0" };
       }
       if (url.endsWith("supabase/postgres/releases?per_page=100"))

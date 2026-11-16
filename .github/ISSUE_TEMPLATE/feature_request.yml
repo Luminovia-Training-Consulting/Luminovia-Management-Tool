@@ -1,62 +1,62 @@
-name: Funktion vorschlagen
-description: Ein Problem und eine überprüfbare Verbesserung für das Luminovia Portal beschreiben.
+name: Suggest a feature
+description: Describe a problem and a verifiable improvement for the Luminovia Portal.
 title: "[Feature]: "
 labels: ["type:feature"]
 body:
   - type: markdown
     attributes:
       value: |
-        Beschreibe zuerst das Problem und den tatsächlichen Arbeitsablauf.
-        Prüfe den [bestehenden Produktplan](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/IMPLEMENTATION_PLAN.md)
-        und vorhandene Issues. Ein Vorschlag ist noch keine Zusage zur Umsetzung oder Produktionsfreigabe.
+        Start with the problem and the actual workflow.
+        Check the [existing product plan](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/IMPLEMENTATION_PLAN.md)
+        and existing issues. A suggestion does not promise implementation or authorize a production release.
   - type: textarea
     id: problem
     attributes:
-      label: Problem und betroffene Personen
-      description: Wer möchte welche Aufgabe erledigen und woran scheitert das bisher?
-      placeholder: "Als … möchte ich …, damit …"
+      label: Problem and affected users
+      description: Who is trying to complete which task, and what currently prevents them from doing so?
+      placeholder: "As a ..., I want to ..., so that ..."
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
-      label: Gewünschtes Verhalten
-      description: Beschreibe den Ablauf und das sichtbare Ergebnis. Fiktive Beispiele helfen.
+      label: Desired behavior
+      description: Describe the workflow and visible result. Fictional examples are helpful.
     validations:
       required: true
   - type: textarea
     id: acceptance
     attributes:
-      label: Überprüfbare Akzeptanzkriterien
-      description: Welche konkreten Beobachtungen zeigen, dass die Funktion richtig arbeitet? Berücksichtige Fehler-, Leer- und Berechtigungsfälle, soweit relevant.
+      label: Verifiable acceptance criteria
+      description: What concrete observations would show that the feature works correctly? Include error, empty and permission cases where relevant.
       placeholder: |
-        - Wenn …, dann …
-        - Ein Konto ohne … darf … nicht sehen oder ändern.
+        - When ..., then ...
+        - An account without ... must not see or change ...
     validations:
       required: true
   - type: textarea
     id: permissions
     attributes:
-      label: Rollen, Daten und Sichtbarkeit
-      description: Welche Rollen dürfen die Funktion nutzen? Welche Daten bleiben privat? Falls keine Änderung an Berechtigungen nötig ist, bitte so angeben.
+      label: Roles, data and visibility
+      description: Which roles may use the feature? Which data must remain private? If no permission changes are needed, say so.
     validations:
       required: true
   - type: textarea
     id: alternatives
     attributes:
-      label: Alternativen und vorhandene Funktionen
-      description: Welche bisherigen Funktionen oder anderen Abläufe wurden geprüft? Verlinke verwandte Issues oder den passenden Eintrag im Produktplan.
+      label: Alternatives and existing features
+      description: Which existing features or other workflows have you considered? Link related issues or the relevant product-plan entry.
   - type: textarea
     id: context
     attributes:
-      label: Weitere Hinweise
-      description: Optional Skizzen, Barrierefreiheit, DE/EN, Mobilansicht, Zeitzonen oder Leistungsanforderungen. Keine realen Kundendaten oder privaten Dokumente anhängen.
+      label: Additional context
+      description: Optionally include sketches, accessibility, DE/EN, mobile layouts, time zones or performance requirements. Do not attach real customer data or private documents.
   - type: checkboxes
     id: checks
     attributes:
-      label: Vor dem Absenden
+      label: Before submitting
       options:
-        - label: Ich habe nach bestehenden Issues und dem passenden Eintrag im Produktplan gesucht.
+        - label: I have searched existing issues and the relevant product-plan entry.
           required: true
-        - label: Die Beispiele und Anhänge enthalten keine Geheimnisse oder personenbezogenen Daten.
+        - label: My examples and attachments contain no secrets or personal data.
           required: true

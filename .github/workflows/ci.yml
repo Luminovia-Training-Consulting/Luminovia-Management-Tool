@@ -15,7 +15,65 @@ concurrency:
   group: portal-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 jobs:
+  quality:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Build
+            command: npm run build
+          - name: Typecheck
+            command: npm run typecheck
+          - name: Lint
+            command: npm run lint
+          - name: Formatting
+            command: npm run format:check && npx prettier --check .github
+          - name: Code quality
+            command: node scripts/code-integrity.mjs --exports
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".node-version"
+          cache: npm
+      - run: npm ci
+      - name: Run ${{ matrix.name }}
+        # Public, fictional build values; PRs need no repository configuration.
+        env:
+          VITE_SUPABASE_URL: https://ci.example.invalid
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_fictional_build_only
+        run: ${{ matrix.command }}
+  coverage:
+    name: Tests and coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".node-version"
+          cache: npm
+      - run: npm ci
+      - name: Check unit tests and coverage thresholds
+        id: coverage
+        run: npm run test:coverage
+      - name: Upload inspectable coverage reports
+        if: always() && steps.coverage.outcome != 'skipped'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: portal-coverage-${{ github.run_id }}-${{ github.run_attempt }}
+          path: coverage/
+          if-no-files-found: error
+          retention-days: 14
   verify:
+    needs: [quality, coverage]
     runs-on: ubuntu-latest
     # The complete gate now covers 32 migrations and the expanded native/browser
     # suite. Individual request, test and stage deadlines remain unchanged.
@@ -59,7 +117,7 @@ jobs:
       - run: node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run --baseline-root "$RUNNER_TEMP/selfhost-baseline" --baseline-commit "$(git rev-parse HEAD^)" --proof-output "$RUNNER_TEMP/postgres-candidate-proof.json"
   release-cms:
     name: Publish tested CMS update
-    needs: [verify, verify-selfhost]
+    needs: [quality, coverage, verify, verify-selfhost]
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15

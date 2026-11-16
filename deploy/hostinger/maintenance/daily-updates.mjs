@@ -138,6 +138,7 @@ async function save(file, value) {
   await writeFile(file, JSON.stringify(value, null, 2) + "\n");
 }
 export function packageGroup(name) {
+  if (name === "vitest" || name.startsWith("@vitest/")) return "vitest";
   if (name.startsWith("@fullcalendar/")) return "fullcalendar";
   if (name.startsWith("@tiptap/")) return "tiptap";
   if (["react", "react-dom", "@types/react", "@types/react-dom"].includes(name))

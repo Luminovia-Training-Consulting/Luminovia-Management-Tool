@@ -247,12 +247,16 @@ class BackupSafetyTests(unittest.TestCase):
             return b""
         with patch.object(b, "run", fake), patch.object(self.backup, "sql", return_value="[]"):
             self.backup.quiesce()
+            self.assertTrue(self.backup.flag_owned)
+            self.assertEqual(stat.S_IMODE(self.backup.maintenance.lstat().st_mode), 0o600)
+            self.assertEqual(self.backup.stopped, ["luminovia-supabase-auth-1"])
             self.backup.resume()
         stops = [c[-1] for c in commands if c[:2] == ["docker", "stop"]]
         starts = [c[-1] for c in commands if c[:2] == ["docker", "start"]]
         self.assertEqual(stops, ["luminovia-supabase-auth-1"])
         self.assertEqual(starts, stops)
         self.assertFalse(self.backup.maintenance.exists())
+        self.assertFalse(self.backup.flag_owned)
 
     def test_recovery_roots_exclude_recursive_backups_keys_caches_and_live_pgdata(self):
         self.assertTrue(self.backup.excluded(self.portal / "private/update-backups/old/storage.tar"))

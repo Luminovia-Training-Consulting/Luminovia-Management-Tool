@@ -48,7 +48,8 @@ test("cancelling a running child waits for actual termination rather than leavin
     process.execPath,
     [
       "-e",
-      `process.on('SIGTERM',()=>{});require('node:fs').writeFileSync(${JSON.stringify(marker)},JSON.stringify({pid:process.pid}));setTimeout(()=>process.exit(0),2500)`,
+      "process.on('SIGTERM',()=>{});require('node:fs').writeFileSync(process.argv[1],JSON.stringify({pid:process.pid}));setTimeout(()=>process.exit(0),2500)",
+      marker,
     ],
     {
       signal: controller.signal,
@@ -97,7 +98,8 @@ test("already cancelled commands do not execute and missing executables reject c
         process.execPath,
         [
           "-e",
-          `require('node:fs').writeFileSync(${JSON.stringify(marker)},'unexpected')`,
+          "require('node:fs').writeFileSync(process.argv[1],'unexpected')",
+          marker,
         ],
         { signal: controller.signal, quiet: true },
       ),

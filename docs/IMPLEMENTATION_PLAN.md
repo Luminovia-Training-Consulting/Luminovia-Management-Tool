@@ -2,11 +2,17 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Concurrent quality baseline and current governance
+
+Incoming main `3256d1a` adds visible build/type/lint/format/connectivity checks, enforceable V8 coverage floors and reports, independent CodeQL, Dependency Review and dependency-update guidance. These are preserved. The pre-incoming 316-unit result is historical; merged dependency/coverage and full native acceptance are next. See [CI_QUALITY](CI_QUALITY.md) and [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md).
+
+The three live rules are active after the user's clarification: Maintain/Admin review exception through PRs only; nine required CI contexts and signatures remain compulsory for humans; only the scoped tested maintenance App has its technical review/check exception. History has no bypass. The configured App's actual main-only workflow probe remains after the tested product merge. Auto-Merge availability is enabled. Source and live rule details are in [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md).
+
 ## Current combined source — complete acceptance next
 
 The primary `codex/community-and-resource-completion` branch now combines all eight additive M7/M8 migrations with the approved repository-scoped maintenance workflow and reviewed file-dialog fixes. There are **32 migrations / 155 public RPCs**. Functional source is frozen; integrated lint/types and **316 Vitest cases / 53 files** passed. The graph has **128 reachable modules / 32 routes** with no detected disconnected runtime source. Full native integration and both exact CI gates remain mandatory.
 
-The next steps are to run the complete isolated command, fix real failures, record actual evidence, merge PR10 only after application and retained-image checks pass, then probe the App workflow on main and activate/read back the precise review/check policies. Keep the separate persistent GitHub preview current through its reviewed migration plan. No production/public-website deployment is authorised.
+The next steps are to run the complete isolated command, fix real failures, record actual evidence, merge PR10 only after application and retained-image checks pass, then probe the App workflow on main and recheck the active, precise review/check policies. Keep the separate persistent GitHub preview current through its reviewed migration plan. No production/public-website deployment is authorised.
 
 The full remaining module ledger stays required. Connected source now includes exact-version evidence, published global-event management, scoped administrative job pickers, saved views, file organisation, chat mentions, quiet hours and announcements. These do not imply course/wiki/forum attachment contexts, finance PDF statements, actual email scheduling, retention administration or physical-platform acceptance are complete.
 

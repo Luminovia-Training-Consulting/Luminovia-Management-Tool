@@ -12,7 +12,7 @@ const jobs = Object.fromEntries(
       .matchAll(/^ {2}([a-z-]+):\n([\s\S]*?)(?=^ {2}[a-z-]+:\n|$(?![\s\S]))/gm),
   ].map((m) => [m[1], m[2]]),
 );
-test("only the exact human PR exception and approved private App can bypass prepared review/check policies", () => {
+test("only maintainer PR review exceptions and the approved private App can bypass the corresponding policies", () => {
   const history = JSON.parse(read(".github/rulesets/history.json")),
     review = JSON.parse(read(".github/rulesets/review.json")),
     checks = JSON.parse(read(".github/rulesets/checks.json"));
@@ -29,7 +29,8 @@ test("only the exact human PR exception and approved private App can bypass prep
   assert.equal(review.enforcement, "active");
   assert.equal(checks.enforcement, "active");
   assert.deepEqual(review.bypass_actors, [
-    { actor_id: 29256704, actor_type: "User", bypass_mode: "pull_request" },
+    { actor_id: 2, actor_type: "RepositoryRole", bypass_mode: "pull_request" },
+    { actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "pull_request" },
     app,
   ]);
   assert.deepEqual(checks.bypass_actors, [app]);
@@ -45,6 +46,12 @@ test("only the exact human PR exception and approved private App can bypass prep
   ).parameters;
   assert.equal(statuses.strict_required_status_checks_policy, true);
   assert.deepEqual(statuses.required_status_checks, [
+    { context: "Build", integration_id: 15368 },
+    { context: "Typecheck", integration_id: 15368 },
+    { context: "Lint", integration_id: 15368 },
+    { context: "Formatting", integration_id: 15368 },
+    { context: "Code quality", integration_id: 15368 },
+    { context: "Tests and coverage", integration_id: 15368 },
     { context: "verify", integration_id: 15368 },
     {
       context: "Actual isolated selfhost image compatibility",

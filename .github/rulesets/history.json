@@ -1,14 +1,13 @@
 {
+  "name": "Branch Protection",
   "target": "branch",
   "enforcement": "active",
   "conditions": {
     "ref_name": {
-      "include": ["~DEFAULT_BRANCH"],
-      "exclude": []
+      "exclude": [],
+      "include": ["~DEFAULT_BRANCH"]
     }
   },
-  "name": "Main history and integrity",
-  "bypass_actors": [],
   "rules": [
     {
       "type": "deletion"
@@ -31,5 +30,6 @@
         "severity": "errors"
       }
     }
-  ]
+  ],
+  "bypass_actors": []
 }

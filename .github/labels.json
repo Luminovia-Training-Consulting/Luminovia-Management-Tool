@@ -2,176 +2,176 @@
   {
     "name": "type:fix",
     "color": "d73a4a",
-    "description": "Korrigiert fehlerhaftes bestehendes Verhalten."
+    "description": "Fixes incorrect existing behavior."
   },
   {
     "name": "type:feature",
     "color": "a2eeef",
-    "description": "Ergänzt eine nutzbare Funktion."
+    "description": "Adds a usable feature."
   },
   {
     "name": "type:docs",
     "color": "0075ca",
-    "description": "Ändert Dokumentation und Beitragsleitfäden."
+    "description": "Updates documentation and contribution guides."
   },
   {
     "name": "type:refactor",
     "color": "5319e7",
-    "description": "Verbessert die Struktur ohne beabsichtigte Verhaltensänderung."
+    "description": "Improves structure without an intended behavior change."
   },
   {
     "name": "type:tests",
     "color": "bfd4f2",
-    "description": "Ergänzt oder verbessert aussagekräftige Prüfungen."
+    "description": "Adds or improves meaningful tests."
   },
   {
     "name": "type:maintenance",
     "color": "ededed",
-    "description": "Pflegt Werkzeuge, Konfiguration und Repository-Abläufe."
+    "description": "Maintains tools, configuration and repository workflows."
   },
   {
     "name": "type:security",
     "color": "b60205",
-    "description": "Behebt eine abgestimmt veröffentlichbare Sicherheitsänderung."
+    "description": "Addresses a security issue cleared for coordinated public disclosure."
   },
   {
     "name": "type:dependencies",
     "color": "0366d6",
-    "description": "Aktualisiert überprüfte Abhängigkeiten oder Laufzeit-Images."
+    "description": "Updates reviewed dependencies or runtime images."
   },
   {
     "name": "area:frontend",
     "color": "1d76db",
-    "description": "React, Bedienung, Darstellung und Barrierefreiheit."
+    "description": "React, interaction, presentation and accessibility."
   },
   {
     "name": "area:backend",
     "color": "0e8a16",
-    "description": "Edge Functions und serverseitige APIs."
+    "description": "Edge Functions and server-side APIs."
   },
   {
     "name": "area:database",
     "color": "006b75",
-    "description": "PostgreSQL, Migrationen, RLS und Transaktionen."
+    "description": "PostgreSQL, migrations, RLS and transactions."
   },
   {
     "name": "area:auth",
     "color": "b60205",
-    "description": "Anmeldung, Konten, Rollen, MFA und Sitzungen."
+    "description": "Sign-in, accounts, roles, MFA and sessions."
   },
   {
     "name": "area:files",
     "color": "c2e0c6",
-    "description": "Storage, Scanning, Versionen und Profilbilder."
+    "description": "Storage, scanning, versions and profile pictures."
   },
   {
     "name": "area:finance",
     "color": "fbca04",
-    "description": "Honorare, Umsatzteilung, Rechnungen und Zahlungen."
+    "description": "Fees, revenue sharing, invoices and payments."
   },
   {
     "name": "area:courses",
     "color": "d4c5f9",
-    "description": "Bausteine, Vorlagen, Kurse, Aufträge und Termine."
+    "description": "Building blocks, templates, courses, jobs and sessions."
   },
   {
     "name": "area:devops",
     "color": "0052cc",
-    "description": "Lokaler Betrieb, CI, Wartung, Backups und Releases."
+    "description": "Local operation, CI, maintenance, backups and releases."
   },
   {
     "name": "area:github",
     "color": "24292f",
-    "description": "Repository-Regeln, Labels und Beitragsabläufe."
+    "description": "Repository rules, labels and contribution workflows."
   },
   {
     "name": "risk:low",
     "color": "c2e0c6",
-    "description": "Begrenzte Änderung ohne neue Daten- oder Berechtigungsrisiken."
+    "description": "Limited change without new data or permission risks."
   },
   {
     "name": "risk:medium",
     "color": "fbca04",
-    "description": "Verhaltensänderung mit gezielt zu prüfenden Auswirkungen."
+    "description": "Behavior change with effects that need focused verification."
   },
   {
     "name": "risk:high",
     "color": "b60205",
-    "description": "Betrifft sensible Daten, Rechte, Geld, Migrationen oder Betrieb."
+    "description": "Affects sensitive data, permissions, money, migrations or operation."
   },
   {
     "name": "area:chat",
     "color": "006b75",
-    "description": "Chat, Kursgruppen, Nachrichten und Realtime."
+    "description": "Chat, course groups, messages and Realtime."
   },
   {
     "name": "area:knowledge",
     "color": "d4c5f9",
-    "description": "Wiki, Forum und Wissensverwaltung."
+    "description": "Wiki, forum and knowledge management."
   },
   {
     "name": "area:calendar",
     "color": "0e8a16",
-    "description": "Termine, Verfügbarkeit und Zeitzonen."
+    "description": "Events, availability and time zones."
   },
   {
     "name": "area:notifications",
     "color": "fbca04",
-    "description": "Benachrichtigungen und persönliche Zustellpräferenzen."
+    "description": "Notifications and personal delivery preferences."
   },
   {
     "name": "area:profiles",
     "color": "c2e0c6",
-    "description": "Profile, Qualifikationen und Dozierendenverzeichnis."
+    "description": "Profiles, qualifications and the lecturer directory."
   },
   {
     "name": "area:clients",
     "color": "0052cc",
-    "description": "Auftraggeberkonten, Organisationen und Geschäftskontakte."
+    "description": "Client accounts, organizations and business contacts."
   },
   {
     "name": "area:pwa",
     "color": "1d76db",
-    "description": "Installation, Service Worker, Offline und Aktualisierung."
+    "description": "Installation, service workers, offline behavior and updates."
   },
   {
     "name": "area:testing",
     "color": "bfd4f2",
-    "description": "QA, Regressionen, Browser- und Berechtigungsprüfungen."
+    "description": "QA, regressions, browser tests and permission checks."
   },
   {
     "name": "area:docs",
     "color": "0075ca",
-    "description": "Anleitungen, API-Referenzen und Betriebsdokumentation."
+    "description": "Guides, API references and operational documentation."
   },
   {
     "name": "area:taxonomy",
     "color": "5319e7",
-    "description": "Themen, Werkzeuge, Programmiersprachen und Hierarchien."
+    "description": "Topics, tools, programming languages and hierarchies."
   },
   {
     "name": "area:api",
     "color": "0e8a16",
-    "description": "Öffentliche Schnittstellen, RPC-Verträge, OpenAPI und API-Kompatibilität."
+    "description": "Account and domain APIs, RPC contracts and integration clients."
   },
   {
     "name": "area:security",
     "color": "b60205",
-    "description": "Berechtigungsgrenzen, Datenschutz, Eingabevalidierung und Schutzmaßnahmen."
+    "description": "Authorization, protected data and security hardening."
   },
   {
     "name": "area:performance",
     "color": "5319e7",
-    "description": "Abfragekosten, Ladeverhalten, Caching und gemessene Laufzeiteffizienz."
+    "description": "Loading, query budgets, caching and runtime performance."
   },
   {
     "name": "area:accessibility",
     "color": "bfd4f2",
-    "description": "Tastaturbedienung, Fokus, Screenreader und lesbare Kontraste."
+    "description": "Keyboard access, accessible controls and WCAG checks."
   },
   {
     "name": "area:design",
     "color": "7d88d8",
-    "description": "Markengerechte Gestaltung, Layout, Typografie und Farbsystem."
+    "description": "Luminovia branding, layout and visual design."
   }
 ]

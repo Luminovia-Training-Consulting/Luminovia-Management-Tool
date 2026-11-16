@@ -1,0 +1,36 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "04:17"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 3
+    labels:
+      - type:dependencies
+      - risk:medium
+      - area:devops
+      - area:github
+    groups:
+      github-actions:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+      time: "04:47"
+      timezone: Etc/UTC
+    # Normal npm versions are tested by daily-maintenance.yml. Security fixes
+    # remain enabled independently of this version-update PR limit.
+    open-pull-requests-limit: 0
+    labels:
+      - type:dependencies
+      - risk:medium
+      - area:frontend
+      - area:devops
+    groups:
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
