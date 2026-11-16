@@ -16,7 +16,6 @@ function headingAnchors(markdown) {
     /^#{1,6}\s+(.+?)\s*#*$/gm,
   )) {
     const base = match[1]
-      .replace(/<[^>]*>/g, "")
       .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
       .toLowerCase()
       .replace(/[^\p{L}\p{M}\p{N}\s_-]/gu, "")
@@ -67,12 +66,13 @@ test("repository documentation links and heading fragments resolve", async () =>
         : resolve(file);
       links++;
       try {
-        await access(target);
-        if (fragment && target.endsWith(".md")) {
+        if (target.endsWith(".md")) {
+          // Read Markdown directly rather than checking existence and then
+          // reopening it. This snapshot supplies both existence and headings.
           const headings = headingAnchors(await readFile(target, "utf8"));
-          if (!headings.has(decodeURIComponent(fragment)))
+          if (fragment && !headings.has(decodeURIComponent(fragment)))
             broken.push(`${file} → ${path}#${fragment} (missing heading)`);
-        }
+        } else await access(target);
       } catch {
         broken.push(`${file} → ${target}`);
       }
