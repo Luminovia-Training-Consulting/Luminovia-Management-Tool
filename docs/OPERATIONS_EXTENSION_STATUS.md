@@ -1,6 +1,16 @@
 # Seven additional operational modules
 
-## Current continuation — actual accepted Main17, final PR24 checks
+## Current accepted Main24 source
+
+PR24 is accepted as Main `99add7de8598bf415977c7cae79f1c5f6993626d`. All 68 SQL files are now released source, including the unchanged previous 62 and six operational additions. This acceptance includes the course-readiness, teaching-delivery, replacement-marketplace, support and operational-notification source; it does not establish hosted installation, provider activation, physical-device delivery or production publication. PR25 retains its separate assigned priority and must be integrated only after actual acceptance with its own source checks.
+
+The prepared quality composition `a0a7b48` passes 690 frontend cases/90 files, 331 runtime/maintenance cases, full TypeScript/ESLint and the production/PWA build; whole-source V8 is S66.75/B62.14/F56.93/L68.87%. Its 65 focused lifecycle/notification API cases retain each API at 100% in all four metrics. Fresh combined-source system/browser/native/security/package CI remains pending. The older 62-migration run was cancelled during system/native verification and is not complete acceptance. The review layer is active after its 13:38 UTC update, with only the personal Carina PR-only exception; checks/history have no bypass and the App has no exception. Draft guards PR19 during coordination because current accepted Main24 does not yet machine-enforce the hold label.
+
+## Historical operational-source continuations
+
+Every earlier continuation, checkpoint and module-table result below keeps its original source/evidence boundary. Statements that PR17 or PR24 is still unmerged, six operational files are pending, or a prior full run is pending describe those historical revisions. They do not override the accepted Main24 source or certify the later quality composition. The entire additional-module and A–N product scope remains preserved.
+
+## Historical continuation — actual accepted Main17, final PR24 checks
 
 PR17 has actually merged as main `4cc20874edc1f865b71106b7bb1299e16fec5aad`. PR24 retains all 62 published SQL files byte-for-byte and adds six pending operational files (68 total). Application, SQL, E2E, database helper, generated API and package/lock bytes remain exactly those of the complete local `2c850` pass. The full local result covered 674 frontend cases, all 68 migrations and real APIs, 150 application browsers, 4 built-PWA cases and checked cleanup; it is not a repeated full pass of the newer executor.
 
@@ -8,7 +18,7 @@ Accepted Main36 phase routing and Main17’s 30-minute aggregate browser budget 
 
 Accounting remains excluded through signed revert `31d4e9` while preserving remote `9bfa7f2` ancestry and its original source for separate later delivery. Both complete product ledgers, authority-race fixes, current resource/privacy boundaries, personal Carina-only PR review exception and manual-only publication remain intact. Earlier continuations and checkpoint/table outcomes below retain their historical source scope; their former unmerged-PR17 states and queue holds do not describe current main.
 
-## Current continuation — local candidate composition before accepted PR17
+## Historical continuation — local candidate composition before accepted PR17
 
 The explicitly authorised local preparation combines PR24 checkpoint `d4e2954` with frozen PR17 source `dd646f91ece7eb136f776597d04e67b27bf72b60`. Accepted main remains `c0622a7`; the delivery order is PR17 → PR24 → PR25. The 68-file candidate retains the 62 PR17-prefix bodies exactly and places six byte-identical operational bodies after them through CLI-created versions `20261116121554`, `20261116121556`, `20261116121558`, `20261116121600`, `20261116121603` and `20261116121605`. The four operational modules and four observed authority-race corrections remain present.
 
@@ -20,7 +30,7 @@ The historical checkpoints and initial module table below retain their original 
 
 The authoritative additional user prompt is preserved verbatim in [OPERATIONS_EXTENSION_PROMPT.txt](OPERATIONS_EXTENSION_PROMPT.txt). It extends, and does not replace, [UNIVERSAL_MASTER_PROMPT.txt](UNIVERSAL_MASTER_PROMPT.txt). The [initial coordination audit](EXTENSION_COORDINATION.md) records current PR overlap, rules and the automatic development-release boundary. A partial checkpoint is not full delivery.
 
-## Current checkpoint
+## Historical checkpoint
 
 Current delivery preparation uses accepted PR10/main `1de544d`:36released SQL files are unchanged and six separately CLI-reversioned operational additions make42files. The latest direct task requests PR24 then PR25 individually; a newer relayed direct instruction reserves actual PR17 first, giving main/QA order17→24→25. Independent source completion, scoped tests, signed commits and focused PR preparation continue. After PR17 actually merges, reconcile that real source and migration prefix before final delivery; no unaccepted branch bundle or prior freeze is required.
 

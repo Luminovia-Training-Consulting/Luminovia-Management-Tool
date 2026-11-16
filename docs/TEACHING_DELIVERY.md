@@ -1,6 +1,6 @@
 # Attendance and proof of teaching delivery
 
-Status: implemented in the seven-module extension branch, with focused PostgreSQL and unit/component acceptance recorded below. Actual Auth/HTTP and full desktop/mobile browser workflows are authored for `./portal test`; they remain unverified until that canonical command runs successfully. This guide does not claim merged source, VPS installation or production acceptance.
+Status: the teaching-delivery source is accepted through Main24 `99add7de8598bf415977c7cae79f1c5f6993626d`, within its 68 released SQL files. The complete local PR24 result recorded in [WORKLOG](WORKLOG.md) belongs to its exact source. The later quality composition passes local frontend/runtime/types/lint checks but still needs fresh exact-head/current-base full system, browser, native, security and package acceptance. Focused evidence below remains source-bound; authored cases alone are not execution evidence. Source acceptance implies neither VPS installation, provider activation, physical-device delivery nor production approval.
 
 ## Daily workflow
 

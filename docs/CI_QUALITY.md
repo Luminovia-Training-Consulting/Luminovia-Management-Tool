@@ -1,6 +1,8 @@
 # GitHub checks, security and coverage
 
-> The recorded 16 November 2026 06:42:36 UTC server snapshot has three active `main` rulesets and the sole personal PR-only review exception for `CarinaSchoppe` (`User:29256704`). A later live readback found the review layer disabled while all fifteen strict checks and separate history/signature protections remain active. The intended source policy and current operating discrepancy are distinguished in [GitHub administration](GITHUB_WORKFLOW.md#active-rule-layers). The prepared controller refuses the missing review layer; no server setting is changed here.
+> The recorded 16 November 2026 06:42:36 UTC snapshot had three active `main` rulesets and the sole personal PR-only review exception for `CarinaSchoppe` (`User:29256704`). The 12:16:58 UTC disabled-review readback is historical. A subsequent live readback confirms review ruleset `27329000` active after its 13:38 UTC update; all fifteen strict checks and the separate history/signature layer retain no bypass actors, and neither roles nor the maintenance App gain a review exception. Root changed no server settings. [GitHub administration](GITHUB_WORKFLOW.md#active-rule-layers) retains the dated chronology. The prepared App controller still requires independent current-head review for every author, and active policy alone does not prove its delivery.
+
+Current accepted Main24 `99add7de` has 68 released SQL sources. Local quality composition `a0a7b48` passes 690 frontend cases/90 files, 331 runtime/maintenance cases, full TypeScript/ESLint and the production/PWA build. V8 whole-source coverage is S66.75/B62.14/F56.93/L68.87%, with both critical lifecycle/notification APIs separately at 100% across 65 focused cases. The older 62-migration workflow passed 144 application browsers, four built-PWA cases, security and its native SQL-worker step, then system/native were cancelled at 14:28 UTC after an external PR-head update. Its dependent preview failed the cancelled prerequisites; this is not complete acceptance of the current composition. Fresh final-source system/browser/native/security/package gates remain required. Current Main24 does not yet machine-enforce `merge:hold`; Draft guards PR19 until the assigned Ready transition triggers fresh full verification.
 
 Every PR retains quality/build, full-source unit coverage, CodeQL, dependency
 review and metadata. Only a verified open Draft event bound to its canonical PR
@@ -28,9 +30,10 @@ without a source push. See [GitHub's PR event types](https://docs.github.com/en/
 Wait for that full run before queuing a native merge; a completed Draft package
 is not full acceptance. Full-profile PR acceptance requires actual successful
 system, browser and native steps behind the current canonical check jobs. The
-controller browser-job binding is implemented; its local test evidence belongs
-to pre-union Root `41866c6`. The queued-source union needs its own tests and fresh
-combined CI.
+controller browser-job binding is implemented. Its pre-union `41866c6` evidence
+and the then-pending queued-source validation are historical. The later Main24
+composition passes 690 frontend and 331 runtime/maintenance cases; fresh final
+68-migration system/browser/native/security/package CI remains required.
 A manual branch run remains available for complete verification.
 
 Full-profile PRs, including every ready PR, split the runner into explicit `--phase system` and

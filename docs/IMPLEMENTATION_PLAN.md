@@ -1,5 +1,17 @@
 # Persistent implementation plan
 
+## Current Main24 quality evidence and controlled delivery
+
+- [x] Preserve accepted Main24 `99add7de8598bf415977c7cae79f1c5f6993626d`, all 68 released SQL blobs and the immutable previous 62-file prefix; retain both complete ordered histories through normal reconciliation with `f9fedf9`.
+- [x] Pass local `a0a7b48` checks: 690 frontend cases / 90 files, 331 runtime/maintenance cases, full TypeScript/ESLint and production/PWA build with 86 precache entries. Measure whole-source V8 S66.75/B62.14/F56.93/L68.87%; 65 focused API cases retain 100% S/B/F/L separately for lifecycle and notification APIs. Compiler inventory: 196 modules / 46 routes / 53 links / 186 RPCs / one Edge call, with zero unresolved/unreachable modules, unused runtime exports, invalid links or missing assets.
+- [x] Keep the old `8541920` 62-migration CI source-bound: 144 application browsers, four built-PWA cases, security and the native SQL-worker step passed, but system/native were cancelled at 14:28 UTC after the external `f9fedf9` head update; the preview failed cancelled prerequisites. Do not report complete acceptance.
+- [x] Record the later live readback confirming review layer `27329000` active after its 13:38 UTC update with only `User:29256704`'s personal PR-only exception, fifteen strict checks and history/signature protections without bypass. Earlier disabled-review/clarification notes are historical; no Root repository-setting change occurred.
+- [x] Record the 14:38 UTC technical freeze after external 14:36:20 auto-merge re-enablement: Root disables auto-merge again and converts PR19 to Draft; readback is Draft, no auto-merge request, head `f9fedf9`.
+- [ ] Keep PR19 in Draft, retain `merge:hold` and keep PR auto-merge disabled until final source gates and the assigned slot are ready; current accepted Main24 does not yet machine-enforce the label, while the prepared controller implements its refusal. preserve technical single-writer coordination and the fixed PR25 priority/reservation. Publish the signed merged source as Draft, then require fresh full verification after the later assigned Ready transition.
+- [ ] Integrate only actually accepted PR25 source in that assigned order, then obtain fresh exact-head/current-base full system, browser, native retained-data, security and preview-package acceptance for the final 68-migration or later composition before the permitted merge.
+
+Current active policy does not establish successful trusted-Main controller execution, a native App merge, provider/device delivery or production readiness. Those remain separate outcomes. All historical evidence and the entire A–N product scope below remain preserved without imposing a collective product-completion gate on every individual PR.
+
 ## Current integration checkpoint — accepted Main24
 
 - [x] Preserve accepted Main24 `99add7de8598bf415977c7cae79f1c5f6993626d` source and both complete ordered ledgers while resolving its integration into published quality source `8541920`; retain the entire A–N target scope below.
