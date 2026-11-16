@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import datetime as dt
 import fcntl
 import hashlib
@@ -15,6 +16,7 @@ import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tarfile
@@ -38,6 +40,10 @@ MAX_FILE = 64 * 1024 * 1024
 MIN_FREE = 2 * 1024 * 1024 * 1024
 CONTROLLER = "deploy/hostinger/updates/updater.py"
 REBOOT_PENDING = Path("/run/luminovia-reboot-pending")
+MAINTENANCE_LOCK = Path("/run/lock/luminovia-maintenance.lock")
+REVIEWED_ROOT_UID = 0
+REVIEWED_PLAN_FORMAT = "luminovia-reviewed-migration-plan-v1"
+REVIEWED_PLAN_MAX_TTL = 7200
 
 
 class UpdateError(Exception):
@@ -297,8 +303,72 @@ def compatible_migration(source):
             raise UpdateError("migration_requires_operator_review")
 
 
-def migration_sql(source, version, name):
-    compatible_migration(source)
+def reviewed_transaction(source):
+    """Only the exact reviewed SQL may cross the automatic policy boundary.
+
+    Review is not permission to escape the one-transaction/history envelope or
+    alter the parser's string semantics. The ordinary classifier stays intact.
+    """
+    visible = visible_sql(source)
+    statements = [part.strip() for part in visible.split(";") if part.strip()]
+    if len(statements) < 2 or statements[0].lower() not in ("begin", "begin transaction") or statements[-1].lower() != "commit":
+        raise UpdateError("migration_requires_single_transaction")
+    if not re.match(r"\s*(?:--[^\n]*\n\s*)*begin(?:\s+transaction)?\s*;", source, re.I) or not re.search(r"(?m)^\s*commit;\s*\Z", source, re.I):
+        raise UpdateError("migration_transaction_delimiters_require_own_lines")
+    for statement in statements[1:-1]:
+        upper = statement.upper()
+        if upper.split()[0] in {"BEGIN", "COMMIT", "ROLLBACK", "ABORT", "END", "SAVEPOINT", "RELEASE", "PREPARE"} or re.search(r"\bSTANDARD_CONFORMING_STRINGS\b|\bALTER\s+SYSTEM\b|\bCOPY\b.*\bPROGRAM\b", upper):
+            raise UpdateError("reviewed_migration_transaction_escape")
+
+
+def canonical_digest(value):
+    """Bind all structured release fields without depending on JSON whitespace."""
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True, allow_nan=False).encode()).hexdigest()
+
+
+def fsync_directory(path):
+    """Persist an exclusive plan/tombstone entry, including new subdirectories."""
+    descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def history_inventory(history):
+    """Keep source fingerprints, never database credentials or application rows."""
+    if not isinstance(history, dict) or not history or len(history) > 4096:
+        raise UpdateError("reviewed_plan_requires_existing_source_history")
+    if any(not isinstance(version, str) or not re.fullmatch(r"[0-9]{14}", version) or not isinstance(source, str) for version, source in history.items()):
+        raise UpdateError("invalid_reviewed_plan_history")
+    result = []
+    for version in sorted(history):
+        result.append({"version": version, "sha256": hashlib.sha256(history[version].encode()).hexdigest()})
+    return result
+
+
+def imported_history(path):
+    """Accept an explicit offline operator snapshot; apply still rereads live SQL."""
+    try:
+        rows = json.loads(Path(path).read_text(encoding="utf8"))
+        if not isinstance(rows, list):
+            raise ValueError()
+        result = {}
+        for row in rows:
+            if not isinstance(row, dict) or set(row) != {"version", "source"} or row["version"] in result:
+                raise ValueError()
+            result[row["version"]] = row["source"]
+        history_inventory(result)
+        return result
+    except (OSError, ValueError, TypeError, KeyError, UpdateError) as error:
+        raise UpdateError("invalid_reviewed_plan_history_input") from error
+
+
+def migration_sql(source, version, name, *, operator_reviewed=False):
+    if operator_reviewed:
+        reviewed_transaction(source)
+    else:
+        compatible_migration(source)
     delimiter = "$cms_history_" + uuid.uuid4().hex + "$"
     if delimiter in source:
         raise UpdateError("invalid_migration_delimiter")
@@ -446,24 +516,246 @@ class Updater:
         raw = self.sql("SELECT coalesce(json_agg(json_build_object('version',version,'source',statements[1])),'[]'::json)::text FROM supabase_migrations.schema_migrations;")
         return {row["version"]: row["source"] for row in json.loads(raw)}
 
-    def plan_migrations(self, tree, manifest):
-        applied = self.current_history()
+    def migration_inventory(self, tree, manifest, applied, *, operator_reviewed=False):
+        """Review can permit exact new SQL, never reorder or rewrite history."""
         candidates = {item["version"]: item for item in manifest["migrations"]}
         if set(applied) - set(candidates):
             raise UpdateError("release_would_remove_applied_migration")
         pending = []
         for version in sorted(candidates):
             item = candidates[version]
-            source = (Path(tree) / item["path"]).read_text(encoding="utf-8")
+            # Do not translate CRLF: history and the approved digest bind bytes.
+            source = (Path(tree) / item["path"]).read_bytes().decode("utf-8")
             if version in applied:
                 if source != applied[version]:
                     raise UpdateError("applied_migration_source_drift")
             else:
                 if applied and version <= max(applied):
                     raise UpdateError("out_of_order_migration")
-                compatible_migration(source)
+                if operator_reviewed:
+                    reviewed_transaction(source)
+                else:
+                    compatible_migration(source)
                 pending.append((version, Path(item["path"]).name[15:-4], source))
         return pending
+
+    def plan_migrations(self, tree, manifest):
+        return self.migration_inventory(tree, manifest, self.current_history())
+
+    def reviewed_pending_inventory(self, tree, manifest, history):
+        """Report each pending source and why normal unattended policy rejects it."""
+        pending = self.migration_inventory(tree, manifest, history, operator_reviewed=True)
+        by_version = {item["version"]: item for item in manifest["migrations"]}
+        result = []
+        for version, _name, source in pending:
+            reason = None
+            try:
+                compatible_migration(source)
+            except UpdateError as error:
+                if str(error) != "migration_requires_operator_review":
+                    raise
+                reason = str(error)
+            result.append({"version": version, "path": by_version[version]["path"], "sha256": hashlib.sha256(source.encode()).hexdigest(), "reviewRequired": reason is not None, "reviewReason": reason})
+        return pending, result
+
+    def make_reviewed_migration_plan(self, archive, manifest, *, history=None, installed_commit=None, ttl_seconds=3600):
+        """Read verified bytes/history; never alter running services or data."""
+        validate_manifest(manifest)
+        if isinstance(ttl_seconds, bool) or not isinstance(ttl_seconds, int) or not 60 <= ttl_seconds <= REVIEWED_PLAN_MAX_TTL:
+            raise UpdateError("invalid_reviewed_plan_ttl")
+        installed_commit = installed_commit if installed_commit is not None else self.state.get("currentCommit")
+        if not SHA.fullmatch(str(installed_commit or "")) or installed_commit == manifest["commit"]:
+            raise UpdateError("reviewed_plan_requires_distinct_installed_commit")
+        history = self.current_history() if history is None else history
+        applied = history_inventory(history)
+        with tempfile.TemporaryDirectory(prefix="luminovia-reviewed-plan-") as directory:
+            unpack_verified(archive, manifest, directory)
+            _pending, inventory = self.reviewed_pending_inventory(directory, manifest, history)
+        if not inventory:
+            raise UpdateError("reviewed_plan_requires_pending_migrations")
+        stamp = dt.datetime.now(dt.timezone.utc)
+        return {"format": REVIEWED_PLAN_FORMAT, "id": str(uuid.uuid4()), "root": str(self.root), "repository": REPOSITORY, "branch": BRANCH,
+                "fromCommit": installed_commit, "targetCommit": manifest["commit"], "manifestSha256": canonical_digest(manifest), "archiveSha256": manifest["archiveSha256"],
+                "applied": applied, "historySha256": canonical_digest(applied), "pending": inventory,
+                "createdAt": stamp.isoformat(), "expiresAt": (stamp + dt.timedelta(seconds=ttl_seconds)).isoformat()}
+
+    def checked_reviewed_plan_path(self, path):
+        """Require a direct private root-owned file, with no writable ancestors."""
+        path = Path(path).absolute()
+        directory = self.control / "reviewed-migrations"
+        if path.parent != directory or not re.fullmatch(r"[a-zA-Z0-9_-][a-zA-Z0-9_.-]{0,150}\.json", path.name):
+            raise UpdateError("reviewed_plan_requires_private_updates_directory")
+        for parent in (directory, self.control, self.private, self.root):
+            info = parent.lstat()
+            if not stat.S_ISDIR(info.st_mode) or info.st_uid != REVIEWED_ROOT_UID or info.st_mode & 0o022:
+                raise UpdateError("unsafe_reviewed_plan_directory")
+        return path
+
+    def write_reviewed_migration_plan(self, path, plan):
+        """Create a reviewable file exclusively; never replace an existing grant."""
+        private_directory(self.control / "reviewed-migrations")
+        path = self.checked_reviewed_plan_path(path)
+        try:
+            descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        except OSError as error:
+            raise UpdateError("reviewed_plan_output_already_exists_or_unsafe") from error
+        with os.fdopen(descriptor, "w", encoding="utf8") as stream:
+            json.dump(plan, stream, sort_keys=True, indent=2, allow_nan=False)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        fsync_directory(path.parent)
+        fsync_directory(self.control)
+        return canonical_digest(plan)
+
+    def read_reviewed_migration_plan(self, path):
+        """Reject links, permissive modes, duplicate fields, expired/replayed grants."""
+        try:
+            path = self.checked_reviewed_plan_path(path)
+            descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+            with os.fdopen(descriptor, "r", encoding="utf8") as stream:
+                info = os.fstat(stream.fileno())
+                if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o600 or info.st_uid != REVIEWED_ROOT_UID or info.st_nlink != 1 or not 1 <= info.st_size <= 2 * 1024 * 1024:
+                    raise UpdateError("unsafe_reviewed_plan_file")
+                def unique_object(pairs):
+                    result = {}
+                    for key, value in pairs:
+                        if key in result:
+                            raise ValueError("duplicate key")
+                        result[key] = value
+                    return result
+                def finite_constant(_value):
+                    raise ValueError("nonfinite value")
+                plan = json.loads(stream.read(2 * 1024 * 1024 + 1), object_pairs_hook=unique_object, parse_constant=finite_constant)
+        except (OSError, ValueError, UnicodeError) as error:
+            raise UpdateError("unsafe_or_invalid_reviewed_plan") from error
+        fields = {"format", "id", "root", "repository", "branch", "fromCommit", "targetCommit", "manifestSha256", "archiveSha256", "applied", "historySha256", "pending", "createdAt", "expiresAt"}
+        try:
+            if not isinstance(plan, dict) or set(plan) != fields or plan["format"] != REVIEWED_PLAN_FORMAT or str(uuid.UUID(plan["id"])) != plan["id"]:
+                raise ValueError()
+        except (ValueError, TypeError, AttributeError) as error:
+            raise UpdateError("invalid_reviewed_plan_format") from error
+        try:
+            issued = dt.datetime.fromisoformat(plan["createdAt"])
+            expires = dt.datetime.fromisoformat(plan["expiresAt"])
+            current = dt.datetime.now(dt.timezone.utc)
+            if issued.tzinfo is None or expires.tzinfo is None or not 0 < (expires - issued).total_seconds() <= REVIEWED_PLAN_MAX_TTL or issued > current or current >= expires:
+                raise ValueError()
+        except (ValueError, TypeError) as error:
+            raise UpdateError("reviewed_plan_expired_or_invalid_time") from error
+        consumed = self.control / "reviewed-migrations" / "used" / (plan["id"] + ".json")
+        if consumed.exists() or consumed.is_symlink():
+            raise UpdateError("reviewed_plan_already_consumed")
+        return plan
+
+    def validate_reviewed_migration_plan(self, path, tree, manifest):
+        """Rebind the file to this live instance and the entire verified release."""
+        plan = self.read_reviewed_migration_plan(path)
+        if plan["root"] != str(self.root) or plan["repository"] != REPOSITORY or plan["branch"] != BRANCH:
+            raise UpdateError("reviewed_plan_target_instance_mismatch")
+        if plan["fromCommit"] != self.state.get("currentCommit") or not SHA.fullmatch(str(plan["fromCommit"])) or plan["targetCommit"] != manifest["commit"]:
+            raise UpdateError("reviewed_plan_commit_mismatch")
+        if plan["manifestSha256"] != canonical_digest(manifest) or plan["archiveSha256"] != manifest["archiveSha256"]:
+            raise UpdateError("reviewed_plan_manifest_mismatch")
+        history = self.current_history()
+        applied = history_inventory(history)
+        pending, inventory = self.reviewed_pending_inventory(tree, manifest, history)
+        if plan["applied"] != applied or plan["historySha256"] != canonical_digest(applied):
+            raise UpdateError("reviewed_plan_history_drift")
+        if not inventory or plan["pending"] != inventory:
+            raise UpdateError("reviewed_plan_pending_mismatch")
+        return plan, pending
+
+    def consume_reviewed_migration_plan(self, plan):
+        """Durably reserve the UUID before mutation, even if physical rollback runs."""
+        directory = self.control / "reviewed-migrations" / "used"
+        private_directory(directory)
+        path = directory / (plan["id"] + ".json")
+        value = {"format": "luminovia-consumed-migration-plan-v1", "id": plan["id"], "planSha256": canonical_digest(plan), "fromCommit": plan["fromCommit"], "targetCommit": plan["targetCommit"], "manifestSha256": plan["manifestSha256"], "historySha256": plan["historySha256"], "consumedAt": now()}
+        try:
+            descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        except OSError as error:
+            raise UpdateError("reviewed_plan_already_consumed_or_unsafe") from error
+        with os.fdopen(descriptor, "w", encoding="utf8") as stream:
+            json.dump(value, stream, sort_keys=True, indent=2)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        # Persist both the record and the `used` directory's parent entry before
+        # any SQL. Physical rollback only swaps data mounts, never these files.
+        fsync_directory(directory)
+        fsync_directory(directory.parent)
+        fsync_directory(self.control)
+        self.state["lastReviewedMigrationPlan"] = value
+        atomic_json(self.state_file, self.state)
+
+    def require_fresh_complete_backup(self, tree):
+        """Require the separate encrypted recovery set before entering downtime."""
+        path = Path(tree) / "deploy/hostinger/backups/complete_backup.py"
+        if not path.is_file() or path.is_symlink():
+            raise UpdateError("missing_verified_complete_backup_helper")
+        spec = importlib.util.spec_from_file_location("luminovia_reviewed_backup_" + digest(path), path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        if not module.CompleteBackup(root=self.root).fresh(max_age_hours=26):
+            raise UpdateError("reviewed_migration_requires_fresh_complete_backup")
+
+    def verify_reviewed_release_identity(self, manifest):
+        """Local bytes must equal the immutable, green, current-main release."""
+        candidate = self.candidate()
+        if candidate.get("status") != "candidate" or candidate.get("commit") != manifest["commit"]:
+            raise UpdateError("reviewed_release_requires_eligible_current_main")
+        private_directory(self.control / "downloads")
+        with tempfile.TemporaryDirectory(prefix="reviewed-identity-", dir=self.control / "downloads") as directory:
+            path = Path(directory) / "manifest.json"
+            self.download(candidate["assets"]["cms-release.json"], path, 4 * 1024 * 1024)
+            try:
+                published = json.loads(path.read_text(encoding="utf8"))
+                validate_manifest(published)
+            except (ValueError, UnicodeError) as error:
+                raise UpdateError("invalid_reviewed_published_manifest") from error
+            if canonical_digest(published) != canonical_digest(manifest):
+                raise UpdateError("reviewed_local_manifest_differs_from_release")
+
+    @contextlib.contextmanager
+    def reviewed_host_lock(self):
+        """Use the same host lock as backup/OS/systemd, retaining inherited locks."""
+        descriptor = None
+        inherited = False
+        try:
+            if MAINTENANCE_LOCK.parent.is_symlink() or not MAINTENANCE_LOCK.parent.is_dir():
+                raise UpdateError("unsafe_maintenance_lock_directory")
+            descriptor = os.open(MAINTENANCE_LOCK, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+            info = os.fstat(descriptor)
+            if not stat.S_ISREG(info.st_mode) or info.st_uid != REVIEWED_ROOT_UID or info.st_mode & 0o022 or info.st_nlink != 1:
+                raise UpdateError("unsafe_maintenance_lock")
+            for raw in os.listdir("/proc/self/fd"):
+                try:
+                    other = int(raw)
+                    if other == descriptor:
+                        continue
+                    candidate = os.fstat(other)
+                    if (candidate.st_dev, candidate.st_ino) == (info.st_dev, info.st_ino):
+                        details = Path("/proc/self/fdinfo") / raw
+                        held = details.read_text(encoding="ascii")
+                        if not any(line.startswith("lock:") and "FLOCK" in line and "WRITE" in line for line in held.splitlines()):
+                            continue
+                        fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        inherited = True
+                        break
+                except (OSError, ValueError):
+                    continue
+            if not inherited:
+                try:
+                    fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError as error:
+                    raise UpdateError("another_host_maintenance_running") from error
+            self._reviewed_global_lock_held = True
+            yield
+        finally:
+            self._reviewed_global_lock_held = False
+            if descriptor is not None:
+                os.close(descriptor)
 
     def rendered_images(self, tree):
         images = {}
@@ -739,8 +1031,10 @@ class Updater:
             except Exception as error:
                 raise UpdateError("static_release_health_failed") from error
 
-    def apply(self, archive, manifest):
+    def apply(self, archive, manifest, *, reviewed_migration_plan=None):
         validate_manifest(manifest)
+        if reviewed_migration_plan is not None and not getattr(self, "_reviewed_global_lock_held", False):
+            raise UpdateError("reviewed_migration_requires_host_maintenance_lock")
         commit = manifest["commit"]
         env = self.verify_public_build(manifest)
         stage_reserve = 2 * sum(item["size"] for item in manifest["files"]) + MAX_ARCHIVE + MIN_FREE
@@ -758,12 +1052,17 @@ class Updater:
         public_unblocked = False
         mode = "validation"
         changed = set()
+        reviewed = None
         old_target = os.readlink(self.www / "current") if (self.www / "current").is_symlink() else None
         if old_target and (PurePosixPath(old_target).is_absolute() or ".." in PurePosixPath(old_target).parts or not old_target.startswith("releases/")):
             raise UpdateError("unsafe_previous_release_target")
         try:
             unpack_verified(archive, manifest, stage)
-            pending = self.plan_migrations(stage, manifest)
+            if reviewed_migration_plan is not None:
+                reviewed, pending = self.validate_reviewed_migration_plan(reviewed_migration_plan, stage, manifest)
+                self.require_fresh_complete_backup(stage)
+            else:
+                pending = self.plan_migrations(stage, manifest)
             changed, controller_changed, runtime_files = self.release_changes(manifest)
             runtime_changed, database_changed = self.verify_runtime(stage, manifest)
             if (self.www / "current").exists() and not (self.www / "current").is_symlink():
@@ -789,6 +1088,17 @@ class Updater:
                 if database_changed:
                     self.state["lastPostgresPreflight"] = self.postgres_preflight(stage, manifest)
                     atomic_json(self.state_file, self.state)
+                if reviewed is not None:
+                    # Writers are stopped and the complete physical checkpoint
+                    # has been validated. Recheck live source history immediately
+                    # before consuming this exact, single-use authorisation.
+                    current_plan, current_pending = self.validate_reviewed_migration_plan(reviewed_migration_plan, stage, manifest)
+                    if canonical_digest(current_plan) != canonical_digest(reviewed) or current_pending != pending:
+                        raise UpdateError("reviewed_plan_changed_during_preflight")
+                    # Long backups may outlive a main promotion. Refuse a stale
+                    # candidate before spending this one-shot authorisation.
+                    self.verify_reviewed_release_identity(manifest)
+                    self.consume_reviewed_migration_plan(reviewed)
                 runtime_mutated = True
                 self.copy_runtime(stage, manifest, rollback, original)
                 # Reconcile both services that remained running while writers
@@ -797,7 +1107,7 @@ class Updater:
                 # Inspect actual catalog versions, not filesystem ICU guesses or image tags.
                 self.collation_guard(manifest)
                 for version, name, source in pending:
-                    self.sql(migration_sql(source, version, name))
+                    self.sql(migration_sql(source, version, name, operator_reviewed=reviewed is not None))
                 self.sql("NOTIFY pgrst, 'reload schema';")
                 self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *WRITERS])
                 self.activate_web(changed)
@@ -868,7 +1178,13 @@ class Updater:
             # The staged directory is unique and owned; application data are elsewhere.
             shutil.rmtree(stage, ignore_errors=True)
 
-    def once(self, *, package=None, manifest_path=None, retry_failed=False):
+    def once(self, *, package=None, manifest_path=None, retry_failed=False, reviewed_migration_plan=None):
+        if reviewed_migration_plan is not None:
+            if package is None or manifest_path is None:
+                raise UpdateError("reviewed_migration_requires_explicit_local_release")
+            if not getattr(self, "_reviewed_global_lock_held", False):
+                with self.reviewed_host_lock():
+                    return self.once(package=package, manifest_path=manifest_path, retry_failed=retry_failed, reviewed_migration_plan=reviewed_migration_plan)
         private_directory(self.control)
         lock = os.open(self.control / "updater.lock", os.O_WRONLY | os.O_CREAT, 0o600)
         try:
@@ -886,6 +1202,11 @@ class Updater:
             if self.maintenance.exists() and not (retry_failed and self.state.get("manualRecoveryRequired")):
                 return {"status": "maintenance_already_active"}
             if retry_failed:
+                if reviewed_migration_plan is not None:
+                    retry_manifest = json.loads(Path(manifest_path).read_text())
+                    validate_manifest(retry_manifest)
+                    if self.state.get("failedCommit") != retry_manifest["commit"]:
+                        raise UpdateError("reviewed_retry_requires_exact_failed_commit")
                 self.state["failedCommit"] = None
             elif self.state.get("nextNetworkRetryAt"):
                 try:
@@ -900,6 +1221,9 @@ class Updater:
                     return {"status": "current", "commit": manifest["commit"]}
                 if manifest["commit"] == self.state.get("failedCommit"):
                     return {"status": "failed_release_suppressed", "commit": manifest["commit"]}
+                if reviewed_migration_plan is not None:
+                    self.verify_reviewed_release_identity(manifest)
+                    return self.apply(Path(package), manifest, reviewed_migration_plan=reviewed_migration_plan)
                 return self.apply(Path(package), manifest)
             if not self.state.get("currentCommit") and self.state.get("bootstrapApproved") is not True:
                 return {"status": "not_initialized"}
@@ -945,16 +1269,42 @@ def main():
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--check", action="store_true", help="Read-only GitHub/current-release inspection")
     mode.add_argument("--once", action="store_true", help="Apply an eligible release once")
+    mode.add_argument("--plan-migrations", action="store_true", help="Read-only exact migration plan; does not authorise or apply it")
     parser.add_argument("--root", type=Path, default=Path("/opt/luminovia-portal"))
     parser.add_argument("--package", type=Path, help="Operator-approved local bootstrap/test package")
     parser.add_argument("--manifest", type=Path, help="External manifest for the local package")
     parser.add_argument("--retry-failed", action="store_true", help="Explicit operator retry of the failed SHA")
+    parser.add_argument("--reviewed-migration-plan", type=Path, help="Explicit operator-reviewed private one-shot plan; requires --once and local release")
+    parser.add_argument("--plan-output", type=Path, help="Create a new private root-owned plan file instead of printing it")
+    parser.add_argument("--history-file", type=Path, help="Read-only JSON version/source snapshot for offline plan construction")
+    parser.add_argument("--installed-commit", help="Installed SHA matching --history-file; apply rechecks live state")
+    parser.add_argument("--plan-ttl-seconds", type=int, help="Plan lifetime, 60–7200 seconds (default 3600)")
     arguments = parser.parse_args()
-    if bool(arguments.package) != bool(arguments.manifest) or (arguments.check and (arguments.package or arguments.retry_failed)):
-        parser.error("Local packages require --once --package and --manifest together")
+    if bool(arguments.package) != bool(arguments.manifest):
+        parser.error("Local packages require --package and --manifest together")
+    if arguments.check and (arguments.package or arguments.retry_failed or arguments.reviewed_migration_plan):
+        parser.error("--check cannot apply a local release or reviewed plan")
+    if arguments.plan_migrations:
+        if not arguments.package or arguments.retry_failed or arguments.reviewed_migration_plan:
+            parser.error("--plan-migrations requires a local release and cannot apply or retry")
+        if bool(arguments.history_file) != bool(arguments.installed_commit):
+            parser.error("Offline planning requires --history-file and --installed-commit together")
+    elif arguments.plan_output or arguments.history_file or arguments.installed_commit or arguments.plan_ttl_seconds is not None:
+        parser.error("Plan construction options require --plan-migrations")
+    if arguments.reviewed_migration_plan and (not arguments.once or not arguments.package):
+        parser.error("Reviewed application requires --once --package --manifest --reviewed-migration-plan")
     try:
         updater = Updater(arguments.root)
-        result = updater.candidate() if arguments.check else updater.once(package=arguments.package, manifest_path=arguments.manifest, retry_failed=arguments.retry_failed)
+        if arguments.plan_migrations:
+            manifest = json.loads(arguments.manifest.read_text(encoding="utf8"))
+            history = imported_history(arguments.history_file) if arguments.history_file else None
+            plan = updater.make_reviewed_migration_plan(arguments.package, manifest, history=history, installed_commit=arguments.installed_commit, ttl_seconds=arguments.plan_ttl_seconds if arguments.plan_ttl_seconds is not None else 3600)
+            plan_hash = updater.write_reviewed_migration_plan(arguments.plan_output, plan) if arguments.plan_output else canonical_digest(plan)
+            result = {"status": "migration_plan", "planSha256": plan_hash, "plan": plan}
+        elif arguments.check:
+            result = updater.candidate()
+        else:
+            result = updater.once(package=arguments.package, manifest_path=arguments.manifest, retry_failed=arguments.retry_failed, reviewed_migration_plan=arguments.reviewed_migration_plan)
         print(json.dumps(result, sort_keys=True))
         return 0
     except Exception as error:
