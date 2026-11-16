@@ -45,6 +45,7 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | announcements | p_search text, p_unacknowledged boolean, p_before_at timestamp with time zone, p_before_id uuid, p_limit integer | jsonb | Authenticated; resource/capability checks apply |
 | assignment_job_titles | p_job_ids uuid[] | jsonb | Authenticated; resource/capability checks apply |
 | attention_preferences | none | jsonb | Authenticated; resource/capability checks apply |
+| attest_qualification | p_user_id uuid, p_topic_id uuid, p_verified boolean, p_valid_until timestamp with time zone, p_evidence_id uuid, p_expected_version integer, p_request_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | cancel_client_request | p_request_id uuid | void | Authenticated; resource/capability checks apply |
 | cancel_job_assignment | p_claim_id uuid, p_reason text, p_request_id uuid | uuid | Authenticated; resource/capability checks apply |
 | chat_contacts | none | TABLE(id uuid, display_name text, roles text[]) | Authenticated; resource/capability checks apply |
@@ -93,6 +94,7 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | forum_thread | p_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | forum_threads_list | p_search text, p_category_id uuid, p_include_archived boolean | TABLE(id uuid, title text, category_id uuid, category_label_de text, category_label_en text, owner_id uuid, owner_name text, locked boolean, pinned boolean, archived boolean, accepted_post_id uuid, post_count bigint, subscribed boolean, created_at timestamp with time zone, updated_at timestamp with time zone) | Authenticated; resource/capability checks apply |
 | get_my_permissions | none | text[] | Authenticated; resource/capability checks apply |
+| global_calendar_events | p_from timestamp with time zone, p_to timestamp with time zone, p_manage boolean, p_search text, p_before_at timestamp with time zone, p_before_id uuid, p_limit integer | jsonb | Authenticated; resource/capability checks apply |
 | invoice_payments | p_invoice_id uuid | TABLE(id uuid, amount numeric, currency text, paid_at timestamp with time zone, reference text, recorded_by_name text, created_at timestamp with time zone, voided_at timestamp with time zone, void_reason text) | Authenticated; resource/capability checks apply |
 | invoice_records | p_all boolean | TABLE(id uuid, user_id uuid, user_name text, number text, issued_on date, due_on date, currency text, total_amount numeric, paid_amount numeric, status text, document_id uuid, document_version_id uuid, claim_ids uuid[], created_at timestamp with time zone, note text, paid_at timestamp with time zone, labels text[]) | Authenticated; resource/capability checks apply |
 | job_board | none | jsonb | Authenticated; resource/capability checks apply |
@@ -101,6 +103,7 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | job_detail | p_job_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | job_discovery | p_filters jsonb, p_cursor jsonb, p_limit integer | jsonb | Authenticated; resource/capability checks apply |
 | job_lifecycle | p_job_id uuid | jsonb | Authenticated; resource/capability checks apply |
+| job_picker | p_purpose text, p_search text, p_cursor jsonb, p_limit integer, p_selected_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | knowledge_access | none | jsonb | Authenticated; resource/capability checks apply |
 | knowledge_categories | p_kind text | TABLE(id uuid, kind text, slug text, label_de text, label_en text, archived boolean) | Authenticated; resource/capability checks apply |
 | lecturer_reviews | p_user_id uuid | jsonb | Authenticated; resource/capability checks apply |
@@ -108,6 +111,7 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | manage_chat_member | p_room_id uuid, p_user_id uuid, p_remove boolean | void | Authenticated; resource/capability checks apply |
 | manage_client_organisation | p_user_id uuid, p_organisation_id uuid, p_remove boolean | void | Authenticated; resource/capability checks apply |
 | manage_course_enrolment | p_course_run_id uuid, p_user_id uuid, p_status text | void | Authenticated; resource/capability checks apply |
+| manage_global_event | p_id uuid, p_action text, p_expected_version integer, p_request_id uuid, p_payload jsonb | jsonb | Authenticated; resource/capability checks apply |
 | manage_job_offer | p_job_id uuid, p_action text, p_expected_version integer, p_request_id uuid, p_payload jsonb | uuid | Authenticated; resource/capability checks apply |
 | mark_chat_read | p_room_id uuid, p_message_id uuid, p_muted boolean | void | Authenticated; resource/capability checks apply |
 | mark_notifications | p_ids uuid[], p_all_before timestamp with time zone, p_read boolean | integer | Authenticated; resource/capability checks apply |
@@ -118,11 +122,15 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | notification_inbox | p_unread_only boolean, p_before_at timestamp with time zone, p_before_id uuid, p_limit integer | jsonb | Authenticated; resource/capability checks apply |
 | notification_preferences | none | jsonb | Authenticated; resource/capability checks apply |
 | own_profile_details | none | jsonb | Authenticated; resource/capability checks apply |
+| own_qualification_certificates | p_search text, p_before_at timestamp with time zone, p_before_id uuid, p_limit integer | jsonb | Authenticated; resource/capability checks apply |
 | people_directory | p_search text, p_label text, p_topic_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | person_profile | p_user_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | profile_avatar | p_user_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | profile_courses | p_user_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | publish_client_request | p_request_id uuid, p_platform_percent numeric, p_terms text, p_requires_contract boolean, p_claim_deadline timestamp with time zone | uuid | Authenticated; resource/capability checks apply |
+| qualification_evidence_access | p_evidence_id uuid | jsonb | Authenticated; resource/capability checks apply |
+| qualification_history | p_user_id uuid, p_topic_id uuid, p_before_at timestamp with time zone, p_before_id uuid, p_limit integer | jsonb | Authenticated; resource/capability checks apply |
+| qualification_review | p_user_id uuid, p_topic_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | react_to_message | p_message_id uuid, p_emoji text, p_remove boolean | void | Authenticated; resource/capability checks apply |
 | record_invoice_payment | p_invoice_id uuid, p_amount numeric, p_paid_at timestamp with time zone, p_reference text, p_client_id uuid | uuid | Authenticated; resource/capability checks apply |
 | refresh_my_notifications | none | integer | Authenticated; resource/capability checks apply |
@@ -150,6 +158,7 @@ Profiles/reviews/labels/avatars, courses/enrolment/CBW provenance, resource comm
 | save_organisation | p_id uuid, p_payload jsonb | uuid | Authenticated; resource/capability checks apply |
 | save_organisation_contact | p_id uuid, p_organisation_id uuid, p_payload jsonb | uuid | Authenticated; resource/capability checks apply |
 | save_profile_details | p_payload jsonb | void | Authenticated; resource/capability checks apply |
+| save_qualification_evidence | p_topic_id uuid, p_version_id uuid, p_expected_version integer, p_request_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | save_taxonomy_topic | p_id uuid, p_payload jsonb, p_version integer | uuid | Authenticated; resource/capability checks apply |
 | save_wiki_page | p_id uuid, p_title text, p_locale text, p_category_id uuid, p_content jsonb, p_status text, p_expected_version integer | jsonb | Authenticated; resource/capability checks apply |
 | saved_job_views | none | jsonb | Authenticated; resource/capability checks apply |

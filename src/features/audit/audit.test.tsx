@@ -79,6 +79,47 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 describe("connected administration audit reader", () => {
+  it("localises newly reviewed announcement and calendar filters without losing the selected action", async () => {
+    state.rpc.mockReturnValue(
+      response({
+        ...data,
+        actions: ["announcement.published", "calendar.global_publish"],
+      }),
+    );
+    mount();
+    expect(
+      await screen.findByRole("option", {
+        name: "Ankündigungen · announcement.published",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", {
+        name: "Globale Termine · calendar.global_publish",
+      }),
+    ).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.selectOptions(
+      screen.getByLabelText("Aktion"),
+      "calendar.global_publish",
+    );
+    await user.click(screen.getByRole("button", { name: "Filter anwenden" }));
+    await waitFor(() => expect(state.rpc).toHaveBeenCalledTimes(2));
+    await act(() => i18n.changeLanguage("en"));
+    expect(screen.getByLabelText("Action")).toHaveValue(
+      "calendar.global_publish",
+    );
+    expect(
+      screen.getByRole("option", {
+        name: "Global events · calendar.global_publish",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", {
+        name: "Announcements · announcement.published",
+      }),
+    ).toBeInTheDocument();
+    expect(state.rpc).toHaveBeenCalledTimes(2);
+  });
   it("loads safe metadata as literal text and exposes no editing controls", async () => {
     const { container } = mount();
     expect(await screen.findByText(event.actor_name)).toBeInTheDocument();

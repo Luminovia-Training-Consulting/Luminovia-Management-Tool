@@ -18,6 +18,10 @@ vi.mock("../../lib/supabase", () => ({
   }),
 }));
 vi.mock("../../lib/queries", () => ({
+  permissionsQuery: () => ({
+    queryKey: ["permissions"],
+    queryFn: async () => [],
+  }),
   profileQuery: () => ({
     queryKey: ["profile"],
     queryFn: async () => ({ time_zone: "Europe/Berlin" }),
@@ -55,10 +59,22 @@ vi.mock("../operations/data", () => ({
 vi.mock("@fullcalendar/react", () => ({
   default: ({
     events,
+    datesSet,
   }: {
     events: { id: string; title: string; url?: string }[];
+    datesSet?: (value: { start: Date; end: Date }) => void;
   }) => (
     <div>
+      <button
+        onClick={() =>
+          datesSet?.({
+            start: new Date("2060-03-01T00:00Z"),
+            end: new Date("2060-04-10T00:00Z"),
+          })
+        }
+      >
+        Change visible range
+      </button>
       {events.map((event) => (
         <a key={event.id} href={event.url}>
           {event.title}
@@ -73,6 +89,13 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 it("global published session links open the precise authorised course detail rather than an unselected catalogue", async () => {
+  state.rpc.mockImplementation(() => {
+    const response = Promise.resolve({
+      data: { items: [], has_more: false, next_cursor: null },
+      error: null,
+    });
+    return Object.assign(response, { abortSignal: () => response });
+  });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -90,7 +113,11 @@ it("global published session links open the precise authorised course detail rat
   expect(
     await screen.findByRole("link", { name: "Published course" }),
   ).toHaveAttribute("href", "/courses?run=specific-course");
-  expect(state.rpc).not.toHaveBeenCalled();
+  expect(state.rpc).toHaveBeenCalledTimes(1);
+  expect(state.rpc).toHaveBeenCalledWith(
+    "global_calendar_events",
+    expect.objectContaining({ p_manage: false, p_limit: 50 }),
+  );
 });
 it("loads titles only for own confirmed assignment IDs rather than the entire marketplace", async () => {
   const jobID = "d7000000-0000-4000-8000-000000000001";
@@ -131,4 +158,48 @@ it("loads titles only for own confirmed assignment IDs rather than the entire ma
   expect(state.rpc).toHaveBeenCalledWith("assignment_job_titles", {
     p_job_ids: [jobID],
   });
+});
+
+it("queries only the visible global range on navigation, without remounting or crawling other months", async () => {
+  state.rpc.mockImplementation(() => {
+    const result = Promise.resolve({
+      data: { items: [], has_more: false, next_cursor: null },
+      error: null,
+    });
+    return Object.assign(result, { abortSignal: () => result });
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  const navigate = await screen.findByRole("button", {
+    name: "Change visible range",
+  });
+  expect(state.rpc).not.toHaveBeenCalled();
+  await user.click(
+    await screen.findByRole("button", { name: "Globale Termine" }),
+  );
+  await screen.findByText("0 Termine geladen");
+  expect(state.rpc).toHaveBeenCalledTimes(1);
+  await user.click(navigate);
+  await screen.findByText("0 Termine geladen");
+  expect(state.rpc).toHaveBeenCalledTimes(2);
+  expect(screen.getByRole("button", { name: "Change visible range" })).toBe(
+    navigate,
+  );
+  expect(state.rpc).toHaveBeenLastCalledWith(
+    "global_calendar_events",
+    expect.objectContaining({
+      p_from: "2060-03-01T00:00:00.000Z",
+      p_to: "2060-04-10T00:00:00.000Z",
+      p_limit: 50,
+    }),
+  );
 });

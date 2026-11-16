@@ -92,12 +92,13 @@ Marktplatz, um alte Termine zu beschriften. Fremde Titel oder private Kalender-
 einträge werden dadurch auch für Administratoren nicht geöffnet. Globale Kurse
 und private Terminbearbeitung bleiben eigene bestehende Abläufe.
 
-Das alte `jobsQuery` bleibt als kompatible Schnittstelle für die vorhandenen
-Datei-/Chat-Auftragsauswahlen bestehen; diese wurden nicht zu einer heimlichen
-Vollkatalogschleife umgebaut. Ihre vollständige paginierte Auswahl ist eine
-separate Integration. Das administrative M6-Kanban bleibt ausdrücklich auf die
-neuesten 500 Angebote begrenzt und weist darauf hin; ältere erlaubte Angebote
-sind über Suche und Detailansicht bearbeitbar.
+Die M8-Quelle ersetzt die bisherigen Datei-/Chat-Auftragsauswahlen durch eine
+[eigene zweckgebundene Suche mit Seitennavigation](JOB_PICKERS.md). Sie verwendet
+jeweils die tatsächliche Upload- bzw. Kurschat-Berechtigung und lädt keine
+vollständigen Marktplatz-Datensätze. Ihre native M8-Abnahme bleibt separat
+nachzuweisen. Das administrative M6-Kanban bleibt ausdrücklich auf die neuesten
+500 Angebote begrenzt und weist darauf hin; ältere erlaubte Angebote sind über
+Suche und Detailansicht bearbeitbar.
 
 ## API und Datenbank
 

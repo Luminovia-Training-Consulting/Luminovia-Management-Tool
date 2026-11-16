@@ -1,13 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "./supabase";
-import type {
-  Job,
-  Claim,
-  Topic,
-  Profile,
-  Expertise,
-  PersonalEvent,
-} from "./types";
+import type { Claim, Topic, Profile, Expertise, PersonalEvent } from "./types";
 export const profileQuery = (id: string) =>
   queryOptions({
     queryKey: ["profile", id],
@@ -53,17 +46,6 @@ export const expertiseQuery = (id: string) =>
       return data as Expertise[];
     },
   });
-export const jobsQuery = queryOptions({
-  queryKey: ["jobs"],
-  queryFn: async () => {
-    const { data, error } = await db()
-      .from("jobs")
-      .select("*,job_sessions(*),job_requirements(topic_id)")
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    return data as Job[];
-  },
-});
 export const claimsQuery = (id: string) =>
   queryOptions({
     queryKey: ["claims", id],

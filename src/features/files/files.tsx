@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
 import { db } from "../../lib/supabase";
-import { jobsQuery, permissionsQuery } from "../../lib/queries";
+import { permissionsQuery } from "../../lib/queries";
 import { dateTime } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
@@ -37,6 +37,7 @@ import {
 import "./i18n";
 import "./files.css";
 import { DocumentExplorer, DocumentOrganiser } from "./discovery";
+import { JobPicker } from "../jobs/picker";
 function fileError(error: unknown) {
   const code = error instanceof Error ? error.message : "";
   return [
@@ -571,13 +572,6 @@ export function FilesPage() {
   const [kind, setKind] = useState("material");
   const [scope, setScope] = useState<UploadContext["scope"]>("personal");
   const [job, setJob] = useState("");
-  const jobs = useQuery({
-    ...jobsQuery,
-    enabled:
-      open &&
-      scope !== "personal" &&
-      Boolean(permissions.data?.includes("jobs.manage")),
-  });
   return (
     <>
       <PageHeading
@@ -632,32 +626,33 @@ export function FilesPage() {
               )}
             </select>
           </Field>
-        ) : (
-          <Field id="upload-job" label={t("file")}>
-            <select
-              id="upload-job"
-              value={job}
-              onChange={(e) => setJob(e.target.value)}
-            >
-              <option value="">—</option>
-              {jobs.data?.map((j) => (
-                <option value={j.id} key={j.id}>
-                  {j.title}
-                </option>
-              ))}
-            </select>
-          </Field>
-        )}
-        {(scope === "personal" || job) && (
+        ) : null}
+        {scope === "personal" ? (
           <FileUpload
-            key={`${scope}:${kind}:${job}`}
-            context={{
-              scope,
-              kind: scope === "personal" ? kind : "material",
-              jobId: scope === "personal" ? undefined : job,
-            }}
+            key={`${scope}:${kind}`}
+            context={{ scope, kind }}
             onDone={() => setOpen(false)}
           />
+        ) : permissions.data?.includes("jobs.manage") ? (
+          <JobPicker
+            key={`${session!.user.id}:${scope}`}
+            actor={session!.user.id}
+            purpose="job_attachment"
+            value={job}
+            onChange={setJob}
+          >
+            {(selected) =>
+              selected && (
+                <FileUpload
+                  key={`${scope}:${selected.id}`}
+                  context={{ scope, kind: "material", jobId: selected.id }}
+                  onDone={() => setOpen(false)}
+                />
+              )
+            }
+          </JobPicker>
+        ) : (
+          <Notice kind="error">{t("jobPicker:denied")}</Notice>
         )}
       </Dialog>
     </>

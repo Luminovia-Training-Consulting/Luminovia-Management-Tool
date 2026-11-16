@@ -1,3 +1,4 @@
+import { OwnQualificationEvidence } from "../qualifications/evidence";
 import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
 import { AvatarEditor } from "./avatar";
@@ -207,6 +208,11 @@ export function ProfilePage() {
       </div>
       <OwnProfileDetails />
       <ProfileEvidence ownerId={session!.user.id} />
+      <OwnQualificationEvidence
+        topics={topics.data.filter((topic) =>
+          expertise.data.some((value) => value.topic_id === topic.id),
+        )}
+      />
       <datalist id="time-zones">
         <option>Europe/Berlin</option>
         <option>Australia/Brisbane</option>
