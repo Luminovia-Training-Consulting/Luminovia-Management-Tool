@@ -104,9 +104,9 @@ jobs:
     # A broken scope job must fail this required gate instead of skipping it.
     if: always() && !cancelled()
     runs-on: ubuntu-latest
-    # The complete gate covers the released migrations and expanded native/browser
-    # suite. Individual request, test and stage deadlines remain unchanged.
-    timeout-minutes: 40
+    # Full PR17 acceptance reached browsers after 31m on run43858966704.
+    # Retain room for the complete suite; individual test deadlines stay fixed.
+    timeout-minutes: 60
     steps:
       - name: Require a successful recognized scope
         env:

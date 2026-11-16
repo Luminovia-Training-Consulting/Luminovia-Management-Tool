@@ -6,6 +6,7 @@
 import { JobPricingPanel } from "../commercial/pricing";
 import { JobLifecyclePanel } from "./lifecycle";
 import { JobBriefing } from "./briefing";
+import { JobSubstitutionPanel, JobWaitlist } from "./lifecycle-extra";
 import { refreshJobState } from "./lifecycle-api";
 import { JobDiscovery } from "./discovery";
 import { jobDetailQuery } from "./discovery-api";
@@ -91,8 +92,20 @@ export function JobDetail() {
     },
   });
   if (jobs.isPending) return <Loading />;
-  if (jobs.isError) return <ErrorState retry={() => void jobs.refetch()} />;
-  if (!job)
+  // Filled offers can deny general detail while the separate, reduced
+  // waitlist RPC still permits interest. Only the server's access-denied code
+  // takes this path; transport, validation and server faults retain retry UI.
+  // Check the denial even when Query retains previously authorised job data.
+  const detailDenied = Boolean(
+    jobs.isError &&
+    jobs.error &&
+    typeof jobs.error === "object" &&
+    "code" in jobs.error &&
+    jobs.error.code === "42501",
+  );
+  if (jobs.isError && !detailDenied)
+    return <ErrorState retry={() => void jobs.refetch()} />;
+  if (detailDenied || !job)
     return (
       <>
         <BackLink />
@@ -103,6 +116,7 @@ export function JobDetail() {
               : "claim_unavailable",
           )}
         </Notice>
+        {id && <JobWaitlist jobId={id} />}
       </>
     );
   const zone = profile.data?.time_zone ?? job.time_zone;
@@ -137,6 +151,8 @@ export function JobDetail() {
         <JobPricingPanel job={job} />
       )}
       <JobLifecyclePanel job={job} />
+      <JobWaitlist jobId={job.id} />
+      <JobSubstitutionPanel jobId={job.id} />
       <div className="detail-layout">
         <div>
           <section className="panel">
