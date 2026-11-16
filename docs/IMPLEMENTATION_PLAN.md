@@ -1,5 +1,17 @@
 # Persistent implementation plan
 
+## Accepted Main34 CI integration with the still-unmerged PR17 candidate
+
+Actual accepted main is now `c5281002c2ea1102abe91a71d497ceeea87341f4` (PR34). This local merge applies its 13 CI, documentation and testing-file changes to signed PR24 candidate `d96ea21`; Main34 changes no application or SQL source. Frozen PR17 source `dd646f91ece7eb136f776597d04e67b27bf72b60` remains an unmerged candidate. The inventory stays at 68 SQL files, including the 36 published main migrations and the complete unchanged 62-file candidate prefix. Current PR24 additions retain the two pending notification-resolver ACL corrections and the test-only historical contract ceilings.
+
+- [x] Preserve both complete product and feature ledgers, historical failures and successes, the four operational modules, current governance and manual-only publication controls while reconciling the accepted CI documentation.
+- [x] Record the pre-Main34 candidate `d96ea21` checks: 674 frontend cases, 110 runtime cases and the final 10 relevant SQL suites pass. The generated API reference remains owned by its actual 68-file replay; it is not overwritten by this documentation merge.
+- [x] Retain conservative source-derived docs/standard/full CI selection. Unknown or sensitive paths and uncertain Git context select full, as does every main/manual invocation; required jobs independently reject invalid scope. All 15 required contexts and the outer 60-minute full-profile verify budget remain intact.
+- [ ] Bind the candidate to the actual accepted PR17 main tree after its real merge, preserving every published SQL byte and rechecking the remaining version order.
+- [ ] Complete current combined local/browser/native acceptance after PR35 cleanup and the legitimate PR24 QA reservation. Observe all 15 successful exact-head checks and signed history before the individual PR24 merge, then repeat for PR25.
+
+This PR changes backend, private-resource and test infrastructure, so its final acceptance requires the full profile. Faster evidence for a documentation-only or standard PR is not substituted. The PR17 owner’s separately prepared 30-minute browser-only aggregate budget remains candidate work; the outer full-profile budget stays 60 minutes. Neither a timeout adjustment nor earlier scoped passes establish combined browser/native acceptance. Earlier sections below retain their named historical states, including the now-completed PR34 delivery tasks.
+
 ## Local PR17 and PR24 candidate integration — accepted main still pending
 
 The coordinator explicitly authorised local candidate integration while the actual delivery order remains **PR17 → PR24 → PR25**. This preparation combines PR24 checkpoint `d4e2954` with frozen PR17 source `dd646f91ece7eb136f776597d04e67b27bf72b60`. Accepted main remains `c0622a7`. The local inventory is 68 SQL files: the 62 byte-identical PR17 candidate sources, including 36 already released main migrations, followed by six CLI-reversioned PR24 bodies. This source preparation does not claim PR17 is merged or that the combined candidate has passed its complete final acceptance.
@@ -77,6 +89,30 @@ The exact additional [implementation prompt](OPERATIONS_EXTENSION_PROMPT.txt) is
 - [ ] Verify any separately authorised installation from actual state. Local development/tests are now the default; the separate workflow owner controls publication switches. No production/public Website/DNS/real-mail/purchase action is implied.
 
 Initial SQL evidence: readiness16, delivery12, replacement13, support12groups. Whole-source257tests and unchanged coverage floors pass; TypeScript/ESLint pass. The canonical complete command returned exit1 before startup because another checkout holds shared QA ownership; this is not a full integration pass.
+
+## Safe development-speed improvements — explicit continuation
+
+- [x] Observe signed608687f/PR34 Portal43855915270 success in11m36s (approximately59%less than28m),351actual SQL groups and every required context; fix missing metadata labels and observe green43856170205.
+- [x] Implement two separate pinned networkless SQL workers with exhaustive partition, unchanged real races/durability, bounded cancellation/cleanup and actual per-suite timing reports; disable JIT only in the disposable PR fixture.
+- [x] Add conservative actual-merge docs/standard/full selection, full sensitive/unknown/main/manual acceptance, early independent jobs and required-gate preflights that fail on scope errors or fast non-PR profiles.
+- [x] Preserve source/rules/dependencies/migrations, all15required statuses, coverage/security/release requirements; make preview evidence profile explicit and reject missing CLI profile.
+- [x] Pass26focused local scope/worker/routing/preview/governance cases and scoped lint/format/actionlint; record local subprocess/Docker limitations and independent read-only review.
+- [ ] Publish final signed source, verify exact remote bytes, pass actual SQL-worker plus full application/native/security/package CI and measure the new SQL duration.
+- [ ] Perform the expressly authorised protected PR34 merge only when every final-current-head check passes; observe main acceptance separately without dispatching a release.
+
+This continuation preserves the complete remaining product scope and prior source-bound evidence below.
+
+## Faster PR CI — 16 November 2026
+
+- [x] Measure actual successful baseline: approximately28minutes, mostly21-minute application plus6-minute serial native rehearsal.
+- [x] Keep quality/coverage/security/metadata contexts; add bounded runtime/Edge/audit and one pinned isolated PostgreSQL suite on every PR, without repeated frontend quality/unit/build commands.
+- [x] Preserve all15required context names, preview success prerequisites, immutable SQL/dependencies and exact-main manual release gates; run unchanged complete application/native main/manual suites in parallel.
+- [x] Document PR SQL/Auth-stub limitations and package evidence scope; pass six runner orchestration, three routing/release-policy and four maintenance/governance checks, scoped lint/format and actionlint.
+- [ ] Publish the prepared branch changes after repository write access or browser file upload is available; connector403 and shell DNS restrictions currently block publication. No extension permission was changed.
+- [ ] Observe exact-head GitHub runtime/Edge/PostgreSQL/image startup and security/coverage/package results, measure actual optimized duration and merge only after every current required check succeeds.
+- [ ] Observe a complete main/manual application/native run before claiming that parallel full acceptance passed; no publication is requested.
+
+All remaining product and operational scope below is preserved. Local Docker and subprocess execution are restricted; mocked routing passes do not replace the pending native evidence.
 
 ## English quote/discovery documentation — released PR10 continuation
 
