@@ -1,5 +1,27 @@
 # QA evidence — 2026-11-16
 
+## Released discovery English documentation — current-source verification
+
+PR #29 now follows accepted main `1de544d` and its 36 released migrations, including actual paginated/actor-priced discovery. Earlier head 3ed9a24 passed all 15 required checks against e88 main (Portal 43831170474/Security 43831170707), including 92 business browsers, 2 built-PWA cases and native 27 migrations/20 API suites with retained data/cleanup. That is a source-specific historical pass, not current-base acceptance after PR10.
+
+Fresh `./portal check` exits 0 with type/lint/source+GitHub-format/compiler gates, **515/515 cases across 65 files**, configured floors unchanged/met (S65.42/B59.94/F56.61/L67.52) and synthetic-public-config build. The PWA has 66 public precache entries / 2798.90 KiB. All **102/102 runtime cases**, **20/20 focused documentation/heading/privacy/catalogue/metadata cases**, technical-guide formatting and diff checks pass. These are source/mock/build checks; this documentation pass does not invent a new local native Auth/SQL/browser result.
+
+All runtime/API/SQL/dependency/workflow bytes and the complete actual-main ledgers remain unchanged; only six English documentation files differ. All 36 SQL source files preserve their identities. Final actual Auth/SQL/browser/retained-image and all 15 current-source check outcomes plus the assigned queue slot govern the actual merge in the live [PR #29](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/29). No publication is dispatched.
+
+## Historical e88 English quote documentation — local verification
+
+[PR #29](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/29) now preserves accepted main `e88df84`, including the completed local-first/English/customer-neutral deliveries and all 27 migration files. Only five documentation files differ. Fresh `./portal check` exits 0: typecheck, lint, source/GitHub formatting, source connectivity, **254/254 frontend cases in 52 files**, unchanged coverage floors (S51.15/B46.15/F41.61/L52.96) and synthetic-public-config build. The built PWA has 63 public precache entries / 2707.70 KiB. All **98/98 runtime cases** pass, including delivered documentation/heading/privacy/catalogue/metadata guards. Technical-guide formatting and diff checks pass.
+
+All runtime, dependency, workflow, SQL and generated API bytes match that accepted main. Its complete plan/work-log/QA bodies are preserved verbatim. The older 254/87 case figures below remain their own checkpoints. Complete actual Auth/SQL/browser/retained-image and all 15 current-head checks are separate required evidence in the live PR. Draft status follows the active delivery queue; no release/deployment is dispatched.
+
+## Historical English role-pricing clarification — local checkpoints
+
+The documentation branch starts at actual main `0a6002a` with 26 released migrations. `npx --no-install vitest run src/features/jobs/jobs.test.tsx src/features/jobs/lifecycle.test.tsx src/features/commercial/compensation-policy.test.tsx src/features/accounts/accounts.test.tsx` passed **23/23 tests in four files**. `node --test scripts/runtime-documentation.test.mjs scripts/runtime-pr-metadata.test.mjs` passed **12/12**. These existing component fixtures validate their mocked boundaries; the text review separately followed the actual current SQL, quote DTOs, request and budget code. No explicit zero-price component case or new native SQL/API/browser result is invented.
+
+After integrating actual main `319ab69`, fresh `npm run test:coverage` exits 0 with **254/254 cases across 52 files** and S51.15/B46.15/F41.61/L52.96%, meeting the configured floors. `node --test scripts/runtime-*.test.mjs` exits 0 with **87/87**; the focused documentation/metadata combination remains **12/12**, and both changed-guide file/heading probes pass. No application, migration or generated API byte differs from that main. [PR #29](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/29) owns the eventual complete exact-head acceptance; local source/mock results do not replace native gates.
+
+No product source, dependency, workflow or SQL migration changes belong to the increment. Complete exact-head CI, actual selfhost retained-data checks and all 15 required merge outcomes remain separate gates. The earlier extension failures and milestone counts below describe their recorded revisions, not a failure or a fresh full pass of this documentation-only source.
+
 ## PR10 final-CI archive race
 
 CI43823638639 on0b615a7 failed111/112application browsers at mobile file discovery's final zero-filename assertion after archive confirmation. Earlier SQL/API/restart stages passed; build/PWA/native/preview acceptance was not reached. The new held-initial-response component regression reproduces the row returning after server acknowledgement. Explicit cancellation before list invalidation corrects that product race; all51focused cases and515frontend cases/coverage plus the actual local source/build command pass. The browser fixture also awaits the applied filter and exact archive RPC acknowledgement, without changing the final deletion assertion, retries or timeouts. New complete exact-head CI remains mandatory. Earlier eee73e4 local/CI/native acceptance is retained as historical evidence only.
