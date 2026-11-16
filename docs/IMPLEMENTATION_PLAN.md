@@ -1,5 +1,14 @@
 # Persistent implementation plan
 
+## Current Main36 aggregate acceptance guard
+
+- [x] Complete actual Main36 integration (`97dba73`) and explicit browser job/step binding (`4b1a541`) with system/native evidence on the same canonical CI suite/run/head/attempt. Keep the native fifteen-context policy unchanged.
+- [x] Reproduce missing/skipped browser evidence against actual old `694cc4e` apply logic, then prove corrected refusal with zero candidate writes; preserve valid same-run earlier attempts and independent source-review requirements.
+- [x] Enforce Ready/full in all three shell preflights. Correct the imported positive Draft fixture without relaxing Ready/unknown-state rejection; pass all 318 runtime/maintenance cases, full ESLint, actionlint, formatting/documentation and independent combined review.
+- [ ] Observe fresh exact-head/current-base quality/security/metadata/package checks plus actual complete system, browser and native execution after publication. Old partial/source-bound results are not substituted.
+- [ ] Follow the assigned Main/shared-QA reservation, preserve mutable queue-managed readiness and reconcile the pending user review-policy decision without silently changing repository settings. Integrate only actually accepted subsequent Main.
+- [ ] Complete permitted delivery, then observe trusted-Main controller operation, an actual Ready-event full run and a genuinely eligible native App merge separately. Preserve the complete remaining product and production acceptance scope below.
+
 ## Accepted Main36 phase integration — combined gates pending
 
 - [x] Preserve accepted Main36 `7fbdb956a513ca8eec3d0f2404adc213c656af1f`, its separate full-PR system/browser phases, both complete historical ledgers and Draft-only fast/Ready-full routing. Production React/Edge and all 36 released SQL sources remain unchanged.

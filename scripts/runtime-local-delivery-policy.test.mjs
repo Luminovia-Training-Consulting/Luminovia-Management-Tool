@@ -485,7 +485,7 @@ test("preview shell preflight rejects every failed skipped canceled or missing p
       assert.equal(execute({ [name]: status }), false, `${name}/${status}`);
 });
 
-test("browser scope preflight accepts only an exact successful PR profile", () => {
+test("browser scope preflight accepts a fast successful PR profile only with explicit Draft inputs", () => {
   const preflight = workflow("ci").jobs["verify-browser"].steps[0].run;
   for (const [event, profile, scopeResult, allowed] of [
     ["pull_request", "docs", "success", true],
@@ -508,6 +508,8 @@ test("browser scope preflight accepts only an exact successful PR profile", () =
           EVENT_NAME: event,
           PROFILE: profile,
           SCOPE_RESULT: scopeResult,
+          PR_DRAFT: "true",
+          PR_ACTION: "synchronize",
         },
         timeout: 1000,
         encoding: "utf8",

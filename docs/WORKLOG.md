@@ -1,5 +1,13 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — complete local Main36 phase binding
+
+Signed merge `97dba73` preserves actually accepted Main36 and all prior ledgers. Controller follow-up `4b1a541` additionally requires `Isolated browser acceptance` and its successful `Complete isolated desktop, mobile and built-PWA acceptance` step in the same canonical CI suite/run/head/attempt. Native rule requirements remain exactly fifteen; this browser check is additional execution evidence. Actual old `694cc4e` simulated apply accepts missing browser evidence or a green job with a skipped browser step; the corrected source rejects both with zero candidate writes. No real App merge or network credential is used by those fixtures.
+
+All three maintained shell preflights reject fast Ready/unknown-Draft decisions. Main36's imported browser-positive fixture initially omitted the new Draft fields and failed; supplying its genuine Draft inputs fixes that fixture while the separate Ready/missing-Draft rejection cases remain enforced. All 318 combined runtime/maintenance cases then pass with bounded local concurrency, together with repository-wide ESLint, actionlint and documentation/format checks. Independent combined-source review finds no remaining concrete binding/split/overblock issue. The default complete runner and accepted parallel system/browser/native command bodies remain unchanged, as do all 36 SQL and production React/Edge bytes.
+
+Fresh exact-head/current-base GitHub acceptance remains required after publication. A partial phase does not certify complete application acceptance, and no post-delivery Ready-event, trusted-Main controller or native App merge is inferred. Earlier 304/90 and exact `7daaa7b` results retain their own source boundaries. Readiness is queue-managed; the review-policy clarification and assigned Main slot remain pending without a server-setting change or new shared-PC QA run.
+
 ## 16 November 2026 — accepted Main36 phase integration; fresh acceptance pending
 
 Actual Main36 `7fbdb956a513ca8eec3d0f2404adc213c656af1f` merged at 12:56:43 UTC. This local integration preserves its parallel full-PR system/browser architecture together with the prepared Draft-only fast/Ready-full routing, dated review-policy distinction and both complete historical ledgers. Production React/Edge source and all 36 released SQL blobs match that accepted Main; no business migration or production change is introduced here.
