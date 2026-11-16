@@ -12,7 +12,7 @@ Current user priority: verify real connected user functions and repair missing b
 - [x] Implement discovered-versus-executed browser enforcement, zero skipped/flaky/retried cases, separate application/PWA reports and source-bound stage evidence. Actual exit-zero-skipped/focused-suite negative probe passes.
 - [x] Complete fresh frozen `./portal test` on signed b93b400:run3346a7e6,actual exit0,68passed stages,234SQL/all18APIs/78application+2PWA,zero skipped/retried browser cases and owned cleanup. [Actual results](QA_RESULTS.md).
 - [x] Push signed reviewable source as draft PR12, preserving concurrent independent product changes.
-- [ ] Observe complete exact-source CI/native compatibility and reduced artifact, then record final remote acceptance. All6quality/coverage gates, metadata and Security including independently generated CodeQL pass; full CI remains in progress. No production/hosted deployment belongs to this request.
+- [ ] Accept the corrected keyboard board in fresh combined local/CI/native runs. First b93b400 remote run passed77/78browsers but failed mobile fixed-distance keyboard targeting; built-PWA/native not reached. Product sensor now traverses actual allowed columns with visible targets and a deterministic long-column/cancel/exact-RPC regression. Focused quality/coverage passes; no thresholds/skips were relaxed. Full acceptance remains pending. No production/hosted deployment belongs to this request.
 
 ## English community information
 

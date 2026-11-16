@@ -6,7 +6,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createRequire } from "node:module";
 import { promisify } from "node:util";
-import { browserPlan, browserAcceptance } from "./testing/browser-evidence.mjs";
+import {
+  browserPlan,
+  browserAcceptance,
+  browserFailure,
+} from "./testing/browser-evidence.mjs";
 
 const projects = ["desktop-chromium", "mobile-chromium"];
 const files = ["calendar.spec.ts", "search.spec.ts"];
@@ -85,6 +89,26 @@ test("only first-attempt passes produce a safe summary without raw logs/configur
   assert.equal(accepted.passed, 4);
   assert.equal(accepted.workflows.length, 4);
   assert.ok(!JSON.stringify(accepted).includes("private fixture password"));
+});
+
+test("failed acceptance retains actual passed/failed/skipped cases without sensitive error payloads", () => {
+  const actual = report();
+  actual.suites[0].specs[0].tests[0].status = "unexpected";
+  actual.suites[0].specs[0].tests[0].results[0].status = "failed";
+  actual.suites[0].specs[0].tests[0].results[0].errors = [
+    { message: "private fixture token" },
+  ];
+  actual.suites[0].specs[0].tests[1].status = "skipped";
+  actual.suites[0].specs[0].tests[1].results = [];
+  actual.errors = [{ message: "private setup token" }];
+  const outcome = browserFailure(actual);
+  assert.equal(outcome.status, "failed");
+  assert.equal(outcome.passed, 2);
+  assert.equal(outcome.failed, 1);
+  assert.equal(outcome.skipped, 1);
+  assert.equal(outcome.errors, 1);
+  assert.equal(outcome.workflows[0].status, "failed");
+  assert.ok(!JSON.stringify(outcome).includes("private"));
 });
 
 test("exit-zero skipped, expected failures, retries and incomplete results fail closed", () => {
@@ -204,6 +228,7 @@ test("real Playwright exit-zero runtime skips and focused suites cannot pass acc
       2,
       "Real Playwright normally exits zero when both workflows skip.",
     );
+    assert.equal(browserFailure(actual).skipped, 2);
     assert.throws(() => browserAcceptance(actual, planned));
     writeFileSync(source, `${header}\ntest.only('focused test', () => {});`);
     await assert.rejects(

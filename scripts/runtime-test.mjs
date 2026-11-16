@@ -12,7 +12,11 @@ import {
 import { join, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { createHash, randomBytes } from "node:crypto";
-import { browserPlan, browserAcceptance } from "./testing/browser-evidence.mjs";
+import {
+  browserPlan,
+  browserAcceptance,
+  browserFailure,
+} from "./testing/browser-evidence.mjs";
 import { runtimeSnapshotSource } from "./runtime-snapshot.mjs";
 import {
   acquireTestLock,
@@ -216,7 +220,18 @@ try {
         planned,
       );
     } catch (error) {
-      evidence.browsers[stage].status = "failed";
+      try {
+        evidence.browsers[stage] = {
+          ...browserFailure(
+            JSON.parse(readFileSync(join(directory, "report.json"), "utf8")),
+          ),
+          planned: planned.length,
+        };
+      } catch {
+        // Missing/malformed execution evidence cannot replace the actual
+        // command/acceptance failure or manufacture completed workflows.
+        evidence.browsers[stage].status = "failed";
+      }
       throw error;
     } finally {
       saveEvidence();

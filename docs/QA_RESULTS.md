@@ -2,6 +2,12 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## Independent functional sweep — mobile keyboard board failure reproduced by CI
+
+Exact signed `b93b400` [CI43791915492](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43791915492) failed after all SQL/API stages: **77/78 browser cases passed**, with mobile `job-capacity.spec.ts:83` failing to target the published column by keyboard. New calendar and aggregate search pass in both projects. Built PWA was not reached remotely; native compatibility was skipped. The complete local pass below remains valid local evidence, not a substitute for this independent failure.
+
+The installed keyboard sensor moves10px per arrow and disables autoscroll; the existing100-arrow limit therefore depends on total stacked-column height and retained browser fixtures. Product keyboard navigation and a deterministic long-column regression are being corrected. No blind rerun, skip or weakened claim/state assertion replaces the failed case. Reduced artifact14193437363 is retained privately at `.local/functional-ci/pr12-b93b400/938368b6/acceptance.json`; it records63passed stages and the failed browser stage. New failure-summary handling now preserves safe case counts/identities without copying error payloads or credentials;6guard checks pass.
+
 ## Functional/integration sweep — complete local acceptance passed
 
 Signed implementation `b93b400bbd3b26fca0d31886c446cf05b35d58bd` passed `./portal test` at **2026-11-16T02:37:51.154Z** (12:37 Australia/Brisbane). Independent detached wrapper `.local/full-functional/run03.exit` records **0**. Private result `.local/tests/3346a7e6/RESULT.txt` is PASS; machine evidence `acceptance.json` identifies sanitized source SHA-256 `19e5bf96ca69f74d148a1c0afb72e288bd5532eebc0eaa2cb8d77fde85a888bf` and all **68 passed stages**. Later changes are evidence documentation and actual fictional screenshots only.

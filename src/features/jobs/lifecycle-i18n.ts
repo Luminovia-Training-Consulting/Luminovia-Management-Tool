@@ -14,7 +14,7 @@ const en = {
   dragEnd: "Drop complete. The server is checking the requested status change.",
   dragCancelled: "Move cancelled. No server change was requested.",
   dragInstructions:
-    "Press Space to pick up an offer, arrow keys to move, Space to drop and Escape to cancel. You can also use the status control on the card.",
+    "Press Space to pick up an offer, Right or Down for the next editable column, Left or Up for the previous one, Space to drop and Escape to cancel. You can also use the status control on the card.",
   readOnly: "Accepted history: manage this offer in its detail view.",
 
   positions: "Lecturer positions",
@@ -90,7 +90,7 @@ const de: typeof en = {
   dragCancelled:
     "Verschieben abgebrochen. Es wurde keine Serveränderung angefordert.",
   dragInstructions:
-    "Leertaste nimmt einen Auftrag auf, Pfeiltasten verschieben, Leertaste legt ab und Escape bricht ab. Alternativ nutze die Statusauswahl auf der Karte.",
+    "Leertaste nimmt einen Auftrag auf, Rechts oder Unten wählt die nächste bearbeitbare Spalte, Links oder Oben die vorherige, Leertaste legt ab und Escape bricht ab. Alternativ nutze die Statusauswahl auf der Karte.",
   readOnly: "Angenommene Historie: Verwaltung in der Detailansicht.",
 
   positions: "Dozierendenplätze",

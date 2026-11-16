@@ -9,7 +9,8 @@ import type {
   DragOverEvent,
   DragEndEvent,
 } from "@dnd-kit/react";
-import { Accessibility } from "@dnd-kit/dom";
+import { Accessibility, KeyboardSensor } from "@dnd-kit/dom";
+import { OfferBoardKeyboardSensor } from "./board-keyboard";
 import { db } from "../../lib/supabase";
 import { useOnline } from "../../lib/online";
 import { useAuth } from "../auth/auth-context";
@@ -221,6 +222,11 @@ export function OfferBoard() {
             <Notice>{lifecycle("boardLimit")}</Notice>
           )}
           <DragDropProvider
+            sensors={(defaults) =>
+              defaults.map((sensor) =>
+                sensor === KeyboardSensor ? OfferBoardKeyboardSensor : sensor,
+              )
+            }
             plugins={(defaults) => [
               ...defaults.filter(
                 (plugin) =>

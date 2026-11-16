@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import { isAbsolute, relative } from "node:path";
 
-function cases(report) {
+function cases(report, { allowErrors = false } = {}) {
   assert.ok(Array.isArray(report?.suites), "Browser report is missing suites.");
-  assert.deepEqual(
-    report.errors,
-    [],
-    "Browser discovery/execution had errors.",
-  );
+  if (!allowErrors)
+    assert.deepEqual(
+      report.errors,
+      [],
+      "Browser discovery/execution had errors.",
+    );
   const found = [];
   function walk(suites, parents = []) {
     for (const suite of suites) {
@@ -40,6 +41,53 @@ function cases(report) {
     "Duplicate browser workflows cannot establish complete acceptance.",
   );
   return found;
+}
+
+/** Preserve useful failure counts and workflow identities without copying
+ * errors, response bodies, environment values, stdout or private traces. */
+export function browserFailure(report) {
+  const executed = cases(report, { allowErrors: true });
+  const workflows = executed.map(({ file, title, project, spec, test }) => {
+    const result = test.results[0];
+    const passed =
+      spec.ok === true &&
+      test.expectedStatus === "passed" &&
+      test.status === "expected" &&
+      test.results.length === 1 &&
+      result?.retry === 0 &&
+      result.status === "passed" &&
+      result.errors?.length === 0;
+    return {
+      file,
+      title,
+      project,
+      status: passed
+        ? "passed"
+        : test.status === "skipped"
+          ? "skipped"
+          : "failed",
+      attempts: test.results.length,
+      durationMs: test.results.reduce(
+        (sum, attempt) => sum + attempt.duration,
+        0,
+      ),
+    };
+  });
+  return {
+    status: "failed",
+    passed: workflows.filter((item) => item.status === "passed").length,
+    failed: workflows.filter((item) => item.status === "failed").length,
+    skipped: workflows.filter((item) => item.status === "skipped").length,
+    flaky: report.stats.flaky,
+    retries: executed.reduce(
+      (sum, { test }) =>
+        sum + test.results.filter((result) => result.retry > 0).length,
+      0,
+    ),
+    errors: report.errors.length,
+    durationMs: report.stats.duration,
+    workflows,
+  };
 }
 
 /** Bind a real Playwright --list report to every source spec and both supported

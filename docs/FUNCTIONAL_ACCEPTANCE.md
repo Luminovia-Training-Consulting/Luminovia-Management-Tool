@@ -45,6 +45,8 @@ Expanded API flows cover versioned bilingual knowledge categories, current-only 
 
 The browser-evidence guard has adversarial report fixtures and a genuine Playwright negative probe: a runtime-skipped suite normally exits zero, but complete acceptance rejects it; an actual focused suite is rejected by Playwright.
 
+Independent CI also exposed the old board keyboard's fixed10px/100-arrow limitation on long mobile columns. The correction uses real dnd-kit sensor activation/collision/drop with semantic next/previous allowed columns and a visible destination. The real capacity workflow seeds16drafts, enforces a gap over1000px on mobile, checks boundaries/filled-column exclusion, Escape with zero mutations/unchanged version and exactly one server-confirmed drop. The correction requires its own new full acceptance; an earlier local pass does not override a later CI failure. Failed reduced reports retain actual passed/failed/skipped workflow identities/counts without raw errors or credentials.
+
 ## Limits and required continuation
 
 Current automated browser acceptance is desktop/mobile Chromium emulation. It is not physical Android/iOS installation, Safari/Firefox, complete manual accessibility, production load, real external SMTP, legal/privacy certification or production deployment. A passed existing slice does not implement outstanding saved views, resource models, structured mentions, scheduled delivery, announcements, permission editing, retention or the other full-specification requirements. Every new function must extend its connected database/API/browser journey and pass a new combined run.
