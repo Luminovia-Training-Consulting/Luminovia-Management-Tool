@@ -9,6 +9,7 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Notify the 16 other active project Codex chats and preserve the local-first rule in `AGENTS.md` and operator/contribution guides.
 - [x] Run the actual fast local command (249 frontend tests before integration;254on current-main integration and build pass), all95integrated offline runtime tests and workflow validation. Cancel the old automatic main publication run and temporarily disable the old metadata publisher, with real server readback.
 - Signed [PR27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27) owns the exact required CI and coordinated user-authorised merge record. After its actual merge, re-enable the manual-only metadata workflow and verify main's publication guard. The first run was cancelled after PR21 advanced main; current-main integration preserves both feature histories.
+- [x] Reproduce the existing50-way lifecycle fixture's disappearing-offer consent lookup from the actual failed run, capture real actor quotes before racing and add a deterministic late-reader case; all12real PostgreSQL groups pass in a fresh disposable local container. Fresh signed-head CI remains the merge gate.
 
 The VPS polling timer and normal/hosted data are unchanged. This direction supersedes historical automatic release/publication descriptions below; it does not remove any product, security or release acceptance requirements.
 ## Coordinated PR18 integration
