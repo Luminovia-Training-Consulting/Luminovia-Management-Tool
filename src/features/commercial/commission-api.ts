@@ -28,6 +28,7 @@ export interface ClientRequest {
   job_id: string | null;
   assigned_lecturer_id: string | null;
   assigned_lecturer_name: string | null;
+  assigned_lecturers?: { id: string; display_name: string }[];
   created_at: string;
 }
 export interface CommissionRecord {
@@ -48,6 +49,7 @@ export interface CommissionRecord {
   lecturer_id: string | null;
   lecturer_name: string | null;
   accepted_at: string | null;
+  capacity?: number;
 }
 export interface ClientSpend {
   organisation_id: string;
@@ -146,6 +148,7 @@ export function splitFee(gross: number, percent: number) {
   };
 }
 export function revenueTotals(rows: CommissionRecord[]) {
+  const quotedJobs = new Set<string>();
   const groups = new Map<
     string,
     {
@@ -170,9 +173,15 @@ export function revenueTotals(rows: CommissionRecord[]) {
     };
     if (
       (row.status !== "archived" || row.claim_id) &&
-      row.gross_total_amount !== null
-    )
-      group.offered += Math.round(Number(row.gross_total_amount) * 100);
+      row.gross_total_amount !== null &&
+      !quotedJobs.has(row.job_id)
+    ) {
+      // The quote is per lecturer position; repeated accepted-claim rows must
+      // not multiply a course budget a second time.
+      group.offered +=
+        Math.round(Number(row.gross_total_amount) * 100) * (row.capacity ?? 1);
+      quotedJobs.add(row.job_id);
+    }
     if (row.claim_id) {
       group.lecturer += Math.round(Number(row.lecturer_net_total_amount) * 100);
       group.count++;

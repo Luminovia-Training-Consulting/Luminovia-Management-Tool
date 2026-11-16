@@ -2,6 +2,14 @@
 
 Updated 16 November 2026, Australia/Brisbane. This is an actual development/setup deployment, not acceptance for 100 GB or 15–25 production users.
 
+## Current accepted operation
+
+Main `bb322746`/18 source-verified application migrations was installed automatically at 2026-11-15T20:04:30UTC after exact CI43753910114 and immutable release checks. PostgreSQL 17.12 and all 10 required containers / 9 healthchecks are healthy, with no OOM/manual-recovery/maintenance flag. REST 16.5, Realtime 2.161.0, Storage 1.95.0, Edge 1.79.1, Envoy 1.40.2, Mailpit 1.33.1 and JSR jose 6.2.17 were genuinely tested together on retained data before rollout. All runtime pins remain immutable; incompatible TypeScript 7/FullCalendar 7 candidates are held.
+
+The five-minute release timer and daily complete backup 02 UTC, official OS 03 UTC and necessary reboot 03:30 UTC timers are enabled/active; GitHub component discovery runs 02:41 UTC. The actual20:10:56UTC encrypted complete set passed native desktop recovery20:13:18UTC:all 3 databases/1,990 files, credentials/RLS/source history/configuration/JWT/Vault/TLS/key/document bytes. A real VM physical checkpoint rollback also passed. See [automatic updates](HOSTINGER_AUTOMATIC_UPDATES.md), [complete backups](../deploy/hostinger/backups/README.md) and exact [WORKLOG](WORKLOG.md) evidence.
+
+Only the public age recipient is on the VPS. Daily complete sets are local, with up to 3 adaptive generations/5GiBreserve; desktop copies have been downloaded manually for recovery testing. Recurring off-site/provider daily full-VM retention is **not activated** and its priced approval remains pending. A future necessary boot into installed kernel7.3.0-10 is scheduled;7.3.0-9 still runs and actual boot acceptance is untested.
+
 ## Target and boundaries
 
 - Portal: <https://cms.luminovia.org>
@@ -38,7 +46,7 @@ Public and anonymous signup, phone signup and phone MFA are disabled. Admin chan
 
 SMTP points to private **Mailpit**, not a real mail recipient/provider. Invitations and recovery messages are captured on the VM; nothing is sent to real people. This is deliberate development configuration and must be replaced with separately approved transactional mail settings before real onboarding.
 
-All fourteen application migrations are applied with source verification in `supabase_migrations.schema_migrations`. `deploy/hostinger/apply-migrations.mjs --development-vps` refuses drift, requires initialized Auth/Storage/Realtime, and never resets data or seeds accounts. It explicitly reapplies development quotas, so it is not a production maintenance command.
+All eighteen application migrations are applied with source verification in `supabase_migrations.schema_migrations`. `deploy/hostinger/apply-migrations.mjs --development-vps` refuses drift, requires initialized Auth/Storage/Realtime, and never resets data or seeds accounts. It explicitly reapplies development quotas, so it is not a production maintenance command.
 
 The current instance allocates **10 GiB total / 1 GiB per owner**, counting all document versions, including archived/rejected/quarantined versions. Server-only `private.document_storage_limits` controls those allocations. The source maximum is 100 MiB per file; this ceiling does not establish a successful 100 MiB load test on KVM 1. Uploads are scanned on private TCP; scan failure leaves them quarantined. Neither a logical quota nor an application limit increases the VM's physical disk.
 
@@ -58,7 +66,7 @@ docker compose --project-directory /opt/luminovia-portal/source/deploy/hostinger
 
 Current test and persistence/backup results are recorded in WORKLOG after actual execution. The offline validators do not replace hosted acceptance. Production still requires complete product/release scope, real SMTP, off-site retention, monitoring, supported-client checks and recovery acceptance.
 
-## Executed development checks
+## Historical setup checks — superseded counts retained as dated evidence
 
 After the controlled PostgreSQL 17.12 image upgrade, all eight actual CMS API suites passed again: public JWKS separation, sign-in/AAL1 restrictions, real temporary-manager TOTP/AAL2, private Mailpit invitation/password setup and PKCE recovery, calendar/RLS/role-forgery rejection, Edge origin/authentication checks, real clean/EICAR scanning and fifty online claim requests from two lecturers. The claims produced exactly one committed winner, all five session allocations and an idempotent winner retry. Only UUID-scoped test fixtures were removed.
 
@@ -74,7 +82,7 @@ These are actual networkless local PostgreSQL recovery drills, with no published
 
 A logical restore rebuilds indexes and does not alone establish safe in-place engine compatibility. Check actual database/explicit collation versions and the official release's index/extension requirements before each reviewed engine patch; rebuild affected indexes before refreshing a changed collation version. The 17.12 candidate and actual updated VM both matched the existing default collation. HTTP/Auth/Storage/Realtime acceptance was performed separately on the updated VM as recorded above.
 
-Keep runtime environment secrets separately recoverable: the backup deliberately excludes passwords, JWT material and Vault encryption keys. Current artifacts contain fictional development data and have restricted local permissions; they are not a configured recurring encrypted production retention service.
+The older `backup.mjs` artifacts in this historical setup check deliberately excluded passwords/JWT/Vault keys. **The currently installed complete encrypted backup includes those secrets**, all connectable databases and actual files; its off-server age identity is required for recovery. Historical logical backup evidence is not the current complete-backup scope, nor a recurring off-site production retention service.
 
 The concurrently merged M3 account/profile/commission extension required a separately pinned historical migration backfill: its three source versions predate the installed storage-capacity migration. A real backup clone passed both deliberate-data-change rollback and exact11-to14 application/idempotence before the frozen live application. Existing data columns/quotas and prior grants were preserved. The accounts worker is read-only mounted and allowlisted in Envoy/runtime. Actual CMS `/v1/me`, AAL1 directory denial, CORS/internal-path rejection, private-file persistence and WSS revocation passed after resumption. This one-off reviewed exception does not loosen the automatic updater's migration-order guard. See [automatic updates](HOSTINGER_AUTOMATIC_UPDATES.md).
 

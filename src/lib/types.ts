@@ -13,6 +13,12 @@ export interface Topic {
   label_de: string;
   label_en: string;
   kind: string;
+  parent_id?: string | null;
+  aliases?: string[];
+  archived_at?: string | null;
+  version?: number;
+  description_de?: string;
+  description_en?: string;
 }
 export interface Expertise {
   user_id: string;
@@ -27,6 +33,8 @@ export interface JobSession {
   ends_at: string;
 }
 export interface Job {
+  capacity?: number;
+  capacity_basis?: "single_position" | "per_position";
   id: string;
   title: string;
   description: string;

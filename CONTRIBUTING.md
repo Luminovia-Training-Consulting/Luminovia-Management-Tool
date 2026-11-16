@@ -1,5 +1,7 @@
 # Zum Luminovia Portal beitragen
 
+> Stand 16. November 2026: Das Review-/Merge-Regelwerk unten ist vorbereitet. Seine serverseitige Aktivierung wartet auf die Freigabe einer beschränkten Wartungs-App; die bisherigen Hauptzweig-Regeln bleiben bis dahin wirksam. [Aktueller Aktivierungsstand](docs/GITHUB_WORKFLOW.md#aktivierung-noch-ausstehend).
+
 Willkommen! Hier steht, wie aus einer Idee oder Fehlermeldung eine nachvollziehbare, getestete Änderung wird. **English contributions are welcome.** Please follow the same issue, test and pull-request process; German is the main documentation language, and application interface changes need both German and English strings.
 
 Das Portal ist eine React-/TypeScript-PWA mit Supabase. Der vollständige Produktumfang bleibt im [Entwicklungsplan](docs/IMPLEMENTATION_PLAN.md) sichtbar. Eine funktionierende Entwicklungsfassung ist keine Produktionsfreigabe.

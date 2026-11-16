@@ -92,3 +92,7 @@ The complete command passed on 2026-11-15 at 13:53:47 UTC, report `.local/tests/
 Development HMR ignores generated QA reports, private `.local` state, coverage and documentation. A real filesystem-watcher regression keeps actual source changes watched while report HTML no longer triggers application reloads.
 
 The inherited actual selfhost image/retained-data compatibility gate remains a separate CI job after the same complete application command. It is required before a development release is published. Offline maintenance/backup guards belong to `./portal test`; separately running a native encrypted three-database restore remains an explicit operation.
+
+## Latest GitHub preview
+
+Use `./portal github` to fetch and start the exact latest main in a separate persistent local preview on port5373/API56321. Use `./portal github test` for a separate latest-source QA checkout. The normal development tree, its dirty files and data are preserved. The [complete preview guide](GITHUB_LOCAL_PREVIEW.md) explains ownership, retained data, local migration review, commands and ports; this is distinct from updating your development branch with Git.

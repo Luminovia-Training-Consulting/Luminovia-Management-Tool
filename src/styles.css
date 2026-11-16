@@ -224,9 +224,8 @@ summary:focus-visible {
   font-weight: 650;
   border: 1px solid transparent;
   border-radius: 10px;
-  transition:
-    background 0.16s,
-    transform 0.16s;
+  /* Theme foreground/background pairs must change in the same frame. */
+  transition: transform 0.16s;
   text-align: center;
   white-space: normal;
 }
@@ -1439,21 +1438,6 @@ legend {
 .session-form-row .button {
   margin-top: 5px;
 }
-.admin-job-list {
-  margin-top: 28px;
-}
-.admin-job-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  align-items: center;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 13px;
-}
-.admin-job-row select {
-  width: 150px;
-}
 .security-panel > svg {
   margin-bottom: 18px;
 }
@@ -1971,12 +1955,6 @@ legend {
   .session-form-row > .button {
     grid-column: 2;
     grid-row: 1 / span 2;
-  }
-  .admin-job-row {
-    font-size: 12px;
-  }
-  .admin-job-row select {
-    width: 120px;
   }
   .update-banner {
     bottom: 83px;

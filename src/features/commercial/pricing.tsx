@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
 import type { Job } from "../../lib/types";
 import { db } from "../../lib/supabase";
+import { lifecycleQuery } from "../jobs/lifecycle-api";
 import { money } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
@@ -184,12 +185,21 @@ export function JobPricingPanel({ job }: { job: Job }) {
     ...commissionReportQuery(actor),
     enabled: Boolean(access.data?.can_manage_gross),
   });
+  const lifecycle = useQuery({
+    ...lifecycleQuery(actor, job.id),
+    enabled: Boolean(access.data?.can_manage_gross),
+  });
   const [editing, setEditing] = useState(false);
   if (!access.data?.can_manage_gross) return null;
   if (report.isPending) return <Loading />;
   if (report.isError) return <ErrorState retry={() => void report.refetch()} />;
   const record = report.data.find((row) => row.job_id === job.id);
-  const locked = job.status === "filled" || Boolean(record?.claim_id);
+  const locked =
+    lifecycle.isPending ||
+    lifecycle.isError ||
+    !lifecycle.data?.can_edit ||
+    job.status === "filled" ||
+    report.data.some((row) => row.job_id === job.id && Boolean(row.claim_id));
   return (
     <section className="panel platform-pricing">
       <h2>{t("pricingTitle")}</h2>

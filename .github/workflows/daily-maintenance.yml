@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   signature-probe:
-    if: github.event_name == 'workflow_dispatch' && inputs.signature_probe_only
+    if: github.repository == 'Luminovia-Training-Consulting/Luminovia-Management-Tool' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.signature_probe_only
     # Keep the App key in this main-only environment: checkout.ref alone cannot
     # stop a modified branch workflow from stealing a repository-level secret.
     environment: maintenance-signing
@@ -30,8 +30,8 @@ jobs:
         env:
           APP_ID: ${{ vars.MAINTENANCE_APP_ID }}
         run: |
-          if test -z "$APP_ID"; then
-            echo "::error::Configure MAINTENANCE_APP_ID and MAINTENANCE_APP_PRIVATE_KEY before using the maintenance App."
+          if test "$APP_ID" != "5776881"; then
+            echo "::error::Require the approved App 5776881 and its protected environment key."
             exit 1
           fi
       - name: Create a repository-scoped App token for the temporary signing probe
@@ -43,6 +43,14 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-contents: write
+      - name: Verify the approved private App identity
+        env:
+          APP_SLUG: ${{ steps.maintenance-app-token.outputs.app-slug }}
+        run: |
+          if test "$APP_SLUG" != "luminovia-portal-maintenance"; then
+            echo "::error::Unexpected maintenance App identity."
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: main
@@ -260,7 +268,7 @@ jobs:
           if-no-files-found: error
   promote:
     needs: [discover, combined, fallback]
-    if: always() && needs.discover.result == 'success' && (needs.combined.result == 'success' || needs.fallback.result == 'success')
+    if: always() && github.repository == 'Luminovia-Training-Consulting/Luminovia-Management-Tool' && github.ref == 'refs/heads/main' && needs.discover.result == 'success' && (needs.combined.result == 'success' || needs.fallback.result == 'success')
     # The same environment boundary protects automatic direct-main promotion.
     environment: maintenance-signing
     runs-on: ubuntu-latest
@@ -272,8 +280,8 @@ jobs:
         env:
           APP_ID: ${{ vars.MAINTENANCE_APP_ID }}
         run: |
-          if test -z "$APP_ID"; then
-            echo "::error::Configure MAINTENANCE_APP_ID and MAINTENANCE_APP_PRIVATE_KEY before enabling maintenance promotion."
+          if test "$APP_ID" != "5776881"; then
+            echo "::error::Require the approved App 5776881 and its protected environment key."
             exit 1
           fi
       - name: Create a repository-scoped App token for tested promotion and exact-main CI
@@ -286,6 +294,14 @@ jobs:
           repositories: ${{ github.event.repository.name }}
           permission-contents: write
           permission-actions: write
+      - name: Verify the approved private App identity
+        env:
+          APP_SLUG: ${{ steps.maintenance-app-token.outputs.app-slug }}
+        run: |
+          if test "$APP_SLUG" != "luminovia-portal-maintenance"; then
+            echo "::error::Unexpected maintenance App identity."
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs.discover.outputs.base }}

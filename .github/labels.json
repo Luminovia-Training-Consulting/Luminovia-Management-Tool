@@ -98,5 +98,55 @@
     "name": "risk:high",
     "color": "b60205",
     "description": "Betrifft sensible Daten, Rechte, Geld, Migrationen oder Betrieb."
+  },
+  {
+    "name": "area:chat",
+    "color": "006b75",
+    "description": "Chat, Kursgruppen, Nachrichten und Realtime."
+  },
+  {
+    "name": "area:knowledge",
+    "color": "d4c5f9",
+    "description": "Wiki, Forum und Wissensverwaltung."
+  },
+  {
+    "name": "area:calendar",
+    "color": "0e8a16",
+    "description": "Termine, Verfügbarkeit und Zeitzonen."
+  },
+  {
+    "name": "area:notifications",
+    "color": "fbca04",
+    "description": "Benachrichtigungen und persönliche Zustellpräferenzen."
+  },
+  {
+    "name": "area:profiles",
+    "color": "c2e0c6",
+    "description": "Profile, Qualifikationen und Dozierendenverzeichnis."
+  },
+  {
+    "name": "area:clients",
+    "color": "0052cc",
+    "description": "Auftraggeberkonten, Organisationen und Geschäftskontakte."
+  },
+  {
+    "name": "area:pwa",
+    "color": "1d76db",
+    "description": "Installation, Service Worker, Offline und Aktualisierung."
+  },
+  {
+    "name": "area:testing",
+    "color": "bfd4f2",
+    "description": "QA, Regressionen, Browser- und Berechtigungsprüfungen."
+  },
+  {
+    "name": "area:docs",
+    "color": "0075ca",
+    "description": "Anleitungen, API-Referenzen und Betriebsdokumentation."
+  },
+  {
+    "name": "area:taxonomy",
+    "color": "5319e7",
+    "description": "Themen, Werkzeuge, Programmiersprachen und Hierarchien."
   }
 ]
