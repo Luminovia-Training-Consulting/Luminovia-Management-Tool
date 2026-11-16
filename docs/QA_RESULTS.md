@@ -2,11 +2,13 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
-## Optional job contacts/reference — feature browser cases pass; whole acceptance pending
+## Optional job contacts/reference — complete local acceptance passed; final integration pending
 
 PR31 signed96c3c5c passes268frontend tests/53files and unchanged coverage floors (S52.08/B47.4/F42.52/L53.93%). Twelve real briefing PostgreSQL groups include role/MFA/privacy/CAS/retry/Unicode boundaries; the imported lifecycle fixture also passes12groups. Native3c4ac24 passes27migrations,21actual API/invitation suites, exact retained password/MFA/roles/private-event/scanned bytes, TLS/WebSockets,50claims and checked cleanup.
 
 Actual complete local projectea5eccf0 passes all preceding source/retention/SQL/20 HTTP API suites/real invitation stages, then **89/90 browser cases**. Both new feature desktop/mobile cases pass and their four fictional DE/light and EN/dark screenshots were inspected. [Exact CI failure](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43815873906/job/133128105342) matches the sole existing mobile Kanban keyboard failure. Whole acceptance and PWA completion are not claimed. Its unchanged PR12-owned correction is narrowly imported; fresh integrated browser/CI results remain required. Owned local containers, volumes and network were verified removed; normal/foreign services remain untouched.
+
+The corrected signed `7215e72` then passes the full local runner: **90/90 app-browser cases**, **2/2 built-PWA cases**, all preceding source/268-unit/retention/SQL/20-HTTP-API/invitation stages and cleanup. Project `66e1ed83` RESULT is PASS at 07:30:22.734Z, launcher/session exit 0. Direct readback confirms no owned containers/volumes/network. Both job-contact journeys and the mobile-board regression pass. Actual PR27 main `e048edb` is integrated afterward with manual publication controls preserved; its integrated `./portal check` and all95offline runtime guards pass. Exact final CI is tracked separately on PR31. No production installation is claimed.
 
 ## Current roles/pricing/welcome/PR-preview extension — combined acceptance pending
 

@@ -47,9 +47,21 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Add the DE/EN detail editor and post-create shortcut; 268 frontend tests and 12 isolated PostgreSQL groups pass.
 - [x] Pass the actual local ten-service native26→27 retained-data rehearsal and all21 Auth/API/invitation suites on585c883 and corrected3c4ac24, including complete owned cleanup.
 - [x] Pass both new real desktop/mobile contact/reference cases locally on96c3c5c, including claim/cancellation, DE/EN/light/dark, axe and inspected fictional screenshots.
-- [ ] Repeat full acceptance after importing PR12's existing mobile-board keyboard correction: initial local/CI96c3c5c has89/90browser cases and the same unrelated board failure; PWA is not reached.
+- [x] Complete local repetition on7215e72 after the exact PR12 board correction: all prior source/268unit/retention/SQL/API/invitation stages,90/90browser cases,2/2built-PWA cases and checked cleanup pass (project66e1ed83, exit0). Initial96c3c5c89/90 failures remain historical.
 - [ ] Deliver signed commits/push/prepared PR, observe exact required green CI and hand merge sequencing to the authorised coordinator. Do not trigger deployment/release workflows.
 
+
+## Current direction — local PC testing and explicit publication
+
+- Final integration follows actual main319ab69 through verified remote mergef24eae9. Prior head30075c9 passed all15required checks (88browser/2PWA plus real26-migration/20-suite native retention); current f24local checks pass254frontend/95runtime/23maintenance cases. Correct the three retained governance contradictions once, preserving manual publication controls, then use PR27's fresh exact-head checks and actual merge record. Other feature development remains independent.
+- [x] Add `./portal check` for fast local source/coverage/build feedback, retaining complete isolated `./portal test` and latest-main `./portal github test`.
+- [x] Keep automatic quality/security/application/native gates; make CMS publication an explicit exact-SHA manual choice and PR deployment metadata manual-only.
+- [x] Notify the 16 other active project Codex chats and preserve the local-first rule in `AGENTS.md` and operator/contribution guides.
+- [x] Run the actual fast local command (249 frontend tests before integration;254on current-main integration and build pass), all95integrated offline runtime tests and workflow validation. Cancel the old automatic main publication run and temporarily disable the old metadata publisher, with real server readback.
+- Signed [PR27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27) owns the exact required CI and coordinated user-authorised merge record. After its actual merge, re-enable the manual-only metadata workflow and verify main's publication guard. The first run was cancelled after PR21 advanced main; current-main integration preserves both feature histories.
+- [x] Reproduce the existing50-way lifecycle fixture's disappearing-offer consent lookup from the actual failed run, capture real actor quotes before racing and add a deterministic late-reader case; all12real PostgreSQL groups pass in a fresh disposable local container. Fresh signed-head CI remains the merge gate.
+
+The VPS polling timer and normal/hosted data are unchanged. This direction supersedes historical automatic release/publication descriptions below; it does not remove any product, security or release acceptance requirements.
 ## Coordinated PR18 integration
 
 The owner-approved PR18 head0675bb9 is integrated on the owned PR21 branch, preserving all audit fixes and both guidance systems. Local combined checks pass254frontend/87runtime cases with no disconnected modules/exports; migration bytes and dependencies match the owner source. The explicit PR18 main-merge hold is respected. Include the actual resulting main merge before the final push, then require all current-head quality/security/application/native and PR-preview-package gates before immediate merge.
