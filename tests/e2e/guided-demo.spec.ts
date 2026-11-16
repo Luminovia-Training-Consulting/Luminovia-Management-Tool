@@ -431,7 +431,9 @@ test("public help searches practical recovery instructions and keeps the selecte
   await expect(page.getByRole("link", { name: /^File centre\b/ })).toHaveCount(
     0,
   );
-  await search.fill("");
+  await page.getByRole("button", { name: "Clear search", exact: true }).click();
+  await expect(search).toBeFocused();
+  await expect(search).toHaveValue("");
   await page.getByRole("link", { name: /^File centre\b/ }).click();
   await expect(page).toHaveURL(
     (url) => url.searchParams.get("topic") === "files",

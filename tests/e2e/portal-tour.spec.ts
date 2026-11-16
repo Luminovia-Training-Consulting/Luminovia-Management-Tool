@@ -25,6 +25,7 @@ test("a real lecturer follows the permission-aware portal tour without changing 
     .getByRole("button", { name: "Zugriffsrechte erneut laden", exact: true })
     .click();
   await expect(launch).toBeEnabled();
+  await expect(launch).toBeFocused();
   await expect(guide.getByRole("alert")).toHaveCount(0);
   await launch.click();
   await expect(guide.getByText(/Du bist im echten Portal/)).toBeVisible();

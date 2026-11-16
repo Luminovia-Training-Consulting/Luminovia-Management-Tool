@@ -194,6 +194,9 @@ describe("live portal guidance", () => {
       screen.getByRole("button", { name: "Portal-Rundgang" }),
     ).toBeDisabled();
     page.rerender(view(true, false));
+    expect(
+      screen.getByRole("button", { name: "Portal-Rundgang" }),
+    ).toHaveFocus();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Portal-Rundgang" }));
     expect(screen.getByRole("progressbar")).toBeVisible();

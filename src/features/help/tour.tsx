@@ -80,6 +80,7 @@ export function PortalTour({
   const [state, setState] = useState<TourState>(() => readTour(actor));
   const heading = useRef<HTMLHeadingElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
+  const retryRequested = useRef(false);
   const modules = permittedTourModules(roles, permissions);
   const index = Math.max(
     0,
@@ -99,7 +100,9 @@ export function PortalTour({
   };
   useEffect(() => {
     if (active) heading.current?.focus();
-  }, [active, state.step]);
+    else if (ready && retryRequested.current) launcher.current?.focus();
+    if (ready) retryRequested.current = false;
+  }, [active, ready, state.step]);
   useEffect(() => {
     if (!active) return;
     const onEscape = (event: KeyboardEvent) => {
@@ -144,7 +147,14 @@ export function PortalTour({
           <div role="alert">
             <p>{text.loadError}</p>
             {onRetry && (
-              <Button variant="secondary" onClick={onRetry} disabled={retrying}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  retryRequested.current = true;
+                  onRetry();
+                }}
+                disabled={retrying}
+              >
                 {text.retry}
               </Button>
             )}

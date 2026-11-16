@@ -70,6 +70,7 @@ describe("public bilingual help", () => {
       screen.getByRole("button", { name: "Suche zurücksetzen" }),
     );
     expect(search).toHaveValue("");
+    expect(search).toHaveFocus();
     expect(screen.getByRole("link", { name: /Kursbewertungen/ })).toBeVisible();
   });
   it("updates selected guides on actual URL navigation and tolerates unknown topics", async () => {
@@ -118,6 +119,9 @@ describe("public bilingual help", () => {
     expect(
       screen.queryByRole("heading", { level: 2, name: "Aufträge übernehmen" }),
     ).not.toBeInTheDocument();
+    await userEvent.clear(screen.getByRole("searchbox"));
+    expect(screen.getByRole("searchbox")).toHaveFocus();
+    await userEvent.type(screen.getByRole("searchbox"), "Übernahme");
     await userEvent.click(
       screen.getByRole("link", { name: /^Aufträge übernehmen/ }),
     );

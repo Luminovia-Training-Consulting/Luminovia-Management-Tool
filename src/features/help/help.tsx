@@ -126,6 +126,7 @@ export function HelpCenter() {
   const [params, setParams] = useSearchParams();
   const location = useLocation();
   const [query, setQuery] = useState("");
+  const searchInput = useRef<HTMLInputElement>(null);
   const articleHeading = useRef<HTMLHeadingElement>(null);
   const topic = params.get("topic");
   const selected = guideModules.find((module) => module.id === topic);
@@ -189,6 +190,7 @@ export function HelpCenter() {
             </span>
             <input
               id="help-search"
+              ref={searchInput}
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -309,7 +311,13 @@ export function HelpCenter() {
           ) : (
             <div className="help-empty">
               <p>{text(labels.empty)}</p>
-              <Button variant="secondary" onClick={() => setQuery("")}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setQuery("");
+                  searchInput.current?.focus();
+                }}
+              >
                 {text(labels.reset)}
               </Button>
             </div>
