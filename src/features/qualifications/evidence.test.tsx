@@ -27,11 +27,32 @@ const state = vi.hoisted(() => ({
   actor: "11111111-1111-4111-8111-111111111111",
   rpc: vi.fn(),
   download: vi.fn(),
+  roleReads: vi.fn(),
+  roles: ["lecturer"] as string[],
+  rolesError: null as unknown,
 }));
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: state.actor } } }),
 }));
-vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: state.rpc }) }));
+vi.mock("../../lib/supabase", () => ({
+  db: () => ({
+    rpc: state.rpc,
+    from: (table: string) => {
+      if (table !== "user_roles") throw new Error("Unexpected table " + table);
+      return {
+        select: () => ({
+          eq: async (column: string, actor: string) => {
+            state.roleReads(table, column, actor);
+            return {
+              data: state.roles.map((role) => ({ role })),
+              error: state.rolesError,
+            };
+          },
+        }),
+      };
+    },
+  }),
+}));
 vi.mock("../files/api", () => ({ saveQualificationEvidence: state.download }));
 const certificate = {
   version_id: ids.version,
@@ -61,6 +82,9 @@ let client: QueryClient;
 beforeEach(async () => {
   await i18n.changeLanguage("de");
   state.actor = ids.teacher;
+  state.roles = ["lecturer"];
+  state.rolesError = null;
+  state.roleReads.mockClear();
   record = {
     user_id: ids.teacher,
     topic_id: ids.topic,
@@ -107,6 +131,8 @@ beforeEach(async () => {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  // The actual Shell already observes this same actor-scoped query.
+  client.setQueryData(["user-roles", ids.teacher], ["lecturer"]);
 });
 afterEach(() => {
   cleanup();
@@ -151,6 +177,107 @@ async function choose() {
   );
 }
 describe("explicit exact-version qualification evidence", () => {
+  it.each(["client", "participant", "management"])(
+    "hides own qualification controls for pure %s without any evidence RPC",
+    (role) => {
+      client.setQueryData(["user-roles", ids.teacher], [role]);
+      own();
+      expect(
+        screen.queryByRole("heading", { name: "Qualifikationsbelege" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByLabelText("Ausgewähltes Thema"),
+      ).not.toBeInTheDocument();
+      expect(state.rpc).not.toHaveBeenCalled();
+      expect(state.roleReads).not.toHaveBeenCalled();
+    },
+  );
+  it.each([["client", "lecturer"], ["senior_lecturer"], ["admin"], ["owner"]])(
+    "allows the server-defined own evidence roles %j",
+    async (...roles) => {
+      client.setQueryData(["user-roles", ids.teacher], roles);
+      own();
+      await userEvent.selectOptions(
+        screen.getByLabelText("Ausgewähltes Thema"),
+        ids.topic,
+      );
+      await screen.findByText(
+        "Für dieses Thema ist kein Zertifikatsbeleg freigegeben.",
+      );
+      expect(state.rpc).toHaveBeenCalledWith("qualification_review", {
+        p_user_id: ids.teacher,
+        p_topic_id: ids.topic,
+      });
+      expect(state.roleReads).not.toHaveBeenCalled();
+    },
+  );
+  it("does not render a card or private query while own roles are unavailable", async () => {
+    client.removeQueries({ queryKey: ["user-roles", ids.teacher] });
+    state.rolesError = { code: "42501", message: "roles denied" };
+    own();
+    await waitFor(() =>
+      expect(state.roleReads).toHaveBeenCalledWith(
+        "user_roles",
+        "user_id",
+        ids.teacher,
+      ),
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Qualifikationsbelege" }),
+    ).not.toBeInTheDocument();
+    expect(state.rpc).not.toHaveBeenCalled();
+  });
+  it("committed own role withdrawal removes mounted private evidence immediately", async () => {
+    record.evidence = evidence;
+    own();
+    await userEvent.selectOptions(
+      screen.getByLabelText("Ausgewähltes Thema"),
+      ids.topic,
+    );
+    await screen.findByText("Original.txt");
+    await act(async () => {
+      client.setQueryData(["user-roles", ids.teacher], ["client"]);
+    });
+    await waitFor(() =>
+      expect(screen.queryByText("Original.txt")).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByText("a".repeat(64))).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Qualifikationsbelege" }),
+    ).not.toBeInTheDocument();
+  });
+  it("a failed shared role refresh hides cached private evidence despite retained old role data", async () => {
+    record.evidence = evidence;
+    own();
+    await userEvent.selectOptions(
+      screen.getByLabelText("Ausgewähltes Thema"),
+      ids.topic,
+    );
+    await screen.findByText("Original.txt");
+    state.rolesError = { code: "42501", message: "role revoked" };
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ["user-roles", ids.teacher] });
+    });
+    await waitFor(() =>
+      expect(screen.queryByText("Original.txt")).not.toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Qualifikationsbelege" }),
+    ).not.toBeInTheDocument();
+  });
+  it("reuses cached Shell roles without creating its own thirty-second polling loop", async () => {
+    vi.useFakeTimers();
+    try {
+      own();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60000);
+      });
+      expect(state.roleReads).not.toHaveBeenCalled();
+      expect(state.rpc).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it("does not query certificates or private topics before user selection", () => {
     own();
     expect(state.rpc).not.toHaveBeenCalled();

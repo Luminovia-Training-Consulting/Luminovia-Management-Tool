@@ -1,3 +1,4 @@
+import { userRolesQuery } from "../../lib/queries";
 import { DateTime } from "luxon";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -547,6 +548,23 @@ export function OwnQualificationEvidence({
   const { session } = useAuth();
   const [topic, setTopic] = useState("");
   const actor = session?.user.id ?? "";
+  // Reuse the Shell's actor-scoped role cache and its refresh lifecycle. This
+  // observer adds no polling timer or extra fetch when the Shell has the roles.
+  const roles = useQuery({
+    ...userRolesQuery(actor),
+    enabled: Boolean(actor),
+    refetchInterval: false,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+  if (
+    roles.isPending ||
+    roles.isError ||
+    !roles.data?.some((role) =>
+      ["lecturer", "senior_lecturer", "admin", "owner"].includes(role),
+    )
+  )
+    return null;
   return (
     <section className="panel">
       <h2>{t("title")}</h2>
