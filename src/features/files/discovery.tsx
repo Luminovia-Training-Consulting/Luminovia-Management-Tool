@@ -22,7 +22,7 @@ export function DocumentExplorer({
   children,
 }: {
   actor: string;
-  children: (files: PortalDocument[]) => ReactNode;
+  children: (files: PortalDocument[], pending: boolean) => ReactNode;
 }) {
   const { t } = useTranslation("files"),
     id = useId(),
@@ -105,24 +105,31 @@ export function DocumentExplorer({
       {!online && <Notice kind="error">{t("discoveryOffline")}</Notice>}
       {query.isError ? (
         <ErrorState retry={() => void query.refetch()} />
-      ) : query.isPending ? (
-        <Loading />
       ) : (
         <>
-          {children(rows)}
-          <div className="file-discovery-pages">
-            <span role="status">
-              {t("loadedFiles", { count: rows.length })}
-            </span>
-            {query.hasNextPage && (
-              <Button
-                disabled={!online || query.isFetching}
-                onClick={() => void query.fetchNextPage()}
-              >
-                {t(query.isFetchingNextPage ? "loadingFiles" : "loadMoreFiles")}
-              </Button>
-            )}
-          </div>
+          {/* Keep captured dialogs mounted while this filter loads, without
+              retaining rows from a different query key. Errors above still
+              unmount the entire child and discard protected metadata. */}
+          {children(query.isPending ? [] : rows, query.isPending)}
+          {query.isPending ? (
+            <Loading />
+          ) : (
+            <div className="file-discovery-pages">
+              <span role="status">
+                {t("loadedFiles", { count: rows.length })}
+              </span>
+              {query.hasNextPage && (
+                <Button
+                  disabled={!online || query.isFetching}
+                  onClick={() => void query.fetchNextPage()}
+                >
+                  {t(
+                    query.isFetchingNextPage ? "loadingFiles" : "loadMoreFiles",
+                  )}
+                </Button>
+              )}
+            </div>
+          )}
         </>
       )}
     </>

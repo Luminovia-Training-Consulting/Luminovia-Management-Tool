@@ -1,4 +1,12 @@
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -351,4 +359,256 @@ it("retains oversized tag input locally without sending invalid personal metadat
       ([name]) => name === "save_document_organisation",
     ),
   ).toBe(false);
+});
+
+// Hold the actual filtered request after advancing the real debounce explicitly.
+// The old result deliberately contains this file before the new filter settles.
+function pendingFilter() {
+  let finishFilter!: (value: unknown) => void;
+  const filter = new Promise((resolve) => {
+    finishFilter = resolve;
+  });
+  let finishMutation!: (value: unknown) => void;
+  const mutation = new Promise((resolve) => {
+    finishMutation = resolve;
+  });
+  const initial = { ...item(), personal_tags: ["visible-filter"] };
+  state.rpc.mockImplementation((name, args) => {
+    if (name !== "document_discovery") return mutation;
+    if (!args.p_tag)
+      return response({ items: [initial], has_more: false, next_cursor: null });
+    return Object.assign(filter, {
+      abortSignal() {
+        return this;
+      },
+    });
+  });
+  return { initial, finishFilter, finishMutation };
+}
+async function advanceFilter() {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(250);
+  });
+  expect(state.rpc).toHaveBeenCalledWith(
+    "document_discovery",
+    expect.objectContaining({ p_tag: "visible-filter" }),
+  );
+}
+it("keeps the identical archive confirmation across pending and empty filter results, then sends exactly one confirmed mutation", async () => {
+  const fixture = pendingFilter();
+  mount();
+  await screen.findByText(fixture.initial.original_name);
+  vi.useFakeTimers();
+  try {
+    fireEvent.change(screen.getByLabelText("Eigenes Tag filtern"), {
+      target: { value: "visible-filter" },
+    });
+    fireEvent.click(
+      screen.getByLabelText(`Dateiname: ${fixture.initial.original_name}`),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Archivieren" }));
+    const dialog = screen.getByRole("dialog");
+    await advanceFilter();
+    expect(screen.getByRole("dialog")).toBe(dialog);
+    expect(document.querySelectorAll(".document-list > li")).toHaveLength(0);
+    await act(async () => {
+      fixture.finishFilter({
+        data: { items: [], has_more: false, next_cursor: null },
+        error: null,
+      });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByRole("dialog")).toBe(dialog);
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Archivieren" }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(
+      within(dialog).getByRole("button", { name: "Archivieren" }),
+    ).toBeDisabled();
+    expect(screen.getByRole("dialog")).toBe(dialog);
+    expect(
+      state.rpc.mock.calls.filter(([name]) => name === "rename_document"),
+    ).toEqual([
+      [
+        "rename_document",
+        {
+          p_id: fixture.initial.id,
+          p_name: fixture.initial.original_name,
+          p_delete: true,
+        },
+      ],
+    ]);
+    await act(async () => {
+      fixture.finishMutation({ data: null, error: null });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      state.rpc.mock.calls.filter(([name]) => name === "rename_document"),
+    ).toHaveLength(1);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+it("preserves the exact organisation editor and its private draft while a new filter is pending and when it resolves", async () => {
+  const fixture = pendingFilter();
+  mount();
+  await screen.findByText(fixture.initial.original_name);
+  vi.useFakeTimers();
+  try {
+    fireEvent.change(screen.getByLabelText("Eigenes Tag filtern"), {
+      target: { value: "visible-filter" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `Persönlich organisieren: ${fixture.initial.original_name}`,
+      }),
+    );
+    const dialog = screen.getByRole("dialog"),
+      input = within(dialog).getByLabelText("Eigene Tags");
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.change(input, { target: { value: "PRIVATE captured draft" } });
+    fireEvent.change(
+      within(dialog).getByLabelText("Eigener virtueller Ordner"),
+      { target: { value: "Private folder" } },
+    );
+    await advanceFilter();
+    expect(screen.getByRole("dialog")).toBe(dialog);
+    expect(within(dialog).getByLabelText("Eigene Tags")).toBe(input);
+    expect(input).toHaveValue("PRIVATE captured draft");
+    expect(document.querySelectorAll(".document-list > li")).toHaveLength(0);
+    await act(async () => {
+      fixture.finishFilter({
+        data: { items: [fixture.initial], has_more: false, next_cursor: null },
+        error: null,
+      });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByRole("dialog")).toBe(dialog);
+    expect(input).toHaveValue("PRIVATE captured draft");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Eigene Ordnung speichern" }),
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByRole("dialog")).toBe(dialog);
+    expect(
+      state.rpc.mock.calls.filter(
+        ([name]) => name === "save_document_organisation",
+      ),
+    ).toEqual([
+      [
+        "save_document_organisation",
+        {
+          p_document_id: fixture.initial.id,
+          p_expected_version: 0,
+          p_payload: {
+            tags: ["PRIVATE captured draft"],
+            folder: "Private folder",
+          },
+        },
+      ],
+    ]);
+    await act(async () => {
+      fixture.finishMutation({
+        data: {
+          tags: ["PRIVATE captured draft"],
+          folder: "Private folder",
+          version: 1,
+        },
+        error: null,
+      });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      state.rpc.mock.calls.filter(
+        ([name]) => name === "save_document_organisation",
+      ),
+    ).toHaveLength(1);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+it.each(["archive", "organise"] as const)(
+  "removes captured %s state on42501 after the held filter and performs no mutation",
+  async (mode) => {
+    const fixture = pendingFilter();
+    mount();
+    await screen.findByText(fixture.initial.original_name);
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(screen.getByLabelText("Eigenes Tag filtern"), {
+        target: { value: "visible-filter" },
+      });
+      if (mode === "archive") {
+        fireEvent.click(
+          screen.getByLabelText(`Dateiname: ${fixture.initial.original_name}`),
+        );
+        fireEvent.click(screen.getByRole("button", { name: "Archivieren" }));
+      } else {
+        fireEvent.click(
+          screen.getByRole("button", {
+            name: `Persönlich organisieren: ${fixture.initial.original_name}`,
+          }),
+        );
+        fireEvent.change(screen.getByLabelText("Eigene Tags"), {
+          target: { value: "PRIVATE denied draft" },
+        });
+      }
+      await advanceFilter();
+      await act(async () => {
+        fixture.finishFilter({ data: null, error: { code: "42501" } });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(fixture.initial.original_name),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByDisplayValue(/PRIVATE denied draft/),
+      ).not.toBeInTheDocument();
+      expect(
+        state.rpc.mock.calls.every(([name]) => name === "document_discovery"),
+      ).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);
+it("hides the held archive dialog on a malformed filtered response without sending a mutation", async () => {
+  const fixture = pendingFilter();
+  mount();
+  await screen.findByText(fixture.initial.original_name);
+  vi.useFakeTimers();
+  try {
+    fireEvent.change(screen.getByLabelText("Eigenes Tag filtern"), {
+      target: { value: "visible-filter" },
+    });
+    fireEvent.click(
+      screen.getByLabelText(`Dateiname: ${fixture.initial.original_name}`),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Archivieren" }));
+    await advanceFilter();
+    await act(async () => {
+      fixture.finishFilter({
+        data: { items: [fixture.initial], has_more: true, next_cursor: null },
+        error: null,
+      });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(fixture.initial.original_name),
+    ).not.toBeInTheDocument();
+    expect(
+      state.rpc.mock.calls.every(([name]) => name === "document_discovery"),
+    ).toBe(true);
+  } finally {
+    vi.useRealTimers();
+  }
 });

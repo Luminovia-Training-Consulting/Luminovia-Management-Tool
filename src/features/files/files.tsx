@@ -256,7 +256,13 @@ function Versions({ file }: { file: PortalDocument }) {
     </>
   );
 }
-function DocumentList({ files }: { files: PortalDocument[] }) {
+function DocumentList({
+  files,
+  pending = false,
+}: {
+  files: PortalDocument[];
+  pending?: boolean;
+}) {
   const { t, i18n } = useTranslation("files");
   const { session } = useAuth();
   const client = useQueryClient();
@@ -291,15 +297,16 @@ function DocumentList({ files }: { files: PortalDocument[] }) {
     setMode(value);
     setSelected(file);
   };
-  if (!files.length)
-    return (
-      <div className="empty-state">
-        <FolderOpen size={32} />
-        <p>{t("empty")}</p>
-      </div>
-    );
   return (
     <>
+      {/* Empty results do not cancel an already captured operation. The
+          explorer owns the access-error boundary and unmounts us on denial. */}
+      {!files.length && !pending && (
+        <div className="empty-state">
+          <FolderOpen size={32} />
+          <p>{t("empty")}</p>
+        </div>
+      )}
       <ul className="document-list">
         {files.map((file) => (
           <li key={file.id}>
@@ -592,7 +599,7 @@ export function FilesPage() {
       />
       <section className="panel">
         <DocumentExplorer key={session!.user.id} actor={session!.user.id}>
-          {(rows) => <DocumentList files={rows} />}
+          {(rows, pending) => <DocumentList files={rows} pending={pending} />}
         </DocumentExplorer>
       </section>
       <Dialog
