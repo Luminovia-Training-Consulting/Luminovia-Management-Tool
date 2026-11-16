@@ -1,19 +1,19 @@
-# PR-Prüfungen und lokale Vorschaupakete
+# PR checks and local preview packages
 
-Jeder Pull Request erhält die vorhandenen Build-, TypeScript-, Stil-, Coverage-, Sicherheits-, Anwendungs- und nativen Selfhost-Prüfungen. Das gilt auch für Forks und Dependabot. GitHubs Zustimmung für erstmalige externe Workflow-Läufe kann weiterhin erforderlich sein. Fehlende Pflichtlabels lassen `PR metadata` weiterhin fehlschlagen; ein Vorschaupaket ersetzt weder diese Einordnung noch die getrennte Security-Analyse.
+Every pull request receives the existing build, TypeScript, style, coverage, security, application and native selfhost checks. This includes forks and Dependabot. GitHub may still require approval for first-time external workflow runs. Missing required labels continue to fail `PR metadata`; a preview package replaces neither this classification nor the separate security analysis.
 
-Der neue Job `PR preview package` wartet auf alle fünf Qualitätsaufgaben, Coverage, `verify` und `Actual isolated selfhost image compatibility`. Erst dann erstellt er ein herunterladbares Paket des tatsächlich geprüften Commitstands. Sein eigenes frisches Checkout enthält keine Zugangsdaten oder Berichte aus dem vorherigen Testlauf. Das Paket enthält:
+The new `PR preview package` job waits for all five quality jobs, coverage, `verify` and `Actual isolated selfhost image compatibility`. Only then does it create a downloadable package of the commit actually tested. Its own fresh checkout contains no credentials or reports from the preceding test run. The package contains:
 
-- `portal-source.tar.gz`: ausschließlich versionierte Anwendungsquellen einschließlich Migrationen und des lokalen Starters.
-- `manifest.json`: PR-Head, geprüfter Merge-Commit, Workflow-Lauf und Versuch sowie SHA-256 des Quellarchivs.
-- `README.txt`: deutsche/englische Startanleitung und Voraussetzungen.
-- `preview.mjs`: Einstieg in eine eigene, datenhaltende lokale PR-Laufzeit.
+- `portal-source.tar.gz`: tracked application sources only, including migrations and the local launcher.
+- `manifest.json`: the PR head, tested merge commit, workflow run and attempt, and the source archive's SHA-256.
+- `README.txt`: German/English startup instructions and prerequisites.
+- `preview.mjs`: the entry point for a separate local PR runtime with persistent data.
 
-## Paket ausprobieren
+## Try a package
 
-Den Link im Summary des `PR preview package`-Jobs oder im GitHub-Deployment `pr-<Nummer>-local-preview` öffnen. Der Link führt zu einem GitHub-Actions-Artefakt; zum Herunterladen ist normalerweise eine GitHub-Anmeldung erforderlich. Es ist ausdrücklich **keine im Internet gehostete Portalinstanz**. GitHub bewahrt das Paket sieben Tage auf, sofern es nicht früher gelöscht wird.
+Open the link in the `PR preview package` job summary or the `pr-<number>-local-preview` GitHub deployment. The link points to a GitHub Actions artifact; downloading it normally requires signing in to GitHub. It is explicitly **not an internet-hosted portal instance**. GitHub retains the package for seven days unless it is deleted earlier.
 
-Quellcode eines externen Beitrags vor dem lokalen Ausführen prüfen. Er wird auf dem eigenen Rechner ausgeführt, einschließlich Paketinstallation und Entwicklungswerkzeugen. Das Artefakt in ein neues, eigenes Verzeichnis entpacken. In diesem Verzeichnis:
+Review an external contribution's source before running it locally. It executes on your computer, including package installation and development tools. Extract the artifact into a new, dedicated directory. In that directory, run:
 
 ```bash
 tar -xzf portal-source.tar.gz
@@ -21,32 +21,32 @@ node preview.mjs start
 node preview.mjs credentials
 ```
 
-Benötigt werden Linux, Node.js mindestens22.12, npm, Docker Engine und Docker Compose mindestens2.20.2. Die Vorschauports5473/573xx müssen frei sein; der Starter beendet keine fremden Prozesse. Diese Ports unterscheiden sich von normaler Entwicklung, vollständigen Tests und der neuesten Main-Vorschau. Die übrigen Voraussetzungen stehen in [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md).
+Prerequisites are Linux, Node.js 22.12 or later, npm, Docker Engine and Docker Compose 2.20.2 or later. Preview ports 5473/573xx must be available; the launcher does not terminate unrelated processes. These ports differ from normal development, full tests and the latest-main preview. Other prerequisites are documented in [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md).
 
-Den Wrapper verwenden; `./portal start` im entpackten kanonischen Quellverzeichnis würde dessen unveränderte normale Entwicklungsidentität verwenden. Der Wrapper bestätigt Archiv- und Konfigurationsprüfsumme, erstellt eine eigene private Kopie unter `.preview/source` und ändert ausschließlich deren Projekt-ID, Auth-URLs und Ports. Die Projekt-ID enthält PR-Nummer sowie einen Hash des geprüften Quellstands und Paketpfads; dadurch bleiben auch die Datenbank-/Storage-Volumes von einer gestoppten normalen Entwicklung getrennt. Das unveränderte Archiv und seine kanonischen Quellen dienen weiter als Referenz. Veränderte Projektkonfigurationen, fremde Verzeichnisse und verlinkter privater Laufzeitzustand werden verweigert.
+Use the wrapper; running `./portal start` in the extracted canonical source directory would use its unchanged normal development identity. The wrapper verifies the archive and configuration checksums, creates a separate private copy under `.preview/source`, and changes only that copy's project ID, Auth URLs and ports. The project ID includes the PR number and a hash of the tested source revision and package path; this also keeps database/Storage volumes separate from a stopped normal development environment. The unchanged archive and its canonical sources remain the reference. Modified project configurations, unrelated directories and symlinked private runtime state are refused.
 
-Die eigene Laufzeit installiert die gesperrten Abhängigkeiten, startet die vollständige lokale Anwendung einschließlich Supabase und Mailpit und legt bei einer leeren ersten Umgebung fiktive Konten an. Das Portal öffnet sich unter <http://127.0.0.1:5473>; API und Mailpit liegen auf57321/57324. Die generierten Zugangsdaten entstehen ausschließlich lokal; echte E-Mails werden lokal abgefangen. Vorhandene Entwicklungsverzeichnisse nicht mit diesem Paket überschreiben.
+The separate runtime installs the locked dependencies, starts the complete local application including Supabase and Mailpit, and creates fictional accounts in an initially empty environment. The portal opens at <http://127.0.0.1:5473>; the API and Mailpit use ports 57321/57324. Generated credentials are created locally only; actual email delivery is intercepted locally. Do not overwrite existing development directories with this package.
 
 ```bash
 node preview.mjs stop
 ```
 
-Dieser Befehl stoppt die eigene Vorschau und erhält ihre lokalen Daten. `node preview.mjs status` prüft diese Laufzeit; `node preview.mjs prepare` erzeugt und prüft ausschließlich die eigene Quellkopie, ohne einen Dienst zu starten. Ein erfolgreicher Paketbau beweist nicht, dass die Vorschau auf jedem fremden Rechner bereits gestartet wurde.
+This command stops the separate preview while preserving its local data. `node preview.mjs status` checks this runtime; `node preview.mjs prepare` only creates and verifies the separate source copy, without starting a service. A successful package build does not prove that the preview has already started on every other computer.
 
-## GitHub-Deployments und Berechtigungen
+## GitHub deployments and permissions
 
-Der Workflow [pr-previews.yml](../.github/workflows/pr-previews.yml) führt ausschließlich den Publisher vom vertrauenswürdigen Standardzweig aus. Er hat `deployments: write` und ausschließlich Leserechte auf Quellen, Actions und PR-Metadaten. Er installiert keine Pakete, lädt keine Artefakte herunter, führt keinen PR-Code aus und erhält keine Hosting-Secrets. Auch das `pull_request_target`-Ereignis wird ausschließlich für die Metadatenbereinigung eines geschlossenen PRs verwendet.
+The [pr-previews.yml](../.github/workflows/pr-previews.yml) workflow executes only the publisher from the trusted default branch. It has `deployments: write` and read-only permissions for sources, Actions and PR metadata. It does not install packages, download artifacts or execute PR code, and it receives no hosting secrets. The `pull_request_target` event is also used only to clean up metadata for a closed PR.
 
-Der Publisher bestätigt Repository, tatsächlichen Workflowpfad, PR-Head, aktuellen Workflow-Versuch und alle erwarteten erfolgreichen Jobs erneut über GitHubs API. Er liest lediglich Metadaten des eindeutig benannten, nicht abgelaufenen Artefakts einschließlich dessen von GitHub ermitteltem Digest. Ein neuerer Lauf oder ein veränderter/geschlossener PR darf kein altes Ergebnis als aktuell veröffentlichen. Fork-Payloads ohne direkte PR-Verknüpfung werden über die zugehörige Commit-API aufgelöst. Freie PR-Texte werden weder als Befehle noch als URLs verwendet.
+The publisher reconfirms the repository, actual workflow path, PR head, current workflow attempt and every expected successful job through GitHub's API. It reads only the metadata of the uniquely named, unexpired artifact, including its GitHub-provided digest. A newer run or a changed/closed PR must prevent an old result from being published as current. Fork payloads without a direct PR association are resolved through the associated commit API. Free-form PR text is never used as commands or URLs.
 
-Das Deployment ist als temporär und nicht produktiv markiert. Während der Prüfung steht es auf `in_progress`, bei fehlgeschlagenen Prüfungen auf `failure`. `success` bedeutet hier ausdrücklich **„lokales Vorschaupaket herunterladbar“**; der angegebene Link führt zum tatsächlichen Artefakt. Ein geschlossener PR oder eine neuere Vorschau deaktiviert ältere Datensätze. Ein täglicher Metadatenlauf deaktiviert abgelaufene, gelöschte oder inzwischen überholte Pakete. Andere Deploymentaufgaben und Produktionsumgebungen werden nicht verändert.
+The deployment is marked transient and non-production. Its status is `in_progress` during checks and `failure` when checks fail. Here, `success` explicitly means **“local preview package available for download”**; the supplied link points to the actual artifact. Closing a PR or publishing a newer preview deactivates older records. A daily metadata run deactivates expired, deleted or superseded packages. Other deployment tasks and production environments remain unchanged.
 
-Der neue vertrauenswürdige Publisher wird durch `workflow_run` erst aktiv, wenn seine Workflow- und Skriptdateien auf dem Standardzweig liegen. Der PR, der ihn erstmals einführt, kann bereits sein Paket bauen. Seine erstmalige Deploymentveröffentlichung kann eine berechtigte Person nach Quellenprüfung einmalig mit demselben getesteten Metadatenpublisher gegen den tatsächlich vollständig erfolgreichen PR-Lauf ausführen. Dazu braucht der Prozess `GITHUB_REPOSITORY`, `GITHUB_EVENT_NAME=workflow_run`, einen privaten Ereignispfad mit der echten Lauf-ID und Versuchsnummer sowie ein im Prozessspeicher übergebenes `GH_TOKEN`; der Publisher bestätigt alle Daten erneut über die API. Er erhält dabei keinen Artefaktinhalt und führt keinen Beitragscode aus. Das ist eine gesondert nachzuweisende Erstveröffentlichung, keine vorgezogene Aktivierung des automatischen Standardzweig-Workflows. Ohne diesen tatsächlichen Schritt oder einen späteren automatischen Lauf dürfen lokale Tests oder gültige YAML-Dateien nicht als erfolgte Remote-Veröffentlichung beschrieben werden.
+The new trusted publisher becomes active through `workflow_run` only once its workflow and script files are on the default branch. The PR that first introduces it can already build its package. After reviewing the source, an authorised person can perform its first deployment publication once, using the same tested metadata publisher against the actual fully successful PR run. The process requires `GITHUB_REPOSITORY`, `GITHUB_EVENT_NAME=workflow_run`, a private event path containing the real run ID and attempt number, and a `GH_TOKEN` passed in process memory; the publisher reconfirms every value through the API. It receives no artifact contents and executes no contribution code. This first publication requires separate evidence; it does not activate the automatic default-branch workflow ahead of time. Without this actual step or a later automatic run, local tests or valid YAML files must not be described as a completed remote publication.
 
-## Gehostete Vorschauen und bestehende Releases
+## Hosted previews and existing releases
 
-Die vorhandene Entwicklungsinstallation `cms.luminovia.org` bleibt eine eigene, datenhaltende Umgebung für erfolgreich geprüftes `main`. Sie wird nicht für ungemergte Beiträge wiederverwendet. Der bestehende Releasejob und die unabhängigen Security- und Metadatenprüfungen bleiben erhalten; das lokale PR-Paket erhält weder produktive Schlüssel noch Zugriff auf diese Daten.
+The existing development installation at `cms.luminovia.org` remains a separate environment with persistent data for successfully tested `main`. It is not reused for unmerged contributions. The existing release job and independent security and metadata checks are preserved; the local PR package receives neither production keys nor access to that data.
 
-Ein dauerhaft per Browser erreichbares Portal je PR benötigt einen eigens konfigurierten Vorschauhost samt getrennter Auth-, Datenbank-, Storage- und E-Mail-Umgebung sowie geregelter Bereinigung. Eine statische Frontendkopie mit einem erfundenen Backend würde den Login und die Geschäftsabläufe nicht erfüllen. Dieser Stand registriert keinen solchen Dienst und behauptet keine öffentliche PR-URL.
+A persistently browser-accessible portal for each PR requires a separately configured preview host with isolated Auth, database, Storage and email environments, plus controlled cleanup. A static frontend copy with an invented backend would not provide working login and business workflows. This implementation registers no such service and claims no public PR URL.
 
-Grundlagen: [GitHub-Deployment-API](https://docs.github.com/en/rest/deployments/deployments), [Deploymentstatus](https://docs.github.com/en/rest/deployments/statuses) und [Sicherheitsgrenzen privilegierter Workflows](https://docs.github.com/en/actions/reference/security/secure-use).
+References: [GitHub deployment API](https://docs.github.com/en/rest/deployments/deployments), [deployment statuses](https://docs.github.com/en/rest/deployments/statuses) and [security boundaries for privileged workflows](https://docs.github.com/en/actions/reference/security/secure-use).

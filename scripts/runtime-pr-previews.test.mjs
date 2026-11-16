@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+  cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -20,6 +21,20 @@ import { preparePackagedPreview } from "./runtime-pr-preview.mjs";
 const repository = "Luminovia-Training-Consulting/Luminovia-Management-Tool";
 const head = "a".repeat(40);
 const now = Date.parse("2026-11-16T10:00:00Z");
+const canonicalConfig = `project_id = "luminovia-portal"
+[api]
+port = 54321
+[db]
+port = 54322
+shadow_port = 54320
+[local_smtp]
+port = 54324
+[edge_runtime]
+inspector_port = 8083
+[auth]
+site_url = "http://127.0.0.1:5173"
+additional_redirect_urls = ["http://127.0.0.1:5173/auth/callback"]
+`;
 const expectedJobs = [
   "Build",
   "Typecheck",
@@ -43,6 +58,7 @@ function fixture() {
       conclusion: "success",
       repository: { full_name: repository },
       head_sha: head,
+      head_branch: "feature/example",
       pull_requests: [{ number: 5 }],
     },
     pr: {
@@ -184,6 +200,25 @@ test("running and failed CI never announce a downloadable/hosted preview", async
   assert.equal(state.statuses.get(id)[0].state, "failure");
   assert.equal(state.statuses.get(id)[0].environment_url, undefined);
   assert.ok(!state.reads.some((path) => path.includes("/artifacts")));
+});
+
+test("actual GitHub stale-run metadata cannot substitute its dynamically updated PR association head", async () => {
+  const { state, publish } = fixture();
+  // Observed REST identity shape from PR16/run43793409118. The run is tied
+  // to an old one-parent source commit; its association now names a NEW head.
+  const oldHead = "1de2de31f533f63df69b27b1e4ef246a221776cc";
+  const currentHead = "32453eb5f022168a0870a107d185e08e879418f7";
+  state.run.head_sha = oldHead;
+  state.run.pull_requests = [
+    {
+      number: 5,
+      head: { sha: currentHead },
+      base: { sha: "3256d1a244ca0d6eac8a7242495f44f37d7e3124" },
+    },
+  ];
+  state.pr.head.sha = currentHead;
+  await publish();
+  assert.deepEqual(state.writes, []);
 });
 
 test("fork workflow payloads without PR associations use the commit association API", async () => {
@@ -391,10 +426,7 @@ function withRepository(operation) {
     writeFileSync(join(cwd, "portal"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
     writeFileSync(join(cwd, ".env.example"), "EXAMPLE=fictional\n");
     mkdirSync(join(cwd, "supabase"));
-    writeFileSync(
-      join(cwd, "supabase/config.toml"),
-      readFileSync(new URL("../supabase/config.toml", import.meta.url)),
-    );
+    writeFileSync(join(cwd, "supabase/config.toml"), canonicalConfig);
     mkdirSync(join(cwd, "scripts"));
     for (const name of [
       "runtime-pr-preview.mjs",
@@ -587,6 +619,54 @@ test("preview preparation refuses changed archive/config, foreign ownership mark
       );
     }
   });
+});
+
+test("package fixtures stay canonical inside the complete runner's rewritten test source", () => {
+  const directory = mkdtempSync(
+    join(tmpdir(), "luminovia-pr-overlay-fixture-"),
+  );
+  try {
+    mkdirSync(join(directory, "supabase"));
+    writeFileSync(
+      join(directory, "supabase/config.toml"),
+      canonicalConfig.replaceAll("543", "553").replaceAll(":5173", ":5273"),
+    );
+    mkdirSync(join(directory, "scripts"));
+    for (const name of [
+      "runtime-pr-previews.test.mjs",
+      "pr-preview-package.mjs",
+      "pr-preview-deployments.mjs",
+      "runtime-pr-preview.mjs",
+      "runtime-github-config.mjs",
+      "runtime-snapshot.mjs",
+    ])
+      cpSync(new URL(name, import.meta.url), join(directory, "scripts", name));
+    const result = execFileSync(
+      process.execPath,
+      [
+        "--test",
+        "--test-name-pattern=actual packaged launcher isolates",
+        "scripts/runtime-pr-previews.test.mjs",
+      ],
+      {
+        cwd: directory,
+        encoding: "utf8",
+        timeout: 15_000,
+        env: Object.fromEntries(
+          Object.entries(process.env).filter(
+            ([key]) => !key.startsWith("NODE_TEST_"),
+          ),
+        ),
+      },
+    );
+    assert.match(result, /pass 1/);
+    assert.equal(
+      readFileSync(join(directory, "supabase/config.toml"), "utf8"),
+      canonicalConfig.replaceAll("543", "553").replaceAll(":5173", ":5273"),
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("committed private files or an incorrect tested revision refuse package creation", () => {
