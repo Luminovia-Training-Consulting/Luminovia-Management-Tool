@@ -125,6 +125,13 @@ function mainRun(workflow, sha, overrides = {}) {
     ...overrides,
   };
 }
+function permissionForRole(role) {
+  if (typeof role !== "string") return structuredClone(role);
+  return {
+    permission: { maintain: "write", triage: "read" }[role] ?? role,
+    role_name: role,
+  };
+}
 function fixture(options = {}) {
   const calls = [];
   let inspection = -1;
@@ -194,13 +201,18 @@ function fixture(options = {}) {
       );
     }
     if (route === "/pulls/31/reviews")
-      return structuredClone(options.reviews ?? []);
+      return structuredClone(
+        options.reviewInspections?.[inspection] ?? options.reviews ?? [],
+      );
     const login = route.match(/^\/collaborators\/([^/]+)\/permission$/)?.[1];
     if (login)
-      return {
-        permission:
-          options.permissions?.[decodeURIComponent(login)] ?? "maintain",
-      };
+      return permissionForRole(
+        options.permissionInspections?.[inspection]?.[
+          decodeURIComponent(login)
+        ] ??
+          options.permissions?.[decodeURIComponent(login)] ??
+          "maintain",
+      );
     if (route === "/pulls") return structuredClone(options.open ?? [active]);
     if (route.startsWith("/compare/"))
       return { status: options.compareStatus ?? "diverged" };
@@ -233,6 +245,42 @@ function fixture(options = {}) {
     request,
     calls,
     writes: () => calls.filter((c) => c.method !== "GET"),
+  };
+}
+
+function httpFixture(options = {}) {
+  const source = fixture(options);
+  const sent = [];
+  // Compose the public HTTP clients and token router with the full domain
+  // fixture, so rejected review decisions must not reach the privileged client.
+  const fetcher = async (url, config) => {
+    const parsed = new URL(url);
+    assert.equal(parsed.origin, "https://api.github.com");
+    sent.push({
+      path: parsed.pathname,
+      method: config.method,
+      authorization: config.headers.Authorization,
+    });
+    const data = await source.request(parsed.pathname + parsed.search, {
+      method: config.method,
+      ...(config.body ? { body: JSON.parse(config.body) } : {}),
+    });
+    return {
+      ok: true,
+      status: data === null ? 204 : 200,
+      json: async () => {
+        assert.notEqual(data, null, "204 dispatch responses have no JSON body");
+        return structuredClone(data);
+      },
+    };
+  };
+  return {
+    ...source,
+    sent,
+    request: routeRequests(
+      githubClient("fictional-read-token", fetcher),
+      githubClient("fictional-app-token", fetcher),
+    ),
   };
 }
 
@@ -546,25 +594,245 @@ test("external authors need an independent writer approval of the exact head", a
   );
 });
 
-test("Dependabot trust requires its exact account identity", async () => {
-  const source = fixture({
-    pr: { user: { login: "dependabot[bot]", id: 49699333 } },
+test("write authors cannot use the promotion App to bypass an independent review", async () => {
+  const source = httpFixture({
+    pr: { mergeable_state: "blocked" },
+    permissions: { maintainer: "write" },
   });
-  assert.equal(
-    (await inspectPullRequest(source.request, 31, catalogue)).eligible,
-    true,
+  assert.deepEqual(
+    await processPullRequest(source.request, 31, catalogue, { apply: true }),
+    { eligible: false, reason: "external-review" },
   );
-  assert.equal(
-    source.calls.some((call) => call.path.includes("/collaborators/")),
-    false,
+  assert.deepEqual(source.writes(), []);
+  assert.ok(source.sent.length > 0);
+  assert.ok(
+    source.sent.every(
+      (call) => call.authorization === "Bearer fictional-read-token",
+    ),
   );
+});
+
+test("write authors need a current independent approval from write, maintain or admin", async () => {
+  const approval = {
+    id: 3,
+    user: { login: "reviewer" },
+    state: "APPROVED",
+    commit_id: head,
+  };
+  for (const permission of ["write", "maintain", "admin"]) {
+    const source = httpFixture({
+      permissions: { maintainer: "write", reviewer: permission },
+      reviews: [approval],
+    });
+    const result = await processPullRequest(source.request, 31, catalogue, {
+      apply: true,
+    });
+    assert.equal(result.promoted, true, permission);
+    assert.equal(result.commit, merge);
+    assert.deepEqual(source.writes()[0], {
+      path: `${prefix}/git/refs/heads/main`,
+      method: "PATCH",
+      body: { sha: merge, force: false },
+    });
+    for (const call of source.sent)
+      assert.equal(
+        call.authorization,
+        call.method === "GET"
+          ? "Bearer fictional-read-token"
+          : "Bearer fictional-app-token",
+      );
+  }
+  for (const review of [
+    { ...approval, commit_id: base },
+    { ...approval, user: { login: "maintainer" } },
+    { ...approval, state: "COMMENTED" },
+  ])
+    await expectBlocked(
+      { permissions: { maintainer: "write" }, reviews: [review] },
+      "external-review",
+    );
+  for (const permission of ["read", "triage", "none", "unknown"])
+    await expectBlocked(
+      {
+        permissions: { maintainer: "write", reviewer: permission },
+        reviews: [approval],
+      },
+      "external-review",
+    );
+});
+
+test("only maintain and admin human authors are review-free, with CI and signatures still mandatory", async () => {
+  for (const permission of ["maintain", "admin"]) {
+    const options = {
+      permissions: { maintainer: permission },
+      pr: { mergeable_state: "blocked" },
+    };
+    const source = fixture(options);
+    assert.equal(
+      (await processPullRequest(source.request, 31, catalogue, { apply: true }))
+        .promoted,
+      true,
+      permission,
+    );
+    const checks = checksFor();
+    checks[0].conclusion = "failure";
+    await expectBlocked({ ...options, checks }, "required-checks");
+    await expectBlocked(
+      {
+        ...options,
+        mergeCommit: {
+          sha: merge,
+          verification: { verified: false, reason: "unsigned" },
+          parents: [{ sha: base }, { sha: head }],
+        },
+      },
+      "untested-merge",
+    );
+  }
+  for (const permission of ["read", "triage", "none", "unknown"])
+    await expectBlocked(
+      { permissions: { maintainer: permission } },
+      "external-review",
+    );
+});
+
+test("author exemptions require exact standard role_name and consistent legacy permission", async () => {
+  for (const permission of [
+    { permission: "write", role_name: "maintain" },
+    { permission: "admin", role_name: "admin" },
+  ]) {
+    const source = fixture({ permissions: { maintainer: permission } });
+    assert.equal(
+      (await processPullRequest(source.request, 31, catalogue, { apply: true }))
+        .promoted,
+      true,
+    );
+  }
+  for (const permission of [
+    { permission: "write", role_name: "write" },
+    { permission: "read", role_name: "maintain" },
+    { permission: "write", role_name: "admin" },
+    { permission: "admin", role_name: "maintain" },
+    { permission: "write", role_name: "custom-maintenance" },
+    { permission: "admin", role_name: "custom-administrator" },
+    { permission: "maintain", role_name: "maintain" },
+    { permission: "write" },
+  ])
+    await expectBlocked(
+      { permissions: { maintainer: permission } },
+      "external-review",
+    );
+});
+
+test("Dependabot and App authors require an independent current-head review", async () => {
+  const approval = {
+    id: 3,
+    user: { login: "reviewer" },
+    state: "APPROVED",
+    commit_id: head,
+  };
+  for (const user of [
+    { login: "dependabot[bot]", id: 49699333, type: "Bot" },
+    { login: "dependabot[bot]", id: 2 },
+    { login: "luminovia-portal-maintenance[bot]", id: 3, type: "Bot" },
+    { login: "maintenance-automation", id: 4, type: "Bot" },
+  ]) {
+    // A bot identity, App-backed transport or assigned permission alone never
+    // grants the human maintainer's review exception to automated PR authors.
+    const options = {
+      pr: { user },
+      permissions: { [user.login]: "admin", reviewer: "write" },
+    };
+    await expectBlocked(options, "external-review");
+    const source = fixture({ ...options, reviews: [approval] });
+    assert.equal(
+      (await processPullRequest(source.request, 31, catalogue, { apply: true }))
+        .promoted,
+      true,
+    );
+    await expectBlocked(
+      { ...options, reviews: [{ ...approval, user }] },
+      "external-review",
+    );
+  }
+});
+
+test("a dismissed review or withdrawn approver permission at the final gate prevents all writes", async () => {
+  const approval = {
+    id: 3,
+    user: { login: "reviewer" },
+    state: "APPROVED",
+    commit_id: head,
+  };
+  for (const changed of [
+    { reviewInspections: [[approval], [{ ...approval, state: "DISMISSED" }]] },
+    { permissionInspections: [{ reviewer: "write" }, { reviewer: "read" }] },
+  ]) {
+    const source = await expectBlocked(
+      {
+        permissions: { maintainer: "write" },
+        reviews: [approval],
+        ...changed,
+      },
+      "external-review",
+    );
+    assert.equal(
+      source.calls.filter((call) => call.path.includes("/pulls/31/reviews?"))
+        .length,
+      2,
+    );
+  }
   await expectBlocked(
     {
-      pr: { user: { login: "dependabot[bot]", id: 2 } },
-      permissions: { "dependabot[bot]": "read" },
+      permissionInspections: [
+        { maintainer: "maintain" },
+        { maintainer: "write" },
+      ],
     },
     "external-review",
   );
+});
+
+test("review-required authors also need native clean state so unresolved rules cannot be bypassed", async () => {
+  const approval = {
+    id: 3,
+    user: { login: "reviewer" },
+    state: "APPROVED",
+    commit_id: head,
+  };
+  for (const [user, permission] of [
+    [{ login: "writer", id: 2 }, "write"],
+    [{ login: "external", id: 3 }, "read"],
+    [{ login: "dependabot[bot]", id: 49699333, type: "Bot" }, "read"],
+  ]) {
+    const options = {
+      permissions: { [user.login]: permission, reviewer: "write" },
+      reviews: [approval],
+    };
+    await expectBlocked(
+      { ...options, pr: { user, mergeable_state: "blocked" } },
+      "native-review-blocked",
+    );
+    const source = fixture({
+      ...options,
+      pr: { user, mergeable_state: "clean" },
+    });
+    assert.equal(
+      (await processPullRequest(source.request, 31, catalogue, { apply: true }))
+        .promoted,
+      true,
+    );
+    await expectBlocked(
+      {
+        ...options,
+        inspections: [
+          { user, mergeable_state: "clean" },
+          { user, mergeable_state: "blocked" },
+        ],
+      },
+      "native-review-blocked",
+    );
+  }
 });
 
 test("check pagination reads failures beyond the first hundred items", async () => {
@@ -1187,48 +1455,22 @@ test("the HTTP client permits Git compare's three-dot delimiter and rejects norm
 });
 
 test("the composed router, HTTP clients and full merge process handle compares and preserve token boundaries", async () => {
-  const source = fixture({
+  const source = httpFixture({
     open: [pullRequest(), { number: 32, head: { sha: merged } }],
     compareStatus: "diverged",
   });
-  const sent = [];
-  // Exercise the public HTTP boundary as well as domain orchestration. A direct
-  // request-function fixture alone would miss URL validation/routing regressions.
-  const fetcher = async (url, options) => {
-    const parsed = new URL(url);
-    assert.equal(parsed.origin, "https://api.github.com");
-    sent.push({
-      path: parsed.pathname,
-      method: options.method,
-      authorization: options.headers.Authorization,
-    });
-    const data = await source.request(parsed.pathname + parsed.search, {
-      method: options.method,
-      ...(options.body ? { body: JSON.parse(options.body) } : {}),
-    });
-    return {
-      ok: true,
-      status: data === null ? 204 : 200,
-      json: async () => {
-        assert.notEqual(data, null, "204 dispatch responses have no JSON body");
-        return structuredClone(data);
-      },
-    };
-  };
-  const request = routeRequests(
-    githubClient("fictional-read-token", fetcher),
-    githubClient("fictional-app-token", fetcher),
-  );
-  const result = await processPullRequest(request, 31, catalogue, {
+  const result = await processPullRequest(source.request, 31, catalogue, {
     apply: true,
   });
   assert.equal(result.promoted, true);
   assert.equal(result.merged, true);
   assert.equal(result.commit, merge);
   assert.ok(
-    sent.some((call) => call.path === `${prefix}/compare/${merged}...${merge}`),
+    source.sent.some(
+      (call) => call.path === `${prefix}/compare/${merged}...${merge}`,
+    ),
   );
-  for (const call of sent)
+  for (const call of source.sent)
     assert.equal(
       call.authorization,
       call.method === "GET"

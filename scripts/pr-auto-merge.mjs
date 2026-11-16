@@ -141,8 +141,8 @@ export async function inspectPullRequest(request, number, catalogue) {
     return blocked("foreign-base");
   if (pr.labels?.some((label) => label.name === "merge:hold"))
     return blocked("maintainer-hold");
-  // The approved App's native review exception can leave a fully tested writer
-  // PR "blocked". Our explicit review/check policy below still must all pass.
+  // The approved App's native review exception can leave a maintainer PR
+  // "blocked". Review-required authors must also pass the clean-state gate below.
   if (
     pr.mergeable !== true ||
     !["clean", "blocked"].includes(pr.mergeable_state)
@@ -290,30 +290,46 @@ export async function inspectPullRequest(request, number, catalogue) {
     )
   )
     return blocked("changes-requested");
-  // Repository writers and the official Dependabot account are trusted authors.
-  // Outside contributions require an actual current-head approval by a writer.
-  const trusted = async (login) => {
+  const permissionFor = async (login) => {
     assert(
       typeof login === "string" && /^[a-zA-Z0-9-]+(?:\[bot\])?$/.test(login),
     );
-    const permission = await request(
+    return request(
       `${prefix}/collaborators/${encodeURIComponent(login)}/permission`,
     );
-    return ["admin", "maintain", "write"].includes(permission.permission);
   };
-  const dependabot =
-    pr.user?.login === "dependabot[bot]" && pr.user?.id === 49699333;
-  if (!dependabot && !(await trusted(pr.user?.login))) {
+  // The human maintainer's review exception is narrower than approval authority.
+  // Neither write access nor an automated author inherits the promotion App's
+  // transport privilege; Dependabot follows the ordinary reviewed PR path.
+  const automatedAuthor =
+    pr.user?.type === "Bot" || pr.user?.login?.endsWith("[bot]");
+  const authorPermission = automatedAuthor
+    ? null
+    : await permissionFor(pr.user?.login);
+  // This endpoint exposes legacy base permissions: maintain maps to write.
+  // Require the exact standard role plus its matching base, not a custom name.
+  const reviewExempt =
+    !automatedAuthor &&
+    ((authorPermission?.permission === "write" &&
+      authorPermission.role_name === "maintain") ||
+      (authorPermission?.permission === "admin" &&
+        authorPermission.role_name === "admin"));
+  if (!reviewExempt) {
     let approved = false;
     for (const review of latestReviews.values())
       if (
         review.state === "APPROVED" &&
         review.commit_id === pr.head.sha &&
         review.user?.login !== pr.user.login &&
-        (await trusted(review.user?.login))
+        ["admin", "write"].includes(
+          (await permissionFor(review.user?.login))?.permission,
+        )
       )
         approved = true;
     if (!approved) return blocked("external-review");
+    // The App exception also bypasses native last-push/thread rules. An explicit
+    // approval alone cannot prove those resolved for a review-required author.
+    if (pr.mergeable_state !== "clean") return blocked("native-review-blocked");
   }
   return {
     eligible: true,
