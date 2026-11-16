@@ -9,7 +9,7 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Correct erased-type false positives in the runtime-use guard with adverse fixtures and runtime-class inheritance preservation.
 - [x] Execute current local source/coverage/public-browser/guard/build checks and document actual evidence in [GUIDED_EXPERIENCE_AUDIT](GUIDED_EXPERIENCE_AUDIT.md).
 
-Exact combined/native/security and extended real-account browser acceptance belongs to the follow-up PR. The prior merged PR16 baseline remains preserved; these focused fixes do not mark unrelated product modules complete.
+Exact combined/native/security, extended real-account browser acceptance and the user-authorised merge are tracked on [PR21](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/21). The prior merged PR16 baseline remains preserved; these focused fixes do not mark unrelated product modules complete.
 
 ## Guided exploration and practical help
 
