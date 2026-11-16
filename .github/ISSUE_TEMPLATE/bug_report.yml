@@ -1,49 +1,49 @@
-name: Fehler melden
-description: Einen reproduzierbaren Fehler im Luminovia Portal beschreiben.
+name: Report a bug
+description: Describe a reproducible bug in the Luminovia Portal.
 title: "[Bug]: "
 labels: ["type:fix"]
 body:
   - type: markdown
     attributes:
       value: |
-        Danke für deine Meldung. Prüfe zuerst, ob bereits ein passendes Issue existiert.
-        Nutze ausschließlich fiktive oder geschwärzte Beispiele. Poste keine Passwörter,
-        Tokens, MFA-Codes, privaten Dokumente oder personenbezogenen Kundendaten.
-        Für Sicherheitslücken gilt der [private Meldeweg im Issue-Leitfaden](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/ISSUE_GUIDE.md#sicherheitsprobleme-melden).
+        Thanks for reporting a problem. First check whether a matching issue already exists.
+        Use fictional or redacted examples only. Do not post passwords, tokens, MFA codes,
+        private documents or personal customer data.
+        Report security vulnerabilities through the [private channel in the issue guide](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/ISSUE_GUIDE.md#reporting-security-vulnerabilities).
   - type: input
     id: revision
     attributes:
-      label: Version oder Commit
-      description: Commit-SHA, Release-Tag oder Datum des beobachteten Stands. Falls unbekannt, bitte ausdrücklich „unbekannt“ schreiben.
-      placeholder: "Zum Beispiel: Commit abc1234, lokaler Branch codex/beispiel"
+      label: Version or commit
+      description: Commit SHA, release tag or date of the affected version. If you do not know, explicitly write "unknown".
+      placeholder: "For example: commit abc1234, local branch codex/example"
     validations:
       required: true
   - type: dropdown
     id: environment
     attributes:
-      label: Umgebung
+      label: Environment
       options:
-        - Lokale Entwicklung mit ./portal start
-        - Isolierter Test mit ./portal test
-        - Selbst gehostete Entwicklungsinstanz
-        - Andere oder unbekannte Umgebung
+        - Local development with ./portal start
+        - Isolated test with ./portal test
+        - Self-hosted development instance
+        - Other or unknown environment
     validations:
       required: true
   - type: input
     id: client
     attributes:
-      label: Betriebssystem und Browser
-      description: Bei Browserfehlern Browsername, Version und Gerät angeben; bei reinen API-/CLI-Fehlern die verwendeten Werkzeuge.
-      placeholder: "Zum Beispiel: Linux, Chromium 140, Desktop; Sprache DE, Theme dunkel"
+      label: Operating system and browser
+      description: For browser issues, include the browser name, version and device. For API or CLI issues, list the tools used.
+      placeholder: "For example: Linux, Chromium 140, desktop; language EN, dark theme"
     validations:
       required: true
   - type: textarea
     id: reproduce
     attributes:
-      label: Schritte zur Reproduktion
-      description: Beschreibe Ausgangszustand, betroffene Seite oder API, benötigte Rolle und genaue Schritte. Keine Zugangsdaten angeben.
+      label: Steps to reproduce
+      description: Describe the starting state, affected page or API, required role and exact steps. Do not include credentials.
       placeholder: |
-        1. Mit einem fiktiven Dozierendenkonto anmelden.
+        1. Sign in with a fictional lecturer account.
         2. ...
         3. ...
     validations:
@@ -51,28 +51,28 @@ body:
   - type: textarea
     id: expected
     attributes:
-      label: Erwartetes Verhalten
-      description: Was sollte nach diesen Schritten passieren?
+      label: Expected behavior
+      description: What should happen after these steps?
     validations:
       required: true
   - type: textarea
     id: actual
     attributes:
-      label: Tatsächliches Verhalten
-      description: Was passiert stattdessen? Ist der Fehler wiederholbar oder nur gelegentlich aufgetreten?
+      label: Actual behavior
+      description: What happens instead? Does the problem occur consistently or only occasionally?
     validations:
       required: true
   - type: textarea
     id: evidence
     attributes:
-      label: Bereinigte Nachweise und weitere Hinweise
-      description: Optional Screenshots, genaue Fehlermeldung oder kurze bereinigte Logs. Bei Kalenderfehlern Datum und IANA-Zeitzone nennen. Keine vollständigen privaten Netzwerkprotokolle hochladen.
+      label: Redacted evidence and additional context
+      description: Optionally include screenshots, the exact error message or short redacted logs. For calendar issues, include the date and IANA time zone. Do not upload complete private network traces.
   - type: checkboxes
     id: checks
     attributes:
-      label: Vor dem Absenden
+      label: Before submitting
       options:
-        - label: Ich habe nach bestehenden Issues gesucht.
+        - label: I have searched for existing issues.
           required: true
-        - label: Die Meldung enthält keine Zugangsdaten, privaten Dokumente oder personenbezogenen Daten; eine Sicherheitslücke melde ich über den beschriebenen privaten Weg.
+        - label: This report contains no credentials, private documents or personal data. I will report security vulnerabilities through the private channel described above.
           required: true
