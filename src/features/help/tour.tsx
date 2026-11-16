@@ -20,9 +20,7 @@ import "./tour.css";
 const copy = {
   de: {
     title: "Portal-Rundgang",
-    start: "Rundgang starten",
     resume: "Rundgang fortsetzen",
-    restart: "Erneut starten",
     pause: "Pausieren",
     close: "Schließen",
     next: "Weiter",
@@ -35,13 +33,14 @@ const copy = {
     done: "Rundgang abgeschlossen. Du kannst ihn jederzeit neu starten.",
     safe: "Du bist im echten Portal. Der Rundgang erklärt nur und führt keine Aktionen aus. Zum gefahrlosen Ausprobieren öffne die Demo.",
     unavailable: "Der Rundgang wartet auf die aktuellen Zugriffsrechte.",
+    loadError:
+      "Die Zugriffsrechte konnten nicht geladen werden. Lade sie erneut, bevor du den Rundgang startest.",
+    retry: "Zugriffsrechte erneut laden",
     count: "Schritt",
   },
   en: {
     title: "Portal tour",
-    start: "Start tour",
     resume: "Resume tour",
-    restart: "Restart tour",
     pause: "Pause",
     close: "Close",
     next: "Next",
@@ -54,6 +53,9 @@ const copy = {
     done: "Tour completed. You can restart it at any time.",
     safe: "You are in the live portal. The tour only explains and never performs actions. Open the demo to practise safely.",
     unavailable: "The tour is waiting for current access permissions.",
+    loadError:
+      "Access permissions could not be loaded. Reload them before starting the tour.",
+    retry: "Reload access permissions",
     count: "Step",
   },
 };
@@ -64,12 +66,18 @@ export function PortalTour({
   roles,
   permissions,
   ready,
+  failed = false,
+  retrying = false,
+  onRetry,
   children,
 }: {
   actor: string;
   roles: readonly string[];
   permissions: readonly string[];
   ready: boolean;
+  failed?: boolean;
+  retrying?: boolean;
+  onRetry?: () => void;
   children?: ReactNode;
 }) {
   const { i18n } = useTranslation();
@@ -79,6 +87,9 @@ export function PortalTour({
   const [state, setState] = useState<TourState>(() => readTour(actor));
   const heading = useRef<HTMLHeadingElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
+  // Restore focus only after an explicit retry; background capability refresh
+  // must leave the user's current control untouched.
+  const retryRequested = useRef(false);
   // Recompute visible stops from current capabilities; stored progress never grants a destination.
   const modules = permittedTourModules(roles, permissions);
   const index = Math.max(
@@ -102,7 +113,9 @@ export function PortalTour({
   };
   useEffect(() => {
     if (active) heading.current?.focus();
-  }, [active, state.step]);
+    else if (ready && retryRequested.current) launcher.current?.focus();
+    if (ready) retryRequested.current = false;
+  }, [active, ready, state.step]);
   useEffect(() => {
     if (!active) return;
     const onEscape = (event: KeyboardEvent) => {
@@ -123,10 +136,7 @@ export function PortalTour({
   return (
     <>
       {!active && children}
-      <section
-        className={`portal-tour ${active ? "portal-tour-active" : ""}`}
-        aria-label={text.title}
-      >
+      <section className="portal-tour" aria-label={text.title}>
         <div className="portal-tour-entry">
           <Button
             ref={launcher}
@@ -147,7 +157,26 @@ export function PortalTour({
             {text.demo}
           </Link>
         </div>
-        {!ready && <p role="status">{text.unavailable}</p>}
+        {!ready &&
+          (failed ? (
+            <div role="alert">
+              <p>{text.loadError}</p>
+              {onRetry && (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    retryRequested.current = true;
+                    onRetry();
+                  }}
+                  disabled={retrying}
+                >
+                  {text.retry}
+                </Button>
+              )}
+            </div>
+          ) : (
+            <p role="status">{text.unavailable}</p>
+          ))}
         {state.status === "completed" && <p role="status">{text.done}</p>}
         {active && step && (
           <div className="portal-tour-content">
