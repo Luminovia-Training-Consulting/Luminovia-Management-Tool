@@ -75,7 +75,7 @@ begin
  if not private.actor_active() then raise exception 'Active account required' using errcode='42501';end if;
  return coalesce((select jsonb_agg(jsonb_build_object('id',o.id,'job_id',j.id,'title',j.title,'time_zone',j.time_zone,
   'status',o.status,'mode',o.mode,'emergency',o.emergency,'version',o.version,'created_at',o.created_at,
-  'can_cancel',o.status='open' and (c.lecturer_id=auth.uid() or private.has_permission('jobs.manage')),
+  'can_cancel',o.status='open' and (c.lecturer_id=auth.uid() and private.lecturer_actor() or private.has_permission('jobs.manage')),
   'can_claim',private.replacement_eligible(o.id,auth.uid()),
   'reason',case when c.lecturer_id=auth.uid() or private.has_permission('jobs.manage') then o.reason end,
   'quote',case when private.replacement_eligible(o.id,auth.uid()) then private.replacement_quote(j.id) end,
@@ -137,7 +137,7 @@ begin
  payload=jsonb_build_object('action','cancel','offer',p_offer_id,'version',p_expected_version);
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('replacement:'||auth.uid()::text||p_request_id::text,0));
  select * into o from private.replacement_offers where id=p_offer_id for update;
- if o.id is null or not(exists(select 1 from public.job_claims where id=o.original_claim_id and lecturer_id=auth.uid()) or private.has_permission('jobs.manage')) then raise exception 'Replacement access denied' using errcode='42501';end if;
+ if o.id is null or not(exists(select 1 from public.job_claims where id=o.original_claim_id and lecturer_id=auth.uid()) and private.lecturer_actor() or private.has_permission('jobs.manage')) then raise exception 'Replacement access denied' using errcode='42501';end if;
  select * into prior from private.replacement_requests where actor_id=auth.uid() and request_id=p_request_id;
  if found then if prior.payload<>payload then raise exception 'Replacement idempotency conflict' using errcode='22023';end if;return p_offer_id;end if;
  if o.version<>p_expected_version or o.status<>'open' then raise exception 'Replacement changed; reload' using errcode='40001';end if;

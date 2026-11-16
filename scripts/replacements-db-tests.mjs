@@ -416,6 +416,18 @@ await withTestDatabase("replacement_test", async ({ sql, actor }) => {
       await request(other.claim, manager, managerKey);
       await sql(`delete from public.user_roles where user_id='${manager}'`);
       await assert.rejects(request(other.claim, manager, managerKey), /42501/);
+      await sql(`delete from public.user_roles where user_id='${original}'`);
+      const ownOffer = (await list(original)).find(
+        (item) => item.job_id === other.job,
+      );
+      assert.equal(ownOffer.can_cancel, false);
+      await assert.rejects(
+        actor(
+          original,
+          `select public.cancel_replacement('${ownOffer.id}',1,'${randomUUID()}')`,
+        ),
+        /42501/,
+      );
     },
   );
   console.log(`\n${checks} replacement PostgreSQL groups passed.`);
