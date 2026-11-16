@@ -1,5 +1,11 @@
 # QA evidence — 2026-11-16
 
+## Accepted PR34 integration: final full-profile verification pending
+
+The user explicitly prioritised PR12 first. Actual main `c5281002` contains accepted PR34's conservative CI scope routing and two independent pinned SQL workers, with no application/API/dependency/migration change. PR12 remains full because it changes scripts/tests/workflows; the canonical source/browser acceptance and actual native retention still run. The measured 50-minute application allowance is retained. The review identified an upload interaction with reduced profiles; its focused correction must preserve incomplete full-run evidence and the missing-evidence failure boundary.
+
+Earlier exact3daf results below remain complete accepted history. They are not relabelled as the later CI/ledger integration. All 36 released SQL bytes remain identical; final focused local checks and fresh exact-final-head/current-base full-profile CI are required before the now-prioritised normal merge. No unaccepted PR17 feature or new shared-PC run is included.
+
 ## Exact 3daf: complete application, actual selfhost and all 15 checks passed
 
 [CI43851370883](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43851370883) passes all 15 mandatory checks on signed published `3daf4f03f6169fd83d2f2c05de18a402119d59bd`, against actual main `c0622a76`. Run1617934c completes 10:44:59.767–11:18:20.849 UTC with 91/91 stages passed and checked owned cleanup. Counts: 515 frontend/65 files, 109 runtime, 46 Edge, 76 Python, 76 operating Node, 350 regular SQL groups plus one legacy refusal, 28 actual business API suites and real invitation/restart retention. All 120 application cases (60 per project) and two built-PWA cases pass, zero skips/retries. Precache: 66 entries/2799.77 KiB. Source SHA-256: `3246a6c080df45a89a29728e04426302438a2940a133e02b9fbe6a7ed4875c1c`.
