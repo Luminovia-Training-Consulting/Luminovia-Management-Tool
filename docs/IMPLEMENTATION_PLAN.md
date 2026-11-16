@@ -42,6 +42,8 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 ## Smart operations extension — current user request
 
+**Current delivery priority:** PR10 alone owns the next main merge/shared PC QA slot. Keep PR17 draft with no auto-merge or merge watcher. Own58-source code and focused evidence are committed; full current-main acceptance is pending. After PR10, integrate actual main e88df84 or newer (including local publication controls/customer-neutral catalogue and the final canonical core), reconcile only undelivered own migration versions with byte-identical SQL, and repeat complete local/native/current-head CI before advancing PR17. The server's automatic mail/Push workers remain uninstalled.
+
 The entire new request is preserved in [SMART_OPERATIONS_SPEC](SMART_OPERATIONS_SPEC.md): alerts/email/push, personal dashboard, quality management, search, timesheets, client/participant workflows, Control Center, replacements/waitlists, favourites/saved filters, calendar feeds, qualifications, forecasts, history, tasks and offline schedule. No pending feature is removed from the original module ledger below.
 
 Current isolated branch: `codex/smart-notifications-and-dashboard`, integrating accepted main `0a6002a`/PR21 after `fabd71a`/PR18 in an independent worktree. All26 accepted migration sources are byte-identical. Full local development/functional testing is the default; no deployment/release workflow is invoked by preparing this feature PR. Independent PR27 owns those workflow switches. Other feature PRs retain their own delivery and integration evidence.

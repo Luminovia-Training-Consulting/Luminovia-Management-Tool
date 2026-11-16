@@ -1,6 +1,6 @@
 # Reading and safely extending SQL migrations
 
-This guide maps the **56 ordered SQL sources through `20261116055929_smart_operations_explicit_plpgsql_types.sql`** without changing their bytes. The earlier 26-source accepted main foundation remains intact. Eight M7/M8 sources and twenty-two smart-operations sources extend it. This is a source checkpoint, not an assertion that a hosted database has applied all 56 or that the current combined acceptance has passed. Accepted migrations form part of the local preview, update and recovery fingerprints. Even an added SQL comment would produce a different source hash. New migrations are added separately; extend this guide and the relevant feature guides when that happens.
+This branch maps **58 ordered SQL sources through `20261116065156_course_document_dedicated_registry_isolation.sql`**. The original 26-source accepted main foundation remains intact. Eight M7/M8 sources and twenty-four smart-operations sources extend that baseline. Current main has subsequently added the customer-neutral catalogue; it and PR10's final canonical migration family must be integrated before this branch's next complete upgrade acceptance. Reconcile only still-undelivered branch identifiers through the CLI, preserving SQL bytes and every published main source. This checkpoint does not assert hosted application, current-main compatibility or complete acceptance. Accepted migrations form part of local preview, update and recovery fingerprints. Even an SQL comment changes its source hash.
 
 The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API inventory. [ERD](ERD.md), [DEVELOPER_GUIDE](DEVELOPER_GUIDE.md) and the relevant feature guides explain how the parts connect.
 
@@ -457,6 +457,22 @@ Source: [20261116055929_smart_operations_explicit_plpgsql_types.sql](../supabase
 The strict complete-CI lint gate found implicit text-to-UUID-array/JSONB initializer conversions and a shadowed quiz loop index/unused local row. This forward migration explicitly types the three empty values, removes the unused declaration and gives the automatic loop index its own name. Independent exact-definition comparison confirms every other business, permission, lock, retry and grant remains unchanged. All three replacement routines pass actual `plpgsql_check` with ordinary/extra warnings enabled; focused course/workbench/brief SQL flows pass. The complete CI gate is retained.
 
 Test entry points: [course-workspace-db-tests.mjs](../scripts/course-workspace-db-tests.mjs), [workbench-db-tests.mjs](../scripts/workbench-db-tests.mjs), [client-request-brief-db-tests.mjs](../scripts/client-request-brief-db-tests.mjs).
+
+### 57. Effective accepted amendments and active forecast months
+
+Source: [20261116063201_amendment_aware_finance_forecast.sql](../supabase/migrations/20261116063201_amendment_aware_finance_forecast.sql).
+
+An internal, ungranted adapter resolves the optional Formal Amendments module's actual `effective_assignment(uuid)` at read time. Current accepted lecturer cost and margin use that effective net; only unreleased allocations choose the month. Original claims and customer-gross ledger rows remain immutable. Valid accepted zero fees are supported; missing, negative and nonfinite snapshots fail. The original-currency, nullable prospective-price and current finance/MFA boundaries stay effective.
+
+Test entry point: [amendment-forecast-db-tests.mjs](../scripts/amendment-forecast-db-tests.mjs). Default replay verifies the current source; explicit pinned local amendment fixtures exercise real consent/application in both installation orders. The executed21 focused groups and14 existing finance groups are separate from full native/Auth/browser acceptance. [Contract and evidence](AMENDMENT_FORECAST_BRIDGE.md).
+
+### 58. Dedicated private document isolation at course boundaries
+
+Source: [20261116065156_course_document_dedicated_registry_isolation.sql](../supabase/migrations/20261116065156_course_document_dedicated_registry_isolation.sql).
+
+Optional Support, enquiry and customer-invoice registries are checked dynamically on course selection, sharing, current resource reads and exact download facts. An unconditional course-resource trigger and shared document/version locks serialize cross-domain registration. Removed share history still prevents reusing the same document for a private enquiry. Normal authorised exact-version teaching resources retain their course audience access. Existing routine identities, unrelated action branches and private execution grants are preserved.
+
+Test entry point: [course-document-privacy-db-tests.mjs](../scripts/course-document-privacy-db-tests.mjs). Its self-contained, hash-bound contract metadata and exact enquiry RPC excerpt exercise18 groups in both module orders, including observed lock races. These fixtures do not claim full foreign-module or actual Edge/Auth acceptance. [Boundary and evidence](COURSE_DOCUMENT_PRIVACY.md).
 
 ## The critical data flows
 
