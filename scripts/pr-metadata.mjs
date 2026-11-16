@@ -1,5 +1,5 @@
 /**
- * Checks current PR identity and the shared required label categories.
+ * Checks automatic PR events or manual main-branch rechecks against the label catalogue.
  * Event fields remain data; repository and API targets are not accepted from arbitrary supplied URLs.
  */
 import { readFile } from "node:fs/promises";
@@ -51,29 +51,56 @@ function checkIdentity(pullRequest, number) {
   );
 }
 
-/** Rejects foreign or unsuitable events before any network request. */
+/** Validates repository/event identity and returns a safe canonical PR number before fetching. */
 function checkEventIdentity(event, context) {
   requireMetadata(
+    context.repository === repository &&
+      event?.repository?.full_name === repository,
+    "This check requires an event from this repository.",
+  );
+  if (context.eventName === "workflow_dispatch") {
+    // Dispatch must run on main, but its selected PR may be closed or target
+    // another branch. Reject ambiguous numeric forms before building the API URL.
+    const input = event.inputs?.pull_request_number;
+    requireMetadata(
+      context.ref === "refs/heads/main" &&
+        typeof input === "string" &&
+        /^[1-9][0-9]*$/.test(input) &&
+        Number.isSafeInteger(Number(input)),
+      "Manual checks require main and a positive pull request number.",
+    );
+    return Number(input);
+  }
+  requireMetadata(
     context.eventName === "pull_request" &&
-      context.repository === repository &&
-      event?.repository?.full_name === repository &&
       Number.isSafeInteger(event.number) &&
-      event.number > 0,
-    "This check requires a pull_request event from this repository.",
+      event.number > 0 &&
+      event.pull_request?.base?.ref === "main",
+    "Automatic checks require a pull_request event against main.",
   );
   checkIdentity(event.pull_request, event.number);
+  return event.number;
 }
 
-/** Validate metadata only. PR titles, bodies and label names are never commands. */
-/** Validates current labels against the catalogue and rejects a superseded PR head. */
+/**
+ * Validates label data without executing PR titles, bodies or label names.
+ * Automatic events bind the fetched head to the event snapshot; manual rechecks
+ * require live metadata because their dispatch payload has no PR snapshot.
+ */
 export function validatePullRequestMetadata(event, catalogue, context = {}) {
-  checkEventIdentity(event, context);
+  const number = checkEventIdentity(event, context);
   const pullRequest = context.livePullRequest ?? event.pull_request;
-  checkIdentity(pullRequest, event.number);
-  requireMetadata(
-    pullRequest.head.sha === event.pull_request.head.sha,
-    "The pull request has changed; use the newer check run.",
-  );
+  checkIdentity(pullRequest, number);
+  if (context.eventName === "pull_request")
+    requireMetadata(
+      pullRequest.head.sha === event.pull_request.head.sha,
+      "The pull request has changed; use the newer check run.",
+    );
+  else
+    requireMetadata(
+      context.livePullRequest,
+      "Manual checks require current pull request metadata from GitHub.",
+    );
   requireMetadata(
     Array.isArray(pullRequest.labels),
     "Pull request labels are missing or invalid.",
@@ -111,14 +138,15 @@ export function validatePullRequestMetadata(event, catalogue, context = {}) {
     "At least one area: label is required.",
   );
   return {
-    number: event.number,
+    number,
+    headSha: pullRequest.head.sha,
     type: selected.type[0],
     risk: selected.risk[0],
     areas: selected.area.sort(),
   };
 }
 
-/** Reads the event, verifies current REST identity and outputs only validated classifications. */
+/** Uses live REST metadata in Actions; tokenless local automatic-event fixtures use their snapshot. */
 async function main() {
   requireMetadata(
     process.env.GITHUB_EVENT_PATH,
@@ -127,15 +155,18 @@ async function main() {
   const event = JSON.parse(
     await readFile(process.env.GITHUB_EVENT_PATH, "utf8"),
   );
+  // The hosted workflow checks out the validator and adjacent catalogue from
+  // trusted main, so an old contribution snapshot cannot supply obsolete labels.
   const catalogue = JSON.parse(
     await readFile(new URL("../.github/labels.json", import.meta.url), "utf8"),
   );
   const context = {
     eventName: process.env.GITHUB_EVENT_NAME,
     repository: process.env.GITHUB_REPOSITORY,
+    ref: process.env.GITHUB_REF,
   };
   // Check event identity before constructing a request; never trust a payload URL.
-  checkEventIdentity(event, context);
+  const number = checkEventIdentity(event, context);
   const token = process.env.GH_TOKEN;
   requireMetadata(
     process.env.GITHUB_ACTIONS !== "true" || token,
@@ -145,7 +176,7 @@ async function main() {
     let response;
     try {
       response = await fetch(
-        `https://api.github.com/repos/${repository}/pulls/${event.number}`,
+        `https://api.github.com/repos/${repository}/pulls/${number}`,
         {
           headers: {
             Accept: "application/vnd.github+json",
@@ -167,7 +198,7 @@ async function main() {
   }
   const result = validatePullRequestMetadata(event, catalogue, context);
   console.log(
-    `PR #${result.number}: ${result.type}, ${result.risk}, ${result.areas.join(", ")}.`,
+    `PR #${result.number}: ${result.type}, ${result.risk}, ${result.areas.join(", ")}. Head ${result.headSha}.`,
   );
 }
 
