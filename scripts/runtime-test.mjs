@@ -397,6 +397,19 @@ try {
     process.execPath,
     ["scripts/runtime-persistence-check.mjs"],
   );
+  // Nested startup/persistence commands deliberately discard PORTAL_* controls.
+  // Seed the fictional commercial policy only here, after the real retention
+  // proof, with this runner's exact owned QA identity. Normal development
+  // startup and its insert-only seed keep choosing no commercial policy.
+  await step(
+    "Fiktive kommerzielle Testkonfiguration",
+    process.execPath,
+    ["scripts/local-seed.mjs"],
+    {
+      PORTAL_TEST_MODE: "1",
+      PORTAL_DB_CONTAINER: `supabase_db_${project}`,
+    },
+  );
   await step("PostgreSQL, RLS und 50-fache Nebenläufigkeit", "npm", [
     "run",
     "test:db",

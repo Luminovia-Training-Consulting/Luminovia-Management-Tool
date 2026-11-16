@@ -35,6 +35,8 @@ This maps the authoritative specification A–N to executable evidence. Each row
 
 SQL discovery includes every `*-db-tests.mjs`; API discovery includes every `*-api-check.mjs`. The core database runner and real Edge invitation run separately. HTTP tests use actual Auth-issued identities and genuine MFA, rather than trusting role metadata or faking RPC success.
 
+The delegated-role extension also supplies `delegated-pricing-db-tests`, actual `welcome-api`/`welcome-db` checks and browser `roles-pricing`/`welcome-guide` journeys. Commission fixtures use explicitly fictional private policies and actor-bound consent tokens; production percentages are neither supplied nor inferred. The combined run must discover and execute these incoming suites together with this matrix. Accepted-history repricing must fail for that specific reason and leave the complete accepted deal and private revenue projection unchanged. Current exact-source results remain in the evidence ledger.
+
 ## Added lifecycle and boundary checks
 
 Calendar workflows cover rejected nonexistent/ambiguous Berlin times and reversed intervals without writes; Brisbane instants/zones; real create/edit/delete/reload; disabled offline writes; other-lecturer and current-MFA administrator isolation; explicitly published global events and exact course navigation.

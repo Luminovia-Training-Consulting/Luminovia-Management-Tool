@@ -12,6 +12,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
   await sql(
     `insert into auth.users(id,email) values('${admin}','lifecycle-admin@example.invalid'),('${teacher}','lifecycle-teacher@example.invalid'),('${peer}','lifecycle-peer@example.invalid'),('${participant}','lifecycle-participant@example.invalid');insert into public.user_roles(user_id,role) values('${admin}','admin'),('${teacher}','lecturer'),('${peer}','lecturer'),('${participant}','participant');`,
   );
+  await actor(admin, "select public.configure_compensation_policy(31,73,0)", "aal2");
   let day = 1;
   /** Creates this module's fictional inputs; authoritative validation remains on the server. */
   const payload = () => ({
@@ -41,8 +42,8 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
   };
   /** Calls the actual claim RPC; only the database result confirms whole-block allocation. */
   const claim = async (job, who = teacher, key = randomUUID()) => {
-    const version = await sql(
-      `select terms_version from public.jobs where id='${job}'`,
+    const version = await actor(who,
+      `select item->>'terms_version' from jsonb_array_elements(public.job_offers()) item where item->>'id'='${job}'`,
     );
     return JSON.parse(
       await actor(who, `select public.claim_job('${job}','${key}',${version})`),
@@ -469,7 +470,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
       day += 3;
       const job = await actor(
         admin,
-        `select public.create_commission_job(null,${quoteSql(JSON.stringify({ ...offer, gross_amount: amount * 2, gross_total_amount: total_amount * 2, requires_contract: false }))}::jsonb,50,'${randomUUID()}')`,
+        `select public.create_commission_job(null,${quoteSql(JSON.stringify({ ...offer, gross_amount: amount * 2, gross_total_amount: total_amount * 2, requires_contract: false }))}::jsonb,null,'${randomUUID()}')`,
         "aal2",
       );
       const c = await claim(job);

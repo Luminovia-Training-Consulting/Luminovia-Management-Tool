@@ -4,9 +4,9 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 ## Current functional/integration completion audit
 
-Current delivery instruction: signed commit→push→prepared PR→direct merge after current full CI, respecting the temporary PR15 main pause. Coordinator source2e367f6 is integrated on the owned PR12 branch without modifying its branch/main. All184frontend changes are semantically equal to accepted8f7588;73runtime/226frontend/type/lint/coverage checks pass. Preserve MFA private-state hardening and accepted API assertions; observe final exact-head full/native/security gates and coordinator release, then merge PR12 without another approval request. Production remains separate.
+Current delivery instruction: signed commit→push→prepared PR→direct merge after current full CI. PR15's formal release and actual main43504b8 are incorporated in published PR12be1ef25. A later explicit PR18 coordination hold is respected. Its source0675bb9 is prepared only on this owned branch, preserving both functional tests and incoming delegated roles/private pricing/welcome/preview work. All92runtime/249frontend cases, type/lint/format/actionlint and unchanged coverage floors pass locally. Incorporate actual main after PR18 completes, then push and require fresh exact-head application/native/security acceptance before merging PR12 without another approval question. Production remains separate.
 
-**Latest combined acceptance:** signed f7453a6, CI43799280625, all68stages,90application+2PWA browser cases with zero skips/retries,234SQL/all18APIs and actual native retained-data compatibility passed. Incoming current main demo/help is included. The subsequent d4c1f49 metadata reconciliation changes no application/migrations/dependencies/journeys/complete runner;all63current runtime cases and actionlint pass. Current PR12 CI remains inspectable. Carina's coordinated PR15 merge pause remains binding; this task does not merge into main before release. [Actual final counts](QA_RESULTS.md).
+**Latest accepted functional application source before the roles extension:** signed f7453a6, CI43799280625, all68stages,90application+2PWA browser cases with zero skips/retries,234SQL/all18APIs and actual native retained-data compatibility passed. This is historical proof for that exact source; final acceptance of the combined26-migration roles extension is pending. [Actual counts and limits](QA_RESULTS.md).
 
 Current user priority: verify real connected user functions and repair missing behavior/test coverage, not rely on unit percentages. Isolated branch `codex/full-functional-integration-tests` starts at1341b16; concurrent shared-checkout onboarding/role/preview work is preserved and requires separate acceptance.
 
@@ -19,6 +19,32 @@ Current user priority: verify real connected user functions and repair missing b
 - [x] Accept the corrected board in exact-source full CI/native verification on signed1e72507:all68 stages,234SQL/all18APIs/78application+2PWA,zero skips/retries;actual retained password/MFA/roles/private event/scanned bytes/TLS/WebSockets/50claims/cleanup passed. Local run04 safely refused a competing checkout's QA lock; no local pass is invented. First77/78 CI failure remains historical. [Exact results](QA_RESULTS.md).
 - [x] Preserve per-project failure evidence without miscounting a passed sibling browser;7 focused guards include genuine Playwright skip/focus/single-project-failure probes. Application/migrations/journeys remain unchanged after accepted1e72507; final PR checks are independently inspectable. No production/hosted deployment belongs to this request.
 
+
+## PR18 complete-CI repair
+
+- [x] Correct the missing disposable compensation bootstrap after real retention, with explicit owned QA identity and three executable orchestration regressions.
+- [x] Cover candidate-only settings after the older native-selfhost baseline upgrades and passes retention/readiness; preserve no-policy normal startup.
+- [x] Integrate current main e75f55d, retaining account welcome, Portal tour and public help/demo.
+- [x] Observe actual application/quality/security success on21959fa:249unit/component tests,88desktop/mobile cases,2built-PWA cases, real retention/SQL/API and checked cleanup.
+- [x] Reproduce native replay refusal for the pending Welcome migration, add its atomic envelope without changing released history, and pass the actual24→26local selfhost retention/API/TLS/cleanup rehearsal against the prepared incoming main source.
+- [x] Integrate actual PR20/PR15 main43504b8 without losing private-pricing behavior, source comments or MFA fixture guards; normalized source review and native rehearsal passed.
+- [ ] Complete exact final-head GitHub application/native-selfhost/preview-package CI and record the observed result. No production action is part of this CI repair; do not bypass coordinated main merge holds.
+
+## Current continuation — private roles/pricing, welcome guide and PR previews
+
+The latest request supersedes the earlier shared compensation default. Work is isolated on `codex/pr-preview-welcome-roles` from `1341b16`; existing accepted business history and the full module ledger below remain in scope. Actual business percentages are private Administration configuration because the source repository is public.
+
+- [x] Implement and separately test subordinate role delegation, guest access and self/equal/higher protection across role/activation/invitation APIs; company budget memberships remain Administration-only.
+- [x] Implement private versioned compensation configuration, captured offer policies, role-scoped quotes and server-bound consent; retain accepted claims/invoices and legacy history.
+- [x] Add administration setup and accurate per-offer preview, permission-scoped role controls and own quote rendering; 215 frontend tests and the existing coverage floors pass before full acceptance.
+- [x] Add a DE/EN sequential welcome guide with own persistent progress, pause/resume/skip/restart and permission-aware links; focused frontend/SQL checks pass.
+- [x] Add read-only gated local PR packages and a separate trusted GitHub Deployment metadata publisher, with real artifact URLs, stale-run/expiry cleanup and no production-host connection.
+- [ ] Finish exact-source combined native Auth/API/desktop/mobile/PWA/retained-data acceptance; fix any actual failures without weakening assertions.
+- [ ] Publish the signed PR and observe exact-head quality/security/application/native outcomes and real downloadable artifact; record a first-PR metadata bootstrap only if actually run.
+- [ ] A continuously hosted URL per PR requires separately configured isolated hosting/backend. The implemented artifact deployment does not claim such a service.
+- [ ] Production policy setup/migration/deployment is a separate operational step; this request does not authorise production or real email changes.
+
+[Roles and private pricing](DELEGATED_ROLES_PRICING.md), [welcome guide](WELCOME_GUIDE.md), [PR previews](PR_PREVIEWS.md). The verbatim original specification remains preserved; these explicit user extensions update its operating details without dropping any remaining modules.
 ## Comprehensive code comments and agent guide
 
 Requested directly on `main`: explain the maintained code throughout and provide a project-specific `AGENTS.md`, using OpenXLR's guide as a structural reference. Work uses a dedicated review worktree so the original checkout's concurrent feature changes remain separate. The independent English community commit `3256d1a` is preserved; contributor guidance remains English and source commentary uses English.

@@ -407,7 +407,7 @@ try {
       p_requires_contract: false,
       p_terms: "Immutable actual API net fee",
     }),
-    "Publish gross request atomically at default50/50",
+    "Publish request with private fictional test policy",
   );
   jobs.push(job);
   // Once published, only the separate audited job lifecycle may change accepted availability.
@@ -433,11 +433,40 @@ try {
     lecturer.client.from("jobs").select("*").eq("id", job).single(),
     "Actual lecturer REST offer",
   );
-  assert.equal(Number(offer.amount), 50);
-  assert.equal(Number(offer.total_amount), 50);
+  assert.equal(Number(offer.amount), 0);
+  assert.equal(Number(offer.total_amount), 0);
   assert.ok(
     !Object.keys(offer).some((k) => /gross|platform|commission/.test(k)),
   );
+  const adminPolicy = await checked(
+    admin.client.rpc("commission_offer_policy", { p_job_id: job }),
+    "Captured administrative offer policy",
+  );
+  assert.equal(adminPolicy.regular_lecturer_percent, 31);
+  assert.equal(adminPolicy.senior_lecturer_percent, 73);
+  for (const who of [management, lecturer, senior, client, other]) {
+    const privateAccess = await checked(
+      who.client.rpc("commission_access"),
+      "Bounded policy access",
+    );
+    assert.equal("regular_lecturer_percent" in privateAccess, false);
+    assert.equal("senior_lecturer_percent" in privateAccess, false);
+    assert.equal(
+      (await who.client.rpc("commission_offer_policy", { p_job_id: job })).error
+        ?.code,
+      "42501",
+    );
+    assert.equal(
+      (
+        await who.client.rpc("configure_compensation_policy", {
+          p_regular_percent: 32,
+          p_senior_percent: 74,
+          p_expected_version: adminPolicy.policy_version,
+        })
+      ).error?.code,
+      "42501",
+    );
+  }
   assert.ok(
     (
       await lecturer.client
@@ -466,11 +495,20 @@ try {
     ).can_manage_gross,
     false,
   );
+  const teacherQuote = (
+      await checked(lecturer.client.rpc("job_offers"), "Own teacher quote")
+    ).find((row) => row.id === job),
+    seniorQuote = (
+      await checked(senior.client.rpc("job_offers"), "Own senior quote")
+    ).find((row) => row.id === job);
+  assert.equal(Number(teacherQuote.total_amount), 31);
+  assert.equal(Number(seniorQuote.total_amount), 73.01);
   const calls = Array.from({ length: 10 }, (_, index) =>
     (index % 2 ? lecturer : senior).client.rpc("claim_job", {
       p_job_id: job,
       p_idempotency_key: randomUUID(),
-      p_terms_version: offer.terms_version,
+      p_terms_version:
+        index % 2 ? teacherQuote.terms_version : seniorQuote.terms_version,
     }),
   );
   const results = await Promise.all(
@@ -481,11 +519,12 @@ try {
   const winningIndex = results.findIndex((r) => r.status === "confirmed"),
     winner = winningIndex % 2 ? lecturer : senior,
     claim = results[winningIndex].claim_id;
+  const expectedNet = winner === senior ? 73.01 : 31;
   const accepted = await checked(
     winner.client.from("job_claims").select("*").eq("id", claim).single(),
     "Own accepted net snapshot",
   );
-  assert.equal(Number(accepted.total_amount), 50);
+  assert.equal(Number(accepted.total_amount), expectedNet);
   assert.ok(
     !Object.keys(accepted).some((k) => /gross|platform|commission/.test(k)),
   );
@@ -497,19 +536,43 @@ try {
   ).find((row) => row.job_id === job);
   assert.equal(report.pricing_model, "commission");
   assert.equal(Number(report.gross_total_amount), 100.01);
-  assert.equal(Number(report.platform_total_amount), 50.01);
-  assert.equal(Number(report.lecturer_net_total_amount), 50);
+  assert.equal(
+    Number(report.platform_total_amount),
+    Number((100.01 - expectedNet).toFixed(2)),
+  );
+  assert.equal(Number(report.lecturer_net_total_amount), expectedNet);
   assert.equal(report.claim_id, claim);
-  assert.ok(
+  // Omit the forbidden per-offer percentage so this reaches the accepted-history guard.
+  // A rejection must leave both the lecturer's deal and the private revenue snapshot exact.
+  const refusedReprice = await admin.client.rpc("set_job_commission", {
+    p_job_id: job,
+    p_gross_amount: 200,
+    p_gross_total_amount: 200,
+  });
+  assert.equal(refusedReprice.error?.code, "22023");
+  assert.equal(
+    refusedReprice.error?.message,
+    "Only unaccepted offers can change commission",
+    "Accepted history itself must prevent repricing",
+  );
+  assert.equal(refusedReprice.data, null);
+  assert.deepEqual(
+    await checked(
+      winner.client.from("job_claims").select("*").eq("id", claim).single(),
+      "Re-read exact accepted deal after rejected repricing",
+    ),
+    accepted,
+    "Rejected repricing preserves every accepted snapshot field",
+  );
+  assert.deepEqual(
     (
-      await admin.client.rpc("set_job_commission", {
-        p_job_id: job,
-        p_gross_amount: 200,
-        p_gross_total_amount: 200,
-        p_platform_percent: 75,
-      })
-    ).error,
-    "Accepted deal cannot be repriced",
+      await checked(
+        owner.client.rpc("commission_report"),
+        "Re-read private revenue after rejected repricing",
+      )
+    ).find((row) => row.job_id === job),
+    report,
+    "Rejected repricing preserves the exact private revenue projection",
   );
   const statement = await checked(
     client.client.rpc("client_spend_summary"),
@@ -551,7 +614,7 @@ try {
   let record = (
     await checked(winner.client.rpc("invoice_records"), "Own net invoice")
   ).find((row) => row.id === invoice);
-  assert.equal(Number(record.total_amount), 50);
+  assert.equal(Number(record.total_amount), expectedNet);
   await checked(
     winner.client.rpc("set_invoice_labels", {
       p_invoice_id: invoice,
@@ -563,7 +626,7 @@ try {
     await checked(winner.client.rpc("invoice_records"), "Read invoice labels")
   ).find((row) => row.id === invoice);
   assert.deepEqual(record.labels, ["Reviewed", "Teaching"]);
-  assert.equal(Number(record.total_amount), 50);
+  assert.equal(Number(record.total_amount), expectedNet);
   assert.ok(
     (
       await client.client.rpc("set_invoice_labels", {
@@ -597,10 +660,12 @@ try {
     "Owner creates actual AUD commissioned offer",
   );
   jobs.push(ownJob);
-  const ownOffer = await checked(
-    owner.client.from("jobs").select("terms_version").eq("id", ownJob).single(),
-    "Own functional lecturer offer",
-  );
+  const ownOffer = (
+    await checked(
+      owner.client.rpc("job_offers"),
+      "Own functional lecturer quote",
+    )
+  ).find((row) => row.id === ownJob);
   assert.equal(
     (
       await checked(
@@ -674,7 +739,7 @@ try {
     [],
   );
   console.log(
-    "PASS: actual Auth/MFA/REST/ClamAV commission: client request cancellation/idempotent audit and published-offer safeguards, cross-org isolation and revocation, default50/50 rounding, hidden gross, atomic claims/revenue, immutable net invoice+labels, separate EUR/AUD, owner lecturer functionality and private-calendar boundary.",
+    "PASS: actual Auth/MFA/REST/ClamAV commission: client request cancellation/idempotent audit and published-offer safeguards, cross-org isolation and revocation, private fictional role-policy rounding, hidden gross, atomic claims/revenue, exact accepted-history repricing refusal with unchanged deal/revenue, immutable net invoice+labels, separate EUR/AUD, owner lecturer functionality and private-calendar boundary.",
   );
 } finally {
   for (const client of clients) await client.removeAllChannels();
