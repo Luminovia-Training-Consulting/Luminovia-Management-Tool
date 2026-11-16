@@ -8,7 +8,9 @@ Corrected signed source `291773aca52f2d1f7ff2074b276a94958c03a373` runs the unch
 
 The remaining 22 hints comprise eight high file-race and 14 medium dataflow hints (11 file-to-HTTP and three HTTP-to-file). They are inherited from Main and are not represented as closed or harmless. Earlier contextual review below is historical; remaining descriptor/ownership/origin hardening needs its own current source review and tests. This patch does not establish complete system security.
 
-A full branch inventory is different from an incremental PR analysis: accepted PR10 testmerge`f23fe565` has zeroJavaScript results despite the 25-result full Main inventory. Native automatic merging still requires zero results from the exact current PR testmerge analysis and a successful generated findings check; no exception for inherited counts is added. PR19's published e498 ref still fails until a corrected current-head PR analysis actually runs. Its final merge, first running Main controller and native App merge are not established by this branch scan.
+A full branch inventory is different from an incremental PR analysis: accepted PR10 testmerge `f23fe565` has zero JavaScript results despite the 25-result full Main inventory. Native automatic merging still requires zero results from the exact current PR testmerge analysis and a successful generated findings check; no exception for inherited counts is added. PR19's published e498 ref still fails until a corrected current-head PR analysis actually runs. Its final merge, first running Main controller and native App merge are not established by this branch scan.
+
+## Initial main scan
 
 The first complete main scan of `d3ace919`, recorded on 16 November 2026, reported **28 open hints: 12 high and 16 medium**. The earlier PR scan found no new findings in its diff; that did not prove the entire repository was warning-free. All scanner jobs completed successfully. Warnings are assessed separately from job status.
 
