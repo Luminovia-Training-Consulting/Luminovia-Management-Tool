@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CompensationPolicyPanel } from "./compensation-policy";
@@ -88,23 +88,27 @@ it("requires explicit private configuration and waits for server confirmation", 
   ).toBeVisible();
 });
 it("keeps the reviewed version when another administrator changes the policy", async () => {
-  const client = setup({
+  setup({
     ...access,
     policy_configured: true,
     policy_version: 3,
     regular_lecturer_percent: 31,
     senior_lecturer_percent: 73,
   });
-  await act(async () =>
-    client.setQueryData(commissionKeys.access("admin"), {
-      ...access,
-      policy_configured: true,
-      policy_version: 4,
-      regular_lecturer_percent: 32,
-      senior_lecturer_percent: 74,
-    }),
+  rpc.mockImplementation(async (name: string) =>
+    name === "commission_access"
+      ? {
+          data: {
+            ...access,
+            policy_configured: true,
+            policy_version: 4,
+            regular_lecturer_percent: 32,
+            senior_lecturer_percent: 74,
+          },
+          error: null,
+        }
+      : { error: { code: "40001" }, data: null },
   );
-  rpc.mockResolvedValue({ error: { code: "40001" }, data: null });
   await userEvent.click(
     screen.getByRole("button", { name: "Vergütungsregeln speichern" }),
   );
@@ -115,9 +119,12 @@ it("keeps the reviewed version when another administrator changes the policy", a
   await userEvent.click(
     await screen.findByRole("button", { name: "Aktuelle Regeln laden" }),
   );
-  expect(
-    screen.getByLabelText("Dozent:in – Honorar vom Auftragspreis (%)"),
-  ).toHaveValue(32);
+  await waitFor(() =>
+    expect(
+      screen.getByLabelText("Dozent:in – Honorar vom Auftragspreis (%)"),
+    ).toHaveValue(32),
+  );
+  expect(rpc).toHaveBeenCalledWith("commission_access");
   expect(
     screen.queryByText("Vergütungsregeln wurden bestätigt."),
   ).not.toBeInTheDocument();

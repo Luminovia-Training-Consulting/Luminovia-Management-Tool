@@ -9,7 +9,13 @@ import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { commissionAccessQuery, type CommissionAccess } from "./commission-api";
 import "./platform-i18n";
 
-function PolicyEditor({ access }: { access: CommissionAccess }) {
+function PolicyEditor({
+  access,
+  onReload,
+}: {
+  access: CommissionAccess;
+  onReload: () => Promise<CommissionAccess>;
+}) {
   const { t } = useTranslation("platform");
   const client = useQueryClient();
   const online = useOnline();
@@ -52,6 +58,18 @@ function PolicyEditor({ access }: { access: CommissionAccess }) {
       await client.invalidateQueries();
     },
   });
+  const reload = useMutation({
+    mutationFn: async () => {
+      requireOnline();
+      return await onReload();
+    },
+    onSuccess: (policy) => {
+      setVersion(policy.policy_version ?? 0);
+      setRegular(String(policy.regular_lecturer_percent ?? ""));
+      setSenior(String(policy.senior_lecturer_percent ?? ""));
+      save.reset();
+    },
+  });
   return (
     <form
       onSubmit={(event) => {
@@ -71,7 +89,7 @@ function PolicyEditor({ access }: { access: CommissionAccess }) {
             required
             value={regular}
             onChange={(event) => setRegular(event.target.value)}
-            disabled={save.isPending}
+            disabled={save.isPending || reload.isPending}
           />
         </Field>
         <Field id="compensation-senior" label={t("seniorPercent")}>
@@ -84,11 +102,13 @@ function PolicyEditor({ access }: { access: CommissionAccess }) {
             required
             value={senior}
             onChange={(event) => setSenior(event.target.value)}
-            disabled={save.isPending}
+            disabled={save.isPending || reload.isPending}
           />
         </Field>
       </div>
-      <Button disabled={!online || !valid || save.isPending}>
+      <Button
+        disabled={!online || !valid || save.isPending || reload.isPending}
+      >
         {t("savePolicy")}
       </Button>
       {save.isSuccess && <Notice>{t("policySaved")}</Notice>}
@@ -98,17 +118,14 @@ function PolicyEditor({ access }: { access: CommissionAccess }) {
           <Button
             type="button"
             variant="secondary"
-            onClick={() => {
-              setVersion(access.policy_version ?? 0);
-              setRegular(String(access.regular_lecturer_percent ?? ""));
-              setSenior(String(access.senior_lecturer_percent ?? ""));
-              save.reset();
-            }}
+            disabled={!online || reload.isPending}
+            onClick={() => reload.mutate()}
           >
             {t("reloadPolicy")}
           </Button>
         </Notice>
       )}
+      {reload.isError && <Notice kind="error">{t("policyError")}</Notice>}
     </form>
   );
 }
@@ -124,7 +141,14 @@ export function CompensationPolicyPanel() {
     <section className="panel" aria-label={t("compensationPolicy")}>
       <h2>{t("compensationPolicy")}</h2>
       <p>{t("compensationPolicyHint")}</p>
-      <PolicyEditor access={access.data} />
+      <PolicyEditor
+        access={access.data}
+        onReload={async () => {
+          const result = await access.refetch();
+          if (result.error) throw result.error;
+          return result.data!;
+        }}
+      />
     </section>
   );
 }
