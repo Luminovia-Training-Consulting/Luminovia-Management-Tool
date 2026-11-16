@@ -1,5 +1,13 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — complete 36-migration functional/native acceptance on 3daf
+
+Exact published signed `3daf4f03f6169fd83d2f2c05de18a402119d59bd` passes all 15 mandatory checks in [CI43851370883](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43851370883). Actual application run1617934c completes 10:44:59.767–11:18:20.849 UTC with all 91 stages passed: 515 frontend/65 files, 109 runtime, 46 Edge, 76 Python, 76 operating Node, 350 regular SQL groups plus one legacy refusal, 28 business API suites and actual invitation/restart retention. All 120 application cases (60 desktop/60 mobile) and two built-PWA cases pass without skips/retries; owned cleanup passed. Actual precache is 66 entries/2799.77 KiB. Source fingerprint: `3246a6c080df45a89a29728e04426302438a2940a133e02b9fbe6a7ed4875c1c`.
+
+The separate ten-service native selfhost gate passed at 11:28:11 UTC with all 36 migrations, 29 suites, 50 claims, retained password/MFA/private event/scanned bytes, real TLS/WebSockets, captured Mailpit and checked cleanup. Its changed-image list is empty; no image-version upgrade is inferred. Preview passed at 11:28:22 UTC, binds exact PR12/head3daf and has matching manifest/archive SHA-256 `f7b1404c01395ba58eb425299bc1dc7db85163c7b7eef42a94d8f59b8575f6af`; read/hashed only, hosted=false. Separate CodeQL passes with zero annotations/new PR alerts. Safe private proof is `.local/functional-ci/pr12-3daf4f0/agent-readback-43851370883/final-evidence-summary.json` and the referenced private reports/logs/package.
+
+Actual main remains `c0622a76`. This pass certifies its named published source, not the later local ledger composition or an unmerged feature. Keep the complete local/main ledgers and all immutable SQL bytes, remain Draft/no-auto-merge under PR17 → PR24 → PR25 priority, then reconcile only actually accepted main and complete final exact-head/current-base checks before normal merge. No shared-PC run, release or deployment is performed. The earlier E7 full-PC proof and both cancelled CI checkpoints remain distinct honest history.
+
 ## 16 November 2026 — parallel remote documentation merge retained without losing ledgers
 
 While exact `1dd3c9e` CI43847426882 ran, a separate normal remote merge advanced PR12 to `3daf4f03f6169fd83d2f2c05de18a402119d59bd`, with the same parents as the already prepared local main reconciliation. Its three guide changes match the local merge, but it did not retain PR29's three incoming ledger additions. This ordinary local merge preserves the remote commit and the complete local/main ledgers. Executable/test/dependency/workflow/migration bytes remain unchanged; three documentation/privacy guards pass.

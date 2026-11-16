@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## Current accepted functional checkpoint and ordered delivery
+
+- [x] Complete exact published `3daf4f03` CI: all 15 mandatory checks, 91 application stages, 120 application + two built-PWA cases with zero skips/retries and owned cleanup, 351 SQL groups and 28 business API suites.
+- [x] Complete actual ten-service selfhost acceptance: 36 migrations/29 suites/50 claims, retained password/MFA/private-event/scanned bytes, TLS/WebSockets/Mailpit/cleanup. Verify the exact-head preview manifest/archive hash and zero new CodeQL findings. No changed image version or hosted publication is claimed.
+- [ ] Preserve the local complete-ledger composition, keep PR12 Draft/no-auto-merge through the explicit PR17 → PR24 → PR25 sequence, reconcile actually merged later main and require fresh exact-final-head/current-base acceptance before normal merge.
+
 ## Current documentation-only main reconciliation
 
 - [x] Preserve separate remote main merge `3daf4f0` in normal ancestry without dropping PR29's ledger additions. Published executable source remains unchanged; local documentation/privacy guards pass three cases.

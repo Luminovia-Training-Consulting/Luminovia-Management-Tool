@@ -1,5 +1,13 @@
 # QA evidence — 2026-11-16
 
+## Exact 3daf: complete application, actual selfhost and all 15 checks passed
+
+[CI43851370883](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43851370883) passes all 15 mandatory checks on signed published `3daf4f03f6169fd83d2f2c05de18a402119d59bd`, against actual main `c0622a76`. Run1617934c completes 10:44:59.767–11:18:20.849 UTC with 91/91 stages passed and checked owned cleanup. Counts: 515 frontend/65 files, 109 runtime, 46 Edge, 76 Python, 76 operating Node, 350 regular SQL groups plus one legacy refusal, 28 actual business API suites and real invitation/restart retention. All 120 application cases (60 per project) and two built-PWA cases pass, zero skips/retries. Precache: 66 entries/2799.77 KiB. Source SHA-256: `3246a6c080df45a89a29728e04426302438a2940a133e02b9fbe6a7ed4875c1c`.
+
+Native ten-service selfhost passes at 11:28:11 UTC: 36 migrations, 29 suites, 50 claims, retained password/MFA/private-event/scanned bytes, TLS/WebSockets, Mailpit and cleanup. The image-change list is empty. Preview passes at 11:28:22 UTC; manifest head is exact3daf and actual archive SHA-256 matches `f7b1404c01395ba58eb425299bc1dc7db85163c7b7eef42a94d8f59b8575f6af`, hosted=false. CodeQL has zero annotations and no new PR alerts. Actual safe evidence is `.local/functional-ci/pr12-3daf4f0/agent-readback-43851370883/final-evidence-summary.json` and its private referenced reports/logs/archive.
+
+This is current-source complete CI acceptance, distinct from E7's recorded local PC pass and the cancelled 68af/1dd checkpoints. The later local ledger composition remains unpublished; PR12 stays Draft/no-auto-merge through the explicit PR17 → PR24 → PR25 priority. Final genuinely newer main still needs exact-final-source/current-base checks before the released merge. No physical-device, production, hosted or full-master-spec completion is inferred.
+
 ## Exact 1dd CI superseded by a parallel documentation merge
 
 CI43847426882 on `1dd3c9e` was cancelled at 10:43:37 UTC when the remote branch advanced to `3daf4f0`. Its partial source-bound summary records 86 passed stages and browser execution still running, not completed acceptance. Fingerprint: `271054ec96f261220505e78e80b2b226d4991d793522ef6708d7058e11d16353`; private proof: `.local/functional-ci/pr12-1dd3c9/agent-readback-43847426882/7c626876/acceptance.json`. No new complete browser/PWA/native or owned-cleanup pass is claimed.
