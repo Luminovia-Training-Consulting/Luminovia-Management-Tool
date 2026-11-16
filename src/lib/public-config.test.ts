@@ -35,4 +35,45 @@ describe("browser configuration boundary", () => {
     );
     expect(() => validatePublicConfig(undefined, undefined)).not.toThrow();
   });
+  it("rejects malformed and credential-bearing endpoints without exposing credentials", () => {
+    expect(() =>
+      validatePublicConfig("not an absolute URL", "sb_publishable_fictional"),
+    ).toThrow("absolute");
+    const endpoint =
+      "https://fictional-user:fictional-password@example.invalid/backend";
+    try {
+      validatePublicConfig(endpoint, "sb_publishable_fictional");
+      expect.fail(
+        "Credential-bearing endpoints must fail before building the client.",
+      );
+    } catch (error) {
+      expect(String(error)).toContain("must not contain credentials");
+      expect(String(error)).not.toContain("fictional-password");
+      expect(String(error)).not.toContain(endpoint);
+    }
+  });
+  it.each(["http://localhost:54321", "http://[::1]:54321"])(
+    "permits explicit loopback development at %s",
+    (endpoint) => {
+      expect(() =>
+        validatePublicConfig(endpoint, jwt("anon"), true),
+      ).not.toThrow();
+    },
+  );
+  it.each([
+    "opaque-fictional-key",
+    "header.not-base64.signature",
+    jwt("authenticated"),
+  ])(
+    "rejects malformed or non-anonymous legacy keys without leaking their bytes",
+    (key) => {
+      try {
+        validatePublicConfig("https://example.invalid", key);
+        expect.fail("Only public browser credentials are accepted.");
+      } catch (error) {
+        expect(String(error)).toContain("Only a publishable or legacy anon");
+        expect(String(error)).not.toContain(key);
+      }
+    },
+  );
 });
