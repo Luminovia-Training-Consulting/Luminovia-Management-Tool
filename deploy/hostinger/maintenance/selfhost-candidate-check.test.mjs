@@ -546,7 +546,7 @@ test("staged API adaptation skips only absent optional children and requires pri
 });
 
 test("staged API read/write path swaps cannot overwrite a fictional outside file", (t) => {
-  const exercise = (adapt) => {
+  const exercise = () => {
     const f = stagedApiFixture(t);
     const retained = join(f.testing, "retained.mjs");
     const victim = join(f.directory, "outside.mjs");
@@ -574,27 +574,19 @@ test("staged API read/write path swaps cannot overwrite a fictional outside file
           return bytes;
         },
       },
-      () => adapt(f),
+      () => {
+        assert.equal(
+          adaptStagedCandidateApiFixture(f.scratch, f.options),
+          true,
+        );
+      },
     );
     assert.equal(swaps, 1);
     return { f, retained, victim, outside };
   };
-  // The inherited callsite really follows the swapped name after its read.
-  // This negative control touches only another owned fictional fixture.
-  const vulnerable = exercise((f) => {
-    if (existsSync(f.file))
-      writeFileSync(
-        f.file,
-        adaptCandidateApiFixture(readFileSync(f.file, "utf8"), f.options),
-      );
-  });
-  assert.notDeepEqual(
-    stagedFileState(vulnerable.victim).bytes,
-    vulnerable.outside,
-  );
-  const safe = exercise((f) => {
-    assert.equal(adaptStagedCandidateApiFixture(f.scratch, f.options), true);
-  });
+  // Keep the genuine replacement and outside-byte assertion around the current
+  // adapter. The retired unsafe implementation is not a maintained caller.
+  const safe = exercise();
   assert.deepEqual(stagedFileState(safe.victim).bytes, safe.outside);
   assert.deepEqual(
     stagedFileState(safe.retained).bytes,

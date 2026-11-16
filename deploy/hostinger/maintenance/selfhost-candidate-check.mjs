@@ -230,6 +230,8 @@ export function adaptStagedCandidateApiFixture(scratch, options) {
   const descriptors = [];
   const directoryFlags =
     constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW;
+  // Track every opened handle; only absent optional descendants may skip the
+  // adapter, while failures opening the required scratch remain visible.
   const openOptional = (path, flags, optional = true) => {
     try {
       const descriptor = openSync(path, flags);
@@ -240,6 +242,8 @@ export function adaptStagedCandidateApiFixture(scratch, options) {
       throw error;
     }
   };
+  // Release all handles in reverse order even if one close fails; cleanup
+  // failure prevents the caller from reporting a successful native gate.
   const closeAll = () => {
     let failure;
     for (const descriptor of descriptors.reverse())
