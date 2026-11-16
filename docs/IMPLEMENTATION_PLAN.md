@@ -1,5 +1,14 @@
 # Persistent implementation plan
 
+## English role-pricing documentation — current-main delivery
+
+- [x] Reconcile the applicable role-discovery notes with actual main `0a6002a` and its 26 released migrations; retain only current-source links and keep unimplemented discovery requirements explicitly pending.
+- [x] Explain monetary sentinel/null/zero distinctions, exact consent, current-status retry semantics and authoritative lifecycle budgets in English without changing application behaviour or released SQL.
+- [x] Run 23 existing component cases and 12 documentation/metadata guards locally; independently review statements against the actual owning source.
+- [ ] Publish signed commit and prepared bounded PR; observe all 15 required checks on its final current-base source and merge directly after the reserved PR #27 merge and successful CI.
+
+This documentation delivery remains separate from PR #13's owned conflict resolution and from unmerged discovery implementations. All remaining product, native/platform and operational acceptance below remains required.
+
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
 ## Coordinated PR18 integration

@@ -2,6 +2,12 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## Current-main English role-pricing clarification — focused local evidence
+
+The documentation branch starts at actual main `0a6002a` with 26 released migrations. `npx --no-install vitest run src/features/jobs/jobs.test.tsx src/features/jobs/lifecycle.test.tsx src/features/commercial/compensation-policy.test.tsx src/features/accounts/accounts.test.tsx` passed **23/23 tests in four files**. `node --test scripts/runtime-documentation.test.mjs scripts/runtime-pr-metadata.test.mjs` passed **12/12**. These existing component fixtures validate their mocked boundaries; the text review separately followed the actual current SQL, quote DTOs, request and budget code. No explicit zero-price component case or new native SQL/API/browser result is invented.
+
+No product source, dependency, workflow or SQL migration changes belong to the increment. Complete exact-head CI, actual selfhost retained-data checks and all 15 required merge outcomes remain separate gates. The earlier extension failures and milestone counts below describe their recorded revisions, not a failure or a fresh full pass of this documentation-only source.
+
 ## Current roles/pricing/welcome/PR-preview extension — combined acceptance pending
 
 [PR18](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/18) preserves accepted M6 and all historical commercial records. The current combined run is a separate gate. Focused frontend:215cases/49files, S48.61/B43.47/F38.76/L50.43%; lint/type/format/build and the source graph pass. Preview/runtime/community guard combination passes36cases; three additional execution-based QA bootstrap cases pass.

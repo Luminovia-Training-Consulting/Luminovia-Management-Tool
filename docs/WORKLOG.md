@@ -1,5 +1,15 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — English explanation of current role-specific quotes
+
+This independent documentation increment starts at actual main `0a6002a`, with its 26 released migrations, role pricing and welcome/audited guidance intact. It delivers the current-main portion of the prepared English role-discovery notes without importing unmerged paginated discovery or another feature branch. The operating guide now distinguishes directly readable numeric-zero storage sentinels, nullable prospective quotes and genuine quoted zero; maps the actual SQL/query/DTO/UI owners; explains full displayed-value consent, current-status retries and authoritative protected lifecycle budgets; and labels future discovery/cursor requirements as pending. Migration 25 gains a linked explanation, while every released SQL byte, the complete 26-entry guide and historical acceptance remain intact.
+
+Local verification on the unchanged application source passed 23 existing component cases across four files (job/detail, lifecycle, compensation policy and account administration) and 12 documentation/metadata guards. These component tests use their existing mocked boundaries; no new native SQL/API/browser or retained-data run is inferred. Documentation formatting, local source-link validation and diff checks govern the text; the final PR's current-head complete application, actual retained-image, security and preview checks remain required before the user-authorised merge. The full product ledger below remains in scope.
+
+Work uses a separate `codex/english-role-pricing-documentation` worktree. The concurrently owned PR #13 branch is untouched. No other ChatGPT chat, publication workflow, production data, real email, credential or repository protection change is used. The next actual main merge is reserved for the separately owned local-first publication change (PR #27); this does not block completing this documentation branch and prepared PR.
+
+**Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
+
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
 ## 16 November 2026 — prepare the coordinated roles/welcome integration

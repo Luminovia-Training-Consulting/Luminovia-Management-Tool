@@ -208,6 +208,10 @@ Current database authority controls the assignable role catalogue, account lifec
 
 Administration configures a private versioned compensation policy with current MFA; no business percentages are seeded. Commissioned offers capture their policy and keep raw public price sentinels at zero. `job_offers()` returns only the current actor's net quote, and claim consent binds that quote to the current role. Later role/policy changes do not rewrite accepted revenue, compensation or invoice history. Legacy net-only offers keep their original meaning.
 
+Read `private.job_offers`, `private.role_net` and `private.role_quote_version` together with the later `private.claim_job` and claim/revenue triggers in this file. A numeric zero in a role-dependent job's public columns is a storage sentinel, whereas `null` in the authorised JSON quote means no prospective monetary value is available. An authorised numeric zero can still be a real quote. The nullable `Job` DTO and list/detail rendering preserve those distinctions; they do not calculate the quote from public columns. Frontend consent captures the exact displayed values and quoted version before the server checks that version under the actor lock. An accepted claim retains its base terms version and immutable amounts.
+
+The later `private.job_lifecycle` definition also returns an authorised `max_net_budget`; an explicit protected `null` must not be replaced by the viewer's personal quote times capacity. These are current functions from migration 25, not pending discovery APIs. [Current source map and future integration requirements](DELEGATED_ROLES_PRICING.md#current-source-ownership) explain the query/DTO/UI ownership and how later pagination must preserve the same quote, null and consent boundaries. No additional migration is introduced by that guidance.
+
 Test entry points: [delegated-pricing-db-tests.mjs](../scripts/delegated-pricing-db-tests.mjs), [commission-api-check.mjs](../scripts/commission-api-check.mjs) and [roles-pricing.spec.ts](../tests/e2e/roles-pricing.spec.ts). [Detailed operating rules](DELEGATED_ROLES_PRICING.md).
 
 ### 26. Personal welcome progress
