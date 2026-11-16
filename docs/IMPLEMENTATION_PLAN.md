@@ -1,5 +1,13 @@
 # Persistent implementation plan
 
+## Queued PR19/Main36 source union — fresh acceptance pending
+
+- [x] Preserve verified queued `99500020175a696f0face5c70b961961c74fe3d3` and Root `41866c6` ancestry plus both complete ledgers. The queued 13:10 update precedes the 13:16 handoff; accepted Main remains `7fbdb956`.
+- [x] Retain the implemented three-phase system/browser/native contract and unchanged fifteen-context server policy, Draft-only fast/Ready-full routing and dated review discrepancy. Root's 318-case and eleven-signature evidence remains bound to pre-union `41866c6`; foreign verification remains bound to its queued source.
+- [ ] Complete the controller/test union with the stronger head/status/suite checks and every unique regression; run the combined source's own tests and every fresh applicable exact-head/current-base CI gate. Prior local or partial results do not establish this new union.
+- [ ] Follow current coordinator instructions and authoritative API readiness without rewriting earlier queue/Ready history. Reconcile the pending review-policy decision without silently changing live rules.
+- [ ] Complete permitted delivery before separately observing trusted-Main controller operation, Ready-event full acceptance and a genuinely eligible native App merge. Preserve all remaining product and production/operational acceptance scope below.
+
 ## Current Main36 aggregate acceptance guard
 
 - [x] Complete actual Main36 integration (`97dba73`) and explicit browser job/step binding (`4b1a541`) with system/native evidence on the same canonical CI suite/run/head/attempt. Keep the native fifteen-context policy unchanged.
@@ -16,6 +24,14 @@
 - [ ] Complete the local integration and every applicable fresh exact-head/current-base gate, with actual aggregate system/browser/native acceptance. The 304 combined Node and 90 focused results remain evidence for pre-Main36 `694cc4e` only.
 - [ ] Follow the assigned delivery sequence and current authoritative API readiness without rewriting historical Ready observations. Resolve user review-policy clarification while preserving the dated disabled-review/source-policy distinction.
 - [ ] Observe trusted-Main controller operation and native App merging separately after permitted delivery; preserve the full remaining product and production/operational acceptance scope below.
+
+## Current all-PR merge continuation — PR19
+
+- [x] Integrate accepted PR36/main `7fbdb956` through normal ancestry, preserving Draft-only fast routing, complete ready/main/manual acceptance and immutable SQL/business source.
+- [x] Bind the split browser job/step to actual current-head producer/suite/check/run evidence; pass source/build, 529 frontend and all 235 runtime cases plus the focused additional controller provenance case.
+- [ ] Require final exact-head system/browser/native/security/package CI and permitted sequential coordinator merge. The actual trusted-Main controller/App merge remains unobserved; no live protection mutation is part of this delivery.
+
+Earlier accepted-source evidence and the complete product scope remain below.
 
 ## Current combined acceptance-step and Draft-routing follow-up
 
@@ -152,6 +168,7 @@ This unchanged Root snapshot records its earlier pending publication/merge items
 - [ ] Perform the expressly authorised protected PR34 merge only when every final-current-head check passes; observe main acceptance separately without dispatching a release.
 
 This continuation preserves the complete remaining product scope and prior source-bound evidence below.
+
 
 ## Safe development-speed improvements — explicit continuation
 

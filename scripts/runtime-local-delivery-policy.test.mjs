@@ -485,7 +485,7 @@ test("preview shell preflight rejects every failed skipped canceled or missing p
       assert.equal(execute({ [name]: status }), false, `${name}/${status}`);
 });
 
-test("browser scope preflight accepts a fast successful PR profile only with explicit Draft inputs", () => {
+test("browser scope preflight accepts only an exact successful PR profile", () => {
   const preflight = workflow("ci").jobs["verify-browser"].steps[0].run;
   for (const [event, profile, scopeResult, allowed] of [
     ["pull_request", "docs", "success", true],
@@ -498,28 +498,36 @@ test("browser scope preflight accepts a fast successful PR profile only with exp
     ["pull_request", "full", "cancelled", false],
     ["pull_request", "", "success", false],
     ["pull_request", "unknown", "success", false],
-  ]) {
-    const result = spawnSync(
-      "bash",
-      ["-e", "-u", "-o", "pipefail", "-c", preflight],
-      {
-        env: {
-          PATH: process.env.PATH,
-          EVENT_NAME: event,
-          PROFILE: profile,
-          SCOPE_RESULT: scopeResult,
-          PR_DRAFT: "true",
-          PR_ACTION: "synchronize",
+  ])
+    for (const [draft, action] of [
+      ["true", "synchronize"],
+      ["false", "synchronize"],
+      ["true", "ready_for_review"],
+      ["", ""],
+    ]) {
+      const result = spawnSync(
+        "bash",
+        ["-e", "-u", "-o", "pipefail", "-c", preflight],
+        {
+          env: {
+            PATH: process.env.PATH,
+            EVENT_NAME: event,
+            PROFILE: profile,
+            SCOPE_RESULT: scopeResult,
+            PR_DRAFT: draft,
+            PR_ACTION: action,
+          },
+          timeout: 1000,
+          encoding: "utf8",
         },
-        timeout: 1000,
-        encoding: "utf8",
-      },
-    );
-    assert.ifError(result.error);
-    assert.equal(
-      result.status === 0,
-      allowed,
-      `${event}/${profile}/${scopeResult}`,
-    );
-  }
+      );
+      assert.ifError(result.error);
+      assert.equal(
+        result.status === 0,
+        allowed &&
+          (profile === "full" ||
+            (draft === "true" && action !== "ready_for_review")),
+        `${event}/${profile}/${scopeResult}/${draft}/${action}`,
+      );
+    }
 });

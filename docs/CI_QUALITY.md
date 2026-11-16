@@ -28,8 +28,9 @@ without a source push. See [GitHub's PR event types](https://docs.github.com/en/
 Wait for that full run before queuing a native merge; a completed Draft package
 is not full acceptance. Full-profile PR acceptance requires actual successful
 system, browser and native steps behind the current canonical check jobs. The
-controller browser-job binding is implemented and locally tested; fresh combined CI remains pending
-at this Main36 integration checkpoint.
+controller browser-job binding is implemented; its local test evidence belongs
+to pre-union Root `41866c6`. The queued-source union needs its own tests and fresh
+combined CI.
 A manual branch run remains available for complete verification.
 
 Full-profile PRs, including every ready PR, split the runner into explicit `--phase system` and

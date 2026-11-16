@@ -1633,3 +1633,48 @@ test("HTTP errors, redirects, invalid JSON and hostile paths cannot expose token
   assert.equal(sent[0].options.redirect, "error");
   assert.ok(sent[0].options.signal instanceof AbortSignal);
 });
+
+/** Split PR acceptance must retain exact browser execution provenance even
+ * though the server's unchanged fifteen-context rule delegates it to preview. */
+test("split browser evidence cannot reuse a foreign suite, source, producer or skipped check", async () => {
+  for (const [change, reason] of [
+    [
+      (check) => {
+        check.check_suite.id = 9999;
+      },
+      "check-suite-provenance",
+    ],
+    [
+      (check) => {
+        check.head_sha = merge;
+      },
+      "additional-checks",
+    ],
+    [
+      (check) => {
+        check.app.id = 9999;
+      },
+      "acceptance-job-provenance",
+    ],
+    [
+      (check) => {
+        check.conclusion = "skipped";
+      },
+      "additional-checks",
+    ],
+  ]) {
+    const checks = checksFor();
+    change(
+      checks.find((check) => check.name === "Isolated browser acceptance"),
+    );
+    const source = httpFixture({ checks });
+    const result = await processPullRequest(source.request, 31, catalogue, {
+      apply: true,
+    });
+    assert.deepEqual(result, { eligible: false, reason });
+    assert.deepEqual(source.writes(), []);
+    assert.ok(
+      source.sent.every((call) => call.token === "Bearer fictional-read"),
+    );
+  }
+});

@@ -1,5 +1,13 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — queued PR19 Main36 update and source union
+
+Verified queued PR19 update `99500020175a696f0face5c70b961961c74fe3d3`, with parents `694cc4e` and accepted Main36 `7fbdb956`, is recorded at 13:10 UTC, before the 13:16 read-only handoff. Main remains `7fbdb956a513ca8eec3d0f2404adc213c656af1f`. The preflight detected this existing branch update before publishing Root `41866c6`; the local integration retains both ancestries through a normal merge. Its branch-reported integration, verification and instruction history is preserved below with its original source scope.
+
+Both branches implement browser execution evidence alongside system/native verification. Root's local `4b1a541` guard and the foreign browser guard are being combined while retaining strict head/status/producer/suite binding and every unique regression. The 318-case local pass and eleven-signature verification belong to Root `41866c6` before this union. The foreign 529-frontend/235-runtime and focused controller results belong to its own queued composition. The combined source still needs its own tests and fresh exact-head system/browser/native/security/package CI; no prior pass is substituted.
+
+All fifteen server-required contexts and the additional actual browser-step requirement remain distinct. Draft-only fast/Ready-full routing and the recorded disabled-review/intended-source-policy distinction are retained. Readiness and sequencing are queue-managed; current GitHub API state and coordinator instructions remain authoritative while earlier Ready observations stay historical. No new remote action, service, trusted-Main controller execution, native App merge or production acceptance is claimed by this documentation resolution.
+
 ## 16 November 2026 — complete local Main36 phase binding
 
 Signed merge `97dba73` preserves actually accepted Main36 and all prior ledgers. Controller follow-up `4b1a541` additionally requires `Isolated browser acceptance` and its successful `Complete isolated desktop, mobile and built-PWA acceptance` step in the same canonical CI suite/run/head/attempt. Native rule requirements remain exactly fifteen; this browser check is additional execution evidence. Actual old `694cc4e` simulated apply accepts missing browser evidence or a green job with a skipped browser step; the corrected source rejects both with zero candidate writes. No real App merge or network credential is used by those fixtures.
@@ -15,6 +23,12 @@ Actual Main36 `7fbdb956a513ca8eec3d0f2404adc213c656af1f` merged at 12:56:43 UTC.
 Full-PR acceptance now aggregates system/SQL/API, the separate `Isolated browser acceptance` job and native retained-data verification. Neither application phase alone establishes complete acceptance. Main/manual/local complete application acceptance keeps its original single-stack sequence. At this merge-resolution checkpoint the controller's earlier two-job binding still needs explicit browser job/step evidence; that adaptation and fresh combined-source CI remain pending. The 304 combined Node and 90 focused passes belong to pre-Main36 source `694cc4e`, not this phase integration.
 
 PR readiness remains queue-managed and mutable; current GitHub API state is authoritative, while earlier preflight Ready observations stay recorded with their original source. The recorded 12:16 disabled-review discrepancy and intended active source policy are preserved. No new application/native/Main-controller, native App merge or production acceptance is inferred from this documentation resolution, and no service or remote operation is started.
+
+## 16 November 2026 — PR19 current-main split-acceptance integration
+
+The current instruction authorises completing and merging all open PRs through the central coordinator, superseding earlier individual queue reservations. This normal signed integration preserves actual main `7fbdb956` (accepted PR36), both ledgers, all 36 released migrations and React/Edge business bytes. The verified-Draft-only fast profiles and fresh full `ready_for_review` acceptance remain. The new browser preflight independently requires full for ready PRs; the native controller now additionally binds successful browser execution to its exact current-head Actions producer, CI suite, job/check URL and complete desktop/mobile/PWA step. Missing, skipped, foreign-suite/source/producer and failed browser evidence cannot authorize a merge. No repository rule, token capability or release control was changed.
+
+Executed on this composition: `./portal check` passes all 529 frontend cases/66 files, unchanged coverage floors (S65.52/B59.99/F56.66/L67.59%), types/lint/format/compiler and production/PWA build. All 235 then-existing runtime cases pass; the additional split-browser provenance case passes with all 50 controller cases. Scoped lint/actionlint and whitespace checks pass. These source/real-child-process checks do not establish complete current native/browser acceptance. Exact-head system/browser/native/security/preview CI remains required before the coordinated merge; no shared full-PC or hosted operation was started.
 
 ## 16 November 2026 — actual acceptance steps and Draft-only fast CI
 

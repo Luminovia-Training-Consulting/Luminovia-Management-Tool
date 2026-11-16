@@ -38,7 +38,8 @@ const prefix = `/repos/${repository}`;
 const acceptanceSteps = new Map([
   ["verify", new Set(["Complete isolated local verification"])],
   // The separate browser job is extra execution evidence; native branch rules
-  // still require exactly their fifteen independently named contexts.
+  // still require exactly their fifteen independently named contexts. The
+  // required preview gate also depends on this job's actual browser execution.
   [
     "Isolated browser acceptance",
     new Set(["Complete isolated desktop, mobile and built-PWA acceptance"]),
@@ -382,7 +383,13 @@ function evaluateAcceptanceJobs(jobs, run, head, checks) {
     const check = checks
       .filter((item) => item.name === name && item.app?.id === 15368)
       .sort((a, b) => b.id - a.id)[0];
-    if (!Number.isSafeInteger(check?.id) || check.id <= 0)
+    if (
+      !Number.isSafeInteger(check?.id) ||
+      check.id <= 0 ||
+      check.head_sha !== head ||
+      check.status !== "completed" ||
+      check.conclusion !== "success"
+    )
       return blocked("acceptance-job-provenance");
     if (check.check_suite?.id !== run.check_suite_id)
       return blocked("check-suite-provenance");
