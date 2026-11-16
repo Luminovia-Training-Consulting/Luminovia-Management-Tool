@@ -2,6 +2,12 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — repeated CI exposed and reproduced a transient theme contrast defect
+
+Documentation PR9's unchanged-application run43774441712 reached69/70passing browsers but rejected taxonomy desktop immediately after a light→dark switch: axe color-contrast on primary/secondary buttons. Native Chromium reproduced this against the actual official M6preview. Foreground colors changed immediately while the160ms background transition retained/interpolated old colors: first-state contrast1.841/1.037, at32ms3.076/1.765, while stable endpoints were7.905/15.493(light) and9.104/13.982(dark).
+
+The production fix removes only background interpolation from `.button`, retaining transform feedback. Applying that exact revised production rule in the same real preview page makes immediate dark ratios9.104/13.982 and every sampled state≥4.5. No Auth/business data was modified. A new desktop/mobile E2E checks the first computed light→dark→light action-label states with the actual application stylesheet; it deliberately waits only for the initial before-change render, never after the theme changes. The CSS fix and this regression are included in the next exact PR9 CI; no blind rerun, axe relaxation or arbitrary wait replaces the failure. Private evidence `.local/theme-contrast-probe/actual-preview-comparison.json`.
+
 ## 16 November 2026 — official GitHub preview upgraded and retained data verified
 
 The actual official latest-main preview upgraded from5f89986(18migrations) to mergedM6dc8e9a7(24migrations). `./portal github plan` identified exactly the six forward migrations and requested review for taxonomy/lifecycle/capacity changes. The reviewed source-bound digest was accepted for this owned fictional local preview; no normal development/hosted/production database was targeted. `./portal github update --accept-migration-plan <reviewed-digest>` returned exit0 and reportedready on5373/API56321/Mailpit56324. Status confirms exactdc8e9a7 and actual migration history count24.

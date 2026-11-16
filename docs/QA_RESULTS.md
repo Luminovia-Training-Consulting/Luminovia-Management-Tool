@@ -2,6 +2,10 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## Subsequent theme regression — actual defect fixed, new CI pending
+
+Repeated documentation CI43774441712 rejected one taxonomy contrast check(69/70passed). Actual served M6markup/styles reproduced first-state button contrast1.841/1.037 during background interpolation; stable themes pass. Removing that interpolation retains transform feedback and gives immediate dark9.104/13.982 on the same actual page. New effect-based desktop/mobile regression samples the first computed theme states; exact new PR9 CI remains required. The historical accepted M6counts below are not rewritten as if this later run passed.
+
 ## M6 application acceptance — passed on exact signed source
 
 Source `9d9bc567e70cdb3100a7ea6d78920d90a735cbba`: local runner report `.local/tests/977d0761/RESULT.txt` PASS at 2026-11-15T22:49:34.605Z; independent exact-source [CI43770187739](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43770187739) application `verify` succeeded at 22:53:22Z. The separate retained-image compatibility job also succeeded at 22:59:09Z; [PR8](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/8) merged at 23:05:43Z as `dc8e9a7e65c96076038bf7067791676578d121d4`.
