@@ -6,11 +6,11 @@ The exact additional [implementation prompt](OPERATIONS_EXTENSION_PROMPT.txt) is
 
 - [x] Inspect/fetch current main, all11open PRs/commits/checks, live rules, security findings and authorised development-release automation; isolate new work from the original dirty checkout.
 - [x] Implement initial course-readiness, delivery, future whole-block replacement and support source with server-side authority, DE/EN UI and focused SQL/source tests. Their full acceptance remains open.
-- [ ] Complete formal changes/amendments, website intake and accounting adapters, without dropping original product scope or duplicating active PRs.
+- [ ] Complete and deliver the separate enquiry, accounting and consented-amendment PRs; initial source and focused tests exist, and commissioned compensation/customer proposals are being completed independently.
 - [ ] Complete started/partially completed/invoiced replacement workflow and optional waitlist/ordered notices.
-- [ ] Run actual combined Auth/HTTP/scanner/browser/a11y/mobile/PWA/retention acceptance and inspect screenshots once the foreign QA lock is released.
-- [ ] Publish focused signed/labelled PRs and verify exact-head required CI, independent review and merge eligibility. Honour Carina's coordinated main-merge hold while PR15 is completed.
-- [ ] Verify merged source and actual authorised development activation separately. No production/public Website/DNS/real-mail/purchase action is implied.
+- [ ] Complete exact-source canonical acceptance. Local e34a5bf passes SQL/Auth/API/scanner and 95/96 browsers; transport failure makes the whole run FAIL and build/PWA were not reached. Own feature screenshots were inspected; the isolated public-help desktop/mobile follow-up passes2/2.
+- [ ] Push the corrected signed PR24/PR25 sources and prepare focused accounting/amendment PRs. Verify all current required checks. The coordinator reserves the next manual main merge for PR27; no competing merge or new auto-merge.
+- [ ] Verify any separately authorised installation from actual state. Local development/tests are now the default; the separate workflow owner controls publication switches. No production/public Website/DNS/real-mail/purchase action is implied.
 
 Initial SQL evidence: readiness16, delivery12, replacement13, support12groups. Whole-source257tests and unchanged coverage floors pass; TypeScript/ESLint pass. The canonical complete command returned exit1 before startup because another checkout holds shared QA ownership; this is not a full integration pass.
 

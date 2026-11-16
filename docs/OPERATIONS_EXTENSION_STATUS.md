@@ -4,6 +4,8 @@ The authoritative additional user prompt is preserved verbatim in [OPERATIONS_EX
 
 ## Current checkpoint
 
+The latest local canonical run `9a6558c9` of frozen `e34a5bf` passed every SQL/Auth/API/scanner stage and 95/96 browser cases, including all eight new operational desktop/mobile journeys. Its overall result is FAIL because public-help startup lost 32 asset fetches to `ERR_NETWORK_CHANGED`; build/PWA were not reached. The isolated public-help follow-up passes desktop/mobile 2/2 without weakening assertions. Own readiness/delivery screenshots were visually inspected. Current main `0a6002a` plus signed private-access correction `23dba45` passes 285 frontend tests, 30 strict operational SQL bodies and 16 ordinary/strict predecessor ACL groups. Another eight ACL groups pass with explicitly pinned PR17 source; native HTTP/file-byte acceptance of the correction is still separate.
+
 PR24 source5ee979a passed the full actual application/native pipeline: 257 frontend tests, all four new actual API suites, 92 browser cases and 2 built-PWA cases; native29migrations/23API suites included TLS/WebSockets, 50claims and retained credentials/MFA/roles/private events/file bytes. This is evidence for that exact source. The new integration of accepted mainfabd71a has 31migrations,280passing frontend tests and6actual role-pricing replacement compatibility groups; the combined complete pipeline is pending. All26released main migration files remain byte-identical.
 
 Initial implementation source is isolated on `codex/operations-extensions`, initially from e75f55d and updated to accepted main d4c1f49. Existing unrelated changes in the original checkout remain untouched. All historical migrations remain unchanged; every new schema change is additive and CLI-generated.
@@ -26,7 +28,7 @@ The first source checkpoint passes whole-project TypeScript/ESLint, all257fronte
 
 Current live main requires signed history, resolved findings and all 15 strict checks, including PR preview package. The active review rules retain their existing Maintainer/Admin PR-only exceptions; no self-review is represented as independent approval. Carina confirmed PR18 merged as fabd71a and normal work resumed. The latest coordination then reserved manual main merges for its coordinator: prepare tested ready PRs, do not independently merge or enable auto-merge, and preserve existing rules.
 
-Eligible main merges may trigger the existing authorised development VPS updater. Do not claim VPS installation without actual activation evidence. Production, public Website, DNS, hosting changes, real emails, purchases and new services keep their separate approval boundaries.
+Carina now prefers local development/tests and explicitly approved publication. A separate owner controls the workflow transition; this task dispatches no deployment/release workflow. Do not claim VPS installation without actual activation evidence. Production, public Website, DNS, hosting changes, real emails, purchases and new services keep their separate approval boundaries.
 
 ## Continuation
 
@@ -34,6 +36,6 @@ Eligible main merges may trigger the existing authorised development VPS updater
 2. Preserve a signed first-four checkpoint, then implement change requests, enquiry intake and accounting in isolated worktrees to avoid changing a running acceptance snapshot.
 3. Integrate current main/role-pricing/qualification/notification/customer-neutral work by inspecting its owning PRs rather than recreating it.
 4. Run complete canonical SQL/API/Auth/scanner/desktop/mobile/axe/PWA/retention acceptance; inspect screenshots. Extend tests for each completed P2 path.
-5. Publish focused labelled PRs with exact evidence/limitations; wait for actual checks and independent review. Honour the temporary merge hold, then merge only eligible exact tested heads and verify merged source/development activation separately.
+5. Deliver focused signed/labelled PRs with exact evidence/limitations without waiting for a large collection branch. The coordinator owns actual manual merge collisions; PR27 has the next reserved main merge. Preserve every gate and verify any separately authorised installation from actual state.
 
 Feature guides: [readiness](COURSE_READINESS.md), [delivery](TEACHING_DELIVERY.md), [replacement](REPLACEMENT_MARKETPLACE.md), [support](SUPPORT_DESK.md). Keep the complete original product ledger in IMPLEMENTATION_PLAN; these additions do not close unrelated pending scope.
