@@ -1,6 +1,6 @@
 # Contributing to Luminovia Portal
 
-> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Maintainers/admins may bypass review through a PR only; nobody can bypass the 15 mandatory CI/security checks or up-to-date testing. The maintenance App has no rule exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
+> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Only `CarinaSchoppe` (User 29256704) has a personal `pull_request` exception in the review rules. Nobody can bypass the 15 mandatory CI/security checks or strict up-to-date testing. The history/check rules and maintenance App have no bypass exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
 
 Welcome! This guide explains how to turn an idea or bug report into a tested, reviewable change. **Use English for issues, pull requests and contributor-facing documentation.** Application interface changes must provide both German and English strings; authored course content keeps its original language.
 
@@ -77,13 +77,11 @@ Every PR needs exactly one `type:*` label, at least one `area:*` label and exact
 
 ## Review and merge
 
-Changes to `main` require a pull request. Ordinary contributors and the maintenance App need an independent approving review, approval of the latest push and resolved review conversations. New pushes dismiss stale approvals; self-approval is insufficient. Maintainers and administrators may bypass the review rules when merging a PR, but cannot push directly to `main` or bypass its required checks.
+Changes to `main` require a pull request. Other contributors, including the maintenance App, need an independent approving review, approval of the latest push and resolved review conversations. New pushes dismiss stale approvals; self-approval is insufficient. The only current review exception is personal to `CarinaSchoppe` (User 29256704), with bypass mode `pull_request`. It permits bypassing review through a PR, not direct pushes or bypassing required checks. Maintainer or administrator role membership alone grants no review exception.
 
-All 15 mandatory checks must pass for the current revision, and the PR must be up to date with `main`. These include Build, Typecheck, Lint, Formatting, Code quality, Tests and coverage, `verify`, `Actual isolated selfhost image compatibility`, `PR metadata`, the three CodeQL language analyses, Dependency review and the generated CodeQL findings check. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes. Missing, pending or failed required checks block every merger, including administrators and the maintenance App.
+All 15 mandatory checks must pass for the current revision, and the PR must be up to date with `main`. These include Build, Typecheck, Lint, Formatting, Code quality, Tests and coverage, `verify`, `Actual isolated selfhost image compatibility`, `PR preview package`, `PR metadata`, the three CodeQL language analyses, Dependency review and the generated CodeQL findings check. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes. Missing, pending or failed required checks block every merger, including administrators and the maintenance App.
 
 Daily maintenance publishes a signed change on a separate branch and opens a PR labelled `type:dependencies`, `area:devops` and `risk:high`. Native auto-merge waits for the same checks and independent review; it grants no exception. App permission setup and actual workflow delivery must be verified separately from the already active rules. See [current operational status](docs/GITHUB_WORKFLOW.md#activation-still-pending).
-
-A direct maintainer merge does not skip publication checks: an explicitly requested development release waits for its gates in `ci.yml`. Failed checks do not produce an approved installation package. The separate Security workflow provides additional analysis. The existing daily maintenance path remains unchanged until the App setup is coordinated; no unverified bot bypass is assumed.
 
 A merge does not publish a development release or create PR deployment metadata.
 An authorised maintainer must explicitly dispatch `Portal checks` on `main` with

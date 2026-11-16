@@ -42,6 +42,7 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 ## Current direction — local PC testing and explicit publication
 
+- Final integration follows actual main319ab69 through verified remote mergef24eae9. Prior head30075c9 passed all15required checks (88browser/2PWA plus real26-migration/20-suite native retention); current f24local checks pass254frontend/95runtime/23maintenance cases. Correct the three retained governance contradictions once, preserving manual publication controls, then use PR27's fresh exact-head checks and actual merge record. Other feature development remains independent.
 - [x] Add `./portal check` for fast local source/coverage/build feedback, retaining complete isolated `./portal test` and latest-main `./portal github test`.
 - [x] Keep automatic quality/security/application/native gates; make CMS publication an explicit exact-SHA manual choice and PR deployment metadata manual-only.
 - [x] Notify the 16 other active project Codex chats and preserve the local-first rule in `AGENTS.md` and operator/contribution guides.
