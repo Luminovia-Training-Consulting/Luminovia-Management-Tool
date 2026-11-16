@@ -1,5 +1,13 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — PR25 conflict and native TLS repair
+
+The direct user request is to make PR25 mergeable. In the isolated `codex/pr25-mergeability-20261117` worktree, merged actual accepted main `2c7d326` through normal signed ancestry and retained both complete work logs/plans. Only those two documents conflicted; all 68 released migration blobs remain identical to main and the enquiry source remains the sole added SQL file. No unrelated branch is imported.
+
+Native CI43887617932 passed retained-data replay and 21 API suites before the enquiry HTTP adapter returned503instead of202. Independently verified the prepared candidate-certificate correction from the existing repair checkout: the default CA:TRUE certificate is invalid as a rustls server end entity. The candidate now explicitly issues a one-day loopback CA:FALSE leaf. Actual-runtime tests exercise the deployed enquiry adapter through HTTPS and reject both an untrusted leaf and a trusted wrong-host certificate without any RPC request. Existing TLS verification and ownership checks remain enabled; no production certificate or worker permission changes.
+
+Executed after main integration: `./portal check` passes681frontend cases/90files, unchanged coverage floors (S66.63/B62.05/F56.66/L68.79%), types/lint/format/compiler and production/PWA build (89 precache entries). `node scripts/ci-pr-check.mjs guards` passes173runtime and74Edge cases, Deno types/lint and production dependency audit. The combined candidate/enquiry socket/TLS suite passes29cases, zero skips/retries. Initial socket invocations lacked the npm-policy-blocked local Deno binary; running the pinned package installer repaired the local dependency setup without source or lockfile changes. The full canonical `./portal test` attempt refused the foreign-owned shared QA lock before startup; no new complete local service/browser acceptance is claimed. Fresh exact-head full CI remains the merge gate. No publication, production, Website activation or real mail is performed.
+
 ## 17 November 2026 — repair PR25 against accepted PR24
 
 The user requested repair of PR25. Work is isolated in `codex/fix-pr25-20261117` from the actual remote enquiry head `d405238`, leaving earlier local branches and the original checkout's pending work unchanged. Current main `99add7d` has accepted PR24. Integrated routes, translations, all reviewed Edge workers, the full plan/work history and source architecture are preserved; generated API inventory will be rebuilt from a real replay.

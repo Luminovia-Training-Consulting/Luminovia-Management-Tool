@@ -1,5 +1,12 @@
 # Persistent implementation plan
 
+## PR25 mergeability continuation — 17 November 2026
+
+- [x] Resolve both documentation conflicts against accepted main `2c7d326`, preserving all released migrations and complete ledgers.
+- [x] Correct native candidate TLS leaf semantics without disabling validation; actual enquiry-runtime positive/untrusted/wrong-host HTTPS and socket/candidate suite passes29cases.
+- [x] Pass combined `./portal check` (681frontend),173runtime and74Edge cases with unchanged gates. Full local acceptance refuses a foreign-owned shared QA lock before startup.
+- [ ] Push signed correction, inspect fresh exact-head full system/browser/native/security/package CI, repair any failures and complete the authorised PR25 merge when repository rules permit. No production/publication action is included.
+
 ## PR25 repair on accepted PR24 — 17 November 2026
 
 - [x] Bind private enquiry intake to accepted main `99add7d`, preserving all 68 published migrations and incoming application/operational workflows.

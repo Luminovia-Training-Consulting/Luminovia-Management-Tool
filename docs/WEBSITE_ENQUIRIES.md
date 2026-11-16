@@ -4,7 +4,7 @@
 
 PR24 is accepted as main `99add7de8598bf415977c7cae79f1c5f6993626d` with 68 published SQL files. The unpublished enquiry source is resequenced with the installed CLI as `20261116143242_website_enquiry_intake.sql`, after that complete prefix. All 68 released files remain byte-identical. This produces 69 sources; source presence does not claim hosted installation.
 
-The enquiry helper is discovered by main's existing owner-only notification resolver. The obsolete resolver rename/wrapper and authenticated EXECUTE grant are removed from the unpublished source, preserving the accepted resolver's identity, fallback branches and restricted ACL. Current SQL tests exercise the actual inbox projection and denied direct helper calls. HTTP fixtures must validate either the canonical disposable backend or the exact ownership-checked native candidate, including its private TLS trust; ordinary services remain excluded.
+The enquiry helper is discovered by main's existing owner-only notification resolver. The obsolete resolver rename/wrapper and authenticated EXECUTE grant are removed from the unpublished source, preserving the accepted resolver's identity, fallback branches and restricted ACL. Current SQL tests exercise the actual inbox projection and denied direct helper calls. HTTP fixtures must validate either the canonical disposable backend or the exact ownership-checked native candidate, including its private TLS trust; ordinary services remain excluded. The native fixture issues an explicit CA:FALSE server leaf so Deno/rustls and Node/OpenSSL both validate it. Tests retain certificate and hostname checks.
 
 The Portal can receive an authenticated integration submission, retain the
 validated original enquiry and consent record privately, and let management
