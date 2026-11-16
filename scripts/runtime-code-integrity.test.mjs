@@ -25,6 +25,85 @@ test("delivered runtime exports have actual production references beyond their i
     [],
   );
 });
+// Erased type references must not disguise a value with no runtime consumer.
+// Temporary source fixtures retain genuine calls, runtime typeof and shorthand use.
+test("type-only references cannot disguise unused runtime exports, while calls and runtime typeof still count", () => {
+  const fixture = mkdtempSync(join(tmpdir(), "luminovia-runtime-types-probe-"));
+  try {
+    mkdirSync(join(fixture, "src"));
+    writeFileSync(
+      join(fixture, "src/main.ts"),
+      `
+      import { annotationsOnly, numericValue, called, inspected } from './values';
+      type Signature = typeof annotationsOnly;
+      interface Contract { run: typeof annotationsOnly; amount: typeof numericValue; }
+      called();
+      const registry = { called };
+      const runtimeType = typeof inspected;
+    `,
+    );
+    writeFileSync(
+      join(fixture, "src/values.ts"),
+      `
+      export function annotationsOnly() { return 1; }
+      export const numericValue = 2;
+      export function called() { return 3; }
+      export function inspected() { return 4; }
+    `,
+    );
+    assert.deepEqual(
+      scanRuntimeExports(fixture).map(({ name, local, external }) => ({
+        name,
+        local,
+        external,
+      })),
+      [
+        { name: "annotationsOnly", local: 0, external: 0 },
+        { name: "called", local: 0, external: 2 },
+        { name: "inspected", local: 0, external: 1 },
+        { name: "numericValue", local: 0, external: 0 },
+      ],
+    );
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});
+// A class extends expression executes its base; generic/interface inheritance is erased.
+// Preserve that distinction even though TypeScript classifies both as type syntax.
+test("runtime class inheritance counts base values while erased inheritance and generic types do not", () => {
+  const fixture = mkdtempSync(
+    join(tmpdir(), "luminovia-runtime-inheritance-probe-"),
+  );
+  try {
+    mkdirSync(join(fixture, "src"));
+    writeFileSync(
+      join(fixture, "src/main.ts"),
+      `
+      import { RuntimeBase, TypeOnlyBase, annotation } from './values';
+      interface Shape extends TypeOnlyBase {}
+      class Child extends RuntimeBase<typeof annotation> implements TypeOnlyBase {}
+      const expression = class extends RuntimeBase<typeof annotation> {};
+    `,
+    );
+    writeFileSync(
+      join(fixture, "src/values.ts"),
+      `
+      export class RuntimeBase<T> {}
+      export class TypeOnlyBase {}
+      export function annotation() { return 1; }
+    `,
+    );
+    const entries = new Map(
+      scanRuntimeExports(fixture).map((entry) => [entry.name, entry]),
+    );
+    assert.equal(entries.get("RuntimeBase").external, 2);
+    assert.equal(entries.get("TypeOnlyBase").external, 0);
+    assert.equal(entries.get("annotation").external, 0);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});
+
 // Both lazy and type imports participate in this static connectivity graph.
 test("every delivered frontend module is reachable from the real entry point, including lazy/type imports", () => {
   assert.deepEqual(report.unreachable, []);
