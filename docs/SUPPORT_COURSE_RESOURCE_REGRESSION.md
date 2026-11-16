@@ -1,5 +1,7 @@
 # Dedicated support evidence and course-resource registries
 
+This report preserves the initial isolated registry/overlay experiment and its pinned historical source. The released main application now includes both support and the course workspace; the canonical runner discovers the current registry regression against that complete migration history. Historical overlay hashes and filenames below identify their original tests and must not be used as deployment instructions. See [OPERATIONS_EXTENSION_STATUS](OPERATIONS_EXTENSION_STATUS.md) for current delivery scope.
+
 This bounded regression tests a document that could otherwise be registered by
 both the support desk and the independently delivered course learning workspace.
 A personal document's ordinary RLS is not sufficient: an approved course resource
@@ -7,7 +9,7 @@ has its own `course_document_access` route for enrolled recipients.
 
 The reviewed product change belongs to the support owner. This test-only work
 started from `1ae8b2616bd237f04be145b6bf01202210c8c932` and used the owner's pending
-`20261116034757_internal_support_desk.sql` as an **uncommitted test overlay** with
+`20261116121556_internal_support_desk.sql` as an **uncommitted test overlay** with
 SHA-256 `877e00bdcf3561b14bdbb7367b87e1ec8d4c94d690af4a8ff5af9b128b57af78`.
 That migration is not part of this test-only commit. Integrating these tests
 requires the matching product fix; missing helpers cause a real assertion failure.

@@ -1,6 +1,6 @@
 # Actual teaching time, financial facts and Control Center
 
-Migration `20261116032842_timesheets_finance_and_control_center.sql` adds a private teaching-time ledger, printable financial facts and capability-scoped operational projections. The frontend routes are `/timesheets` and `/control-center`; every string supports German and English. Author-written notes and agreement text retain their authored language.
+Migration `20261116091017_timesheets_finance_and_control_center.sql` adds a private teaching-time ledger, printable financial facts and capability-scoped operational projections. The frontend routes are `/timesheets` and `/control-center`; every string supports German and English. Author-written notes and agreement text retain their authored language.
 
 ## Teaching-time workflow
 

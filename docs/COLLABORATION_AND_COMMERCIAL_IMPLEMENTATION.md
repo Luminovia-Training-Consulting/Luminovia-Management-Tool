@@ -1,6 +1,6 @@
 # Collaboration, knowledge and commercial frontend
 
-This document records the implemented source interfaces and the evidence available before the next isolated full-stack test. It complements `IMPLEMENTATION_PLAN.md`; it does not narrow the Universal Master Prompt.
+This document records the implemented source interfaces and the evidence available before the next isolated full-stack test. It complements [ROADMAP](../ROADMAP.md); it does not narrow the Universal Master Prompt.
 
 ## Implemented interfaces
 
@@ -14,7 +14,7 @@ Feature query keys are scoped to the authenticated actor and relevant entity. Al
 
 ## Source ownership and integration
 
-Feature source is in `src/features/chat`, `src/features/knowledge` and `src/features/commercial`. Translations register isolated `chat`, `knowledge` and `commercial` namespaces. Entry points are `ChatPage`, `WikiPage`, `ForumPage`, `ContractsPage` and `FinancePage`. Shared files APIs provide quarantine/scanning and fresh-authorized exact-version downloads. Central routing, navigation, backend migrations, runtime and deployment ownership are tracked in the main work log.
+Feature source is in `src/features/chat`, `src/features/knowledge` and `src/features/commercial`. Translations register isolated `chat`, `knowledge` and `commercial` namespaces. Entry points are `ChatPage`, `WikiPage`, `ForumPage`, `ContractsPage` and `FinancePage`. Shared files APIs provide quarantine/scanning and fresh-authorized exact-version downloads. Central routing, navigation, backend migrations, runtime and deployment ownership are tracked in the QA results.
 
 Knowledge attachments are pending a dedicated knowledge ACL/storage adapter. The editor does not expose personal-file URLs as an unsafe substitute. Chat currently uses validated PostgreSQL message and membership streams; ephemeral typing/presence is pending a revocation-safe design.
 
@@ -26,7 +26,7 @@ That complete run verified the real chat, wiki/forum and commercial workflows de
 
 A second fresh, isolated targeted stack then passed **all 6 chat/commercial desktop/mobile browser cases** with the current input fix. The strengthened DM workflow opens the actual attachment button and native file chooser, uploads fictional text through real security scanning, sends it after approval, and verifies the recipient's authorised downloaded bytes. Both commercial PDF workflows still passed. A real populated-mobile DOM comparison measured viewport/scrollWidth **412/412** with native hidden, **412/445** after temporarily restoring the old input class (input left 33, width 412, right 445), and **412/412** after restoration. The current mobile chat screenshot is 1082 physical pixels wide at the Pixel 7 profile's 412 CSS pixels and 2.625 DPR; the blank side strip is removed. TypeScript, scoped ESLint and the 15 directly affected chat/commercial unit checks passed after this fix.
 
-The complete canonical run preceded this final narrow input correction. The 6 targeted cases verify that correction; the exact final source's complete CI result belongs in the main work log. Read-only real local browser checks additionally passed six lecturer chat/unsaved wiki/forum desktop/mobile axe scans and eight contracts/finance desktop/mobile light/dark scans without creating development business records.
+The complete canonical run preceded this final narrow input correction. The 6 targeted cases verify that correction; the exact final source's complete CI result belongs in the QA results. Read-only real local browser checks additionally passed six lecturer chat/unsaved wiki/forum desktop/mobile axe scans and eight contracts/finance desktop/mobile light/dark scans without creating development business records.
 
 ## Test interpretation and remaining acceptance
 

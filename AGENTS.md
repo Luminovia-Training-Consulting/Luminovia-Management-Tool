@@ -9,21 +9,24 @@ Agent assistance does not transfer that responsibility.
 
 ## Ground rules
 
-1. Read [WORKLOG](docs/WORKLOG.md) first, then
-   [IMPLEMENTATION_PLAN](docs/IMPLEMENTATION_PLAN.md).
+1. Read [README](README.md), the [documentation index](docs/README.md) and
+   [roadmap](ROADMAP.md) before choosing work.
 2. Read [UNIVERSAL_MASTER_PROMPT.txt](docs/UNIVERSAL_MASTER_PROMPT.txt).
    It preserves the complete product specification. Accepted later decisions and
-   their boundaries are recorded in the plan and work log. Do not replace the
+   their boundaries are recorded in the product and feature documentation.
+   Carina explicitly removed the implementation plan, work log and root changelog
+   on 17 November 2026; do not recreate them despite the original brief's historical deliverable list. Do not replace the
    target with an MVP, a design prototype or decorative placeholders.
 3. Inspect `git status --short --branch`, `git remote -v` and `git worktree list`.
-   Read the actual owning source, migrations and tests. A historical work-log
-   entry does not establish current behavior or deployment state.
+   Read the actual owning source, migrations and tests. Historical QA evidence
+   does not establish current behavior or deployment state.
 4. Read [DEVELOPER_GUIDE](docs/DEVELOPER_GUIDE.md),
    [ARCHITECTURE](docs/ARCHITECTURE.md), [ERD](docs/ERD.md) and the relevant feature
    guides in `docs/`. [README](README.md) explains the runnable entry points.
 5. Complete a coherent, reviewable slice. Preserve working code, persistent data
-   and unrelated changes. Update the work log, plan and affected feature/runbook
-   documentation with actual results and immediate next actions.
+   and unrelated changes. Update the affected feature/API/runbook
+   documentation and record relevant actual validation in the PR. Keep remaining
+   product requirements visible in the existing roadmap.
 
 ## Where things are
 
@@ -194,7 +197,7 @@ physical PWA installation, mail delivery or production readiness.
 ## Git, parallel agents and delivery
 
 - Use a separate `codex/` branch/worktree. Deliver changes to `main` through the
-  pull-request workflow below. Never switch branches in a working directory
+  pull-request workflow below unless Carina explicitly instructs otherwise. Never switch branches in a working directory
   concurrently used by another agent. Use separate worktrees and explicit working
   directories.
 - Delegate bounded independent paths; one agent integrates the results. Do not stop
@@ -229,7 +232,7 @@ physical PWA installation, mail delivery or production readiness.
   updater can consume an explicitly published release; claim an installation
   only after observing it. Production approval remains separate.
 - Report concrete changes, executed checks, remaining limits and commit/PR links.
-  Preserve the complete open product scope and honest next actions in the plan/log.
+  Preserve the complete open product scope in the specification and existing roadmap.
 
 ## What is authorized and what needs approval
 

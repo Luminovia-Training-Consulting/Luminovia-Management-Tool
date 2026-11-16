@@ -1,5 +1,7 @@
 # KVM1 development performance
 
+Historical measurement report for the 15 November 2026 development rollout. The measurements and installed revisions below are evidence for that rollout, not a current hosted benchmark or health readback. The versioned Compose configuration remains the source for present healthcheck settings.
+
 The purchased KVM1 has one CPU, 4 GB RAM and 50 GB disk. PostgreSQL, Auth, REST, Realtime, Storage, all three application Edge functions, Envoy, Caddy, ClamAV and private development Mailpit remain available. These adjustments reduce background work while preserving the existing authentication, database, scanning and readiness checks.
 
 ## Health scheduling
@@ -30,7 +32,7 @@ Local verification used Docker Engine 29.9.3 and Compose 5.7.1. Read-only inspec
 
 ## Release-selection recovery
 
-The actual rollout found that GitHub returned an older release before the newest one. The updater now reads the exact current-main SHA and fetches its corresponding tag, with a normal wait when that release is not yet published. The observed ordering and HTTP error cases are covered by28 updater tests. The first performance release required the documented operator path because the installed discovery code could not find it; its current-main, tag, full CI, immutable assets and hashes were independently verified before installation. Further exact-main release and no-restart proof are recorded from live results in WORKLOG.
+The actual rollout found that GitHub returned an older release before the newest one. The updater now reads the exact current-main SHA and fetches its corresponding tag, with a normal wait when that release is not yet published. The observed ordering and HTTP error cases are covered by28 updater tests. The first performance release required the documented operator path because the installed discovery code could not find it; its current-main, tag, full CI, immutable assets and hashes were independently verified before installation. Further exact-main release and no-restart proof are recorded from live results in QA_RESULTS.
 
 Full backend activation reconciles both persistent support services, PostgreSQL and private Mailpit, before restarting the six writers. This ensures a changed Mailpit health/image/configuration is applied while unchanged services are retained. The live Mailpit adjustment is checked against actual Engine metadata, not merely the Compose text.
 
