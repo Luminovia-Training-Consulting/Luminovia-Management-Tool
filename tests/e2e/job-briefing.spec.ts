@@ -132,6 +132,22 @@ test("optional external reference and contact are saved, shown after claim and h
     briefing.getByRole("link", { name: "Originalausschreibung", exact: true }),
   ).toHaveAttribute("href", reference);
   await expect(briefing.locator("script")).toHaveCount(0);
+  // Record the management view with visible fictional contact details in German
+  // light mode, complementing the revoked-contact English dark view below.
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  const managementScan = await new AxeBuilder({ page })
+    .include("#job-briefing")
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+    .analyze();
+  expect(managementScan.violations.map((issue) => issue.id)).toEqual([]);
+  await page.screenshot({
+    path: `docs/screenshots/${testInfo.project.name}-job-briefing-management-de-light.png`,
+    fullPage: true,
+  });
   // A second account needs an independent session, but must retain the current
   // project's mobile/desktop layout and runner-owned URL for relative navigation.
   const project = testInfo.project.use;
