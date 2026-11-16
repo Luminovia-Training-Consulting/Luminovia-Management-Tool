@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import "../availability/i18n";
+import { assignmentJobTitlesQuery } from "../jobs/discovery-api";
 import { runsQuery, templatesQuery } from "../operations/data";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -18,12 +19,7 @@ import deLocale from "@fullcalendar/core/locales/de";
 import enLocale from "@fullcalendar/core/locales/en-gb";
 import { DateTime } from "luxon";
 import { useAuth } from "../auth/auth-context";
-import {
-  claimsQuery,
-  eventsQuery,
-  jobsQuery,
-  profileQuery,
-} from "../../lib/queries";
+import { claimsQuery, eventsQuery, profileQuery } from "../../lib/queries";
 import { db } from "../../lib/supabase";
 import type { PersonalEvent } from "../../lib/types";
 import { validZone, zonedInstant } from "../../lib/dates";
@@ -196,7 +192,12 @@ export function CalendarPage() {
   const profile = useQuery(profileQuery(session!.user.id));
   const claims = useQuery(claimsQuery(session!.user.id));
   const personal = useQuery(eventsQuery(session!.user.id));
-  const jobs = useQuery(jobsQuery);
+  const jobs = useQuery(
+    assignmentJobTitlesQuery(
+      session!.user.id,
+      (claims.data ?? []).map((claim) => claim.job_id),
+    ),
+  );
   const [global, setGlobal] = useState(false);
   const publicRuns = useQuery({
     ...runsQuery(session!.user.id),
@@ -230,7 +231,7 @@ export function CalendarPage() {
   if (
     claims.isPending ||
     personal.isPending ||
-    jobs.isPending ||
+    (Boolean(claims.data?.length) && jobs.isPending) ||
     globals.isPending ||
     (global && (publicRuns.isPending || templates.isPending))
   )
@@ -238,7 +239,7 @@ export function CalendarPage() {
   if (
     claims.isError ||
     personal.isError ||
-    jobs.isError ||
+    (Boolean(claims.data?.length) && jobs.isError) ||
     globals.isError ||
     (global && (publicRuns.isError || templates.isError))
   )
@@ -295,7 +296,7 @@ export function CalendarPage() {
           c.assignment_sessions.map((s) => ({
             id: s.id,
             title:
-              jobs.data.find((j) => j.id === c.job_id)?.title ??
+              jobs.data?.find((j) => j.id === c.job_id)?.title ??
               t("assignment"),
             start: s.starts_at,
             end: s.ends_at,

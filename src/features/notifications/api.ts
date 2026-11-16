@@ -23,11 +23,20 @@ const notificationItemSchema = z.object({
     .nullable(),
   title: z.string(),
 });
-const inboxPageSchema = z.object({
-  items: z.array(notificationItemSchema),
-  unread_count: z.number().int().nonnegative(),
-  as_of: z.string().datetime({ offset: true }),
-});
+const inboxPageSchema = z
+  .object({
+    items: z.array(notificationItemSchema),
+    unread_count: z.number().int().nonnegative(),
+    quiet_active: z.boolean().optional(),
+    attention_count: z.number().int().nonnegative().optional(),
+    as_of: z.string().datetime({ offset: true }),
+  })
+  .refine((page) =>
+    page.quiet_active === true
+      ? page.attention_count !== undefined &&
+        page.attention_count <= page.unread_count
+      : page.attention_count === undefined,
+  );
 export const notificationPreferencesSchema = z.object({
   chat: z.boolean(),
   forum: z.boolean(),

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { AnnouncementBanners } from "../features/announcements/announcements";
 import {
   MessagesSquare,
   FolderOpen,
@@ -108,7 +109,10 @@ export function Shell() {
     roles.data?.some((role) =>
       ["owner", "admin", "participant"].includes(role),
     ) ?? false;
-  const manage = permissions.data?.includes("jobs.manage") ?? false;
+  const manage = Boolean(
+    permissions.data?.includes("jobs.manage") ||
+    permissions.data?.includes("announcements.manage"),
+  );
   const navigation = [
     { to: "/", icon: Home, label: "home" },
     ...(staff ? [{ to: "/jobs", icon: BriefcaseBusiness, label: "jobs" }] : []),
@@ -134,6 +138,7 @@ export function Shell() {
     ...(staff ? [{ to: "/wiki", icon: BookOpen, label: "wiki" }] : []),
     ...(staff ? [{ to: "/forum", icon: MessageCircle, label: "forum" }] : []),
     { to: "/notifications", icon: MessageCircle, label: "notifications" },
+    { to: "/announcements", icon: MessageCircle, label: "announcements" },
     { to: "/topics", icon: BookOpen, label: "topics" },
     ...(staff
       ? [{ to: "/availability", icon: CalendarDays, label: "availability" }]
@@ -294,7 +299,10 @@ export function Shell() {
           ) : !profile.data?.active ? (
             <Notice kind="error">{t("profileMissing")}</Notice>
           ) : (
-            <Outlet />
+            <>
+              <AnnouncementBanners actor={session!.user.id} />
+              <Outlet />
+            </>
           )}
         </main>
         <footer className="workspace-footer">

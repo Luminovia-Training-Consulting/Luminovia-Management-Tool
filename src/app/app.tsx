@@ -16,6 +16,7 @@ import { Button } from "../components/ui/button";
 import { Dashboard } from "../features/dashboard/dashboard";
 import { Jobs, JobDetail } from "../features/jobs/jobs";
 import { ProfilePage } from "../features/profile/profile";
+import { AnnouncementsPage } from "../features/announcements/announcements";
 // Job/profile widgets already load this module; another lazy wrapper only adds
 // a loading boundary and cannot produce an independent route chunk.
 import { FilesPage } from "../features/files/files";
@@ -26,6 +27,11 @@ import {
 const AdminAuditPage = lazy(() =>
   import("../features/audit/audit").then((module) => ({
     default: module.AdminAuditPage,
+  })),
+);
+const AdminAnnouncementsPage = lazy(() =>
+  import("../features/announcements/admin").then((module) => ({
+    default: module.AdminAnnouncementsPage,
   })),
 );
 const AvailabilityPage = lazy(() =>
@@ -197,6 +203,7 @@ export function App() {
               <Route path="files" element={<FilesPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="notifications" element={<NotificationsPage />} />
+              <Route path="announcements" element={<AnnouncementsPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="topics" element={<TaxonomyPage />} />
               <Route path="availability" element={<AvailabilityPage />} />
@@ -207,6 +214,10 @@ export function App() {
                 <Route path="people" element={<PeopleAdminPage />} />
                 <Route path="accounts" element={<AccountsPage />} />
                 <Route path="audit" element={<AdminAuditPage />} />
+                <Route
+                  path="announcements"
+                  element={<AdminAnnouncementsPage />}
+                />
               </Route>
             </Route>
           </Route>

@@ -1,249 +1,34 @@
 import { JobPricingPanel } from "../commercial/pricing";
 import { JobLifecyclePanel } from "./lifecycle";
 import { refreshJobState } from "./lifecycle-api";
+import { JobDiscovery } from "./discovery";
+import { jobDetailQuery } from "./discovery-api";
 import { ResourceComments } from "../comments/comments";
 import { JobBuildingBlockReference } from "../operations/building-blocks";
 import "../commercial/platform-i18n";
 import { JobDocuments } from "../files/files";
 import { permissionsQuery } from "../../lib/queries";
 import { useRef, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import {
-  ArrowUpRight,
-  BriefcaseBusiness,
-  CalendarDays,
-  CheckCircle2,
-  MapPin,
-  Search,
-  SlidersHorizontal,
-} from "lucide-react";
-import { DateTime } from "luxon";
+import { CalendarDays, CheckCircle2, MapPin } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
-import {
-  claimsQuery,
-  jobsQuery,
-  profileQuery,
-  topicsQuery,
-} from "../../lib/queries";
-import type { Job } from "../../lib/types";
+import { claimsQuery, profileQuery, topicsQuery } from "../../lib/queries";
 import { db } from "../../lib/supabase";
 import { dateTime, money } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import {
   ErrorState,
-  Field,
   Loading,
   Notice,
   PageHeading,
 } from "../../components/common";
 import { BackLink } from "../../app/shell";
-export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
-  const { t, i18n } = useTranslation();
-  const lifeText = useTranslation("jobLifecycle").t;
-  const priceText = useTranslation("platform").t;
-  const first = [...job.job_sessions].sort((a, b) =>
-    a.starts_at.localeCompare(b.starts_at),
-  )[0];
-  return (
-    <article className={`job-card accent-${index % 4}`}>
-      <div className="job-card-top">
-        <span className="badge">{t(job.delivery_type)}</span>
-        <span className={`status status-${job.status}`}>{t(job.status)}</span>
-      </div>
-      <p className="job-customer">{job.customer_name}</p>
-      <h2>
-        <Link to={`/jobs/${job.id}`}>
-          {job.title}
-          <ArrowUpRight size={21} />
-        </Link>
-      </h2>
-      <p className="job-excerpt">{job.description}</p>
-      <div className="job-meta">
-        <span>
-          <CalendarDays size={16} />
-          {first
-            ? dateTime(first.starts_at, i18n.language, job.time_zone)
-            : "—"}
-        </span>
-        <span>
-          <MapPin size={16} />
-          {job.location || t(job.delivery_type)}
-        </span>
-      </div>
-      <div className="job-card-bottom">
-        <div>
-          <strong>
-            {money(job.total_amount, job.currency, i18n.language)}
-          </strong>
-          <small>
-            {priceText("lecturerShare")} · {lifeText("perPosition")} ·{" "}
-            {t("sessionCount", { count: job.job_sessions.length })}
-            {(job.capacity ?? 1) > 1 &&
-              ` · ${job.capacity} ${lifeText("positions")}`}
-          </small>
-        </div>
-        <Link
-          className="round-link"
-          to={`/jobs/${job.id}`}
-          aria-label={`${t("details")}: ${job.title}`}
-        >
-          <ArrowUpRight size={21} />
-        </Link>
-      </div>
-    </article>
-  );
-}
+export { JobCard } from "./card";
 export function Jobs() {
-  const { t, i18n } = useTranslation();
-  const query = useQuery(jobsQuery);
-  const topics = useQuery(topicsQuery);
-  const [params, setParams] = useSearchParams();
-  const update = (key: string, value: string) => {
-    const next = new URLSearchParams(params);
-    if (value) next.set(key, value);
-    else next.delete(key);
-    setParams(next, { replace: true });
-  };
-  const q = params.get("q") ?? "";
-  const delivery = params.get("delivery") ?? "";
-  const topic = params.get("topic") ?? "";
-  const from = params.get("from") ?? "";
-  const to = params.get("to") ?? "";
-  const min = params.get("min") ?? "";
-  const currency = params.get("currency") ?? "";
-  const filtered =
-    query.data?.filter((j) => {
-      const search = [j.title, j.description, j.customer_name, j.location]
-        .join(" ")
-        .toLocaleLowerCase(i18n.language);
-      const dates = j.job_sessions.map(
-        (s) =>
-          DateTime.fromISO(s.starts_at).setZone(j.time_zone).toISODate() ?? "",
-      );
-      return (
-        search.includes(q.toLocaleLowerCase(i18n.language)) &&
-        (!delivery || j.delivery_type === delivery) &&
-        (!topic || j.job_requirements.some((r) => r.topic_id === topic)) &&
-        (!(from || to) ||
-          dates.some((d) => (!from || d >= from) && (!to || d <= to))) &&
-        (!min || Number(j.total_amount) >= Number(min)) &&
-        (!currency || j.currency === currency)
-      );
-    }) ?? [];
-  return (
-    <>
-      <PageHeading
-        eyebrow={t("opportunities")}
-        title={t("jobs")}
-        description={t("heroText")}
-      />
-      <section className="filters panel" aria-label={t("search")}>
-        <div className="search-field">
-          <Search size={20} />
-          <label htmlFor="job-search" className="sr-only">
-            {t("search")}
-          </label>
-          <input
-            id="job-search"
-            type="search"
-            value={q}
-            placeholder={t("search")}
-            onChange={(e) => update("q", e.target.value)}
-          />
-          <SlidersHorizontal size={18} />
-        </div>
-        <div className="filter-grid">
-          <Field id="filter-delivery" label={t("delivery")}>
-            <select
-              id="filter-delivery"
-              value={delivery}
-              onChange={(e) => update("delivery", e.target.value)}
-            >
-              <option value="">{t("all")}</option>
-              <option value="online">{t("online")}</option>
-              <option value="onsite">{t("onsite")}</option>
-            </select>
-          </Field>
-          <Field id="filter-topic" label={t("topic")}>
-            <select
-              id="filter-topic"
-              value={topic}
-              onChange={(e) => update("topic", e.target.value)}
-            >
-              <option value="">{t("all")}</option>
-              {topics.data?.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {i18n.language === "de" ? t.label_de : t.label_en}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field id="filter-from" label={t("dateFrom")}>
-            <input
-              id="filter-from"
-              type="date"
-              value={from}
-              onChange={(e) => update("from", e.target.value)}
-            />
-          </Field>
-          <Field id="filter-to" label={t("dateTo")}>
-            <input
-              id="filter-to"
-              type="date"
-              value={to}
-              onChange={(e) => update("to", e.target.value)}
-            />
-          </Field>
-          <Field id="filter-min" label={t("minTotal")}>
-            <input
-              id="filter-min"
-              type="number"
-              min="0"
-              step="1"
-              value={min}
-              onChange={(e) => update("min", e.target.value)}
-            />
-          </Field>
-          <Field id="filter-currency" label={t("currency")}>
-            <select
-              id="filter-currency"
-              value={currency}
-              onChange={(e) => update("currency", e.target.value)}
-            >
-              <option value="">{t("all")}</option>
-              <option>EUR</option>
-              <option>AUD</option>
-            </select>
-          </Field>
-        </div>
-        {params.size > 0 && (
-          <Button variant="ghost" size="sm" onClick={() => setParams({})}>
-            {t("resetFilters")}
-          </Button>
-        )}
-      </section>
-      {query.isPending ? (
-        <Loading />
-      ) : query.isError ? (
-        <ErrorState retry={() => void query.refetch()} />
-      ) : filtered.length ? (
-        <div className="jobs-grid">
-          {filtered.map((job, index) => (
-            <JobCard key={job.id} job={job} index={index} />
-          ))}
-        </div>
-      ) : (
-        <div className="empty-state">
-          <BriefcaseBusiness size={40} />
-          <h2>{t("noJobs")}</h2>
-          <p>{t("noJobsHint")}</p>
-        </div>
-      )}
-    </>
-  );
+  return <JobDiscovery />;
 }
 export function JobDetail() {
   const { id } = useParams();
@@ -255,11 +40,11 @@ export function JobDetail() {
   const [accepted, setAccepted] = useState<number | null>(null);
   const key = useRef(crypto.randomUUID());
   const permissions = useQuery(permissionsQuery(session!.user.id));
-  const jobs = useQuery(jobsQuery);
+  const jobs = useQuery(jobDetailQuery(session!.user.id, id ?? ""));
   const topics = useQuery(topicsQuery);
   const claims = useQuery(claimsQuery(session!.user.id));
   const profile = useQuery(profileQuery(session!.user.id));
-  const job = jobs.data?.find((j) => j.id === id);
+  const job = jobs.data;
   const ownClaim = claims.data?.find((c) => c.job_id === id);
   const claim = useMutation({
     mutationFn: async () => {

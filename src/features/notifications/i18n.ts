@@ -43,6 +43,7 @@ const de = {
   forum_reply: "Neue Antwort im Forum",
   session_reminder: "Bevorstehender Unterricht",
   contract_available: "Vertrag verfügbar",
+  portal_announcement: "Wichtige Portal-Ankündigung",
   contract_expiring: "Vertrag läuft aus",
   activity: "Neue Aktivität",
 };
@@ -90,6 +91,7 @@ const en: Record<keyof typeof de, string> = {
   forum_reply: "New forum reply",
   session_reminder: "Upcoming teaching session",
   contract_available: "Contract available",
+  portal_announcement: "Important portal announcement",
   contract_expiring: "Contract expiring",
   activity: "New activity",
 };

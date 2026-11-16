@@ -1,6 +1,6 @@
 # Relational model and permission boundaries
 
-The target diagrams retain the complete product map. They are not a claim that every target table already exists. The implemented diagrams below use the actual names in `supabase/migrations/*.sql`, including the current local collaboration, files, knowledge, customer/course and commercial migrations. Migration source, RLS policies and executed API/database tests are authoritative for exact columns and behaviour. A local migration does not imply hosted deployment or production acceptance.
+The target diagrams retain the complete product map; conceptual target entities are not claims that every table exists. Implemented diagrams use physical names from `supabase/migrations/*.sql`, with `PRIVATE_*` aliases mapped below. The accepted M6 baseline contains 24 migrations. The M7 source adds five migrations (29 total); authored native Auth/API/browser scenarios are still pending combined M7 acceptance. SQL, explicit grants/RLS and owning tests remain authoritative. Source relations do not prove hosted installation or production acceptance. See [ARCHITECTURE](ARCHITECTURE.md), [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
 
 ## Core target relations
 
@@ -90,7 +90,7 @@ erDiagram
   PROFILES ||--o{ AUDIT_EVENTS : acts
 ```
 
-Roles and permission identifiers are text values in the implemented joins, rather than separate `roles`/`permissions` tables. `lecturer_topics` stores self-selection and separately managed verification; the target's separate expertise/qualification entities are not additional current tables. Availability rules and persisted general preferences remain broader target scope. In this schema each `contracts` row is one executed version; there is no separate implemented `contract_versions` table.
+Roles and permission identifiers are text values in the implemented joins, rather than separate `roles`/`permissions` tables. `lecturer_topics` stores self-selection and separately managed verification; the target's separate expertise/qualification entities are not additional current tables. M6 adds actual `lecturer_availability` and private notification preferences; M7 adds the separate own attention preference below. Broader scheduling and settings remain target scope. In this schema each `contracts` row is one executed version; there is no separate implemented `contract_versions` table.
 
 ## Implemented collaboration and files
 
@@ -167,7 +167,7 @@ erDiagram
   PROFILES ||--o{ COURSE_REVIEWS : teaches
 ```
 
-`PRIVATE_*` entities in this diagram name actual `private.client_course_requests`, `private.job_commission_offers` and `private.claim_revenue_ledger`; they are not public REST tables. Only authorised security-invoker wrappers call the private implementations. The accepted ledger is one snapshot per claim. A client request may create a draft or published job; reports count publication from the actual job state. Invoice labels change metadata only; PDF versions, accepted compensation and payment history keep their original invariants.
+`PRIVATE_*` entities in this diagram name actual `private.client_course_requests`, `private.job_commission_offers` and `private.claim_revenue_ledger`; they are not public REST tables. Only authorised security-invoker wrappers call the private implementations. The accepted ledger is one snapshot per claim. A client request may create a draft or published capacity-one job; reports count publication from the actual job state. M6 permits several historical revenue-ledger rows for a job, one immutable row per accepted claim, and sums current accepted position revenue without counting that course several times. Invoice labels change metadata only; PDF versions, accepted compensation and payment history keep their original invariants.
 
 `profile_details` separates the new authored country/languages/experience/labels from private contacts/evidence. `course_enrolments` keeps current membership/completion/removal, while `course_reviews` carries course/actual lecturer/author, versioned text/rating and moderation/withdrawal state. Direct review table reads are denied; identity-safe RPCs project each reader's authorised view. Existing `invitation_requests` now binds the requested role/organisation/display name; both invitation handlers use this single lifecycle. Exact schema/arguments are in [API_REFERENCE](API_REFERENCE.md) and the three additive M3 migrations.
 
@@ -194,15 +194,178 @@ A comment references exactly one job or template, enforced by a database constra
 
 Source versions have stable provider/code/file/hash identity. LPC3/LPC4 each retain two real PDF variants under one block. Template/run provenance freezes when a linked job exists. The private course-offer request ledger binds the original financial request and resulting existing-run job; client full-fee requests remain in the existing client ledger when actually known. No new duplicate source columns are added to job/claim snapshots. See [CBW_TEMPLATES](CBW_TEMPLATES.md), [RESOURCE_COMMENTS](RESOURCE_COMMENTS.md) and [PROFILE_AVATARS](PROFILE_AVATARS.md).
 
+## Implemented M6 operations additions
+
+```mermaid
+erDiagram
+  TOPICS o|--o{ TOPICS : optional_parent
+  PROFILES ||--o{ LECTURER_AVAILABILITY : owns_private_windows
+  PROFILES ||--o| PRIVATE_NOTIFICATION_PREFERENCES : owns_categories
+  PROFILES ||--o{ PRIVATE_JOB_LIFECYCLE_REQUESTS : binds_operation_key
+```
+
+These entities map to `public.topics`, `public.lecturer_availability`,
+`private.notification_preferences` and `private.job_lifecycle_requests`.
+Topics retain shared IDs across expertise, course templates and job requirements;
+archive/version/parent guards do not rewrite existing references. Availability
+keeps finite instants, IANA zone, own notes and default-false explicit management
+sharing. The direct table read policy remains owner-only; the shared RPC exposes
+only its reduced opt-in projection. Notification preferences have one profile-FK
+primary key and the four independent `chat`, `forum`, `job_updates`, `reminders`
+booleans with optimistic versioning.
+
+`private.job_lifecycle_requests` has primary key `(actor_id,request_id)` and a
+profile FK. Its `result` UUID binds the operation result through checked RPC logic;
+it is **not** a declared job foreign key. Job lifecycle metadata/board/audit reads
+are projections, not additional storage tables. [JOB_LIFECYCLE](JOB_LIFECYCLE.md),
+[TAXONOMY](TAXONOMY.md), [AVAILABILITY](AVAILABILITY.md),
+[NOTIFICATIONS](NOTIFICATIONS.md) and [ADMIN_AUDIT](ADMIN_AUDIT.md) describe the
+scoped APIs.
+
+M6 replaces the original single-confirmed-claim-per-job index with partial unique
+`(job_id,lecturer_id) WHERE status='confirmed'`. Job capacity is 1–20;
+`capacity_basis='single_position'` requires capacity 1, while an explicitly new
+per-position offer may have several positions. The transactional job lock guards
+its remaining count. `assignment_sessions.released_at` preserves cancelled
+intervals; only unreleased rows participate in the GiST lecturer/time exclusion.
+Cancellation preserves accepted claim/fee/session/revenue history and closes the
+offer to draft until audited reopening. Shared lecturer locking prevents invoice
+submission racing cancellation. There is no new refund or bank-payment relation.
+
+## Implemented M7 private personal organization
+
+```mermaid
+erDiagram
+  PROFILES ||--o{ PRIVATE_DOCUMENT_ORGANISATION : owns_annotations
+  DOCUMENTS ||--o{ PRIVATE_DOCUMENT_ORGANISATION : annotates_accessible_resource
+  PROFILES ||--o{ PRIVATE_SAVED_JOB_VIEWS : owns_filters
+  PROFILES ||--o| PRIVATE_ATTENTION_PREFERENCES : owns_quiet_window
+```
+
+| Diagram entity / physical table                                   | Key and actual foreign keys                                                              | Stored invariant / API                                                                                                                                                                                |
+| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PRIVATE_DOCUMENT_ORGANISATION` / `private.document_organisation` | PK `(user_id,document_id)`; FKs to `profiles.id` and `documents.id`, both delete-cascade | Own tags/folder/version only; `document_discovery`, `save_document_organisation`. No Storage path or shared-file move.                                                                                |
+| `PRIVATE_SAVED_JOB_VIEWS` / `private.saved_job_views`             | PK `id`; `user_id` FK to `profiles.id`, delete-cascade; unique `(user_id,lower(name))`   | At most 20 canonical closed-JSON views per actor, checked under quota lock; `saved_job_views`, `save_job_view`, `remove_job_view`. Filter IDs inside JSON are validated by the API, not declared FKs. |
+| `PRIVATE_ATTENTION_PREFERENCES` / `private.attention_preferences` | PK/FK `user_id` to `profiles.id`, delete-cascade                                         | Separate versioned daily minute window/IANA zone; `attention_preferences`, `save_attention_preferences`. Missing row reads as version 0 without insertion.                                            |
+
+All three tables enable RLS and revoke direct PUBLIC/anon/authenticated access.
+The first two explicitly grant service-role table access; this is not a browser
+permission or an administrator read bypass. Scoped invoker RPCs/private definers
+check the current actor and resource. Personal document metadata requires current
+underlying document access, including after room revocation. Saved views confer
+no access to a filtered job. Quiet settings confer no access to another inbox.
+
+`job_discovery`, `job_detail`, `job_dashboard` and `assignment_job_titles` are
+projections of existing job/claim/session/profile data, **not** duplicated job or
+dashboard tables. Discovery cursors include stable sort/UUID values and a filter
+fingerprint. File discovery orders by `(created_at,id)`. Both page on the server;
+neither raises the global 1,000-row Data API setting. Dashboard totals are
+server-authorized aggregates, not counts of a preview page. Calendar title lookup
+returns only requested own confirmed assignment jobs. See [JOB_DISCOVERY](JOB_DISCOVERY.md)
+and [FILES](FILES.md).
+
+Both saved-view mutations take actor profile `FOR SHARE` **before** the separate
+current-role/capability check and saved-view row lock. The volatile entry's new
+statement snapshot observes a role withdrawal that held profile `FOR UPDATE`.
+A stale expected view version fails with `40001`; an authoritative `42501` hides
+and discards captured private editor/list data. Network errors retain the draft.
+Operation UUID reuse is limited to retries of the same open create dialog.
+
+## Implemented M7 chat content and mention versions
+
+```mermaid
+erDiagram
+  MESSAGES ||--|{ PRIVATE_CHAT_CONTENT_VERSIONS : identifies_body_revision
+  PRIVATE_CHAT_CONTENT_VERSIONS ||--o{ PRIVATE_CHAT_MENTION_VERSIONS : binds_recipients
+  PROFILES ||--o{ PRIVATE_CHAT_MENTION_VERSIONS : is_target
+  PROFILES ||--o{ PRIVATE_CHAT_MENTION_REQUESTS : binds_exact_retry
+```
+
+| Physical table                  | Key / relation                                                                                                                                                           |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `private.chat_content_versions` | PK `(message_id,version)`; message FK delete-cascade. Records version identity/time; existing private message revisions retain body audit.                               |
+| `private.chat_mention_versions` | PK `(message_id,version,user_id)`; composite FK to content versions, delete-cascade; target profile FK. Index `(message_id,user_id)` supports first-ever mention lookup. |
+| `private.chat_mention_requests` | PK `(actor_id,request_id)`; actor profile FK delete-cascade; exact normalized payload/result JSON, not ordinary chat history.                                            |
+
+`messages.content_version` changes with body/edit/deletion state, including legacy
+API edits; only the current version's authorized recipients appear in
+`chat_messages_with_mentions`. A legacy edit does not carry forward an earlier
+structured selection. `send_message_with_mentions` and
+`edit_message_with_mentions` atomically bind current eligible room members and
+exact retry parameters; `chat_mention_candidates` is a current-room projection.
+Internal helpers and these three RLS-enabled private tables have no direct browser
+grants. Normal chat membership/role predicates still apply to reads, edits,
+moderation, attachments and Realtime; administrator status does not open DMs.
+
+Notifications reuse unique `(user_id,kind,resource_id)` with kind `chat_message`
+and the message UUID. The **first ever** committed structured message/recipient
+mention can renew that same notice; retries and remove/re-add cycles do not.
+History retains that fact even if category preference suppressed delivery.
+Room mute may be overridden by an explicit mention; the global category opt-out
+still applies. Quiet hours affect attention only. The polymorphic notification
+`resource_id` has no message FK; current target resolution supplies authorization.
+See [CHAT](CHAT.md) and [CHAT_SECURITY](CHAT_SECURITY.md).
+
+## Implemented M7 announcement snapshots and acknowledgements
+
+```mermaid
+erDiagram
+  PROFILES ||--o{ PRIVATE_PORTAL_ANNOUNCEMENTS : creates
+  PRIVATE_PORTAL_ANNOUNCEMENTS ||--o{ PRIVATE_ANNOUNCEMENT_REVISIONS : owns_snapshots
+  PRIVATE_ANNOUNCEMENT_REVISIONS o|--o| PRIVATE_PORTAL_ANNOUNCEMENTS : current_draft
+  PRIVATE_ANNOUNCEMENT_REVISIONS o|--o| PRIVATE_PORTAL_ANNOUNCEMENTS : current_publication
+  PRIVATE_ANNOUNCEMENT_REVISIONS ||--o| PRIVATE_ANNOUNCEMENT_PUBLICATIONS : explicitly_publishes
+  PROFILES ||--o{ PRIVATE_ANNOUNCEMENT_PUBLICATIONS : publishes
+  PRIVATE_ANNOUNCEMENT_REVISIONS ||--o{ PRIVATE_ANNOUNCEMENT_ACKNOWLEDGEMENTS : receives
+  PROFILES ||--o{ PRIVATE_ANNOUNCEMENT_ACKNOWLEDGEMENTS : acknowledges_own
+  PROFILES ||--o{ PRIVATE_ANNOUNCEMENT_REQUESTS : binds_exact_operation
+```
+
+| Physical table                          | Keys and state boundary                                                                                                                                                                                              |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `private.portal_announcements`          | UUID PK; creator profile FK; optimistic parent `version`, archive state, separate draft/published revision pointers.                                                                                                 |
+| `private.announcement_revisions`        | UUID PK; parent FK delete-cascade; unique `(announcement_id,revision)` and `(announcement_id,id)`; creator profile FK. Immutable DE/EN title/body, importance, role audience, finite display instants and IANA zone. |
+| `private.announcement_publications`     | PK/FK `revision_id` delete-cascade; publisher profile FK; immutable publication timestamp. A draft alone has no publication receipt.                                                                                 |
+| `private.announcement_acknowledgements` | PK `(user_id,revision_id)`; profile/revision FKs delete-cascade; exact retry preserves original acknowledgement timestamp.                                                                                           |
+| `private.announcement_requests`         | PK `(actor_id,request_id)`; actor profile FK delete-cascade; exact action/version/payload and original result. No JSON-result FK is implied.                                                                         |
+
+Parent `(id,draft_revision_id)` and `(id,published_revision_id)` are separate
+**composite**, initially deferred FKs to revision `(announcement_id,id)`. Thus a
+parent cannot point to another announcement's revision. Saving a new immutable
+draft leaves the published snapshot intact. Update guards protect revisions and
+publication receipts. Ordinary reads start from the current published pointer;
+older, draft, archived, expired and newly unauthorized revisions fail exact reads.
+
+`manage_announcement` uses current `announcements.manage`/MFA, profile-first locks,
+parent version and exact request binding. Publication, optional important inbox
+fanout, safe audit and retry result commit atomically. Future-start publication is
+explicitly refused until manually due. `announcements` and `announcement` return
+only currently authorized display-window publications;
+`admin_announcements`/`admin_announcement` expose the separately permissioned
+editor. `acknowledge_announcement` locks the actor profile before current audience
+checks, binds only that actor/revision and marks only its corresponding own inbox
+row read. Archive/recover preserves existing ACK/notice identity; a new published
+revision is a new acknowledgement target.
+
+All five private tables enable RLS and revoke direct PUBLIC/anon/authenticated
+access; internal helpers are also execution-restricted. Audience roles come from
+current database grants, never user metadata. Important notices use
+`portal_announcement` plus revision UUID in the existing notification uniqueness
+key. These are logical references, not additional FKs. Important current readable
+publications add quiet-hour attention; ordinary inbox rows and full unread count
+remain unchanged. The older four-category preference table/API is not replaced.
+No scheduler, email delivery, push transport or history-purge policy is implied.
+See [ANNOUNCEMENTS](ANNOUNCEMENTS.md) and [NOTIFICATIONS](NOTIFICATIONS.md).
+
 ## Required constraints and ownership
 
 - Stable UUID foreign keys with explicit deletion behaviour; no accidental cascading deletion of executed contracts or accepted assignments. Unique role/permission/expertise and room membership joins. Verification is server-managed independently of lecturer self-selected expertise.
-- Templates contain reusable course content; runs contain actual delivery/customer context; sessions contain canonical instants and intended display zone. A job includes one or more complete sessions. Jobs initially have capacity one, with one active claim per available slot. Future capacity cannot weaken conflict/atomicity constraints.
+- Templates contain reusable course content; runs contain actual delivery/customer context; sessions contain canonical instants and intended display zone. A job includes one or more complete sessions. Legacy/client/CBW jobs keep capacity one; explicit new administrative per-position jobs support 1–20. Job locks, confirmed-count checks and unique active job/lecturer claims protect capacity without partial multi-session allocation.
 - Claims own immutable accepted amount/currency/rate unit/terms and the applicable executed-contract row. Its immutable file reference/hash fixes the agreement evidence when present. Idempotency keys are scoped to actor/request; claim events and notifications deduplicate by committed event. A later job edit never rewrites accepted terms.
 - Allocation intervals use non-overlap protection per lecturer across jobs, together with transaction locking; private events/availability are included in server-side eligibility. Every session reserves or the entire transaction rolls back.
 - Personal events belong solely to their creator. Global events require explicit publication. Business contacts/internal notes, contracts, CVs/evidence and invoices need separate capabilities or resource membership. Private room membership is not implied by admin status.
 - Every exposed relation requires RLS and explicit least-privilege grants. Private schema objects are unexposed and execution-locked. User IDs/roles are derived from verified Auth/current database authority, never editable metadata.
-- Implemented indexes include job publication/requirements, assignment exclusion ranges, owner/member and cursor lookups, wiki/forum searchable text, invoice active-claim uniqueness and scoped payment history. Search always runs under actor authorisation. Search/list limits are documented in the feature security notes; full-scale pagination remains part of the target.
+- Implemented indexes include job publication/requirements, assignment exclusion ranges, owner/member and cursor lookups, wiki/forum searchable text, invoice active-claim uniqueness and scoped payment history. Search always runs under actor authorisation. Search/list limits are documented in feature notes. M7 job/file discovery pages beyond 1,000; legacy file/chat job pickers retain `jobsQuery` limits and the administrative board retains its explicit newest-500 bound. Other unconverted lists are not claimed unbounded.
 
 ## Implemented permission matrix
 
@@ -222,5 +385,9 @@ Source versions have stable provider/code/file/hash identity. LPC3/LPC4 each ret
 | Wiki drafts/history              | Author and current wiki managers                                                                            | Published revisions only for staff                 | `wiki.manage` plus MFA for publish/archive                                              |
 | Forum/report/revision            | Staff; own reports, own post revisions                                                                      | Staff discussion only                              | `forum.moderate` plus MFA for moderation/reports                                        |
 | Earnings/invoice/payment history | Own original-currency records                                                                               | Denied                                             | `finance.manage` plus MFA; mutations audited                                            |
+| Private file tags/virtual folder | Own annotation for a currently accessible document                                                          | Other account's annotation denied                  | No annotation read bypass                                                               |
+| Saved job views / quiet window   | Own active actor; saved views additionally require current lecturer/manage access                           | Denied                                             | Only own records under the same rules                                                   |
+| Structured chat recipients       | Current eligible room members, current message version                                                      | Denied outside room                                | Room-scoped moderation only; no DM/history bypass                                       |
+| Published announcements / ACK    | Current active-account audience/window; own exact-revision ACK                                              | Same current audience rules                        | Management drafts/publication need `announcements.manage` and MFA                       |
 
-See `CHAT_SECURITY.md`, `KNOWLEDGE_SECURITY.md`, `COMMERCIAL_SECURITY.md`, `OPERATIONS.md` and `BACKEND_SECURITY_REVIEW.md` for actual tested boundaries and outstanding acceptance. Tombstones, archives and audit revisions preserve data; none is a production legal-erasure or retention-policy guarantee.
+See [CHAT_SECURITY](CHAT_SECURITY.md), [KNOWLEDGE_SECURITY](KNOWLEDGE_SECURITY.md), [COMMERCIAL_SECURITY](COMMERCIAL_SECURITY.md), [OPERATIONS](OPERATIONS.md) and [BACKEND_SECURITY_REVIEW](BACKEND_SECURITY_REVIEW.md) for tested boundaries and outstanding acceptance. The combined native M7 gate remains pending; authored tests do not establish a passed run. Tombstones, archives and audit revisions preserve data; none is a production legal-erasure or retention-policy guarantee.

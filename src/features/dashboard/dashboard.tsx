@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { FinancialSummaryCards } from "../commercial/revenue";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -12,13 +11,12 @@ import {
 } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
 import {
-  claimsQuery,
   expertiseQuery,
-  jobsQuery,
   profileQuery,
   userRolesQuery,
 } from "../../lib/queries";
 import { JobCard } from "../jobs/jobs";
+import { jobDashboardQuery } from "../jobs/discovery-api";
 import { Button } from "../../components/ui/button";
 import { ErrorState, Loading, TextLink } from "../../components/common";
 import { validZone } from "../../lib/dates";
@@ -26,7 +24,6 @@ import { DashboardCalendarPreview, DashboardWidgets } from "./widgets";
 import "./i18n";
 export function Dashboard() {
   const { t, i18n } = useTranslation();
-  const [openedAt] = useState(() => Date.now());
   const dashboard = useTranslation("dashboard").t;
   const { session } = useAuth();
   const profile = useQuery(profileQuery(session!.user.id));
@@ -39,58 +36,29 @@ export function Dashboard() {
     ) ?? false;
   const clientAccount = Boolean(roles.data?.includes("client")) && !staff;
   const destination = staff ? "/jobs" : clientAccount ? "/client" : "/courses";
-  const jobs = useQuery({ ...jobsQuery, enabled: staff });
-  const claims = useQuery({ ...claimsQuery(session!.user.id), enabled: staff });
+  const jobs = useQuery({
+    ...jobDashboardQuery(session!.user.id),
+    enabled: staff,
+  });
   const expertise = useQuery({
     ...expertiseQuery(session!.user.id),
     enabled: staff,
   });
-  if (roles.isPending || (staff && (jobs.isPending || claims.isPending)))
-    return <Loading />;
-  if (roles.isError || (staff && (jobs.isError || claims.isError)))
+  if (roles.isPending || (staff && jobs.isPending)) return <Loading />;
+  if (roles.isError || (staff && jobs.isError))
     return (
       <ErrorState
         retry={() => {
           void roles.refetch();
           void jobs.refetch();
-          void claims.refetch();
         }}
       />
     );
-  const availableJobs = jobs.data ?? [];
-  const ownClaims = claims.data ?? [];
-  const now = Math.max(openedAt, jobs.dataUpdatedAt, expertise.dataUpdatedAt);
-  const open = availableJobs.filter(
-    (j) =>
-      j.status === "published" &&
-      (!j.claim_deadline || Date.parse(j.claim_deadline) > now),
-  );
-  const verified = new Set(
-    (expertise.data ?? [])
-      .filter(
-        (item) =>
-          item.verified &&
-          (!item.valid_until || Date.parse(item.valid_until) > now),
-      )
-      .map((item) => item.topic_id),
-  );
-  const matching = open.filter(
-    (job) =>
-      job.job_requirements.length > 0 &&
-      job.job_requirements.every((requirement) =>
-        verified.has(requirement.topic_id),
-      ),
-  );
-  const suggested = matching.length ? matching : open;
-  const next = ownClaims
-    .flatMap((c) =>
-      c.assignment_sessions.map((s) => ({
-        ...s,
-        job: availableJobs.find((j) => j.id === c.job_id),
-      })),
-    )
-    .filter((s) => new Date(s.ends_at) > new Date())
-    .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  // Counts are authoritative aggregates, not the length of a truncated preview.
+  const availableJobs = jobs.data?.suggestions ?? [];
+  const matching = jobs.data?.matching ?? false;
+  const suggested = availableJobs;
+  const next = jobs.data?.next_assignments ?? [];
   const zone =
     profile.data?.time_zone && validZone(profile.data.time_zone)
       ? profile.data.time_zone
@@ -146,21 +114,21 @@ export function Dashboard() {
           {[
             {
               label: "openJobs",
-              number: open.length,
+              number: jobs.data?.open_count ?? 0,
               icon: BriefcaseBusiness,
               color: "mint",
               to: "/jobs",
             },
             {
               label: "myAssignments",
-              number: ownClaims.length,
+              number: jobs.data?.assignment_count ?? 0,
               icon: GraduationCap,
               color: "peach",
               to: "/calendar",
             },
             {
               label: "nextSessions",
-              number: next.length,
+              number: jobs.data?.next_session_count ?? 0,
               icon: CalendarDays,
               color: "yellow",
               to: "/calendar",
@@ -189,10 +157,10 @@ export function Dashboard() {
         <div className="dashboard-lower">
           <section>
             <div className="section-heading">
-              <h2>{matching.length ? dashboard("matches") : t("openJobs")}</h2>
+              <h2>{matching ? dashboard("matches") : t("openJobs")}</h2>
               <TextLink to="/jobs">{t("all")}</TextLink>
             </div>
-            {matching.length > 0 && (
+            {matching && (
               <p className="dashboard-matching-hint">
                 {dashboard("matchingHint")}
               </p>
@@ -236,8 +204,7 @@ export function Dashboard() {
         zone={zone}
         staff={staff}
         clientAccount={clientAccount}
-        jobs={availableJobs}
-        jobsAsOf={jobs.dataUpdatedAt}
+        jobCounts={jobs.data?.management ?? undefined}
       />
     </>
   );

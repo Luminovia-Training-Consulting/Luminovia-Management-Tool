@@ -2,6 +2,7 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { readPreference, writePreference } from "./preferences";
 const pairs: Record<string, [string, string]> = {
+  announcements: ["Ankündigungen", "Announcements"],
   auditLog: ["Administrationsprotokoll", "Administration log"],
   availability: ["Verfügbarkeit", "Availability"],
   topics: ["Themen & Tools", "Topics & tools"],
