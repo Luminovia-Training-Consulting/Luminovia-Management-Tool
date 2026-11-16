@@ -206,6 +206,7 @@ try {
     "accounts",
     "course-documents",
     "calendar-feed",
+    "website-enquiries",
   ];
   for (const worker of workers) {
     const mount = compose.services.functions.volumes.find(
@@ -235,10 +236,28 @@ try {
   const router = readFileSync(resolve(here, "runtime/index.ts"), "utf8");
   assert(
     router.includes(
-      "const PORTAL_FUNCTIONS = new Set(['files', 'invite-lecturer', 'accounts', 'course-documents', 'calendar-feed'])",
+      "const PORTAL_FUNCTIONS = new Set(['files', 'invite-lecturer', 'accounts', 'course-documents', 'calendar-feed', 'website-enquiries'])",
     ),
   );
   assert(router.includes("if (!PORTAL_FUNCTIONS.has(service_name))"));
+  assert.equal(server.PORTAL_WEBSITE_ENQUIRIES_ENABLED, "false");
+  assert.equal(
+    compose.services.functions.environment.PORTAL_WEBSITE_ENQUIRIES_ENABLED,
+    "false",
+  );
+  assert.equal(
+    compose.services.functions.environment.PORTAL_WEBSITE_INTEGRATION_TOKEN,
+    "",
+  );
+  assert.equal(
+    compose.services.functions.environment.PORTAL_WEBSITE_ORIGIN,
+    "",
+  );
+  assert.equal(
+    compose.services.functions.environment
+      .PORTAL_WEBSITE_PRIVACY_NOTICE_VERSION,
+    "",
+  );
   if (process.argv.includes("--gateway-routing"))
     checkGatewayRouting({
       directory,

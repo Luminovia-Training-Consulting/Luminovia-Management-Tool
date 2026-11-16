@@ -111,6 +111,11 @@ export function createConfiguration(options) {
     PORTAL_BACKEND_NETWORK: network,
     PORTAL_DATA_DIR: dataDirectory,
     PORTAL_INVITES_ENABLED: "true",
+    // Provision no intake credential implicitly; public Website activation is separate.
+    PORTAL_WEBSITE_ENQUIRIES_ENABLED: "false",
+    PORTAL_WEBSITE_ORIGIN: "",
+    PORTAL_WEBSITE_PRIVACY_NOTICE_VERSION: "",
+    PORTAL_WEBSITE_INTEGRATION_TOKEN: "",
     PORTAL_FUNCTIONS_MEMORY_LIMIT: "1280m",
     SUPABASE_PUBLIC_URL: publicUrl,
     API_EXTERNAL_URL: publicUrl + "/auth/v1",
