@@ -163,6 +163,105 @@ test("demo chat and profile drafts stay fictional and a page reload clears pract
   ).toHaveCount(0);
 });
 
+test("connected demo publication, allocation, calendar and document exercises reset together", async ({
+  page,
+}) => {
+  await page.goto("/demo/admin");
+  await page
+    .getByLabel("Demo-Rolle", { exact: true })
+    .selectOption("management");
+  await page
+    .getByLabel("Fiktiver Auftragstitel", { exact: true })
+    .fill("Fictional guided Linux block");
+  await page
+    .getByRole("button", {
+      name: "Demo-Angebot als Entwurf speichern",
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole("button", { name: "Demo-Angebot veröffentlichen", exact: true })
+    .click();
+  const visit = async (path: string) => {
+    await page
+      .getByRole("navigation", { name: "Demo-Bereiche", exact: true })
+      .locator(`a[href="/demo${path}"]`)
+      .click();
+  };
+  await page.getByLabel("Demo-Rolle", { exact: true }).selectOption("lecturer");
+  await visit("/jobs");
+  await expect(
+    page.getByRole("heading", {
+      name: "Fictional guided Linux block",
+      level: 3,
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Auftrag zur Probe übernehmen", exact: true })
+    .click();
+  await visit("/calendar");
+  await expect(
+    page.getByText("Demo-Auftrag: beide bestätigten Termine", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Jetzt mit Beispielen üben", exact: true })
+      .getByRole("listitem")
+      .filter({ hasText: "Europe/Berlin" }),
+  ).toHaveCount(2);
+  await page
+    .getByRole("button", {
+      name: "Fiktiven privaten Termin hinzufügen",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByText("Fiktive Vorbereitung · nur in deiner Demo", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await visit("/files");
+  await expect(page.getByRole("status")).toContainText("wartet auf Prüfung");
+  await page
+    .getByRole("button", {
+      name: "Prüfung einer Beispieldatei simulieren",
+      exact: true,
+    })
+    .click();
+  await expect(page.getByRole("status")).toContainText(
+    "Demo-Datei: Prüfung bestanden",
+  );
+  await visit("/finance");
+  await page
+    .getByRole("button", { name: "Fiktive Rechnung vormerken", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText(
+    "Kein PDF hochgeladen, keine Zahlung ausgelöst",
+  );
+  await page
+    .getByRole("button", { name: "Demo zurücksetzen", exact: true })
+    .click();
+  await visit("/calendar");
+  await expect(
+    page.getByText("Demo-Auftrag: beide bestätigten Termine", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("Fiktive Vorbereitung · nur in deiner Demo", {
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await visit("/files");
+  await expect(page.getByRole("status")).toContainText("wartet auf Prüfung");
+  await visit("/jobs");
+  await expect(
+    page.getByRole("heading", {
+      name: "Fictional guided Linux block",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+});
+
 test("the guided demo visits every actual portal area, pauses and restarts in either language", async ({
   page,
 }) => {
