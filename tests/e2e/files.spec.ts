@@ -73,22 +73,43 @@ test("real private upload is scanned, downloaded, versioned and archived through
   if (!(await searchLink.isVisible()))
     await page.getByLabel("Mehr", { exact: true }).click();
   await searchLink.click();
-  await page
-    .getByRole("searchbox", { name: "Im Portal suchen", exact: true })
-    .fill(renamed);
-  await page
-    .getByRole("searchbox", { name: "Im Portal suchen", exact: true })
-    .press("Enter");
+  // A selected mobile destination must close its menu before the new page is
+  // used; an open overlay otherwise blocks the actual search-result click.
+  await expect(page.locator("details.mobile-more")).toHaveJSProperty(
+    "open",
+    false,
+  );
+  // The navigation label opens the eleven-area search, whose own field and
+  // page title are distinct. Exercise its real authorised result deep link.
+  const search = page.getByRole("searchbox", {
+    name: "Suchbegriff",
+    exact: true,
+  });
+  await search.fill(renamed);
+  await search.press("Enter");
   await expect(
-    page.getByRole("heading", { name: "Im Portal suchen", exact: true }),
+    page.getByRole("heading", { name: "Universelle Suche", exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("link", {
-      name: new RegExp(renamed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
-    }),
-  ).toBeVisible();
-  await page.goto("/files");
-  await expect(page.getByText(renamed, { exact: true })).toBeVisible();
+  const result = page.getByRole("link", {
+    name: new RegExp(renamed.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+  });
+  await expect(result).toBeVisible();
+  await result.click();
+  await expect(page).toHaveURL(
+    (url) => url.pathname === "/files" && url.searchParams.get("q") === renamed,
+  );
+  const foundFile = page
+    .getByRole("listitem")
+    .filter({ has: page.getByText(renamed, { exact: true }) });
+  await expect(foundFile.getByText(renamed, { exact: true })).toBeVisible();
+  const renamedDownloadPromise = page.waitForEvent("download");
+  await foundFile
+    .getByRole("button", { name: `Herunterladen: ${renamed}`, exact: true })
+    .click();
+  const renamedDownload = await renamedDownloadPromise;
+  expect(renamedDownload.suggestedFilename()).toBe(renamed);
+  expect(await renamedDownload.failure()).toBeNull();
+  expect(readFileSync((await renamedDownload.path())!, "utf8")).toBe(text);
   // Observe a real settled list beyond its former ten-second polling period.
   // Preference-only renders must neither reload the document nor refetch files.
   await page.waitForLoadState("networkidle");

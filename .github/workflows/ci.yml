@@ -86,9 +86,10 @@ jobs:
     # The canonical local command owns its data/ports and verifies cleanup.
     needs: [quality, coverage]
     runs-on: ubuntu-latest
-    # The complete gate now covers 35 migrations and the expanded native/browser
-    # suite. Individual request, test and stage deadlines remain unchanged.
-    timeout-minutes: 40
+    # With 62 migrations and 43 APIs, run43851414028 reached browsers after 31m
+    # and then hit the former 40m job limit. Keep every request/test/stage deadline;
+    # this outer budget lets the complete browser/build/PWA gate finish.
+    timeout-minutes: 60
     steps:
       - name: Verify explicitly requested revision
         env:

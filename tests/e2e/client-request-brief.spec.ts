@@ -135,6 +135,15 @@ test("customer records teaching units, revises the brief, shares scanned bytes a
     await card
       .getByRole("button", { name: "Anforderungen speichern", exact: true })
       .click();
+    // The editor previews teaching minutes before the save commits. Wait for
+    // the enabled non-editing action: the confirmed revision/refetch has then
+    // finished, and the real file input is available to a user again.
+    await expect(
+      card.getByRole("button", {
+        name: "Anforderungsprofil bearbeiten",
+        exact: true,
+      }),
+    ).toBeEnabled();
     await expect(
       card
         .getByText("Benötigte Unterrichtszeit: 135 Minuten", { exact: true })

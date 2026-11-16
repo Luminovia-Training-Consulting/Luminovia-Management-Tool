@@ -296,7 +296,14 @@ export function ControlCenterPage() {
           ) : (
             <>
               <p>{t("paymentsHelp")}</p>
-              <div className="finance-table-scroll">
+              {/* The wide table must remain keyboard-scrollable on mobile.
+                  A named group avoids duplicating the surrounding region. */}
+              <div
+                className="finance-table-scroll"
+                role="group"
+                aria-label={t("forecast")}
+                tabIndex={0}
+              >
                 <table className="finance-table">
                   <caption>
                     {t("forecast")} ·{" "}

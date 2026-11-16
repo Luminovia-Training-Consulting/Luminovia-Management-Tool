@@ -1,3 +1,7 @@
+/** Real waitlist/substitution UI acceptance with exact server receipts.
+ * Filled jobs deliberately deny their full detail while the independent reduced
+ * waitlist remains usable; cleanup must not replace an original action failure.
+ */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
@@ -62,6 +66,9 @@ test("waitlisted lecturer explicitly accepts a complete immutable substitution o
     hasTouch: testInfo.project.use.hasTouch,
   });
   const other = await context.newPage();
+  let failed = false;
+  let originalFailure: unknown;
+  let cleanupErrors: unknown[];
   try {
     await login(other, replacement.email);
     await other.goto(`/jobs/${job}`);
@@ -69,9 +76,18 @@ test("waitlisted lecturer explicitly accepts a complete immutable substitution o
       name: "Warteliste",
       exact: true,
     });
+    const joinedResponse = other.waitForResponse((response) => {
+      if (!new URL(response.url()).pathname.endsWith("/rpc/set_job_waitlist"))
+        return false;
+      const input = response.request().postDataJSON();
+      return input.p_job_id === job && input.p_join === true;
+    });
     await waitlist
       .getByRole("button", { name: "Auf Warteliste setzen", exact: true })
       .click();
+    const joined = await joinedResponse;
+    expect(joined.ok()).toBe(true);
+    expect(await joined.json()).toMatchObject({ job_id: job, joined: true });
     await expect(
       waitlist.getByText("Du stehst auf der Warteliste.", { exact: true }),
     ).toBeVisible();
@@ -216,9 +232,26 @@ test("waitlisted lecturer explicitly accepts a complete immutable substitution o
       path: testInfo.outputPath("substitution-confirmed.png"),
       fullPage: true,
     });
+  } catch (error) {
+    failed = true;
+    originalFailure = error;
   } finally {
-    await context.setOffline(false);
-    await context.close();
-    await originalApi.auth.signOut();
+    // Playwright may already dispose a context after a failed action. Attempt
+    // every owned cleanup, but retain that original failure rather than replace
+    // it with a later context-close protocol error.
+    const offline = await Promise.allSettled([context.setOffline(false)]);
+    const closed = await Promise.allSettled([
+      context.close(),
+      originalApi.auth.signOut(),
+    ]);
+    cleanupErrors = [...offline, ...closed].flatMap((result) =>
+      result.status === "rejected" ? [result.reason] : [],
+    );
   }
+  if (failed) throw originalFailure;
+  if (cleanupErrors.length)
+    throw new AggregateError(
+      cleanupErrors,
+      "Owned substitution context cleanup failed",
+    );
 });

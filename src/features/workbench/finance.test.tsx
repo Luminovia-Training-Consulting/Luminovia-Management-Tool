@@ -341,6 +341,36 @@ it("renders scoped Control Center findings and scenario controls without exposin
   ).toBeVisible();
 });
 
+// The forecast table deliberately overflows on narrow screens. Its wrapper
+// must be reachable by normal Tab navigation so keyboard users can scroll it.
+it("makes the forecast table a bilingual keyboard-reachable scroll group", async () => {
+  const user = userEvent.setup();
+  mount(<ControlCenterPage />);
+  const table = await screen.findByRole("table");
+  const scroll = table.parentElement!;
+  await user.click(
+    screen.getByLabelText(
+      "Angenommene Wahrscheinlichkeit für offene Angebote und Anfragen (%)",
+    ),
+  );
+  await user.tab();
+  expect(
+    screen.getByRole("button", { name: "Szenario berechnen" }),
+  ).toHaveFocus();
+  await user.tab();
+  expect(scroll).toHaveFocus();
+  expect(screen.getByRole("group", { name: "Finanzszenario" })).toBe(scroll);
+  expect(scroll).toContainElement(table);
+  await act(async () => {
+    await i18n.changeLanguage("en");
+  });
+  expect(screen.getByRole("group", { name: "Financial scenario" })).toBe(
+    scroll,
+  );
+  expect(scroll).toHaveFocus();
+  expect(within(scroll).getByRole("table")).toBe(table);
+});
+
 it("does not fetch any privileged Control Center or forecast data without current management permission", async () => {
   fake.responses.get_my_permissions = [];
   mount(<ControlCenterPage />);

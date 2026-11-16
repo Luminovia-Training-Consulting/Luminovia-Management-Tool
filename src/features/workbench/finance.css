@@ -72,6 +72,11 @@
   overflow-x: auto;
   max-width: 100%;
 }
+/* Match the existing visible keyboard-focus treatment for this scroll target. */
+.finance-table-scroll:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
+}
 .finance-table {
   border-collapse: collapse;
   width: 100%;

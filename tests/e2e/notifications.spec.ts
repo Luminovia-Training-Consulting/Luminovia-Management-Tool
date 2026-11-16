@@ -55,7 +55,14 @@ test("personal inbox, safe bulk read and DE/EN notification preferences persist"
     await page
       .getByRole("link", { name: "Benachrichtigungen einstellen", exact: true })
       .click();
-    const chat = page.getByRole("checkbox", {
+    // This category form and the independent email/attention forms coexist on
+    // Settings. Follow its exact DE/EN fieldset identity through locale/reload.
+    const categorySettings = page.locator("form").filter({
+      has: page.getByRole("group", {
+        name: /^(Benachrichtigungen|Notifications)$/,
+      }),
+    });
+    const chat = categorySettings.getByRole("checkbox", {
       name: "Neue Chatnachrichten",
       exact: true,
     });
@@ -63,15 +70,23 @@ test("personal inbox, safe bulk read and DE/EN notification preferences persist"
     await chat.uncheck();
     await page.getByLabel("Sprache", { exact: true }).selectOption("en");
     await expect(
-      page.getByRole("checkbox", { name: "New chat messages", exact: true }),
+      categorySettings.getByRole("checkbox", {
+        name: "New chat messages",
+        exact: true,
+      }),
     ).not.toBeChecked();
-    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await categorySettings
+      .getByRole("button", { name: "Save", exact: true })
+      .click();
     await expect(
-      page.getByText("Preferences saved.", { exact: true }),
+      categorySettings.getByText("Preferences saved.", { exact: true }),
     ).toBeVisible();
     await page.reload();
     await expect(
-      page.getByRole("checkbox", { name: "New chat messages", exact: true }),
+      categorySettings.getByRole("checkbox", {
+        name: "New chat messages",
+        exact: true,
+      }),
     ).not.toBeChecked();
     expect((await checked(reader.rpc("notification_preferences"))).chat).toBe(
       false,
@@ -138,38 +153,49 @@ test("email channel and IANA quiet hours persist across language, reload and off
     );
     await login(page, owner.email);
     await page.goto("/settings");
-    const email = page.getByRole("checkbox", {
+    // The form owning the named email fieldset includes its save button and
+    // confirmation; in-app attention quiet hours are a separate region.
+    const emailSettings = page.locator("form").filter({
+      has: page.getByRole("group", {
+        name: /^(E-Mail-Benachrichtigungen|Email notifications)$/,
+      }),
+    });
+    const email = emailSettings.getByRole("checkbox", {
       name: "Zusätzliche Hinweise per E-Mail erhalten",
       exact: true,
     });
     await expect(email).not.toBeChecked();
     await email.check();
-    await page
+    await emailSettings
       .getByRole("checkbox", {
         name: "Ruhezeiten für E-Mails verwenden",
         exact: true,
       })
       .check();
-    await page.getByLabel("Ruhezeit von", { exact: true }).fill("23:15");
-    await page.getByLabel("Ruhezeit bis", { exact: true }).fill("06:45");
-    await page
+    await emailSettings
+      .getByLabel("Ruhezeit von", { exact: true })
+      .fill("23:15");
+    await emailSettings
+      .getByLabel("Ruhezeit bis", { exact: true })
+      .fill("06:45");
+    await emailSettings
       .getByLabel("Zeitzone der Ruhezeiten", { exact: true })
       .fill("Australia/Brisbane");
     await page.getByLabel("Sprache", { exact: true }).selectOption("en");
     await expect(
-      page.getByRole("checkbox", {
+      emailSettings.getByRole("checkbox", {
         name: "Receive additional alerts by email",
         exact: true,
       }),
     ).toBeChecked();
     await expect(
-      page.getByLabel("Quiet hours from", { exact: true }),
+      emailSettings.getByLabel("Quiet hours from", { exact: true }),
     ).toHaveValue("23:15");
-    await page
+    await emailSettings
       .getByRole("button", { name: "Save email preferences", exact: true })
       .click();
     await expect(
-      page.getByText("Email preferences saved.", { exact: true }),
+      emailSettings.getByText("Email preferences saved.", { exact: true }),
     ).toBeVisible();
     const saved = await checked(reader.rpc("delivery_preferences"));
     expect(saved).toEqual({
@@ -181,53 +207,59 @@ test("email channel and IANA quiet hours persist across language, reload and off
     });
     await page.reload();
     await expect(
-      page.getByRole("checkbox", {
+      emailSettings.getByRole("checkbox", {
         name: "Receive additional alerts by email",
         exact: true,
       }),
     ).toBeChecked();
     await expect(
-      page.getByLabel("Quiet hours from", { exact: true }),
+      emailSettings.getByLabel("Quiet hours from", { exact: true }),
     ).toHaveValue("23:15");
     await expect(
-      page.getByLabel("Quiet hours until", { exact: true }),
+      emailSettings.getByLabel("Quiet hours until", { exact: true }),
     ).toHaveValue("06:45");
     await expect(
-      page.getByLabel("Quiet hours time zone", { exact: true }),
+      emailSettings.getByLabel("Quiet hours time zone", { exact: true }),
     ).toHaveValue("Australia/Brisbane");
     await page.screenshot({
       path: testInfo.outputPath("email-quiet-hours.png"),
       fullPage: true,
     });
     await page.context().setOffline(true);
-    await page
+    await emailSettings
       .getByRole("checkbox", {
         name: "Receive additional alerts by email",
         exact: true,
       })
       .uncheck();
     await expect(
-      page.getByRole("button", { name: "Save email preferences", exact: true }),
+      emailSettings.getByRole("button", {
+        name: "Save email preferences",
+        exact: true,
+      }),
     ).toBeDisabled();
     expect(
       (await checked(reader.rpc("delivery_preferences"))).email_enabled,
     ).toBe(true);
     await page.context().setOffline(false);
     await expect(
-      page.getByRole("button", { name: "Save email preferences", exact: true }),
+      emailSettings.getByRole("button", {
+        name: "Save email preferences",
+        exact: true,
+      }),
     ).toBeEnabled();
-    await page
+    await emailSettings
       .getByRole("button", { name: "Save email preferences", exact: true })
       .click();
     await expect(
-      page.getByText("Email preferences saved.", { exact: true }),
+      emailSettings.getByText("Email preferences saved.", { exact: true }),
     ).toBeVisible();
     expect(
       (await checked(reader.rpc("delivery_preferences"))).email_enabled,
     ).toBe(false);
     await page.reload();
     await expect(
-      page.getByRole("checkbox", {
+      emailSettings.getByRole("checkbox", {
         name: "Receive additional alerts by email",
         exact: true,
       }),

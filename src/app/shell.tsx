@@ -2,8 +2,8 @@
  * Shared desktop/mobile shell for navigation, search, notifications and preferences.
  * Loaded capabilities shape visible actions and guidance; the backend authorizes access.
  */
-import { useEffect, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { AnnouncementBanners } from "../features/announcements/announcements";
@@ -57,6 +57,19 @@ export function Shell() {
   const { session } = useAuth();
   const actor = session!.user.id;
   const navigate = useNavigate();
+  const location = useLocation();
+  const mobileMore = useRef<HTMLDetailsElement>(null);
+  // Native details survives route changes with the Shell. Close its overlay
+  // after every actual navigation, including query changes and browser back.
+  // Keep keyboard focus visible when its selected link becomes hidden, but do
+  // not take focus from a header search or another control outside the menu.
+  useEffect(() => {
+    const menu = mobileMore.current;
+    if (!menu?.open) return;
+    const focusInside = menu.contains(document.activeElement);
+    menu.open = false;
+    if (focusInside) menu.querySelector("summary")?.focus();
+  }, [location]);
   const client = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
   const [search, setSearch] = useState("");
@@ -249,7 +262,7 @@ export function Shell() {
               />
             )}
             <Preferences />
-            <details className="mobile-more">
+            <details className="mobile-more" ref={mobileMore}>
               <summary aria-label={t("more")}>
                 <Menu size={20} />
               </summary>
