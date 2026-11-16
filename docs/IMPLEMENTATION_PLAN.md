@@ -1,5 +1,29 @@
 # Persistent implementation plan
 
+## Safe development-speed improvements — explicit continuation
+
+- [x] Observe signed608687f/PR34 Portal43855915270 success in11m36s (approximately59%less than28m),351actual SQL groups and every required context; fix missing metadata labels and observe green43856170205.
+- [x] Implement two separate pinned networkless SQL workers with exhaustive partition, unchanged real races/durability, bounded cancellation/cleanup and actual per-suite timing reports; disable JIT only in the disposable PR fixture.
+- [x] Add conservative actual-merge docs/standard/full selection, full sensitive/unknown/main/manual acceptance, early independent jobs and required-gate preflights that fail on scope errors or fast non-PR profiles.
+- [x] Preserve source/rules/dependencies/migrations, all15required statuses, coverage/security/release requirements; make preview evidence profile explicit and reject missing CLI profile.
+- [x] Pass26focused local scope/worker/routing/preview/governance cases and scoped lint/format/actionlint; record local subprocess/Docker limitations and independent read-only review.
+- [ ] Publish final signed source, verify exact remote bytes, pass actual SQL-worker plus full application/native/security/package CI and measure the new SQL duration.
+- [ ] Perform the expressly authorised protected PR34 merge only when every final-current-head check passes; observe main acceptance separately without dispatching a release.
+
+This continuation preserves the complete remaining product scope and prior source-bound evidence below.
+
+## Faster PR CI — 16 November 2026
+
+- [x] Measure actual successful baseline: approximately28minutes, mostly21-minute application plus6-minute serial native rehearsal.
+- [x] Keep quality/coverage/security/metadata contexts; add bounded runtime/Edge/audit and one pinned isolated PostgreSQL suite on every PR, without repeated frontend quality/unit/build commands.
+- [x] Preserve all15required context names, preview success prerequisites, immutable SQL/dependencies and exact-main manual release gates; run unchanged complete application/native main/manual suites in parallel.
+- [x] Document PR SQL/Auth-stub limitations and package evidence scope; pass six runner orchestration, three routing/release-policy and four maintenance/governance checks, scoped lint/format and actionlint.
+- [ ] Publish the prepared branch changes after repository write access or browser file upload is available; connector403 and shell DNS restrictions currently block publication. No extension permission was changed.
+- [ ] Observe exact-head GitHub runtime/Edge/PostgreSQL/image startup and security/coverage/package results, measure actual optimized duration and merge only after every current required check succeeds.
+- [ ] Observe a complete main/manual application/native run before claiming that parallel full acceptance passed; no publication is requested.
+
+All remaining product and operational scope below is preserved. Local Docker and subprocess execution are restricted; mocked routing passes do not replace the pending native evidence.
+
 ## English quote/discovery documentation — released PR10 continuation
 
 - [x] Integrate accepted main `1de544d` and preserve all 36 released SQL sources, neutral naming, operator guidance and complete actual-main histories.
