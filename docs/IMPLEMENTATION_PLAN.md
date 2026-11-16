@@ -6,6 +6,7 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 - [x] Accept signed0950506 in all15required checks:72stages,94application+2PWA cases without skips/retries,258SQLgroups including legacy,19API suites and actual26-migration/20-suite native retention/TLS/cleanup. [Source-specific proof](QA_RESULTS.md).
 - [x] Preserve prepared PR27 publication controls and integrate actual PR21 main0a6002a5 locally; resolve both documentation histories without implementation conflicts. Local source/build acceptance passes254frontend cases/52files and all102runtime checks; migration/dependency bytes remain unchanged.
+- [x] Integrate owner30075c9's necessary lifecycle-fixture race correction: actual quotes captured before all50claims, exact winner/session assertions retained and deterministic late-reader coverage added. Local syntax/lint/format checks pass; do not label this a new full SQL pass.
 - [ ] Use the next assigned local QA slot after the readiness checkout releases it naturally; the earlier refused command is not a local pass. Discovery94/28files is not executed acceptance.
 - [ ] Incorporate actual PR27 main after its reserved publication-control merge, then push one necessary signed current-source integration and pass all15current-head gates before merging PR12. No publication dispatch or larger PR22/26 collection belongs to this work.
 
@@ -19,13 +20,15 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 Other proposed PR21/22/26 group work remains separate from this frozen functional scope. The complete outstanding product/platform requirements below remain required.
 
+
 ## Current direction — local PC testing and explicit publication
 
 - [x] Add `./portal check` for fast local source/coverage/build feedback, retaining complete isolated `./portal test` and latest-main `./portal github test`.
 - [x] Keep automatic quality/security/application/native gates; make CMS publication an explicit exact-SHA manual choice and PR deployment metadata manual-only.
 - [x] Notify the 16 other active project Codex chats and preserve the local-first rule in `AGENTS.md` and operator/contribution guides.
-- [x] Run the actual fast local command (249 frontend tests and build pass), focused publication/orchestration regressions and workflow validation. Cancel the old automatic main publication run and temporarily disable the old metadata publisher, with real server readback.
-- [ ] Complete the signed PR, exact required CI and coordinated user-authorised merge; then re-enable the manual-only metadata workflow and verify main's publication guard.
+- [x] Run the actual fast local command (249 frontend tests before integration;254on current-main integration and build pass), all95integrated offline runtime tests and workflow validation. Cancel the old automatic main publication run and temporarily disable the old metadata publisher, with real server readback.
+- Signed [PR27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27) owns the exact required CI and coordinated user-authorised merge record. After its actual merge, re-enable the manual-only metadata workflow and verify main's publication guard. The first run was cancelled after PR21 advanced main; current-main integration preserves both feature histories.
+- [x] Reproduce the existing50-way lifecycle fixture's disappearing-offer consent lookup from the actual failed run, capture real actor quotes before racing and add a deterministic late-reader case; all12real PostgreSQL groups pass in a fresh disposable local container. Fresh signed-head CI remains the merge gate.
 
 The VPS polling timer and normal/hosted data are unchanged. This direction supersedes historical automatic release/publication descriptions below; it does not remove any product, security or release acceptance requirements.
 
@@ -46,6 +49,7 @@ Current user priority: verify real connected user functions and repair missing b
 - [x] Accept the corrected board in exact-source full CI/native verification on signed1e72507:all68 stages,234SQL/all18APIs/78application+2PWA,zero skips/retries;actual retained password/MFA/roles/private event/scanned bytes/TLS/WebSockets/50claims/cleanup passed. Local run04 safely refused a competing checkout's QA lock; no local pass is invented. First77/78 CI failure remains historical. [Exact results](QA_RESULTS.md).
 - [x] Preserve per-project failure evidence without miscounting a passed sibling browser;7 focused guards include genuine Playwright skip/focus/single-project-failure probes. Application/migrations/journeys remain unchanged after accepted1e72507; final PR checks are independently inspectable. No production/hosted deployment belongs to this request.
 - [ ] Correct the independent be1ef25 desktop search-navigation readiness race (89/90cases passed; no skip/retry), then accept the final roles-integrated source in complete application/native/security CI before direct merge.
+
 
 
 ## Coordinated PR18 integration

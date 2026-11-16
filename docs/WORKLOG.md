@@ -2,6 +2,14 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — incoming lifecycle fixture race repaired without weakening claims
+
+PR27's6cd5de0 full CI failed in the lifecycle SQL fixture with42601 after six groups. That fixture was byte-identical to accepted0950506: the50competing helpers independently reread an offer before claiming, so a lookup scheduled after the winner filled it could return no version and interpolate invalid SQL. The owner repaired this on30075c9, now merged locally with both documentation continuations. No second fixture implementation or business migration was introduced here.
+
+The repair captures each actor's real authorised quote before the race, validates a positive integer, preserves all50real claims and exact1confirmed/49filled/2-session assertions, and adds a deterministic independent late-reader check: no longer visible in offers, but an already reviewed token still reaches the real RPC and returns filled. There is no invented fallback/base token. Syntax, ESLint, Prettier, documentation and diff checks pass locally; full combined SQL/API/browser acceptance remains pending.
+
+The next complete local attempt onbbd3238 was correctly refused before startup because the customer-neutral checkout had taken the shared lock at05:48:47UTC (PID315819). Its private `.local/full-functional/bbd3238-full-local.*` records exit1, not a pass. The coordinator assigns PR12 the next naturally released slot. Keep the complete prepared source frozen for that run, preserve all foreign QA processes and wait for actual PR27 main before the one final push/current15-gate merge. Earlier accepted0950506 proof remains exact and unchanged.
+
 ## 16 November 2026 — complete functional head accepted; current main reconciled locally
 
 Signed0950506 passed all15required checks in [CI43808553155](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43808553155): application05:37:12UTC, native05:43:24UTC and preview05:43:33UTC. Actual application totals are72passed stages,249frontend/52files,92runtime,42Edge,76Python,62operatingNode,257regular SQL groups plus1legacy refusal,19business API suites and **94application+2built-PWA cases, zero skips/retries**. Build63precache entries/2708.06KiB. Native confirms26migrations/20suites, retained Auth/password/MFA/roles/private-event/scanned bytes, TLS/WebSockets/50claims/private Mailpit and owned cleanup. No changed images or hosted installation is inferred.
@@ -19,6 +27,7 @@ Carina's direct instruction remains to wait for green CI and merge the completed
 Prepared PR27 exactec29bc5 only on this owned branch, preserving its original head. Two documentation conflicts retain both complete continuations. Application/browser/backend source, all26migrations, dependencies, the canonical complete runner and browser-evidence guards are byte-identical to0950506. Incoming publication/CLI code is byte-identical toec29bc5; the combined CI additionally retains our reduced acceptance upload. Independent source review found no concrete integration error.
 
 Actual combined local `./portal check` exits0: TypeScript, ESLint, source/workflow format, export integrity,249frontend cases/52files with unchanged coverage floors, and synthetic-public-config build/PWA63precache entries. All100runtime cases pass with zero skips; actionlint/diff checks pass. Private logs `.local/full-functional/pr27-combined-check.log` and `pr27-combined-runtime.log`. No service or shared QA stack was started. This is local source/controller proof, not future combined native/browser acceptance. Wait for actual PR27 main ancestry, record0950506's observed full outcome, then publish one necessary combined source and require its exact15gates before merge. Unrelated PR21/22/26 heads were not integrated.
+
 
 ## 16 November 2026 — local testing and explicit publication
 
@@ -118,6 +127,16 @@ Five guard checks including a real Playwright exit-zero runtime-skip/focused-sui
 
 
 
+
+Signed head `ec29bc5` is published as [PR27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27), with GitHub signature verification valid. Its initial quality/security checks passed; while complete application run43810730448 was still executing, the coordinating chat merged PR21 as main `0a6002a`. The now superseded application run was cancelled, not recorded as passing. Integrating that actual main preserves both plan/log histories and the guided-experience fixes; relative to current main this PR still changes no application TS/SQL/dependencies. The new independent-feature→local-tests→signed-commit/push→focused-PR→sequential-green-merge direction is explicit in AGENTS, without a blanket development freeze. The coordinated next merge slot is reserved for this PR.
+
+Actual integrated local rerun: `./portal check` exit0,254frontend tests/52files, S51.15/B46.15/F41.61/L52.96%, all preceding source gates and63-entryPWA build; all95offline runtime tests pass. Workflow lint and diff checks pass. This validates the local controls on the new main basis, while the new exact-head GitHub application/native/package gates remain separately observable on PR27.
+
+Exact integrated run43812657568 passed quality/security and earlier real SQL/retention stages, then failed in the existing lifecycle50-way fixture: each helper re-read `job_offers()` during the race, so a losing actor whose now-filled offer disappeared generated an empty SQL argument (`42601`). The fixture now captures each actor's actual consent version before starting all50RPCs; there is no raw-job or invented version fallback, and exact1confirmed/49filled/2session assertions remain. A separate fictional late reader without historical claims deterministically proves that an absent current offer still accepts the previously read token as an RPC request and returns `filled`. No business SQL, permission, migration or claim logic changed.
+
+The corrected complete lifecycle suite passed all12real PostgreSQL groups locally on a newly owned PostgreSQL17.11 container with network none, no published ports/mounts and UUID databases replaying the actual migration history. The UUID database and owned container were verified removed; all foreign/normal services remained untouched. Targeted ESLint/format/diff checks pass. The failed GitHub run is not relabelled as successful; the next signed revision owns fresh exact application/native/package acceptance.
+
+A fresh read-only VPS check at05:41UTC reports `waiting_for_main_release` for `fabd71a`, with installed frontend still `5f89986`. The installed updater accepts only a release matching current main, so the old published `43504b8` cannot be pulled as a backlog. Its five-minute timer remains active; no service/timer/data was changed. Explicit future release publication can still feed this existing updater.
 ## 16 November 2026 — prepare the coordinated roles/welcome integration
 
 A second explicit coordination hold now covers PR18 until its owner completes the final CI/merge. PR15 is already merged as43504b8. The owned PR21 checkout pre-integrates exact PR18 source0675bb9; the foreign branch and main remain untouched. Four conflicts preserve both documentation histories, authorization refresh/navigation, our access-load error/retry/focus handling and the new server-backed welcome child. Automatic welcome content is outside the live-tour region and disappears while that tour is active; /welcome[/] hides the live panel without changing its stored progress. All nine tour cases and all four Shell cases pass. The Shell recovery check now scopes the correct tour region rather than assuming the independent welcome cannot report its own access error.
