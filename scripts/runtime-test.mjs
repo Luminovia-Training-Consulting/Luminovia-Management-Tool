@@ -1,6 +1,6 @@
 /**
- * Canonical complete acceptance in an owned snapshot, random project and separate service ports.
- * Every stage must pass; failures and cleanup errors remain visible in the private result report.
+ * Canonical complete acceptance, or an explicitly selected CI phase, in an owned snapshot.
+ * Every selected stage must pass; phase and cleanup failures remain visible in the private report.
  */
 import {
   cpSync,
@@ -18,6 +18,10 @@ import { tmpdir } from "node:os";
 import { randomBytes } from "node:crypto";
 import { runtimeSnapshotSource } from "./runtime-snapshot.mjs";
 import {
+  runtimeTestArguments,
+  runtimeTestPhasePlan,
+} from "./runtime-test-phase.mjs";
+import {
   acquireTestLock,
   assertTestPortsAvailable,
 } from "./runtime-test-lock.mjs";
@@ -31,6 +35,9 @@ import {
   assertLocalDocker,
 } from "./runtime-lib.mjs";
 
+// Parse before acquiring a lock, copying source or reaching a Docker engine.
+// Without explicit CLI arguments the canonical command always runs everything.
+const phase = runtimeTestPhasePlan(runtimeTestArguments(process.argv, root));
 const run = randomBytes(4).toString("hex");
 const project = `luminovia-portal-test-${run}`;
 const artifacts = join(runtimeDir, "tests", run);
@@ -84,7 +91,7 @@ try {
   delete env.DOCKER_CONTEXT;
   localDockerReady = true;
   console.log(
-    `Isolierte Testumgebung ${project}. Entwicklungsdaten bleiben unverändert.`,
+    `Isolierte Testumgebung ${project}. Phase: ${phase.phase}. Entwicklungsdaten bleiben unverändert.`,
   );
   cpSync(root, scratch, {
     recursive: true,
@@ -121,144 +128,148 @@ try {
       signal: cancellation.signal,
     });
   };
-  await step("Lint", "npm", ["run", "lint"]);
-  await step("TypeScript", "npm", ["run", "typecheck"]);
-  await step("Formatierung", "npm", ["run", "format:check"]);
-  const runtimeTests = readdirSync(join(scratch, "scripts"))
-    .filter((name) => name.startsWith("runtime-") && name.endsWith(".test.mjs"))
-    .map((name) => `scripts/${name}`);
-  if (runtimeTests.length)
-    await step("Laufzeit-Sicherheitsprüfungen", process.execPath, [
-      "--test",
-      ...runtimeTests,
+  if (phase.system) {
+    await step("Lint", "npm", ["run", "lint"]);
+    await step("TypeScript", "npm", ["run", "typecheck"]);
+    await step("Formatierung", "npm", ["run", "format:check"]);
+    const runtimeTests = readdirSync(join(scratch, "scripts"))
+      .filter(
+        (name) => name.startsWith("runtime-") && name.endsWith(".test.mjs"),
+      )
+      .map((name) => `scripts/${name}`);
+    if (runtimeTests.length)
+      await step("Laufzeit-Sicherheitsprüfungen", process.execPath, [
+        "--test",
+        ...runtimeTests,
+      ]);
+    await step("Unit-/Komponententests und Coverage", "npm", [
+      "run",
+      "test:coverage",
     ]);
-  await step("Unit-/Komponententests und Coverage", "npm", [
-    "run",
-    "test:coverage",
-  ]);
-  await step("Produktionsabhängigkeiten", "npm", [
-    "audit",
-    "--omit=dev",
-    "--audit-level=low",
-  ]);
-  const functions = join(scratch, "supabase/functions");
-  const handlerTests = [];
-  const entries = [];
-  /** Discovers delivered Edge entry points and tests recursively so new functions do not silently escape verification. */
-  function find(path) {
-    for (const entry of readdirSync(path, { withFileTypes: true })) {
-      const child = join(path, entry.name);
-      if (entry.isDirectory()) find(child);
-      else if (entry.name.endsWith("_test.ts")) handlerTests.push(child);
-      else if (entry.name === "index.ts") entries.push(child);
-    }
-  }
-  if (existsSync(functions)) find(functions);
-  // Pinned npm: imports and control-character rejection are intentional here.
-  // Promise-shaped test doubles may be async without awaiting real I/O; keep
-  // require-await active on production Edge source and relax it only in tests.
-  if (entries.length)
-    await step("Edge-Quellcode-Lint", process.execPath, [
-      join(scratch, "node_modules/deno/bin.cjs"),
-      "lint",
-      "--rules-exclude=no-import-prefix,no-control-regex",
-      "--ignore=**/*_test.ts",
-      functions,
+    await step("Produktionsabhängigkeiten", "npm", [
+      "audit",
+      "--omit=dev",
+      "--audit-level=low",
     ]);
-  if (handlerTests.length) {
-    await step("Edge-Test-Lint", process.execPath, [
-      join(scratch, "node_modules/deno/bin.cjs"),
-      "lint",
-      "--rules-exclude=no-import-prefix,no-control-regex,require-await",
-      ...handlerTests,
-    ]);
-    await step("Edge-Unit-Tests", process.execPath, [
-      join(scratch, "node_modules/deno/bin.cjs"),
-      "test",
-      "--allow-env",
-      `--allow-read=${join(functions, "course-documents/assets")}`,
-      ...handlerTests,
-    ]);
-  }
-  for (const entry of entries)
-    await step(
-      `Edge-Typprüfung ${basename(join(entry, ".."))}`,
-      process.execPath,
-      [join(scratch, "node_modules/deno/bin.cjs"), "check", entry],
-    );
-  // Keep release/update safety in the same local command as application QA.
-  await step("SMTP-Benachrichtigungsschutz", "python3", [
-    "-W",
-    "error::ResourceWarning",
-    "-m",
-    "unittest",
-    "discover",
-    "-s",
-    "scripts",
-    "-p",
-    "test_notification_mail_worker.py",
-  ]);
-  // These checks use fixtures and owned proxy containers, never the hosted VM.
-  const hosting = join(scratch, "deploy/hostinger");
-  if (existsSync(hosting)) {
-    if (existsSync(join(hosting, "backups"))) {
-      // The crypto fixtures otherwise skip successfully when their tools are
-      // absent. Require real age binaries before claiming complete local QA.
-      for (const [label, binary] of [
-        ["age-Verschlüsselungswerkzeug", env.AGE_TEST_BINARY || "age"],
-        ["age-Schlüsselwerkzeug", env.AGE_KEYGEN_TEST_BINARY || "age-keygen"],
-      ]) {
-        const version = await step(label, binary, ["--version"]);
-        if (!/^v?1\.\d+\.\d+$/.test(version.trim()))
-          throw new Error(
-            "The encrypted-backup fixtures require a stable age 1.x tool version; verification stopped before crypto tests.",
-          );
+    const functions = join(scratch, "supabase/functions");
+    const handlerTests = [];
+    const entries = [];
+    /** Discovers delivered Edge entry points and tests recursively so new functions do not silently escape verification. */
+    function find(path) {
+      for (const entry of readdirSync(path, { withFileTypes: true })) {
+        const child = join(path, entry.name);
+        if (entry.isDirectory()) find(child);
+        else if (entry.name.endsWith("_test.ts")) handlerTests.push(child);
+        else if (entry.name === "index.ts") entries.push(child);
       }
     }
-    for (const area of ["updates", "maintenance", "backups"])
-      if (existsSync(join(hosting, area)))
-        await step(`Update-/Wiederherstellungsschutz ${area}`, "python3", [
-          "-m",
-          "unittest",
-          "discover",
-          "-s",
-          `deploy/hostinger/${area}`,
-          "-p",
-          "test_*.py",
-        ]);
-    const releaseTests = [
-      ...readdirSync(hosting)
-        .filter((name) => /^reviewed-.*\.test\.mjs$/.test(name))
-        .map((name) => `deploy/hostinger/${name}`),
-      ...readdirSync(join(hosting, "updates"))
-        .filter((name) => name.endsWith(".test.mjs"))
-        .map((name) => `deploy/hostinger/updates/${name}`),
-      ...readdirSync(join(hosting, "scanner"))
-        .filter((name) => name.endsWith(".test.mjs"))
-        .map((name) => `deploy/hostinger/scanner/${name}`),
-      ...(existsSync(join(hosting, "backups"))
-        ? readdirSync(join(hosting, "backups"))
-            .filter((name) => name.endsWith(".test.mjs"))
-            .map((name) => `deploy/hostinger/backups/${name}`)
-        : []),
-      ...(existsSync(join(hosting, "maintenance"))
-        ? readdirSync(join(hosting, "maintenance"))
-            .filter((name) => name.endsWith(".test.mjs"))
-            .map((name) => `deploy/hostinger/maintenance/${name}`)
-        : []),
-    ].sort();
-    await step(
-      "Release-Pakete und geprüfte Migrationspläne",
-      process.execPath,
-      ["--test", ...releaseTests],
-    );
-    await step("Private Selfhost-Gateway-Routen", process.execPath, [
-      "deploy/hostinger/selfhost/validate.mjs",
-      "--gateway-routing",
+    if (existsSync(functions)) find(functions);
+    // Pinned npm: imports and control-character rejection are intentional here.
+    // Promise-shaped test doubles may be async without awaiting real I/O; keep
+    // require-await active on production Edge source and relax it only in tests.
+    if (entries.length)
+      await step("Edge-Quellcode-Lint", process.execPath, [
+        join(scratch, "node_modules/deno/bin.cjs"),
+        "lint",
+        "--rules-exclude=no-import-prefix,no-control-regex",
+        "--ignore=**/*_test.ts",
+        functions,
+      ]);
+    if (handlerTests.length) {
+      await step("Edge-Test-Lint", process.execPath, [
+        join(scratch, "node_modules/deno/bin.cjs"),
+        "lint",
+        "--rules-exclude=no-import-prefix,no-control-regex,require-await",
+        ...handlerTests,
+      ]);
+      await step("Edge-Unit-Tests", process.execPath, [
+        join(scratch, "node_modules/deno/bin.cjs"),
+        "test",
+        "--allow-env",
+        `--allow-read=${join(functions, "course-documents/assets")}`,
+        ...handlerTests,
+      ]);
+    }
+    for (const entry of entries)
+      await step(
+        `Edge-Typprüfung ${basename(join(entry, ".."))}`,
+        process.execPath,
+        [join(scratch, "node_modules/deno/bin.cjs"), "check", entry],
+      );
+    // Keep release/update safety in the same local command as application QA.
+    await step("SMTP-Benachrichtigungsschutz", "python3", [
+      "-W",
+      "error::ResourceWarning",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts",
+      "-p",
+      "test_notification_mail_worker.py",
     ]);
-    await step("Caddy-Zugriff und private Grenzen", process.execPath, [
-      "scripts/hostinger-caddy-check.mjs",
-    ]);
+    // These checks use fixtures and owned proxy containers, never the hosted VM.
+    const hosting = join(scratch, "deploy/hostinger");
+    if (existsSync(hosting)) {
+      if (existsSync(join(hosting, "backups"))) {
+        // The crypto fixtures otherwise skip successfully when their tools are
+        // absent. Require real age binaries before claiming complete local QA.
+        for (const [label, binary] of [
+          ["age-Verschlüsselungswerkzeug", env.AGE_TEST_BINARY || "age"],
+          ["age-Schlüsselwerkzeug", env.AGE_KEYGEN_TEST_BINARY || "age-keygen"],
+        ]) {
+          const version = await step(label, binary, ["--version"]);
+          if (!/^v?1\.\d+\.\d+$/.test(version.trim()))
+            throw new Error(
+              "The encrypted-backup fixtures require a stable age 1.x tool version; verification stopped before crypto tests.",
+            );
+        }
+      }
+      for (const area of ["updates", "maintenance", "backups"])
+        if (existsSync(join(hosting, area)))
+          await step(`Update-/Wiederherstellungsschutz ${area}`, "python3", [
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            `deploy/hostinger/${area}`,
+            "-p",
+            "test_*.py",
+          ]);
+      const releaseTests = [
+        ...readdirSync(hosting)
+          .filter((name) => /^reviewed-.*\.test\.mjs$/.test(name))
+          .map((name) => `deploy/hostinger/${name}`),
+        ...readdirSync(join(hosting, "updates"))
+          .filter((name) => name.endsWith(".test.mjs"))
+          .map((name) => `deploy/hostinger/updates/${name}`),
+        ...readdirSync(join(hosting, "scanner"))
+          .filter((name) => name.endsWith(".test.mjs"))
+          .map((name) => `deploy/hostinger/scanner/${name}`),
+        ...(existsSync(join(hosting, "backups"))
+          ? readdirSync(join(hosting, "backups"))
+              .filter((name) => name.endsWith(".test.mjs"))
+              .map((name) => `deploy/hostinger/backups/${name}`)
+          : []),
+        ...(existsSync(join(hosting, "maintenance"))
+          ? readdirSync(join(hosting, "maintenance"))
+              .filter((name) => name.endsWith(".test.mjs"))
+              .map((name) => `deploy/hostinger/maintenance/${name}`)
+          : []),
+      ].sort();
+      await step(
+        "Release-Pakete und geprüfte Migrationspläne",
+        process.execPath,
+        ["--test", ...releaseTests],
+      );
+      await step("Private Selfhost-Gateway-Routen", process.execPath, [
+        "deploy/hostinger/selfhost/validate.mjs",
+        "--gateway-routing",
+      ]);
+      await step("Caddy-Zugriff und private Grenzen", process.execPath, [
+        "scripts/hostinger-caddy-check.mjs",
+      ]);
+    }
   }
   await step("Vollständige isolierte Dienste starten", process.execPath, [
     "scripts/runtime-cli.mjs",
@@ -297,62 +308,73 @@ try {
       PORTAL_DB_CONTAINER: `supabase_db_${project}`,
     },
   );
-  await step("PostgreSQL, RLS und 50-fache Nebenläufigkeit", "npm", [
-    "run",
-    "test:db",
-  ]);
-  for (const script of readdirSync(join(scratch, "scripts"))
-    .filter((name) => name.endsWith("-db-tests.mjs"))
-    .sort())
-    await step(`Weitere SQL-Sicherheitsfälle ${script}`, process.execPath, [
-      `scripts/${script}`,
+  if (phase.system) {
+    await step("PostgreSQL, RLS und 50-fache Nebenläufigkeit", "npm", [
+      "run",
+      "test:db",
     ]);
-  for (const script of readdirSync(join(scratch, "scripts"))
-    .filter((name) => name.endsWith("-api-check.mjs"))
-    .sort())
-    await step(`Echte API ${script}`, process.execPath, [`scripts/${script}`]);
-  await step("Echte Edge-Einladung und Mailpit", process.execPath, [
-    "scripts/local-invite-check.mjs",
-  ]);
-  await step("Chromium bereitstellen", "npx", [
-    "--no-install",
-    "playwright",
-    "install",
-    ...(process.env.CI === "true" ? ["--with-deps"] : []),
-    "chromium",
-  ]);
-  await step("Desktop- und Mobilbrowser", "npm", [
-    "run",
-    "test:e2e",
-    "--",
-    "--grep-invert",
-    "built PWA",
-  ]);
-  await step("Produktions-Build", "npm", ["run", "build"]);
-  // The test supervisor serves the built artifact from a separate, owned preview.
-  await step("Gebautes PWA starten", process.execPath, [
-    "scripts/runtime-test-preview.mjs",
-    "start",
-  ]);
-  await step(
-    "PWA, Offline-Shell und keine privaten Caches",
-    "npx",
-    ["--no-install", "playwright", "test", "tests/e2e/pwa.spec.ts"],
-    { E2E_PWA: "1", E2E_BASE_URL: "http://127.0.0.1:4273" },
-  );
+    for (const script of readdirSync(join(scratch, "scripts"))
+      .filter((name) => name.endsWith("-db-tests.mjs"))
+      .sort())
+      await step(`Weitere SQL-Sicherheitsfälle ${script}`, process.execPath, [
+        `scripts/${script}`,
+      ]);
+    for (const script of readdirSync(join(scratch, "scripts"))
+      .filter((name) => name.endsWith("-api-check.mjs"))
+      .sort())
+      await step(`Echte API ${script}`, process.execPath, [
+        `scripts/${script}`,
+      ]);
+    await step("Echte Edge-Einladung und Mailpit", process.execPath, [
+      "scripts/local-invite-check.mjs",
+    ]);
+  }
+  if (phase.browser) {
+    await step("Chromium bereitstellen", "npx", [
+      "--no-install",
+      "playwright",
+      "install",
+      ...(process.env.CI === "true" ? ["--with-deps"] : []),
+      "chromium",
+    ]);
+    await step("Desktop- und Mobilbrowser", "npm", [
+      "run",
+      "test:e2e",
+      "--",
+      "--grep-invert",
+      "built PWA",
+    ]);
+    await step("Produktions-Build", "npm", ["run", "build"]);
+    // The test supervisor serves the built artifact from a separate, owned preview.
+    await step("Gebautes PWA starten", process.execPath, [
+      "scripts/runtime-test-preview.mjs",
+      "start",
+    ]);
+    await step(
+      "PWA, Offline-Shell und keine privaten Caches",
+      "npx",
+      ["--no-install", "playwright", "test", "tests/e2e/pwa.spec.ts"],
+      { E2E_PWA: "1", E2E_BASE_URL: "http://127.0.0.1:4273" },
+    );
+  }
 } catch (error) {
   failure = error;
-  privateWrite(join(artifacts, "RESULT.txt"), `FAIL\n${error.message}\n`);
+  privateWrite(
+    join(artifacts, "RESULT.txt"),
+    `FAIL\nPhase: ${phase.phase}\n${error.message}\n`,
+  );
 } finally {
   if (localDockerReady) {
-    try {
-      await command(
-        process.execPath,
-        ["scripts/runtime-test-preview.mjs", "stop"],
-        { cwd: scratch, env, quiet: true, timeoutMs: 20000 },
-      );
-    } catch {
-      /* not started */
+    if (phase.browser) {
+      try {
+        await command(
+          process.execPath,
+          ["scripts/runtime-test-preview.mjs", "stop"],
+          { cwd: scratch, env, quiet: true, timeoutMs: 20000 },
+        );
+      } catch {
+        /* not started */
+      }
     }
     try {
       await command(process.execPath, ["scripts/runtime-cli.mjs", "stop"], {
@@ -384,10 +406,13 @@ try {
       /* scanner may not have started */
     }
   }
-  for (const name of ["playwright-report", "test-results", "coverage"])
+  for (const name of [
+    ...(phase.browser ? ["playwright-report", "test-results"] : []),
+    ...(phase.system ? ["coverage"] : []),
+  ])
     if (existsSync(join(scratch, name)))
       cpSync(join(scratch, name), join(artifacts, name), { recursive: true });
-  if (existsSync(join(scratch, "docs/screenshots")))
+  if (phase.browser && existsSync(join(scratch, "docs/screenshots")))
     cpSync(join(scratch, "docs/screenshots"), join(artifacts, "screenshots"), {
       recursive: true,
     });
@@ -399,8 +424,14 @@ try {
   process.removeListener("SIGINT", cancel);
   process.removeListener("SIGTERM", cancel);
 }
+// A cancellation during bounded cleanup must not turn a partial run into PASS.
+if (cancellation.signal.aborted)
+  failure ??= new Error(`Isolated ${phase.phase} acceptance was cancelled.`);
 if (failure) {
-  privateWrite(join(artifacts, "RESULT.txt"), `FAIL\n${failure.message}\n`);
+  privateWrite(
+    join(artifacts, "RESULT.txt"),
+    `FAIL\nPhase: ${phase.phase}\n${failure.message}\n`,
+  );
   console.error(
     `Isolierter Test fehlgeschlagen. Bericht: .local/tests/${run}/RESULT.txt`,
   );
@@ -408,8 +439,10 @@ if (failure) {
 }
 privateWrite(
   join(artifacts, "RESULT.txt"),
-  `PASS\nProject: ${project}\nCompleted: ${new Date().toISOString()}\nDevelopment database and object volumes were not targeted.\n`,
+  `PASS\nPhase: ${phase.phase}\nStages: ${phase.stages.join(", ")}\n${phase.phase === "system" ? "Browser/build/PWA acceptance was not run in this phase.\n" : phase.phase === "browser" ? "System SQL/API/Edge/operational acceptance was not run in this phase.\n" : "Complete local acceptance.\n"}Project: ${project}\nCompleted: ${new Date().toISOString()}\nDevelopment database and object volumes were not targeted.\n`,
 );
 console.log(
-  `\nAlle isolierten Prüfungen und Aufräumen bestanden. Bericht: .local/tests/${run}/RESULT.txt`,
+  phase.phase === "all"
+    ? `\nAlle isolierten Prüfungen und Aufräumen bestanden. Bericht: .local/tests/${run}/RESULT.txt`
+    : `\nIsolated ${phase.phase} phase and cleanup passed; other acceptance phases are not claimed. Report: .local/tests/${run}/RESULT.txt`,
 );

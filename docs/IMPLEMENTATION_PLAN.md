@@ -1,5 +1,43 @@
 # Persistent implementation plan
 
+## Current Main36 reconciliation and history-preserving accounting correction
+
+Actual accepted Main36 is `7fbdb956a513ca8eec3d0f2404adc213c656af1f`, with 36 published SQL files. Frozen PR17 `dd646f91ece7eb136f776597d04e67b27bf72b60` remains an unmerged candidate; our local source still contains 68 SQL files and the generated 247-public-function API inventory. This preparation reconciles Main36’s CI/runner changes with the fully tested local `2c850` candidate while keeping accounting outside PR24’s operational scope.
+
+- [x] Complete ordinary full local acceptance on exact `2c850fc488165e37887807a74e92414e4fa0a25e`: 674 frontend cases, all 68 SQL files and real API stages, 150 application browser cases in 13.3 minutes and 4 built-PWA cases in 10.4 seconds. Owned cleanup completed and the shared slot was released.
+- [x] Preserve accidental remote accounting integration `9bfa7f2` in normal ancestry and prepare signed local revert `31d4e975d87b50835275be5e78454f0b3bc32397`. Its tree is exactly the pre-accounting `bbc1ea7` tree; accounting’s original source remains available for separately scoped later delivery. The revert is not pushed, and the `2c850` pass does not cover `9bfa7f2`.
+- [x] Retain every product and feature ledger, all 62 candidate-prefix SQL bodies, the six pending operational additions, four authority-race corrections, two resolver ACL corrections and historical contract tests. Preserve the personal Carina-only PR review exception and manual-only publication.
+- [ ] Complete the current Main36 runner reconciliation and relevant source/phase checks. Conservative full scope is mandatory for this backend/private-resource/test-infrastructure PR; system, browser and actual native success must all gate the final package. Ordinary `./portal test` remains complete.
+- [ ] After PR17 actually merges, bind the prepared source to its accepted main tree and the corrected remote history, preserve all released SQL bytes, and observe all 15 successful final exact-head checks and signed history before the individual PR24 merge.
+
+Earlier source-specific passes, queue notes and remaining product checkboxes below are preserved as history. They neither accept the accidental accounting composition nor substitute for final current-main CI. No deployment, publication or real-message delivery is authorised by this correction.
+
+## Historical preparation states retained during Main36 reconciliation
+
+Earlier source from the preceding local candidate recorded these states. They remain historical; the current Main36 reconciliation above controls delivery.
+
+> - [ ] Publish final signed source, verify exact remote bytes, pass actual SQL-worker plus full application/native/security/package CI and measure the new SQL duration.
+>
+> - [ ] Perform the expressly authorised protected PR34 merge only when every final-current-head check passes; observe main acceptance separately without dispatching a release.
+
+Earlier source from the incoming pre-candidate preparation recorded these states. They remain historical; the current Main36 reconciliation above controls delivery.
+
+> The latest direct request is to make PR24 and then PR25 mergeable and merge them individually. A subsequently relayed direct instruction reserves PR17 first, so actual main/QA ordering is **PR17 → PR24 → PR25**. This coordinates actual merge collisions; it is not a blanket development or source freeze. Accepted PR10/main `1de544d` and all36released SQL blobs remain intact. The six unreleased operational files now follow that accepted prefix (42total); after PR17 actually merges, compare its real migration prefix and recreate only still-unreleased versions if required.
+>
+> - [x] Reconcile accepted main PR10 with the first-four operational source, retaining both full product/extension ledgers and the current personal-only review/manual-publication rules.
+>
+> - [x] Recreate the six pending migration filenames through the installed CLI with unchanged SQL bodies and dependency order; retain all36published blobs exactly.
+>
+> - [x] Generate the actual183public-RPC reference from42SQL files. Root's current source checks pass546frontend cases/71files, unchanged coverage floors, types/lint/format/compiler checks; focused SQL evidence remains separately scoped.
+>
+> - [ ] Complete the real current-base integration after actual PR17, including renewed prefix checks and relevant source/functional checks.
+>
+> - [ ] Obtain all15successful exact-head application/native/security/package checks and signed history before individually merging PR24, then repeat the scoped process for PR25. Historical acceptance does not replace these gates.
+>
+> - [ ] Preserve every outstanding item across all seven requested additions; do not infer full product, native retention, installation or production acceptance from this preparation.
+>
+> The earlier PR10/PR27 priority notes below describe their recorded source checkpoints. Their merges are now accepted; they are not current blockers or instructions to restore a previous shared freeze.
+
 ## Accepted Main34 CI integration with the still-unmerged PR17 candidate
 
 Actual accepted main is now `c5281002c2ea1102abe91a71d497ceeea87341f4` (PR34). This local merge applies its 13 CI, documentation and testing-file changes to signed PR24 candidate `d96ea21`; Main34 changes no application or SQL source. Frozen PR17 source `dd646f91ece7eb136f776597d04e67b27bf72b60` remains an unmerged candidate. The inventory stays at 68 SQL files, including the 36 published main migrations and the complete unchanged 62-file candidate prefix. Current PR24 additions retain the two pending notification-resolver ACL corrections and the test-only historical contract ceilings.
@@ -62,6 +100,10 @@ Current isolated branch: `codex/smart-notifications-and-dashboard`, integrating 
 - [ ] Follow the user's explicit release preference before any CMS deployment or private SMTP/Push timer activation. Retain per-account/per-device consent. Physical mobile/desktop Push delivery requires a supported consenting device and remains a separate untested acceptance step.
 - [x] Actual self-addressed Hostinger465 TLS SMTP acceptance and IMAP993 receipt; that exact test's SPF/DKIM/DMARC pass. Automatic application timers are not yet installed.
 
+## All-open-PR merge continuation
+
+The latest direct instruction authorises all current PR integrations and protected merges after successful current required checks. Earlier merge reservations below are historical. PR24 now incorporates accepted main `7fbdb95`, preserving both CI-routing and operational histories, all36released SQL files and six pending additions unchanged. Relevant integration checks and fresh exact-head required CI remain the next gate; no deployment is requested.
+
 ## Current user-directed operational delivery preparation
 
 The current delivery order is **PR17 → PR24 → PR25**: make each PR mergeable and merge it separately after its current required checks pass. Accepted main `c0622a763127081a7b5be092ce2782253991c6a5` includes PR29’s English private-pricing and discovery documentation. This local preparation integrates those six documentation updates while retaining PR24’s four operational modules, four observed authority-race corrections, 36 unchanged released SQL files and six pending additions (42 SQL files in total). Independent source work continues while the actual merge and shared acceptance slots follow that order.
@@ -90,6 +132,15 @@ The exact additional [implementation prompt](OPERATIONS_EXTENSION_PROMPT.txt) is
 
 Initial SQL evidence: readiness16, delivery12, replacement13, support12groups. Whole-source257tests and unchanged coverage floors pass; TypeScript/ESLint pass. The canonical complete command returned exit1 before startup because another checkout holds shared QA ownership; this is not a full integration pass.
 
+## Full PR acceptance critical path — further authorised continuation
+
+- [x] Measure two-worker SQL5m07s, complete native/retained-data success, and historical full browser13.9m versus13s Chromium setup; preserve canonical SQL lint/advisor and native-engine checks.
+- [x] Route sensitive PR system and browser acceptance onto separate owned runners; preserve main/manual/local complete acceptance and all existing required context names.
+- [x] Pass56focused phase/bootstrap/snapshot/safety/worker/scope/preview/policy cases and38actual shell boundary/routing cases; validate launcher normalization, complete stage partition, fresh service/persistence/seed setup and failure/cancellation cleanup. Scoped lint/format/compiler connectivity/actionlint pass; actual Docker/complete child-process evidence remains pending CI.
+- [ ] Publish signed exact source, observe every final-head system/browser/native/security/package gate, measure actual wall time, and complete the user-authorised protected merge.
+
+The complete product scope and earlier actual-source evidence below remain in force.
+
 ## Safe development-speed improvements — explicit continuation
 
 - [x] Observe signed608687f/PR34 Portal43855915270 success in11m36s (approximately59%less than28m),351actual SQL groups and every required context; fix missing metadata labels and observe green43856170205.
@@ -97,8 +148,8 @@ Initial SQL evidence: readiness16, delivery12, replacement13, support12groups. W
 - [x] Add conservative actual-merge docs/standard/full selection, full sensitive/unknown/main/manual acceptance, early independent jobs and required-gate preflights that fail on scope errors or fast non-PR profiles.
 - [x] Preserve source/rules/dependencies/migrations, all15required statuses, coverage/security/release requirements; make preview evidence profile explicit and reject missing CLI profile.
 - [x] Pass26focused local scope/worker/routing/preview/governance cases and scoped lint/format/actionlint; record local subprocess/Docker limitations and independent read-only review.
-- [ ] Publish final signed source, verify exact remote bytes, pass actual SQL-worker plus full application/native/security/package CI and measure the new SQL duration.
-- [ ] Perform the expressly authorised protected PR34 merge only when every final-current-head check passes; observe main acceptance separately without dispatching a release.
+- [x] Publish signed8f29147 and verify13exact remote blobs; Portal43860971674 passes complete SQL/native/application/security/package gates in32m35s, including SQL5m07s,114desktop/mobile and2built-PWA cases.
+- [x] Observe the user-performed protected PR34 merge after every final-head check passed: signedmain c528100. Main acceptance is a separate run; no release was dispatched.
 
 This continuation preserves the complete remaining product scope and prior source-bound evidence below.
 

@@ -6,6 +6,10 @@ import { readFileSync } from "node:fs";
 import { join, basename } from "node:path";
 import { randomBytes } from "node:crypto";
 import { cleanEnvironment } from "./runtime-lib.mjs";
+import {
+  runtimeTestArguments,
+  runtimeTestPhasePlan,
+} from "./runtime-test-phase.mjs";
 
 const source = readFileSync(
   new URL("./runtime-test.mjs", import.meta.url),
@@ -45,6 +49,8 @@ async function runFixture({ failPersistence = false, failSeed = false } = {}) {
     root: "/owned-qa/source",
     runtimeDir: "/owned-qa/reports",
     runtimeSnapshotSource: () => true,
+    runtimeTestPhasePlan,
+    runtimeTestArguments,
     acquireTestLock: () => () => {},
     assertTestPortsAvailable: async () => {},
     privateDirectory() {},
@@ -63,6 +69,7 @@ async function runFixture({ failPersistence = false, failSeed = false } = {}) {
       return "";
     },
     process: {
+      argv: [process.execPath, "scripts/runtime-test.mjs"],
       execPath: process.execPath,
       pid: process.pid,
       env: {},
