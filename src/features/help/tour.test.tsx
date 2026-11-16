@@ -231,6 +231,49 @@ describe("live portal guidance", () => {
     await user.click(screen.getByRole("button", { name: "Portal-Rundgang" }));
     expect(screen.getByRole("progressbar")).toBeVisible();
   });
+  it("distinguishes loading from failed access and recovers without exposing stops early", async () => {
+    const user = userEvent.setup();
+    const retry = vi.fn();
+    const view = (ready: boolean, failed: boolean, retrying = false) => (
+      <MemoryRouter>
+        <PortalTour
+          actor="recovery"
+          roles={["lecturer"]}
+          permissions={[]}
+          ready={ready}
+          failed={failed}
+          retrying={retrying}
+          onRetry={retry}
+        />
+      </MemoryRouter>
+    );
+    const page = render(view(false, false));
+    expect(screen.getByRole("status")).toHaveTextContent("wartet");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    page.rerender(view(false, true));
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "konnten nicht geladen werden",
+    );
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Zugriffsrechte erneut laden" }),
+    );
+    expect(retry).toHaveBeenCalledTimes(1);
+    page.rerender(view(false, true, true));
+    expect(
+      screen.getByRole("button", { name: "Zugriffsrechte erneut laden" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Portal-Rundgang" }),
+    ).toBeDisabled();
+    page.rerender(view(true, false));
+    expect(
+      screen.getByRole("button", { name: "Portal-Rundgang" }),
+    ).toHaveFocus();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Portal-Rundgang" }));
+    expect(screen.getByRole("progressbar")).toBeVisible();
+  });
   it("never derives administrative paths from an unrelated role", () => {
     for (const role of [
       "participant",

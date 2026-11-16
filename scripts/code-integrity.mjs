@@ -258,10 +258,27 @@ export function scanRuntimeExports(root) {
   for (const source of sources) {
     /** Counts symbol uses outside import/export declarations and the definition itself. */
     function visit(node) {
+      // TypeScript also classifies a class's `extends Base<T>` as a type node,
+      // although evaluating Base is required at runtime. Keep that expression
+      // and discard only its erased generic arguments (and implements clauses).
+      if (
+        ts.isExpressionWithTypeArguments(node) &&
+        ts.isHeritageClause(node.parent) &&
+        node.parent.token === ts.SyntaxKind.ExtendsKeyword &&
+        (ts.isClassDeclaration(node.parent.parent) ||
+          ts.isClassExpression(node.parent.parent))
+      ) {
+        visit(node.expression);
+        return;
+      }
       if (
         ts.isImportDeclaration(node) ||
         ts.isExportDeclaration(node) ||
-        ts.isExportAssignment(node)
+        ts.isExportAssignment(node) ||
+        // Type queries/annotations are erased by the compiler. Counting
+        // `type Signature = typeof unused` would disguise an unused export.
+        // A JavaScript `typeof value` expression remains a runtime reference.
+        ts.isTypeNode(node)
       )
         return;
       if (ts.isIdentifier(node)) {

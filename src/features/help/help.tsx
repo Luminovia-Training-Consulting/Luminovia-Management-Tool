@@ -3,7 +3,7 @@
  * filtering and recovery guidance require no backend data and send no support messages.
  */
 import { useEffect, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -58,8 +58,6 @@ const labels = {
     de: "Probleme Schritt für Schritt lösen",
     en: "Solve problems step by step",
   },
-  back: { de: "Zur Übersicht", en: "Back to overview" },
-  context: { de: "Hilfe zu diesem Bereich", en: "Help with this section" },
 };
 const recovery = [
   {
@@ -132,15 +130,18 @@ export function HelpCenter() {
   const { i18n } = useTranslation();
   const text = <T,>(value: { de: T; en: T }) => guideText(value, i18n.language);
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
   const [query, setQuery] = useState("");
+  const searchInput = useRef<HTMLInputElement>(null);
   const articleHeading = useRef<HTMLHeadingElement>(null);
   const topic = params.get("topic");
   const selected = guideModules.find((module) => module.id === topic);
   const troubleshooting = topic === "troubleshooting";
   useEffect(() => {
     // URL navigation should reveal the chosen instructions to keyboard users too.
+    // Reopening the same topic after a search creates a new history key as well.
     articleHeading.current?.focus();
-  }, [topic]);
+  }, [location.key]);
   const needle = query.trim().toLocaleLowerCase();
   const results = guideModules.filter((module) =>
     searchText(module).includes(needle),
@@ -195,6 +196,7 @@ export function HelpCenter() {
             </span>
             <input
               id="help-search"
+              ref={searchInput}
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -291,10 +293,7 @@ export function HelpCenter() {
             </aside>
           </section>
         )}
-        <section
-          className="help-sections"
-          aria-labelledby="help-sections-title"
-        >
+        <section aria-labelledby="help-sections-title">
           <h2 id="help-sections-title">{text(labels.topics)}</h2>
           <p className="help-result-count" role="status">
             {text(labels.count)}: {results.length}
@@ -318,7 +317,13 @@ export function HelpCenter() {
           ) : (
             <div className="help-empty">
               <p>{text(labels.empty)}</p>
-              <Button variant="secondary" onClick={() => setQuery("")}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setQuery("");
+                  searchInput.current?.focus();
+                }}
+              >
                 {text(labels.reset)}
               </Button>
             </div>
