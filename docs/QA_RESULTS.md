@@ -1,5 +1,11 @@
 # QA evidence — 2026-11-16
 
+## PR31 canonical candidate — complete PASS on59c3bd6
+
+The assigned canonical ./portal test completed PASS/launcher exit0 on frozen signed59c3bd6e3c67a4914b17bbc15c3f43d013ed2e50. Owned project4b5bc7a1 RESULT completed2026-11-16T14:07:32.708Z (17November Brisbane). Actual execution passed657frontend/84files,53additional SQL suites plus core concurrency,44real HTTP API suites, Edge/operational/security gates, actual Auth/MFA/Storage stop-start retention, invitation/Mailpit,144desktop/mobile browsers in12.6minutes, production/PWA build and4built-PWA cases in9.4seconds. Final cleanup passed; independent exact-run-marker inspection finds no containers, volumes or networks and no listeners on5273/55321–55329. The source tree stayed clean during execution. All four actual fictional DE/light and EN/dark desktop/mobile contact captures were visually inspected and replace the older feature screenshots. They show explicit literal reference text, responsive contacts and post-cancellation hiding; no new design behavior is inferred from a screenshot alone.
+
+Accepted main17/4cc2087 is now incorporated through normal signed ancestry; the resulting Git tree is byte-identical to tested59c3 before these documentation/image updates. All62now-published SQL files remain byte-identical, with only the never-released briefing extension after that prefix (63total). The changed priority is now actual12→24→25, followed by final actual-base PR31 integration, a final new migration version if necessary, exact-head required CI and protected merge. This successful candidate pass neither installs a release nor certifies those future compositions. Shared QA is released for the coordinator's25assignment; no retry/native/full stack remains running.
+
 ## PR17 current-main integration — complete acceptance pending
 
 The current source integrates accepted main/PR10 and its published 36-migration prefix with PR17 smart operations. Merge resolution, source-level checks and earlier focused results do not establish complete current-source acceptance. The integration must pass fresh and retained-data database replay, actual Auth/API/Storage flows, desktop/mobile and built-PWA journeys, security and all 15 required exact-head checks before merge. External mail/Push activation, physical-device behavior and production are separate operational gates.

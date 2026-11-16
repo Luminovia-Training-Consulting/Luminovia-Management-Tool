@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## PR31 complete candidate gate passed; actual-base merge gate pending
+
+- [x] Complete assigned canonical candidate on59c3bd6:657frontend,53additional SQL suites,44actual APIs,144app browsers,4PWA, real retention and verified cleanup.
+- [x] Inspect four fictional DE/light and EN/dark desktop/mobile feature captures; incorporate actual accepted main17 with byte-identical tested tree.
+- [ ] Preserve actual future main12→24→25 and its complete released prefix, then finish final exact-head required CI and protected PR31 merge. No release/deployment or extra shared-stack start is authorised by this checkbox.
+
 ## PR31 anticipated PR17 integration — local preparation only
 
 - [x] Retain briefing and PR17 waitlist/substitution panels and actor-scoped invalidation together; preserve both complete documentation histories.
