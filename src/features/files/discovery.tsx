@@ -22,11 +22,17 @@ export function DocumentExplorer({
   children,
 }: {
   actor: string;
-  children: (files: PortalDocument[], pending: boolean) => ReactNode;
+  children: (
+    files: PortalDocument[],
+    pending: boolean,
+    epoch?: string,
+    renewalEpoch?: string,
+  ) => ReactNode;
 }) {
   const { t } = useTranslation("files"),
     id = useId(),
-    online = useOnline();
+    online = useOnline(),
+    client = useQueryClient();
   const [search, setSearch] = useState(
       () => new URLSearchParams(window.location.search).get("q") ?? "",
     ),
@@ -50,11 +56,26 @@ export function DocumentExplorer({
     );
     return () => clearTimeout(timer);
   }, [search, tag, folder, unfiled]);
+  const options = documentDiscoveryQuery(actor, filters);
   const query = useInfiniteQuery({
-      ...documentDiscoveryQuery(actor, filters),
+      ...options,
       enabled: online,
     }),
     rows = discoveredDocuments(query.data?.pages);
+  // Query-state counters advance even if structurally shared data or the clock
+  // stays equal. A pending key is not a successful authorisation epoch.
+  const state = client.getQueryState(options.queryKey);
+  const epoch = query.isSuccess
+    ? `${JSON.stringify(options.queryKey)}:${state?.dataUpdateCount}`
+    : undefined;
+  // A cached key transition or appended page has not revalidated the cached
+  // prefix. Only a full response since this observer mounted may renew a row.
+  const renewalEpoch =
+    query.isFetchedAfterMount &&
+    !query.isFetching &&
+    !state?.fetchMeta?.fetchMore
+      ? epoch
+      : undefined;
   return (
     <>
       <p className="muted">{t("discoveryHelp")}</p>
@@ -110,7 +131,12 @@ export function DocumentExplorer({
           {/* Keep captured dialogs mounted while this filter loads, without
               retaining rows from a different query key. Errors above still
               unmount the entire child and discard protected metadata. */}
-          {children(query.isPending ? [] : rows, query.isPending)}
+          {children(
+            query.isPending ? [] : rows,
+            query.isPending,
+            epoch,
+            renewalEpoch,
+          )}
           {query.isPending ? (
             <Loading />
           ) : (
@@ -138,9 +164,15 @@ export function DocumentExplorer({
 export function DocumentOrganiser({
   file,
   onClose,
+  authorised,
+  accessStatus,
+  onDenied,
 }: {
   file: PortalDocument;
   onClose: () => void;
+  authorised: boolean;
+  accessStatus: ReactNode;
+  onDenied: () => void;
 }) {
   const { t } = useTranslation("files"),
     client = useQueryClient(),
@@ -149,18 +181,29 @@ export function DocumentOrganiser({
   const [tags, setTags] = useState((file.personal_tags ?? []).join("\n")),
     [folder, setFolder] = useState(file.personal_folder ?? "");
   const save = useMutation({
-    mutationFn: () =>
-      saveDocumentOrganisation(
+    mutationFn: () => {
+      if (!authorised) throw new Error("file_access_pending");
+      return saveDocumentOrganisation(
         file,
         tags
           .split("\n")
           .map((tag) => tag.trim())
           .filter(Boolean),
         folder,
-      ),
+      );
+    },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["documents"] });
       onClose();
+    },
+    onError: (error) => {
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        error.code === "42501"
+      )
+        onDenied();
     },
   });
   const stale =
@@ -178,6 +221,7 @@ export function DocumentOrganiser({
       description={file.original_name}
     >
       <p>{t("organisationPrivate")}</p>
+      {accessStatus}
       <form
         className="file-organisation-form"
         onSubmit={(e) => {
@@ -220,7 +264,7 @@ export function DocumentOrganiser({
             {t("organisationReload")}
           </Button>
         )}
-        <Button disabled={!online || save.isPending}>
+        <Button disabled={!online || !authorised || save.isPending}>
           {t("saveOrganisation")}
         </Button>
       </form>

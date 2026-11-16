@@ -8,14 +8,19 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  focusManager,
+} from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
 import { documentDiscoveryQuery } from "./discovery-api";
-import { FilesPage } from "./files";
+import { FilesPage, JobDocuments, SubjectDocuments } from "./files";
 const state = vi.hoisted(() => ({
   rpc: vi.fn(),
   reads: vi.fn(),
+  exact: vi.fn(),
   online: true,
 }));
 vi.mock("../../lib/online", () => ({
@@ -41,15 +46,20 @@ vi.mock("../../lib/supabase", () => ({
   db: () => ({
     rpc: state.rpc,
     from: () => {
+      let id = "";
       const chain: Record<string, unknown> = {};
       for (const name of ["select", "is", "eq", "order", "abortSignal"])
         chain[name] = () => chain;
+      chain.eq = (field: string, value: string) => {
+        if (field === "id") id = value;
+        return chain;
+      };
+      chain.maybeSingle = () => state.exact(id);
       chain.then = (resolve: (value: unknown) => unknown) => {
-        state.reads();
-        return Promise.resolve({
-          data: documents.slice(0, 1000),
-          error: null,
-        }).then(resolve);
+        const result = state.reads();
+        return Promise.resolve(
+          result ?? { data: documents.slice(0, 1000), error: null },
+        ).then(resolve);
       };
       return chain;
     },
@@ -74,10 +84,16 @@ const documents = Array.from({ length: 1001 }, (_, n) => ({
 const clients: QueryClient[] = [];
 beforeEach(async () => {
   state.online = true;
+  state.reads.mockReset();
+  state.exact.mockReset();
+  state.exact.mockImplementation((id: string) =>
+    response(documents.find((file) => file.id === id) ?? null),
+  );
   await i18n.changeLanguage("de");
 });
 afterEach(() => {
   cleanup();
+  focusManager.setFocused(undefined);
   for (const client of clients) client.clear();
   clients.length = 0;
   window.history.replaceState({}, "", "/");
@@ -98,7 +114,7 @@ function item(index = 0) {
     personal_version: 0,
   };
 }
-function mount() {
+function mount(view = <FilesPage />) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -106,9 +122,7 @@ function mount() {
   return {
     client,
     ...render(
-      <QueryClientProvider client={client}>
-        <FilesPage />
-      </QueryClientProvider>,
+      <QueryClientProvider client={client}>{view}</QueryClientProvider>,
     ),
   };
 }
@@ -259,17 +273,24 @@ it("waits for server confirmation before showing personal tags and preserves org
     personal_folder: "Teaching",
     personal_version: 1,
   };
-  await act(() =>
-    finish({
-      data: { tags: current.personal_tags, folder: "Teaching", version: 1 },
-      error: null,
-    }),
-  );
-  await waitFor(() =>
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
-  );
-  expect(screen.getByText("Linux")).toBeInTheDocument();
-  expect(screen.getByText("Your virtual folder: Teaching")).toBeInTheDocument();
+  vi.useFakeTimers();
+  try {
+    await act(async () => {
+      finish({
+        data: { tags: current.personal_tags, folder: "Teaching", version: 1 },
+        error: null,
+      });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await drainTargetQueries();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByText("Linux")).toBeInTheDocument();
+    expect(
+      screen.getByText("Your virtual folder: Teaching"),
+    ).toBeInTheDocument();
+  } finally {
+    vi.useRealTimers();
+  }
 });
 it("retains stale drafts and disables offline organisation changes", async () => {
   state.rpc.mockImplementation((name) =>
@@ -361,9 +382,21 @@ it("retains oversized tag input locally without sending invalid personal metadat
   ).toBe(false);
 });
 
+// A result notification can commit a new query observer, whose own transport
+// completion schedules a second notification. Flush both real scheduler stages.
+async function drainTargetQueries() {
+  // Fake timers schedule notifications created inside another timer on the
+  // next millisecond. Advance that scheduler tick, not an application timeout.
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1);
+  });
+}
 // Hold the actual filtered request after advancing the real debounce explicitly.
 // The old result deliberately contains this file before the new filter settles.
-function pendingFilter() {
+function pendingFilter(overrides: Record<string, unknown> = {}) {
   let finishFilter!: (value: unknown) => void;
   const filter = new Promise((resolve) => {
     finishFilter = resolve;
@@ -372,7 +405,11 @@ function pendingFilter() {
   const mutation = new Promise((resolve) => {
     finishMutation = resolve;
   });
-  const initial = { ...item(), personal_tags: ["visible-filter"] };
+  const initial = {
+    ...item(),
+    personal_tags: ["visible-filter"],
+    ...overrides,
+  };
   state.rpc.mockImplementation((name, args) => {
     if (name !== "document_discovery") return mutation;
     if (!args.p_tag)
@@ -409,6 +446,7 @@ it("keeps the identical archive confirmation across pending and empty filter res
     fireEvent.click(screen.getByRole("button", { name: "Archivieren" }));
     const dialog = screen.getByRole("dialog");
     await advanceFilter();
+    await drainTargetQueries();
     expect(screen.getByRole("dialog")).toBe(dialog);
     expect(document.querySelectorAll(".document-list > li")).toHaveLength(0);
     await act(async () => {
@@ -418,6 +456,7 @@ it("keeps the identical archive confirmation across pending and empty filter res
       });
       await vi.advanceTimersByTimeAsync(0);
     });
+    await drainTargetQueries();
     expect(screen.getByRole("dialog")).toBe(dialog);
     fireEvent.click(
       within(dialog).getByRole("button", { name: "Archivieren" }),
@@ -428,6 +467,7 @@ it("keeps the identical archive confirmation across pending and empty filter res
     expect(
       within(dialog).getByRole("button", { name: "Archivieren" }),
     ).toBeDisabled();
+    await drainTargetQueries();
     expect(screen.getByRole("dialog")).toBe(dialog);
     expect(
       state.rpc.mock.calls.filter(([name]) => name === "rename_document"),
@@ -445,6 +485,7 @@ it("keeps the identical archive confirmation across pending and empty filter res
       fixture.finishMutation({ data: null, error: null });
       await vi.advanceTimersByTimeAsync(0);
     });
+    await drainTargetQueries();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(
       state.rpc.mock.calls.filter(([name]) => name === "rename_document"),
@@ -476,6 +517,7 @@ it("preserves the exact organisation editor and its private draft while a new fi
       { target: { value: "Private folder" } },
     );
     await advanceFilter();
+    await drainTargetQueries();
     expect(screen.getByRole("dialog")).toBe(dialog);
     expect(within(dialog).getByLabelText("Eigene Tags")).toBe(input);
     expect(input).toHaveValue("PRIVATE captured draft");
@@ -487,6 +529,7 @@ it("preserves the exact organisation editor and its private draft while a new fi
       });
       await vi.advanceTimersByTimeAsync(0);
     });
+    await drainTargetQueries();
     expect(screen.getByRole("dialog")).toBe(dialog);
     expect(input).toHaveValue("PRIVATE captured draft");
     fireEvent.click(
@@ -495,6 +538,7 @@ it("preserves the exact organisation editor and its private draft while a new fi
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
+    await drainTargetQueries();
     expect(screen.getByRole("dialog")).toBe(dialog);
     expect(
       state.rpc.mock.calls.filter(
@@ -524,6 +568,7 @@ it("preserves the exact organisation editor and its private draft while a new fi
       });
       await vi.advanceTimersByTimeAsync(0);
     });
+    await drainTargetQueries();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(
       state.rpc.mock.calls.filter(
@@ -565,6 +610,8 @@ it.each(["archive", "organise"] as const)(
         fixture.finishFilter({ data: null, error: { code: "42501" } });
         await vi.advanceTimersByTimeAsync(0);
       });
+      await drainTargetQueries();
+      await drainTargetQueries();
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
       expect(
         screen.queryByText(fixture.initial.original_name),
@@ -601,6 +648,7 @@ it("hides the held archive dialog on a malformed filtered response without sendi
       });
       await vi.advanceTimersByTimeAsync(0);
     });
+    await drainTargetQueries();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(
       screen.queryByText(fixture.initial.original_name),
@@ -612,3 +660,685 @@ it("hides the held archive dialog on a malformed filtered response without sendi
     vi.useRealTimers();
   }
 });
+
+function openCaptured(mode: "archive" | "organise", filename: string) {
+  if (mode === "archive") {
+    fireEvent.click(screen.getByLabelText(`Dateiname: ${filename}`));
+    const row = screen.getByText(filename).closest("li")!;
+    fireEvent.click(within(row).getByRole("button", { name: "Archivieren" }));
+  } else {
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `Persönlich organisieren: ${filename}`,
+      }),
+    );
+    fireEvent.change(screen.getByLabelText("Eigene Tags"), {
+      target: { value: "PRIVATE room draft" },
+    });
+  }
+  return screen.getByRole("dialog");
+}
+const roomFields = {
+  scope: "room" as const,
+  room_id: "47000000-0000-4000-8000-000000000099",
+};
+it.each(["archive", "organise"] as const)(
+  "discards captured room %s after a successful empty list and exact RLS null, without a write",
+  async (mode) => {
+    const fixture = pendingFilter(roomFields);
+    state.exact.mockReturnValue(response(fixture.initial));
+    mount();
+    await screen.findByText(fixture.initial.original_name);
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(screen.getByLabelText("Eigenes Tag filtern"), {
+        target: { value: "visible-filter" },
+      });
+      openCaptured(mode, fixture.initial.original_name);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(state.exact).toHaveBeenCalledTimes(1);
+      await advanceFilter();
+      state.exact.mockReturnValue(response(null));
+      await act(async () => {
+        fixture.finishFilter({
+          data: { items: [], has_more: false, next_cursor: null },
+          error: null,
+        });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      await drainTargetQueries();
+      await drainTargetQueries();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByDisplayValue("PRIVATE room draft"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(fixture.initial.original_name),
+      ).not.toBeInTheDocument();
+      expect(state.exact).toHaveBeenCalledTimes(2);
+      expect(
+        state.exact.mock.calls.every(([id]) => id === fixture.initial.id),
+      ).toBe(true);
+      expect(
+        state.rpc.mock.calls.every(([name]) => name === "document_discovery"),
+      ).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);
+it.each(["archive", "organise"] as const)(
+  "retains the exact %s DOM/draft across empty filters, waits for the bounded fresh target grant and never writes early",
+  async (mode) => {
+    const fixture = pendingFilter(roomFields);
+    state.exact.mockReturnValue(response(fixture.initial));
+    mount();
+    await screen.findByText(fixture.initial.original_name);
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(screen.getByLabelText("Eigenes Tag filtern"), {
+        target: { value: "visible-filter" },
+      });
+      const dialog = openCaptured(mode, fixture.initial.original_name);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      await advanceFilter();
+      let finish!: (value: unknown) => void;
+      const held = new Promise((resolve) => {
+        finish = resolve;
+      });
+      state.exact.mockReturnValue(held);
+      await act(async () => {
+        fixture.finishFilter({
+          data: { items: [], has_more: false, next_cursor: null },
+          error: null,
+        });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      await drainTargetQueries();
+      expect(screen.getByRole("dialog")).toBe(dialog);
+      const save = within(dialog).getByRole("button", {
+        name: mode === "archive" ? "Archivieren" : "Eigene Ordnung speichern",
+      });
+      expect(save).toBeDisabled();
+      fireEvent.click(save);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(
+        state.rpc.mock.calls.every(([name]) => name === "document_discovery"),
+      ).toBe(true);
+      expect(state.exact).toHaveBeenCalledTimes(2);
+      await act(async () => {
+        finish({ data: fixture.initial, error: null });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      await drainTargetQueries();
+      expect(screen.getByRole("dialog")).toBe(dialog);
+      expect(save).toBeEnabled();
+      if (mode === "organise")
+        expect(screen.getByLabelText("Eigene Tags")).toHaveValue(
+          "PRIVATE room draft",
+        );
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);
+it.each([
+  [
+    "deleted",
+    { data: { ...item(), deleted_at: "2026-11-16T00:00:00Z" }, error: null },
+  ],
+  ["wrong identity", { data: item(1), error: null }],
+  ["permission denial", { data: null, error: { code: "42501" } }],
+] as const)(
+  "removes both captured metadata and private organisation draft on exact %s",
+  async (_name, result) => {
+    const fixture = pendingFilter(roomFields);
+    state.exact.mockReturnValue(response(fixture.initial));
+    const { client } = mount();
+    await screen.findByText(fixture.initial.original_name);
+    vi.useFakeTimers();
+    try {
+      openCaptured("organise", fixture.initial.original_name);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      state.exact.mockReturnValue(Promise.resolve(result));
+      // Same clock instant and a new successful list: dataUpdateCount, not a newly
+      // allocated rows array or timestamp sleep, triggers the exact ACL check.
+      state.rpc.mockImplementation(() =>
+        response({ items: [], has_more: false, next_cursor: null }),
+      );
+      await act(async () => {
+        await client.invalidateQueries({ queryKey: ["documents"] });
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      await drainTargetQueries();
+      await drainTargetQueries();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByDisplayValue("PRIVATE room draft"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(fixture.initial.original_name),
+      ).not.toBeInTheDocument();
+      expect(state.exact).toHaveBeenCalledTimes(2);
+      expect(
+        state.rpc.mock.calls.every(([name]) => name === "document_discovery"),
+      ).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);
+it("rechecks only the open document on focus and hides a specifically revoked row without refreshing the catalogue", async () => {
+  const fixture = pendingFilter(roomFields);
+  state.exact.mockReturnValue(response(fixture.initial));
+  mount();
+  await screen.findByText(fixture.initial.original_name);
+  vi.useFakeTimers();
+  try {
+    openCaptured("organise", fixture.initial.original_name);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(state.exact).toHaveBeenCalledTimes(1);
+    state.exact.mockReturnValue(response(null));
+    await act(async () => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await drainTargetQueries();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(fixture.initial.original_name),
+    ).not.toBeInTheDocument();
+    expect(state.exact).toHaveBeenCalledTimes(2);
+    expect(
+      state.rpc.mock.calls.filter(([name]) => name === "document_discovery"),
+    ).toHaveLength(1);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it.each(["archive", "organise"] as const)(
+  "a first-ever pending exact read cannot authorise a newer %s epoch after late old grant",
+  async (mode) => {
+    const fixture = pendingFilter(roomFields);
+    let oldFinish!: (value: unknown) => void,
+      newFinish!: (value: unknown) => void;
+    const oldRead = new Promise((resolve) => {
+        oldFinish = resolve;
+      }),
+      newRead = new Promise((resolve) => {
+        newFinish = resolve;
+      });
+    state.exact.mockReset();
+    state.exact.mockReturnValueOnce(oldRead).mockReturnValue(newRead);
+    mount();
+    await screen.findByText(fixture.initial.original_name);
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(screen.getByLabelText("Eigenes Tag filtern"), {
+        target: { value: "visible-filter" },
+      });
+      const dialog = openCaptured(mode, fixture.initial.original_name);
+      await drainTargetQueries();
+      expect(state.exact).toHaveBeenCalledTimes(1);
+      await advanceFilter();
+      await act(async () => {
+        fixture.finishFilter({
+          data: { items: [], has_more: false, next_cursor: null },
+          error: null,
+        });
+      });
+      await drainTargetQueries();
+      expect(state.exact).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole("dialog")).toBe(dialog);
+      expect(
+        within(dialog).getByRole("button", {
+          name: mode === "archive" ? "Archivieren" : "Eigene Ordnung speichern",
+        }),
+      ).toBeDisabled();
+      await act(async () => {
+        newFinish({ data: null, error: null });
+      });
+      await drainTargetQueries();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      await act(async () => {
+        oldFinish({ data: fixture.initial, error: null });
+      });
+      await drainTargetQueries();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(fixture.initial.original_name),
+      ).not.toBeInTheDocument();
+      expect(state.exact).toHaveBeenCalledTimes(2);
+      expect(
+        state.rpc.mock.calls.every(([name]) => name === "document_discovery"),
+      ).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);
+it.each(["archive", "organise"] as const)(
+  "discards protected %s state immediately when its mutation itself returns42501",
+  async (mode) => {
+    const record = { ...item(), ...roomFields };
+    state.rpc.mockImplementation((name) =>
+      name === "document_discovery"
+        ? response({ items: [record], has_more: false, next_cursor: null })
+        : response(null, { code: "42501" }),
+    );
+    state.exact.mockReturnValue(response(record));
+    mount();
+    await screen.findByText(record.original_name);
+    vi.useFakeTimers();
+    try {
+      const dialog = openCaptured(mode, record.original_name);
+      await drainTargetQueries();
+      fireEvent.click(
+        within(dialog).getByRole("button", {
+          name: mode === "archive" ? "Archivieren" : "Eigene Ordnung speichern",
+        }),
+      );
+      await drainTargetQueries();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.queryByText(record.original_name)).not.toBeInTheDocument();
+      expect(
+        screen.queryByDisplayValue("PRIVATE room draft"),
+      ).not.toBeInTheDocument();
+      expect(
+        state.rpc.mock.calls.filter(([name]) => name !== "document_discovery"),
+      ).toHaveLength(1);
+      expect(state.exact).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);
+it.each(["40001", undefined] as const)(
+  "preserves captured private drafts on a non-revocation mutation error %s",
+  async (code) => {
+    state.rpc.mockImplementation((name) =>
+      name === "document_discovery"
+        ? response({ items: [item()], has_more: false, next_cursor: null })
+        : response(null, { code, message: "Fictional uncertain error" }),
+    );
+    mount();
+    await screen.findByText(item().original_name);
+    vi.useFakeTimers();
+    try {
+      const dialog = openCaptured("organise", item().original_name);
+      await drainTargetQueries();
+      fireEvent.click(
+        within(dialog).getByRole("button", {
+          name: "Eigene Ordnung speichern",
+        }),
+      );
+      await drainTargetQueries();
+      expect(screen.getByRole("dialog")).toBe(dialog);
+      expect(screen.getByLabelText("Eigene Tags")).toHaveValue(
+        "PRIVATE room draft",
+      );
+      expect(
+        state.rpc.mock.calls.filter(
+          ([name]) => name === "save_document_organisation",
+        ),
+      ).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);
+it("a specifically quarantined filename stays hidden during a deferred background list refresh", async () => {
+  const record = { ...item(), ...roomFields };
+  state.rpc.mockReturnValue(
+    response({ items: [record], has_more: false, next_cursor: null }),
+  );
+  state.exact.mockReturnValue(response(record));
+  const { client } = mount();
+  await screen.findByText(record.original_name);
+  vi.useFakeTimers();
+  try {
+    openCaptured("organise", record.original_name);
+    await drainTargetQueries();
+    state.exact.mockReturnValue(response(null));
+    await act(async () => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+    await drainTargetQueries();
+    expect(screen.queryByText(record.original_name)).not.toBeInTheDocument();
+    let finish!: (value: unknown) => void;
+    const held = new Promise((resolve) => {
+      finish = resolve;
+    });
+    state.rpc.mockReturnValue(
+      Object.assign(held, {
+        abortSignal() {
+          return this;
+        },
+      }),
+    );
+    let refresh!: Promise<void>;
+    await act(async () => {
+      refresh = client.invalidateQueries({ queryKey: ["documents"] });
+    });
+    await drainTargetQueries();
+    expect(screen.queryByText(record.original_name)).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await act(async () => {
+      finish({
+        data: { items: [], has_more: false, next_cursor: null },
+        error: null,
+      });
+      await refresh;
+    });
+    await drainTargetQueries();
+    expect(screen.queryByText(record.original_name)).not.toBeInTheDocument();
+    expect(state.exact).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+it.each(["denied", "confirmed"] as const)(
+  "a late %s archive outcome targets its original file and preserves a newer rename draft",
+  async (outcome) => {
+    const first = item(),
+      second = item(1);
+    let current = [first, second],
+      finish!: (value: unknown) => void;
+    const held = new Promise((resolve) => {
+      finish = resolve;
+    });
+    state.rpc.mockImplementation((name) =>
+      name === "document_discovery"
+        ? response({ items: current, has_more: false, next_cursor: null })
+        : held,
+    );
+    mount();
+    await screen.findByText(first.original_name);
+    vi.useFakeTimers();
+    try {
+      const old = openCaptured("archive", first.original_name);
+      await drainTargetQueries();
+      fireEvent.click(within(old).getByRole("button", { name: "Archivieren" }));
+      await drainTargetQueries();
+      fireEvent.click(within(old).getByRole("button", { name: "Schließen" }));
+      fireEvent.click(
+        screen.getByLabelText(`Dateiname: ${second.original_name}`),
+      );
+      const row = screen.getByText(second.original_name).closest("li")!;
+      fireEvent.click(within(row).getByRole("button", { name: "Umbenennen" }));
+      const newer = screen.getByRole("dialog");
+      fireEvent.change(within(newer).getByLabelText("Dateiname"), {
+        target: { value: "PRIVATE newer rename draft" },
+      });
+      await drainTargetQueries();
+      current = [second];
+      await act(async () => {
+        finish({
+          data: null,
+          error: outcome === "denied" ? { code: "42501" } : null,
+        });
+      });
+      await drainTargetQueries();
+      expect(screen.getByRole("dialog")).toBe(newer);
+      expect(within(newer).getByLabelText("Dateiname")).toHaveValue(
+        "PRIVATE newer rename draft",
+      );
+      expect(
+        state.rpc.mock.calls.filter(([name]) => name === "rename_document"),
+      ).toEqual([
+        [
+          "rename_document",
+          { p_id: first.id, p_name: first.original_name, p_delete: true },
+        ],
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);
+it.each(["subject", "job"] as const)(
+  "rechecks a captured %s target after a same-clock successful scoped-list response",
+  async (scope) => {
+    const record = { ...item(), ...roomFields };
+    state.reads.mockReturnValue({ data: [record], error: null });
+    state.exact.mockReturnValue(response(record));
+    const { client } = mount(
+      scope === "subject" ? (
+        <SubjectDocuments ownerId={actor} />
+      ) : (
+        <JobDocuments
+          jobId="47000000-0000-4000-8000-000000000098"
+          canManage={false}
+        />
+      ),
+    );
+    await screen.findByText(record.original_name);
+    vi.useFakeTimers();
+    try {
+      const listKey = client
+        .getQueryCache()
+        .findAll({ queryKey: ["documents"] })[0].queryKey;
+      const before = client.getQueryState(listKey)!;
+      openCaptured("organise", record.original_name);
+      await drainTargetQueries();
+      expect(state.exact).toHaveBeenCalledTimes(1);
+      state.reads.mockReturnValue({ data: [], error: null });
+      state.exact.mockReturnValue(response(null));
+      vi.setSystemTime(before.dataUpdatedAt);
+      await act(async () => {
+        await client.invalidateQueries({ queryKey: ["documents"] });
+      });
+      // dataUpdatedAt can stay exactly equal. The successful cache update
+      // counter must still create a new bounded target-authorisation epoch.
+      expect(client.getQueryState(listKey)!.dataUpdatedAt).toBe(
+        before.dataUpdatedAt,
+      );
+      expect(client.getQueryState(listKey)!.dataUpdateCount).toBe(
+        before.dataUpdateCount + 1,
+      );
+      await drainTargetQueries();
+      await drainTargetQueries();
+      expect(state.exact).toHaveBeenCalledTimes(2);
+      expect(state.exact.mock.calls.every(([id]) => id === record.id)).toBe(
+        true,
+      );
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(
+        screen.queryByDisplayValue("PRIVATE room draft"),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText(record.original_name)).not.toBeInTheDocument();
+      expect(state.rpc).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);
+it.each(["observed", "previous-visit"] as const)(
+  "a prior %s filter cache cannot renew a known-revoked filename, but a newer successful response can",
+  async (cacheKind) => {
+    const record = { ...item(), ...roomFields };
+    state.rpc.mockReturnValue(
+      response({ items: [record], has_more: false, next_cursor: null }),
+    );
+    state.exact.mockReturnValue(response(record));
+    const { client } = mount();
+    if (cacheKind === "previous-visit")
+      client.setQueryData(
+        documentDiscoveryQuery(actor, {
+          search: "prior",
+          tag: "",
+          folder: null,
+        }).queryKey,
+        {
+          pages: [{ items: [record], has_more: false, next_cursor: null }],
+          pageParams: [null],
+        },
+      );
+    await screen.findByText(record.original_name);
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(screen.getByLabelText("Eigenes Tag filtern"), {
+        target: { value: "visible-filter" },
+      });
+      await advanceFilter();
+      await drainTargetQueries();
+      openCaptured("organise", record.original_name);
+      await drainTargetQueries();
+      state.exact.mockReturnValue(response(null));
+      await act(async () => {
+        focusManager.setFocused(false);
+        focusManager.setFocused(true);
+      });
+      await drainTargetQueries();
+      expect(screen.queryByText(record.original_name)).not.toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      const calls = state.rpc.mock.calls.length;
+      fireEvent.change(screen.getByLabelText("Eigenes Tag filtern"), {
+        target: { value: "" },
+      });
+      if (cacheKind === "previous-visit")
+        fireEvent.change(
+          screen.getByRole("searchbox", { name: "Dateien suchen" }),
+          { target: { value: "prior" } },
+        );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(250);
+      });
+      await drainTargetQueries();
+      expect(state.rpc).toHaveBeenCalledTimes(calls);
+      expect(screen.queryByText(record.original_name)).not.toBeInTheDocument();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Dateiliste aktualisieren" }),
+      );
+      await drainTargetQueries();
+      expect(state.rpc).toHaveBeenCalledTimes(calls + 1);
+      expect(screen.getByText(record.original_name)).toBeInTheDocument();
+      expect(state.exact).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);
+it("appending a genuinely fresh page cannot renew the known-revoked cached prefix", async () => {
+  const first = { ...item(), ...roomFields },
+    second = item(1);
+  state.rpc.mockImplementation((_name, args) =>
+    response(
+      args.p_before_id
+        ? { items: [second], has_more: false, next_cursor: null }
+        : {
+            items: [first],
+            has_more: true,
+            next_cursor: { at: first.created_at, id: first.id },
+          },
+    ),
+  );
+  state.exact.mockReturnValue(response(first));
+  mount();
+  await screen.findByText(first.original_name);
+  vi.useFakeTimers();
+  try {
+    openCaptured("organise", first.original_name);
+    await drainTargetQueries();
+    state.exact.mockReturnValue(response(null));
+    await act(async () => {
+      focusManager.setFocused(false);
+      focusManager.setFocused(true);
+    });
+    await drainTargetQueries();
+    expect(screen.queryByText(first.original_name)).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weitere Dateien laden" }),
+    );
+    await drainTargetQueries();
+    expect(screen.getByText(second.original_name)).toBeInTheDocument();
+    expect(screen.queryByText(first.original_name)).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(state.exact).toHaveBeenCalledTimes(2);
+    expect(state.rpc).toHaveBeenCalledTimes(2);
+    expect(
+      state.rpc.mock.calls.every(([name]) => name === "document_discovery"),
+    ).toBe(true);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+it.each(["denied", "confirmed"] as const)(
+  "a late %s organisation outcome cannot close or erase another file's newer draft",
+  async (outcome) => {
+    const first = { ...item(), ...roomFields },
+      second = item(1);
+    let current = [first, second],
+      finish!: (value: unknown) => void;
+    const held = new Promise((resolve) => {
+      finish = resolve;
+    });
+    state.rpc.mockImplementation((name) =>
+      name === "document_discovery"
+        ? response({ items: current, has_more: false, next_cursor: null })
+        : held,
+    );
+    mount();
+    await screen.findByText(first.original_name);
+    vi.useFakeTimers();
+    try {
+      const old = openCaptured("organise", first.original_name);
+      await drainTargetQueries();
+      fireEvent.click(
+        within(old).getByRole("button", { name: "Eigene Ordnung speichern" }),
+      );
+      await drainTargetQueries();
+      state.exact.mockImplementation((id: string) =>
+        response(id === first.id ? null : second),
+      );
+      await act(async () => {
+        focusManager.setFocused(false);
+        focusManager.setFocused(true);
+      });
+      await drainTargetQueries();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      const newer = openCaptured("organise", second.original_name);
+      fireEvent.change(within(newer).getByLabelText("Eigene Tags"), {
+        target: { value: "PRIVATE newer organisation draft" },
+      });
+      await drainTargetQueries();
+      current = [second];
+      await act(async () => {
+        finish(
+          outcome === "denied"
+            ? { data: null, error: { code: "42501" } }
+            : {
+                data: { tags: ["saved first"], folder: "", version: 1 },
+                error: null,
+              },
+        );
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      await drainTargetQueries();
+      expect(screen.getByRole("dialog")).toBe(newer);
+      expect(within(newer).getByLabelText("Eigene Tags")).toHaveValue(
+        "PRIVATE newer organisation draft",
+      );
+      const writes = state.rpc.mock.calls.filter(
+        ([name]) => name === "save_document_organisation",
+      );
+      expect(writes).toHaveLength(1);
+      expect(writes[0][1].p_document_id).toBe(first.id);
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);

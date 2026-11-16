@@ -1,5 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  focusManager,
+} from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
   FileDown,
@@ -28,6 +33,7 @@ import {
   acceptedFiles,
   downloadDocument,
   documentsQuery,
+  documentQuery,
   maximumFileSize,
   saveDownload,
   uploadDocument,
@@ -256,12 +262,87 @@ function Versions({ file }: { file: PortalDocument }) {
     </>
   );
 }
+/** A captured target has an independent query generation per successful list
+ * epoch/focus. An older in-flight grant cannot satisfy the newer ACL check.
+ */
+function CapturedDocumentGuard({
+  file,
+  actor,
+  epoch,
+  onRevoked,
+  children,
+}: {
+  file: PortalDocument;
+  actor: string;
+  epoch?: string;
+  onRevoked: () => void;
+  children: (authorised: boolean, status: ReactNode) => ReactNode;
+}) {
+  const online = useOnline();
+  const [focusEpoch, setFocusEpoch] = useState(0);
+  useEffect(
+    () =>
+      focusManager.subscribe((focused) => {
+        if (focused) setFocusEpoch((previous) => previous + 1);
+      }),
+    [],
+  );
+  const base = documentQuery(actor, file.id);
+  const exact = useQuery({
+    ...base,
+    queryKey: [
+      ...base.queryKey,
+      "captured-dialog",
+      epoch ?? "opening",
+      String(focusEpoch),
+    ],
+    enabled: online,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
+  });
+  const valid = Boolean(
+    exact.data &&
+    typeof exact.data === "object" &&
+    exact.data.id === file.id &&
+    exact.data.deleted_at === null,
+  );
+  const rejected =
+    !exact.isFetching &&
+    ((exact.isSuccess && !valid) || documentPermissionDenied(exact.error));
+  useEffect(() => {
+    if (rejected) onRevoked();
+  }, [rejected, onRevoked]);
+  if (rejected) return null;
+  const authorised = online && exact.isSuccess && !exact.isFetching && valid;
+  return children(
+    authorised,
+    exact.isError ? (
+      <ErrorState retry={() => void exact.refetch()} />
+    ) : !authorised ? (
+      <Loading />
+    ) : null,
+  );
+}
+function documentPermissionDenied(error: unknown) {
+  return Boolean(
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    error.code === "42501",
+  );
+}
 function DocumentList({
   files,
   pending = false,
+  verificationEpoch,
+  renewalEpoch,
 }: {
   files: PortalDocument[];
   pending?: boolean;
+  verificationEpoch?: string;
+  renewalEpoch?: string;
 }) {
   const { t, i18n } = useTranslation("files");
   const { session } = useAuth();
@@ -271,29 +352,82 @@ function DocumentList({
   const [mode, setMode] = useState<
     "preview" | "versions" | "rename" | "archive" | "replace"
   >("preview");
-  const [name, setName] = useState("");
+  const [name, setName] = useState<{ id: string | null; value: string }>({
+    id: null,
+    value: "",
+  });
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [organising, setOrganising] = useState<PortalDocument | null>(null);
+  const [epochs, setEpochs] = useState<{
+    current?: string;
+    revision: number;
+    observed: Record<string, number>;
+  }>(() => ({
+    current: verificationEpoch,
+    revision: renewalEpoch === undefined ? 0 : 1,
+    observed: renewalEpoch === undefined ? {} : { [renewalEpoch]: 1 },
+  }));
+  const newRenewal =
+    renewalEpoch !== undefined && epochs.observed[renewalEpoch] === undefined;
+  if (
+    (verificationEpoch !== undefined && verificationEpoch !== epochs.current) ||
+    newRenewal
+  ) {
+    const revision = newRenewal ? epochs.revision + 1 : epochs.revision;
+    setEpochs({
+      current: verificationEpoch ?? epochs.current,
+      revision,
+      observed: newRenewal
+        ? { ...epochs.observed, [renewalEpoch]: revision }
+        : epochs.observed,
+    });
+  }
+  const currentEpoch = epochs.current;
+  const currentRevision =
+    renewalEpoch === undefined ? 0 : epochs.observed[renewalEpoch];
+  const [revokedAt, setRevokedAt] = useState<Record<string, number>>({});
+  // Returning to another already-observed filter cache is not a renewed grant.
+  // Only a genuinely newer successful response may restore quarantined rows.
+  const visibleFiles = files.filter(
+    (file) =>
+      !Object.hasOwn(revokedAt, file.id) ||
+      currentRevision > revokedAt[file.id],
+  );
+  const discardTarget = (id: string) => {
+    setRevokedAt((previous) => ({ ...previous, [id]: epochs.revision }));
+    setSelected((previous) => (previous?.id === id ? null : previous));
+    setOrganising((previous) => (previous?.id === id ? null : previous));
+    setName((previous) =>
+      previous.id === id ? { id: null, value: "" } : previous,
+    );
+  };
   const change = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (input: {
+      id: string;
+      name: string;
+      archive: boolean;
+    }) => {
       requireOnline();
       const { error } = await db().rpc("rename_document", {
-        p_id: selected!.id,
-        p_name: name,
-        p_delete: mode === "archive",
+        p_id: input.id,
+        p_name: input.name,
+        p_delete: input.archive,
       });
       if (error) throw error;
     },
-    onSuccess: async () => {
+    onSuccess: async (_result, input) => {
       await client.invalidateQueries({ queryKey: ["documents"] });
-      setSelected(null);
+      setSelected((previous) => (previous?.id === input.id ? null : previous));
+    },
+    onError: (error, input) => {
+      if (documentPermissionDenied(error)) discardTarget(input.id);
     },
   });
   const select = (file: PortalDocument, value: typeof mode) => {
     change.reset();
     setFailed(false);
-    setName(file.original_name);
+    setName({ id: file.id, value: file.original_name });
     setMode(value);
     setSelected(file);
   };
@@ -301,14 +435,14 @@ function DocumentList({
     <>
       {/* Empty results do not cancel an already captured operation. The
           explorer owns the access-error boundary and unmounts us on denial. */}
-      {!files.length && !pending && (
+      {!visibleFiles.length && !pending && (
         <div className="empty-state">
           <FolderOpen size={32} />
           <p>{t("empty")}</p>
         </div>
       )}
       <ul className="document-list">
-        {files.map((file) => (
+        {visibleFiles.map((file) => (
           <li key={file.id}>
             <div className="file-icon">
               <FolderOpen size={23} />
@@ -431,85 +565,137 @@ function DocumentList({
       </ul>
       {failed && <Notice kind="error">{t("error")}</Notice>}
       {organising && (
-        <DocumentOrganiser
-          key={`${organising.id}:${organising.personal_version}`}
+        <CapturedDocumentGuard
+          key={`organisation:${organising.id}:${organising.personal_version}`}
           file={organising}
-          onClose={() => setOrganising(null)}
-        />
+          actor={session!.user.id}
+          epoch={currentEpoch}
+          onRevoked={() => discardTarget(organising.id)}
+        >
+          {(authorised, accessStatus) => (
+            <DocumentOrganiser
+              file={organising}
+              onClose={() =>
+                setOrganising((current) =>
+                  current?.id === organising.id ? null : current,
+                )
+              }
+              authorised={authorised}
+              accessStatus={accessStatus}
+              onDenied={() => discardTarget(organising.id)}
+            />
+          )}
+        </CapturedDocumentGuard>
       )}
-      <Dialog
-        open={selected !== null}
-        onOpenChange={(open) => {
-          if (!open) setSelected(null);
-        }}
-        title={
-          mode === "archive"
-            ? t("archiveTitle")
-            : mode === "rename"
-              ? t("rename")
-              : mode === "replace"
-                ? t("replace")
-                : mode === "versions"
-                  ? t("versions")
-                  : t("preview")
-        }
-        description={
-          mode === "archive"
-            ? t("archiveDescription", { name: selected?.original_name })
-            : (selected?.original_name ?? "")
-        }
-      >
-        {selected && (
-          <>
-            {mode === "preview" ? (
-              <Preview
-                key={`${selected.id}:${selected.current_version_id}`}
-                file={selected}
-              />
-            ) : mode === "versions" ? (
-              <Versions file={selected} />
-            ) : mode === "replace" ? (
-              <FileUpload
-                context={{
-                  scope: selected.scope,
-                  roomId: selected.room_id ?? undefined,
-                  jobId: selected.job_id ?? undefined,
-                  kind: selected.kind,
-                  replaceId: selected.id,
-                  ownerId: selected.owner_id,
-                }}
-                onDone={() => setSelected(null)}
-              />
-            ) : (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  change.mutate();
-                }}
-              >
-                {mode === "rename" && (
-                  <Field id="document-name" label={t("name")}>
-                    <input
-                      id="document-name"
-                      value={name}
-                      maxLength={200}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                    />
-                  </Field>
-                )}
-                <Button
-                  disabled={!online || change.isPending}
-                  variant={mode === "archive" ? "danger" : "default"}
+      {selected && (
+        <CapturedDocumentGuard
+          key={`selected:${selected.id}:${mode}`}
+          file={selected}
+          actor={session!.user.id}
+          epoch={currentEpoch}
+          onRevoked={() => discardTarget(selected.id)}
+        >
+          {(authorised, accessStatus) => (
+            <Dialog
+              open={selected !== null}
+              onOpenChange={(open) => {
+                if (!open)
+                  setSelected((current) =>
+                    current?.id === selected.id ? null : current,
+                  );
+              }}
+              title={
+                mode === "archive"
+                  ? t("archiveTitle")
+                  : mode === "rename"
+                    ? t("rename")
+                    : mode === "replace"
+                      ? t("replace")
+                      : mode === "versions"
+                        ? t("versions")
+                        : t("preview")
+              }
+              description={
+                mode === "archive"
+                  ? t("archiveDescription", { name: selected?.original_name })
+                  : (selected?.original_name ?? "")
+              }
+            >
+              {accessStatus}
+              {selected && (
+                <fieldset
+                  disabled={!authorised}
+                  style={{ border: 0, padding: 0, margin: 0 }}
                 >
-                  {t(mode === "archive" ? "archive" : "rename")}
-                </Button>
-                {change.isError && <Notice kind="error">{t("error")}</Notice>}
-              </form>
-            )}
-          </>
-        )}
-      </Dialog>
+                  {mode === "preview" ? (
+                    <Preview
+                      key={`${selected.id}:${selected.current_version_id}`}
+                      file={selected}
+                    />
+                  ) : mode === "versions" ? (
+                    <Versions file={selected} />
+                  ) : mode === "replace" ? (
+                    <FileUpload
+                      context={{
+                        scope: selected.scope,
+                        roomId: selected.room_id ?? undefined,
+                        jobId: selected.job_id ?? undefined,
+                        kind: selected.kind,
+                        replaceId: selected.id,
+                        ownerId: selected.owner_id,
+                      }}
+                      onDone={() =>
+                        setSelected((current) =>
+                          current?.id === selected.id ? null : current,
+                        )
+                      }
+                    />
+                  ) : (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (authorised)
+                          change.mutate({
+                            id: selected.id,
+                            name: name.value,
+                            archive: mode === "archive",
+                          });
+                      }}
+                    >
+                      {mode === "rename" && (
+                        <Field id="document-name" label={t("name")}>
+                          <input
+                            id="document-name"
+                            value={name.value}
+                            maxLength={200}
+                            onChange={(e) =>
+                              setName({
+                                id: selected.id,
+                                value: e.target.value,
+                              })
+                            }
+                            required
+                          />
+                        </Field>
+                      )}
+                      <Button
+                        disabled={!online || change.isPending}
+                        variant={mode === "archive" ? "danger" : "default"}
+                      >
+                        {t(mode === "archive" ? "archive" : "rename")}
+                      </Button>
+                      {change.isError &&
+                        change.variables?.id === selected.id && (
+                          <Notice kind="error">{t("error")}</Notice>
+                        )}
+                    </form>
+                  )}
+                </fieldset>
+              )}
+            </Dialog>
+          )}
+        </CapturedDocumentGuard>
+      )}
     </>
   );
 }
@@ -521,10 +707,21 @@ export function SubjectDocuments({
   kind?: string;
 }) {
   const { session } = useAuth();
-  const files = useQuery(documentsQuery(session!.user.id, ownerId, kind));
+  const client = useQueryClient();
+  const options = documentsQuery(session!.user.id, ownerId, kind);
+  const files = useQuery(options);
+  const epoch = `${JSON.stringify(options.queryKey)}:${client.getQueryState(options.queryKey)?.dataUpdateCount}`;
   if (files.isPending) return <Loading />;
   if (files.isError) return <ErrorState />;
-  return <DocumentList files={files.data} />;
+  return (
+    <DocumentList
+      files={files.data}
+      verificationEpoch={epoch}
+      renewalEpoch={
+        files.isFetchedAfterMount && !files.isFetching ? epoch : undefined
+      }
+    />
+  );
 }
 export function JobDocuments({
   jobId,
@@ -535,9 +732,10 @@ export function JobDocuments({
 }) {
   const { t } = useTranslation("files");
   const { session } = useAuth();
-  const files = useQuery(
-    documentsQuery(session!.user.id, undefined, undefined, jobId),
-  );
+  const client = useQueryClient();
+  const options = documentsQuery(session!.user.id, undefined, undefined, jobId);
+  const files = useQuery(options);
+  const epoch = `${JSON.stringify(options.queryKey)}:${client.getQueryState(options.queryKey)?.dataUpdateCount}`;
   const [scope, setScope] = useState<UploadContext["scope"]>("job_before");
   return (
     <section className="panel job-documents">
@@ -565,7 +763,13 @@ export function JobDocuments({
       ) : files.isError ? (
         <ErrorState />
       ) : (
-        <DocumentList files={files.data} />
+        <DocumentList
+          files={files.data}
+          verificationEpoch={epoch}
+          renewalEpoch={
+            files.isFetchedAfterMount && !files.isFetching ? epoch : undefined
+          }
+        />
       )}
     </section>
   );
@@ -599,7 +803,14 @@ export function FilesPage() {
       />
       <section className="panel">
         <DocumentExplorer key={session!.user.id} actor={session!.user.id}>
-          {(rows, pending) => <DocumentList files={rows} pending={pending} />}
+          {(rows, pending, epoch, renewalEpoch) => (
+            <DocumentList
+              files={rows}
+              pending={pending}
+              verificationEpoch={epoch}
+              renewalEpoch={renewalEpoch}
+            />
+          )}
         </DocumentExplorer>
       </section>
       <Dialog
