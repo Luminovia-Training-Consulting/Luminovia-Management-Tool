@@ -361,6 +361,75 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
         console.log(
           `INFO ${mode}: actual Formal Amendments absent; fallback verified, explicit local module fixtures enable both-order integration`,
         );
+      await check(
+        "a captured zero regular share confirms online and forecasts zero accepted net with unchanged gross",
+        async () => {
+          const before = (await forecast()).months.find(
+            (row) => row.month === "2058-01-01" && row.currency === "AUD",
+          );
+          // This explicit fictional policy is a valid product boundary, not a
+          // modified claim or hand-built financial snapshot. Capture it through
+          // the actual publication and authoritative online claim transaction.
+          await call(
+            admin,
+            "public.configure_compensation_policy(0,61,1)",
+            "aal2",
+          );
+          const zero = await make({ day: 25 });
+          assert.equal(zero.total, 0);
+          const captured = await original(zero);
+          assert.equal(
+            await sql(
+              `select total_amount from public.job_claims where id=${q(zero.claim)}`,
+            ),
+            "0.00",
+          );
+          assert.equal(
+            await sql(
+              `select lecturer_net_total_amount from private.claim_revenue_ledger where claim_id=${q(zero.claim)}`,
+            ),
+            "0.00",
+          );
+          const row = (await forecast()).months.find(
+            (item) => item.month === "2058-01-01" && item.currency === "AUD",
+          );
+          assert.equal(
+            row.accepted_lecturer_cost,
+            before?.accepted_lecturer_cost ?? 0,
+          );
+          assert.equal(
+            row.accepted_gross_known,
+            (before?.accepted_gross_known ?? 0) + 200,
+          );
+          assert.equal(
+            row.accepted_margin_known,
+            (before?.accepted_margin_known ?? 0) + 200,
+          );
+          assert.equal(await original(zero), captured);
+        },
+      );
+      await check(
+        "null, negative and nonfinite optional snapshots fail closed without changing the actual installed helper",
+        async () => {
+          const definition = () =>
+            sql(
+              "select coalesce(pg_get_functiondef(to_regprocedure('private.effective_assignment(uuid)')),'ABSENT')",
+            );
+          const before = await definition();
+          // Fault injection is confined to an uncommitted test transaction.
+          // Every expected SQL error rolls back the temporary helper replacement;
+          // actual module files, accepted agreements and ledgers are untouched.
+          for (const value of [null, -0.01, "NaN", "Infinity", "-Infinity"])
+            await assert.rejects(
+              sql(
+                `begin;create or replace function private.effective_assignment(p_claim uuid)returns jsonb language sql stable security definer set search_path=''as $fault$select ${q(JSON.stringify({ total_amount: value }))}::jsonb$fault$;select private.forecast_assignment_total(${q(fixture.claim)});rollback;`,
+              ),
+              /55000/,
+            );
+          assert.equal(await definition(), before);
+          assert.equal(await original(fixture), immutableBefore);
+        },
+      );
       console.log(
         `Verified ${checks} forecast groups (${mode}); owned disposable database cleanup follows.`,
       );

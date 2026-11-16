@@ -11,8 +11,10 @@ The independently delivered Formal Amendments module defines
 immutable `private.assignment_amendments.accepted` value ordered by amendment
 version, or the original claim total when no amendment exists. The bridge's
 ungranted `private.forecast_assignment_total(uuid)` resolves that exact helper
-at runtime. Without the module it reads the original claim. Invalid effective
-totals fail rather than falling back to an obsolete agreement. Both install
+at runtime. Without the module it reads the original claim. Valid zero net
+compensation remains zero, including a captured role policy share of 0%.
+Null, negative and nonfinite effective totals fail rather than falling back to
+an obsolete agreement. Both install
 orders work without a captured predecessor or optional installation hook.
 
 The commissioned amendment contract in migration
@@ -32,7 +34,9 @@ online publication, claims and amendment RPCs. Its default run checks current
 source, including the fallback when Formal Amendments is absent. With the
 actual module installed, it also checks independent consent/application,
 price and month changes, multiple amendment versions, preserved original
-claim/revenue/session history, and separate original currencies.
+claim/revenue/session history, and separate original currencies. All modes also
+exercise a real zero-share online claim and rollback-only invalid snapshot
+faults, without changing actual accepted evidence or the installed helper.
 
 To test both installation orders before that module is merged, place its exact
 two public source migrations (`*_formal_change_requests.sql` and

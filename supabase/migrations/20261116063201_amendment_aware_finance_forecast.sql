@@ -18,7 +18,8 @@ begin
   -- a caller string. Keep absent optional SQL out of static body resolution.
   execute format('select (%s($1)->>''total_amount'')::numeric',effective_function::oid::regproc) into result using p_claim;
  end if;
- if result is null or result<=0 or result::text in('NaN','Infinity','-Infinity') then
+ -- Accepted zero net is valid (including a captured regular role share of 0%).
+ if result is null or result<0 or result::text in('NaN','Infinity','-Infinity') then
   raise exception 'Valid effective accepted compensation required' using errcode='55000';
  end if;
  return result;
