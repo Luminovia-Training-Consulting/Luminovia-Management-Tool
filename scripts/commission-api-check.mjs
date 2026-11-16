@@ -292,6 +292,82 @@ try {
     ).error,
     "Cross-org request denied",
   );
+  // A client may cancel an unpublished request only within its own organisation.
+  // Retrying the committed cancellation must preserve one audit record and never create an offer.
+  const cancellation = await checked(
+    client.client.rpc("create_client_request", {
+      p_organisation_id: org,
+      p_payload: payload(7),
+      p_client_id: randomUUID(),
+    }),
+    "Create request for real cancellation workflow",
+  );
+  assert.equal(
+    (
+      await other.client.rpc("cancel_client_request", {
+        p_request_id: cancellation,
+      })
+    ).error?.code,
+    "42501",
+    "Other client cannot cancel cross-organisation request",
+  );
+  assert.equal(
+    (
+      await lecturer.client.rpc("cancel_client_request", {
+        p_request_id: cancellation,
+      })
+    ).error?.code,
+    "42501",
+    "Lecturer cannot cancel a client request",
+  );
+  assert.equal(
+    (
+      await checked(
+        client.client.rpc("client_requests"),
+        "Rejected cancellation preserves submitted request",
+      )
+    ).find((r) => r.id === cancellation).status,
+    "submitted",
+  );
+  await checked(
+    client.client.rpc("cancel_client_request", { p_request_id: cancellation }),
+    "Client cancels own unsubmitted-to-market request",
+  );
+  await checked(
+    client.client.rpc("cancel_client_request", { p_request_id: cancellation }),
+    "Cancelled request retry is idempotent",
+  );
+  const cancelled = (
+    await checked(
+      client.client.rpc("client_requests"),
+      "Read cancelled request",
+    )
+  ).find((r) => r.id === cancellation);
+  assert.equal(cancelled.status, "cancelled");
+  assert.equal(cancelled.job_id, null);
+  assert.equal(
+    (
+      await admin.client.rpc("publish_client_request", {
+        p_request_id: cancellation,
+        p_requires_contract: false,
+      })
+    ).error?.code,
+    "22023",
+    "Cancelled request cannot be published",
+  );
+  const cancelAudit = await checked(
+    service
+      .from("audit_events")
+      .select("id")
+      .eq("action", "client.request_cancelled")
+      .eq("resource_id", cancellation),
+    "Read actual cancellation audit",
+  );
+  assert.equal(
+    cancelAudit.length,
+    1,
+    "Retry preserves a single cancellation audit",
+  );
   const requestKey = randomUUID(),
     requestArgs = {
       p_organisation_id: org,
@@ -334,6 +410,25 @@ try {
     "Publish request with private fictional test policy",
   );
   jobs.push(job);
+  // Once published, only the separate audited job lifecycle may change accepted availability.
+  assert.equal(
+    (
+      await client.client.rpc("cancel_client_request", {
+        p_request_id: request,
+      })
+    ).error?.code,
+    "22023",
+    "A published request must use audited job cancellation, not erase the published offer",
+  );
+  assert.equal(
+    (
+      await checked(
+        client.client.rpc("client_requests"),
+        "Rejected cancellation preserves published request",
+      )
+    ).find((r) => r.id === request).job_id,
+    job,
+  );
   const offer = await checked(
     lecturer.client.from("jobs").select("*").eq("id", job).single(),
     "Actual lecturer REST offer",
@@ -447,16 +542,37 @@ try {
   );
   assert.equal(Number(report.lecturer_net_total_amount), expectedNet);
   assert.equal(report.claim_id, claim);
-  assert.ok(
+  // Omit the forbidden per-offer percentage so this reaches the accepted-history guard.
+  // A rejection must leave both the lecturer's deal and the private revenue snapshot exact.
+  const refusedReprice = await admin.client.rpc("set_job_commission", {
+    p_job_id: job,
+    p_gross_amount: 200,
+    p_gross_total_amount: 200,
+  });
+  assert.equal(refusedReprice.error?.code, "22023");
+  assert.equal(
+    refusedReprice.error?.message,
+    "Only unaccepted offers can change commission",
+    "Accepted history itself must prevent repricing",
+  );
+  assert.equal(refusedReprice.data, null);
+  assert.deepEqual(
+    await checked(
+      winner.client.from("job_claims").select("*").eq("id", claim).single(),
+      "Re-read exact accepted deal after rejected repricing",
+    ),
+    accepted,
+    "Rejected repricing preserves every accepted snapshot field",
+  );
+  assert.deepEqual(
     (
-      await admin.client.rpc("set_job_commission", {
-        p_job_id: job,
-        p_gross_amount: 200,
-        p_gross_total_amount: 200,
-        p_platform_percent: 75,
-      })
-    ).error,
-    "Accepted deal cannot be repriced",
+      await checked(
+        owner.client.rpc("commission_report"),
+        "Re-read private revenue after rejected repricing",
+      )
+    ).find((row) => row.job_id === job),
+    report,
+    "Rejected repricing preserves the exact private revenue projection",
   );
   const statement = await checked(
     client.client.rpc("client_spend_summary"),
@@ -623,7 +739,7 @@ try {
     [],
   );
   console.log(
-    "PASS: actual Auth/MFA/REST/ClamAV commission: client cross-org isolation and revocation, private fictional role-policy rounding, hidden gross, atomic claims/revenue, immutable net invoice+labels, separate EUR/AUD, owner lecturer functionality and private-calendar boundary.",
+    "PASS: actual Auth/MFA/REST/ClamAV commission: client request cancellation/idempotent audit and published-offer safeguards, cross-org isolation and revocation, private fictional role-policy rounding, hidden gross, atomic claims/revenue, exact accepted-history repricing refusal with unchanged deal/revenue, immutable net invoice+labels, separate EUR/AUD, owner lecturer functionality and private-calendar boundary.",
   );
 } finally {
   for (const client of clients) await client.removeAllChannels();

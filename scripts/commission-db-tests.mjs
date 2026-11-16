@@ -461,6 +461,31 @@ try {
       assert.equal(results.filter((x) => x.status === "confirmed").length, 1);
       assert.equal(results.filter((x) => x.status === "filled").length, 9);
       winner = candidates[results.findIndex((x) => x.status === "confirmed")];
+      // Deterministically reproduce a late losing reader after the race: the
+      // offer disappears, but its previously reviewed token still reaches the
+      // real claim RPC and produces filled without another accepted snapshot.
+      const losingIndex = results.findIndex(
+        (result) => result.status === "filled",
+      );
+      const loser = candidates[losingIndex];
+      assert.equal(
+        JSON.parse(await value(loser, "job_offers")).some(
+          (offer) => offer.id === concurrentJob,
+        ),
+        false,
+        "A losing actor no longer sees the filled offer in a later list read",
+      );
+      assert.equal(
+        (
+          await claim(
+            loser,
+            concurrentJob,
+            reviewedQuotes[losingIndex].terms_version,
+          )
+        ).status,
+        "filled",
+        "Previously reviewed consent reaches the server after visibility changes",
+      );
       assert.equal(
         await sql(
           `select count(*) from private.claim_revenue_ledger where job_id='${concurrentJob}'`,

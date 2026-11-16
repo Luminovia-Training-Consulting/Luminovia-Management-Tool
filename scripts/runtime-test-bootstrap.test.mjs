@@ -4,8 +4,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join, basename } from "node:path";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { cleanEnvironment } from "./runtime-lib.mjs";
+import {
+  browserPlan,
+  browserAcceptance,
+  browserFailure,
+} from "./testing/browser-evidence.mjs";
 import {
   runtimeTestArguments,
   runtimeTestPhasePlan,
@@ -23,13 +28,62 @@ assert.equal(
 );
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
+/** Match the actual application browser process, excluding its independent
+ * discovery command and the separate built-PWA execution. */
+const applicationExecution = ({ file, args, env }) =>
+  file === "npx" &&
+  args[0] === "--no-install" &&
+  args[1] === "playwright" &&
+  args[2] === "test" &&
+  env.PORTAL_BROWSER_STAGE === "application" &&
+  !args.includes("--list");
+
 async function runFixture({
   failPersistence = false,
   failSeed = false,
+  args = [],
   failBrowser = false,
 } = {}) {
   const calls = [],
     reports = [];
+  // The CLI process boundary supplies virtual reports, while the real evidence
+  // validators still run. Genuine Playwright parsing/execution is exercised by
+  // runtime-browser-evidence.test.mjs and the canonical native browser stage.
+  const browserReport = (path) => {
+    const discovery = path.endsWith("plan.json");
+    return JSON.stringify({
+      config: {
+        rootDir: "/owned-qa/scratch/tests/e2e",
+        projects: ["desktop-chromium", "mobile-chromium"].map((name) => ({
+          name,
+        })),
+      },
+      errors: [],
+      suites: [
+        {
+          title: "orchestration fixture",
+          specs: [
+            {
+              file: path.includes("/pwa/") ? "pwa.spec.ts" : "workflow.spec.ts",
+              title: "service-boundary fixture",
+              ok: !discovery,
+              tests: ["desktop-chromium", "mobile-chromium"].map(
+                (projectName) => ({
+                  projectName,
+                  expectedStatus: "passed",
+                  status: discovery ? "skipped" : "expected",
+                  results: discovery
+                    ? []
+                    : [{ status: "passed", retry: 0, duration: 0, errors: [] }],
+                }),
+              ),
+            },
+          ],
+        },
+      ],
+      stats: { expected: 2, unexpected: 0, flaky: 0, skipped: 0, duration: 0 },
+    });
+  };
   const bindings = {
     cpSync() {},
     mkdirSync() {},
@@ -42,13 +96,23 @@ async function runFixture({
         ? 'project_id = "luminovia-portal"\n[api]\nport = 54321\n'
         : path.endsWith(".env.test.local")
           ? "SUPABASE_URL=http://127.0.0.1:55321\nSUPABASE_ANON_KEY=fictional-public-fixture\n"
-          : "",
+          : path.endsWith("plan.json") || path.endsWith("report.json")
+            ? browserReport(path)
+            : "",
     readdirSync: (path) =>
-      path.endsWith("scripts") ? ["commission-api-check.mjs"] : [],
+      path.endsWith("scripts")
+        ? ["commission-api-check.mjs"]
+        : path.endsWith("tests/e2e")
+          ? ["workflow.spec.ts", "pwa.spec.ts"]
+          : [],
     existsSync: () => false,
     join,
     basename,
     randomBytes,
+    createHash,
+    browserPlan,
+    browserAcceptance,
+    browserFailure,
     tmpdir: () => "/owned-qa/tmp",
     root: "/owned-qa/source",
     runtimeDir: "/owned-qa/reports",
@@ -77,12 +141,12 @@ async function runFixture({
         throw new Error("Fictional retained-data failure");
       if (args.includes("scripts/local-seed.mjs") && failSeed)
         throw new Error("Fictional commercial bootstrap failure");
-      if (args.includes("test:e2e") && failBrowser)
+      if (applicationExecution({ file, args, env: options.env }) && failBrowser)
         throw new Error("Fictional browser aggregate deadline");
       return "";
     },
     process: {
-      argv: [process.execPath, "scripts/runtime-test.mjs"],
+      argv: [process.execPath, "scripts/runtime-test.mjs", ...args],
       execPath: process.execPath,
       pid: process.pid,
       env: {},
@@ -148,6 +212,17 @@ test("actual QA runner seeds commercial fixtures after retention and before SQL/
     result.reports.some((report) => report.value.startsWith("PASS\n")),
     true,
   );
+  const evidence = JSON.parse(
+    result.reports
+      .filter((report) => report.path.endsWith("acceptance.json"))
+      .at(-1).value,
+  );
+  assert.equal(evidence.phase, "all");
+  assert.equal(evidence.status, "passed");
+  assert.deepEqual(evidence.stagePlan, runtimeTestPhasePlan().stages);
+  assert.match(evidence.sourceSha256, /^[a-f0-9]{64}$/);
+  assert.equal(evidence.browsers.application.passed, 2);
+  assert.equal(evidence.browsers.pwa.passed, 2);
 });
 
 test("failed retention prevents the explicit fixture bootstrap and every SQL/API acceptance stage", async () => {
@@ -200,15 +275,31 @@ test("failed commercial bootstrap stops SQL/API acceptance while retaining owned
 test("only the complete browser command receives the expanded aggregate budget", async () => {
   const result = await runFixture();
   assert.equal(result.error, undefined);
-  const browser = result.calls.filter((call) => call.args.includes("test:e2e"));
+  const browser = result.calls.filter(applicationExecution);
   assert.equal(browser.length, 1);
   assert.deepEqual(browser[0].args, [
-    "run",
-    "test:e2e",
-    "--",
+    "--no-install",
+    "playwright",
+    "test",
     "--grep-invert",
     "built PWA",
   ]);
+  const discovery = result.calls.filter(
+    (call) =>
+      call.env.PORTAL_BROWSER_STAGE === "application" &&
+      call.args.includes("--list"),
+  );
+  assert.equal(discovery.length, 1);
+  assert.deepEqual(discovery[0].args, [
+    ...browser[0].args,
+    "--list",
+    "--reporter=json",
+  ]);
+  assert.equal(discovery[0].timeoutMs, 1200000);
+  assert.equal(discovery[0].signal, browser[0].signal);
+  assert.ok(
+    result.calls.indexOf(discovery[0]) < result.calls.indexOf(browser[0]),
+  );
   assert.equal(browser[0].timeoutMs, 1800000);
   assert.ok(browser[0].signal instanceof AbortSignal);
   assert.equal(
@@ -254,4 +345,14 @@ test("a browser deadline still fails acceptance, skips build/PWA and performs ow
     false,
   );
   assert.ok(result.reports.some((report) => report.value.startsWith("FAIL\n")));
+  const evidence = JSON.parse(
+    result.reports
+      .filter((report) => report.path.endsWith("acceptance.json"))
+      .at(-1).value,
+  );
+  assert.equal(evidence.phase, "all");
+  assert.equal(evidence.status, "failed");
+  assert.equal(evidence.browsers.application.status, "failed");
+  assert.equal("pwa" in evidence.browsers, false);
+  assert.match(evidence.sourceSha256, /^[a-f0-9]{64}$/);
 });
