@@ -4,8 +4,8 @@ This extension preserves the existing job/claim/calendar/chat/finance architectu
 
 At `/replacements`, eligible lecturers see the entire block, original IANA time zone, their own current compensation quote and exact terms. Explicit consent binds all quote fields and session instants. Changing any of them clears consent. Open and selected-invitation modes and emergency marking are implemented. Selected invitations reject currently ineligible lecturers; eligibility is recomputed on every read and claim. No private appointment details, other lecturer's prices or contract records are returned.
 
-
 Replacement requests and claims recheck active status after profile-lock waits. A retained successful claim receipt is returned only after the current caller profile is locked and lecturer authority is checked again after the request-gate wait. Winning role withdrawal or suspension refuses the retry without changing the historical receipt, accepted compensation or confirmed successor.
+
 ## Atomic handover
 
 `claim_replacement` locks both involved profiles/lecturers in a deterministic order, then the job, original claim and replacement. It checks current active roles, original allocation/version, complete future block, qualifications through the last session, applicable contract, calendar/private-event/unavailable-window conflicts and invoice history. The existing `private.claim_job` is the authoritative new-claim operation, preserving current quote/contract/revenue rules rather than duplicating those rules.

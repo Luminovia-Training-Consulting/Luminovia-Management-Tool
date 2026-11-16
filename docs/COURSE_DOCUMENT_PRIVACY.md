@@ -1,6 +1,6 @@
 # Course resources and dedicated private documents
 
-Migration `20261116065156` keeps dedicated Support attachments, website-enquiry
+Migration `20261116091034` keeps dedicated Support attachments, website-enquiry
 attachments and external customer-invoice evidence outside course sharing. Its
 private helper checks the actual optional registry tables by document identity
 when they exist. The helper has no external-role execution grant.

@@ -32,7 +32,7 @@ The following integration suites passed in the canonical guarded `./portal test`
 - `scripts/avatars-api-check.mjs` uses the shared actual Auth/MFA fixture/cleanup helper, real PNG/ClamAV/private Storage/hash bytes, invalid-format/metadata/dimensions, generic download/Storage/signed-URL denial, separate client/enrolment visibility/revocation, replacement/removal and suspension.
 - `tests/e2e/avatars.spec.ts` uses actual distinct browser identities, real JPEG input containing fictional source metadata, browser crop/resize, scan/save/reload, exact clean PNG/no EXIF, safe invalid-source retention, permitted peer display, removal, English/dark axe/overflow checks and fictional screenshots.
 
-Complete local acceptance is recorded below. Physical-device image picking, browser implementations beyond the tested engine and deployed hosting/security remain separate acceptance gates. See `QA_RESULTS.md`/`WORKLOG.md` for the exact submitted-revision CI and broader product evidence.
+Complete local acceptance is recorded below. Physical-device image picking, browser implementations beyond the tested engine and deployed hosting/security remain separate acceptance gates. See `QA_RESULTS.md` for the exact submitted-revision CI and broader product evidence.
 
 ### M4-02 integration checkpoint
 

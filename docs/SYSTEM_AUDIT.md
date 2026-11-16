@@ -1,6 +1,6 @@
 # System audit: functionality, performance and failure paths
 
-As of 16 November 2026, Australia/Brisbane. Baseline: PR #4 / `b9cdcc8`. This report preserves that historical audit's examined contracts, concrete findings and measurements; its module and migration counts are not the current inventory. The current source has 27 migrations, including delegated roles/private compensation and welcome progress; see the [migration guide](MIGRATION_GUIDE.md). Actual complete acceptance is recorded in [QA_RESULTS](QA_RESULTS.md); the entire remaining product scope stays in [IMPLEMENTATION_PLAN](IMPLEMENTATION_PLAN.md).
+As of 16 November 2026, Australia/Brisbane. Baseline: PR #4 / `b9cdcc8`. This report preserves that historical audit's examined contracts, concrete findings and measurements; its module and migration counts are not the current inventory. For the current migration inventory and later feature additions, see the [migration guide](MIGRATION_GUIDE.md) and [documentation index](README.md). Actual complete acceptance is recorded in [QA_RESULTS](QA_RESULTS.md); the entire remaining product scope stays in [roadmap](../ROADMAP.md).
 
 ## Scope and traceable entry points
 

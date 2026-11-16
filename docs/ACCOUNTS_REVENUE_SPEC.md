@@ -12,13 +12,13 @@ New fictional local fixtures add `carina@example.invalid` (owner demonstration) 
 
 ## Money and visibility
 
-| Actor | Authorised view |
-| --- | --- |
-| Lecturer / senior lecturer | Offered and accepted **own lecturer compensation**, expected/completed/invoiced/paid amounts, own uploaded invoice PDFs and tracked payments. No customer gross or platform commission field is returned. |
-| Client | Their own organisation's requests, full customer offer, commissioned/assigned spend in original currency and assigned lecturer identity. No other organisation or private lecturer invoice/contract access. |
-| Management | Explicit operational functions and authorised lecturer invoice/payment administration. Gross/platform reporting needs the separate capability reserved to admin/owner. |
-| Admin / owner | Full customer gross, agreed lecturer net compensation and platform margin, original-currency reporting, operational administration and own lecturer functions. |
-| Learner | Explicitly enrolled course data and its lecturer; eligible own course feedback. No business financial data. |
+| Actor                      | Authorised view                                                                                                                                                                                             |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lecturer / senior lecturer | Offered and accepted **own lecturer compensation**, expected/completed/invoiced/paid amounts, own uploaded invoice PDFs and tracked payments. No customer gross or platform commission field is returned.   |
+| Client                     | Their own organisation's requests, full customer offer, commissioned/assigned spend in original currency and assigned lecturer identity. No other organisation or private lecturer invoice/contract access. |
+| Management                 | Explicit operational functions and authorised lecturer invoice/payment administration. Gross/platform reporting needs the separate capability reserved to admin/owner.                                      |
+| Admin / owner              | Full customer gross, agreed lecturer net compensation and platform margin, original-currency reporting, operational administration and own lecturer functions.                                              |
+| Learner                    | Explicitly enrolled course data and its lecturer; eligible own course feedback. No business financial data.                                                                                                 |
 
 Gross, policy and platform data live in an unexposed private schema. Role-priced offers put zero sentinels in raw `jobs.amount/total_amount`; applications use `job_offers()` for their authorised current offer. Lecturers receive only their own applicable fee; Management receives null for protected compensation. Accepted claims and lecturer invoices retain immutable lecturer-compensation semantics. Compensation rounds to cents first and the platform receives the exact remainder, with no hidden EUR/AUD conversion. Each offer stores a private policy snapshot; policy edits apply to future offers. Explicit unclaimed-offer repricing advances its terms version. Current role-specific claim tokens and database locks prevent accepting an outdated role quote. Accepted gross/net/margin snapshots never change with later templates, roles or policy edits.
 
@@ -35,4 +35,4 @@ Existing net-only agreements remain unchanged. Their historical customer gross i
 
 The versioned `/functions/v1/accounts/v1/` API covers own identity/profile, administrative account search, roles, activation, client organisation grants and invitations. Its OpenAPI document is served at `/functions/v1/accounts/openapi.json`. Supabase Auth supplies login/password/recovery/MFA. Domain operations use the same JWT through documented public RPCs and the existing authenticated document gateway; service keys never enter client code.
 
-Required verification: direct REST/RPC and façade permission denials; own/cross-account and cross-organisation access; gross absent from lecturer responses; private policy configuration, role quotes and cent rounding; immutable old/accepted deals; concurrent claim/revenue and account lifecycle races; actual scanned net invoices/payment records; real course history/enrolment/reviews/moderation; mobile/DE/EN/keyboard/axe and fresh one-command/PWA checks. Planned acceptance is not a test result; see WORKLOG and QA_RESULTS.
+Required verification: direct REST/RPC and façade permission denials; own/cross-account and cross-organisation access; gross absent from lecturer responses; private policy configuration, role quotes and cent rounding; immutable old/accepted deals; concurrent claim/revenue and account lifecycle races; actual scanned net invoices/payment records; real course history/enrolment/reviews/moderation; mobile/DE/EN/keyboard/axe and fresh one-command/PWA checks. Planned acceptance is not a test result; see QA_RESULTS.

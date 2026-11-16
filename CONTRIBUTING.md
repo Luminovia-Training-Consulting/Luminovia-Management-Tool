@@ -1,103 +1,54 @@
 # Contributing to Luminovia Portal
 
-> Reviewed source policy and latest integration readback: all three `main` rulesets are active. Only CarinaSchoppe's personal account (`User:29256704`) has a `pull_request` review exception; every other user and App needs independent/latest-push approval. History/signatures and all15strict producer-bound checks have no bypass. A temporary disabled review-layer drift was observed and subsequently restored through a separate coordinated operational action, then independently read back. Committing these source snapshots does not itself activate a rule; the [live server rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) remain authoritative.
+Use English for issues, pull requests and contributor documentation. Application UI changes must include German and English; user-authored content keeps its language.
 
-Welcome! This guide explains how to turn an idea or bug report into a tested, reviewable change. **Use English for issues, pull requests and contributor-facing documentation.** Application interface changes must provide both German and English strings; authored course content keeps its original language.
+## Choose a focused change
 
-The portal is a React/TypeScript PWA backed by Supabase. The [implementation plan](docs/IMPLEMENTATION_PLAN.md) retains the full product scope. A working development version is not production approval.
+Read the [project overview](README.md), [documentation index](docs/README.md), [product specification](docs/PRODUCT_SPEC.md) and relevant feature guide. The [roadmap](ROADMAP.md) describes remaining requirements. Inspect the current source and existing issues/PRs before proposing overlapping work. Agent-assisted changes also follow [AGENTS](AGENTS.md).
 
-## Find the right starting point
+Report bugs, questions and feature ideas through the [issue chooser](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/issues/new/choose); the [issue guide](docs/ISSUE_GUIDE.md) explains useful reproductions. Suspected vulnerabilities belong in [private security reporting](SECURITY.md), not a public issue.
 
-| Goal                                                   | Start here                                                                                                                                                        |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Report a bug, ask a question or suggest an improvement | [Issue guide](docs/ISSUE_GUIDE.md) and the appropriate [issue form](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/issues/new/choose) |
-| Change code or documentation                           | This guide, then the [pull request guide](docs/PULL_REQUEST_GUIDE.md)                                                                                             |
-| Understand the architecture, data model and tests      | [Developer guide](docs/DEVELOPER_GUIDE.md), [architecture](docs/ARCHITECTURE.md) and [test plan](docs/TEST_PLAN.md)                                               |
-| Start the local system or troubleshoot startup         | [Local development](docs/LOCAL_DEVELOPMENT.md)                                                                                                                    |
-| Report a possible vulnerability                        | [Private reporting](docs/ISSUE_GUIDE.md#reporting-security-vulnerabilities); do not publish exploit details                                                       |
+External contributors use a fork; contributors with write access can use an owned branch. Agent branches normally start with `codex/`. Keep unrelated changes and other worktrees intact. Use meaningful signed commits and open a PR against `main`.
 
-## 1. Read the current project state
+## Set up and check
 
-Read the [work log](docs/WORKLOG.md), [implementation plan](docs/IMPLEMENTATION_PLAN.md), [project instructions](AGENTS.md) and authoritative [master specification](docs/UNIVERSAL_MASTER_PROMPT.txt). Search existing issues and ongoing work before opening an issue or PR. Larger feature changes should start with an issue describing the problem, desired outcome and acceptance criteria.
+Use Linux, the Node version in [.node-version](.node-version), npm and Docker/Compose. Complete verification additionally needs Python 3, util-linux `flock` and `age`/`age-keygen`; see [local development](docs/LOCAL_DEVELOPMENT.md).
 
-Preserve working code and previously delivered migrations. The public Luminovia Website repository is a brand reference and is outside this repository's change scope.
-
-## 2. Use your own branch
-
-External contributors should fork the repository and create a branch in their fork. Contributors with write access may create a branch in this repository. Agent work uses the `codex/` prefix; other examples include `fix/short-description`, `feature/short-description` and `docs/short-description`.
-
-```bash
-git clone https://github.com/YOUR_GITHUB_NAME/Luminovia-Management-Tool.git
-cd Luminovia-Management-Tool
-git remote add upstream https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool.git
-git fetch upstream
-git switch -c fix/short-description upstream/main
-```
-
-Keep each branch focused on one coherent change. Use meaningful, signed commits such as `fix: preserve invoice version on download` or `docs: explain local startup`. Credentials, real customer names and real personal or customer data must not appear in public documentation, filenames, UI examples, commits, screenshots or test fixtures. Use customer-neutral terminology and clearly fictional organisations; configure actual customers privately in the application.
-
-## 3. Develop and verify locally
-
-[LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) lists the supported prerequisites: Linux, the Node version pinned in `.node-version`, npm, Docker Engine and Compose. Complete verification also requires Python 3, `flock` and the official `age`/`age-keygen` tools. Use the lockfile; do not run an unreviewed `audit fix --force`.
-
-```bash
+```sh
+npm ci
+./portal check
 ./portal start
 ./portal test
 ./portal stop
 ```
 
-`start` runs the real local system and preserves its data. `test` uses separate temporary data to check components, database permissions, APIs, browsers and the built PWA. `stop` shuts down the managed development services without deleting their data. Tests do not reset the normal development database. First startup downloads images and needs enough RAM for the services and malware scanner.
+`check` runs fast quality/coverage/build checks. `start` preserves ordinary local data. `test` owns a separate disposable stack for actual database/API/browser/PWA acceptance; it must never target ordinary development or hosted data. `stop` preserves development volumes. Use focused unit/component checks while editing and the complete command for changes to behavior or infrastructure. Explain checks not run and any first failure; a written test or browser discovery is not executed acceptance.
 
-During development, run focused checks such as `npm test`, `npm run test:coverage`, `npm run lint` and `npm run typecheck` after installing dependencies. The [CI and coverage guide](docs/CI_QUALITY.md) explains checks, reports and thresholds. `./portal test` is the canonical complete acceptance command. Understand a check's target and resources before running it, and do not publish unredacted private test artifacts.
+`./portal github` previews latest main separately; `./portal github test` verifies that source rather than your uncommitted edits. Coordinate the shared QA lock and never terminate foreign services. [Test plan](docs/TEST_PLAN.md), [CI profiles and coverage](docs/CI_QUALITY.md), and [functional acceptance](docs/FUNCTIONAL_ACCEPTANCE.md) explain scope and evidence.
 
-Local PC verification is the default. Use `./portal check` for fast quality,
-coverage and build feedback while editing, then `./portal test` for complete
-isolated acceptance of your working source before delivery;
-`./portal github test` fetches and verifies current `main` in a separate local
-checkout, while `./portal github` opens its persistent preview. No GitHub
-deployment or self-hosted Actions runner is needed. Coordinate the shared QA lock
-with other agents and never stop a foreign stack to obtain its ports. Automatic
-GitHub quality/security checks remain in place.
+Use `npm ci` and the lockfile. Dependency updates must preserve compatible peer families; do not add unrelated upgrades or use blanket `audit fix --force`.
 
-## 4. Preserve the domain contracts
+## Preserve application contracts
 
-- **Permissions:** The database and API decide access. Test other accounts, revoked permissions and rejected requests; hiding a button is insufficient.
-- **Schedules and fees:** Show a confirmed booking only after the database transaction succeeds. Accepted schedules and commercial agreements remain immutable snapshots.
-- **Database:** Add migrations instead of rewriting delivered files. Verify RLS, grants, constraints, concurrency and retained data together with the API and UI.
-- **Interface:** Include DE/EN text, loading, error and empty states. Check keyboard use, mobile layouts, and light/dark themes. Screenshots must contain fictional data only.
-- **Documentation:** Update affected guides and API descriptions. Record actual changes, executed checks and remaining limits in the work log.
+- **Authorization:** current database roles, MFA, RLS, exact grants and resource membership decide access. Test direct requests, other actors and revocation. Hidden UI and editable metadata confer no rights.
+- **Claims and money:** confirm only after a successful online transaction reserves every session. Preserve accepted schedules, terms, contract versions and original-currency compensation. A payment record is not a bank transfer.
+- **Migrations:** released SQL bytes remain unchanged. Add new migrations through the pinned CLI and check retained data, permissions and concurrency. See [migration ownership](docs/MIGRATION_GUIDE.md).
+- **Private resources:** preserve distinct DM, calendar, evidence, contract and invoice boundaries. Exact file bytes require current authorization and completed scanning. Do not generically cache authenticated responses or private file bytes offline. The explicit opt-in [minimal own teaching schedule](docs/CALENDAR_CONNECTIONS.md) is the documented narrow exception.
+- **Interface:** provide DE/EN text and meaningful loading/error/empty states; check keyboard access, mobile layout and light/dark themes. Store instants with intended IANA zones; exercise Berlin DST and Brisbane.
+- **Documentation:** update the affected feature/API/runbook alongside the change. Keep API generation reproducible and distinguish current behavior, historical evidence and pending operational acceptance.
 
-Tests should demonstrate changed behavior and relevant failure paths. A useful regression test fails before the fix and passes afterwards. Match the evidence to the change's risk and explicitly identify checks that were not run.
+Public docs, examples, filenames, commits and screenshots must be customer-neutral. Use fictional people and organisations. Never commit credentials, tokens, private traces, CVs, customer records or financial documents. Preserve source explanations, licenses and asset provenance; see [agent source-comment rules](AGENTS.md#comments-are-part-of-the-source).
 
-## 5. Open a pull request
+## Prepare the pull request
 
-Open a PR against `main` and complete the template in English. Use a draft while the change is not ready for review. Explain the problem, resulting behavior, actual test evidence and risks. Link the issue: `Closes #123` closes it on merge, while `Refs #123` only associates it.
+Complete the English template with the concrete problem, resulting behavior, relevant issue, actual checks and material limits. Use `Closes #123` only when the PR fully resolves it. Attach fictional screenshots for meaningful UI changes and describe database/operational effects where applicable.
 
-Every PR needs exactly one `type:*` label, at least one `area:*` label and exactly one `risk:*` label. See [pull request labels](docs/PULL_REQUEST_GUIDE.md#pull-request-labels) for values, examples and responsibilities. External contributors usually cannot set labels: suggest them in the description and a maintainer will apply them.
+Every PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*` label. External contributors can suggest labels for a maintainer to apply. See the [PR guide](docs/PULL_REQUEST_GUIDE.md#pull-request-labels).
 
-## Review and merge
+All changes to `main` require a PR, signed history and current required checks against an up-to-date base. The reviewed policy has one personal PR-only review exception for `CarinaSchoppe`; maintainer/admin membership alone grants no exception. Other contributors and maintenance automation need independent approval, latest-push approval and resolved review conversations. No actor bypasses mandatory checks or signature/history rules. The dated [GitHub policy readback](docs/GITHUB_WORKFLOW.md#active-rule-layers) records the exact contexts and producers; live server policy remains authoritative.
 
-The project workflow requires a pull request for every change to `main`. The reviewed source policy grants only CarinaSchoppe's immutable personal account (`User:29256704`) a `pull_request` review exception. When that review layer is active, every other user and App needs independent/latest-push approval and resolved conversations; the exception follows the executing account, not the author, pusher or repository role. The temporary review-layer drift above was restored and independently verified; future source snapshots still require an actual activation readback. History/signature and required-check enforcement remain active without bypass.
+A merge does not publish a CMS release or PR deployment record. Releases require an explicitly authorized manual `Portal checks` dispatch on `main`, `publish_release=true` and the exact current commit in `expected_commit`, followed by all publication gates. Hosting/DNS, production, risky migrations and real-message delivery retain separate authorization. See [release operation](docs/DEPLOYMENT_RUNBOOK.md).
 
-All 15 mandatory checks must pass for the current revision, and the PR must be up to date with `main`. These include Build, Typecheck, Lint, Formatting, Code quality, Tests and coverage, `verify`, `Actual isolated selfhost image compatibility`, `PR metadata`, the three CodeQL language analyses, Dependency review, the generated CodeQL findings check and `PR preview package`. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes. Missing, pending or failed required checks block every merger, including administrators and the maintenance App.
+## Licensing and collaboration
 
-Daily maintenance publishes a signed change on a separate branch and opens a PR labelled `type:dependencies`, `area:devops` and `risk:high`. Native auto-merge must satisfy the actual server rules; the reviewed contribution policy additionally requires independent review for the App and grants it no exception. App setup, workflow delivery and current review enforcement must be verified separately. See [current operational status](docs/GITHUB_WORKFLOW.md#activation-still-pending).
-
-A merge does not publish a development release or create PR deployment metadata.
-An authorised maintainer must explicitly dispatch `Portal checks` on `main` with
-`publish_release=true` and the exact current `main` SHA in `expected_commit`.
-Normal manual checks and daily-maintenance verification do not publish releases.
-PR deployment metadata has its own manual-only workflow; the verified local
-artifact remains downloadable without creating that record. Production
-installation, risky migrations, and changes to hosting, DNS or real data still
-require the relevant separate authorization. A GitHub merge does not replace it.
-
-## Tags and releases
-
-Labels classify issues and PRs. Git tags identify a particular commit. The signed M3 accounts/commission, M4 building-block and M5 system-audit checkpoints identify accepted development revisions; they do not imply a complete product or production release.
-
-Existing `cms-dev-*` tags identify immutable development packages created by explicit manual publication. Do not move or replace published tags. Maintainers attach new milestone/version tags to the exact verified commit; a PR label does not create a Git tag.
-
-## License and collaboration
-
-The repository uses GNU GPLv3. Preserve existing license and provenance notices; bundled fonts and brand assets retain their respective notices. Discuss technical disagreements factually, explain decisions and respond respectfully to feedback.
+Contributions use the repository's [GNU GPLv3 license](LICENSE). Preserve bundled font, upstream and brand notices. Explain technical disagreements plainly and respond respectfully. Published tags identify immutable revisions; do not move or replace them. Milestone tags and local preview packages do not certify production readiness.

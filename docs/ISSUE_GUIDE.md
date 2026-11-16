@@ -4,7 +4,7 @@ A useful issue describes a reproducible problem or a verifiable goal. Start with
 
 ## Before opening an issue
 
-Search open and closed issues as well as active pull requests. For an apparently missing product feature, check the [current implementation plan](IMPLEMENTATION_PLAN.md). A feature listed as pending can be clarified in a proposal; it should not be reported as a broken workflow that has already been delivered.
+Search open and closed issues as well as active pull requests. For an apparently missing product feature, check the [roadmap](../ROADMAP.md). A feature listed as pending can be clarified in a proposal; it should not be reported as a broken workflow that has already been delivered.
 
 Keep each issue focused on one related problem. Report unrelated bugs separately so their reproduction, tests and resolution remain clear.
 
@@ -21,7 +21,7 @@ Use the bug report form and include:
 
 For startup problems, include the command you ran, Node and Docker versions, and the visible error. The [local development guide](LOCAL_DEVELOPMENT.md) explains services, ports and persistence. Do not delete required volumes or reset a normal database to reproduce a problem.
 
-Remove tokens, passwords, authentication callback URLs, QR codes, personal data and private document contents from every attachment. Do not upload raw `.local` directories, Playwright traces, HAR files or database backups. Even seemingly useful network logs can contain sessions and private responses.
+Remove tokens, passwords, authentication callback URLs, QR codes, personal data and private document contents from every attachment. Do not upload raw `.local` directories, Playwright traces, HAR files or database backups. Even seemingly useful netQA records can contain sessions and private responses.
 
 ## Proposing features and improvements
 
@@ -56,6 +56,6 @@ You do not need permission to manage labels to open an issue. Mention the likely
 3. The fix receives appropriate tests and updated documentation.
 4. The pull request is merged after its checks and any required review. `Closes #123` automatically closes the linked issue.
 
-Only CarinaSchoppe's personal account (`User:29256704`) has the PR-only review exception. All other accounts, including maintainers, administrators and Apps, require independent review. All 15 required checks and signatures remain mandatory for everyone. See the [review rules](PULL_REQUEST_GUIDE.md#review-rules-for-main).
+Only `CarinaSchoppe` has the personal PR-only review exception in the reviewed server configuration. Maintainer or administrator membership alone grants no exception; required CI and commit signatures still apply. Auto-Merge waits for the active requirements. See the [pull request guide](PULL_REQUEST_GUIDE.md#review-rules-for-main) for the review and merge rules.
 
-A closed issue means its agreed goal has been completed. It does not prove a production deployment. For a regression, provide a new reproducible report that links to the earlier issue.
+An issue may be closed as completed, duplicate or not planned; read its resolution and linked PR. It does not prove a production deployment. For a regression, provide a new reproducible report that links to the earlier issue.

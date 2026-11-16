@@ -29,4 +29,4 @@ PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-m6 node scripts/admin-audi
 
 The PostgreSQL check creates and removes only its own temporary database. It covers roles/MFA, the allowlist and detail protection, literal search, time/cursor bounds, actual concurrent events sharing a timestamp, write prohibitions, role revocation and account suspension with existing token identities. Native Auth/TOTP/REST checks are in `scripts/admin-audit-api-check.mjs`; desktop/mobile journeys, DE/EN, dark mode, offline operation, role revocation and axe checks are in `tests/e2e/admin-audit.spec.ts`.
 
-Authored API/browser checks do not constitute passed acceptance. The combined checks actually executed are documented in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md). Operational monitoring, deletion/retention actions, email delivery and production deployment are not claimed here.
+Authored API/browser checks do not constitute passed acceptance. The combined checks actually executed are documented in [QA_RESULTS](QA_RESULTS.md). Operational monitoring, deletion/retention actions, email delivery and production deployment are not claimed here.
