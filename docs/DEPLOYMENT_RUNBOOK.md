@@ -2,6 +2,16 @@
 
 Status: actual authorised self-hosted development at **https://cms.luminovia.org** on the existing **Hostinger KVM 1**. The user explicitly requested that frontend, Supabase and files run together at Hostinger and declined a paid upgrade during setup. Follow [HOSTINGER_DEVELOPMENT](HOSTINGER_DEVELOPMENT.md) for this instance's exact configuration, Compose commands, backup/restore checks and limits. The managed-backend steps below are retained reference from the earlier architecture, not the current target. Full production acceptance remains separate. Do not change the public Luminovia marketing website.
 
+Current workflow: develop and test on the local PC with `./portal check` for
+fast feedback and `./portal test` for complete isolated acceptance. Automatic
+GitHub quality/security checks remain, but pushes and merges no longer publish
+CMS releases or PR deployment records. An authorised CMS publication requires a
+manual `Portal checks` dispatch on `main`, `publish_release=true`, the exact
+current `main` SHA in `expected_commit` and all verification gates. PR deployment
+metadata has a separate manual-only action; see [PR_PREVIEWS](PR_PREVIEWS.md).
+The existing five-minute VPS updater timer has not been changed. It may consume
+an explicitly published release through its existing guarded installation path.
+
 ## Configuration boundaries
 
 Frontend variables in `.env.example` are public build configuration. The browser may receive only Supabase project URL and publishable key (or local legacy anon key) plus non-sensitive configuration. Service-role/secret keys, SMTP passwords and database credentials are server-only or developer-local and must never use a `VITE_` variable. Keep `.env.local`, `.env.test.local` and generated test credential files ignored and permission-restricted.
@@ -20,7 +30,7 @@ The authorised KVM 1 environment has three fictional accounts, private Mailpit a
 
 ## Local operation
 
-Run `./portal start` for complete persistent local operation and `./portal test` for complete isolated verification. The launcher handles lockfile dependencies, migrations, insert-only fictional bootstrap and real service readiness; see [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md). Inspect evolving CLI help rather than guessing flags. Bind previews to loopback. Local Auth emails are captured by the local test mail service, not sent to real people. Generated local accounts are test accounts, not real invitations. Never run a local reset/seed harness against hosted data.
+Run `./portal start` for complete persistent local operation, `./portal check` for fast quality/coverage/build feedback and `./portal test` for complete isolated verification before delivery. `./portal github test` verifies freshly fetched main locally, while `./portal github` starts its separate persistent preview; no GitHub deployment or self-hosted Actions runner is needed. The launcher handles lockfile dependencies, migrations, insert-only fictional bootstrap and real service readiness; see [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md). Inspect evolving CLI help rather than guessing flags. Bind previews to loopback. Local Auth emails are captured by the local test mail service, not sent to real people. Generated local accounts are test accounts, not real invitations. Never run a local reset/seed harness against hosted data.
 
 Use `./portal stop` when the local background system is no longer required; the command preserves Auth/database/Storage data. `./portal start` resumes that data. Preserve source/migrations/plan/log, not running-process promises. Do not remove an existing unrelated stack or delete stored data as cleanup.
 
