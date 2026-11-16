@@ -1,25 +1,34 @@
 # GitHub checks, security and coverage
 
-> Reviewed server snapshot on 16 November 2026 at 06:42:36 UTC: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception (`bypass_mode: pull_request`). No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. Live server rules are authoritative and may later differ. [Reviewed rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
+> The recorded 16 November 2026 06:42:36 UTC server snapshot has three active `main` rulesets and the sole personal PR-only review exception for `CarinaSchoppe` (`User:29256704`). A later live readback found the review layer disabled while all fifteen strict checks and separate history/signature protections remain active. The intended source policy and current operating discrepancy are distinguished in [GitHub administration](GITHUB_WORKFLOW.md#active-rule-layers). The prepared controller refuses the missing review layer; no server setting is changed here.
 
 Every PR retains quality/build, full-source unit coverage, CodeQL, dependency
-review and metadata. The checked-out two-parent merge determines the work below;
-labels and caller-supplied paths cannot select a cheaper profile. Missing Git
-history, invalid paths and unknown source locations conservatively select full.
+review and metadata. Only a verified open Draft event bound to its canonical PR
+ref, repository and exact tested merge parents may use a cheaper path below.
+Ready PRs always select full, including documentation-only work. Labels and
+caller-supplied paths cannot select a cheaper profile. Missing event/Git evidence,
+invalid paths and unknown source locations conservatively select full.
 
 | Change profile                                                                                                                | Acceptance beyond quality/coverage/security                                                                                                                  |
 | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Documentation/templates only                                                                                                  | Runtime/Edge/audit checks; no SQL or native run is claimed.                                                                                                  |
-| Ordinary frontend/static changes                                                                                              | Runtime/Edge/audit plus every existing SQL migration/RLS/race suite, split exhaustively between two separate digest-pinned, networkless PostgreSQL clusters. |
+| Verified Draft: documentation/templates only                                                                                  | Runtime/Edge/audit checks; no SQL or native run is claimed.                                                                                                  |
+| Verified Draft: ordinary frontend/static changes                                                                              | Runtime/Edge/audit plus every existing SQL migration/RLS/race suite, split exhaustively between two separate digest-pinned, networkless PostgreSQL clusters. |
 | Backend, Auth, private file/chat access, shared app/cache code, dependencies, test/delivery infrastructure or unknown changes | Complete unchanged `./portal test` and actual native retained-data rehearsal in parallel. PRs also exercise both new SQL workers.                            |
+| Every ready PR, including `ready_for_review`                                                                                  | Complete application and actual native retained-data acceptance in parallel; Draft-only results do not authorize merging.                                    |
 | Every main push or manual run                                                                                                 | Complete unchanged application and native retained-data acceptance in parallel.                                                                              |
 
 The required verification jobs start after the small scope job instead of waiting
 for the quality matrix. Their first shell step independently rejects a failed,
-missing or invalid scope, and rejects every non-full main/manual profile. Thus a
+missing or invalid scope, and rejects every non-full ready/main/manual profile. Thus a
 broken selector cannot convert a required check into a successful skipped job.
 No required context is removed and no threshold, race count or security assertion
-is reduced. A manual branch run remains available for full pre-merge acceptance.
+is reduced. The workflow explicitly subscribes to `ready_for_review` as well as
+the default PR actions, so a transition to Ready starts a fresh full run even
+without a source push. See [GitHub's PR event types](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request).
+Wait for that full run before queuing a native merge; a completed Draft package
+is not full acceptance. The prepared controller additionally requires the actual
+successful application/native steps behind the current canonical check jobs.
+A manual branch run remains available for complete verification.
 
 Each SQL worker has its own engine, connection limit, random ownership label and
 UUID databases. No host ports/mounts or network are available. Cancellation stops
@@ -46,21 +55,21 @@ verification; a successful check or merge is not a publication request.
 
 ## Visible checks
 
-| Check                                                             | What it verifies                                                                                                                                 |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Build                                                             | Production compilation and PWA build using only synthetic public Supabase configuration. It does not access a real instance.                     |
-| Typecheck                                                         | TypeScript project checks through `npm run typecheck`.                                                                                           |
-| Lint                                                              | ESLint with no warnings allowed.                                                                                                                 |
-| Formatting                                                        | Existing source formatting and GitHub configuration.                                                                                             |
-| Code quality                                                      | Existing compiler-based checks for reachable modules, exports and connections.                                                                   |
-| Tests and coverage                                                | All Vitest unit/component tests, V8 coverage and enforced thresholds; downloadable HTML/LCOV/JSON artifacts.                                     |
-| verify                                                            | Docs/ordinary PR: runtime guards, Edge lint/types/tests and production audit. Sensitive PR/main/manual: complete `./portal test`.                |
-| Actual isolated selfhost image compatibility                      | Ordinary PR: two isolated PostgreSQL workers. Sensitive PR/main/manual: actual native images and retained data; docs records its narrower scope. |
-| PR preview package                                                | Package the committed tested application and upload its real runnable local preview artifact; required before PR merge.                          |
-| PR metadata                                                       | Current PR labels and matching repository/commit identity.                                                                                       |
-| CodeQL (javascript-typescript), CodeQL (python), CodeQL (actions) | Completion of each configured language analysis.                                                                                                 |
-| Dependency review                                                 | Newly introduced vulnerable dependencies on the PR.                                                                                              |
-| CodeQL                                                            | Generated findings check, separate from successful scanner execution.                                                                            |
+| Check                                                             | What it verifies                                                                                                                                                                |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build                                                             | Production compilation and PWA build using only synthetic public Supabase configuration. It does not access a real instance.                                                    |
+| Typecheck                                                         | TypeScript project checks through `npm run typecheck`.                                                                                                                          |
+| Lint                                                              | ESLint with no warnings allowed.                                                                                                                                                |
+| Formatting                                                        | Existing source formatting and GitHub configuration.                                                                                                                            |
+| Code quality                                                      | Existing compiler-based checks for reachable modules, exports and connections.                                                                                                  |
+| Tests and coverage                                                | All Vitest unit/component tests, V8 coverage and enforced thresholds; downloadable HTML/LCOV/JSON artifacts.                                                                    |
+| verify                                                            | Verified Draft docs/ordinary source: runtime guards, Edge lint/types/tests and production audit. Ready/sensitive PR/main/manual: complete `./portal test`.                      |
+| Actual isolated selfhost image compatibility                      | Verified Draft ordinary source: two isolated PostgreSQL workers. Ready/sensitive PR/main/manual: actual native images and retained data; Draft docs records its narrower scope. |
+| PR preview package                                                | Package the committed tested application and upload its real runnable local preview artifact; required before PR merge.                                                         |
+| PR metadata                                                       | Current PR labels and matching repository/commit identity.                                                                                                                      |
+| CodeQL (javascript-typescript), CodeQL (python), CodeQL (actions) | Completion of each configured language analysis.                                                                                                                                |
+| Dependency review                                                 | Newly introduced vulnerable dependencies on the PR.                                                                                                                             |
+| CodeQL                                                            | Generated findings check, separate from successful scanner execution.                                                                                                           |
 
 All 15 listed checks are mandatory before a PR can merge. The strict rule also requires the PR to be up to date with `main`. Neither maintainers, administrators nor the maintenance App can bypass these checks.
 

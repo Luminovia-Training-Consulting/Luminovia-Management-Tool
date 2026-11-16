@@ -95,7 +95,7 @@ function allows(condition, github, inputs = {}, needs = {}) {
   );
 }
 
-test("PR checks are bounded while main/manual retains complete acceptance", () => {
+test("Draft checks are bounded while ready events and main/manual retain complete acceptance", () => {
   const ci = workflow("ci");
   assert.deepEqual(Object.keys(ci.on).sort(), [
     "pull_request",
@@ -103,6 +103,13 @@ test("PR checks are bounded while main/manual retains complete acceptance", () =
     "workflow_dispatch",
   ]);
   assert.deepEqual(ci.on.push.branches, ["main"]);
+  for (const action of [
+    "opened",
+    "synchronize",
+    "reopened",
+    "ready_for_review",
+  ])
+    assert.ok(ci.on.pull_request.types.includes(action));
   assert.equal(ci.permissions.contents, "read");
   assert.deepEqual(
     ci.jobs.quality.strategy.matrix.include.map((item) => item.name),
@@ -133,7 +140,7 @@ test("PR checks are bounded while main/manual retains complete acceptance", () =
   const baseline = ci.jobs["verify-selfhost"].steps.find((step) =>
     step.run?.includes("git archive HEAD^"),
   );
-  // Risky PRs/main/manual run both complete suites; only proven UI/docs PRs
+  // Ready/risky PRs/main/manual run both complete suites; proven Draft UI/docs
   // take faster paths. SQL shards still exercise the new runner on a risky PR.
   for (const [event_name, profile] of [
     ["pull_request", "docs"],
@@ -159,6 +166,11 @@ test("PR checks are bounded while main/manual retains complete acceptance", () =
     assert.equal(scopeCheck.env.SCOPE_RESULT, "${{ needs.scope.result }}");
     assert.equal(scopeCheck.env.PROFILE, "${{ needs.scope.outputs.profile }}");
     assert.equal(scopeCheck.env.EVENT_NAME, "${{ github.event_name }}");
+    assert.equal(
+      scopeCheck.env.PR_DRAFT,
+      "${{ github.event.pull_request.draft }}",
+    );
+    assert.equal(scopeCheck.env.PR_ACTION, "${{ github.event.action }}");
     assert.match(
       scopeCheck.run,
       /if test "\$EVENT_NAME" != pull_request; then test "\$PROFILE" = full; fi/,
@@ -352,26 +364,40 @@ test("PR deployment metadata is manual and runs only trusted main metadata code"
   assert.equal(commands[0].run, "node scripts/pr-preview-deployments.mjs");
 });
 
-// Exercise the maintained shell gate: a fast main/manual classification must
+// Exercise the maintained shell gate: a fast ready/main/manual classification must
 // independently fail even if a future classifier regresses.
-test("scope shell preflight fails closed for bad scope and fast non-PR profiles", () => {
+test("scope shell preflight rejects fast ready profiles and accepts only explicit Draft fast paths", () => {
   for (const job of [
     workflow("ci").jobs.verify,
     workflow("ci").jobs["verify-selfhost"],
   ]) {
     const preflight = job.steps[0].run;
-    for (const [event, profile, result, allowed] of [
-      ["pull_request", "docs", "success", true],
-      ["pull_request", "standard", "success", true],
-      ["pull_request", "full", "success", true],
-      ["push", "full", "success", true],
-      ["workflow_dispatch", "full", "success", true],
-      ["push", "standard", "success", false],
-      ["workflow_dispatch", "docs", "success", false],
-      ["pull_request", "full", "failure", false],
-      ["pull_request", "full", "skipped", false],
-      ["pull_request", "", "success", false],
-      ["pull_request", "unknown", "success", false],
+    for (const [event, profile, result, draft, action, allowed] of [
+      ["pull_request", "docs", "success", "true", "synchronize", true],
+      ["pull_request", "standard", "success", "true", "opened", true],
+      ["pull_request", "full", "success", "false", "synchronize", true],
+      ["pull_request", "full", "success", "false", "ready_for_review", true],
+      ["pull_request", "docs", "success", "false", "synchronize", false],
+      ["pull_request", "standard", "success", "false", "synchronize", false],
+      ["pull_request", "docs", "success", "true", "ready_for_review", false],
+      [
+        "pull_request",
+        "standard",
+        "success",
+        "true",
+        "ready_for_review",
+        false,
+      ],
+      ["pull_request", "docs", "success", "", "synchronize", false],
+      ["pull_request", "standard", "success", "TRUE", "synchronize", false],
+      ["push", "full", "success", "", "", true],
+      ["workflow_dispatch", "full", "success", "", "", true],
+      ["push", "standard", "success", "", "", false],
+      ["workflow_dispatch", "docs", "success", "", "", false],
+      ["pull_request", "full", "failure", "true", "synchronize", false],
+      ["pull_request", "full", "skipped", "true", "synchronize", false],
+      ["pull_request", "", "success", "true", "synchronize", false],
+      ["pull_request", "unknown", "success", "true", "synchronize", false],
     ]) {
       const execution = spawnSync(
         "bash",
@@ -382,6 +408,8 @@ test("scope shell preflight fails closed for bad scope and fast non-PR profiles"
             EVENT_NAME: event,
             PROFILE: profile,
             SCOPE_RESULT: result,
+            PR_DRAFT: draft,
+            PR_ACTION: action,
           },
           timeout: 1000,
           encoding: "utf8",
@@ -391,7 +419,7 @@ test("scope shell preflight fails closed for bad scope and fast non-PR profiles"
       assert.equal(
         execution.status === 0,
         allowed,
-        `${event}/${profile}/${result}`,
+        `${event}/${profile}/${result}/${draft}/${action}`,
       );
     }
   }

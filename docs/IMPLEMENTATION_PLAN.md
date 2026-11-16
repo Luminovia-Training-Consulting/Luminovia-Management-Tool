@@ -1,5 +1,15 @@
 # Persistent implementation plan
 
+## Current combined acceptance-step and Draft-routing follow-up
+
+- [x] Integrate actually accepted Main34 `c5281002` with both complete historical ledgers, parallel quality/application/native jobs and independent SQL workers; preserve all 36 released SQL and production React/Edge bytes.
+- [x] Require actual successful full application/native steps bound to the current canonical CI run/check/head/attempt and complete job inventory. Demonstrate two old-controller red/new-controller green simulated apply cases with zero corrected writer calls; retain legitimate earlier successful attempts.
+- [x] Preserve fast UI/docs verification only for proven open Drafts; route Ready/unknown/mismatched events to full and subscribe to `ready_for_review`. Exercise both maintained shell preflights against fast Ready decisions, including four old-red/new-green comparisons.
+- [x] Pass 90 focused and all 304 combined runtime/maintenance cases, scoped lint/format/actionlint/syntax/diff checks and production/SQL byte comparisons. Raise only the outer application budget to 60 minutes after the measured 38m53s pass; retain all inner deadlines and assertions.
+- [ ] Observe every required exact-head/current-base GitHub check on this new combined source, including complete real application and native retained-data acceptance. Earlier `7daaa7b` and Main34 outcomes remain tied to their own revisions.
+- [ ] Follow the assigned Main/shared-QA order and reconcile the user review-policy clarification without silently changing server settings. Keep PR19 Draft until its permitted delivery slot; integrate only actually accepted later Main and preserve all remaining product scope.
+- [ ] After permitted delivery, observe an actual Ready-event full run, trusted-Main controller execution and a genuinely eligible native App merge separately. No metadata/unit proof establishes those outcomes or production approval.
+
 ## Accepted Main34 integration — combined-source acceptance pending
 
 - [x] Resolve documentation conflicts while retaining accepted Main34 `c5281002c2ea1102abe91a71d497ceeea87341f4`, both complete historical ledgers and the intended active policy/12:16 disabled-review distinction. Main34's merge at 12:21:30 UTC is observed; its initiator remains unconfirmed.

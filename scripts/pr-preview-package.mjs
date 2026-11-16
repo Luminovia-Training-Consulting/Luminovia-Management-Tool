@@ -125,7 +125,7 @@ try {
 This package contains committed source from tested revision ${testedSha}.
 Verification profile / Pruefumfang: ${profile}.
 PostgreSQL suites / SQL-Pruefungen: ${profile === "docs" ? "not run for documentation-only changes / bei reinen Dokumentationsaenderungen nicht ausgefuehrt" : "included / enthalten"}.
-Full Auth/Storage/browser/PWA/retained-data acceptance: ${profile === "full" ? "included / enthalten" : "main/manual only / nur main/manuell"}.
+Full Auth/Storage/browser/PWA/retained-data acceptance: ${profile === "full" ? "included / enthalten" : "not included in this Draft profile / in diesem Entwurfsprofil nicht enthalten"}.
 PR head: ${headSha}. It is a downloadable local preview, not a hosted website.
 It contains no live backend connection, generated account passwords or QA traces.
 Review PR source before running it: contributor code executes on your computer.
