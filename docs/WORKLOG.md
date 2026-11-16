@@ -1,5 +1,11 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — saved source under exclusive PR10 priority
+
+Accepted main e88df84 is merged locally as 62be5a6, retaining its customer-neutral catalogue, publication controls, documentation and all 27 accepted migration hashes. All six owned operational files remain additive and ordered after the accepted maximum. The three documentation/link/neutrality checks pass; no new complete or native runtime was started during PR10's reserved QA/headroom.
+
+Carina's latest instruction gives PR10 exclusive next-merge and shared-PC acceptance priority. All other PRs remain Draft, with no self-issued Ready, auto-merge or merge watcher. The corrected first-four source and separate enquiry/accounting/amendment checkpoints are saved as signed commits. Their remaining current-main reconciliation, source pushes/PR preparation and actual Auth/scanner/browser acceptance follow that priority. This is a continuation checkpoint, not a claim that the full seven-module target or a deployment is complete.
+
 ## 16 November 2026 — symmetric support/course document isolation
 
 The independent optional-course review found an access path outside the ordinary document predicate: a course resource registry could retain a previously personal upload. The never-released support migration now refuses any existing or removed course-resource reference before dedicating a document. Its optional reverse trigger takes the same document row lock before refusing a support attachment as course material. This closes both registration orders without denying ordinary participant course resources or adding a dependency on the optional workspace.

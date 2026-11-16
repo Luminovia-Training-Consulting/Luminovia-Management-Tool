@@ -6,10 +6,10 @@ The exact additional [implementation prompt](OPERATIONS_EXTENSION_PROMPT.txt) is
 
 - [x] Inspect/fetch current main, all11open PRs/commits/checks, live rules, security findings and authorised development-release automation; isolate new work from the original dirty checkout.
 - [x] Implement initial course-readiness, delivery, future whole-block replacement and support source with server-side authority, DE/EN UI and focused SQL/source tests. Their full acceptance remains open.
-- [ ] Complete and deliver the separate enquiry, accounting and consented-amendment PRs; initial source and focused tests exist, and commissioned compensation/customer proposals are being completed independently.
+- [ ] Deliver the separately implemented enquiry/document, accounting and consented-amendment sources. Current focused evidence is recorded in their worktrees; actual Auth/scanner/browser acceptance and final current-main reconciliation remain required.
 - [ ] Complete started/partially completed/invoiced replacement workflow and optional waitlist/ordered notices.
 - [ ] Complete exact-source canonical acceptance. Local e34a5bf passes SQL/Auth/API/scanner and 95/96 browsers; transport failure makes the whole run FAIL and build/PWA were not reached. Own feature screenshots were inspected; the isolated public-help desktop/mobile follow-up passes2/2.
-- [ ] Push the corrected signed PR24/PR25 sources and prepare focused accounting/amendment PRs. Verify all current required checks. The coordinator reserves the next manual main merge for PR27; no competing merge or new auto-merge.
+- [ ] Push the corrected signed PR24/PR25 sources and prepare focused accounting/amendment PRs. Verify all current required checks. PR10 now owns the next main merge and shared PC QA/headroom; no competing Ready/merge/auto-merge/watch or heavy test starts here.
 - [ ] Verify any separately authorised installation from actual state. Local development/tests are now the default; the separate workflow owner controls publication switches. No production/public Website/DNS/real-mail/purchase action is implied.
 
 Initial SQL evidence: readiness16, delivery12, replacement13, support12groups. Whole-source257tests and unchanged coverage floors pass; TypeScript/ESLint pass. The canonical complete command returned exit1 before startup because another checkout holds shared QA ownership; this is not a full integration pass.
