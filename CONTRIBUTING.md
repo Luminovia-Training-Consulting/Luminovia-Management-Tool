@@ -78,6 +78,8 @@ All 15 required contexts are listed in [GitHub administration](docs/GITHUB_WORKF
 
 Repository auto-merge availability is enabled, but it does not prove that the new controller is delivered. The controller-only source remains prepared until its own exact-source CI, merge and successful default-branch execution are observed. Keep work as a draft or add `merge:hold` to pause it; the required metadata check also rejects the hold. Native merging can create a commit different from the synthetic test merge; the controller makes no exact-test-merge-SHA guarantee.
 
+Daily maintenance uses a signed separate branch and a PR labelled `type:dependencies`, `area:devops` and `risk:high`. Its native auto-merge request waits for independent review and all 15 current checks; the maintenance App has no exception. The [protected maintenance guide](docs/GITHUB_WORKFLOW.md#protected-daily-maintenance) explains deterministic PR reuse, outdated-PR resolution, the non-merging signature diagnostic and the separate workflow-delivery evidence. Source integrated from PR22/main `319ab69f` does not prove that a privileged maintenance run has succeeded.
+
 Merging and successful verification do not themselves authorise release publication, installation, production, SMTP, DNS, risky migrations or real-data changes. Follow the separate owning workflows and [deployment runbook](docs/DEPLOYMENT_RUNBOOK.md); claim a release or installation only from its actual evidence.
 
 ## Tags and releases

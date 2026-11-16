@@ -42,7 +42,7 @@ The prepared [native controller](AUTO_MERGE.md) requires independent review and 
 
 ## Controller delivery still pending
 
-The legacy fragment above remains valid for older links. **Branch rules are active; controller delivery is the pending item.** This prepared narrow follow-up integrates main `0a6002a5` and still requires its own exact-source CI, merge and successful default-branch execution. Source files, repository auto-merge availability and a configured App token do not prove that the controller is running on accepted main.
+The legacy fragment above remains valid for older links. **Branch rules are active; controller delivery is the pending item.** This prepared narrow follow-up includes main `319ab69f` and its protected PR22 daily-maintenance source and still requires its own exact-source CI, merge and successful default-branch execution. Source files, repository auto-merge availability and a configured App token do not prove that the controller is running on accepted main.
 
 The existing App `5776881` (`luminovia-portal-maintenance`) remains scoped to this repository. Its existing protected `maintenance-signing` credentials are reused; no new App, permission scope, personal token or server credential is introduced. The standard Actions token reads REST and a fixed GraphQL operation. Only the separate App token may call the native PR merge endpoint or the two main-verification dispatch endpoints. It has no main-ref/force-write route and no native-rule bypass.
 
@@ -53,6 +53,28 @@ The successful [read-only proof 43809731348](https://github.com/Luminovia-Traini
 Earlier standard-token/ref-promotion probes, role-based review exceptions and historical broad exemptions describe their recorded configurations. They grant no exception under the current rules. The separate maintenance/signature mechanisms must obey their current owning controls; an old signing probe is not review approval.
 
 References: [rulesets and exceptions](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository), [Rules API](https://docs.github.com/en/rest/repos/rules), [native PR merge endpoint](https://docs.github.com/en/rest/pulls/pulls#merge-a-pull-request), [controller evidence policy](AUTO_MERGE.md). [CI_QUALITY](CI_QUALITY.md) records historical check/coverage evidence; the current rule table above supersedes its earlier governance snapshots.
+
+## Protected daily maintenance
+
+PR22/main `319ab69f` supplies the protected PR-based maintenance source. Branch-rule activation is complete; successful App-token creation and actual maintenance workflow execution are separate operational evidence, not a reason to weaken protection. Only `CarinaSchoppe` (`User:29256704`) has the personal PR-only review exception. Maintain/Admin roles and the maintenance App have none; all 15 strict checks and the history/signature rules remain mandatory.
+
+The existing private **Luminovia Portal Maintenance** App has integration ID 5776881 and selected installation 182397724. The protected `maintenance-signing` environment already contains the App ID and private-key secret and restricts deployment to `main`. After explicit user confirmation, both the App registration and installation grant `contents/actions/pull_requests: write`. The installation remains limited to the single Luminovia-Management-Tool repository. Requesting a permission in a workflow does not grant it to the installation. Successful short-lived token creation and actual PR workflow execution remain acceptance steps; no completed App publication is claimed here.
+
+The new publisher validates the tested dependency-only patch, creates or reuses its deterministic separate branch, verifies the signed commit and exact parent, and opens or reuses the matching PR. It applies `type:dependencies`, `area:devops` and `risk:high`, then requests native auto-merge. The App token starts normal PR CI without the extra workflow approval associated with a `GITHUB_TOKEN`-created PR. Native auto-merge still waits for independent review and every required check. If GitHub already reports the PR clean and ready, the publisher may use the regular PR merge endpoint with the exact expected head SHA; all native protections still apply. It cannot change `main` directly or substitute a pre-merge main workflow dispatch for PR checks.
+
+While another open same-repository `codex/daily-maintenance-*` PR carries the maintenance marker, the publisher refuses to open a second update PR and reports `maintenance_existing_pr_requires_resolution`. It does not rewrite or close reviewed or human-edited PRs. If main has advanced and the existing PR is outdated, a maintainer closes it; the next daily scan retests and regenerates the candidate against actual current main. Strict up-to-date CI prevents an old-base merge.
+
+After protected delivery, the manual diagnostic can verify the App against real GitHub endpoints without merging a candidate:
+
+```sh
+gh workflow run daily-maintenance.yml --ref main -f signature_probe_only=true
+```
+
+It creates a signed temporary branch and labelled draft PR, confirms their identity, closes the draft and deletes its branch. It never enables auto-merge or calls the merge endpoint for the diagnostic. Acceptance requires confirmed cleanup and unchanged main; unknown or edited resources remain visible for inspection. Normal PR CI may start for the probe commit, independently of the already required full source acceptance.
+
+The former standard-token direct-main path is rejected by the active rules. Keep that failure closed until the PR workflow is delivered and tested. An unchanged daily scan skips privileged publication entirely. A deliberately absent release does not trigger another main CI run; the former retry-main command and its Actions-write token scope have been removed. Publication requires its own explicit approval under the local-first delivery policy. Do not restore App bypasses to make old promotion code work.
+
+References: [rulesets and exceptions](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository), [Rules API](https://docs.github.com/en/rest/repos/rules), [workflow token events](https://docs.github.com/en/actions/concepts/security/github_token).
 
 ## PR preview packages and deployment records
 

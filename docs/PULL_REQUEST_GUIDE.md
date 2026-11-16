@@ -95,6 +95,8 @@ Keep unfinished work as a draft or add `merge:hold`; the required metadata check
 
 Repository auto-merge availability and prepared source do not prove that this controller has reached main. Its own exact-source CI, merge and successful default-branch execution remain required. Historical work-log results are revision-specific and cannot certify a new head.
 
+Daily maintenance follows the same protected PR process: a signed separate branch, `type:dependencies`, `area:devops` and `risk:high` labels, independent review and all 15 current checks. Native auto-merge grants no App or role exception. PR22/main `319ab69f` provides the publisher source; [protected maintenance operation](GITHUB_WORKFLOW.md#protected-daily-maintenance) distinguishes it from actual token/workflow acceptance and explains existing-PR and diagnostic cleanup behavior.
+
 ## Merge and publication
 
 Use GitHub's native PR merge path after the applicable review, current-base checks and signature requirements pass. The controller submits the expected head SHA and `merge_method: merge`; it does not PATCH the main ref or force an update. Native merging may create a commit different from the synthetic test merge, so there is no exact-test-merge-SHA guarantee. A refused or unconfirmed merge must not be described as completed.
