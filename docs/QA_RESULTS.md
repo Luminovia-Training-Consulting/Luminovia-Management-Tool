@@ -2,6 +2,10 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## Combined source coverage — full native result pending
+
+The integrated source passes **342/342 unit/component tests in54files** and every configured V8 coverage floor. Measured statements55.78%, branches50.40%, functions46.94%, lines57.60%; file API lines98.92%, functions96.29%. Reported source coverage includes all executable browser TS/TSX and public-config code; SQL, Edge and browser acceptance are separate. `./portal test` now executes this gate and preserves HTML/LCOV/JSON reports. A complete new native32 result is still required.
+
 ## Combined 32-migration preflight — native acceptance still required
 
 Signed source `1adc134` passed **316 Vitest cases / 53 files**, lint and TypeScript. The source graph contains **128 reachable modules and 32 routes**, with no unreachable modules, unresolved imports, unused runtime exports, missing literal assets or broken literal routes. A real disposable migration replay inventories **155 public functions**. Focused module checks and independent reviews are recorded in WORKLOG; they do not replace actual Auth/Storage/browser integration.

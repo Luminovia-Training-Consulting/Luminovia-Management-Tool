@@ -1,6 +1,6 @@
 # Contributing to Luminovia Portal
 
-> Status as of 16 November 2026: Maintainers and administrators have a permanent `always` exception for direct merges. Additional review/check requirements for other contributors remain prepared but disabled until the maintenance App path has been verified. [Current activation status](docs/GITHUB_WORKFLOW.md#activation-still-pending).
+> Status as of 16 November 2026: all three main rulesets are active. Maintainers and repository administrators have a **PR-only review exception**; required CI and commit signatures remain mandatory. Auto-Merge is enabled and waits for the applicable requirements. [Current rule layers and App boundary](docs/GITHUB_WORKFLOW.md#active-rule-layers).
 
 Welcome! This guide explains how to turn an idea or bug report into a tested, reviewable change. **Use English for issues, pull requests and contributor-facing documentation.** Application interface changes must provide both German and English strings; authored course content keeps its original language.
 
@@ -68,13 +68,13 @@ Every PR needs exactly one `type:*` label, at least one `area:*` label and exact
 
 ## Review and merge
 
-The normal contribution process uses a pull request, an independent approving review, resolved conversations and current passing checks. New changes invalidate earlier approvals where the prepared review policy is enforced.
+Ordinary contributors need a pull request, an independent approving review, resolved conversations and current passing checks. New changes invalidate earlier approvals under the active review rules.
 
-Maintainers and administrators have an explicit role-based exception and may **merge directly at any time**, including while reviews or checks are pending or failing. This replaces the former personal PR-only exception. Ordinary write access does not grant this bypass. The exception applies to the acting person; GitHub may require an explicit bypass action. Review and clear test evidence remain the recommended workflow.
+Maintainers and repository administrators may merge **through a PR without another person's review approval**. This role-based exception applies only to the review layer (`pull_request`, repository roles 2 and 5); it does not allow a direct push or bypass required CI or commit signatures. Ordinary write access receives no review exception. The exception follows the person performing the merge, not the PR author.
 
-Build, Typecheck, Lint, Formatting, Code quality and Tests and coverage run alongside `verify`, `Actual isolated selfhost image compatibility` and `PR metadata`. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes, CodeQL and Dependabot. The additional mandatory review/check rules for ordinary contributors remain disabled until the maintenance App path is verified; committed JSON alone does not prove active enforcement.
+All three rule layers are active. The check rule requires nine GitHub Actions contexts: Build, Typecheck, Lint, Formatting, Code quality, Tests and coverage, `verify`, `Actual isolated selfhost image compatibility` and `PR metadata`. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes, CodeQL and Dependabot. Missing, failed or stale checks must be resolved before a human merge.
 
-A direct maintainer merge does not skip publication checks: the development release job waits for its gates in `ci.yml`. Failed checks do not produce an approved installation package. The separate Security workflow provides additional analysis. The existing daily maintenance path remains unchanged until the App setup is coordinated; no unverified bot bypass is assumed.
+Repository Auto-Merge is enabled. It can queue an eligible PR until its active requirements are satisfied; it is not a review, CI or signature bypass. A changed head needs its own current checks. The separate repository-scoped maintenance App has a technical exception in the review/check layers; the history/signature layer has no bypass. Its operational proof and remaining main-only workflow gate are recorded in [GITHUB_WORKFLOW](docs/GITHUB_WORKFLOW.md).
 
 A merge may trigger the existing **development release automation**. Production installation, risky migrations, and changes to hosting, DNS or real data still require the relevant separate authorization. A GitHub merge does not replace that operational approval.
 

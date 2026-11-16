@@ -1,5 +1,10 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — combined coverage and full native freeze
+
+The integrated source preserves incoming main3256d1a, all32 migrations and both M7/M8 verticals. `npm run test:coverage` passed342/342 tests in54files: statements55.78%, branches50.40%, functions46.94%, lines57.60%; all configured global/critical-file floors pass. Six additional real download-contract cases cover exact bytes/bindings, current auth/no-store headers, error rejection and Blob-URL cleanup; no floor or source exclusion was changed. The canonical isolated command now runs this coverage gate and saves its reports with the private artifacts. Full native32 acceptance and exact-head CI remain pending at this freeze.
+
+
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
 ## 16 November 2026 — concurrent quality baseline integrated; maintainer exception corrected

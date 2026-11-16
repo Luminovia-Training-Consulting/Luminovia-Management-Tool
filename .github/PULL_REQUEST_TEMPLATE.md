@@ -34,4 +34,4 @@ A merged PR does not authorize production deployment or risky data migrations.
 - [ ] Tests and documentation match the change; remaining gaps are listed above.
 - [ ] Exactly one `type:*`, exactly one `risk:*` and at least one `area:*` label are set. For a fork PR without label access, ask a maintainer to classify it.
 
-<!-- Maintainers and administrators have an ALWAYS exception for direct merges, including while reviews or checks are pending. Release publication still requires successful CI. Additional review/check enforcement rules remain disabled until the maintenance app's protected update path is verified; see docs/GITHUB_WORKFLOW.md for the current server configuration. -->
+<!-- All three main rulesets are active. Maintainers and repository administrators have a PR-only review exception; the nine required CI checks and commit signatures remain mandatory. Auto-Merge waits for the active requirements. The separate maintenance App exception does not bypass the history/signature layer. See docs/GITHUB_WORKFLOW.md for current rules and operational evidence. -->
