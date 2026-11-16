@@ -1,3 +1,6 @@
+/**
+ * Source-bound, explicitly reviewed M3 transition for historical development data. Fixed hashes constrain this exception; ordinary later migrations do not use it.
+ */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { lstat, readFile, readdir, writeFile } from "node:fs/promises";
@@ -45,18 +48,22 @@ const baselineVersions = [
   "20261115132410",
   "20261115142130",
 ];
+// Compute a stable SHA-256 digest for the source/artifact comparison.
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const historySQL =
   "select coalesce(json_agg(json_build_object('version',version,'source',statements[1]) order by version),'[]'::json)::text from supabase_migrations.schema_migrations;";
+// Quote the SQL text value for the unchanged source recorded in migration history.
 function quoted(value) {
   return "'" + value.replaceAll("'", "''") + "'";
 }
+// Choose a dollar-quote delimiter absent from this source.
 function dollar(value, suffix) {
   const delimiter = "$reviewed_m3_" + suffix + "$";
   assert(!value.includes(delimiter), "Unexpected reviewed source delimiter.");
   return delimiter + value + delimiter;
 }
 
+// Read the exact historical migration files and verify their known hashes.
 export async function loadReviewedSources(root = repository) {
   const sources = [];
   for (const item of reviewedMigrations) {
@@ -105,6 +112,7 @@ do $verify$ declare r record; actual text; begin
 end; $verify$;
 `;
 
+// Build the bounded transition with locks and preservation checks; do not rewrite historical source.
 export function buildBackfillSQL(pending, history) {
   assert(
     pending.length > 0 &&
@@ -154,6 +162,7 @@ export function buildBackfillSQL(pending, history) {
   return sql + preserveAfterSQL + "NOTIFY pgrst, 'reload schema';\nCOMMIT;\n";
 }
 
+// Apply the reviewed transition only under the required data/backup conditions.
 export async function applyReviewedBackfill(sql, root = repository) {
   const sources = await loadReviewedSources(root);
   const history = JSON.parse(await sql(historySQL));
@@ -213,6 +222,7 @@ export async function applyReviewedBackfill(sql, root = repository) {
   };
 }
 
+// Rehearse the transition against a private restored copy first.
 export async function backfillRestoreCheck(directory) {
   const { actual, manifest } = await inspectBackup(directory);
   let database;
@@ -310,6 +320,7 @@ export async function backfillRestoreCheck(directory) {
   }
 }
 
+// Execute SQL through the fixed development connection, not an arbitrary database target.
 async function developmentSql(input) {
   return collectCommand(
     "ssh",

@@ -1,3 +1,7 @@
+/**
+ * Catalogue search, hierarchy details and versioned topic editor, using shared brand colours and
+ * surface variables.
+ */
 .taxonomy-filters {
   display: grid;
   grid-template-columns: minmax(180px, 2fr) minmax(150px, 1fr);
@@ -77,6 +81,7 @@
 .taxonomy-editor textarea {
   min-height: 110px;
 }
+
 @media (max-width: 640px) {
   .taxonomy-filters,
   .taxonomy-editor-pair {

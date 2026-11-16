@@ -1,3 +1,7 @@
+/**
+ * Active conversation with search, history, read state, mute and member controls. Access loss
+ * hides retained data; report messages read only online and in the visible tab.
+ */
 import { useEffect, useRef, useState } from "react";
 import {
   useInfiniteQuery,
@@ -32,6 +36,7 @@ import { MessageBubble } from "./message";
 import { useChatRealtime } from "./realtime";
 import type { ChatRoom } from "./types";
 import "./i18n";
+/** Bind history, read state, search, Realtime and attachments to one active room. */
 export function ChatThread({
   actor,
   room,
@@ -64,6 +69,8 @@ export function ChatThread({
   const latest = ordered[ordered.length - 1];
   const marked = useRef("");
   const end = useRef<HTMLDivElement>(null);
+  // Room management is not a blanket administrator read bypass for private DMs.
+  // The UI follows distinct room types; the server checks each action again.
   const canManage =
     room.kind !== "dm" &&
     room.kind !== "general" &&
@@ -90,6 +97,8 @@ export function ChatThread({
   });
   const mark = read.mutate;
   useEffect(() => {
+    // Search results or an invisible tab do not confirm that new messages were read.
+    // The ref prevents concurrent duplicates only; onError allows an uncertain receipt to retry.
     const observeRead = () => {
       if (
         !latest ||
@@ -126,6 +135,8 @@ export function ChatThread({
     onSuccess: () =>
       client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
   });
+  // Revocation outranks a previously successful history response.
+  // Retained query data must not conceal the revoked state.
   const lost = revoked || chatAccessDenied(messages.error);
   if (lost)
     return (

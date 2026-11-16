@@ -1,3 +1,7 @@
+/**
+ * Management Kanban for versioned offer state. Drag and keyboard changes share the server
+ * contract; actual claims determine filled state, which is never a manual drop target.
+ */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -20,8 +24,11 @@ import { manageOffer } from "./lifecycle-api";
 import "./lifecycle-i18n";
 import "./board.css";
 
+/** Fixed offer-state presentation; the filled column remains server-derived. */
 const statuses = ["draft", "published", "filled", "archived"] as const;
+/** Four visible board columns; only the permitted subset is manually mutable. */
 type Status = (typeof statuses)[number];
+/** Reduced authorized board projection with version and explicit transition capability. */
 interface BoardOffer {
   id: string;
   title: string;
@@ -31,8 +38,10 @@ interface BoardOffer {
   confirmed_count: number;
   can_transition: boolean;
 }
+/** Allow manual draft/published/archived transitions only; actual claims determine filled state. */
 const mutableStatus = (s: string): s is Exclude<Status, "filled"> =>
   s === "draft" || s === "published" || s === "archived";
+/** Register allowed drop destinations without exposing filled as a manual transition target. */
 function Column({
   status,
   children,
@@ -59,11 +68,13 @@ function Column({
     </section>
   );
 }
+/** Shared data/action contract for mouse and keyboard interaction with one offer card. */
 type CardProps = {
   offer: BoardOffer;
   disabled: boolean;
   change: (offer: BoardOffer, status: Exclude<Status, "filled">) => void;
 };
+/** Use the same allowed offer states for keyboard selection and the drag handle. */
 function CardContent({
   offer,
   disabled,
@@ -113,6 +124,7 @@ function CardContent({
     </>
   );
 }
+/** Register only a movable offer as draggable, with its own explicit handle. */
 function MovableCard(props: CardProps) {
   const { offer, disabled } = props;
   const { ref, handleRef, isDragging } = useDraggable({
@@ -130,6 +142,7 @@ function MovableCard(props: CardProps) {
     </article>
   );
 }
+/** Keep historical cards as ordinary articles/links without artificial drag-button semantics. */
 function Card(props: CardProps) {
   // Historical/accepted cards never register as draggables: this also avoids
   // adding synthetic button/tab semantics around their ordinary detail link.
@@ -141,8 +154,10 @@ function Card(props: CardProps) {
     </article>
   );
 }
-/** One server-scoped batch, no per-card polling or optimistic status changes.
- * A drag is only a versioned publication request, never an assignment. */
+/**
+ * Read one server-scoped batch without per-card polling. Confirm versioned publication transitions
+ * online without optimistic card moves; dragging never allocates an assignment.
+ */
 export function OfferBoard() {
   const { session } = useAuth();
   const { t } = useTranslation();

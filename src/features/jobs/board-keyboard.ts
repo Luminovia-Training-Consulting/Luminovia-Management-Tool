@@ -1,3 +1,4 @@
+/** Board-specific extension of the real dnd-kit keyboard sensor; publication remains a versioned server request made by OfferBoard only after a completed drop. */
 import { KeyboardSensor } from "@dnd-kit/dom";
 
 const columns = ["draft", "published", "archived"] as const;
@@ -5,6 +6,7 @@ const columns = ["draft", "published", "archived"] as const;
 /** Keep dnd-kit's activation, cancellation and announcements, but navigate
  * actual publication destinations rather than moving ten pixels per key. */
 export class OfferBoardKeyboardSensor extends KeyboardSensor {
+  /** Reveal the next valid target and use normal collisions; publication is owned by the board's completed-drop handler. */
   protected override handleMove(
     direction: "up" | "down" | "left" | "right",
     event: KeyboardEvent,

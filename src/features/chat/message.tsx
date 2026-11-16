@@ -1,3 +1,7 @@
+/**
+ * Single messages with safe text links, reactions and own-edit controls. Visible author/time
+ * rules guide the UI; chat RPCs reauthorize every mutation.
+ */
 import { Fragment, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -13,7 +17,9 @@ import { Dialog } from "../../components/ui/dialog";
 import { chatKeys } from "./api";
 import type { ChatMessage } from "./types";
 import "./i18n";
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const editSchema = z.object({ body: z.string().max(8000) });
+/** Bound the quick emoji picker; the server validates actual reaction changes. */
 const quickReactions = ["👍", "❤️", "🎉", "💡", "👀", "✅"];
 /** Text is never interpreted as HTML. Only explicit HTTP(S) links become anchors. */
 export function MessageText({ body }: { body: string }) {
@@ -43,6 +49,7 @@ export function MessageText({ body }: { body: string }) {
     </>
   );
 }
+/** Display message/reaction/edit controls and await the corresponding RPC before confirming changes. */
 export function MessageBubble({
   message,
   actor,

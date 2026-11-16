@@ -1,3 +1,7 @@
+/**
+ * Wiki lists, article views, drafts and revision history. Saved drafts and published versions
+ * remain distinct so editing cannot silently publish changes.
+ */
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -41,11 +45,13 @@ import { KnowledgeEditor } from "./editor";
 import { CategoryManager } from "./categories";
 import "./i18n";
 import "./knowledge.css";
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const metadata = z.object({
   title: z.string().trim().min(1).max(200),
   locale: z.enum(["de", "en"]),
   category: z.string().min(1),
 });
+/** Save normalized content/metadata through an explicit draft/publication action. */
 function WikiForm({
   actor,
   record,
@@ -223,6 +229,7 @@ function WikiForm({
     </form>
   );
 }
+/** Display the permitted version, its history and separate editing state. */
 function WikiArticle({
   actor,
   id,
@@ -364,6 +371,7 @@ function WikiArticle({
     </article>
   );
 }
+/** Coordinate wiki search, categories and article routes using authorized server lists. */
 export function WikiPage() {
   const { t, i18n } = useTranslation("knowledge");
   const online = useOnline();

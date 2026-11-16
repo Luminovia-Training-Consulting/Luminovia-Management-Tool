@@ -1,3 +1,7 @@
+/**
+ * DOM regressions for fictional workflows, navigation, reset and keyboard focus. Mocked backend
+ * imports and fetch expose accidental demo coupling; these fixtures do not test live workflows.
+ */
 import {
   act,
   cleanup,

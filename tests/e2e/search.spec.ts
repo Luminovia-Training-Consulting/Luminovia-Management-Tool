@@ -1,3 +1,4 @@
+/** Real aggregate-search journey across Auth/RPC/REST/scanned files: authorised results navigate correctly while foreign private records stay absent. Uses only canonical fictional actors. */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";

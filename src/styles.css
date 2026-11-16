@@ -1,4 +1,9 @@
+/**
+ * Global brand tokens, shared controls and desktop/mobile shell. Dark mode uses deliberate
+ * contrast values; responsive layouts preserve business actions and share brand variables.
+ */
 @import "tailwindcss";
+/* Locally bundled brand font: no external font request or blocked text rendering. */
 @font-face {
   font-family: "Space Grotesk";
   font-style: normal;
@@ -6,6 +11,7 @@
   font-display: swap;
   src: url("/brand/space-grotesk-latin-wght-normal.woff2") format("woff2");
 }
+/* Light surfaces and the seven official accent colours as central design variables. */
 :root {
   font-family:
     Inter,
@@ -39,6 +45,7 @@
   --radius: 18px;
   color-scheme: light;
 }
+/* Deliberate dark surface/text contrasts rather than simply inverted brand accents. */
 :root[data-theme="dark"] {
   --paper: #111a2e;
   --surface: #1b2840;
@@ -51,6 +58,7 @@
   --shadow: 0 5px 20px #0001;
   color-scheme: dark;
 }
+/* Consistent box sizing and native defaults before component rules. */
 * {
   box-sizing: border-box;
 }
@@ -131,6 +139,7 @@ ol {
 svg {
   flex-shrink: 0;
 }
+/* Shared form controls have at least 44-pixel height and explicit theme colours. */
 input:not([type="checkbox"]),
 select,
 textarea {
@@ -162,6 +171,7 @@ input[type="checkbox"] {
   flex-shrink: 0;
   margin: 0;
 }
+/* Keep keyboard focus visible independently of hover; feature styles must preserve it. */
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
@@ -171,6 +181,7 @@ summary:focus-visible {
   outline: 3px solid var(--brand);
   outline-offset: 3px;
 }
+/* Accessibility helpers hide text visually only; the skip link remains keyboard-accessible. */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -212,6 +223,7 @@ summary:focus-visible {
   color: var(--muted);
   margin-bottom: 12px;
 }
+/* Shared buttons switch theme colours without background interpolation so immediate text contrast remains valid. */
 .button {
   display: inline-flex;
   align-items: center;
@@ -272,6 +284,7 @@ summary:focus-visible {
 .full-width {
   width: 100%;
 }
+/* Form fields/hints share styling; components/common.tsx owns their semantic ID/ARIA links. */
 .field {
   display: flex;
   flex-direction: column;
@@ -311,6 +324,7 @@ legend {
   margin: 12px 0;
   min-height: 30px;
 }
+/* Shared panels, result/error notices and empty/loading states. */
 .panel {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -385,6 +399,7 @@ legend {
 .text-link:hover {
   text-decoration: underline;
 }
+/* Consistent state chips/tags; colours present state, not business transition rules. */
 .badge,
 .status {
   display: inline-flex;
@@ -430,6 +445,7 @@ legend {
   max-width: 660px;
   margin: 0 auto;
 }
+/* Shared page heading with a flexible feature action. */
 .page-heading {
   display: flex;
   justify-content: space-between;
@@ -446,6 +462,7 @@ legend {
 .page-heading h1 {
   margin-bottom: 8px;
 }
+/* Desktop shell with a fixed navigation column and a workspace that can shrink internally. */
 .app-shell {
   display: grid;
   grid-template-columns: 225px minmax(0, 1fr);
@@ -488,6 +505,7 @@ legend {
   color: #b2c5e2;
   margin: 3px 0 0;
 }
+/* Offizielles siebenfarbiges Markenband, getrennt von funktionalen Statusfarben. */
 .rainbow {
   height: 4px;
   width: 100%;
@@ -570,6 +588,7 @@ legend {
   background: #29466b;
   color: #fff;
 }
+/* Workspace, header and shared search; min-width rules prevent overflow from long content. */
 .workspace {
   min-width: 0;
   display: flex;
@@ -660,6 +679,7 @@ legend {
 .mobile-nav {
   display: none;
 }
+/* Compact desktop mode preserves navigation icons and the same reachable destinations. */
 .is-collapsed {
   grid-template-columns: 82px minmax(0, 1fr);
 }
@@ -683,6 +703,7 @@ legend {
 .is-collapsed .collapse-button {
   width: 100%;
 }
+/* Native bell disclosure with a bounded personal preview, not another complete inbox. */
 .notification-menu {
   position: relative;
 }
@@ -738,6 +759,7 @@ legend {
 .notification-popover p {
   font-size: 13px;
 }
+/* Global network/update notices above the current feature view. */
 .connection-banner {
   position: sticky;
   top: 0;
@@ -765,6 +787,7 @@ legend {
   box-shadow: 0 10px 35px #0002;
   font-size: 12px;
 }
+/* Personal dashboard heading and distinct brand hero composition. */
 .dashboard-heading {
   display: flex;
   align-items: center;
@@ -834,6 +857,7 @@ legend {
 .hero .button:hover {
   background: #123a92;
 }
+/* Decorative arcs/stars support branding; ordinary text carries business information. */
 .hero-art {
   position: relative;
   min-height: 280px;
@@ -926,6 +950,7 @@ legend {
 [data-theme="dark"] .hero .little-star {
   color: #ffdb76;
 }
+/* Responsive metric cards use official pastel accents and legible navy text. */
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -976,6 +1001,7 @@ legend {
   top: 12px;
   opacity: 0.6;
 }
+/* Dashboard offers/upcoming assignments reuse feature-view card primitives. */
 .dashboard-lower {
   display: grid;
   grid-template-columns: minmax(0, 1.65fr) minmax(260px, 1fr);
@@ -1156,6 +1182,7 @@ legend {
   margin: 0 !important;
   text-transform: uppercase;
 }
+/* Marketplace layout with combinable filters and an accessible empty state. */
 .jobs-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1213,6 +1240,7 @@ legend {
   font-size: 13px;
   max-width: 450px;
 }
+/* Job details and claim side panel; CSS cannot establish confirmed allocation. */
 .detail-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 330px;
@@ -1278,6 +1306,7 @@ legend {
 .claim-panel h2 {
   margin-top: 0;
 }
+/* Own profile and expertise selection accommodate long labels and form content. */
 .profile-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr);
@@ -1312,6 +1341,7 @@ legend {
   margin-top: 4px;
   font-size: 10px;
 }
+/* Calendar controls and FullCalendar adaptation use global theme variables. */
 .calendar-controls {
   display: flex;
   justify-content: space-between;
@@ -1374,6 +1404,7 @@ legend {
 .fc .fc-daygrid-dot-event {
   color: var(--ink);
 }
+/* Modal overlay styling; the Radix dialog owns focus mechanics and roles. */
 .dialog-overlay {
   position: fixed;
   inset: 0;
@@ -1429,6 +1460,7 @@ legend {
 .admin-form legend {
   padding: 0 6px;
 }
+/* Session rows and bounded MFA QR presentation in administrative/security forms. */
 .session-form-row {
   display: grid;
   grid-template-columns: 1fr 1fr 44px;
@@ -1452,6 +1484,7 @@ legend {
 .security-panel form {
   margin-top: 20px;
 }
+/* Public sign-in shell with brand narrative and a separate form panel. */
 .login-layout {
   min-height: 100vh;
   display: grid;
@@ -1575,6 +1608,7 @@ legend {
   top: 22px;
   z-index: 5;
 }
+
 @media (min-width: 1500px) {
   .hero-art .arc-one {
     right: 21%;
@@ -1589,6 +1623,7 @@ legend {
     right: 35%;
   }
 }
+
 @media (max-width: 1250px) {
   .topbar {
     padding-inline: 25px;
@@ -1656,6 +1691,7 @@ legend {
     gap: 18px;
   }
 }
+
 @media (max-width: 960px) {
   .topbar-actions {
     gap: 6px;
@@ -1719,6 +1755,7 @@ legend {
     width: 210px;
   }
 }
+
 @media (max-width: 760px) {
   .app-shell,
   .app-shell.is-collapsed {
@@ -2020,6 +2057,7 @@ legend {
     background: #fffdf8;
   }
 }
+
 @media (max-width: 480px) {
   .global-search {
     display: none;
@@ -2108,6 +2146,7 @@ legend {
     right: -140px;
   }
 }
+/* Respect the system reduced-motion preference while preserving controls and information. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *:before,
@@ -2124,6 +2163,7 @@ legend {
 .fc .fc-day-other .fc-daygrid-day-number {
   color: var(--muted);
 }
+/* Compact invitation/recovery return UI outside private shell state. */
 .callback-layout {
   min-height: 100vh;
   display: grid;
@@ -2148,6 +2188,7 @@ legend {
   max-width: 130px;
   overflow-wrap: normal;
 }
+/* Administrative navigation and two-column person selection with targeted review. */
 .admin-tabs {
   display: flex;
   gap: 8px;
@@ -2273,6 +2314,7 @@ legend {
 .people-expertise-card .button {
   font-size: 12px;
 }
+
 @media (max-width: 1100px) {
   .people-admin-layout {
     grid-template-columns: 1fr;
@@ -2283,6 +2325,7 @@ legend {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
 @media (max-width: 520px) {
   .people-results {
     grid-template-columns: 1fr;
@@ -2297,6 +2340,7 @@ legend {
     gap: 10px;
   }
 }
+/* Keep additional mobile modules reachable through More without crowding primary navigation. */
 .mobile-more {
   display: none;
 }
@@ -2307,6 +2351,7 @@ legend {
 .sidebar-bottom {
   flex-shrink: 0;
 }
+/* Low-height desktop layouts retain accessible navigation actions. */
 @media (max-height: 850px) {
   .sidebar-note {
     display: none;
@@ -2315,6 +2360,7 @@ legend {
     padding-top: 12px;
   }
 }
+
 @media (max-width: 760px) {
   .mobile-more {
     display: block;
@@ -2352,6 +2398,7 @@ legend {
     background: var(--blue-soft);
   }
 }
+/* Explicit global search with authorized results grouped by type. */
 .search-page-form {
   display: flex;
   gap: 12px;
@@ -2380,6 +2427,7 @@ legend {
 .portal-search-results small {
   color: var(--muted);
 }
+
 @media (max-width: 700px) {
   .portal-search-results {
     grid-template-columns: 1fr;
@@ -2389,6 +2437,7 @@ legend {
   }
 }
 
+/* Wrap account/role actions on narrow screens. */
 .account-list {
   list-style: none;
   padding: 0;
@@ -2427,6 +2476,7 @@ legend {
 .account-roles input {
   width: auto;
 }
+/* Keep public practice/help links reachable alongside the sign-in form on narrow screens. */
 .login-learning-links {
   display: flex;
   flex-wrap: wrap;

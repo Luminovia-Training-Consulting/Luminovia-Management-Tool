@@ -1,6 +1,8 @@
+/** Browser acceptance/report boundaries for the canonical runner: bind every copied spec/project to execution and publish only credential-free workflow facts. */
 import assert from "node:assert/strict";
 import { isAbsolute, relative } from "node:path";
 
+/** Flatten nested suites into stable file/title/project identities, rejecting malformed or duplicate evidence. */
 function cases(report, { allowErrors = false } = {}) {
   assert.ok(Array.isArray(report?.suites), "Browser report is missing suites.");
   if (!allowErrors)

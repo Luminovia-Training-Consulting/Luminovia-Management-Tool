@@ -1,3 +1,7 @@
+/**
+ * Canonical complete acceptance in an owned snapshot, random project and separate service ports.
+ * Every stage must pass; failures and cleanup errors remain visible in the private result report.
+ */
 import {
   cpSync,
   mkdirSync,
@@ -81,12 +85,15 @@ const evidence = {
   stages: [],
   browsers: {},
 };
+/** Persist only source/stage/workflow facts; raw process and browser data stay private. */
 const saveEvidence = () =>
   privateWrite(
     join(artifacts, "acceptance.json"),
     JSON.stringify(evidence, null, 2) + "\n",
   );
 saveEvidence();
+
+/** Cancels the current stage; the outer finally path remains responsible for cleanup. */
 const cancel = () => {
   console.log("Test wird abgebrochen; isolierte Dienste werden aufgeräumt …");
   cancellation.abort();
@@ -107,6 +114,7 @@ try {
   // Fingerprint the actual sanitized source, including uncommitted/untracked
   // work. A Git HEAD alone would misidentify the bytes that are being tested.
   const sourceHash = createHash("sha256");
+  /** Hash the copied, credential-filtered bytes before generated configuration changes. */
   function hashSource(directory, prefix = "") {
     for (const entry of readdirSync(directory, { withFileTypes: true }).sort(
       (a, b) => a.name.localeCompare(b.name),
@@ -137,6 +145,7 @@ try {
       entry.isDirectory() ? "dir" : "file",
     );
   }
+  // Only the disposable copy receives the test project/ports; normal development source stays unchanged.
   const configPath = join(scratch, "supabase/config.toml");
   let config = readFileSync(configPath, "utf8");
   config = config
@@ -144,6 +153,8 @@ try {
     .replaceAll("543", "553")
     .replaceAll(":5173", ":5273");
   writeFileSync(configPath, config);
+  /** Runs one named stage in the isolated snapshot with a timeout and shared cancellation signal. */
+  /** Run one required child command; cancellation/failure cannot be recorded as success. */
   const step = async (label, file, args, extra = {}) => {
     console.log(`\n[TEST] ${label}`);
     const item = {
@@ -171,6 +182,7 @@ try {
       saveEvidence();
     }
   };
+  /** Inventory all expected files/projects, execute them and retain truthful separate stage evidence. */
   const browserStage = async (stage, label, args, extra = {}) => {
     const directory = join(scratch, ".local/browser", stage);
     privateDirectory(directory);
@@ -257,6 +269,7 @@ try {
   const functions = join(scratch, "supabase/functions");
   const handlerTests = [];
   const entries = [];
+  /** Discovers delivered Edge entry points and tests recursively so new functions do not silently escape verification. */
   function find(path) {
     for (const entry of readdirSync(path, { withFileTypes: true })) {
       const child = join(path, entry.name);

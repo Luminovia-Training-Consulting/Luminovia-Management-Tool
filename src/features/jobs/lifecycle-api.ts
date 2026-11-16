@@ -1,7 +1,12 @@
+/**
+ * Versioned lifecycle/capacity actions and related query revalidation. Request IDs support
+ * retries; PostgreSQL owns state, slots, cancellation and immutable claim history.
+ */
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import { requireOnline } from "../../lib/online";
 
+/** Accessible claim with permitted history and exact reserved/released intervals. */
 export interface LifecycleClaim {
   id: string;
   lecturer_id: string;
@@ -16,6 +21,7 @@ export interface LifecycleClaim {
   }[];
   events: { type: string; created_at: string; reason: string | null }[];
 }
+/** Current administrative offer state with version protection and separate claim histories. */
 export interface JobLifecycle {
   version: number;
   capacity?: number;
@@ -30,6 +36,7 @@ export interface JobLifecycle {
   claims: LifecycleClaim[];
 }
 
+/** Request a capacity change with expected offer version and reusable request identity. */
 export async function setCapacity(
   job: string,
   capacity: number,
@@ -46,6 +53,7 @@ export async function setCapacity(
   if (error) throw error;
   return data as string;
 }
+/** Read the job_lifecycle server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const lifecycleQuery = (actor: string, job: string) =>
   queryOptions({
     queryKey: ["job-lifecycle", actor, job],
@@ -58,6 +66,7 @@ export const lifecycleQuery = (actor: string, job: string) =>
     },
   });
 
+/** Submit one versioned offer action; the server decides returned state and side effects. */
 export async function manageOffer(input: {
   job: string;
   action: "draft" | "published" | "archived" | "reopen" | "edit" | "duplicate";
@@ -77,6 +86,7 @@ export async function manageOffer(input: {
   return data as string;
 }
 
+/** Request reasoned whole-claim cancellation with its own retry identity. */
 export async function cancelAssignment(
   claim: string,
   reason: string,

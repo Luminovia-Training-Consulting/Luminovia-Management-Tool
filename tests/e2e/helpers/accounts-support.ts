@@ -1,7 +1,12 @@
+/**
+ * Shared real account/MFA fixtures and visible browser sign-in actions.
+ * API clients are restricted to the canonical local random test project; callers own fixture cleanup.
+ */
 import { expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID, createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
+/** Requires the canonical local random test project before creating a client with the supplied privileges. */
 export function api(key: string) {
   if (process.env.PORTAL_TEST_MODE !== "1")
     throw new Error("Only isolated account fixtures");
@@ -15,6 +20,7 @@ export function api(key: string) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+/** Requires actual SDK success before returning the response data. */
 export async function checked<T extends { data: unknown; error: unknown }>(
   request: PromiseLike<T>,
 ): Promise<T["data"]> {
@@ -22,6 +28,7 @@ export async function checked<T extends { data: unknown; error: unknown }>(
   expect(result.error).toBeNull();
   return result.data;
 }
+/** Creates a fictional Auth identity, profile and fixture role; the calling test owns cleanup. */
 export async function actor(name: string, role: string) {
   const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const email = `people-ui-${randomUUID()}@example.invalid`;
@@ -39,6 +46,7 @@ export async function actor(name: string, role: string) {
   await checked(service.from("user_roles").insert({ user_id: id, role }));
   return { id, email, name };
 }
+/** Signs this test actor in through the visible form and waits for confirmed navigation. */
 export async function login(page: Page, email: string) {
   await page.goto("/login");
   await page.getByLabel("E-Mail", { exact: true }).fill(email);
@@ -48,6 +56,7 @@ export async function login(page: Page, email: string) {
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
 }
+/** Computes the fixture's current TOTP for the real MFA challenge. */
 export function code(secret: string) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567",
     bits = [...secret.replace(/=+$/, "")]
@@ -61,6 +70,7 @@ export function code(secret: string) {
     .toString()
     .padStart(6, "0");
 }
+/** Combines visible sign-in and a real MFA challenge for authorised management workflows. */
 export async function adminLogin(page: Page, user: { email: string }) {
   const client = api(process.env.SUPABASE_ANON_KEY!);
   await checked(

@@ -4,6 +4,8 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 
 ## Current functional/integration completion audit
 
+Current delivery instruction: signed commit→push→prepared PR→direct merge after current full CI, respecting the temporary PR15 main pause. Coordinator source2e367f6 is integrated on the owned PR12 branch without modifying its branch/main. All184frontend changes are semantically equal to accepted8f7588;73runtime/226frontend/type/lint/coverage checks pass. Preserve MFA private-state hardening and accepted API assertions; observe final exact-head full/native/security gates and coordinator release, then merge PR12 without another approval request. Production remains separate.
+
 **Latest combined acceptance:** signed f7453a6, CI43799280625, all68stages,90application+2PWA browser cases with zero skips/retries,234SQL/all18APIs and actual native retained-data compatibility passed. Incoming current main demo/help is included. The subsequent d4c1f49 metadata reconciliation changes no application/migrations/dependencies/journeys/complete runner;all63current runtime cases and actionlint pass. Current PR12 CI remains inspectable. Carina's coordinated PR15 merge pause remains binding; this task does not merge into main before release. [Actual final counts](QA_RESULTS.md).
 
 Current user priority: verify real connected user functions and repair missing behavior/test coverage, not rely on unit percentages. Isolated branch `codex/full-functional-integration-tests` starts at1341b16; concurrent shared-checkout onboarding/role/preview work is preserved and requires separate acceptance.
@@ -16,6 +18,18 @@ Current user priority: verify real connected user functions and repair missing b
 - [x] Push signed reviewable source as draft PR12, preserving concurrent independent product changes.
 - [x] Accept the corrected board in exact-source full CI/native verification on signed1e72507:all68 stages,234SQL/all18APIs/78application+2PWA,zero skips/retries;actual retained password/MFA/roles/private event/scanned bytes/TLS/WebSockets/50claims/cleanup passed. Local run04 safely refused a competing checkout's QA lock; no local pass is invented. First77/78 CI failure remains historical. [Exact results](QA_RESULTS.md).
 - [x] Preserve per-project failure evidence without miscounting a passed sibling browser;7 focused guards include genuine Playwright skip/focus/single-project-failure probes. Application/migrations/journeys remain unchanged after accepted1e72507; final PR checks are independently inspectable. No production/hosted deployment belongs to this request.
+
+## Comprehensive code comments and agent guide
+
+Requested directly on `main`: explain the maintained code throughout and provide a project-specific `AGENTS.md`, using OpenXLR's guide as a structural reference. Work uses a dedicated review worktree so the original checkout's concurrent feature changes remain separate. The independent English community commit `3256d1a` is preserved; contributor guidance remains English and source commentary uses English.
+
+- [x] Annotate the original170frontend and104launcher/script/browser-test files, maintained Edge/operating code and root build/CI/configuration entry points with purposes, contracts and important flow/security/resource explanations. Preserve and annotate the incoming PR16 guided-demo/help main additions:183frontend and109launcher/script/browser-test files in total, including the two private fixture sources. Combined226frontend/63runtime/10publicbrowser cases pass locally; exact protected PR acceptance remains required.
+- [x] Expand `AGENTS.md` with the actual ownership map, reading order, business/security invariants, commands, collaboration/Git rules, comprehensive English-comment policy and operational boundaries; add a canonical `.github/copilot-instructions.md` entry point.
+- [x] Explain all 24 released migrations in [MIGRATION_GUIDE](MIGRATION_GUIDE.md); preserve their exact bytes, vendor provenance, JSON/lockfiles, generated data and assets.
+- [x] Compare executable syntax/literals, CSS rules and parsed/active configuration against current main at pure-comment checkpoint1055101; run frontend coverage, type/lint/build, runtime, Edge and offline operating checks.
+- [x] Harden only the existing private MFA test-state IO after the protected CodeQL gate re-flags it; ten real filesystem regression groups and all62combined runtime tests pass. Fresh exact-head full CI remains the acceptance source for this bounded harness exception.
+
+The full product ledger below remains unchanged. The protected PR additionally requires hardening the existing private MFA test-state file reader/writer after CodeQL re-flags its old race warning in the touched fixture. That bounded harness change receives real ownership/symlink/atomic-write regressions; application business behavior stays unchanged. Exact-head CodeQL and full application/selfhost CI remain acceptance gates, with no advance production/hosted claim.
 
 ## Historical PR CI repair
 

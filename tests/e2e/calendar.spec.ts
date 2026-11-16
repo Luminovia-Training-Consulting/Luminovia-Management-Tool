@@ -1,3 +1,4 @@
+/** Canonical real-Auth calendar workflows: preserve instants/zones, exercise actual CRUD and keep private appointments isolated even from a genuine MFA administrator. Only disposable fixtures are mutated. */
 import { expect, test, type Page } from "@playwright/test";
 import { DateTime } from "luxon";
 import { randomUUID } from "node:crypto";
@@ -8,6 +9,7 @@ test.skip(
   "Calendar lifecycle runs only in the isolated ./portal test project.",
 );
 
+/** Obtain a genuine independent SDK session for an already-created disposable actor. */
 async function signedIn(user: { email: string }) {
   const client = api(process.env.SUPABASE_ANON_KEY!);
   await checked(
@@ -19,6 +21,7 @@ async function signedIn(user: { email: string }) {
   return client;
 }
 
+/** Open the actual visible event rather than injecting a selected record into component state. */
 async function eventDialog(page: Page, title: string) {
   await page.locator(".fc-event").filter({ hasText: title }).click();
   const dialog = page.getByRole("dialog", {

@@ -1,3 +1,7 @@
+/**
+ * Shared local process, configuration and persistence helpers for the portal CLI.
+ * Private files, sanitised environments and confirmed process termination define the runtime boundaries.
+ */
 import { spawn, execFileSync } from "node:child_process";
 import {
   readFileSync,
@@ -16,10 +20,12 @@ export const root = resolve(import.meta.dirname, "..");
 export const runtimeDir = join(root, ".local");
 export const stateFile = join(runtimeDir, "runtime.json");
 export const runtimeVersion = 3;
+/** Creates the private directory and applies mode 0700 even when the path already exists. */
 export function privateDirectory(path = runtimeDir) {
   mkdirSync(path, { recursive: true, mode: 0o700 });
   chmodSync(path, 0o700);
 }
+/** Reads simple local KEY=VALUE lines as data, without shell evaluation or interpolation. */
 export function readEnvFile(path) {
   if (!existsSync(path)) return {};
   return Object.fromEntries(
@@ -32,6 +38,7 @@ export function readEnvFile(path) {
       }),
   );
 }
+/** Preserves identical contents or replaces them through a private temporary file; the final mode remains 0600. */
 export function privateWrite(path, content) {
   if (existsSync(path) && readFileSync(path, "utf8") === content) {
     chmodSync(path, 0o600);
@@ -42,6 +49,7 @@ export function privateWrite(path, content) {
   renameSync(temporary, path);
   chmodSync(path, 0o600);
 }
+/** Reads runtime state best effort; a missing or invalid file never confirms a running process. */
 export function readState() {
   try {
     return JSON.parse(readFileSync(stateFile, "utf8"));
@@ -49,10 +57,12 @@ export function readState() {
     return null;
   }
 }
+/** Persists structured supervisor state only in private runtime storage. */
 export function writeState(state) {
   privateDirectory();
   privateWrite(stateFile, JSON.stringify(state, null, 2) + "\n");
 }
+/** Checks PID, supervisor path and session so an unrelated reused PID cannot be adopted. */
 export function processIsOurs(state) {
   if (
     !Number.isInteger(state?.pid) ||
@@ -76,6 +86,7 @@ export function processIsOurs(state) {
     return false;
   }
 }
+/** Removes inherited service/cloud credentials before local subprocesses, then adds only explicit values. */
 export function cleanEnvironment(extra = {}) {
   const env = Object.fromEntries(
     Object.entries(process.env).filter(
@@ -87,6 +98,7 @@ export function cleanEnvironment(extra = {}) {
   );
   return { ...env, ...extra };
 }
+/** Redacts known key/JWT/database patterns and saved local secrets before logging output. */
 export function redact(value) {
   let text = String(value)
     .replace(
@@ -111,6 +123,7 @@ export function redact(value) {
     .replace(/\bsb_(?:secret|publishable)_[A-Za-z0-9_-]+\b/g, "[redacted key]")
     .replace(/postgres(?:ql)?:\/\/[^\s"']+/g, "postgresql://[redacted]");
 }
+/** Starts an owned process group, bounds captured output and confirms success only after actual close. */
 export async function command(
   file,
   args,
@@ -137,6 +150,7 @@ export async function command(
     let termination;
     let forceTimer;
     let spawnError;
+    /** Signals only the owned process group and tolerates a child that has already exited. */
     const kill = (signal) => {
       if (finished) return;
       try {
@@ -146,6 +160,7 @@ export async function command(
         /* already exited */
       }
     };
+    /** Records timeout/cancellation and escalates only after the bounded SIGTERM grace period. */
     const terminate = (cause) => {
       if (finished || termination) return;
       termination = cause;
@@ -154,9 +169,11 @@ export async function command(
       // tool ignores SIGTERM. An AbortError alone is not proof of termination.
       forceTimer = setTimeout(() => kill("SIGKILL"), killGraceMs);
     };
+    /** Marks the active command cancelled; a later zero exit must not turn cancellation into success. */
     const cancel = () => terminate("cancelled");
     const timer = setTimeout(() => terminate("timed out"), timeoutMs);
     signal?.addEventListener("abort", cancel, { once: true });
+    /** Bounds captured subprocess output until the final logging path redacts it. */
     const receive = (data) => {
       output = (output + data.toString()).slice(-1000000);
     };
@@ -194,11 +211,14 @@ export async function command(
     });
   });
 }
+/** Invokes exactly the installed local Supabase CLI through the same controlled process runner. */
 export function supabase(args, options = {}) {
   return command(join(root, "node_modules/.bin/supabase"), args, options);
 }
+/** Reads project identity and local service ports from the TOML configuration actually in use. */
 export function projectConfig(cwd = root) {
   const text = readFileSync(join(cwd, "supabase/config.toml"), "utf8");
+  /** Restricts configuration lookup to the requested TOML section. */
   const section = (name) =>
     text.match(new RegExp(`\\[${name}\\]([\\s\\S]*?)(?=\\n\\[|$)`))?.[1] ?? "";
   return {
@@ -209,6 +229,7 @@ export function projectConfig(cwd = root) {
     site: section("auth").match(/^site_url\s*=\s*"([^"]+)"/m)?.[1],
   };
 }
+/** Rejects remote targets, embedded credentials and unrelated protocols for local HTTP probes. */
 export function localUrl(value, label = "URL") {
   const url = new URL(value);
   if (
@@ -220,6 +241,7 @@ export function localUrl(value, label = "URL") {
     throw new Error(`${label} must be a credential-free loopback HTTP URL.`);
   return url;
 }
+/** Waits within a deadline for the required actual HTTP status, not merely a started process. */
 export async function waitForHttp(
   url,
   { timeoutMs = 45000, status = 200 } = {},
@@ -238,6 +260,7 @@ export async function waitForHttp(
     `Local service did not become ready at ${new URL(url).origin}.`,
   );
 }
+/** Checks installed dependencies against the lockfile contract and installs reproducibly when needed. */
 export async function ensureDependencies() {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
   const lock = JSON.parse(
@@ -273,6 +296,7 @@ export async function ensureDependencies() {
   );
 }
 
+/** Requires a local Docker endpoint before service mutations; remote daemons are not valid test targets. */
 export async function assertLocalDocker() {
   const host =
     (!process.env.DOCKER_CONTEXT && process.env.DOCKER_HOST) ||
@@ -311,6 +335,7 @@ export async function assertLocalDocker() {
   return host;
 }
 
+/** Binds startup state to complete sorted migration sources and rejects unfinished source files. */
 export function migrationDigest(cwd = root) {
   const path = join(cwd, "supabase/migrations");
   const hash = createHash("sha256");

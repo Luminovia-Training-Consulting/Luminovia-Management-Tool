@@ -1,3 +1,7 @@
+/**
+ * Regressions for bounded audit windows using real zoned date boundaries. These focused input
+ * tests do not establish server-side audit access.
+ */
 import { describe, expect, it } from "vitest";
 import { auditEventsQuery, auditRange } from "./api";
 

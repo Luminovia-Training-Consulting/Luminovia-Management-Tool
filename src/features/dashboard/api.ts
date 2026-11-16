@@ -1,7 +1,12 @@
+/**
+ * Bounded personal previews of recent clean files and upcoming own appointments. Avoid complete
+ * file/calendar history requests and use existing RLS queries for data visibility.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 import type { PersonalEvent } from "../../lib/types";
 
+/** Bounded dashboard metadata without private file bytes. */
 export interface RecentDocument {
   id: string;
   original_name: string;
@@ -10,6 +15,7 @@ export interface RecentDocument {
 
 // Keep the existing invalidation prefixes, but fetch only bounded preview
 // metadata instead of loading the file centre or a whole calendar history.
+/** Read documents through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const recentDocumentsQuery = (actor: string) =>
   queryOptions({
     queryKey: ["documents", actor, "dashboard-recent"],
@@ -29,6 +35,7 @@ export const recentDocumentsQuery = (actor: string) =>
     retry: false,
   });
 
+/** Read personal_events through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
 export const nextPersonalEventsQuery = (actor: string) =>
   queryOptions({
     queryKey: ["events", actor, "dashboard-next"],

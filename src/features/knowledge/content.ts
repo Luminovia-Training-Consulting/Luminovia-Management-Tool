@@ -1,8 +1,14 @@
+/**
+ * Structured editor content with link, depth and size bounds. Rebuild JSON from supported nodes;
+ * PostgreSQL validates the same contract independently of the browser.
+ */
 import type { JSONContent } from "@tiptap/react";
+/** Structurally valid empty editor state rather than unvalidated HTML. */
 export const emptyDocument: JSONContent = {
   type: "doc",
   content: [{ type: "paragraph" }],
 };
+/** Explicit node allowlist for stored knowledge JSON. */
 const nodes = new Set([
   "doc",
   "paragraph",
@@ -16,7 +22,9 @@ const nodes = new Set([
   "hardBreak",
   "horizontalRule",
 ]);
+/** Allowed text marks; link destinations receive separate validation. */
 const marks = new Set(["bold", "italic", "strike", "code"]);
+/** Allow internal absolute paths and HTTP(S)/mailto links; reject controls, backslashes and protocol-relative URLs. */
 export function safeLink(value: string): boolean {
   if (
     !value ||
@@ -32,10 +40,12 @@ export function safeLink(value: string): boolean {
     return false;
   }
 }
-/** Emit only the supported JSON schema. The database independently validates it. */
+/** Rebuild a bounded tree from allowed nodes/attributes/links; the database independently validates the stored schema. */
 export function normalizedDocument(value: JSONContent, depth = 0): JSONContent {
   if (depth > 16 || !value || !nodes.has(value.type ?? ""))
     return { type: "paragraph" };
+  // Rebuild through an allowlist: unknown attributes are never copied through
+  // object spread or original HTML into the normalized output.
   const result: JSONContent = { type: value.type };
   if (value.type === "text") result.text = value.text ?? "";
   if (value.type === "heading")
@@ -50,6 +60,8 @@ export function normalizedDocument(value: JSONContent, depth = 0): JSONContent {
     /^[a-zA-Z0-9_+-]{0,30}$/.test(value.attrs.language)
   )
     result.attrs = { language: value.attrs.language };
+  // Validate links separately and assign fixed new-tab attributes.
+  // Discard unknown formatting marks instead of retaining them as HTML.
   if (value.marks?.length)
     result.marks = value.marks.flatMap((mark) =>
       marks.has(mark.type)
@@ -75,16 +87,19 @@ export function normalizedDocument(value: JSONContent, depth = 0): JSONContent {
     );
   return result;
 }
+/** Extract authored text recursively for validation and search previews. */
 export function documentText(value: JSONContent): string {
   return [value.text ?? "", ...(value.content ?? []).map(documentText)].join(
     " ",
   );
 }
+/** Bound visible text and serialized UTF-8 bytes; allow empty content only when explicitly requested. */
 export function contentIsValid(value: JSONContent, allowEmpty = false) {
   const text = documentText(value).trim();
   return (
     (allowEmpty || text.length > 0) &&
     text.length <= 40000 &&
+    // UTF-8 byte limits also bound invisible structure and attribute overhead.
     new TextEncoder().encode(JSON.stringify(value)).byteLength <= 200000
   );
 }

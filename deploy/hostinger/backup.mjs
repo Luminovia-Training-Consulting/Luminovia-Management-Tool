@@ -1,3 +1,6 @@
+/**
+ * Manual development backup with separate checksummed database, role and actual Storage-file artifacts. Private output stays under .local; this is not recurring off-site retention.
+ */
 import { spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream, createWriteStream } from "node:fs";
@@ -57,6 +60,7 @@ export const summarySQL = `select json_build_object(
 
 // No credential is placed in argv or a temporary source file. Binary data is
 // streamed directly through SSH to a mode0600 file, with bounded stderr capture.
+// Run a child with separate streams and bounded error output; resolve only after the process actually exits.
 export function startCommand(
   program,
   args,
@@ -98,6 +102,7 @@ export function startCommand(
   return { child, completed };
 }
 
+// Collect bounded command output and preserve its failure status.
 export async function collectCommand(program, args, options = {}) {
   const { child, completed } = startCommand(program, args, options);
   const chunks = [];
@@ -114,6 +119,7 @@ export async function collectCommand(program, args, options = {}) {
   return Buffer.concat(chunks).toString("utf8").trim();
 }
 
+// Build fixed SSH arguments for the authorized development server without starting an interactive login.
 function sshArgs(command) {
   return [
     "-o",
@@ -131,6 +137,7 @@ function sshArgs(command) {
   ];
 }
 
+// Stream the entire artifact into its hash rather than loading large backups into memory.
 export async function fileDigest(file) {
   const hash = createHash("sha256");
   let bytes = 0;
@@ -141,6 +148,7 @@ export async function fileDigest(file) {
   return { sha256: hash.digest("hex"), bytes };
 }
 
+// Write a command stream exclusively to a private artifact and accept it only after successful process completion.
 async function streamArtifact(directory, name, command, input) {
   const output = resolve(directory, name);
   const { child, completed } = startCommand("ssh", sshArgs(command), { input });
@@ -192,6 +200,7 @@ except Exception:
  sys.stderr.write('Storage inventory failed; private details withheld.\\n');sys.exit(1)
 `;
 
+// Aggregate the line-oriented file inventory and verify its byte/hash fields.
 export async function inventoryTotals(file) {
   let pending = "";
   let files = 0;
@@ -226,6 +235,7 @@ export async function inventoryTotals(file) {
   return { files, bytes };
 }
 
+// Create separate private dump/Storage artifacts and write the final manifest only after success; failed partial output is not a complete backup.
 export async function createDevelopmentBackup({ quiescent = false } = {}) {
   if (quiescent !== true)
     throw new Error(

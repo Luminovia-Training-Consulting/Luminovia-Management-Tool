@@ -1,3 +1,7 @@
+/**
+ * DOM regressions for URL-selected guides, bilingual search, language switches and recovery text.
+ * Catalog checks cover authored completeness and route identity, not live feature permissions.
+ */
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

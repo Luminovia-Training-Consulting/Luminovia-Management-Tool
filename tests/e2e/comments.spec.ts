@@ -1,3 +1,7 @@
+/**
+ * Browser workflows for literal comments, own revisions and reasoned MFA moderation.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
+ */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
@@ -26,21 +30,19 @@ test("job comments persist, stay literal, support own edits and reasoned MFA mod
   const job = randomUUID(),
     body = `Practical teaching note <script>${suffix}</script>`;
   await checked(
-    service
-      .from("jobs")
-      .insert({
-        id: job,
-        title: `Comment course ${suffix}`,
-        customer_name: "Fictional comment academy",
-        delivery_type: "online",
-        time_zone: "Europe/Berlin",
-        status: "published",
-        amount: 100,
-        total_amount: 100,
-        currency: "EUR",
-        rate_unit: "fixed_total",
-        terms: "Fictional assignment terms",
-      }),
+    service.from("jobs").insert({
+      id: job,
+      title: `Comment course ${suffix}`,
+      customer_name: "Fictional comment academy",
+      delivery_type: "online",
+      time_zone: "Europe/Berlin",
+      status: "published",
+      amount: 100,
+      total_amount: 100,
+      currency: "EUR",
+      rate_unit: "fixed_total",
+      terms: "Fictional assignment terms",
+    }),
   );
   const options = {
     baseURL: process.env.E2E_BASE_URL!,

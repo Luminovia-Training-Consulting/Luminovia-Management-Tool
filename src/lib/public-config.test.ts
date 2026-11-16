@@ -1,3 +1,7 @@
+/**
+ * Regressions for public build configuration and rejection of private/misclassified keys. Pure
+ * configuration checks do not replace native Auth/RLS acceptance.
+ */
 import { describe, expect, it } from "vitest";
 import { validatePublicConfig } from "../../scripts/public-config";
 const jwt = (role: string) =>

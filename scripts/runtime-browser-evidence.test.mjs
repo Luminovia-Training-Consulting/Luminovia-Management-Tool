@@ -1,3 +1,4 @@
+/** Regression and actual Playwright process probes for truthful complete acceptance, including skipped, focused, partial and per-project failure results. All generated fixtures are owned and temporary. */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { execFile } from "node:child_process";

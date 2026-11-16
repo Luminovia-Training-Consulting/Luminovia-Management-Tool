@@ -1,3 +1,7 @@
+/**
+ * Own availability planning and explicitly shared windows. Distinguish stale versions and
+ * overlaps in the editor; the database atomically enforces assignment conflicts.
+ */
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { DateTime } from "luxon";
@@ -35,11 +39,13 @@ import {
 } from "./api";
 import "./i18n";
 import "./availability.css";
+/** Map overlap (23P01), stale version (40001) and other failures to the corresponding UI message. */
 function failure(error: unknown) {
   const code =
     typeof error === "object" && error && "code" in error ? error.code : null;
   return code === "23P01" ? "conflict" : code === "40001" ? "stale" : "error";
 }
+/** Edit a window locally and adopt the new server state only after confirmed saving. */
 function AvailabilityForm({
   item,
   zone,
@@ -153,6 +159,7 @@ function AvailabilityForm({
     </form>
   );
 }
+/** Combine the selected date range, own windows and explicitly reduced management projections. */
 function ReadyAvailability({
   actor,
   zone,
@@ -394,6 +401,7 @@ function ReadyAvailability({
     </>
   );
 }
+/** Load the profile zone and capabilities before constructing the availability view. */
 export function AvailabilityPage() {
   const { session } = useAuth(),
     actor = session!.user.id;

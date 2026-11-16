@@ -1,3 +1,7 @@
+/**
+ * Regressions for permission checks before account search and retained search focus during
+ * pending page requests. SDK/DOM fixtures do not replace real account API/database acceptance.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   notifyManager,
@@ -20,6 +24,7 @@ vi.mock("../../lib/supabase", () => ({
   db: () => ({ rpc: fake.rpc, functions: { invoke: fake.invoke } }),
 }));
 let client: QueryClient;
+/** Render the real page in its router/query context for the interaction checks below. */
 function page() {
   render(
     <MemoryRouter>

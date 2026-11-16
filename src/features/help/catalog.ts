@@ -1,3 +1,8 @@
+/**
+ * Public bilingual instructions shared by help, fictional practice and the live tour. Catalog
+ * IDs/routes identify authored sections; optional role/permission hints grant no data access.
+ */
+/** Bilingual authored content plus optional visibility hints for a known portal destination. */
 export type GuideModule = {
   id: string;
   path: string;
@@ -10,6 +15,7 @@ export type GuideModule = {
   roles?: string[];
   permission?: string;
 };
+/** Select German language variants; all other language tags use the authored English fallback. */
 export function guideText<T>(value: { de: T; en: T }, language: string): T {
   return language.toLowerCase().startsWith("de") ? value.de : value.en;
 }

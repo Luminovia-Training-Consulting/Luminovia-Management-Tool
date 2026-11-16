@@ -1,5 +1,10 @@
+/**
+ * Live-tour navigation filtering and best-effort progress storage per actor and browser tab.
+ * Stored progress is validated against the public catalog; current capabilities filter stops.
+ */
 import { guideModules, type GuideModule } from "./catalog";
 
+/** Progress stores only a status and catalog ID; it contains no private record or access grant. */
 export type TourState = {
   status: "idle" | "active" | "paused" | "completed";
   step: string;
@@ -34,6 +39,7 @@ export function permittedTourModules(
   });
 }
 
+/** Accept known statuses/catalog IDs from this actor's tab storage, falling back safely on malformed/denied storage. */
 export function readTour(actor: string): TourState {
   try {
     const value: unknown = JSON.parse(
@@ -56,6 +62,7 @@ export function readTour(actor: string): TourState {
   return initialTour;
 }
 
+/** Persist non-sensitive progress best-effort; navigation remains usable when storage is denied. */
 export function storeTour(actor: string, state: TourState) {
   try {
     sessionStorage.setItem(`luminovia.tour.v1.${actor}`, JSON.stringify(state));

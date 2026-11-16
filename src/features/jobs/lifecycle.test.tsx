@@ -1,3 +1,7 @@
+/**
+ * Regressions for versioned administration, confirmed cancellation and stable request IDs.
+ * Controlled SDK responses do not replace real transaction/permission checks.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import {
   cleanup,
@@ -92,6 +96,7 @@ const assigned: JobLifecycle = {
     },
   ],
 };
+/** Configure the reviewed lifecycle state and targeted SDK mutation responses. */
 function mock(
   meta: JobLifecycle,
   write: (
@@ -110,10 +115,12 @@ function mock(
     },
   );
 }
+/** Expose the actual router location after a confirmed lifecycle action. */
 function CurrentLocation() {
   const location = useLocation();
   return <output aria-label="route">{location.pathname}</output>;
 }
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(meta = empty, write?: Parameters<typeof mock>[1]) {
   mock(meta, write);
   const client = new QueryClient({
