@@ -48,7 +48,7 @@ Management budgets are another projection. For role-priced offers, `job_lifecycl
 
 ## Current source ownership
 
-This guide describes the 26-migration main implementation. The relevant reading path is:
+This guide describes the released role-pricing implementation. The relevant reading path is:
 
 | Source                                                                                                               | Owning contract                                                                                                                                                                                 |
 | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
