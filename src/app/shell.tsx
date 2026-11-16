@@ -31,6 +31,10 @@ import {
   Star,
   PanelLeftClose,
   PanelLeftOpen,
+  ListChecks,
+  ClipboardCheck,
+  LifeBuoy,
+  ArrowRightLeft,
   Compass,
 } from "lucide-react";
 import { WelcomeGuideEntry } from "../features/onboarding/welcome";
@@ -113,6 +117,16 @@ export function Shell() {
     { to: "/files", icon: FolderOpen, label: "files" },
     { to: "/search", icon: Search, label: "portalSearch" },
     { to: "/courses", icon: GraduationCap, label: "courses" },
+    ...(staff
+      ? [
+          { to: "/readiness", icon: ListChecks, label: "courseReadiness" },
+          { to: "/replacements", icon: ArrowRightLeft, label: "replacements" },
+        ]
+      : []),
+    ...(staff || clientPortalAccess
+      ? [{ to: "/delivery", icon: ClipboardCheck, label: "teachingDelivery" }]
+      : []),
+    { to: "/support", icon: LifeBuoy, label: "supportDesk" },
     { to: "/learning", icon: BookOpen, label: "learning:hub" },
     { to: "/workbench", icon: FileCheck2, label: "workbench:title" },
     ...(staff
