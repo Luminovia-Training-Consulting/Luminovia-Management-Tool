@@ -34,4 +34,4 @@ A merged PR does not authorize production deployment or risky data migrations.
 - [ ] Tests and documentation match the change; remaining gaps are listed above.
 - [ ] Exactly one `type:*`, exactly one `risk:*` and at least one `area:*` label are set. For a fork PR without label access, ask a maintainer to classify it.
 
-<!-- Main requires a PR and all 15 successful mandatory checks on an up-to-date branch. Maintainers/admins may bypass independent review through a PR only; the maintenance App has no bypass. See docs/GITHUB_WORKFLOW.md for live configuration and operational evidence. -->
+<!-- Main requires a PR and all 15 successful mandatory checks on an up-to-date branch. Only CarinaSchoppe's immutable personal account (User:29256704) may bypass review through a PR; every other user, including maintainers/admins, and every App requires independent review. CI, signatures and up-to-date testing apply to everyone; history/check rules have no bypass actors. See docs/GITHUB_WORKFLOW.md for live configuration and operational evidence. -->

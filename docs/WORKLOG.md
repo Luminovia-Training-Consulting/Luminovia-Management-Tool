@@ -1,5 +1,13 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — personal review exception, separate governance delivery
+
+The latest explicit instruction grants the review exception only to CarinaSchoppe's immutable personal GitHub account (`User:29256704`) in `pull_request` mode. This supersedes earlier role-wide Maintain/Admin review exceptions recorded below. Every other account, including maintainers, administrators and Apps, requires ordinary independent/latest-push review and resolved conversations. All 15 strict current-base checks and valid signatures remain mandatory for everyone; the separate history/check rules have no bypass actors.
+
+This bounded branch starts from actual main `319ab69f152ed3b86dbcb4cfe3347f1364335306` after PR22. The coordinator's restored live readback was compared with every field in all three source snapshots. Only `review.json` needed its actor allowlist corrected; history/check files already matched and remain byte-identical. Contribution, PR, issue, CI and root-index guidance now describes the personal exception without importing unmerged product/controller documentation. This branch performs no live API mutation and changes no workflow, SQL or business code.
+
+The new automatically discovered `runtime-review-policy.test.mjs` failed before the actor fix, showing the old role2/5 entries instead of the personal User. After correction, all 28 policy cases pass, including adverse roles/users/Apps, unconditional or disabled protection, weakened review, CI/history bypass, missing signatures, non-strict checks, missing preview and incorrect check producers. The existing 11 metadata cases and documentation-link case also pass: 40 targeted Node cases in total. Scoped ESLint, Prettier and diff validation are run before the signed delivery; full application/native/browser acceptance and final-head GitHub CI are separate pending checks, not inferred from this policy-only result. Next: deliver the signed backup branch, prepare the separate labelled governance PR and complete its exact-head required checks under coordinated merge ownership. No merge, workflow dispatch, publication or deployment is performed here.
+
 ## 16 November 2026 — finish the independent maintenance PR with explicit publication
 
 The latest user-authorised coordination lifts the source freeze and replaces the proposed group delivery: finish and locally verify each scoped PR, then deliver them sequentially after current-head CI. PR22 remains the sole maintenance source; no coordinated group branch is edited or merged here.
@@ -87,7 +95,6 @@ Three functional defects were reproduced before correction: failed access querie
 Manual control-flow and object-key review removed4unreachable demo fallback checks,5unused translation keys,5unread catalogue properties plus their constant, and2inert class markers. The stricter actual audit finds112modules/225runtimeexports with zero disconnections or missing links/assets/imports/unused exports. This is paired with behavior tests, not falsely claimed as proof that every control-flow path executes.
 
 Executed local acceptance: npmci, type/lint/sourceformat,231unit/componentcases/49files (S49.78/B44.45/F40.10/L51.56%; thresholds unchanged),10/10actual public desktop/mobile browsers including DE/EN/themes/axe/no-overflow/all25stops/loginentry/same-topicfocus/zerobackendattempts,9integrityguards plus the documentation check and synthetic production/PWA build. [Audit and exact boundaries](GUIDED_EXPERIENCE_AUDIT.md). New exact-head full/native/security CI and the user-authorised merge are tracked on [PR21](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/21); the new genuine-account recovery case is not yet claimed run locally. No new dependency, migration, business-policy value, normal/hosted data, production or real mail was changed.
-
 
 Actual final application acceptance: head13313de passed CI43798768990 (231frontend/55runtime/42Edge/61releaseguards,84desktop/mobile browsers including both genuine-account failure→retry→tour cases,2built-PWA) and Security43798769092. The separate real selfhost proof passed24migrations,19API suites,50claims,TLS/WebSockets, retained password/MFA/privateevent/scannedbytes and owned cleanup. All three source commits are GitHub-verified signatures.
 

@@ -39,7 +39,7 @@ See [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) for operation, troubleshootin
 
 M6 connects the database, APIs and interface. Its complete application and native retained-data acceptance passed before [PR #8](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/8) merged. The later accepted `1341b16` checkpoint passed [all nine Main CI jobs](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43788369925), including 197 unit/component tests, 234 SQL cases, 18 actual business API suites, 72 desktop/mobile browser cases, persistence, built-PWA checks and real selfhost compatibility. New revisions need their own verification; these results do not imply complete production acceptance. See [QA_RESULTS](docs/QA_RESULTS.md) and [WORKLOG](docs/WORKLOG.md).
 
-The contribution guides merged in [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the independent GitHub preview launcher in [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). The catalogue contains 30 managed labels alongside nine preserved GitHub defaults. Public contribution guidance, issue forms and pull request instructions use English. The [GitHub administration guide](docs/GITHUB_WORKFLOW.md) distinguishes active Maintainer/Admin exceptions from the additional review/check rules still awaiting activation.
+The contribution guides merged in [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the independent GitHub preview launcher in [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). The catalogue contains 30 managed labels alongside nine preserved GitHub defaults. Public contribution guidance, issue forms and pull request instructions use English. The [GitHub administration guide](docs/GITHUB_WORKFLOW.md) records all three active rulesets: only CarinaSchoppe's personal account (`User:29256704`) has a PR-only review exception. Every other account needs independent review, and all 15 required checks and signatures remain mandatory for everyone.
 
 ## Implemented routes
 
@@ -81,7 +81,7 @@ German/English and light/dark/system preferences persist locally. Server data ar
 
 ## GitHub checks and coverage
 
-Separate Build, Typecheck, Lint, Formatting, Code quality and Tests and coverage tasks complement the existing real SQL/API/browser/selfhost checks. Run `npm run test:coverage` for full-source frontend V8 reports and regression thresholds. CodeQL, Dependabot and the current Maintainer/Admin direct-merge exceptions are explained in [CI_QUALITY](docs/CI_QUALITY.md).
+Separate Build, Typecheck, Lint, Formatting, Code quality and Tests and coverage tasks complement the existing real SQL/API/browser/selfhost checks. Run `npm run test:coverage` for full-source frontend V8 reports and regression thresholds. CodeQL, Dependabot and Carina's personal PR-only review exception, with mandatory CI/signatures for everyone and independent review for all other accounts, are explained in [CI_QUALITY](docs/CI_QUALITY.md).
 
 ## Stack and layout
 

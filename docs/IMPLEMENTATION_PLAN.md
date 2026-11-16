@@ -1,5 +1,16 @@
 # Persistent implementation plan
 
+## Current continuation — Carina-only personal review exception
+
+This explicit instruction supersedes the older Maintain/Admin review exceptions below. The bounded governance delivery is based on actual main `319ab69`; unrelated product/controller work remains separate.
+
+- [x] Compare all three source rule snapshots with the coordinator's restored active live readback. Preserve the already matching history/check bytes and all 15 strict producer-bound checks/signature requirements.
+- [x] Limit the review actor allowlist to personal `User:29256704` in `pull_request` mode; every other user, repository role and App needs ordinary independent review.
+- [x] Correct current contribution/PR/issue/CI/index guidance and add an automatically discovered source-policy guard. Demonstrate the old role allowlist fails, then pass 28 policy and 12 existing metadata/documentation cases (40 total).
+- [ ] Deliver the signed isolated backup branch and separate governance PR; observe its exact-head required CI and merge through the designated coordinator. Source/local checks alone do not prove live activation, full product acceptance, publication or deployment.
+
+All remaining product requirements and historical evidence below are preserved. This task changes no application, SQL, workflow, real data or live repository setting.
+
 ## Independent maintenance delivery after source-freeze release
 
 - [x] Honour the latest instruction to finish PR22 separately; preserve other source branches and the proposed group worktree. Earlier group/freeze entries below are historical.

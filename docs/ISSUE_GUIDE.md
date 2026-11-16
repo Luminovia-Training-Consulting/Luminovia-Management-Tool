@@ -56,4 +56,6 @@ You do not need permission to manage labels to open an issue. Mention the likely
 3. The fix receives appropriate tests and updated documentation.
 4. The pull request is merged after its checks and any required review. `Closes #123` automatically closes the linked issue.
 
+Only CarinaSchoppe's personal account (`User:29256704`) has the PR-only review exception. All other accounts, including maintainers, administrators and Apps, require independent review. All 15 required checks and signatures remain mandatory for everyone. See the [review rules](PULL_REQUEST_GUIDE.md#review-rules-for-main).
+
 A closed issue means its agreed goal has been completed. It does not prove a production deployment. For a regression, provide a new reproducible report that links to the earlier issue.
