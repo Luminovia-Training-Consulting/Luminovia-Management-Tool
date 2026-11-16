@@ -33,7 +33,6 @@ import {
 } from "./daily-updates.mjs";
 import {
   promote,
-  retryMainChecks,
   signatureProbe,
   validateFileChange,
   validatePatch,
@@ -1634,42 +1633,46 @@ test("real signature-probe CLI reaches draft PR/label/cleanup paths without queu
   }
 });
 
-test("a daily no-change run retries failed final main CI without duplicating active or released checks", async () => {
-  for (const scenario of ["failed", "running", "released"]) {
-    const calls = [],
-      commit = "a".repeat(40);
-    const api = async (path, options = {}) => {
-      calls.push({ path, options });
-      if (path.endsWith("/branches/main")) return { commit: { sha: commit } };
-      if (path.includes("/releases/tags/"))
-        return scenario === "released"
-          ? { immutable: true, draft: false }
-          : null;
-      if (path.includes("/runs?"))
-        return {
-          workflow_runs: [
-            {
-              head_sha: commit,
-              status: scenario === "running" ? "in_progress" : "completed",
-              conclusion: "failure",
-            },
+// Exercise the retired command through the real CLI: intentionally unpublished main
+// must never be mistaken for failed CI and trigger another remote workflow.
+test("the retired retry-main CLI fails without any GitHub request", async () => {
+  const root = await mkdtemp(resolve(tmpdir(), "luminovia-no-main-retry-"));
+  try {
+    const loader = resolve(root, "reject-network.mjs");
+    const transcript = resolve(root, "unexpected-request.json");
+    await writeFile(
+      loader,
+      `import {writeFileSync} from "node:fs";
+globalThis.fetch=async(url)=>{writeFileSync(${JSON.stringify(transcript)},String(url));throw new Error("Unexpected GitHub request");};
+`,
+    );
+    assert.throws(
+      () =>
+        execFileSync(
+          process.execPath,
+          [
+            "--import",
+            loader,
+            resolve(ROOT, "deploy/hostinger/maintenance/promote.mjs"),
+            "retry-main",
           ],
-        };
-      assert.equal(options.body.inputs.expected_commit, commit);
-      return null;
-    };
-    const result = await retryMainChecks(api);
-    assert.equal(
-      result.status,
-      scenario === "failed"
-        ? "retried_unreleased_main_checks"
-        : scenario === "running"
-          ? "exact_main_checks_already_running"
-          : "current_main_already_released",
+          {
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "pipe"],
+            env: {
+              ...process.env,
+              GH_TOKEN: "fictional-offline-test-token",
+              GITHUB_STEP_SUMMARY: "",
+            },
+          },
+        ),
+      (error) =>
+        error.status === 1 &&
+        error.stdout === "" &&
+        /private response withheld/.test(error.stderr),
     );
-    assert.equal(
-      calls.filter((item) => item.options.method === "POST").length,
-      scenario === "failed" ? 1 : 0,
-    );
+    await assert.rejects(readFile(transcript), { code: "ENOENT" });
+  } finally {
+    await rm(root, { recursive: true, force: true });
   }
 });

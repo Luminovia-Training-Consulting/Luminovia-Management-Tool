@@ -1,5 +1,12 @@
 # Persistent implementation plan
 
+## Independent maintenance delivery after source-freeze release
+
+- [x] Honour the latest instruction to finish PR22 separately; preserve other source branches and the proposed group worktree. Earlier group/freeze entries below are historical.
+- [x] Remove the obsolete no-change retry-main helper/CLI/workflow path and publisher Actions-write token scope; unchanged scans skip privileged publication, while tested changed candidates retain native PR/review/CI protection.
+- [x] Pass31local maintenance/candidate tests, including real CLI failure/no-network acceptance, plus lint/type/workflow/diff checks; re-read live15-check/no-App-bypass and main-only signing-environment configuration.
+- [ ] Sign/push the scoped final correction, pass all15exact-current-head checks, complete coordinated normal PR merge and verify the real App diagnostic creates/labels/closes its owned draft and removes its branch while main stays unchanged. No release/deployment is authorised by this diagnostic.
+
 ## Current continuation — App PR-only maintenance and audited execution
 
 This latest user instruction removes the maintenance App exception as well. It supersedes the earlier human-only verification and historical ALWAYS guidance. All remaining product modules below remain in scope.

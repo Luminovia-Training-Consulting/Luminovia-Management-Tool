@@ -809,47 +809,15 @@ export async function signatureProbe(api = github) {
     temporaryBranchCleaned: true,
   };
 }
-// Dispatch CI only for the expected current main commit; starting a workflow does not mean it passed.
-export async function retryMainChecks(api = github) {
-  const branch = await api("/repos/" + REPOSITORY + "/branches/main");
-  const commit = branch.commit?.sha;
-  assert(/^[a-f0-9]{40}$/.test(commit));
-  const release = await api(
-    "/repos/" + REPOSITORY + "/releases/tags/cms-dev-" + commit,
-    { allowMissing: true },
-  );
-  if (release?.immutable === true && !release.draft)
-    return { status: "current_main_already_released", commit };
-  const runs = await api(
-    "/repos/" +
-      REPOSITORY +
-      "/actions/workflows/ci.yml/runs?branch=main&head_sha=" +
-      commit +
-      "&per_page=10",
-  );
-  if (
-    runs.workflow_runs.some(
-      (run) => run.head_sha === commit && run.status !== "completed",
-    )
-  )
-    return { status: "exact_main_checks_already_running", commit };
-  await api("/repos/" + REPOSITORY + "/actions/workflows/ci.yml/dispatches", {
-    method: "POST",
-    body: { ref: "main", inputs: { expected_commit: commit } },
-  });
-  return { status: "retried_unreleased_main_checks", commit };
-}
 // Handle only documented subcommands and propagate failures as a failed process exit.
 async function cli() {
   const [operation, file] = process.argv.slice(2);
   const result =
     operation === "signature-probe"
       ? await signatureProbe()
-      : operation === "retry-main"
-        ? await retryMainChecks()
-        : operation === "promote"
-          ? await promote(JSON.parse(await readFile(file, "utf8")))
-          : null;
+      : operation === "promote"
+        ? await promote(JSON.parse(await readFile(file, "utf8")))
+        : null;
   assert(result, "Unknown promotion operation.");
   console.log(JSON.stringify(result));
   if (process.env.GITHUB_STEP_SUMMARY)

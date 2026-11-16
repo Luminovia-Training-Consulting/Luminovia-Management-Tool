@@ -1,5 +1,15 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — finish the independent maintenance PR with explicit publication
+
+The latest user-authorised coordination lifts the source freeze and replaces the proposed group delivery: finish and locally verify each scoped PR, then deliver them sequentially after current-head CI. PR22 remains the sole maintenance source; no coordinated group branch is edited or merged here.
+
+The integration review found that the old no-change retry-main path interpreted a deliberately missing release as incomplete CI. Removed that command/helper and its workflow invocation entirely rather than leaving unused code or silently redispatching successful main CI. A no-change daily scan now skips the privileged publisher job; changed combined/fallback candidates retain the same signed, exact-head protected PR path. Publisher tokens now request only contents/PR write, with no Actions-write scope. Publication is a separate explicitly authorised operation under the user's new local-first policy; PR27 owns its workflow gates.
+
+Actual local validation: all31maintenance/candidate groups pass, including real publisher/probe CLI fixtures and a real retired-command process proving exit1 with no network request; ESLint, TypeScript, actionlint and diff checks pass. The first new negative fixture expected an internal assertion message, whereas the real CLI intentionally withholds private error responses; its acceptance now checks the public failure contract and absence of network activity. Earlier249frontend/75targeted checks and full accepted checkpoints below remain their own evidence, not a claim of final-head CI.
+
+Fresh authenticated live readback confirms all3rulesets active, no history/check bypass, only maintain2/admin5PR-only review bypass and all15strict required contexts. App installation182397724 has contents/actions/PR write plus metadata read, selected repository scope, no administration permission; the actual job token is narrower. maintenance-signing permits only branchmain, with the existing AppID5776881 and private-key secret name present; no secret value was read. The real App draft-PR diagnostic remains pending accepted delivery to main. Immediate actions: sign/push this scoped correction, complete all current15CI gates and coordinated normal merge, then inspect the real diagnostic's signing/PR/cleanup evidence without deploying or publishing a release.
+
 ## 16 November 2026 — final maintenance integration with actual PR18 main
 
 Integrated actual merged PR18mainfabd71a7958d7814c18e3403877e542c20c3bea2 into the owned maintenance branch without conflicts. Its delegated/private pricing, welcome guide,26migration history, QA-only policy bootstrap and candidate retained-data corrections are preserved exactly; no older module replaces them. The new PR preview package is included in the15mandatory live checks. No App bypass is restored. The standalone23-group publisher/diagnostic implementation is unchanged by this integration.
