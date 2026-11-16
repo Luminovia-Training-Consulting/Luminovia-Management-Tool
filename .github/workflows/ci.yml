@@ -86,9 +86,10 @@ jobs:
     # The canonical local command owns its data/ports and verifies cleanup.
     needs: [quality, coverage]
     runs-on: ubuntu-latest
-    # The complete gate now covers 36 migrations and the expanded native/browser
-    # suite. Individual request, test and stage deadlines remain unchanged.
-    timeout-minutes: 40
+    # The measured 120-journey run reached built-PWA verification at minute 40.
+    # Leave room for that stage and owned cleanup after the full SQL/API suite;
+    # individual request, test and stage deadlines remain unchanged.
+    timeout-minutes: 50
     steps:
       - name: Verify explicitly requested revision
         env:

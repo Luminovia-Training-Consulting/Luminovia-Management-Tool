@@ -2,6 +2,8 @@
 
 ## Current functional delivery after accepted PR10 main
 
+- [x] Diagnose exact `68af64e` CI cancellation: 90 passed stages including 31 SQL scripts, 28 business API stages and 120 application browsers; the 40-minute job budget cut off PWA execution. Preserve incomplete evidence and increase only the aggregate CI budget to 50 minutes, with every individual deadline/assertion unchanged.
+- [ ] Complete fresh exact-head CI through built-PWA, checked owned cleanup, native retained-data and preview gates; the cancelled partial run is not full acceptance.
 - [x] Integrate actual main `1de544d872706eebc95a942a1956254ed87ae40d`, retaining all 36 published migration bytes, both histories, manual publication controls and the complete functional acceptance matrix.
 - [x] Pass relevant combined source checks: 515 frontend cases/65 files and coverage/build, 109 runtime cases, three documentation/privacy cases, actionlint and whitespace checks. Preserve the strict source fingerprint and browser-inventory guards.
 - [x] Retain the actual E7 full-PC and all-15-check CI results as source-specific evidence, with matching source fingerprints and checked owned cleanup.

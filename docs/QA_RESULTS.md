@@ -1,5 +1,11 @@
 # QA evidence — 2026-11-16
 
+## Exact 68af64e CI: 120 application browsers passed, full gate cancelled
+
+[CI43840712518](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43840712518) was cancelled at its aggregate 40-minute job deadline. The uploaded private summary `.local/functional-ci/pr12-68af64e/560f1466/acceptance.json` has source fingerprint `27713b432d78dc5c176e3ddc6b07466cde8a5183f7317ceb31e33cd3ff46986b`, 90 passed stages and one running PWA stage. All 31 discovered SQL-script stages, 28 business API stages, real invitation/retention and 120 application browser cases passed (17.6 minutes, zero skips/retries); production build passed. PWA completion, runner-owned cleanup, separate native retention and preview acceptance were not reached or verified. This is not a complete pass.
+
+The measured run started PWA execution at 10:14:00 UTC immediately before termination. The correction raises only the whole CI job allowance from 40 to 50 minutes; all individual request/test/stage limits, assertions and no-retry/no-skip rules remain unchanged. The next exact source must complete all required gates. No new shared-PC test, deployment or publication was started.
+
 ## Frozen 36-migration composition: actual bounded SQL acceptance
 
 Signed `ddb848564753ea5a89b326d649708c69385475c5` passes commission 14 groups and lifecycle 12 groups on all 36 migrations, exit 0. The catalogue-preservation regression independently passes five groups on its intentional historical baseline of 24 migrations through `20261115213550`, followed only by `20261116032005`. No historical migration or production SQL was changed.

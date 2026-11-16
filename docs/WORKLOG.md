@@ -1,5 +1,13 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — complete CI reached PWA, then exceeded aggregate job budget
+
+Exact signed `68af64e0b4310149ca2189f83d4ccf9af2a1c189` in [CI43840712518](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43840712518) is **cancelled, not accepted**. Its downloaded source-bound summary records 90 passed stages and one running PWA stage when the 40-minute job deadline terminated the process. All 31 discovered SQL-script stages, 28 business API stages, real invitation/retention checks and all 120 application browser cases passed; browsers took 17.6 minutes with zero skips/retries. The production build also passed. PWA execution, checked runner cleanup, separate native selfhost and preview completion are not claimed.
+
+Private evidence is `.local/functional-ci/pr12-68af64e/560f1466/acceptance.json` plus `verify.log`; source fingerprint `27713b432d78dc5c176e3ddc6b07466cde8a5183f7317ceb31e33cd3ff46986b`. The summary truthfully remains running rather than PASS after forced termination. GitHub's uploaded partial artifact is preserved as incomplete evidence. No failed business assertion is hidden or retried.
+
+The measured run reached PWA execution at 10:14:00 UTC, just before cancellation. Only the aggregate CI job budget increases from 40 to 50 minutes so the same complete command can finish built-PWA verification and owned cleanup. Every individual test/request/stage deadline, assertion, sequential execution and no-retry/no-skip rule is unchanged. Fresh complete exact-head acceptance remains required; the shared-PC/actual-main priority and Draft/no-auto-merge state remain in force.
+
 ## 16 November 2026 — frozen 36-migration SQL integration verified
 
 Signed `ddb848564753ea5a89b326d649708c69385475c5` passes the actual owned PostgreSQL commission suite (14 groups, all 36 migrations) and lifecycle suite (12 groups, all 36 migrations). The historical catalogue-preservation upgrade separately passes five groups: 24 baseline migrations through `20261115213550`, then only `20261116032005`. Its intentionally historical replay is not described as a 36-migration upgrade. Real ten-way/fifty-way concurrency, reviewed consent, exact winners and immutable financial assertions remain unchanged.
