@@ -126,3 +126,7 @@ Documentation uses English; the application supports German/English and user-aut
 [Decision notes](decisions/README.md) record lasting documentation, governance and evidence conventions. [Brand provenance](BRAND_DESIGN_SYSTEM.md) explains official assets under `public/brand/`. Screenshots under `docs/screenshots/` are historical fictional captures, not evidence of current hosted installation.
 
 Keep credentials, private records and unredacted traces outside Git. Production, hosting/DNS changes, risky data operations and real-message delivery require their own authorization.
+
+## Job briefing
+
+[Optional job contacts and references](JOB_BRIEFING.md) explains the current assignment briefing permissions and editing flow.
