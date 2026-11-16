@@ -10,6 +10,8 @@ const sources = [
   "20261116034812_replacement_marketplace.sql",
   "20261116034826_attendance_delivery.sql",
   "20261116035802_operations_notification_integration.sql",
+  "20261116054027_operational_module_notification_handover_integration.sql",
+
   "20261116055506_accounting_interoperability.sql",
 ];
 const names = new Set();

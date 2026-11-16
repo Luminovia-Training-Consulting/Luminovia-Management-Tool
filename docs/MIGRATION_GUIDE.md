@@ -1,6 +1,6 @@
 # Reading and safely extending SQL migrations
 
-This guide preserves the 24 original baseline migrations and the two released role/pricing/welcome migrations byte-for-byte. The following operational extension adds five separate migration files; source availability is not installation evidence. Accepted SQL hashes participate in preview/update/recovery checks, so future changes use new additive files rather than editing released history.
+This guide preserves the 24 original baseline migrations and the two released role/pricing/welcome migrations byte-for-byte. The following operational extension adds six separate migration files; source availability is not installation evidence. Accepted SQL hashes participate in preview/update/recovery checks, so future changes use new additive files rather than editing released history.
 
 The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API inventory. [ERD](ERD.md), [DEVELOPER_GUIDE](DEVELOPER_GUIDE.md) and the relevant feature guides explain how the parts connect.
 
@@ -257,6 +257,14 @@ Source: [20261116035802_operations_notification_integration.sql](../supabase/mig
 Preserves the prior resolver and composes readiness/support/delivery/replacement destinations under current access. Assigned preparation reminders respect preferences and actual task changes. Removed memberships, cancelled allocations and revoked capabilities cannot turn an old notification into a private-resource link. No mail service or public cache is added.
 
 Strict non-trigger body diagnostics are additionally checked by [operations-lint-db-tests.mjs](../scripts/operations-lint-db-tests.mjs); canonical SQL lint/advisor/trigger and actual Auth/browser checks remain mandatory. [The extension ledger](OPERATIONS_EXTENSION_STATUS.md) distinguishes executed focused checks from full acceptance and release status.
+
+### 32. Optional forward notification and handover composition
+
+Source: [20261116054027_operational_module_notification_handover_integration.sql](../supabase/migrations/20261116054027_operational_module_notification_handover_integration.sql).
+
+Replaces the current inbox target in place and retains an owner-only trusted core/smart fallback. Readiness, delivery, support and marketplace targets retain their own current resource checks; exact optional enquiry/amendment helpers fail closed when absent. Where directed substitutions are installed, an accepted transition atomically closes competing open marketplace offers, with idempotent historical repair. No email/push category is activated. Later modules that replace this resolver must preserve its composition in their own newer migration.
+
+Tests: automatically discovered [operational-forward-db-tests.mjs](../scripts/operational-forward-db-tests.mjs); strict optional [operational-pr17-integration.mjs](../scripts/operational-pr17-integration.mjs). [Integration, chronology and actual evidence](OPERATIONAL_FORWARD_INTEGRATION.md).
 
 ### 33. Accounting snapshots and external customer invoice evidence (pending)
 
