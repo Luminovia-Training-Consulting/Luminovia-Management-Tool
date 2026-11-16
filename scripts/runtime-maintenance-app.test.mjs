@@ -12,15 +12,10 @@ const jobs = Object.fromEntries(
       .matchAll(/^ {2}([a-z-]+):\n([\s\S]*?)(?=^ {2}[a-z-]+:\n|$(?![\s\S]))/gm),
   ].map((m) => [m[1], m[2]]),
 );
-test("only maintainer PR review exceptions and the approved private App can bypass the corresponding policies", () => {
+test("maintainer review exceptions are PR-only and signing plus all15CI checks have no bypass", () => {
   const history = JSON.parse(read(".github/rulesets/history.json")),
     review = JSON.parse(read(".github/rulesets/review.json")),
     checks = JSON.parse(read(".github/rulesets/checks.json"));
-  const app = {
-    actor_id: 5776881,
-    actor_type: "Integration",
-    bypass_mode: "always",
-  };
   assert.equal(history.enforcement, "active");
   assert.deepEqual(history.bypass_actors, []);
   assert.ok(history.rules.some((r) => r.type === "required_signatures"));
@@ -31,9 +26,8 @@ test("only maintainer PR review exceptions and the approved private App can bypa
   assert.deepEqual(review.bypass_actors, [
     { actor_id: 2, actor_type: "RepositoryRole", bypass_mode: "pull_request" },
     { actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "pull_request" },
-    app,
   ]);
-  assert.deepEqual(checks.bypass_actors, [app]);
+  assert.deepEqual(checks.bypass_actors, []);
   const required = review.rules.find(
     (r) => r.type === "pull_request",
   ).parameters;
@@ -63,6 +57,7 @@ test("only maintainer PR review exceptions and the approved private App can bypa
     { context: "CodeQL (actions)", integration_id: 15368 },
     { context: "Dependency review", integration_id: 15368 },
     { context: "CodeQL", integration_id: 57789 },
+    { context: "PR preview package", integration_id: 15368 },
   ]);
   for (const policy of [history, review, checks])
     assert.deepEqual(policy.conditions.ref_name, {

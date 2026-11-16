@@ -1,5 +1,13 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — local M7/English acceptance checkpoint
+
+The owned integration now includes accepted main0a6002a and both original PR10/PR13 histories, with35migrations/160public functions. All26released SQL files remain byte-identical; the eight incoming M7 bodies use the already canonical20261116022730–37names, and the separately prepared role-quote migration follows at20261116045609. Private quotes, cursor context and exact actor-bound consent are retained; PR19 automation is not included.
+
+Actual local acceptance:514unit/component cases in65files pass with coverageS65.41/B59.94/F56.61/L67.51%, above stronger62.5/56.5/53/64.5floors; whole-source types/lint/format pass. All30disposable SQL suites pass321groups. Compiler connectivity inventories141modules and zero unused runtime exports. The92runtime guards pass after their first run correctly found one inherited documentation anchor lost during governance reconciliation; the stable active-rule-layers alias was restored. The policy source and guard now require15checks and no CI/signature bypass, matching current readback; this does not change live settings or publication switches. The separately owned PR22operating implementation remains a later integration boundary.
+
+The complete local Auth/browser/PWA command is pending because another checkout owns the shared kernel QA lock. Its processes and ports are untouched. A separate native candidate uses independently labelled projects/random loopback ports and will be checked from the exact signed source against accepted main; no success is claimed before execution. No real mail, public website, production or automatic publication was performed. Local evidence is private under.local; only source and safe summaries are deliverables.
+
 ## 16 November 2026 — current-main re-audit preserved
 
 Accepted main0a6002a(PR21) is merged into the owned M7/English integration. Both onboarding systems, the audited help/demo fixes and the complete earlier ledgers are retained. The preceding M7 checkpoint passed509unit/component cases in65files with S65.34/B59.82/F56.57/L67.45%, above the newly retained62.5/56.5/53/64.5floors; whole-project types/lint/format and actual compiler reachability/export checks passed. That result precedes this newest main merge and does not stand in for its final checks. The independent35-migration SQL command remains in progress, with every completed group passing. No source exception, deployed environment or publication action is invented.

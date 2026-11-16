@@ -8,7 +8,8 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Resolve documentation conflicts with accepted main `fabd71a`, retaining the private policy, subordinate authority, own welcome progress and PR-preview boundaries alongside the complete M7/M8 ledger.
 - [x] Inventory 35 SQL files: the 26 byte-identical released files, eight byte-identical M7/M8 sources renamed after that prefix and one additive role-aware discovery migration.
 - [x] Replay35migrations in the owned networkless SQL fixture, pass6role-aware and9discovery groups, and regenerate the actual160-function API reference. Native upgrade/retention remains a separate pending gate.
-- [ ] Complete source and focused regressions, then the combined isolated Auth/API/desktop/mobile/PWA and native retained-data acceptance. Earlier source-specific passes below do not certify this integration.
+- [x] Pass current514frontend/92runtime checks, stronger coverage floors, compiler graph and30SQLsuites/321groups on the owned integration; preserve current15-check policy.
+- [ ] Complete the combined isolated Auth/API/desktop/mobile/PWA and native retained-data acceptance after the shared QA slot is available. Earlier source-specific passes below do not certify this integration.
 - [ ] Publish the signed combined head and observe all 15 current required checks, including `PR preview package`, before the coordinated merge. Review exceptions never bypass CI or signatures.
 
 The current required-check policy has 15 contexts. Older 14-check readbacks below remain historical evidence; use current server rules and exact-head results. Production, hosted installation and other operational approvals remain separate.
