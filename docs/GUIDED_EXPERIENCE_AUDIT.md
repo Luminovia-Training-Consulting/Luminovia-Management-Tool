@@ -42,3 +42,9 @@ The stricter actual audit finds112frontendmodules and225runtimeexports, with no 
 - The extended real-account failed-permission→retry browser path runs in the canonical disposable CI project. Its new exact-source combined/native/security acceptance and merge state are recorded on [PR21](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/21). The prior PR16 acceptance (84browsercases,2built-PWAcases and actual selfhost/private-byte retention) is historical evidence and is not relabelled as execution of this new regression.
 
 The repository's full remaining product scope is retained. This audit reports reproducible fixes and tested behavior; it does not claim mathematical absence of all bugs, production acceptance or hardware/browser-platform certification.
+
+## Completed application proof and concurrent-main integration
+
+Final application head `13313de` passed full CI43798768990 and Security43798769092:231frontend tests,55runtime guards,42Edge tests,61release guards,84desktop/mobile browser cases (including real permission-failure→server-retry→tour),2built-PWA cases. The independent actual selfhost run passed24migrations,19API suites,50claims,TLS/WebSockets, retained password/MFA/privateevent/file bytes and owned cleanup.
+
+Parallel PR20 then advanced main to `d4c1f49`. Only the two progress documents conflicted; both histories are preserved. The application, schema, deployment/runtime implementation, dependencies, browser cases and integrity implementation are byte-identical to the accepted application head. Incoming governance changes add trusted current-main metadata validation and documentation;21combinedmetadata/integrity/documentation cases pass. Its new exact-head CI remains separately observable on PR21. User-authorised coordination temporarily holds further main merges until PR15 completes; no merge or production publication is implied by the prior application proof.
