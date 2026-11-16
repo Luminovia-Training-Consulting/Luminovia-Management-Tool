@@ -6,6 +6,92 @@ The assigned canonical ./portal test completed PASS/launcher exit0 on frozen sig
 
 Accepted main17/4cc2087 is now incorporated through normal signed ancestry; the resulting Git tree is byte-identical to tested59c3 before these documentation/image updates. All62now-published SQL files remain byte-identical, with only the never-released briefing extension after that prefix (63total). The changed priority is now actual12→24→25, followed by final actual-base PR31 integration, a final new migration version if necessary, exact-head required CI and protected merge. This successful candidate pass neither installs a release nor certifies those future compositions. Shared QA is released for the coordinator's25assignment; no retry/native/full stack remains running.
 
+## Actual68-migration main: combined local source acceptance
+
+Accepted PR24 main `99add7de` adds six migrations and four operational domains; all68staged migration blobs match accepted main. Actual combined checks pass674frontend cases/89files, unchanged coverage floors(S66.50/B61.95/F56.89/L68.65%), types/lint/format/compiler/build and all156runtime cases without skips; actionlint/own-diff checks pass. Precache86entries/3083.87KiB; logs `.local/full-functional/main24-source-check.log` and `main24-runtime.log`.
+
+Discovery validates54files/156application+4PWA cases but executes none. The matrix/source review records new operational/permission/forwarding slices without claiming their combined pass. Prior native68 proof belongs to accepted PR24's own source; priorRoot2f SQL/service proof remains62-migration history. Fresh final-head/current-base system/browser/native/parallel-SQL/security/preview acceptance is required before the directly prioritised PR12 merge. No new shared-PC stack or production/provider action.
+
+## Actual 62-migration main: source/controller acceptance, fresh services pending
+
+Accepted PR17 main `4cc20874` now contains62published migration files, including26additions; all62 staged blobs equal main and the earlier36-file prefix is unchanged. The unified-search test keeps seven authorised hits/six sources and all privacy/literal/language/draft/URL/reload/navigation boundaries while validating the actual POST/DTO and person-profile link. Explicit E2E TypeScript/lint/format pass. Main's font asset read, SMTP tests and measured browser/system budgets remain alongside strict source/browser/phase/privacy/cancellation evidence.
+
+Actual combined checks:18targeted controller/bootstrap cases, all156runtime cases without skips and643frontend cases/83files; unchanged coverage floors (S66.21/B61.43/F56.85/L68.40%), type/lint/format/compiler/build and actionlint/workflow formatting pass. Precache76entries/2990.04KiB. Private logs `.local/full-functional/main17-source-check.log`, `main17-runtime.log`, `main17-npm-ci.log`. Discovery validates50files/148application+4PWA cases only; none is represented as newly executed. Accepted vendor/license bytes are retained despite historical whitespace; own changes pass checks against actual main.
+
+The complete AA proof remains source-specific to36migrations. This new62-migration composition still requires actual current-head system/browser/native/parallel-SQL/security/preview acceptance before the explicitly prioritised PR12 merge. No shared-PC service start, provider activation or production action is included.
+
+## Main36 combined controller/source checks passed
+
+The combined phase-aware source passes 515 frontend cases/65 files and all existing coverage floors (S65.18/B59.74/F56.60/L67.28%), types/lint/format/compiler checks and production/PWA build (66 entries/2799.81 KiB). All 144 runtime cases pass, zero skips; actionlint/workflow formatting/whitespace checks pass. Private logs: `.local/full-functional/main36-source-check.log` and `main36-runtime.log`. Real-controller fixtures keep real hashing and browser validators, truthful phase/discovery/execution evidence, full stage partition and all-phase cleanup-cancellation failures. The workflow regression evaluates both actual safe upload conditions and unique artifact names. These are controlled service-boundary/source results; fresh real phase/native CI remains pending.
+
+Previous6ff completed all 15 gates separately: 91 stages, 120 application + two PWA cases, zero skips/retries, 351 SQL groups, 28 business API suites, checked cleanup and actual native36/29/50claims. Source fingerprint `016ab8b6e94a954637f70597f93ee9981156081373b7d3959f741316116b39f4`; private run5a16f9b7 lasts 12:33:40.580–13:06:23.594 UTC. Exact full-profile preview passed 13:07:06 UTC, matching archive SHA-256 `b51eb628be0d2173b27b8d7281f97c715452fe7d923417c96034c6e77b9e3c94`, hosted=false. Its private proof is `.local/functional-ci/pr12-6ff7470/agent-readback-43867519903/`. That earlier complete proof is not relabelled as the new phase integration.
+
+## Accepted PR36 phase integration: new final evidence required
+
+Actual main `7fbdb956` adds explicit independent system/browser CI phases and a final gate that requires both. This integration retains complete default local `all`, source hashing, complete browser inventory/execution, safe per-job evidence and post-cleanup cancellation failures. Partial summaries state their phase and selected plan; neither alone is a complete pass. Final current-head system/browser reports must both pass and identify matching source, alongside actual native compatibility and every required check.
+
+Exact previous6ff native compatibility passed at 12:46:35 UTC with 36 migrations/29 suites/50 claims, actual retained Auth/MFA/private events/scanned bytes, TLS/WebSockets and cleanup. Its application job ran under the older single-run architecture. It does not certify this later integration. All app/API/browser/dependency/migration bytes remain unchanged; focused fixture/source checks and fresh phased full-profile CI are pending. No unmerged PR17 source or new shared-PC run is imported.
+
+## Final PR34 combined local acceptance
+
+The normal signed main/remote reconciliation retains all accepted histories and immutable 36-migration bytes; app/API/browser/dependency source is unchanged over accepted3daf. Actual source-derived routing is full for 27 changed paths. The upload-condition regression was red on the original actual workflow and passes after the bounded fix: ten cases cover reduced skipped/unstarted applications and full success/failure/cancellation, with unchanged exact summary allowlist and strict missing-evidence errors.
+
+Combined local `./portal check` passes 515 frontend cases/65 files and all coverage floors (S65.18/B59.74/F56.60/L67.28%), types/lint/format/compiler checks and production/PWA build (66 precache entries/2799.81 KiB). All 130 runtime cases pass with zero skips; actionlint/workflow formatting/whitespace checks pass. Private logs: `.local/full-functional/main34-source-check.log` and `main34-runtime.log`. This is source/controller acceptance, not a new complete service run. Fresh final-head/current-base full application/native/security/package CI remains required before the explicitly prioritised PR12 merge.
+
+## Accepted PR34 integration: final full-profile verification pending
+
+The user explicitly prioritised PR12 first. Actual main `c5281002` contains accepted PR34's conservative CI scope routing and two independent pinned SQL workers, with no application/API/dependency/migration change. PR12 remains full because it changes scripts/tests/workflows; the canonical source/browser acceptance and actual native retention still run. The measured 50-minute application allowance is retained. The review identified an upload interaction with reduced profiles; its focused correction must preserve incomplete full-run evidence and the missing-evidence failure boundary.
+
+Earlier exact3daf results below remain complete accepted history. They are not relabelled as the later CI/ledger integration. All 36 released SQL bytes remain identical; final focused local checks and fresh exact-final-head/current-base full-profile CI are required before the now-prioritised normal merge. No unaccepted PR17 feature or new shared-PC run is included.
+
+## Exact 3daf: complete application, actual selfhost and all 15 checks passed
+
+[CI43851370883](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43851370883) passes all 15 mandatory checks on signed published `3daf4f03f6169fd83d2f2c05de18a402119d59bd`, against actual main `c0622a76`. Run1617934c completes 10:44:59.767–11:18:20.849 UTC with 91/91 stages passed and checked owned cleanup. Counts: 515 frontend/65 files, 109 runtime, 46 Edge, 76 Python, 76 operating Node, 350 regular SQL groups plus one legacy refusal, 28 actual business API suites and real invitation/restart retention. All 120 application cases (60 per project) and two built-PWA cases pass, zero skips/retries. Precache: 66 entries/2799.77 KiB. Source SHA-256: `3246a6c080df45a89a29728e04426302438a2940a133e02b9fbe6a7ed4875c1c`.
+
+Native ten-service selfhost passes at 11:28:11 UTC: 36 migrations, 29 suites, 50 claims, retained password/MFA/private-event/scanned bytes, TLS/WebSockets, Mailpit and cleanup. The image-change list is empty. Preview passes at 11:28:22 UTC; manifest head is exact3daf and actual archive SHA-256 matches `f7b1404c01395ba58eb425299bc1dc7db85163c7b7eef42a94d8f59b8575f6af`, hosted=false. CodeQL has zero annotations and no new PR alerts. Actual safe evidence is `.local/functional-ci/pr12-3daf4f0/agent-readback-43851370883/final-evidence-summary.json` and its private referenced reports/logs/archive.
+
+This is current-source complete CI acceptance, distinct from E7's recorded local PC pass and the cancelled 68af/1dd checkpoints. The later local ledger composition remains unpublished; PR12 stays Draft/no-auto-merge through the explicit PR17 → PR24 → PR25 priority. Final genuinely newer main still needs exact-final-source/current-base checks before the released merge. No physical-device, production, hosted or full-master-spec completion is inferred.
+
+## Exact 1dd CI superseded by a parallel documentation merge
+
+CI43847426882 on `1dd3c9e` was cancelled at 10:43:37 UTC when the remote branch advanced to `3daf4f0`. Its partial source-bound summary records 86 passed stages and browser execution still running, not completed acceptance. Fingerprint: `271054ec96f261220505e78e80b2b226d4991d793522ef6708d7058e11d16353`; private proof: `.local/functional-ci/pr12-1dd3c9/agent-readback-43847426882/7c626876/acceptance.json`. No new complete browser/PWA/native or owned-cleanup pass is claimed.
+
+Remote3daf merges only the same three actual-main guides already prepared locally. Its separate CI43851370883 is pending. A normal local ancestry merge retains that remote commit, the complete incoming main ledgers and current own evidence; executable/test/dependency/workflow/migration bytes are unchanged. Three documentation/privacy cases pass. No force push or competing shared-PC run is used.
+
+## Actual PR29 main: documentation-only local reconciliation
+
+Actual main `c0622a763127081a7b5be092ce2782253991c6a5` contributes six English role/pricing/ownership guides and ledgers. Both histories and all 36 published migration bytes are retained. Combined local documentation/privacy guards pass three cases; application, test, dependency and operating bytes remain identical to published `1dd3c9e`. Its current CI continues independently; no full pass is inferred for this later documentation composition. The explicit shared-PC/main queue and Draft/no-auto-merge state remain unchanged.
+
+## Exact 68af64e CI: 120 application browsers passed, full gate cancelled
+
+[CI43840712518](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43840712518) was cancelled at its aggregate 40-minute job deadline. The uploaded private summary `.local/functional-ci/pr12-68af64e/560f1466/acceptance.json` has source fingerprint `27713b432d78dc5c176e3ddc6b07466cde8a5183f7317ceb31e33cd3ff46986b`, 90 passed stages and one running PWA stage. All 31 discovered SQL-script stages, 28 business API stages, real invitation/retention and 120 application browser cases passed (17.6 minutes, zero skips/retries); production build passed. PWA completion, runner-owned cleanup, separate native retention and preview acceptance were not reached or verified. This is not a complete pass.
+
+The measured run started PWA execution at 10:14:00 UTC immediately before termination. The correction raises only the whole CI job allowance from 40 to 50 minutes; all individual request/test/stage limits, assertions and no-retry/no-skip rules remain unchanged. The next exact source must complete all required gates. No new shared-PC test, deployment or publication was started.
+
+## Frozen 36-migration composition: actual bounded SQL acceptance
+
+Signed `ddb848564753ea5a89b326d649708c69385475c5` passes commission 14 groups and lifecycle 12 groups on all 36 migrations, exit 0. The catalogue-preservation regression independently passes five groups on its intentional historical baseline of 24 migrations through `20261115213550`, followed only by `20261116032005`. No historical migration or production SQL was changed.
+
+The first lifecycle attempt failed at PostgreSQL fork after six groups under the own 256-PID ceiling. Exactly one complete repetition, with only the own container ceiling raised to 512, passes; source and real fifty-way race/assertions are unchanged. Both own pinned PostgreSQL 17.12 containers have no network or hostports, 768 MiB/one CPU/private tmpfs and checked database/container removal. Evidence is private mode 0600 under `.local/full-functional/independent-sql/6dc8d65c52-result.json` and `232fcc59c2-result.json`. SQL Auth helpers are emulated; native Auth/HTTP acceptance remains separate.
+
+Independent backend-free collection validates all 38 files/both browser projects: 120 application cases plus two PWA cases. No journey was executed by collection. Noncredential placeholders satisfy fixture-presence conditions only; earlier fixture-incomplete discovery correctly failed the no-disabled-case guard. Bounded source review found no actionable regression. Fresh complete exact-head CI remains pending, and PR12 remains Draft under the PR17 → PR24 → PR25 shared-PC/actual-main priority.
+
+## Accepted PR10 main: combined source checks, full CI still pending
+
+The local functional-test branch now incorporates actual main `1de544d872706eebc95a942a1956254ed87ae40d` (PR10, merged 09:04:25 UTC). All 36 published migration files are byte-identical to that main. The runner preserves source hashing, independent complete browser discovery, no skips/retries and cleanup-before-PASS.
+
+Actual combined checks pass: `./portal check`, 515 frontend cases in 65 files, coverage S65.18/B59.74/F56.60/L67.28% with all existing floors, type/lint/format/compiler checks and production/PWA build (66 precache entries, 2799.81 KiB); 109 runtime cases with zero skipped; three documentation/privacy cases; actionlint and whitespace checks. Logs remain private under `.local/full-functional/main10-*`.
+
+These are focused current-source results. E7's full PC/CI pass below does not certify this later 36-migration composition. Bounded owned SQL verification and all 15 fresh exact-final-head checks remain pending. PR12 stays Draft without auto-merge while the explicit queue serves PR17, then PR24 and PR25; no new shared full-PC run is started.
+
+## E7complete PC/CI acceptance; later neutral-catalogue integration
+
+SignedE7cab0d passed actual PC `./portal test`, run1aacef6d,07:33:30.406–07:49:32.799UTC with launcher/session exit0 and all72stages. Actual94application+2PWA cases have zero skips/retries; SQL/API/invitation/retention and owned cleanup pass. Independent local Docker readback finds no run-owned containers/volumes/networks or checkout lock. Private proof: `.local/tests/1aacef6d/acceptance.json` and `.local/full-functional/e7cab0d-full-local.*`.
+
+CI43824413347 passed all15gates on exactE7:application07:51:11UTC,native07:57:08UTC,preview07:57:18UTC. Its fingerprint matches PC exactly: `e8250d5a2a494d08691292c9bdfd33e55ab4d4ea7038e9ecb5d556323e595720`. Counts:254frontend/102runtime/42Edge/76Python/72operatingNode,258SQLgroups,19APIs,94+2browsers; native26migrations/20suites with actual retained Auth/MFA/private-event/scanned bytes and cleanup. Reports/package verification: `.local/functional-ci/pr12-e7cab0d/`.
+
+Subsequent actualPR13maine88df84c introduces neutral-catalogue migration27. Its local integration passes254frontend/build,105runtime,20native/updater guards,3documentation/privacy groups and4controlled-HTML real-Chromium pointer/layout cases; the last4exercise no backend/Auth and record no separate pageerror listener. Earlier isolatedPG14+12acceptance remains bound to068b603/26migrations. No later full native/SQL/current-head pass is invented. ExplicitPR10-first priority keeps PR12 Draft and reserves shared QA; further own acceptance resumes afterwards.
+## Released discovery English documentation — current-source verification
 ## PR17 current-main integration — complete acceptance pending
 
 The current source integrates accepted main/PR10 and its published 36-migration prefix with PR17 smart operations. Merge resolution, source-level checks and earlier focused results do not establish complete current-source acceptance. The integration must pass fresh and retained-data database replay, actual Auth/API/Storage flows, desktop/mobile and built-PWA journeys, security and all 15 required exact-head checks before merge. External mail/Push activation, physical-device behavior and production are separate operational gates.
