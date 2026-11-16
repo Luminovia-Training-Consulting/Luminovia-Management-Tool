@@ -1,5 +1,11 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — parallel remote documentation merge retained without losing ledgers
+
+While exact `1dd3c9e` CI43847426882 ran, a separate normal remote merge advanced PR12 to `3daf4f03f6169fd83d2f2c05de18a402119d59bd`, with the same parents as the already prepared local main reconciliation. Its three guide changes match the local merge, but it did not retain PR29's three incoming ledger additions. This ordinary local merge preserves the remote commit and the complete local/main ledgers. Executable/test/dependency/workflow/migration bytes remain unchanged; three documentation/privacy guards pass.
+
+The superseded CI was cancelled at 10:43:37 UTC, with 86 stages passed and application browser execution still running. Private partial summary `.local/functional-ci/pr12-1dd3c9/agent-readback-43847426882/7c626876/acceptance.json` remains running, fingerprint `271054ec96f261220505e78e80b2b226d4991d793522ef6708d7058e11d16353`; no complete browser/PWA/native/cleanup pass is inferred. Remote3daf's CI43851370883 is a separate pending gate. Keep the unpublished ledger reconciliation locally while that current remote run proceeds and the explicit merge/shared-PC queue remains in force; no force push or competing full-PC test is used.
+
 ## 16 November 2026 — actual English role/pricing main preserved locally
 
 Actual main `c0622a763127081a7b5be092ce2782253991c6a5` merged PR29's six English documentation files. This local reconciliation preserves its accurate current quote/null/consent/retry ownership and immutable 36-migration guidance, together with both complete development histories. Application, tests, dependencies, operating code and all released SQL bytes are unchanged from published `1dd3c9e`; three documentation/privacy guards pass. The running exact-1dd CI is allowed to finish without publishing this documentation-only reconciliation prematurely. It is not a new full native/browser result. Draft/no-auto-merge and the explicitly reserved shared-PC/main sequence remain in force.

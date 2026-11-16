@@ -2,6 +2,8 @@
 
 ## Current documentation-only main reconciliation
 
+- [x] Preserve separate remote main merge `3daf4f0` in normal ancestry without dropping PR29's ledger additions. Published executable source remains unchanged; local documentation/privacy guards pass three cases.
+- [ ] Preserve incomplete exact-1dd CI as cancelled after 86 passed stages; observe separate current-3daf CI, then incorporate actually accepted later main and publish one coherent final branch update under the explicit queue.
 - [x] Retain actual PR29 main `c0622a7`, both histories, current English quote/consent/retry guidance and all 36 immutable released migration bytes; application/test/dependency/operating bytes remain identical to published `1dd3c9e`. Three documentation/privacy guards pass.
 - [ ] Let exact-1dd complete CI finish, preserve its actual result and integrate later genuinely accepted main before the released final publication/current-base acceptance. No competing shared-PC run or premature main merge.
 

@@ -1,5 +1,11 @@
 # QA evidence — 2026-11-16
 
+## Exact 1dd CI superseded by a parallel documentation merge
+
+CI43847426882 on `1dd3c9e` was cancelled at 10:43:37 UTC when the remote branch advanced to `3daf4f0`. Its partial source-bound summary records 86 passed stages and browser execution still running, not completed acceptance. Fingerprint: `271054ec96f261220505e78e80b2b226d4991d793522ef6708d7058e11d16353`; private proof: `.local/functional-ci/pr12-1dd3c9/agent-readback-43847426882/7c626876/acceptance.json`. No new complete browser/PWA/native or owned-cleanup pass is claimed.
+
+Remote3daf merges only the same three actual-main guides already prepared locally. Its separate CI43851370883 is pending. A normal local ancestry merge retains that remote commit, the complete incoming main ledgers and current own evidence; executable/test/dependency/workflow/migration bytes are unchanged. Three documentation/privacy cases pass. No force push or competing shared-PC run is used.
+
 ## Actual PR29 main: documentation-only local reconciliation
 
 Actual main `c0622a763127081a7b5be092ce2782253991c6a5` contributes six English role/pricing/ownership guides and ledgers. Both histories and all 36 published migration bytes are retained. Combined local documentation/privacy guards pass three cases; application, test, dependency and operating bytes remain identical to published `1dd3c9e`. Its current CI continues independently; no full pass is inferred for this later documentation composition. The explicit shared-PC/main queue and Draft/no-auto-merge state remain unchanged.
