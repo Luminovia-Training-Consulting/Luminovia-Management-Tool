@@ -1,5 +1,15 @@
 # Persistent implementation plan
 
+## Current native checkpoint and descriptor safeguards
+
+- [x] Observe exact e498/fd0 GitHub application 116 browser + 2 PWA and actual 36→36 retained-data native acceptance with 29 API suites, real 50-way claims and owned cleanup.
+- [x] Verify two unchanged accepted assignments and one invoice, exact financial digest/PDF bytes, current access and foreign denial on both sides of that source update; no image-upgrade claim.
+- [x] Integrate checked-descriptor preview/private-text/native-fixture boundaries with real race/error/resource tests; pass 259 combined Node cases on code checkpoint `ab442e0`, with all 36 released SQL and production application bytes unchanged.
+- [x] Observe full branch scan 21 inherited results on `82f9965`, no new IDs and no candidate-probe/preview-reader finding; preserve the failed old PR-ref findings and distinction from incremental PR zero results.
+- [ ] Observe current corrected-source exact-head CodeQL/application/native/security/package CI; preserve all 15 mandatory gates and source-bound results.
+- [ ] Integrate only actually accepted future Main changes and complete their relevant combined acceptance; respect PR17,24/25 service/Main reservation and centrally managed draft/readiness.
+- [ ] Complete the permitted PR19 merge and then separately observe trusted Main controller operation. No native App merge or production permission is inferred from the prior runtime proof.
+
 ## Current quality acceptance and corrected-source delivery gate
 
 - [x] Complete frozen e498 PC acceptance: 529 frontend, 159 runtime, all SQL/RLS/concurrency, 29 real API groups plus invitation, 116 desktop/mobile and 2 built-PWA cases and observed owned cleanup, exit0 at 09:42:44 UTC.
