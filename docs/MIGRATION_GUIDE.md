@@ -1,6 +1,6 @@
 # Reading and safely extending SQL migrations
 
-This guide inventories **62 SQL sources: the 36 published main migrations and 26 still-undelivered PR17 extensions**. Pending identifiers are reconciled with the installed CLI after that immutable prefix without changing SQL bytes or dependency order. This is a source inventory, not a claim of complete fresh or retained-data replay. Accepted SQL forms part of local preview, update and recovery fingerprints, so even a comment changes source identity. File identity/order checks do not replace fresh or retained-data replay. New business changes use separate additive migrations and matching guide updates.
+This guide inventories **63 SQL sources: 62 accepted main migrations and one additive assignment-withdrawal extension**. The earlier PR17 status labels below record the historical source reconciliation before its accepted merge. Pending identifiers are reconciled with the installed CLI after that immutable prefix without changing SQL bytes or dependency order. This is a source inventory, not a claim of complete fresh or retained-data replay. Accepted SQL forms part of local preview, update and recovery fingerprints, so even a comment changes source identity. File identity/order checks do not replace fresh or retained-data replay. New business changes use separate additive migrations and matching guide updates.
 
 The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API inventory. [ERD](ERD.md), [DEVELOPER_GUIDE](DEVELOPER_GUIDE.md) and the relevant feature guides explain how the parts connect.
 
@@ -606,3 +606,22 @@ A private experimental database that applied earlier unmerged identifiers needs 
 3. Comment new tables, functions, lock ordering, actor/MFA checks, `search_path`, versioning/idempotency and grants directly in the new SQL source. New internal helpers need explicit EXECUTE revokes; do not broadly expand wrapper/definer boundaries.
 4. Check a fresh replay, actual RLS/concurrency and the affected Auth/API/browser flows. Updating an existing database and preserving actual Storage bytes require separate evidence. Use the existing isolated full verification command and document the stages actually reached.
 5. Update the API reference only through its intended actual replay; also update this guide, feature documentation, plan and work log. Hosted migrations follow the existing operations and approval path.
+
+### 63. Reasoned short-notice assignment withdrawals
+
+Source: [20261116140511_assignment_withdrawal_requests.sql](../supabase/migrations/20261116140511_assignment_withdrawal_requests.sql).
+
+Adds private application and actor-command tables with RLS and no client table
+grants. Own withdrawal at least 168 hours before the first session releases the
+whole block directly. Shorter notice requires a reason and a non-author
+Administration/Management decision with current MFA. Pending/rejected applications
+retain all sessions. Accepted commercial snapshots remain unchanged. Existing
+private cancellation/lifecycle/notification helpers are retained behind restricted
+wrappers; the old self-cancellation endpoint cannot bypass review. A claim-status
+trigger closes requests overtaken by administrative cancellation or substitution.
+
+Test entry points: [claim-withdrawal-db-tests.mjs](../scripts/claim-withdrawal-db-tests.mjs),
+[assignment-withdrawal-api-check.mjs](../scripts/assignment-withdrawal-api-check.mjs)
+and [assignment-withdrawal.spec.ts](../tests/e2e/assignment-withdrawal.spec.ts).
+See [workflow and operations](ASSIGNMENT_WITHDRAWALS.md) and the work log for actual
+executed results; this inventory does not certify a hosted installation.

@@ -46,6 +46,7 @@ Profiles/reviews/labels/avatars, courses/enrolment/source provenance, resource c
 | apply_work_template | p_id uuid, p_expected_version integer, p_client_id uuid | uuid[] | Authenticated; resource/capability checks apply |
 | assignment_confirmation | p_claim_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | assignment_job_titles | p_job_ids uuid[] | jsonb | Authenticated; resource/capability checks apply |
+| assignment_withdrawals | p_job_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | attention_preferences | none | jsonb | Authenticated; resource/capability checks apply |
 | attest_qualification | p_user_id uuid, p_topic_id uuid, p_verified boolean, p_valid_until timestamp with time zone, p_evidence_id uuid, p_expected_version integer, p_request_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | bulk_work_task_state | p_items jsonb, p_state text | integer | Authenticated; resource/capability checks apply |
@@ -186,12 +187,14 @@ Profiles/reviews/labels/avatars, courses/enrolment/source provenance, resource c
 | rename_document | p_id uuid, p_name text, p_delete boolean | void | Authenticated; resource/capability checks apply |
 | repeat_client_request | p_request_id uuid, p_sessions jsonb, p_client_id uuid | uuid | Authenticated; resource/capability checks apply |
 | report_forum_post | p_post_id uuid, p_reason text | uuid | Authenticated; resource/capability checks apply |
+| request_assignment_withdrawal | p_claim_id uuid, p_reason text, p_request_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | reserve_account_invitation | p_email text, p_display_name text, p_role text, p_organisation_id uuid, p_idempotency_key uuid | jsonb | Authenticated; resource/capability checks apply |
 | reserve_document | p_name text, p_mime text, p_size bigint, p_scope text, p_kind text, p_room_id uuid, p_job_id uuid, p_client_id uuid, p_replace_id uuid, p_owner_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | reserve_invitation | p_email text, p_idempotency_key uuid | jsonb | Authenticated; resource/capability checks apply |
 | resolve_forum_report | p_report_id uuid, p_resolved boolean | void | Authenticated; resource/capability checks apply |
 | resource_comments | p_kind text, p_id uuid, p_before_at timestamp with time zone, p_before_id uuid, p_limit integer | jsonb | Authenticated; resource/capability checks apply |
 | respond_job_substitution | p_offer_id uuid, p_action text, p_quote_hash text, p_request_id uuid, p_accept_terms boolean | jsonb | Authenticated; resource/capability checks apply |
+| review_assignment_withdrawal | p_withdrawal_id uuid, p_approve boolean, p_reason text, p_request_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | review_invoice | p_invoice_id uuid, p_status text, p_note text | void | Authenticated; resource/capability checks apply |
 | reviewable_courses | none | jsonb | Authenticated; resource/capability checks apply |
 | revoke_calendar_subscription | p_id uuid, p_expected_version integer | boolean | Authenticated; resource/capability checks apply |

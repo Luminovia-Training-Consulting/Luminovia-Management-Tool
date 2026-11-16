@@ -1,5 +1,15 @@
 # Persistent implementation plan
 
+## 17 November 2026 — short-notice withdrawal policy
+
+- [x] Implement own direct withdrawal at least 168 elapsed hours before the first session; shorter notice requires a private reasoned application and non-author Administration/Management review with current MFA.
+- [x] Preserve pending/rejected reservations, accepted snapshots and started/invoiced safeguards; enforce the boundary through the legacy API, atomic locks, immutable retry payloads, role-revocation checks and committed inbox outcomes.
+- [x] Connect DE/EN accessible job detail dialogs/history/decisions and inbox links; document the contract, migration and operating boundaries without reducing the full target scope.
+- [x] Pass652frontendcases/84files and full fast source/build checks,146runtimeguards,17finalfocusedcases and58realPostgreSQLgroups (including15newwithdrawalcases and strict diagnostics); regenerate API from actual replay.
+- [ ] Complete the fresh canonical native/Auth/HTTP/browser/PWA/retention run, inspect actual desktop/mobile DE/EN light/dark screenshots, then observe all required current-head CI/native/security/package gates and complete the authorized protected PR merge.
+
+[Workflow and recovery](ASSIGNMENT_WITHDRAWALS.md). This is a withdrawal review path, not a routine approval queue for claiming jobs. The complete remaining product ledger below stays required. No production/provider/release activation is included.
+
 ## All-open-PR merge continuation — smart operations
 
 - [x] Integrate accepted main `7fbdb956`, preserving phase separation and PR17-only font/mail/browser aggregate requirements plus both ledgers.

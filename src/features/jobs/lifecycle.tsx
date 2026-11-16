@@ -326,15 +326,17 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
                     {event.reason}
                   </p>
                 ))}
-              {claim.can_cancel && (
-                <Button
-                  variant="secondary"
-                  disabled={!online || change.isPending}
-                  onClick={() => openConfirmation("cancel", claim.id)}
-                >
-                  {t("cancel")}
-                </Button>
-              )}
+              {claim.can_cancel &&
+                info.can_manage &&
+                claim.lecturer_id !== session!.user.id && (
+                  <Button
+                    variant="secondary"
+                    disabled={!online || change.isPending}
+                    onClick={() => openConfirmation("cancel", claim.id)}
+                  >
+                    {t("cancel")}
+                  </Button>
+                )}
             </li>
           ))}
         </ol>

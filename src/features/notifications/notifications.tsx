@@ -49,6 +49,10 @@ import "./attention-i18n";
 const knownKinds = new Set([
   "claim_confirmed",
   "claim_cancelled",
+  "assignment_withdrawal_requested",
+  "assignment_withdrawal_approved",
+  "assignment_withdrawal_rejected",
+  "assignment_withdrawal_withdrawn",
   "job_reopened",
   "job_matching",
   "chat_message",

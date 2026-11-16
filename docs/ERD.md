@@ -1,6 +1,6 @@
 # Relational model and permission boundaries
 
-The target diagrams retain the complete product map; conceptual target entities do not claim that every table exists. The implemented diagrams depict a selected subset of physical relations represented in the current **62 SQL sources**, with `PRIVATE_*` aliases mapped to unexposed private relations below. They are not a complete schema dump or a claim that every later replacement routine, optional-module adapter or constraint is diagrammed. The 36 published main sources remain byte-identical; 26 PR17 files follow that prefix. Actual migration replay, SQL constraints, explicit grants/RLS and owning tests are authoritative. This source map does not claim the current combined native gate, hosted installation or platform acceptance has passed. See [ARCHITECTURE](ARCHITECTURE.md), [MIGRATION_GUIDE](MIGRATION_GUIDE.md), [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
+The target diagrams retain the complete product map; conceptual target entities do not claim that every table exists. The implemented diagrams depict a selected subset of physical relations represented in the current **63 SQL sources**, with `PRIVATE_*` aliases mapped to unexposed private relations below. They are not a complete schema dump or a claim that every later replacement routine, optional-module adapter or constraint is diagrammed. The 62 sources accepted on main remain byte-identical; one additive withdrawal-workflow migration follows that prefix. Actual migration replay, SQL constraints, explicit grants/RLS and owning tests are authoritative. This source map does not claim the current combined native gate, hosted installation or platform acceptance has passed. See [ARCHITECTURE](ARCHITECTURE.md), [MIGRATION_GUIDE](MIGRATION_GUIDE.md), [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
 
 ## Core target relations
 
@@ -635,3 +635,15 @@ Additional operational boundaries:
 | Notification channel/device              | Own preference/device; current eligible event                   | Service-only delivery leases do not grant browser data access                       |
 
 See [CHAT_SECURITY](CHAT_SECURITY.md), [KNOWLEDGE_SECURITY](KNOWLEDGE_SECURITY.md), [COMMERCIAL_SECURITY](COMMERCIAL_SECURITY.md), [OPERATIONS](OPERATIONS.md) and [BACKEND_SECURITY_REVIEW](BACKEND_SECURITY_REVIEW.md) for tested boundaries and outstanding acceptance. Current combined 62-source native acceptance is recorded separately in QA/work logs; authored cases and focused passes do not establish that result. Tombstones, archives and audit revisions preserve data; none is a production legal-erasure or retention-policy guarantee.
+
+## Assignment withdrawal applications
+
+`private.assignment_withdrawals` references the immutable `job_claims` and its
+lecturer profile. It stores the bounded authored reason, pending/final status,
+reviewer, decision note and timestamps. A partial unique index allows one pending
+application per claim. `private.assignment_withdrawal_commands` binds each actor
+and request UUID to its exact payload and application for safe transport retries.
+Both tables have RLS and no client table grants; scoped RPCs expose only own or
+current MFA-authorized management work. Existing claim/session/commercial rows
+retain their identities and accepted snapshots. See
+[assignment withdrawals](ASSIGNMENT_WITHDRAWALS.md).

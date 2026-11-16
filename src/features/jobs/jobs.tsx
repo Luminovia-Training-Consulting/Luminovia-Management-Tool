@@ -5,6 +5,7 @@
  */
 import { JobPricingPanel } from "../commercial/pricing";
 import { JobLifecyclePanel } from "./lifecycle";
+import { JobWithdrawalPanel } from "./withdrawal";
 import { JobSubstitutionPanel, JobWaitlist } from "./lifecycle-extra";
 import { refreshJobState } from "./lifecycle-api";
 import { JobDiscovery } from "./discovery";
@@ -150,6 +151,7 @@ export function JobDetail() {
         <JobPricingPanel job={job} />
       )}
       <JobLifecyclePanel job={job} />
+      <JobWithdrawalPanel key={job.id} jobId={job.id} zone={job.time_zone} />
       <JobWaitlist jobId={job.id} />
       <JobSubstitutionPanel jobId={job.id} />
       <div className="detail-layout">

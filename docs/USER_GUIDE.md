@@ -283,3 +283,14 @@ Choose **Create teaching offer** to use the existing course as the basis for an 
 Under **My profile**, choose a PNG, JPEG or WebP profile picture. The editor explains the square centre crop. The new picture becomes selected only after confirmed processing and storage; a rejected image does not replace the existing one. **Remove profile picture** clears the current selection. Authorised team/course contacts can see the selected image; it is not published as a public Internet file. Initials appear offline and editing is disabled.
 
 Templates and individual jobs have **Comments & teaching notes** for the authorised teaching team. Write a question or teaching note, edit your own posts or withdraw them with confirmation. Management can hide/restore posts with MFA and a reason. A version conflict signals an intervening change; review the current post before continuing. Comments do not change accepted fees or assignment terms and remain separate from client/participant accounts.
+
+## Withdrawing from a claimed teaching block
+
+Open the assigned job and choose **Withdraw from this assignment**. At least
+seven days before its first session, confirm a direct withdrawal. With less than
+seven days, explain the reason and submit the application. The assignment remains
+binding while pending or after rejection. Administration or Management reviews
+the request from its inbox link and supplies a decision note. The lecturer sees
+the outcome in the personal inbox and job detail. Approval releases the complete
+block, and Management explicitly reopens the vacancy. Started/invoiced work needs
+separate review. [Detailed workflow](ASSIGNMENT_WITHDRAWALS.md).

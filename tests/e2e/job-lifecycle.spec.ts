@@ -132,17 +132,22 @@ test("reasoned cancellation, explicit reopening, same-page reclaim and safe copy
       ),
     ).toBeVisible();
     await lecturerPage
-      .getByRole("button", { name: "Zuweisung stornieren", exact: true })
+      .getByRole("button", {
+        name: "Von diesem Auftrag zurücktreten",
+        exact: true,
+      })
       .click();
     const dialog = lecturerPage.getByRole("dialog");
     await expect(
-      dialog.getByRole("button", { name: "Stornierung bestätigen" }),
-    ).toBeDisabled();
+      dialog.getByRole("button", { name: "Rücktritt bestätigen" }),
+    ).toBeEnabled();
     await dialog
-      .getByLabel("Begründung (5–1000 Zeichen)", { exact: true })
+      .getByLabel("Begründung (ab sieben Tagen Vorlauf optional)", {
+        exact: true,
+      })
       .fill("Fictional agreed scheduling change");
     await dialog
-      .getByRole("button", { name: "Stornierung bestätigen", exact: true })
+      .getByRole("button", { name: "Rücktritt bestätigen", exact: true })
       .click();
     await expect(dialog).not.toBeVisible();
     await expect(
