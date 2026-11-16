@@ -2,7 +2,9 @@
 
 ## Delivery status
 
-This prepared controller-only source integrates main `0a6002a5`. Its own exact-source CI, merge and successful default-branch execution remain required before it can be described as an accepted running controller. Repository auto-merge availability and active branch rules do not prove controller delivery. Results from another product or quality branch do not certify this change.
+This prepared native-merge and quality source includes actual main `1de544d872706eebc95a942a1956254ed87ae40d` (PR10), with all 36 SQL migrations and the already accepted M7 application source. It retains the accepted English documentation and customer-neutral course catalogue, and integrates the focused quality and course-regression work. Acceptance of those incoming revisions does not certify the combined current head; the complete product scope and remaining operational/platform gates stay in the implementation plan.
+
+The integrated revision still needs its own exact-head CI and merge. The first successful default-branch execution of this controller and its continuous read-only probe, and an observed native App merge by this controller, remain pending. Repository auto-merge availability, active branch rules, local quality results and the separate successful manual metadata proofs do not establish those outcomes. No accepted running-controller or native-App-write claim is made here.
 
 The live rules have been read back: **15 required checks, strict current-base enforcement and no CI bypass; a personal PR-only review exception solely for `CarinaSchoppe` (user `29256704`), with no role-based exception; no App review exception; and no history/signature bypass**. The matching source snapshots are linked in [GitHub administration](GITHUB_WORKFLOW.md#rules-for-main). This implementation does not change those server rules or grant a new exception.
 
