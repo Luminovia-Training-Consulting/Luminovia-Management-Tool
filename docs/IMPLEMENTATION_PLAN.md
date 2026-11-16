@@ -1,5 +1,13 @@
 # Persistent implementation plan
 
+## Retained financial witness after accepted PR10
+
+- [x] Port only the executed financial witness's two maintenance programs, two test files and owning README onto accepted main `1de544d872706eebc95a942a1956254ed87ae40d`; preserve current controllers, application contracts and all 36 released migration blobs.
+- [x] Require actual caller/MFA/scanner creation before the source switch and exact accepted compensation, session, private policy/split, contract receipt, invoice/item/payment and PDF retention afterward, including fresh identity sessions and foreign-record/byte denials. Keep candidate-only bootstrap after comparison and disallow role-pricing sentinel fallback.
+- [x] Pass all 65 maintenance unit/contract cases, including 29 financial cases, scoped lint/format and diff checks; preserve automatic maintenance-test discovery. These lightweight checks are not native acceptance.
+- [ ] Coordinate the shared QA lock and run the exact signed candidate against a separately archived actual `1de544d` baseline, with the current 36 migrations and discovered API inventory. Record matching anonymous financial digests, full native Auth/Storage/TLS/50-claim checks and verified owned cleanup before claiming a current pass.
+- [ ] Run complete canonical application acceptance and the final exact-head PR CI gates through the owning quality integration. Keep the historical `5876224`/`e048edb` 26-migration proof source-bound; no deployment or PostgreSQL image upgrade is implied.
+
 ## PR10 current accepted Main13 checkpoint
 
 - [x] Preserve c808 archive-race regression/fix while resolving actual main e88 conflicts and retaining customer-neutral/personal-only/manual-publication contracts.

@@ -251,6 +251,20 @@ export async function allocateCandidatePorts(createListener = createServer) {
   }
 }
 
+/** Accept only a completed candidate-owned probe receipt, never an empty success exit. */
+export function financialProbeReceipt(output, phase) {
+  const result = JSON.parse(output.trim().split("\n").at(-1));
+  assert.equal(result?.kind, "accepted-financial-witness");
+  assert.equal(result.phase, phase);
+  assert([1, 2].includes(result.claims));
+  assert.equal(result.invoices, 1);
+  assert.equal(typeof result.commissioned, "boolean");
+  assert.equal(result.claims, result.commissioned ? 2 : 1);
+  assert.equal(result.foreignDenied, true);
+  assert.match(result.snapshotSha256, /^[a-f0-9]{64}$/);
+  return result;
+}
+
 // Start owned Compose resources, verify data before/after upgrading, and clean up only resources covered by the ownership contract.
 export async function checkCandidate({
   baselineRoot,
@@ -749,7 +763,7 @@ export async function checkCandidate({
       NODE_EXTRA_CA_CERTS: join(scratch, "certs/cert.pem"),
     };
     console.log(
-      "Candidate: baseline initialized; seeding and retaining real password/MFA/private event/scanned bytes.",
+      "Candidate: baseline initialized; retaining real password/MFA/private event/scanned bytes and accepted claims/invoice snapshots.",
     );
     await run(process.execPath, [join(scratch, "scripts/local-seed.mjs")], {
       env: childEnvironment,
@@ -759,10 +773,14 @@ export async function checkCandidate({
       root,
       "deploy/hostinger/maintenance/candidate-upgrade-probe.mjs",
     );
-    await run(process.execPath, [probe, "--create"], {
-      env: childEnvironment,
-      timeout: 120000,
-    });
+    const financialBefore = financialProbeReceipt(
+      await run(process.execPath, [probe, "--create"], {
+        env: childEnvironment,
+        timeout: 120000,
+      }),
+      "--create",
+    );
+    console.log(JSON.stringify(financialBefore));
     const baselineImages = Object.fromEntries(
       Object.entries(configuration.services).map(([name, service]) => [
         name,
@@ -802,14 +820,23 @@ export async function checkCandidate({
       "Baseline database roles, grantors and membership options changed.",
     );
     await sql("NOTIFY pgrst,'reload schema';");
-    await run(process.execPath, [probe, "--verify"], {
-      env: childEnvironment,
-      timeout: 120000,
-    });
+    const financialAfter = financialProbeReceipt(
+      await run(process.execPath, [probe, "--verify"], {
+        env: childEnvironment,
+        timeout: 120000,
+      }),
+      "--verify",
+    );
+    assert.deepEqual(
+      { ...financialAfter, phase: "--create" },
+      financialBefore,
+      "Pre/post-upgrade financial probe receipts differ",
+    );
+    console.log(JSON.stringify(financialAfter));
     console.log(
       "PASS candidate retained-data upgrade: " +
         changedImages.length +
-        " changed images; existing password/MFA/roles/private event/scanned bytes and migration history survived.",
+        " changed images; existing password/MFA/roles/private event/scanned bytes, accepted financial/invoice snapshots and migration history survived.",
     );
     const publicGet = (path, headers = {}) =>
       new Promise((done, fail) => {
@@ -905,6 +932,7 @@ export async function checkCandidate({
       baselineUpgradePassed: true,
       changedImages,
       retainedPasswordMfaPrivateEventAndFile: true,
+      retainedAcceptedClaimsAndInvoices: true,
       suites: suites.length,
       realTlsWebSockets: true,
       claims: 50,
@@ -930,6 +958,7 @@ export async function checkCandidate({
           migrationSourcesExact: true,
           existingCredentialsAndFileExact: true,
           roleAndMembershipExact: true,
+          acceptedFinancialSnapshotsExact: true,
         },
         requiresLiveDataPreflight: true,
       };
