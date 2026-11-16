@@ -12,7 +12,7 @@ The native controller and continuous read-only probe remain prepared; a manual m
 
 Create a branch from the current `main`; external contributors use a fork. Keep each pull request focused on one related problem. Agent branches start with `codex/`. An early draft is useful when you need feedback before the implementation is ready for review.
 
-Choose a title that describes the outcome, such as `fix: keep accepted fee when editing a course` or `docs: explain private file permissions`. A prefix helps readers but does not replace a label. Commits should be signed and clearly describe their changes.
+Choose a title that describes the outcome, such as `fix: keep accepted fee when editing a course` or `docs: explain private file permissions`. A prefix helps readers but does not replace a label. Commits must be signed and clearly describe their changes.
 
 ## Pull request description
 
@@ -37,27 +37,31 @@ Every pull request needs **exactly one type label**, **at least one area label**
 | `type:security`     | Coordinate a security fix; never use a public PR as the initial vulnerability report |
 | `type:dependencies` | Update reviewed dependencies                                                         |
 
-Choose every area that is materially affected. The original area labels remain available: `area:frontend`, `area:backend`, `area:database`, `area:auth`, `area:files`, `area:finance`, `area:courses`, `area:devops` and `area:github`. Additional areas provide more specific classifications:
+Choose every area that is materially affected. The original area labels remain available: `area:frontend`, `area:backend`, `area:database`, `area:auth`, `area:files`, `area:finance`, `area:courses`, `area:devops` and `area:github`. The following areas provide more specific classifications; the final five describe API, security, performance, accessibility and design changes:
 
-| Area                 | Use                                                     |
-| -------------------- | ------------------------------------------------------- |
-| `area:chat`          | Messages, course/interest groups and Realtime           |
-| `area:knowledge`     | Wiki, forum and knowledge management                    |
-| `area:calendar`      | Events, availability, blocked time and time zones       |
-| `area:notifications` | Inbox, notices and delivery preferences                 |
-| `area:profiles`      | Profiles, qualifications and lecturer directory         |
-| `area:clients`       | Client accounts, organisations and business contacts    |
-| `area:pwa`           | Installation, service worker, offline state and updates |
-| `area:testing`       | QA, regressions, browser and permission checks          |
-| `area:docs`          | Guides, API references and operational documentation    |
-| `area:taxonomy`      | Topics, tools, programming languages and hierarchies    |
-| `area:api`           | API and RPC contracts and integration clients           |
-| `area:security`      | Authorization, protected data and security hardening    |
-| `area:performance`   | Loading, query budgets, caching and runtime performance |
-| `area:accessibility` | Keyboard access, accessible controls and WCAG checks    |
-| `area:design`        | Luminovia branding, layout and visual design            |
+| Area                 | Use                                                         |
+| -------------------- | ----------------------------------------------------------- |
+| `area:chat`          | Messages, course/interest groups and Realtime               |
+| `area:knowledge`     | Wiki, forum and knowledge management                        |
+| `area:calendar`      | Events, availability, blocked time and time zones           |
+| `area:notifications` | Inbox, notices and delivery preferences                     |
+| `area:profiles`      | Profiles, qualifications and lecturer directory             |
+| `area:clients`       | Client accounts, organisations and business contacts        |
+| `area:pwa`           | Installation, service worker, offline state and updates     |
+| `area:testing`       | QA, regressions, browser and permission checks              |
+| `area:docs`          | Guides, API references and operational documentation        |
+| `area:taxonomy`      | Topics, tools, programming languages and hierarchies        |
+| `area:api`           | Public interfaces, RPC contracts, OpenAPI and compatibility |
+| `area:security`      | Permission boundaries, privacy and input validation         |
+| `area:performance`   | Concrete query-cost, loading or caching changes             |
+| `area:accessibility` | Keyboard, focus, screen-reader and contrast work            |
+| `area:design`        | Brand, layout, typography and colour system                 |
 
 A documentation change receives `area:docs` and any relevant documented area; general contribution rules also use `area:github`. A test does not need every label used by the whole system. A feature with a migration should include the product and technical areas it actually changes. The 36 managed labels comprise eight types, 24 areas, three risk levels and the `merge:hold` stop signal; nine original GitHub labels remain available. `merge:hold` records a maintainer review stop. Preserve it until the stated concern is addressed; it grants no permission and does not replace required checks. Additional labels do not replace a required category. Add a new managed label to the shared catalogue before applying it. See [metadata operation and historical rechecks](GITHUB_WORKFLOW.md#labels-and-metadata-validation).
+
+Apply the five additional areas based on the actual diff. Use `area:api` for changed interface contracts or documented RPC/OpenAPI functions; `area:backend` still describes server implementation. Add `area:security` to the affected area for actual protection or permission changes. It is not a second type label: a `type:feature` can change security boundaries, while `type:security` identifies a coordinated security fix as the main purpose.
+
+`area:performance` requires a concrete change to query, loading or cache behaviour; an incidental index or an existing full-system test is insufficient. `area:accessibility` identifies actual keyboard, focus, screen-reader or contrast work. `area:design` describes visible design changes; a theme contrast fix can need both labels. Preserve existing labels when they remain accurate. Select labels for the reviewable scope, not to use every available category.
 
 | Risk          | Meaning                                                                                             |
 | ------------- | --------------------------------------------------------------------------------------------------- |
@@ -130,5 +134,11 @@ Signatures remain mandatory for every actor. Native repository Auto-Merge is ava
 Signed annotated `milestone/*` tags identify verified historical development states. They are not PR labels or a promise of a Semver or production version. Do not move existing tags; create tags only on the intended commit.
 
 After merging, update the issue resolution when needed and track remaining tasks separately. A new task must not silently expand the original acceptance criteria or be described as already completed.
+
+## Current catalogue and historical metadata checks
+
+The read-only metadata workflow executes only this repository's current main code and catalogue, including for fork PRs. It does not execute proposed contribution code, install dependencies or use write credentials. Automatic checks apply to open PR events; closed PR label edits do not restart this gate. Add new managed labels to the shared catalogue before applying them.
+
+A deliberate historical check can be dispatched from main with a positive PR number. It re-reads current labels and records the actual historical head, without rerunning or rewriting its past application acceptance. See [metadata operation](GITHUB_WORKFLOW.md#labels-and-metadata-validation) and [the executed repair evidence](PR_CI_REPAIR_20261116.md).
 
 The gated [PR preview package and deployment record](PR_PREVIEWS.md) provides an owned, locally runnable application preview after the complete checks. Its artifact URL is not a hosted portal URL.

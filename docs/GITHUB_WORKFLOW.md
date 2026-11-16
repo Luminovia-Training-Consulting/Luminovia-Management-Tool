@@ -114,7 +114,7 @@ The manual run reads current GitHub labels and records the actual PR head, inclu
 
 ## Git tags and development packages
 
-Labels classify issues and PRs; Git tags identify immutable commits. Existing signed annotated development milestones include:
+Labels classify issues and pull requests. Git tags identify an immutable source revision. These signed annotated tags name already merged development milestones:
 
 | Tag                                 | Accepted merge commit                      | Scope                                                                                  |
 | ----------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------- |

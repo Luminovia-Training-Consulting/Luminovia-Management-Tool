@@ -88,13 +88,12 @@ export default defineConfig(({ mode }) => {
         reporter: ["text-summary", "html", "lcov", "json-summary", "json"],
         reportOnFailure: true,
         thresholds: {
-          // Ratchet the measured 26-migration main baseline with a small margin:
-          // S51.28/B46.15/F41.66/L53.00, including uncovered UI modules.
+          // Preserve the accepted whole-source floor, including uncovered UI modules.
           // End-to-end browser execution is not merged into these unit figures.
-          statements: 51,
-          branches: 45.8,
-          functions: 41.4,
-          lines: 52.7,
+          statements: 62.5,
+          branches: 56.5,
+          functions: 53,
+          lines: 64.5,
           "**/scripts/public-config.ts": { 100: true },
           "**/src/lib/dates.ts": { 100: true },
           "**/src/features/operations/schedule.ts": { 100: true },

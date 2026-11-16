@@ -330,3 +330,69 @@ describe("versioned notification preferences API", () => {
     ).rejects.toThrow();
   });
 });
+
+describe("server-computed quiet-hour attention contract", () => {
+  it.each([
+    { quiet_active: true, attention_count: 0 },
+    { quiet_active: true, attention_count: 3 },
+    { quiet_active: true, attention_count: 50 },
+    { quiet_active: false },
+    {},
+  ])(
+    "retains all unread records and the current server attention state %j",
+    async (attention) => {
+      const data = { ...page(), ...attention };
+      rpc.mockReturnValue(response(data));
+      const cache = client();
+      await expect(
+        cache.fetchQuery(notificationPreviewQuery("actor-a")),
+      ).resolves.toEqual(data);
+      expect(data.unread_count).toBe(50);
+      expect(data.items).toEqual([notice]);
+      expect(rpc).toHaveBeenCalledExactlyOnceWith("notification_inbox", {
+        p_limit: 8,
+      });
+    },
+  );
+
+  it.each([
+    { quiet_active: true },
+    { quiet_active: true, attention_count: 51 },
+    { quiet_active: false, attention_count: 0 },
+    { attention_count: 0 },
+    { quiet_active: true, attention_count: -1 },
+    { quiet_active: true, attention_count: 0.5 },
+    { quiet_active: "true", attention_count: 3 },
+    { quiet_active: true, attention_count: null },
+  ])(
+    "rejects inconsistent quiet-hour metadata %j rather than inventing a badge count",
+    async (attention) => {
+      rpc.mockReturnValue(response({ ...page(), ...attention }));
+      const cache = client();
+      const query = notificationPreviewQuery("actor-a");
+      await expect(cache.fetchQuery(query)).rejects.toThrow();
+      expect(cache.getQueryData(query.queryKey)).toBeUndefined();
+    },
+  );
+
+  it("fetches full quiet-hour history without acknowledging or suppressing its records", async () => {
+    const data = {
+      ...page(),
+      quiet_active: true,
+      attention_count: 0,
+    };
+    rpc.mockReturnValue(response(data));
+    const cache = client();
+    const query = notificationInboxQuery("actor-a", false);
+    const result = await cache.fetchInfiniteQuery(query);
+    expect(result.pages).toEqual([data]);
+    expect(result.pages[0].unread_count).toBe(50);
+    expect(result.pages[0].items[0].read_at).toBeNull();
+    expect(rpc).toHaveBeenCalledExactlyOnceWith("notification_inbox", {
+      p_unread_only: false,
+      p_before_at: null,
+      p_before_id: null,
+      p_limit: 40,
+    });
+  });
+});
