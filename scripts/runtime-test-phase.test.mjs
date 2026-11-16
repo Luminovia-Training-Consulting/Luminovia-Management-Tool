@@ -2,11 +2,16 @@
  * No GitHub, child process, Docker daemon or shared port is needed here.
  */
 import assert from "node:assert/strict";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import test from "node:test";
 import { cleanEnvironment } from "./runtime-lib.mjs";
+import {
+  browserPlan,
+  browserAcceptance,
+  browserFailure,
+} from "./testing/browser-evidence.mjs";
 import {
   runtimeTestArguments,
   runtimeTestPhasePlan,
@@ -29,6 +34,8 @@ async function runFixture({
   fail = () => false,
   cancelDuringCleanup = false,
   inherited = {},
+  sourceText = "export const fictionalSource = true;\n",
+  mutateBrowserReport = () => {},
 } = {}) {
   const calls = [],
     reports = [],
@@ -41,6 +48,61 @@ async function runFixture({
     snapshots = 0;
   const directory = (name) => ({ name, isDirectory: () => true });
   const file = (name) => ({ name, isDirectory: () => false });
+  // Replace only the OS report boundary. Real inventory/acceptance validators
+  // consume list reports without execution and actual-style first-pass results.
+  const browserReport = (path) => {
+    const discovery = path.endsWith("plan.json");
+    const stage = path.includes("/pwa/") ? "pwa" : "application";
+    const name = stage === "pwa" ? "pwa.spec.ts" : "workflow.spec.ts";
+    const report = {
+      config: {
+        rootDir: "/owned-qa/scratch/tests/e2e",
+        projects: ["desktop-chromium", "mobile-chromium"].map((name) => ({
+          name,
+        })),
+      },
+      errors: [],
+      suites: [
+        {
+          title: name,
+          specs: [
+            {
+              file: name,
+              title: "service-boundary workflow",
+              ok: !discovery,
+              tests: ["desktop-chromium", "mobile-chromium"].map(
+                (projectName) => ({
+                  projectName,
+                  expectedStatus: "passed",
+                  status: discovery ? "skipped" : "expected",
+                  results: discovery
+                    ? []
+                    : [
+                        {
+                          status: "passed",
+                          retry: 0,
+                          duration: 1,
+                          errors: [],
+                          stdout: [{ text: "private-browser-session-fixture" }],
+                        },
+                      ],
+                }),
+              ),
+            },
+          ],
+        },
+      ],
+      stats: {
+        expected: discovery ? 0 : 2,
+        unexpected: 0,
+        flaky: 0,
+        skipped: 0,
+        duration: discovery ? 0 : 2,
+      },
+    };
+    mutateBrowserReport(report, { stage, discovery });
+    return JSON.stringify(report);
+  };
   const bindings = {
     cpSync(from, to) {
       copies.push([from, to]);
@@ -52,12 +114,19 @@ async function runFixture({
     writeFileSync() {},
     mkdtempSync: () => "/owned-qa/scratch",
     readFileSync: (path) =>
-      path.endsWith("config.toml")
-        ? 'project_id = "luminovia-portal"\n[api]\nport = 54321\n'
-        : path.endsWith(".env.test.local")
-          ? "SUPABASE_URL=http://127.0.0.1:55321\nSUPABASE_ANON_KEY=fictional-public-fixture\nE2E_PASSWORD=fictional-local-password\n"
-          : "",
+      path.endsWith("source.fixture.ts")
+        ? Buffer.from(sourceText)
+        : path.endsWith("config.toml")
+          ? 'project_id = "luminovia-portal"\n[api]\nport = 54321\n'
+          : path.endsWith(".env.test.local")
+            ? "SUPABASE_URL=http://127.0.0.1:55321\nSUPABASE_ANON_KEY=fictional-public-fixture\nE2E_PASSWORD=fictional-local-password\n"
+            : path.endsWith("plan.json") || path.endsWith("report.json")
+              ? browserReport(path)
+              : "",
     readdirSync(path) {
+      if (path === "/owned-qa/scratch") return [file("source.fixture.ts")];
+      if (path.endsWith("tests/e2e"))
+        return ["workflow.spec.ts", "pwa.spec.ts"];
       if (path.endsWith("scripts"))
         return [
           "runtime-safety.test.mjs",
@@ -80,12 +149,16 @@ async function runFixture({
       return [];
     },
     existsSync: (path) =>
-      /deploy\/hostinger|supabase\/functions|playwright-report$|test-results$|coverage$|docs\/screenshots$|\.local\/runtime\.log$/.test(
+      /deploy\/hostinger|supabase\/functions|playwright-report$|test-results$|coverage$|docs\/screenshots$|\.local\/browser$|\.local\/runtime\.log$/.test(
         path,
       ),
     join,
     basename,
     randomBytes,
+    createHash,
+    browserPlan,
+    browserAcceptance,
+    browserFailure,
     tmpdir: () => "/owned-qa/tmp",
     root: "/owned-qa/source",
     runtimeDir: "/owned-qa/reports",
@@ -159,6 +232,23 @@ const commands = (result) =>
     .map(({ file, args }) => [file, args]);
 const contains = (result, value) =>
   result.calls.some(({ args }) => args.includes(value));
+/** Identify native Playwright discovery/execution independently of stage labels. */
+const browserCommand = (result, stage, discovery = false) =>
+  result.calls.find(
+    ({ file, args, env }) =>
+      file === "npx" &&
+      args[0] === "--no-install" &&
+      args[1] === "playwright" &&
+      args[2] === "test" &&
+      env.PORTAL_BROWSER_STAGE === stage &&
+      args.includes("--list") === discovery,
+  );
+/** Read the final safe JSON evidence, separately from the human result text. */
+const acceptance = (result) =>
+  JSON.parse(
+    result.reports.filter(({ path }) => path.endsWith("acceptance.json")).at(-1)
+      .value,
+  );
 
 test("no arguments remain complete; explicit phase arguments reject every unknown or partial option", () => {
   const expected = [
@@ -240,7 +330,9 @@ test("actual default runner retains all quality, Edge, operational, SQL/API and 
     "scripts/beta-api-check.mjs",
     "scripts/local-invite-check.mjs",
     "chromium",
-    "test:e2e",
+    "playwright",
+    "--list",
+    "--reporter=json",
     "build",
     "tests/e2e/pwa.spec.ts",
   ])
@@ -376,19 +468,65 @@ test("browser phase gets its own snapshot, retained real services and explicit o
     seed.env.PORTAL_DB_CONTAINER,
     relevant[1].env.PORTAL_DB_CONTAINER,
   );
-  const desktop = relevant.find(({ args }) => args.includes("test:e2e"));
+  const discovery = browserCommand(browser, "application", true);
+  const desktop = browserCommand(browser, "application");
+  assert.ok(discovery, "Every application workflow must be inventoried first");
+  assert.ok(
+    desktop,
+    "The application phase executes native Playwright after inventory",
+  );
   assert.equal(desktop.env.PORTAL_DB_CONTAINER, seed.env.PORTAL_DB_CONTAINER);
+  assert.equal(desktop.env.PORTAL_BROWSER_STAGE, "application");
   assert.equal(desktop.timeoutMs, 1800000);
+  assert.equal(
+    discovery.timeoutMs,
+    1200000,
+    "Discovery keeps its original deadline",
+  );
+  assert.equal(discovery.signal, desktop.signal);
   assert.deepEqual(desktop.args, [
-    "run",
-    "test:e2e",
-    "--",
+    "--no-install",
+    "playwright",
+    "test",
     "--grep-invert",
     "built PWA",
   ]);
-  const pwa = relevant.find(({ args }) =>
-    args.includes("tests/e2e/pwa.spec.ts"),
+  assert.deepEqual(discovery.args, [
+    ...desktop.args,
+    "--list",
+    "--reporter=json",
+  ]);
+  assert.equal(
+    discovery.env.PLAYWRIGHT_JSON_OUTPUT_NAME,
+    "/owned-qa/scratch/.local/browser/application/plan.json",
   );
+  assert.ok(relevant.indexOf(discovery) < relevant.indexOf(desktop));
+  const pwa = browserCommand(browser, "pwa");
+  const pwaDiscovery = browserCommand(browser, "pwa", true);
+  assert.ok(
+    pwa && pwaDiscovery,
+    "Built PWA also requires its own inventory and execution",
+  );
+  assert.deepEqual(pwa.args, [
+    "--no-install",
+    "playwright",
+    "test",
+    "tests/e2e/pwa.spec.ts",
+  ]);
+  assert.deepEqual(pwaDiscovery.args, [
+    ...pwa.args,
+    "--list",
+    "--reporter=json",
+  ]);
+  assert.equal(
+    pwaDiscovery.env.PLAYWRIGHT_JSON_OUTPUT_NAME,
+    "/owned-qa/scratch/.local/browser/pwa/plan.json",
+  );
+  assert.ok(relevant.indexOf(pwaDiscovery) < relevant.indexOf(pwa));
+  assert.equal(pwa.timeoutMs, 1200000);
+  assert.equal(pwaDiscovery.timeoutMs, 1200000);
+  assert.equal(pwa.signal, desktop.signal);
+  assert.equal(pwaDiscovery.signal, desktop.signal);
   assert.equal(pwa.env.E2E_PWA, "1");
   assert.equal(pwa.env.E2E_BASE_URL, "http://127.0.0.1:4273");
   assert.equal(browser.snapshots, 1);
@@ -408,6 +546,154 @@ test("browser phase gets its own snapshot, retained real services and explicit o
   );
 });
 
+test("safe evidence binds identical source bytes to the selected phase without claiming unrun acceptance", async () => {
+  const sourceText = "export const fictionalSource = true;\n";
+  const bytes = Buffer.from(sourceText);
+  const expectedHash = createHash("sha256")
+    .update(JSON.stringify(["source.fixture.ts", bytes.length]) + "\n")
+    .update(bytes)
+    .digest("hex");
+  for (const phase of ["all", "system", "browser"]) {
+    const result = await runFixture({ args: ["--phase", phase], sourceText });
+    assert.ifError(result.error);
+    const evidence = acceptance(result);
+    assert.equal(evidence.phase, phase);
+    assert.equal(evidence.status, "passed");
+    assert.equal(evidence.sourceSha256, expectedHash);
+    assert.deepEqual(
+      evidence.stagePlan,
+      runtimeTestPhasePlan(["--phase", phase]).stages,
+    );
+    assert.ok(evidence.stages.length > 0);
+    assert.ok(evidence.stages.every((stage) => stage.status === "passed"));
+    assert.ok(evidence.completedAt);
+    if (phase === "system") {
+      assert.deepEqual(
+        evidence.browsers,
+        {},
+        "System acceptance cannot invent browser results",
+      );
+      assert.equal(browserCommand(result, "application", true), undefined);
+      assert.equal(browserCommand(result, "pwa", true), undefined);
+    } else {
+      for (const stage of ["application", "pwa"]) {
+        assert.equal(evidence.browsers[stage].status, "passed");
+        assert.equal(evidence.browsers[stage].passed, 2);
+        assert.equal(evidence.browsers[stage].skipped, 0);
+        assert.equal(evidence.browsers[stage].retries, 0);
+        assert.deepEqual(
+          evidence.browsers[stage].workflows
+            .map((workflow) => workflow.project)
+            .sort(),
+          ["desktop-chromium", "mobile-chromium"],
+        );
+      }
+    }
+    const safe = JSON.stringify(evidence);
+    for (const secret of [
+      "fictional-local-password",
+      "fictional-public-fixture",
+      "private-browser-session-fixture",
+      sourceText,
+    ])
+      assert.equal(
+        safe.includes(secret),
+        false,
+        "Safe phase evidence excludes raw source, environment and browser logs",
+      );
+    assert.equal(
+      /Complete local acceptance/.test(result.reports.at(-1).value),
+      phase === "all",
+    );
+  }
+  const changed = await runFixture({
+    args: ["--phase", "system"],
+    sourceText: sourceText + "// changed fixture bytes\n",
+  });
+  assert.ifError(changed.error);
+  assert.notEqual(
+    acceptance(changed).sourceSha256,
+    expectedHash,
+    "The actual fingerprint changes when copied source bytes change",
+  );
+});
+
+test("browser phase invokes real evidence validators and rejects skipped, partial, retried or erroneous results", async () => {
+  const mutations = [
+    {
+      name: "disabled discovery",
+      error: /Disabled/,
+      change(report, { discovery }) {
+        if (discovery)
+          report.suites[0].specs[0].tests[0].expectedStatus = "skipped";
+      },
+    },
+    {
+      name: "skipped execution",
+      error: /Browser skipped/,
+      change(report, { discovery }) {
+        if (!discovery) {
+          report.stats.skipped = 1;
+          report.suites[0].specs[0].tests[0].status = "skipped";
+          report.suites[0].specs[0].tests[0].results = [];
+        }
+      },
+    },
+    {
+      name: "missing project execution",
+      error: /differ from discovery/,
+      change(report, { discovery }) {
+        if (!discovery) report.suites[0].specs[0].tests.pop();
+      },
+    },
+    {
+      name: "retried execution",
+      error: /Retried browser workflow/,
+      change(report, { discovery }) {
+        if (!discovery) report.suites[0].specs[0].tests[0].results[0].retry = 1;
+      },
+    },
+    {
+      name: "private execution error",
+      error: /Browser discovery\/execution had errors/,
+      change(report, { discovery }) {
+        if (!discovery)
+          report.errors = [{ message: "private-evidence-error-token" }];
+      },
+    },
+  ];
+  for (const item of mutations) {
+    const result = await runFixture({
+      args: ["--phase", "browser"],
+      mutateBrowserReport: (report, context) => {
+        if (context.stage === "application") item.change(report, context);
+      },
+    });
+    assert.match(result.error?.message, item.error, item.name);
+    assert.equal(result.released, 1);
+    assert.ok(result.removed.includes("/owned-qa/scratch"));
+    assert.ok(result.calls.some(({ args }) => args.includes("--no-backup")));
+    assert.equal(
+      browserCommand(result, "pwa", true),
+      undefined,
+      "A rejected application report cannot reach PWA acceptance",
+    );
+    assert.ok(!result.reports.some(({ value }) => value.startsWith("PASS\n")));
+    const evidence = acceptance(result);
+    assert.equal(evidence.phase, "browser");
+    assert.equal(evidence.status, "failed");
+    assert.match(evidence.sourceSha256, /^[a-f0-9]{64}$/);
+    if (item.name !== "disabled discovery")
+      assert.equal(evidence.browsers.application.status, "failed");
+    for (const secret of [
+      "private-evidence-error-token",
+      "private-browser-session-fixture",
+      "fictional-local-password",
+    ])
+      assert.equal(JSON.stringify(evidence).includes(secret), false);
+  }
+});
+
 test("bad CLI arguments fail before locking or allocating source/services; environment phase hints cannot shorten default acceptance", async () => {
   const invalid = await runFixture({ args: ["--phase", "unrecognized"] });
   assert.match(invalid.error?.message, /Use no arguments/);
@@ -423,7 +709,8 @@ test("bad CLI arguments fail before locking or allocating source/services; envir
   });
   assert.ifError(all.error);
   assert(contains(all, "test:db"));
-  assert(contains(all, "test:e2e"));
+  assert.ok(browserCommand(all, "application"));
+  assert.ok(browserCommand(all, "pwa"));
   assert.match(all.reports.at(-1).value, /^PASS\nPhase: all\n/);
 });
 
@@ -439,7 +726,8 @@ test("failed startup, retention or policy prevents all browser acceptance while 
     });
     assert.match(result.error?.message, /Fictional stage failure/);
     assert(!contains(result, "chromium"));
-    assert(!contains(result, "test:e2e"));
+    assert.equal(browserCommand(result, "application", true), undefined);
+    assert.equal(browserCommand(result, "application"), undefined);
     assert(!result.reports.some(({ value }) => value.startsWith("PASS\n")));
     assert(result.calls.some(({ args }) => args.includes("--no-backup")));
     assert.equal(result.released, 1);
@@ -450,12 +738,16 @@ test("system SQL/API failure and browser/PWA failure remain phase failures with 
   for (const [phase, stage] of [
     ["system", "test:db"],
     ["system", "scripts/alpha-api-check.mjs"],
-    ["browser", "test:e2e"],
+    ["browser", "application-execution"],
     ["browser", "tests/e2e/pwa.spec.ts"],
   ]) {
     const result = await runFixture({
       args: ["--phase", phase],
-      fail: ({ args }) => args.includes(stage),
+      fail: ({ args, env }) =>
+        stage === "application-execution"
+          ? env.PORTAL_BROWSER_STAGE === "application" &&
+            !args.includes("--list")
+          : args.includes(stage),
     });
     assert.match(result.error?.message, /Fictional stage failure/);
     assert(result.reports.at(-1).value.startsWith(`FAIL\nPhase: ${phase}\n`));
@@ -463,7 +755,7 @@ test("system SQL/API failure and browser/PWA failure remain phase failures with 
     assert(result.removed.includes("/owned-qa/scratch"));
     assert(result.calls.some(({ args }) => args.includes("--no-backup")));
     if (phase === "system") assert(!contains(result, "chromium"));
-    if (stage === "test:e2e")
+    if (stage === "application-execution")
       assert(!contains(result, "tests/e2e/pwa.spec.ts"));
   }
 });

@@ -15,7 +15,12 @@ import {
 } from "node:fs";
 import { join, basename } from "node:path";
 import { tmpdir } from "node:os";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
+import {
+  browserPlan,
+  browserAcceptance,
+  browserFailure,
+} from "./testing/browser-evidence.mjs";
 import { runtimeSnapshotSource } from "./runtime-snapshot.mjs";
 import {
   runtimeTestArguments,
@@ -79,6 +84,25 @@ const env = cleanEnvironment({
 let failure;
 let localDockerReady = false;
 const cancellation = new AbortController();
+const evidence = {
+  version: 1,
+  // A passed selected phase is not a claim that the other phase ran.
+  phase: phase.phase,
+  stagePlan: phase.stages,
+  project,
+  startedAt: new Date().toISOString(),
+  status: "running",
+  stages: [],
+  browsers: {},
+};
+/** Persist only source/stage/workflow facts; raw process and browser data stay private. */
+const saveEvidence = () =>
+  privateWrite(
+    join(artifacts, "acceptance.json"),
+    JSON.stringify(evidence, null, 2) + "\n",
+  );
+saveEvidence();
+
 /** Cancels the current stage; the outer finally path remains responsible for cleanup. */
 const cancel = () => {
   console.log("Test wird abgebrochen; isolierte Dienste werden aufgeräumt …");
@@ -97,6 +121,27 @@ try {
     recursive: true,
     filter: (source) => runtimeSnapshotSource(source, root),
   });
+  // Fingerprint the actual sanitized source, including uncommitted/untracked
+  // work. A Git HEAD alone would misidentify the bytes that are being tested.
+  const sourceHash = createHash("sha256");
+  /** Hash the copied, credential-filtered bytes before generated configuration changes. */
+  function hashSource(directory, prefix = "") {
+    for (const entry of readdirSync(directory, { withFileTypes: true }).sort(
+      (a, b) => a.name.localeCompare(b.name),
+    )) {
+      const path = join(directory, entry.name);
+      const name = `${prefix}${entry.name}`;
+      if (entry.isDirectory()) hashSource(path, `${name}/`);
+      else {
+        const bytes = readFileSync(path);
+        sourceHash.update(JSON.stringify([name, bytes.length]) + "\n");
+        sourceHash.update(bytes);
+      }
+    }
+  }
+  hashSource(scratch);
+  evidence.sourceSha256 = sourceHash.digest("hex");
+  saveEvidence();
   // Independent cache directories; only immutable package contents are shared.
   mkdirSync(join(scratch, "node_modules"));
   for (const entry of readdirSync(join(root, "node_modules"), {
@@ -119,14 +164,107 @@ try {
     .replaceAll(":5173", ":5273");
   writeFileSync(configPath, config);
   /** Runs one named stage in the isolated snapshot with a timeout and shared cancellation signal. */
+  /** Run one required child command; cancellation/failure cannot be recorded as success. */
   const step = async (label, file, args, extra = {}, timeoutMs = 1200000) => {
     console.log(`\n[TEST] ${label}`);
-    return await command(file, args, {
-      cwd: scratch,
-      env: { ...env, ...extra },
-      timeoutMs,
-      signal: cancellation.signal,
+    const item = {
+      label,
+      command: [basename(file), ...args],
+      status: "running",
+      startedAt: new Date().toISOString(),
+    };
+    evidence.stages.push(item);
+    saveEvidence();
+    try {
+      const output = await command(file, args, {
+        cwd: scratch,
+        env: { ...env, ...extra },
+        timeoutMs,
+        signal: cancellation.signal,
+      });
+      item.status = "passed";
+      return output;
+    } catch (error) {
+      item.status = "failed";
+      throw error;
+    } finally {
+      item.completedAt = new Date().toISOString();
+      saveEvidence();
+    }
+  };
+  /** Inventory all expected files/projects, execute them and retain truthful separate stage evidence. */
+  const browserStage = async (
+    stage,
+    label,
+    args,
+    extra = {},
+    timeoutMs = 1200000,
+  ) => {
+    const directory = join(scratch, ".local/browser", stage);
+    privateDirectory(directory);
+    const stageEnv = { ...extra, PORTAL_BROWSER_STAGE: stage };
+    const expectedFiles = readdirSync(join(scratch, "tests/e2e"), {
+      recursive: true,
+    })
+      .filter(
+        (file) =>
+          file.endsWith(".spec.ts") &&
+          (stage === "pwa") === (file === "pwa.spec.ts"),
+      )
+      .sort();
+    const planPath = join(directory, "plan.json");
+    await step(
+      `${label}: vollständige Testauswahl`,
+      "npx",
+      [
+        "--no-install",
+        "playwright",
+        "test",
+        ...args,
+        "--list",
+        "--reporter=json",
+      ],
+      { ...stageEnv, PLAYWRIGHT_JSON_OUTPUT_NAME: planPath },
+    );
+    const planned = browserPlan(JSON.parse(readFileSync(planPath, "utf8")), {
+      files: expectedFiles,
+      projects: ["desktop-chromium", "mobile-chromium"],
     });
+    evidence.browsers[stage] = {
+      status: "planned",
+      planned: planned.length,
+      files: expectedFiles,
+    };
+    saveEvidence();
+    try {
+      await step(
+        label,
+        "npx",
+        ["--no-install", "playwright", "test", ...args],
+        stageEnv,
+        timeoutMs,
+      );
+      evidence.browsers[stage] = browserAcceptance(
+        JSON.parse(readFileSync(join(directory, "report.json"), "utf8")),
+        planned,
+      );
+    } catch (error) {
+      try {
+        evidence.browsers[stage] = {
+          ...browserFailure(
+            JSON.parse(readFileSync(join(directory, "report.json"), "utf8")),
+          ),
+          planned: planned.length,
+        };
+      } catch {
+        // Missing/malformed execution evidence cannot replace the actual
+        // command/acceptance failure or manufacture completed workflows.
+        evidence.browsers[stage].status = "failed";
+      }
+      throw error;
+    } finally {
+      saveEvidence();
+    }
   };
   if (phase.system) {
     await step("Lint", "npm", ["run", "lint"]);
@@ -337,12 +475,12 @@ try {
       ...(process.env.CI === "true" ? ["--with-deps"] : []),
       "chromium",
     ]);
-    // CI43858966704 passed 136/142 cases before this aggregate's former 20m cap.
-    // Only the whole browser command gets 30m; all individual tests stay bounded.
-    await step(
+    // Preserve the measured whole-command budget; individual browser tests
+    // remain bounded and strict discovery/results still reject incomplete runs.
+    await browserStage(
+      "application",
       "Desktop- und Mobilbrowser",
-      "npm",
-      ["run", "test:e2e", "--", "--grep-invert", "built PWA"],
+      ["--grep-invert", "built PWA"],
       {},
       1800000,
     );
@@ -352,10 +490,10 @@ try {
       "scripts/runtime-test-preview.mjs",
       "start",
     ]);
-    await step(
+    await browserStage(
+      "pwa",
       "PWA, Offline-Shell und keine privaten Caches",
-      "npx",
-      ["--no-install", "playwright", "test", "tests/e2e/pwa.spec.ts"],
+      ["tests/e2e/pwa.spec.ts"],
       { E2E_PWA: "1", E2E_BASE_URL: "http://127.0.0.1:4273" },
     );
   }
@@ -414,6 +552,10 @@ try {
   ])
     if (existsSync(join(scratch, name)))
       cpSync(join(scratch, name), join(artifacts, name), { recursive: true });
+  if (phase.browser && existsSync(join(scratch, ".local/browser")))
+    cpSync(join(scratch, ".local/browser"), join(artifacts, "browser"), {
+      recursive: true,
+    });
   if (phase.browser && existsSync(join(scratch, "docs/screenshots")))
     cpSync(join(scratch, "docs/screenshots"), join(artifacts, "screenshots"), {
       recursive: true,
@@ -430,6 +572,9 @@ try {
 if (cancellation.signal.aborted)
   failure ??= new Error(`Isolated ${phase.phase} acceptance was cancelled.`);
 if (failure) {
+  evidence.status = "failed";
+  evidence.completedAt = new Date().toISOString();
+  saveEvidence();
   privateWrite(
     join(artifacts, "RESULT.txt"),
     `FAIL\nPhase: ${phase.phase}\n${failure.message}\n`,
@@ -439,6 +584,9 @@ if (failure) {
   );
   throw failure;
 }
+evidence.status = "passed";
+evidence.completedAt = new Date().toISOString();
+saveEvidence();
 privateWrite(
   join(artifacts, "RESULT.txt"),
   `PASS\nPhase: ${phase.phase}\nStages: ${phase.stages.join(", ")}\n${phase.phase === "system" ? "Browser/build/PWA acceptance was not run in this phase.\n" : phase.phase === "browser" ? "System SQL/API/Edge/operational acceptance was not run in this phase.\n" : "Complete local acceptance.\n"}Project: ${project}\nCompleted: ${new Date().toISOString()}\nDevelopment database and object volumes were not targeted.\n`,

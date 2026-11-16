@@ -160,7 +160,7 @@ async function download(actor, id, versionId) {
   });
 }
 /** Creates a fictional job with controlled sessions and terms for the following assertions. */
-async function job(admin, day, fee) {
+async function job(admin, day, fee, topics = []) {
   const date = new Date(Date.now() + (90 + day) * 86400000);
   date.setUTCHours(8, 0, 0, 0);
   const data = await checked(
@@ -185,7 +185,7 @@ async function job(admin, day, fee) {
             ends_at: new Date(+date + 3600000).toISOString(),
           },
         ],
-        topic_ids: [],
+        topic_ids: topics,
       },
     }),
     "Create actual commercial job",
@@ -200,6 +200,45 @@ try {
   assert.ok(
     (await admin.client.rpc("contract_records", { p_all: true })).error,
   );
+  // Password-only sessions see themselves; current management MFA unlocks a names-only picker.
+  for (const who of [a, b, admin])
+    assert.deepEqual(
+      (
+        await checked(
+          who.client.rpc("commercial_people"),
+          "Password-only actor receives only own commercial person",
+        )
+      ).map((person) => person.id),
+      [who.id],
+    );
+  // Use a canonical active taxonomy entry, then select expertise through the lecturer's actual REST grant.
+  const topic = (
+    await checked(
+      a.client.from("topics").select("id").is("archived_at", null).limit(1),
+      "Select actual active qualification topic",
+    )
+  )[0].id;
+  await checked(
+    a.client.from("lecturer_topics").insert({ user_id: a.id, topic_id: topic }),
+    "Lecturer selects own unverified expertise",
+  );
+  const verification = {
+    p_user_id: a.id,
+    p_topic_id: topic,
+    p_verified: true,
+    p_valid_until: new Date(Date.now() + 365 * 86400000).toISOString(),
+  };
+  assert.equal(
+    (await admin.client.rpc("verify_lecturer_topic", verification)).error?.code,
+    "42501",
+    "Password-only manager cannot attest eligibility",
+  );
+  assert.equal(
+    (await b.client.rpc("verify_lecturer_topic", verification)).error?.code,
+    "42501",
+    "Senior lecturer cannot attest another lecturer",
+  );
+
   const factor = await checked(
     admin.client.auth.mfa.enroll({
       factorType: "totp",
@@ -213,6 +252,21 @@ try {
       code: totp(factor.totp.secret),
     }),
     "Verify real management TOTP",
+  );
+  const people = await checked(
+    admin.client.rpc("commercial_people"),
+    "Actual MFA commercial actor directory",
+  );
+  assert.ok(
+    [a.id, b.id, admin.id].every((id) =>
+      people.some((person) => person.id === id),
+    ),
+  );
+  assert.ok(
+    people.every((person) =>
+      Object.keys(person).every((key) => ["id", "display_name"].includes(key)),
+    ),
+    "Commercial picker reveals names and IDs only",
   );
   const original = pdf("Fictional externally executed contract - QA only.");
   const contractDoc = await upload(admin, original, "contract", a.id);
@@ -290,23 +344,134 @@ try {
     [],
   );
   assert.equal((await download(b, contractDoc.id, version.id)).status, 403);
+  // Follow qualification expiry, revocation and contract expiry through actual claim outcomes.
+  // Accepted history must retain its exact contract and fee while later eligibility changes.
   const claims = [];
   for (const [day, fee] of [
     [1, 100],
     [2, 200],
   ]) {
-    const id = await job(admin, day, fee);
-    const result = await checked(
+    const id = await job(admin, day, fee, [topic]);
+    const attempt = () =>
       a.client.rpc("claim_job", {
         p_job_id: id,
         p_idempotency_key: randomUUID(),
         p_terms_version: 1,
-      }),
-      "Actual contract-required claim",
+      });
+    assert.equal(
+      (await checked(attempt(), "Unverified or revoked expertise cannot claim"))
+        .status,
+      "not_eligible",
+    );
+    if (day === 1) {
+      await checked(
+        admin.client.rpc("verify_lecturer_topic", {
+          ...verification,
+          p_valid_until: new Date(Date.now() + 30 * 86400000).toISOString(),
+        }),
+        "Attest qualification that expires before assignment",
+      );
+      assert.equal(
+        (
+          await checked(
+            attempt(),
+            "Qualification must cover the entire future teaching block",
+          )
+        ).status,
+        "not_eligible",
+      );
+    }
+    await checked(
+      admin.client.rpc("verify_lecturer_topic", verification),
+      "Attest qualification with actual current MFA",
+    );
+    const ownExpertise = await checked(
+      a.client
+        .from("lecturer_topics")
+        .select("verified,valid_until")
+        .eq("user_id", a.id)
+        .eq("topic_id", topic)
+        .single(),
+      "Read durable verified expertise",
+    );
+    assert.equal(ownExpertise.verified, true);
+    assert.equal(
+      Date.parse(ownExpertise.valid_until),
+      Date.parse(verification.p_valid_until),
+    );
+    if (day === 2) {
+      assert.equal(
+        (
+          await a.client.rpc("set_contract_status", {
+            p_contract_id: contract,
+            p_status: "active",
+          })
+        ).error?.code,
+        "42501",
+        "Contract owner cannot override management status",
+      );
+      await checked(
+        admin.client.rpc("set_contract_status", {
+          p_contract_id: contract,
+          p_status: "expired",
+        }),
+        "MFA manager expires actual executed contract",
+      );
+      assert.equal(
+        (
+          await checked(
+            attempt(),
+            "New claims fail after current contract is expired",
+          )
+        ).status,
+        "prerequisite_missing",
+      );
+      const previous = await checked(
+        a.client
+          .from("job_claims")
+          .select("contract_id,total_amount")
+          .eq("id", claims[0])
+          .single(),
+        "Prior accepted agreement remains linked after contract expiry",
+      );
+      assert.equal(previous.contract_id, contract);
+      assert.equal(Number(previous.total_amount), 100);
+      await checked(
+        admin.client.rpc("set_contract_status", {
+          p_contract_id: contract,
+          p_status: "active",
+        }),
+        "MFA manager reactivates still-date-valid executed agreement",
+      );
+    }
+    const result = await checked(
+      attempt(),
+      "Actual qualification and contract-required claim",
     );
     assert.equal(result.status, "confirmed");
     claims.push(result.claim_id);
+    if (day === 1) {
+      await checked(
+        admin.client.rpc("verify_lecturer_topic", {
+          ...verification,
+          p_verified: false,
+        }),
+        "MFA manager revokes future qualification eligibility",
+      );
+      const revoked = await checked(
+        a.client
+          .from("lecturer_topics")
+          .select("verified,valid_until")
+          .eq("user_id", a.id)
+          .eq("topic_id", topic)
+          .single(),
+        "Read durable qualification revocation",
+      );
+      assert.equal(revoked.verified, false);
+      assert.equal(revoked.valid_until, null);
+    }
   }
+
   const invoiceBytes = pdf(
     "Fictional compensation statement - no tax calculation.",
   );
@@ -451,7 +616,7 @@ try {
     "Linked executed evidence cannot be hidden by ordinary file deletion",
   );
   console.log(
-    "PASS: actual Auth, real MFA, Storage/ClamAV-scanned PDF versions: externally executed contract registration, exact-hash receipt-not-signature, contract-gated claims, original-fee invoice derivation/idempotency/privacy, MFA partial/full payment+audited correction and immutable old-version download after replacement.",
+    "PASS: actual Auth, real MFA, Storage/ClamAV-scanned PDF versions: externally executed contract registration, exact-hash receipt-not-signature, names-only commercial directory/MFA isolation, qualification verification/expiry/revocation and contract status-gated claims, original-fee invoice derivation/idempotency/privacy, MFA partial/full payment+audited correction and immutable old-version download after replacement.",
   );
 } finally {
   for (const client of clients) await client.removeAllChannels();

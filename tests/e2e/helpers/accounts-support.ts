@@ -21,9 +21,9 @@ export function api(key: string) {
   });
 }
 /** Requires actual SDK success before returning the response data. */
-export async function checked<T>(
-  request: PromiseLike<{ data: T; error: unknown }>,
-) {
+export async function checked<T extends { data: unknown; error: unknown }>(
+  request: PromiseLike<T>,
+): Promise<T["data"]> {
   const result = await request;
   expect(result.error).toBeNull();
   return result.data;
@@ -87,15 +87,15 @@ export async function adminLogin(page: Page, user: { email: string }) {
   );
   await checked(
     client.auth.mfa.challengeAndVerify({
-      factorId: factor.id,
-      code: code(factor.totp.secret),
+      factorId: factor!.id,
+      code: code(factor!.totp.secret),
     }),
   );
   await login(page, user.email);
   await page.goto("/security");
   await page
     .getByLabel("Sechsstelliger Code", { exact: true })
-    .fill(code(factor.totp.secret));
+    .fill(code(factor!.totp.secret));
   await page
     .getByRole("button", { name: "Code bestätigen", exact: true })
     .click();

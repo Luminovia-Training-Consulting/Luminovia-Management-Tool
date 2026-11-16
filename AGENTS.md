@@ -201,6 +201,10 @@ physical PWA installation, mail delivery or production readiness.
   and release/maintenance gates. [PULL_REQUEST_GUIDE](docs/PULL_REQUEST_GUIDE.md)
   explains labels and PR content; [GITHUB_WORKFLOW](docs/GITHUB_WORKFLOW.md) records
   actual server-side rules. A prepared ruleset is not necessarily active.
+- For requested changes, create signed commits, push the work branch and prepare
+  a pull request. Merge directly after the current CI gates pass, without another
+  confirmation within the authorised scope. Respect explicit coordinated merge
+  pauses until their release; production approval remains separate.
 - Check dependencies and compatible peer families together. Do not add blanket
   `audit fix --force` or version upgrades to an unrelated task.
 - Merging or pushing `main` does not publish a CMS release. An authorised manual
