@@ -2,6 +2,12 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## Combined 32-migration preflight — native acceptance still required
+
+Signed source `1adc134` passed **316 Vitest cases / 53 files**, lint and TypeScript. The source graph contains **128 reachable modules and 32 routes**, with no unreachable modules, unresolved imports, unused runtime exports, missing literal assets or broken literal routes. A real disposable migration replay inventories **155 public functions**. Focused module checks and independent reviews are recorded in WORKLOG; they do not replace actual Auth/Storage/browser integration.
+
+The next canonical run discovers 26 native business API suites, 94 business browser cases and 2 separately built-PWA cases. Its actual result and the exact application/retained-data CI must be recorded before complete acceptance. Earlier 29-migration failures below remain honest checkpoints. The open build-only advisory is documented in [DEPENDENCY_AUDIT](DEPENDENCY_AUDIT.md).
+
 ## M7 second combined run — actual dialog defect reproduced and corrected
 
 Source `8fe3e19`: detached launcher **exit 1**, private report `.local/tests/1aab5e9e/RESULT.txt`. All native migration/285 SQL/23 API/invitation/restart checks passed again; browsers **85/86** (9.9 minutes). Exact CI43782621640 reproduced file-dialog loss in both browser projects (84/86, 14.6 minutes). Trace: a delayed new filter unmounted the captured dialog before any archive RPC. Native test steps and their timeouts remain unchanged. New deterministic regressions reproduce the original lifetime defect; exact-resource revalidation also covers successful empty responses after room-access withdrawal. The final combined 32-migration source still requires a complete new native gate and exact CI. Build/PWA was not reached by these failed checkpoints.

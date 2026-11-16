@@ -22,6 +22,16 @@ Ein virtueller Ordner ist eine persönliche Bezeichnung, kein Storage-Verzeichni
 
 Archivierung, entzogene Raum-/Auftragsrechte oder Kontosperrung lassen die Zuordnung nicht als Ersatzberechtigung weiterwirken. Verborgene Dokumente erscheinen auch über ihre eigenen Tags nicht mehr und können nicht weiter organisiert werden. Bei einem aktuellen Serverfehler werden zurückbehaltene Discovery-Daten nicht weiter angezeigt. Der vorhandene Auth-Kontowechsel leert zusätzlich den Arbeitsspeicher-Cache; die Abfrageschlüssel enthalten das Konto. Es gibt keinen persistierten Offline-Cache.
 
+## Stabile Dialoge und aktueller Ressourcenzugriff
+
+Ein laufender Filterabruf ersetzt die Ergebniszeilen, erhält aber einen bereits geöffneten Archiv-/Versions-/Bearbeitungsdialog und persönliche Ordnungsentwürfe. Neue Ergebnisse verwenden ihre eigenen Zeilen; es gibt keine Übernahme fremder Filter- oder Kontodaten. Ein legitimes leeres Filterergebnis beendet keine begonnene Operation.
+
+Nur tatsächlich geöffnete Ziele erhalten eine begrenzte genaue Metadatenprüfung über die vorhandene `documentQuery`. Konto, Dokumentkennung, erfolgreiche Listenbeobachtung und Fokusgeneration trennen diese Prüfung von alten Antworten. Während einer ungeklärten Prüfung bleiben Schreibaktionen gesperrt. `null`, gelöschte/falsche Zielkennungen und Berechtigungsfehler verwerfen das betroffene Modal samt geschützten Entwürfen. Das gilt auch für einzelne Raumrechteentzüge, bei denen die Listenantwort erfolgreich, aber leer ist. Subject-/Auftragsdateilisten verwenden denselben Schutz.
+
+Ein zuvor gesperrter Dateiname darf nicht aus einem alten Suchcache oder einer lediglich angehängten Seite wieder erscheinen. Nur eine wirklich neue vollständige Antwort des aktuellen Beobachters kann diese Quarantäne erneuern. Netzwerk- und Versionskonflikte erhalten erlaubte Entwürfe; `42501` verwirft das ursprüngliche Ziel. Verspätete Erfolge oder Fehler einer alten Operation schließen keinen inzwischen geöffneten anderen Entwurf. Es entstehen weder Abfragen pro Ergebniszeile noch eine zusätzliche Polling-Schleife.
+
+Diese Korrektur wurde vorab reproduziert und durch **47 bestandene Datei-Komponentenfälle** mit kontrollierten Transportbarrieren, Cache-/Paging-/Fokusübergängen und exakten Schreibanzahlen geprüft. Die native Gesamtabnahme bleibt separat in [QA_RESULTS](QA_RESULTS.md) erfasst.
+
 ## Bewahrte Dateipipeline
 
 Upload, Byte-/MIME-/Größenprüfung, Quarantäne und tatsächlicher ClamAV-Scan, private Storage-Ablage, Versionshistorie, Preview-Blob-Lebensdauer, Umbenennen und Archivieren bleiben verbunden. Downloads verwenden weiterhin das bestehende authentifizierte Dateigateway mit aktueller Ressourcenprüfung und ausgewählter Version; Tags oder Ordner liefern keine öffentliche URL und keinen Storage-Bypass. Eine Metadatenzeile ist kein Nachweis einer gescannten vorhandenen Datei.

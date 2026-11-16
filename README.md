@@ -1,8 +1,10 @@
 # Luminovia Portal
 
-A real React/TypeScript Progressive Web App for Luminovia Training & Consulting. The local system connects invitation-only Supabase Auth, administrator MFA, bilingual profiles/evidence, teaching jobs and atomic allocation, calendar, private realtime chat, scanned files, wiki/forum, customers/courses and contract/invoice tracking. Individual client accounts, optional enrolled learners, safe course ratings, profile/invoice labels and a server-enforced default 50/50 commission model extend these workflows. CBW building blocks become provenance-linked course templates and referenced teaching offers; secure scanned profile pictures and staff comments connect the same application. The accepted M6 baseline adds taxonomy administration, private availability, audited job lifecycle and explicit lecturer positions, personal dashboard previews, notification preferences/inbox and a reduced administrative audit reader. The M7 source connects paginated file/job discovery, personal file tags/folders and saved views, structured chat mentions, in-app quiet hours and versioned announcements; its complete native acceptance is running. It is **not the complete production product yet**. See the [implementation plan](docs/IMPLEMENTATION_PLAN.md) for the entire outstanding scope.
+A real React/TypeScript Progressive Web App for Luminovia Training & Consulting. The local system connects invitation-only Supabase Auth, administrator MFA, bilingual profiles, teaching jobs and atomic allocation, calendar, private realtime chat, scanned files, wiki/forum, customers/courses and contract/invoice tracking. Individual client accounts, optional enrolled learners, safe course ratings, profile/invoice labels and a server-enforced default 50/50 commission model extend these workflows. CBW building blocks become provenance-linked course templates and referenced teaching offers; secure scanned profile pictures and staff comments connect the same application.
 
-The user's [Universal Master Prompt](docs/UNIVERSAL_MASTER_PROMPT.txt) is preserved verbatim and is the authoritative project specification. On continuation, read [WORKLOG](docs/WORKLOG.md) first, then [AGENTS.md](AGENTS.md) and the plan. The public Website repository is a read-only brand reference; it has not been changed.
+The current M7/M8 source adds paginated file/job discovery, private saved views and file organisation, structured chat mentions, quiet hours, versioned announcements, published global calendar events, purpose-scoped administrative course/offer choices and explicit qualification evidence tied to an exact certificate version. **The combined 32-migration source has passed preflight; full native acceptance and exact-commit CI remain pending.** It is **not the complete production product yet**. The [documentation index](docs/README.md) is the central developer entry point; the [implementation plan](docs/IMPLEMENTATION_PLAN.md) retains the entire outstanding scope.
+
+The user's [Universal Master Prompt](docs/UNIVERSAL_MASTER_PROMPT.txt) is preserved verbatim and is the authoritative project specification. On continuation, read [WORKLOG](docs/WORKLOG.md) first, then the plan and [AGENTS.md](AGENTS.md). The public Website repository is a read-only brand reference; it has not been changed.
 
 ## Requirements
 
@@ -55,49 +57,51 @@ Die vollständigen Betriebsdetails, Fehlerbehebung und Persistenzgrenzen stehen 
 
 **M6 ist vollständig lokal und im exakten CI-Stand abgenommen und gemergt.** [PR #8](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/8) wurde als `dc8e9a7` übernommen: tatsächliche Auth/MFA-, Storage-, Berechtigungs-, Nebenläufigkeits-, Browser- und PWA-Prüfungen sowie der Stop/Start-Persistenznachweis bestanden. Der Folgefix für den reproduzierten Theme-Kontrastfehler wurde nach beiden exakten CI-Gates mit [PR #9](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/9) als `9c2103b` gemergt. Die Anwendungstests und der getrennte Test der selbst gehosteten Images mit Datenerhalt sind dokumentiert; daraus folgt keine vollständige Produktivfreigabe.
 
-**M7 ist ein verbundener Quellstand mit bestandenem Preflight; die vollständige native Abnahme läuft noch.** Lint, Typen und Formatierung sowie 240 Vitest-Fälle bestanden. Die Compilerprüfung erfasst 119 erreichbare Module und 32 Routen ohne unaufgelöste Imports, unerreichbare Module oder unbenutzte Laufzeitexports; der echte Replay der 29 Migrationen inventarisiert 146 öffentliche RPCs. Gezielte Datenbankprüfungen sind in den Modulunterlagen festgehalten. Geschriebene API-/Browserfälle zählen erst nach ihrem tatsächlichen vollständigen Lauf als bestanden. Maßgeblich bleiben [QA_RESULTS](docs/QA_RESULTS.md) und [WORKLOG](docs/WORKLOG.md).
+**Der gemeinsame M7/M8-Quellstand mit dem Dateidialog-Nachfix hat den Preflight bestanden; seine vollständige native 32-Migrations-Abnahme und exakte CI-Prüfung stehen aus.** Am Quellstand `1adc134` umfasst die Komponenten-/Unit-Suite 316 bestandene Vitest-Fälle in 53 Dateien. Die Compilerprüfung erfasst 128 erreichbare Module und 32 Routen ohne Graphfehler; der echte Replay der 32 Migrationen inventarisiert 155 öffentliche RPCs. Diese Zahlen gelten für diesen Stand, nicht automatisch für spätere Integrationen. Gezielte Datenbank-/Edge-Prüfungen sind in den Modulunterlagen festgehalten. Diese Nachweise ersetzen keinen vollständigen Lauf mit Auth, Storage, Scanner, Browsern und Datenerhalt. Geschriebene API-/Browserfälle zählen erst nach ihrer tatsächlichen Ausführung als bestanden. Maßgeblich bleiben [QA_RESULTS](docs/QA_RESULTS.md) und [WORKLOG](docs/WORKLOG.md).
 
-Die M7-Funktionsgrenzen erklären die Leitfäden für [Dateien](docs/FILES.md), [Auftragssuche und gespeicherte Ansichten](docs/JOB_DISCOVERY.md), [Chat und Erwähnungen](docs/CHAT.md), [Benachrichtigungen und Ruhezeiten](docs/NOTIFICATIONS.md) sowie [Ankündigungen](docs/ANNOUNCEMENTS.md). Kurs-/Wiki-/Forenressourcen, beleggebundene Qualifikationsverifikation und weitere offene Anforderungen bleiben im vollständigen Plan sichtbar.
+Die verbundenen Funktionen und ihre Grenzen erklären die Leitfäden für [Dateien](docs/FILES.md), [Auftragssuche und gespeicherte Ansichten](docs/JOB_DISCOVERY.md), [Chat und Erwähnungen](docs/CHAT.md), [Benachrichtigungen und Ruhezeiten](docs/NOTIFICATIONS.md) sowie [Ankündigungen](docs/ANNOUNCEMENTS.md). M8 ergänzt [zweckgebundene Auftrags-/Kurswähler](docs/JOB_PICKERS.md), [globale Kalenderpublikationen](docs/CALENDAR.md) und [Qualifikationsbelege mit Prüfverlauf](docs/QUALIFICATIONS.md). Weiterer Produktumfang und noch offene Abnahmen bleiben im vollständigen Plan sichtbar.
 
 Die Beitragsunterlagen wurden mit [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`) und der unabhängige GitHub-Vorschaustarter mit [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`) gemergt. Der Labelkatalog umfasst 30 verwaltete Labels; die neun ursprünglichen GitHub-Labels bleiben erhalten. Die gesonderte Aktivierung der Review-/Merge-Regeln ist im [GitHub-Betriebsleitfaden](docs/GITHUB_WORKFLOW.md) dokumentiert.
 
 ## Implemented routes
 
-| Route                    | Function                                                                                                                                  |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `/login`                 | Real email/password sign-in and password recovery; no public signup.                                                                      |
-| `/auth/callback`         | Explicit one-time invitation acceptance; PKCE recovery callback.                                                                          |
-| `/auth/password`         | Set a password after an authenticated invite/recovery.                                                                                    |
-| `/`                      | Personal job suggestions, calendar/chat/notification/file previews, own contract receipts and capability-scoped management follow-ups.    |
-| `/jobs`, `/jobs/:id`     | Server-paged search/sorting, own saved views, exact detail, localised sessions/fees, terms acceptance and atomic allocation.              |
-| `/calendar`              | Private appointments, confirmed assignments, published global events and month/week/day/agenda views.                                     |
-| `/profile`               | Persisted DE/EN biography, contact/timezone, expertise and private CV/certificate uploads.                                                |
-| `/chats`                 | Private DMs, staff/group/course rooms; realtime, structured mentions, scanned drag/drop files, membership/moderation and read/mute state. |
-| `/files`                 | Server-paged search, own tags/folders; quarantine/scanning, upload progress, authorised download/preview, history, replace/archive.       |
-| `/wiki`, `/forum`        | Safe rich text/code, drafts/publication/revisions; threads, replies, accepted answers, subscriptions and moderation.                      |
-| `/clients`               | MFA/capability-protected customer records, private contacts/notes, tags and archive.                                                      |
-| `/courses`               | Reusable templates, actual runs/sessions, safe duplication and explicit publication.                                                      |
-| `/contracts`             | Executed PDF versions/hashes, master/addendum chain, private downloads and receipt history. A receipt is not an e-signature.              |
-| `/finance`               | Accepted-assignment earnings, scanned invoice PDFs, review, partial/full payments and authorised CSV with separate currencies.            |
-| `/search`                | Permission-aware jobs, documents, messages, safe wiki/forum results and minimal chat contacts.                                            |
-| `/security`              | Real Auth TOTP enrollment/challenge; administrative actions require AAL2 at the database.                                                 |
-| `/admin`                 | Atomic course/job creation, publication/archive, lecturer invitations.                                                                    |
-| `/people`, `/people/:id` | Safe lecturer directory, own labels/expertise, actual upcoming/current/past courses and authorised anonymised ratings.                    |
-| `/my-reviews`            | Optional learners review actual completed enrolled courses; management enrols and moderates with MFA.                                     |
-| `/client`                | Own-organisation course requests/full fee, commissioned spend and assigned lecturers.                                                     |
-| `/admin/accounts`        | Versioned account API-backed role assignment, separate invitations, scoped client memberships and linked profile/status management.       |
-| `/admin/people`          | Search people, attest declared expertise with UTC expiry, suspend/reactivate accounts with named confirmation.                            |
-| `/topics`                | DE/EN topic/tool/programming-language hierarchy, aliases, authorized related templates and MFA-protected versioned CRUD/archive.          |
-| `/availability`          | Own private available/unavailable windows; explicit reduced sharing with MFA management and transaction-safe assignment conflict checks.  |
-| `/notifications`         | Own cursor-paged inbox, current-authorized links, read/unread state and explicit due-reminder refresh.                                    |
-| `/announcements`         | Current audience-authorised DE/EN publications, cursor pages and own revision-specific acknowledgement; up to three shell banners.        |
-| `/settings`              | Own versioned notification preferences and timezone-aware in-app quiet hours; inbox and critical receipts remain available.               |
-| `/admin/audit`           | MFA/current `audit.read` capability, bounded metadata search/filter/cursor pages and an exact reviewed action allowlist.                  |
-| `/admin/announcements`   | Current capability/MFA, immutable revisions, separate drafts, publish/archive/recover and bounded search; no background scheduler.        |
+| Route                    | Function                                                                                                                                    |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/login`                 | Real email/password sign-in and password recovery; no public signup.                                                                        |
+| `/auth/callback`         | Explicit one-time invitation acceptance; PKCE recovery callback.                                                                            |
+| `/auth/password`         | Set a password after an authenticated invite/recovery.                                                                                      |
+| `/`                      | Personal job suggestions, calendar/chat/notification/file previews, own contract receipts and capability-scoped management follow-ups.      |
+| `/jobs`, `/jobs/:id`     | Server-paged search/sorting, own saved views, exact detail, localised sessions/fees, terms acceptance and atomic allocation.                |
+| `/calendar`              | Private appointments, confirmed assignments, visible-window global-event pages and explicit MFA-protected draft/publication/archive.        |
+| `/profile`               | DE/EN biography, contact/timezone, expertise, private CV/certificate uploads and consent to share one exact certificate version per topic.  |
+| `/chats`                 | Private DMs, staff/group/course rooms; realtime, structured mentions, scanned files and purpose-scoped participant-course choices.          |
+| `/files`                 | Server-paged search, own tags/folders; scanning, authorised exact-file dialogs/downloads, history, replace/archive and scoped offer choice. |
+| `/wiki`, `/forum`        | Safe rich text/code, drafts/publication/revisions; threads, replies, accepted answers, subscriptions and moderation.                        |
+| `/clients`               | MFA/capability-protected customer records, private contacts/notes, tags and archive.                                                        |
+| `/courses`               | Reusable templates, actual runs/sessions, safe duplication and explicit publication.                                                        |
+| `/contracts`             | Executed PDF versions/hashes, master/addendum chain, private downloads and receipt history. A receipt is not an e-signature.                |
+| `/finance`               | Accepted-assignment earnings, scanned invoice PDFs, review, partial/full payments and authorised CSV with separate currencies.              |
+| `/search`                | Permission-aware jobs, documents, messages, safe wiki/forum results and minimal chat contacts.                                              |
+| `/security`              | Real Auth TOTP enrollment/challenge; administrative actions require AAL2 at the database.                                                   |
+| `/admin`                 | Atomic course/job creation, publication/archive, lecturer invitations.                                                                      |
+| `/people`, `/people/:id` | Safe lecturer directory, own labels/expertise, actual upcoming/current/past courses and authorised anonymised ratings.                      |
+| `/my-reviews`            | Optional learners review actual completed enrolled courses; management enrols and moderates with MFA.                                       |
+| `/client`                | Own-organisation course requests/full fee, commissioned spend and assigned lecturers.                                                       |
+| `/admin/accounts`        | Versioned account API-backed role assignment, separate invitations, scoped client memberships and linked profile/status management.         |
+| `/admin/people`          | Search people, review explicitly shared certificate evidence/history, attest expertise with UTC expiry and suspend/reactivate accounts.     |
+| `/topics`                | DE/EN topic/tool/programming-language hierarchy, aliases, authorized related templates and MFA-protected versioned CRUD/archive.            |
+| `/availability`          | Own private available/unavailable windows; explicit reduced sharing with MFA management and transaction-safe assignment conflict checks.    |
+| `/notifications`         | Own cursor-paged inbox, current-authorized links, read/unread state and explicit due-reminder refresh.                                      |
+| `/announcements`         | Current audience-authorised DE/EN publications, cursor pages and own revision-specific acknowledgement; up to three shell banners.          |
+| `/settings`              | Own versioned notification preferences and timezone-aware in-app quiet hours; inbox and critical receipts remain available.                 |
+| `/admin/audit`           | MFA/current `audit.read` capability, bounded metadata search/filter/cursor pages and an exact reviewed action allowlist.                    |
+| `/admin/announcements`   | Current capability/MFA, immutable revisions, separate drafts, publish/archive/recover and bounded search; no background scheduler.          |
 
 New standalone administrative offers support 1–20 explicitly priced lecturer positions. Each position covers the whole offered block; existing, client-originated and CBW/course-originated offers retain their original single-position budget. Every session is reserved in one PostgreSQL transaction. Qualification validity, executed-contract prerequisites, remaining capacity, job/deadline/terms status and private calendar/unavailable-window/confirmed-assignment conflicts are checked server-side. Accepted rates/currency/terms remain immutable snapshots. Requests are idempotent and competing jobs for the same lecturer are serialised. Future uninvoiced assignments can be cancelled as a whole block, preserving history; an audited explicit reopening permits a replacement to claim. Started or invoiced work requires separate review. The management Kanban cannot drag a lecturer into confirmation. See [JOB_LIFECYCLE](docs/JOB_LIFECYCLE.md).
 
 Admins gain no access to others' private appointments, availability notes, DMs or contract documents through these additions. Shared availability is explicitly opt-in; the audit view excludes private action families and all detail payloads. Contract/session reminders are generated by the user's explicit refresh, without a claimed background email or push service.
+
+Downloading another lecturer's qualification evidence requires current `qualifications.verify` and MFA plus an active explicit evidence binding to one certificate version. It grants no general CV, contract or certificate-library access; the separate existing `users.manage`/MFA CV permission and manual qualification attestation remain. Course/offer pickers return purpose-authorised metadata, not additional financial or job-detail rights. The administrative Kanban still shows the newest **500** offers with an explicit limit notice; it is separate from paginated marketplace discovery. Global-event management is bounded to the visible calendar window. See the [permission architecture](docs/ARCHITECTURE.md) and individual feature guides for exact limits.
 
 German/English and light/dark/system preferences persist locally. Server data are held only in memory; the service worker caches static application assets only. Claims, messages, file operations and all other mutations require online server confirmation. The PWA provides an offline shell and explicit connection state; it does not pretend offline actions succeeded.
 
@@ -146,9 +150,13 @@ Stoppe verwaltete lokale Dienste mit `./portal stop`; Datenbank und tatsächlich
 
 ## Documentation
 
+[Central developer documentation index](docs/README.md) — reading order, architecture, feature guides, APIs, test evidence, security and operations. The [user guide](docs/USER_GUIDE.md) explains connected account workflows.
+
 [Developer guide](docs/DEVELOPER_GUIDE.md) · [Architecture](docs/ARCHITECTURE.md) · [ERD](docs/ERD.md) · [Generated API reference](docs/API_REFERENCE.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [Product scope](docs/PRODUCT_SPEC.md) · [Brand](docs/BRAND_DESIGN_SYSTEM.md)
 
-[Files](docs/FILES.md) · [Job discovery](docs/JOB_DISCOVERY.md) · [Job lifecycle/capacity](docs/JOB_LIFECYCLE.md) · [Chat](docs/CHAT.md) · [Notifications/quiet hours](docs/NOTIFICATIONS.md) · [Announcements](docs/ANNOUNCEMENTS.md) · [Dashboard](docs/DASHBOARD.md) · [GitHub preview](docs/GITHUB_LOCAL_PREVIEW.md)
+[Files](docs/FILES.md) · [Job discovery](docs/JOB_DISCOVERY.md) · [Job lifecycle/capacity](docs/JOB_LIFECYCLE.md) · [Job/course pickers](docs/JOB_PICKERS.md) · [Calendar](docs/CALENDAR.md) · [Qualifications](docs/QUALIFICATIONS.md)
+
+[Chat](docs/CHAT.md) · [Notifications/quiet hours](docs/NOTIFICATIONS.md) · [Announcements](docs/ANNOUNCEMENTS.md) · [Dashboard](docs/DASHBOARD.md) · [GitHub preview](docs/GITHUB_LOCAL_PREVIEW.md)
 
 [CBW templates](docs/CBW_TEMPLATES.md) · [Profile pictures](docs/PROFILE_AVATARS.md) · [Comments](docs/RESOURCE_COMMENTS.md) · [Taxonomy](docs/TAXONOMY.md) · [Availability](docs/AVAILABILITY.md) · [Administration audit](docs/ADMIN_AUDIT.md) · [User guide](docs/USER_GUIDE.md)
 
@@ -156,7 +164,7 @@ Stoppe verwaltete lokale Dienste mit `./portal stop`; Datenbank und tatsächlich
 
 ## Mitwirken auf GitHub
 
-Der [Beitragsleitfaden](CONTRIBUTING.md) erklärt Einrichtung, Branches, Tests und den Weg bis zum Merge. Der [Issue-Leitfaden](docs/ISSUE_GUIDE.md) hilft bei Fehlern und Vorschlägen; der [PR-Leitfaden](docs/PULL_REQUEST_GUIDE.md) beschreibt Pflichtlabels, Review und CI. Deutsch und Englisch sind willkommen. Sicherheitslücken werden über einen privaten Meldeweg behandelt.
+Der [Beitragsleitfaden](CONTRIBUTING.md) erklärt Einrichtung, Branches, Tests und den Weg bis zum Merge. Der [Issue-Leitfaden](docs/ISSUE_GUIDE.md) hilft bei Fehlern und Vorschlägen; der [PR-Leitfaden](docs/PULL_REQUEST_GUIDE.md) beschreibt Pflichtlabels, Review und CI. Der gemeinsame Katalog enthält 30 verwaltete Labels; PRs benötigen genau ein `type:*`, genau ein `risk:*` und mindestens ein `area:*`. Vorgesehen ist ein Maintainer-Merge über PR ohne fremde Reviewzustimmung; CI und Signaturen bleiben Pflicht. Der tatsächliche Aktivierungsstand der Review-/Checkregeln und der Wartungs-App steht in [GITHUB_WORKFLOW](docs/GITHUB_WORKFLOW.md); vorbereitete Konfiguration bedeutet keine bereits wirksame Live-Regel. Deutsch und Englisch sind willkommen. Sicherheitslücken gehören in den [privaten Meldeweg](SECURITY.md).
 
 Repository license: GNU GPLv3; the authentic Space Grotesk font retains its included OFL notice. Brand assets remain Luminovia assets.
 
@@ -166,7 +174,7 @@ Repository license: GNU GPLv3; the authentic Space Grotesk font retains its incl
 
 ## Account and revenue APIs
 
-[Account/revenue specification](docs/ACCOUNTS_REVENUE_SPEC.md) · [Generated platform API reference](docs/API_REFERENCE.md) · [Server audit](docs/ACCOUNTS_PLATFORM_AUDIT.md). The current source reference inventories 146 public RPCs from an actual disposable migration replay; an inventory proves the interface exists, not that every branch has passed native end-to-end acceptance.
+[Account/revenue specification](docs/ACCOUNTS_REVENUE_SPEC.md) · [Generated platform API reference](docs/API_REFERENCE.md) · [Server audit](docs/ACCOUNTS_PLATFORM_AUDIT.md). The current source reference inventories 155 public RPCs from an actual disposable replay of all 32 migrations; an inventory proves the interface exists, not that every branch has passed native end-to-end acceptance.
 
 New commission offers default to 50% platform / 50% lecturer; only admin/owner can change the percentage. Customer total and platform amounts remain in private tables and never appear in lecturer job/claim/invoice responses. Legacy accepted net fees stay unchanged, and unknown historical customer totals remain unknown. Income/payment status is tracking data; no bank transfer or tax calculation is initiated.
 

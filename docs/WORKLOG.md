@@ -2,6 +2,18 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — combined 32-migration source ready for complete isolated acceptance
+
+Primary tree: `/home/carinaschoppe/.codex/worktrees/luminovia-m7-community-resources`, branch `codex/community-and-resource-completion`. Signed merge `1adc134` combines M7, reviewed M8 commits `215202a`/`184b3ce`, the approved maintenance App source and the independently reviewed file-dialog corrections. All functional owners are frozen. The latest attachment remains byte-identical to the preserved master specification.
+
+Actual integrated preflight: **316 Vitest cases across 53 files passed**, plus whole-tree lint and TypeScript. The compiler graph has **128 reachable modules / 32 routes**, no unresolved imports, missing assets, invalid literal links, unreachable modules or unused runtime exports. The generated reference inventories **155 public functions** from the actual 32-migration replay; 142 literal frontend RPC references bind to that surface. The targeted integrity, documentation and maintenance-policy command passed 11 cases.
+
+The file follow-up passed 47 focused cases and independent source/real QueryObserver review. Dialogs survive legitimate pending/empty filter results, while exact actor/target/generation checks remove revoked metadata and drafts. A cached filter or appended page cannot renew an explicitly denied resource. Late mutation replies affect their original target only. Qualification cards now use actual own database roles, hide on denial, retain eligible multiple roles and add no duplicate polling.
+
+The next complete command must run all 32 migrations, native Auth/MFA/scanner/Storage, SQL and integration checks, **26 discovered business API suites**, **94 business browser journeys** and the separate **2 built-PWA cases**. These are discovered cases, not yet passed combined results. Capture the actual subprocess exit through the independent detached runner and the canonical RESULT.txt, then fix failures without weakening assertions. Exact GitHub application and retained-data checks must both pass before authorised merge. The public website and production remain out of scope.
+
+Repository Auto-Merge availability was enabled through the API. PR10 is not armed while the live required-check rules are still pending activation: the first combined merge remains explicitly gated on both successful checks. The actual main-only App workflow probe and live rule activation follow that tested merge. Historical checkpoints below remain intact.
+
 ## 16 November 2026 — M8 source and focused checks complete; integrated native gate pending
 
 All three module owners have frozen their connected source. Integrated M8 preflight passed lint, TypeScript and **276 Vitest cases in 53 files**. The compiler graph contains **128 reachable modules and 32 routes**, with zero unresolved imports, missing assets, invalid literal links, unreachable modules or unused runtime exports. A real disposable 32-migration replay generated **155 public functions** in API_REFERENCE; 142 literal frontend RPC references bind to the migrated surface.

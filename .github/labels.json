@@ -148,5 +148,30 @@
     "name": "area:taxonomy",
     "color": "5319e7",
     "description": "Themen, Werkzeuge, Programmiersprachen und Hierarchien."
+  },
+  {
+    "name": "area:api",
+    "color": "0e8a16",
+    "description": "Öffentliche Schnittstellen, RPC-Verträge, OpenAPI und API-Kompatibilität."
+  },
+  {
+    "name": "area:security",
+    "color": "b60205",
+    "description": "Berechtigungsgrenzen, Datenschutz, Eingabevalidierung und Schutzmaßnahmen."
+  },
+  {
+    "name": "area:performance",
+    "color": "5319e7",
+    "description": "Abfragekosten, Ladeverhalten, Caching und gemessene Laufzeiteffizienz."
+  },
+  {
+    "name": "area:accessibility",
+    "color": "bfd4f2",
+    "description": "Tastaturbedienung, Fokus, Screenreader und lesbare Kontraste."
+  },
+  {
+    "name": "area:design",
+    "color": "7d88d8",
+    "description": "Markengerechte Gestaltung, Layout, Typografie und Farbsystem."
   }
 ]

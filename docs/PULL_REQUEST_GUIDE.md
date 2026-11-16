@@ -4,7 +4,7 @@
 
 Dieser Leitfaden beschreibt die Abnahme einer Änderung. Einrichtung und lokale Entwicklung stehen in [CONTRIBUTING](../CONTRIBUTING.md) und [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); Meldungen beginnen mit dem [Issue-Leitfaden](ISSUE_GUIDE.md).
 
-Die Beitragsunterlagen wurden mit [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`) geliefert, der getrennte lokale GitHub-Vorschaustarter mit [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). Diese Merges aktivieren die oben genannten noch offenen serverseitigen Reviewregeln nicht. Der Quellenkatalog [labels.json](../.github/labels.json) enthält inzwischen 30 verwaltete Labels; neun ursprüngliche GitHub-Labels bleiben zusätzlich erhalten.
+Die Beitragsunterlagen wurden mit [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`) geliefert, der getrennte lokale GitHub-Vorschaustarter mit [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). Diese Merges aktivieren die oben genannten noch offenen serverseitigen Reviewregeln nicht. Der Quellenkatalog [labels.json](../.github/labels.json) enthält inzwischen 35 verwaltete Labels; neun ursprüngliche GitHub-Labels bleiben zusätzlich erhalten.
 
 ## Branch und Titel
 
@@ -35,22 +35,31 @@ Jeder PR braucht **genau ein Typ-Label**, **mindestens ein Bereichslabel** und *
 | `type:security`     | Abgestimmte Sicherheitskorrektur; keine öffentliche Erstmeldung |
 | `type:dependencies` | Geprüfte Abhängigkeitsaktualisierung                            |
 
-Wähle alle tatsächlich wesentlich betroffenen Bereiche. Die ursprünglichen Bereichslabels bleiben erhalten: `area:frontend`, `area:backend`, `area:database`, `area:auth`, `area:files`, `area:finance`, `area:courses`, `area:devops` und `area:github`. Zehn weitere Bereiche ergänzen die Einordnung:
+Wähle alle tatsächlich wesentlich betroffenen Bereiche. Die ursprünglichen Bereichslabels bleiben erhalten: `area:frontend`, `area:backend`, `area:database`, `area:auth`, `area:files`, `area:finance`, `area:courses`, `area:devops` und `area:github`. Die folgenden Fachbereiche ergänzen die Einordnung; die letzten fünf Bereiche kennzeichnen API-, Sicherheits-, Leistungs-, Barrierefreiheits- und Gestaltungsänderungen:
 
-| Bereich | Verwendung |
-| --- | --- |
-| `area:chat` | Nachrichten, Kurs-/Interessengruppen und Realtime |
-| `area:knowledge` | Wiki, Forum und Wissensverwaltung |
-| `area:calendar` | Termine, Verfügbarkeit, Sperrzeiten und Zeitzonen |
-| `area:notifications` | Posteingang, Meldungen und Zustellpräferenzen |
-| `area:profiles` | Profile, Qualifikationen und Dozierendenverzeichnis |
-| `area:clients` | Auftraggeberkonten, Organisationen und Geschäftskontakte |
-| `area:pwa` | Installation, Service Worker, Offlinezustand und Updates |
-| `area:testing` | QA, Regressionen, Browser- und Berechtigungsprüfungen |
-| `area:docs` | Anleitungen, API-Referenzen und Betriebsdokumentation |
-| `area:taxonomy` | Themen, Werkzeuge, Programmiersprachen und Hierarchien |
+| Bereich              | Verwendung                                                           |
+| -------------------- | -------------------------------------------------------------------- |
+| `area:chat`          | Nachrichten, Kurs-/Interessengruppen und Realtime                    |
+| `area:knowledge`     | Wiki, Forum und Wissensverwaltung                                    |
+| `area:calendar`      | Termine, Verfügbarkeit, Sperrzeiten und Zeitzonen                    |
+| `area:notifications` | Posteingang, Meldungen und Zustellpräferenzen                        |
+| `area:profiles`      | Profile, Qualifikationen und Dozierendenverzeichnis                  |
+| `area:clients`       | Auftraggeberkonten, Organisationen und Geschäftskontakte             |
+| `area:pwa`           | Installation, Service Worker, Offlinezustand und Updates             |
+| `area:testing`       | QA, Regressionen, Browser- und Berechtigungsprüfungen                |
+| `area:docs`          | Anleitungen, API-Referenzen und Betriebsdokumentation                |
+| `area:taxonomy`      | Themen, Werkzeuge, Programmiersprachen und Hierarchien               |
+| `area:api`           | Öffentliche Schnittstellen, RPC-Verträge, OpenAPI und Kompatibilität |
+| `area:security`      | Berechtigungsgrenzen, Datenschutz und Eingabevalidierung             |
+| `area:performance`   | Konkrete Änderungen an Abfragekosten, Laden oder Caching             |
+| `area:accessibility` | Tastatur, Fokus, Screenreader und Kontrast                           |
+| `area:design`        | Marke, Layout, Typografie und Farbsystem                             |
 
-Eine Dokumentationsänderung erhält `area:docs` und gegebenenfalls den dokumentierten Fachbereich; allgemeine Beitragsregeln zusätzlich `area:github`. Ein Test allein erfordert nicht jedes vom Gesamtsystem verwendete Label. Umgekehrt braucht eine Funktionsänderung mit Migration die tatsächlich betroffenen Fach- und Technikbereiche. Die 30 verwalteten Labels ergeben sich aus acht Typen, 19 Bereichen und drei Risikostufen; zusätzliche ursprüngliche GitHub-Labels ersetzen keine Pflichtkategorie.
+Eine Dokumentationsänderung erhält `area:docs` und gegebenenfalls den dokumentierten Fachbereich; allgemeine Beitragsregeln zusätzlich `area:github`. Ein Test allein erfordert nicht jedes vom Gesamtsystem verwendete Label. Umgekehrt braucht eine Funktionsänderung mit Migration die tatsächlich betroffenen Fach- und Technikbereiche. Die 35 verwalteten Labels ergeben sich aus acht Typen, 24 Bereichen und drei Risikostufen; zusätzliche ursprüngliche GitHub-Labels ersetzen keine Pflichtkategorie.
+
+Die fünf zusätzlichen Bereiche werden anhand des tatsächlichen Diffs vergeben: `area:api` für einen geänderten Schnittstellenvertrag oder dokumentierte RPC-/OpenAPI-Funktionen; `area:backend` bleibt für die serverseitige Implementierung. `area:security` ergänzt den betroffenen Fachbereich bei konkreten Schutz- oder Berechtigungsänderungen. Es ist kein zweites Typ-Label: Auch ein `type:feature` kann Sicherheitsgrenzen ändern; `type:security` beschreibt den Hauptzweck einer abgestimmten Sicherheitskorrektur.
+
+`area:performance` setzt eine konkrete Änderung am Abfrage-, Lade- oder Cacheverhalten voraus; ein beiläufiger Index oder ein vorhandener Gesamttest genügt nicht. `area:accessibility` kennzeichnet tatsächliche Tastatur-, Fokus-, Screenreader- oder Kontrastarbeit. `area:design` betrifft sichtbare Gestaltung; beispielsweise erhält ein Theme-Kontrastfix beide Labels. Bestehende Labels werden bei späterer Einordnung bewahrt, solange sie weiterhin zutreffen. Der prüfbare Umfang bestimmt die Auswahl, nicht die Anzahl verfügbarer Labels.
 
 | Risiko        | Einordnung                                                                                                             |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------- |
