@@ -1,6 +1,6 @@
 # Operational notification and handover integration
 
-The forward migration `20261116054027_operational_module_notification_handover_integration.sql`
+The forward migration `20261116121605_operational_module_notification_handover_integration.sql`
 keeps preparation, support, delivery and replacement inbox destinations available
 when independent operational modules are combined. It preserves the installed
 core resolver when the smart-operations module is absent. When that module is
@@ -43,13 +43,9 @@ writes. Already cancelled/completed marketplace offers remain unchanged.
 
 ## Migration ownership and order
 
-PR17 is **optional**, with no prerequisite for the independent operational
-rollout. The combined evidence pins committed PR17 source
-`00eaa5249a163618887f72683da362e785a5957f`, whose last committed migration is
-`20261116051736_substitution_withdrawal_permission_recheck.sql`. The unrelated
-uncommitted teaching-day migration was excluded. This integration was generated
-with Supabase CLI 3.1.0 after those currently known versions; no historical
-migration was renamed or modified here.
+The current released forward migration is `20261116121605`; it follows the accepted smart-operations prefix. Its version was reconciled before release. The migration was designed to support both presence and absence of the smart module; the current complete application includes that module. No released SQL is renamed or modified.
+
+Historical combined-fixture evidence below pins committed PR17 source `00eaa5249a163618887f72683da362e785a5957f`. Its then-current withdrawal migration was `20261116051736_substitution_withdrawal_permission_recheck.sql`; the current released counterpart is `20261116091026`. These historical identifiers are not interchangeable source digests. Tests discover the present forward source by its suffix.
 
 The trigger is installed only when the directed table exists. If another branch
 is delivered later and overwrites the resolver or adds that table after this
@@ -65,8 +61,8 @@ operational modules alone. The separate manual combined gate refuses missing
 smart-module prerequisites. Run only against an owned local test container:
 
 ```sh
-PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-extensions-20261116 node scripts/operational-forward-db-tests.mjs
-PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-extensions-20261116 node scripts/operational-pr17-integration.mjs
+PORTAL_DB_CONTAINER=YOUR_OWNED_DISPOSABLE_CONTAINER node scripts/operational-forward-db-tests.mjs
+PORTAL_DB_CONTAINER=YOUR_OWNED_DISPOSABLE_CONTAINER node scripts/operational-pr17-integration.mjs
 ```
 
 Each suite creates and drops random UUID databases. Fresh replay and populated

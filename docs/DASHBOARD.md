@@ -37,4 +37,4 @@ The ten component tests verify actual query calls and DOM behaviour: account/rol
 npx vitest run src/features/dashboard/dashboard.test.tsx
 ```
 
-Two additional browser journeys in `tests/e2e/dashboard.spec.ts` use only the canonical disposable test data. They cover actual own/other calendars, a real DM with unread counters, an actually scanned upload and its file-centre link, DE/EN/dark mode, mobile width/axe and MFA management access. Authored scenarios and actually passed browser runs are documented separately in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
+Two additional browser journeys in `tests/e2e/dashboard.spec.ts` use only the canonical disposable test data. They cover actual own/other calendars, a real DM with unread counters, an actually scanned upload and its file-centre link, DE/EN/dark mode, mobile width/axe and MFA management access. Authored scenarios and actually passed browser runs are documented separately in [QA_RESULTS](QA_RESULTS.md).

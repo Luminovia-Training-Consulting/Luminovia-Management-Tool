@@ -1,6 +1,6 @@
 # Accepted amendment forecast integration
 
-Migration `20261116063201_amendment_aware_finance_forecast.sql` keeps the
+Migration `20261116091032_amendment_aware_finance_forecast.sql` keeps the
 existing `public.finance_forecast(date,date,numeric)` response and permission
 boundary. Accepted lecturer cost comes from the latest effective accepted
 agreement; only unreleased assignment sessions choose its month. Original
@@ -38,7 +38,7 @@ claim/revenue/session history, and separate original currencies. All modes also
 exercise a real zero-share online claim and rollback-only invalid snapshot
 faults, without changing actual accepted evidence or the installed helper.
 
-To test both installation orders before that module is merged, place its exact
+The formal-amendment module is absent from the current 68-file inventory. To rehearse both installation orders before integrating it, place its exact
 two public source migrations (`*_formal_change_requests.sql` and
 `*_commissioned_and_customer_amendments.sql`) in a private local fixture
 directory and run:

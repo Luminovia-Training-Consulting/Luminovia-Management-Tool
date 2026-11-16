@@ -1,6 +1,6 @@
 # Luminovia Portal — product specification
 
-Authority: [Universal Master Prompt](UNIVERSAL_MASTER_PROMPT.txt), preserved verbatim from the user's attachment on 15 November 2026 (Australia/Brisbane). This document is its implementation map; it does not reduce the requested product scope. See [implementation plan](IMPLEMENTATION_PLAN.md) for actual completion status.
+Authority: [Universal Master Prompt](UNIVERSAL_MASTER_PROMPT.txt), preserved verbatim from the user's attachment on 15 November 2026 (Australia/Brisbane). This document is its implementation map; it does not reduce the requested product scope. See the [roadmap](../ROADMAP.md) for remaining scope and [QA results](QA_RESULTS.md) for actual acceptance. Carina removed the separate implementation plan, work log and root changelog on 17 November 2026; their original deliverable instructions in the verbatim brief are superseded.
 
 The approved 16 November [smart operations extension](SMART_OPERATIONS_SPEC.md) additionally requires the full Control Center, personalized dashboard/Teaching Day, Hostinger email and optional mobile Push, waitlists/replacement workflows, timesheets, client/participant self-service, favourites, saved filters, calendar feeds, preparation, quality, forecasting and offline schedule. Its complete feature map distinguishes current source from remaining work; the original master prompt remains preserved verbatim.
 
@@ -8,7 +8,7 @@ The approved 16 November [smart operations extension](SMART_OPERATIONS_SPEC.md) 
 
 A private, bilingual German/English, responsive PWA for approximately eleven freelance lecturers, administrators/management and restricted course participants. Management publishes teaching jobs. An authenticated, eligible lecturer may claim an entire job immediately; the first committed database transaction wins. The claim requires no routine approval queue. Client/employer organisations have explicit individual client accounts and scoped memberships as approved on 16 November 2026; see [Accounts and commission extension](ACCOUNTS_REVENUE_SPEC.md).
 
-Production target is `portal.luminovia.org` on compatible existing Hostinger static hosting with managed Supabase. No production deployment is authorised by the development task. The public marketing site is a read-only brand source.
+The original brief names `portal.luminovia.org` as the production target. Later accepted development uses the self-hosted Supabase tooling in this repository; the initial managed-backend default is superseded for that environment. Production architecture, capacity, processor/location review and release approval remain separate gates. No production deployment is authorised by the development task. The public marketing site is a read-only brand source.
 
 ## Short-notice assignment withdrawals — 17 November 2026
 
@@ -27,7 +27,7 @@ Users may hold compatible combinations of `owner`, `admin`, `management`, `senio
 
 The latest 16 November instruction supersedes the earlier shared compensation default: the teaching role determines compensation from a private, Administration-configured policy. Its actual business values must not be committed to this public repository or frontend bundles. Each offer captures its policy and each successful claim captures immutable accepted compensation. Do not infer missing historical client fees. See [delegated roles and private pricing](DELEGATED_ROLES_PRICING.md).
 
-New accounts receive a sequential, permission-aware DE/EN [welcome guide](WELCOME_GUIDE.md), with private server-persisted progress, pause/resume, skip and restart. All PRs retain the complete quality/security/application/native checks and a genuinely runnable [local preview package and GitHub deployment record](PR_PREVIEWS.md); a downloadable package is not a hosted preview website.
+New accounts receive a sequential, permission-aware DE/EN [welcome guide](WELCOME_GUIDE.md), with private server-persisted progress, pause/resume, skip and restart. PRs retain required quality/security checks and conservatively selected docs/standard/full acceptance profiles. A genuinely runnable [local preview package](PR_PREVIEWS.md) records its actual profile; GitHub deployment metadata requires a separate explicit manual action. A downloadable package is not a hosted preview website.
 
 ## Complete module scope
 

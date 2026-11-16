@@ -2,7 +2,7 @@
 
 Status: existing quality contract, restated on 16 November 2026.
 
-A successful check supports the tested revision, environment and behaviour. It does not establish the absence of every possible bug. Record actual command exits, test counts, failures, fixes and untested paths in [QA_RESULTS](../QA_RESULTS.md) and [WORKLOG](../WORKLOG.md).
+A successful check supports the tested revision, environment and behaviour. It does not establish the absence of every possible bug. Record actual command exits, test counts, failures, fixes and untested paths in [QA_RESULTS](../QA_RESULTS.md) and [functional acceptance matrix](../FUNCTIONAL_ACCEPTANCE.md).
 
 Develop and test locally by default. Use focused checks during development and the isolated `./portal test` command for application acceptance. The actual selfhost image/retained-data gate remains separate, alongside required GitHub merge checks. A test or successful merge does not authorise deployment or release publication. Tests use fictional records and disposable owned resources, preserving persistent development and hosted data.
 

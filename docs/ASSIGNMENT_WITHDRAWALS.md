@@ -59,7 +59,7 @@ or suspended proposer no longer authorizes the transfer.
 
 ## Migration and operations
 
-Apply `20261116140511_assignment_withdrawal_requests.sql` only through the existing
+Apply `20261116170334_assignment_withdrawal_requests.sql` only through the existing
 reviewed migration/update procedure. It adds private workflow tables, a cancellation
 trigger and scoped RPCs; published prior migrations stay unchanged. Existing claims
 and commercial rows are preserved, with no invented historical applications.
@@ -68,6 +68,6 @@ This code change does not install the migration in any hosted or ordinary databa
 Revert application code through the existing recovery procedure if necessary;
 do not drop application records or rewrite accepted history to roll back. Pending
 applications require an authorized operational decision. Preserve workflow tables
-in backups with the rest of the database. The work log records checks actually
+in backups with the rest of the database. PR and QA records describe checks actually
 executed; source/component tests alone do not prove native Auth, HTTP, retained data
 or production readiness.

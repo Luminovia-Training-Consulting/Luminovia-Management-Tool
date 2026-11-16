@@ -1,6 +1,6 @@
 # Attendance and proof of teaching delivery
 
-Status: implemented in the seven-module extension branch, with focused PostgreSQL and unit/component acceptance recorded below. Actual Auth/HTTP and full desktop/mobile browser workflows are authored for `./portal test`; they remain unverified until that canonical command runs successfully. This guide does not claim merged source, VPS installation or production acceptance.
+The workflow is present in accepted main's published migration `20261116121600_attendance_delivery.sql`, with its frontend, actual API fixtures and desktop/mobile journeys. Focused evidence below describes its original source checkpoint; current complete execution is recorded in [QA_RESULTS](QA_RESULTS.md) under the [functional acceptance contract](FUNCTIONAL_ACCEPTANCE.md). Source merge does not establish hosted installation or production acceptance.
 
 ## Daily workflow
 

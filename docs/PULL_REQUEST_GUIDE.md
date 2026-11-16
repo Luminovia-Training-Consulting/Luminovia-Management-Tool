@@ -1,6 +1,6 @@
 # Creating, reviewing and merging pull requests
 
-> Reviewed server snapshot on 16 November 2026 at 06:42:36 UTC: Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception (`bypass_mode: pull_request`). No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. Live server rules are authoritative and may later differ. [Reviewed rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
+> Reviewed server snapshot on 16 November 2026 at 15:08:47 UTC (17 November in Australia/Brisbane): Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception (`bypass_mode: pull_request`). No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. Live server rules are authoritative and may later differ. [Reviewed rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
 
 This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
@@ -83,7 +83,7 @@ External contributors usually cannot manage labels. Suggest the appropriate valu
 | Runtime/deployment | Targeted process/configuration checks, retained data, safe recovery and existing operator boundaries  |
 | Documentation      | Working links, accurate commands and clear separation of tested and pending work                      |
 
-Run targeted checks during development. The complete local acceptance command is `./portal test`. CI also requires the separate native Supabase verification. Use fictional data and do not publish raw traces, credentials or private database/file backups.
+Run targeted checks during development. The complete local acceptance command is `./portal test`. CI selects a conservative `docs`, `standard` or `full` profile from the actual changed paths. Full acceptance includes independent system, browser/PWA and native retained-data checks; a reduced profile does not claim those stages ran. Use fictional data and do not publish raw traces, credentials or private database/file backups.
 
 Use `./portal github test` for an independent test of current `main`. `./portal github` instead starts a separate persistent preview on `5373`/`563xx`; it changes neither normal development nor the PR branch. A passing check of `main` does not prove acceptance of a different PR head. See [preview, persistence and migration controls](GITHUB_LOCAL_PREVIEW.md).
 
@@ -97,9 +97,10 @@ All fifteen required checks must pass against the current base:
 
 - `Build`, `Typecheck`, `Lint`, `Formatting` and `Code quality` check compilation, rules, style and actual source connections.
 - `Tests and coverage` runs unit/component tests with complete frontend source coverage reporting and enforced thresholds.
-- `verify` runs the complete real application/SQL/API/browser/PWA/maintenance suites; `Actual isolated selfhost image compatibility` checks real runtime behaviour and retained data.
+- `verify` runs the selected profile: documentation validation for `docs`, bounded runtime/Edge/dependency guards for `standard`, or the real system/SQL/API/maintenance phase for `full`. `Isolated browser acceptance` runs desktop/mobile/PWA work on a separate stack for full-profile PRs.
+- `Actual isolated selfhost image compatibility` runs the applicable PostgreSQL checks and, for `full`, the native runtime/retained-data rehearsal. A successful reduced-profile check explicitly records the stages it did not run.
 - `PR metadata` checks required labels against trusted current-main code.
-- `PR preview package` creates the gated downloadable source package; package availability does not claim a hosted portal or complete-product acceptance.
+- `PR preview package` requires all applicable quality, coverage, system, browser and native jobs to succeed and records the selected profile. The additional browser job is enforced through this required package gate; it is not a sixteenth required context. Package availability does not claim a hosted portal or complete-product acceptance.
 - `CodeQL (javascript-typescript)`, `CodeQL (python)` and `CodeQL (actions)` run the separate language-specific security analyses; `Dependency review` rejects newly introduced vulnerable dependencies.
 - The generated `CodeQL` finding check evaluates the uploaded security findings separately from successful scanner execution.
 
@@ -127,4 +128,4 @@ The read-only metadata workflow executes only this repository's current main cod
 
 A deliberate historical check can be dispatched from main with a positive PR number. It re-reads current labels and records the actual historical head, without rerunning or rewriting its past application acceptance. See [metadata operation](GITHUB_WORKFLOW.md#labels-and-metadata-validation) and [the executed repair evidence](PR_CI_REPAIR_20261116.md).
 
-The gated [PR preview package and deployment record](PR_PREVIEWS.md) provides an owned, locally runnable application preview after the complete checks. Its artifact URL is not a hosted portal URL.
+The gated [PR preview package and deployment record](PR_PREVIEWS.md) provides an owned, locally runnable application preview after the applicable checks; its manifest identifies their scope. Its artifact URL is not a hosted portal URL.

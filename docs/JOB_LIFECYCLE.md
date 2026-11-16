@@ -192,14 +192,14 @@ suite owns real upload/scanner acceptance.
 `jobs-lifecycle-api-check.mjs`, `jobs-capacity-api-check.mjs` and Playwright
 `job-lifecycle.spec.ts` / `job-capacity.spec.ts` are wired into the canonical
 isolated suite. Their actual native/browser result is recorded by the combined
-acceptance run in the work log; authored tests alone are not acceptance evidence.
+acceptance run in QA results; authored tests alone are not acceptance evidence.
 The browser cases cover a lecturer page staying mounted through cancellation and
 reopening, actual board input controls, partial capacity, DE/EN, dark mode and
 mobile/desktop accessibility. Run the supported `./portal test` entry point for
 complete native Auth/API/browser validation; do not point fixtures at development
 or production data.
 
-The complete product checklist remains in `IMPLEMENTATION_PLAN.md`. This module
+The complete product checklist remains in `ROADMAP.md`. This module
 does not declare saved marketplace filters, automatic substitute selection,
 scheduled publication, complete advanced marketplace filtering or all platform
 production acceptance complete.

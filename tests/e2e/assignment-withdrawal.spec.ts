@@ -172,7 +172,7 @@ test("short-notice withdrawal remains assigned until Management reviews it, with
     await adminLogin(reviewPage, manager);
     await reviewPage.goto("/notifications");
     const requestNote = reviewPage
-      .locator(".notification-row")
+      .locator("#main .notification-row")
       .filter({ hasText: "Rücktritt beantragt" });
     await requestNote
       .getByRole("link", { name: "Öffnen", exact: true })
@@ -195,7 +195,7 @@ test("short-notice withdrawal remains assigned until Management reviews it, with
     await expect(decision).not.toBeVisible();
     await page.goto("/notifications");
     const rejected = page
-      .locator(".notification-row")
+      .locator("#main .notification-row")
       .filter({ hasText: "Rücktrittsantrag abgelehnt" });
     await rejected.getByRole("link", { name: "Öffnen", exact: true }).click();
     await expect(
@@ -264,7 +264,7 @@ test("short-notice withdrawal remains assigned until Management reviews it, with
     await page.goto("/notifications");
     await expect(
       page
-        .locator(".notification-row")
+        .locator("#main .notification-row")
         .filter({ hasText: "Rücktritt genehmigt" }),
     ).toBeVisible();
     expect(
