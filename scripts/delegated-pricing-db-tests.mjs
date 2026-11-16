@@ -651,6 +651,106 @@ await withTestDatabase(
       },
     );
     await check(
+      "Duplicated commissioned offers capture the current private policy and remain claimable without changing accepted source history",
+      async () => {
+        const sourceClaims = await sql(
+          `select jsonb_agg(to_jsonb(c) order by c.id) from public.job_claims c where job_id='${id}'`,
+        );
+        const sourceRevenue = await sql(
+          `select jsonb_agg(to_jsonb(r) order by r.claim_id) from private.claim_revenue_ledger r where job_id='${id}'`,
+        );
+        const sourcePolicy = await rpc(
+          admin,
+          "commission_offer_policy",
+          [id],
+          "aal2",
+        );
+        assert.equal(sourcePolicy.policy_version, 1);
+        const sourceState = await rpc(admin, "job_lifecycle", [id], "aal2");
+        const request = randomUUID();
+        const parameters = [
+          id,
+          "duplicate",
+          sourceState.version,
+          request,
+          JSON.stringify({ title: "Fictional policy-versioned duplicate" }),
+        ];
+        const duplicate = await rpc(
+          admin,
+          "manage_job_offer",
+          parameters,
+          "aal2",
+        );
+        assert.equal(
+          await rpc(admin, "manage_job_offer", parameters, "aal2"),
+          duplicate,
+        );
+        assert.notEqual(duplicate, id);
+        const captured = await rpc(
+          admin,
+          "commission_offer_policy",
+          [duplicate],
+          "aal2",
+        );
+        assert.deepEqual(captured, {
+          regular_lecturer_percent: 32,
+          senior_lecturer_percent: 74,
+          policy_version: 2,
+        });
+        assert.equal(
+          await sql(
+            `select amount||','||total_amount from public.jobs where id='${duplicate}'`,
+          ),
+          "0.00,0.00",
+        );
+        const draft = await rpc(admin, "job_lifecycle", [duplicate], "aal2");
+        await rpc(
+          admin,
+          "manage_job_offer",
+          [duplicate, "published", draft.version, randomUUID(), "{}"],
+          "aal2",
+        );
+        await rpc(manager, "set_account_roles", [guest, "{lecturer}"], "aal2");
+        const quote = await offer(guest, duplicate);
+        assert.equal(Number(quote.amount), 32);
+        assert.equal(Number(quote.total_amount), 32);
+        assert.equal(
+          Number((await offer(senior, duplicate)).total_amount),
+          74.01,
+        );
+        const receipt = await claim(
+          guest,
+          duplicate,
+          randomUUID(),
+          quote.terms_version,
+        );
+        assert.equal(receipt.status, "confirmed");
+        assert.equal(
+          await sql(
+            `select total_amount from public.job_claims where id='${receipt.claim_id}'`,
+          ),
+          "32.00",
+        );
+        assert.equal(
+          await sql(
+            `select jsonb_agg(to_jsonb(c) order by c.id) from public.job_claims c where job_id='${id}'`,
+          ),
+          sourceClaims,
+        );
+        assert.equal(
+          await sql(
+            `select jsonb_agg(to_jsonb(r) order by r.claim_id) from private.claim_revenue_ledger r where job_id='${id}'`,
+          ),
+          sourceRevenue,
+        );
+        assert.deepEqual(
+          await rpc(admin, "commission_offer_policy", [id], "aal2"),
+          sourcePolicy,
+        );
+        await rpc(manager, "set_account_roles", [guest, "{guest}"], "aal2");
+      },
+    );
+    await check(
       "Own company request/spend projections expose gross only, no net or split",
       async () => {
         const requests = JSON.parse(
