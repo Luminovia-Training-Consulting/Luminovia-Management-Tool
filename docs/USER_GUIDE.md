@@ -290,3 +290,7 @@ the request from its inbox link and supplies a decision note. The lecturer sees
 the outcome in the personal inbox and job detail. Approval releases the complete
 block, and Management explicitly reopens the vacancy. Started/invoiced work needs
 separate review. [Detailed workflow](ASSIGNMENT_WITHDRAWALS.md).
+
+## Optional contacts and job references
+
+Open a job and use **Contact and job reference** to add an optional external brief/link and contact details. The creation confirmation also links directly to this section. Contact details default to confirmed assignees; management can deliberately release the entered details to authorised offer viewers. Private customer-directory entries are not shared automatically. Editing requires current management MFA; an explicit reload resolves a version conflict. [Details](JOB_BRIEFING.md).

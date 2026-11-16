@@ -112,6 +112,7 @@ export async function refreshJobState(client: QueryClient) {
       "job-board",
       "job-lifecycle",
       "assignment-withdrawals",
+      "job-briefing",
       "claims",
       "finance",
       "commission-report",

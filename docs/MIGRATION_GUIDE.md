@@ -1,6 +1,6 @@
 # Reading and safely extending SQL migrations
 
-This guide covers **70 SQL source files**, including the proposed withdrawal migration on top of the 69 present in accepted main `4f7f6c0` on 17 November 2026. PR17's operational cohort, PR24's six additional files and PR25's enquiry intake are merged; earlier candidate/pending descriptions apply only to their historical checkpoints. The ordered source versions and byte hashes are bound into the generated [API reference](API_REFERENCE.md).
+This guide covers **71 SQL source files**, including the proposed withdrawal migration on top of the 70 present in accepted main `85b02b8` on 17 November 2026. PR17's operational cohort, PR24's six additional files and PR25's enquiry intake are merged; earlier candidate/pending descriptions apply only to their historical checkpoints. The ordered source versions and byte hashes are bound into the generated [API reference](API_REFERENCE.md).
 
 Published SQL participates in preview, update and recovery fingerprints and must remain byte-identical. New business changes require additive migrations. Repository history does not establish what an installed or hosted database has applied. Read [QA_RESULTS](QA_RESULTS.md) for source-specific executed checks and [FUNCTIONAL_ACCEPTANCE](FUNCTIONAL_ACCEPTANCE.md) for the current acceptance contract. A split CI phase alone is not complete application acceptance; publication remains a separate authorised manual operation.
 
@@ -669,7 +669,11 @@ A private experimental database that applied earlier unmerged identifiers needs 
 4. Check a fresh replay, actual RLS/concurrency and the affected Auth/API/browser flows. Updating an existing database and preserving actual Storage bytes require separate evidence. Use the existing isolated full verification command and document the stages actually reached.
 5. Update the API reference only through its intended actual replay; also update this guide, feature documentation and PR validation evidence. Hosted migrations follow the existing operations and approval path.
 
-### 70. Reasoned short-notice assignment withdrawals
+## Job briefing migration
+
+[Job briefing contacts and references](../supabase/migrations/20261116163013_job_briefing_contacts_references.sql) adds private briefing and request records after the accepted migration prefix. Current actor and job access determine the disclosed projection; see [JOB_BRIEFING](JOB_BRIEFING.md).
+
+### 71. Reasoned short-notice assignment withdrawals
 
 Source: [20261116170334_assignment_withdrawal_requests.sql](../supabase/migrations/20261116170334_assignment_withdrawal_requests.sql).
 

@@ -435,3 +435,7 @@ application. The original cancellation transaction remains the release owner and
 retains invoice/snapshot/chat guards. Private inbox targets reauthorize the current
 actor without copying reason text into notices. See
 [workflow and operating contract](ASSIGNMENT_WITHDRAWALS.md).
+
+### Job-specific references and consented contacts
+
+`private.job_briefings` and its actor-bound retry ledger are unexposed RLS data. Public invoker RPCs project only the current staff/job audience; after-claim contacts require a currently confirmed assignment unless management explicitly releases them to authorised offer viewers. Current role loss and cancellation revoke that access. Versioned writes require existing management MFA and actor/request/job locks, while accepted commercial snapshots and internal customer contacts remain separate. The job-detail query is actor-scoped and refreshed by claim/cancellation actions. [Contract and evidence](JOB_BRIEFING.md).
