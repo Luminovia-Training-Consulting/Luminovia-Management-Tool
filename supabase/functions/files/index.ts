@@ -140,6 +140,7 @@ Deno.serve(async(request:Request)=>{
    return new Response(new Uint8Array(bytes),{headers:{...headers,'Content-Type':'image/png',
     'Content-Disposition':'inline; filename="avatar.png"','Content-Security-Policy':"default-src 'none'; sandbox"}});
   }
+  // Evidence grants bind the exact reviewed version and are checked again after Storage reads.
   if(data.action==='qualification_evidence_download'){
    if(!uuid(data.evidence_id))return json(400,{error:'invalid_request'});
    const selected=await qualificationEvidenceBytes(data.evidence_id,{

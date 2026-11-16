@@ -34,6 +34,6 @@ begin
  end if;
  return private.notification_target_before_extensions(p_kind,p_resource);
 end;$$;
-revoke execute on function private.notification_target(text,uuid) from public,anon;
-grant execute on function private.notification_target(text,uuid) to authenticated;
+-- Resolve destinations only inside the authorized public inbox/dispatch paths.
+revoke all on function private.notification_target(text,uuid) from public,anon,authenticated,service_role;
 commit;

@@ -10,8 +10,10 @@ import {
   runSupportCourseAbsenceChecks,
   runSupportCourseRegistryChecks,
 } from "./testing/support-course-registry.mjs";
-// Preserve the complete accepted predecessor when pending operational versions
-// are regenerated. Stable module suffixes identify the tested SQL boundaries.
+// Stable module suffixes identify the operational boundaries independently of
+// CLI regeneration. The optional-module absence case deliberately replays the
+// historical 36-migration predecessor, before the real course module existed;
+// the registry case below always includes the complete current predecessor.
 const migrationFiles = (
   await readdir(new URL("../supabase/migrations/", import.meta.url))
 )
@@ -26,9 +28,12 @@ const supportFiles = migrationFiles.filter((name) =>
 assert.equal(readinessFiles.length, 1);
 assert.equal(supportFiles.length, 1);
 const readinessFile = readinessFiles[0],
-  supportFile = supportFiles[0],
-  predecessor = migrationFiles.filter((name) => name < readinessFile).at(-1);
-assert.ok(predecessor, "A complete accepted predecessor must be present.");
+  supportFile = supportFiles[0];
+const courseAbsentThrough = "20261116080748";
+assert.ok(
+  migrationFiles.some((name) => name.startsWith(courseAbsentThrough + "_")),
+  "The explicit historical course-absent predecessor must be present.",
+);
 assert.ok(readinessFile < supportFile);
 const support = await readFile(
   new URL("../supabase/migrations/" + supportFile, import.meta.url),
@@ -46,7 +51,7 @@ await withTestDatabase(
     await fixture.sql(support);
     await runSupportCourseAbsenceChecks(fixture);
   },
-  { migrationsThrough: predecessor.slice(0, 14) },
+  { migrationsThrough: courseAbsentThrough },
 );
 await withTestDatabase(
   "support_course_registry",

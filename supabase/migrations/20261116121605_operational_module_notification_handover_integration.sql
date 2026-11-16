@@ -79,8 +79,8 @@ begin
  end if;
  return private.notification_target_integrated_fallback(p_kind,p_resource);
 end;$$;
-revoke all on function private.notification_target(text,uuid) from public,anon,service_role;
-grant execute on function private.notification_target(text,uuid) to authenticated;
+-- Preserve the accepted owner-only resolver boundary after composition.
+revoke all on function private.notification_target(text,uuid) from public,anon,authenticated,service_role;
 
 -- A directed handover and a marketplace handover serialize on the same job.
 -- Close only marketplace offers superseded by a committed directed acceptance,

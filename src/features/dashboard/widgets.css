@@ -13,6 +13,88 @@
   padding: 22px;
   border-top: 5px solid var(--mint);
 }
+.dashboard-widget-slot {
+  min-width: 0;
+}
+.dashboard-widget-slot > .dashboard-widget {
+  height: 100%;
+}
+.dashboard-customize {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+.dashboard-layout-editor {
+  margin-top: 16px;
+  padding: 22px;
+}
+.dashboard-layout-editor fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.dashboard-layout-editor ol {
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.dashboard-layout-editor li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 0;
+}
+.dashboard-layout-editor label,
+.teaching-readiness label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+}
+.dashboard-layout-editor input[type="checkbox"],
+.teaching-readiness input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.dashboard-layout-editor li > div {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.dashboard-layout-error {
+  margin-top: 12px;
+  color: var(--muted);
+}
+.dashboard-teaching-day {
+  border-top-color: var(--brand);
+}
+.teaching-day-sessions > li {
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.teaching-day-sessions h3 {
+  font-size: 0.95rem;
+  margin: 16px 0 8px;
+}
+.teaching-readiness {
+  margin: 18px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+}
+.teaching-readiness legend {
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0 5px;
+}
+.teaching-readiness label {
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
 .dashboard-widget .section-heading {
   align-items: flex-start;
   gap: 12px;

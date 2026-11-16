@@ -1,5 +1,15 @@
 # Seven additional operational modules
 
+## Current continuation — local candidate composition before accepted PR17
+
+The explicitly authorised local preparation combines PR24 checkpoint `d4e2954` with frozen PR17 source `dd646f91ece7eb136f776597d04e67b27bf72b60`. Accepted main remains `c0622a7`; the delivery order is PR17 → PR24 → PR25. The 68-file candidate retains the 62 PR17-prefix bodies exactly and places six byte-identical operational bodies after them through CLI-created versions `20261116121554`, `20261116121556`, `20261116121558`, `20261116121600`, `20261116121603` and `20261116121605`. The four operational modules and four observed authority-race corrections remain present.
+
+Candidate-only source checks pass 674 frontend cases in 89 files, coverage S66.68/B62.10/F56.90/L68.82% with unchanged gates, TypeScript and ESLint. Complete local/native acceptance remains pending until actual Main17 binding and the legitimately available PR24 QA slot after PR35 cleanup.
+
+All 15 required checks passed separately on PR24 head `2a15df1`, including its 42-migration native retained-data gate. The frozen PR17 candidate separately passed 643 frontend cases, 142 application browsers and 4 built-PWA cases in its full local run; native CI remains pending. Neither result certifies this local composition. Combined SQL/API inventory, actual directed/marketplace races, resource isolation and final current-source functional acceptance are still required. After PR17 genuinely merges, bind to that accepted tree and require the final local/native and all 15 exact-head CI gates before merging PR24.
+
+The historical checkpoints and initial module table below retain their original scope, failures and pending states. They do not remove outstanding work across the seven requested modules or establish hosted installation, physical-device acceptance, external delivery or production publication. [Current plan](IMPLEMENTATION_PLAN.md), [source-bound evidence](WORKLOG.md) and [migration inventory](MIGRATION_GUIDE.md) govern the continuation. Manual-only publication and the personal Carina-only PR review exception remain unchanged.
+
 The authoritative additional user prompt is preserved verbatim in [OPERATIONS_EXTENSION_PROMPT.txt](OPERATIONS_EXTENSION_PROMPT.txt). It extends, and does not replace, [UNIVERSAL_MASTER_PROMPT.txt](UNIVERSAL_MASTER_PROMPT.txt). The [initial coordination audit](EXTENSION_COORDINATION.md) records current PR overlap, rules and the automatic development-release boundary. A partial checkpoint is not full delivery.
 
 ## Current checkpoint

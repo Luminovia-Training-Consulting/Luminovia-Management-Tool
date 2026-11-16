@@ -80,15 +80,27 @@ export async function runOperationalForwardChecks({
           ["replacement_available", offer, "/replacements"],
           ["claim_confirmed", claim, "/jobs/" + job],
         ];
-        /** Resolve under the real caller, never via owner fixture privileges. */
-        const resolve = async (who, kind, id, aal = "aal1") =>
-          JSON.parse(
+        /** A real own notification reaches the resolver only through the public
+         * inbox boundary, with current caller identity and MFA. The implementation
+         * helper itself remains owner-only, as in the accepted predecessor. */
+        const resolve = async (who, kind, id, aal = "aal1") => {
+          await sql(
+            `insert into public.notifications(user_id,kind,resource_id) values(${q(who)},${q(kind)},${q(id)}) on conflict do nothing`,
+          );
+          const notice = await sql(
+            `select id from public.notifications where user_id=${q(who)} and kind=${q(kind)} and resource_id=${q(id)}`,
+          );
+          const inbox = JSON.parse(
             await actor(
               who,
-              `select private.notification_target(${q(kind)},${q(id)})`,
+              "select public.notification_inbox(false,null,null,100)",
               aal,
             ),
           );
+          const item = inbox.items.find((entry) => entry.id === notice);
+          assert.ok(item, "The caller's actual inbox row must be returned");
+          return { href: item.href, title: item.title };
+        };
         let accepted;
         if (combined) {
           const replacement = randomUUID(),
@@ -201,7 +213,7 @@ export async function runOperationalForwardChecks({
         );
         await check(
           mode +
-            ": fallback and reconciliation helpers are owner-only and lint clean",
+            ": resolver, fallback and reconciliation helpers are owner-only and lint clean",
           async () => {
             const functions = [
               "private.notification_target(text,uuid)",
@@ -217,7 +229,7 @@ export async function runOperationalForwardChecks({
               );
               assert.deepEqual(diagnostics, [], name);
             }
-            for (const name of functions.slice(1))
+            for (const name of functions)
               for (const role of ["anon", "authenticated", "service_role"])
                 assert.equal(
                   await sql(
@@ -320,16 +332,13 @@ export async function runOperationalForwardChecks({
           );
         await check(
           mode +
-            ": suspension redacts titles and adds no new external channel categories",
+            ": suspension denies inbox/title access and adds no new external channel categories",
           async () => {
             await sql(
               `update public.profiles set active=false where id=${q(owner)}`,
             );
             for (const [kind, id] of targets)
-              assert.deepEqual(await resolve(owner, kind, id), {
-                href: null,
-                title: "",
-              });
+              await assert.rejects(resolve(owner, kind, id), /42501/);
             if (
               (await sql(
                 "select to_regprocedure('private.email_category_enabled(uuid,text)') is not null",

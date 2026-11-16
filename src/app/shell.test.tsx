@@ -12,7 +12,13 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import type { InboxPage } from "../features/notifications/api";
 import { Shell } from "./shell";
 import "../lib/i18n";
@@ -71,7 +77,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 /** Render the subject with local provider/router fixtures and an isolated QueryClient. */
-function setup() {
+function setup(path = "/") {
   vi.stubGlobal(
     "matchMedia",
     vi.fn(() => ({
@@ -84,10 +90,12 @@ function setup() {
   client.setQueryData(["private", "actor"], "Owned private data");
   render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={["/"]}>
+      <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route element={<Shell />}>
             <Route index element={<p>Private workspace</p>} />
+            <Route path="files" element={<NavigationTarget />} />
+            <Route path="search" element={<NavigationTarget />} />
           </Route>
           <Route path="/login" element={<p>Login screen</p>} />
         </Routes>
@@ -158,5 +166,82 @@ describe("tour access recovery", () => {
     expect(client.getQueryData(["private", "actor"])).toBe(
       "Owned private data",
     );
+  });
+});
+
+/** Observe real router transitions; the history action is outside the More disclosure. */
+function NavigationTarget() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  return (
+    <>
+      <output aria-label="Fixture location">
+        {location.pathname + location.search + location.hash}
+      </output>
+      <button onClick={() => navigate(-1)}>Back in fixture history</button>
+    </>
+  );
+}
+
+describe("native mobile More navigation", () => {
+  it("closes after ordinary keyboard link navigation and leaves focus on its visible summary", async () => {
+    const { user } = setup();
+    const summary = screen.getByLabelText("Mehr");
+    const menu = summary.closest("details")!;
+    await user.click(summary);
+    expect(menu).toHaveProperty("open", true);
+    await user.tab();
+    const files = within(menu).getByRole("link", { name: "Dateien" });
+    expect(files).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
+      "/files",
+    );
+    await waitFor(() => expect(menu).toHaveProperty("open", false));
+    expect(summary).toHaveFocus();
+  });
+
+  it("closes on header-search navigation without stealing focus from the search input", async () => {
+    const { user } = setup();
+    const summary = screen.getByLabelText("Mehr");
+    const menu = summary.closest("details")!;
+    await user.click(summary);
+    const search = screen.getByLabelText("Stellen durchsuchen");
+    await user.type(search, "Fictional files");
+    // Typing and unrelated Shell state renders are not navigation events.
+    expect(menu).toHaveProperty("open", true);
+    await user.keyboard("{Enter}");
+    expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
+      "/search?q=Fictional%20files",
+    );
+    await waitFor(() => expect(menu).toHaveProperty("open", false));
+    expect(search).toHaveFocus();
+    expect(search).toHaveValue("Fictional files");
+  });
+
+  it("closes for same-path query changes and back navigation rather than only a pathname change", async () => {
+    const { user } = setup("/search?q=original");
+    const summary = screen.getByLabelText("Mehr");
+    const menu = summary.closest("details")!;
+    await user.click(summary);
+    await user.type(screen.getByLabelText("Stellen durchsuchen"), "updated");
+    await user.keyboard("{Enter}");
+    await waitFor(() =>
+      expect(screen.getByLabelText("Fixture location")).toHaveTextContent(
+        "/search?q=updated",
+      ),
+    );
+    await waitFor(() => expect(menu).toHaveProperty("open", false));
+    await user.click(summary);
+    expect(menu).toHaveProperty("open", true);
+    await user.click(
+      screen.getByRole("button", { name: "Back in fixture history" }),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("Fixture location")).toHaveTextContent(
+        "/search?q=original",
+      ),
+    );
+    expect(menu).toHaveProperty("open", false);
   });
 });

@@ -28,7 +28,7 @@ const baseVersion = replayFiles
   .at(-1)
   ?.slice(0, 14);
 assert.ok(baseVersion, "A complete accepted predecessor must be present.");
-const supportFile = "20261116091438_internal_support_desk.sql";
+const supportFile = "20261116121556_internal_support_desk.sql";
 const combinedCommit = process.env.PORTAL_REVIEW_PR17_COMMIT;
 if (combinedCommit !== undefined && !/^[a-f0-9]{40}$/.test(combinedCommit))
   throw new Error(
