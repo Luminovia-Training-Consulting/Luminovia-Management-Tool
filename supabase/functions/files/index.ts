@@ -1,5 +1,8 @@
 /**
- * Authenticated file gateway: reserve under caller permissions, store immutable quarantine bytes, scan and promote explicitly. Downloads check current resource access before and after Storage reads.
+ * Authenticated file gateway: reserve under caller permissions, store immutable
+ * quarantine bytes, scan and promote explicitly. Downloads recheck current
+ * resource access around Storage reads; qualification evidence has its own
+ * exact-version authorization context.
  */
 import {qualificationEvidenceBytes} from './qualification-download.ts';
 import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
@@ -110,7 +113,7 @@ Deno.serve(async(request:Request)=>{
    return json(200,{document:await visible(doc.id)});
   }
   const data=JSON.parse(new TextDecoder().decode(await bounded(request,4096))) as {action?:string;id?:string;version_id?:string;user_id?:string;evidence_id?:string};
-  // Avatars use the narrow selection view, not a general grant to read personal files.
+  // Avatar selection is a narrow projection, not a general grant to personal files.
   if(data.action==='avatar'){
    if(!uuid(data.user_id))return json(400,{error:'invalid_request'});
    const bytes=await selectedAvatarBytes(data.user_id,{

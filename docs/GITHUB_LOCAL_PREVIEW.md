@@ -1,5 +1,12 @@
 # Try the latest GitHub version locally
 
+Local execution is the default development workflow. Run `./portal check` for
+fast quality/coverage/build feedback and `./portal test` in your own checkout for
+complete isolated acceptance before delivery. Use `./portal github test` to
+fetch and verify the latest `main` on this PC. Neither command publishes a
+GitHub deployment or requires registering the PC as an Actions runner.
+Automatic GitHub quality/security checks remain additional independent evidence.
+
 ```bash
 ./portal github
 ```

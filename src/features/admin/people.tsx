@@ -1,7 +1,7 @@
 /**
- * Manage qualification verification, expiry and account suspension. Changes require confirmed
- * server responses and invalidate related queries; private profile fields retain database access
- * controls.
+ * Manage qualification verification, evidence and expiry plus account suspension.
+ * Changes require confirmed server responses and invalidate related queries;
+ * private profile fields retain their resource-specific database access controls.
  */
 import { qualificationKey } from "../qualifications/api";
 import { QualificationEvidenceReview } from "../qualifications/evidence";

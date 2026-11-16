@@ -37,8 +37,8 @@ vi.mock("../auth/auth-context", () => ({
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => fake }));
 vi.mock("../commercial/revenue", () => ({ FinancialSummaryCards: () => null }));
-// Use the real lightweight card so dashboard DTO/null handling is exercised;
-// avoid importing the unrelated marketplace detail/mutation module here.
+// Exercise the real lightweight card and its restricted-price contract without
+// importing unrelated marketplace detail mutations into dashboard tests.
 vi.mock("../jobs/jobs", async () => ({
   JobCard: (await import("../jobs/card")).JobCard,
 }));
@@ -267,7 +267,7 @@ const rpcCalls = (name: string) =>
   fake.calls.filter((call) => call.method === "rpc" && call.table === name);
 
 describe("role-aware dashboard previews", () => {
-  it("accepts a restricted null suggestion without presenting the public zero sentinel as compensation", async () => {
+  it("accepts a restricted suggestion without inventing a zero-price compensation", async () => {
     (fake.rpcData.job_dashboard as { suggestions: unknown[] }).suggestions = [
       job("restricted quote", { amount: null, total_amount: null }),
     ];

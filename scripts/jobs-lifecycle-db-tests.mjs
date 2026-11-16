@@ -6,11 +6,12 @@ import { quoteSql, withTestDatabase } from "./testing/database.mjs";
 const admin = "c6000000-0000-4000-8000-000000000001",
   teacher = "c6000000-0000-4000-8000-000000000002",
   peer = "c6000000-0000-4000-8000-000000000003",
-  participant = "c6000000-0000-4000-8000-000000000004";
+  participant = "c6000000-0000-4000-8000-000000000004",
+  lateReader = "c6000000-0000-4000-8000-000000000005";
 let checks = 0;
 await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
   await sql(
-    `insert into auth.users(id,email) values('${admin}','lifecycle-admin@example.invalid'),('${teacher}','lifecycle-teacher@example.invalid'),('${peer}','lifecycle-peer@example.invalid'),('${participant}','lifecycle-participant@example.invalid');insert into public.user_roles(user_id,role) values('${admin}','admin'),('${teacher}','lecturer'),('${peer}','lecturer'),('${participant}','participant');`,
+    `insert into auth.users(id,email) values('${admin}','lifecycle-admin@example.invalid'),('${teacher}','lifecycle-teacher@example.invalid'),('${peer}','lifecycle-peer@example.invalid'),('${participant}','lifecycle-participant@example.invalid'),('${lateReader}','lifecycle-late-reader@example.invalid');insert into public.user_roles(user_id,role) values('${admin}','admin'),('${teacher}','lecturer'),('${peer}','lecturer'),('${participant}','participant'),('${lateReader}','lecturer');`,
   );
   await actor(
     admin,
@@ -44,8 +45,8 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
     day += 3;
     return result;
   };
-  /** Capture the actor's real visible quote before submitting or racing its consent. */
-  const quotedVersion = async (job, who) => {
+  /** Captures the actor's actual offer consent before a competing claim can hide it. */
+  const quoteVersion = async (job, who) => {
     const version = await actor(
       who,
       `select item->>'terms_version' from jsonb_array_elements(public.job_offers()) item where item->>'id'='${job}'`,
@@ -53,18 +54,19 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
     assert.match(
       version,
       /^[1-9][0-9]*$/,
-      "A visible actor-specific quote token is required before claiming",
+      "A visible offer must supply its consent version",
     );
     return version;
   };
-  /** Calls the actual claim RPC; only the database result confirms whole-block allocation. */
+  /** Calls the real RPC with previously reviewed consent when supplied. A claim
+   * response, rather than a subsequent offer-list read, decides the race. */
   const claim = async (
     job,
     who = teacher,
     key = randomUUID(),
-    observedVersion,
+    reviewedVersion,
   ) => {
-    const version = observedVersion ?? (await quotedVersion(job, who));
+    const version = reviewedVersion ?? (await quoteVersion(job, who));
     assert.match(
       version,
       /^[1-9][0-9]*$/,
@@ -380,22 +382,21 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
       await action(job, "reopen", {
         reason: "Fictional concurrency review complete",
       });
-      // Both actors observe the published offer before the first winner can
-      // make it invisible to the other. This is genuine frozen consent, not a
-      // base-version fallback or a quote lookup performed after allocation.
-      const [teacherVersion, peerVersion] = await Promise.all([
-        quotedVersion(job, teacher),
-        quotedVersion(job, peer),
-      ]);
-      const results = await Promise.all(
-        Array.from({ length: 50 }, (_, i) =>
-          claim(
-            job,
-            i % 2 ? teacher : peer,
-            randomUUID(),
-            i % 2 ? teacherVersion : peerVersion,
-          ),
+      // All reviewers capture the published offer before any transaction wins.
+      // A filled offer can disappear for a loser; never re-fetch consent then.
+      const versions = new Map(
+        await Promise.all(
+          [teacher, peer, lateReader].map(async (who) => [
+            who,
+            await quoteVersion(job, who),
+          ]),
         ),
+      );
+      const results = await Promise.all(
+        Array.from({ length: 50 }, (_, i) => {
+          const who = i % 2 ? teacher : peer;
+          return claim(job, who, randomUUID(), versions.get(who));
+        }),
       );
       assert.equal(results.filter((x) => x.status === "confirmed").length, 1);
       assert.equal(results.filter((x) => x.status === "filled").length, 49);
@@ -404,6 +405,21 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
           `select count(*) from public.assignment_sessions s join public.job_claims c on c.id=s.claim_id where c.job_id='${job}' and c.status='confirmed' and s.released_at is null`,
         ),
         "2",
+      );
+      // Deterministic late-arrival regression: this actor has no historical claim
+      // and no longer sees a quote regardless of which competing actor won,
+      // yet the already reviewed token must still reach the RPC and return filled.
+      assert.equal(
+        await actor(
+          lateReader,
+          `select exists(select 1 from jsonb_array_elements(public.job_offers()) item where item->>'id'='${job}')`,
+        ),
+        "f",
+      );
+      assert.equal(
+        (await claim(job, lateReader, randomUUID(), versions.get(lateReader)))
+          .status,
+        "filled",
       );
     },
   );

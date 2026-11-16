@@ -93,6 +93,7 @@
 .notification-preferences > .notice {
   margin-block: 1rem;
 }
+/* Quiet-hour settings remain separate from the four category switches. */
 .attention-settings {
   margin-top: 1.25rem;
 }

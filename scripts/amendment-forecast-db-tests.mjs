@@ -13,7 +13,7 @@ import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
 
 const execute = promisify(execFile);
 
-const bridgeFile = "20261116063201_amendment_aware_finance_forecast.sql";
+const bridgeFile = "20261116091032_amendment_aware_finance_forecast.sql";
 const bridge = await readFile(
   new URL("../supabase/migrations/" + bridgeFile, import.meta.url),
   "utf8",
@@ -434,6 +434,6 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
         `Verified ${checks} forecast groups (${mode}); owned disposable database cleanup follows.`,
       );
     },
-    mode === "current_source" ? {} : { migrationsThrough: "20261116054135" },
+    mode === "current_source" ? {} : { migrationsThrough: "20261116091030" },
   );
 }

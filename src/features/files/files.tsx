@@ -1,6 +1,7 @@
 /**
- * File centre with drop uploads, version-bound previews and history. Blob URLs belong to the
- * displayed version and are disposed; upload progress alone is not scan clearance.
+ * File centre with drop uploads, version-bound previews and history. Captured
+ * dialogs recheck exact resource access independently of filtered result pages;
+ * transferred upload bytes alone do not confirm scan clearance.
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
@@ -342,7 +343,7 @@ function documentPermissionDenied(error: unknown) {
     error.code === "42501",
   );
 }
-/** Display authorized files with previews, history, renaming and explicit archival. */
+/** Keep captured dialogs independent of filtered lists while revalidating their exact targets. */
 function DocumentList({
   files,
   pending = false,
@@ -369,6 +370,9 @@ function DocumentList({
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [organising, setOrganising] = useState<PortalDocument | null>(null);
+  // Filter loading may remove the row DOM. Retain only one presentation ID;
+  // the menu and its actions still require a current authorised list row.
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [epochs, setEpochs] = useState<{
     current?: string;
     revision: number;
@@ -406,6 +410,7 @@ function DocumentList({
   );
   const discardTarget = (id: string) => {
     setRevokedAt((previous) => ({ ...previous, [id]: epochs.revision }));
+    setOpenMenuId((previous) => (previous === id ? null : previous));
     setSelected((previous) => (previous?.id === id ? null : previous));
     setOrganising((previous) => (previous?.id === id ? null : previous));
     setName((previous) =>
@@ -427,6 +432,12 @@ function DocumentList({
       if (error) throw error;
     },
     onSuccess: async (_result, input) => {
+      if (input.archive)
+        setOpenMenuId((previous) => (previous === input.id ? null : previous));
+      // Invalidation alone reuses an initial fetch that has no cached data.
+      // Cancel pre-commit reads explicitly so their older snapshot cannot
+      // restore an archived row or an earlier filename after this write.
+      await client.cancelQueries({ queryKey: ["documents"] });
       await client.invalidateQueries({ queryKey: ["documents"] });
       setSelected((previous) => (previous?.id === input.id ? null : previous));
     },
@@ -542,8 +553,19 @@ function DocumentList({
                 <History size={18} />
               </Button>
               {file.owner_id === session!.user.id && (
-                <details>
-                  <summary aria-label={`${t("name")}: ${file.original_name}`}>
+                <details open={openMenuId === file.id}>
+                  <summary
+                    aria-label={`${t("name")}: ${file.original_name}`}
+                    onClick={(event) => {
+                      // Summary activation also covers Enter/Space. Keeping
+                      // the native toggle out of state avoids queued events
+                      // from a detached row closing a newer document's menu.
+                      event.preventDefault();
+                      setOpenMenuId((previous) =>
+                        previous === file.id ? null : file.id,
+                      );
+                    }}
+                  >
                     ···
                   </summary>
                   <div className="file-more">

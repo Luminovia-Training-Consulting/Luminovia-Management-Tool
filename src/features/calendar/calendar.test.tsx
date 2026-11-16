@@ -1,6 +1,7 @@
 /**
- * Regressions for course deep links and global publication details across locale
- * and visible-range changes. Controlled UI data do not replace server ACL tests.
+ * Calendar regressions for own assignment titles, authorised course links and
+ * global-event detail lifetime across locale, query refresh and range changes.
+ * Controlled Query/FullCalendar fixtures do not replace native ACL acceptance.
  */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useEffect } from "react";

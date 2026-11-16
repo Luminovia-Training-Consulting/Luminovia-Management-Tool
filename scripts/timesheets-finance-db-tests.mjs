@@ -578,5 +578,5 @@ await withTestDatabase(
       `${checks} timesheet/finance/control-center PostgreSQL groups passed.`,
     );
   },
-  { migrationsThrough: "20261116032842" },
+  { migrationsThrough: "20261116091017" },
 );

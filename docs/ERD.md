@@ -1,6 +1,6 @@
 # Relational model and permission boundaries
 
-The target diagrams retain the complete product map; conceptual target entities do not claim that every table exists. Implemented diagrams use physical names from the **46 migration sources through `20261116042100`**, with `PRIVATE_*` aliases mapped to unexposed private relations below. The M6 foundation has 24 sources; M7/M8 add eight and smart operations add fourteen. SQL constraints, explicit grants/RLS and owning tests remain authoritative. This source map does not claim the current combined native gate, hosted installation or platform acceptance has passed. See [ARCHITECTURE](ARCHITECTURE.md), [MIGRATION_GUIDE](MIGRATION_GUIDE.md), [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
+The target diagrams retain the complete product map; conceptual target entities do not claim that every table exists. The implemented diagrams depict a selected subset of physical relations represented in the current **60 SQL sources**, with `PRIVATE_*` aliases mapped to unexposed private relations below. They are not a complete schema dump or a claim that every later replacement routine, optional-module adapter or constraint is diagrammed. The 36 published main sources remain byte-identical; 24 PR17 files follow that prefix. Actual migration replay, SQL constraints, explicit grants/RLS and owning tests are authoritative. This source map does not claim the current combined native gate, hosted installation or platform acceptance has passed. See [ARCHITECTURE](ARCHITECTURE.md), [MIGRATION_GUIDE](MIGRATION_GUIDE.md), [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
 
 ## Core target relations
 
@@ -205,7 +205,7 @@ erDiagram
 
 A comment references exactly one job or template, enforced by a database constraint. Cursor indexes order each resource; actor request UUIDs deduplicate concurrent submissions and actor locks serialize rate checks. Private revisions are not ordinary reader data. A profile avatar selects an exact immutable clean image version; its owner-only metadata table does not grant peers the underlying personal document. Peer display uses the separate current-profile projection and authenticated gateway.
 
-Source versions have stable provider/code/file/hash identity. LPC3/LPC4 each retain two real PDF variants under one block. Template/run provenance freezes when a linked job exists. The private course-offer request ledger binds the original financial request and resulting existing-run job; client full-fee requests remain in the existing client ledger when actually known. No new duplicate source columns are added to job/claim snapshots. See [CBW_TEMPLATES](CBW_TEMPLATES.md), [RESOURCE_COMMENTS](RESOURCE_COMMENTS.md) and [PROFILE_AVATARS](PROFILE_AVATARS.md).
+Source versions have stable provider/code/file/hash identity. LPC3/LPC4 each retain two real PDF variants under one block. Template/run provenance freezes when a linked job exists. The private course-offer request ledger binds the original financial request and resulting existing-run job; client full-fee requests remain in the existing client ledger when actually known. No new duplicate source columns are added to job/claim snapshots. See [COURSE_BUILDING_BLOCKS](COURSE_BUILDING_BLOCKS.md), [RESOURCE_COMMENTS](RESOURCE_COMMENTS.md) and [PROFILE_AVATARS](PROFILE_AVATARS.md).
 
 ## Implemented M6 operations additions
 
@@ -478,7 +478,7 @@ The three additive sources are `20261116022735_scoped_administrative_job_pickers
 `20261116022736_global_calendar_publications` and
 `20261116022737_qualification_evidence_and_attestation_history`. Together with the
 29 earlier migration sources these form the historical 32-migration M7/M8 model.
-The following fourteen sources extend the current inventory to 46. Focused source,
+The following diagram covers the fourteen-source operational cohort depicted here, not every later addition in the current 60-source inventory. Focused source,
 SQL/component/Edge checks do not establish combined native acceptance.
 
 ## Implemented personal settings and external delivery
@@ -585,7 +585,7 @@ Brief JSON stores whole teaching units, 45/60-minute units, preparation instruct
 ## Required constraints and ownership
 
 - Stable UUID foreign keys with explicit deletion behaviour; no accidental cascading deletion of executed contracts or accepted assignments. Unique role/permission/expertise and room membership joins. Verification is server-managed independently of lecturer self-selected expertise.
-- Templates contain reusable course content; runs contain actual delivery/customer context; sessions contain canonical instants and intended display zone. A job includes one or more complete sessions. Legacy/client/CBW jobs keep capacity one; explicit new administrative per-position jobs support 1–20. Job locks, confirmed-count checks and unique active job/lecturer claims protect capacity without partial multi-session allocation.
+- Templates contain reusable course content; runs contain actual delivery/customer context; sessions contain canonical instants and intended display zone. A job includes one or more complete sessions. Legacy/client/Course jobs keep capacity one; explicit new administrative per-position jobs support 1–20. Job locks, confirmed-count checks and unique active job/lecturer claims protect capacity without partial multi-session allocation.
 - Claims own immutable accepted amount/currency/rate unit/terms and the applicable executed-contract row. Its immutable file reference/hash fixes the agreement evidence when present. Idempotency keys are scoped to actor/request; claim events and notifications deduplicate by committed event. A later job edit never rewrites accepted terms.
 - Allocation intervals use non-overlap protection per lecturer across jobs, together with transaction locking; private events/availability are included in server-side eligibility. Every session reserves or the entire transaction rolls back.
 - Personal events belong solely to their creator. Global events require explicit publication. Business contacts/internal notes, contracts, CVs/evidence and invoices need separate capabilities or resource membership. Private room membership is not implied by admin status.
@@ -634,4 +634,4 @@ Additional operational boundaries:
 | Calendar capability / offline schedule   | Explicit owner opt-in; expiry/revocation and identity clearing  | No administrator calendar bypass; no general private-response cache                 |
 | Notification channel/device              | Own preference/device; current eligible event                   | Service-only delivery leases do not grant browser data access                       |
 
-See [CHAT_SECURITY](CHAT_SECURITY.md), [KNOWLEDGE_SECURITY](KNOWLEDGE_SECURITY.md), [COMMERCIAL_SECURITY](COMMERCIAL_SECURITY.md), [OPERATIONS](OPERATIONS.md) and [BACKEND_SECURITY_REVIEW](BACKEND_SECURITY_REVIEW.md) for tested boundaries and outstanding acceptance. The current combined 46-migration native result is recorded separately in QA/work logs; authored cases and focused passes do not establish that result. Tombstones, archives and audit revisions preserve data; none is a production legal-erasure or retention-policy guarantee.
+See [CHAT_SECURITY](CHAT_SECURITY.md), [KNOWLEDGE_SECURITY](KNOWLEDGE_SECURITY.md), [COMMERCIAL_SECURITY](COMMERCIAL_SECURITY.md), [OPERATIONS](OPERATIONS.md) and [BACKEND_SECURITY_REVIEW](BACKEND_SECURITY_REVIEW.md) for tested boundaries and outstanding acceptance. Current combined 60-source native acceptance is recorded separately in QA/work logs; authored cases and focused passes do not establish that result. Tombstones, archives and audit revisions preserve data; none is a production legal-erasure or retention-policy guarantee.

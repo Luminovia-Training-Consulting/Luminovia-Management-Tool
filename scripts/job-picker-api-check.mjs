@@ -262,8 +262,23 @@ await withApiFixture(
     assert.equal(doc.job_id, ids[0]);
     assert.equal(doc.scope, "job_after");
     assert.equal(doc.status, "quarantined");
-    // Even an unchanged administrative role cannot be self-assigned. Prove
-    // this guard before checking suspension with the same issued MFA token.
+    // Current authority rejects self role writes even when the submitted set
+    // matches. Prove denial leaves roles and audit history unchanged before
+    // the separate existing-token suspension check below.
+    const actualRoles = () =>
+      checked(
+        admin.client
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", admin.id)
+          .order("role"),
+        "Read current actor roles through actual RLS",
+      );
+    const rolesBeforeSelfWrite = await actualRoles();
+    assert.deepEqual(rolesBeforeSelfWrite, [{ role: "admin" }]);
+    const auditBeforeSelfWrite = await sql(
+      `select count(*) from public.audit_events where actor_id=${q(admin.id)}`,
+    );
     assert.equal(
       (
         await admin.client.rpc("set_account_roles", {
@@ -273,12 +288,12 @@ await withApiFixture(
       ).error?.code,
       "42501",
     );
-    assert.deepEqual(
-      await checked(
-        admin.client.from("user_roles").select("role").eq("user_id", admin.id),
-        "Read unchanged own roles through RLS",
+    assert.deepEqual(await actualRoles(), rolesBeforeSelfWrite);
+    assert.equal(
+      await sql(
+        `select count(*) from public.audit_events where actor_id=${q(admin.id)}`,
       ),
-      [{ role: "admin" }],
+      auditBeforeSelfWrite,
     );
     await sql(
       `update public.profiles set active=false where id=${q(admin.id)}`,
@@ -293,7 +308,7 @@ await withApiFixture(
       "42501",
     );
     console.log(
-      "PASS: actual Auth/MFA/REST scoped-picker roles; unchanged1000cap→1059jobs/1057distinctruns; literal/metadata privacy/cursor; real selected upload reservation and participant channel; existing-token suspension.",
+      "PASS: actual Auth/MFA/REST scoped-picker roles; unchanged1000cap→1059jobs/1057distinctruns; literal/metadata privacy/cursor; real selected upload reservation and participant channel; self-role refusal without role/audit mutation; existing-token suspension.",
     );
   },
 );

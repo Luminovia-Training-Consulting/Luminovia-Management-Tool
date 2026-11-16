@@ -1,6 +1,7 @@
 /**
- * Single messages with safe text links, reactions and own-edit controls. Visible author/time
- * rules guide the UI; chat RPCs reauthorize versioned mutations and structured mentions.
+ * Safe message text, reactions, versioned mentions and permitted edit/moderation
+ * controls. Versioned edits reuse stable request identities; room RPCs authorise
+ * mutations under current membership and resource state.
  */
 import { Fragment, useRef, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";

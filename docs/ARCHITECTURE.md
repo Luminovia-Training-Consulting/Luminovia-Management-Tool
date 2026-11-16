@@ -1,6 +1,6 @@
 # Architecture and decisions
 
-Source checkpoint: **58 additive migrations**, including the byte-identical26-source accepted main, eight M7/M8 discovery/evidence/publication sources and twenty-four smart-operations sources through `20261116065156_course_document_dedicated_registry_isolation.sql`. The ordered model includes current actor-role quotes, immutable recipient-specific substitution consent, current-status receipts, own Teaching Day course/contact context, effective-amendment forecasts and dedicated private-document isolation. Current-main catalogue/core integration and forward version reconciliation remain required before the next complete acceptance. Earlier accepted local/CI checkpoints and the current combined verification belong in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md); this inventory does not declare the merged revision accepted or installed. [ERD](ERD.md) maps physical relations, [MIGRATION_GUIDE](MIGRATION_GUIDE.md) explains source order and [API_REFERENCE](API_REFERENCE.md) inventories replayed interfaces. The full target remains [PRODUCT_SPEC](PRODUCT_SPEC.md) and the authoritative [master prompt](UNIVERSAL_MASTER_PROMPT.txt). Hosted state, external delivery and platform acceptance remain separate operational evidence.
+This integration preserves the published main migration history and adds the PR17 smart-operations sources. The ordered model includes current actor-role quotes, immutable recipient-specific substitution consent, current-status receipts, own Teaching Day course/contact context, effective-amendment forecasts and dedicated private-document isolation. The current combined source requires fresh and retained-data replay plus the complete application/native acceptance; previous source-bound results remain in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md). [ERD](ERD.md) maps physical relations, [MIGRATION_GUIDE](MIGRATION_GUIDE.md) explains source order and [API_REFERENCE](API_REFERENCE.md) inventories replayed interfaces. The full target remains [PRODUCT_SPEC](PRODUCT_SPEC.md) and the authoritative [master prompt](UNIVERSAL_MASTER_PROMPT.txt). Hosted state, external delivery and platform acceptance remain separate operational evidence.
 
 ## ADR-001 — separate private portal and static frontend
 
@@ -14,7 +14,7 @@ TanStack Query manages remote state through `@supabase/supabase-js`; no duplicat
 
 M1 public API contract (subject to migration ownership): `get_my_permissions()` returns capability names; own `profiles` uses `id`, `display_name`, `bio_de`, `bio_en`, `phone`, `time_zone`, `locale`, `active` with restricted self-edit fields. `topics` and `lecturer_topics` distinguish self-selected expertise from protected verification. Jobs expose nested `job_sessions`/`job_requirements`. `set_job_status(p_job_id, p_status)` allows audited draft/published/archived transitions and refuses silent changes to filled work. `claim_job(p_job_id, p_idempotency_key, p_terms_version)` returns a truthful status and optional claim ID. `create_job(p_payload jsonb)` requires `jobs.manage` and AAL2 and creates the complete supported block atomically. Private events stay owner-only. Check backend notes for the final full payload, validation and result codes before adding callers.
 
-Current routes include Auth, dashboard, jobs/detail, calendar, chats, files, knowledge, client/people/course and commercial screens. M6 adds `/topics`, `/availability`, `/notifications`, `/settings` and `/admin/audit`; M7 adds `/announcements` and `/admin/announcements`. The actual route definitions are in `src/app/app.tsx`; a route or navigation item is not evidence that the full target module is complete.
+Current routes include Auth, dashboard, jobs/detail, calendar, chats, files, knowledge, client/people/course and commercial screens. M6 adds `/topics`, `/availability`, `/notifications`, `/settings` and `/admin/audit`; M7 adds `/announcements` and `/admin/announcements`. PR18 also adds the own-account `/welcome` guide and private compensation administration. The actual route definitions are in `src/app/app.tsx`; a route or navigation item is not evidence that the full target module is complete.
 
 Feature flow: component → validated form/query/mutation → Supabase Auth/data API/RPC → permission/RLS + constraints → committed database records → query invalidation/refetch. Claims, messages and uploads show success only after server confirmation. A failed write never becomes a local confirmed allocation.
 
@@ -26,7 +26,7 @@ User self-service edits must not change identity, verified qualification fields,
 
 ## ADR-004 — PostgreSQL owns claims and scheduling
 
-The original M1 single-position API remains compatible. M6 adds explicit capacity 1–20 for new standalone per-position administrative offers. Existing offers, CBW run offers and client requests retain their capacity-one commercial meaning. `claim_job` still authenticates the current actor, checks qualifications, the applicable contract and current terms, locks the lecturer scheduling boundary and job, and allocates every session atomically. Confirmed claims are unique per job/lecturer, confirmed count cannot exceed capacity, and only unreleased intervals participate in the per-lecturer exclusion constraint. The final free position closes the offer. No UI drag operation confirms a booking.
+The original M1 single-position API remains compatible. M6 adds explicit capacity 1–20 for new standalone per-position administrative offers. Existing offers, catalogue-linked course offers and client requests retain their capacity-one commercial meaning. `claim_job` still authenticates the current actor, checks qualifications, the applicable contract and current terms, locks the lecturer scheduling boundary and job, and allocates every session atomically. Confirmed claims are unique per job/lecturer, confirmed count cannot exceed capacity, and only unreleased intervals participate in the per-lecturer exclusion constraint. The final free position closes the offer. No UI drag operation confirms a booking.
 
 Accepted compensation, currency, contract, sessions and revenue remain immutable history. `cancel_job_assignment` requires current management permission/MFA and an explicit reason, refuses started or invoiced work, releases the complete interval block and updates intended course-room membership. Cancellation closes the offer to `draft`; replacement requires the separate audited `manage_job_offer` reopen action. Existing other confirmed positions remain accepted. Invoice submission and cancellation share the lecturer mutex, preventing a late invoice from attaching to a concurrently cancelled claim. These operations record tracking/audit state, not bank refunds or transfers. See [JOB_LIFECYCLE](JOB_LIFECYCLE.md).
 
@@ -106,25 +106,27 @@ Client membership is explicit per active organisation and rechecked on every sco
 
 Separate profile-detail and review projections share only intentional authored biography/expertise/labels. Course history derives its phase from real confirmed assignment instants; links appear only when the viewer can open the course. Optional learners are enrolled by authorised management and may review a real assigned teacher only after recorded completion. Reviews use optimistic versions, identity-safe public projections and reasoned MFA moderation. Neither the administrator functional-role fallback nor profile access grants private DM/calendar membership. See [profile boundaries](PROFILES_REVIEWS.md).
 
-## ADR-013 — verified automatic development releases
+## ADR-013 — verified explicitly published development releases
 
-The user requested automatic GitHub updates without repeated cloning. Successful exact-main CI builds a public, immutable, content-hashed release; the VPS checks every five minutes and keeps its credentials/data locally. Installation pauses backend writers for a backup, preserves historical migration source and private configuration, applies eligible incremental SQL, and promotes a static release through the stable mounted parent. PostgreSQL major changes and unsafe/out-of-order migrations require operator review. OS security updates share a lock with application deployments. This is an authorised development release path, not automatic production publishing or uncontrolled dependency/engine upgrades. See [automatic update policy](HOSTINGER_AUTOMATIC_UPDATES.md).
+The source retains immutable, content-hashed development releases and the existing five-minute VPS poller. Under the accepted local-first policy, ordinary main CI, PR merges and maintenance verification do not publish a release. Publication requires an authorised main-only manual dispatch with `publish_release=true`, the exact current main SHA as `expected_commit`, and every existing release gate. A previously published release is eligible for installation only for exact current main; normal checks do not manufacture a missing release.
 
-## ADR-014 — reusable CBW provenance, teaching discussions and scoped avatars
+An installation pauses backend writers for a backup, preserves historical migration source and private configuration, applies eligible incremental SQL, and promotes a static release through the stable mounted parent. PostgreSQL major changes and unsafe/out-of-order migrations require operator review. OS security updates share a lock with application deployments. This source/automation boundary is not production approval or proof of an actual server installation. See [automatic update policy](HOSTINGER_AUTOMATIC_UPDATES.md), [local-first publication](GITHUB_WORKFLOW.md) and ADR-032 for reviewed migration plans.
 
-CBW course content is a versioned source catalogue, not a set of duplicated job drafts. The reviewed JSON represents 24 originals under 22 canonical Kurzzeichen. Each source stores filename/hash/pages/dates; raw PDFs, source authors and machine-local paths are excluded. Course templates reference exact source versions; actual runs keep customer/delivery/session identity. New offers derive from locked existing resources and require the reviewed source revision. Stable source links freeze once a job exists, while a different edition uses a new template. Existing accepted monetary/term snapshots are unchanged.
+## ADR-014 — reusable course provenance, teaching discussions and scoped avatars
+
+Reusable course content is a versioned source catalogue, not a set of duplicated job drafts. The reviewed JSON represents 24 originals under 22 canonical Kurzzeichen. Each source stores filename/hash/pages/dates; raw PDFs, source authors and machine-local paths are excluded. Course templates reference exact source versions; actual runs keep customer/delivery/session identity. New offers derive from locked existing resources and require the reviewed source revision. Stable source links freeze once a job exists, while a different edition uses a new template. Existing accepted monetary/term snapshots are unchanged.
 
 Staff discussions use one resource-comment implementation for jobs and course templates. Job visibility is shared through private.can_read_job; authorised enrolled/client course access does not grant staff discussion. Text, author/version/idempotency, cursor limits, withdrawals and MFA moderation live in private rows/revisions. React renders literal text; a resource/actor switch resets unsent drafts. No comment rewrites accepted terms.
 
 Profile pictures reuse clean immutable private document versions. The editor rasterises a bounded metadata-free PNG; the server independently validates its structure/dimensions and actual ClamAV result. A separate selected-avatar projection uses current person visibility, and the file gateway rechecks selection/access after retrieving bytes. Generic personal-document ACLs remain unchanged. Actor-bound Blob URLs are memory-only and revoked on identity/version/offline/unmount changes.
 
-[Developer guide](DEVELOPER_GUIDE.md), [CBW details](CBW_TEMPLATES.md), [comment contract](RESOURCE_COMMENTS.md), [avatar boundary](PROFILE_AVATARS.md) and [functional audit](FUNCTIONAL_CODE_AUDIT.md) record the owning implementation and verification. Compiler-based source/export/RPC and documentation-link checks supplement actual SQL/API/browser tests; they do not replace runtime authorisation.
+[Developer guide](DEVELOPER_GUIDE.md), [course building blocks](COURSE_BUILDING_BLOCKS.md), [comment contract](RESOURCE_COMMENTS.md), [avatar boundary](PROFILE_AVATARS.md) and [functional audit](FUNCTIONAL_CODE_AUDIT.md) record the owning implementation and verification. Compiler-based source/export/RPC and documentation-link checks supplement actual SQL/API/browser tests; they do not replace runtime authorisation.
 
 ## ADR-015 — shared local QA ownership and bounded revalidation
 
 All checkouts of this user/machine share fixed isolated test ports. A per-checkout marker cannot exclude another worktree, as an actual concurrent test demonstrated. Acquire a private kernel flock before snapshots/proxy/service work, retain its inode, then probe the fixed ports to refuse legacy/unrelated listeners. The kernel releases ownership on process exit; PID metadata is diagnostic. Linux util-linux is an explicit prerequisite. A forced termination can still leave services/local recovery state requiring ownership inspection.
 
-Application server state remains memory-only and actor-scoped, apart from the explicit minimal offline schedule in ADR-026. Settled files use bounded revalidation; active scans have a two-minute fast-check window. Exact avatar bytes are immutable by actor/target/version while selection/permission revalidation stays separate. Realtime hints batch for 150 ms and still fetch authorised rows; removal stays synchronous. A user-ID key on the protected Outlet clears local drafts on account switch while preserving same-actor refresh and public callback continuity. Full rationale/measurements: [SYSTEM_AUDIT](SYSTEM_AUDIT.md).
+Application server state remains memory-only and actor-scoped, apart from the explicit minimal offline schedule in ADR-028. Settled files use bounded revalidation; active scans have a two-minute fast-check window. Exact avatar bytes are immutable by actor/target/version while selection/permission revalidation stays separate. Realtime hints batch for 150 ms and still fetch authorised rows; removal stays synchronous. A user-ID key on the protected Outlet clears local drafts on account switch while preserving same-actor refresh and public callback continuity. Full rationale/measurements: [SYSTEM_AUDIT](SYSTEM_AUDIT.md).
 
 ## ADR-016 — bounded M7 discovery and private saved state
 
@@ -148,6 +150,14 @@ Money bounds/sorting require an explicit currency; rate comparisons additionally
 require a unit. Date filters use actual session overlap with local calendar-day
 boundaries in the selected IANA zone. Availability filtering never reserves work
 or replaces the online claim checks.
+
+The final role-aware discovery migration uses the current actor's authorized quote
+for discovery bounds, ordering, detail and dashboard-suggestion projections; its
+cursor fingerprint binds the actor's role/tier and policy context. The complete
+integrated database/API test result is still required. Raw zero sentinels
+are storage placeholders, not a free teaching offer or a comparison price. Every
+claim still requires consent to the exact server-returned quote and current role;
+management discovery must not reveal protected compensation.
 
 `private.document_organisation` stores each account's tags/virtual folder for an
 accessible document. It changes no shared filename, bytes, Storage path or access
@@ -313,44 +323,48 @@ edit event history. Privileged account/version purges have documented cascade
 semantics for controlled cleanup; this is not a retention UI or tamper-proof archive
 claim. See [QUALIFICATIONS](QUALIFICATIONS.md) and physical keys in [ERD](ERD.md).
 
+## ADR-022 — delegated authority and private role pricing
+
+Current database authority restricts account mutations to subordinate roles and targets, including invitation completion. Management receives role-assignment authority without the financial authority to grant company budgets. Company invitations may omit an organisation; only Administration can attach the financial membership. Role removal revokes old memberships. The same lifecycle lock serializes membership/role changes, and a profile lock serializes claims against changes to the claimant's role.
+
+Commercial policy is private operational data because repository source is public. An empty RLS-enabled private singleton is configured through an administrative MFA/CAS endpoint. New offers capture both private role percentages and the policy version; global changes affect future offers. Old accepted claims/revenue remain immutable. Raw role-priced job amounts are zero sentinels, while `job_offers()` returns the current lecturer's net quote or null protected Management pricing. Role-discriminated consent versions and complete UI quote fingerprints prevent unreviewed changes to the accepted amount. [Owning contract](DELEGATED_ROLES_PRICING.md).
+
+## ADR-023 — personal introduction and untrusted PR previews
+
+Welcome progress is private presentation state, accessed only by target-free own-account RPCs. Versioned online writes implement step changes, pause/resume, skip and restart. Server roles/permissions select the explanatory steps; the guide cannot grant authority or complete business actions. The shell resets protected caches when server-returned authority changes. [Guide](WELCOME_GUIDE.md).
+
+PR packaging runs with read-only permissions after complete application/native checks. A separate trusted default-branch metadata writer has deployment write authority and never executes contribution code or artifacts. Deployment metadata publication and cleanup are manual-only; an ordinary PR event or successful merge publishes neither a record nor a release. Its URL links the actual runnable package. The packaged launcher leaves the canonical archive/source intact and creates an owned private runtime with unique database volumes and separate ports. `source_head` and `tested_revision` are distinct manifest fields; a dynamic association with a newer PR head cannot make an old run current. No hosted per-PR backend or production deployment is implied. [Preview contract](PR_PREVIEWS.md).
+
 ## Current scope and evidence boundaries
 
-The 24 accepted M6 migrations remain unchanged. The five M7 additions are
-`20261116022730_chat_structured_mentions`,
-`20261116022731_file_discovery_personal_organisation`,
-`20261116022732_job_discovery_and_saved_views`,
-`20261116022733_notification_attention_preferences` and
-`20261116022734_portal_announcements`. Their private tables use RLS and revoke
+All 36 published main migrations remain byte-identical. The existing M7 additions provide structured chat mentions, private personal file organisation, bounded job discovery and saved views, attention preferences and announcements. Their private tables use RLS and revoke
 direct PUBLIC/anon/authenticated access. Public invoker wrappers call scoped
 private implementations with empty search paths and explicit authenticated
 execution grants; pure internal trigger/filter helpers revoke browser execution. Private routines
 needed by public wrappers retain their own current-actor/resource checks. Service credentials remain server-only. [ERD](ERD.md) records physical
 keys and exceptions rather than inferring grants from schema placement.
 
-M8 adds `20261116022735_scoped_administrative_job_pickers`,
-`20261116022736_global_calendar_publications` and
-`20261116022737_qualification_evidence_and_attestation_history`, bringing source to
-32 migrations at that checkpoint without replacing any earlier applied source. The operational checkpoint below adds fourteen sources, reaching 46 through `20261116042100`. The picker is a
+The published M8 extensions provide scoped administrative job pickers, explicit global-calendar publications and qualification evidence/attestation history. Their chronological source links are recorded in [MIGRATION_GUIDE](MIGRATION_GUIDE.md); still-undelivered PR17 sources follow the published prefix without changing released bytes. The picker is a
 projection; calendar extends the existing event table plus one private request
 ledger; qualification adds four private relations. New private tables use RLS and
 revoke direct browser access. See [JOB_PICKERS](JOB_PICKERS.md),
 [CALENDAR](CALENDAR.md) and [QUALIFICATIONS](QUALIFICATIONS.md).
 
-The newest-500 administrative job board remains explicitly bounded. Discovery, course, financial, search and resource projections retain their own documented windows/page limits; none raises the global REST row cap. The following ADRs describe the additional fourteen operational sources. They do not convert authored API/browser tests, earlier milestone passes or provider experiments into combined acceptance. Current outcomes belong in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
+The newest-500 administrative job board remains explicitly bounded. Discovery, course, financial, search and resource projections retain their own documented windows/page limits; no feature raises the global REST row cap. The following ADRs describe implemented PR17 source, including explicit substitutions, course resources, calendar exports and standalone delivery workers. Broader invitation/knowledge-resource/retention functions, live worker activation, actual provider/device delivery, production-scale recovery and physical-platform acceptance remain separate requirements. The combined native Auth/API/browser/PWA and retained-data gates must exercise current feature interactions; focused results and earlier milestone passes do not establish that combined result. Current actual outcomes belong in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
 
-## ADR-022 — personal presentation and explicit staff contact consent
+## ADR-024 — personal presentation and explicit staff contact consent
 
-`dashboard_preferences` saves only the current account's allowed widget order and visibility with a version check. `teaching_day` derives confirmed, unreleased assignments for the profile's current local day. Its `teaching_preparation` checklist is private to the owning assignment; it is separate from the shared course preparation in ADR-024. Presentation preferences confer no resource access and offline clicks cannot confirm a mutation.
+`dashboard_preferences` saves only the current account's allowed widget order and visibility with a version check. `teaching_day` derives confirmed, unreleased assignments for the profile's current local day. Its `teaching_preparation` checklist is private to the owning assignment; it is separate from the shared course preparation in ADR-026. Presentation preferences confer no resource access and offline clicks cannot confirm a mutation.
 
 `staff_contact_visibility` defaults to private. An active staff member may opt in separately to sharing their current Auth email and stored profile phone with other active staff. `person_contact` is a narrow projection; the existing people/profile projection is unchanged, clients/participants gain no directory contact right and administrators gain no consent override. Both preference editors use current identity and compare-and-swap. See [PERSONAL_DASHBOARD](PERSONAL_DASHBOARD.md) and [STAFF_CONTACT_VISIBILITY](STAFF_CONTACT_VISIBILITY.md).
 
-## ADR-023 — interest lists and explicit assignment substitution
+## ADR-025 — interest lists and explicit assignment substitution
 
 `job_waitlist` records interest, not a reservation, priority claim or routine approval queue. Reopening can notify currently eligible waiting lecturers; an ordinary online claim still wins the complete available position under the existing rules.
 
 `job_substitutions` binds a proposal to the original accepted claim, a specific target, an immutable quote/hash and expiry. Current owners or permitted managers may propose; only the target can explicitly accept the quoted terms. Acceptance locks both lecturer scheduling boundaries and the relevant job/claim, rechecks availability, qualification, contract, invoices and capacity, and atomically releases the old block and creates the new accepted block. No partial-day handover or browser-only allocation is introduced. Old accepted compensation remains historical. Private calendars are used only for eligibility and are not returned as candidate detail. See [ASSIGNMENT_HANDOVER](ASSIGNMENT_HANDOVER.md).
 
-## ADR-024 — scoped course workspaces and versioned customer briefs
+## ADR-026 — scoped course workspaces and versioned customer briefs
 
 `/learning` and `/courses/:id/workspace` consume `my_course_workspaces` and `course_workspace`. Current course managers, assigned confirmed lecturers, active enrolled/completed learners and linked customer organisations receive different projections. Shared preparation and the selected same-organisation contact are explicit course state; private organisation notes, contracts and personal preparation are not bundled into it.
 
@@ -360,7 +374,7 @@ Quiz publication creates immutable versions; learner projections omit correct an
 
 `client_request_briefs` adds whole required teaching units of 45/60 minutes, instructions, document requirements and explicit scanned material/report attachments to the existing original-currency request. Required teaching minutes must fit planned session time and do not derive prices. Creation retries compare the immutable first brief; later pre-publication edits use CAS and the publication row lock. `client_request_revisions` records baseline/submission, brief and lifecycle snapshots with bounded history cursors. Access remains the exact current customer organisation or existing gross-finance capability/MFA. Repeat booking copies requirements and teaching time into a fresh future request, without attachments or private learner records. Request material sharing does not widen ordinary file RLS or lecturer access to gross requests. See [CLIENT_REQUEST_BRIEFS](CLIENT_REQUEST_BRIEFS.md).
 
-## ADR-025 — workbench, finance facts and unified discovery
+## ADR-027 — workbench, finance facts and unified discovery
 
 `/workbench` stores private or operations tasks, immutable task history, reusable templates and idempotent template runs. A private task remains creator-only. Operations tasks require current teaching-team access and the applicable creator/assignee/management relationship. A task linked from a chat message additionally requires continuing access to the nondeleted source message; copying it does not grant a manager access to a private DM. Bulk state changes validate the entire bounded batch before committing. Personal favourites are references that are resolved again under current resource rights. Recommendations use permitted preferences and current job eligibility, never reserve a position. See [WORKBENCH](WORKBENCH.md).
 
@@ -368,7 +382,7 @@ Quiz publication creates immutable versions; learner projections omit correct an
 
 `unified_search` keyset-pages a server-authorised union across jobs, clean files, selected wiki revisions, forum, accessible chats, people, courses, clients, tasks and authorised commercial metadata. It derives the actor from Auth, accepts 2–100 search characters and returns at most 80 rows per page with a complete kind/title/UUID cursor. Search results, saved filters and favourites never substitute for the destination's permission check.
 
-## ADR-026 — private calendar files, subscriptions and opt-in offline schedule
+## ADR-028 — private calendar files, subscriptions and opt-in offline schedule
 
 `export_my_calendar` is a bounded current-owner projection of confirmed unreleased allocations and optionally the owner's private events. UTC instants preserve the intended IANA zone; ICS escaping/folding prevents authored text from becoming calendar fields. The UI obtains fresh authorised data before producing a file.
 
@@ -376,34 +390,22 @@ Quiz publication creates immutable versions; learner projections omit correct an
 
 Offline schedule is a separate explicit local opt-in. IndexedDB stores only the current owner's minimal teaching titles, instants and zones for a bounded snapshot; it excludes contacts, files, contracts, messages, quiz answers and private events. It expires after seven days. Identity generations, abort controllers and transaction cancellation prevent a delayed old-account write; sign-out/account changes clear the snapshot. Offline reads are visibly dated and cannot confirm claims, attendance or mutations. The service worker still caches only public shell/assets. See [CALENDAR_CONNECTIONS](CALENDAR_CONNECTIONS.md).
 
-## ADR-027 — committed notifications and separate external delivery
+## ADR-029 — committed notifications and separate external delivery
 
 The inbox remains the committed-event source. Private email and Web Push outboxes deduplicate notification occurrences, lease bounded batches and distinguish pending/leased/sending/accepted/suppressed/failed/uncertain outcomes. Worker prepare rechecks current recipient activation, channel preference, quiet hours and current event/resource eligibility immediately before handing off delivery. Course preparation, questions/answers, resource/quiz publication, attendance and completion changes, waitlists/substitution, tasks, timesheets and due reminders use scoped targets rather than leaking private content into generic messages. In-app quiet attention does not erase committed operational receipts.
 
 Email is an explicit per-account opt-in. SMTP credentials remain private operating configuration; verified TLS465 or mandatory STARTTLS587, retry bounds and uncertain acceptance handling belong to the worker/runbook. Push additionally requires explicit browser permission and an active device subscription; endpoint/key validation, provider bounds and private VAPID material remain server-side. Notifications contain generic text and require fresh authorisation after opening the destination. Local cryptographic/provider fixtures and headless browser permission results are not real-device delivery acceptance. Source/systemd templates do not prove a live timer, provider activation or delivery. See [NOTIFICATION_MAIL_OPERATIONS](NOTIFICATION_MAIL_OPERATIONS.md) and [WEB_PUSH](WEB_PUSH.md).
 
-## ADR-028 — protected printable facts use the existing Edge tier
+## ADR-030 — protected printable facts use the existing Edge tier
 
 `course-documents` reuses the Supabase Edge tier, not a new application server. Caller JWT/current Auth plus reviewed SQL facts determine course resource, request resource, attendance, completion, assignment-confirmation and earnings-statement downloads. It checks actual Auth and the same permission-bound facts both before and after Storage/rendering; changed/revoked facts fail closed. Resource bytes must match the exact reviewed SHA-256, and responses are private/no-store with attachment headers.
 
 The pinned, vendored pdf-lib/fontkit runtime and licensed DejaVu font ship with the release. Explicit fields, deterministic wrapping/pagination and supported-glyph checks avoid arbitrary private-object rendering or silent name alteration. Printed facts and hashes do not assert legal signatures, invoice submission or qualification certification. Read-only mounted assets, the actual self-hosted Edge font boundary and release-archive asset integrity have separate focused checks. The owner-reviewed extensions below are implemented source; combined and live acceptance remain separate.
 
-## ADR-029 — personal qualification passport
+## ADR-031 — personal qualification passport
 
 An active lecturer can explicitly export their own selected expertise. The API has no subject-ID parameter. Eligibility, self-declarations, current certificate availability and historical attestations remain distinct; missing legacy provenance stays unknown. One Edge-chosen instant binds both current facts reads and the hash. The deterministic DE/EN PDF creates no verification, public link or certificate-byte sharing. See [QUALIFICATION_PASSPORT](QUALIFICATION_PASSPORT.md).
 
-## ADR-030 — explicit reviewed migration release
+## ADR-032 — explicit reviewed migration release
 
 Unattended updates retain the existing strict classifier. An explicit root-private, expiring one-shot plan binds the exact immutable green current-main release, full installed history and pending source hashes. The reviewed path shares the host lock, requires a fresh encrypted backup and uses existing stopped-writer backup/physical-checkpoint/install/private-health/rollback. It repeats identity/history checks and expiry before durable consumption; failure requires a fresh review. No automatic plan discovery, history rewrite or rewind after admitting public writes is added. See [REVIEWED_MIGRATION_PLANS](REVIEWED_MIGRATION_PLANS.md).
-
-## ADR-016 — delegated authority and private role pricing
-
-Current database authority restricts account mutations to subordinate roles and targets, including invitation completion. Management receives role-assignment authority without the financial authority to grant company budgets. Company invitations may omit an organisation; only Administration can attach the financial membership. Role removal revokes old memberships. The same lifecycle lock serializes membership/role changes, and a profile lock serializes claims against changes to the claimant's role.
-
-Commercial policy is private operational data because repository source is public. An empty RLS-enabled private singleton is configured through an administrative MFA/CAS endpoint. New offers capture both private role percentages and the policy version; global changes affect future offers. Old accepted claims/revenue remain immutable. Raw role-priced job amounts are zero sentinels, while `job_offers()` returns the current lecturer's net quote or null protected Management pricing. Role-discriminated consent versions and complete UI quote fingerprints prevent unreviewed changes to the accepted amount. [Owning contract](DELEGATED_ROLES_PRICING.md).
-
-## ADR-017 — personal introduction and untrusted PR previews
-
-Welcome progress is private presentation state, accessed only by target-free own-account RPCs. Versioned online writes implement step changes, pause/resume, skip and restart. Server roles/permissions select the explanatory steps; the guide cannot grant authority or complete business actions. The shell resets protected caches when server-returned authority changes. [Guide](WELCOME_GUIDE.md).
-
-PR packaging runs with read-only permissions after complete application/native checks. A separate trusted default-branch metadata writer has deployment write authority and never executes contribution code or artifacts. Its URL links the actual runnable package. The packaged launcher leaves the canonical archive/source intact and creates an owned private runtime with unique database volumes and separate ports. `source_head` and `tested_revision` are distinct manifest fields; a dynamic association with a newer PR head cannot make an old run current. No hosted per-PR backend or production deployment is implied. [Preview contract](PR_PREVIEWS.md).

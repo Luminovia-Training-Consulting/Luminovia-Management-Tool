@@ -1,3 +1,8 @@
+/**
+ * Waitlist and recipient-consent regressions with isolated SDK/query fixtures.
+ * Current quote refreshes must not reuse acknowledgement of an older deal;
+ * native concurrency and permissions remain covered by separate database suites.
+ */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -155,6 +160,162 @@ it("exact quoted terms need explicit consent and a conflicting response never an
   expect(
     screen.queryByText(/Die Vertretung ist verbindlich bestätigt/),
   ).not.toBeInTheDocument();
+});
+
+/** Refresh the existing query observer rather than remounting the offer component. */
+async function replaceCurrentOffer(updated: ReturnType<typeof offer>) {
+  fake.responses.job_substitutions = [updated];
+  await act(async () => {
+    client.setQueryData(
+      ["job-substitutions", "replacement", "inbox"],
+      [updated],
+    );
+  });
+}
+
+it.each([
+  [
+    "rate",
+    (value: ReturnType<typeof offer>) => ({
+      ...value,
+      quote: { ...value.quote, amount: 0 },
+    }),
+  ],
+  [
+    "total",
+    (value: ReturnType<typeof offer>) => ({
+      ...value,
+      quote: { ...value.quote, total_amount: 725 },
+    }),
+  ],
+  [
+    "currency",
+    (value: ReturnType<typeof offer>) => ({
+      ...value,
+      quote: { ...value.quote, currency: "AUD" },
+    }),
+  ],
+  [
+    "rate unit",
+    (value: ReturnType<typeof offer>) => ({
+      ...value,
+      quote: { ...value.quote, rate_unit: "fixed_total" },
+    }),
+  ],
+  [
+    "terms text",
+    (value: ReturnType<typeof offer>) => ({
+      ...value,
+      quote: { ...value.quote, terms: "Changed fictional terms" },
+    }),
+  ],
+  [
+    "terms version",
+    (value: ReturnType<typeof offer>) => ({
+      ...value,
+      quote: { ...value.quote, terms_version: 2 },
+    }),
+  ],
+  [
+    "server quote hash",
+    (value: ReturnType<typeof offer>) => ({
+      ...value,
+      quote_hash: "2".repeat(64),
+    }),
+  ],
+  [
+    "session",
+    (value: ReturnType<typeof offer>) => ({
+      ...value,
+      quote: {
+        ...value.quote,
+        sessions: [
+          { ...value.quote.sessions[0], ends_at: "2047-06-01T15:00:00Z" },
+        ],
+      },
+    }),
+  ],
+  [
+    "contract prerequisite",
+    (value: ReturnType<typeof offer>) => ({
+      ...value,
+      quote: { ...value.quote, requires_contract: true },
+    }),
+  ],
+  [
+    "teaching location",
+    (value: ReturnType<typeof offer>) => ({
+      ...value,
+      quote: { ...value.quote, location: "Changed fictional venue" },
+    }),
+  ],
+] as const)(
+  "requires fresh consent when the same substitution changes its %s",
+  async (_label, change) => {
+    const user = userEvent.setup();
+    mount(<SubstitutionOffers />);
+    await screen.findByText("Immutable reviewed fictional terms");
+    await user.click(screen.getByRole("checkbox"));
+    expect(
+      screen.getByRole("button", { name: "Vertretung verbindlich übernehmen" }),
+    ).toBeEnabled();
+
+    const changed = change(offer());
+    await replaceCurrentOffer(changed);
+    await waitFor(() => expect(screen.getByRole("checkbox")).not.toBeChecked());
+    const accept = screen.getByRole("button", {
+      name: "Vertretung verbindlich übernehmen",
+    });
+    expect(accept).toBeDisabled();
+    await user.click(accept);
+    expect(
+      fake.rpc.mock.calls.some(([name]) => name === "respond_job_substitution"),
+    ).toBe(false);
+
+    // Returning to an older snapshot must not resurrect its former acknowledgement.
+    await replaceCurrentOffer(offer());
+    await waitFor(() => expect(screen.getByRole("checkbox")).not.toBeChecked());
+    await replaceCurrentOffer(changed);
+    await user.click(screen.getByRole("checkbox"));
+    fake.responses.respond_job_substitution = { status: "conflict" };
+    await user.click(
+      screen.getByRole("button", { name: "Vertretung verbindlich übernehmen" }),
+    );
+    await waitFor(() =>
+      expect(fake.rpc).toHaveBeenCalledWith(
+        "respond_job_substitution",
+        expect.objectContaining({
+          p_offer_id: changed.id,
+          p_quote_hash: changed.quote_hash,
+          p_accept_terms: true,
+        }),
+      ),
+    );
+  },
+);
+
+it("preserves explicit substitution consent across an unchanged server refresh and UI language change", async () => {
+  const user = userEvent.setup();
+  mount(<SubstitutionOffers />);
+  await screen.findByText("Immutable reviewed fictional terms");
+  await user.click(screen.getByRole("checkbox"));
+  await replaceCurrentOffer({
+    ...offer(),
+    quote: {
+      ...offer().quote,
+      sessions: offer().quote.sessions.map((item) => ({ ...item })),
+    },
+  });
+  await act(async () => {
+    await i18n.changeLanguage("en");
+  });
+  expect(screen.getByRole("checkbox")).toBeChecked();
+  expect(
+    screen.getByRole("button", { name: "Accept substitution now" }),
+  ).toBeEnabled();
+  expect(
+    fake.rpc.mock.calls.some(([name]) => name === "respond_job_substitution"),
+  ).toBe(false);
 });
 
 it("a successful online response refreshes the immutable quote and survives a UI language change without refetch", async () => {

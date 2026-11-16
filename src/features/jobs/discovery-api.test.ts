@@ -45,12 +45,13 @@ describe("discovery data contracts", () => {
       filters: defaultJobFilters,
     };
     expect(discoveryPageSchema.parse(page).items[0].total_amount).toBeNull();
-    expect(
-      discoveryPageSchema.safeParse({
-        ...page,
-        items: [{ ...item, amount: "0", total_amount: "0" }],
-      }).success,
-    ).toBe(false);
+    for (const invalid of ["0", "", undefined, true, [], {}, -1, Infinity, NaN])
+      expect(
+        discoveryPageSchema.safeParse({
+          ...page,
+          items: [{ ...item, amount: invalid, total_amount: invalid }],
+        }).success,
+      ).toBe(false);
     expect(
       discoveryPageSchema.parse({
         ...page,

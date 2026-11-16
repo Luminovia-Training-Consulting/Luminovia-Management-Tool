@@ -92,10 +92,10 @@ export default defineConfig(({ mode }) => {
         thresholds: {
           // Whole-source regression floor, measured with uncovered UI included.
           // End-to-end browser execution is not merged into these unit figures.
-          statements: 46.5,
-          branches: 41,
-          functions: 36.5,
-          lines: 48,
+          statements: 62.5,
+          branches: 56.5,
+          functions: 53,
+          lines: 64.5,
           "**/scripts/public-config.ts": { 100: true },
           "**/src/lib/dates.ts": { 100: true },
           "**/src/features/operations/schedule.ts": { 100: true },

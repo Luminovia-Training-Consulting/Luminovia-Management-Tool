@@ -1,4 +1,4 @@
-/** Server-filtered offers and private saved views; role transitions reset quote-bearing page state. */
+/** Server-filtered offers and own saved views; observed roles scope quote-bearing pages. */
 import { MyJobWaitlist, SubstitutionOffers } from "./lifecycle-extra";
 import { useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";

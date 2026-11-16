@@ -129,7 +129,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
     await sql(
       await readFile(
         new URL(
-          "../supabase/migrations/20261116045011_role_aware_handover_and_forecast.sql",
+          "../supabase/migrations/20261116091025_role_aware_handover_and_forecast.sql",
           import.meta.url,
         ),
         "utf8",
@@ -139,7 +139,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
     await sql(
       await readFile(
         new URL(
-          "../supabase/migrations/20261116051736_substitution_withdrawal_permission_recheck.sql",
+          "../supabase/migrations/20261116091026_substitution_withdrawal_permission_recheck.sql",
           import.meta.url,
         ),
         "utf8",
@@ -148,7 +148,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
     await sql(
       await readFile(
         new URL(
-          "../supabase/migrations/20261116052910_substitution_receipt_current_status.sql",
+          "../supabase/migrations/20261116091029_substitution_receipt_current_status.sql",
           import.meta.url,
         ),
         "utf8",
@@ -157,7 +157,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
     await sql(
       await readFile(
         new URL(
-          "../supabase/migrations/20261116054135_substitution_retry_current_lecturer_authority.sql",
+          "../supabase/migrations/20261116091030_substitution_retry_current_lecturer_authority.sql",
           import.meta.url,
         ),
         "utf8",
@@ -839,5 +839,5 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
       `${checks} role-aware handover/forecast PostgreSQL groups passed.`,
     );
   },
-  { migrationsThrough: "20261116045010" },
+  { migrationsThrough: "20261116091024" },
 );

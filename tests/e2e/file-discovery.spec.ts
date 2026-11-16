@@ -157,18 +157,29 @@ test("file discovery pages, scans, privately organises and downloads unchanged b
     await context.setOffline(false);
     await page.reload();
     await page.getByLabel("Filter by your tag", { exact: true }).fill(tag);
-    // The tag exists in the unfiltered row too. Wait for the debounced server
-    // filter before opening native details, which a pending row remount closes.
+    // The tag already exists on the unfiltered row. Wait for the actual
+    // debounced filter result before beginning a separate archive gesture.
     await expect(
       page.getByText("1 file loaded", { exact: true }),
     ).toBeVisible();
     await expect(file().getByText(tag, { exact: true })).toBeVisible();
     await file().getByLabel(`File name: ${name}`, { exact: true }).click();
     await file().getByRole("button", { name: "Archive", exact: true }).click();
+    const archiveAcknowledged = page.waitForResponse((response) => {
+      const request = response.request();
+      if (
+        request.method() !== "POST" ||
+        !new URL(response.url()).pathname.endsWith("/rpc/rename_document")
+      )
+        return false;
+      const input = request.postDataJSON();
+      return input.p_name === name && input.p_delete === true;
+    });
     await page
       .getByRole("dialog")
       .getByRole("button", { name: "Archive", exact: true })
       .click();
+    expect((await archiveAcknowledged).ok()).toBe(true);
     await expect(page.getByText(name, { exact: true })).toHaveCount(0);
   } finally {
     await context.setOffline(false);

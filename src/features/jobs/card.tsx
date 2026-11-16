@@ -1,4 +1,4 @@
-/** Displays one current authorized prospective quote; hidden compensation never becomes a zero fee. */
+/** Actor-authorized marketplace card; hidden compensation never becomes a zero-price offer. */
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
@@ -6,7 +6,7 @@ import type { Job } from "../../lib/types";
 import { dateTime, money } from "../../lib/dates";
 import "./lifecycle-i18n";
 import "../commercial/platform-i18n";
-/** Render only the supplied current quote; a null fee is a restricted value, not a price. */
+/** Render the server's current quote and earliest session without inferring protected prices. */
 export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
   const { t, i18n } = useTranslation();
   const lifeText = useTranslation("jobLifecycle").t;

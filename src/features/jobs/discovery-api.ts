@@ -1,4 +1,4 @@
-/** Current-actor discovery/detail/dashboard DTOs preserve restricted quotes as null, never zero. */
+/** Current-actor discovery/detail/dashboard contracts preserve restricted compensation as null. */
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
@@ -134,6 +134,8 @@ const jobSchema = z.object({
   location: z.string(),
   time_zone: z.string().refine(validZone),
   status: z.enum(["draft", "published", "filled", "archived"]),
+  // Management may discover an offer without its private lecturer quote.
+  // Accept numeric or restricted-null values explicitly; coercion invents zero fees.
   amount: z.number().finite().nonnegative().nullable(),
   total_amount: z.number().finite().nonnegative().nullable(),
   currency: z.enum(["EUR", "AUD"]),
@@ -190,7 +192,7 @@ export const discoveryPageSchema = z
         message: "Inconsistent discovery pagination",
       });
   });
-/** Reset known role-context pages; server cursor checks remain authoritative for unobserved changes. */
+/** Start fresh infinite pages when an observed role changes; SQL checks unobserved cursor changes. */
 export const jobDiscoveryQuery = (
   actor: string,
   filters: JobFilters,

@@ -1,6 +1,7 @@
 /**
- * Job discovery and exact detail with current server authorization. The atomic claim
- * RPC alone confirms an entire assignment and preserves accepted commercial terms.
+ * Marketplace entry and exact actor-scoped job detail with immediate allocation.
+ * Discovery owns bounded server paging and URL filters; only the atomic online
+ * RPC confirms every session and preserves the accepted commercial snapshot.
  */
 import { JobPricingPanel } from "../commercial/pricing";
 import { JobLifecyclePanel } from "./lifecycle";
@@ -32,6 +33,7 @@ import {
 } from "../../components/common";
 import { BackLink } from "../../app/shell";
 export { JobCard } from "./card";
+/** Delegate URL filters, private saved views and bounded server paging to JobDiscovery. */
 export function Jobs() {
   return <JobDiscovery />;
 }
@@ -53,8 +55,8 @@ export function JobDetail() {
   const claims = useQuery(claimsQuery(session!.user.id));
   const profile = useQuery(profileQuery(session!.user.id));
   const job = jobs.data;
-  // Bind consent to the exact displayed offer as well as its server version.
-  // Role-specific compensation can change while the detail page stays mounted.
+  // Bind consent to the actor-authorized detail and every displayed quote field.
+  // A role or offer refresh may replace the price without changing the route.
   const consent = job
     ? JSON.stringify([
         job.id,

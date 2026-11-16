@@ -1,6 +1,7 @@
 /**
- * CV/certificate files in the personal evidence context. The supplied person identifies the
- * relationship; it never replaces server resource authorization or upload checks.
+ * CV/certificate files in a person's evidence context. The selected person does
+ * not replace server authorization; qualification downloads use their separate
+ * exact-version evidence binding rather than a general foreign-file grant.
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";

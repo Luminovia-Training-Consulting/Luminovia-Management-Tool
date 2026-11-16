@@ -65,11 +65,16 @@ const job: Job & {
   job_requirements: [],
 };
 /** Render the subject with local provider/router fixtures and an isolated QueryClient. */
-function setup(route = "/jobs/job-a", list = false) {
+function setup(
+  route = "/jobs/job-a",
+  list = false,
+  overrides: Partial<Job> = {},
+) {
+  const offer = { ...job, ...overrides };
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
-  client.setQueryData(["jobs", "detail", "lecturer-a", "job-a"], job);
+  client.setQueryData(["jobs", "detail", "lecturer-a", "job-a"], offer);
   client.setQueryData(["permissions", "lecturer-a"], []);
   client.setQueryData(["job-lifecycle", "lecturer-a", "job-a"], {
     version: 1,
@@ -92,7 +97,7 @@ function setup(route = "/jobs/job-a", list = false) {
       {
         pages: [
           {
-            items: parsed.data.from ? [] : [job],
+            items: parsed.data.from ? [] : [offer],
             has_more: false,
             next_cursor: null,
             as_of: new Date().toISOString(),
@@ -123,6 +128,12 @@ function setup(route = "/jobs/job-a", list = false) {
   return client;
 }
 describe("safe marketplace interactions", () => {
+  it("retains the protected quote state in a paged discovery card", () => {
+    setup("/jobs", true, { amount: null, total_amount: null });
+    expect(screen.getByText("Honorar geschützt")).toBeVisible();
+    expect(screen.queryByText("0,00 €")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Python Block" })).toBeVisible();
+  });
   it("shows restricted compensation without turning an unavailable amount into a zero-price offer", async () => {
     const client = setup();
     await act(async () =>
@@ -167,9 +178,11 @@ describe("safe marketplace interactions", () => {
     ).toHaveLength(0);
   });
   it.each([
-    { amount: 301, total_amount: 1505 },
+    { amount: 301 },
+    { total_amount: 1505 },
     { currency: "AUD" as const },
     { rate_unit: "per_hour" as const },
+    { terms: "Revised assignment terms" },
   ])(
     "requires new consent when the displayed quote changes without a version change: %j",
     async (quote) => {

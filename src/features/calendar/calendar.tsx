@@ -1,6 +1,7 @@
 /**
- * FullCalendar view of own events, confirmed assignments and published course sessions. Each
- * source retains its visibility rules; convert local form times to instants before mutations.
+ * FullCalendar view of own events, confirmed assignments, published global events
+ * and course sessions. Visible ranges bound global discovery; each source keeps
+ * its own ACL. Private form times become instants before server-confirmed writes.
  */
 import { Link } from "react-router-dom";
 import "../availability/i18n";
@@ -54,14 +55,14 @@ import {
 import { globalEventsQuery } from "./publications-api";
 import { GlobalEventDetails, GlobalEventManagement } from "./publications";
 import "./publications-i18n";
-/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
+/** Validate private-event form input; current server permissions and constraints remain authoritative. */
 const schema = z.object({
   title: z.string().trim().min(1).max(200),
   starts_at: z.string().min(1),
   ends_at: z.string().min(1),
   time_zone: z.string().refine(validZone),
 });
-/** Create a private event from unambiguous zoned input and invalidate the actor's event query. */
+/** Save or delete an own private event using zoned instants, then invalidate the actor's event query after confirmation. */
 function EventForm({
   userId,
   zone,

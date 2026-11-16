@@ -705,5 +705,5 @@ await withTestDatabase(
       `${checks} assignment waitlist/substitution PostgreSQL groups passed.`,
     );
   },
-  { migrationsThrough: "20261116031429" },
+  { migrationsThrough: "20261116091012" },
 );

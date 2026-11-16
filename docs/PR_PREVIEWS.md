@@ -1,8 +1,14 @@
 # PR checks and local preview packages
 
+Run `./portal check` on the local PC for fast feedback while editing, then
+`./portal test` for complete isolated acceptance before delivery. To test the
+latest `main` locally use `./portal github test`; `./portal github` starts its
+persistent local preview. These commands require no GitHub deployment or
+self-hosted Actions runner.
+
 Every pull request receives the existing build, TypeScript, style, coverage, security, application and native selfhost checks. This includes forks and Dependabot. GitHub may still require approval for first-time external workflow runs. Missing required labels continue to fail `PR metadata`; a preview package replaces neither this classification nor the separate security analysis.
 
-The new `PR preview package` job waits for all five quality jobs, coverage, `verify` and `Actual isolated selfhost image compatibility`. Only then does it create a downloadable package of the commit actually tested. Its own fresh checkout contains no credentials or reports from the preceding test run. The package contains:
+The `PR preview package` job waits for all five quality jobs, coverage, `verify` and `Actual isolated selfhost image compatibility`. Only then does it create a downloadable package of the commit actually tested. Creating the artifact does not create a GitHub Deployment record. Its own fresh checkout contains no credentials or reports from the preceding test run. The package contains:
 
 - `portal-source.tar.gz`: tracked application sources only, including migrations and the local launcher.
 - `manifest.json`: the PR head, tested merge commit, workflow run and attempt, and the source archive's SHA-256.
@@ -11,7 +17,7 @@ The new `PR preview package` job waits for all five quality jobs, coverage, `ver
 
 ## Try a package
 
-Open the link in the `PR preview package` job summary or the `pr-<number>-local-preview` GitHub deployment. The link points to a GitHub Actions artifact; downloading it normally requires signing in to GitHub. It is explicitly **not an internet-hosted portal instance**. GitHub retains the package for seven days unless it is deleted earlier.
+Open the link in the `PR preview package` job summary. If a maintainer explicitly publishes deployment metadata, its `pr-<number>-local-preview` record links to the same artifact. Downloading it normally requires signing in to GitHub. It is explicitly **not an internet-hosted portal instance**. GitHub retains the package for seven days unless it is deleted earlier.
 
 Review an external contribution's source before running it locally. It executes on your computer, including package installation and development tools. Extract the artifact into a new, dedicated directory. In that directory, run:
 
@@ -35,17 +41,42 @@ This command stops the separate preview while preserving its local data. `node p
 
 ## GitHub deployments and permissions
 
-The [pr-previews.yml](../.github/workflows/pr-previews.yml) workflow executes only the publisher from the trusted default branch. It has `deployments: write` and read-only permissions for sources, Actions and PR metadata. It does not install packages, download artifacts or execute PR code, and it receives no hosting secrets. The `pull_request_target` event is also used only to clean up metadata for a closed PR.
+The [pr-previews.yml](../.github/workflows/pr-previews.yml) workflow is
+**manual-only** and accepts dispatches on `main`. It has no automatic
+`workflow_run`, PR or scheduled deployment trigger. In GitHub Actions, choose
+`PR preview deployments` → `Run workflow` on `main`, then select:
+
+- `action=publish`, with the successful `Portal checks` run's `run_id` and exact
+  `run_attempt`, to publish its verified local artifact metadata.
+- `action=cleanup` (the default), to deactivate stale/closed/expired metadata
+  without publishing a new deployment. Run this deliberately when cleanup is
+  needed; PR closure and the passage of time no longer schedule it automatically.
+
+Publication requires an explicit user request. The workflow executes only the
+publisher from the trusted default branch. It has `deployments: write` and
+read-only permissions for sources, Actions and PR metadata. It does not install
+packages, download artifacts or execute PR code, and receives no hosting secrets.
 
 The publisher reconfirms the repository, actual workflow path, PR head, current workflow attempt and every expected successful job through GitHub's API. It reads only the metadata of the uniquely named, unexpired artifact, including its GitHub-provided digest. A newer run or a changed/closed PR must prevent an old result from being published as current. Fork payloads without a direct PR association are resolved through the associated commit API. Free-form PR text is never used as commands or URLs.
 
-The deployment is marked transient and non-production. Its status is `in_progress` during checks and `failure` when checks fail. Here, `success` explicitly means **“local preview package available for download”**; the supplied link points to the actual artifact. Closing a PR or publishing a newer preview deactivates older records. A daily metadata run deactivates expired, deleted or superseded packages. Other deployment tasks and production environments remain unchanged.
-
-The new trusted publisher becomes active through `workflow_run` only once its workflow and script files are on the default branch. The PR that first introduces it can already build its package. After reviewing the source, an authorised person can perform its first deployment publication once, using the same tested metadata publisher against the actual fully successful PR run. The process requires `GITHUB_REPOSITORY`, `GITHUB_EVENT_NAME=workflow_run`, a private event path containing the real run ID and attempt number, and a `GH_TOKEN` passed in process memory; the publisher reconfirms every value through the API. It receives no artifact contents and executes no contribution code. This first publication requires separate evidence; it does not activate the automatic default-branch workflow ahead of time. Without this actual step or a later automatic run, local tests or valid YAML files must not be described as a completed remote publication.
+The deployment is transient and non-production. Its `success` means
+**“local preview package available for download”**; the supplied link points to
+the actual artifact. Publishing a current preview deactivates superseded records;
+the manual cleanup action deactivates closed, expired, deleted or stale records.
+Existing records are not claimed removed merely because the workflow changed.
+Record actual publication/cleanup evidence separately from local test results.
 
 ## Hosted previews and existing releases
 
-The existing development installation at `cms.luminovia.org` remains a separate environment with persistent data for successfully tested `main`. It is not reused for unmerged contributions. The existing release job and independent security and metadata checks are preserved; the local PR package receives neither production keys nor access to that data.
+The existing development installation at `cms.luminovia.org` remains a separate
+environment with persistent data. An authorised maintainer must manually dispatch
+`Portal checks` on `main` with `publish_release=true` and the exact current main
+SHA in `expected_commit` before its gated release job can publish a CMS package.
+Pushes, merges, ordinary manual verification and daily-maintenance verification
+do not publish releases. The existing VPS updater polling timer is unchanged;
+this source change does not claim a hosted timer modification. Independent
+quality/security/metadata checks stay in place, and the local PR package receives
+neither production keys nor access to hosted data.
 
 A persistently browser-accessible portal for each PR requires a separately configured preview host with isolated Auth, database, Storage and email environments, plus controlled cleanup. A static frontend copy with an invented backend would not provide working login and business workflows. This implementation registers no such service and claims no public PR URL.
 

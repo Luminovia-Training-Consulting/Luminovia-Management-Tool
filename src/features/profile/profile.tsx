@@ -1,6 +1,7 @@
 /**
- * Own profile fields, time zone and expertise with evidence/avatar controls. Self-declared
- * expertise is not management verification; mutations invalidate the owning queries.
+ * Own profile fields, time zone and expertise with evidence/avatar controls.
+ * Self-declared expertise is separate from management verification; the own
+ * qualification card follows the current role gate and server permissions.
  */
 import { OwnQualificationEvidence } from "../qualifications/evidence";
 import { selectableTopics } from "../taxonomy/selection";

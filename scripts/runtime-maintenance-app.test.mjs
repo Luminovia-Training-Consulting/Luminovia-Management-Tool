@@ -1,3 +1,5 @@
+/** Preserve M7's credential-isolation regressions against the accepted PR-based
+ * maintenance publisher. Network fixtures cannot grant live GitHub privileges. */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
@@ -12,15 +14,10 @@ const jobs = Object.fromEntries(
       .matchAll(/^ {2}([a-z-]+):\n([\s\S]*?)(?=^ {2}[a-z-]+:\n|$(?![\s\S]))/gm),
   ].map((m) => [m[1], m[2]]),
 );
-test("only maintainer PR review exceptions and the approved private App can bypass the corresponding policies", () => {
+test("only Carina has the PR-only review exception and signing plus all15CI checks have no bypass", () => {
   const history = JSON.parse(read(".github/rulesets/history.json")),
     review = JSON.parse(read(".github/rulesets/review.json")),
     checks = JSON.parse(read(".github/rulesets/checks.json"));
-  const app = {
-    actor_id: 5776881,
-    actor_type: "Integration",
-    bypass_mode: "always",
-  };
   assert.equal(history.enforcement, "active");
   assert.deepEqual(history.bypass_actors, []);
   assert.ok(history.rules.some((r) => r.type === "required_signatures"));
@@ -29,11 +26,9 @@ test("only maintainer PR review exceptions and the approved private App can bypa
   assert.equal(review.enforcement, "active");
   assert.equal(checks.enforcement, "active");
   assert.deepEqual(review.bypass_actors, [
-    { actor_id: 2, actor_type: "RepositoryRole", bypass_mode: "pull_request" },
-    { actor_id: 5, actor_type: "RepositoryRole", bypass_mode: "pull_request" },
-    app,
+    { actor_id: 29256704, actor_type: "User", bypass_mode: "pull_request" },
   ]);
-  assert.deepEqual(checks.bypass_actors, [app]);
+  assert.deepEqual(checks.bypass_actors, []);
   const required = review.rules.find(
     (r) => r.type === "pull_request",
   ).parameters;
@@ -63,6 +58,7 @@ test("only maintainer PR review exceptions and the approved private App can bypa
     { context: "CodeQL (actions)", integration_id: 15368 },
     { context: "Dependency review", integration_id: 15368 },
     { context: "CodeQL", integration_id: 57789 },
+    { context: "PR preview package", integration_id: 15368 },
   ]);
   for (const policy of [history, review, checks])
     assert.deepEqual(policy.conditions.ref_name, {
@@ -94,11 +90,8 @@ test("App credentials stay in main-only privileged jobs, exact repository tokens
     );
     assert.match(source, /^ {4}environment: maintenance-signing$/m);
     assert.match(source, /^ {4}permissions:\n {6}contents: read$/m);
-    assert.match(source, /if test "\$APP_ID" != "5776881"/);
-    assert.match(
-      source,
-      /if test "\$APP_SLUG" != "luminovia-portal-maintenance"/,
-    );
+    assert.match(source, /test "\$APP_ID" = "5776881"/);
+    assert.match(source, /test "\$APP_SLUG" = "luminovia-portal-maintenance"/);
     assert.match(
       source,
       /uses: actions\/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510/,
@@ -114,15 +107,16 @@ test("App credentials stay in main-only privileged jobs, exact repository tokens
     );
     assert.doesNotMatch(
       source,
-      /skip-token-revoke|permission-(administration|pull-requests|workflows|secrets|members|checks):/,
+      /skip-token-revoke|permission-(administration|actions|workflows|secrets|members|checks):/,
     );
     assert.equal((source.match(/permission-contents: write/g) ?? []).length, 1);
+    assert.equal((source.match(/permission-actions: write/g) ?? []).length, 0);
     assert.equal(
-      (source.match(/permission-actions: write/g) ?? []).length,
-      name === "promote" ? 1 : 0,
+      (source.match(/permission-pull-requests: write/g) ?? []).length,
+      1,
     );
     assert.ok(
-      source.indexOf("Verify the approved private App identity") <
+      source.indexOf("APP_SLUG") <
         source.indexOf("run: node deploy/hostinger/maintenance/promote.mjs"),
     );
     for (const match of source.matchAll(/GH_TOKEN: (.+)$/gm))
@@ -143,6 +137,7 @@ test("probe never attempts broad cleanup if branch creation is denied", async ()
       calls.push({ path, options });
       if (path.endsWith("/branches/main"))
         return { commit: { sha: "a".repeat(40) } };
+      if (path.includes("/git/ref/heads/")) return null;
       assert.equal(options.method, "POST");
       assert.match(
         options.body.ref,
@@ -152,23 +147,29 @@ test("probe never attempts broad cleanup if branch creation is denied", async ()
     }),
     /Fictional rules denied/,
   );
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 4);
   assert.ok(calls.every((c) => c.options.method !== "DELETE"));
 });
 test("probe cleans only its exact newly created branch after a signed-commit API failure and never dispatches main CI", async () => {
   const calls = [];
   let owned;
+  let created = false;
   await assert.rejects(
     signatureProbe(async (path, options = {}) => {
       calls.push({ path, options });
       if (path.endsWith("/branches/main"))
         return { commit: { sha: "a".repeat(40) } };
+      if (path.includes("/git/ref/heads/"))
+        return created
+          ? { ref: "refs/heads/" + owned, object: { sha: "a".repeat(40) } }
+          : null;
       if (options.method === "DELETE") {
         assert.ok(path.endsWith(owned));
         return null;
       }
       if (path.endsWith("/git/refs")) {
         owned = options.body.ref.slice("refs/heads/".length);
+        created = true;
         return {};
       }
       assert.equal(path, "/graphql");

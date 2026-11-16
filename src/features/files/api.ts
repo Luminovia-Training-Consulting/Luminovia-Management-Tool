@@ -109,7 +109,7 @@ export async function uploadDocument(
     xhr.send(form);
   });
 }
-/** Fetch authenticated no-store bytes through the exact-version or explicit qualification-evidence action. */
+/** Fetch authenticated gateway bytes with the exact request context and no browser cache. */
 async function downloadFile(body: Record<string, unknown>): Promise<Blob> {
   const response = await fetch(endpoint(), {
     method: "POST",
@@ -128,11 +128,11 @@ async function downloadFile(body: Record<string, unknown>): Promise<Blob> {
   }
   return await response.blob();
 }
-/** Download current or explicitly selected version bytes without combining older names with replacement bytes. */
+/** Download the selected version so replacement cannot silently substitute newer bytes. */
 export async function downloadDocument(id: string, versionId?: string | null) {
   return downloadFile({ action: "download", id, version_id: versionId });
 }
-/** Download only the exact evidence version selected by a current owner consent and manager/owner grant. */
+/** Download through the qualification binding, preserving its separately authorized exact version. */
 export async function saveQualificationEvidence(
   evidenceId: string,
   name: string,
@@ -143,7 +143,7 @@ export async function saveQualificationEvidence(
   });
   saveBlob(blob, name);
 }
-/** Create a temporary browser download from confirmed bytes and release its object URL. */
+/** Download confirmed bytes through a temporary object URL, then release that URL. */
 function saveBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");

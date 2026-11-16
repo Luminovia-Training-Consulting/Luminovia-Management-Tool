@@ -18,7 +18,7 @@ All UI labels and explanatory notices are DE/EN; authored syllabus, questions, a
 
 ## Database and protected documents
 
-Migration `20261116031728_course_learning_workspace.sql` adds private RLS tables for course settings, preparation, exact resource shares/receipts, attendance/corrections, Q&A, owner notebooks, protected feedback, quiz versions/attempts and immutable completion facts with auditable revocation. Direct browser table access is revoked. Public functions remain invoker wrappers around checked private implementations:
+Migration `20261116091015_course_learning_workspace.sql` adds private RLS tables for course settings, preparation, exact resource shares/receipts, attendance/corrections, Q&A, owner notebooks, protected feedback, quiz versions/attempts and immutable completion facts with auditable revocation. Direct browser table access is revoked. Public functions remain invoker wrappers around checked private implementations:
 
 | RPC                                                                       | Purpose                                                                                                |
 | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -48,4 +48,4 @@ Executed on 16 November 2026 against disposable local resources:
 
 `scripts/course-workspace-api-check.mjs` is authored for the canonical actual Auth/MFA/REST/ClamAV/Storage/Edge flow, including changed underlying file versions and deterministic protected completion bytes. `tests/e2e/course-workspace.spec.ts` supplies two workflows per desktop/mobile target, including client shared preparation/material download and learner notes/Q&A/quiz/feedback/completion PDF, DE/EN/dark/axe and screenshots. Those native suites count as passed only when the root's complete command actually executes them; the root work log owns final combined/CI evidence.
 
-No real learner records, production course data, real email recipients, hosting or service settings were changed by this work. Existing fictional/CBW catalogue references can be used with these workflows; the module does not fabricate attendance, quiz passes, signed certificates or legal acceptance.
+No real learner records, production course data, real email recipients, hosting or service settings were changed by this work. Existing fictional course-building-block catalogue references can be used with these workflows; the module does not fabricate attendance, quiz passes, signed certificates or legal acceptance.

@@ -1,6 +1,7 @@
 /**
- * Personal dashboard with matching offers, confirmed assignments and feature widgets. Derive
- * metrics from loaded authorized projections; management views follow current capabilities.
+ * Role-adapted dashboard with server-aggregated job counts, bounded matching
+ * suggestions and personal widgets. Preview-array length never replaces totals;
+ * current roles/capabilities gate the actor-scoped queries.
  */
 import { FinancialSummaryCards } from "../commercial/revenue";
 import { Link } from "react-router-dom";

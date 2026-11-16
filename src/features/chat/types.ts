@@ -25,18 +25,18 @@ export interface ChatMember {
   display_name: string;
   joined_at: string;
 }
-/** Zusammengefasste Reaktion mit aktueller eigener Beteiligung. */
+/** Aggregated reaction with the current actor's participation flag. */
 export interface ChatReaction {
   emoji: string;
   count: number;
   mine: boolean;
 }
-/** Structured mention of an actual room member; display text grants no access. */
+/** Explicit member selection resolved for the persisted message content version. */
 export interface ChatMention {
   user_id: string;
   display_name: string;
 }
-/** Persisted message with visible author, edit/deletion state and permitted attachments. */
+/** Persisted message with permitted attachments, versioned mentions and server-projected moderation controls. */
 export interface ChatMessage {
   id: string;
   room_id: string;

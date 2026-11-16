@@ -93,18 +93,42 @@ export function MyJobWaitlist() {
 function SubstituteOffer({ offer }: { offer: Substitution }) {
   const { t, i18n } = useTranslation("jobExtra");
   const common = useTranslation().t;
-  const [consent, setConsent] = useState(false);
+  // Consent belongs to the exact recipient quote currently displayed, not to
+  // the offer ID. Refetches can replace prices, terms, sessions or authority
+  // while this card remains mounted. Identical refreshes and language changes
+  // preserve a review; any intervening changed snapshot retires it permanently.
+  const snapshot = JSON.stringify([
+    offer.id,
+    offer.job_id,
+    offer.original_claim_id,
+    offer.target_user_id,
+    offer.quote_hash,
+    offer.quote,
+    offer.expires_at,
+    offer.reason,
+    offer.proposer_name,
+    offer.target_name,
+    offer.status,
+    offer.can_accept,
+  ]);
+  const [reviewedSnapshot, setReviewedSnapshot] = useState<string | null>(null);
+  if (reviewedSnapshot !== null && reviewedSnapshot !== snapshot)
+    setReviewedSnapshot(null);
+  const consent = reviewedSnapshot === snapshot;
   const online = useOnline(),
     client = useQueryClient(),
     keyFor = useRequestKey();
   const action = useMutation({
-    mutationFn: (kind: "accept" | "decline" | "withdraw") =>
-      respondSubstitution(
+    mutationFn: (kind: "accept" | "decline" | "withdraw") => {
+      if (kind === "accept" && !consent)
+        throw new Error("substitution_review_required");
+      return respondSubstitution(
         offer,
         kind,
         keyFor(`${offer.id}:${kind}:${offer.quote_hash}`),
         consent,
-      ),
+      );
+    },
     onSuccess: () => refreshJobState(client),
   });
   const result = action.data?.status;
@@ -187,7 +211,9 @@ function SubstituteOffer({ offer }: { offer: Substitution }) {
               type="checkbox"
               checked={consent}
               disabled={action.isPending}
-              onChange={(event) => setConsent(event.target.checked)}
+              onChange={(event) =>
+                setReviewedSnapshot(event.target.checked ? snapshot : null)
+              }
             />
             <span>{t("consent")}</span>
           </label>

@@ -49,7 +49,7 @@ test("built PWA registers its shell, supports offline deep links and never cache
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/jobs");
   await expect(
-    page.getByRole("heading", { name: "Stellenbörse", exact: true }),
+    page.getByRole("heading", { name: "Aufträge finden", exact: true }),
   ).toBeVisible();
   const cachedUrls = await page.evaluate(async () => {
     const names = await caches.keys();

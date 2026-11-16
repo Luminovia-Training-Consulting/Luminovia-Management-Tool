@@ -47,7 +47,7 @@ for (const moduleFirst of [false, true]) {
         await sql(fixture);
         for (const file of (await readdir(migrations))
           .filter(
-            (f) => f.endsWith(".sql") && f.slice(0, 14) > "20261116031727",
+            (f) => f.endsWith(".sql") && f.slice(0, 14) > "20261116091014",
           )
           .sort())
           await sql(await readFile(new URL(file, migrations), "utf8"));
@@ -325,7 +325,7 @@ for (const moduleFirst of [false, true]) {
         },
       );
     },
-    moduleFirst ? { migrationsThrough: "20261116031727" } : {},
+    moduleFirst ? { migrationsThrough: "20261116091014" } : {},
   );
 }
 console.log(

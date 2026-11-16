@@ -35,7 +35,7 @@ await withTestDatabase(
     await sql(
       await readFile(
         new URL(
-          "../supabase/migrations/20261116021141_notification_email_outbox.sql",
+          "../supabase/migrations/20261116091007_notification_email_outbox.sql",
           import.meta.url,
         ),
         "utf8",

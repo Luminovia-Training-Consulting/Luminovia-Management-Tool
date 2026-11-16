@@ -1,3 +1,5 @@
+/** Exercises manual metadata publication and isolated runnable packages with
+ * fictional GitHub responses and temporary Git repositories only. */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -139,14 +141,14 @@ function fixture() {
     assert.fail(`Unexpected read: ${route}`);
   };
   const event = {
-    action: "completed",
     repository: { full_name: repository },
-    workflow_run: { id: 41, run_attempt: 1 },
+    inputs: { action: "publish", run_id: "41", run_attempt: "1" },
   };
   const publish = (overrides = {}) =>
     publishPullRequestPreview({
       event,
-      eventName: "workflow_run",
+      eventName: "workflow_dispatch",
+      currentRef: "refs/heads/main",
       currentRepository: repository,
       request,
       now,
@@ -155,7 +157,7 @@ function fixture() {
   return { state, event, publish };
 }
 
-test("a fork PR gets an exact-head downloadable package deployment after every complete check", async () => {
+test("manual publication links a fork PR's exact-head package after every required check passed", async () => {
   const { state, publish } = fixture();
   const result = await publish();
   assert.match(result[0], /no hosted website/);
@@ -184,22 +186,60 @@ test("a fork PR gets an exact-head downloadable package deployment after every c
   );
 });
 
-test("running and failed CI never announce a downloadable/hosted preview", async () => {
-  const { state, event, publish } = fixture();
-  event.action = "in_progress";
-  state.run.status = "in_progress";
-  state.run.conclusion = null;
-  await publish();
-  const id = state.deployments[0].id;
-  assert.equal(state.statuses.get(id)[0].state, "in_progress");
-  assert.equal(state.statuses.get(id)[0].environment_url, undefined);
-  state.run.status = "completed";
-  state.run.conclusion = "failure";
-  event.action = "completed";
-  await publish();
-  assert.equal(state.statuses.get(id)[0].state, "failure");
-  assert.equal(state.statuses.get(id)[0].environment_url, undefined);
-  assert.ok(!state.reads.some((path) => path.includes("/artifacts")));
+test("manual publication rejects running/failed CI before creating any deployment", async () => {
+  for (const [status, conclusion] of [
+    ["in_progress", null],
+    ["completed", "failure"],
+    ["completed", "cancelled"],
+  ]) {
+    const { state, publish } = fixture();
+    Object.assign(state.run, { status, conclusion });
+    await assert.rejects(publish(), /completed successful/);
+    assert.deepEqual(state.writes, []);
+  }
+});
+
+test("automatic events, other refs and malformed manual inputs cannot read or write metadata", async () => {
+  for (const eventName of [
+    "workflow_run",
+    "pull_request_target",
+    "schedule",
+    "push",
+  ]) {
+    const { state, publish } = fixture();
+    await assert.rejects(publish({ eventName }), /explicit manual dispatch/);
+    assert.deepEqual(state.reads, []);
+    assert.deepEqual(state.writes, []);
+  }
+  for (const overrides of [
+    { currentRef: "refs/heads/feature/example" },
+    { currentRef: undefined },
+    { inputs: {} },
+    { inputs: { action: "deploy", run_id: "41", run_attempt: "1" } },
+    ...[
+      "",
+      "0",
+      "-1",
+      "1.5",
+      "01",
+      "9007199254740992",
+      "$(touch /tmp/never-execute)",
+    ].flatMap((value) => [
+      { inputs: { action: "publish", run_id: value, run_attempt: "1" } },
+      { inputs: { action: "publish", run_id: "41", run_attempt: value } },
+    ]),
+  ]) {
+    const { state, event, publish } = fixture();
+    const { inputs, ...context } = overrides;
+    await assert.rejects(
+      publish({
+        ...context,
+        event: { ...event, ...(inputs ? { inputs } : {}) },
+      }),
+    );
+    assert.deepEqual(state.reads, []);
+    assert.deepEqual(state.writes, []);
+  }
 });
 
 test("actual GitHub stale-run metadata cannot substitute its dynamically updated PR association head", async () => {
@@ -340,7 +380,7 @@ test("a PR changed during publication is made inactive before any success", asyn
   assert.ok(!state.writes.some((write) => write.body.state === "success"));
 });
 
-test("close cleanup deactivates owned previews and preserves unrelated/production deployments", async () => {
+test("manual cleanup deactivates closed owned previews and preserves unrelated/production deployments", async () => {
   const { state, event, publish } = fixture();
   await publish();
   state.deployments.push({
@@ -350,26 +390,19 @@ test("close cleanup deactivates owned previews and preserves unrelated/productio
     production_environment: true,
   });
   state.pr.state = "closed";
-  const closed = {
+  const cleanup = {
     repository: event.repository,
-    action: "closed",
-    number: 5,
-    pull_request: state.pr,
+    inputs: { action: "cleanup" },
   };
-  await publish({ event: closed, eventName: "pull_request_target" });
+  await publish({ event: cleanup });
   assert.equal(
     state.statuses.get(state.deployments[0].id)[0].state,
     "inactive",
   );
   assert.equal(state.statuses.get(900), undefined);
-  state.pr.state = "open";
-  await assert.rejects(
-    publish({ event: closed, eventName: "pull_request_target" }),
-    /reopened/,
-  );
 });
 
-test("daily cleanup uses actual artifact expiry and closes stale links", async () => {
+test("manual cleanup uses actual artifact expiry and closes stale links", async () => {
   for (const change of [
     (state) => {
       state.artifacts[0].expired = true;
@@ -388,8 +421,7 @@ test("daily cleanup uses actual artifact expiry and closes stale links", async (
     await publish();
     change(state);
     await publish({
-      event: { repository: event.repository },
-      eventName: "schedule",
+      event: { repository: event.repository, inputs: { action: "cleanup" } },
     });
     assert.equal(
       state.statuses.get(state.deployments[0].id)[0].state,
@@ -400,8 +432,7 @@ test("daily cleanup uses actual artifact expiry and closes stale links", async (
   await publish();
   const count = state.writes.length;
   await publish({
-    event: { repository: event.repository },
-    eventName: "schedule",
+    event: { repository: event.repository, inputs: { action: "cleanup" } },
   });
   assert.equal(
     state.writes.length,
@@ -712,7 +743,8 @@ test("privileged workflow uses only trusted default-branch metadata code; produc
     /ref: \$\{\{ github.event.repository.default_branch \}\}/,
   );
   assert.match(writer, /deployments: write/);
-  assert.match(writer, /types: \[closed\]/);
+  assert.match(writer, /workflow_dispatch:/);
+  assert.doesNotMatch(writer, /workflow_run:|pull_request_target:|schedule:/);
   assert.doesNotMatch(
     writer,
     /secrets\.|npm |download-artifact@|head\.sha|head_ref|contents: write|pull-requests: write/,
