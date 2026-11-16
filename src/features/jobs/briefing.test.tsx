@@ -439,6 +439,37 @@ it("keeps a browser-unparseable stored reference readable and repairable without
   ).toBeDisabled();
 });
 
+it("uses PostgreSQL character counts for supplementary Unicode text on reads and edits", async () => {
+  const name = "😀".repeat(120);
+  server = { ...empty, version: 1, contact_name: name, has_contact: true };
+  const client = new QueryClient();
+  clients.push(client);
+  const data = await client.fetchQuery(briefingQuery(state.actor, "job-a"));
+  expect(data.contact_name).toBe(name);
+  expect(briefingValuesSchema.safeParse(briefingValues(data)).success).toBe(
+    true,
+  );
+  expect(
+    briefingValuesSchema.safeParse({
+      ...briefingValues(data),
+      contact_name: name + "😀",
+    }).success,
+  ).toBe(false);
+  setup(data);
+  expect(screen.getByText(name)).toBeVisible();
+  await userEvent.click(
+    screen.getByRole("button", { name: "Kontakt oder Webverweis bearbeiten" }),
+  );
+  expect(screen.getByLabelText("Ansprechpartner:in")).toHaveValue(name);
+  expect(screen.getByLabelText("Ansprechpartner:in")).toHaveAttribute(
+    "maxlength",
+    "240",
+  );
+  expect(
+    screen.getByRole("button", { name: "Angaben speichern" }),
+  ).toBeEnabled();
+});
+
 it("canonicalizes IDN and valid shorthand IPv4 before binding the save request", async () => {
   for (const [authored, canonical] of [
     ["https://bücher.example/brief", "https://xn--bcher-kva.example/brief"],

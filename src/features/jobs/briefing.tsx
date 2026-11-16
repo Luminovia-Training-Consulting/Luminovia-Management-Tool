@@ -184,6 +184,7 @@ function BriefingContent({
         ? { ...previous, values: { ...previous.values, [name]: value } }
         : previous,
     );
+  // HTML counts UTF-16 units; the schema enforces PostgreSQL code-point limits.
   const field = (
     name: Exclude<keyof BriefingValues, "contact_visibility">,
     label: string,
@@ -201,7 +202,7 @@ function BriefingContent({
         <textarea
           rows={rows}
           value={draft!.values[name]}
-          maxLength={maxLength}
+          maxLength={maxLength * 2}
           disabled={pending}
           onChange={(event) => update(name, event.target.value)}
         />
@@ -209,7 +210,7 @@ function BriefingContent({
         <input
           type={type}
           value={draft!.values[name]}
-          maxLength={maxLength}
+          maxLength={maxLength * 2}
           disabled={pending}
           onChange={(event) => update(name, event.target.value)}
         />

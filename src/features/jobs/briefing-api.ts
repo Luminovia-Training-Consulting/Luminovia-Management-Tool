@@ -42,35 +42,35 @@ export function briefingWebUrl(value: string): string | null {
   }
 }
 
+/** PostgreSQL length(text) counts Unicode code points; Zod/HTML normally count
+ * UTF-16 units. Bound both memory and the actual database character contract. */
+function briefingText(limit: number) {
+  return z
+    .string()
+    .trim()
+    .max(limit * 2)
+    .refine((value) => [...value].length <= limit);
+}
+
 /** Validate authored optional fields locally; PostgreSQL independently validates the closed payload. */
 export const briefingValuesSchema = z
   .object({
-    reference_url: z
-      .string()
-      .trim()
-      .max(2048)
-      .refine((value) => value === "" || briefingWebUrl(value) !== null),
-    reference_label: z.string().trim().max(120),
-    reference_description: z.string().trim().max(4000),
-    contact_name: z.string().trim().max(120),
-    contact_email: z
-      .string()
-      .trim()
-      .max(254)
-      .refine(
-        (value) => value === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(value),
-      ),
-    contact_phone: z
-      .string()
-      .trim()
-      .max(50)
-      .refine(
-        (value) =>
-          ![...value].some(
-            (c) => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127,
-          ),
-      ),
-    contact_description: z.string().trim().max(2000),
+    reference_url: briefingText(2048).refine(
+      (value) => value === "" || briefingWebUrl(value) !== null,
+    ),
+    reference_label: briefingText(120),
+    reference_description: briefingText(4000),
+    contact_name: briefingText(120),
+    contact_email: briefingText(254).refine(
+      (value) => value === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(value),
+    ),
+    contact_phone: briefingText(50).refine(
+      (value) =>
+        ![...value].some(
+          (c) => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127,
+        ),
+    ),
+    contact_description: briefingText(2000),
     contact_visibility: z.enum(["after_claim", "offer_viewers"]),
   })
   .strict();
@@ -89,7 +89,7 @@ const responseSchema = briefingValuesSchema.extend({
   // browser's complete WHATWG/IDNA implementation. Keep a bounded raw value
   // readable/editable if those parsers ever differ; rendering separately uses
   // briefingWebUrl, so an unparseable destination can never become a link.
-  reference_url: z.string().max(2048),
+  reference_url: briefingText(2048),
   version: z.number().int().nonnegative(),
   has_contact: z.boolean(),
   contact_visible: z.boolean(),

@@ -313,6 +313,27 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
         assert.doesNotThrow(() => new URL(saved.reference_url));
         assert.equal((await get(job)).reference_url, reference_url);
       }
+      // PostgreSQL counts Unicode characters, including supplementary code
+      // points, rather than the UTF-16 units used by HTML input maxlength.
+      const unicode = {
+        ...payload,
+        contact_name: "😀".repeat(120),
+        reference_description: "😀".repeat(4000),
+      };
+      const storedUnicode = await save(job, unicode, version);
+      assert.equal(storedUnicode.contact_name, unicode.contact_name);
+      assert.equal(
+        storedUnicode.reference_description,
+        unicode.reference_description,
+      );
+      await assert.rejects(
+        save(
+          job,
+          { ...unicode, contact_name: unicode.contact_name + "😀" },
+          version + 1,
+        ),
+        /22023/,
+      );
     },
   );
 
