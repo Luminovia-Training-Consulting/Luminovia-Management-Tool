@@ -1,5 +1,13 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — current human PR-only and mandatory-CI boundary verified
+
+The latest user instruction supersedes earlier Maintainer/Admin ALWAYS guidance: humans may update main only through a PR; maintain/admin may bypass independent review, but never mandatory CI. Live authenticated GitHub REST readback already matches this instruction, so this verification made no repository-setting mutations. All three rulesets27315671/27329000/27329142 are active. History has no bypass; review has maintain2/admin5 in pull_request mode; checks have no human bypass and current_user_can_bypass=never for CarinaSchoppe. All14 exact mandatory checks are registered against their actual Actions/CodeQL integrations, including full application/native verification, metadata, quality/coverage, three CodeQL languages, dependency review and generated CodeQL findings. Strict up-to-date testing is active. Ruleset source snapshots now reflect this readback.
+
+The existing maintenance App5776881 retains ALWAYS in review/check rules; this task concerns the human maintainer/admin boundary and did not silently change that separate automation exception. Current main still uses the standard github.token for direct daily main promotion, so PR protection rejects that path safely. A working App-token promotion or PR-based maintenance migration is not claimed. No unsafe push, deliberate failing merge, production operation or foreign PR merge was attempted. Existing open PRs are reported BEHIND after concurrent main advances; this is consistent with strict checks but is not an executed negative merge test. Administrators retain permission to edit rules; normal pushes/merges cannot bypass them.
+
+Validation: authenticated ruleset/assertion readback, effective /rules/branches/main readback, current workflow/check names and open-PR states inspected. Documentation/ruleset syntax checks are recorded with the isolated commit. Application tests are not rerun for this operational verification. Immediate next action: migrate daily maintenance to the protected PR path before treating automatic promotion as operational; reconcile historical guidance below against the current status callouts. Unrelated application work remains untouched.
+
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
 ## 16 November 2026 — bilingual guided demo, live tour and practical help

@@ -1,5 +1,7 @@
 # Contributing to Luminovia Portal
 
+> Current status verified on 16 November 2026: all three main rulesets are active. Humans must use a PR. Maintainers/admins can bypass independent review only through a PR; all 14 mandatory CI/security checks and up-to-date testing still apply, with no human check bypass. The existing maintenance App has a separate automation exception. Earlier ALWAYS/disabled descriptions below are historical and superseded. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
+
 > Status as of 16 November 2026: Maintainers and administrators have a permanent `always` exception for direct merges. Additional review/check requirements for other contributors remain prepared but disabled until the maintenance App path has been verified. [Current activation status](docs/GITHUB_WORKFLOW.md#activation-still-pending).
 
 Welcome! This guide explains how to turn an idea or bug report into a tested, reviewable change. **Use English for issues, pull requests and contributor-facing documentation.** Application interface changes must provide both German and English strings; authored course content keeps its original language.

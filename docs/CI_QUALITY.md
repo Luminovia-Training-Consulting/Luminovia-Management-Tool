@@ -1,5 +1,7 @@
 # GitHub checks, security and coverage
 
+> Current status verified on 16 November 2026: all three main rulesets are active. Humans must use a PR. Maintainers/admins can bypass independent review only through a PR; all 14 mandatory CI/security checks and up-to-date testing still apply, with no human check bypass. The existing maintenance App has a separate automation exception. Earlier ALWAYS/disabled descriptions below are historical and superseded. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
+
 Workflows run for pull requests and `main`; manual execution is also available. They need no VPS credentials, private Supabase keys or production data. Existing real application/database/API/browser checks remain in place.
 
 ## Visible checks

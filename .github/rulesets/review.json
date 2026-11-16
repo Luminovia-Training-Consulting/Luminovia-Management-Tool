@@ -1,7 +1,7 @@
 {
   "name": "Main pull requests and review",
   "target": "branch",
-  "enforcement": "disabled",
+  "enforcement": "active",
   "conditions": {
     "ref_name": {
       "exclude": [],
@@ -31,11 +31,16 @@
     {
       "actor_id": 2,
       "actor_type": "RepositoryRole",
-      "bypass_mode": "always"
+      "bypass_mode": "pull_request"
     },
     {
       "actor_id": 5,
       "actor_type": "RepositoryRole",
+      "bypass_mode": "pull_request"
+    },
+    {
+      "actor_id": 5776881,
+      "actor_type": "Integration",
       "bypass_mode": "always"
     }
   ]

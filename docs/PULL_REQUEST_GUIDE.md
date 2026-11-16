@@ -1,5 +1,7 @@
 # Creating, reviewing and merging pull requests
 
+> Current status verified on 16 November 2026: all three main rulesets are active. Humans must use a PR. Maintainers/admins can bypass independent review only through a PR; all 14 mandatory CI/security checks and up-to-date testing still apply, with no human check bypass. The existing maintenance App has a separate automation exception. Earlier ALWAYS/disabled descriptions below are historical and superseded. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
+
 > Status on 16 November 2026: Maintainers and administrators have a permanent `always` bypass for direct merges. Additional review and check requirements for ordinary contributors remain prepared but disabled until the maintenance App path has been proven. [Current activation status](GITHUB_WORKFLOW.md#activation-still-pending).
 
 This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.

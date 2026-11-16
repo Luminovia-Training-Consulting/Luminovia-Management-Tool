@@ -1,5 +1,7 @@
 # GitHub administration and contribution workflow
 
+> Current status verified on 16 November 2026: all three main rulesets are active. Humans must use a PR. Maintainers/admins can bypass independent review only through a PR; all 14 mandatory CI/security checks and up-to-date testing still apply, with no human check bypass. The existing maintenance App has a separate automation exception. Earlier ALWAYS/disabled descriptions below are historical and superseded. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
+
 Contributors should start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue guide](ISSUE_GUIDE.md) and the [pull request guide](PULL_REQUEST_GUIDE.md). This page explains the administrative sources and the boundaries of rule exceptions. Public contribution guidance and new contribution discussions use English; the product interface remains German and English.
 
 ## Rules for `main`

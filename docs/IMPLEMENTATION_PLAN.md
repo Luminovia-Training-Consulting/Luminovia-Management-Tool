@@ -1,5 +1,14 @@
 # Persistent implementation plan
 
+## Current human main-protection verification — 16 November 2026
+
+- [x] Verify active live history/review/check rules: humans require a PR, maintain/admin can skip independent review, all14 checks remain mandatory even for CarinaSchoppe, and the PR must be up to date.
+- [x] Preserve the existing separate maintenance App exception; record its exact scope without claiming a working token/promotion path.
+- [x] Synchronize the three rule JSON snapshots with authenticated live readback in isolated codex/main-protection-verification-20261116; make no application or repository-setting mutation where the requested setting is already active.
+- [ ] Replace standard-token direct daily main promotion with a verified protected PR path. Current strict rules reject direct promotion safely; do not disable protection to restore it.
+
+This current instruction supersedes historical ALWAYS/disabled guidance below. The full product ledger remains required. Admins retain settings-edit authority, but ordinary merges and pushes must satisfy the active rules.
+
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
 ## Guided exploration and practical help
