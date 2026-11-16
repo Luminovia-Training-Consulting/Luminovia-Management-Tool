@@ -79,8 +79,17 @@ test("insecure file permissions and hardlinked targets reject both reading and r
     () => writePrivateJson(file, { altered: true }),
   ])
     assert.throws(operation, /private regular file/);
-  assert.equal(statSync(file).mode & 0o777, 0o644);
-  assert.equal(readFileSync(file, "utf8"), '{"retained":true}');
+  // Rechte und erhaltene Bytes am selben geöffneten Inode prüfen, ohne erneute Pfadauflösung zwischen den Assertions.
+  const retainedDescriptor = fs.openSync(
+    file,
+    fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW,
+  );
+  try {
+    assert.equal(fs.fstatSync(retainedDescriptor).mode & 0o777, 0o644);
+    assert.equal(readFileSync(retainedDescriptor, "utf8"), '{"retained":true}');
+  } finally {
+    fs.closeSync(retainedDescriptor);
+  }
   chmodSync(file, 0o600);
   linkSync(file, join(directory, "shared.json"));
   for (const operation of [
