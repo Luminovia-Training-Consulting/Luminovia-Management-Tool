@@ -117,6 +117,26 @@ const CoursesPage = lazy(() =>
     default: module.CoursesPage,
   })),
 );
+const CourseReadinessPage = lazy(() =>
+  import("../features/readiness/readiness").then((module) => ({
+    default: module.CourseReadinessPage,
+  })),
+);
+const TeachingDelivery = lazy(() =>
+  import("../features/delivery/delivery").then((module) => ({
+    default: module.TeachingDelivery,
+  })),
+);
+const SupportDeskPage = lazy(() =>
+  import("../features/support/support").then((module) => ({
+    default: module.SupportDeskPage,
+  })),
+);
+const ReplacementMarketplacePage = lazy(() =>
+  import("../features/replacements/replacements").then((module) => ({
+    default: module.ReplacementMarketplacePage,
+  })),
+);
 const LearningHubPage = lazy(() =>
   import("../features/learning/learning").then((module) => ({
     default: module.LearningHubPage,
@@ -262,6 +282,15 @@ export function App() {
               <Route path="people/:id" element={<PersonProfile />} />
               <Route path="my-reviews" element={<MyCourseReviews />} />
               <Route path="courses" element={<CoursesPage />} />
+              <Route path="readiness" element={<CourseReadinessPage />} />
+              <Route path="readiness/:id" element={<CourseReadinessPage />} />
+              <Route path="delivery" element={<TeachingDelivery />} />
+              <Route path="support" element={<SupportDeskPage />} />
+              <Route path="support/:id" element={<SupportDeskPage />} />
+              <Route
+                path="replacements"
+                element={<ReplacementMarketplacePage />}
+              />
               <Route path="learning" element={<LearningHubPage />} />
               <Route path="workbench" element={<WorkbenchPage />} />
               <Route path="timesheets" element={<TimesheetsPage />} />

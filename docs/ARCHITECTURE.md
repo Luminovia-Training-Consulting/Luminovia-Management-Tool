@@ -342,14 +342,14 @@ PR packaging runs with read-only permissions after complete application/native c
 
 ## Current scope and evidence boundaries
 
-All 36 published main migrations remain byte-identical. The existing M7 additions provide structured chat mentions, private personal file organisation, bounded job discovery and saved views, attention preferences and announcements. Their private tables use RLS and revoke
+All 62 published main migrations remain byte-identical. The existing M7 additions provide structured chat mentions, private personal file organisation, bounded job discovery and saved views, attention preferences and announcements. Their private tables use RLS and revoke
 direct PUBLIC/anon/authenticated access. Public invoker wrappers call scoped
 private implementations with empty search paths and explicit authenticated
 execution grants; pure internal trigger/filter helpers revoke browser execution. Private routines
 needed by public wrappers retain their own current-actor/resource checks. Service credentials remain server-only. [ERD](ERD.md) records physical
 keys and exceptions rather than inferring grants from schema placement.
 
-The published M8 extensions provide scoped administrative job pickers, explicit global-calendar publications and qualification evidence/attestation history. Their chronological source links are recorded in [MIGRATION_GUIDE](MIGRATION_GUIDE.md); still-undelivered PR17 sources follow the published prefix without changing released bytes. The picker is a
+The published M8 extensions provide scoped administrative job pickers, explicit global-calendar publications and qualification evidence/attestation history. Their chronological source links are recorded in [MIGRATION_GUIDE](MIGRATION_GUIDE.md); the now-published PR17 sources follow the earlier 36-file prefix without changing released bytes. The picker is a
 projection; calendar extends the existing event table plus one private request
 ledger; qualification adds four private relations. New private tables use RLS and
 revoke direct browser access. See [JOB_PICKERS](JOB_PICKERS.md),

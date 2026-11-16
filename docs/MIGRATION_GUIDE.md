@@ -547,6 +547,56 @@ Preserves the existing private `configure_web_push` signature, public invoker wr
 
 The preceding 61 SQL files remain unchanged, and no API or browser privilege is added. All six focused [safe-update PostgreSQL groups](../scripts/web-push-safeupdate-db-tests.mjs) passed with the actual installed safe-update module loaded and enabled in the RPC backend. They cover initial/same-key configuration, active-only rotation with unchanged inactive history, disable/re-enable behavior, validation and service-only grants. Restoring the original routine reproduces `21000` under the same test. Existing [Push PostgreSQL checks](../scripts/web-push-db-tests.mjs) and [actual Auth/PostgREST acceptance](../scripts/web-push-api-check.mjs) exercise configuration and device behavior. Exact safe-update negative-control and corrected-source results belong in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md); a focused source/SQL pass does not establish the full 62-source application/native gate or external Push delivery.
 
+### 63. Derived course readiness and scoped preparation
+
+Source: [20261116121554_course_readiness.sql](../supabase/migrations/20261116121554_course_readiness.sql).
+
+Private settings/tasks/instruction receipts complement live assignment, agreement, qualification, material, contact and schedule checks. No percentage setter exists. Reads require current course management/MFA or assignment ownership; historical or published visibility alone does not grant preparation access. Writers lock the run before the preparation advisory lock, and compare reviewed versions. A thin wrapper reuses current standalone job creation and fills its newly created run's mode/venue; it never rewrites existing authored runs.
+
+Tests: [readiness-db-tests.mjs](../scripts/readiness-db-tests.mjs), [readiness-api-check.mjs](../scripts/readiness-api-check.mjs).
+
+### 64. Private support tickets and dedicated attachments
+
+Source: [20261116121556_internal_support_desk.sql](../supabase/migrations/20261116121556_internal_support_desk.sql).
+
+Own ticket history and explicit MFA support authority replace an administrator-wide shortcut. Replies, internal notes, transitions, version checks and retry receipts stay private; internal notes/files are withheld from requesters. Clean single-version evidence becomes dedicated/frozen and the ticket ACL takes precedence over ordinary personal-document ownership, including after role revocation.
+
+Tests: [support-db-tests.mjs](../scripts/support-db-tests.mjs), [support-api-check.mjs](../scripts/support-api-check.mjs).
+
+The support migration also rejects existing/removed optional course-resource references and guards the reverse registry insertion with the same document lock. The automatically discovered [support/course contract tests](../scripts/support-course-registry-db-tests.mjs) distinguish synthetic optional-schema contracts from the strict manual actual-module gate. [Chronology and evidence](SUPPORT_COURSE_RESOURCE_REGRESSION.md).
+
+### 65. Whole-block replacement without premature release
+
+Source: [20261116121558_replacement_marketplace.sql](../supabase/migrations/20261116121558_replacement_marketplace.sql).
+
+Open/selected emergency searches keep the original confirmed allocation. Sorted profile/lecturer locks precede job/claim/offer locks. The existing current claim implementation executes inside a subtransaction; every failed handover restores the original, while success retains old financial/schedule history and transfers current calendar/chat/file authority. Optional role-price helpers are discovered by exact trusted signatures and missing quotes fail closed. Started/invoiced/partial-work orchestration and ordered notifications remain explicit limitations.
+
+Tests: [replacements-db-tests.mjs](../scripts/replacements-db-tests.mjs), [replacements-api-check.mjs](../scripts/replacements-api-check.mjs).
+
+### 66. Immutable lecturer delivery evidence
+
+Source: [20261116121600_attendance_delivery.sql](../supabase/migrations/20261116121600_attendance_delivery.sql).
+
+Assignment sessions own drafts, immutable submitted revisions and independent review/customer events. Version/request locks protect concurrent changes. Customer projections omit draft/private notes/invoice IDs; existing accepted fees and invoices never change when evidence is corrected. The feature records freelance teaching delivery and does not introduce payroll or clock-in processing.
+
+Tests: [delivery-db-tests.mjs](../scripts/delivery-db-tests.mjs), [delivery-api-check.mjs](../scripts/delivery-api-check.mjs).
+
+### 67. Current-authority operational inbox targets
+
+Source: [20261116121603_operations_notification_integration.sql](../supabase/migrations/20261116121603_operations_notification_integration.sql).
+
+Preserves the prior resolver and composes readiness/support/delivery/replacement destinations under current access. Assigned preparation reminders respect preferences and actual task changes. Removed memberships, cancelled allocations and revoked capabilities cannot turn an old notification into a private-resource link. No mail service or public cache is added.
+
+Strict non-trigger body diagnostics are additionally checked by [operations-lint-db-tests.mjs](../scripts/operations-lint-db-tests.mjs); canonical SQL lint/advisor/trigger and actual Auth/browser checks remain mandatory. [The extension ledger](OPERATIONS_EXTENSION_STATUS.md) distinguishes executed focused checks from full acceptance and release status.
+
+### 68. Optional forward notification and handover composition
+
+Source: [20261116121605_operational_module_notification_handover_integration.sql](../supabase/migrations/20261116121605_operational_module_notification_handover_integration.sql).
+
+Replaces the current inbox target in place and retains an owner-only trusted core/smart fallback. Readiness, delivery, support and marketplace targets retain their own current resource checks; exact optional enquiry/amendment helpers fail closed when absent. Where directed substitutions are installed, an accepted transition atomically closes competing open marketplace offers, with idempotent historical repair. No email/push category is activated. Later modules that replace this resolver must preserve its composition in their own newer migration.
+
+Tests: automatically discovered [operational-forward-db-tests.mjs](../scripts/operational-forward-db-tests.mjs); strict optional [operational-pr17-integration.mjs](../scripts/operational-pr17-integration.mjs). [Integration, chronology and actual evidence](OPERATIONAL_FORWARD_INTEGRATION.md).
+
 ## The critical data flows
 
 **A job is claimed:** browser draft and idempotency key → public `claim_job` invoker → latest private implementation → current actor, locks, contract/qualification/capacity/time-conflict checks → immutable claim/schedule/revenue snapshots, memberships and notifications → transaction commit → confirmed UI. An error cannot leave a partially successful multi-day booking. Kanban calls permitted lifecycle actions; dragging a card does not create a claim.
@@ -565,9 +615,9 @@ The preceding 61 SQL files remain unchanged, and no API or browser privilege is 
 
 <a id="unreleased-branch-version-reconciliation"></a>
 
-## Pending-source version reconciliation
+## Historical pre-release source version reconciliation
 
-The accepted main prefix contains 36 published SQL files. Nine shared branch sources are byte-identical to their published canonical files and are represented once. The 23 still-undelivered PR17 files were assigned new forward identifiers with the installed CLI, preserving every SQL byte, SHA-256 and relative dependency order. This is source-file reconciliation before release, not an installed-database history repair. No ordinary or hosted database was reset, backdated or given fabricated migration records. The separate 60th source adds the post-lock waitlist authority correction described above; it does not rewrite those 59 files.
+At this historical pre-PR17-release checkpoint, the accepted main prefix contained 36 published SQL files. The table retains its status at that time; actual Main17 now publishes all 62 files described above. Nine shared branch sources are byte-identical to their published canonical files and are represented once. The 23 still-undelivered PR17 files were assigned new forward identifiers with the installed CLI, preserving every SQL byte, SHA-256 and relative dependency order. This is source-file reconciliation before release, not an installed-database history repair. No ordinary or hosted database was reset, backdated or given fabricated migration records. The separate 60th source adds the post-lock waitlist authority correction described above; it does not rewrite those 59 files.
 
 | Earlier branch version | Current source version | Status                   |
 | ---------------------- | ---------------------- | ------------------------ |
