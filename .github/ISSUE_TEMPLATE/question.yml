@@ -1,40 +1,40 @@
-name: Frage stellen
-description: Eine konkrete Frage zu Entwicklung, Bedienung oder Dokumentation stellen.
-title: "[Frage]: "
+name: Question
+description: Ask a specific development, usage or documentation question.
+title: "[Question]: "
 labels: ["question"]
 body:
   - type: markdown
     attributes:
       value: |
-        Lies zuerst [CONTRIBUTING](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/CONTRIBUTING.md)
-        und den [Issue-Leitfaden](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/ISSUE_GUIDE.md).
-        Poste keine Zugangsdaten, Tokens, MFA-Codes, privaten Dokumente oder realen Personen- und Kundendaten.
-        Vermutete Sicherheitslücken gehören in [GitHubs private Sicherheitsmeldung](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/security/advisories/new).
+        Read [CONTRIBUTING](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/CONTRIBUTING.md)
+        and the [issue guide](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/ISSUE_GUIDE.md) first.
+        Do not post credentials, tokens, MFA codes, private documents or real personal/customer data.
+        Report suspected vulnerabilities through [GitHub private vulnerability reporting](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/security/advisories/new).
   - type: textarea
     id: question
     attributes:
-      label: Deine Frage
-      description: Welche konkrete Information fehlt dir? Beschreibe das gewünschte Ergebnis.
+      label: Your question
+      description: Which specific information is missing? Describe the intended result.
     validations:
       required: true
   - type: textarea
     id: context
     attributes:
-      label: Kontext und bereits geprüfte Informationen
-      description: Verlinke die betroffene Anleitung oder Funktion und beschreibe, was du bereits nachgelesen oder ausprobiert hast. Verwende nur fiktive oder bereinigte Beispiele.
+      label: Context and information already checked
+      description: Link the affected guide or feature and explain what you already read or tried. Use fictional or sanitised examples only.
     validations:
       required: true
   - type: input
     id: revision
     attributes:
-      label: Version oder Umgebung (optional)
-      description: Falls relevant, Commit, Entwicklungsrelease, Browser oder lokale Umgebung angeben; keine Zugangsdaten.
+      label: Version or environment (optional)
+      description: Include commit, development release, browser or local environment where relevant; no credentials.
   - type: checkboxes
     id: checks
     attributes:
-      label: Vor dem Absenden
+      label: Before submitting
       options:
-        - label: Ich habe in der vorhandenen Dokumentation und in bestehenden Issues nach einer Antwort gesucht.
+        - label: I searched existing documentation and issues for an answer.
           required: true
-        - label: Meine Angaben und Anhänge enthalten keine Geheimnisse, privaten Dokumente oder personenbezogenen Daten.
+        - label: My information and attachments contain no secrets, private documents or personal data.
           required: true

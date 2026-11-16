@@ -1,44 +1,44 @@
-# Zum Luminovia Portal beitragen
+# Contributing to Luminovia Portal
 
-> Stand 16. November 2026: Maintainer und Administratoren haben eine dauerhafte `always`-Ausnahme zum direkten Merge. Die zusätzlichen Review-/Checkpflichten für gewöhnliche Beitragende bleiben bis zum nachgewiesenen Wartungs-App-Pfad deaktiviert vorbereitet. [Aktueller Aktivierungsstand](docs/GITHUB_WORKFLOW.md#aktivierung-noch-ausstehend).
+> Status on 16 November 2026: Maintainers and administrators have a permanent `always` bypass for direct merges. The additional review/check rules for ordinary contributors are prepared but remain disabled until the maintenance App path is proven. [Current activation status](docs/GITHUB_WORKFLOW.md#activation-still-pending).
 
-Willkommen! Hier steht, wie aus einer Idee oder Fehlermeldung eine nachvollziehbare, getestete Änderung wird. **English contributions are welcome.** Please follow the same issue, test and pull-request process; German is the main documentation language, and application interface changes need both German and English strings.
+This guide explains how an idea or bug report becomes a traceable, tested change. Project documentation is written in English. Issues and discussions in German or English are welcome; application interface changes require both German and English strings. Authored course material and other user content retain their original language.
 
-Das Portal ist eine React-/TypeScript-PWA mit Supabase. Der vollständige Produktumfang bleibt im [Entwicklungsplan](docs/IMPLEMENTATION_PLAN.md) sichtbar. Eine funktionierende Entwicklungsfassung ist keine Produktionsfreigabe.
+The Portal is a React/TypeScript PWA backed by Supabase. The complete product scope remains in the [implementation plan](docs/IMPLEMENTATION_PLAN.md) and [roadmap](ROADMAP.md). A working development version does not constitute production approval.
 
-## Den passenden Einstieg finden
+## Choose a starting point
 
-| Vorhaben                                                   | Einstieg                                                                                                                                                          |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Fehler melden, Frage stellen oder Verbesserung vorschlagen | [Issue-Leitfaden](docs/ISSUE_GUIDE.md) und passende [Issue-Vorlage](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/issues/new/choose) |
-| Code oder Dokumentation ändern                             | Dieser Ablauf, anschließend der [PR-Leitfaden](docs/PULL_REQUEST_GUIDE.md)                                                                                        |
-| Architektur, Datenmodell und Tests verstehen               | [Entwicklerhandbuch](docs/DEVELOPER_GUIDE.md), [Architektur](docs/ARCHITECTURE.md), [Testplan](docs/TEST_PLAN.md)                                                 |
-| Lokales System starten oder Fehler beim Start untersuchen  | [Lokale Entwicklung](docs/LOCAL_DEVELOPMENT.md)                                                                                                                   |
-| Eine mögliche Sicherheitslücke melden                      | [Privater Meldeweg](docs/ISSUE_GUIDE.md#sicherheitsprobleme-melden); keine öffentlichen Exploitdetails                                                            |
+| Task                                                   | Starting point                                                                                                                                                    |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Report a bug, ask a question or propose an improvement | [Issue guide](docs/ISSUE_GUIDE.md) and the appropriate [issue form](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/issues/new/choose) |
+| Change code or documentation                           | This guide, followed by the [pull request guide](docs/PULL_REQUEST_GUIDE.md)                                                                                      |
+| Understand architecture, data and tests                | [Developer guide](docs/DEVELOPER_GUIDE.md), [architecture](docs/ARCHITECTURE.md) and [test plan](docs/TEST_PLAN.md)                                               |
+| Start the local system or investigate startup errors   | [Local development](docs/LOCAL_DEVELOPMENT.md)                                                                                                                    |
+| Report a possible vulnerability                        | [Private reporting process](docs/ISSUE_GUIDE.md#reporting-security-issues); do not publish exploit details                                                        |
 
-## 1. Vorhandenen Stand lesen
+## 1. Read the existing state
 
-Lies [Arbeitsprotokoll](docs/WORKLOG.md), [Entwicklungsplan](docs/IMPLEMENTATION_PLAN.md), [Projektregeln](AGENTS.md) und den verbindlichen [Master-Prompt](docs/UNIVERSAL_MASTER_PROMPT.txt). Suche vor einem neuen Issue oder PR nach bestehenden Meldungen und laufender Arbeit. Größere fachliche Änderungen sollten zuerst in einem Issue mit Problem, Ziel und Abnahmekriterien beschrieben werden.
+Read the [work log](docs/WORKLOG.md), [implementation plan](docs/IMPLEMENTATION_PLAN.md), [project instructions](AGENTS.md) and authoritative [master specification](docs/UNIVERSAL_MASTER_PROMPT.txt). Search existing issues and active pull requests before opening another. Describe substantial business changes in an issue first, including the problem, intended outcome and acceptance criteria.
 
-Bewahre funktionierenden Code und bereits ausgelieferte Migrationen. Die öffentliche Luminovia-Website ist eine Designreferenz und gehört nicht zum Änderungsumfang dieses Repositorys.
+Preserve working code and already delivered migrations. The public Luminovia website is a brand reference and is outside this repository's change scope.
 
-## 2. Einen eigenen Branch verwenden
+## 2. Use a separate branch
 
-Externe Beitragende erstellen einen Fork und einen Branch darin. Mit Schreibrechten im Repository genügt ein eigener Branch. Für Agentenarbeit verwenden wir `codex/`; für andere Beiträge sind zum Beispiel `fix/kurzer-name`, `feature/kurzer-name` und `docs/kurzer-name` geeignet.
+External contributors create a fork and work on a branch there. Contributors with repository write access can use a branch in this repository. Agent branches use `codex/`; other suitable examples are `fix/short-description`, `feature/short-description` and `docs/short-description`.
 
 ```bash
-git clone https://github.com/DEIN_GITHUB_NAME/Luminovia-Management-Tool.git
+git clone https://github.com/YOUR_GITHUB_NAME/Luminovia-Management-Tool.git
 cd Luminovia-Management-Tool
 git remote add upstream https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool.git
 git fetch upstream
-git switch -c fix/kurzer-name upstream/main
+git switch -c fix/short-description upstream/main
 ```
 
-Halte den Branch auf eine zusammenhängende Änderung begrenzt. Nutze aussagekräftige, signierte Commits, beispielsweise `fix: preserve invoice version on download` oder `docs: explain local startup`. Zugangsdaten und reale Personen- oder Kundendaten gehören weder in Commits noch in Screenshots oder Test-Fixtures.
+Keep each branch focused on one coherent change. Use meaningful, signed commits, such as `fix: preserve invoice version on download` or `docs: explain local startup`. Credentials and real personal/customer data must never appear in commits, screenshots or test fixtures.
 
-## 3. Lokal entwickeln und prüfen
+## 3. Develop and verify locally
 
-Die unterstützten Voraussetzungen stehen vollständig in [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md): Linux, die in `.node-version` gepinnte Node-Version, npm und Docker Engine/Compose. Die vollständigen Prüfungen benötigen zusätzlich Python 3, `flock` sowie die offiziellen `age`-/`age-keygen`-Werkzeuge. Verwende den Lockfile-Stand; führe kein ungeprüftes `audit fix --force` aus.
+[LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) contains the complete prerequisites: Linux, the Node version pinned in `.node-version`, npm and Docker Engine/Compose. Full verification also requires Python 3, `flock` and the official `age`/`age-keygen` tools. Install the locked dependency versions; do not run an unreviewed `audit fix --force`.
 
 ```bash
 ./portal start
@@ -46,44 +46,44 @@ Die unterstützten Voraussetzungen stehen vollständig in [LOCAL_DEVELOPMENT](do
 ./portal stop
 ```
 
-`start` startet das echte lokale System und bewahrt seine Daten. `test` verwendet einen getrennten temporären Datenbestand und prüft unter anderem Komponenten, Datenbankrechte, APIs, Browser und die gebaute PWA. `stop` beendet die verwaltete Entwicklungsumgebung datenerhaltend. Eine normale Datenbank wird für einen Test nicht zurückgesetzt. Der erste Start benötigt Downloads und ausreichend RAM für die Dienste samt Malware-Scanner.
+`start` runs the real local system and preserves its data. `test` uses a separate temporary dataset to verify components, database permissions, APIs, browsers and the built PWA. `stop` stops the managed development environment while retaining data. Testing does not reset an ordinary development database. The first start downloads images and needs sufficient RAM for the services and malware scanner.
 
-Während der Entwicklung sind gezielte Prüfungen sinnvoll, zum Beispiel `npm test`, `npm run test:coverage`, `npm run lint` und `npm run typecheck`, sobald die lokalen Abhängigkeiten installiert sind. Die [CI-/Coverage-Anleitung](docs/CI_QUALITY.md) erklärt Prüfungen, Berichte und Mindestwerte. Vor der Abnahme ist `./portal test` maßgeblich. Führe nur Prüfungen aus, deren Ziel und Ressourcen du verstanden hast; veröffentliche keine unbearbeiteten privaten Testartefakte.
+Use focused checks during development, such as `npm test`, `npm run test:coverage`, `npm run lint` and `npm run typecheck`, once local dependencies are installed. The [CI and coverage guide](docs/CI_QUALITY.md) explains checks, reports and thresholds. `./portal test` is the full acceptance command. Understand each command's target and resource requirements before executing it; never publish raw private test artifacts.
 
-## 4. Die fachlichen Verträge erhalten
+## 4. Preserve business and security contracts
 
-- **Berechtigungen:** Datenbank und API entscheiden über Zugriffe. Prüfe andere Konten, entzogene Rechte und abgelehnte Anfragen; ein ausgeblendeter Button reicht nicht.
-- **Termine und Honorare:** Buchungen werden erst nach bestätigter Datenbanktransaktion angezeigt. Angenommene Termine und finanzielle Vereinbarungen bleiben unveränderliche Snapshots.
-- **Datenbank:** Ergänze neue Migrationen, statt ausgelieferte Dateien zu ändern. Prüfe RLS, Grants, Constraints, Nebenläufigkeit und vorhandene Daten gemeinsam mit der API und Oberfläche.
-- **Oberfläche:** Ergänze DE/EN-Texte, Lade-, Fehler- und Leerzustände. Prüfe Tastaturbedienung, Mobilansicht sowie helle und dunkle Darstellung. Screenshots enthalten ausschließlich fiktive Daten.
-- **Dokumentation:** Aktualisiere betroffene Anleitungen und API-Beschreibungen. Halte im Arbeitsprotokoll tatsächliche Änderungen, ausgeführte Prüfungen und offene Grenzen fest.
+- **Permissions:** Database and API checks authorise access. Test separate accounts, revoked permissions and rejected requests; hiding a button does not enforce a boundary.
+- **Scheduling and fees:** Confirm bookings only after the database transaction succeeds. Accepted sessions and commercial terms remain immutable snapshots.
+- **Database:** Add migrations rather than editing delivered ones. Verify RLS, grants, constraints, concurrency and retained data together with API and UI behaviour.
+- **Interface:** Add DE/EN strings plus loading, error and empty states. Check keyboard use, mobile layouts and light/dark themes. Use fictional screenshot data only.
+- **Documentation:** Update affected guides and API references. Record actual changes, executed checks and remaining limitations in the work log.
 
-Tests sollten das veränderte Verhalten und relevante Fehlerpfade nachweisen. Ein sinnvoller Regressionstest schlägt vor der Fehlerkorrektur fehl und besteht danach. Umfang und Testnachweise richten sich nach dem Risiko; dokumentiere eine nicht ausgeführte Prüfung ausdrücklich.
+Tests should demonstrate the changed behaviour and relevant failure paths. A useful regression test fails before the correction and passes afterwards. Scale validation to the risk and explicitly identify checks that were not run.
 
-## 5. Pull Request eröffnen
+## 5. Open a pull request
 
-Öffne einen PR gegen `main` und fülle die Vorlage aus. Ein Draft eignet sich für noch nicht prüfbereite Arbeit. Beschreibe Problem, resultierendes Verhalten, tatsächliche Testnachweise und Risiken. Verlinke das Issue; `Closes #123` schließt es beim Merge, während `Refs #123` es nur zuordnet.
+Target `main` and complete the template. Use a draft while work is not ready for review. Describe the problem, resulting behaviour, actual validation and risks. Link the issue: `Closes #123` closes it after merge; `Refs #123` records a relationship without closing it.
 
-Jeder PR braucht genau ein `type:*`-Label, mindestens ein `area:*`-Label und genau ein `risk:*`-Label. Die vollständigen Werte, Beispiele und Verantwortlichkeiten stehen im [PR-Leitfaden](docs/PULL_REQUEST_GUIDE.md#labels-für-pull-requests). Externe Beitragende können Labels normalerweise nicht selbst setzen: Nenne deine Vorschläge im PR, ein Maintainer setzt sie vor der Abnahme.
+Each PR needs exactly one `type:*` label, at least one `area:*` label and exactly one `risk:*` label. Available values, examples and responsibilities are in the [PR guide](docs/PULL_REQUEST_GUIDE.md#labels-for-pull-requests). External contributors usually cannot set labels: suggest them in the description so a maintainer can apply them.
 
-## Review und Merge
+## Review and merge
 
-Beiträge an `main` laufen über einen Pull Request. Für gewöhnliche Beitragende ist mindestens eine unabhängige zustimmende Review erforderlich; neue Änderungen machen eine vorherige Zustimmung ungültig. Beantworte offene Rückfragen und halte die CI grün.
+The contribution process uses pull requests into `main`. Ordinary contributions should receive at least one independent approval; new changes invalidate earlier approval under the prepared review policy. Resolve review discussions and keep CI green. These are process requirements: the additional server-side review/check rules are currently disabled, as stated above.
 
-Maintainer und Administratoren können durch die ausdrücklich konfigurierte Rollen-Ausnahme **jederzeit direkt mergen**, auch bei ausstehender Review oder noch laufenden/fehlgeschlagenen Checks. Das ersetzt die frühere auf Carina beschränkte PR-only-Ausnahme. Gewöhnliche Schreibrechte ergeben keinen Bypass. Die Ausnahme bezieht sich auf die handelnde Person; GitHub kann eine ausdrückliche Bypass-Aktion anzeigen. Fachliche Prüfung und nachvollziehbare Testnachweise bleiben die empfohlene Arbeitsweise.
+Maintainers and administrators have an explicit role-based `always` bypass and can merge directly, including when reviews or checks are pending or failing. This replaces the earlier Carina-only PR bypass. Ordinary write access does not grant bypass. The exception belongs to the acting person; GitHub may require an explicit bypass action. Business review and traceable validation remain the recommended process.
 
-Build, Typecheck, Lint, Formatting, Code quality und Tests and coverage laufen neben `verify`, `Actual isolated selfhost image compatibility` und `PR metadata`. Die genaue Trennung, zusätzliche CodeQL-Analyse und Dependabot stehen in [CI_QUALITY](docs/CI_QUALITY.md). Die zusätzlichen verpflichtenden Review-/Checkregeln für gewöhnliche Beitragende sind bis zum nachgewiesenen Wartungs-App-Pfad deaktiviert; eine JSON-Datei oder Rollen-Ausnahme beweist keine solche Aktivierung.
+Build, Typecheck, Lint, Formatting, Code quality and Tests and coverage run alongside `verify`, `Actual isolated selfhost image compatibility` and `PR metadata`. [CI_QUALITY](docs/CI_QUALITY.md) explains their boundaries, separate CodeQL analysis and Dependabot. A ruleset JSON file or role bypass does not prove that a disabled review/check rule is enforced.
 
-Ein direkter Maintainer-Merge überspringt **nicht** die Veröffentlichungsprüfung: Die Entwicklungsrelease-Automatik wartet auf alle CI-Gates. Eine fehlgeschlagene Prüfung erzeugt kein freigegebenes Installationspaket. Der bestehende tägliche Wartungspfad bleibt bis zur abgestimmten App-Einrichtung unverändert; es wird kein fiktiver Bot-Bypass behauptet.
+Direct maintainer merging does not bypass release acceptance: the development release automation waits for all of its CI gates. Failed checks do not produce an accepted installation package. The existing daily maintenance path remains unchanged until the separate App integration is proven; no fictional bot bypass is assumed.
 
-Ein Merge kann die bestehende **Entwicklungsrelease-Automatik** anstoßen. Eine Produktionsinstallation, riskante Migration oder Änderung an Hosting, DNS und echten Daten benötigt weiterhin die dafür vorgesehene separate Freigabe. Der GitHub-Merge ist kein Ersatz für diese Betriebsfreigabe.
+Merging can trigger the existing development release automation. Production installation, risky migrations and changes to hosting, DNS or real data still require the appropriate separate authorisation. A GitHub merge does not replace operational approval.
 
-## Tags und Veröffentlichungen
+## Tags and releases
 
-Labels ordnen Issues und PRs ein. Git-Tags markieren dagegen einen bestimmten Commit. Die signierten, annotierten Tags `milestone/m3-accounts-commission`, `milestone/m4-cbw-templates` und `milestone/m5-system-audit` kennzeichnen angenommene Entwicklungsmeilensteine. Sie behaupten weder einen vollständigen Produktumfang noch eine Produktionsfreigabe.
+Labels classify issues and PRs. Git tags identify specific commits. Signed annotated tags such as `milestone/m3-accounts-commission`, `milestone/m4-cbw-templates`, `milestone/m5-system-audit` and `milestone/m6-connected-operations` identify accepted development milestones, without claiming complete product scope or production approval.
 
-Bestehende `cms-dev-*`-Tags gehören zur Entwicklungsrelease-Automatik. Verschiebe oder ersetze veröffentlichte Tags nicht. Neue Meilenstein- oder Versionsmarkierungen werden von den Maintainerinnen und Maintainern mit dem tatsächlich geprüften Commit verknüpft; ein PR-Label erzeugt keinen Git-Tag.
+Existing `cms-dev-*` tags belong to development release automation. Never move or replace published tags. Maintainers associate new milestone/version tags with the actual verified commit; applying a PR label does not create a Git tag.
 
-## Lizenz und Zusammenarbeit
+## Licence and collaboration
 
-Das Repository steht unter GNU GPLv3; vorhandene Lizenz- und Herkunftshinweise bleiben erhalten. Für mitgelieferte Fonts und Markenmaterial gelten die jeweiligen Hinweise. Beschreibe technische Meinungsverschiedenheiten sachlich, begründe Entscheidungen und behandle Rückmeldungen respektvoll.
+This repository uses GNU GPLv3. Retain existing licence and provenance notices; bundled fonts and brand assets have their own applicable notices. Discuss technical disagreements respectfully, explain decisions and respond constructively to feedback.

@@ -1,9 +1,9 @@
-# Sicherheitsprobleme melden
+# Reporting security issues
 
-Bitte melde vermutete Schwachstellen über [GitHubs private Sicherheitsmeldung](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/security/advisories/new). Diese Funktion ist für dieses öffentliche Repository aktiviert. Öffentliche Issues und PRs eignen sich erst nach abgestimmter Offenlegung.
+Report suspected vulnerabilities through [GitHub private vulnerability reporting](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/security/advisories/new), which is enabled for this public repository. Use public issues and PRs only after coordinated disclosure.
 
-Beschreibe betroffene Version oder Commit, Voraussetzungen, erwartetes und beobachtetes Verhalten sowie eine minimale Reproduktion mit fiktiven Daten. Lade keine echten Zugangsdaten, Token, Kundendaten, Rechnungen oder privaten Dateien hoch. Nutze ausschließlich eigene oder ausdrücklich freigegebene Testumgebungen.
+Include the affected version or commit, prerequisites, expected and observed behaviour, and a minimal reproduction using fictional data. Do not upload real credentials, tokens, customer data, invoices or private files. Use only your own or explicitly authorised test environments.
 
-Der aktuelle Entwicklungsstand auf `main` wird gepflegt. Historische Meilenstein-Tags dokumentieren frühere Stände und sind keine Zusage eigener Wartungszweige. Es gibt noch keine freigegebene Produktionsversion.
+The current development branch `main` is maintained. Historical milestone tags record earlier states and do not imply separately maintained release branches. No production version has been approved yet.
 
-Weitere Hinweise stehen im [Issue-Leitfaden](docs/ISSUE_GUIDE.md#sicherheitsprobleme-melden). Die technischen Entwicklungsgrenzen und offenen Freigaben stehen in der [Sicherheitsdokumentation](docs/SECURITY_PRIVACY_CHECKLIST.md).
+The [issue guide](docs/ISSUE_GUIDE.md#reporting-security-issues) explains reporting in more detail. The [security documentation](docs/SECURITY_PRIVACY_CHECKLIST.md) records technical development boundaries and outstanding approvals.
