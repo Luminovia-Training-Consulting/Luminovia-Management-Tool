@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { db, isConfigured } from "../../lib/supabase";
@@ -165,6 +165,12 @@ export function Login() {
             </form>
           )}
           <p className="fine-print">{t("invitationNote")}</p>
+          <div className="login-learning-links">
+            <Button asChild variant="secondary">
+              <Link to="/demo">{t("tryDemo")}</Link>
+            </Button>
+            <Link to="/help">{t("helpGuides")}</Link>
+          </div>
         </div>
       </section>
     </div>
