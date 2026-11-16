@@ -450,7 +450,7 @@ export const guideModules: GuideModule[] = [
       "durchführung",
       "run",
       "baustein",
-      "cbw",
+      "building block",
     ],
   },
   {

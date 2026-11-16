@@ -1,5 +1,7 @@
 # GitHub administration and contribution workflow
 
+> Reviewed server snapshot on 16 November 2026 at 06:42:36 UTC: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception (`bypass_mode: pull_request`). No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. Live server rules are authoritative and may later differ. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
+
 Contributors should start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue guide](ISSUE_GUIDE.md) and the [pull request guide](PULL_REQUEST_GUIDE.md). This page explains the administrative sources and the boundaries of rule exceptions. Public contribution guidance and new contribution discussions use English; the product interface remains German and English.
 
 Current publication policy: use `./portal check` for fast local feedback and
@@ -10,9 +12,11 @@ CMS release. Releases require an authorised manual `Portal checks` dispatch on
 and every existing release gate. PR metadata publication/cleanup is manual-only;
 see [PR_PREVIEWS](PR_PREVIEWS.md). The existing VPS polling timer is unchanged.
 
-## Rules for `main`
+<a id="rules-for-main"></a>
 
-The current server readback and matching source JSON replace the earlier disabled-rule and broad-`always` snapshots. The [server-side rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative; committing JSON alone does not activate or change a rule.
+<a id="active-rule-layers"></a>
+
+The JSON files under `.github/rulesets/` preserve the verified 16 November 2026 06:42:36 UTC server snapshot: all three rulesets active, no history/check bypass, and only `CarinaSchoppe` (`User:29256704`) with `bypass_mode: pull_request` in the review rule. The review layer contains only its pull-request rule. Committing JSON does not activate protection; later [server-side rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) remain authoritative. The reviewed layers are:
 
 | Layer                    | Live ID    | Source                                           | Active exceptions                                                                          |
 | ------------------------ | ---------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------ |
@@ -50,7 +54,7 @@ The prepared [native controller](AUTO_MERGE.md) requires independent review and 
 
 ## Controller delivery still pending
 
-The legacy fragment above remains valid for older links. **Branch rules are active; controller delivery is the pending item.** This prepared narrow follow-up includes main `319ab69f` and its protected PR22 daily-maintenance source and still requires its own exact-source CI, merge and successful default-branch execution. Source files, repository auto-merge availability and a configured App token do not prove that the controller is running on accepted main.
+The legacy fragment above remains valid for older links. **Branch rules are active; controller delivery is the pending item.** This prepared narrow follow-up includes main `e88df84c`, the protected PR22 daily-maintenance source and the accepted English/customer-neutral documentation and still requires its own exact-source CI, merge and successful default-branch execution. Source files, repository auto-merge availability and a configured App token do not prove that the controller is running on accepted main.
 
 The existing App `5776881` (`luminovia-portal-maintenance`) remains scoped to this repository. Its existing protected `maintenance-signing` credentials are reused; no new App, permission scope, personal token or server credential is introduced. The standard Actions token reads REST and a fixed GraphQL operation. Only the separate App token may call the native PR merge endpoint or the two main-verification dispatch endpoints. It has no main-ref/force-write route and no native-rule bypass.
 
@@ -88,9 +92,11 @@ References: [rulesets and exceptions](https://docs.github.com/en/repositories/co
 
 After complete quality, coverage, application and native acceptance, PRs produce a seven-day source package for a complete local preview. The artifact remains available without a Deployment record. Only an authorised manual `PR preview deployments` dispatch on `main` with `action=publish`, the exact `run_id` and `run_attempt` asks the trusted default-branch publisher to create metadata. Its default `action=cleanup` deactivates stale/closed/expired records without publishing a new one; no PR event or schedule runs that cleanup automatically. Contribution code receives no write token or hosting secrets. The deployment URL opens the downloadable package; successful publication does not claim a hosted website. The packaged launcher uses owned local database identities and distinct ports. See [PR previews](PR_PREVIEWS.md) for permissions and local operation.
 
+<a id="labels-and-historical-prs"></a>
+
 ## Labels and metadata validation
 
-[labels.json](../.github/labels.json) is the shared catalogue of managed labels used by local and CI validation. The nine existing GitHub standard labels are preserved. Every PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. The catalogue contains 36 managed labels, including `merge:hold`, alongside the preserved defaults. Unknown values within the three required categories are rejected. `merge:hold` independently blocks the required metadata check and pauses merging until removed. The [pull request guide](PULL_REQUEST_GUIDE.md#pull-request-labels) explains how to choose them.
+[labels.json](../.github/labels.json) contains 36 managed entries: eight types, 24 areas, three risk levels and `merge:hold`. It is the shared catalogue used by local and CI validation. The stop signal grants no permission and does not replace categories or checks; preserve it until its stated concern is addressed. The nine existing GitHub standard labels are preserved. Every PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. Other labels may be added; unknown values within these three categories are rejected. The [pull request guide](PULL_REQUEST_GUIDE.md#pull-request-labels) explains how to choose them. The required metadata gate also rejects `merge:hold`, so the pause applies to native queued merging as well.
 
 The [metadata workflow](../.github/workflows/pr-metadata.yml) responds to changes on open PRs through the ordinary `pull_request` event. It explicitly checks out `refs/heads/main` from this repository, so current labels are checked against the current shared catalogue rather than an obsolete contribution snapshot. It never checks out or executes contribution code, installs dependencies or uses secrets. Permissions remain only `contents: read` and `pull-requests: read`; no elevated event is needed. Repository, PR number and live head identity are validated; titles, bodies and labels remain data. Its regression tests are discovered automatically by `./portal test`:
 
@@ -108,13 +114,14 @@ The manual run reads current GitHub labels and records the actual PR head, inclu
 
 ## Git tags and development packages
 
-Labels classify issues and pull requests. Git tags identify an immutable source revision. These signed annotated tags name already merged development milestones:
+Labels classify issues and PRs; Git tags identify immutable commits. Existing signed annotated development milestones include:
 
-| Tag                                | Actual merge commit                        | Meaning                                                               |
-| ---------------------------------- | ------------------------------------------ | --------------------------------------------------------------------- |
-| `milestone/m3-accounts-commission` | `00db7c9630dbf413000feab7ec7e0c2f56cb5b3a` | Accounts, profiles, clients and revenue sharing; PR #3.               |
-| `milestone/m4-cbw-templates`       | `b9cdcc89758451bc8258f3a9f173e95ee1a23736` | Building-block templates, avatars and comments; PR #4.                |
-| `milestone/m5-system-audit`        | `bb322746d3cf18b1a0f1eae0eaa96450d26e26cd` | System review and concrete functional/performance corrections; PR #5. |
+| Tag                                 | Accepted merge commit                      | Scope                                                                                  |
+| ----------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `milestone/m3-accounts-commission`  | `00db7c9630dbf413000feab7ec7e0c2f56cb5b3a` | Accounts, profiles, clients and revenue allocation; PR #3.                             |
+| M4 building-block checkpoint        | `b9cdcc89758451bc8258f3a9f173e95ee1a23736` | Building-block templates, avatars and comments; PR #4.                                 |
+| `milestone/m5-system-audit`         | `bb322746d3cf18b1a0f1eae0eaa96450d26e26cd` | Functional and performance corrections; PR #5.                                         |
+| `milestone/m6-connected-operations` | `dc8e9a7e65c96076038bf7067791676578d121d4` | Taxonomy, availability, lifecycle/capacity, dashboard, notifications and audit; PR #8. |
 
 These tags are not production approvals or new Semver releases. They do not change existing `cms-dev-*` release tags. Release publication and installation follow their separate owning workflows and operational authorisation; successful main CI or pushing a milestone tag alone is not evidence of a published or installed package. Do not move or replace published tags.
 
@@ -122,4 +129,4 @@ These tags are not production approvals or new Semver releases. They do not chan
 
 Bug reports and feature requests start with the [issue chooser](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/issues/new/choose). Blank issues are disabled in favour of the forms. This is a setting of the chooser interface, not a technical restriction on the issue API.
 
-GitHub private vulnerability reporting is enabled and linked from [SECURITY](../SECURITY.md). Enabling it does not automatically enable Secret Scanning or other paid services. No people were invited, messages sent, or hosting/production settings changed as part of this administration work.
+GitHub private vulnerability reporting is enabled and linked from [SECURITY](../SECURITY.md). Secret Scanning and Push Protection were separately enabled and read back in the earlier quality task; private reporting alone does not enable them. No people were invited, messages sent, or hosting/production settings changed as part of this administration work.

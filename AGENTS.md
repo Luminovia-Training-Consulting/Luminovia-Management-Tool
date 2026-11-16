@@ -62,6 +62,7 @@ The authenticated tour may navigate only after explicit user choice; it grants n
 
 ## Rules the code already follows
 
+- Keep public documentation, filenames, source explanations, UI examples and screenshots customer-neutral. Never name actual customers or publish their records. Use fictional organisations in tests; actual customer names and account memberships are private application configuration.
 - Keep React, TypeScript, Vite, Tailwind/shadcn primitives, Router, TanStack Query,
   React Hook Form/Zod and Supabase. Do not add another application server without
   a demonstrated requirement. The existing internal scanner and local controllers
@@ -79,7 +80,7 @@ The authenticated tour may navigate only after explicit user choice; it grants n
   partial booking, drag-to-confirm or browser-only success.
 - Accepted fees, currency, shares, contract versions and session snapshots remain
   immutable. New per-position capacity must not reinterpret legacy single-position,
-  client or CBW budgets. Receipt acknowledgement is not an electronic signature.
+  client or course-originated budgets. Receipt acknowledgement is not an electronic signature.
 - Private calendars/availability notes, DMs, evidence, contracts and invoices have
   no blanket administrator read bypass. Current permissions also apply to file
   bytes, search results, realtime delivery and repeated requests.

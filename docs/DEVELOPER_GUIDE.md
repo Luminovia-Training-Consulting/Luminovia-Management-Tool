@@ -9,6 +9,7 @@ Read [WORKLOG](WORKLOG.md), [AGENTS](../AGENTS.md), the [master specification](U
 ```bash
 ./portal start
 ./portal status
+./portal check
 ./portal test
 ./portal stop
 ```
@@ -75,7 +76,7 @@ The [generated API reference](API_REFERENCE.md) lists actual parameters, return 
 | Profiles and expertise | `features/profile`, `features/people`, profile/expertise tables and safe person projections  | Own contact/evidence data are separate from intentionally shared profile information. [PROFILES_REVIEWS](PROFILES_REVIEWS.md).                                                                                  |
 | Profile pictures       | Avatar editor/API, `profile_avatars`, existing document versions and the files avatar action | Own clean image, exact version, authorized profile viewing and reauthorization before returning bytes. [PROFILE_AVATARS](PROFILE_AVATARS.md).                                                                   |
 | Customers and courses  | `features/operations`, organization/template/run/session model                               | Private contacts/notes remain protected; reusable content and an actual course run are separate entities. [OPERATIONS](OPERATIONS.md).                                                                          |
-| CBW building blocks    | Provenance catalogue, `building_blocks`, source versions and referencing templates           | One canonical template per code, each original source with hash/pages/filename. No import of compensation, contacts or real participants. [CBW_TEMPLATES](CBW_TEMPLATES.md).                                    |
+| Course building blocks | Provenance catalogue, `building_blocks`, source versions and referencing templates           | One canonical template per code, each original source with hash/pages/filename. No import of compensation, contacts or real participants. [COURSE_BUILDING_BLOCKS](COURSE_BUILDING_BLOCKS.md).                  |
 | Job offers             | `features/admin`, `features/jobs`, job/session/requirement tables                            | Template → run → referenced job, verified current source data and an immutable accepted snapshot.                                                                                                               |
 | Immediate allocation   | Claim RPC, lecturer/job locks, unique claims and interval exclusion                          | All sessions or none; one winner, idempotent retry, no drag/frontend shortcut.                                                                                                                                  |
 | Comments               | `features/comments`, private comment/revision data                                           | Resource-specific staff discussions; own versioned edits/withdrawal and reasoned MFA moderation; no modification of accepted terms. [RESOURCE_COMMENTS](RESOURCE_COMMENTS.md).                                  |
@@ -87,9 +88,9 @@ The [generated API reference](API_REFERENCE.md) lists actual parameters, return 
 | Clients and commission | Client portal, current organization membership, private gross/commission snapshots           | Private versioned role policy; lecturers see their own compensation, admin/owner sees full prices; unknown historical gross prices remain unknown. [CLIENT_COMMISSION_SECURITY](CLIENT_COMMISSION_SECURITY.md). |
 | Account management     | `features/accounts`, accounts Edge, role/activation/invitation RPCs                          | MFA and current permissions; the last active administrator is preserved under a shared lock.                                                                                                                    |
 
-## Maintaining CBW provenance and offers
+## Maintaining course provenance and offers
 
-The catalogue contains no absolute local user paths and does not publish the original PDFs. A source reference includes the code, exact filename, SHA-256, pages and dates. LPC3/LPC4 revisions with the same title are distinct sources of the same canonical building block. The import/check routine and its arguments are documented in [CBW_TEMPLATES](CBW_TEMPLATES.md).
+The catalogue contains no absolute local user paths and does not publish the original PDFs. A source reference includes the code, exact filename, SHA-256, pages and dates. LPC3/LPC4 revisions with the same title are distinct sources of the same canonical building block. The import/check routine and its arguments are documented in [COURSE_BUILDING_BLOCKS](COURSE_BUILDING_BLOCKS.md).
 
 New runs use a selected template; customer, delivery mode, location/link and actual sessions can be planned separately. The course-to-job form displays a frozen source snapshot and submits only financial terms with `source_revision`. The server reads and locks the real resources, compares the revision and uses the original session IDs. A stale draft is rejected. Once a job exists, its source chain is protected; a new building-block revision receives a new template rather than redirecting existing jobs.
 
@@ -107,7 +108,7 @@ Keep components, DTOs and queries in the feature module that owns them. Share ac
 
 Comment on the reason for a lock, important ordering, the authorization contract, version/retry handling or memory cleanup directly beside the code. Types and clear names describe the data; security/architecture documents explain broader decisions. Update comments when behavior changes. Document known limits instead of returning success from unimplemented branches.
 
-Comprehensive English source commentary now covers maintained frontend modules, tests, Edge handlers, runtime tools and operating configuration. Keep file purposes, function/component/hook contracts and important control-flow explanations current; preserve useful existing comments and directives. The [agent guide](../AGENTS.md) maps ownership, commands and invariants. Released migration bytes remain unchanged because preview/update checks bind their hashes; the [SQL migration guide](MIGRATION_GUIDE.md) explains all 24 historical files and their replacement order. JSON/lockfiles, generated data, binary assets and the vendored upstream snapshot retain their own formats and provenance.
+Comprehensive English source commentary now covers maintained frontend modules, tests, Edge handlers, runtime tools and operating configuration. Keep file purposes, function/component/hook contracts and important control-flow explanations current; preserve useful existing comments and directives. The [agent guide](../AGENTS.md) maps ownership, commands and invariants. Released migration bytes remain unchanged because preview/update checks bind their hashes; the [SQL migration guide](MIGRATION_GUIDE.md) explains the historical files and additive follow-up migrations in order. JSON/lockfiles, generated data, binary assets and the vendored upstream snapshot retain their own formats and provenance.
 
 Create additive migrations with the actually installed CLI (`npx --no-install supabase migration new NAME`). Do not modify migrations that have already been delivered. Check new tables, indexes, constraints, RLS and grants together with their UI/API. Avoid a second source of truth for accepted compensation, confirmed sessions or author identities.
 

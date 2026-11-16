@@ -1,6 +1,7 @@
 # Contributing to Luminovia Portal
 
-> Live policy verified on 16 November 2026: all 15 required checks and signatures are mandatory, with no CI or history bypass. Only `CarinaSchoppe` (user `29256704`) has a personal PR-only review exception; repository roles and the maintenance App have none. The native automatic-merge controller is prepared and still needs its own exact-source CI, merge and default-branch execution. [Current rules and delivery boundary](docs/GITHUB_WORKFLOW.md#rules-for-main).
+> Reviewed server snapshot on 16 November 2026 at 06:42:36 UTC: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception (`bypass_mode: pull_request`). No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. Live server rules are authoritative and may later differ. [Reviewed rule configuration](docs/GITHUB_WORKFLOW.md#active-rule-layers).
+> The native controller and continuous read-only probe remain prepared until their own exact-source acceptance and actual default-branch execution.
 
 Welcome! This guide explains how to turn an idea or bug report into a tested, reviewable change. **Use English for issues, pull requests and contributor-facing documentation.** Application interface changes must provide both German and English strings; authored course content keeps its original language.
 
@@ -34,7 +35,7 @@ git fetch upstream
 git switch -c fix/short-description upstream/main
 ```
 
-Keep each branch focused on one coherent change. Use meaningful, signed commits such as `fix: preserve invoice version on download` or `docs: explain local startup`. Credentials and real personal or customer data must not appear in commits, screenshots or test fixtures.
+Keep each branch focused on one coherent change. Use meaningful, signed commits such as `fix: preserve invoice version on download` or `docs: explain local startup`. Credentials, real customer names and real personal or customer data must not appear in public documentation, filenames, UI examples, commits, screenshots or test fixtures. Use customer-neutral terminology and clearly fictional organisations; configure actual customers privately in the application.
 
 ## 3. Develop and verify locally
 
@@ -81,6 +82,8 @@ Ordinary contributors need an independent current-head approval, resolved conver
 
 Only `CarinaSchoppe` (immutable user ID `29256704`) has a personal `pull_request` exception in the review ruleset. It applies when that exact user performs a native PR merge, including their own, and grants no direct-main push or early merge before required checks pass. The exception is not attached to the PR author and cannot be inherited by another account or App. Maintain/Admin roles, ordinary write access and the maintenance App grant no review exception.
 
+Fourteen required check contexts are bound to GitHub Actions integration `15368`; the generated `CodeQL` finding check is bound to integration `57789`. All 15 mandatory checks must pass for the current revision, and the PR must be up to date with `main`. These include Build, Typecheck, Lint, Formatting, Code quality, Tests and coverage, `verify`, `Actual isolated selfhost image compatibility`, `PR preview package`, `PR metadata`, the three CodeQL language analyses, Dependency review and the generated CodeQL findings check. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes. Missing, pending or failed required checks block every merger, including administrators and the maintenance App.
+
 The prepared [native automatic-merge controller](docs/AUTO_MERGE.md) uses the ordinary reviewed path for **every** PR, including Carina-authored, maintainer/admin and App-authored work: an independent approval of the exact head and native `clean` mergeability. Reviewer independence uses the actual source push bound to the CI check suite, not the workflow actor, retry initiator or commit email. Missing push evidence grants no exception; contradictory evidence blocks the candidate.
 
 All 15 required contexts are listed in [GitHub administration](docs/GITHUB_WORKFLOW.md#required-checks-and-native-auto-merge). They include the complete application/native checks, PR preview package and separate CodeQL findings result. A successful unit run, scanner job or preview artifact does not replace the other gates. Coverage reports describe measured source and do not promise universal bug freedom or 100% whole-system coverage.
@@ -89,13 +92,22 @@ Repository auto-merge availability is enabled, but it does not prove that the ne
 
 Daily maintenance uses a signed separate branch and a PR labelled `type:dependencies`, `area:devops` and `risk:high`. Its native auto-merge request waits for independent review and all 15 current checks; the maintenance App has no exception. The [protected maintenance guide](docs/GITHUB_WORKFLOW.md#protected-daily-maintenance) explains deterministic PR reuse, outdated-PR resolution, the non-merging signature diagnostic and the separate workflow-delivery evidence. Source integrated from PR22/main `319ab69f` does not prove that a privileged maintenance run has succeeded.
 
-Merging and successful verification do not themselves authorise release publication, installation, production, SMTP, DNS, risky migrations or real-data changes. Follow the separate owning workflows and [deployment runbook](docs/DEPLOYMENT_RUNBOOK.md); claim a release or installation only from its actual evidence.
+A merge does not publish a development release or create PR deployment metadata.
+An authorised maintainer must explicitly dispatch `Portal checks` on `main` with
+`publish_release=true` and the exact current `main` SHA in `expected_commit`.
+Normal manual checks and daily-maintenance verification do not publish releases.
+PR deployment metadata has its own manual-only workflow; the verified local
+artifact remains downloadable without creating that record. Production
+installation, risky migrations, and changes to hosting, DNS or real data still
+require the relevant separate authorization. A GitHub merge does not replace it.
+
+The automatic controller does not publish either output. Its check dispatches preserve the separate publication opt-in and operational authorization boundaries.
 
 ## Tags and releases
 
-Labels classify issues and PRs. Git tags identify a particular commit. The signed annotated tags `milestone/m3-accounts-commission`, `milestone/m4-cbw-templates` and `milestone/m5-system-audit` mark accepted development checkpoints; they do not imply a complete product or production release.
+Labels classify issues and PRs. Git tags identify a particular commit. The signed M3 accounts/commission, M4 building-block and M5 system-audit checkpoints identify accepted development revisions; they do not imply a complete product or production release.
 
-Existing `cms-dev-*` tags belong to development release automation. Do not move or replace published tags. Maintainers attach new milestone/version tags to the exact verified commit; a PR label does not create a Git tag.
+Existing `cms-dev-*` tags identify immutable development packages created by explicit manual publication. Do not move or replace published tags. Maintainers attach new milestone/version tags to the exact verified commit; a PR label does not create a Git tag.
 
 ## License and collaboration
 
