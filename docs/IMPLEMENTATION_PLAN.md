@@ -7,7 +7,7 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Neutral public docs, UI, tool/data names and source-linked catalogue; original migration bytes/UUIDs/source hashes and edited/used templates retained.
 - [x] Focused original-checkout validation and removal of eight branded screenshots are recorded in WORKLOG.
 - [x] Isolate the change from independently open roles/pricing work onto current main; preserve all unrelated source and the full product ledger below.
-- [ ] Complete exact-source application/security/native CI, inspect fresh neutral desktop/mobile screenshots, prepare the focused PR and perform the user-authorised merge.
+- [x] Submit signed [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23) with main-compatible preservation checks, required complete application/security/native gates and a six-screenshot fictional artifact. Actual CI completion, visual evidence and the user-authorised merge are recorded on that PR; submission alone is not acceptance.
 
 Customer organisations remain privately configured and reusable templates support multiple explicit organisation scopes. Publication of this source does not assert hosted migration installation or production acceptance.
 
