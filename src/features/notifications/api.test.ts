@@ -196,6 +196,7 @@ describe("notification response trust boundaries", () => {
     "/jobs/job-a\t",
     "/jobs/job-a\u007f",
     "/jobs/job a",
+    "//foreign.example.invalid",
     "https://foreign.example.invalid",
     "data:text/html,unsafe",
     "\\\\foreign.example.invalid",

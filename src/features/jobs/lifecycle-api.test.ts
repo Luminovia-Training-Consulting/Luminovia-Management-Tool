@@ -218,6 +218,15 @@ describe("lifecycle reads and connected cache refresh", () => {
       ["chat-members", "actor-a", "room-a"],
       ["chat-messages", "actor-a", "room-a"],
       ["operations", "actor-a", "courses"],
+      // Accepted handovers affect both the recipient inbox and the per-job
+      // projection; waitlist availability and teaching-day allocations must
+      // also become stale after a confirmed lifecycle mutation.
+      ["job-substitutions", "actor-a", "inbox"],
+      ["job-substitutions", "actor-a", "job-a"],
+      ["job-waitlist", "actor-a", "job-a"],
+      ["my-job-waitlist", "actor-a"],
+      ["substitution-candidates", "actor-a", "claim-a", "Fictional lecturer"],
+      ["teaching-day", "actor-a"],
     ];
     const unrelated = [
       ["profile", "actor-a"],
