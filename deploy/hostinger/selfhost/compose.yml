@@ -306,6 +306,8 @@ services:
     - ../../../supabase/functions/files:/home/deno/functions/files:ro
     - ../../../supabase/functions/invite-lecturer:/home/deno/functions/invite-lecturer:ro
     - ../../../supabase/functions/accounts:/home/deno/functions/accounts:ro
+    # Reviewed integration worker only; this adds no listener or separate service.
+    - ../../../supabase/functions/website-enquiries:/home/deno/functions/website-enquiries:ro
     - ../../../supabase/functions/course-documents:/home/deno/functions/course-documents:ro
     - ../../../supabase/functions/calendar-feed:/home/deno/functions/calendar-feed:ro
     - deno-cache:/root/.cache/deno
@@ -335,6 +337,11 @@ services:
       PORTAL_APP_ORIGIN: ${PORTAL_APP_ORIGIN:?Set PORTAL_APP_ORIGIN}
       PORTAL_ALLOWED_ORIGINS: ${PORTAL_APP_ORIGIN:?Set PORTAL_APP_ORIGIN}
       PORTAL_INVITES_ENABLED: ${PORTAL_INVITES_ENABLED:-false}
+      PORTAL_WEBSITE_ENQUIRIES_ENABLED: ${PORTAL_WEBSITE_ENQUIRIES_ENABLED:-false}
+      # Keep both credentials/config server-side; missing configuration stays disabled.
+      PORTAL_WEBSITE_ORIGIN: ${PORTAL_WEBSITE_ORIGIN:-}
+      PORTAL_WEBSITE_PRIVACY_NOTICE_VERSION: ${PORTAL_WEBSITE_PRIVACY_NOTICE_VERSION:-}
+      PORTAL_WEBSITE_INTEGRATION_TOKEN: ${PORTAL_WEBSITE_INTEGRATION_TOKEN:-}
       PORTAL_CLAMAV_HOST: clamav
       PORTAL_CLAMAV_PORT: '3310'
       DENO_TLS_CA_STORE: mozilla,system

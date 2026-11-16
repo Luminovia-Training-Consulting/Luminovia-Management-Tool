@@ -1,5 +1,25 @@
 # Persistent implementation plan
 
+## Current local Main25 evidence — actual 69-migration source
+
+- [x] Preserve actually accepted Main25 `4f7f6c06fdcf4f81bd4ad051ecf1a123da52d824`, exactly 69 SQL sources and the unchanged prior 68-file prefix; retain both complete ordered histories and the full A–N target.
+- [x] Pass 697 frontend cases / 91 files, whole-source V8 S66.70/B62.08/F56.69/L68.84%; both lifecycle/notification APIs retain 100% S/B/F/L across their unchanged 65 included cases.
+- [x] Pass 358 combined runtime/maintenance cases, including 17 new Deno HTTP cases with the real rustls CA:FALSE fixture, and all 31 package cases in 10.2 seconds. Pass eight production enquiry Edge-handler Deno cases and three-file production Edge lint.
+- [x] Pass full types/ESLint/actionlint/source-workflow-doc formatting, graph (200 modules / 48 routes / 56 links / 190 RPCs / one Edge call / zero issues) and production/PWA build (89 precache entries). Preserve the owning Website-enquiry and separate public-activation boundary.
+- [ ] Verify and preserve any further actual remote ancestry normally, publish the signed coherent source and perform the assigned Ready transition with a fresh full run. Obtain all fifteen current-head/current-base contexts plus actual browser execution evidence: system, browser, native retained-data, security and preview-package acceptance are not replaced by local checks.
+
+Historical `a084859d` against Main12 base passed native compatibility and 158 desktop/mobile plus four built-PWA cases; no complete system pass or acceptance of the new Main25 composition is inferred. No source-commit/cancellation-time guess or earlier 70-file-candidate inventory is used. Current coordination, personal-only review policy and separate controller/App-merge, release/provider/Website/device and production boundaries remain in force. Both complete ledgers and remaining A–N work below are preserved without a forward-feature completion gate for this PR.
+
+## Current integration checkpoint — actual Main25, 69 SQL files
+
+- [x] Bind to actually accepted Main25 `4f7f6c06fdcf4f81bd4ad051ecf1a123da52d824`, merged 15:56:00 UTC with valid signature and parents Main12 `2c7d326` / PR25 `5ac68f0`; integrate normally into `a084859d`, preserving both complete ordered ledgers and the full A–N target.
+- [x] Verify the actual accepted and working tree contain exactly 69 SQL files: all previous 68 paths/blobs unchanged plus `20261116143242_website_enquiry_intake.sql`. Earlier 70-file candidates are historical, not this accepted inventory. Preserve unchanged package/dependencies and both critical API source/test boundaries.
+- [x] Retain the actual private enquiry-intake/management, gateway/runtime and source-bound SQL/API/browser work, with the CA:FALSE native fixture leaf correction composed with Root's descriptor hardening. Keep the public Website/activation boundary, server-only credential and no production/provider/payment/accounting completion claim.
+- [ ] Run fresh combined-source tests and exact-head/current-base full 69-migration system, browser, native retained-data, security and preview-package gates. Prior 690-frontend/341-runtime local results predate Main25; `a084859d` run43895937202 native and browser pass at 15:53:43/15:57:18 UTC while system remains pending, so no complete or rebased acceptance is inferred.
+- [ ] Preserve remote `a084859d` Draft/no-auto-merge and hold coordination until the final source gates and assigned delivery slot are ready. The actual PR25 acceptance satisfies its priority reservation; proceed from that real accepted source without requiring another future feature or collective A–N completion gate.
+
+The active personal-only review policy, fifteen strict checks and no strict/history/App/role bypass remain unchanged. Controller/App-merge operation, release, public Website activation, real delivery and production approval remain separate unclaimed outcomes. Every historical candidate/source boundary and the complete remaining product scope below is retained.
+
 ## Current package-hardening and remote-union checkpoint
 
 - [x] Integrate independently reviewed package correction `c24` as signed `5c8444d9cc5617399e2d24cd39d2c20165c7aca6`; actual package suite passes 31/31 in 6.78 seconds and combined post-package runtime/maintenance passes 341 unique cases in 9.18 seconds.
@@ -216,6 +236,22 @@ Full product/module scope and independently ongoing PR acceptance remain unchang
 - [ ] Run complete canonical application acceptance and the final exact-head PR CI gates through the owning quality integration. Keep the historical `5876224`/`e048edb` 26-migration proof source-bound; no deployment or PostgreSQL image upgrade is implied.
 
 ## Actual Main17 integration — final PR24 current-head acceptance
+
+## PR25 mergeability continuation — 17 November 2026
+
+- [x] Resolve both documentation conflicts against accepted main `2c7d326`, preserving all released migrations and complete ledgers.
+- [x] Correct native candidate TLS leaf semantics without disabling validation; actual enquiry-runtime positive/untrusted/wrong-host HTTPS and socket/candidate suite passes29cases.
+- [x] Pass combined `./portal check` (681frontend),173runtime and74Edge cases with unchanged gates. Full local acceptance refuses a foreign-owned shared QA lock before startup.
+- [ ] Push signed correction, inspect fresh exact-head full system/browser/native/security/package CI, repair any failures and complete the authorised PR25 merge when repository rules permit. No production/publication action is included.
+
+## PR25 repair on accepted PR24 — 17 November 2026
+
+- [x] Bind private enquiry intake to accepted main `99add7d`, preserving all 68 published migrations and incoming application/operational workflows.
+- [x] Resequence the one unpublished enquiry migration after the released prefix; use the accepted owner-only notification resolver without restoring direct authenticated execution.
+- [ ] Verify canonical and native enquiry adapter startup, actual SQL permissions/inbox/conversion, frontend and complete isolated acceptance. Record actual results in WORKLOG; previous PR24 results do not accept PR25.
+- [ ] Push signed repair to PR25, refresh its stale stacked description and draft status when ready, observe all required current-revision checks, and merge only when repository rules permit. No release or production action is included.
+
+All complete product and seven-module ledgers below remain required. Prior coordination notes describe their historical checkpoints; this PR repair follows the current user request.
 
 ## Current final delivery on actual 68-migration main
 
