@@ -2,6 +2,12 @@
 
 The latest continuation evidence is first. Older M1 results below remain historical; they do not describe the current local service state. Full target/production acceptance remains pending.
 
+## Smart operations — focused source acceptance, combined gate pending
+
+Isolated `codex/smart-notifications-and-dashboard` preserves concurrently developed preview/role work. New source: durable email/quiet hours/SMTP worker, personal dashboard/Teaching Day/preparation, staff contact opt-in and fresh private calendar downloads. Native focused groups: email17, dashboard9, contact8, calendar4; prior notification15and central API6also pass.218Vitest/51files pass; V8 S49.61/B43.42/F40.25/L51.48%. SMTP33Python cases pass, including actual loopback protocols and bounded alarm failures. Typecheck/lint/format/export integrity and synthetic public-config production/PWA build pass (57entries/2629.78KiB). API reference139functions comes from an actual28migration replay.
+
+The first complete-command attempts refused the legitimately occupied cross-checkout QA lock before services. No new REST/E2E/native-retained result is inferred from written tests or the historical M6acceptance. Current whole-command outcome must be appended after execution. Real Hostinger authentication/delivery, installed timer, physical PWA/Google/Outlook import and production are not claimed.
+
 ## Subsequent theme regression — actual defect fixed, new CI pending
 
 Repeated documentation CI43774441712 rejected one taxonomy contrast check(69/70passed). Actual served M6markup/styles reproduced first-state button contrast1.841/1.037 during background interpolation; stable themes pass. Removing that interpolation retains transform feedback and gives immediate dark9.104/13.982 on the same actual page. New effect-based desktop/mobile regression samples the first computed theme states; exact new PR9 CI remains required. The historical accepted M6counts below are not rewritten as if this later run passed.

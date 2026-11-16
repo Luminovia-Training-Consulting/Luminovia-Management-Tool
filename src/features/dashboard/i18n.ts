@@ -1,6 +1,65 @@
 import i18n from "../../lib/i18n";
 
 const pairs: Record<string, [string, string]> = {
+  customize: ["Dashboard anpassen", "Customize dashboard"],
+  customizeHelp: [
+    "Blende persönliche Vorschaukarten ein oder aus und ändere ihre Reihenfolge. Deine Auswahl wird für dein Konto gespeichert; Rollenrechte bleiben maßgeblich.",
+    "Show or hide personal preview cards and change their order. Your choices are saved for your account; role permissions still apply.",
+  ],
+  moveUp: ["{{name}} nach oben", "Move {{name}} up"],
+  moveDown: ["{{name}} nach unten", "Move {{name}} down"],
+  saveLayout: ["Dashboard speichern", "Save dashboard"],
+  cancelLayout: ["Abbrechen", "Cancel"],
+  reloadLayout: ["Gespeicherte Auswahl neu laden", "Reload saved layout"],
+  layoutConflict: [
+    "Dein Dashboard wurde inzwischen geändert. Lade die gespeicherte Auswahl neu, bevor du speicherst.",
+    "Your dashboard changed elsewhere. Reload the saved layout before saving.",
+  ],
+  layoutError: [
+    "Die Auswahl konnte nicht gespeichert werden. Dein Entwurf bleibt erhalten.",
+    "Your choices could not be saved. Your draft is preserved.",
+  ],
+  layoutLoadError: [
+    "Deine Dashboard-Auswahl konnte nicht geladen werden. Die Standardkarten bleiben verfügbar.",
+    "Your dashboard choices could not be loaded. Default cards remain available.",
+  ],
+  teachingDay: ["Mein Unterrichtstag", "My teaching day"],
+  teachingDayHint: [
+    "Deine heute verbindlich übernommenen Termine in deiner Profilzeitzone. Kursdateien werden nur mit aktuellen Zugriffsrechten angezeigt.",
+    "Your confirmed sessions today in your profile time zone. Course files appear only with current access rights.",
+  ],
+  noTeachingToday: [
+    "Heute stehen keine bestätigten Unterrichtstermine an.",
+    "No confirmed teaching sessions today.",
+  ],
+  openTeachingLink: ["Unterrichtslink öffnen", "Open teaching link"],
+  courseDocuments: ["Freigegebene Kursdateien", "Available course files"],
+  noCourseDocuments: [
+    "Keine freigegebenen Kursdateien vorhanden.",
+    "No available course files.",
+  ],
+  personalPreparation: ["Meine Vorbereitung", "My preparation"],
+  personalPreparationHint: [
+    "Persönliche Checkliste für diesen Lehrauftrag. Diese Häkchen sind keine Freigabe oder Fortschrittsmeldung an den Auftraggeber.",
+    "Personal checklist for this assignment. These checks do not approve materials or report progress to the client.",
+  ],
+  materials_ready: [
+    "Unterlagen geprüft und vorbereitet",
+    "Materials reviewed and prepared",
+  ],
+  location_ready: [
+    "Unterrichtslink oder Raum geprüft",
+    "Teaching link or room checked",
+  ],
+  contact_ready: [
+    "Ansprechperson und Kontaktweg geklärt",
+    "Contact person and contact method confirmed",
+  ],
+  preparationError: [
+    "Die Vorbereitung konnte nicht gespeichert werden oder wurde inzwischen geändert. Aktualisiere den Unterrichtstag und versuche es erneut.",
+    "Preparation could not be saved or changed elsewhere. Refresh your teaching day and try again.",
+  ],
+  refreshTeachingDay: ["Unterrichtstag aktualisieren", "Refresh teaching day"],
   calendar: ["Mein Kalender im Blick", "My calendar at a glance"],
   calendarZone: ["Anzeige: {{zone}}", "Displayed in {{zone}}"],
   calendarHint: [

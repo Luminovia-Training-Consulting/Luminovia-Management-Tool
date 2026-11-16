@@ -19,6 +19,7 @@ import { contractsQuery } from "../commercial/api";
 import { chatRoomsQuery } from "../chat/api";
 import { notificationPreviewQuery } from "../notifications/api";
 import { recentDocumentsQuery, nextPersonalEventsQuery } from "./api";
+import { PersonalizedWidgets, TeachingDayWidget } from "./personal";
 import "./i18n";
 import "./widgets.css";
 
@@ -334,29 +335,35 @@ export function DashboardWidgets({
   ).length;
   return (
     <>
-      <div className="dashboard-widgets">
-        <Activity actor={actor} zone={zone} />
-        {staff && <PendingContracts actor={actor} zone={zone} />}
-        <RecentDocuments actor={actor} zone={zone} />
-        {manage && (
-          <section
-            className="panel dashboard-widget dashboard-followups"
-            aria-label={t("followUps")}
-          >
-            <div className="section-heading">
-              <h2>{t("followUps")}</h2>
-              <ListChecks size={22} aria-hidden="true" />
-            </div>
-            <p className="muted dashboard-widget-hint">{t("followUpHint")}</p>
-            <ul className="dashboard-preview-list">
-              <li>{t("draftJobs", { count: drafts })}</li>
-              <li>{t("upcomingUnfilled", { count: upcoming })}</li>
-              <li>{t("expiringJobs", { count: expired })}</li>
-            </ul>
-            <TextLink to="/admin">{t("manageJobs")}</TextLink>
-          </section>
-        )}
-      </div>
+      <PersonalizedWidgets
+        actor={actor}
+        widgets={{
+          teaching_day: staff ? <TeachingDayWidget actor={actor} /> : null,
+          activity: <Activity actor={actor} zone={zone} />,
+          contracts: staff ? (
+            <PendingContracts actor={actor} zone={zone} />
+          ) : null,
+          files: <RecentDocuments actor={actor} zone={zone} />,
+          followups: manage ? (
+            <section
+              className="panel dashboard-widget dashboard-followups"
+              aria-label={t("followUps")}
+            >
+              <div className="section-heading">
+                <h2>{t("followUps")}</h2>
+                <ListChecks size={22} aria-hidden="true" />
+              </div>
+              <p className="muted dashboard-widget-hint">{t("followUpHint")}</p>
+              <ul className="dashboard-preview-list">
+                <li>{t("draftJobs", { count: drafts })}</li>
+                <li>{t("upcomingUnfilled", { count: upcoming })}</li>
+                <li>{t("expiringJobs", { count: expired })}</li>
+              </ul>
+              <TextLink to="/admin">{t("manageJobs")}</TextLink>
+            </section>
+          ) : null,
+        }}
+      />
       <nav className="panel dashboard-shortcuts" aria-label={t("shortcuts")}>
         <strong>{t("shortcuts")}</strong>
         <Link to={staff ? "/jobs" : clientAccount ? "/client" : "/courses"}>

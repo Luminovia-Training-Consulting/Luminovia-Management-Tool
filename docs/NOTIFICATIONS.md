@@ -18,7 +18,9 @@ Passende Aufträge werden nach Abschluss der Veröffentlichungstransaktion aus d
 
 „Erinnerungen aktualisieren“ erzeugt ausdrücklich ausgelöste, idempotente Hinweise auf eigene bestätigte, nicht freigegebene Termine innerhalb von 24 Stunden und eigene aktive, innerhalb von 30 Tagen auslaufende Verträge. Eine serverseitige Begrenzung verhindert wiederholte Berechnung innerhalb einer Minute. Eine geänderte Einstellung erlaubt eine sofortige Neuberechnung. Freigegebene historische Zuordnungen und widerrufene Verträge erzeugen keine aktuellen Erinnerungen.
 
-Dieser Stand enthält In-App-Meldungen und manuelle Erinnerungsaktualisierung. Ein automatischer Zeitplan, Ruhezeiten, E-Mail-Digests, Web Push und tatsächliche SMTP-Zustellung sind weitere Produktarbeit; sie werden nicht als bestehende Funktion dargestellt.
+Die [E-Mail-Erweiterung](NOTIFICATION_DELIVERY_DATABASE.md) ergänzt persönliche E-Mail-Auswahl, IANA-bezogene Ruhezeiten und eine transaktionale Versandwarteschlange. Das Einstellungsformular speichert diese Angaben serverseitig mit Versionsschutz. Der [endliche Hostinger-Mail-Worker](NOTIFICATION_MAIL_OPERATIONS.md) berechnet zusätzlich fällige Erinnerungen für aktive Konten mit E-Mail-Auswahl und verarbeitet neue vorgemerkte Meldungen. Eine manuelle Erinnerungsprüfung kann deshalb ebenfalls eine neue E-Mail-Vormerkung erzeugen. Bereits vorhandene Posteingänge werden nicht nachträglich versendet.
+
+Die mitgelieferte Serverkonfiguration und der Timer sind zunächst deaktiviert und werden durch diese Quelländerung nicht installiert. Eine echte SMTP-Anmeldung/Zustellung wurde damit noch nicht nachgewiesen. Web Push, Digests und Benachrichtigungen weiterer noch ausstehender Fachabläufe bleiben weitere Produktarbeit. In-App-Meldungen und Pflichtbelege sind unabhängig vom E-Mail-Kanal verfügbar.
 
 ## API und Prüfung
 

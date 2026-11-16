@@ -175,6 +175,17 @@ try {
       [join(scratch, "node_modules/deno/bin.cjs"), "check", entry],
     );
   // Keep release/update safety in the same local command as application QA.
+  await step("SMTP-Benachrichtigungsschutz", "python3", [
+    "-W",
+    "error::ResourceWarning",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "scripts",
+    "-p",
+    "test_notification_mail_worker.py",
+  ]);
   // These checks use fixtures and owned proxy containers, never the hosted VM.
   const hosting = join(scratch, "deploy/hostinger");
   if (existsSync(hosting)) {

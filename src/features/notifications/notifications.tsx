@@ -36,6 +36,7 @@ import {
 } from "./api";
 import "./i18n";
 import "./notifications.css";
+import { DeliverySettings } from "./delivery-settings";
 
 const knownKinds = new Set([
   "claim_confirmed",
@@ -355,6 +356,7 @@ export function SettingsPage() {
           }}
         />
       )}
+      <DeliverySettings actor={actor} />
     </>
   );
 }

@@ -2,6 +2,20 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Smart operations extension — current user request
+
+The entire new request is preserved in [SMART_OPERATIONS_SPEC](SMART_OPERATIONS_SPEC.md): alerts/email/push, personal dashboard, quality management, search, timesheets, client/participant workflows, Control Center, replacements/waitlists, favourites/saved filters, calendar feeds, qualifications, forecasts, history, tasks and offline schedule. No pending feature is removed from the original module ledger below.
+
+Current isolated branch: `codex/smart-notifications-and-dashboard`, based on1341b16 in an independent worktree. Another chat owns preview/welcome/role work; its files/data stay outside this branch.
+
+- [x] Implement transactional email outbox, per-account email opt-in/quiet hours and service-only finite Hostinger SMTP worker; disabled server templates, no credential in deliverables.
+- [x] Implement private persisted dashboard card order/visibility, own Teaching Day and own assignment preparation checklist, with server ownership/version checks.
+- [x] Implement fresh permission-checked personal ICS downloads, bounded periods/size, explicit private-event inclusion and UTC/zone preservation.
+- [x] Implement explicit self-opt-in staff email/phone contact visibility, current staff-only projection and versioned DE/EN controls; focused SQL/component checks pass.
+- [ ] Complete current exact-source integrated acceptance; record actual results in WORKLOG/QA_RESULTS.
+- [ ] Activate reviewed SMTP/timer on the authorised target with privately supplied credentials, live authorised-recipient/provider proof and monitoring. Source completion does not mean live mail was sent.
+- [ ] Continue all remaining features in the extension map, especially Push, replacements/waitlists, shared course preparation, timesheets, participant attendance/quiz/completion, favourites and saved filters.
+
 ## GitHub quality, coverage and maintainer merge continuation
 
 Current request: visible compilation/type/style/quality/security/coverage tasks, Dependabot and uninterrupted direct Maintainer merges. Work is isolated on `codex/github-quality-checks` from current accepted main9c2103b; no business migration, normal preview, VPS or production mutation belongs to this slice.

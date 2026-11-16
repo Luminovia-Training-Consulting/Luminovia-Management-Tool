@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
+import { CalendarExport } from "./export";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -344,6 +345,11 @@ export function CalendarPage() {
         <span className="badge">{zone}</span>
       </div>
       {message && <Notice>{message}</Notice>}
+      <CalendarExport
+        key={session!.user.id}
+        actor={session!.user.id}
+        zone={zone}
+      />
       <div className="panel calendar-panel">
         <FullCalendar
           plugins={[

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { MessageCircle, Star } from "lucide-react";
 import { Avatar } from "../profile/avatar";
+import { PersonContact } from "./person-contact";
 import { useAuth } from "../auth/auth-context";
 import { topicsQuery } from "../../lib/queries";
 import { dateTime } from "../../lib/dates";
@@ -236,6 +237,7 @@ export function PersonProfile() {
             </Button>
           )}
       </div>
+      <PersonContact actor={actor} target={id} />
       <div className="people-details-grid">
         <section className="panel">
           <h2>{t("details")}</h2>

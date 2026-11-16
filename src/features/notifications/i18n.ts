@@ -27,7 +27,7 @@ const de = {
     "Die Auswahl gilt für neue Meldungen. Buchungs- und Stornierungsbestätigungen bleiben als Nachweis erhalten. Bereits eingegangene Meldungen werden nicht gelöscht.",
   refresh: "Fällige Erinnerungen prüfen",
   refreshHelp:
-    "Prüft deine bestätigten Termine der nächsten 24 Stunden und Verträge, die in 30 Tagen auslaufen. Die Prüfung erfolgt hier im Portal, höchstens einmal pro Minute. Eine E-Mail wird dabei nicht versendet.",
+    "Prüft deine bestätigten Termine der nächsten 24 Stunden und Verträge, die in 30 Tagen auslaufen, höchstens einmal pro Minute. Neue Meldungen erscheinen im Portal. Bei aktivierten E-Mail-Hinweisen und eingerichteter Zustellung werden sie zusätzlich für den Versand vorgemerkt.",
   refreshed: "Erinnerungen sind geprüft.",
   saved: "Einstellungen gespeichert.",
   save: "Speichern",
@@ -74,7 +74,7 @@ const en: Record<keyof typeof de, string> = {
     "These choices apply to new notifications. Booking and cancellation confirmations remain available as receipts. Existing notifications are not deleted.",
   refresh: "Check due reminders",
   refreshHelp:
-    "Checks your confirmed sessions in the next 24 hours and contracts expiring within 30 days. This check runs here in the portal, at most once a minute. It does not send email.",
+    "Checks your confirmed sessions in the next 24 hours and contracts expiring within 30 days, at most once a minute. New updates appear in the portal. With email alerts enabled and delivery configured, they are also queued for email.",
   refreshed: "Reminders checked.",
   saved: "Preferences saved.",
   save: "Save",

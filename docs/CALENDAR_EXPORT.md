@@ -1,0 +1,9 @@
+# Personal calendar files
+
+The calendar page provides a deliberate monthly ICS download, suitable for import into calendar applications. Each click reads current authorised database records through `export_my_calendar`; it does not export stale calendar UI/query-cache data. The invoker RPC retains RLS and additionally fixes all ownership to the current active identity. No actor ID can be passed. Only confirmed, unreleased teaching sessions are included by default. Own private events require an explicit checkbox. Administrators do not receive another person's private calendar through this endpoint.
+
+The request has exact overlapping instant boundaries, a finite93day maximum and500event ceiling. Overflow raises54000rather than silently omitting events. The current UI selects one month in the profile's IANA zone. The file includes event identity, title, start/end and intended zone metadata; no fees, terms, participant lists, contacts, documents or signed URLs. UTC DTSTART/DTEND preserve repeated Berlin DST instants and Brisbane times without floating-time ambiguity. RFC5545text escaping and75octet Unicode-aware folding prevent authored titles becoming additional calendar properties.
+
+The file is a snapshot. Later cancellations/changes do not update an already imported calendar. It is not an active subscription or proof of Google/Outlook/Apple import acceptance. Files leave the portal's controls when saved/imported; the UI explains the selected calendar provider will receive their contents. No private schedule cache or service-worker rule is added. Offline export is disabled.
+
+Verification source: `src/features/calendar/ical.test.ts`, `scripts/calendar-export-db-tests.mjs`, `scripts/calendar-export-api-check.mjs`, `tests/e2e/calendar-export.spec.ts`. The first native run passed4SQLgroups and3serializer tests. Current complete-command outcomes belong in WORKLOG/QA_RESULTS; authored API/browser cases alone are not a passed result.

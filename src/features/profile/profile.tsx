@@ -1,6 +1,7 @@
 import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
 import { AvatarEditor } from "./avatar";
+import { OwnContactVisibility } from "./contact-visibility";
 import { OwnProfileDetails } from "../people/profile-details";
 import { ProfileEvidence } from "../files/profile-evidence";
 import { useState } from "react";
@@ -57,6 +58,9 @@ function ProfileForm({ profile }: { profile: Profile }) {
     },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["profile", profile.id] });
+      await client.invalidateQueries({
+        queryKey: ["contact-visibility", profile.id],
+      });
       setDone(true);
     },
   });
@@ -206,6 +210,7 @@ export function ProfilePage() {
         </section>
       </div>
       <OwnProfileDetails />
+      <OwnContactVisibility actor={session!.user.id} />
       <ProfileEvidence ownerId={session!.user.id} />
       <datalist id="time-zones">
         <option>Europe/Berlin</option>
