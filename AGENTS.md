@@ -60,8 +60,16 @@ The public fictional demo and practical help live in `src/features/demo/` and
 Demo actions remain in memory and must not import Supabase or change actual accounts.
 The authenticated tour may navigate only after explicit user choice; it grants no rights.
 
+Authenticated welcome and actor-owned server-persisted setup progress live in
+`src/features/onboarding/`. The customer-neutral course catalogue uses
+`src/features/operations/building-blocks-api.ts`,
+`src/features/operations/building-blocks.tsx` and `data/course-building-blocks.json`.
+[COURSE_BUILDING_BLOCKS](docs/COURSE_BUILDING_BLOCKS.md) explains its provenance,
+source versions and preservation contract.
+
 ## Rules the code already follows
 
+- Keep public documentation, filenames, source explanations, UI examples and screenshots customer-neutral. Never name actual customers or publish their records. Use fictional organisations in tests; actual customer names and account memberships are private application configuration.
 - Keep React, TypeScript, Vite, Tailwind/shadcn primitives, Router, TanStack Query,
   React Hook Form/Zod and Supabase. Do not add another application server without
   a demonstrated requirement. The existing internal scanner and local controllers
@@ -79,7 +87,7 @@ The authenticated tour may navigate only after explicit user choice; it grants n
   partial booking, drag-to-confirm or browser-only success.
 - Accepted fees, currency, shares, contract versions and session snapshots remain
   immutable. New per-position capacity must not reinterpret legacy single-position,
-  client or CBW budgets. Receipt acknowledgement is not an electronic signature.
+  client or course-originated budgets. Receipt acknowledgement is not an electronic signature.
 - Private calendars/availability notes, DMs, evidence, contracts and invoices have
   no blanket administrator read bypass. Current permissions also apply to file
   bytes, search results, realtime delivery and repeated requests.

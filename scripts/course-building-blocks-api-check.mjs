@@ -1,5 +1,5 @@
 /**
- * Real Auth/HTTP checks for CBW templates with source provenance and jobs planned from them.
+ * Real Auth/HTTP checks for course templates with source provenance and jobs planned from them.
  * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
@@ -8,11 +8,11 @@ import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 
 await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
-  const admin = await actor("cbw-admin", "admin"),
-    manager = await actor("cbw-manager", "management"),
-    teacher = await actor("cbw-teacher", "lecturer"),
-    learner = await actor("cbw-learner", "participant"),
-    client = await actor("cbw-client", "client");
+  const admin = await actor("course-admin", "admin"),
+    manager = await actor("course-manager", "management"),
+    teacher = await actor("course-teacher", "lecturer"),
+    learner = await actor("course-learner", "participant"),
+    client = await actor("course-client", "client");
   const runs = [],
     templates = [],
     orgs = [];
@@ -79,7 +79,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
     admin.client.rpc("save_organisation", {
       p_id: null,
       p_payload: {
-        name: `Fictional CBW API ${randomUUID()}`,
+        name: `Fictional course building-block API ${randomUUID()}`,
         time_zone: "Europe/Berlin",
       },
     }),
@@ -95,7 +95,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
   const template = await checked(
     admin.client.rpc("duplicate_course_template", {
       p_id: block.default_template_id,
-      p_title: `Fictional CBW API ${randomUUID()}`,
+      p_title: `Fictional course building-block API ${randomUUID()}`,
     }),
   );
   templates.push(template);
@@ -105,13 +105,13 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
       starts_at: `2037-07-${String(6 + offset + day).padStart(2, "0")}T08:00:00Z`,
       ends_at: `2037-07-${String(6 + offset + day).padStart(2, "0")}T14:00:00Z`,
     }));
-  /** Plans the concrete run with controlled dates from the selected CBW template. */
+  /** Plans the concrete run with controlled dates from the selected course template. */
   const runPayload = (offset = 0) => ({
     template_id: template,
     organisation_id: org,
     time_zone: "Europe/Berlin",
     delivery_type: "online",
-    venue: "Fictional CBW access",
+    venue: "Fictional course building-block access",
     published: false,
     sessions: sessions(offset),
   });
@@ -390,6 +390,6 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
   );
   assert.deepEqual(await checked(client.client.rpc("client_requests")), []);
   console.log(
-    "PASS: actual Auth/TOTP/REST CBW catalogue, exact PDF provenance, stale-source denial, run/session identity, gross/net isolation, idempotency/atomic competing offers, real whole-block claim, source freeze, scoped learner/client revocation and suspension.",
+    "PASS: actual Auth/TOTP/REST course building-block catalogue, exact PDF provenance, stale-source denial, run/session identity, gross/net isolation, idempotency/atomic competing offers, real whole-block claim, source freeze, scoped learner/client revocation and suspension.",
   );
 });

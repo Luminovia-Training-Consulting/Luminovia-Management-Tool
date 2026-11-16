@@ -4,6 +4,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { assertPointerReady } from "./helpers/pointer-readiness";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID, createHmac } from "node:crypto";
 import { DateTime } from "luxon";
@@ -73,7 +74,9 @@ test("readonly operations catalogue is accessible and private client directory i
   await a11y(page);
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
     ),
   ).toBe(true);
   await page.screenshot({
@@ -236,7 +239,9 @@ test("admin persists private customer/contact, course template/run and safe unpu
     .locator(".operations-course")
     .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
   await expect(card).toHaveCount(1);
-  await card.getByRole("button", { name: "Ansehen", exact: true }).click();
+  const viewAction = card.getByRole("button", { name: "Ansehen", exact: true });
+  await assertPointerReady(viewAction, "saved course view");
+  await viewAction.click();
   dialog = page.getByRole("dialog");
   await expect(
     dialog.getByText("Shell, Rechte und Prozesse. <script>alert(1)</script>", {
