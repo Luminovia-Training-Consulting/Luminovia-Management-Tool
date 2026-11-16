@@ -1,5 +1,16 @@
 # Persistent implementation plan
 
+## Confirmed permanent deletion — current user extension
+
+- [x] Record the latest direct decision: permanent confirmed deletion, no trash; companies only own jobs; this task does not merge unrelated PRs.
+- [x] Audit actual account/Storage/job/company/FK behavior on main1de544d; define the bounded [execution contract](PERMANENT_DELETION.md).
+- [x] Implement typed administrative deletion plans, current authority/MFA, dependency handling, irreversible fences and truthful completion;25new real SQL groups and reduced-content/executor recovery review pass.
+- [x] Implement server-only native Auth hard deletion and exact all-version Storage cleanup, upload leases/path fences and failure/retry orchestration;62Edge unit cases pass. Actual native byte/Auth/race acceptance remains pending below.
+- [x] Close inherited company job/history/attachment bypasses and expose only own-company deletion targets;7real company SQL groups pass.
+- [x] Implement bilingual admin/context confirmation UI with pending/error/success and server receipt recovery; retain archive separately;535frontend cases and actual source/build checks pass.
+- [ ] Execute targeted real SQL/Auth/Storage and browser checks in owned fictional fixtures, then complete the reserved local acceptance and current-head CI.
+- [ ] Deliver signed commits, push and prepared focused PR; no other PR merge is performed by this scope.
+
 ## English quote/discovery documentation — released PR10 continuation
 
 - [x] Integrate accepted main `1de544d` and preserve all 36 released SQL sources, neutral naming, operator guidance and complete actual-main histories.

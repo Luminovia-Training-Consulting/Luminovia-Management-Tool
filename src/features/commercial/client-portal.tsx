@@ -1,3 +1,4 @@
+import { CompanyJobDeletions } from "../deletions/deletions";
 /**
  * Organization-scoped course requests and client spending views. Membership limits available
  * organizations; publication and lecturer allocation remain separate server operations.
@@ -723,6 +724,7 @@ export function ClientPortalPage() {
           )}
         </>
       )}
+      <CompanyJobDeletions />
       <Dialog
         open={writing}
         onOpenChange={setWriting}

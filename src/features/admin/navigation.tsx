@@ -6,12 +6,15 @@ import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../auth/auth-context";
+import { deletionAccessQuery } from "../deletions/api";
+import "../deletions/i18n";
 import { permissionsQuery } from "../../lib/queries";
 /** Show sections allowed by loaded capabilities; links do not replace server permissions. */
 export function AdminNavigation() {
   const { t } = useTranslation();
   const { session } = useAuth();
   const permissions = useQuery(permissionsQuery(session!.user.id));
+  const deletions = useQuery(deletionAccessQuery(session!.user.id));
   return (
     <>
       <nav className="admin-tabs" aria-label={t("admin")}>
@@ -32,6 +35,9 @@ export function AdminNavigation() {
         )}
         {permissions.data?.includes("announcements.manage") && (
           <NavLink to="/admin/announcements">{t("announcements")}</NavLink>
+        )}
+        {!deletions.isError && deletions.data?.can_admin && (
+          <NavLink to="/admin/deletions">{t("deletions:title")}</NavLink>
         )}
       </nav>
       <Outlet />

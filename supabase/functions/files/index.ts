@@ -5,6 +5,7 @@
  * exact-version authorization context.
  */
 import {qualificationEvidenceBytes} from './qualification-download.ts';
+import {withUploadLease} from './deletion-lease.ts';
 import {createClient} from 'npm:@supabase/supabase-js@2.119.0';
 import {scan} from './clamav.ts';
 import {validateAvatar} from './avatar.ts';
@@ -73,6 +74,13 @@ Deno.serve(async(request:Request)=>{
    if(requestedVersion.data.sha256&&requestedVersion.data.sha256!==incomingDigest)return json(409,{error:'idempotency_conflict'});
    if(doc.status==='clean'){if(!requestedVersion.data.sha256)return json(503,{error:'upload_failed'});return json(200,{document:doc});}
    if(doc.status==='rejected')return json(422,{error:'scan_rejected',document_id:doc.id});
+   // The lease starts before the first Storage write and remains held through
+   // scanning, promotion and all cleanup. A concurrent deletion cannot complete
+   // while this request could still recreate a clean/quarantine object.
+   return await withUploadLease({
+    begin:async()=>{const r=await service.rpc('deletion_upload_begin',{p_document_id:doc.id,p_version_id:reservation.version_id});if(r.error||typeof r.data!=='string')throw new Error('access_denied');return r.data;},
+    end:async(lease)=>{const r=await service.rpc('deletion_upload_end',{p_lease_id:lease});if(r.error)throw new Error('deletion_unavailable');},
+   },async()=>{
    // Quarantine is not a download area; upsert:false protects reserved object bytes.
    const upload=await service.storage.from('portal-quarantine').upload(reservation.object_path,bytes,{contentType:mime,upsert:false,cacheControl:'0'});
    if(upload.error&&upload.error.message!=='The resource already exists'&&String((upload.error as {statusCode?:string}).statusCode)!=='409')return json(503,{error:'upload_failed'});
@@ -111,6 +119,7 @@ Deno.serve(async(request:Request)=>{
    await service.from('audit_events').insert({actor_id:actor,action:'document.scan_clean',resource_id:doc.id});
    await service.storage.from('portal-quarantine').remove([reservation.object_path]);
    return json(200,{document:await visible(doc.id)});
+   });
   }
   const data=JSON.parse(new TextDecoder().decode(await bounded(request,4096))) as {action?:string;id?:string;version_id?:string;user_id?:string;evidence_id?:string};
   // Avatar selection is a narrow projection, not a general grant to personal files.
@@ -164,6 +173,6 @@ Deno.serve(async(request:Request)=>{
  // Return only allowed stable error codes, not Storage paths, tokens or internal provider responses.
  }catch(error){
   const code=error instanceof Error?error.message:'';
-  return json(code==='access_denied'?403:code==='avatar_unavailable'?404:code==='file_size'?413:code==='unsupported_type'?415:400,{error:['access_denied','avatar_unavailable','file_size','unsupported_type','avatar_image_invalid'].includes(code)?code:'invalid_request'});
+  return json(code==='deletion_unavailable'?503:code==='access_denied'?403:code==='avatar_unavailable'?404:code==='file_size'?413:code==='unsupported_type'?415:400,{error:['deletion_unavailable','access_denied','avatar_unavailable','file_size','unsupported_type','avatar_image_invalid'].includes(code)?code:'invalid_request'});
  }
 });

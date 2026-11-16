@@ -1,5 +1,7 @@
 # Relational model and permission boundaries
 
+The permanent-deletion extension adds private `deletion_plans`, `deletion_operations`, `deletion_permits`, `deletion_upload_leases` and exact Storage-path fences. Plans bind current actor, typed target, dependency hashes and expiry; operations retain only reduced execution metadata. Permits are short-lived service execution authority; upload leases must actually settle before completion. No journal stores deleted bodies or provides restore. Typed owned children and protected inbound references are distinct; the [deletion contract](PERMANENT_DELETION.md) documents the confirmation and native cleanup boundary. These source additions still require their own native/functional acceptance.
+
 The target diagrams retain the complete product map; conceptual target entities are not claims that every table exists. Implemented diagrams use physical names from `supabase/migrations/*.sql`, with `PRIVATE_*` aliases mapped below. The accepted M6 baseline contains 24 migrations. M7 adds five migrations (29 total), followed by three M8 migrations (32 total). The combined native 32-migration acceptance, including the M7 file-dialog correction, remains pending. SQL, explicit grants/RLS and owning tests remain authoritative. Source relations do not prove hosted installation or production acceptance. See [ARCHITECTURE](ARCHITECTURE.md), [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
 
 ## Core target relations

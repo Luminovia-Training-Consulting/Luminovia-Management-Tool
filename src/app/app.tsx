@@ -25,6 +25,8 @@ import { AnnouncementsPage } from "../features/announcements/announcements";
 // Job/profile widgets already load this module; another lazy wrapper only adds
 // a loading boundary and cannot produce an independent route chunk.
 import { FilesPage } from "../features/files/files";
+// The shared shell/provider and contextual actions already load this module.
+import { DeletionsPage } from "../features/deletions/deletions";
 import {
   NotificationsPage,
   SettingsPage,
@@ -252,6 +254,7 @@ export function App() {
                 <Route index element={<AdminPage />} />
                 <Route path="people" element={<PeopleAdminPage />} />
                 <Route path="accounts" element={<AccountsPage />} />
+                <Route path="deletions" element={<DeletionsPage />} />
                 <Route path="audit" element={<AdminAuditPage />} />
                 <Route
                   path="announcements"
