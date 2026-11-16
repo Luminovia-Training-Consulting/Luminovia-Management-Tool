@@ -13,6 +13,12 @@ const sources = [
   "20261116054027_operational_module_notification_handover_integration.sql",
 
   "20261116055506_accounting_interoperability.sql",
+  "20261116091436_course_readiness.sql",
+  "20261116091438_internal_support_desk.sql",
+  "20261116091441_replacement_marketplace.sql",
+  "20261116091443_attendance_delivery.sql",
+  "20261116091445_operations_notification_integration.sql",
+  "20261116091447_operational_module_notification_handover_integration.sql",
 ];
 const names = new Set();
 for (const file of sources) {

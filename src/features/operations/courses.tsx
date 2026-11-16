@@ -68,11 +68,37 @@ const runSchema = z.object({
   archived: z.boolean(),
   sessions: z
     .array(
-      z.object({ starts_at: z.string().min(1), ends_at: z.string().min(1) }),
+      z.object({
+        starts_at: z.string().min(1),
+        ends_at: z.string().min(1),
+        // Form-local identity follows a retained row through remove/reorder.
+        // It is never included in the normalized server session payload.
+        source_session_id: z.string().optional(),
+      }),
     )
     .min(1)
     .max(60),
 });
+/** Compare absolute instants, retaining PostgreSQL microseconds when JavaScript milliseconds tie. Invalid endpoints return null. */
+function compareCourseInstants(first: string, second: string): number | null {
+  const firstMillis = Date.parse(first);
+  const secondMillis = Date.parse(second);
+  if (!Number.isFinite(firstMillis) || !Number.isFinite(secondMillis))
+    return null;
+  const difference = firstMillis - secondMillis;
+  if (difference) return difference;
+  // PostgreSQL timestamps retain up to six fractional digits. Equal JavaScript
+  // milliseconds still need that precision; whole-minute ISO offsets do not
+  // affect the fractional component within the same absolute second.
+  const microseconds = (instant: string) =>
+    Number(
+      (/\.(\d+)(?:Z|[+-]\d{2}:\d{2})$/i.exec(instant)?.[1] ?? "")
+        .padEnd(6, "0")
+        .slice(0, 6),
+    );
+  return microseconds(first) - microseconds(second);
+}
+
 /** Edit reusable content templates separately from particular customers and schedules. */
 function TemplateForm({
   original,
@@ -193,6 +219,15 @@ function RunForm({
   const [planningStart, setPlanningStart] = useState("09:00");
   const [planningEnd, setPlanningEnd] = useState("17:00");
   const [planningError, setPlanningError] = useState(false);
+  const [sessionOrigins] = useState(() => ({
+    zone: original?.time_zone,
+    sessions: new Map(
+      original?.course_sessions.map((session) => [
+        session.id,
+        Object.freeze({ ...session }),
+      ]) ?? [],
+    ),
+  }));
   const {
     register,
     control,
@@ -213,6 +248,7 @@ function RunForm({
         ? [...original.course_sessions]
             .sort((a, b) => a.starts_at.localeCompare(b.starts_at))
             .map((s) => ({
+              source_session_id: s.id,
               starts_at: DateTime.fromISO(s.starts_at)
                 .setZone(original.time_zone)
                 .toFormat("yyyy-MM-dd'T'HH:mm"),
@@ -239,9 +275,34 @@ function RunForm({
       requireOnline();
       setTimeError(false);
       const sessions = values.sessions.map((s) => {
-        const start = zonedInstant(s.starts_at, values.time_zone);
-        const end = zonedInstant(s.ends_at, values.time_zone);
-        if (!start || !end || end <= start) {
+        const source = sessionOrigins.sessions.get(s.source_session_id ?? "");
+        const endpoint = (
+          input: string,
+          originalInstant: string | undefined,
+        ) => {
+          const previous = originalInstant
+            ? DateTime.fromISO(originalInstant)
+            : null;
+          // The minute editor cannot express original seconds/microseconds or
+          // identify a DST-fold offset. Keep that already-known instant until
+          // this endpoint or its intended zone is actually changed.
+          return previous?.isValid &&
+            values.time_zone === sessionOrigins.zone &&
+            previous
+              .setZone(values.time_zone)
+              .toFormat("yyyy-MM-dd'T'HH:mm") === input
+            ? originalInstant!
+            : zonedInstant(input, values.time_zone);
+        };
+        const start = endpoint(s.starts_at, source?.starts_at);
+        const end = endpoint(s.ends_at, source?.ends_at);
+        const unchanged =
+          start === source?.starts_at && end === source?.ends_at;
+        const order = start && end ? compareCourseInstants(end, start) : null;
+        // Stored intervals already satisfy the database range constraint, even
+        // below JavaScript's millisecond precision. Edited ranges are compared
+        // as instants; ISO strings can legitimately contain different offsets.
+        if (!start || !end || order === null || (!unchanged && order <= 0)) {
           setTimeError(true);
           throw new Error("time");
         }
@@ -682,7 +743,7 @@ export function CoursesPage() {
                 <p>{template?.description}</p>
                 {template?.building_block_id && (
                   <span className="badge">
-                    CBW{" "}
+                    {t("buildingBlocks")}{" "}
                     {
                       blocks.data.find(
                         (block) => block.id === template.building_block_id,
@@ -875,7 +936,7 @@ export function CoursesPage() {
         title={
           templateDetail?.title ??
           (blockDetail
-            ? `CBW ${blockDetail.code} · ${blockDetail.title}`
+            ? `${blockDetail.code} · ${blockDetail.title}`
             : t("template"))
         }
         description={t("reusableBlock")}

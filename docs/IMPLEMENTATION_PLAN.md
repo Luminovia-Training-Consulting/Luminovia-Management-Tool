@@ -1,20 +1,284 @@
 # Persistent implementation plan
 
+## All-open-PR merge continuation
+
+The latest direct instruction authorises all current PR integrations and protected merges after successful current required checks. Earlier merge reservations below are historical. PR24 now incorporates accepted main `7fbdb95`, preserving both CI-routing and operational histories, all36released SQL files and six pending additions unchanged. Relevant integration checks and fresh exact-head required CI remain the next gate; no deployment is requested.
+
+## Current user-directed operational delivery preparation
+
+The latest direct request is to make PR24 and then PR25 mergeable and merge them individually. A subsequently relayed direct instruction reserves PR17 first, so actual main/QA ordering is **PR17 → PR24 → PR25**. This coordinates actual merge collisions; it is not a blanket development or source freeze. Accepted PR10/main `1de544d` and all36released SQL blobs remain intact. The six unreleased operational files now follow that accepted prefix (42total); after PR17 actually merges, compare its real migration prefix and recreate only still-unreleased versions if required.
+
+- [x] Reconcile accepted main PR10 with the first-four operational source, retaining both full product/extension ledgers and the current personal-only review/manual-publication rules.
+- [x] Recreate the six pending migration filenames through the installed CLI with unchanged SQL bodies and dependency order; retain all36published blobs exactly.
+- [x] Generate the actual183public-RPC reference from42SQL files. Root's current source checks pass546frontend cases/71files, unchanged coverage floors, types/lint/format/compiler checks; focused SQL evidence remains separately scoped.
+- [ ] Complete the real current-base integration after actual PR17, including renewed prefix checks and relevant source/functional checks.
+- [ ] Obtain all15successful exact-head application/native/security/package checks and signed history before individually merging PR24, then repeat the scoped process for PR25. Historical acceptance does not replace these gates.
+- [ ] Preserve every outstanding item across all seven requested additions; do not infer full product, native retention, installation or production acceptance from this preparation.
+
+The earlier PR10/PR27 priority notes below describe their recorded source checkpoints. Their merges are now accepted; they are not current blockers or instructions to restore a previous shared freeze.
+
 ## Seven additional operational modules — current user request
 
 The exact additional [implementation prompt](OPERATIONS_EXTENSION_PROMPT.txt) is preserved alongside the original authoritative specification. All seven additions remain required. [Ownership/PR audit](EXTENSION_COORDINATION.md), [actual status and next actions](OPERATIONS_EXTENSION_STATUS.md).
 
 - [x] Inspect/fetch current main, all11open PRs/commits/checks, live rules, security findings and authorised development-release automation; isolate new work from the original dirty checkout.
 - [x] Implement initial course-readiness, delivery, future whole-block replacement and support source with server-side authority, DE/EN UI and focused SQL/source tests. Their full acceptance remains open.
-- [ ] Complete and deliver the separate enquiry, accounting and consented-amendment PRs; initial source and focused tests exist, and commissioned compensation/customer proposals are being completed independently.
+- [ ] Deliver the separately implemented enquiry/document, accounting and consented-amendment sources. Current focused evidence is recorded in their worktrees; actual Auth/scanner/browser acceptance and final current-main reconciliation remain required.
 - [ ] Complete started/partially completed/invoiced replacement workflow and optional waitlist/ordered notices.
 - [ ] Complete exact-source canonical acceptance. Local e34a5bf passes SQL/Auth/API/scanner and 95/96 browsers; transport failure makes the whole run FAIL and build/PWA were not reached. Own feature screenshots were inspected; the isolated public-help desktop/mobile follow-up passes2/2.
-- [ ] Push the corrected signed PR24/PR25 sources and prepare focused accounting/amendment PRs. Verify all current required checks. The coordinator reserves the next manual main merge for PR27; no competing merge or new auto-merge.
+- [ ] Push the corrected signed PR24/PR25 sources and prepare focused accounting/amendment PRs. Verify all current required checks. Coordinate the current actual PR17 → PR24 → PR25 sequence and legitimate shared QA ownership while continuing independent feature preparation.
 - [ ] Verify any separately authorised installation from actual state. Local development/tests are now the default; the separate workflow owner controls publication switches. No production/public Website/DNS/real-mail/purchase action is implied.
 
 Initial SQL evidence: readiness16, delivery12, replacement13, support12groups. Whole-source257tests and unchanged coverage floors pass; TypeScript/ESLint pass. The canonical complete command returned exit1 before startup because another checkout holds shared QA ownership; this is not a full integration pass.
 
+## Full PR acceptance critical path — further authorised continuation
+
+- [x] Measure two-worker SQL5m07s, complete native/retained-data success, and historical full browser13.9m versus13s Chromium setup; preserve canonical SQL lint/advisor and native-engine checks.
+- [x] Route sensitive PR system and browser acceptance onto separate owned runners; preserve main/manual/local complete acceptance and all existing required context names.
+- [x] Pass56focused phase/bootstrap/snapshot/safety/worker/scope/preview/policy cases and38actual shell boundary/routing cases; validate launcher normalization, complete stage partition, fresh service/persistence/seed setup and failure/cancellation cleanup. Scoped lint/format/compiler connectivity/actionlint pass; actual Docker/complete child-process evidence remains pending CI.
+- [ ] Publish signed exact source, observe every final-head system/browser/native/security/package gate, measure actual wall time, and complete the user-authorised protected merge.
+
+The complete product scope and earlier actual-source evidence below remain in force.
+
+## Safe development-speed improvements — explicit continuation
+
+- [x] Observe signed608687f/PR34 Portal43855915270 success in11m36s (approximately59%less than28m),351actual SQL groups and every required context; fix missing metadata labels and observe green43856170205.
+- [x] Implement two separate pinned networkless SQL workers with exhaustive partition, unchanged real races/durability, bounded cancellation/cleanup and actual per-suite timing reports; disable JIT only in the disposable PR fixture.
+- [x] Add conservative actual-merge docs/standard/full selection, full sensitive/unknown/main/manual acceptance, early independent jobs and required-gate preflights that fail on scope errors or fast non-PR profiles.
+- [x] Preserve source/rules/dependencies/migrations, all15required statuses, coverage/security/release requirements; make preview evidence profile explicit and reject missing CLI profile.
+- [x] Pass26focused local scope/worker/routing/preview/governance cases and scoped lint/format/actionlint; record local subprocess/Docker limitations and independent read-only review.
+- [x] Publish signed8f29147 and verify13exact remote blobs; Portal43860971674 passes complete SQL/native/application/security/package gates in32m35s, including SQL5m07s,114desktop/mobile and2built-PWA cases.
+- [x] Observe the user-performed protected PR34 merge after every final-head check passed: signedmain c528100. Main acceptance is a separate run; no release was dispatched.
+
+This continuation preserves the complete remaining product scope and prior source-bound evidence below.
+
+## Faster PR CI — 16 November 2026
+
+- [x] Measure actual successful baseline: approximately28minutes, mostly21-minute application plus6-minute serial native rehearsal.
+- [x] Keep quality/coverage/security/metadata contexts; add bounded runtime/Edge/audit and one pinned isolated PostgreSQL suite on every PR, without repeated frontend quality/unit/build commands.
+- [x] Preserve all15required context names, preview success prerequisites, immutable SQL/dependencies and exact-main manual release gates; run unchanged complete application/native main/manual suites in parallel.
+- [x] Document PR SQL/Auth-stub limitations and package evidence scope; pass six runner orchestration, three routing/release-policy and four maintenance/governance checks, scoped lint/format and actionlint.
+- [ ] Publish the prepared branch changes after repository write access or browser file upload is available; connector403 and shell DNS restrictions currently block publication. No extension permission was changed.
+- [ ] Observe exact-head GitHub runtime/Edge/PostgreSQL/image startup and security/coverage/package results, measure actual optimized duration and merge only after every current required check succeeds.
+- [ ] Observe a complete main/manual application/native run before claiming that parallel full acceptance passed; no publication is requested.
+
+All remaining product and operational scope below is preserved. Local Docker and subprocess execution are restricted; mocked routing passes do not replace the pending native evidence.
+
+## English quote/discovery documentation — released PR10 continuation
+
+- [x] Integrate accepted main `1de544d` and preserve all 36 released SQL sources, neutral naming, operator guidance and complete actual-main histories.
+- [x] Replace obsolete unpaged/future wording with actual shipped actor quotes, monetary filtering/order, cursor context, exact consent and current SQL/query/DTO/UI ownership in the role, discovery and migration guides.
+- [x] Pass fresh `./portal check` (515 frontend cases/65 files, unchanged coverage floors and build), 102 runtime cases, 20 focused documentation/privacy/catalogue/metadata cases and technical-guide formatting; deliver the signed bounded update through [PR #29](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/29).
+- [ ] Complete all 15 exact-current-head required checks and the assigned actual merge. Preserve queue-controlled Draft; no additional routine user approval is required.
+
+The earlier 3ed9a24 all-green checkpoint applies only to its e88 base. All remaining product and operational scope in the ledger below remains required.
+
+## PR10 current accepted Main13 checkpoint
+
+- [x] Preserve c808 archive-race regression/fix while resolving actual main e88 conflicts and retaining customer-neutral/personal-only/manual-publication contracts.
+- [x] Preserve all27released SQL blobs; CLI-reversion nine pending bodies without changing bytes, in dependency order after the released prefix (36total).
+- [x] Pass actual local source/build command515frontend,102runtime,3documentation/privacy cases; replay36in owned SQLfixture, generate160publicRPCs and pass6role-discovery groups, with checked fixture cleanup.
+- [ ] Run the specifically authorised targeted real file-browser acceptance once the actual shared kernel QA lock is free; do not claim a repeated complete PC run.
+- [ ] Integrate the next actually accepted Main31, recheck released prefix/order, then observe all15final exact-head checks before normal PR10 merge. No speculative feature bundle or weaker gate is permitted.
+
+## PR10 current archive-race correction
+
+- [x] Record exact0b615a7CI43823638639 as failed111/112application browsers; do not substitute older complete passes.
+- [x] Reproduce the pre-commit initial-filter response restoring an archived row, then explicitly cancel old documents reads before the post-ACK refresh.
+- [x] Preserve exact-resource ACL checks, independent newer drafts and exactly-one-mutation assertions; pass51focused component cases and515frontend cases through actual `./portal check`.
+- [x] Synchronise the native browser fixture with the applied filter and exact server archive acknowledgement; keep final zero-filename assertion and all original timeouts.
+- [ ] Observe fresh complete current-head application/native/security/package CI, then merge PR10 normally on its exclusive accepted-main position.
+
+## PR10 final accepted-base merge gate
+
+- [x] Complete local isolated acceptance on eee73e4:514frontend,30additional SQL suites,28business APIs plus invitation,112application+2built-PWA browsers, restart retention and checked cleanup; PASS/exit0.
+- [x] Observe all15exact eee73e4 GitHub checks in43818183207, including actual native35migrations/29API suites/retained data and PRpreview package.
+- [x] Integrate actual accepted PR27/main e048edb without unrelated feature sources; preserve manual publication, both ledgers and stable documentation anchors.
+- [x] Run actual `./portal check` and100runtime cases on that final control integration; application/SQL/dependency/browser source remains byte-identical to eee73e4. No extra shared-PC full run is claimed.
+- [ ] Observe all15required checks on the final signed pushed integration/current base, then perform the explicitly authorised regular PR10 merge. Earlier passes do not replace this final gate.
+
+## PR10 sequential merge continuation
+
+- [x] Preserve original PR10 and M7/English integration ancestry; reconcile actual accepted main319ab69 and its PR-based maintenance boundary without changing live settings.
+- [x] Independently reproduce the prepared mobile course-tab overflow, retain the scoped wrapping correction and pass both real Chromium layouts; retain file-menu access/refresh regressions.
+- [x] Pass 514 frontend cases with unchanged coverage floors, 92 runtime cases, 23 maintenance cases, types/lint/format/compiler checks and released26-migration byte preservation.
+- [ ] Integrate PR27's actual accepted publication-control ancestry once its exclusive prior merge completes; no broad feature bundle is required.
+- [ ] Complete isolated local application and final exact-head application/native/security/package checks, then merge PR10 as directly authorised. Historical native and source-level passes are not substituted for the final combined revision.
+
+## Final PR13 delivery gates
+
+- [x] Integrate actual accepted main `e048edb` and preserve current PR23 `7767564` ancestry, all27migration sources, English/private-role guidance and both ledgers.
+- [x] Run `./portal check` (254frontend cases),98runtime cases,12native candidate cases, documentation/privacy/metadata, formatting, source-export and actionlint checks.
+- [x] Attempt canonical full local acceptance; record the existing global QA lock refusal before service startup and preserve every foreign process/port.
+- [ ] Publish the signed final existing-PR branch update; all15exact-head current-base GitHub gates must pass before the directly authorised normal merge.
+
+## Final PR13 integration of accepted PR27/main
+
+PR27 passed all15mandatory checks on `485ac16`, including full application, actual selfhost retained-data and preview-package gates, and merged as actual main `e048edb` at07:21:44UTC. This PR13 continuation incorporates that actual accepted main without bundling an unmerged branch. It preserves `./portal check`, complete local acceptance, explicit exact-SHA CMS publication and manual-only PR deployment metadata, together with the corrected pre-captured quote versions in the concurrent lifecycle fixture. No publication workflow is dispatched.
+
+The complete PR13 source retains the English documentation, customer-neutral PR23 `7767564` product/migration27, all26released SQL bytes, current personal PR-only review snapshot and the unified12-case native port allocator correction. Both complete ledgers and every original branch head remain in normal ancestry. The next gates are final current-source local checks, one signed normal PR13 branch update, all15fresh exact-head GitHub checks and the directly authorised merge. Earlier checkpoints and externally changed rule modes below remain historical.
+
+## Latest PR23 port-correction ancestry
+
+PR23 advanced to `7767564` with an independently developed correction for the same duplicate-port failure. This normal merge preserves that actual head, both prior PR23 heads and the earlier reviewed port correction. The selector and complementary recycling, real-socket and cleanup regressions are reconciled into one implementation; all ownership/isolation/unique-port gates remain. Current evidence and the final combined PR13 checks govern acceptance. Older records below describe their exact named source checkpoints and do not establish the current live policy, source tree or complete final native pass.
+
+## Current PR13 continuation — latest personal policy and native fixture
+
+The verified06:42UTC correction restores active review27329000 with only User29256704 (`CarinaSchoppe`) in `pull_request` mode and its original independent-review conditions. There are no extra scanning/quality/Copilot rules in that layer. History/checks remain active, without bypass and with all15mandatory statuses/signatures. All older always/disabled/role-based records below are timestamped history; no server rule is written here.
+
+Both current PR13 `eb001c4` and PR23 `8047b94` heads are preserved in the normal ancestry. The native candidate port selector now reserves all3loopback listeners together before releasing them; a deterministic recycling regression, failure-cleanup cases and real TCP group rebind pass (11candidate+3documentation cases). The incoming isolation/ownership/unique3guards remain. An independent read-only review finds no actionable defect; actual Docker handoff/native preservation still requires final CI. PR27's current-base acceptance and actual main merge remain the preceding release dependency; no unaccepted PR27 bundle is published in this branch.
+
+## PR13 preservation of actual merged PR22/main
+
+The remote PR13 branch was updated through GitHub to `eb001c4`, incorporating actual accepted main `319ab69`/PR22. This continuation retains that exact ancestry and the signed PR23 product composition, without force pushing. The maintenance publisher, no-retry-main behavior, workflow and CLI regressions are preserved. Current personal review-policy snapshot and its later external enforcement drift remain documented above older dated governance records. PR27 still owns the separately tested local-first/manual-publication controls and concurrent lifecycle-fixture correction; its updated current-base acceptance precedes final PR13 delivery.
+
+Historical06:30UTC checkpoint: review enforcement was disabled externally while history/checks remained active. At that point source preserved the06:25UTC snapshot. The later06:42UTC readback supersedes both: active review, only CarinaSchoppe User29256704 in `pull_request` mode and no extra scanning/quality/Copilot rules in that layer. Source and present-tense guidance now follow that corrected configuration. No server rule is modified by this task.
+
+## Final PR13 composition and acceptance boundary
+
+- [x] Preserve actual remote PR13 `af3bd61` and its PR23 `d448fab` ancestry alongside the reviewed English/current-personal-policy candidate `84fc41c`.
+- [x] Retain the customer-neutral catalogue and additive migration27, course UI/pointer fixes, both evidence ledgers and all26previously released migration bytes.
+- [ ] Integrate actual accepted PR27/main publication controls and corrected concurrent lifecycle fixture; verify current source and publish one signed final PR13 head without force-pushing.
+- [ ] Observe all15mandatory exact-head checks on the complete composition, then perform the directly authorised PR13 merge. Earlier documentation-only/local passes do not certify this product source.
+
+## Independent maintenance delivery after source-freeze release
+
+- [x] Honour the latest instruction to finish PR22 separately; preserve other source branches and the proposed group worktree. Earlier group/freeze entries below are historical.
+- [x] Remove the obsolete no-change retry-main helper/CLI/workflow path and publisher Actions-write token scope; unchanged scans skip privileged publication, while tested changed candidates retain native PR/review/CI protection.
+- [x] Pass31local maintenance/candidate tests, including real CLI failure/no-network acceptance, plus lint/type/workflow/diff checks; re-read live15-check/no-App-bypass and main-only signing-environment configuration.
+- [ ] Sign/push the scoped final correction, pass all15exact-current-head checks, complete coordinated normal PR merge and verify the real App diagnostic creates/labels/closes its owned draft and removes its branch while main stays unchanged. No release/deployment is authorised by this diagnostic.
+
+## Current continuation — App PR-only maintenance and audited execution
+
+This latest user instruction removes the maintenance App exception as well. It supersedes the earlier human-only verification and historical ALWAYS guidance. All remaining product modules below remain in scope.
+
+- [x] Remove App5776881 from live review/check bypass lists and read back all3active policies; checks/history have no exceptions, only human maintain/admin retain PR-only review exceptions.
+- [x] Replace direct daily main promotion with exact signed dependency-only branch/PR publication and native required-review/CI auto-merge; never mutate the main ref or substitute pre-merge dispatch for PR CI.
+- [x] Verify deterministic retries/lost responses, changed signatures/parents/blobs/PR identity, stale candidate and existing reviewed-PR preservation, plus the real CLI command path with network-free fictional fixtures.
+- [x] Wire protected main-only selected-repository short-lived App tokens and the missing official age prerequisites for full candidate tests; update current guides and rule snapshots.
+- [x] Run lint/type/source-connection/coverage/build/workflow checks and49Node+13Python offline guards;226unit/component cases pass with existing floors. No frontend runtime module or export is statically unconnected.
+- [x] Complete independent final review; correct the invalid GraphQL interface selection and remove unsupported hold-label behavior. All20maintenance groups pass, including a concurrent classification-change rejection.
+- [x] Deliver signed [PR22](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/22); its durable GitHub record owns final exact-head full/security/native CI and merge acceptance. All15checks must pass before merging; an open PR is not a passed full run.
+- [x] Obtain explicit action-time confirmation and grant the existing App only additional pull_requests:write; UI confirms one selected repository and REST confirms the installed permissions, with no rule bypass.
+- [x] Observe all14required checks passing on exact PR22 checkpoint8c50852, including84browser/2PWA and the24migration/19suite native retained-data run. Main advanced afterward, so this is not a current-base merge permit.
+- [x] Honour the authorised PR15 merge hold and integrate its actual merged43504b8main once. Both conflicts preserve current PR-only behavior plus incoming English comments,35labels and MFA fixtures;32focused guards and independent review pass.
+- [x] Extend the existing manual diagnostic with real draft-PR creation/labels/closure and owned-ref cleanup;23maintenance groups plus11metadata/1documentation pass. Unknown or externally changed resources are preserved; no diagnostic merge is attempted.
+- [x] Honour the subsequently authorised PR18 merge hold and integrate actualfabd71amain without conflicts, retaining its private pricing/welcome26migrations and QA fixtures. Fresh249frontend/75targeted Node cases pass.
+- [ ] Observe all15checks on the final combined PR22 head; the intentionally cancelled8176724interim run and prior8c50852checks do not satisfy this acceptance.
+- [x] Add PR18's actual successful PR preview package job as the15thmandatory Actions check, with strict up-to-date enforcement and no bypasses; synchronize current guides.
+- [ ] Verify actual short-lived App token/signature/PR CI after the source reaches protected main. The configured environment key/ID and installed scopes alone are not execution proof.
+
+No App review exemption is restored: automated PRs need normal independent approval/latest-push approval and resolved conversations as well as all15required checks. An outdated open maintenance PR must be explicitly resolved before regeneration; no reviewed content is overwritten. The unmerged direct-ref auto-merger in PR19 is not part of this implementation.
+
+## Earlier human-only verification — superseded on 16 November 2026
+
+- [x] Verify active live history/review/check rules: humans require a PR, maintain/admin can skip independent review, all14 checks remain mandatory even for CarinaSchoppe, and the PR must be up to date.
+- [x] Preserve the existing separate maintenance App exception; record its exact scope without claiming a working token/promotion path.
+- [x] Synchronize the three rule JSON snapshots with authenticated live readback in isolated codex/main-protection-verification-20261116; make no application or repository-setting mutation where the requested setting is already active.
+- [ ] Replace standard-token direct daily main promotion with a verified protected PR path. Current strict rules reject direct promotion safely; do not disable protection to restore it.
+
+This current instruction supersedes historical ALWAYS/disabled guidance below. The full product ledger remains required. Admins retain settings-edit authority, but ordinary merges and pushes must satisfy the active rules.
+
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
+
+## Current joint PR10/PR13 integration with released PR18
+
+- [x] Preserve both original PR10/PR13 histories, the English roadmap/decision/index structure and the reviewed Calendar, file-menu and PWA-title corrections from the incoming source.
+- [x] Resolve documentation conflicts with accepted main `fabd71a`, retaining the private policy, subordinate authority, own welcome progress and PR-preview boundaries alongside the complete M7/M8 ledger.
+- [x] Inventory 35 SQL files: the 26 byte-identical released files, eight byte-identical M7/M8 sources renamed after that prefix and one additive role-aware discovery migration.
+- [x] Replay35migrations in the owned networkless SQL fixture, pass6role-aware and9discovery groups, and regenerate the actual160-function API reference. Native upgrade/retention remains a separate pending gate.
+- [x] Pass current514frontend/92runtime checks, stronger coverage floors, compiler graph and30SQLsuites/321groups on the owned integration; preserve current15-check policy.
+- [ ] Complete the combined isolated Auth/API/desktop/mobile/PWA and native retained-data acceptance after the shared QA slot is available. Earlier source-specific passes below do not certify this integration.
+- [ ] Publish the signed combined head and observe all 15 current required checks, including `PR preview package`, before the coordinated merge. Review exceptions never bypass CI or signatures.
+
+## Earlier PR13 policy checkpoint — superseded by the latest dated readback
+
+The latest explicit user decision is authoritative: only `CarinaSchoppe` (GitHub User29256704) receives the sole personal review-ruleset exception. The latest readback sets `bypass_mode: always` only on that review ruleset and includes CodeQL, code-quality and Copilot-review rules. All15CI checks and verified signatures remain mandatory; history/check bypass lists are empty. Source snapshots mirror the designated owner's confirmed live update. Older role-based, unrestricted or disabled-rule entries below are dated development history, not instructions to restore those configurations. PR27 has the next main merge, followed by this independent PR13 conflict resolution; feature work does not wait for a large aggregate branch.
+
+## Native candidate port-selection correction
+
+- [x] Reproduce legal immediate ephemeral-port reuse deterministically; preserve simultaneous three-port uniqueness and loopback ownership boundaries.
+- [x] Hold all three reservation listeners until selection completes, and release partial groups on bind failure; retain the existing uniqueness assertion without retries or timeout changes.
+- [x] Pass11candidate cases, including real TCP group/rebind cleanup and rejection of an isolated old-algorithm mutant, plus targeted lint/format/whitespace checks.
+- [ ] Repeat required complete native retained-data CI on the integrated signed source before the authorised PR merges; local socket fixtures do not establish complete native acceptance.
+
+## PR13/PR23 requested conflict correction
+
+- [x] Resolve PR13 against actual main0a6002a, preserving both full product/evidence ledgers and accepted roles/welcome/help/metadata work.
+- [x] Reconcile current rule snapshots and contributor guides to15mandatory checks, no history/check/App bypass and Maintain/Admin PR-only review exceptions; preserve released SQL and application/workflow/dependency source. The older14-check/App-exception snapshots below are historical.
+- [x] Pass22focused documentation/metadata/integrity guards, targeted lint, formatting and diff checks.
+- [x] Integrate signed PR23 d448fab directly, preserving neutral content, its additive migration and both original PR heads in the final normal-merge ancestry.
+- [ ] Observe all15required checks on final PR13 source/current base, then merge directly under Carina's latest explicit instruction. The former coordination hold is superseded by that instruction.
+
+## PR13 current-base acceptance
+
+- [x] Preserve prior exact-head acceptance as historical evidence; resolve the eight current conflicts and integrate accepted main through `0a6002a` without application or released-migration changes.
+- [x] Reconcile the 36-label catalogue, 15 mandatory live checks, current private pricing/roles/welcome guidance and both documentation histories.
+- [x] Pass fresh local254frontend/88runtime/13documentation-metadata cases, unchanged coverage thresholds, type/lint/format/source-integrity/build/actionlint checks. Application,26SQL migrations and operating code match accepted main.
+- [ ] Publish the signed conflict resolution and pass every current required check on the final head before the authorised merge. PR27 has the next actual main merge; preserve its publication controls and required shared-fixture correction when integrating that base.
+- [x] Confirm prior exact-head quality, security, full application/native and corrected metadata success.
+- [x] Integrate current main e75f55d after PR16; retain both documentation histories and the complete guided-demo implementation.
+- [ ] Observe fresh exact-source quality/security/application/native and metadata checks; merge PR13 only when every required gate passes, as explicitly authorised by the user. The live PR is the final acceptance record.
+
+The current required-check policy has 15 contexts. Older 14-check readbacks below remain historical evidence; use current server rules and exact-head results. Production, hosted installation and other operational approvals remain separate.
+
+> Historical PR21 acceptance notes follow. PR18 and PR21 have since merged; they do not impose a current merge hold. The active joint integration is recorded above.
+
+- [x] Translate the remaining general guides, forms, security policy and 30 label descriptions into English, preserving bilingual application behaviour, authored content and the verbatim specification.
+- [x] Add a [documentation index](README.md), discoverable [roadmap](../ROADMAP.md), [changelog](../CHANGELOG.md) and [decision notes](decisions/README.md); correct stale M6-pending prose using recorded accepted evidence.
+- [x] Read back all three active rules after concurrent02:33UTC activation; synchronize source JSON without changing live settings. Maintain/Admin review exceptions are PR-only; all 14 strict current-base checks apply without human bypass. Preserve separate maintenance-App promotion/source-delivery work. This current snapshot supersedes earlier dormant-rule/governance descriptions below.
+- [x] Read back all eleven existing PRs, including active #10; every PR already has one type, one risk and at least one area label. Preserve classifications and the nine original labels.
+- [x] Extend delivered documentation verification to roadmap/change notes and local heading fragments so translated navigation is checked.
+- [x] Record actual local checks, safe full-command refusal, verified English-label readback and signed publication on [PR #13](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/13). All six quality gates and the four Security jobs passed on first head `8e14e9e`; the latest complete application/native acceptance is recorded by the PR's exact-source checks, not inferred from this checkbox. No bug-free certification, new product module, hosted/production change or real mail is implied by this increment.
+
+The full product and operational ledger remains below; open PR #10 and concurrent source are not silently included in this documentation acceptance.
+
+## PR23 current native gate correction
+
+- [x] Retain exact d448fab application-verify success and the actual native setup failure (two unique ports where three were required); no native SQL/API proof or preview completion is inferred.
+- [x] Hold three temporary loopback listeners together and release all on success/failure; preserve the original assertion and all acceptance gates. Ten native unit cases pass, including real bind-failure cleanup and successful rebinding.
+- [x] Preserve parallel main319ab69/PR22 and all26published SQL bytes, both verification ledgers and current Draft/no-auto-merge queue. No global-QA reservation is bypassed.
+- Fresh exact-head full CI/native/preview acceptance and subsequent sequential merge remain recorded on [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23); PR27 owns the next actual merge.
+
+## PR23 current-main conflict resolution
+
+- [x] Integrate accepted main `0a6002a` / PR21, preserving both ledger histories, all guided-experience fixes and all26published main migration bytes.
+- [x] Pass254frontend cases with unchanged coverage floors,28catalogue/privacy/documentation/metadata/integrity guards, affected UI checks, TypeScript/ESLint/source formatting and the export graph.
+- [ ] Observe complete exact-head PR23 application/native/security CI and merge under the current explicit user instruction; no full acceptance or hosted installation is inferred from local focused checks.
+
+## PR23 mobile acceptance continuation
+
+- [x] Record exact failed82/84mobile/browser acceptance; preserve actual successful SQL/API/persistence evidence and stages not reached.
+- [x] Reproduce the exact CI435px layout/412px visual viewport failure with the actual React UI and broad system font, including a failing ordinary click without screenshots.
+- [x] Add strict pointer hit-target readiness/geometry and a native covered-control/scroll/capture regression; both desktop/mobile fixture cases pass without changing business assertions, retries or timeouts.
+- [x] Integrate current mainfabd71a comments, private role pricing/welcome and previews, preserving26published SQL sources, customer-neutral wording and MIGRATION_GUIDE.
+- [x] Correct the nonwrapping German course tabs with scoped wrapping; four real-source-CSS pointer/layout regressions pass, and overflow checks use document clientWidth.
+- [x] Complete exacta793da4/fabd71a acceptance:249frontend,263SQL,92browser,2PWA; native27migration upgrade/retention/20API suites; all quality/security/preview gates. Six fresh screenshots inspected and OCR checked.
+- [x] Retain newly merged main0a6002a guided-help/compiler fixes; this new combined source needs its own acceptance.
+- [x] Current-main focused local254frontend/89runtime/type/lint/format/compiler checks pass. Local complete3250296d passes90/92browsers and all4course/source cases; two initial-login module loads fail with recorded ERR_NETWORK_CHANGED. Keep this failed run distinct from the accepted prior CI.
+- [x] Diagnose coincident host container-interface churn without changing assertions;20fresh actual-React login renders pass in a separate backend-free diagnostic. Respect the explicit PC-QA reservation for any complete rerun.
+- Current exact-source full application/native/security acceptance, feature screenshots and the user-authorised merge are owned by [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23). A partial screenshot artifact or source submission does not mark that acceptance complete.
+
+## Current correction — customer-independent catalogue and authorised Git delivery
+
+- [x] Neutral public docs, UI, tool/data names and source-linked catalogue; original migration bytes/UUIDs/source hashes and edited/used templates retained.
+- [x] Focused original-checkout validation and removal of eight branded screenshots are recorded in WORKLOG.
+- [x] Isolate the change from independently open roles/pricing work onto current main; preserve all unrelated source and the full product ledger below.
+- [x] Submit signed [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23) with main-compatible preservation checks, required complete application/security/native gates and a six-screenshot fictional artifact. Actual CI completion, visual evidence and the user-authorised merge are recorded on that PR; submission alone is not acceptance.
+
+Customer organisations remain privately configured and reusable templates support multiple explicit organisation scopes. Publication of this source does not assert hosted migration installation or production acceptance.
+
+## Current direction — local PC testing and explicit publication
+
+- Final integration follows actual main319ab69 through verified remote mergef24eae9. Prior head30075c9 passed all15required checks (88browser/2PWA plus real26-migration/20-suite native retention); current f24local checks pass254frontend/95runtime/23maintenance cases. Correct the three retained governance contradictions once, preserving manual publication controls, then use PR27's fresh exact-head checks and actual merge record. Other feature development remains independent.
+- [x] Add `./portal check` for fast local source/coverage/build feedback, retaining complete isolated `./portal test` and latest-main `./portal github test`.
+- [x] Keep automatic quality/security/application/native gates; make CMS publication an explicit exact-SHA manual choice and PR deployment metadata manual-only.
+- [x] Notify the 16 other active project Codex chats and preserve the local-first rule in `AGENTS.md` and operator/contribution guides.
+- [x] Run the actual fast local command (249 frontend tests before integration;254on current-main integration and build pass), all95integrated offline runtime tests and workflow validation. Cancel the old automatic main publication run and temporarily disable the old metadata publisher, with real server readback.
+- Signed [PR27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27) owns the exact required CI and coordinated user-authorised merge record. After its actual merge, re-enable the manual-only metadata workflow and verify main's publication guard. The first run was cancelled after PR21 advanced main; current-main integration preserves both feature histories.
+- [x] Reproduce the existing50-way lifecycle fixture's disappearing-offer consent lookup from the actual failed run, capture real actor quotes before racing and add a deterministic late-reader case; all12real PostgreSQL groups pass in a fresh disposable local container. Fresh signed-head CI remains the merge gate.
+
+The VPS polling timer and normal/hosted data are unchanged. This direction supersedes historical automatic release/publication descriptions below; it does not remove any product, security or release acceptance requirements.
 
 ## Coordinated PR18 integration
 
@@ -58,6 +322,7 @@ The latest request supersedes the earlier shared compensation default. Work is i
 - [ ] Production policy setup/migration/deployment is a separate operational step; this request does not authorise production or real email changes.
 
 [Roles and private pricing](DELEGATED_ROLES_PRICING.md), [welcome guide](WELCOME_GUIDE.md), [PR previews](PR_PREVIEWS.md). The verbatim original specification remains preserved; these explicit user extensions update its operating details without dropping any remaining modules.
+
 ## Comprehensive code comments and agent guide
 
 Requested directly on `main`: explain the maintained code throughout and provide a project-specific `AGENTS.md`, using OpenXLR's guide as a structural reference. Work uses a dedicated review worktree so the original checkout's concurrent feature changes remain separate. The independent English community commit `3256d1a` is preserved; contributor guidance remains English and source commentary uses English.
@@ -70,6 +335,10 @@ Requested directly on `main`: explain the maintained code throughout and provide
 
 The full product ledger below remains unchanged. The protected PR additionally requires hardening the existing private MFA test-state file reader/writer after CodeQL re-flags its old race warning in the touched fixture. That bounded harness change receives real ownership/symlink/atomic-write regressions; application business behavior stays unchanged. Exact-head CodeQL and full application/selfhost CI remain acceptance gates, with no advance production/hosted claim.
 
+Historical PR15 request, now reconciled on the separate combined-source rehearsal: explain the maintained code throughout and provide a project-specific `AGENTS.md`, using OpenXLR's guide as a structural reference. Work uses a dedicated review worktree so the original checkout's concurrent feature changes remain separate. The independent English community commit `3256d1a` is preserved; contributor guidance remains English and source commentary uses English.
+
+Current reconciliation preserves all32 released migration bytes and94 product behavior:212 frontend/Edge syntax trees and26CSS structures match, with purpose/contract comments adapted to current M7/M8 implementations. Exact final acceptance follows the actual main15 merge and the complete combined-source gates.
+
 ## Historical PR CI repair
 
 Requested PRs6/7/8/9/14/11 are already merged. Their final application checks and later metadata failures are distinguished in [the audit](PR_CI_REPAIR_20261116.md);14 is a cancelled temporary-base fixture, not a failed product merge.
@@ -80,6 +349,11 @@ Requested PRs6/7/8/9/14/11 are already merged. Their final application checks an
 - [ ] Publish the signed fix, observe exact-head CI, merge under the user's explicit instruction and execute all six historical checks through the merged main workflow.
 
 No new application migration, production deployment or reduction of the remaining product scope belongs to this repair.
+
+- [x] Reconcile the35managed labels with current GitHub usage; preserve existing names, colours, descriptions and assignments.
+- [x] Use current trusted main for the ordinary read-only metadata check, skip automatic closed-PR events and add a main-only manual historical check; retain strict categories, canonical identity and stale-head rejection.
+- [x] Pass12focused Node regressions plus workflow/format/link checks and real read-only label validation for all six PRs.
+- [x] Signed PR20 head6e593f5 passed all14 required checks and merged asd4c1f49; all six explicit current-main historical metadata rechecks passed. These validate present labels, not a replacement for historical application runs.
 
 ## Guided exploration and practical help
 
@@ -93,7 +367,15 @@ User requested a complete bilingual guided experience, safe fictional test syste
 
 [Guided demo and help](GUIDED_DEMO_AND_HELP.md) complements the full target below. These educational simulations do not mark any unimplemented business module complete and do not replace the independent account welcome checklist.
 
+- [x] Public fictional demo for all25current portal modules, guided route sequence and meaningful in-memory exercises; explicit simulation labels, reset/reload erasure, DE/EN and shared themes.
+- [x] Authenticated permission-aware Portal tour with explicit navigation, pause/resume/restart and per-account session progress; unchanged server permissions, MFA and online confirmation.
+- [x] Public searchable bilingual help with practical workflows, module deep links, general recovery and entry points from login/tour/errors.
+- [x] Source checks, production build, actual public desktop/mobile acceptance, initial whole-source coverage above unchanged gates and precise usage/security documentation. See WORKLOG for executed counts and remaining exact-source checks.
+- Accepted [PR16](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/16) is included through incoming main `e75f55d`. Its independent evidence is retained; the current combined32-migration source still requires fresh complete application/native retained-data/security acceptance. No production deployment is implied.
+
 ## English community information
+
+> Historical accepted-main checkpoint. Its counts and former rules describe that source snapshot; current merge eligibility is the 15-check policy stated above.
 
 The current language request covers public security/contribution documentation, GitHub issue/PR forms and guidance, managed label descriptions and PR metadata feedback. Isolated branch `codex/english-community-guides` preserves concurrent application work and the full product ledger below.
 
@@ -107,6 +389,8 @@ New contribution discussions use English. Product UI remains German/English, exi
 
 ## GitHub quality, coverage and maintainer merge continuation
 
+> Historical accepted-main checkpoint. Its counts and former rules describe that source snapshot; current merge eligibility is the 15-check policy stated above.
+
 Current request: visible compilation/type/style/quality/security/coverage tasks, Dependabot and uninterrupted direct Maintainer merges. Work is isolated on `codex/github-quality-checks` from current accepted main9c2103b; no business migration, normal preview, VPS or production mutation belongs to this slice.
 
 - [x] Preserve existing full application/native-selfhost/release and daily maintenance paths; add explicit quality/coverage gates and reports with no private credentials.
@@ -119,6 +403,65 @@ Current request: visible compilation/type/style/quality/security/coverage tasks,
 The first whole-main CodeQL baseline reports existing warnings beyond the earlier PR diff; [bounded triage](CODE_SCANNING_TRIAGE.md) records actual contexts, three tested small hardenings and remaining local-reader/scanner/Origin follow-up. No false zero-finding or complete security-certification claim is made.
 
 The additional PR-/check rules remain disabled until the independently prepared maintenance App has a proven token/promotion path; current effective Maintainer/Admin merge freedom is already present. The older personal PR-only preference below is superseded. Full remaining product scope stays unchanged.
+
+## Current combined acceptance after Demo/Help integration
+
+- [x] Preserve all32 migrations, M7/M8 resource/privacy boundaries, the complete master-specification ledger and accepted incoming Demo/Help/Tour source from PR16/main `e75f55d`.
+- [x] Record exact `9c42730` CI43794921492 as **failed**:316 SQL cases,26 actual business API suites and real restart persistence passed;92/94 browser journeys passed and both global-calendar DE→EN journeys failed. Earlier29-migration failures remain historical evidence in WORKLOG.
+- [x] Reproduce the dialog-loss regression and correct only semantic calendar range handling in `bf09f19`;12 Calendar cases, TypeScript, lint and formatting pass. Equal-range language signals preserve the same detail; real navigation still clears it and introduces no duplicate range queries.
+- [x] Resolve the App/Shell/Demo integration while preserving actor-bound private state, current inbox/quiet preferences, announcement banners, all M7/M8 routes and the extracted Preferences component; TypeScript, focused lint/format and 78 tests across nine affected files passed.
+- [x] Preserve incoming PR13 English documentation, roadmap/changelog/decision notes and the 36-label catalogue without replacing M7/M8 APIs, ACLs, the complete remaining ledger or failed-run history.
+- [x] Record current functional preflight: 372 tests across 57 files; coverage S57.65/B52.32/F49.11/L59.46%, all configured floors passed. The corrected source has no complete native acceptance yet; its final combined SHA is not asserted here.
+- [x] Measure the current compiler inventory: 135 reachable modules, 34 routes, 286 runtime exports and zero connectivity/export/link/asset errors; collect 106 authored business browser cases plus two built-PWA cases without collection errors. Discovery does not mark those journeys passed.
+- [ ] Complete integration checks and a fresh full isolated run of the combined M7/M8/Demo/Help source, then observe both exact application and retained-data CI gates. Do not reuse individual branch or pre-merge counts as combined acceptance.
+- [ ] After the tested product merge, execute the actual main-only maintenance-App workflow proof. Preserve the current 15 required checks, including PR preview package, mandatory signatures and review-only Maintain/Admin PR exception; do not restore an older nine-check policy. Review-hold decisions for separate PR13/19 remain separate from this product gate.
+
+## PR13 documentation-branch acceptance history
+
+- [x] Confirm prior exact-head quality, security, full application/native and corrected metadata success.
+- [x] Integrate current main e75f55d after PR16; retain both documentation histories and the complete guided-demo implementation.
+- [ ] Observe fresh exact-source quality/security/application/native and metadata checks; merge PR13 only when every required gate passes, as explicitly authorised by the user. The live PR is the final acceptance record.
+
+## English documentation and repository verification continuation
+
+The user requests English general documentation, detailed contribution/issue/PR instructions, an explicit roadmap and useful notes, current/historical labels, protected main and continued direct merge authority. Work is isolated on `codex/english-documentation-governance` from accepted main `1341b16`; concurrent role/welcome-tour changes in the original checkout are preserved.
+
+- [x] Translate the remaining general guides, forms, security policy and 30 label descriptions into English, preserving bilingual application behaviour, authored content and the verbatim specification.
+- [x] Add a [documentation index](README.md), discoverable [roadmap](../ROADMAP.md), [changelog](../CHANGELOG.md) and [decision notes](decisions/README.md); correct stale M6-pending prose using recorded accepted evidence.
+- [x] Read back all three active rules after concurrent02:33UTC activation; synchronize source JSON without changing live settings. Maintain/Admin review exceptions are PR-only; all 14 strict current-base checks apply without human bypass. Preserve separate maintenance-App promotion/source-delivery work. This current snapshot supersedes earlier dormant-rule/governance descriptions below.
+- [x] Read back all eleven existing PRs, including active #10; every PR already has one type, one risk and at least one area label. Preserve classifications and the nine original labels.
+- [x] Extend delivered documentation verification to roadmap/change notes and local heading fragments so translated navigation is checked.
+- [x] Record actual local checks, safe full-command refusal, verified English-label readback and signed publication on [PR #13](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/13). All six quality gates and the four Security jobs passed on first head `8e14e9e`; the latest complete application/native acceptance is recorded by the PR's exact-source checks, not inferred from this checkbox. No bug-free certification, new product module, hosted/production change or real mail is implied by this increment.
+
+The full product and operational ledger remains below. Those PR13 checks concern its documentation branch and do not certify the M7/M8 integration, which is tracked separately above.
+
+## Concurrent quality baseline and current governance
+
+Incoming main `3256d1a` adds visible build/type/lint/format/connectivity checks, enforceable V8 coverage floors and reports, independent CodeQL, Dependency Review and dependency-update guidance. These are preserved. The pre-incoming316-unit result and pre-Demo342-test coverage pass are historical source-bound checkpoints. The first32-migration exact CI subsequently failed the two Calendar language journeys; the corrected combined source requires the fresh complete acceptance above. See [CI_QUALITY](CI_QUALITY.md) and [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md).
+
+The three live rules are active after the user's clarification: Maintain/Admin review exception through PRs only; all14 currently required CI contexts and signatures remain compulsory for humans; only the scoped tested maintenance App has its technical review/check exception. History has no bypass. The configured App's actual main-only workflow probe remains after the tested product merge. Auto-Merge availability is enabled. Source and live rule details are in [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md).
+
+## Current combined source — complete acceptance next
+
+The primary `codex/community-and-resource-completion` branch combines all eight additive M7/M8 migrations with the approved repository-scoped maintenance workflow, reviewed file-dialog fixes, Calendar correction and incoming Demo/Help/Tour source. There are **32 migrations / 155 public RPCs**; PR16 introduces no migration. Historical pre-Demo checks passed lint/types and **342 Vitest cases / 54 files** with all coverage thresholds; the earlier M7/M8 graph inventoried **128 reachable modules / 32 routes** with no detected disconnected runtime source. Those counts do not verify this new integration. A fresh source inventory, full native integration and both exact CI gates remain mandatory.
+
+The next steps are to run the complete isolated command, fix real failures, record actual evidence, merge PR10 only after application and retained-image checks pass, then probe the App workflow on main and recheck the active, precise review/check policies. Keep the separate persistent GitHub preview current through its reviewed migration plan. No production/public-website deployment is authorised.
+
+The full remaining module ledger stays required. Connected source now includes exact-version evidence, published global-event management, scoped administrative job pickers, saved views, file organisation, chat mentions, quiet hours and announcements. These do not imply course/wiki/forum attachment contexts, finance PDF statements, actual email scheduling, retention administration or physical-platform acceptance are complete.
+
+## M8 connected continuation — implementation and focused checks in progress
+
+The separate `codex/scoped-resource-job-pickers` branch continues the remaining specification with purpose-scoped administrative job search, published global-calendar management, and explicitly shared, version-pinned qualification evidence. The file/course-chat pickers must preserve their actual write permissions; they must not reuse lecturer-marketplace eligibility. Global events require current management MFA and explicit publication. Evidence review must preserve manual verification, CV/contract boundaries and accepted assignment snapshots.
+
+These modules are **not yet accepted**. Finish source and focused checks, freeze all owners, replay the additive migration set, generate the actual API reference, and run the complete isolated Auth/Storage/scanner/SQL/API/browser/PWA command plus both exact CI gates. M7 PR10 and its corrected local run remain a separate pending gate. The entire remaining module ledger below stays required.
+
+## M7 discovery and community source frozen — complete acceptance pending
+
+Current branch `codex/community-and-resource-completion` preserves all24accepted M6 migrations and adds five actual CLI migrations (29total). Connected source now includes server-side file search/cursors/private tags and virtual folders, job discovery/exact details/scalar counts/private saved views, structured chat mentions and existing-policy moderation/drag-drop, effective in-app quiet hours and versioned DE/EN announcements. See [FILES](FILES.md), [JOB_DISCOVERY](JOB_DISCOVERY.md), [CHAT](CHAT.md), [NOTIFICATIONS](NOTIFICATIONS.md), [ANNOUNCEMENTS](ANNOUNCEMENTS.md), [ARCHITECTURE](ARCHITECTURE.md) and [ERD](ERD.md).
+
+Integrated preflight passed source lint/type/format and240Vitest cases across50files. Compiler graph:119reachable modules/32routes, no unresolved imports/unreachable modules/unused runtime exports. The generated API reference inventories146actual migrated public functions. Focused real temporary-PostgreSQL groups: files6, jobs9(including observed save/remove role-withdrawal races), mentions11, attention9(timezones/DST/CAS/retained inbox), announcements16(profile-lock/revocation/commit/ACK/publication privacy). API/browser scenarios are authored and discovered but **not yet a passed canonical M7/native acceptance**.
+
+Independent M6follow-up PR9 records accepted evidence and fixes a reproduced160ms theme-interpolation contrast defect; the exact new CI must pass before its merge. M7 contains the same atomic color-pair fix and first-computed-state regression. Keep legacy scoped job pickers,500-cardboard, rich course/wiki/forum resources, financial statements, real scheduling/email and remaining administration/retention work visible in the full ledger below.
 
 ## M6 continuation — complete operations and latest-source local preview
 
@@ -139,9 +482,9 @@ Taxonomy and availability together passed 18 focused Vitest tests. The generated
 
 ## GitHub contribution and governance continuation
 
-Original request (superseded for the merge exception by the current Maintainer/Admin ALWAYS instruction above): require independent review for other contributors while allowing `CarinaSchoppe` to merge through a personal PR-only exception; supply useful labels/tags, issue/PR templates and a GitHub-discoverable contribution guide. Contributor source passed exact CI and merged through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) as `18ce633`. The catalogue now contains 30 managed labels plus nine preserved original GitHub labels; earlier PR classifications retain existing labels. [PR guide](PULL_REQUEST_GUIDE.md).
+Requested: require independent review for other contributors while allowing `CarinaSchoppe` to merge through a personal PR-only exception; supply useful labels/tags, issue/PR templates and a GitHub-discoverable contribution guide. Contributor source passed exact CI and merged through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) as `18ce633`. The catalogue now contains 30 managed labels plus nine preserved original GitHub labels; earlier PR classifications retain existing labels. [PR guide](PULL_REQUEST_GUIDE.md).
 
-[GitHub administration](GITHUB_WORKFLOW.md) records the split history/review/check policies, precise human and maintenance-bot identities, metadata validation and historical milestone tag targets. The standard-bot bypass failed the actual protected-branch proof. Live review/check rules remain disabled; a repository-scoped App-token patch is signed and pushed separately, awaiting user approval and GitHub passkey authentication. Finish the documented App setup/proof before activating rules. A merged guide or accepted ruleset JSON is not proof of active enforcement. No production or public-website change belongs to this task.
+[GitHub administration](GITHUB_WORKFLOW.md) records the current active history/review/CI policies. Maintain/Admin roles may bypass only the review requirement through PRs; CI and signatures remain mandatory. The private repository-scoped App5776881, selected installation182397724 and main-only signing Environment are configured. Its actual protected signing/bypass probe passed without any signature exception; the real main-only workflow probe follows the tested merge. Earlier standard-bot failures and disabled-rule checkpoints remain historical in WORKLOG. No production or public-website change belongs to this task.
 
 ## M5 local acceptance passed — system functionality and performance audit
 
@@ -167,11 +510,11 @@ The authorised development instance automatically installed main `bb322746` at 2
 
 Post-automatic-deployment hosted Auth/MFA/Mailpit/recovery/RLS, actual scanning,50 claims, private file and WSS delivery/revocation passed. Existing 3 users/profiles/roles,1 private document/object,10/1GiBquotas and22templates/24sources remain. No capacity upgrade, real SMTP, production release or future100GB/15–25-member acceptance is implied. Full remaining product scope stays below; [WORKLOG](WORKLOG.md) records exact evidence and limitations.
 
-## M4 local acceptance passed — functional audit and reusable CBW content
+## M4 local acceptance passed — functional audit and reusable course-building-block content
 
-Requested 16 November: source-grounded functional/dead-code/connection audit; meaningful failed-path tests and developer docs; CBW building blocks as reusable provenance-linked templates; profile pictures; and resource-specific comments. M3 is merged through PR #3. Work is isolated in `codex/functional-qa-building-blocks`; original concurrent hosting edits and normal persistent data remain untouched.
+Requested 16 November: source-grounded functional/dead-code/connection audit; meaningful failed-path tests and developer docs; course building blocks as reusable provenance-linked templates; profile pictures; and resource-specific comments. M3 is merged through PR #3. Work is isolated in `codex/functional-qa-building-blocks`; original concurrent hosting edits and normal persistent data remain untouched.
 
-- [x] Import all 24 PDF source references into 22 canonical CBW building blocks/templates, retaining both LPC3/LPC4 revisions. Provide readable searchable content and safe template/run duplication.
+- [x] Import all 24 PDF source references into 22 canonical building blocks/templates, retaining both LPC3/LPC4 revisions. Provide readable searchable content and safe template/run duplication.
 - [x] Create real offers from an existing course run with exact template/session/source references, authoritative server defaults, gross/net separation and idempotency; change only scheduling/financial/delivery details as needed.
 - [x] Secure scanned profile avatars with own upload/remove/replace, scoped authenticated viewing and no private-file bypass or offline caches.
 - [x] Staff comments under templates and jobs, with access checks, bounded text, actual persistence, idempotency, cursor pagination, edits/withdrawals and reasoned MFA moderation.
@@ -208,7 +551,7 @@ M1 is locally verified and was merged by Carina in PR #1. The previous continuat
 | Customers/courses              | Private directory/contacts/notes/tags/archive; reusable templates, real runs/sessions/publication/safe copy                                                     | 11 real Auth/MFA API cases, component/privacy/read-only checks plus isolated browser journeys                                         |
 | Contracts/finance              | Executed PDF/version/hash/receipt/addenda, applicable-contract prerequisite, immutable earnings/invoice/payment records and scoped CSV                          | Commercial SQL/API/component and isolated browser checks recorded in latest work log                                                  |
 | Global search/calendar         | Permission-filtered jobs/files/messages/safe wiki/forum/contacts; explicitly published course sessions in global calendar                                       | Real API boundaries plus desktop/mobile journeys; no search over private draft bodies                                                 |
-| M6 operations source           | Taxonomy, private availability, audited lifecycle/per-position capacity, Kanban, personal dashboard, own inbox/preferences and safe administrative audit        | Focused module evidence above; full combined native M6 acceptance pending                                                             |
+| M6 operations source           | Taxonomy, private availability, audited lifecycle/per-position capacity, Kanban, personal dashboard, own inbox/preferences and safe administrative audit        | Application and retained-data CI accepted on9d9bc56; mergedPR8dc8e9a7                                                                 |
 | Latest-main local preview      | Merged PR7; `./portal github` persistent `5373`/`563xx` preview and separate `github test` QA checkout                                                          | Independent runtime evidence in WORKLOG; does not imply new business-feature acceptance                                               |
 | M3 extension                   | Scoped accounts/client commission/profile/review functions merged in PR3 and integrated into the hosted development release                                     | Combined acceptance: 59 source, 31 Edge, 124 SQL, 46 browser and 2 PWA checks; hosted accounts/privacy/revocation passed              |
 | Hosted development             | Actual self-hosted KVM 1 at cms.luminovia.org; private Supabase services, internal Mailpit, 18 migrations                                                       | Eight hosted API suites, fifty requests/two actors, restart persistence and browser login; see current WORKLOG                        |
@@ -228,22 +571,22 @@ M1 is locally verified and was merged by Carina in PR #1. The previous continuat
 
 ## Module completeness ledger — full remaining scope
 
-| Module                 | Current functioning slice                                                                                                                                                                                                                                       | Required follow-up                                                                                                                                                                                                                                         |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A Dashboard/navigation | Authenticated branded responsive shell, permission-filtered search, mobile More; M6 bounded personal calendar/chat/inbox/file/contract previews and capability-scoped follow-ups                                                                                | Extend authorized management cost/document follow-ups, matching/saved views and resource search; final native M6 browser/platform acceptance                                                                                                               |
-| B Users/Auth/profiles  | Invites/recovery/MFA, roles, suspend/reactivate, bilingual profile/timezone/phone, expertise attestation, scanned CV/certificates and scoped scanned avatars                                                                                                    | Structured education and visibility preferences; evidence-linked verification/expiry; full lifecycle/recovery hardening. M3 adds validated experience/country/languages/self-labels, current database role editor and account HTTP API.                    |
-| C Taxonomy             | M6 shared DE/EN topics/tools/programming-language hierarchy, aliases, related authorized courses, current-MFA versioned CRUD/archive and active/historical selectors                                                                                            | Complete native/API/browser acceptance and future catalogue administration needs without rewriting historical qualifications                                                                                                                               |
-| D Organisations        | Search/edit/archive, types/industry/location/timezone/tags, permissioned contacts and private notes, linked course runs                                                                                                                                         | Organisation-scoped files and richer topic/filter/contact actions. M3 adds explicitly managed client accounts/memberships, course requests and organisation-scoped spend/assigned-teacher views.                                                           |
-| E Courses              | Reusable descriptions/syllabus/prerequisites/topics; actual customer/delivery/venue/precise sessions; safe duplicate and publication                                                                                                                            | Standalone participant groups, resource links and independent split-job editor. M3 adds optional manager enrolment, lecturer course history/deep links and eligible learner reviews with moderation.                                                       |
-| F Jobs/claims          | Combined filters/current consent, whole-block atomic claims and immutable snapshots; M6 versioned edit/copy/deadlines, accessible Kanban, explicit new 1–20 per-position capacity, safe cancellation/reopening/replacement                                      | Saved/advanced views/sorting, richer vacancy rules/resource UI and substitute orchestration; preserve single-position client/CBW budgets; complete native/concurrent/retained-data M6 acceptance                                                           |
-| G Calendar             | Private events, confirmed jobs, published global course data, month/week/day/agenda/time zones; M6 own available/unavailable editor and explicitly shared reduced management windows                                                                            | Global-event management, richer files/links, invitations, scheduled reminders and permitted drag/edit; ICS later; full native/MFA/privacy/race M6 acceptance                                                                                               |
-| H Chat                 | Private DMs/groups/staff general and separate course participant rooms; persisted realtime/history/search/reactions/edit/delete/read/mute/files; immediate future-event revocation; permission-scoped profile-to-DM links already call the actual create_dm API | Structured mentions and corresponding deduplicated alerts; presence/typing if practical; disclosed moderation and richer group administration                                                                                                              |
-| I Files                | Authenticated private scope, actual scanner/quarantine, validated PDF/Office/images/text, limits/progress, preview/download/version/hash/rename/archive, evidence/chat/job contexts                                                                             | Course/organisation-specific resource UX, tags/folders/classification, sharing/expiry links, approved restricted archives, retention/purge tools; large videos stay external                                                                               |
-| J Contracts            | Personal/master/addenda/version PDF/hash, immutable receipt (no signature claim), effective/expiry/revocation and claim prerequisites; M6 own due-expiry notices on explicit reminder refresh                                                                   | Scheduled/approved renewal delivery, assignment-confirmation documents, configurable privacy/legal/retention documents and approved legal/e-sign review if needed                                                                                          |
-| K Wiki/forum           | Safe Tiptap content/code language labels, DE/EN categories, wiki revisions/draft/publish, forum acceptance/subscriptions/moderation                                                                                                                             | Authorised attachments and course-template links, finer editorial workflow and richer search/presentation                                                                                                                                                  |
-| L Finance              | Original-currency expected/completed/invoiced/paid earnings; claim-derived invoice PDFs, review/reject, partial/full payments/void, scoped formula-safe CSV                                                                                                     | Downloadable statements and richer time-series reporting. M3 adds private gross/platform/net agreements and 50/50 default, immutable accepted splits, client spend, owner revenue and labelled/filterable invoices; no payroll/accounting/tax/bank claims. |
-| M Notifications        | Committed own inbox with safe links/cursor/read state, versioned category preferences, final-transaction topic matching, cancellation receipts and explicit own session/contract reminder refresh; chat mute retained                                           | Quiet hours, global announcement banners, durable approved email delivery/retry and optional push; final actual Auth/API/browser M6 acceptance                                                                                                             |
-| N Administration       | Invites/MFA/suspension/verification, customers/courses, account/client-role APIs, contracts/invoices/payments; M6 taxonomy/lifecycle board and finite safe `audit.read` projection                                                                              | Granular permission/brand settings, retention, bulk recovery, richer diagnostics/status UI; complete product/hosted/manual acceptance. Existing backup/restore acceptance is operational evidence, not a delivered retention UI.                           |
+| Module                 | Current functioning slice                                                                                                                                                                                                                                       | Required follow-up                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A Dashboard/navigation | Authenticated branded responsive shell, permission-filtered search, mobile More; M6 bounded personal calendar/chat/inbox/file/contract previews and capability-scoped follow-ups                                                                                | Extend authorized management cost/document follow-ups, expertise/availability matching and resource search; combined source adds own saved views; M6browseracceptancepassed; physical/manualplatformacceptance remains                                                                                                                              |
+| B Users/Auth/profiles  | Invites/recovery/MFA, roles, suspend/reactivate, bilingual profile/timezone/phone, expertise attestation, scanned CV/certificates and scoped scanned avatars                                                                                                    | Structured education and visibility preferences; full lifecycle/recovery hardening. The combined source adds explicitly shared exact-version evidence and common attestation history; complete native32 acceptance remains required. M3 adds validated experience/country/languages/self-labels, current database role editor and account HTTP API. |
+| C Taxonomy             | M6 shared DE/EN topics/tools/programming-language hierarchy, aliases, related authorized courses, current-MFA versioned CRUD/archive and active/historical selectors                                                                                            | M6Auth/API/browseraccepted; availability/expertise search and future catalogue needs remain without rewriting historical qualifications                                                                                                                                                                                                             |
+| D Organisations        | Search/edit/archive, types/industry/location/timezone/tags, permissioned contacts and private notes, linked course runs                                                                                                                                         | Organisation-scoped files and richer topic/filter/contact actions. M3 adds explicitly managed client accounts/memberships, course requests and organisation-scoped spend/assigned-teacher views.                                                                                                                                                    |
+| E Courses              | Reusable descriptions/syllabus/prerequisites/topics; actual customer/delivery/venue/precise sessions; safe duplicate and publication                                                                                                                            | Standalone participant groups, resource links and independent split-job editor. M3 adds optional manager enrolment, lecturer course history/deep links and eligible learner reviews with moderation.                                                                                                                                                |
+| F Jobs/claims          | Combined filters/current consent, whole-block atomic claims and immutable snapshots; M6 versioned edit/copy/deadlines, accessible Kanban, explicit new 1–20 per-position capacity, safe cancellation/reopening/replacement                                      | M7source adds paginated advanced search/sorting and private saved views; complete M7nativeacceptance. The scoped file/course-chat pickers are replaced in the combined source. Remaining: richer vacancy/resource UI and substitute orchestration; preserve single-position client/Course budgets                                                   |
+| G Calendar             | Private events, confirmed jobs, published global course data, month/week/day/agenda/time zones; M6 own available/unavailable editor and explicitly shared reduced management windows                                                                            | Combined source adds global-event management, plain descriptions/safe links and bounded published discovery; exact own assignment titles are connected. Remaining: event files/invitations, real scheduling and permitted private drag/edit; ICS later. Complete native32 acceptance remains required.                                              |
+| H Chat                 | Private DMs/groups/staff general and separate course participant rooms; persisted realtime/history/search/reactions/edit/delete/read/mute/files; immediate future-event revocation; permission-scoped profile-to-DM links already call the actual create_dm API | M7source adds structured versioned mentions/deduplicated alerts, visible existing-policy group moderation and scanner drag-drop; complete M7nativeacceptance. Remaining: presence/typing if practical and richer group administration                                                                                                               |
+| I Files                | Authenticated private scope, actual scanner/quarantine, validated PDF/Office/images/text, limits/progress, preview/download/version/hash/rename/archive, evidence/chat/job contexts                                                                             | M7source adds server-paged literal search and private tags/virtual folders; complete M7nativeacceptance. Remaining: course/organisation resources, real classification policy, sharing/expiry links, restricted archives and retention/purge tools; large videos stay external                                                                      |
+| J Contracts            | Personal/master/addenda/version PDF/hash, immutable receipt (no signature claim), effective/expiry/revocation and claim prerequisites; M6 own due-expiry notices on explicit reminder refresh                                                                   | Scheduled/approved renewal delivery, assignment-confirmation documents, configurable privacy/legal/retention documents and approved legal/e-sign review if needed                                                                                                                                                                                   |
+| K Wiki/forum           | Safe Tiptap content/code language labels, DE/EN categories, wiki revisions/draft/publish, forum acceptance/subscriptions/moderation                                                                                                                             | Authorised attachments and course-template links, finer editorial workflow and richer search/presentation                                                                                                                                                                                                                                           |
+| L Finance              | Original-currency expected/completed/invoiced/paid earnings; claim-derived invoice PDFs, review/reject, partial/full payments/void, scoped formula-safe CSV                                                                                                     | Downloadable statements and richer time-series reporting. M3 adds private gross/platform/net agreements with privately configured role-specific compensation, immutable accepted splits, client spend, owner revenue and labelled/filterable invoices; no payroll/accounting/tax/bank claims.                                                       |
+| M Notifications        | Committed own inbox with safe links/cursor/read state, versioned category preferences, final-transaction topic matching, cancellation receipts and explicit own session/contract reminder refresh; chat mute retained                                           | M7source adds in-app quiet attention and versioned audience-scoped banners/important inbox notices; complete M7nativeacceptance. Durable approved email scheduling/retry and optional push remain                                                                                                                                                   |
+| N Administration       | Invites/MFA/suspension/verification, customers/courses, account/client-role APIs, contracts/invoices/payments; M6 taxonomy/lifecycle board and finite safe `audit.read` projection                                                                              | M7source adds announcement management and current-role publication/ACK protection. Granular permission/brand settings, retention, bulk recovery, richer diagnostics/status UI and full product/hosted/manual acceptance remain. Existing backup/restore acceptance is operational evidence, not a delivered retention UI.                           |
 
 ## Next source-verified slices after the M6 acceptance gate
 

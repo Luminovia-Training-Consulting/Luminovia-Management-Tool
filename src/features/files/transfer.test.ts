@@ -3,7 +3,13 @@
  * versions. Controlled transport does not replace real RLS/Auth/Storage/browser acceptance.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { downloadDocument, maximumFileSize, uploadDocument } from "./api";
+import {
+  downloadDocument,
+  maximumFileSize,
+  saveDownload,
+  saveQualificationEvidence,
+  uploadDocument,
+} from "./api";
 
 const auth = vi.hoisted(() => ({ getSession: vi.fn() }));
 vi.mock("../../lib/supabase", () => ({
@@ -62,6 +68,7 @@ beforeEach(() => {
   vi.stubEnv("VITE_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_fictional");
 });
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
@@ -199,6 +206,9 @@ describe("online, authenticated document transfers", () => {
       "offline",
     );
     await expect(downloadDocument("fictional-file")).rejects.toThrow("offline");
+    await expect(
+      saveQualificationEvidence("fictional-binding", "Proof.txt"),
+    ).rejects.toThrow("offline");
     expect(auth.getSession).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
     expect(Request.requests).toHaveLength(0);
@@ -211,6 +221,12 @@ describe("online, authenticated document transfers", () => {
       await expect(
         uploadDocument(file(), { scope: "personal" }),
       ).rejects.toThrow("authentication_required");
+      const fetch = vi.fn();
+      vi.stubGlobal("fetch", fetch);
+      await expect(
+        saveQualificationEvidence("fictional-binding", "Proof.txt"),
+      ).rejects.toThrow("authentication_required");
+      expect(fetch).not.toHaveBeenCalled();
       expect(Request.requests).toHaveLength(0);
     },
   );
@@ -255,4 +271,126 @@ describe("online, authenticated document transfers", () => {
       );
     },
   );
+
+  it.each(["document", "qualification"] as const)(
+    "saves %s only after authenticated bytes arrive, pins its gateway identity and releases its Blob URL",
+    async (kind) => {
+      vi.useFakeTimers();
+      let complete!: (response: Response) => void;
+      const response = new Promise<Response>((resolve) => {
+        complete = resolve;
+      });
+      const fetch = vi.fn().mockReturnValue(response);
+      vi.stubGlobal("fetch", fetch);
+      const create = vi.fn<(blob: Blob) => string>(
+        () => "blob:fictional-reviewed-download",
+      );
+      const revoke = vi.fn();
+      class DownloadURL extends URL {
+        static createObjectURL = create;
+        static revokeObjectURL = revoke;
+      }
+      vi.stubGlobal("URL", DownloadURL);
+      const anchor = document.createElement("a");
+      const click = vi.spyOn(anchor, "click").mockImplementation(() => {});
+      const element = vi
+        .spyOn(document, "createElement")
+        .mockReturnValue(anchor);
+      auth.getSession.mockResolvedValue({
+        data: { session: { access_token: "fictional-refreshed-token" } },
+        error: null,
+      });
+      const name = "Reviewed original V1.txt";
+      const saved =
+        kind === "document"
+          ? saveDownload("fictional-document", name, "reviewed-version")
+          : saveQualificationEvidence("fictional-topic-binding", name);
+      await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+      expect(element).not.toHaveBeenCalled();
+      expect(create).not.toHaveBeenCalled();
+      expect(click).not.toHaveBeenCalled();
+      expect(fetch).toHaveBeenCalledWith(
+        "https://fictional.example.invalid/backend/functions/v1/files",
+        {
+          method: "POST",
+          headers: {
+            Authorization: "Bearer fictional-refreshed-token",
+            apikey: "sb_publishable_fictional",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(
+            kind === "document"
+              ? {
+                  action: "download",
+                  id: "fictional-document",
+                  version_id: "reviewed-version",
+                }
+              : {
+                  action: "qualification_evidence_download",
+                  evidence_id: "fictional-topic-binding",
+                },
+          ),
+          cache: "no-store",
+        },
+      );
+      complete(new Response("Fictional original reviewed bytes."));
+      await saved;
+      expect(create).toHaveBeenCalledOnce();
+      const blob = create.mock.calls[0][0];
+      expect(await blob.text()).toBe("Fictional original reviewed bytes.");
+      expect(element).toHaveBeenCalledExactlyOnceWith("a");
+      expect(anchor.href).toBe("blob:fictional-reviewed-download");
+      expect(anchor.download).toBe(name);
+      expect(anchor.rel).toBe("noopener");
+      expect(click).toHaveBeenCalledOnce();
+      expect(revoke).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(999);
+      expect(revoke).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(revoke).toHaveBeenCalledExactlyOnceWith(
+        "blob:fictional-reviewed-download",
+      );
+    },
+  );
+
+  it.each([
+    [403, JSON.stringify({ error: "access_denied" }), "access_denied"],
+    [503, JSON.stringify({}), "download_failed"],
+    [502, "upstream unavailable", "download_failed"],
+  ])(
+    "never saves rejected qualification bytes for HTTP%s",
+    async (status, body, code) => {
+      const create = vi.fn();
+      class DownloadURL extends URL {
+        static createObjectURL = create;
+      }
+      vi.stubGlobal("URL", DownloadURL);
+      const click = vi
+        .spyOn(HTMLAnchorElement.prototype, "click")
+        .mockImplementation(() => {});
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(new Response(body, { status })),
+      );
+      await expect(
+        saveQualificationEvidence("fictional-topic-binding", "Proof.txt"),
+      ).rejects.toThrow(code);
+      expect(create).not.toHaveBeenCalled();
+      expect(click).not.toHaveBeenCalled();
+    },
+  );
+
+  it("keeps a failed qualification transfer retryable without creating or saving partial private bytes", async () => {
+    const failure = new Error("fictional transport interrupted");
+    const fetch = vi.fn().mockRejectedValue(failure);
+    vi.stubGlobal("fetch", fetch);
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {});
+    await expect(
+      saveQualificationEvidence("fictional-topic-binding", "Proof.txt"),
+    ).rejects.toBe(failure);
+    expect(click).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledOnce();
+  });
 });
