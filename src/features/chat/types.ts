@@ -31,6 +31,11 @@ export interface ChatReaction {
   count: number;
   mine: boolean;
 }
+/** Structured mention of an actual room member; display text grants no access. */
+export interface ChatMention {
+  user_id: string;
+  display_name: string;
+}
 /** Persisted message with visible author, edit/deletion state and permitted attachments. */
 export interface ChatMessage {
   id: string;
@@ -43,6 +48,9 @@ export interface ChatMessage {
   deleted_at: string | null;
   document_id: string | null;
   reactions: ChatReaction[];
+  content_version?: number;
+  mentions?: ChatMention[];
+  can_moderate?: boolean;
 }
 /** History continuation using the last timestamp/ID pair. */
 export interface MessageCursor {

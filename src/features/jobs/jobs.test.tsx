@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import "../../lib/i18n";
 import { JobDetail, Jobs } from "./jobs";
+import { filtersFromParams, jobDiscoveryQuery } from "./discovery-api";
 import type { Job } from "../../lib/types";
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "lecturer-a" } } }),
@@ -19,7 +20,18 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
-const job: Job = {
+const job: Job & {
+  created_at: string;
+  confirmed_count: number;
+  open_positions: number;
+  capacity: number;
+  capacity_basis: "single_position";
+} = {
+  created_at: "2026-01-01T00:00:00Z",
+  confirmed_count: 0,
+  open_positions: 1,
+  capacity: 1,
+  capacity_basis: "single_position",
   id: "job-a",
   title: "Python Block",
   description: "Example",
@@ -57,7 +69,35 @@ function setup(route = "/jobs/job-a", list = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
-  client.setQueryData(["jobs"], [job]);
+  client.setQueryData(["jobs", "detail", "lecturer-a", "job-a"], job);
+  client.setQueryData(["permissions", "lecturer-a"], []);
+  client.setQueryData(["job-lifecycle", "lecturer-a", "job-a"], {
+    version: 1,
+    can_manage: false,
+    can_edit: false,
+    can_duplicate: false,
+    claims: [],
+  });
+  client.setQueryData(["user-roles", "lecturer-a"], ["lecturer"]);
+  client.setQueryData(["saved-job-views", "lecturer-a"], []);
+  if (list) {
+    const parsed = filtersFromParams(
+      new URL(route, "https://example.invalid").searchParams,
+    );
+    if (!parsed.success) throw new Error("Invalid fixture filters");
+    client.setQueryData(jobDiscoveryQuery("lecturer-a", parsed.data).queryKey, {
+      pages: [
+        {
+          items: parsed.data.from ? [] : [job],
+          has_more: false,
+          next_cursor: null,
+          as_of: new Date().toISOString(),
+          filters: parsed.data,
+        },
+      ],
+      pageParams: [null],
+    });
+  }
   client.setQueryData(["topics"], []);
   client.setQueryData(["claims", "lecturer-a"], []);
   client.setQueryData(["profile", "lecturer-a"], {
@@ -88,10 +128,11 @@ describe("safe marketplace interactions", () => {
       screen.getByRole("button", { name: "Auftrag übernehmen" }),
     ).toBeEnabled();
     await act(async () => {
-      client.setQueryData(
-        ["jobs"],
-        [{ ...job, terms_version: 2, terms: "Updated terms" }],
-      );
+      client.setQueryData(["jobs", "detail", "lecturer-a", "job-a"], {
+        ...job,
+        terms_version: 2,
+        terms: "Updated terms",
+      });
     });
     await waitFor(() => expect(screen.getByRole("checkbox")).not.toBeChecked());
     expect(
@@ -101,7 +142,7 @@ describe("safe marketplace interactions", () => {
       rpc.mock.calls.filter(([name]) => name === "claim_job"),
     ).toHaveLength(0);
   });
-  it("does not match a date range falling entirely between two teaching sessions", () => {
+  it("renders the authorized empty session-range response without a catalogue preload", () => {
     setup("/jobs?from=2027-01-05&to=2027-01-06", true);
     expect(
       screen.getByText("Hier ist Raum für neue Möglichkeiten."),
@@ -110,7 +151,7 @@ describe("safe marketplace interactions", () => {
       screen.queryByRole("link", { name: /Python Block/ }),
     ).not.toBeInTheDocument();
   });
-  it("finds a job with combined text, currency and delivery filters", () => {
+  it("renders the authorized combined text, currency and delivery result", () => {
     setup("/jobs?q=python&currency=EUR&delivery=online", true);
     expect(
       screen.getByRole("link", { name: "Python Block" }),

@@ -74,6 +74,9 @@ begin
    join public.jobs j on j.id=c.job_id where s.id=p_resource and c.lecturer_id=auth.uid()
    and c.status='confirmed' and s.released_at is null and private.can_read_job(j.id);
   if found then path='/jobs/'||target; end if;
+ elsif p_kind='portal_announcement' and private.can_read_announcement_revision(p_resource) then
+  select r.id,case when (select locale from public.profiles where id=auth.uid())='en' then r.title_en else r.title_de end into target,heading from private.announcement_revisions r where r.id=p_resource;
+  if found then path='/announcements?revision='||target;end if;
  elsif p_kind in ('contract_available','contract_expiring') then
   select c.id,c.title into target,heading from public.contracts c where c.id=p_resource and c.user_id=auth.uid();
   if found then path='/contracts'; end if;
@@ -87,7 +90,7 @@ language sql stable security definer set search_path='' as $$
  select coalesce((select case
  when p_kind in('chat_message','course_question','course_answer') then p.chat
  when p_kind='forum_reply' then p.forum
- when p_kind in('job_reopened','job_matching','job_waitlist_available','course_preparation_updated','course_resource_shared','course_quiz_published') then p.job_updates
+ when p_kind in('job_reopened','job_matching','job_waitlist_available','course_preparation_updated','course_resource_shared','course_quiz_published','portal_announcement') then p.job_updates
  when p_kind in('session_reminder','contract_expiring','qualification_expiring','task_assigned','task_due','timesheet_reviewed','course_attendance_updated','course_completion_issued','course_completion_revoked') then p.reminders
  else p_kind in('claim_confirmed','claim_cancelled','contract_available','substitution_proposed','substitution_closed') end
  from private.notification_preferences p where p.user_id=p_user),false);
@@ -332,5 +335,18 @@ create trigger notify_course_resource after insert or update of removed_at on pr
 create trigger notify_course_quiz after insert on private.course_quiz_versions for each row execute function private.notify_course_workspace_change();
 create trigger notify_course_attendance after insert or update on private.course_attendance for each row execute function private.notify_course_workspace_change();
 create trigger notify_course_completion after insert or update on private.course_completion_records for each row execute function private.notify_course_workspace_change();
+-- Quiet in-app attention does not hide committed operational receipts.
+create or replace function private.notification_attention() returns jsonb language plpgsql stable security definer set search_path='' as $$
+declare p private.attention_preferences;total bigint;
+begin
+ if not private.actor_active() then raise exception 'Account inactive' using errcode='42501';end if;
+ select * into p from private.attention_preferences where user_id=auth.uid();
+ if not found or not p.enabled then return jsonb_build_object('quiet_active',false);end if;
+ if not private.attention_is_quiet(now(),p.time_zone,p.starts_minute,p.ends_minute) then return jsonb_build_object('quiet_active',false);end if;
+ select count(*) into total from public.notifications where user_id=auth.uid() and read_at is null
+ and (kind in('claim_confirmed','claim_cancelled','contract_available','substitution_proposed','substitution_closed','task_assigned','timesheet_reviewed','course_attendance_updated','course_completion_issued','course_completion_revoked') or (kind='portal_announcement' and private.can_read_announcement_revision(resource_id)));
+ return jsonb_build_object('quiet_active',true,'attention_count',total);
+end;$$;
+
 revoke all on function private.course_notification_target(text,uuid),private.notification_delivery_allowed(uuid,text,uuid),private.generate_due_work_notifications(uuid),private.notify_course_workspace_change() from public,anon,authenticated,service_role;
 commit;

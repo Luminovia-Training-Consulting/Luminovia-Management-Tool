@@ -1,6 +1,6 @@
 # Contributing to Luminovia Portal
 
-> Status as of 16 November 2026: Maintainers and administrators have a permanent `always` exception for direct merges. Additional review/check requirements for other contributors remain prepared but disabled until the maintenance App path has been verified. [Current activation status](docs/GITHUB_WORKFLOW.md#activation-still-pending).
+> Status read back on 16 November 2026 after 02:45 UTC: the additional review and required-check rules are active. Maintainers and administrators may bypass independent review through a pull request, but must wait for all fourteen required checks against the current base. The maintenance App has a separate `always` exception. [Current rule and App delivery status](docs/GITHUB_WORKFLOW.md#active-rule-layers).
 
 Welcome! This guide explains how to turn an idea or bug report into a tested, reviewable change. **Use English for issues, pull requests and contributor-facing documentation.** Application interface changes must provide both German and English strings; authored course content keeps its original language.
 
@@ -68,13 +68,19 @@ Every PR needs exactly one `type:*` label, at least one `area:*` label and exact
 
 ## Review and merge
 
-The normal contribution process uses a pull request, an independent approving review, resolved conversations and current passing checks. New changes invalidate earlier approvals where the prepared review policy is enforced.
+Ordinary contributors to `main` require a pull request, an independent approving review, resolved conversations and current passing checks. New changes dismiss earlier approvals, and the latest push must be approved by someone other than its pusher.
 
-Maintainers and administrators have an explicit role-based exception and may **merge directly at any time**, including while reviews or checks are pending or failing. This replaces the former personal PR-only exception. Ordinary write access does not grant this bypass. The exception applies to the acting person; GitHub may require an explicit bypass action. Review and clear test evidence remain the recommended workflow.
+Maintainers and administrators have a role-based `pull_request` exception to the review rule. They can merge a PR, including their own, without an independent approval, but cannot use that exception to push directly to `main` or bypass the separate required-check rule. All fourteen checks must pass against the current base. Ordinary write access does not grant the review exception; GitHub may require an explicit bypass action for an authorised maintainer.
 
-Build, Typecheck, Lint, Formatting, Code quality and Tests and coverage run alongside `verify`, `Actual isolated selfhost image compatibility` and `PR metadata`. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes, CodeQL and Dependabot. The additional mandatory review/check rules for ordinary contributors remain disabled until the maintenance App path is verified; committed JSON alone does not prove active enforcement.
+The fourteen required checks include Build, Typecheck, Lint, Formatting, Code quality, Tests and coverage, `verify`, `Actual isolated selfhost image compatibility`, `PR metadata`, three language-specific CodeQL analyses, `Dependency review` and the generated `CodeQL` finding check. The first thirteen are bound to GitHub Actions integration `15368`; the generated finding check is bound to integration `57789`. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes and Dependabot. A changed base may require updating the PR and waiting for new checks before merging.
 
-A direct maintainer merge does not skip publication checks: the development release job waits for its gates in `ci.yml`. Failed checks do not produce an approved installation package. The separate Security workflow provides additional analysis. The existing daily maintenance path remains unchanged until the App setup is coordinated; no unverified bot bypass is assumed.
+The maintenance App, integration `5776881`, has a separate `always` exception on the review/check rules. That configured exception does not prove its workflow and token path have been delivered on current main. [GITHUB_WORKFLOW](docs/GITHUB_WORKFLOW.md#activation-still-pending) distinguishes active server settings from App source and promotion evidence. The history/signature rule has no bypass actors, including for maintainers, administrators or the maintenance App.
+
+The development release job additionally waits for its gates in `ci.yml`. Failed checks do not produce an approved installation package. The separate Security workflow and generated finding check are also required for PR merging; release publication still follows its own explicit dependencies in `ci.yml`.
+
+The review exception follows the person performing the merge, not the PR author. It is limited to Maintain (`RepositoryRole:2`) and Repository admin (`RepositoryRole:5`); human accounts have no CI or signature exception.
+
+Repository Auto-Merge is enabled. Queuing a suitable PR waits for applicable requirements and grants no new review, CI or signature bypass. A changed head needs its own current checks. The separate proposed privileged automatic-promotion workflow must satisfy its review-boundary and delivery gates; do not infer that it is deployed or accepted from this setting.
 
 A merge may trigger the existing **development release automation**. Production installation, risky migrations, and changes to hosting, DNS or real data still require the relevant separate authorization. A GitHub merge does not replace that operational approval.
 

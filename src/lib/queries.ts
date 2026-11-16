@@ -4,15 +4,8 @@
  */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "./supabase";
-import type {
-  Job,
-  Claim,
-  Topic,
-  Profile,
-  Expertise,
-  PersonalEvent,
-} from "./types";
-/** Read profiles through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
+import type { Claim, Topic, Profile, Expertise, PersonalEvent } from "./types";
+/** Read the current resource through its native actor-scoped client contract. */
 export const profileQuery = (id: string) =>
   queryOptions({
     queryKey: ["profile", id],
@@ -61,19 +54,7 @@ export const expertiseQuery = (id: string) =>
       return data as Expertise[];
     },
   });
-/** Read authorized offer rows through the native client and propagate read/access errors. */
-export const jobsQuery = queryOptions({
-  queryKey: ["jobs"],
-  queryFn: async () => {
-    const { data, error } = await db()
-      .from("jobs")
-      .select("*,job_sessions(*),job_requirements(topic_id)")
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    return data as Job[];
-  },
-});
-/** Read job_claims through the native client, propagate access/read failures and scope cached data to the actor and requested resource. */
+/** Read the actor’s committed claim snapshots; roles and fees remain server-owned. */
 export const claimsQuery = (id: string) =>
   queryOptions({
     queryKey: ["claims", id],

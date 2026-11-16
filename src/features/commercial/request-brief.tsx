@@ -30,6 +30,7 @@ import {
   type RequestBriefView,
 } from "./request-brief-api";
 import "./request-brief-i18n";
+import "../files/i18n";
 
 /** Shared DE/EN fields for initial submission and pre-publication revisions. */
 export function RequestBriefFields({
@@ -242,17 +243,16 @@ function BriefEditor({
         uploaded.current?.file === file
           ? uploaded.current.document
           : await uploadDocument(file, { scope: "personal", kind: "material" });
+      // Discovery rows may legitimately lack a version. Sharing requires the
+      // exact clean upload version; never turn null into a request attachment.
+      const versionId = document.current_version_id;
+      if (!versionId) throw new Error("unconfirmed_file_version");
       uploaded.current = { file, document };
       const next = {
         ...draft,
-        documents: draft.documents.some(
-          (item) => item.version_id === document.current_version_id,
-        )
+        documents: draft.documents.some((item) => item.version_id === versionId)
           ? draft.documents
-          : [
-              ...draft.documents,
-              { version_id: document.current_version_id, category },
-            ],
+          : [...draft.documents, { version_id: versionId, category }],
       };
       setDraft(next);
       if (!validRequestBrief(cleanRequestBrief(next), request.sessions))
@@ -411,7 +411,10 @@ function BriefEditor({
         <Notice kind="error">
           {failure instanceof Error && failure.message === "invalid_brief"
             ? t("invalid")
-            : t("failed")}
+            : failure instanceof Error &&
+                failure.message === "unconfirmed_file_version"
+              ? common("files:error")
+              : t("failed")}
         </Notice>
       )}
       <Button variant="ghost" disabled={busy} onClick={onReload}>

@@ -6,17 +6,17 @@ The latest continuation evidence is first. Older M1 results below remain histori
 
 Frozen application source `d7d3c580e64d0fdd1f7bfdde606f50966ec74e76` passed `./portal test` at **2026-11-16 03:04:52 UTC / 13:04:52 Australia/Brisbane**. The command and its independent launcher both returned **exit 0** after owned cleanup. Private report: `.local/tests/b9d31627/RESULT.txt`; complete transcript/exit: `.local/smart-operations-test.log` and `.local/smart-operations-test.exit`.
 
-| Check | Actual result |
-| --- | --- |
-| Frontend/source | 219 Vitest cases in 51 files; TypeScript, ESLint, formatting and source/export checks passed |
-| Runtime/Edge | 52 Node runtime checks; 42 Edge tests and three entry-point typechecks |
-| Mail/operating guards | 33 SMTP Python cases, 76 existing operating Python cases, 61 operating Node cases; actual Envoy/Caddy boundaries |
-| Database | All 28 migrations, lint/advisors and 272 PostgreSQL cases/groups, including the legacy taxonomy refusal case |
-| Auth/business APIs | All 23 actual Auth/REST/Storage/WebSocket suites; real Python worker to loopback SMTP acceptance/uncertainty/opt-out; Edge/Mailpit invitation |
-| Persistence | Password, verified MFA, profile/zone, private event and exact private Storage bytes survived stop/start |
-| Browsers | 80 passed, zero failed/skipped, desktop/mobile Chromium, 7.1 minutes; new dashboard/contact/email/ICS and retained previous workflows |
-| Build/PWA | 57 public precache entries, 2629.79 KiB; two built-PWA offline/private-cache tests passed in 2.5 seconds |
-| Cleanup | Owned random stack/network/volumes/locks removed; normal development records were not targeted |
+| Check                 | Actual result                                                                                                                                 |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Frontend/source       | 219 Vitest cases in 51 files; TypeScript, ESLint, formatting and source/export checks passed                                                  |
+| Runtime/Edge          | 52 Node runtime checks; 42 Edge tests and three entry-point typechecks                                                                        |
+| Mail/operating guards | 33 SMTP Python cases, 76 existing operating Python cases, 61 operating Node cases; actual Envoy/Caddy boundaries                              |
+| Database              | All 28 migrations, lint/advisors and 272 PostgreSQL cases/groups, including the legacy taxonomy refusal case                                  |
+| Auth/business APIs    | All 23 actual Auth/REST/Storage/WebSocket suites; real Python worker to loopback SMTP acceptance/uncertainty/opt-out; Edge/Mailpit invitation |
+| Persistence           | Password, verified MFA, profile/zone, private event and exact private Storage bytes survived stop/start                                       |
+| Browsers              | 80 passed, zero failed/skipped, desktop/mobile Chromium, 7.1 minutes; new dashboard/contact/email/ICS and retained previous workflows         |
+| Build/PWA             | 57 public precache entries, 2629.79 KiB; two built-PWA offline/private-cache tests passed in 2.5 seconds                                      |
+| Cleanup               | Owned random stack/network/volumes/locks removed; normal development records were not targeted                                                |
 
 The desktop/mobile [personal dashboard](screenshots/desktop-chromium-dashboard-personal.png), [mobile dashboard](screenshots/mobile-chromium-dashboard-personal.png), [contact settings](screenshots/desktop-chromium-staff-contact-settings.png) and [mobile contact settings](screenshots/mobile-chromium-staff-contact-settings.png) were visually inspected. All data are fictional. Coverage checkpoint: 218 cases, S49.61/B43.42/F40.25/L51.48%; one subsequently added positive download case brings the complete-command count to 219. No coverage floor was lowered.
 
@@ -28,6 +28,56 @@ Isolated `codex/smart-notifications-and-dashboard` preserves concurrently develo
 
 The first complete-command attempts refused the legitimately occupied cross-checkout QA lock before services. Run 1 later failed on the new calendar test fixture's account cleanup; run 2 was deliberately cancelled for an asynchronous checkbox test correction. Both are recorded in WORKLOG and are superseded for local application acceptance by the successful frozen-source run above; neither failed/cancelled command is relabelled successful.
 
+## Current functional preflight — complete acceptance still pending
+
+The integrated functional source including PR16 Demo/Help/Tour, the Calendar correction and scoped picker passed `npm run test:coverage`: **372/372 tests across 57 files**, exit 0. Measured coverage: statements **57.65%**, branches **52.32%**, functions **49.11%**, lines **59.46%**; every configured floor passed. No new complete native pass or final merged-source SHA is claimed by this preflight. The separate PR19 automatic-merge implementation is not included.
+
+The current compiler inventory contains **135 reachable modules, 34 routes and 286 runtime exports**, with no unreachable modules, unresolved imports, unused runtime exports, broken literal links or missing assets. Playwright collection in explicit local test mode discovers **106 business cases plus two built-PWA cases**, with no collection errors. Those cases are authored/discovered, not passed current-source native acceptance.
+
+## Current 32-migration CI — Calendar failures, corrected integration pending
+
+Exact source `9c42730` failed complete acceptance in [CI43794921492](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43794921492). All **316 PostgreSQL cases, 26 actual business API suites, 46 Edge tests and real restart persistence passed**. The local run also exited 1 with the same two Calendar failures in `.local/tests/cf7ffa12/RESULT.txt` (9.8 minutes); runtime guards 56, operational Node guards 61 and Python guards 76 passed. Business browsers finished **92 passed / 2 failed out of 94**: both desktop/mobile global-calendar journeys lost the published-event detail after the DE→EN switch. Build/PWA and the native selfhost acceptance were not reached. This is a failed complete gate, not a full pass.
+
+The focused regression failed before signed correction `bf09f19` and passed afterwards. All **12 Calendar component cases**, whole-tree TypeScript and focused lint/format passed. The App/Shell merge with accepted PR16/main `e75f55d` then passed **78 tests across nine affected files**, TypeScript and focused lint/format. These checks preserve same-range details, real navigation, account boundaries, announcements, current notifications/quiet hours, Demo, Help, Tour and Preferences; they do not establish complete acceptance of the combined source. A fresh full isolated run and exact-source application/security/retained-data CI remain pending.
+
+The older counts below, including **342 tests, 128 modules and 32 routes**, belong to their recorded pre-Demo revisions. They are not the measured counts or acceptance result of the current combined source. The 29-migration failures and successful M6 results remain separate historical evidence.
+
+## Historical pre-Demo source coverage — full native result then pending
+
+The pre-Demo integrated source passed **342/342 unit/component tests in54files** and every configured V8 coverage floor. Measured statements55.78%, branches50.40%, functions46.94%, lines57.60%; file API lines98.92%, functions96.29%. Reported source coverage includes all executable browser TS/TSX and public-config code; SQL, Edge and browser acceptance are separate. `./portal test` now executes this gate and preserves HTML/LCOV/JSON reports. A complete new native32 result is still required.
+
+## Combined 32-migration preflight — native acceptance still required
+
+Signed source `1adc134` passed **316 Vitest cases / 53 files**, lint and TypeScript. The source graph contains **128 reachable modules and 32 routes**, with no unreachable modules, unresolved imports, unused runtime exports, missing literal assets or broken literal routes. A real disposable migration replay inventories **155 public functions**. Focused module checks and independent reviews are recorded in WORKLOG; they do not replace actual Auth/Storage/browser integration.
+
+The next canonical run discovers 26 native business API suites, 94 business browser cases and 2 separately built-PWA cases. Its actual result and the exact application/retained-data CI must be recorded before complete acceptance. Earlier 29-migration failures below remain honest checkpoints. The open build-only advisory is documented in [DEPENDENCY_AUDIT](DEPENDENCY_AUDIT.md).
+
+## M7 second combined run — actual dialog defect reproduced and corrected
+
+Source `8fe3e19`: detached launcher **exit 1**, private report `.local/tests/1aab5e9e/RESULT.txt`. All native migration/285 SQL/23 API/invitation/restart checks passed again; browsers **85/86** (9.9 minutes). Exact CI43782621640 reproduced file-dialog loss in both browser projects (84/86, 14.6 minutes). Trace: a delayed new filter unmounted the captured dialog before any archive RPC. Native test steps and their timeouts remain unchanged. New deterministic regressions reproduce the original lifetime defect; exact-resource revalidation also covers successful empty responses after room-access withdrawal. The final combined 32-migration source still requires a complete new native gate and exact CI. Build/PWA was not reached by these failed checkpoints.
+
+## M7 first combined run — 84/86 browsers, corrected fixture, rerun required
+
+Frozen source `eaefea5` returned **exit 1**, explicitly captured by the detached launcher in `.local/m7-test-01.exit`; private report `.local/tests/b026ab59/RESULT.txt`. All 29 migrations, 285 PostgreSQL cases, 23 actual business API suites, real Edge/Mailpit and real password/MFA/profile/calendar/Storage restart preservation passed. Chromium completed **84 passed / 2 failed / zero skipped** (7.8 minutes). Both failures came from mixed notification-fixture row shapes producing a NULL ID before the quiet-hour UI journey. Explicit IDs now fix the fixture without relaxing its assertions. Build/PWA was not reached. Full corrected-source verification and exact PR CI remain required.
+
+Visually inspected passing journeys from this run: [file centre](screenshots/m7-desktop-file-centre.png), [structured chat mention and scanned attachment](screenshots/m7-desktop-chat-mentions.png), [desktop announcement](screenshots/m7-desktop-announcements.png), [mobile announcement](screenshots/m7-mobile-announcements.png). These images do not turn the two failing journeys into passes.
+
+## M7 source preflight — not full acceptance
+
+Integrated current source passed lint/type/format,240Vitest cases across50files and compiler connectivity (119modules/32routes; zero unreachable/unresolved/unused runtime exports). Actual disposable29-migration replay generated146public functions. Narrow module SQL groups passed (files6,jobs9,mentions11,attention9,announcements16); temporary minimal Auth identities are not real Auth/TOTP acceptance. Actual API/browser definitions are authored. The complete native isolated M7 command and exact application/retained-image CI remain pending; no M7deployment/merge or fullpass is claimed.
+
+## English documentation and repository verification
+
+Exact 24-migration source e7cf92a completed [CI43793778452](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43793778452) successfully:197unit/component tests,53runtime guards,18actual API suites,72desktop/mobile browser cases,2built-PWA cases, actual restart/scoped cleanup and the separate genuine selfhost/retained-data job. [Security43793778386](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43793778386) and CodeQL's zero-new-alert/zero-annotation outcome passed; findings30/31are fixed, not dismissed. A later documentation/catalogue-only follow-up includes all36managed live labels after parallel classifications otherwise made the older30-label source reject metadata. No application/backend/package source changes in that follow-up. Its focused validator/link checks and latest exact PR results remain distinct from this completed full application record.
+
+[PR #13](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/13) contains English general documentation/forms/labels, roadmap/changelog/index/decision notes and an extended real-document heading-link check. It changes no application, database migration, package or backend source relative to accepted main `1341b16`. The authoritative master prompt is unchanged. Original concurrent work and active PRs #10/#12 are independent.
+
+Actual local checks: clean `npm ci`;197Vitest cases/46files; coverage S47.09/B41.59/F37.07/L48.89%; ESLint, TypeScript, formatting, synthetic-public production build and56PWAprecache entries/2600.80KiB; compiler connectivity/exports;10documentation/PRmetadata plus8connectivity/private-snapshot regressions; form/label structural comparisons and diff whitespace checks. The full local command returned1 before starting services because another checkout holds the global QA lock; no competing process or data was altered.
+
+On signed first head `8e14e9e`, all6quality gates in [CI43792083385](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43792083385), all4jobs in [Security43792083378](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43792083378) and current PRmetadata passed. The complete application and native retained-data jobs are tracked on the [exact current PR checks](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/13/checks); this checkpoint does not substitute an earlier revision's success for an unobserved run. Baseline main1341b16 independently passed all9CIjobs in43788369925.
+
+Latest live API readback after concurrent02:33UTC activation and02:45UTC extension verifies main `protected:true`, all three active rulesets, Maintainer/Admin PR-only review bypass and all 14 strict required checks without human bypass, App5776881bypass, private vulnerability reporting enabled,30managed English label descriptions plus9preserved originals and valid type/risk/area categories on all11pre-existing PRs. Alerts2–4are fixed without dismissals, leaving25open CodeQL hints(10high/15medium). Test success, scanner success and finding closure are separate claims. Existing4low build-tool audit entries remain documented; no complete bug-free/security/physical-device/production certification is asserted.
+
 ## Subsequent theme regression — actual defect fixed, new CI pending
 
 Repeated documentation CI43774441712 rejected one taxonomy contrast check(69/70passed). Actual served M6markup/styles reproduced first-state button contrast1.841/1.037 during background interpolation; stable themes pass. Removing that interpolation retains transform feedback and gives immediate dark9.104/13.982 on the same actual page. New effect-based desktop/mobile regression samples the first computed theme states; exact new PR9 CI remains required. The historical accepted M6counts below are not rewritten as if this later run passed.
@@ -36,17 +86,17 @@ Repeated documentation CI43774441712 rejected one taxonomy contrast check(69/70p
 
 Source `9d9bc567e70cdb3100a7ea6d78920d90a735cbba`: local runner report `.local/tests/977d0761/RESULT.txt` PASS at 2026-11-15T22:49:34.605Z; independent exact-source [CI43770187739](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43770187739) application `verify` succeeded at 22:53:22Z. The separate retained-image compatibility job also succeeded at 22:59:09Z; [PR8](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/8) merged at 23:05:43Z as `dc8e9a7e65c96076038bf7067791676578d121d4`.
 
-| Check | Actual result |
-| --- | --- |
-| Source and graph | Lint/type/format;177 Vitest/45 files;105reachable modules/30routes; zero unused runtime exports, broken imports/routes/assets |
-| Runtime/Edge |52 runtime,42 Edge tests and3 entry-point typechecks |
-| Operating guards |76 Python,60 Node, real Envoy/Caddy boundaries; real age encryption fixtures |
-| Database |24migrations, lint/security/performance advisors and234 PostgreSQL cases |
-| Business interfaces |18 actual Auth/MFA/REST/Storage/WebSocket suites plus real idempotent Edge/Mailpit invitation |
-| Persistence | Actual password/MFA/profile/private-event/object bytes survived stop/start |
-| Browsers |70/70 desktop/mobile Chromium workflows, zero skipped;6.6 minutes; DE/EN/dark/offline/axe and real DnD/claim/storno/reopen |
-| Build/PWA |56 public precache entries/2600.83 KiB;2/2 built-PWA checks in2.2 seconds |
-| Cleanup | Owned random stack/network/volumes/markers removed; normal development records not targeted |
+| Check               | Actual result                                                                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Source and graph    | Lint/type/format;177 Vitest/45 files;105reachable modules/30routes; zero unused runtime exports, broken imports/routes/assets |
+| Runtime/Edge        | 52 runtime,42 Edge tests and3 entry-point typechecks                                                                          |
+| Operating guards    | 76 Python,60 Node, real Envoy/Caddy boundaries; real age encryption fixtures                                                  |
+| Database            | 24migrations, lint/security/performance advisors and234 PostgreSQL cases                                                      |
+| Business interfaces | 18 actual Auth/MFA/REST/Storage/WebSocket suites plus real idempotent Edge/Mailpit invitation                                 |
+| Persistence         | Actual password/MFA/profile/private-event/object bytes survived stop/start                                                    |
+| Browsers            | 70/70 desktop/mobile Chromium workflows, zero skipped;6.6 minutes; DE/EN/dark/offline/axe and real DnD/claim/storno/reopen    |
+| Build/PWA           | 56 public precache entries/2600.83 KiB;2/2 built-PWA checks in2.2 seconds                                                     |
+| Cleanup             | Owned random stack/network/volumes/markers removed; normal development records not targeted                                   |
 
 Actual inspected fictional screenshots: [desktop dashboard](screenshots/m6-desktop-dashboard.png), [mobile dashboard](screenshots/m6-mobile-dashboard.png), [desktop board](screenshots/m6-desktop-job-board.png), [mobile board](screenshots/m6-mobile-job-board.png).
 
@@ -72,18 +122,18 @@ Actual frozen-source `./portal test` run `.local/tests/ba7f328e/RESULT.txt` retu
 
 `./portal test` passed on **2026-11-15 at 19:02:50.239UTC (16 November 05:02 Australia/Brisbane)** on frozen signed source `7abad7e`, baseline main `b9cdcc8`. Private report `.local/tests/d1953a8c/RESULT.txt`; launcher `.local/system-audit-test-04.exit` and execution session both returned **0**. The later integration of main `11448e4` changes deployment/backup/maintenance source and offline guard discovery, with no incoming application TS/SQL difference. Its targeted results are recorded separately; exact combined/native CI and merge are recorded on [PR #5](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/5).
 
-| Check | Actual result |
-| --- | --- |
-| Source | Lint, TypeScript, formatting; **117 Vitest cases / 34 files** |
-| Connections | **85 modules /25 routes /175 runtime exports**, no unreachable module, unused runtime export, broken relative import/literal route/static asset |
-| Runtime | **33 Node cases**, including real child timeout/abort, stop acknowledgement, kernel QA contention/crash release, busy legacy listener and actual Vite watcher |
-| Edge | **42 tests /3 entry-point typechecks**; updated Office validation plus all invitation/account/avatar/TCP/HTTPS regressions |
-| Schema/SQL | All **18 migrations**, lint/security/performance advisors; **174 real PostgreSQL cases** including six finite-schedule and six API/security inventory cases |
-| APIs | All **12 actual suites** plus Edge/Mailpit invitation; the corrected native HTTP test retains exact `23514` and unchanged old event instants |
-| Restart | Actual password/MFA/profile/private-event/object bytes preserved across stop/start; probe cleanup passed |
-| Browser | **54/54 desktop/mobile Chromium cases**, zero skipped, 4.8 minutes; 12-second actual idle-file/no-reload budget and blocked-storage DE/EN/dark/retained-draft cases passed |
-| Build/PWA | Build; **47 public precache entries / 2415.14 KiB**; **2/2 built-PWA** registration/offline/private-cache checks, 2.2 seconds |
-| Cleanup | Owned services/network/volumes/markers cleaned; normal development data not targeted |
+| Check       | Actual result                                                                                                                                                              |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Source      | Lint, TypeScript, formatting; **117 Vitest cases / 34 files**                                                                                                              |
+| Connections | **85 modules /25 routes /175 runtime exports**, no unreachable module, unused runtime export, broken relative import/literal route/static asset                            |
+| Runtime     | **33 Node cases**, including real child timeout/abort, stop acknowledgement, kernel QA contention/crash release, busy legacy listener and actual Vite watcher              |
+| Edge        | **42 tests /3 entry-point typechecks**; updated Office validation plus all invitation/account/avatar/TCP/HTTPS regressions                                                 |
+| Schema/SQL  | All **18 migrations**, lint/security/performance advisors; **174 real PostgreSQL cases** including six finite-schedule and six API/security inventory cases                |
+| APIs        | All **12 actual suites** plus Edge/Mailpit invitation; the corrected native HTTP test retains exact `23514` and unchanged old event instants                               |
+| Restart     | Actual password/MFA/profile/private-event/object bytes preserved across stop/start; probe cleanup passed                                                                   |
+| Browser     | **54/54 desktop/mobile Chromium cases**, zero skipped, 4.8 minutes; 12-second actual idle-file/no-reload budget and blocked-storage DE/EN/dark/retained-draft cases passed |
+| Build/PWA   | Build; **47 public precache entries / 2415.14 KiB**; **2/2 built-PWA** registration/offline/private-cache checks, 2.2 seconds                                              |
+| Cleanup     | Owned services/network/volumes/markers cleaned; normal development data not targeted                                                                                       |
 
 Reproduced/fixed behavior and measurements are in [SYSTEM_AUDIT](SYSTEM_AUDIT.md): unbounded timestamps, excessive settled metadata requests, stuck scan polls, stale/cross-actor attachment metadata, version-history/download consistency, failed read receipt retries, duplicate immutable-avatar bytes, realtime burst invalidations, blocked preference storage, private local drafts across account switches, dishonest timeout/stop success, cross-checkout QA collisions and generated-HTML HMR reloads. Timing/memory and invalidation measurements retain their exact synthetic/component scope; they are not whole-platform hosted-throughput claims.
 
@@ -97,20 +147,20 @@ No M5 hosted installation or production publication was performed. The historica
 
 `./portal test` passed on **2026-11-15 at 17:31:03.771UTC (16 November 03:31 Australia/Brisbane)** against frozen signed source `4c7c897`, including concurrent main through `1f9a114`. Project `luminovia-portal-test-7c2dd978`; private report `.local/tests/7c2dd978/RESULT.txt`. The wrapper explicitly captured **exit 0** in `.local/m4-test-04.exit`, and the execution session also returned 0. Subsequent local changes are documentation and actual fictional screenshots; exact submitted-source CI and the final merge are recorded on [PR #4](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/4).
 
-| Check | Actual combined result |
-| --- | --- |
-| Source | Lint, strict TypeScript and formatting; **91 Vitest cases / 28 files** passed |
+| Check               | Actual combined result                                                                                                                                                                                   |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Source              | Lint, strict TypeScript and formatting; **91 Vitest cases / 28 files** passed                                                                                                                            |
 | Connections/runtime | **21 Node cases**: environment/ownership/persistence guards, catalogue delimiters, compiler import/export/route/asset/RPC graph, local documentation links and two actual-copy private snapshot fixtures |
-| Edge | **37 tests**, all three entry-point typechecks passed; avatar PNG/revocation and private HTTPS/TCP scan boundaries retained |
-| Release controls | **28 Python updater +35 Node** cases (M3 review 6, M4 review 8, package 7, scanner HTTP/TCP 14), plus **11 actual Envoy routes / 10 actual Caddy HTTP checks**; fixture-only/owned-resource cleanup |
-| Fresh backend | All **17 migrations** replayed; SQL lint/security/performance advisors passed |
-| SQL | **165 PostgreSQL cases**: core 25, accounts 11, API surface 3, avatars 10, CBW 16, chat 17, comments 11, commercial 14, commission 14, documents 12, knowledge 14, M4 preservation 4, profiles 14 |
-| Actual APIs | All **12 suites** passed, including new avatars/CBW/comments and all earlier Auth/TOTP/REST/RPC/WebSocket/Storage/ClamAV regressions |
-| Mail | Actual Edge invitation, durable retry and exactly one Mailpit delivery; no real recipient |
-| Restart | Actual stop/start retained password, verified MFA, profile/timezone, private appointment and exact private Storage object bytes; probe cleanup passed |
-| Browser | **52/52 desktop/mobile Chromium journeys**, zero skipped,4.3 minutes; new source-link/offer/image/comment workflows and existing regressions passed |
-| Build/PWA | Build passed; **47 public static precache entries / 2413.56 KiB**; **2/2 built-PWA** SW/offline-deep-link/no-private-cache cases,2.2 seconds |
-| Cleanup | Owned random services/network/volumes removed; normal persistent development stack was not targeted |
+| Edge                | **37 tests**, all three entry-point typechecks passed; avatar PNG/revocation and private HTTPS/TCP scan boundaries retained                                                                              |
+| Release controls    | **28 Python updater +35 Node** cases (M3 review 6, M4 review 8, package 7, scanner HTTP/TCP 14), plus **11 actual Envoy routes / 10 actual Caddy HTTP checks**; fixture-only/owned-resource cleanup      |
+| Fresh backend       | All **17 migrations** replayed; SQL lint/security/performance advisors passed                                                                                                                            |
+| SQL                 | **165 PostgreSQL cases**: core 25, accounts 11, API surface 3, avatars 10, CBW 16, chat 17, comments 11, commercial 14, commission 14, documents 12, knowledge 14, M4 preservation 4, profiles 14        |
+| Actual APIs         | All **12 suites** passed, including new avatars/CBW/comments and all earlier Auth/TOTP/REST/RPC/WebSocket/Storage/ClamAV regressions                                                                     |
+| Mail                | Actual Edge invitation, durable retry and exactly one Mailpit delivery; no real recipient                                                                                                                |
+| Restart             | Actual stop/start retained password, verified MFA, profile/timezone, private appointment and exact private Storage object bytes; probe cleanup passed                                                    |
+| Browser             | **52/52 desktop/mobile Chromium journeys**, zero skipped,4.3 minutes; new source-link/offer/image/comment workflows and existing regressions passed                                                      |
+| Build/PWA           | Build passed; **47 public static precache entries / 2413.56 KiB**; **2/2 built-PWA** SW/offline-deep-link/no-private-cache cases,2.2 seconds                                                             |
+| Cleanup             | Owned random services/network/volumes removed; normal persistent development stack was not targeted                                                                                                      |
 
 All 24 original supplied PDF bytes independently matched 22 canonical CBW codes and 24 source revisions. M4 preserves both LPC3/LPC4 variants, exact source/session identity, trusted source fingerprints and financial-only run offers. Real API/browser evidence includes stale preview rejection, concurrent/idempotent offers, actual whole-block allocation, private gross/net and revoked memberships. Raw PDFs/personal source paths are not published. Weekday planning does not decide holiday/break arrangements automatically.
 
