@@ -174,6 +174,10 @@ physical PWA installation, mail delivery or production readiness.
 - Delegate bounded independent paths; one agent integrates the results. Do not stop
   foreign processes, reset files or stage unrelated changes. Recheck branch, diff
   and remote before committing and pushing.
+- For every requested change, create signed commits, push the branch and prepare a
+  pull request. Carina authorises merging promptly once all required CI checks on
+  the current revision succeed; do not request the same approval again. Respect
+  explicit instructions to hold a merge or leave a particular PR unmerged.
 - Sign commits. Describe the change and purpose plainly; preserve published tags
   and release/maintenance gates. [PULL_REQUEST_GUIDE](docs/PULL_REQUEST_GUIDE.md)
   explains labels and PR content; [GITHUB_WORKFLOW](docs/GITHUB_WORKFLOW.md) records

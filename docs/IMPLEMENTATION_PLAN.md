@@ -2,6 +2,12 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## PR23 current-main conflict resolution
+
+- [x] Integrate accepted main `0a6002a` / PR21, preserving both ledger histories, all guided-experience fixes and all26published main migration bytes.
+- [x] Pass254frontend cases with unchanged coverage floors,28catalogue/privacy/documentation/metadata/integrity guards, affected UI checks, TypeScript/ESLint/source formatting and the export graph.
+- [ ] Observe complete exact-head PR23 application/native/security CI and merge under the current explicit user instruction; no full acceptance or hosted installation is inferred from local focused checks.
+
 ## PR23 mobile acceptance continuation
 
 - [x] Record exact failed82/84mobile/browser acceptance; preserve actual successful SQL/API/persistence evidence and stages not reached.
@@ -19,6 +25,22 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Submit signed [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23) with main-compatible preservation checks, required complete application/security/native gates and a six-screenshot fictional artifact. Actual CI completion, visual evidence and the user-authorised merge are recorded on that PR; submission alone is not acceptance.
 
 Customer organisations remain privately configured and reusable templates support multiple explicit organisation scopes. Publication of this source does not assert hosted migration installation or production acceptance.
+## Coordinated PR18 integration
+
+The owner-approved PR18 head0675bb9 is integrated on the owned PR21 branch, preserving all audit fixes and both guidance systems. Local combined checks pass254frontend/87runtime cases with no disconnected modules/exports; migration bytes and dependencies match the owner source. The explicit PR18 main-merge hold is respected. Include the actual resulting main merge before the final push, then require all current-head quality/security/application/native and PR-preview-package gates before immediate merge.
+
+## Standing delivery workflow
+
+Carina requires signed commit → push → prepared PR → direct merge after required CI succeeds, without another routine approval. AGENTS.md records this rule; explicit merge holds remain respected. PR21 already includes exact PR15 head2e367f6 on its own branch to preserve comments and the audited fixes. Local integration passes231frontend/68runtime cases with identical production JS; exact-head combined/native/security CI and PR15 coordination completion govern its immediate merge.
+
+## Guided experience re-audit
+
+- [x] Independently trace all PR16 modules, routes, handlers, runtime exports and meaningful control-flow/state behavior; preserve legitimate non-frontend entries.
+- [x] Reproduce/fix actual tour-access recovery, same-topic Help focus and demo accepted-offer identity errors; remove confirmed inert copy/metadata/branches/markers.
+- [x] Correct erased-type false positives in the runtime-use guard with adverse fixtures and runtime-class inheritance preservation.
+- [x] Execute current local source/coverage/public-browser/guard/build checks and document actual evidence in [GUIDED_EXPERIENCE_AUDIT](GUIDED_EXPERIENCE_AUDIT.md).
+
+Exact combined/native/security, extended real-account browser acceptance and the user-authorised merge are tracked on [PR21](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/21). Application head13313de passed all combined/native/security gates. Current main metadata changes are integrated with unchanged application source and21passingtargetedguards. Further main merges are temporarily held by user-authorised coordination until PR15 completes. The prior merged PR16 baseline remains preserved; these focused fixes do not mark unrelated product modules complete.
 
 ## PR18 complete-CI repair
 
