@@ -1,5 +1,5 @@
 /**
- * DTOs and actor-scoped reads for organizations, contacts, CBW sources, templates and course
+ * DTOs and actor-scoped reads for organizations, contacts, course sources, templates and course
  * runs. Relational references keep reusable content separate from scheduled teaching.
  */
 import { queryOptions } from "@tanstack/react-query";
@@ -38,7 +38,7 @@ export interface Template {
   building_block_source_id: string | null;
   course_template_topics: { topic_id: string }[];
 }
-/** Exact original CBW revision with hash and provenance metadata. */
+/** Exact original course revision with hash and provenance metadata. */
 export interface BuildingBlockSource {
   id: string;
   building_block_id: string;
@@ -50,7 +50,7 @@ export interface BuildingBlockSource {
   revision_on: string;
   is_primary: boolean;
 }
-/** Kanonischer CBW-Inhaltsbaustein mit seinen getrennt erhaltenen Originalfassungen. */
+/** Canonical course curriculum with separately retained original source revisions. */
 export interface BuildingBlock {
   id: string;
   provider: string;

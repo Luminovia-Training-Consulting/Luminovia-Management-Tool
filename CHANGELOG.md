@@ -26,7 +26,7 @@ Validation and publication for this increment are recorded in its PR and work lo
 ## Earlier accepted development increments
 
 - [M5 / PR #5](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/5): scheduling, account, file/realtime and runtime reliability fixes, plus measured request and resource improvements.
-- [M4 / PR #4](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/4): provenance-linked CBW templates, scanned profile avatars and authorised resource comments.
+- [M4 / PR #4](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/4): provenance-linked course templates, scanned profile avatars and authorised resource comments.
 - [M3 / PR #3](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/3): account/client APIs, accepted commission snapshots, profile history and optional course reviews.
 - [M2 / PR #2](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/2): persistent local development, chat/files, knowledge, directory/course and commercial workflows.
 - [M1 / PR #1](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/1): secure real-Auth PWA foundation and transactional teaching-job claims.

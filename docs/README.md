@@ -18,7 +18,7 @@ General project documentation is maintained in English. The application supports
 
 - [Account and revenue specification](ACCOUNTS_REVENUE_SPEC.md), [account platform audit](ACCOUNTS_PLATFORM_AUDIT.md), [profiles and reviews](PROFILES_REVIEWS.md).
 - [Taxonomy](TAXONOMY.md), [availability](AVAILABILITY.md), [job lifecycle and capacity](JOB_LIFECYCLE.md), [dashboard](DASHBOARD.md), [notifications](NOTIFICATIONS.md), [administrative audit](ADMIN_AUDIT.md).
-- [CBW building blocks](CBW_TEMPLATES.md), [profile avatars](PROFILE_AVATARS.md), [resource comments](RESOURCE_COMMENTS.md), [collaboration and commercial implementation](COLLABORATION_AND_COMMERCIAL_IMPLEMENTATION.md).
+- [Course building blocks](COURSE_BUILDING_BLOCKS.md), [profile avatars](PROFILE_AVATARS.md), [resource comments](RESOURCE_COMMENTS.md), [collaboration and commercial implementation](COLLABORATION_AND_COMMERCIAL_IMPLEMENTATION.md).
 
 ## Security and quality
 
