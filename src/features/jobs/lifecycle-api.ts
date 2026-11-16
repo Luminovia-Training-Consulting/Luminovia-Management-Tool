@@ -110,6 +110,10 @@ export async function refreshJobState(client: QueryClient) {
       "chat-members",
       "chat-messages",
       "operations",
+      "readiness",
+      "delivery",
+      "replacements",
+      "replacement-assignments",
     ].map((key) => client.invalidateQueries({ queryKey: [key] })),
   );
 }

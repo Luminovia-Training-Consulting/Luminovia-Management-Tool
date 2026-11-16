@@ -1,5 +1,9 @@
 # Relational model and permission boundaries
 
+## Added operational records
+
+Readiness settings/tasks/instruction receipts/events reference course_runs and currently assigned profiles; percentages derive from current source records. Delivery records reference assignment_sessions, with immutable submissions and events plus actor/request receipts. Replacement offers link original job_claims to a new accepted job_claim only after atomic handover; allocation history remains in assignment_sessions. Support tickets link their requester, optional authorised course/claim/organisation and support assignee; separate messages/events/attachments enforce hidden internal entries. All new persistent operational tables are private, RLS-enabled and accessed by reviewed invoker RPCs over scoped implementations. [Schema/workflow guides](OPERATIONS_EXTENSION_STATUS.md) and additive migration source own exact columns and acceptance.
+
 The target diagrams retain the complete product map. They are not a claim that every target table already exists. The implemented diagrams below use the actual names in `supabase/migrations/*.sql`, including the current local collaboration, files, knowledge, customer/course and commercial migrations. Migration source, RLS policies and executed API/database tests are authoritative for exact columns and behaviour. A local migration does not imply hosted deployment or production acceptance.
 
 ## Core target relations

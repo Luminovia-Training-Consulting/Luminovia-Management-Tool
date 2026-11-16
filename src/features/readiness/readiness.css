@@ -1,0 +1,293 @@
+.readiness-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: 1.2rem;
+  align-items: start;
+}
+.readiness-card {
+  border-top: 4px solid var(--mint);
+  min-width: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+.readiness-card:nth-child(3n + 2) {
+  border-top-color: var(--peach);
+}
+.readiness-card:nth-child(3n) {
+  border-top-color: var(--lilac);
+}
+.readiness-card h2,
+.readiness-card p {
+  margin: 0;
+}
+.readiness-card h2 a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.readiness-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 2rem;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--ink);
+  background: var(--surface);
+}
+.readiness-status-ready,
+.readiness-status-completed {
+  background: color-mix(in srgb, var(--mint) 30%, var(--surface));
+}
+.readiness-status-blocked {
+  background: color-mix(in srgb, var(--coral) 30%, var(--surface));
+}
+.readiness-status-attention_required {
+  background: color-mix(in srgb, var(--yellow) 30%, var(--surface));
+}
+.readiness-progress {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+.readiness-progress > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 1rem;
+  justify-content: space-between;
+}
+.readiness-progress span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.readiness-progress progress {
+  width: 100%;
+  height: 0.65rem;
+  accent-color: var(--brand);
+  border: none;
+  background: var(--line);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+.readiness-progress progress::-webkit-progress-bar {
+  background: var(--line);
+}
+.readiness-progress progress::-webkit-progress-value {
+  background: var(--brand);
+}
+.readiness-progress progress::-moz-progress-bar {
+  background: var(--brand);
+}
+.readiness-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 0.5rem 1rem;
+  margin-bottom: 1.3rem;
+}
+.readiness-filters .checkbox-label {
+  grid-column: 1/-1;
+}
+.readiness-back {
+  margin-bottom: 1rem;
+}
+.readiness-detail-header {
+  margin-bottom: 1rem;
+  border-left: 5px solid var(--brand);
+}
+.readiness-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.readiness-context {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.readiness-context .text-link {
+  margin-top: 0.6rem;
+}
+.readiness-checklist > ul,
+.readiness-tasks > ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.readiness-checklist li {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.readiness-check-label {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  min-width: 0;
+}
+.readiness-check-icon {
+  flex: 0 0 1.3rem;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.readiness-check-ok {
+  color: var(--brand);
+}
+.readiness-check-label strong {
+  font-weight: 550;
+  font-size: 0.95rem;
+}
+.readiness-check-label small,
+.readiness-documents small {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+.readiness-check-result {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+  flex: 0 0 auto;
+}
+.readiness-check-result a {
+  display: inline-flex;
+  min-height: 2.5rem;
+  min-width: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  color: var(--brand);
+}
+.readiness-missing-preview {
+  padding-left: 1.2rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0.2rem 0;
+}
+.readiness-missing-preview li + li {
+  margin-top: 0.35rem;
+}
+.readiness-instructions,
+.readiness-tasks {
+  margin-top: 1rem;
+}
+.readiness-authored {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.readiness-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  list-style: none;
+  padding: 0;
+}
+.readiness-people li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  padding: 0.7rem 1rem;
+}
+.readiness-people li span + span {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.readiness-tasks li {
+  padding: 1rem 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+.readiness-tasks h3 {
+  font-size: 1rem;
+  margin: 0;
+}
+.readiness-tasks p {
+  font-size: 0.9rem;
+  margin: 0.35rem 0;
+}
+.readiness-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: flex-start;
+}
+.readiness-action {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: start;
+}
+.readiness-action .notice {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.readiness-options {
+  display: grid;
+  gap: 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+.readiness-documents {
+  padding-left: 1.2rem;
+  overflow-wrap: anywhere;
+}
+.readiness-documents li + li {
+  margin-top: 0.6rem;
+}
+.readiness-widget-count {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+.readiness-widget {
+  border-top: 4px solid var(--peach);
+}
+.readiness-completion-hint {
+  font-size: 0.85rem;
+  max-width: 75ch;
+  margin: 1.2rem 0;
+}
+@media (max-width: 850px) {
+  .readiness-detail-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .readiness-tasks li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .readiness-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .readiness-checklist li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .readiness-check-result {
+    padding-left: 1.95rem;
+  }
+  .readiness-status {
+    font-size: 0.75rem;
+  }
+  .readiness-tasks .section-heading {
+    align-items: flex-start;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+  }
+}

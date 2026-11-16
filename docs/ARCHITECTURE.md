@@ -1,5 +1,9 @@
 # Architecture and decisions
 
+## Operational extension architecture
+
+Course readiness is a live resource-scoped SQL projection; no authoritative percentage is writable. Private per-run settings, tasks and instruction receipts bind current schedules/assignments and actual accessible clean material. Teaching delivery uses editable unsubmitted drafts and immutable submitted revisions/review history, leaving accepted prices/invoices unchanged. A replacement calls the existing claim implementation within a rollback-safe handover transaction and preserves the original until success. Support uses ticket ownership or explicit MFA support authority, with separate filtered internal messages and dedicated frozen attachments. No capability grants unrelated private calendar/chat/contracts. New wrappers remain invoker functions; private tables retain RLS and no browser table access. Existing public-shell-only PWA caching and online confirmation apply. [Actual implementation/evidence/limits](OPERATIONS_EXTENSION_STATUS.md).
+
 Status: M1/M2 locally accepted and merged; the approved M3 account/profile/commission extension passed complete isolated verification and was merged in PR #3. See QA_RESULTS for executed evidence. The complete product is specified in [PRODUCT_SPEC.md](PRODUCT_SPEC.md). Current primary documentation/version checks are in [REFERENCE_SOURCES.md](REFERENCE_SOURCES.md). Database-specific API/security notes are maintained in `BACKEND*.md` where present; migration SQL and actual tests own the schema truth. The authorised self-hosted KVM1 development instance is online at cms.luminovia.org; the combined M3/hosting source is being validated before automatic adoption. Full product and production acceptance remain outstanding.
 
 ## ADR-001 — separate private portal and static frontend
@@ -117,7 +121,6 @@ Staff discussions use one resource-comment implementation for jobs and course te
 Profile pictures reuse clean immutable private document versions. The editor rasterises a bounded metadata-free PNG; the server independently validates its structure/dimensions and actual ClamAV result. A separate selected-avatar projection uses current person visibility, and the file gateway rechecks selection/access after retrieving bytes. Generic personal-document ACLs remain unchanged. Actor-bound Blob URLs are memory-only and revoked on identity/version/offline/unmount changes.
 
 [Developer guide](DEVELOPER_GUIDE.md), [CBW details](CBW_TEMPLATES.md), [comment contract](RESOURCE_COMMENTS.md), [avatar boundary](PROFILE_AVATARS.md) and [functional audit](FUNCTIONAL_CODE_AUDIT.md) record the owning implementation and verification. Compiler-based source/export/RPC and documentation-link checks supplement actual SQL/API/browser tests; they do not replace runtime authorisation.
-
 
 ## ADR-015 — shared local QA ownership and bounded revalidation
 

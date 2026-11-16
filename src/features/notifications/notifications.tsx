@@ -47,6 +47,15 @@ const knownKinds = new Set([
   "session_reminder",
   "contract_expiring",
   "contract_available",
+  "support_update",
+  "readiness_task",
+  "replacement_available",
+  "replacement_completed",
+  "delivery_submitted",
+  "delivery_confirmed",
+  "delivery_disputed",
+  "delivery_correction_requested",
+  "delivery_customer_confirmed",
 ]);
 function useReadState(actor: string) {
   const client = useQueryClient();

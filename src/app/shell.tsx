@@ -26,6 +26,10 @@ import {
   Star,
   PanelLeftClose,
   PanelLeftOpen,
+  ListChecks,
+  ClipboardCheck,
+  LifeBuoy,
+  ArrowRightLeft,
 } from "lucide-react";
 import { NotificationsMenu } from "../features/notifications/notifications";
 import { Avatar } from "../features/profile/avatar";
@@ -70,6 +74,16 @@ export function Shell() {
     { to: "/files", icon: FolderOpen, label: "files" },
     { to: "/search", icon: Search, label: "portalSearch" },
     { to: "/courses", icon: GraduationCap, label: "courses" },
+    ...(staff
+      ? [
+          { to: "/readiness", icon: ListChecks, label: "courseReadiness" },
+          { to: "/replacements", icon: ArrowRightLeft, label: "replacements" },
+        ]
+      : []),
+    ...(staff || clientPortalAccess
+      ? [{ to: "/delivery", icon: ClipboardCheck, label: "teachingDelivery" }]
+      : []),
+    { to: "/support", icon: LifeBuoy, label: "supportDesk" },
     { to: "/people", icon: Users, label: "staffDirectory" },
     ...(clientPortalAccess
       ? [{ to: "/client", icon: Building2, label: "clientPortal" }]
