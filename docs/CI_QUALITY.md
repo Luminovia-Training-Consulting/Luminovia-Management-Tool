@@ -1,6 +1,6 @@
 # GitHub checks, security and coverage
 
-> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Maintainers/admins may bypass review through a PR only; nobody can bypass the 15 mandatory CI/security checks or up-to-date testing. The maintenance App has no rule exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
+> Status verified on 16 November 2026: all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Only `CarinaSchoppe` (User 29256704) has a personal `pull_request` exception in the review rules. Nobody can bypass the 15 mandatory CI/security checks or strict up-to-date testing. The history/check rules and maintenance App have no bypass exception. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
 
 Workflows run for pull requests and `main`; manual execution is also available. They need no VPS credentials, private Supabase keys or production data. Existing real application/database/API/browser checks remain in place.
 
@@ -71,7 +71,7 @@ Dependabot PRs receive suitable existing type/area/risk labels and run through t
 
 ## Maintainers and server-side rules
 
-The history, review and required-check rules are active. Human maintainers and administrators have a `pull_request` exception only in the review rules: they may merge a PR without an additional review, once all mandatory checks pass. They cannot push directly to `main`. Ordinary contributors and the maintenance App must satisfy the independent/latest-push review and resolved-conversation rules as well as every check. The App has no bypass actor entry in any policy. [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md) documents the readback and remaining operational App setup.
+The history, review and required-check rules are active. The only current review bypass actor is `CarinaSchoppe` (User 29256704), with mode `pull_request`; it does not allow direct pushes or skipped checks. Maintainer or administrator role membership alone grants no review exception. Other contributors and the maintenance App must satisfy the independent/latest-push review and resolved-conversation rules as well as every check. The history and required-check rules have no bypass actors, and the App has no bypass entry in any policy. Versioned JSON snapshots can predate the current live exception; the server-side rules are authoritative. [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md) documents the readback and remaining operational App setup.
 
 The initial quality setup was merged through [PR11](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/11) under the previous policy, which allowed an early maintainer merge while long-running tests were active. That historical result is not the current merge policy. The scanner job and generated CodeQL findings check were verified separately; the initial test-fixture finding was fixed by checking the exact URL origin. The first complete main scan additionally reported existing operations/test-script findings. They are individually assessed in [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md); a successful PR-diff scan does not imply a main scan without warnings.
 
