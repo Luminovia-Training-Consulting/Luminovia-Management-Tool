@@ -50,6 +50,15 @@ Keep each branch focused on one coherent change. Use meaningful, signed commits 
 
 During development, run focused checks such as `npm test`, `npm run test:coverage`, `npm run lint` and `npm run typecheck` after installing dependencies. The [CI and coverage guide](docs/CI_QUALITY.md) explains checks, reports and thresholds. `./portal test` is the canonical complete acceptance command. Understand a check's target and resources before running it, and do not publish unredacted private test artifacts.
 
+Local PC verification is the default. Use `./portal check` for fast quality,
+coverage and build feedback while editing, then `./portal test` for complete
+isolated acceptance of your working source before delivery;
+`./portal github test` fetches and verifies current `main` in a separate local
+checkout, while `./portal github` opens its persistent preview. No GitHub
+deployment or self-hosted Actions runner is needed. Coordinate the shared QA lock
+with other agents and never stop a foreign stack to obtain its ports. Automatic
+GitHub quality/security checks remain in place.
+
 ## 4. Preserve the domain contracts
 
 - **Permissions:** The database and API decide access. Test other accounts, revoked permissions and rejected requests; hiding a button is insufficient.
@@ -74,7 +83,14 @@ All 15 mandatory checks must pass for the current revision, and the PR must be u
 
 Daily maintenance publishes a signed change on a separate branch and opens a PR labelled `type:dependencies`, `area:devops` and `risk:high`. Native auto-merge waits for the same checks and independent review; it grants no exception. App permission setup and actual workflow delivery must be verified separately from the already active rules. See [current operational status](docs/GITHUB_WORKFLOW.md#activation-still-pending).
 
-A merge may trigger the existing **development release automation**. The release job and VPS installer still require their own successful exact-main checks and immutable-package validation. Production installation, risky migrations, and changes to hosting, DNS or real data require the relevant separate authorization. A GitHub merge does not replace that operational approval.
+A merge does not publish a development release or create PR deployment metadata.
+An authorised maintainer must explicitly dispatch `Portal checks` on `main` with
+`publish_release=true` and the exact current `main` SHA in `expected_commit`.
+Normal manual checks and daily-maintenance verification do not publish releases.
+PR deployment metadata has its own manual-only workflow; the verified local
+artifact remains downloadable without creating that record. Production
+installation, risky migrations, and changes to hosting, DNS or real data still
+require the relevant separate authorization. A GitHub merge does not replace it.
 
 ## Tags and releases
 

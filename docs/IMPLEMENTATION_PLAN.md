@@ -7,7 +7,8 @@ This explicit instruction supersedes the older Maintain/Admin review exceptions 
 - [x] Compare all three source rule snapshots with the coordinator's restored active live readback. Preserve the already matching history/check bytes and all 15 strict producer-bound checks/signature requirements.
 - [x] Limit the review actor allowlist to personal `User:29256704` in `pull_request` mode; every other user, repository role and App needs ordinary independent review.
 - [x] Correct current contribution/PR/issue/CI/index guidance and add an automatically discovered source-policy guard. Demonstrate the old role allowlist fails, then pass 28 policy and 12 existing metadata/documentation cases (40 total).
-- [ ] Deliver the signed isolated backup branch and separate governance PR; observe its exact-head required CI and merge through the designated coordinator. Source/local checks alone do not prove live activation, full product acceptance, publication or deployment.
+- [x] Deliver the signed isolated source as separate draft PR33, preserve the accepted local-first PR27 Main ancestry and record the earlier lifecycle-fixture CI failure plus its actual Main correction;47 merged-source targeted checks pass.
+- [ ] Observe fresh exact-head/current-base required CI and merge after the reserved PR10 delivery. Source/local checks alone do not prove full product acceptance, publication or deployment.
 
 All remaining product requirements and historical evidence below are preserved. This task changes no application, SQL, workflow, real data or live repository setting.
 
@@ -50,6 +51,18 @@ No App review exemption is restored: automated PRs need normal independent appro
 This current instruction supersedes historical ALWAYS/disabled guidance below. The full product ledger remains required. Admins retain settings-edit authority, but ordinary merges and pushes must satisfy the active rules.
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
+
+## Current direction — local PC testing and explicit publication
+
+- Final integration follows actual main319ab69 through verified remote mergef24eae9. Prior head30075c9 passed all15required checks (88browser/2PWA plus real26-migration/20-suite native retention); current f24local checks pass254frontend/95runtime/23maintenance cases. Correct the three retained governance contradictions once, preserving manual publication controls, then use PR27's fresh exact-head checks and actual merge record. Other feature development remains independent.
+- [x] Add `./portal check` for fast local source/coverage/build feedback, retaining complete isolated `./portal test` and latest-main `./portal github test`.
+- [x] Keep automatic quality/security/application/native gates; make CMS publication an explicit exact-SHA manual choice and PR deployment metadata manual-only.
+- [x] Notify the 16 other active project Codex chats and preserve the local-first rule in `AGENTS.md` and operator/contribution guides.
+- [x] Run the actual fast local command (249 frontend tests before integration;254on current-main integration and build pass), all95integrated offline runtime tests and workflow validation. Cancel the old automatic main publication run and temporarily disable the old metadata publisher, with real server readback.
+- Signed [PR27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27) owns the exact required CI and coordinated user-authorised merge record. After its actual merge, re-enable the manual-only metadata workflow and verify main's publication guard. The first run was cancelled after PR21 advanced main; current-main integration preserves both feature histories.
+- [x] Reproduce the existing50-way lifecycle fixture's disappearing-offer consent lookup from the actual failed run, capture real actor quotes before racing and add a deterministic late-reader case; all12real PostgreSQL groups pass in a fresh disposable local container. Fresh signed-head CI remains the merge gate.
+
+The VPS polling timer and normal/hosted data are unchanged. This direction supersedes historical automatic release/publication descriptions below; it does not remove any product, security or release acceptance requirements.
 
 ## Coordinated PR18 integration
 

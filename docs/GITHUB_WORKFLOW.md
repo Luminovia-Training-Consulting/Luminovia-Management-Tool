@@ -4,9 +4,17 @@
 
 Contributors should start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue guide](ISSUE_GUIDE.md) and the [pull request guide](PULL_REQUEST_GUIDE.md). This page explains the administrative sources and the boundaries of rule exceptions. Public contribution guidance and new contribution discussions use English; the product interface remains German and English.
 
+Current publication policy: use `./portal check` for fast local feedback and
+`./portal test` for complete local acceptance. Ordinary PR/main activity keeps
+its GitHub quality/security checks but creates no automatic deployment record or
+CMS release. Releases require an authorised manual `Portal checks` dispatch on
+`main`, `publish_release=true`, the exact current `main` SHA in `expected_commit`
+and every existing release gate. PR metadata publication/cleanup is manual-only;
+see [PR_PREVIEWS](PR_PREVIEWS.md). The existing VPS polling timer is unchanged.
+
 ## Rules for `main`
 
-The JSON files under `.github/rulesets/` are snapshots of the configuration read back from GitHub. Files alone do not activate protection; the [server-side rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. All three policies are active:
+The JSON files under `.github/rulesets/` are versioned snapshots. The review source now matches the personal `User:29256704` (`CarinaSchoppe`) exception in `pull_request` mode; history/check sources retain the exact verified configuration. Files alone do not activate protection; the [server-side rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. The latest readback confirms all three policies active:
 
 | Rule                          | Source                                           | Enforcement and exceptions                                                                                                                                                  |
 | ----------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -44,7 +52,7 @@ References: [rulesets and exceptions](https://docs.github.com/en/repositories/co
 
 ## PR preview packages and deployment records
 
-After complete quality, coverage, application and native acceptance, PRs produce a seven-day source package for a complete local preview. A separate trusted default-branch publisher updates GitHub Deployments using actual current PR, workflow and artifact metadata. Contribution code receives no write token or hosting secrets. The deployment URL opens the downloadable package; successful publication does not claim a hosted website. Closed, superseded and expired previews become inactive. The packaged launcher uses owned local database identities and distinct ports. See [PR previews](PR_PREVIEWS.md) for permissions, local operation and first activation.
+After complete quality, coverage, application and native acceptance, PRs produce a seven-day source package for a complete local preview. The artifact remains available without a Deployment record. Only an authorised manual `PR preview deployments` dispatch on `main` with `action=publish`, the exact `run_id` and `run_attempt` asks the trusted default-branch publisher to create metadata. Its default `action=cleanup` deactivates stale/closed/expired records without publishing a new one; no PR event or schedule runs that cleanup automatically. Contribution code receives no write token or hosting secrets. The deployment URL opens the downloadable package; successful publication does not claim a hosted website. The packaged launcher uses owned local database identities and distinct ports. See [PR previews](PR_PREVIEWS.md) for permissions and local operation.
 
 ## Labels and metadata validation
 
@@ -74,7 +82,7 @@ Labels classify issues and pull requests. Git tags identify an immutable source 
 | `milestone/m4-cbw-templates`       | `b9cdcc89758451bc8258f3a9f173e95ee1a23736` | Building-block templates, avatars and comments; PR #4.                |
 | `milestone/m5-system-audit`        | `bb322746d3cf18b1a0f1eae0eaa96450d26e26cd` | System review and concrete functional/performance corrections; PR #5. |
 
-These tags are not production approvals or new Semver releases. They do not change existing `cms-dev-*` release tags. Current workflows publish development packages after successful main CI; pushing these `milestone/*` tags does not start those release jobs. Do not move or replace published tags.
+These tags are not production approvals or new Semver releases. They do not change existing `cms-dev-*` release tags. Development packages require the explicit manual publication inputs and complete verification described above; successful automatic main CI alone does not publish one. Pushing `milestone/*` tags does not start release jobs. Do not move or replace published tags.
 
 ## Public and private reports
 
