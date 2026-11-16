@@ -1,5 +1,12 @@
 # Persistent implementation plan
 
+## PR35 integration after accepted PR25 — 17 November 2026
+
+- [x] Preserve actually merged PR25/main `4f7f6c0`, all69published SQL blobs and the existing PR35 fixes through normal ancestry; resolve all three documentation conflicts without dropping ledgers or contracts.
+- [x] Upgrade the real composition fixture from the accepted69file baseline; combined72file replay passes upgrade4/deletion25/company8/support16/API6/enquiries17groups and regenerates265public API functions.
+- [x] Pass704frontend cases,173runtime and92Edge cases,29candidate/TLS and3documentation checks plus existing source/coverage/build gates. The full local command remains refused before startup by a foreign-owned shared QA lock.
+- [ ] Publish the signed integration, inspect complete fresh current-head system/browser/native/security/package CI, fix any failures and merge PR35 under existing repository rules. No production/publication operation belongs to this work.
+
 ## PR35 mergeability repair — 17 November 2026
 
 - [x] Reproduce the current SQL blocker and trace the fresh-account browser blocker to accepted request-revision and profile-preference dependencies.
