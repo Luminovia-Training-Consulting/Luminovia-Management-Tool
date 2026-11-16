@@ -1,3 +1,7 @@
+/**
+ * Explicit operator tool for the configured hosted development instance.
+ * Uses real private credentials and temporary test data; do not run it as an ordinary offline test.
+ */
 import assert from "node:assert/strict";
 import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
 import {
@@ -106,6 +110,7 @@ if (options["--mailpit-api"]) {
     "Mail capture requires an explicit loopback SSH tunnel, never a public mailbox",
   );
 }
+/** Reads only the operator-owned regular private file with the expected restrictive permissions. */
 function privateRead(path) {
   const stat = lstatSync(path);
   assert(
@@ -114,6 +119,7 @@ function privateRead(path) {
   );
   return readFileSync(path, "utf8");
 }
+/** Writes private operator state through a temporary file and keeps its permissions restrictive. */
 function privateWrite(path, content) {
   const temporary = `${path}.${process.pid}.tmp`;
   writeFileSync(temporary, content, { mode: 0o600, flag: "wx" });
@@ -142,6 +148,7 @@ assert(
   environment.SERVICE_ROLE_KEY && environment.SUPABASE_PUBLISHABLE_KEY,
   "Server and public API configuration required",
 );
+/** Creates a separate SDK client without persistent sessions or automatic session refresh. */
 const make = (url, key) =>
   createClient(url, key, {
     auth: {
@@ -151,8 +158,10 @@ const make = (url, key) =>
     },
   });
 const service = make(privateApi.href, environment.SERVICE_ROLE_KEY);
+/** Creates the unprivileged public-key client for actual hosted permission checks. */
 const publicClient = () => make(api, environment.SUPABASE_PUBLISHABLE_KEY);
 const clients = [];
+/** Persists the private operator ledger so owned resources can be recovered after interruption. */
 const save = () =>
   privateWrite(statePath, JSON.stringify(state, null, 2) + "\n");
 const state = existsSync(statePath)
@@ -222,6 +231,7 @@ if (state.target !== target) {
 state.backend = { vpsId: 2163645, serviceRoleFingerprint: backendFingerprint };
 save();
 let passes = 0;
+/** Requires actual SDK success before returning the response data. */
 async function checked(request, label) {
   const result = await request;
   if (result.error)
@@ -230,11 +240,13 @@ async function checked(request, label) {
     );
   return result.data;
 }
+/** Counts and reports a case only after all of its assertions have completed successfully. */
 async function check(name, callback) {
   await callback();
   passes++;
   console.log(`PASS ${name}`);
 }
+/** Signs the test identity in through Auth; an error never counts as an authorised session. */
 async function signIn(account) {
   const client = publicClient();
   clients.push(client);
@@ -412,6 +424,7 @@ state.lastRun = run;
 save();
 const cleanupFailures = [];
 let failure;
+/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
 function totp(secret) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const bits = [...secret.replace(/=+$/, "").toUpperCase()]
@@ -429,6 +442,7 @@ function totp(secret) {
     .toString()
     .padStart(6, "0");
 }
+/** Reads the test actor's current session token for actual authenticated gateway requests. */
 async function headers(actor) {
   const { session } = await checked(
     actor.client.auth.getSession(),
@@ -440,6 +454,7 @@ async function headers(actor) {
     Authorization: `Bearer ${session.access_token}`,
   };
 }
+/** Sends real fixture bytes through the authenticated file endpoint; scanning and release remain server responsibilities. */
 async function upload(actor, bytes, name) {
   const clientId = randomUUID();
   run.documentClientIds.push(clientId);
@@ -464,6 +479,7 @@ async function upload(actor, bytes, name) {
   }
   return { status: response.status, body };
 }
+/** Requests the authorised bytes for this identity and exact document version through the gateway. */
 async function download(actor, id) {
   return fetch(api + "/functions/v1/files", {
     method: "POST",
@@ -472,6 +488,7 @@ async function download(actor, id) {
     signal: AbortSignal.timeout(60000),
   });
 }
+/** Creates or checks the explicitly retained fictional persistence probe across service restarts. */
 async function persistenceProbe(createMissing) {
   const path = join(directory, "persistence-probe.json");
   let probe = existsSync(path) ? JSON.parse(privateRead(path)) : null;
@@ -602,6 +619,7 @@ async function persistenceProbe(createMissing) {
       );
   }
 }
+/** Checks actual WebSocket delivery and subsequent access revocation on the approved development instance. */
 async function verifyRealtime() {
   const tag = randomUUID();
   const title = `Fictional hosted Realtime ${tag}`;
@@ -610,7 +628,9 @@ async function verifyRealtime() {
   let owner;
   let failure;
   let room;
+  /** Paces bounded observational polling; the caller owns the overall timeout. */
   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  /** Bounds the wait for an observable event; a timeout remains a test failure. */
   const eventually = async (predicate, label) => {
     const deadline = Date.now() + 20000;
     while (Date.now() < deadline) {
@@ -619,6 +639,7 @@ async function verifyRealtime() {
     }
     throw new Error(label);
   };
+  /** Connects a real Realtime subscription for this identity and waits until it is ready. */
   const subscribe = async (actor, events, name) => {
     const { session } = await checked(
       actor.client.auth.getSession(),
@@ -754,6 +775,7 @@ async function verifyRealtime() {
   } catch (error) {
     failure = error;
   } finally {
+    /** Removes resources created by this run; cleanup must not hide a business assertion failure. */
     const cleanup = async (callback) => {
       try {
         await callback();
@@ -848,6 +870,7 @@ async function verifyRealtime() {
     "Realtime test group/messages/notifications removed; sockets and new sessions closed. Existing profiles/passwords/MFA/private files unchanged; no files or private account ledgers written.",
   );
 }
+/** Reads only the explicitly configured private Mailpit tunnel, not a real recipient mailbox. */
 async function mailboxMessages() {
   const response = await fetch(new URL("/api/v1/messages?limit=100", mailpit), {
     signal: AbortSignal.timeout(15000),
@@ -863,6 +886,7 @@ async function mailboxMessages() {
     message.To.some((recipient) => recipient.Address === run.invitedEmail),
   );
 }
+/** Waits for a new captured message owned by this fixture, ignoring previously seen IDs. */
 async function capturedMessage(excludedIds = []) {
   for (let attempt = 0; attempt < 50; attempt++) {
     const messages = (await mailboxMessages()).filter(
@@ -890,6 +914,7 @@ async function capturedMessage(excludedIds = []) {
     "Expected fictional Auth email was not captured in private Mailpit",
   );
 }
+/** Extracts the checked Auth link from the captured test message. */
 function mailLink(message) {
   const href = /href="([^"]+)"/
     .exec(message.HTML)?.[1]
@@ -1020,6 +1045,7 @@ try {
           display_name: "Fiktive eingeladene Entwicklungslehrkraft",
           idempotency_key: run.invitationKey,
         };
+        /** Checks a fictional invitation through the actual handler and the development instance's local mail capture. */
         const invite = async () => {
           const response = await fetch(api + "/functions/v1/invite-lecturer", {
             method: "POST",
@@ -1479,6 +1505,7 @@ try {
 } catch (error) {
   failure = error;
 } finally {
+  /** Removes resources created by this run; cleanup must not hide a business assertion failure. */
   const cleanup = async (callback) => {
     try {
       await callback();

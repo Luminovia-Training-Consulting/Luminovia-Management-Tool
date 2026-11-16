@@ -1,3 +1,5 @@
+# Static analysis is separate from runtime acceptance. A successful scan does
+# not prove existing findings fixed; review their actual contexts.
 name: Security analysis
 on:
   push:
@@ -14,6 +16,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   codeql:
+    # Include operating tools and workflow trust boundaries in the three analyses.
     name: CodeQL (${{ matrix.language }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -39,6 +42,7 @@ jobs:
         with:
           category: /language:${{ matrix.language }}
   dependency-review:
+    # Evaluate the PR dependency diff; npm audit checks the current package tree.
     name: Dependency review
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest

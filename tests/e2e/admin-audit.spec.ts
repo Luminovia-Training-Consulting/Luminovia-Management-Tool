@@ -1,3 +1,7 @@
+/**
+ * Browser workflows for MFA-restricted audit filters and revoked access.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
+ */
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
@@ -13,6 +17,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Audit fixtures require the canonical disposable stack.",
 );
+/** Checks the current rendered browser state for the selected axe violations. */
 async function accessible(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   const result = await new AxeBuilder({ page })
@@ -47,36 +52,32 @@ test("MFA administrator filters and pages a redacted real audit trail; other rol
   let readerContext: Awaited<ReturnType<typeof browser.newContext>> | undefined;
   try {
     await checked(
-      service
-        .from("audit_events")
-        .insert(
-          ids.map((id) => ({
-            id,
-            actor_id: teacher.id,
-            action: "taxonomy.created",
-            resource_id: randomUUID(),
-            created_at: at,
-            details: { notes: secret },
-          })),
-        ),
+      service.from("audit_events").insert(
+        ids.map((id) => ({
+          id,
+          actor_id: teacher.id,
+          action: "taxonomy.created",
+          resource_id: randomUUID(),
+          created_at: at,
+          details: { notes: secret },
+        })),
+      ),
     );
     await checked(
-      service
-        .from("audit_events")
-        .insert(
-          [
-            "chat.member_added",
-            "availability.created",
-            "contract.executed_version_registered",
-            "invoice.submitted",
-            "job.lifecycle.private_unknown",
-          ].map((action) => ({
-            actor_id: teacher.id,
-            action,
-            resource_id: randomUUID(),
-            details: { body: secret },
-          })),
-        ),
+      service.from("audit_events").insert(
+        [
+          "chat.member_added",
+          "availability.created",
+          "contract.executed_version_registered",
+          "invoice.submitted",
+          "job.lifecycle.private_unknown",
+        ].map((action) => ({
+          actor_id: teacher.id,
+          action,
+          resource_id: randomUUID(),
+          details: { body: secret },
+        })),
+      ),
     );
     await adminLogin(page, administrator);
     await page.goto("/admin/audit");

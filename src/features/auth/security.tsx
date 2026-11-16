@@ -1,3 +1,7 @@
+/**
+ * TOTP enrollment, challenges and factor management for the current session. Keep
+ * QR/verification state local and reread privileged capabilities after successful MFA.
+ */
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -9,6 +13,7 @@ import { db } from "../../lib/supabase";
 import { Button } from "../../components/ui/button";
 import { Field, Loading, Notice, PageHeading } from "../../components/common";
 import { useOnline } from "../../lib/online";
+/** Manage TOTP enrollment/challenges without presenting an unverified factor as confirmed MFA. */
 export function Security() {
   const { t } = useTranslation();
   const online = useOnline();

@@ -1,6 +1,6 @@
 # Creating, reviewing and merging pull requests
 
-> Status read back on 16 November 2026 after 02:45 UTC: review and required-check rules are active. Maintainers and administrators may bypass independent review through a PR, but must wait for all fourteen required checks against the current base. The maintenance App has a separate `always` exception. [Current rule and App delivery status](GITHUB_WORKFLOW.md#activation-still-pending).
+> Current server policy on 16 November 2026: all fifteen required checks and valid signatures remain mandatory. Maintain and Repository-admin accounts may bypass review only through a pull request. No App has a review or required-check exception. [Current rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
 
 This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
@@ -49,18 +49,13 @@ Choose every area that is materially affected. The original area labels remain a
 | `area:testing`       | QA, regressions, browser and permission checks          |
 | `area:docs`          | Guides, API references and operational documentation    |
 | `area:taxonomy`      | Topics, tools, programming languages and hierarchies    |
+| `area:api`           | API and RPC contracts and integration clients           |
+| `area:security`      | Authorization, protected data and security hardening    |
+| `area:performance`   | Loading, query budgets, caching and runtime performance |
+| `area:accessibility` | Keyboard access, accessible controls and WCAG checks    |
+| `area:design`        | Luminovia branding, layout and visual design            |
 
-The expanded catalogue also includes:
-
-| Area                 | Use                                                        |
-| -------------------- | ---------------------------------------------------------- |
-| `area:api`           | Account/domain APIs, RPC contracts and integration clients |
-| `area:security`      | Authorisation, protected data and security hardening       |
-| `area:accessibility` | Keyboard access, accessible controls and WCAG checks       |
-| `area:design`        | Luminovia branding, layout and visual design               |
-| `area:performance`   | Loading, query budgets, caching and runtime performance    |
-
-A documentation change receives `area:docs` and any relevant documented area; general contribution rules also use `area:github`. A test does not need every label used by the whole system. A feature with a migration should include the product and technical areas it actually changes. The 36 managed labels comprise eight types, 24 areas, three risk levels and the `merge:hold` stop signal; nine original GitHub labels remain available. `merge:hold` records a maintainer review stop. Preserve it until the stated concern is addressed; it grants no permission and does not replace required checks. Additional labels do not replace a required category.
+A documentation change receives `area:docs` and any relevant documented area; general contribution rules also use `area:github`. A test does not need every label used by the whole system. A feature with a migration should include the product and technical areas it actually changes. The 36 managed labels comprise eight types, 24 areas, three risk levels and the `merge:hold` stop signal; nine original GitHub labels remain available. `merge:hold` records a maintainer review stop. Preserve it until the stated concern is addressed; it grants no permission and does not replace required checks. Additional labels do not replace a required category. Add a new managed label to the shared catalogue before applying it. See [metadata operation and historical rechecks](GITHUB_WORKFLOW.md#labels-and-metadata-validation).
 
 | Risk          | Meaning                                                                                             |
 | ------------- | --------------------------------------------------------------------------------------------------- |
@@ -94,27 +89,32 @@ The active contributor rules require a pull request and at least one approval fr
 
 Maintainers and administrators have a role-based `pull_request` exception on the review rule. They may bypass independent review when merging a PR, including their own PR. This exception does not allow direct pushes to `main` or bypass the separate required-check rule. Ordinary write access alone grants no review exception. GitHub may require an explicit bypass action in the merge dialog.
 
-All fourteen required checks must pass against the current base:
+All fifteen required checks must pass against the current base:
 
 - `Build`, `Typecheck`, `Lint`, `Formatting` and `Code quality` check compilation, rules, style and actual source connections.
 - `Tests and coverage` runs unit/component tests with complete frontend source coverage reporting and enforced thresholds.
 - `verify` runs the complete real application/SQL/API/browser/PWA/maintenance suites; `Actual isolated selfhost image compatibility` checks real runtime behaviour and retained data.
-- `PR metadata` checks required labels.
+- `PR metadata` checks required labels against trusted current-main code.
+- `PR preview package` creates the gated downloadable source package; package availability does not claim a hosted portal or complete-product acceptance.
 - `CodeQL (javascript-typescript)`, `CodeQL (python)` and `CodeQL (actions)` run the separate language-specific security analyses; `Dependency review` rejects newly introduced vulnerable dependencies.
 - The generated `CodeQL` finding check evaluates the uploaded security findings separately from successful scanner execution.
 
-The first thirteen statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. All fourteen are required for merging. See [CI_QUALITY](CI_QUALITY.md).
+Fourteen statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. All fifteen are required for merging. See [CI_QUALITY](CI_QUALITY.md).
 
-If main changes, update the PR as required and wait for checks against the current base. The history/signature ruleset has no bypass actors, including for maintainers, administrators and the maintenance App. The maintenance App, integration `5776881`, has its own `always` exception on the review and required-check rules. Server-side activation and that exception do not prove the App workflow is already delivered on main; see the [current rule and App delivery status](GITHUB_WORKFLOW.md#activation-still-pending).
+If main changes, update the PR as required and wait for checks against the current base. The required-check and history/signature rulesets have no bypass actors. The review ruleset grants only Maintain (`RepositoryRole:2`) and Repository admin (`RepositoryRole:5`) a PR-only exception. No App has a review or required-check exception. Historical App-token tests grant no current merge authority; see the [current rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
 
 ## Merge and publication
 
-Maintainers and administrators can merge a PR without an independent approval through their review exception once the fourteen required checks and current-base requirement are satisfied. Check the description, labels, tests and unresolved conversations first. Pending operational approvals remain separate from repository merge eligibility.
+Maintainers and administrators can merge a PR without an independent approval through their review exception once the fifteen required checks and current-base requirement are satisfied. Check the description, labels, tests and unresolved conversations first. Pending operational approvals remain separate from repository merge eligibility.
 
 The separate Security outcomes are required for PR merge eligibility. Release publication still follows the explicit dependencies in `ci.yml`; the ruleset does not add them as release-job dependencies.
 
-A merge can start the existing development release process. Its immutable `cms-dev-*` packages and hosted migration checks remain separate. Production operation, real data, SMTP, DNS and risky maintenance need the appropriate separate approvals. Claim a hosted installation only when actual operational evidence exists.
+Current `main` can publish an immutable `cms-dev-*` development package automatically after successful main CI. The requested local-first, manual-only publication path is proposed in [PR #27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27), which remains unmerged. Do not claim that replacement is active or trigger publication as part of reviewing documentation. Production operation, real data, SMTP, DNS and risky maintenance need the appropriate separate authorization. Claim a hosted installation only when actual operational evidence exists.
+
+Signatures remain mandatory for every actor. Native repository Auto-Merge is available and waits for applicable requirements; enable it only within the task's authorized merge scope, preserving coordinated holds and `merge:hold`.
 
 Signed annotated `milestone/*` tags identify verified historical development states. They are not PR labels or a promise of a Semver or production version. Do not move existing tags; create tags only on the intended commit.
 
 After merging, update the issue resolution when needed and track remaining tasks separately. A new task must not silently expand the original acceptance criteria or be described as already completed.
+
+The gated [PR preview package and deployment record](PR_PREVIEWS.md) provides an owned, locally runnable application preview after the complete checks. Its artifact URL is not a hosted portal URL.

@@ -1,3 +1,7 @@
+/**
+ * Browser workflows for CBW source templates, planned sessions and lecturer-visible net claims.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
+ */
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
@@ -13,6 +17,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "CBW writes require the canonical disposable project.",
 );
+/** Checks the rendered state with axe; this does not replace manual accessibility acceptance. */
 async function a11y(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   const scan = await new AxeBuilder({ page })
@@ -186,7 +191,7 @@ test("CBW source template plans ten real sessions and one linked net-only teachi
       .single(),
   );
   expect(created.course_run_id).toBe(run.id);
-  expect(created.total_amount).toBe(500);
+  expect(created.total_amount).toBe(0);
   expect(created.job_sessions).toHaveLength(10);
   expect(
     created.job_sessions
@@ -211,7 +216,7 @@ test("CBW source template plans ten real sessions and one linked net-only teachi
     await login(lecturerPage, teacher.email);
     await lecturerPage.goto(`/jobs/${created.id}`);
     await expect(lecturerPage.locator(".claim-panel .amount")).toHaveText(
-      /500,00/,
+      /310,00/,
     );
     await expect(lecturerPage.getByText(/1\.000,00/)).toHaveCount(0);
     await expect(
@@ -241,7 +246,7 @@ test("CBW source template plans ten real sessions and one linked net-only teachi
         .eq("job_id", created.id),
     );
     expect(claims).toHaveLength(1);
-    expect(claims[0].total_amount).toBe(500);
+    expect(claims[0].total_amount).toBe(310);
     expect(claims[0].assignment_sessions).toHaveLength(10);
     await a11y(lecturerPage);
     await lecturerPage.screenshot({

@@ -1,11 +1,17 @@
+/**
+ * Bind a later PostgreSQL image to completed compatibility proof and exact historical migration source. A tag or matching major version alone is insufficient.
+ */
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+// Compute SHA-256 so comparisons bind exact bytes, not only version labels.
 const sha = (value) => createHash("sha256").update(value).digest("hex");
 const imagePattern =
   /^supabase\/postgres:17\.\d+\.\d+\.\d+@sha256:[a-f0-9]{64}$/;
 const proofPath =
   "opt/luminovia-portal/source/deploy/hostinger/selfhost/postgres-candidate-proof.json";
+// Hash migration order, paths and source digests into one witness digest.
 const inventoryHash = (inventory) => sha(JSON.stringify(inventory));
+// Check the strict migration-inventory structure and ordering before using it as recovery evidence.
 const validInventory = (entries) =>
   Array.isArray(entries) &&
   entries.length > 0 &&
@@ -22,6 +28,7 @@ const validInventory = (entries) =>
 
 // This is an explicit recovery witness from an authenticated complete set,
 // never a global allowlist update or permission to pull arbitrary latest tags.
+// Allow a later image only with matching completed proof and an unchanged historical source chain.
 export function validateRecoveryImageWitness(image, catalog) {
   assert(
     imagePattern.test(image),
@@ -108,6 +115,7 @@ export function validateRecoveryImageWitness(image, catalog) {
   return image;
 }
 
+// Read the actual restored migration ledger and compare it with the recovery catalog.
 export async function verifyRestoredRecoveryInventory(database, catalog) {
   const expected = catalog.postgresRecoveryEvidence?.appliedMigrationInventory;
   if (!expected) return false; // Original approved historical backup format.

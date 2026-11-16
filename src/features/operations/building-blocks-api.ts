@@ -1,6 +1,11 @@
+/**
+ * Source bindings from CBW templates through actual course runs to derived offers. Source
+ * revisions let the server reject stale offer drafts instead of silently replacing sessions.
+ */
 import { queryOptions } from "@tanstack/react-query";
 import { db } from "../../lib/supabase";
 
+/** Reviewed course source for a new job, including its server-comparable revision. */
 export interface CourseRunJobDefaults {
   source_revision: string;
   course_run_id: string;
@@ -23,6 +28,7 @@ export interface CourseRunJobDefaults {
     ends_at: string;
   }[];
 }
+/** Read the course_run_job_defaults server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const courseRunJobDefaultsQuery = (actor: string, runId: string) =>
   queryOptions({
     queryKey: ["operations", "run-job-defaults", actor, runId],
@@ -35,11 +41,13 @@ export const courseRunJobDefaultsQuery = (actor: string, runId: string) =>
     },
   });
 
+/** Authorized job provenance back to its original building block/template source. */
 export interface JobBuildingBlockSource {
   template_id: string;
   building_block_id: string;
   source_id: string;
 }
+/** Read the job_building_block_reference server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const jobBuildingBlockQuery = (actor: string, jobId: string) =>
   queryOptions({
     queryKey: ["operations", "job-building-block", actor, jobId],

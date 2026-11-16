@@ -1,3 +1,7 @@
+/**
+ * Explicit offer metadata, capacity and cancellation actions. Confirmation state retains
+ * reviewed version/request ID; background changes must not silently authorize an action.
+ */
 import { useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -20,12 +24,15 @@ import {
 import "./lifecycle-i18n";
 import "./lifecycle.css";
 
+/** Derive the shared lifecycle action's exact input contract instead of maintaining a second parameter definition. */
 type OfferInput = Parameters<typeof manageOffer>[0];
+/** Frozen action/version for deliberate cancellation, reopening or copy confirmation. */
 type Confirmation = {
   kind: "cancel" | "reopen" | "duplicate";
   version: number;
   claim?: string;
 };
+/** Load capabilities/lifecycle, retain confirmation input and execute explicit management actions. */
 export function JobLifecyclePanel({ job }: { job: Job }) {
   const { session } = useAuth();
   const { t, i18n } = useTranslation("jobLifecycle");
@@ -72,6 +79,12 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
   if (state.isError) return <ErrorState retry={() => void state.refetch()} />;
   const info = state.data;
   const capacity = info.capacity ?? job.capacity ?? 1;
+  const maxNetBudget =
+    info.max_net_budget !== undefined
+      ? info.max_net_budget
+      : job.total_amount === null
+        ? null
+        : (Math.round(Number(job.total_amount) * 100) * capacity) / 100;
   const confirmedCount =
     info.confirmed_count ??
     info.claims.filter((claim) => claim.status === "confirmed").length;
@@ -133,14 +146,12 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
       </div>
       {info.can_manage && (
         <p>
-          <strong>
-            {t("maxNetBudget")}:{" "}
-            {money(
-              (Math.round(Number(job.total_amount) * 100) * capacity) / 100,
-              job.currency,
-              i18n.language,
-            )}
-          </strong>
+          {maxNetBudget !== null && (
+            <strong>
+              {t("maxNetBudget")}:{" "}
+              {money(maxNetBudget, job.currency, i18n.language)}
+            </strong>
+          )}
           {info.gross_budget !== undefined && info.gross_budget !== null && (
             <>
               {" "}
@@ -416,6 +427,7 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
   );
 }
 
+/** Edit allowed metadata against its reviewed version; preserve exact timestamps when their inputs are unchanged. */
 function EditOffer({
   job,
   version,

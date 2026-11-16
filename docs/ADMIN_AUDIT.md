@@ -1,6 +1,6 @@
 # Administrative audit log
 
-`/admin/audit` adds a readable, searchable interface to the existing server-side audit events. The new `audit.read` permission is assigned only to `owner` and `admin`. Every API request checks current database roles, account activation and verified MFA. Ordinary management, senior, lecturer, client and participant roles have no access. An explicitly assigned additional permission is recognised; an assumed role hierarchy or editable Auth metadata cannot replace it.
+`/admin/audit` adds a readable, searchable interface to the existing server-side audit events. The new `audit.read` permission is assigned only to `owner` and `admin`. Every API request checks current database roles, account activation and verified MFA. Ordinary management, senior, lecturer, client, participant and guest roles have no access. An explicitly assigned additional permission is recognised; an assumed role hierarchy or editable Auth metadata cannot replace it.
 
 ## Deliberately reduced projection
 

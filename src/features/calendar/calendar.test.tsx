@@ -1,3 +1,7 @@
+/**
+ * Regressions for published-course deep links selecting the actual course run. Controlled UI
+ * data do not replace server authorization checks.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

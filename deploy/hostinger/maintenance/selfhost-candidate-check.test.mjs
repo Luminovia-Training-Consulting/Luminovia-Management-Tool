@@ -1,3 +1,6 @@
+/**
+ * Static/filesystem candidate cases exercise isolation, unique ownership and carried fixtures. The separate native run must prove actual Auth/Storage persistence.
+ */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
@@ -5,6 +8,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -28,6 +32,7 @@ const scope = {
   network: project + "-backend",
   directory: "/tmp/fictional-candidate-fixture",
 };
+// Create controlled owned fixtures with replaceable external responses.
 function fixture() {
   const services = Object.fromEntries(
     [
@@ -136,6 +141,27 @@ test("migration replay preserves every original SQL dollar and exact history sou
     ["20261115111133_fixture.sql", source + delimiter],
   ])
     assert.throws(() => migrationWithHistory(name, sql));
+});
+
+test("every actual application migration can be atomically replayed with its exact history source", () => {
+  // A fresh CLI replay can accept a source that the retained-data path rejects.
+  // Keep the real migration inventory bound to that stricter upgrade contract.
+  const directory = resolve("supabase/migrations");
+  const names = readdirSync(directory)
+    .filter((name) => /^\d{14}_[a-z0-9_]+\.sql$/.test(name))
+    .sort();
+  assert(names.length >= 24);
+  for (const name of names) {
+    const source = readFileSync(join(directory, name), "utf8");
+    const replay = migrationWithHistory(name, source);
+    assert(
+      replay.includes(
+        "ARRAY[$candidate_history_" + name.slice(0, 14) + "$" + source,
+      ),
+      name,
+    );
+    assert.match(replay, /COMMIT;\s*$/);
+  }
 });
 
 test("M4 candidate source stages all discovered API suites and exact catalogue assets without replacing retained runtime data", (t) => {

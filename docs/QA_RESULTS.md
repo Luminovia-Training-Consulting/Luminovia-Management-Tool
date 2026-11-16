@@ -14,6 +14,14 @@ On signed first head `8e14e9e`, all6quality gates in [CI43792083385](https://git
 
 Latest live API readback after concurrent02:33UTC activation and02:45UTC extension verifies main `protected:true`, all three active rulesets, Maintainer/Admin PR-only review bypass and all 14 strict required checks without human bypass, App5776881bypass, private vulnerability reporting enabled,30managed English label descriptions plus9preserved originals and valid type/risk/area categories on all11pre-existing PRs. Alerts2–4are fixed without dismissals, leaving25open CodeQL hints(10high/15medium). Test success, scanner success and finding closure are separate claims. Existing4low build-tool audit entries remain documented; no complete bug-free/security/physical-device/production certification is asserted.
 
+## Current roles/pricing/welcome/PR-preview extension — combined acceptance pending
+
+[PR18](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/18) preserves accepted M6 and all historical commercial records. The current combined run is a separate gate. Focused frontend:215cases/49files, S48.61/B43.47/F38.76/L50.43%; lint/type/format/build and the source graph pass. Preview/runtime/community guard combination passes36cases; three additional execution-based QA bootstrap cases pass.
+
+Actual signed-source `a55089b` local `.local/tests/98a4eba3/RESULT.txt` and [CI43795741418](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43795741418) both return **exit1** after all26migrations, schema lint/advisors, **257 individual SQL cases**, genuine retained password/MFA/profile/private-event/Storage bytes and four actual API suites. The first CBW commissioned-offer API correctly rejects missing private policy. The QA bootstrap had been filtered out by intentionally sanitized nested startup; the corrected runner explicitly seeds its fictional policy with its own QA identity after the persistence proof. No normal development or production policy is chosen by seeding. Native API/browser/build-PWA completion is still required after this test-environment correction.
+
+Earlier CI43794432854 exposed wrapper fixture dependence on the outer QA port overlay, fixed and covered by an actual nested-process regression. CI43794974281 exposed legacy test expectations that allowed one equal-role administrator suspension; assertions now require both denied and both accounts unchanged. No permission/assertion was relaxed to accept either behavior. Current captured-offer duplication, role-bound consent, private configuration and stale-policy UI reload have independent regressions. Source/test existence and previous milestone acceptance are not labelled complete acceptance for this extension.
+
 ## Subsequent theme regression — actual defect fixed, new CI pending
 
 Repeated documentation CI43774441712 rejected one taxonomy contrast check(69/70passed). Actual served M6markup/styles reproduced first-state button contrast1.841/1.037 during background interpolation; stable themes pass. Removing that interpolation retains transform feedback and gives immediate dark9.104/13.982 on the same actual page. New effect-based desktop/mobile regression samples the first computed theme states; exact new PR9 CI remains required. The historical accepted M6counts below are not rewritten as if this later run passed.
@@ -22,17 +30,17 @@ Repeated documentation CI43774441712 rejected one taxonomy contrast check(69/70p
 
 Source `9d9bc567e70cdb3100a7ea6d78920d90a735cbba`: local runner report `.local/tests/977d0761/RESULT.txt` PASS at 2026-11-15T22:49:34.605Z; independent exact-source [CI43770187739](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43770187739) application `verify` succeeded at 22:53:22Z. The separate retained-image compatibility job also succeeded at 22:59:09Z; [PR8](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/8) merged at 23:05:43Z as `dc8e9a7e65c96076038bf7067791676578d121d4`.
 
-| Check | Actual result |
-| --- | --- |
-| Source and graph | Lint/type/format;177 Vitest/45 files;105reachable modules/30routes; zero unused runtime exports, broken imports/routes/assets |
-| Runtime/Edge |52 runtime,42 Edge tests and3 entry-point typechecks |
-| Operating guards |76 Python,60 Node, real Envoy/Caddy boundaries; real age encryption fixtures |
-| Database |24migrations, lint/security/performance advisors and234 PostgreSQL cases |
-| Business interfaces |18 actual Auth/MFA/REST/Storage/WebSocket suites plus real idempotent Edge/Mailpit invitation |
-| Persistence | Actual password/MFA/profile/private-event/object bytes survived stop/start |
-| Browsers |70/70 desktop/mobile Chromium workflows, zero skipped;6.6 minutes; DE/EN/dark/offline/axe and real DnD/claim/storno/reopen |
-| Build/PWA |56 public precache entries/2600.83 KiB;2/2 built-PWA checks in2.2 seconds |
-| Cleanup | Owned random stack/network/volumes/markers removed; normal development records not targeted |
+| Check               | Actual result                                                                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Source and graph    | Lint/type/format;177 Vitest/45 files;105reachable modules/30routes; zero unused runtime exports, broken imports/routes/assets |
+| Runtime/Edge        | 52 runtime,42 Edge tests and3 entry-point typechecks                                                                          |
+| Operating guards    | 76 Python,60 Node, real Envoy/Caddy boundaries; real age encryption fixtures                                                  |
+| Database            | 24migrations, lint/security/performance advisors and234 PostgreSQL cases                                                      |
+| Business interfaces | 18 actual Auth/MFA/REST/Storage/WebSocket suites plus real idempotent Edge/Mailpit invitation                                 |
+| Persistence         | Actual password/MFA/profile/private-event/object bytes survived stop/start                                                    |
+| Browsers            | 70/70 desktop/mobile Chromium workflows, zero skipped;6.6 minutes; DE/EN/dark/offline/axe and real DnD/claim/storno/reopen    |
+| Build/PWA           | 56 public precache entries/2600.83 KiB;2/2 built-PWA checks in2.2 seconds                                                     |
+| Cleanup             | Owned random stack/network/volumes/markers removed; normal development records not targeted                                   |
 
 Actual inspected fictional screenshots: [desktop dashboard](screenshots/m6-desktop-dashboard.png), [mobile dashboard](screenshots/m6-mobile-dashboard.png), [desktop board](screenshots/m6-desktop-job-board.png), [mobile board](screenshots/m6-mobile-job-board.png).
 
@@ -58,18 +66,18 @@ Actual frozen-source `./portal test` run `.local/tests/ba7f328e/RESULT.txt` retu
 
 `./portal test` passed on **2026-11-15 at 19:02:50.239UTC (16 November 05:02 Australia/Brisbane)** on frozen signed source `7abad7e`, baseline main `b9cdcc8`. Private report `.local/tests/d1953a8c/RESULT.txt`; launcher `.local/system-audit-test-04.exit` and execution session both returned **0**. The later integration of main `11448e4` changes deployment/backup/maintenance source and offline guard discovery, with no incoming application TS/SQL difference. Its targeted results are recorded separately; exact combined/native CI and merge are recorded on [PR #5](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/5).
 
-| Check | Actual result |
-| --- | --- |
-| Source | Lint, TypeScript, formatting; **117 Vitest cases / 34 files** |
-| Connections | **85 modules /25 routes /175 runtime exports**, no unreachable module, unused runtime export, broken relative import/literal route/static asset |
-| Runtime | **33 Node cases**, including real child timeout/abort, stop acknowledgement, kernel QA contention/crash release, busy legacy listener and actual Vite watcher |
-| Edge | **42 tests /3 entry-point typechecks**; updated Office validation plus all invitation/account/avatar/TCP/HTTPS regressions |
-| Schema/SQL | All **18 migrations**, lint/security/performance advisors; **174 real PostgreSQL cases** including six finite-schedule and six API/security inventory cases |
-| APIs | All **12 actual suites** plus Edge/Mailpit invitation; the corrected native HTTP test retains exact `23514` and unchanged old event instants |
-| Restart | Actual password/MFA/profile/private-event/object bytes preserved across stop/start; probe cleanup passed |
-| Browser | **54/54 desktop/mobile Chromium cases**, zero skipped, 4.8 minutes; 12-second actual idle-file/no-reload budget and blocked-storage DE/EN/dark/retained-draft cases passed |
-| Build/PWA | Build; **47 public precache entries / 2415.14 KiB**; **2/2 built-PWA** registration/offline/private-cache checks, 2.2 seconds |
-| Cleanup | Owned services/network/volumes/markers cleaned; normal development data not targeted |
+| Check       | Actual result                                                                                                                                                              |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Source      | Lint, TypeScript, formatting; **117 Vitest cases / 34 files**                                                                                                              |
+| Connections | **85 modules /25 routes /175 runtime exports**, no unreachable module, unused runtime export, broken relative import/literal route/static asset                            |
+| Runtime     | **33 Node cases**, including real child timeout/abort, stop acknowledgement, kernel QA contention/crash release, busy legacy listener and actual Vite watcher              |
+| Edge        | **42 tests /3 entry-point typechecks**; updated Office validation plus all invitation/account/avatar/TCP/HTTPS regressions                                                 |
+| Schema/SQL  | All **18 migrations**, lint/security/performance advisors; **174 real PostgreSQL cases** including six finite-schedule and six API/security inventory cases                |
+| APIs        | All **12 actual suites** plus Edge/Mailpit invitation; the corrected native HTTP test retains exact `23514` and unchanged old event instants                               |
+| Restart     | Actual password/MFA/profile/private-event/object bytes preserved across stop/start; probe cleanup passed                                                                   |
+| Browser     | **54/54 desktop/mobile Chromium cases**, zero skipped, 4.8 minutes; 12-second actual idle-file/no-reload budget and blocked-storage DE/EN/dark/retained-draft cases passed |
+| Build/PWA   | Build; **47 public precache entries / 2415.14 KiB**; **2/2 built-PWA** registration/offline/private-cache checks, 2.2 seconds                                              |
+| Cleanup     | Owned services/network/volumes/markers cleaned; normal development data not targeted                                                                                       |
 
 Reproduced/fixed behavior and measurements are in [SYSTEM_AUDIT](SYSTEM_AUDIT.md): unbounded timestamps, excessive settled metadata requests, stuck scan polls, stale/cross-actor attachment metadata, version-history/download consistency, failed read receipt retries, duplicate immutable-avatar bytes, realtime burst invalidations, blocked preference storage, private local drafts across account switches, dishonest timeout/stop success, cross-checkout QA collisions and generated-HTML HMR reloads. Timing/memory and invalidation measurements retain their exact synthetic/component scope; they are not whole-platform hosted-throughput claims.
 
@@ -83,20 +91,20 @@ No M5 hosted installation or production publication was performed. The historica
 
 `./portal test` passed on **2026-11-15 at 17:31:03.771UTC (16 November 03:31 Australia/Brisbane)** against frozen signed source `4c7c897`, including concurrent main through `1f9a114`. Project `luminovia-portal-test-7c2dd978`; private report `.local/tests/7c2dd978/RESULT.txt`. The wrapper explicitly captured **exit 0** in `.local/m4-test-04.exit`, and the execution session also returned 0. Subsequent local changes are documentation and actual fictional screenshots; exact submitted-source CI and the final merge are recorded on [PR #4](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/4).
 
-| Check | Actual combined result |
-| --- | --- |
-| Source | Lint, strict TypeScript and formatting; **91 Vitest cases / 28 files** passed |
+| Check               | Actual combined result                                                                                                                                                                                   |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Source              | Lint, strict TypeScript and formatting; **91 Vitest cases / 28 files** passed                                                                                                                            |
 | Connections/runtime | **21 Node cases**: environment/ownership/persistence guards, catalogue delimiters, compiler import/export/route/asset/RPC graph, local documentation links and two actual-copy private snapshot fixtures |
-| Edge | **37 tests**, all three entry-point typechecks passed; avatar PNG/revocation and private HTTPS/TCP scan boundaries retained |
-| Release controls | **28 Python updater +35 Node** cases (M3 review 6, M4 review 8, package 7, scanner HTTP/TCP 14), plus **11 actual Envoy routes / 10 actual Caddy HTTP checks**; fixture-only/owned-resource cleanup |
-| Fresh backend | All **17 migrations** replayed; SQL lint/security/performance advisors passed |
-| SQL | **165 PostgreSQL cases**: core 25, accounts 11, API surface 3, avatars 10, CBW 16, chat 17, comments 11, commercial 14, commission 14, documents 12, knowledge 14, M4 preservation 4, profiles 14 |
-| Actual APIs | All **12 suites** passed, including new avatars/CBW/comments and all earlier Auth/TOTP/REST/RPC/WebSocket/Storage/ClamAV regressions |
-| Mail | Actual Edge invitation, durable retry and exactly one Mailpit delivery; no real recipient |
-| Restart | Actual stop/start retained password, verified MFA, profile/timezone, private appointment and exact private Storage object bytes; probe cleanup passed |
-| Browser | **52/52 desktop/mobile Chromium journeys**, zero skipped,4.3 minutes; new source-link/offer/image/comment workflows and existing regressions passed |
-| Build/PWA | Build passed; **47 public static precache entries / 2413.56 KiB**; **2/2 built-PWA** SW/offline-deep-link/no-private-cache cases,2.2 seconds |
-| Cleanup | Owned random services/network/volumes removed; normal persistent development stack was not targeted |
+| Edge                | **37 tests**, all three entry-point typechecks passed; avatar PNG/revocation and private HTTPS/TCP scan boundaries retained                                                                              |
+| Release controls    | **28 Python updater +35 Node** cases (M3 review 6, M4 review 8, package 7, scanner HTTP/TCP 14), plus **11 actual Envoy routes / 10 actual Caddy HTTP checks**; fixture-only/owned-resource cleanup      |
+| Fresh backend       | All **17 migrations** replayed; SQL lint/security/performance advisors passed                                                                                                                            |
+| SQL                 | **165 PostgreSQL cases**: core 25, accounts 11, API surface 3, avatars 10, CBW 16, chat 17, comments 11, commercial 14, commission 14, documents 12, knowledge 14, M4 preservation 4, profiles 14        |
+| Actual APIs         | All **12 suites** passed, including new avatars/CBW/comments and all earlier Auth/TOTP/REST/RPC/WebSocket/Storage/ClamAV regressions                                                                     |
+| Mail                | Actual Edge invitation, durable retry and exactly one Mailpit delivery; no real recipient                                                                                                                |
+| Restart             | Actual stop/start retained password, verified MFA, profile/timezone, private appointment and exact private Storage object bytes; probe cleanup passed                                                    |
+| Browser             | **52/52 desktop/mobile Chromium journeys**, zero skipped,4.3 minutes; new source-link/offer/image/comment workflows and existing regressions passed                                                      |
+| Build/PWA           | Build passed; **47 public static precache entries / 2413.56 KiB**; **2/2 built-PWA** SW/offline-deep-link/no-private-cache cases,2.2 seconds                                                             |
+| Cleanup             | Owned random services/network/volumes removed; normal persistent development stack was not targeted                                                                                                      |
 
 All 24 original supplied PDF bytes independently matched 22 canonical CBW codes and 24 source revisions. M4 preserves both LPC3/LPC4 variants, exact source/session identity, trusted source fingerprints and financial-only run offers. Real API/browser evidence includes stale preview rejection, concurrent/idempotent offers, actual whole-block allocation, private gross/net and revoked memberships. Raw PDFs/personal source paths are not published. Weekday planning does not decide holiday/break arrangements automatically.
 

@@ -1,3 +1,7 @@
+/**
+ * Local safety regressions for Docker bindings, environments, logs and process ownership.
+ * Fixtures exercise concrete boundaries rather than claiming a general security certification.
+ */
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {

@@ -1,3 +1,7 @@
+/*
+ * Public demo workspace, fictional-state notices and practice panels using shared brand tokens.
+ * Responsive layouts retain the section navigation, controls and visible keyboard focus.
+ */
 .demo-app {
   min-height: 100vh;
 }

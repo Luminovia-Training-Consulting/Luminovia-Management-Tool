@@ -1,3 +1,7 @@
+/**
+ * Job list, URL filters and detail view with immediate server allocation. Filter the loaded
+ * authorized set; only the atomic RPC can confirm a claim and preserve accepted terms.
+ */
 import { JobPricingPanel } from "../commercial/pricing";
 import { JobLifecyclePanel } from "./lifecycle";
 import { refreshJobState } from "./lifecycle-api";
@@ -40,6 +44,7 @@ import {
   PageHeading,
 } from "../../components/common";
 import { BackLink } from "../../app/shell";
+/** Display the current offer projection with its earliest session and per-position lecturer fee. */
 export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
   const { t, i18n } = useTranslation();
   const lifeText = useTranslation("jobLifecycle").t;
@@ -76,7 +81,9 @@ export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
       <div className="job-card-bottom">
         <div>
           <strong>
-            {money(job.total_amount, job.currency, i18n.language)}
+            {job.total_amount === null
+              ? priceText("privateCompensation")
+              : money(job.total_amount, job.currency, i18n.language)}
           </strong>
           <small>
             {priceText("lecturerShare")} · {lifeText("perPosition")} ·{" "}
@@ -96,11 +103,14 @@ export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
     </article>
   );
 }
+/** Keep combined filters in the URL and apply them to the currently loaded authorized offers. */
 export function Jobs() {
   const { t, i18n } = useTranslation();
   const query = useQuery(jobsQuery);
   const topics = useQuery(topicsQuery);
   const [params, setParams] = useSearchParams();
+  // URL filters let browser navigation and shared links restore the same
+  // selection without maintaining a second filter state.
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
@@ -114,6 +124,8 @@ export function Jobs() {
   const to = params.get("to") ?? "";
   const min = params.get("min") ?? "";
   const currency = params.get("currency") ?? "";
+  // This filters the loaded, already authorized server result set.
+  // It does not claim complete discovery beyond the REST row limit.
   const filtered =
     query.data?.filter((j) => {
       const search = [j.title, j.description, j.customer_name, j.location]
@@ -129,7 +141,8 @@ export function Jobs() {
         (!topic || j.job_requirements.some((r) => r.topic_id === topic)) &&
         (!(from || to) ||
           dates.some((d) => (!from || d >= from) && (!to || d <= to))) &&
-        (!min || Number(j.total_amount) >= Number(min)) &&
+        (!min ||
+          (j.total_amount !== null && Number(j.total_amount) >= Number(min))) &&
         (!currency || j.currency === currency)
       );
     }) ?? [];
@@ -245,6 +258,7 @@ export function Jobs() {
     </>
   );
 }
+/** Display own accepted terms and request new allocation only through the atomic claim RPC. */
 export function JobDetail() {
   const { id } = useParams();
   const { t, i18n } = useTranslation();
@@ -252,7 +266,9 @@ export function JobDetail() {
   const { session } = useAuth();
   const online = useOnline();
   const client = useQueryClient();
-  const [accepted, setAccepted] = useState<number | null>(null);
+  const [accepted, setAccepted] = useState<string | null>(null);
+  // Network uncertainty preserves the same operation; only a confirmed claim
+  // later receives a fresh identity for a genuine reopening.
   const key = useRef(crypto.randomUUID());
   const permissions = useQuery(permissionsQuery(session!.user.id));
   const jobs = useQuery(jobsQuery);
@@ -260,15 +276,30 @@ export function JobDetail() {
   const claims = useQuery(claimsQuery(session!.user.id));
   const profile = useQuery(profileQuery(session!.user.id));
   const job = jobs.data?.find((j) => j.id === id);
+  // Bind consent to the exact displayed offer as well as its server version.
+  // Role-specific compensation can change while the detail page stays mounted.
+  const consent = job
+    ? JSON.stringify([
+        job.id,
+        job.terms_version,
+        job.amount,
+        job.total_amount,
+        job.currency,
+        job.rate_unit,
+        job.terms,
+      ])
+    : null;
   const ownClaim = claims.data?.find((c) => c.job_id === id);
   const claim = useMutation({
     mutationFn: async () => {
       requireOnline();
-      if (!job || accepted !== job.terms_version) throw new Error("invalid");
+      if (!job || accepted !== consent) throw new Error("invalid");
+      // The browser submits no winner/lecturer ID. The server atomically checks
+      // the current actor, eligibility, every session and accepted terms.
       const { data, error } = await db().rpc("claim_job", {
         p_job_id: job.id,
         p_idempotency_key: key.current,
-        p_terms_version: accepted,
+        p_terms_version: job.terms_version,
       });
       if (error) throw error;
       return data as { status: string; claim_id?: string };
@@ -296,6 +327,8 @@ export function JobDetail() {
       </>
     );
   const zone = profile.data?.time_zone ?? job.time_zone;
+  // An accepted claim remains the source for agreed fees and conditions
+  // even if the current offer is subsequently edited.
   const terms = ownClaim ?? job;
   const result = claim.data?.status;
   const resultKey =
@@ -393,11 +426,17 @@ export function JobDetail() {
             {i18n.getFixedT(i18n.language, "platform")("lecturerShare")}
           </p>
           <div className="amount">
-            {money(terms.total_amount, terms.currency, i18n.language)}
+            {terms.total_amount === null
+              ? i18n.getFixedT(i18n.language, "platform")("privateCompensation")
+              : money(terms.total_amount, terms.currency, i18n.language)}
           </div>
           <p>
-            {money(terms.amount, terms.currency, i18n.language)}{" "}
-            {t(terms.rate_unit)}
+            {terms.amount !== null && (
+              <>
+                {money(terms.amount, terms.currency, i18n.language)}{" "}
+                {t(terms.rate_unit)}
+              </>
+            )}
           </p>
           <small>{lifeText("positionFeeHint")}</small>
           <hr />
@@ -423,9 +462,9 @@ export function JobDetail() {
               <label className="checkbox-label">
                 <input
                   type="checkbox"
-                  checked={accepted === job.terms_version}
+                  checked={accepted === consent}
                   onChange={(e) =>
-                    setAccepted(e.target.checked ? job.terms_version : null)
+                    setAccepted(e.target.checked ? consent : null)
                   }
                 />
                 <span>{t("acceptTerms")}</span>
@@ -434,10 +473,12 @@ export function JobDetail() {
                 className="full-width"
                 onClick={() => claim.mutate()}
                 disabled={
-                  accepted !== job.terms_version ||
+                  accepted !== consent ||
                   !online ||
                   claim.isPending ||
-                  job.status !== "published"
+                  job.status !== "published" ||
+                  job.amount === null ||
+                  job.total_amount === null
                 }
               >
                 {t(claim.isPending ? "claiming" : "claim")}

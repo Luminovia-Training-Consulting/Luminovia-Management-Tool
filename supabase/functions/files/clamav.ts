@@ -1,19 +1,25 @@
+/**
+ * Edge ClamAV adapter using HTTPS gateway or private TCP. Bound upload/response bytes, time and signature age; failure must not mark a document clean.
+ */
 const encoder = new TextEncoder();
 const MAX_SCAN_BYTES = 100 * 1024 * 1024;
 const MAX_RESPONSE_BYTES = 4096;
 const SIGNATURE_MAX_AGE = 14 * 86400000;
 
+// Server-side HTTPS gateway configuration, never supplied by a browser upload.
 export interface HttpsScannerConfig {
   url?: string;
   token?: string;
 }
 
 // Injection is for isolated protocol/deadline tests, never browser input.
+// Replaceable transport/deadline boundary for isolated protocol tests.
 interface ScannerDependencies {
   fetcher?: typeof fetch;
   timeoutMs?: number;
 }
 
+// Validate response format and signature date; a version string alone does not prove fresh signatures.
 function validateVersion(value: unknown): string {
   if (
     typeof value !== "string" || !value.startsWith("ClamAV ") ||
@@ -30,6 +36,7 @@ function validateVersion(value: unknown): string {
   return value;
 }
 
+// Accept only the server-configured HTTPS /scan endpoint without credentials or a query; redirects are rejected by the transport.
 function httpsEndpoint(config: HttpsScannerConfig): URL {
   let endpoint: URL;
   try {
@@ -47,6 +54,7 @@ function httpsEndpoint(config: HttpsScannerConfig): URL {
   return endpoint;
 }
 
+// Bound upload/response size, reject redirects, and terminate fetch/readers on completion or timeout.
 async function scanHttps(
   bytes: Uint8Array,
   config: HttpsScannerConfig,
@@ -142,6 +150,7 @@ async function scanHttps(
   }
 }
 
+// Write the complete protocol block even when TCP writes accept only part of it.
 async function writeAll(conn: Deno.Conn, bytes: Uint8Array) {
   let at = 0;
   while (at < bytes.length) {
@@ -151,6 +160,7 @@ async function writeAll(conn: Deno.Conn, bytes: Uint8Array) {
   }
 }
 
+// Read only the bounded clamd response through its protocol terminator.
 async function readResult(conn: Deno.Conn) {
   let result = "";
   const buffer = new Uint8Array(4096);
@@ -163,6 +173,7 @@ async function readResult(conn: Deno.Conn) {
   return result.trim().replace(/\0/g, "");
 }
 
+// Query clamd's current signature version through a separate bounded connection.
 async function scannerVersion(host: string, port: number) {
   const conn = await Deno.connect({ hostname: host, port });
   const timeout = setTimeout(() => {
@@ -181,6 +192,7 @@ async function scannerVersion(host: string, port: number) {
   }
 }
 
+// Use only the configured transport and accept a complete, validated scan result.
 export async function scan(
   bytes: Uint8Array,
   host: string,

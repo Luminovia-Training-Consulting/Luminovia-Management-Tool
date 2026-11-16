@@ -1,3 +1,7 @@
+/**
+ * Forum threads, replies, accepted answers, subscriptions and visible moderation. Wait for
+ * server confirmation and invalidate only the affected query scopes.
+ */
 import { useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -48,10 +52,12 @@ import { KnowledgeEditor } from "./editor";
 import { CategoryManager } from "./categories";
 import "./i18n";
 import "./knowledge.css";
+/** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const threadSchema = z.object({
   title: z.string().trim().min(1).max(200),
   category: z.string().min(1),
 });
+/** Create a validated thread and normalized first post through the server contract. */
 function CreateThread({
   actor,
   categories,
@@ -161,6 +167,7 @@ function CreateThread({
     </form>
   );
 }
+/** Keep reply content local until the server confirms posting. */
 function ReplyForm({ actor, thread }: { actor: string; thread: ForumThread }) {
   const { t } = useTranslation("knowledge");
   const online = useOnline();
@@ -223,6 +230,7 @@ function ReplyForm({ actor, thread }: { actor: string; thread: ForumThread }) {
     </form>
   );
 }
+/** Render a permitted post with own-edit and applicable moderation/answer actions. */
 function ForumPostView({
   actor,
   thread,
@@ -512,6 +520,7 @@ function ForumPostView({
     </article>
   );
 }
+/** Combine thread, paginated posts and confirmed subscription/moderation actions. */
 function ForumThreadView({
   actor,
   id,
@@ -685,6 +694,7 @@ function ForumThreadView({
     </>
   );
 }
+/** Display permitted moderation reports and their explicit handling. */
 function Reports({
   actor,
   open,
@@ -767,6 +777,7 @@ function Reports({
     </Dialog>
   );
 }
+/** Coordinate category/thread selection, search and authorized forum moderation. */
 export function ForumPage() {
   const { t, i18n } = useTranslation("knowledge");
   const online = useOnline();

@@ -1,3 +1,7 @@
+/**
+ * Bounded personal preview widgets with their loading/error states, using shared brand colours
+ * and surface variables.
+ */
 .dashboard-widgets {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
@@ -29,6 +33,7 @@
   line-height: 1.6;
   margin: 0 0 14px;
 }
+/* Distinguish feature previews with pastel borders within a shared card geometry. */
 .dashboard-calendar {
   border-top-color: var(--yellow);
 }
@@ -41,6 +46,7 @@
 .dashboard-followups {
   border-top-color: var(--coral);
 }
+/* Wrap long titles within short bounded preview lists rather than clipping horizontally. */
 .dashboard-preview-list {
   list-style: none;
   padding: 0;
@@ -88,6 +94,7 @@
   border-top: 1px solid var(--line);
   font-size: 0.9rem;
 }
+/* Keep local widget errors and targeted retry visible without hiding the entire dashboard. */
 .dashboard-widget-error {
   font-size: 0.86rem;
   color: var(--muted);
@@ -115,6 +122,7 @@
   color: var(--muted);
   margin: -4px 0 14px;
 }
+
 @media (max-width: 600px) {
   .dashboard-widget {
     padding: 18px;

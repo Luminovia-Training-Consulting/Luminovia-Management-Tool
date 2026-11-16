@@ -1,3 +1,7 @@
+/**
+ * Real processes and listeners verify QA exclusion across checkouts.
+ * Unrelated listeners survive; process exit releases the kernel lock without trusting a PID record.
+ */
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";

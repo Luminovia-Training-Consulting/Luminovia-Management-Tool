@@ -1,3 +1,7 @@
+/**
+ * Shared desktop/mobile shell for navigation, search, notifications and preferences.
+ * Loaded capabilities shape visible actions and guidance; the backend authorizes access.
+ */
 import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -26,10 +30,13 @@ import {
   Star,
   PanelLeftClose,
   PanelLeftOpen,
+  Compass,
 } from "lucide-react";
+import { WelcomeGuideEntry } from "../features/onboarding/welcome";
 import { NotificationsMenu } from "../features/notifications/notifications";
 import { Avatar } from "../features/profile/avatar";
 import { useAuth } from "../features/auth/auth-context";
+import { useAuthorizationRefresh } from "../features/auth/authorization-refresh";
 import { db } from "../lib/supabase";
 import { permissionsQuery, profileQuery, userRolesQuery } from "../lib/queries";
 import { Button } from "../components/ui/button";
@@ -37,6 +44,7 @@ import { ErrorState, Loading, Notice } from "../components/common";
 import { Preferences } from "../components/preferences";
 import { PortalTour } from "../features/help/tour";
 export { Preferences } from "../components/preferences";
+/** Render private navigation and the actor-scoped tour; confirm sign-out before clearing private queries. */
 export function Shell() {
   const { t } = useTranslation();
   const { session } = useAuth();
@@ -49,6 +57,7 @@ export function Shell() {
   const profile = useQuery(profileQuery(session!.user.id));
   const permissions = useQuery(permissionsQuery(session!.user.id));
   const roles = useQuery(userRolesQuery(session!.user.id));
+  useAuthorizationRefresh(session!.user.id, roles.data, permissions.data);
   const teaching =
     roles.data?.some((role) =>
       ["owner", "admin", "lecturer", "senior_lecturer"].includes(role),
@@ -94,6 +103,7 @@ export function Shell() {
     { to: "/settings", icon: Settings2, label: "settings" },
     { to: "/profile", icon: UserRound, label: "profile" },
     { to: "/security", icon: ShieldCheck, label: "security" },
+    { to: "/welcome", icon: Compass, label: "welcome:nav" },
     ...(manage ? [{ to: "/admin", icon: Settings2, label: "admin" }] : []),
   ];
   const mobilePrimary = [
@@ -254,7 +264,9 @@ export function Shell() {
                 roles={roles.data ?? []}
                 permissions={permissions.data ?? []}
                 ready={permissions.isSuccess && roles.isSuccess}
-              />
+              >
+                <WelcomeGuideEntry />
+              </PortalTour>
               <Outlet />
             </>
           )}
@@ -281,6 +293,7 @@ export function Shell() {
     </div>
   );
 }
+/** Return from a job detail view to the job list. */
 export function BackLink() {
   const { t } = useTranslation();
   return (

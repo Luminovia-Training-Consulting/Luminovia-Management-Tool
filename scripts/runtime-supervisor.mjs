@@ -1,3 +1,7 @@
+/**
+ * Owns the local service group and records its confirmed lifecycle.
+ * Migrations, scanner, Edge and Vite start in order and stop without resetting persistent data.
+ */
 import { spawn } from "node:child_process";
 import { appendFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -32,6 +36,7 @@ privateDirectory();
 const config = projectConfig();
 const logPath = join(runtimeDir, "runtime.log");
 privateWrite(logPath, "");
+/** Writes only redacted runtime output into the private log file. */
 const log = (text) => appendFileSync(logPath, redact(text), { mode: 0o600 });
 const startedAt = new Date().toISOString();
 let phase = "starting";
@@ -41,6 +46,7 @@ let scannerTouched = false;
 let migrations;
 let network;
 const children = [];
+/** Binds every state record to supervisor PID, session and startup time. */
 const state = (extra) =>
   writeState({
     pid: process.pid,
@@ -54,10 +60,12 @@ const state = (extra) =>
     url: config.site,
     ...extra,
   });
+/** Persists the current startup stage so CLI status and private diagnostics show the same progress. */
 function stage(message) {
   log(message + "\n");
   state({ message });
 }
+/** Checks a local port before startup without terminating an existing listener. */
 async function available(port) {
   await new Promise((resolve, reject) => {
     const server = createServer();
@@ -71,6 +79,7 @@ async function available(port) {
     server.listen(port, "127.0.0.1", () => server.close(resolve));
   });
 }
+/** Stops owned children/services through their cleanup path, then writes the terminal state. */
 async function stop(exitCode = 0) {
   if (stopping) return;
   stopping = true;
@@ -121,6 +130,7 @@ async function stop(exitCode = 0) {
 }
 process.on("SIGTERM", () => void stop());
 process.on("SIGINT", () => void stop());
+/** Starts a supervisor-owned background process and routes its output into the redacted log. */
 function background(file, args, env) {
   const child = spawn(file, args, {
     cwd: root,

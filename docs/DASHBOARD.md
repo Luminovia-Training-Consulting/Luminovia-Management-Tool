@@ -15,7 +15,9 @@ The dashboard connects the existing job, calendar and earnings cards with person
 
 Client-only and participant-only accounts do not load lecturer job, allocation, expertise or contract lists for the dashboard. Their entry point leads to the client portal or course overview. Personal appointments, accessible files and permitted messages remain available. Multiple-role behaviour follows actual roles and capabilities; a display label alone cannot expand database permissions.
 
-Existing finance cards retain their own permission checks: platform revenue, client spend or personal net compensation is returned according to role as before. The new preview cards request no additional gross-revenue or other-person contract list.
+Existing finance cards retain their own permission checks: platform revenue, client spend or personal net compensation is returned according to role as before. Role-priced job projections expose only the current lecturer's applicable quote; management without gross-finance permission receives no monetary values for those offers. The preview cards request no additional gross-revenue or other-person contract list. Private policy percentages are not dashboard defaults. See [delegated roles and private compensation](DELEGATED_ROLES_PRICING.md).
+
+The dashboard can also show the permission-aware [welcome guide](WELCOME_GUIDE.md). Its progress is private to the account and changes only after online server confirmation. It remains distinct from the explicit Portal tour's per-account tab-session progress and the public fictional demo. Opening guidance grants no role, completes no business action and exposes no other account's data.
 
 ## Freshness without extra history queries
 

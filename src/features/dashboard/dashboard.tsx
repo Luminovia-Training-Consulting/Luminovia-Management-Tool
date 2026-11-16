@@ -1,3 +1,7 @@
+/**
+ * Personal dashboard with matching offers, confirmed assignments and feature widgets. Derive
+ * metrics from loaded authorized projections; management views follow current capabilities.
+ */
 import { useState } from "react";
 import { FinancialSummaryCards } from "../commercial/revenue";
 import { Link } from "react-router-dom";
@@ -24,6 +28,7 @@ import { ErrorState, Loading, TextLink } from "../../components/common";
 import { validZone } from "../../lib/dates";
 import { DashboardCalendarPreview, DashboardWidgets } from "./widgets";
 import "./i18n";
+/** Compose personal entry points, actual offers and confirmed assignments from shared queries. */
 export function Dashboard() {
   const { t, i18n } = useTranslation();
   const [openedAt] = useState(() => Date.now());

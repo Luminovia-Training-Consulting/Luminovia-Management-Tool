@@ -1,3 +1,7 @@
+/**
+ * Shared catalogue search, detail and versioned maintenance. Conflicts require explicit
+ * reloading instead of silently overwriting drafts or historical references.
+ */
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -28,6 +32,7 @@ import {
 import "./i18n";
 import "./taxonomy.css";
 
+/** Recognize SQLSTATE 40001 as a version conflict requiring deliberate reload. */
 function isConflict(error: unknown) {
   return (
     typeof error === "object" &&
@@ -37,6 +42,7 @@ function isConflict(error: unknown) {
   );
 }
 
+/** Retain local metadata/hierarchy drafts and accept only confirmed changes against the reviewed version. */
 function TopicEditor({
   topic,
   parents,
@@ -182,6 +188,7 @@ function TopicEditor({
   );
 }
 
+/** Combine explicit search, current capabilities and a version-conflict-aware catalogue editor. */
 export function TaxonomyPage() {
   const { t, i18n } = useTranslation("taxonomy");
   const { session } = useAuth();
