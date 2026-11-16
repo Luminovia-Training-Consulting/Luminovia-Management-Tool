@@ -1,5 +1,11 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — native acceptance exposed stale picker fixture
+
+The exact d4027d2native candidate passed the actual26→35migration replay, retained password/MFA/roles/private appointment/scanned bytes, TLS boundaries and the first16business API suites. It then returned exit1 in job-picker-api-check: the old fixture expected an administrator's self-role no-op to succeed, while the released authority correctly returns42501. Candidate cleanup completed and no passing full-native witness is claimed.
+
+The bounded test correction now proves that exact self-role request is denied, its actual RLS-visible role set remains unchanged and it creates no audit mutation, before retaining the independent existing-token suspension assertion. No application permission or test gate is relaxed. The already-running canonical snapshot still contains the preceding fixture and is allowed to finish naturally. The next shared QA slot is reserved for another owner's job-contact test; no competing full retry is started. A separate random-port native rerun can verify this correction without that slot.
+
 ## 16 November 2026 — local M7/English acceptance checkpoint
 
 The owned integration now includes accepted main0a6002a and both original PR10/PR13 histories, with35migrations/160public functions. All26released SQL files remain byte-identical; the eight incoming M7 bodies use the already canonical20261116022730–37names, and the separately prepared role-quote migration follows at20261116045609. Private quotes, cursor context and exact actor-bound consent are retained; PR19 automation is not included.
