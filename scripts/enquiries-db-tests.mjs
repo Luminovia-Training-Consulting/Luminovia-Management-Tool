@@ -1,8 +1,106 @@
 /** Real isolated PostgreSQL intake, permissions, idempotency and conversion. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { spawn } from "node:child_process";
+import { z } from "zod";
 import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
-await withTestDatabase("enquiries_test", async ({ sql, actor }) => {
+await withTestDatabase("enquiries_test", async (fixture) => {
+  const { sql, actor, container, database } = fixture;
+  /** Keep a real owned transaction open until the test explicitly releases it.
+   * Readiness comes from a SQL marker, and wait assertions inspect actual lock
+   * blockers; elapsed sleeps never stand in for a concurrency assertion. */
+  const hold = async (text) => {
+    const marker = `enquiry_gate_${randomUUID().replaceAll("-", "")}`;
+    const child = spawn(
+      "docker",
+      [
+        "exec",
+        "-i",
+        container,
+        "psql",
+        "-U",
+        "postgres",
+        "-d",
+        database,
+        "-X",
+        "-qAt",
+        "-v",
+        "ON_ERROR_STOP=1",
+      ],
+      { stdio: ["pipe", "pipe", "pipe"] },
+    );
+    let output = "",
+      error = "",
+      released = false;
+    const closed = new Promise((resolve, reject) => {
+      child.on("error", reject);
+      child.on("close", (code) =>
+        code === 0
+          ? resolve()
+          : reject(Error(error || "Owned enquiry lock transaction failed")),
+      );
+    });
+    // Attach a rejection handler immediately while readiness is being awaited.
+    void closed.catch(() => {});
+    const ready = new Promise((resolve, reject) => {
+      const timer = setTimeout(
+        () =>
+          reject(Error("Owned enquiry lock transaction did not become ready")),
+        10000,
+      );
+      child.stdout.on("data", (chunk) => {
+        output += chunk;
+        if (output.includes(marker)) {
+          clearTimeout(timer);
+          resolve();
+        }
+      });
+      child.stderr.on("data", (chunk) => {
+        error += chunk;
+      });
+      child.on("error", (value) => {
+        clearTimeout(timer);
+        reject(value);
+      });
+      child.once("close", () => {
+        clearTimeout(timer);
+        reject(
+          Error(
+            error || "Owned enquiry lock transaction exited before readiness",
+          ),
+        );
+      });
+    });
+    child.stdin.write(
+      `begin;set local application_name=${q(marker)};${text};select ${q(marker)};\n`,
+    );
+    await ready;
+    return {
+      finish: async (beforeCommit = "") => {
+        if (!released) {
+          released = true;
+          child.stdin.end(`${beforeCommit}\ncommit;\n\\q\n`);
+        }
+        await closed;
+      },
+    };
+  };
+  /** Poll a specific fixture statement until PostgreSQL proves it is blocked. */
+  const waitBlocked = async (identifier) => {
+    const until = Date.now() + 10000;
+    while (Date.now() < until) {
+      if (
+        (await sql(
+          `select exists(select 1 from pg_stat_activity where datname=current_database() and pid<>pg_backend_pid() and (application_name=${q(identifier)} or position(${q(identifier)} in query)>0) and cardinality(pg_blocking_pids(pid))>0)`,
+        )) === "t"
+      )
+        return;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    throw Error(
+      "Expected owned enquiry statement never reached a proven lock wait",
+    );
+  };
   const manager = randomUUID(),
     admin = randomUUID(),
     lecturer = randomUUID(),
@@ -105,6 +203,9 @@ await withTestDatabase("enquiries_test", async ({ sql, actor }) => {
         { ...payload, consent: false },
         { ...payload, company_name: "" },
         { ...payload, email: "x\n@bad.invalid" },
+        { ...payload, email: 'bad"@example.invalid' },
+        { ...payload, email: "first..last@example.invalid" },
+        { ...payload, email: ".first@example.invalid" },
         { ...payload, time_zone: "not-a-zone" },
         { ...payload, message: [] },
       ])
@@ -112,6 +213,33 @@ await withTestDatabase("enquiries_test", async ({ sql, actor }) => {
           receive(body, randomUUID()),
           /Invalid website enquiry/,
         );
+    },
+  );
+  await check(
+    "Every acknowledged conventional email remains readable by the frontend consumer schema",
+    async () => {
+      for (const email of [
+        "first.last+training@example.invalid",
+        "o'brien@example.invalid",
+        "member_name-2@example.invalid",
+        "CAPITAL@EXAMPLE.INVALID",
+      ]) {
+        const current = await receive(
+          {
+            ...payload,
+            email,
+            company_name: "Fictional Email Consumer Company",
+          },
+          randomUUID(),
+          "c".repeat(64),
+        );
+        const received = await detail(manager, current);
+        assert.equal(
+          z.email().safeParse(received.payload.email).success,
+          true,
+          email,
+        );
+      }
     },
   );
   await check(
@@ -135,7 +263,7 @@ await withTestDatabase("enquiries_test", async ({ sql, actor }) => {
       const page = JSON.parse(
         await actor(
           manager,
-          "select public.enquiry_inbox('Fictional')",
+          "select public.enquiry_inbox('Fictional Training Company')",
           "aal2",
         ),
       );
@@ -334,6 +462,201 @@ await withTestDatabase("enquiries_test", async ({ sql, actor }) => {
           "aal2",
         ),
         /permission denied/,
+      );
+    },
+  );
+  await check(
+    "An enquiry decision holding authority serializes a concurrent role/activity revocation before its commit",
+    async () => {
+      const request = randomUUID(),
+        revokeTag = `enquiry_revoke_${randomUUID()}`;
+      const current = await receive(
+        { ...payload, topic: "Fictional authority lock order" },
+        randomUUID(),
+        otherSender,
+      );
+      const gate = await hold(
+        `select id from private.website_enquiries where id='${current}' for update`,
+      );
+      try {
+        const mutation = manage(
+          manager,
+          current,
+          "note",
+          { note: "Authorised before revocation commits" },
+          1,
+          request,
+        );
+        await waitBlocked(request);
+        const revoked = sql(
+          `begin;set local application_name=${q(revokeTag)};delete from public.user_roles where user_id='${manager}';update public.profiles set active=false where id='${manager}';commit;`,
+        );
+        await waitBlocked(revokeTag);
+        await gate.finish();
+        await Promise.all([mutation, revoked]);
+        assert.equal(
+          await sql(
+            `select version from private.website_enquiries where id='${current}'`,
+          ),
+          "2",
+        );
+        await assert.rejects(
+          manage(
+            manager,
+            current,
+            "note",
+            { note: "Authorised before revocation commits" },
+            1,
+            request,
+          ),
+          /management and MFA required/,
+        );
+        assert.equal(
+          await sql(
+            `select count(*) from private.website_enquiry_events where enquiry_id='${current}' and action='note'`,
+          ),
+          "1",
+        );
+      } finally {
+        await gate.finish();
+      }
+      await sql(
+        `update public.profiles set active=true where id='${manager}';insert into public.user_roles values('${manager}','management')`,
+      );
+    },
+  );
+  await check(
+    "A revocation holding the profile first denies a blocked mutation without an event, receipt or version increment",
+    async () => {
+      const request = randomUUID();
+      const current = await receive(
+        { ...payload, topic: "Fictional revocation wins" },
+        randomUUID(),
+        otherSender,
+      );
+      const gate = await hold(
+        `select id from public.profiles where id='${manager}' for update`,
+      );
+      try {
+        const denied = assert.rejects(
+          manage(
+            manager,
+            current,
+            "note",
+            { note: "Must never be committed" },
+            1,
+            request,
+          ),
+          /management and MFA required/,
+        );
+        await waitBlocked(request);
+        await gate.finish(
+          `delete from public.user_roles where user_id='${manager}';update public.profiles set active=false where id='${manager}';`,
+        );
+        await denied;
+        assert.equal(
+          await sql(
+            `select version from private.website_enquiries where id='${current}'`,
+          ),
+          "1",
+        );
+        assert.equal(
+          await sql(
+            `select count(*) from private.website_enquiry_events where enquiry_id='${current}' and action='note'`,
+          ),
+          "0",
+        );
+        assert.equal(
+          await sql(
+            `select count(*) from private.website_enquiry_requests where request_id='${request}'`,
+          ),
+          "0",
+        );
+      } finally {
+        await gate.finish();
+      }
+      await sql(
+        `update public.profiles set active=true where id='${manager}';insert into public.user_roles values('${manager}','management')`,
+      );
+    },
+  );
+  await check(
+    "A capability change committed during an enquiry-row wait is rechecked before any mutation",
+    async () => {
+      const request = randomUUID();
+      const current = await receive(
+        { ...payload, topic: "Fictional post-wait authority" },
+        randomUUID(),
+        otherSender,
+      );
+      const gate = await hold(
+        `select id from private.website_enquiries where id='${current}' for update`,
+      );
+      try {
+        const denied = assert.rejects(
+          manage(
+            manager,
+            current,
+            "note",
+            { note: "Must not pass a stale capability check" },
+            1,
+            request,
+          ),
+          /management and MFA required/,
+        );
+        await waitBlocked(request);
+        await sql(
+          "delete from public.role_permissions where role='management' and permission='organisations.manage'",
+        );
+        await gate.finish();
+        await denied;
+        assert.equal(
+          await sql(
+            `select version from private.website_enquiries where id='${current}'`,
+          ),
+          "1",
+        );
+        assert.equal(
+          await sql(
+            `select count(*) from private.website_enquiry_requests where request_id='${request}'`,
+          ),
+          "0",
+        );
+      } finally {
+        await gate.finish();
+        await sql(
+          "insert into public.role_permissions values('management','organisations.manage') on conflict do nothing",
+        );
+      }
+    },
+  );
+  await check(
+    "A conversion receipt cannot be reused after its separate course capability is revoked",
+    async () => {
+      const current = await receive(
+        { ...payload, topic: "Fictional conversion receipt authority" },
+        randomUUID(),
+        otherSender,
+      );
+      const organisation = (await detail(manager, id)).organisation_id;
+      await manage(
+        manager,
+        current,
+        "link_customer",
+        { organisation_id: organisation },
+        1,
+      );
+      const request = randomUUID();
+      await manage(manager, current, "convert", conversion, 2, request);
+      await sql(
+        "delete from public.role_permissions where role='management' and permission='courses.manage'",
+      );
+      await assert.rejects(
+        manage(manager, current, "convert", conversion, 2, request),
+        /Course management and MFA required/,
+      );
+      await sql(
+        "insert into public.role_permissions values('management','courses.manage')",
       );
     },
   );

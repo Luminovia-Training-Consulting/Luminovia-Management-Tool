@@ -74,6 +74,10 @@ and 100 per rolling 24 hours are accepted for one integration sender. Retrying t
 same UUID and identical validated payload returns the original record, including
 after management conversion; a changed retry returns 409. A retry consumes no
 additional quota and creates no duplicate history or notifications.
+HTTP and SQL accept the same conventional email-address subset as the detail
+consumer. Quoted local parts, leading/consecutive dots and control characters
+reject before acknowledgement; an accepted address must remain readable in the
+management detail projection.
 
 The successful response is `202 {"received":true,"receipt":"<your UUID>"}` only
 after a confirmed database response. It exposes no internal enquiry/customer ID,
@@ -91,6 +95,11 @@ tables are private and RLS-enabled; browser table writes are unavailable. The
 original validated payload, including submitted identity and consent, remains
 unchanged by triage. Interface text supports DE/EN and existing light/dark/system
 themes. Data stays in actor-scoped memory, outside service-worker caches.
+Mutations first hold the active caller's profile for share, then acquire the actor
+request lock and enquiry row. Supported account changes take that profile for
+update, so a decision and role/activity revocation serialize. Permissions are
+checked again after the business-lock wait and before a historical receipt or
+new write; a conversion retry also requires its current course capability.
 
 Management can search the queue, assign an eligible active colleague, add an
 append-only note and move Received → Under Review → Awaiting Customer or Closed.
@@ -130,12 +139,16 @@ normal or hosted endpoint.
 Executed focused evidence:
 
 - `PORTAL_DB_CONTAINER=<owned-disposable-container> node scripts/enquiries-db-tests.mjs`:
-  11 real PostgreSQL groups pass, including simultaneous retries/conversions,
+  16 real PostgreSQL groups pass, including simultaneous retries/conversions,
   sender limits, denial/MFA/revocation, customer/contact idempotency, rollback and
   preserved original records. Actual `plpgsql_check` reports zero body warnings
   or errors for all five new PL/pgSQL implementations.
+  The concurrency cases use explicitly held SQL transactions and observed
+  `pg_blocking_pids`, covering both revocation orderings and a capability change
+  committed during an enquiry-row wait. No fixed sleep substitutes for a lock assertion.
 - `npx --no-install deno test supabase/functions/website-enquiries/handler_test.ts`:
-  seven request/authentication/validation/acknowledgement cases pass.
+  eight request/authentication/validation/acknowledgement cases pass, including
+  acknowledged addresses checked by the actual frontend Zod email validator.
 - `npx --no-install deno check supabase/functions/website-enquiries/index.ts scripts/testing/enquiries-edge-http.ts`:
   both deployed and isolated HTTP adapters typecheck.
 - Seven frontend unit/component tests pass for authority gating, literal original

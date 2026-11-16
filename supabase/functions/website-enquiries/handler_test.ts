@@ -1,5 +1,6 @@
 /** Edge request-boundary regressions with a controlled RPC double and no real mail/site writes. */
 import assert from "node:assert/strict";
+import { z } from "npm:zod@4.6.7";
 import { createWebsiteEnquiryHandler } from "./handler.ts";
 const submission = "11111111-1111-4111-8111-111111111111";
 const id = "22222222-2222-4222-8222-222222222222";
@@ -129,6 +130,9 @@ Deno.test(
     for (const body of [
       { ...payload, company_name: "" },
       { ...payload, email: "x\r\nBcc: a@b.invalid" },
+      { ...payload, email: 'bad"@example.invalid' },
+      { ...payload, email: "first..last@example.invalid" },
+      { ...payload, email: ".first@example.invalid" },
       { ...payload, consent: false },
       { ...payload, privacy_notice_version: "unreviewed-notice" },
       { ...payload, time_zone: "not/a-zone" },
@@ -140,6 +144,27 @@ Deno.test(
       const f = fixture();
       assert.equal((await f.handler(f.request(body))).status, 400);
       assert.equal(f.calls.length, 0);
+    }
+  },
+);
+Deno.test(
+  "Acknowledged email addresses satisfy the exact installed frontend consumer validator",
+  async () => {
+    for (const email of [
+      "first.last+training@example.invalid",
+      "o'brien@example.invalid",
+      "member_name-2@example.invalid",
+      "CAPITAL@EXAMPLE.INVALID",
+    ]) {
+      const f = fixture();
+      assert.equal(
+        (await f.handler(f.request({ ...payload, email }))).status,
+        202,
+      );
+      const recorded = (
+        f.calls[0] as [unknown, unknown, Record<string, unknown>]
+      )[2];
+      assert.equal(z.email().safeParse(recorded.email).success, true);
     }
   },
 );

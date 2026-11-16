@@ -105,7 +105,9 @@ function validatedInput(
     !text.contact_name ||
     text.contact_name.length > 120 ||
     text.email.length > 254 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text.email) ||
+    !/^(?:[A-Za-z0-9_+'-]+\.)*[A-Za-z0-9_+'-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9-]*\.)+[A-Za-z]{2,}$/.test(
+      text.email,
+    ) ||
     text.phone.length > 60 ||
     /[\u0000-\u001f\u007f]/.test(text.phone) ||
     !text.topic ||

@@ -51,7 +51,9 @@ begin
  or exists(select 1 from jsonb_object_keys(p_payload) k where k not in ('company_name','contact_name','email','phone','topic','message','preferred_dates','duration','delivery_type','time_zone','locale','privacy_notice_version','consent'))
  or exists(select 1 from unnest(array['company_name','contact_name','email','phone','topic','message','preferred_dates','duration','delivery_type','time_zone','locale','privacy_notice_version']) k where jsonb_typeof(p_payload->k) is distinct from 'string')
  or length(trim(p_payload->>'company_name')) not between 1 and 200 or length(trim(p_payload->>'contact_name')) not between 1 and 120
- or length(p_payload->>'email') not between 3 and 254 or p_payload->>'email' !~'^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$'
+ -- Match the conventional address subset accepted by the browser's z.email()
+ -- projection. An acknowledged contact must not make its management detail unreadable.
+ or length(p_payload->>'email') not between 3 and 254 or p_payload->>'email' !~'^(?:[A-Za-z0-9_+''-]+\.)*[A-Za-z0-9_+''-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9-]*\.)+[A-Za-z]{2,}$'
  or length(p_payload->>'phone')>60 or (p_payload->>'phone')~'[[:cntrl:]]' or length(trim(p_payload->>'topic')) not between 1 and 200
  or length(trim(p_payload->>'message')) not between 1 and 12000 or length(p_payload->>'preferred_dates')>1000 or length(p_payload->>'duration')>200
  or p_payload->>'delivery_type' not in ('online','onsite','flexible') or p_payload->>'locale' not in ('de','en')
@@ -122,7 +124,10 @@ begin
 end;$$;
 create function public.enquiry_detail(p_enquiry_id uuid) returns jsonb language sql stable security invoker set search_path='' as $$select private.enquiry_detail(p_enquiry_id);$$;
 
--- Lock order is caller request namespace then enquiry row. Retry identity is
+-- Lock order is active caller profile, caller request namespace, then enquiry row.
+-- Supported role/activity mutations acquire that profile for update, so they
+-- cannot revoke authority between an authorised enquiry decision and its commit.
+-- Retry identity is
 -- checked before CAS so an already committed decision remains safely retryable.
 -- Customer/contact and course conversion run in this same transaction; failures
 -- roll back all derived records, while the original validated payload is untouched.
@@ -130,10 +135,15 @@ create function private.manage_enquiry(p_enquiry_id uuid,p_action text,p_payload
 language plpgsql security definer set search_path='' as $$
 declare enquiry private.website_enquiries; previous private.website_enquiry_requests; signature jsonb; target uuid; reason text:=''; run_payload jsonb; template uuid;
 begin
- if not private.has_permission('organisations.manage') then raise exception 'Enquiry management and MFA required' using errcode='42501'; end if;
+ perform 1 from public.profiles where id=auth.uid() and active for share;
+ if not found or not private.has_permission('organisations.manage') then raise exception 'Enquiry management and MFA required' using errcode='42501'; end if;
  if p_action is null or p_action not in ('status','assign','link_customer','create_customer','convert','note') or p_payload is null or jsonb_typeof(p_payload)<>'object' or p_expected_version is null or p_request_id is null then raise exception 'Invalid enquiry action' using errcode='22023'; end if;
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('enquiry-actor:'||auth.uid()::text,0));
  select * into enquiry from private.website_enquiries where id=p_enquiry_id for update;if not found then raise exception 'Enquiry unavailable' using errcode='42501'; end if;
+ -- Revalidate after business-lock waits and before either an old receipt or a
+ -- new mutation is returned. Conversion receipts retain the course capability.
+ if not private.has_permission('organisations.manage') then raise exception 'Enquiry management and MFA required' using errcode='42501'; end if;
+ if p_action='convert' and not private.has_permission('courses.manage') then raise exception 'Course management and MFA required' using errcode='42501';end if;
  signature:=jsonb_build_object('id',p_enquiry_id,'action',p_action,'payload',p_payload,'version',p_expected_version);
  select * into previous from private.website_enquiry_requests where actor_id=auth.uid() and request_id=p_request_id;
  if found then if previous.signature<>signature then raise exception 'Enquiry retry conflict' using errcode='22023';end if;return previous.enquiry_id;end if;
