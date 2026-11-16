@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## All-open-PR merge coordination — PR26
+
+- [x] Integrate accepted main7fbdb95, preserve the complete product ledger and mandatory signed PR delivery.
+- [x] Pass21 focused documentation/metadata/publication-policy cases, handbook formatting and whitespace checks.
+- [ ] Observe every current-head required check and perform the user-authorised protected PR26 merge; continue the remaining open PRs sequentially without publishing a release.
+
 ## Full PR acceptance critical path — further authorised continuation
 
 - [x] Measure two-worker SQL5m07s, complete native/retained-data success, and historical full browser13.9m versus13s Chromium setup; preserve canonical SQL lint/advisor and native-engine checks.

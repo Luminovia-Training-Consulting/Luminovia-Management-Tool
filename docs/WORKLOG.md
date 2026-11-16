@@ -1,5 +1,9 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — all-open-PR merge coordination, PR26
+
+The user now expressly authorises making all open PRs mergeable and merging them sequentially. This supersedes earlier queue reservations. Integrated accepted main7fbdb95/PR36 into PR26 without changing application, migration, workflow or rule behavior. All21 documentation/privacy/metadata/publication-policy cases and AGENTS formatting pass on the integrated source; whitespace checks pass. Required current-head remote CI and the protected merge remain pending until actually observed. No release, deployment, real mail or normal data action is requested.
+
 ## 16 November 2026 — separate full-PR browser and system acceptance
 
 The user requested a further safe reduction after the two-worker/scope implementation. Actual8f29147 SQL completed in5m07s versus608687f10m10.6s (about50%less), and the complete retained-data/native check passed. The final8f29147 Portal43860971674 passed in32m35s, including114desktop/mobile and2built-PWA cases, and the user mergedPR34 as signedmain c528100. This further work is an isolated follow-up from that accepted tree. The previous actual-main application log spent13.9minutes in114desktop/mobile browser cases, with only13seconds Chromium setup; browser caching would not address this critical path. Full canonical SQL is deliberately retained: its native engine, database lint and advisor checks are additional evidence beyond the isolated SQL pool.
