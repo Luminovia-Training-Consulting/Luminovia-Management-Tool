@@ -3,8 +3,19 @@
  * retry identity, actor-scoped reads and targeted cache refresh. These controlled
  * transport fixtures complement the separate real PostgreSQL/API acceptance.
  */
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, type QueryKey } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  deliveryHistoryQuery,
+  deliverySessionQuery,
+  deliverySessionsQuery,
+} from "../delivery/api";
+import { readinessQuery } from "../readiness/api";
+import {
+  replacementAssignmentsQuery,
+  replacementQuery,
+} from "../replacements/api";
+import { supportContextQuery, supportTicketQuery } from "../support/api";
 import {
   cancelAssignment,
   lifecycleQuery,
@@ -243,5 +254,43 @@ describe("lifecycle reads and connected cache refresh", () => {
     }
     for (const key of unrelated)
       expect(cache.getQueryState(key)?.isInvalidated).toBe(false);
+  });
+
+  it("refreshes actual preparation, delivery and replacement views while retaining private support state", async () => {
+    const cache = client();
+    // Build the released modules' actual keys, including nested detail/history
+    // views. Merely calling invalidateQueries with a new prefix must not count
+    // as success if these cached projections remain fresh after an allocation.
+    const resource = "dfd10801-30b5-49a9-85ae-f30ede7be3a4";
+    const affected: QueryKey[] = [
+      readinessQuery("actor-a").queryKey,
+      readinessQuery("actor-a", resource).queryKey,
+      deliverySessionsQuery("actor-a", "own").queryKey,
+      deliverySessionsQuery("actor-a", "management").queryKey,
+      deliverySessionsQuery("actor-a", "customer").queryKey,
+      deliverySessionQuery("actor-a", resource).queryKey,
+      deliveryHistoryQuery("actor-a", resource).queryKey,
+      replacementQuery("actor-a").queryKey,
+      replacementAssignmentsQuery("actor-a").queryKey,
+    ];
+    const unrelated: QueryKey[] = [
+      supportContextQuery("actor-a").queryKey,
+      supportTicketQuery("actor-a", resource).queryKey,
+    ];
+    // Inactive cache entries retain their in-memory data; this local refresh
+    // neither acknowledges a server mutation nor contacts another private API.
+    const retained = { title: "Fictional cached projection" };
+    for (const key of [...affected, ...unrelated])
+      cache.setQueryData(key, retained);
+
+    await refreshJobState(cache);
+
+    for (const key of affected)
+      expect(cache.getQueryState(key)?.isInvalidated).toBe(true);
+    for (const key of unrelated)
+      expect(cache.getQueryState(key)?.isInvalidated).toBe(false);
+    for (const key of [...affected, ...unrelated])
+      expect(cache.getQueryData(key)).toBe(retained);
+    expect(rpc).not.toHaveBeenCalled();
   });
 });
