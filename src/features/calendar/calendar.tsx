@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import "../availability/i18n";
 import { assignmentJobTitlesQuery } from "../jobs/discovery-api";
 import { runsQuery, templatesQuery } from "../operations/data";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { DatesSetArg } from "@fullcalendar/core";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -241,11 +241,19 @@ export function CalendarPage() {
             .map((event) => [event.id, event]),
         ).values(),
       ];
+  const visibleRange = useRef(range);
   const handleDatesSet = useCallback((info: DatesSetArg) => {
     const next = { from: info.start.toISOString(), to: info.end.toISOString() };
-    setRange((previous) =>
-      previous.from === next.from && previous.to === next.to ? previous : next,
-    );
+    // Locale/view options can rebuild FullCalendar's DateProfile without moving
+    // its instants. Preserve the captured detail and query key for those signals.
+    if (
+      visibleRange.current.from === next.from &&
+      visibleRange.current.to === next.to
+    )
+      return;
+    // Update synchronously: multiple navigation callbacks can precede a render.
+    visibleRange.current = next;
+    setRange(next);
     setGlobalID(null);
   }, []);
   const activeGlobal = globalRows.find((event) => event.id === globalID);

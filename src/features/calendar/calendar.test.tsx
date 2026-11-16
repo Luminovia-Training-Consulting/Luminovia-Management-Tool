@@ -1,11 +1,17 @@
-import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { useEffect } from "react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { CalendarPage } from "./calendar";
-import "../../lib/i18n";
-const state = vi.hoisted(() => ({ claims: [] as unknown[], rpc: vi.fn() }));
+import i18n from "../../lib/i18n";
+const state = vi.hoisted(() => ({
+  claims: [] as unknown[],
+  rpc: vi.fn(),
+  datesSetOnLocale: false,
+  callbacks: [] as unknown[],
+}));
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "actor" } } }),
 }));
@@ -57,32 +63,73 @@ vi.mock("../operations/data", () => ({
   }),
 }));
 vi.mock("@fullcalendar/react", () => ({
-  default: ({
+  default: function Calendar({
     events,
     datesSet,
+    eventClick,
+    locale,
   }: {
-    events: { id: string; title: string; url?: string }[];
+    events: {
+      id: string;
+      title: string;
+      url?: string;
+      extendedProps?: { kind: string };
+    }[];
     datesSet?: (value: { start: Date; end: Date }) => void;
-  }) => (
-    <div>
-      <button
-        onClick={() =>
-          datesSet?.({
-            start: new Date("2060-03-01T00:00Z"),
-            end: new Date("2060-04-10T00:00Z"),
-          })
-        }
-      >
-        Change visible range
-      </button>
-      {events.map((event) => (
-        <a key={event.id} href={event.url}>
-          {event.title}
-        </a>
-      ))}
-    </div>
-  ),
+    eventClick?: (value: {
+      event: { id: string; extendedProps: { kind?: string } };
+      jsEvent: { preventDefault: () => void };
+    }) => void;
+    locale: unknown;
+  }) {
+    state.callbacks.push(datesSet);
+    // FullCalendar rebuilds its DateProfile when locale options change and may
+    // deliver datesSet again even though the visible instants remain identical.
+    useEffect(() => {
+      if (state.datesSetOnLocale)
+        datesSet?.({
+          start: new Date("2060-03-01T00:00Z"),
+          end: new Date("2060-04-10T00:00Z"),
+        });
+    }, [locale, datesSet]);
+    return (
+      <div>
+        <button
+          onClick={() =>
+            datesSet?.({
+              start: new Date("2060-03-01T00:00Z"),
+              end: new Date("2060-04-10T00:00Z"),
+            })
+          }
+        >
+          Change visible range
+        </button>
+        {events.map((event) => (
+          <a
+            key={event.id}
+            href={event.url}
+            onClick={(jsEvent) =>
+              eventClick?.({
+                event: {
+                  id: event.id,
+                  extendedProps: event.extendedProps ?? {},
+                },
+                jsEvent,
+              })
+            }
+          >
+            {event.title}
+          </a>
+        ))}
+      </div>
+    );
+  },
 }));
+beforeEach(async () => {
+  await i18n.changeLanguage("de");
+  state.datesSetOnLocale = false;
+  state.callbacks = [];
+});
 afterEach(() => {
   cleanup();
   state.claims = [];
@@ -202,4 +249,108 @@ it("queries only the visible global range on navigation, without remounting or c
       p_limit: 50,
     }),
   );
+});
+
+it("preserves the same global-event dialog/link across locale and equal-range signals/refetch, but closes it on real navigation", async () => {
+  const event = {
+    id: "c8000000-0000-4000-8000-000000000001",
+    title: "Fictional published lesson",
+    description: "Authored <script> description stays plain text",
+    link_url: "https://example.invalid/lesson",
+    starts_at: "2060-03-28T00:30:45Z",
+    ends_at: "2060-03-28T02:30:45Z",
+    time_zone: "Europe/Berlin",
+    published: true,
+    archived_at: null,
+    version: 1,
+    updated_at: "2060-01-01T00:00:00Z",
+  };
+  state.datesSetOnLocale = true;
+  state.rpc.mockImplementation(() => {
+    const result = Promise.resolve({
+      data: { items: [event], has_more: false, next_cursor: null },
+      error: null,
+    });
+    return Object.assign(result, { abortSignal: () => result });
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Globale Termine" }),
+  );
+  await user.click(await screen.findByText(event.title));
+  const dialog = screen.getByRole("dialog");
+  const signal = state.callbacks.at(-1) as (range: {
+    start: Date;
+    end: Date;
+  }) => void;
+  expect(within(dialog).getByText(event.description)).toBeInTheDocument();
+  expect(
+    within(dialog).getByRole("link", { name: "Weiterführenden Link öffnen" }),
+  ).toHaveAttribute("href", event.link_url);
+  expect(state.rpc).toHaveBeenCalledTimes(1);
+  await act(() => i18n.changeLanguage("en"));
+  expect(screen.getByRole("dialog")).toBe(dialog);
+  expect(
+    within(dialog).getByRole("link", { name: "Open related link" }),
+  ).toHaveAttribute("rel", "noopener noreferrer");
+  expect(within(dialog).getByText(event.description)).toBeInTheDocument();
+  expect(state.rpc).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    signal({
+      start: new Date("2060-03-01T00:00Z"),
+      end: new Date("2060-04-10T00:00Z"),
+    });
+  });
+  expect(screen.getByRole("dialog")).toBe(dialog);
+  expect(state.rpc).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    await client.invalidateQueries({ queryKey: ["global-events"] });
+  });
+  expect(screen.getByRole("dialog")).toBe(dialog);
+  expect(state.rpc).toHaveBeenCalledTimes(2);
+  expect(new Set(state.callbacks).size).toBe(1);
+  await act(async () => {
+    // FullCalendar can navigate A→B→A before React commits a render. Comparing
+    // a stale render's range would accidentally leave B selected and query it.
+    signal({
+      start: new Date("2060-04-10T00:00Z"),
+      end: new Date("2060-05-20T00:00Z"),
+    });
+    signal({
+      start: new Date("2060-03-01T00:00Z"),
+      end: new Date("2060-04-10T00:00Z"),
+    });
+  });
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(state.rpc).toHaveBeenCalledTimes(2);
+  await user.click(screen.getByText(event.title));
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  expect(state.rpc).toHaveBeenCalledTimes(2);
+  await act(async () => {
+    signal({
+      start: new Date("2060-04-10T00:00Z"),
+      end: new Date("2060-05-20T00:00Z"),
+    });
+  });
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(state.rpc).toHaveBeenCalledTimes(3);
+  expect(state.rpc).toHaveBeenLastCalledWith(
+    "global_calendar_events",
+    expect.objectContaining({
+      p_from: "2060-04-10T00:00:00.000Z",
+      p_to: "2060-05-20T00:00:00.000Z",
+    }),
+  );
+  expect(new Set(state.callbacks).size).toBe(1);
+  client.clear();
 });
