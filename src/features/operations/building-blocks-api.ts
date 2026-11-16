@@ -1,5 +1,5 @@
 /**
- * Source bindings from CBW templates through actual course runs to derived offers. Source
+ * Source bindings from course templates through actual course runs to derived offers. Source
  * revisions let the server reject stale offer drafts instead of silently replacing sessions.
  */
 import { queryOptions } from "@tanstack/react-query";

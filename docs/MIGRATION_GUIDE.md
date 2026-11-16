@@ -1,6 +1,6 @@
 # Reading and safely extending SQL migrations
 
-This guide preserves the 24 original baseline migrations and the two released role/pricing/welcome migrations byte-for-byte. The following operational extension adds six separate migration files; source availability is not installation evidence. Accepted SQL hashes participate in preview/update/recovery checks, so future changes use new additive files rather than editing released history.
+This guide preserves all 27 accepted source migrations, including the customer-neutral forward migration, byte-for-byte. Six separately versioned operational migrations follow them. Source availability does not claim installation; accepted hashes participate in preview/update/recovery checks, and released files are never rewritten.
 
 The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API inventory. [ERD](ERD.md), [DEVELOPER_GUIDE](DEVELOPER_GUIDE.md) and the relevant feature guides explain how the parts connect.
 
@@ -136,13 +136,13 @@ Source: [20261115155038_resource_comments.sql](../supabase/migrations/2026111515
 
 Test entry point: [comments-db-tests.mjs](../scripts/comments-db-tests.mjs).
 
-### 17. CBW templates and offers linked to their sources
+### 17. Source-linked course templates and teaching offers
 
-Source: [20261115155208_cbw_building_block_templates.sql](../supabase/migrations/20261115155208_cbw_building_block_templates.sql).
+Source version: `20261115155208` in [the immutable migration directory](../supabase/migrations). Its historical filename and bytes remain unchanged; public guidance uses the version identifier.
 
 The building block and exact source revision remain separate from editable templates. Hashes, filenames and page references record provenance without shipping the original PDFs. `course_run_job_defaults` and `create_course_run_job` bind the current source revision, actual session IDs and idempotent financial inputs.
 
-Test entry point: [cbw-db-tests.mjs](../scripts/cbw-db-tests.mjs).
+Test entry point: [course-building-blocks-db-tests.mjs](../scripts/course-building-blocks-db-tests.mjs).
 
 ### 18. Finite schedule intervals
 
@@ -188,7 +188,7 @@ Test entry point: [availability-db-tests.mjs](../scripts/availability-db-tests.m
 
 Source: [20261115210814_job_capacity_and_board.sql](../supabase/migrations/20261115210814_job_capacity_and_board.sql).
 
-Only new offers explicitly priced per position receive 1–20 positions. Legacy, client and CBW offers retain their single-position meaning. `claim_job` locks the person and offer, checks available positions and reserves every session atomically. Lifecycle, cancellation, invoice review and client/revenue projections account for active positions while preserving history.
+Only new offers explicitly priced per position receive 1–20 positions. Legacy, client and course-originated offers retain their single-position meaning. `claim_job` locks the person and offer, checks available positions and reserves every session atomically. Lifecycle, cancellation, invoice review and client/revenue projections account for active positions while preserving history.
 
 Test entry point: [jobs-capacity-db-tests.mjs](../scripts/jobs-capacity-db-tests.mjs).
 
@@ -218,7 +218,21 @@ Own-account invoker RPCs read and version personal step/status state in the unex
 
 Test entry points: [welcome-db-tests.mjs](../scripts/welcome-db-tests.mjs), [welcome-api-check.mjs](../scripts/welcome-api-check.mjs), [welcome-guide.spec.ts](../tests/e2e/welcome-guide.spec.ts) and [selfhost-candidate-check.test.mjs](../deploy/hostinger/maintenance/selfhost-candidate-check.test.mjs). [Welcome guide](WELCOME_GUIDE.md).
 
-### 27. Derived course readiness and scoped preparation
+### 27. Customer-neutral catalogue labels and reusable templates
+
+Source: [20261116032005_customer_neutral_course_catalogue.sql](../supabase/migrations/20261116032005_customer_neutral_course_catalogue.sql).
+
+The catalogue namespace describes curriculum, independently of the customer organisation selected for each actual run. The forward transaction replaces the original single-provider CHECK with a trimmed namespace of 1–80 characters; provider/code uniqueness and the existing read/write permissions remain unchanged.
+
+Exact original SHA-256 value digests guard changes to curated provider, description and notes fields. Default template titles/descriptions are replaced only when their source identifiers and all original teaching fields still match, they have no course run or topic links, they are not archived, and no authored-save audit exists. Edited, saved, used, archived and copied templates are retained. The generated seed DML inserts missing canonical identities and fills only an unset default-template link; it does not overwrite existing authored content.
+
+All 22 canonical block identities and 24 exact source revisions remain intact. Original source filename/hash/page/date references, actual organisation memberships, run/session/job links and accepted fee/contract/revenue records are not rewritten. No original PDFs or local personal paths are published. [Course building blocks](COURSE_BUILDING_BLOCKS.md) explains the import and customer-independent workflow.
+
+The constraint replacement and bounded data changes retain the hosted operator-review gate. Installation requires the existing reviewed maintenance/writer-stop and verified backup/recovery procedure; neither this guide, generated SQL nor a local test result applies the migration or approves production. Do not edit earlier migration sources or bypass the ordinary update classifier.
+
+Test entry points: [upgrade/preservation rehearsal](../scripts/course-catalogue-preservation-db-tests.mjs), [building-block SQL groups](../scripts/course-building-blocks-db-tests.mjs) and [catalogue/reproducibility regressions](../scripts/runtime-course-catalogue.test.mjs). These fixtures distinguish fresh catalogue state from two independent customers sharing a template, edited/used templates and an accepted pre-upgrade agreement; actual full application/hosted outcomes remain separately recorded.
+
+### 28. Derived course readiness and scoped preparation
 
 Source: [20261116034641_course_readiness.sql](../supabase/migrations/20261116034641_course_readiness.sql).
 
@@ -226,7 +240,7 @@ Private settings/tasks/instruction receipts complement live assignment, agreemen
 
 Tests: [readiness-db-tests.mjs](../scripts/readiness-db-tests.mjs), [readiness-api-check.mjs](../scripts/readiness-api-check.mjs).
 
-### 28. Private support tickets and dedicated attachments
+### 29. Private support tickets and dedicated attachments
 
 Source: [20261116034757_internal_support_desk.sql](../supabase/migrations/20261116034757_internal_support_desk.sql).
 
@@ -236,7 +250,7 @@ Tests: [support-db-tests.mjs](../scripts/support-db-tests.mjs), [support-api-che
 
 The support migration also rejects existing/removed optional course-resource references and guards the reverse registry insertion with the same document lock. The automatically discovered [support/course contract tests](../scripts/support-course-registry-db-tests.mjs) distinguish synthetic optional-schema contracts from the strict manual actual-module gate. [Chronology and evidence](SUPPORT_COURSE_RESOURCE_REGRESSION.md).
 
-### 29. Whole-block replacement without premature release
+### 30. Whole-block replacement without premature release
 
 Source: [20261116034812_replacement_marketplace.sql](../supabase/migrations/20261116034812_replacement_marketplace.sql).
 
@@ -244,7 +258,7 @@ Open/selected emergency searches keep the original confirmed allocation. Sorted 
 
 Tests: [replacements-db-tests.mjs](../scripts/replacements-db-tests.mjs), [replacements-api-check.mjs](../scripts/replacements-api-check.mjs).
 
-### 30. Immutable lecturer delivery evidence
+### 31. Immutable lecturer delivery evidence
 
 Source: [20261116034826_attendance_delivery.sql](../supabase/migrations/20261116034826_attendance_delivery.sql).
 
@@ -252,7 +266,7 @@ Assignment sessions own drafts, immutable submitted revisions and independent re
 
 Tests: [delivery-db-tests.mjs](../scripts/delivery-db-tests.mjs), [delivery-api-check.mjs](../scripts/delivery-api-check.mjs).
 
-### 31. Current-authority operational inbox targets
+### 32. Current-authority operational inbox targets
 
 Source: [20261116035802_operations_notification_integration.sql](../supabase/migrations/20261116035802_operations_notification_integration.sql).
 
@@ -260,7 +274,7 @@ Preserves the prior resolver and composes readiness/support/delivery/replacement
 
 Strict non-trigger body diagnostics are additionally checked by [operations-lint-db-tests.mjs](../scripts/operations-lint-db-tests.mjs); canonical SQL lint/advisor/trigger and actual Auth/browser checks remain mandatory. [The extension ledger](OPERATIONS_EXTENSION_STATUS.md) distinguishes executed focused checks from full acceptance and release status.
 
-### 32. Optional forward notification and handover composition
+### 33. Optional forward notification and handover composition
 
 Source: [20261116054027_operational_module_notification_handover_integration.sql](../supabase/migrations/20261116054027_operational_module_notification_handover_integration.sql).
 
