@@ -16,6 +16,23 @@ Initial SQL evidence: readiness16, delivery12, replacement13, support12groups. W
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Coordinated PR18 integration
+
+The owner-approved PR18 head0675bb9 is integrated on the owned PR21 branch, preserving all audit fixes and both guidance systems. Local combined checks pass254frontend/87runtime cases with no disconnected modules/exports; migration bytes and dependencies match the owner source. The explicit PR18 main-merge hold is respected. Include the actual resulting main merge before the final push, then require all current-head quality/security/application/native and PR-preview-package gates before immediate merge.
+
+## Standing delivery workflow
+
+Carina requires signed commit → push → prepared PR → direct merge after required CI succeeds, without another routine approval. AGENTS.md records this rule; explicit merge holds remain respected. PR21 already includes exact PR15 head2e367f6 on its own branch to preserve comments and the audited fixes. Local integration passes231frontend/68runtime cases with identical production JS; exact-head combined/native/security CI and PR15 coordination completion govern its immediate merge.
+
+## Guided experience re-audit
+
+- [x] Independently trace all PR16 modules, routes, handlers, runtime exports and meaningful control-flow/state behavior; preserve legitimate non-frontend entries.
+- [x] Reproduce/fix actual tour-access recovery, same-topic Help focus and demo accepted-offer identity errors; remove confirmed inert copy/metadata/branches/markers.
+- [x] Correct erased-type false positives in the runtime-use guard with adverse fixtures and runtime-class inheritance preservation.
+- [x] Execute current local source/coverage/public-browser/guard/build checks and document actual evidence in [GUIDED_EXPERIENCE_AUDIT](GUIDED_EXPERIENCE_AUDIT.md).
+
+Exact combined/native/security, extended real-account browser acceptance and the user-authorised merge are tracked on [PR21](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/21). Application head13313de passed all combined/native/security gates. Current main metadata changes are integrated with unchanged application source and21passingtargetedguards. Further main merges are temporarily held by user-authorised coordination until PR15 completes. The prior merged PR16 baseline remains preserved; these focused fixes do not mark unrelated product modules complete.
+
 ## PR18 complete-CI repair
 
 - [x] Correct the missing disposable compensation bootstrap after real retention, with explicit owned QA identity and three executable orchestration regressions.
