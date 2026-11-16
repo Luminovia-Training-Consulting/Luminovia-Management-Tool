@@ -17,12 +17,40 @@ concurrency:
   cancel-in-progress: false
 jobs:
   signature-probe:
-    if: github.event_name == 'workflow_dispatch' && inputs.signature_probe_only
+    if: github.repository == 'Luminovia-Training-Consulting/Luminovia-Management-Tool' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.signature_probe_only
+    # Keep the App key in this main-only environment: checkout.ref alone cannot
+    # stop a modified branch workflow from stealing a repository-level secret.
+    environment: maintenance-signing
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      contents: write
+      contents: read
     steps:
+      - name: Require the configured maintenance App
+        env:
+          APP_ID: ${{ vars.MAINTENANCE_APP_ID }}
+        run: |
+          if test "$APP_ID" != "5776881"; then
+            echo "::error::Require the approved App 5776881 and its protected environment key."
+            exit 1
+          fi
+      - name: Create a repository-scoped App token for the temporary signing probe
+        id: maintenance-app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.MAINTENANCE_APP_ID }}
+          private-key: ${{ secrets.MAINTENANCE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+      - name: Verify the approved private App identity
+        env:
+          APP_SLUG: ${{ steps.maintenance-app-token.outputs.app-slug }}
+        run: |
+          if test "$APP_SLUG" != "luminovia-portal-maintenance"; then
+            echo "::error::Unexpected maintenance App identity."
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: main
@@ -31,7 +59,7 @@ jobs:
         with:
           node-version-file: ".node-version"
       - env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.maintenance-app-token.outputs.token }}
         run: node deploy/hostinger/maintenance/promote.mjs signature-probe
   discover:
     if: inputs.signature_probe_only != true
@@ -240,13 +268,40 @@ jobs:
           if-no-files-found: error
   promote:
     needs: [discover, combined, fallback]
-    if: always() && needs.discover.result == 'success' && (needs.combined.result == 'success' || needs.fallback.result == 'success')
+    if: always() && github.repository == 'Luminovia-Training-Consulting/Luminovia-Management-Tool' && github.ref == 'refs/heads/main' && needs.discover.result == 'success' && (needs.combined.result == 'success' || needs.fallback.result == 'success')
+    # The same environment boundary protects automatic direct-main promotion.
+    environment: maintenance-signing
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write
-      actions: write
+      contents: read
     steps:
+      - name: Require the configured maintenance App
+        env:
+          APP_ID: ${{ vars.MAINTENANCE_APP_ID }}
+        run: |
+          if test "$APP_ID" != "5776881"; then
+            echo "::error::Require the approved App 5776881 and its protected environment key."
+            exit 1
+          fi
+      - name: Create a repository-scoped App token for tested promotion and exact-main CI
+        id: maintenance-app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.MAINTENANCE_APP_ID }}
+          private-key: ${{ secrets.MAINTENANCE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-actions: write
+      - name: Verify the approved private App identity
+        env:
+          APP_SLUG: ${{ steps.maintenance-app-token.outputs.app-slug }}
+        run: |
+          if test "$APP_SLUG" != "luminovia-portal-maintenance"; then
+            echo "::error::Unexpected maintenance App identity."
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs.discover.outputs.base }}
@@ -267,10 +322,10 @@ jobs:
       - name: Sign tested main change and dispatch exact-revision CI
         if: (needs.combined.result == 'success' && needs.combined.outputs.changed == 'true') || (needs.combined.result == 'failure' && needs.fallback.result == 'success' && needs.fallback.outputs.changed == 'true')
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.maintenance-app-token.outputs.token }}
         run: node deploy/hostinger/maintenance/promote.mjs promote "$RUNNER_TEMP/maintenance-selected/result.json"
       - name: Retry an unreleased main revision after earlier transient CI failure
         if: needs.combined.outputs.changed != 'true' && needs.fallback.outputs.changed != 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.maintenance-app-token.outputs.token }}
         run: node deploy/hostinger/maintenance/promote.mjs retry-main
