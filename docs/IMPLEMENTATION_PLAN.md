@@ -2,6 +2,22 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Current continuation — private roles/pricing, welcome guide and PR previews
+
+The latest request supersedes the earlier shared compensation default. Work is isolated on `codex/pr-preview-welcome-roles` from `1341b16`; existing accepted business history and the full module ledger below remain in scope. Actual business percentages are private Administration configuration because the source repository is public.
+
+- [x] Implement and separately test subordinate role delegation, guest access and self/equal/higher protection across role/activation/invitation APIs; company budget memberships remain Administration-only.
+- [x] Implement private versioned compensation configuration, captured offer policies, role-scoped quotes and server-bound consent; retain accepted claims/invoices and legacy history.
+- [x] Add administration setup and accurate per-offer preview, permission-scoped role controls and own quote rendering; 215 frontend tests and the existing coverage floors pass before full acceptance.
+- [x] Add a DE/EN sequential welcome guide with own persistent progress, pause/resume/skip/restart and permission-aware links; focused frontend/SQL checks pass.
+- [x] Add read-only gated local PR packages and a separate trusted GitHub Deployment metadata publisher, with real artifact URLs, stale-run/expiry cleanup and no production-host connection.
+- [ ] Finish exact-source combined native Auth/API/desktop/mobile/PWA/retained-data acceptance; fix any actual failures without weakening assertions.
+- [ ] Publish the signed PR and observe exact-head quality/security/application/native outcomes and real downloadable artifact; record a first-PR metadata bootstrap only if actually run.
+- [ ] A continuously hosted URL per PR requires separately configured isolated hosting/backend. The implemented artifact deployment does not claim such a service.
+- [ ] Production policy setup/migration/deployment is a separate operational step; this request does not authorise production or real email changes.
+
+[Roles and private pricing](DELEGATED_ROLES_PRICING.md), [welcome guide](WELCOME_GUIDE.md), [PR previews](PR_PREVIEWS.md). The verbatim original specification remains preserved; these explicit user extensions update its operating details without dropping any remaining modules.
+
 ## GitHub quality, coverage and maintainer merge continuation
 
 Current request: visible compilation/type/style/quality/security/coverage tasks, Dependabot and uninterrupted direct Maintainer merges. Work is isolated on `codex/github-quality-checks` from current accepted main9c2103b; no business migration, normal preview, VPS or production mutation belongs to this slice.

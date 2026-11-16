@@ -9,7 +9,13 @@ import { Field, Notice } from "../../components/common";
 import { Button } from "../../components/ui/button";
 import { requireOnline, useOnline } from "../../lib/online";
 import { db } from "../../lib/supabase";
-import { accountRequest, accountRoles } from "../accounts/api";
+import {
+  accountRequest,
+  accountRoles,
+  accountRoleCatalogQuery,
+} from "../accounts/api";
+import { useAuth } from "../auth/auth-context";
+import { commissionAccessQuery } from "../commercial/commission-api";
 import "../accounts/i18n";
 
 const schema = z.object({
@@ -70,10 +76,25 @@ export function InviteForm({
   canAssignRoles?: boolean;
 }) {
   const { t } = useTranslation();
+  const { session } = useAuth();
+  const actor = session?.user.id ?? "";
+  const clientAccess = useQuery({
+    ...commissionAccessQuery(actor),
+    enabled: allRoles && canAssignRoles && Boolean(actor),
+  });
+  const canLinkOrganisations = Boolean(
+    clientAccess.data?.can_manage_client_memberships,
+  );
+  const catalog = useQuery({
+    ...accountRoleCatalogQuery(actor),
+    enabled: allRoles && Boolean(actor),
+  });
+  const availableRoles =
+    catalog.data?.filter((entry) => entry.assignable) ?? [];
   const accountText = useTranslation("accounts").t;
   const organisations = useQuery({
-    queryKey: ["invite-organisations"],
-    enabled: allRoles && canAssignRoles,
+    queryKey: ["invite-organisations", actor],
+    enabled: allRoles && canLinkOrganisations,
     queryFn: async () => {
       const result = await db()
         .from("organisations")
@@ -109,7 +130,10 @@ export function InviteForm({
         email: values.email.trim().toLowerCase(),
         display_name: values.display_name.trim(),
         role: values.role,
-        organisation_id: values.role === "client" ? values.organisation_id : "",
+        organisation_id:
+          values.role === "client" && canLinkOrganisations
+            ? values.organisation_id
+            : "",
       };
       const next = signature(normalized);
       // Preserve the same key after network/HTTP failures. Only editing the intended
@@ -117,8 +141,6 @@ export function InviteForm({
       if (!retry.current || retry.current.signature !== next)
         retry.current = { signature: next, key: crypto.randomUUID() };
       if (allRoles) {
-        if (normalized.role === "client" && !normalized.organisation_id)
-          throw new Error("organisation_required");
         return resultFrom(
           await accountRequest("invitations", "POST", {
             ...normalized,
@@ -197,22 +219,24 @@ export function InviteForm({
             <select
               id="invite-role"
               {...register("role")}
-              disabled={invitation.isPending}
+              disabled={
+                invitation.isPending || catalog.isPending || catalog.isError
+              }
             >
-              {accountRoles
-                .filter(
-                  (role) =>
-                    canAssignRoles ||
-                    ["lecturer", "participant"].includes(role),
-                )
-                .map((role) => (
-                  <option value={role} key={role}>
-                    {accountText(role)}
-                  </option>
-                ))}
+              {availableRoles.map(({ role }) => (
+                <option value={role} key={role}>
+                  {accountText(role)}
+                </option>
+              ))}
             </select>
           </Field>
-          {watched.role === "client" && (
+          {catalog.isError && (
+            <Notice kind="error">{accountText("error")}</Notice>
+          )}
+          {watched.role === "client" && !canLinkOrganisations && (
+            <Notice>{accountText("organisationAdmin")}</Notice>
+          )}
+          {watched.role === "client" && canLinkOrganisations && (
             <Field
               id="invite-organisation"
               label={accountText("organisation")}
@@ -221,7 +245,6 @@ export function InviteForm({
               <select
                 id="invite-organisation"
                 {...register("organisation_id")}
-                required
                 disabled={
                   invitation.isPending ||
                   organisations.isPending ||
@@ -237,9 +260,11 @@ export function InviteForm({
               </select>
             </Field>
           )}
-          {watched.role === "client" && organisations.isError && (
-            <Notice kind="error">{accountText("error")}</Notice>
-          )}
+          {watched.role === "client" &&
+            canLinkOrganisations &&
+            organisations.isError && (
+              <Notice kind="error">{accountText("error")}</Notice>
+            )}
         </>
       )}
       <Button
@@ -247,7 +272,13 @@ export function InviteForm({
           !online ||
           invitation.isPending ||
           Boolean(sent) ||
-          (allRoles && watched.role === "client" && !watched.organisation_id)
+          (allRoles &&
+            (catalog.isPending ||
+              catalog.isError ||
+              !availableRoles.some((entry) => entry.role === watched.role))) ||
+          (allRoles &&
+            canAssignRoles &&
+            (clientAccess.isPending || clientAccess.isError))
         }
       >
         {t(invitation.isPending ? "inviteSending" : "inviteSend")}

@@ -4,6 +4,10 @@ export interface CommissionAccess {
   can_manage_gross: boolean;
   can_manage_client_memberships: boolean;
   can_request: boolean;
+  regular_lecturer_percent?: number | null;
+  senior_lecturer_percent?: number | null;
+  policy_version?: number;
+  policy_configured?: boolean;
 }
 export interface ClientOrganisation {
   id: string;
@@ -78,6 +82,22 @@ export const commissionAccessQuery = (actor: string) =>
       return data as CommissionAccess;
     },
     staleTime: 1000,
+  });
+export const offerPolicyQuery = (actor: string, job: string) =>
+  queryOptions({
+    queryKey: ["commission-offer-policy", actor, job],
+    queryFn: async () => {
+      const { data, error } = await db().rpc("commission_offer_policy", {
+        p_job_id: job,
+      });
+      if (error) throw error;
+      return data as Pick<
+        CommissionAccess,
+        | "regular_lecturer_percent"
+        | "senior_lecturer_percent"
+        | "policy_version"
+      > | null;
+    },
   });
 export const clientOrganisationsQuery = (actor: string) =>
   queryOptions({

@@ -43,9 +43,9 @@ await withTestDatabase('accounts_test',async({sql,actor})=>{
  await check('Client invitations bind exact role, organisation and request identity before any external send',async()=>{
   invitation=await rpc(admin,'reserve_account_invitation',['fictional-client@example.invalid','Client','client',org,inviteKey],'aal2');assert.equal(invitation.status,'reserved');
   assert.equal((await rpc(admin,'reserve_account_invitation',['fictional-client@example.invalid','Client','client',org,inviteKey],'aal2')).status,'in_progress');
-  assert.equal((await rpc(admin,'reserve_account_invitation',['fictional-client@example.invalid','Client','admin',null,inviteKey],'aal2')).status,'idempotency_conflict');
-  await assert.rejects(rpc(manager,'reserve_account_invitation',['another@example.invalid','Client','client',org,randomUUID()],'aal2'),/Role assignment permission/);
-  await assert.rejects(rpc(admin,'reserve_account_invitation',['bad@example.invalid','Client','client',null,randomUUID()],'aal2'),/Valid client organisation/);
+  assert.equal((await rpc(admin,'reserve_account_invitation',['fictional-client@example.invalid','Client','lecturer',null,inviteKey],'aal2')).status,'idempotency_conflict');
+  await assert.rejects(rpc(manager,'reserve_account_invitation',['another@example.invalid','Client','management',null,randomUUID()],'aal2'),/Only subordinate invitation/);
+  await assert.rejects(rpc(admin,'reserve_account_invitation',['bad@example.invalid','Client','lecturer',org,randomUUID()],'aal2'),/Valid client organisation/);
  });
  await check('Completion is server-only and grants only the reserved role and reserved organisation',async()=>{
   await assert.rejects(rpc(admin,'complete_account_invitation',[invitation.invitation_id,client,'Untrusted',true],'aal2'),/permission denied/);

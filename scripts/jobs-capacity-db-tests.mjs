@@ -10,6 +10,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
   await sql(
     `insert into auth.users(id,email) values('${manager}','capacity-admin@example.invalid'),('${client}','capacity-client@example.invalid'),${teachers.map((id, i) => `('${id}','capacity-${i}@example.invalid')`).join(",")};insert into public.user_roles(user_id,role) values('${manager}','admin'),('${client}','client'),${teachers.map((id) => `('${id}','lecturer')`).join(",")}`,
   );
+  await actor(manager, "select public.configure_compensation_policy(31,73,0)", "aal2");
   let day = 0;
   const body = (gross = false, currency = "EUR") => {
     day += 3;
@@ -48,7 +49,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
     JSON.parse(await actor(who, `select public.job_lifecycle('${job}')`, aal));
   const claim = async (job, who, key = randomUUID()) => {
     const version = await sql(
-      `select terms_version from public.jobs where id='${job}'`,
+      `select case when exists(select 1 from private.job_commission_offers where job_id='${job}' and pricing_mode='role_split') then terms_version*10+1 else terms_version end from public.jobs where id='${job}'`,
     );
     return JSON.parse(
       await actor(who, `select public.claim_job('${job}','${key}',${version})`),

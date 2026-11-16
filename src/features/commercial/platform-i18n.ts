@@ -41,10 +41,40 @@ const pairs: Record<string, [string, string]> = {
   grossTotal: ["Voller Auftragspreis gesamt", "Full total client fee"],
   platformPercent: ["Plattformanteil (%)", "Platform share (%)"],
   lecturerShare: ["Dozierendenhonorar", "Lecturer compensation"],
+  regularLecturer: ["Dozent:in", "Lecturer"],
+  seniorLecturer: ["Senior-Dozent:in", "Senior lecturer"],
+  privateCompensation: ["Honorar geschützt", "Compensation restricted"],
+  compensationPolicy: ["Vergütungsregeln", "Compensation policy"],
+  compensationPolicyHint: [
+    "Diese vertraulichen Regeln sind ausschließlich für die Administration sichtbar. Bereits vereinbarte Honorare bleiben erhalten.",
+    "These confidential rules are visible only to administration. Already accepted compensation is preserved.",
+  ],
+  policyMissing: [
+    "Lege vor der Veröffentlichung die Vergütungsregeln fest.",
+    "Set the compensation policy before publishing an offer.",
+  ],
+  regularPercent: [
+    "Dozent:in – Honorar vom Auftragspreis (%)",
+    "Lecturer – compensation from client fee (%)",
+  ],
+  seniorPercent: [
+    "Senior-Dozent:in – Honorar vom Auftragspreis (%)",
+    "Senior lecturer – compensation from client fee (%)",
+  ],
+  savePolicy: ["Vergütungsregeln speichern", "Save compensation policy"],
+  reloadPolicy: ["Aktuelle Regeln laden", "Load current policy"],
+  policySaved: [
+    "Vergütungsregeln wurden bestätigt.",
+    "Compensation policy confirmed.",
+  ],
+  policyError: [
+    "Die Regeln wurden nicht bestätigt. Prüfe deine Eingaben und lade bei einer parallelen Änderung die aktuellen Werte neu.",
+    "The policy was not confirmed. Check your entries and reload the current values after a concurrent change.",
+  ],
   platformShare: ["Plattformanteil", "Platform share"],
   splitHint: [
-    "Standard: 50 % Plattform und 50 % Dozierendenhonorar. Die Freigabe speichert die Aufteilung serverseitig; angenommene Konditionen bleiben unverändert.",
-    "Default: 50% platform and 50% lecturer compensation. Confirmation stores the split on the server; accepted terms stay unchanged.",
+    "Die Administration sieht die rollenabhängige Aufteilung. Das jeweilige Honorar wird serverseitig berechnet; angenommene Konditionen bleiben unverändert.",
+    "Administration can review the role-based split. Each fee is calculated on the server; accepted terms stay unchanged.",
   ],
   feeBasis: [
     "Preisaufteilung der Vergütung; keine Umsatzsteuerberechnung.",

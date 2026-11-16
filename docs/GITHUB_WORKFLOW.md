@@ -28,6 +28,10 @@ Die effektiven Main-Regeln und Repository-Rollen wurden über REST/GraphQL ausge
 
 Grundlagen: [Rulesets und Ausnahmen](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository), [Rules-API](https://docs.github.com/en/rest/repos/rules). Prüfungen und Coverage erklärt [CI_QUALITY](CI_QUALITY.md).
 
+## PR-Vorschaupakete und Deploymentdatensätze
+
+Der PR-Workflow erstellt nach vollständiger Qualität-/Coverage-/Anwendungs-/Selfhost-Abnahme ein sieben Tage verfügbares Quellpaket für eine vollständige lokale Vorschau. Ein eigener Publisher vom vertrauenswürdigen Standardzweig aktualisiert GitHub-Deployments anhand der tatsächlichen aktuellen PR-, Workflow- und Artefaktmetadaten. Der PR-Code erhält dafür keine Schreibrechte oder Hosting-Secrets. Die Deployment-URL öffnet das herunterladbare Paket; eine erfolgreiche Paketveröffentlichung behauptet keine gehostete Website. Geschlossene und überholte PR-Vorschauen sowie abgelaufene Artefakte werden deaktiviert. [Ablauf, Berechtigungen und erstmalige Aktivierung](PR_PREVIEWS.md).
+
 ## Labels und Metadatenprüfung
 
 [labels.json](../.github/labels.json) ist der gemeinsame Katalog für 20 zusätzliche Labels und die lokale/CI-Prüfung. Die neun vorhandenen GitHub-Standardlabels bleiben erhalten. Genau ein `type:*`, genau ein `risk:*` und mindestens ein `area:*` sind für jeden PR erforderlich. Andere Labels dürfen hinzukommen; unbekannte Werte innerhalb dieser drei Kategorien werden abgelehnt. Der [PR-Leitfaden](PULL_REQUEST_GUIDE.md#labels-für-pull-requests) erklärt die Auswahl.

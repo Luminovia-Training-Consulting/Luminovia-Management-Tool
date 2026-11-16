@@ -1,5 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 process.loadEnvFile(".env.test.local");
 const url = process.env.SUPABASE_URL;
@@ -67,6 +69,46 @@ const admin = await user(
   "Luminovia Testverwaltung",
   "admin",
 );
+// Fictional commercial settings belong only to the disposable acceptance stack.
+// Normal development seeds never choose or overwrite a real private policy.
+if (process.env.PORTAL_TEST_MODE === "1") {
+  const project = /^project_id\s*=\s*"([a-zA-Z0-9_-]+)"/m.exec(
+    readFileSync("supabase/config.toml", "utf8"),
+  )?.[1];
+  if (!/^luminovia-portal-test-[a-f0-9]+$/.test(project ?? ""))
+    throw new Error(
+      "Fictional compensation requires an owned disposable test project.",
+    );
+  const container = process.env.PORTAL_DB_CONTAINER ?? `supabase_db_${project}`;
+  if (
+    container !== `supabase_db_${project}` ||
+    !/^[0-9a-f-]{36}$/.test(admin.id)
+  )
+    throw new Error(
+      "Fictional compensation target identity does not match the test project.",
+    );
+  execFileSync(
+    "docker",
+    [
+      "exec",
+      "-i",
+      container,
+      "psql",
+      "-U",
+      "postgres",
+      "-d",
+      "postgres",
+      "-X",
+      "-q",
+      "-v",
+      "ON_ERROR_STOP=1",
+    ],
+    {
+      input: `begin;set local role authenticated;set local request.jwt.claims='${JSON.stringify({ sub: admin.id, aal: "aal2", role: "authenticated" })}';do $$begin if not (public.commission_access()->>'policy_configured')::boolean then perform public.configure_compensation_policy(31,73,0);end if;end$$;commit;`,
+      stdio: ["pipe", "pipe", "pipe"],
+    },
+  );
+}
 await user(
   "carina@example.invalid",
   "Plattformleitung (lokales Demo-Konto)",
@@ -79,17 +121,15 @@ const demoClient = await user(
 );
 const demoOrganisation = stableId("client-demo-organisation");
 await checked(
-  service
-    .from("organisations")
-    .upsert(
-      {
-        id: demoOrganisation,
-        name: "Fiktiver Auftraggeber (Demo)",
-        country: "DE",
-        time_zone: "Europe/Berlin",
-      },
-      { onConflict: "id", ignoreDuplicates: true },
-    ),
+  service.from("organisations").upsert(
+    {
+      id: demoOrganisation,
+      name: "Fiktiver Auftraggeber (Demo)",
+      country: "DE",
+      time_zone: "Europe/Berlin",
+    },
+    { onConflict: "id", ignoreDuplicates: true },
+  ),
   "Seed missing fictional client organisation",
 );
 if (demoClient.created)

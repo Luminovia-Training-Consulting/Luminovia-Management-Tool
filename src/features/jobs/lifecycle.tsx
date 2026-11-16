@@ -133,14 +133,16 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
       </div>
       {info.can_manage && (
         <p>
-          <strong>
-            {t("maxNetBudget")}:{" "}
-            {money(
-              (Math.round(Number(job.total_amount) * 100) * capacity) / 100,
-              job.currency,
-              i18n.language,
-            )}
-          </strong>
+          {job.total_amount !== null && (
+            <strong>
+              {t("maxNetBudget")}:{" "}
+              {money(
+                (Math.round(Number(job.total_amount) * 100) * capacity) / 100,
+                job.currency,
+                i18n.language,
+              )}
+            </strong>
+          )}
           {info.gross_budget !== undefined && info.gross_budget !== null && (
             <>
               {" "}

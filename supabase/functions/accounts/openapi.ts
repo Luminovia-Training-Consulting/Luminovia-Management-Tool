@@ -30,6 +30,9 @@ const role = {
     "lecturer",
     "client",
     "participant",
+    "guest",
+    "guest",
+    "guest",
   ],
 };
 export const accountOpenApi = {

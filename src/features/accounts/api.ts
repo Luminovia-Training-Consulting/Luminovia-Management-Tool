@@ -9,6 +9,7 @@ export const accountRoles = [
   "lecturer",
   "client",
   "participant",
+  "guest",
 ] as const;
 export type AccountRole = (typeof accountRoles)[number];
 export interface AccountPerson {
@@ -19,7 +20,20 @@ export interface AccountPerson {
   locale: string;
   time_zone: string;
   roles: AccountRole[];
+  can_assign_roles: boolean;
+  can_change_active: boolean;
 }
+export interface AccountRoleCapability {
+  role: AccountRole;
+  permissions: string[];
+  assignable: boolean;
+}
+export const accountRoleCatalogQuery = (actor: string) =>
+  queryOptions({
+    queryKey: ["account-role-catalog", actor],
+    queryFn: () => accountRequest<AccountRoleCapability[]>("roles"),
+    staleTime: 0,
+  });
 export interface AccountList {
   items: AccountPerson[];
   total: number;

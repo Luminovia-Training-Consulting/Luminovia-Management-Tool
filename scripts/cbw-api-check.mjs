@@ -143,7 +143,6 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
   const stale = await admin.client.rpc("create_course_run_job", {
     p_course_run_id: run,
     p_payload: fee(before.source_revision),
-    p_platform_percent: 50,
     p_client_id: randomUUID(),
   });
   assert.match(stale.error.message, /course_run_source_changed/);
@@ -181,8 +180,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
     admin.client.rpc("create_course_run_job", {
       p_course_run_id: run,
       p_payload: payload,
-      p_platform_percent: 50,
-      p_client_id: request,
+        p_client_id: request,
     }),
   );
   assert.equal(
@@ -190,8 +188,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
       admin.client.rpc("create_course_run_job", {
         p_course_run_id: run,
         p_payload: payload,
-        p_platform_percent: 50,
-        p_client_id: request,
+            p_client_id: request,
       }),
     ),
     job,
@@ -213,8 +210,10 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
       .single(),
   );
   assert.equal(actual.course_run_id, run);
-  assert.equal(actual.amount, 50);
-  assert.equal(actual.total_amount, 100.01);
+  assert.equal(actual.amount, 0);
+  assert.equal(actual.total_amount, 0);
+  const quote=(await checked(teacher.client.rpc("job_offers"))).find(row=>row.id===job);
+  assert.equal(quote.amount,31);assert.equal(quote.total_amount,62.01);
   assert.equal(actual.job_sessions.length, 2);
   assert.deepEqual(
     actual.job_sessions.map((row) => row.course_session_id).sort(),
@@ -320,7 +319,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
     teacher.client.rpc("claim_job", {
       p_job_id: job,
       p_idempotency_key: randomUUID(),
-      p_terms_version: actual.terms_version,
+      p_terms_version: quote.terms_version,
     }),
   );
   assert.equal(claim.status, "confirmed");
@@ -347,8 +346,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
         p_job_id: job,
         p_gross_amount: 200,
         p_gross_total_amount: 400,
-        p_platform_percent: 50,
-      })
+          })
     ).error,
   );
   const alias = block.building_block_sources.find((row) => !row.is_primary);

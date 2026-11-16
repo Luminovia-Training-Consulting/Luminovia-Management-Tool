@@ -90,6 +90,7 @@ Die Prüfungen laufen weiterhin und liefern nachvollziehbare Ergebnisse:
 - `Tests and coverage` führt Unit-/Komponententests mit ehrlicher vollständiger Frontend-Erfassung und Mindestwerten aus.
 - `verify` führt die vollständigen realen Anwendungs-/SQL-/API-/Browser-/PWA-/Wartungstests aus; `Actual isolated selfhost image compatibility` prüft echte Laufzeit und Datenübernahme.
 - `PR metadata` prüft Pflichtlabels; CodeQL analysiert Sicherheitsmuster. Details: [CI_QUALITY](CI_QUALITY.md).
+- `PR preview package` liefert nach vollständiger Anwendungs- und nativer Abnahme ein herunterladbares, lokal startbares Quellpaket. Der getrennte vertrauenswürdige Publisher verknüpft es mit einem temporären GitHub-Deployment; der Link führt zum Artefakt, nicht zu einer gehosteten Website. [Vorschau und Aktivierungsgrenze](PR_PREVIEWS.md).
 
 Ein Maintainer kann einen Merge bewusst vorziehen. Das macht fehlgeschlagene Tests nicht grün und veröffentlicht kein ungeprüftes Entwicklungsupdate: Der Releasejob wartet auf alle ausdrücklich in `ci.yml` definierten Gates; der zusätzliche Security-Workflow läuft getrennt. Für andere Beitragende bleiben unabhängige Review und grüne, aktuelle Tests der vorgesehene Ablauf. Die zusätzlichen serverseitigen PR-/Checkregeln bleiben bis zur bewiesenen Wartungs-App-Anbindung deaktiviert; [aktueller Zustand](GITHUB_WORKFLOW.md#aktivierung-noch-ausstehend).
 

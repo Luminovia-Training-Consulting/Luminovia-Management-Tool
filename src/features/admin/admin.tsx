@@ -7,7 +7,8 @@ import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 import { Plus, Trash2 } from "lucide-react";
 import { DateTime } from "luxon";
-import { FeeSplitPreview } from "../commercial/pricing";
+import { RoleFeePreview } from "../commercial/pricing";
+import { CompensationPolicyPanel } from "../commercial/compensation-policy";
 import {
   commissionAccessQuery,
   clientOrganisationsQuery,
@@ -43,7 +44,6 @@ const schema = z.object({
   description: z.string().max(10000),
   customer_name: z.string().trim().min(1).max(200),
   organisation: z.union([z.string().uuid(), z.literal("")]),
-  platform_percent: z.number().min(0).max(100),
   delivery_type: z.enum(["online", "onsite"]),
   location: z.string().max(500),
   time_zone: z.string().refine(validZone),
@@ -112,7 +112,6 @@ function JobForm({
       description: courseRun?.description ?? "",
       customer_name: courseRun?.customer_name ?? "",
       organisation: courseRun?.organisation_id ?? "",
-      platform_percent: 50,
       delivery_type: courseRun?.delivery_type ?? "online",
       location: courseRun?.location ?? "",
       time_zone: courseRun?.time_zone ?? "Europe/Berlin",
@@ -151,7 +150,6 @@ function JobForm({
     },
   });
   const watchedTotal = useWatch({ control, name: "total_amount" });
-  const watchedPercent = useWatch({ control, name: "platform_percent" });
   const watchedCurrency = useWatch({ control, name: "currency" });
   const watchedCapacity = useWatch({ control, name: "capacity" });
   const selectedTopicIds = useWatch({ control, name: "topic_ids" });
@@ -191,11 +189,12 @@ function JobForm({
         claim_deadline,
         capacity,
         organisation,
-        platform_percent,
         amount,
         total_amount,
         ...rest
       } = values;
+      if (gross && !pricing.data?.policy_configured)
+        throw new Error("pricing_policy_unavailable");
       const deadline = claim_deadline
         ? zonedInstant(claim_deadline, values.time_zone)
         : null;
@@ -229,17 +228,12 @@ function JobForm({
             ? { gross_amount: amount, gross_total_amount: total_amount }
             : { amount, total_amount }),
         };
-        const signature = JSON.stringify([
-          courseRun.course_run_id,
-          payload,
-          platform_percent,
-        ]);
+        const signature = JSON.stringify([courseRun.course_run_id, payload]);
         if (!retry.current || retry.current.signature !== signature)
           retry.current = { signature, key: crypto.randomUUID() };
         const { data, error } = await db().rpc("create_course_run_job", {
           p_course_run_id: courseRun.course_run_id,
           p_payload: payload,
-          p_platform_percent: gross ? platform_percent : 50,
           p_client_id: retry.current.key,
         });
         if (error || !data) throw error ?? new Error("unconfirmed");
@@ -248,12 +242,7 @@ function JobForm({
       const payload = gross
         ? { ...base, gross_amount: amount, gross_total_amount: total_amount }
         : { ...base, amount, total_amount };
-      const signature = JSON.stringify([
-        organisation,
-        platform_percent,
-        capacity,
-        payload,
-      ]);
+      const signature = JSON.stringify([organisation, capacity, payload]);
       if (!retry.current || retry.current.signature !== signature)
         retry.current = { signature, key: crypto.randomUUID() };
       const { data, error } = await db().rpc("create_capacity_job", {
@@ -261,7 +250,6 @@ function JobForm({
         p_capacity: capacity,
         p_request_id: retry.current.key,
         p_organisation_id: gross ? organisation || null : null,
-        p_platform_percent: gross ? platform_percent : 50,
       });
       if (error || !data) throw error ?? new Error("unconfirmed");
       return data as string;
@@ -576,23 +564,9 @@ function JobForm({
         )}
       {gross && (
         <>
-          <Field
-            id="job-platform-percent"
-            label={priceText("platformPercent")}
-            error={Boolean(errors.platform_percent)}
-          >
-            <input
-              id="job-platform-percent"
-              type="number"
-              min="0"
-              max="100"
-              step="0.01"
-              {...register("platform_percent", { valueAsNumber: true })}
-            />
-          </Field>
-          <FeeSplitPreview
+          <RoleFeePreview
             gross={Number(watchedTotal)}
-            percent={Number(watchedPercent)}
+            access={pricing.data}
             currency={watchedCurrency}
           />
           <p className="muted commercial-small">
@@ -653,6 +627,7 @@ function JobForm({
         disabled={
           !online ||
           create.isPending ||
+          (gross && !pricing.data?.policy_configured) ||
           (done && (!isDirty || Boolean(courseRun)))
         }
       >
@@ -713,6 +688,7 @@ export function AdminPage() {
   return (
     <>
       <PageHeading title={t("admin")} description={t("adminIntro")} />
+      <CompensationPolicyPanel />
       {runId ? (
         !permissions.data.includes("courses.manage") ? (
           <Notice kind="error">{t("noAccess")}</Notice>

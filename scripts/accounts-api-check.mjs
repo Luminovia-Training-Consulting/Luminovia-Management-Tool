@@ -17,17 +17,17 @@ async function fixture(name,role){const email=`account-${name}-${suffix}@example
 async function mfa(actor){const factor=await checked(actor.client.auth.mfa.enroll({factorType:'totp',friendlyName:'Account API QA'}),'Enroll actual TOTP');await checked(actor.client.auth.mfa.challengeAndVerify({factorId:factor.id,code:totp(factor.totp.secret)}),'Verify actual TOTP');}
 async function request(actor,path,method='GET',body,originValue=undefined){const session=await checked(actor.client.auth.getSession(),'Read own Auth session');const response=await fetch(`${url}/functions/v1/accounts/v1/${path}`,{method,headers:{apikey:process.env.SUPABASE_ANON_KEY,Authorization:`Bearer ${session.session.access_token}`,...(originValue===undefined?{}:{Origin:originValue}),...(body===undefined?{}:{'Content-Type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)}),signal:AbortSignal.timeout(30000)});return{status:response.status,headers:response.headers,body:await response.json()};}
 try{
- const admin=await fixture('admin','admin'),teacher=await fixture('teacher','lecturer'),peer=await fixture('peer','lecturer');
+ const admin=await fixture('admin','admin'),teacher=await fixture('teacher','lecturer'),peer=await fixture('peer','lecturer'),manager=await fixture('manager','management');
  let own=await request(teacher,'me');assert.equal(own.status,200);assert.equal(own.body.profile.id,teacher.id);assert.deepEqual(own.body.roles,['lecturer']);assert.match(own.headers.get('cache-control'),/no-store/);
  assert.equal((await request(teacher,'users')).status,403);assert.equal((await request(admin,'users')).status,403);await mfa(admin);
- const accounts=await request(admin,`users?q=${suffix}&limit=2&offset=0`);assert.equal(accounts.status,200);assert.equal(accounts.body.total,3);assert.equal(accounts.body.items.length,2);assert.ok(accounts.body.items.every(item=>!('encrypted_password'in item)));
+ const accounts=await request(admin,`users?q=${suffix}&limit=2&offset=0`);assert.equal(accounts.status,200);assert.equal(accounts.body.total,4);assert.equal(accounts.body.items.length,2);assert.ok(accounts.body.items.every(item=>!('encrypted_password'in item)));
  assert.equal((await admin.client.rpc('account_users',{p_limit:null})).error?.code,'22023','Native RPC cannot bypass pagination cap with explicit NULL');
  assert.equal((await request(teacher,'me','PATCH',{display_name:`API teacher edited ${suffix}`,bio_de:'Echte API-Daten',time_zone:'Australia/Brisbane'},origin)).status,200);own=await request(teacher,'me');assert.equal(own.body.profile.time_zone,'Australia/Brisbane');
  for(const payload of[{id:peer.id},{roles:['owner']},{active:false},{time_zone:'Invalid/Zone'}])assert.equal((await request(teacher,'me','PATCH',payload)).status,400);
  assert.ok((await teacher.client.from('profiles').update({time_zone:'Invalid/Zone'}).eq('id',teacher.id)).error,'Native REST repeats timezone integrity');
  assert.equal((await request(teacher,`users/${teacher.id}/roles`,'PUT',{roles:['owner']})).status,403);
  assert.equal((await request(admin,`users/${teacher.id}/roles`,'PUT',{roles:['lecturer','participant']})).status,200);assert.deepEqual((await request(teacher,'me')).body.roles,['lecturer','participant']);
- assert.equal((await request(admin,`users/${admin.id}/roles`,'PUT',{roles:['lecturer']})).status,400);assert.equal((await request(admin,`users/${admin.id}/status`,'PATCH',{active:false})).status,400);
+ assert.equal((await request(admin,`users/${admin.id}/roles`,'PUT',{roles:['lecturer']})).status,403);assert.equal((await request(admin,`users/${admin.id}/status`,'PATCH',{active:false})).status,403);
  const org=await checked(admin.client.rpc('save_organisation',{p_id:null,p_payload:{name:`API organisation ${suffix}`,time_zone:'Europe/Berlin'}}),'Create scoped org');organisations.push(org);
  assert.equal((await request(admin,`users/${peer.id}/roles`,'PUT',{roles:['client']})).status,200);
  assert.equal((await request(admin,`users/${peer.id}/organisations/${org}`,'PUT')).status,200);assert.equal((await checked(peer.client.rpc('client_organisations'),'Scoped linked client'))[0].id,org);
@@ -35,12 +35,20 @@ try{
  const email=`account-invited-${suffix}@example.invalid`,body={email,display_name:`Invited client ${suffix}`,role:'client',organisation_id:org,idempotency_key:randomUUID()};
  const sent=await request(admin,'invitations','POST',body,origin);assert.equal(sent.status,200,JSON.stringify(sent.body));assert.equal(sent.body.status,'sent');
  const retry=await request(admin,'invitations','POST',body);assert.equal(retry.status,200);assert.equal(retry.body.status,'already_sent');assert.equal(retry.body.invitation_id,sent.body.invitation_id);
- assert.equal((await request(admin,'invitations','POST',{...body,role:'admin',organisation_id:null})).status,409);
+ assert.equal((await request(admin,'invitations','POST',{...body,role:'lecturer',organisation_id:null})).status,409);
  const invited=(await checked(service.auth.admin.listUsers({perPage:1000}),'Read scoped invited actor')).users.find(user=>user.email===email);assert.ok(invited);users.push(invited.id);
  assert.deepEqual((await checked(service.from('user_roles').select('role').eq('user_id',invited.id),'Invited role')).map(row=>row.role),['client']);assert.equal((await checked(service.from('client_organisation_memberships').select('organisation_id').eq('user_id',invited.id),'Invited client scope'))[0].organisation_id,org);
  let messages=[];for(let i=0;i<20;i++){const inbox=await(await fetch(`${process.env.E2E_MAILPIT_URL}/api/v1/messages`)).json();messages=inbox.messages.filter(message=>message.To.some(recipient=>recipient.Address===email));if(messages.length)break;await delay(250)}assert.equal(messages.length,1,'Exactly one actual captured account invitation after retry');
  assert.equal((await request(admin,'users','GET',undefined,'https://foreign.invalid')).status,403);
  assert.equal((await request(admin,`users/${teacher.id}/status`,'PATCH',{active:false})).status,200);assert.equal((await request(teacher,'me')).status,401);assert.equal((await request(admin,`users/${teacher.id}/status`,'PATCH',{active:true})).status,200);assert.equal((await request(teacher,'me')).status,200);
+ await mfa(manager);const managerCatalog=await request(manager,'roles');assert.equal(managerCatalog.status,200);assert.ok(managerCatalog.body.some(row=>row.role==='guest'&&row.assignable));assert.ok(managerCatalog.body.filter(row=>['owner','admin','management'].includes(row.role)).every(row=>row.assignable===false));
+ assert.equal((await request(manager,`users/${teacher.id}/roles`,'PUT',{roles:['senior_lecturer']})).status,200);assert.deepEqual((await request(teacher,'me')).body.roles,['senior_lecturer']);
+ for(const target of[admin,manager])assert.equal((await request(manager,`users/${target.id}/roles`,'PUT',{roles:['guest']})).status,403);
+ assert.equal((await request(manager,`users/${teacher.id}/roles`,'PUT',{roles:['admin']})).status,403);
+ assert.equal((await request(manager,`users/${teacher.id}/roles`,'PUT',{roles:['guest']})).status,200);assert.deepEqual((await request(teacher,'me')).body.roles,['guest']);
+ assert.equal((await request(manager,`users/${teacher.id}/roles`,'PUT',{roles:['client','lecturer']})).status,400);
+ assert.equal((await request(manager,`users/${admin.id}/status`,'PATCH',{active:false})).status,403);
+ const privatePolicy=await checked(manager.client.rpc('commission_access'),'Manager private policy projection');assert.equal('regular_lecturer_percent'in privatePolicy,false);assert.equal('senior_lecturer_percent'in privatePolicy,false);
  const catalog=await request(admin,'roles');assert.equal(catalog.status,200);assert.ok(catalog.body.some(row=>row.role==='owner'));assert.ok(catalog.body.some(row=>row.role==='client'));
  const spec=await fetch(`${url}/functions/v1/accounts/openapi.json`,{headers:{apikey:process.env.SUPABASE_ANON_KEY,Authorization:`Bearer ${(await admin.client.auth.getSession()).data.session.access_token}`}});assert.equal(spec.status,200);assert.equal((await spec.json()).openapi,'3.1.0');
  console.log('PASS: actual Auth/TOTP Account HTTP API, own profile, strict identity/roles/timezones, bounded directory, self protection, role assignment, scoped client links/revocation, durable one-email invitation, origin check and old-token suspension/reactivation.');

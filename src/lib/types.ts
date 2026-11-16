@@ -43,10 +43,10 @@ export interface Job {
   location: string;
   time_zone: string;
   status: "draft" | "published" | "filled" | "archived";
-  amount: number;
+  amount: number | null;
   currency: "EUR" | "AUD";
   rate_unit: "per_day" | "per_hour" | "per_teaching_unit" | "fixed_total";
-  total_amount: number;
+  total_amount: number | null;
   terms: string;
   terms_version: number;
   requires_contract: boolean;

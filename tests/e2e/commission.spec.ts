@@ -244,8 +244,14 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
       .click();
     dialog = ownerPage.getByRole("dialog");
     await expect(
-      dialog.getByLabel("Plattformanteil (%)", { exact: true }),
-    ).toHaveValue("50");
+      dialog.getByRole("heading", { name: "Dozent:in · 31%", exact: true }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("heading", {
+        name: "Senior-Dozent:in · 73%",
+        exact: true,
+      }),
+    ).toBeVisible();
     await dialog
       .getByLabel("Konditionen", { exact: true })
       .fill("Fictional lecturer assignment terms.");
@@ -273,7 +279,7 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
     await login(teacherPage, lecturer);
     await teacherPage.goto(`/jobs/${linked.job_id}`);
     await expect(teacherPage.locator(".claim-panel .amount")).toContainText(
-      "500,00",
+      "310,00",
     );
     await expect(
       teacherPage.getByText("1.000,00 €", { exact: true }),
@@ -288,7 +294,15 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
       .eq("id", linked.job_id)
       .single();
     expect(safeJob.error).toBeNull();
-    expect(Number(safeJob.data!.total_amount)).toBe(500);
+    expect(Number(safeJob.data!.total_amount)).toBe(0);
+    const ownQuotes = await teacherApi.rpc("job_offers");
+    expect(ownQuotes.error).toBeNull();
+    expect(
+      Number(
+        ownQuotes.data.find((row: { id: string }) => row.id === linked.job_id)
+          .total_amount,
+      ),
+    ).toBe(310);
     expect(JSON.stringify(safeJob.data)).not.toMatch(
       /gross_amount|platform_percent|platform_total/,
     );
@@ -381,7 +395,7 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
     const record = invoiceRows.data.find(
       (row: { number: string }) => row.number === number,
     );
-    expect(Number(record.total_amount)).toBe(500);
+    expect(Number(record.total_amount)).toBe(310);
     expect(record.labels).toEqual(["=Review", "Commission", "QA"]);
     const csvEvent = teacherPage.waitForEvent("download");
     await teacherPage
@@ -418,7 +432,7 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
       ownerPage
         .getByRole("dialog")
         .getByLabel("Zahlungsbetrag (EUR)", { exact: true }),
-    ).toHaveValue("500.00");
+    ).toHaveValue("310.00");
     await ownerPage
       .getByRole("dialog")
       .getByRole("button", { name: "Zahlung speichern", exact: true })
