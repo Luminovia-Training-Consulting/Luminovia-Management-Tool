@@ -1,3 +1,7 @@
+/**
+ * Regressions for denied resource access, separate drafts and exact retries after uncertain
+ * comment mutations. Controlled responses do not establish real resource permissions.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -12,6 +16,7 @@ vi.mock("../auth/auth-context", () => ({
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc: mock.rpc }) }));
 
 const clients: QueryClient[] = [];
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(id = "job-a") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

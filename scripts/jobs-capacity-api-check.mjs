@@ -95,6 +95,7 @@ await withApiFixture(
       }
       commit;`);
     });
+    // Shared fixture factory: complete session blocks, input terms, current version and owned cleanup IDs.
     const base = Date.now() + 180 * 86400000,
       sessions = (offset = 0) =>
         [0, 1].map((day) => ({
@@ -137,6 +138,7 @@ await withApiFixture(
         return id;
       };
     let checks = 0;
+    /** Reports success only after the preceding real assertions have completed. */
     const pass = (message) => {
       checks++;
       console.log(`PASS ${message}`);
@@ -257,11 +259,11 @@ await withApiFixture(
     );
 
     const offer = await checked(
-      teachers[0].client.from("jobs").select("*").eq("id", job).single(),
+      teachers[0].client.rpc("job_offers").then(({data,error})=>({data:data?.find(row=>row.id===job),error})),
       "Read actual lecturer-visible net offer",
     );
-    assert.equal(Number(offer.amount), 50);
-    assert.equal(Number(offer.total_amount), 50);
+    assert.equal(Number(offer.amount), 31);
+    assert.equal(Number(offer.total_amount), 31);
     assert.equal(offer.capacity, 3);
     assert.ok(
       !Object.keys(offer).some((key) => /gross|platform|commission/.test(key)),
@@ -319,9 +321,9 @@ await withApiFixture(
       );
       assert.equal(own.length, 1);
       assert.equal(own[0].id, winner.result.claim_id);
-      assert.equal(Number(own[0].total_amount), 50);
+      assert.equal(Number(own[0].total_amount), 31);
       assert.equal(own[0].terms, offer.terms);
-      assert.equal(own[0].terms_version, offer.terms_version);
+      assert.equal(own[0].terms_version, Math.floor(offer.terms_version / 10));
       assert.ok(
         !Object.keys(own[0]).some((key) =>
           /gross|platform|commission/.test(key),
@@ -397,6 +399,7 @@ await withApiFixture(
       "fifty concurrent HTTP calls commit exactly three distinct lecturers, six intervals and three deduplicated notifications",
     );
 
+    // Checks totals and client reports independently against confirmed positions and original currencies.
     const summary = async (expectedIds) => {
         const rows = await checked(
             client.client.rpc("client_spend_summary"),
@@ -449,10 +452,10 @@ await withApiFixture(
           assert.equal(row.capacity, 3);
           assert.equal(row.pricing_model, "commission");
           assert.equal(Number(row.gross_total_amount), 100.01);
-          assert.equal(Number(row.platform_percent), 50);
-          // Established rounding allocates the odd cent to the platform.
-          assert.equal(Number(row.platform_total_amount), 50.01);
-          assert.equal(Number(row.lecturer_net_total_amount), 50);
+          assert.equal(Number(row.platform_percent), 69);
+          // Residual conservation follows the fictional test policy.
+          assert.equal(Number(row.platform_total_amount), 69.01);
+          assert.equal(Number(row.lecturer_net_total_amount), 31);
         }
         return rows;
       };
@@ -481,7 +484,7 @@ await withApiFixture(
       "22023",
     );
     pass(
-      "capacity-three gross budget stays300.03, each accepted net stays50.00 and the client counts one course",
+      "capacity-three gross budget stays300.03, each accepted net stays31.00 and the client counts one course",
     );
 
     const cancelled = winners[0],

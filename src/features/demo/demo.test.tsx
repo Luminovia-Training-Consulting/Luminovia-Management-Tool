@@ -1,3 +1,7 @@
+/**
+ * DOM regressions for fictional workflows, navigation, reset and keyboard focus. Mocked backend
+ * imports and fetch expose accidental demo coupling; these fixtures do not test live workflows.
+ */
 import {
   act,
   cleanup,
@@ -205,6 +209,55 @@ describe("public fictional demo boundary", () => {
 });
 
 describe("connected fictional workflows", () => {
+  it("keeps an accepted example fixed instead of silently marking a later publication as already claimed", () => {
+    open("/demo/jobs");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Auftrag zur Probe übernehmen" }),
+    );
+    section("/admin");
+    expect(
+      screen.getByRole("button", { name: "Demo-Angebot veröffentlichen" }),
+    ).toBeDisabled();
+    expect(screen.getByLabelText("Fiktiver Auftragstitel")).toBeDisabled();
+    expect(
+      screen.getByText(/Dieser Demo-Terminblock wurde bereits übernommen/),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Demo zurücksetzen" }));
+    expect(screen.getByLabelText("Fiktiver Auftragstitel")).toBeEnabled();
+  });
+  it("uses a published title for the actual claim and its calendar allocation rather than an unrelated sample heading", () => {
+    open("/demo/admin");
+    fireEvent.change(screen.getByLabelText("Fiktiver Auftragstitel"), {
+      target: { value: "Fictional SQL workshop" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Demo-Angebot als Entwurf speichern",
+      }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Demo-Angebot veröffentlichen" }),
+    );
+    section("/jobs");
+    expect(
+      screen.getByRole("heading", { level: 3, name: "Fictional SQL workshop" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("heading", {
+        level: 3,
+        name: "Linux Grundlagen · Demo-Akademie",
+      }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Auftrag zur Probe übernehmen" }),
+    );
+    section("/calendar");
+    expect(
+      screen.getByRole("heading", { name: "Fictional SQL workshop" }),
+    ).toBeVisible();
+    expect(screen.getByText(/06.05.2030/)).toBeVisible();
+    expect(screen.getByText(/07.05.2030/)).toBeVisible();
+  });
   it("requires a saved draft before publishing and exposes only that fictional offer in demo jobs", () => {
     open("/demo/admin");
     const publish = screen.getByRole("button", {

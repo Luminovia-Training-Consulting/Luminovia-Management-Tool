@@ -1,9 +1,13 @@
+/**
+ * Authenticated HTTP gateway in front of private clamd. Bound headers, upload size, concurrency and duration; return only an explicit ClamAV result as a scan outcome.
+ */
 import { createHash, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { pathToFileURL } from "node:url";
 import { createClamavScanner, MAX_BYTES, validateVersion } from "./clamav.mjs";
 
+// Load the server-only gateway token and reject unusable configuration.
 export function readToken(environment = process.env) {
   const value = environment.PORTAL_SCANNER_TOKEN;
   const file = environment.PORTAL_SCANNER_TOKEN_FILE;
@@ -16,10 +20,12 @@ export function readToken(environment = process.env) {
   return token;
 }
 
+// Hash bearer values to equal-length buffers for timingSafeEqual rather than comparing token lengths directly.
 function digest(value) {
   return createHash("sha256").update(value).digest();
 }
 
+// Write bounded JSON with an explicit HTTP status and security headers.
 function json(response, status, value, extraHeaders = {}) {
   if (response.destroyed || response.writableEnded) return;
   response.writeHead(status, {
@@ -31,11 +37,13 @@ function json(response, status, value, extraHeaders = {}) {
   response.end(JSON.stringify(value));
 }
 
+// Close a rejected request connection after responding so leftover bytes cannot continue as another upload.
 function closeAfterReply(request, response) {
   response.setHeader("Connection", "close");
   response.once("finish", () => request.destroy());
 }
 
+// Count raw header fields; combined header values could hide duplicate authorization/length fields.
 function headerCount(request, name) {
   let count = 0;
   for (let index = 0; index < request.rawHeaders.length; index += 2) {
@@ -44,6 +52,7 @@ function headerCount(request, name) {
   return count;
 }
 
+// Create the bounded scan gateway with an injectable adapter, authentication and controlled occupancy.
 export function createScannerServer({
   token,
   scanner = createClamavScanner(),

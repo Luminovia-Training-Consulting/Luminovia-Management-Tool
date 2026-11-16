@@ -1,3 +1,7 @@
+/**
+ * DOM regressions for explicit tour navigation, actor-scoped progress, capability changes and
+ * keyboard focus. Browser-storage fixtures do not replace native authorization/MFA checks.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -137,6 +141,75 @@ describe("live portal guidance", () => {
       screen.getByRole("link", { name: "Hilfe zu diesem Bereich" }),
     ).not.toHaveAttribute("href", expect.stringContaining(audit.id));
   });
+  it("shows automatic onboarding only while the live tour is inactive and restores it on pause", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <PortalTour
+          actor="fictional"
+          roles={["lecturer"]}
+          permissions={[]}
+          ready
+        >
+          <p>Server-backed automatic welcome guide</p>
+        </PortalTour>
+      </MemoryRouter>,
+    );
+    expect(
+      screen.getByText("Server-backed automatic welcome guide"),
+    ).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Portal-Rundgang" }));
+    expect(
+      screen.queryByText("Server-backed automatic welcome guide"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Weiter" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Pausieren" }));
+    expect(
+      screen.getByText("Server-backed automatic welcome guide"),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Weiter" }),
+    ).not.toBeInTheDocument();
+    expect(readTour("fictional")).toEqual({ status: "paused", step: "home" });
+  });
+  it.each(["/welcome", "/welcome/"])(
+    "keeps an explicit manual guide at %s free of a resumed tour panel",
+    async (path) => {
+      storeTour("fictional", { status: "active", step: "profile" });
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter initialEntries={[path]}>
+          <PortalTour
+            actor="fictional"
+            roles={["lecturer"]}
+            permissions={[]}
+            ready
+          >
+            <p>Retained manual welcome content</p>
+          </PortalTour>
+          <Location />
+        </MemoryRouter>,
+      );
+      expect(screen.getByText("Retained manual welcome content")).toBeVisible();
+      expect(
+        screen.queryByRole("button", { name: "Weiter" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Zurück" }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+      expect(readTour("fictional")).toEqual({
+        status: "active",
+        step: "profile",
+      });
+      await user.click(screen.getByRole("button", { name: "Portal-Rundgang" }));
+      expect(screen.getByLabelText("route")).toHaveTextContent("/");
+      expect(screen.getByRole("button", { name: "Weiter" })).toBeVisible();
+      expect(
+        screen.queryByText("Retained manual welcome content"),
+      ).not.toBeInTheDocument();
+    },
+  );
   it("validates session storage and tolerates browser storage denial", async () => {
     sessionStorage.setItem(
       "luminovia.tour.v1.bad",
@@ -155,6 +228,49 @@ describe("live portal guidance", () => {
     ).not.toThrow();
     const user = userEvent.setup();
     mount();
+    await user.click(screen.getByRole("button", { name: "Portal-Rundgang" }));
+    expect(screen.getByRole("progressbar")).toBeVisible();
+  });
+  it("distinguishes loading from failed access and recovers without exposing stops early", async () => {
+    const user = userEvent.setup();
+    const retry = vi.fn();
+    const view = (ready: boolean, failed: boolean, retrying = false) => (
+      <MemoryRouter>
+        <PortalTour
+          actor="recovery"
+          roles={["lecturer"]}
+          permissions={[]}
+          ready={ready}
+          failed={failed}
+          retrying={retrying}
+          onRetry={retry}
+        />
+      </MemoryRouter>
+    );
+    const page = render(view(false, false));
+    expect(screen.getByRole("status")).toHaveTextContent("wartet");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    page.rerender(view(false, true));
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "konnten nicht geladen werden",
+    );
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Zugriffsrechte erneut laden" }),
+    );
+    expect(retry).toHaveBeenCalledTimes(1);
+    page.rerender(view(false, true, true));
+    expect(
+      screen.getByRole("button", { name: "Zugriffsrechte erneut laden" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Portal-Rundgang" }),
+    ).toBeDisabled();
+    page.rerender(view(true, false));
+    expect(
+      screen.getByRole("button", { name: "Portal-Rundgang" }),
+    ).toHaveFocus();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Portal-Rundgang" }));
     expect(screen.getByRole("progressbar")).toBeVisible();
   });

@@ -28,6 +28,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
         `(${q(id)},${q(name === "stranger" ? "participant" : name)})`,
     )
     .join(",")};`);
+  /** Calls the business database API under the fixture's controlled identity/MFA claims. */
   const rpc = async (who, name, args = [], aal = "aal1") => {
     const invocation = `public.${name}(${args.map((v) => (v === null ? "null" : typeof v === "number" || typeof v === "boolean" ? String(v) : q(typeof v === "object" ? JSON.stringify(v) : v))).join(",")})`;
     const value = await actor(
@@ -43,7 +44,9 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
       return value;
     }
   };
+  await rpc("admin", "configure_compensation_policy", [31, 73, 0], "aal2");
   let count = 0;
+  /** Counts and reports a case only after all of its assertions have completed successfully. */
   const check = async (name, action) => {
     await action();
     count++;
@@ -57,6 +60,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
   await sql(
     `insert into public.organisations(id,name) values(${q(org)},'Fictional CBW Academy');insert into public.client_organisation_memberships(user_id,organisation_id) values(${q(ids.client)},${q(org)});`,
   );
+  /** Plans a real course run from the referenced template rather than merely setting a screen state. */
   const createRun = async (templateId = template, offset = 0) => {
     const start = new Date(Date.now() + (100 + offset) * 86400000);
     start.setUTCHours(8, 0, 0, 0);
@@ -83,6 +87,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
       "aal2",
     );
   };
+  /** Creates terms tied to the exact source revision; the database must reject stale references. */
   const financial = (revision, gross = true) => ({
     source_revision: revision,
     ...(gross
@@ -289,7 +294,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
         rpc(
           "admin",
           "create_course_run_job",
-          [run, financial(before.source_revision), 50, randomUUID()],
+          [run, financial(before.source_revision), null, randomUUID()],
           "aal2",
         ),
         /course_run_source_changed/,
@@ -304,7 +309,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
   );
   let requestId, payload;
   await check(
-    "A complete offer reuses the real run/customer/template/session IDs with exact50/50 rounding",
+    "A complete offer reuses the real run/customer/template/session IDs with private role-specific net rounding",
     async () => {
       const defaults = await rpc(
         "admin",
@@ -320,7 +325,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
       job = await rpc(
         "admin",
         "create_course_run_job",
-        [run, payload, 50, requestId],
+        [run, payload, null, requestId],
         "aal2",
       );
       assert.equal(
@@ -343,7 +348,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
         await sql(
           `select amount||','||total_amount from public.jobs where id=${q(job)}`,
         ),
-        "50.00,100.01",
+        "0.00,0.00",
       );
       assert.equal(
         await sql(
@@ -360,7 +365,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
         await rpc(
           "admin",
           "create_course_run_job",
-          [run, payload, 50, requestId],
+          [run, payload, null, requestId],
           "aal2",
         ),
         job,
@@ -369,7 +374,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
         rpc(
           "admin",
           "create_course_run_job",
-          [run, { ...payload, gross_total_amount: 250 }, 50, requestId],
+          [run, { ...payload, gross_total_amount: 250 }, null, requestId],
           "aal2",
         ),
         /idempotency conflict/,
@@ -378,7 +383,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
         rpc(
           "admin",
           "create_course_run_job",
-          [run, payload, 50, randomUUID()],
+          [run, payload, null, randomUUID()],
           "aal2",
         ),
         /course_run_offer_exists/,
@@ -466,7 +471,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
         rpc(
           "management",
           "create_course_run_job",
-          [netRun, financial(preview.source_revision), 50, randomUUID()],
+          [netRun, financial(preview.source_revision), null, randomUUID()],
           "aal2",
         ),
         /Gross finance permission/,
@@ -474,7 +479,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
       const netJob = await rpc(
         "management",
         "create_course_run_job",
-        [netRun, financial(preview.source_revision, false), 50, randomUUID()],
+        [netRun, financial(preview.source_revision, false), null, randomUUID()],
         "aal2",
       );
       const report = await rpc("admin", "commission_report", [], "aal2");
@@ -512,7 +517,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
         rpc(
           "admin",
           "create_course_run_job",
-          [raceRun, financial(preview.source_revision), 50, randomUUID()],
+          [raceRun, financial(preview.source_revision), null, randomUUID()],
           "aal2",
         ),
         rpc(
@@ -521,7 +526,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
           [
             raceRun,
             financial(preview.source_revision, false),
-            50,
+            null,
             randomUUID(),
           ],
           "aal2",
@@ -571,7 +576,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
           rpc(
             "admin",
             "create_course_run_job",
-            [invalidRun, { ...base, ...extra }, 50, randomUUID()],
+            [invalidRun, { ...base, ...extra }, null, randomUUID()],
             "aal2",
           ),
         );
@@ -585,7 +590,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
         rpc("admin", "create_course_run_job", [
           invalidRun,
           base,
-          50,
+          null,
           randomUUID(),
         ]),
         /MFA required/,
@@ -634,7 +639,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
     "Actual whole-block claim fixes lecturer compensation independently of later offer values",
     async () => {
       const version = Number(
-        await sql(`select terms_version from public.jobs where id=${q(job)}`),
+        await actor(ids.lecturer, `select item->>'terms_version' from jsonb_array_elements(public.job_offers()) item where item->>'id'=${q(job)}`),
       );
       const claim = await rpc("lecturer", "claim_job", [
         job,
@@ -652,7 +657,7 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
         await sql(
           `select gross_total_amount||','||lecturer_net_total_amount from private.claim_revenue_ledger where claim_id=${q(claim.claim_id)}`,
         ),
-        "200.02,100.01",
+        "200.02,62.01",
       );
       await sql(
         `update public.jobs set amount=7,total_amount=14 where id=${q(job)}`,
@@ -661,10 +666,10 @@ await withTestDatabase("cbw_test", async ({ sql, actor }) => {
         await sql(
           `select total_amount from public.job_claims where id=${q(claim.claim_id)}`,
         ),
-        "100.01",
+        "62.01",
       );
       await assert.rejects(
-        rpc("admin", "set_job_commission", [job, 900, 1800, 50], "aal2"),
+        rpc("admin", "set_job_commission", [job, 900, 1800, null], "aal2"),
         /unaccepted offers/,
       );
     },

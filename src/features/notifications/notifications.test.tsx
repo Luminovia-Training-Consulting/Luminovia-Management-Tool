@@ -1,3 +1,7 @@
+/**
+ * Regressions for safe inbox destinations, confirmed read state and retained drafts after
+ * version conflicts. UI/SDK fixtures do not replace native notification authorization.
+ */
 import {
   act,
   cleanup,
@@ -102,6 +106,7 @@ afterEach(() => {
   clients.splice(0).forEach((client) => client.clear());
   vi.clearAllMocks();
 });
+/** Render the subject with the local providers required by this test. */
 function view(component: React.ReactNode) {
   const client = new QueryClient({
     defaultOptions: {

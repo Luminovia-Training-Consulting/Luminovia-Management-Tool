@@ -1,3 +1,7 @@
+/**
+ * Explicit optional-participant enrollment management. Roles shape the UI; the server
+ * establishes enrollment and dependent resource permissions.
+ */
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -9,6 +13,7 @@ import { Field, Loading, ErrorState, Notice } from "../../components/common";
 import { peopleRpc, type Enrolment } from "./api";
 import "./i18n";
 import "./people.css";
+/** Read/change explicit course enrollments only through their administrative contract. */
 export function EnrolmentManager({ courseRunId }: { courseRunId: string }) {
   const { t } = useTranslation("people");
   const { session } = useAuth();

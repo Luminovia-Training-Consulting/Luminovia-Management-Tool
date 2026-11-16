@@ -1,6 +1,11 @@
+/**
+ * Shared language/theme controls for public and private pages. Only visual preferences persist;
+ * system-colour listeners follow the selected theme and are removed when it changes or unmounts.
+ */
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { readPreference, writePreference } from "../lib/preferences";
+/** Apply language/theme choices; follow system colours and persist visual settings best-effort. */
 export function Preferences() {
   const { t, i18n } = useTranslation();
   const [theme, setTheme] = useState(() => {

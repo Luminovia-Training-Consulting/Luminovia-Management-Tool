@@ -39,7 +39,7 @@ See [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) for operation, troubleshootin
 
 M6 connects the database, APIs and interface. Its complete application and native retained-data acceptance passed before [PR #8](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/8) merged. The later accepted `1341b16` checkpoint passed [all nine Main CI jobs](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43788369925), including 197 unit/component tests, 234 SQL cases, 18 actual business API suites, 72 desktop/mobile browser cases, persistence, built-PWA checks and real selfhost compatibility. New revisions need their own verification; these results do not imply complete production acceptance. See [QA_RESULTS](docs/QA_RESULTS.md) and [WORKLOG](docs/WORKLOG.md).
 
-The contribution guides merged in [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the independent GitHub preview launcher in [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). The catalogue contains 36 managed labels alongside nine preserved GitHub defaults. Public contribution guidance, issue forms and pull request instructions use English. The [GitHub administration guide](docs/GITHUB_WORKFLOW.md) distinguishes active Maintainer/Admin exceptions from the additional review/check rules still awaiting activation.
+The contribution guides merged in [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the independent GitHub preview launcher in [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). The catalogue contains 36 managed labels alongside nine preserved GitHub defaults. Public contribution guidance, issue forms and pull request instructions use English. The [GitHub administration guide](docs/GITHUB_WORKFLOW.md) records the active rules: 15 compulsory checks, signatures, PR-only Maintain/Admin review exceptions and no App bypass.
 
 ## Implemented routes
 
@@ -139,6 +139,8 @@ Stop managed local services with `./portal stop`; database and actual Storage fi
 ## Documentation
 
 [Documentation index](docs/README.md) · [Roadmap](ROADMAP.md) · [Changelog](CHANGELOG.md) · [Decision notes](docs/decisions/README.md)
+
+[Agent working guide](AGENTS.md) · [SQL migration reading guide](docs/MIGRATION_GUIDE.md). Maintained application, test and operating source includes comprehensive English comments; keep those contracts and explanations current with code changes.
 
 [System audit](docs/SYSTEM_AUDIT.md) · [Developer guide](docs/DEVELOPER_GUIDE.md) · [Functional audit](docs/FUNCTIONAL_CODE_AUDIT.md) · [CBW templates](docs/CBW_TEMPLATES.md) · [Profile pictures](docs/PROFILE_AVATARS.md) · [Comments](docs/RESOURCE_COMMENTS.md) · [Taxonomy](docs/TAXONOMY.md) · [Availability](docs/AVAILABILITY.md) · [Job lifecycle/capacity](docs/JOB_LIFECYCLE.md) · [Dashboard](docs/DASHBOARD.md) · [Notifications](docs/NOTIFICATIONS.md) · [Administration audit](docs/ADMIN_AUDIT.md) · [GitHub preview](docs/GITHUB_LOCAL_PREVIEW.md) · [Product scope](docs/PRODUCT_SPEC.md) · [Architecture](docs/ARCHITECTURE.md) · [ERD](docs/ERD.md) · [Brand](docs/BRAND_DESIGN_SYSTEM.md) · [Plan](docs/IMPLEMENTATION_PLAN.md) · [Security review](docs/BACKEND_SECURITY_REVIEW.md) · [Test plan](docs/TEST_PLAN.md) · [User guide](docs/USER_GUIDE.md)
 

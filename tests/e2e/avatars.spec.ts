@@ -1,3 +1,7 @@
+/**
+ * Browser workflows for canonical scanned avatars after actual image processing.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
+ */
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import sharp from "sharp";

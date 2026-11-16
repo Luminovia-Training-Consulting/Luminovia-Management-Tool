@@ -1,3 +1,7 @@
+/**
+ * Regressions for versioned administration, confirmed cancellation and stable request IDs.
+ * Controlled SDK responses do not replace real transaction/permission checks.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import {
   cleanup,
@@ -92,6 +96,7 @@ const assigned: JobLifecycle = {
     },
   ],
 };
+/** Configure the reviewed lifecycle state and targeted SDK mutation responses. */
 function mock(
   meta: JobLifecycle,
   write: (
@@ -110,10 +115,12 @@ function mock(
     },
   );
 }
+/** Expose the actual router location after a confirmed lifecycle action. */
 function CurrentLocation() {
   const location = useLocation();
   return <output aria-label="route">{location.pathname}</output>;
 }
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(meta = empty, write?: Parameters<typeof mock>[1]) {
   mock(meta, write);
   const client = new QueryClient({
@@ -133,6 +140,20 @@ function setup(meta = empty, write?: Parameters<typeof mock>[1]) {
   );
   return client;
 }
+it("shows the server maximum across lecturer tiers instead of multiplying the viewer's own quote", async () => {
+  setup({ ...empty, capacity: 3, max_net_budget: 219.03 });
+  expect(
+    await screen.findByText(/Maximale Dozierendenvergütung: 219,03/),
+  ).toBeVisible();
+  expect(screen.queryByText(/600,00/)).not.toBeInTheDocument();
+});
+it("honours an explicitly protected budget without falling back to a cached personal quote", async () => {
+  setup({ ...empty, capacity: 3, max_net_budget: null });
+  await screen.findByRole("heading", { name: "Zuweisung und Auftragsverlauf" });
+  expect(
+    screen.queryByText(/Maximale Dozierendenvergütung/),
+  ).not.toBeInTheDocument();
+});
 it("requires an explicit reason and server confirmation before releasing an own assignment", async () => {
   const meta = structuredClone(assigned);
   setup(meta, (name) => {

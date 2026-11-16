@@ -1,3 +1,7 @@
+/**
+ * Availability window editor and separate own/shared views, using shared brand colours and
+ * surface variables.
+ */
 .availability-range {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -9,6 +13,7 @@
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
   gap: 20px;
 }
+/* Window cards distinguish available and blocked intervals through content as well as colour. */
 .availability-card {
   min-width: 0;
   border-top: 5px solid #b8edd9;
@@ -41,6 +46,7 @@
   gap: 12px;
   flex-wrap: wrap;
 }
+/* Group editor fields with their visible conflict notices as one coherent operation. */
 .availability-form {
   display: grid;
   gap: 16px;
@@ -48,6 +54,7 @@
 .availability-form textarea {
   min-height: 110px;
 }
+
 @media (max-width: 640px) {
   .availability-range {
     grid-template-columns: 1fr;

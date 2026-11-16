@@ -1,3 +1,6 @@
+/**
+ * Account HTTP cases inject Auth/RPC/delivery with fictional UUIDs. Exercise methods, input, caller propagation and reservation; native Auth/RLS is checked separately.
+ */
 import assert from "node:assert/strict";
 import {
   createAccountHandler,
@@ -7,6 +10,7 @@ import {
 import { accountOpenApi } from "./openapi.ts";
 const id = "44444444-4444-4444-8444-444444444444";
 const key = "55555555-5555-4555-8555-555555555555";
+// Create controlled owned fixtures with replaceable external responses.
 function fixture(overrides: Partial<AccountDependencies> = {}) {
   const calls: string[] = [];
   const handler = createAccountHandler({
@@ -72,7 +76,7 @@ Deno.test(
         email: "a@example.invalid",
         role: "client",
         idempotency_key: key,
-      }),
+      })?.organisation_id,
       null,
     );
     assert.equal(

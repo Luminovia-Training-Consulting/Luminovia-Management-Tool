@@ -1,10 +1,18 @@
+/**
+ * Authenticated tour acceptance using a fictional actor on the disposable local stack.
+ * Unlike the public demo, this signs in through the UI and reads real fixture records.
+ */
 import { expect, test } from "@playwright/test";
 import { actor, api, checked, login } from "./helpers/accounts-support";
 
+// Exercise lecturer-visible sections, focus, resume state and language changes.
+// The final read-back checks this actor's profile, claims and private calendar.
 test("a real lecturer follows the permission-aware portal tour without changing business records", async ({
   page,
 }) => {
   const teacher = await actor("Fictional guided portal lecturer", "lecturer");
+  const accessEndpoint = "**/rest/v1/rpc/get_my_permissions";
+  await page.route(accessEndpoint, (route) => route.abort("failed"));
   await login(page, teacher.email);
   const guide = page.getByRole("region", {
     name: "Portal-Rundgang",
@@ -14,7 +22,17 @@ test("a real lecturer follows the permission-aware portal tour without changing 
     name: "Portal-Rundgang",
     exact: true,
   });
+  await expect(guide.getByRole("alert")).toContainText(
+    "Die Zugriffsrechte konnten nicht geladen werden",
+  );
+  await expect(launch).toBeDisabled();
+  await page.unroute(accessEndpoint);
+  await guide
+    .getByRole("button", { name: "Zugriffsrechte erneut laden", exact: true })
+    .click();
   await expect(launch).toBeEnabled();
+  await expect(launch).toBeFocused();
+  await expect(guide.getByRole("alert")).toHaveCount(0);
   await launch.click();
   await expect(guide.getByText(/Du bist im echten Portal/)).toBeVisible();
   const section = guide.getByRole("combobox", {
@@ -26,6 +44,7 @@ test("a real lecturer follows the permission-aware portal tour without changing 
     .evaluateAll((items) =>
       items.map((item) => (item as HTMLOptionElement).value),
     );
+  // Management-only sections must not appear in this lecturer's tour selector.
   expect(options).toContain("jobs");
   expect(options).not.toContain("accounts");
   expect(options).not.toContain("audit");
@@ -70,6 +89,8 @@ test("a real lecturer follows the permission-aware portal tour without changing 
     englishGuide.getByRole("button", { name: "Resume tour", exact: true }),
   ).toBeFocused();
   await expect(englishGuide.getByRole("progressbar")).toHaveCount(0);
+  // Privileged reads inspect only this fictional actor; browser actions use the
+  // signed-in lecturer. These assertions cover the listed records, not all tables.
   const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const profile = await checked(
     service

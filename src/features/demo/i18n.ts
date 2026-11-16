@@ -1,3 +1,7 @@
+/**
+ * DE/EN UI resources for fictional demo interactions. Import registers the demo namespace;
+ * authored guide text is selected separately by the shared catalog helpers.
+ */
 import i18n from "../../lib/i18n";
 const pairs = {
   adminTitle: ["Fiktiver Auftragstitel", "Fictional job title"],
@@ -17,6 +21,10 @@ const pairs = {
   adminLocked: [
     "Der veröffentlichte Demo-Titel bleibt für diese Übung fest. Zum Wiederholen die Demo zurücksetzen.",
     "The published demo title stays fixed for this exercise. Reset the demo to repeat.",
+  ],
+  adminClaimed: [
+    "Dieser Demo-Terminblock wurde bereits übernommen. Sein Titel und seine Termine bleiben erhalten. Setze die Demo zurück, bevor du ein neues Angebot ausprobierst.",
+    "This demo session block has already been claimed. Its title and sessions stay unchanged. Reset the demo before practising a new offer.",
   ],
   request: ["Fiktive Kursanfrage", "Fictional course request"],
   requestSend: [
@@ -81,7 +89,6 @@ const pairs = {
     "Participants use shared course information and their own reviews. Internal jobs and finances are outside their view.",
   ],
   navigation: ["Demo-Bereiche", "Demo sections"],
-  language: ["Sprache", "Language"],
   reset: ["Demo zurücksetzen", "Reset demo"],
   resetDone: [
     "Alle Demo-Übungen wurden zurückgesetzt.",

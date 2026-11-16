@@ -1,3 +1,7 @@
+/**
+ * Public fictional practice workspace driven by the authored guide catalog. Business inputs and
+ * outcomes live only in this component; the demo imports no backend client or account session.
+ */
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -15,12 +19,13 @@ import { guideModules, guideText } from "../help/catalog";
 import "./i18n";
 import "./demo.css";
 
+/** Change the educational perspective only; this selector never establishes a real role. */
 type DemoRole = "lecturer" | "management" | "client" | "participant";
 type Outcome = "success" | "filled" | "conflict" | "qualification" | "offline";
 const demoPath = (path: string) => `/demo${path === "/" ? "" : path}`;
 const sessions = ["2030-05-06T08:00:00Z", "2030-05-07T08:00:00Z"];
 
-/** An educational sandbox: no API client, session, real record or persistent input. */
+/** Render local practice state; only the shared visual-preference control uses persistent storage. */
 export function DemoPage() {
   const { t, i18n } = useTranslation("demo");
   const location = useLocation();
@@ -28,6 +33,7 @@ export function DemoPage() {
   const heading = useRef<HTMLHeadingElement>(null);
   const launcher = useRef<HTMLButtonElement>(null);
   const restoreLauncherFocus = useRef(false);
+  // Resolve URLs only against authored catalog entries; unknown destinations use the first section.
   const queryModule = new URLSearchParams(location.search).get("module");
   const requestedPath = location.pathname.replace(/^\/demo/, "") || "/";
   const selected = guideModules.find((module) =>
@@ -66,6 +72,7 @@ export function DemoPage() {
     key: string;
     path: string;
   } | null>(null);
+  // Scope feedback to its originating section so navigation cannot show an unrelated result.
   const report = (key: string) => setFeedback(key ? { key, path } : null);
   useEffect(() => {
     heading.current?.focus();
@@ -78,11 +85,13 @@ export function DemoPage() {
       launcher.current?.focus();
     }
   }, [tour]);
+  /** Restore launcher focus after pause/finish removes the active tour controls. */
   function stopTour(completed = false) {
     restoreLauncherFocus.current = true;
     setTour(false);
     if (completed) setComplete(true);
   }
+  /** Clear every fictional workflow and tour state while keeping the current route and visual preferences. */
   function reset() {
     setClaimed(false);
     setOutcome("success");
@@ -118,6 +127,11 @@ export function DemoPage() {
       { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin" },
     ).format(new Date(iso));
   const description = guideText(module.summary, i18n.language);
+  // One exercise represents one complete block. Once claimed, its title and
+  // accepted sessions stay fixed until an explicit reset starts a new round.
+  const offerTitle = publishedJob || t("course");
+  const publicationLocked = Boolean(publishedJob) || claimed;
+  // These flags describe simulated exercises only, never confirmed portal records or assignments.
   const practiceDone =
     path === "/jobs"
       ? claimed
@@ -299,13 +313,8 @@ export function DemoPage() {
               <span className="demo-sample-label">{t("sample")}</span>
               {path === "/jobs" ? (
                 <>
-                  {publishedJob && (
-                    <div className="demo-published-job">
-                      <h3>{publishedJob}</h3>
-                      <p>{t("adminPublished")}</p>
-                    </div>
-                  )}
-                  <h3>{t("course")}</h3>
+                  <h3>{offerTitle}</h3>
+                  {publishedJob && <p>{t("adminPublished")}</p>}
                   <p>{t("fee")}</p>
                   <ul>
                     {sessions.map((session) => (
@@ -363,6 +372,7 @@ export function DemoPage() {
                   {claimed ? (
                     <>
                       <p>{t("assignment")}</p>
+                      <h3>{offerTitle}</h3>
                       <ul>
                         {sessions.map((session) => (
                           <li key={session}>
@@ -474,7 +484,7 @@ export function DemoPage() {
                       id="demo-job-title"
                       maxLength={80}
                       value={jobDraft}
-                      disabled={Boolean(publishedJob)}
+                      disabled={publicationLocked}
                       onChange={(e) => {
                         setJobDraft(e.target.value);
                         setSavedJob("");
@@ -482,13 +492,13 @@ export function DemoPage() {
                     />
                     <Button
                       type="submit"
-                      disabled={!jobDraft.trim() || Boolean(publishedJob)}
+                      disabled={!jobDraft.trim() || publicationLocked}
                     >
                       {t("adminDraft")}
                     </Button>
                   </form>
                   <Button
-                    disabled={!savedJob || Boolean(publishedJob)}
+                    disabled={!savedJob || publicationLocked}
                     onClick={() => {
                       setPublishedJob(savedJob);
                       report("adminPublished");
@@ -496,6 +506,7 @@ export function DemoPage() {
                   >
                     {t("adminPublish")}
                   </Button>
+                  {claimed && <p>{t("adminClaimed")}</p>}
                   {publishedJob && (
                     <>
                       <h4>{publishedJob}</h4>
@@ -595,23 +606,17 @@ export function DemoPage() {
                 <>
                   <h3>
                     {t(
-                      path === "/contracts"
-                        ? "sampleTerms"
-                        : path === "/notifications" || path === "/settings"
-                          ? "notification"
-                          : path === "/people" ||
-                              path === "/admin/people" ||
-                              path === "/admin/accounts"
-                            ? "profile"
-                            : path === "/wiki"
-                              ? "wiki"
-                              : path === "/forum"
-                                ? "forum"
-                                : path === "/security"
-                                  ? "security"
-                                  : path === "/clients" || path === "/client"
-                                    ? "organisation"
-                                    : "course",
+                      path === "/notifications" || path === "/settings"
+                        ? "notification"
+                        : path === "/people" ||
+                            path === "/admin/people" ||
+                            path === "/admin/accounts"
+                          ? "profile"
+                          : path === "/security"
+                            ? "security"
+                            : path === "/clients"
+                              ? "organisation"
+                              : "course",
                     )}
                   </h3>
                   <p>{description}</p>

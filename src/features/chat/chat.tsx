@@ -1,3 +1,7 @@
+/**
+ * Room directory, direct-message creation and active conversation selection. Selection owns
+ * thread lifetime; contacts and membership come from authorized server projections.
+ */
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -25,6 +29,7 @@ import { ContactPicker, CreateGroup, RoomIcon } from "./manage";
 import { ChatThread } from "./thread";
 import "./i18n";
 import "./chat.css";
+/** Select rooms and start DMs using authorized contact/room projections. */
 export function ChatPage() {
   const { t, i18n } = useTranslation("chat");
   const online = useOnline();

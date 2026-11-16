@@ -1,3 +1,7 @@
+/**
+ * Regressions for referenced course offers, stable reviewed sources and retryable financial
+ * inputs. SDK/DOM fixtures isolate the form; actual server/data acceptance remains separate.
+ */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -62,7 +66,20 @@ beforeEach(async () => {
         if (name === "get_my_permissions")
           return { data: ["jobs.manage", "courses.manage"], error: null };
         if (name === "commission_access")
-          return { data: { can_manage_gross: mock.gross }, error: null };
+          return {
+            data: {
+              can_manage_gross: mock.gross,
+              ...(mock.gross
+                ? {
+                    regular_lecturer_percent: 31,
+                    senior_lecturer_percent: 73,
+                    policy_configured: true,
+                    policy_version: 1,
+                  }
+                : {}),
+            },
+            error: null,
+          };
         if (name === "course_run_job_defaults")
           return { data: mock.source, error: null };
         if (name === "create_course_run_job")
@@ -84,6 +101,7 @@ afterEach(() => {
   cleanup();
   cache.clear();
 });
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup() {
   return render(
     <QueryClientProvider client={cache}>
@@ -124,7 +142,6 @@ it("creates a referenced offer from trusted course defaults using only financial
   expect(calls).toHaveLength(1);
   expect(calls[0][1]).toMatchObject({
     p_course_run_id: source.course_run_id,
-    p_platform_percent: 50,
     p_payload: {
       source_revision: source.source_revision,
       gross_amount: 1000,
@@ -132,6 +149,7 @@ it("creates a referenced offer from trusted course defaults using only financial
     },
   });
   expect(calls[0][1].p_payload).not.toHaveProperty("sessions");
+  expect(calls[0][1]).not.toHaveProperty("p_platform_percent");
   expect(calls[0][1].p_payload).not.toHaveProperty("customer_name");
   expect(
     screen.getByRole("button", { name: "Stelle speichern" }),
@@ -194,7 +212,7 @@ it("keeps fixed-total net offers consistent for management without submitting gr
   const args = mock.rpc.mock.calls.find(
     ([name]) => name === "create_course_run_job",
   )![1];
-  expect(args.p_platform_percent).toBe(50);
+  expect(args).not.toHaveProperty("p_platform_percent");
   expect(args.p_payload).toMatchObject({ amount: 750, total_amount: 750 });
   expect(args.p_payload).not.toHaveProperty("gross_amount");
 });

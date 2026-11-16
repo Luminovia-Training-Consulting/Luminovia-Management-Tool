@@ -1,3 +1,7 @@
+/**
+ * Shared commercial PDF upload. Return only a clean, concrete document version to the parent
+ * form; a filename or selected local bytes alone is insufficient.
+ */
 import { useEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -7,6 +11,7 @@ import { useOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
 import { Notice } from "../../components/common";
 import "./i18n";
+/** Select/upload a PDF and report only the confirmed clean version to the parent form. */
 export function CommercialPdfUpload({
   kind,
   ownerId,

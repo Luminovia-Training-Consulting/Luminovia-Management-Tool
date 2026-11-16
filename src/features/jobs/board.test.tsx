@@ -1,3 +1,7 @@
+/**
+ * Regressions for confirmed board transitions and prohibition of drag-based claim success. UI
+ * fixtures do not replace actual transactional allocation checks.
+ */
 import { afterEach, expect, it, vi } from "vitest";
 import {
   cleanup,
@@ -50,6 +54,7 @@ const initial = [
     can_transition: false,
   },
 ];
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup(
   write: (
     args: Record<string, unknown>,

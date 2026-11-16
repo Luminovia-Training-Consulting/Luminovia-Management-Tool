@@ -38,6 +38,7 @@ await withApiFixture(async ({ service, actor, mfa, checked, sql, defer }) => {
         service.from("organisations").delete().eq("id", organisation),
       );
   });
+  // Own notes and windows start private, including against administrators.
   const body = {
     kind: "available",
     starts_at: "2061-05-01T08:00:00Z",
@@ -46,6 +47,7 @@ await withApiFixture(async ({ service, actor, mfa, checked, sql, defer }) => {
     notes: "Fictional private note NEVER IN MANAGEMENT",
     share_with_management: false,
   };
+  /** Sends the checked draft with its version and identity context to the owning API. */
   const save = (who, key, payload, version = 0) =>
     who.client.rpc("save_lecturer_availability", {
       p_id: key,
@@ -86,6 +88,7 @@ await withApiFixture(async ({ service, actor, mfa, checked, sql, defer }) => {
       })
     ).error,
   );
+  // MFA alone does not share calendar data; only explicit consent opens the reduced projection.
   await mfa(admin.client);
   assert.deepEqual(
     await checked(
@@ -118,6 +121,7 @@ await withApiFixture(async ({ service, actor, mfa, checked, sql, defer }) => {
     [],
   );
   assert.equal((await save(teacher, id, body, 1)).error?.code, "40001");
+  // Private blocked time must reject the real claim atomically without a partial allocation.
   const interval = {
     starts_at: "2061-05-02T08:00:00Z",
     ends_at: "2061-05-02T09:00:00Z",
@@ -210,6 +214,7 @@ await withApiFixture(async ({ service, actor, mfa, checked, sql, defer }) => {
         .eq("id", id)
     ).error,
   );
+  // Previously issued tokens must lose access after the account is actually suspended.
   await checked(
     service.from("profiles").update({ active: false }).eq("id", teacher.id),
   );

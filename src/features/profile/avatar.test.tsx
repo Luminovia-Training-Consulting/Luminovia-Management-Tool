@@ -1,3 +1,7 @@
+/**
+ * Regressions for identity-bound avatar bytes, offline state and object-URL lifetime. Controlled
+ * transports do not replace real avatar authorization.
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import {
@@ -42,6 +46,7 @@ afterEach(() => {
   focusManager.setFocused(undefined);
   onlineManager.setOnline(true);
 });
+/** Render the subject with local provider/router fixtures and an isolated QueryClient. */
 function setup() {
   const create = vi
     .fn()

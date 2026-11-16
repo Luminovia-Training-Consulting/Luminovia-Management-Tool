@@ -1,11 +1,15 @@
+/**
+ * Public browser journeys through fictional in-memory practice and help content.
+ * These exercise the rendered UI without proving real job claims or backend workflows.
+ */
 import { expect, test as base, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 const backendPath = /\/(?:auth|rest|storage|functions|realtime)\/v1(?:\/|$)/;
 
-// A public walkthrough must not silently turn a practice action into a real
-// request. Abort unexpected backend calls before they can affect even an
-// isolated fixture, then fail on the attempted request rather than mock success.
+// Abort matching HTTP requests and fail on attempts instead of mocking success.
+// WebSocket attempts are recorded separately; the listener does not block them.
+// The automatic fixture checks every scenario after its browser actions finish.
 const test = base.extend<{ isolatedDemo: void }>({
   isolatedDemo: [
     async ({ page }, use) => {
@@ -30,6 +34,7 @@ const test = base.extend<{ isolatedDemo: void }>({
   ],
 });
 
+/** Waits for fonts before checking viewport fit and automated WCAG rules. */
 async function accessibleWithoutOverflow(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   expect(
@@ -52,10 +57,26 @@ async function accessibleWithoutOverflow(page: Page) {
   ).toEqual([]);
 }
 
+// Rejected attempts stay retryable; simulated success survives role/language
+// changes until reset. Light/dark scans cover only the rendered demo state.
 test("fictional job outcomes never reserve real work, and language changes retain practice state", async ({
   page,
 }, testInfo) => {
-  await page.goto("/demo/jobs");
+  await page.goto("/login");
+  await expect(
+    page.getByRole("link", { name: "Hilfe & Anleitungen", exact: true }),
+  ).toHaveAttribute("href", "/help");
+  await page
+    .getByRole("link", {
+      name: "Demo mit Beispieldaten ausprobieren",
+      exact: true,
+    })
+    .click();
+  await expect(page).toHaveURL((url) => url.pathname === "/demo");
+  await page
+    .getByRole("navigation", { name: "Demo-Bereiche", exact: true })
+    .getByRole("link", { name: "Aufträge übernehmen", exact: true })
+    .click();
   await expect(
     page.getByText("DEMO · Nur fiktive Daten", { exact: true }).first(),
   ).toBeVisible();
@@ -127,6 +148,8 @@ test("fictional job outcomes never reserve real work, and language changes retai
   ).toHaveCount(0);
 });
 
+// In-app navigation retains practice drafts, while a full reload discards them.
+// The automatic backend guard distinguishes this from a persisted chat/profile flow.
 test("demo chat and profile drafts stay fictional and a page reload clears practice", async ({
   page,
 }) => {
@@ -163,6 +186,8 @@ test("demo chat and profile drafts stay fictional and a page reload clears pract
   ).toHaveCount(0);
 });
 
+// Connect the management and lecturer exercises through shared fictional state,
+// then verify one reset clears the publication, allocation and calendar effects.
 test("connected demo publication, allocation, calendar and document exercises reset together", async ({
   page,
 }) => {
@@ -182,6 +207,7 @@ test("connected demo publication, allocation, calendar and document exercises re
   await page
     .getByRole("button", { name: "Demo-Angebot veröffentlichen", exact: true })
     .click();
+  // Follow rendered links so navigation retains the same in-memory demo session.
   const visit = async (path: string) => {
     await page
       .getByRole("navigation", { name: "Demo-Bereiche", exact: true })
@@ -262,6 +288,8 @@ test("connected demo publication, allocation, calendar and document exercises re
   ).toHaveCount(0);
 });
 
+// Check the complete demo navigation inventory before walking its displayed order.
+// Pausing, changing language and restarting must retain coherent tour controls.
 test("the guided demo visits every actual portal area, pauses and restarts in either language", async ({
   page,
 }) => {
@@ -356,6 +384,8 @@ test("the guided demo visits every actual portal area, pauses and restarts in ei
   await accessibleWithoutOverflow(page);
 });
 
+// A deep-linked help topic survives translation; searching filters topic links
+// and choosing a result updates the shareable URL without backend interaction.
 test("public help searches practical recovery instructions and keeps the selected topic across language changes", async ({
   page,
 }, testInfo) => {
@@ -398,6 +428,17 @@ test("public help searches practical recovery instructions and keeps the selecte
     name: "Search help",
     exact: true,
   });
+  await search.fill("claim");
+  await expect(
+    page.getByRole("heading", { name: "Claim jobs", exact: true, level: 2 }),
+  ).toHaveCount(0);
+  await page.getByRole("link", { name: /^Claim jobs\b/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Claim jobs", exact: true, level: 2 }),
+  ).toBeFocused();
+  await expect(page).toHaveURL(
+    (url) => url.searchParams.get("topic") === "jobs",
+  );
   await search.fill("quarantine");
   await expect(
     page.getByRole("link", { name: /^File centre\b/ }),
@@ -406,7 +447,9 @@ test("public help searches practical recovery instructions and keeps the selecte
   await expect(page.getByRole("link", { name: /^File centre\b/ })).toHaveCount(
     0,
   );
-  await search.fill("");
+  await page.getByRole("button", { name: "Clear search", exact: true }).click();
+  await expect(search).toBeFocused();
+  await expect(search).toHaveValue("");
   await page.getByRole("link", { name: /^File centre\b/ }).click();
   await expect(page).toHaveURL(
     (url) => url.searchParams.get("topic") === "files",

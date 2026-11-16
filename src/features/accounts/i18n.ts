@@ -1,4 +1,10 @@
+/**
+ * DE/EN UI resources for the accounts namespace. Module import registers these strings with
+ * i18next; authored business content is not translated.
+ */
 import i18n from "../../lib/i18n";
+// Static UI resources use the namespace's shared interpolation and pluralization contract.
+// Authored content is separate from these i18next interface strings.
 const de = {
   title: "Konten & Zugänge",
   invited:
@@ -24,12 +30,15 @@ const de = {
   management: "Management",
   senior_lecturer: "Senior-Dozent:in",
   lecturer: "Dozent:in",
-  client: "Auftraggeber:in",
+  client: "Unternehmen",
   participant: "Kursteilnehmer:in",
+  guest: "Gast",
   role: "Kontorolle",
   organisation: "Auftraggeber-Organisation",
   organisationHint:
     "Dieser Zugang sieht nur Daten seiner zugeordneten Organisation.",
+  organisationAdmin:
+    "Die Administration ordnet diesem Konto anschließend eine Organisation zu.",
   choose: "Organisation wählen",
   clientLink: "Organisation zuordnen",
   clientUnlink: "Organisationszugriff entziehen",
@@ -41,7 +50,9 @@ const de = {
   next: "Weiter",
   count: "{{count}} Konten",
   roleHint:
-    "Administration und Plattformleitung können alle fachlichen Funktionen verwalten. Private Chats und persönliche Termine behalten ihre Zugriffsgrenzen.",
+    "Du kannst nur die freigegebenen untergeordneten Rollen vergeben. Der eigene Zugang sowie gleich- und höhergestellte Konten sind geschützt. Private Chats und persönliche Termine behalten ihre Zugriffsgrenzen.",
+  protected:
+    "Dieser Zugang ist vor Rollenänderungen durch dein Konto geschützt.",
   api: "API-Referenz",
   apiHint:
     "Anmeldung erfolgt über Supabase Auth. Konten, Rollen und Einladungen sind über die versionierte Account-API nutzbar; weitere Fachfunktionen über die dokumentierten Datenbank-RPCs.",
@@ -73,12 +84,15 @@ const en: typeof de = {
   management: "Management",
   senior_lecturer: "Senior lecturer",
   lecturer: "Lecturer",
-  client: "Client",
+  client: "Company",
   participant: "Course participant",
+  guest: "Guest",
   role: "Account role",
   organisation: "Client organisation",
   organisationHint:
     "This account only sees records belonging to its assigned organisation.",
+  organisationAdmin:
+    "Administration will assign an organisation to this account afterwards.",
   choose: "Choose organisation",
   clientLink: "Assign organisation",
   clientUnlink: "Revoke organisation access",
@@ -90,7 +104,8 @@ const en: typeof de = {
   next: "Next",
   count: "{{count}} accounts",
   roleHint:
-    "Administration and platform owners can manage all business functions. Private chats and personal events retain their resource access boundaries.",
+    "You can assign only the permitted subordinate roles. Your own account and accounts with equal or higher privileges are protected. Private chats and personal events retain their resource access boundaries.",
+  protected: "This account is protected from role changes by your account.",
   api: "API reference",
   apiHint:
     "Sign in through Supabase Auth. Accounts, roles and invitations are available through the versioned Account API; other domain features use the documented database RPCs.",

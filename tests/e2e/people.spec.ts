@@ -1,3 +1,7 @@
+/**
+ * Browser workflows for shared profiles, course history and reviews by enrolled participants.
+ * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
+ */
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
@@ -12,6 +16,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Profile workflows require the isolated ./portal test project.",
 );
+/** Checks the rendered state with axe; this does not replace manual accessibility acceptance. */
 async function a11y(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   const scan = await new AxeBuilder({ page })

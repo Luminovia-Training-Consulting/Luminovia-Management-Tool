@@ -1,3 +1,7 @@
+/**
+ * Regressions for failed sign-in, recovery and password changes. Controlled SDK responses test
+ * error/retry presentation, not real Auth delivery.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -37,6 +41,7 @@ beforeEach(() => {
   window.history.replaceState(null, "", "/");
 });
 afterEach(cleanup);
+/** Render the subject with the local providers required by this test. */
 function view(element: React.ReactNode) {
   return render(<MemoryRouter>{element}</MemoryRouter>);
 }

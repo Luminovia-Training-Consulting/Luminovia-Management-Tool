@@ -1,3 +1,6 @@
+/**
+ * Check the bounded historical backfill against real versioned SQL. Wrong history/source must not create a general migration bypass.
+ */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import {
@@ -19,6 +22,7 @@ import {
   reviewedMigrations,
 } from "./reviewed-m3-backfill.mjs";
 
+// Build the exact historical state for the successful or deliberately corrupted plan case.
 async function history() {
   const files = await readdir(resolve(repository, "supabase/migrations"));
   return Promise.all(
