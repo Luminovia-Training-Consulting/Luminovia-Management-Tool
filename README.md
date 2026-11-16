@@ -67,7 +67,7 @@ See [LOCAL_DEVELOPMENT](docs/LOCAL_DEVELOPMENT.md) for operation, troubleshootin
 
 ## Current development and acceptance status
 
-Accepted main `4cc20874` brings the Main17 smart-operations source and its 62 released migrations into this prepared quality branch. Fresh tests and exact-head/current-base acceptance of this combined assembly are pending. The **319 passing Node cases at `0bdcb2a` predate Main17 integration**; PR17's own recorded 643 frontend cases/83 files and 146 runtime groups also remain source-bound. Full-profile PR acceptance requires the system phase, the separate browser phase and native retained-data verification together, followed by the applicable security and preview-package gates. Source presence does not prove installed provider delivery, physical-device acceptance or production readiness.
+Accepted main `4cc20874` brings the Main17 smart-operations source and its 62 released migrations into this prepared quality branch. The local combined source passes **658 frontend cases/84 files**, **331 runtime/maintenance cases**, full TypeScript/lint, the compiler graph and production/PWA build. Whole-source frontend V8 coverage is **66.47% statements / 61.64% branches / 56.90% functions / 68.64% lines**; the lifecycle and notification APIs separately meet **100% in all four metrics**. The graph inventories 183 modules / 40 routes with no unreachable modules or unused runtime exports. These are local source checks; fresh exact-head/current-base system, browser and native retained-data execution, security and preview-package gates remain required. Source presence does not prove installed provider delivery, physical-device acceptance or production readiness.
 
 ### Historical source-bound checkpoints
 

@@ -1,5 +1,13 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 UTC — local 62-migration quality composition
+
+Signed Main17 integration `1be4d96` and API regression follow-up `86c3e8e` preserve accepted Main `4cc20874`, all 62 released SQL sources and production React/Edge bytes. The lifecycle cache contract now covers the five actual new prefixes, including inbox and per-job projections; the notification boundary additionally rejects a protocol-relative external target. All inherited Quiet-Hour cases remain present once. The focused two-API run passes 64 cases and measures 100% in every metric for each real API source file; this is not global coverage.
+
+The complete local frontend run passes 658 cases across 84 files with V8 S66.47/B61.64/F56.90/L68.64%. All 331 runtime/maintenance cases pass at bounded concurrency. Full TypeScript and repository ESLint pass with an isolated exact-lock Main17 dependency install; the former missing-fake-indexeddb environment issue is resolved. The actual pinned Deno2.9.6 CLI runs without changing install-script policy. Compiler inventory reports 183 modules / 40 routes, no unresolved/unreachable modules and no unused runtime exports. The synthetic-public-config production/PWA build succeeds with 76 precache entries. Actionlint, documentation/formatting and the quality diff against accepted Main pass. Accepted vendored PDF/license bytes are preserved; their inherited whitespace is not rewritten by this slice.
+
+These results certify local code checks for this combined source, without starting a complete shared-PC service run. Current 62-migration system/browser/native, security and package CI still require fresh exact-head/current-base execution after publication. Earlier 319/318/304 and `7daaa7b` outcomes remain historical. The full product plan, queue-managed readiness, pending user review-policy decision and separate trusted-Main/Ready-event/native-App/provider/production acceptance remain unchanged.
+
 ## 16 November 2026 — accepted Main17 smart-operations source integration
 
 Accepted Main17 `4cc20874edc1f865b71106b7bb1299e16fec5aad`, with parents accepted Main36 `7fbdb956` and PR17 `6a6ff8b`, is being integrated into the prepared quality branch after normal merge `0bdcb2a` preserved queued PR19 update `9950002`. The actual accepted Main17 tree contains 62 released SQL migrations; every previously released 36-migration path/blob is unchanged, and the working migration files match all 62 incoming blobs. Both complete work-log and plan histories, including the full A–N target scope, remain preserved. Source integration does not establish hosted migration application, provider activation or product completion.

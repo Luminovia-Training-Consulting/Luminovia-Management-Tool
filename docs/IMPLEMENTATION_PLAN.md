@@ -1,5 +1,14 @@
 # Persistent implementation plan
 
+## Current local 62-migration quality composition
+
+- [x] Complete signed actual Main17 integration and preserve all 62 released SQL/production React/Edge bytes, full product scope and both complete histories.
+- [x] Preserve 100% API gates and cover all five new lifecycle cache prefixes plus protocol-relative notification targets; 64 focused cases and each API source at 100% S/B/F/L, with inherited Quiet-Hour coverage preserved once.
+- [x] Pass 658 frontend cases / 84 files, 331 runtime/maintenance cases, full types/lint,the connectivity/export inventory of 183 modules and 40 routes and synthetic-public-config production/PWA build. Measure actual whole-source coverage S66.47/B61.64/F56.90/L68.64%; retain every accepted global floor.
+- [ ] Publish the signed combined source normally while preserving current remote ancestry, then observe fresh exact-head/current-base full system, browser, native retained-data, security, metadata and preview-package acceptance. Historical 36-migration checkpoints do not prove acceptance of the 62-migration source.
+- [ ] Follow the assigned delivery sequence and current API readiness, reconcile the pending review-policy decision without silently changing server rules, and integrate only actually accepted later Main.
+- [ ] Complete permitted delivery and separately observe trusted-Main controller execution, actual Ready-event full verification and a genuinely eligible native App merge. Provider activation, physical-device and production acceptance remain distinct; the complete A–N scope below is retained.
+
 ## Current integration checkpoint — accepted Main17
 
 - [x] Integrate accepted Main17 `4cc20874edc1f865b71106b7bb1299e16fec5aad` after the pre-Main17 PR19 union `0bdcb2a`; preserve both complete ledgers and the full A–N product scope below.
@@ -191,7 +200,6 @@ This unchanged Root snapshot records its earlier pending publication/merge items
 - [ ] Perform the expressly authorised protected PR34 merge only when every final-current-head check passes; observe main acceptance separately without dispatching a release.
 
 This continuation preserves the complete remaining product scope and prior source-bound evidence below.
-
 
 ## Safe development-speed improvements — explicit continuation
 
