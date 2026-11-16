@@ -230,6 +230,55 @@ commit;`);
         0,
       );
     }
+    if (source === senior) {
+      const scope = [fixture.claim, receipt.claim_id, fixture.job, offer.id]
+        .map(q)
+        .join(",");
+      const snapshot = () =>
+        sql(
+          `select jsonb_build_object('claims',(select jsonb_agg(to_jsonb(c)order by c.id)from public.job_claims c where job_id=${q(fixture.job)}),'sessions',(select jsonb_agg(to_jsonb(s)order by s.id)from public.assignment_sessions s join public.job_claims c on c.id=s.claim_id where c.job_id=${q(fixture.job)}),'notices',(select jsonb_agg(to_jsonb(n)order by n.id)from public.notifications n where resource_id in(${scope})))`,
+        );
+      const before = await snapshot();
+      // The same genuinely issued Auth token must obey current DB roles and
+      // activation, even when it already obtained a successful receipt.
+      await checked(
+        admin.client.rpc("set_account_roles", {
+          p_user_id: target.id,
+          p_roles: ["participant"],
+        }),
+      );
+      assert.deepEqual(await accept(target, offer, request), {
+        status: "not_eligible",
+      });
+      assert.equal(await snapshot(), before);
+      await checked(
+        admin.client.rpc("set_account_roles", {
+          p_user_id: target.id,
+          p_roles: ["lecturer"],
+        }),
+      );
+      await checked(
+        admin.client.rpc("set_user_active", {
+          p_user_id: target.id,
+          p_active: false,
+        }),
+      );
+      const inactive = await target.client.rpc("respond_job_substitution", {
+        p_offer_id: offer.id,
+        p_action: "accept",
+        p_quote_hash: offer.quote_hash,
+        p_request_id: request,
+        p_accept_terms: true,
+      });
+      assert.equal(inactive.error?.code, "42501");
+      assert.equal(await snapshot(), before);
+      await checked(
+        admin.client.rpc("set_user_active", {
+          p_user_id: target.id,
+          p_active: true,
+        }),
+      );
+    }
   }
   const stale = await make(regular, candidate),
     oldOffer = await propose(stale);

@@ -57,6 +57,12 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
       sql(
         `select jsonb_build_object('amount',amount,'total_amount',total_amount,'currency',currency,'terms',terms,'terms_version',terms_version)from public.job_claims where id=${q(id)}`,
       );
+    // Profile/role changes are intentional inputs; business records must remain
+    // byte-identical when a historical acceptance retry is no longer allowed.
+    const receiptState = (fixture, offer, claim) =>
+      sql(
+        `select jsonb_build_object('offer',(select to_jsonb(o)from private.job_substitutions o where id=${q(offer.id)}),'claims',(select jsonb_agg(to_jsonb(c)order by c.id)from public.job_claims c where job_id=${q(fixture.job)}),'sessions',(select jsonb_agg(to_jsonb(s)order by s.id)from public.assignment_sessions s join public.job_claims c on c.id=s.claim_id where c.job_id=${q(fixture.job)}),'notices',(select jsonb_agg(to_jsonb(n)order by n.id)from public.notifications n where resource_id in(${[fixture.claim, fixture.job, offer.id, claim].map(q).join(",")})))`,
+      );
     const ownOffer = async (who, job) =>
       (await rpc(who, "job_offers")).find((row) => row.id === job);
     const proposal = async (fixture, target = fixture.target) => {
@@ -143,6 +149,15 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
       await readFile(
         new URL(
           "../supabase/migrations/20261116052910_substitution_receipt_current_status.sql",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    );
+    await sql(
+      await readFile(
+        new URL(
+          "../supabase/migrations/20261116054135_substitution_retry_current_lecturer_authority.sql",
           import.meta.url,
         ),
         "utf8",
@@ -587,6 +602,203 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
           /22023/,
         );
         assert.equal(await snapshot(), before);
+      },
+    );
+
+    await check(
+      "An active account losing lecturer authority cannot reconfirm an accepted receipt",
+      async () => {
+        const fixture = await make(),
+          offer = await proposal(fixture),
+          key = randomUUID();
+        const response = [
+          q(offer.id),
+          q("accept"),
+          q(offer.quote_hash),
+          q(key),
+          "true",
+        ];
+        const accepted = await rpc(
+          fixture.target,
+          "respond_job_substitution",
+          response,
+        );
+        assert.equal(accepted.status, "confirmed");
+        await call(
+          admin,
+          "set_account_roles",
+          [q(fixture.target), "array['participant']"],
+          "aal2",
+        );
+        const before = await receiptState(fixture, offer, accepted.claim_id);
+        assert.deepEqual(
+          await rpc(fixture.target, "respond_job_substitution", response),
+          { status: "not_eligible" },
+        );
+        assert.equal(
+          await receiptState(fixture, offer, accepted.claim_id),
+          before,
+        );
+        await assert.rejects(
+          call(fixture.target, "respond_job_substitution", [
+            q(offer.id),
+            q("accept"),
+            q("forged"),
+            q(key),
+            "true",
+          ]),
+          /22023/,
+        );
+        await assert.rejects(
+          call(fixture.target, "respond_job_substitution", [
+            q(offer.id),
+            q("accept"),
+            q(offer.quote_hash),
+            q(key),
+            "false",
+          ]),
+          /22023/,
+        );
+        await call(
+          admin,
+          "set_account_roles",
+          [q(fixture.target), "array['senior_lecturer']"],
+          "aal2",
+        );
+      },
+    );
+
+    await check(
+      "Suspension denies accepted receipt retries without changing the deal or calendars",
+      async () => {
+        const fixture = await make(),
+          offer = await proposal(fixture),
+          key = randomUUID();
+        const response = [
+          q(offer.id),
+          q("accept"),
+          q(offer.quote_hash),
+          q(key),
+          "true",
+        ];
+        const accepted = await rpc(
+          fixture.target,
+          "respond_job_substitution",
+          response,
+        );
+        assert.equal(accepted.status, "confirmed");
+        await call(
+          admin,
+          "set_user_active",
+          [q(fixture.target), "false"],
+          "aal2",
+        );
+        const before = await receiptState(fixture, offer, accepted.claim_id);
+        await assert.rejects(
+          call(fixture.target, "respond_job_substitution", response),
+          /42501/,
+        );
+        assert.equal(
+          await receiptState(fixture, offer, accepted.claim_id),
+          before,
+        );
+        await call(
+          admin,
+          "set_user_active",
+          [q(fixture.target), "true"],
+          "aal2",
+        );
+      },
+    );
+
+    await check(
+      "Accepted retries waiting behind role or activation revocation recheck current authority after actual profile locks",
+      async () => {
+        for (const kind of ["role", "activation"]) {
+          const fixture = await make(),
+            offer = await proposal(fixture),
+            key = randomUUID();
+          const response = [
+            q(offer.id),
+            q("accept"),
+            q(offer.quote_hash),
+            q(key),
+            "true",
+          ];
+          const accepted = await rpc(
+            fixture.target,
+            "respond_job_substitution",
+            response,
+          );
+          assert.equal(accepted.status, "confirmed");
+          const before = await receiptState(fixture, offer, accepted.claim_id);
+          const tag = `retry_revoke_${randomUUID().replaceAll("-", "")}`,
+            waiting = `retry_wait_${randomUUID().replaceAll("-", "")}`;
+          const mutation =
+            kind === "role"
+              ? `public.set_account_roles(${q(fixture.target)},array['participant'])`
+              : `public.set_user_active(${q(fixture.target)},false)`;
+          const revoked = actor(
+            admin,
+            `set local application_name=${q(tag)};select ${mutation};select pg_sleep(3)`,
+            "aal2",
+          );
+          const barrier = async (name, condition) => {
+            for (let attempt = 0; attempt < 100; attempt++) {
+              if (
+                (await sql(
+                  `select exists(select 1 from pg_stat_activity where datname=current_database() and application_name=${q(name)} and ${condition})`,
+                )) === "t"
+              )
+                return;
+              await new Promise((resolve) => setTimeout(resolve, 10));
+            }
+            throw new Error(
+              "Accepted retry did not reach the actual PostgreSQL revocation barrier",
+            );
+          };
+          let writer;
+          try {
+            await barrier(tag, "wait_event='PgSleep'");
+            writer = actor(
+              fixture.target,
+              `set local application_name=${q(waiting)};select public.respond_job_substitution(${response.join(",")})`,
+            );
+            const settled = Promise.allSettled([revoked, writer]);
+            await barrier(waiting, "wait_event_type='Lock'");
+            const results = await settled;
+            assert.equal(results[0].status, "fulfilled");
+            if (kind === "role") {
+              assert.equal(results[1].status, "fulfilled");
+              assert.deepEqual(JSON.parse(results[1].value), {
+                status: "not_eligible",
+              });
+            } else {
+              assert.equal(results[1].status, "rejected");
+              assert.match(results[1].reason.message, /42501/);
+            }
+          } finally {
+            await Promise.allSettled([revoked, ...(writer ? [writer] : [])]);
+          }
+          assert.equal(
+            await receiptState(fixture, offer, accepted.claim_id),
+            before,
+          );
+          if (kind === "role")
+            await call(
+              admin,
+              "set_account_roles",
+              [q(fixture.target), "array['senior_lecturer']"],
+              "aal2",
+            );
+          else
+            await call(
+              admin,
+              "set_user_active",
+              [q(fixture.target), "true"],
+              "aal2",
+            );
+        }
       },
     );
 

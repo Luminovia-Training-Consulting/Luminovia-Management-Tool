@@ -54,7 +54,7 @@ const de = {
   conflict:
     "Der gesamte Block passt nicht mehr in deinen Kalender oder deine Verfügbarkeit. Es wurden keine Termine übertragen.",
   not_eligible:
-    "Die erforderliche Qualifikation liegt derzeit nicht gültig vor.",
+    "Eine aktuelle Dozentenberechtigung und gültige erforderliche Qualifikationen sind notwendig.",
   prerequisite_missing:
     "Ein gültiger eigener Rahmenvertrag für den gesamten Block fehlt.",
   terms_changed:
@@ -120,7 +120,8 @@ const en: Record<keyof typeof de, string> = {
     "This request is no longer available. Refresh the current state.",
   conflict:
     "The whole block no longer fits your calendar or availability. No sessions transferred.",
-  not_eligible: "Your required qualification is not currently valid.",
+  not_eligible:
+    "Current lecturer authority and valid required qualifications are needed.",
   prerequisite_missing:
     "A valid personal framework agreement covering the whole block is missing.",
   terms_changed:
