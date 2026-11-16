@@ -5,16 +5,23 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { randomBytes, createHash } from "node:crypto";
 import {
+  closeSync,
+  constants,
   copyFileSync,
   existsSync,
+  fstatSync,
+  ftruncateSync,
+  fsyncSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readFileSync,
   readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
+  writeSync,
 } from "node:fs";
 import { tmpdir, totalmem } from "node:os";
 import { createServer } from "node:net";
@@ -213,6 +220,95 @@ export function adaptCandidateApiFixture(source, { project, apiPort }) {
   return source
     .replace(port, port.replace('"55321"', JSON.stringify(String(apiPort))))
     .replace(client, identity + client);
+}
+
+/** Adapt an optional staged fixture through pinned directories and its checked inode.
+ * The harness owns the initial scratch path; it must be a real private 0700 directory.
+ * Source subdirectories remain public-readable. A failed in-place write aborts the gate.
+ */
+export function adaptStagedCandidateApiFixture(scratch, options) {
+  const descriptors = [];
+  const directoryFlags =
+    constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW;
+  const openOptional = (path, flags, optional = true) => {
+    try {
+      const descriptor = openSync(path, flags);
+      descriptors.push(descriptor);
+      return descriptor;
+    } catch (error) {
+      if (optional && error.code === "ENOENT") return undefined;
+      throw error;
+    }
+  };
+  const closeAll = () => {
+    let failure;
+    for (const descriptor of descriptors.reverse())
+      try {
+        closeSync(descriptor);
+      } catch (error) {
+        failure ??= error;
+      }
+    if (failure) throw failure;
+  };
+  try {
+    let parent;
+    for (const [index, name] of [scratch, "scripts", "testing"].entries()) {
+      const descriptor = openOptional(
+        index === 0 ? name : `/proc/self/fd/${parent}/${name}`,
+        directoryFlags,
+        index !== 0,
+      );
+      if (descriptor === undefined) return false;
+      const info = fstatSync(descriptor);
+      assert(
+        info.isDirectory() && info.uid === process.getuid(),
+        "Candidate fixture directories must be real and owned.",
+      );
+      if (index === 0)
+        assert.equal(
+          info.mode & 0o7777,
+          0o700,
+          "Candidate fixture scratch must remain private 0700.",
+        );
+      parent = descriptor;
+    }
+    const descriptor = openOptional(
+      `/proc/self/fd/${parent}/api.mjs`,
+      constants.O_RDWR | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+    );
+    if (descriptor === undefined) return false;
+    const info = fstatSync(descriptor);
+    assert(
+      info.isFile() && info.uid === process.getuid() && info.nlink === 1,
+      "Candidate API fixture must be an owned regular file with one link.",
+    );
+    // Complete validation and adaptation before modifying the opened inode.
+    const bytes = Buffer.from(
+      adaptCandidateApiFixture(readFileSync(descriptor, "utf8"), options),
+      "utf8",
+    );
+    let position = 0;
+    while (position < bytes.length) {
+      const remaining = bytes.length - position;
+      const written = writeSync(
+        descriptor,
+        bytes,
+        position,
+        remaining,
+        position,
+      );
+      assert(
+        Number.isSafeInteger(written) && written > 0 && written <= remaining,
+        "Candidate fixture write made no valid progress.",
+      );
+      position += written;
+    }
+    ftruncateSync(descriptor, bytes.length);
+    fsyncSync(descriptor);
+    return true;
+  } finally {
+    closeAll();
+  }
 }
 
 // Hold all three loopback reservations together so the OS cannot return a port
@@ -906,15 +1002,7 @@ export async function checkCandidate({
     console.log(
       "Candidate: TLS/public boundaries and complete migration replay passed; running actual API suites.",
     );
-    const apiFixture = join(scratch, "scripts/testing/api.mjs");
-    if (existsSync(apiFixture))
-      writeFileSync(
-        apiFixture,
-        adaptCandidateApiFixture(readFileSync(apiFixture, "utf8"), {
-          project,
-          apiPort: ports.api,
-        }),
-      );
+    adaptStagedCandidateApiFixture(scratch, { project, apiPort: ports.api });
     const suites = candidateApiSuites(scratch);
     for (const suite of suites) {
       await owned("supabase_db_" + project);

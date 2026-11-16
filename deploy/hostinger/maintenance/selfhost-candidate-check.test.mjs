@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { EventEmitter } from "node:events";
+import fs from "node:fs";
 import {
   existsSync,
   mkdirSync,
@@ -14,12 +15,15 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
+import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { createServer } from "node:net";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 import {
   adaptCandidateApiFixture,
+  adaptStagedCandidateApiFixture,
   allocateCandidatePorts,
   assertCandidateConfiguration,
   candidateApiSuites,
@@ -426,6 +430,499 @@ test("M4 candidate source stages all discovered API suites and exact catalogue a
     "keep bytes",
     "Source fixture data must never overlap the retained database/storage bind root.",
   );
+});
+
+/** Create only owned filesystem fixtures; adaptation never executes their source. */
+function stagedApiFixture(t) {
+  const directory = mkdtempSync(join(tmpdir(), "candidate-staged-api-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const scratch = join(directory, "scratch");
+  const scripts = join(scratch, "scripts");
+  const testing = join(scripts, "testing");
+  mkdirSync(scratch, { mode: 0o700 });
+  mkdirSync(testing, { recursive: true, mode: 0o755 });
+  for (const path of [scripts, testing]) fs.chmodSync(path, 0o755);
+  const file = join(testing, "api.mjs");
+  const source =
+    "// Fictional UTF-8 fixture: Prüfung 🙂\n" +
+    readFileSync(resolve("scripts/testing/api.mjs"), "utf8");
+  writeFileSync(file, source, { mode: 0o644 });
+  fs.chmodSync(file, 0o644);
+  return {
+    directory,
+    scratch,
+    scripts,
+    testing,
+    file,
+    source,
+    options: { project, apiPort: 44777 },
+  };
+}
+
+/** Inspect assertions through one descriptor rather than a pathname check/read pair. */
+function stagedFileState(path) {
+  const descriptor = fs.openSync(
+    path,
+    fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK,
+  );
+  try {
+    const info = fs.fstatSync(descriptor);
+    return {
+      inode: info.ino,
+      mode: info.mode & 0o7777,
+      bytes: fs.readFileSync(descriptor),
+    };
+  } finally {
+    fs.closeSync(descriptor);
+  }
+}
+
+/** Fault only selected syscalls; real descriptors and bytes must still be cleaned up. */
+function withStagedFilesystem(t, overrides, operation) {
+  const descriptors = [];
+  const names = new Set(["openSync", "closeSync", ...Object.keys(overrides)]);
+  const original = Object.fromEntries(
+    [...names].map((name) => [name, fs[name]]),
+  );
+  const inspect = fs.fstatSync;
+  const mocks = [...names].map((name) =>
+    t.mock.method(fs, name, (...args) => {
+      const result = overrides[name]
+        ? overrides[name](original[name], ...args)
+        : original[name](...args);
+      if (name === "openSync") descriptors.push(result);
+      return result;
+    }),
+  );
+  syncBuiltinESMExports();
+  try {
+    return operation();
+  } finally {
+    for (const mock of mocks) mock.mock.restore();
+    syncBuiltinESMExports();
+    for (const descriptor of descriptors)
+      assert.throws(() => inspect(descriptor), { code: "EBADF" });
+  }
+}
+
+test("staged API adaptation preserves the exact pure output, public modes and original inode", (t) => {
+  const f = stagedApiFixture(t);
+  const before = stagedFileState(f.file);
+  const expected = Buffer.from(adaptCandidateApiFixture(f.source, f.options));
+  assert.equal(
+    withStagedFilesystem(t, {}, () =>
+      adaptStagedCandidateApiFixture(f.scratch, f.options),
+    ),
+    true,
+  );
+  assert.deepEqual(stagedFileState(f.file), { ...before, bytes: expected });
+  for (const directory of [f.scripts, f.testing])
+    assert.equal(fs.statSync(directory).mode & 0o7777, 0o755);
+});
+
+test("staged API adaptation skips only absent optional children and requires private owned scratch", (t) => {
+  for (const missing of ["file", "testing", "scripts"]) {
+    const f = stagedApiFixture(t);
+    rmSync(f[missing], { recursive: true });
+    assert.equal(
+      withStagedFilesystem(t, {}, () =>
+        adaptStagedCandidateApiFixture(f.scratch, f.options),
+      ),
+      false,
+    );
+    assert.equal(existsSync(f[missing]), false);
+  }
+  const f = stagedApiFixture(t);
+  fs.chmodSync(f.scratch, 0o755);
+  assert.throws(
+    () => adaptStagedCandidateApiFixture(f.scratch, f.options),
+    /private 0700/,
+  );
+  assert.equal(fs.statSync(f.scratch).mode & 0o7777, 0o755);
+  rmSync(f.scratch, { recursive: true });
+  assert.throws(() => adaptStagedCandidateApiFixture(f.scratch, f.options), {
+    code: "ENOENT",
+  });
+});
+
+test("staged API read/write path swaps cannot overwrite a fictional outside file", (t) => {
+  const exercise = (adapt) => {
+    const f = stagedApiFixture(t);
+    const retained = join(f.testing, "retained.mjs");
+    const victim = join(f.directory, "outside.mjs");
+    const outside = Buffer.from(
+      "Fictional outside bytes must remain unchanged.\n",
+    );
+    writeFileSync(victim, outside);
+    const inode = stagedFileState(f.file).inode;
+    const inspect = fs.fstatSync;
+    let swaps = 0;
+    withStagedFilesystem(
+      t,
+      {
+        readFileSync(original, path, ...args) {
+          const bytes = original(path, ...args);
+          if (
+            swaps === 0 &&
+            (path === f.file ||
+              (typeof path === "number" && inspect(path).ino === inode))
+          ) {
+            swaps++;
+            fs.renameSync(f.file, retained);
+            symlinkSync(victim, f.file);
+          }
+          return bytes;
+        },
+      },
+      () => adapt(f),
+    );
+    assert.equal(swaps, 1);
+    return { f, retained, victim, outside };
+  };
+  // The inherited callsite really follows the swapped name after its read.
+  // This negative control touches only another owned fictional fixture.
+  const vulnerable = exercise((f) => {
+    if (existsSync(f.file))
+      writeFileSync(
+        f.file,
+        adaptCandidateApiFixture(readFileSync(f.file, "utf8"), f.options),
+      );
+  });
+  assert.notDeepEqual(
+    stagedFileState(vulnerable.victim).bytes,
+    vulnerable.outside,
+  );
+  const safe = exercise((f) => {
+    assert.equal(adaptStagedCandidateApiFixture(f.scratch, f.options), true);
+  });
+  assert.deepEqual(stagedFileState(safe.victim).bytes, safe.outside);
+  assert.deepEqual(
+    stagedFileState(safe.retained).bytes,
+    Buffer.from(adaptCandidateApiFixture(safe.f.source, safe.f.options)),
+  );
+});
+
+test("staged API adaptation stays inside pinned scratch, scripts and testing after ancestor swaps", (t) => {
+  for (const level of ["scratch", "scripts", "testing"]) {
+    const f = stagedApiFixture(t);
+    const retained = join(f.directory, "retained");
+    const outside = join(f.directory, "outside");
+    const suffix = {
+      scratch: "scripts/testing/api.mjs",
+      scripts: "testing/api.mjs",
+      testing: "api.mjs",
+    }[level];
+    const victim = join(outside, suffix);
+    mkdirSync(join(victim, ".."), { recursive: true });
+    writeFileSync(victim, "Fictional outside ancestor bytes.\n");
+    const before = stagedFileState(victim);
+    let swaps = 0;
+    withStagedFilesystem(
+      t,
+      {
+        openSync(original, path, ...args) {
+          // At api.mjs open, all three directory FDs must already be pinned.
+          if (typeof path === "string" && path.endsWith("/api.mjs")) {
+            swaps++;
+            fs.renameSync(f[level], retained);
+            symlinkSync(outside, f[level]);
+          }
+          return original(path, ...args);
+        },
+      },
+      () =>
+        assert.equal(
+          adaptStagedCandidateApiFixture(f.scratch, f.options),
+          true,
+        ),
+    );
+    assert.equal(swaps, 1);
+    assert.deepEqual(stagedFileState(victim), before);
+    assert.deepEqual(
+      stagedFileState(join(retained, suffix)).bytes,
+      Buffer.from(adaptCandidateApiFixture(f.source, f.options)),
+    );
+  }
+});
+
+test("staged API adaptation rejects symlinked path components and hardlinked files without writes", (t) => {
+  for (const component of ["scratch", "scripts", "testing", "file"]) {
+    const f = stagedApiFixture(t);
+    const retained = join(f.directory, "retained");
+    fs.renameSync(f[component], retained);
+    symlinkSync(retained, f[component]);
+    withStagedFilesystem(t, {}, () =>
+      assert.throws(() => adaptStagedCandidateApiFixture(f.scratch, f.options)),
+    );
+    const suffix = {
+      scratch: "scripts/testing/api.mjs",
+      scripts: "testing/api.mjs",
+      testing: "api.mjs",
+      file: "",
+    }[component];
+    assert.deepEqual(
+      stagedFileState(join(retained, suffix)).bytes,
+      Buffer.from(f.source),
+    );
+  }
+  const f = stagedApiFixture(t);
+  const outside = join(f.directory, "hardlink.mjs");
+  fs.linkSync(f.file, outside);
+  withStagedFilesystem(t, {}, () =>
+    assert.throws(
+      () => adaptStagedCandidateApiFixture(f.scratch, f.options),
+      /owned regular file with one link/,
+    ),
+  );
+  assert.deepEqual(stagedFileState(outside).bytes, Buffer.from(f.source));
+  assert.deepEqual(stagedFileState(f.file).bytes, Buffer.from(f.source));
+});
+
+test("staged API adaptation rejects foreign directory and file ownership without changing bytes", (t) => {
+  for (const foreignAt of [1, 2, 3, 4]) {
+    const f = stagedApiFixture(t);
+    const before = stagedFileState(f.file);
+    let checks = 0;
+    withStagedFilesystem(
+      t,
+      {
+        fstatSync(original, ...args) {
+          const info = original(...args);
+          if (++checks === foreignAt) info.uid = process.getuid() + 1;
+          return info;
+        },
+      },
+      () =>
+        assert.throws(
+          () => adaptStagedCandidateApiFixture(f.scratch, f.options),
+          /real and owned|owned regular file/,
+        ),
+    );
+    assert.deepEqual(stagedFileState(f.file), before);
+  }
+});
+
+test("staged API adaptation refuses dangling links, FIFOs and Unix sockets without blocking", (t) => {
+  for (const kind of ["symlink", "fifo", "socket"]) {
+    const f = stagedApiFixture(t);
+    rmSync(f.file);
+    if (kind === "symlink")
+      symlinkSync(join(f.directory, "absent.mjs"), f.file);
+    else {
+      const args =
+        kind === "fifo"
+          ? ["mkfifo", ["-m", "600", f.file]]
+          : [
+              "python3",
+              [
+                "-c",
+                "import socket,sys\nwith socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as fixture:\n fixture.bind(sys.argv[1])",
+                f.file,
+              ],
+            ];
+      const created = spawnSync(...args, { encoding: "utf8" });
+      assert.equal(created.status, 0, created.stderr);
+    }
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        `const {adaptStagedCandidateApiFixture}=await import(process.env.FIXTURE_MODULE);
+let refused=false;
+try { adaptStagedCandidateApiFixture(process.env.FIXTURE_SCRATCH,JSON.parse(process.env.FIXTURE_OPTIONS)); }
+catch { refused=true; }
+if(!refused) throw new Error("Unsafe optional fixture was accepted");`,
+      ],
+      {
+        encoding: "utf8",
+        timeout: 5000,
+        env: {
+          FIXTURE_MODULE: pathToFileURL(
+            resolve(
+              "deploy/hostinger/maintenance/selfhost-candidate-check.mjs",
+            ),
+          ).href,
+          FIXTURE_SCRATCH: f.scratch,
+          FIXTURE_OPTIONS: JSON.stringify(f.options),
+        },
+      },
+    );
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(existsSync(join(f.directory, "absent.mjs")), false);
+  }
+});
+
+test("staged API adaptation completes short positioned writes and truncates stale tail bytes", (t) => {
+  const f = stagedApiFixture(t);
+  const before = stagedFileState(f.file);
+  const expected = Buffer.from(adaptCandidateApiFixture(f.source, f.options));
+  const append = fs.writeSync;
+  let writes = 0;
+  let truncations = 0;
+  let syncs = 0;
+  withStagedFilesystem(
+    t,
+    {
+      readFileSync(original, descriptor, ...args) {
+        const source = original(descriptor, ...args);
+        const tail = Buffer.alloc(expected.length * 2, 0x78);
+        assert.equal(append(descriptor, tail, 0, tail.length, 0), tail.length);
+        return source;
+      },
+      writeSync(original, descriptor, bytes, offset, length, position) {
+        writes++;
+        assert.equal(position, offset);
+        return original(
+          descriptor,
+          bytes,
+          offset,
+          Math.min(length, 7),
+          position,
+        );
+      },
+      ftruncateSync(original, descriptor, length) {
+        truncations++;
+        assert.equal(length, expected.length);
+        return original(descriptor, length);
+      },
+      fsyncSync(original, descriptor) {
+        syncs++;
+        return original(descriptor);
+      },
+    },
+    () =>
+      assert.equal(adaptStagedCandidateApiFixture(f.scratch, f.options), true),
+  );
+  assert(writes > 1);
+  assert.equal(truncations, 1);
+  assert.equal(syncs, 1);
+  assert.deepEqual(stagedFileState(f.file), { ...before, bytes: expected });
+});
+
+test("staged API adaptation aborts invalid writes without truncation or false success", (t) => {
+  for (const written of [0, -1, 0.5, NaN, Number.MAX_SAFE_INTEGER]) {
+    const f = stagedApiFixture(t);
+    const before = stagedFileState(f.file);
+    let finalizations = 0;
+    let attempts = 0;
+    withStagedFilesystem(
+      t,
+      {
+        writeSync() {
+          if (++attempts > 1)
+            throw new Error(
+              "Invalid write progress was retried instead of refused.",
+            );
+          return written;
+        },
+        ftruncateSync() {
+          finalizations++;
+        },
+        fsyncSync() {
+          finalizations++;
+        },
+      },
+      () =>
+        assert.throws(
+          () => adaptStagedCandidateApiFixture(f.scratch, f.options),
+          /no valid progress/,
+        ),
+    );
+    assert.equal(attempts, 1);
+    assert.equal(finalizations, 0);
+    assert.deepEqual(stagedFileState(f.file), before);
+  }
+  const f = stagedApiFixture(t);
+  let writes = 0;
+  let finalizations = 0;
+  withStagedFilesystem(
+    t,
+    {
+      writeSync(original, descriptor, bytes, offset, length, position) {
+        if (writes >= 2)
+          throw new Error(
+            "Stopped write progress was retried instead of refused.",
+          );
+        if (++writes > 1) return 0;
+        return original(
+          descriptor,
+          bytes,
+          offset,
+          Math.min(length, 7),
+          position,
+        );
+      },
+      ftruncateSync() {
+        finalizations++;
+      },
+      fsyncSync() {
+        finalizations++;
+      },
+    },
+    () =>
+      assert.throws(
+        () => adaptStagedCandidateApiFixture(f.scratch, f.options),
+        /no valid progress/,
+      ),
+  );
+  assert.equal(writes, 2);
+  assert.equal(finalizations, 0);
+});
+
+test("staged API source and option validation finish before any fixture mutation", (t) => {
+  for (const invalid of ["source", "options"]) {
+    const f = stagedApiFixture(t);
+    if (invalid === "source")
+      writeFileSync(f.file, "Fictional unexpected source.\n");
+    else f.options.apiPort = 443;
+    const before = stagedFileState(f.file);
+    withStagedFilesystem(t, {}, () =>
+      assert.throws(() => adaptStagedCandidateApiFixture(f.scratch, f.options)),
+    );
+    assert.deepEqual(stagedFileState(f.file), before);
+  }
+});
+
+test("staged API syscall failures remain visible and close every successfully opened descriptor", (t) => {
+  for (const phase of [
+    "open",
+    "fstatSync",
+    "readFileSync",
+    "writeSync",
+    "ftruncateSync",
+    "fsyncSync",
+    "closeSync",
+  ]) {
+    const f = stagedApiFixture(t);
+    const failure = Object.assign(
+      new Error("Fictional fixture syscall refusal"),
+      { code: "EIO" },
+    );
+    let failed = false;
+    const name = phase === "open" ? "openSync" : phase;
+    withStagedFilesystem(
+      t,
+      {
+        [name](original, ...args) {
+          const selected = phase !== "open" || args[0].endsWith("/api.mjs");
+          if (!failed && selected) {
+            failed = true;
+            if (phase === "closeSync") original(...args);
+            throw failure;
+          }
+          return original(...args);
+        },
+      },
+      () =>
+        assert.throws(
+          () => adaptStagedCandidateApiFixture(f.scratch, f.options),
+          (error) => error === failure,
+        ),
+    );
+    assert.equal(failed, true);
+  }
 });
 
 test("M4 scratch API adapter preserves loopback guards and requires exact candidate project, endpoint and database label before fixtures", (t) => {
