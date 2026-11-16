@@ -2,6 +2,8 @@
 -- bytes remain unchanged. Existing function privileges and caller checks survive
 -- replacement; shared evidence and uncertain external deliveries remain blockers.
 
+begin;
+
 create or replace function private.deletion_scope(p_kind text,p_id uuid) returns jsonb language plpgsql stable security definer set search_path='' as $$
 declare result jsonb:='[]'::jsonb;root text:=private.deletion_registry()->>p_kind;entry jsonb;ref record;pred text;join_sql text;i integer:=0;
 begin
@@ -161,3 +163,5 @@ begin
  update private.deletion_operations set applied=true where id=o.id;
  return private.deletion_operation_view(o.id);
 end;$$;
+
+commit;

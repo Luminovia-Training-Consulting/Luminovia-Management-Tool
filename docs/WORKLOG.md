@@ -1,6 +1,11 @@
 # Luminovia Portal — development work log
 
 ## 17 November 2026 — PR35 mergeability repair
+
+Integrated accepted main `2c7d326` arrived on signed `9faa0d4` without changing the repair bytes. Its repeated local source check passes697/91, and25phase/bootstrap/browser-evidence guards pass. Real `plpgsql_check` reports no findings in all3replaced routines; an actual pre/post-upgrade comparison preserves their exact ACLs and denies browser execution while retaining the permit-gated service worker. An initial scratch assertion incorrectly expected the service worker itself to lack execution; the exact baseline comparison confirmed the intended existing grant.
+
+CI43891311237 passes source/coverage/security gates but stops `verify` at the unchanged atomic-replay guard: the newly authored repair migration lacked explicit BEGIN/COMMIT. Added that transaction to this unaccepted migration; no historical source or updater assertion changes. All12native-candidate guards (including exact atomic replay of every real migration) and26daily-maintenance/recovery guards now pass locally. Fresh exact-head CI determines the next outcome. The owned SQL fixture had zero remaining UUID databases and was removed by checked exact container ID; ordinary/foreign services remain untouched.
+
 ## 16 November 2026 — actual operational main retained for final PR12 acceptance
 
 During the62-migration CI, accepted PR24 advanced actual main to `99add7de8598bf415977c7cae79f1c5f6993626d` at14:16:34UTC: six added operational migrations, now68published files. All68staged SQL blobs equal accepted main; no existing migration is edited. Preserve its readiness, delivery, replacement, support and permission/notification-forwarding source and complete ledgers. It changes no workflow, runner or dependency. Independent bounded source review found no concrete break in Root calendar/search/four expanded API contracts; that review is not execution.
