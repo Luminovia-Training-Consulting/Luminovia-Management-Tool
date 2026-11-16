@@ -1,10 +1,27 @@
 # Persistent implementation plan
 
+The later06:30UTC readback found the live review ruleset disabled externally, while history/checks remained active and unchanged. The committed active review JSON is explicitly the reviewed06:25UTC policy snapshot, not an applied server change. Current merge acceptance still requires all15checks and signatures; live review enforcement must be read separately. No server rule is modified or re-enabled by this task.
+
+## Final PR13 composition and acceptance boundary
+
+- [x] Preserve actual remote PR13 `af3bd61` and its PR23 `d448fab` ancestry alongside the reviewed English/current-personal-policy candidate `84fc41c`.
+- [x] Retain the customer-neutral catalogue and additive migration27, course UI/pointer fixes, both evidence ledgers and all26previously released migration bytes.
+- [ ] Integrate actual accepted PR27/main publication controls and corrected concurrent lifecycle fixture; verify current source and publish one signed final PR13 head without force-pushing.
+- [ ] Observe all15mandatory exact-head checks on the complete composition, then perform the directly authorised PR13 merge. Earlier documentation-only/local passes do not certify this product source.
+
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
 ## Current GitHub policy and PR13 delivery precedence
 
-The latest explicit user decision is authoritative: only `CarinaSchoppe` (GitHub User29256704) receives a personal PR-only review exception. All15CI checks and verified signatures remain mandatory; history/check bypass lists are empty. Source snapshots mirror the designated owner's confirmed live update. Older role-based, unrestricted or disabled-rule entries below are dated development history, not instructions to restore those configurations. PR27 has the next main merge, followed by this independent PR13 conflict resolution; feature work does not wait for a large aggregate branch.
+The latest explicit user decision is authoritative: only `CarinaSchoppe` (GitHub User29256704) receives the sole personal review-ruleset exception. The latest readback sets `bypass_mode: always` only on that review ruleset and includes CodeQL, code-quality and Copilot-review rules. All15CI checks and verified signatures remain mandatory; history/check bypass lists are empty. Source snapshots mirror the designated owner's confirmed live update. Older role-based, unrestricted or disabled-rule entries below are dated development history, not instructions to restore those configurations. PR27 has the next main merge, followed by this independent PR13 conflict resolution; feature work does not wait for a large aggregate branch.
+
+## PR13/PR23 requested conflict correction
+
+- [x] Resolve PR13 against actual main0a6002a, preserving both full product/evidence ledgers and accepted roles/welcome/help/metadata work.
+- [x] Reconcile current rule snapshots and contributor guides to15mandatory checks, no history/check/App bypass and Maintain/Admin PR-only review exceptions; preserve released SQL and application/workflow/dependency source. The older14-check/App-exception snapshots below are historical.
+- [x] Pass22focused documentation/metadata/integrity guards, targeted lint, formatting and diff checks.
+- [x] Integrate signed PR23 d448fab directly, preserving neutral content, its additive migration and both original PR heads in the final normal-merge ancestry.
+- [ ] Observe all15required checks on final PR13 source/current base, then merge directly under Carina's latest explicit instruction. The former coordination hold is superseded by that instruction.
 
 ## PR13 current-base acceptance
 
@@ -28,6 +45,30 @@ The user requests English general documentation, detailed contribution/issue/PR 
 - [x] Record actual local checks, safe full-command refusal, verified English-label readback and signed publication on [PR #13](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/13). All six quality gates and the four Security jobs passed on first head `8e14e9e`; the latest complete application/native acceptance is recorded by the PR's exact-source checks, not inferred from this checkbox. No bug-free certification, new product module, hosted/production change or real mail is implied by this increment.
 
 The full product and operational ledger remains below; open PR #10 and concurrent source are not silently included in this documentation acceptance.
+
+## PR23 current-main conflict resolution
+
+- [x] Integrate accepted main `0a6002a` / PR21, preserving both ledger histories, all guided-experience fixes and all26published main migration bytes.
+- [x] Pass254frontend cases with unchanged coverage floors,28catalogue/privacy/documentation/metadata/integrity guards, affected UI checks, TypeScript/ESLint/source formatting and the export graph.
+- [ ] Observe complete exact-head PR23 application/native/security CI and merge under the current explicit user instruction; no full acceptance or hosted installation is inferred from local focused checks.
+
+## PR23 mobile acceptance continuation
+
+- [x] Record exact failed82/84mobile/browser acceptance; preserve actual successful SQL/API/persistence evidence and stages not reached.
+- [x] Reproduce the exact CI435px layout/412px visual viewport failure with the actual React UI and broad system font, including a failing ordinary click without screenshots.
+- [x] Add strict pointer hit-target readiness/geometry and a native covered-control/scroll/capture regression; both desktop/mobile fixture cases pass without changing business assertions, retries or timeouts.
+- [x] Integrate current mainfabd71a comments, private role pricing/welcome and previews, preserving26published SQL sources, customer-neutral wording and MIGRATION_GUIDE.
+- [x] Correct the nonwrapping German course tabs with scoped wrapping; four real-source-CSS pointer/layout regressions pass, and overflow checks use document clientWidth.
+- Current exact-source full application/native/security acceptance, feature screenshots and the user-authorised merge are owned by [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23). A partial screenshot artifact or source submission does not mark that acceptance complete.
+
+## Current correction — customer-independent catalogue and authorised Git delivery
+
+- [x] Neutral public docs, UI, tool/data names and source-linked catalogue; original migration bytes/UUIDs/source hashes and edited/used templates retained.
+- [x] Focused original-checkout validation and removal of eight branded screenshots are recorded in WORKLOG.
+- [x] Isolate the change from independently open roles/pricing work onto current main; preserve all unrelated source and the full product ledger below.
+- [x] Submit signed [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23) with main-compatible preservation checks, required complete application/security/native gates and a six-screenshot fictional artifact. Actual CI completion, visual evidence and the user-authorised merge are recorded on that PR; submission alone is not acceptance.
+
+Customer organisations remain privately configured and reusable templates support multiple explicit organisation scopes. Publication of this source does not assert hosted migration installation or production acceptance.
 
 ## Coordinated PR18 integration
 
@@ -181,11 +222,11 @@ The authorised development instance automatically installed main `bb322746` at 2
 
 Post-automatic-deployment hosted Auth/MFA/Mailpit/recovery/RLS, actual scanning,50 claims, private file and WSS delivery/revocation passed. Existing 3 users/profiles/roles,1 private document/object,10/1GiBquotas and22templates/24sources remain. No capacity upgrade, real SMTP, production release or future100GB/15–25-member acceptance is implied. Full remaining product scope stays below; [WORKLOG](WORKLOG.md) records exact evidence and limitations.
 
-## M4 local acceptance passed — functional audit and reusable CBW content
+## M4 local acceptance passed — functional audit and reusable course-building-block content
 
-Requested 16 November: source-grounded functional/dead-code/connection audit; meaningful failed-path tests and developer docs; CBW building blocks as reusable provenance-linked templates; profile pictures; and resource-specific comments. M3 is merged through PR #3. Work is isolated in `codex/functional-qa-building-blocks`; original concurrent hosting edits and normal persistent data remain untouched.
+Requested 16 November: source-grounded functional/dead-code/connection audit; meaningful failed-path tests and developer docs; course building blocks as reusable provenance-linked templates; profile pictures; and resource-specific comments. M3 is merged through PR #3. Work is isolated in `codex/functional-qa-building-blocks`; original concurrent hosting edits and normal persistent data remain untouched.
 
-- [x] Import all 24 PDF source references into 22 canonical CBW building blocks/templates, retaining both LPC3/LPC4 revisions. Provide readable searchable content and safe template/run duplication.
+- [x] Import all 24 PDF source references into 22 canonical building blocks/templates, retaining both LPC3/LPC4 revisions. Provide readable searchable content and safe template/run duplication.
 - [x] Create real offers from an existing course run with exact template/session/source references, authoritative server defaults, gross/net separation and idempotency; change only scheduling/financial/delivery details as needed.
 - [x] Secure scanned profile avatars with own upload/remove/replace, scoped authenticated viewing and no private-file bypass or offline caches.
 - [x] Staff comments under templates and jobs, with access checks, bounded text, actual persistence, idempotency, cursor pagination, edits/withdrawals and reasoned MFA moderation.
@@ -249,7 +290,7 @@ M1 is locally verified and was merged by Carina in PR #1. The previous continuat
 | C Taxonomy             | M6 shared DE/EN topics/tools/programming-language hierarchy, aliases, related authorized courses, current-MFA versioned CRUD/archive and active/historical selectors                                                                                            | Further catalogue administration needs without rewriting historical qualifications; broader platform acceptance                                                                                                                                            |
 | D Organisations        | Search/edit/archive, types/industry/location/timezone/tags, permissioned contacts and private notes, linked course runs                                                                                                                                         | Organisation-scoped files and richer topic/filter/contact actions. M3 adds explicitly managed client accounts/memberships, course requests and organisation-scoped spend/assigned-teacher views.                                                           |
 | E Courses              | Reusable descriptions/syllabus/prerequisites/topics; actual customer/delivery/venue/precise sessions; safe duplicate and publication                                                                                                                            | Standalone participant groups, resource links and independent split-job editor. M3 adds optional manager enrolment, lecturer course history/deep links and eligible learner reviews with moderation.                                                       |
-| F Jobs/claims          | Combined filters/current consent, whole-block atomic claims and immutable snapshots; M6 versioned edit/copy/deadlines, accessible Kanban, explicit new 1–20 per-position capacity, safe cancellation/reopening/replacement                                      | Saved/advanced views/sorting, richer vacancy rules/resource UI and substitute orchestration; preserve single-position client/CBW budgets; broader product and platform acceptance (recorded M6 native/concurrent/retained-data checks passed)              |
+| F Jobs/claims          | Combined filters/current consent, whole-block atomic claims and immutable snapshots; M6 versioned edit/copy/deadlines, accessible Kanban, explicit new 1–20 per-position capacity, safe cancellation/reopening/replacement                                      | Saved/advanced views/sorting, richer vacancy rules/resource UI and substitute orchestration; preserve single-position client/course budgets; broader product and platform acceptance (recorded M6 native/concurrent/retained-data checks passed)           |
 | G Calendar             | Private events, confirmed jobs, published global course data, month/week/day/agenda/time zones; M6 own available/unavailable editor and explicitly shared reduced management windows                                                                            | Global-event management, richer files/links, invitations, scheduled reminders and permitted drag/edit; ICS later; broader physical/platform acceptance (recorded M6 native/MFA/privacy/race checks passed)                                                 |
 | H Chat                 | Private DMs/groups/staff general and separate course participant rooms; persisted realtime/history/search/reactions/edit/delete/read/mute/files; immediate future-event revocation; permission-scoped profile-to-DM links already call the actual create_dm API | Structured mentions and corresponding deduplicated alerts; presence/typing if practical; disclosed moderation and richer group administration                                                                                                              |
 | I Files                | Authenticated private scope, actual scanner/quarantine, validated PDF/Office/images/text, limits/progress, preview/download/version/hash/rename/archive, evidence/chat/job contexts                                                                             | Course/organisation-specific resource UX, tags/folders/classification, sharing/expiry links, approved restricted archives, retention/purge tools; large videos stay external                                                                               |

@@ -178,14 +178,14 @@ test("M4 candidate source stages all discovered API suites and exact catalogue a
   const suites = candidateApiSuites(scratch);
   for (const name of [
     "avatars-api-check.mjs",
-    "cbw-api-check.mjs",
+    "course-building-blocks-api-check.mjs",
     "comments-api-check.mjs",
     "local-invite-check.mjs",
   ])
     assert(suites.includes(name));
   assert.deepEqual(
-    readFileSync(join(scratch, "data/cbw-building-blocks.json")),
-    readFileSync(join(source, "data/cbw-building-blocks.json")),
+    readFileSync(join(scratch, "data/course-building-blocks.json")),
+    readFileSync(join(source, "data/course-building-blocks.json")),
   );
   stageCandidateSource(baseline, scratch);
   assert(!existsSync(join(scratch, "data")));

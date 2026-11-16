@@ -26,7 +26,11 @@ The release job requires the fast quality gates and both complete application/se
 
 [CodeQL](../.github/workflows/security.yml) additionally analyses JavaScript/TypeScript, Python and GitHub Actions on PRs/main and on Mondays at 05:23 UTC (15:23 Brisbane). This is static security analysis, not a replacement for real RLS/auth/file-access tests. Findings appear under GitHub Security/Code scanning; a successfully completed scan does not by itself mean there are no warnings. Its three language analyses, `Dependency review` and the generated `CodeQL` finding check are now required for PR merges. The fourteen workflow-produced statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. The separate Security workflow is not an additional release-job `needs` gate; publication conditions remain explicitly defined in `ci.yml`.
 
-Current `main` still publishes development packages automatically after its explicit CI dependencies succeed. The requested local-first, manual-only publication path remains proposed in [PR #27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27); it is not installed by this documentation change. Successful checks alone provide no new deployment or publication authorization.
+Current `main` still publishes development packages automatically after its explicit CI dependencies succeed. The requested local-first, manual-only publication path remains proposed in [PR #27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27); it is not yet merged or part of the combined PR13/PR23 source. Successful checks alone provide no new deployment or publication authorization.
+
+## Current integration evidence boundary
+
+The combined PR13/PR23 source includes the customer-neutral course catalogue, related application/test changes and the additive 27th migration. It is not a documentation-only change. See [course building blocks](COURSE_BUILDING_BLOCKS.md) for the current catalogue paths and preservation contract. Earlier 24- or 26-migration results remain historical and do not accept this complete 27-migration composition. Documentation and metadata checks cover their own scope; all required application, database, browser, security and retained-data checks must pass on the exact final source before merging.
 
 ## Running and interpreting coverage
 
@@ -53,7 +57,7 @@ Dependabot PRs receive suitable existing type/area/risk labels and run through t
 
 ## Maintainers and server-side rules
 
-Current server readback on 16 November 2026 confirms that all three rulesets are active with fifteen required statuses. Only `CarinaSchoppe` (`User:29256704`) has `pull_request` bypass on the review rule: she may merge through a PR without an independent approval, but must wait for all fifteen checks against the current base. Other maintainers, administrators, users, bots and Apps have no review exception; repository roles confer none. Required-check and history/signature rules have no bypass actors.
+The reviewed server snapshot on 16 November 2026 at 06:25 UTC records all three rulesets as active with fifteen mandatory statuses. Source snapshots preserve that reviewed active configuration; live server rules are authoritative and may later differ. Only `CarinaSchoppe` (`User:29256704`) has an `always` exception within the review ruleset. No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. The review ruleset also contains CodeQL scanning thresholds (`high_or_higher` security alerts and `errors` alerts), code-quality errors and Copilot review on pushes, excluding draft PRs. Carina's exception applies only within that layer; the separate mandatory security/check results and history/code-quality restrictions still apply.
 
 No App has a review or required-check exception. Earlier App-token tests belong to their recorded historical rules. See [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md#active-rule-layers) for the current configuration.
 

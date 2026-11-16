@@ -1,6 +1,6 @@
 # Contributing to Luminovia Portal
 
-> Current server policy on 16 November 2026: all fifteen required checks and valid signatures remain mandatory. Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception. No repository role, other user, bot or App has a review exception. No App has a required-check exception. [Current rule configuration](docs/GITHUB_WORKFLOW.md#active-rule-layers).
+> Reviewed server snapshot on 16 November 2026 at 06:25 UTC: Only `CarinaSchoppe` (`User:29256704`) has an `always` exception within the review ruleset. No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. Live server rules are authoritative and may later differ. [Reviewed rule configuration](docs/GITHUB_WORKFLOW.md#active-rule-layers).
 
 Welcome! This guide explains how to turn an idea or bug report into a tested, reviewable change. **Use English for issues, pull requests and contributor-facing documentation.** Application interface changes must provide both German and English strings; authored course content keeps its original language.
 
@@ -34,7 +34,7 @@ git fetch upstream
 git switch -c fix/short-description upstream/main
 ```
 
-Keep each branch focused on one coherent change. Use meaningful, signed commits such as `fix: preserve invoice version on download` or `docs: explain local startup`. Credentials and real personal or customer data must not appear in commits, screenshots or test fixtures.
+Keep each branch focused on one coherent change. Use meaningful, signed commits such as `fix: preserve invoice version on download` or `docs: explain local startup`. Credentials, real customer names and real personal or customer data must not appear in public documentation, filenames, UI examples, commits, screenshots or test fixtures. Use customer-neutral terminology and clearly fictional organisations; configure actual customers privately in the application.
 
 ## 3. Develop and verify locally
 
@@ -70,11 +70,11 @@ Every PR needs exactly one `type:*` label, at least one `area:*` label and exact
 
 Ordinary contributors to `main` require a pull request, an independent approving review, resolved conversations and current passing checks. New changes dismiss earlier approvals, and the latest push must be approved by someone other than its pusher.
 
-Only `CarinaSchoppe` (`User:29256704`) has a personal `pull_request` exception to the review rule. She may merge a PR, including her own, without an independent approval, but cannot use that exception to push directly to `main` or bypass the separate required-check rule. All fifteen checks must pass against the current base. Other maintainers, administrators, users, bots and Apps require normal review; repository roles confer no review exception. GitHub may require an explicit bypass action for Carina.
+Only `CarinaSchoppe` (`User:29256704`) has a personal `always` exception within the review ruleset. She may bypass that layer's PR, approval, conversation, scanning, quality and Copilot-review conditions. This exception follows the person acting; it is not inherited by another maintainer, administrator, bot or App handling a PR she authored. It does not bypass the separate required-check or history/signature rules. GitHub may require an explicit bypass action for Carina.
 
-The fifteen required checks include Build, Typecheck, Lint, Formatting, Code quality, Tests and coverage, `verify`, `Actual isolated selfhost image compatibility`, `PR metadata`, `PR preview package`, three language-specific CodeQL analyses, `Dependency review` and the generated `CodeQL` finding check. Fourteen statuses are bound to GitHub Actions integration `15368`; the generated finding check is bound to integration `57789`. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes and Dependabot. A changed base may require updating the PR and waiting for new checks before merging.
+The fifteen required checks include Build, Typecheck, Lint, Formatting, Code quality, Tests and coverage, `verify`, `Actual isolated selfhost image compatibility`, `PR metadata`, `PR preview package`, three language-specific CodeQL analyses, `Dependency review` and the generated `CodeQL` finding check. Fourteen statuses are bound to GitHub Actions integration `15368`; the generated finding check is bound to integration `57789`. All must pass against the current base for every actor. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes and Dependabot. A changed base may require updating the PR and waiting for new checks before merging.
 
-The required-check and history/signature rules have no bypass actors. The review rule grants only `CarinaSchoppe` (`User:29256704`) the personal PR-only exception. No App has a review or required-check exception. [GITHUB_WORKFLOW](docs/GITHUB_WORKFLOW.md#active-rule-layers) records the live configuration; historical App-token tests grant no current exception.
+The required-check and history/signature rules have no bypass actors. The review rule grants only `CarinaSchoppe` (`User:29256704`) the personal `always` exception. No repository role, other user, bot or App has that exception. [GITHUB_WORKFLOW](docs/GITHUB_WORKFLOW.md#active-rule-layers) records all current rules, including the added CodeQL threshold, quality and Copilot-review conditions. Historical token tests grant no current exception.
 
 The development release job additionally waits for its gates in `ci.yml`. Failed checks do not produce an approved installation package. The separate Security workflow and generated finding check are also required for PR merging; release publication still follows its own explicit dependencies in `ci.yml`.
 
@@ -82,7 +82,7 @@ Current `main` still contains automatic **development release publication** afte
 
 ## Tags and releases
 
-Labels classify issues and PRs. Git tags identify a particular commit. The signed annotated tags `milestone/m3-accounts-commission`, `milestone/m4-cbw-templates` and `milestone/m5-system-audit` mark accepted development checkpoints; they do not imply a complete product or production release.
+Labels classify issues and PRs. Git tags identify a particular commit. The signed M3 accounts/commission, M4 building-block and M5 system-audit checkpoints identify accepted development revisions; they do not imply a complete product or production release.
 
 Existing `cms-dev-*` tags belong to development release automation. Do not move or replace published tags. Maintainers attach new milestone/version tags to the exact verified commit; a PR label does not create a Git tag.
 

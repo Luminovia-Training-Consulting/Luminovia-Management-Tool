@@ -1,5 +1,5 @@
 /**
- * Readable CBW provenance and template-based course planning entry points. Display source
+ * Readable course provenance and template-based course planning entry points. Display source
  * hashes/references without publishing original teaching PDFs.
  */
 import { useQuery } from "@tanstack/react-query";
@@ -20,7 +20,7 @@ import "./i18n";
 import "./building-blocks.css";
 import { jobBuildingBlockQuery } from "./building-blocks-api";
 
-/** Display the canonical CBW building block and its referenced provenance. */
+/** Display the canonical course building block and its referenced provenance. */
 export function BuildingBlockReference({
   buildingBlockId,
   sourceId,
@@ -114,10 +114,7 @@ export function BuildingBlockSources({
         {t("sourceReference")}
       </h3>
       <p>
-        <strong>
-          {block.provider} {block.code}
-        </strong>{" "}
-        ·{" "}
+        <strong>{block.code}</strong> ·{" "}
         {t("sourceDuration", {
           days: block.duration_days,
           hours: block.duration_hours,
@@ -178,9 +175,7 @@ export function BuildingBlockCards({
         <article className="panel operations-course" key={block.id}>
           <div className="section-heading">
             <BookOpen className="blue" />
-            <span className="badge">
-              {block.provider} {block.code}
-            </span>
+            <span className="badge">{block.code}</span>
           </div>
           <h2>{block.title}</h2>
           <p>

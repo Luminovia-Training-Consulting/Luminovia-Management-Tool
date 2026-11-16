@@ -1,20 +1,26 @@
 # GitHub administration and contribution workflow
 
-Start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue guide](ISSUE_GUIDE.md) and [pull request guide](PULL_REQUEST_GUIDE.md). Public contribution guidance and new discussions use English; the application interface remains German and English. The public Luminovia Website repository is a separate read-only brand reference.
+Start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue guide](ISSUE_GUIDE.md), [pull request guide](PULL_REQUEST_GUIDE.md) and [documentation index](README.md). Public contribution guidance and new discussions use English; the application interface remains German and English. The public Luminovia Website repository is a separate read-only brand reference.
 
 <a id="rules-for-main"></a>
 
-## Active rule layers
+<a id="active-rule-layers"></a>
 
-All three `main` rulesets were read back as **active** on 16 November 2026. Source configurations under `.github/rulesets/` mirror that readback. Committing JSON does not activate a rule: the [server rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. Earlier disabled-rule, role-based-review, unrestricted-human-bypass and App-exception snapshots describe their recorded time. This reconciliation changes no server settings.
+## Reviewed rule layers
 
-| Layer                 | Live ID    | Source                                           | Exceptions                                                |
-| --------------------- | ---------- | ------------------------------------------------ | --------------------------------------------------------- |
-| History and integrity | `27315671` | [history.json](../.github/rulesets/history.json) | None.                                                     |
-| PRs and review        | `27329000` | [review.json](../.github/rulesets/review.json)   | Only `CarinaSchoppe` (`User:29256704`), through PRs only. |
-| Verified checks       | `27329142` | [checks.json](../.github/rulesets/checks.json)   | None.                                                     |
+The reviewed server snapshot on 16 November 2026 at **06:25 UTC** records all three `main` rulesets as **active**. Source configurations under `.github/rulesets/` preserve that reviewed active snapshot; later live settings may differ. Committing JSON does not activate a rule: the [server rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. Earlier disabled-rule, role-based-review, unrestricted-human-bypass and App-exception snapshots describe their recorded time. This reconciliation changes no server settings.
 
-The history layer preserves deletion protection, non-fast-forward protection, valid signatures, the existing deployment rule with an empty environment list and code-quality errors. The review layer requires a PR, one independent approval, current last-push approval and resolved conversations. New pushes dismiss old approvals; code-owner review is not required. The personal PR-only exception applies within the review layer, so `CarinaSchoppe` (`User:29256704`) may merge a PR, including her own, without a separate approving review. It grants neither direct-main push permission nor a required-check or history exception. Other maintainers, administrators, users, bots and Apps have no review exception; repository roles confer none. Administrators retain permission to edit settings; these rules govern normal push and merge operations.
+| Layer                 | Live ID    | Source                                           | Exceptions                                                                              |
+| --------------------- | ---------- | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| History and integrity | `27315671` | [history.json](../.github/rulesets/history.json) | None.                                                                                   |
+| PRs and review        | `27329000` | [review.json](../.github/rulesets/review.json)   | Only `CarinaSchoppe` (`User:29256704`), with `bypass_mode: always` within this ruleset. |
+| Verified checks       | `27329142` | [checks.json](../.github/rulesets/checks.json)   | None.                                                                                   |
+
+The history layer preserves deletion protection, non-fast-forward protection, valid signatures, the existing deployment rule with an empty environment list and code-quality errors. It has no bypass actors.
+
+For actors without an exception, the review layer requires a PR, one independent approval, current last-push approval and resolved conversations. New pushes dismiss old approvals; code-owner review is not required. The same ruleset contains CodeQL scanning thresholds (`security_alerts_threshold: high_or_higher`, `alerts_threshold: errors`), a code-quality rule with `severity: errors`, and Copilot review with `review_on_push: true` and `review_draft_pull_requests: false`.
+
+Only `CarinaSchoppe` (`User:29256704`) has `bypass_mode: always` in this review ruleset. Her exception can bypass that layer's PR/review and added scanning, quality and Copilot conditions; it is not limited to a PR-only bypass. It does not bypass the separate required-check or history/signature rules. All fifteen statuses, including CodeQL and Code quality, and the history layer's own code-quality restriction remain mandatory. No repository role, other user, bot or App receives this exception, including when handling a PR authored by Carina. Administrators retain permission to edit settings; the recorded rules govern normal push and merge operations.
 
 ## Required checks and merge controls
 
@@ -43,7 +49,7 @@ Repository `allow_auto_merge` is enabled. Native Auto-Merge waits for applicable
 
 ## Current enforcement and maintenance path
 
-The legacy fragment above is retained for published links; rule activation is complete. Required-check and history/signature rules have no bypass actors. The review rule has only the personal PR-only exception for `CarinaSchoppe` (`User:29256704`). No repository role, other user, bot or App has a review exception. Maintenance App `5776881` has no review, check or history exception. GitHub Actions `15368` and CodeQL `57789` identify check producers, not bypass actors.
+The legacy fragment above is retained for published links. At the reviewed 06:25 UTC snapshot, rule activation was complete; this paragraph does not establish later enforcement. Required-check and history/signature rules have no bypass actors. The review ruleset has only the personal `always` exception for `CarinaSchoppe` (`User:29256704`), limited to that layer. No repository role, other user, bot or App has a review exception. Maintenance App `5776881` has no review, check or history exception. GitHub Actions `15368` and CodeQL `57789` identify check producers, not bypass actors.
 
 Current main contains daily component discovery, candidate verification and a promotion helper. These files do not prove that direct-main promotion can succeed under today's rules. It must fail closed if protection prevents it; do not restore an App exception or substitute a broadly privileged personal token. A replacement path must use a signed PR with the applicable review and exact-head checks. App registration or historical token/signature tests do not establish source delivery or successful operation under the current policy. See the [maintenance runbook](HOSTINGER_AUTOMATIC_UPDATES.md) for revision-specific evidence.
 
@@ -61,7 +67,7 @@ The effective branch endpoint returns active rules; inspect individual rulesets 
 
 ## Local work and publication status
 
-Develop and verify locally by default. The user has requested explicit manual publication. That implementation is proposed in open [PR #27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27); it is not yet merged and is not installed by this documentation reconciliation.
+Develop and verify locally by default. The user has requested explicit manual publication. That implementation is proposed in open [PR #27](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/27); it is not yet merged or part of the combined PR13/PR23 source.
 
 Current `main` still runs CI for PRs and main pushes, publishes a development release after its explicit quality/coverage/application/selfhost dependencies pass, and records local PR-preview artifacts through a separate trusted publisher. The separate Security outcomes are required for PR merging but are not added to the release job's `needs` by the ruleset. The existing VPS installer independently requires successful exact-main CI. A merge can therefore trigger the existing development publication path until the replacement is delivered. Passing tests or merging provides no new authorization for publication, production operations or risky data changes. Do not dispatch a publication or deployment while reviewing this guidance.
 
@@ -89,6 +95,8 @@ gh workflow run pr-metadata.yml --ref main -f pull_request_number=6
 
 The manual run reads current GitHub labels and records the actual PR head, including for a closed temporary-base fixture. It does not rerun application acceptance, replace historical SHA-bound results or invent a green status on an old failed run. A new managed label must be added to the shared catalogue before use. External contributors can suggest labels in the description; a maintainer applies them. Workflow changes themselves still need review.
 
+The 36 managed entries are eight types, 24 areas, three risk levels and `merge:hold`. The stop signal grants no permission and does not replace a required category or passing checks. Keep it until its stated concern is addressed. Classify the actual diff and preserve accurate labels.
+
 ## Git tags and development packages
 
 Labels classify issues and PRs; Git tags identify immutable commits. Existing signed annotated development milestones include:
@@ -96,7 +104,7 @@ Labels classify issues and PRs; Git tags identify immutable commits. Existing si
 | Tag                                 | Accepted merge commit                      | Scope                                                                                  |
 | ----------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------- |
 | `milestone/m3-accounts-commission`  | `00db7c9630dbf413000feab7ec7e0c2f56cb5b3a` | Accounts, profiles, clients and revenue allocation; PR #3.                             |
-| `milestone/m4-cbw-templates`        | `b9cdcc89758451bc8258f3a9f173e95ee1a23736` | Building-block templates, avatars and comments; PR #4.                                 |
+| M4 building-block checkpoint        | `b9cdcc89758451bc8258f3a9f173e95ee1a23736` | Building-block templates, avatars and comments; PR #4.                                 |
 | `milestone/m5-system-audit`         | `bb322746d3cf18b1a0f1eae0eaa96450d26e26cd` | Functional and performance corrections; PR #5.                                         |
 | `milestone/m6-connected-operations` | `dc8e9a7e65c96076038bf7067791676578d121d4` | Taxonomy, availability, lifecycle/capacity, dashboard, notifications and audit; PR #8. |
 
@@ -106,4 +114,4 @@ These tags are development acceptance markers, not production approval or semant
 
 Use English for new issues, pull requests and contributor-facing documentation. Application interfaces remain German/English and authored content retains its language. Use the [issue chooser](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/issues/new/choose) for ordinary bugs, features and questions. Blank issues are disabled in that UI in favour of structured forms; this is not an Issue API access restriction.
 
-Private vulnerability reporting is enabled; follow [SECURITY](../SECURITY.md). Secret Scanning and Push Protection were separately enabled and read back in the earlier quality task; private reporting alone would not enable them. No new App, key, paid service, invitation, real email or hosting/production change was made in this documentation task.
+Private vulnerability reporting is enabled; follow [SECURITY](../SECURITY.md). Secret Scanning and Push Protection were separately enabled and read back in the earlier quality task; private reporting alone would not enable them. No new App, key, paid service, invitation, real email or hosting/production change was made by this policy reconciliation.
