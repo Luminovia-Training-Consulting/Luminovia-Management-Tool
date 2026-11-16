@@ -9,6 +9,8 @@
 - [ ] Complete current-source local checks and complete Auth/API/desktop/mobile/built-PWA/retained-data/native acceptance; record failures and stages not reached honestly.
 - [ ] Push the signed integrated PR17 head, observe all fifteen required current-head checks, resolve review threads and merge with the tested tree.
 
+Current final source contains62 migrations:36 unchanged published main files and26 additive extension/correction sources. Independently reproduced waitlist metadata disclosure and real safeupdate Push-configuration refusal are also corrected; eight privacy/authority and six actual safeupdate SQL groups pass. Full acceptance remains the unchecked gate above.
+
 Carina clarified that PR17 is next; unrelated PRs and historical reservations below are not prerequisites. No deployment, real email, server timer activation or physical-device acceptance is implied. The full smart-operations request and remaining master-product ledger below remain required.
 
 ## PR10 current accepted Main13 checkpoint

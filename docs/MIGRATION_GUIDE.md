@@ -1,6 +1,6 @@
 # Reading and safely extending SQL migrations
 
-This guide inventories **60 SQL sources: the 36 published main migrations and 24 still-undelivered PR17 extensions**. Pending identifiers are reconciled with the installed CLI after that immutable prefix without changing SQL bytes or dependency order. This is a source inventory, not a claim of complete fresh or retained-data replay. Accepted SQL forms part of local preview, update and recovery fingerprints, so even a comment changes source identity. File identity/order checks do not replace fresh or retained-data replay. New business changes use separate additive migrations and matching guide updates.
+This guide inventories **62 SQL sources: the 36 published main migrations and 26 still-undelivered PR17 extensions**. Pending identifiers are reconciled with the installed CLI after that immutable prefix without changing SQL bytes or dependency order. This is a source inventory, not a claim of complete fresh or retained-data replay. Accepted SQL forms part of local preview, update and recovery fingerprints, so even a comment changes source identity. File identity/order checks do not replace fresh or retained-data replay. New business changes use separate additive migrations and matching guide updates.
 
 The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API inventory. [ERD](ERD.md), [DEVELOPER_GUIDE](DEVELOPER_GUIDE.md) and the relevant feature guides explain how the parts connect.
 
@@ -513,6 +513,24 @@ Source: [20261116091534_waitlist_current_authority_after_profile_lock.sql](../su
 Replaces only the existing private waitlist mutation implementation, preserving its public API and grants. Immediately after the existing profile `FOR SHARE` lock, it rechecks current account activation and, for joining, current lecturer authority. A request that waited behind a committed suspension may neither join nor leave using the earlier authority result; the waitlist and corresponding notice remain unchanged. An active former lecturer may still withdraw their own existing interest. No assignment, capacity reservation or accepted commercial snapshot is changed.
 
 Test entry point: [waitlist-authority-db-tests.mjs](../scripts/waitlist-authority-db-tests.mjs). Four deterministic real PostgreSQL cases observe the profile-lock wait and verify suspended join/leave denial, downgraded-role join denial and permitted active-former-lecturer withdrawal. The vulnerable original routine fails the suspension regression before this correction; all four cases pass with the new migration. These focused results do not replace current combined native/Auth/browser acceptance. The preceding 59 SQL files remain byte-identical.
+
+### 61. Metadata-private waitlist withdrawal and retained interest
+
+Source: [20261116100136_waitlist_private_withdrawal_receipts.sql](../supabase/migrations/20261116100136_waitlist_private_withdrawal_receipts.sql).
+
+An idempotent leave request is own-state cleanup, not a foreign job lookup. After the current active-account/profile-lock checks, a caller without their own interest receives the same empty-title receipt for guessed private or missing job IDs before any foreign job lookup or row lock. Null job IDs remain denied. All successful leave receipts omit the title, including when removing a genuine own row, and preserve the permitted withdrawal by an active former lecturer.
+
+Stored own interest does not grant access to later private job edits. Exact and own-list projections redact draft/archived titles unless the caller currently has ordinary job-read authority. The existing reduced published/filled marketplace projection remains intact. The UI labels hidden interest generically, omits its job-detail link and retains its own leave action; no private title or job-existence oracle is introduced by withdrawal. The preceding 60 migration files and public API/grant identities remain unchanged.
+
+Test entry point: [waitlist-authority-db-tests.mjs](../scripts/waitlist-authority-db-tests.mjs). All eight focused authority/privacy PostgreSQL groups pass on the 61-source fixture, including the existing observed profile-lock races, guessed-ID withdrawal, retained-interest private-title changes and own-notice cleanup. Restoring the vulnerable 60-source leave implementation makes the new metadata regression fail. These bounded results are separate from full 61-source native/Auth/browser acceptance; exact broader outcomes belong in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
+
+### 62. Explicit safe-update targets for service-only Push configuration
+
+Source: [20261116101427_web_push_safe_update_targets.sql](../supabase/migrations/20261116101427_web_push_safe_update_targets.sql).
+
+Preserves the existing private `configure_web_push` signature, public invoker wrapper, service-only execution grants and public-key validation. A changed VAPID public key invalidates only currently active subscriptions with an explicit `WHERE active` predicate. The configuration write targets its existing singleton with `WHERE singleton=true`. Inactive device history is retained; the database's safe-update protection remains enabled rather than being disabled to permit unbounded updates.
+
+The preceding 61 SQL files remain unchanged, and no API or browser privilege is added. All six focused [safe-update PostgreSQL groups](../scripts/web-push-safeupdate-db-tests.mjs) passed with the actual installed safe-update module loaded and enabled in the RPC backend. They cover initial/same-key configuration, active-only rotation with unchanged inactive history, disable/re-enable behavior, validation and service-only grants. Restoring the original routine reproduces `21000` under the same test. Existing [Push PostgreSQL checks](../scripts/web-push-db-tests.mjs) and [actual Auth/PostgREST acceptance](../scripts/web-push-api-check.mjs) exercise configuration and device behavior. Exact safe-update negative-control and corrected-source results belong in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md); a focused source/SQL pass does not establish the full 62-source application/native gate or external Push delivery.
 
 ## The critical data flows
 

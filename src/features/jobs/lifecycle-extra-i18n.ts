@@ -1,6 +1,7 @@
 import i18n from "../../lib/i18n";
 const de = {
   waitlist: "Warteliste",
+  waitlistUnavailable: "Derzeit nicht verfügbarer Auftrag",
   waitlistHelp:
     "Die Warteliste meldet dir eine erneute Veröffentlichung. Sie reserviert keinen Platz. Die verbindliche Übernahme wird weiterhin online in Reihenfolge erfolgreicher Buchungen geprüft.",
   join: "Auf Warteliste setzen",
@@ -68,6 +69,7 @@ const de = {
 };
 const en: Record<keyof typeof de, string> = {
   waitlist: "Waitlist",
+  waitlistUnavailable: "Currently unavailable job",
   waitlistHelp:
     "The waitlist alerts you when an offer is published again. It reserves no place. Taking the assignment still requires online validation in successful booking order.",
   join: "Join waitlist",

@@ -8,9 +8,17 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, mfa }) => {
   const original = await actor("handover-original", "lecturer"),
     replacement = await actor("handover-replacement", "lecturer"),
     peer = await actor("handover-peer", "lecturer"),
+    participant = await actor("handover-private-peer", "participant"),
     admin = await actor("handover-admin", "admin");
-  const users = [original.id, replacement.id, peer.id, admin.id],
+  const users = [
+      original.id,
+      replacement.id,
+      peer.id,
+      participant.id,
+      admin.id,
+    ],
     job = randomUUID(),
+    privateJob = randomUUID(),
     topic = randomUUID();
   defer(async () => {
     await sql(`delete from private.job_substitutions where job_id=${q(job)};
@@ -24,10 +32,54 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, mfa }) => {
     delete from public.job_claims where job_id=${q(job)};
     delete from public.job_requirements where job_id=${q(job)};
     delete from public.job_sessions where job_id=${q(job)};
-    delete from public.jobs where id=${q(job)};
+    delete from public.jobs where id in(${q(job)},${q(privateJob)});
     delete from public.lecturer_topics where topic_id=${q(topic)};
     delete from public.topics where id=${q(topic)};`);
   });
+  // A harmless repeated leave must not become a service-definer job-title or
+  // existence oracle. Prove both actual JWT roles have no underlying RLS row
+  // and receive exactly the same minimal receipt for private and unknown IDs.
+  await checked(
+    service.from("jobs").insert({
+      id: privateJob,
+      title:
+        "Fictional confidential draft; never return through waitlist leave",
+      customer_name: "Fictional private academy",
+      delivery_type: "online",
+      status: "draft",
+      amount: 1,
+      total_amount: 1,
+      currency: "EUR",
+      rate_unit: "fixed_total",
+      terms: "Fictional private draft agreement",
+      requires_contract: false,
+    }),
+  );
+  for (const viewer of [peer, participant]) {
+    assert.deepEqual(
+      await checked(
+        viewer.client.from("jobs").select("id,title").eq("id", privateJob),
+      ),
+      [],
+    );
+    for (const id of [privateJob, randomUUID()]) {
+      assert.deepEqual(
+        await checked(
+          viewer.client.rpc("set_job_waitlist", {
+            p_job_id: id,
+            p_join: false,
+          }),
+        ),
+        {
+          job_id: id,
+          title: "",
+          joined: false,
+          can_join: false,
+          available: false,
+        },
+      );
+    }
+  }
   await checked(
     service.from("topics").insert({
       id: topic,
@@ -291,6 +343,6 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, mfa }) => {
     "42501",
   );
   console.log(
-    "PASS actual Auth/REST waitlist dedup/no allocation, current candidate/MFA/privacy scope, immutable concrete proposal, exact recipient consent, revalidated qualifications, concurrent whole-block transfer, retained net deal, old chat revocation and inactive-token denial.",
+    "PASS actual Auth/REST waitlist private/unknown minimal receipts, dedup/no allocation, current candidate/MFA/privacy scope, immutable concrete proposal, exact recipient consent, revalidated qualifications, concurrent whole-block transfer, retained net deal, old chat revocation and inactive-token denial.",
   );
 });

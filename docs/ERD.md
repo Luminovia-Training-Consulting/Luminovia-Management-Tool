@@ -1,6 +1,6 @@
 # Relational model and permission boundaries
 
-The target diagrams retain the complete product map; conceptual target entities do not claim that every table exists. The implemented diagrams depict a selected subset of physical relations represented in the current **60 SQL sources**, with `PRIVATE_*` aliases mapped to unexposed private relations below. They are not a complete schema dump or a claim that every later replacement routine, optional-module adapter or constraint is diagrammed. The 36 published main sources remain byte-identical; 24 PR17 files follow that prefix. Actual migration replay, SQL constraints, explicit grants/RLS and owning tests are authoritative. This source map does not claim the current combined native gate, hosted installation or platform acceptance has passed. See [ARCHITECTURE](ARCHITECTURE.md), [MIGRATION_GUIDE](MIGRATION_GUIDE.md), [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
+The target diagrams retain the complete product map; conceptual target entities do not claim that every table exists. The implemented diagrams depict a selected subset of physical relations represented in the current **62 SQL sources**, with `PRIVATE_*` aliases mapped to unexposed private relations below. They are not a complete schema dump or a claim that every later replacement routine, optional-module adapter or constraint is diagrammed. The 36 published main sources remain byte-identical; 26 PR17 files follow that prefix. Actual migration replay, SQL constraints, explicit grants/RLS and owning tests are authoritative. This source map does not claim the current combined native gate, hosted installation or platform acceptance has passed. See [ARCHITECTURE](ARCHITECTURE.md), [MIGRATION_GUIDE](MIGRATION_GUIDE.md), [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
 
 ## Core target relations
 
@@ -478,7 +478,7 @@ The three additive sources are `20261116022735_scoped_administrative_job_pickers
 `20261116022736_global_calendar_publications` and
 `20261116022737_qualification_evidence_and_attestation_history`. Together with the
 29 earlier migration sources these form the historical 32-migration M7/M8 model.
-The following diagram covers the fourteen-source operational cohort depicted here, not every later addition in the current 60-source inventory. Focused source,
+The following diagram covers the fourteen-source operational cohort depicted here, not every later addition in the current 62-source inventory. Focused source,
 SQL/component/Edge checks do not establish combined native acceptance.
 
 ## Implemented personal settings and external delivery
@@ -634,4 +634,4 @@ Additional operational boundaries:
 | Calendar capability / offline schedule   | Explicit owner opt-in; expiry/revocation and identity clearing  | No administrator calendar bypass; no general private-response cache                 |
 | Notification channel/device              | Own preference/device; current eligible event                   | Service-only delivery leases do not grant browser data access                       |
 
-See [CHAT_SECURITY](CHAT_SECURITY.md), [KNOWLEDGE_SECURITY](KNOWLEDGE_SECURITY.md), [COMMERCIAL_SECURITY](COMMERCIAL_SECURITY.md), [OPERATIONS](OPERATIONS.md) and [BACKEND_SECURITY_REVIEW](BACKEND_SECURITY_REVIEW.md) for tested boundaries and outstanding acceptance. Current combined 60-source native acceptance is recorded separately in QA/work logs; authored cases and focused passes do not establish that result. Tombstones, archives and audit revisions preserve data; none is a production legal-erasure or retention-policy guarantee.
+See [CHAT_SECURITY](CHAT_SECURITY.md), [KNOWLEDGE_SECURITY](KNOWLEDGE_SECURITY.md), [COMMERCIAL_SECURITY](COMMERCIAL_SECURITY.md), [OPERATIONS](OPERATIONS.md) and [BACKEND_SECURITY_REVIEW](BACKEND_SECURITY_REVIEW.md) for tested boundaries and outstanding acceptance. Current combined 62-source native acceptance is recorded separately in QA/work logs; authored cases and focused passes do not establish that result. Tombstones, archives and audit revisions preserve data; none is a production legal-erasure or retention-policy guarantee.

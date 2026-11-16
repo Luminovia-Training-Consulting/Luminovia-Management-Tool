@@ -26,6 +26,36 @@ await withTestDatabase("waitlist_authority", async ({ sql, actor }) => {
       routine[0].replace("create function", "create or replace function"),
     );
   }
+  if (process.env.PORTAL_WAITLIST_TITLE_VULNERABLE_CONTROL === "1") {
+    const source = await readFile(
+      new URL(
+        "../supabase/migrations/20261116091534_waitlist_current_authority_after_profile_lock.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const routine = source.match(
+      /create or replace function private\.set_job_waitlist\(.*?end;\$\$;/s,
+    );
+    assert.ok(routine, "The actual pre-privacy routine must remain available");
+    await sql(routine[0]);
+  }
+  if (process.env.PORTAL_WAITLIST_GETTER_VULNERABLE_CONTROL === "1") {
+    const source = await readFile(
+      new URL(
+        "../supabase/migrations/20261116091012_assignment_waitlist_and_substitution.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const routine = source.match(
+      /create function private\.job_waitlist\(.*?end;\$\$;/s,
+    );
+    assert.ok(routine, "The actual original getter must remain available");
+    await sql(
+      routine[0].replace("create function", "create or replace function"),
+    );
+  }
   const [admin, waiter] = Array.from({ length: 2 }, randomUUID);
   await sql(`insert into auth.users(id,email)values${[admin, waiter]
     .map((id) => `(${q(id)},${q(id + "@example.invalid")})`)
@@ -199,6 +229,198 @@ insert into public.job_sessions(job_id,starts_at,ends_at)values(${q(job)},'2055-
         ),
         "0",
       );
+    },
+  );
+  /** Leave receipts contain only the requested identifier and own-state flags;
+   * an empty title is accepted by the existing public receipt schema. */
+  const leftReceipt = (job) => ({
+    job_id: job,
+    title: "",
+    joined: false,
+    can_join: false,
+    available: false,
+  });
+  const [participant, privateLecturer] = Array.from({ length: 2 }, randomUUID);
+  await sql(`insert into auth.users(id,email)values${[participant, privateLecturer].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};
+insert into public.user_roles(user_id,role)values(${q(participant)},'participant'),(${q(privateLecturer)},'lecturer');`);
+  /** Private test jobs have no actual accepted assignments or customer records. */
+  const privateJob = async (status) => {
+    const job = randomUUID();
+    await sql(`insert into public.jobs(id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms,requires_contract)
+values(${q(job)},'Fictional confidential private title','Fictional private academy','online',${q(status)},1,1,'EUR','fixed_total','Fictional private terms',false);`);
+    return job;
+  };
+  await check(
+    "Uninterested participant and lecturer withdrawals reveal no draft, archived or unknown job metadata",
+    async () => {
+      const jobs = [
+        await privateJob("draft"),
+        await privateJob("archived"),
+        randomUUID(),
+      ];
+      for (const who of [participant, privateLecturer]) {
+        for (const job of jobs) {
+          assert.equal(
+            await actor(
+              who,
+              `select count(*)from public.jobs where id=${q(job)}`,
+            ),
+            "0",
+          );
+          assert.equal(
+            await sql(
+              `select count(*)from private.job_waitlist where job_id=${q(job)} and user_id=${q(who)}`,
+            ),
+            "0",
+          );
+          assert.deepEqual(
+            JSON.parse(
+              await actor(
+                who,
+                `select public.set_job_waitlist(${q(job)},false)`,
+              ),
+            ),
+            leftReceipt(job),
+          );
+          assert.deepEqual(
+            JSON.parse(
+              await actor(
+                who,
+                `select public.set_job_waitlist(${q(job)},false)`,
+              ),
+            ),
+            leftReceipt(job),
+          );
+        }
+      }
+    },
+  );
+  await check(
+    "Unknown identifiers clean only the caller's stale notice without exposing existence or another account",
+    async () => {
+      const job = randomUUID();
+      await sql(
+        `insert into public.notifications(user_id,kind,resource_id)values(${q(participant)},'job_waitlist_available',${q(job)}),(${q(privateLecturer)},'job_waitlist_available',${q(job)})`,
+      );
+      const foreign = await sql(
+        `select to_jsonb(n)from public.notifications n where user_id=${q(privateLecturer)}and resource_id=${q(job)}`,
+      );
+      assert.deepEqual(
+        JSON.parse(
+          await actor(
+            participant,
+            `select public.set_job_waitlist(${q(job)},false)`,
+          ),
+        ),
+        leftReceipt(job),
+      );
+      assert.equal(
+        await sql(
+          `select count(*)from public.notifications where user_id=${q(participant)}and resource_id=${q(job)}`,
+        ),
+        "0",
+      );
+      assert.equal(
+        await sql(
+          `select to_jsonb(n)from public.notifications n where user_id=${q(privateLecturer)}and resource_id=${q(job)}`,
+        ),
+        foreign,
+      );
+    },
+  );
+  await check(
+    "Null and malformed job identifiers never produce a malformed public receipt",
+    async () => {
+      for (const who of [participant, privateLecturer]) {
+        await assert.rejects(
+          actor(who, "select public.set_job_waitlist(null,false)"),
+          /42501/,
+        );
+        await assert.rejects(
+          actor(who, "select public.set_job_waitlist('malformed-uuid',false)"),
+          /22P02/,
+        );
+      }
+    },
+  );
+  await check(
+    "Existing interest survives read revocation without exposing a newly private title and can still be withdrawn",
+    async () => {
+      for (const status of ["draft", "archived"]) {
+        const job = await privateJob("filled");
+        await sql(
+          `insert into public.job_sessions(job_id,starts_at,ends_at)values(${q(job)},'2056-01-01T08:00:00Z','2056-01-01T09:00:00Z')`,
+        );
+        await actor(
+          privateLecturer,
+          `select public.set_job_waitlist(${q(job)},true)`,
+        );
+        await sql(
+          `update public.jobs set status=${q(status)},title='Fictional newly private changed title'where id=${q(job)}`,
+        );
+        assert.equal(
+          await actor(
+            privateLecturer,
+            `select count(*)from public.jobs where id=${q(job)}`,
+          ),
+          "0",
+        );
+        assert.equal(
+          JSON.parse(
+            await actor(
+              privateLecturer,
+              `select public.job_waitlist(${q(job)})`,
+            ),
+          ).title,
+          "",
+        );
+        const ownList = JSON.parse(
+          await actor(privateLecturer, "select public.my_job_waitlist()"),
+        );
+        assert.equal(ownList.find((item) => item.job_id === job).title, "");
+        await actor(
+          admin,
+          `select public.set_account_roles(${q(privateLecturer)},array['participant'])`,
+          "aal2",
+        );
+        await assert.rejects(
+          actor(privateLecturer, `select public.job_waitlist(${q(job)})`),
+          /42501/,
+        );
+        await assert.rejects(
+          actor(privateLecturer, "select public.my_job_waitlist()"),
+          /42501/,
+        );
+        assert.deepEqual(
+          JSON.parse(
+            await actor(
+              privateLecturer,
+              `select public.set_job_waitlist(${q(job)},false)`,
+            ),
+          ),
+          leftReceipt(job),
+        );
+        assert.deepEqual(
+          JSON.parse(
+            await actor(
+              privateLecturer,
+              `select public.set_job_waitlist(${q(job)},false)`,
+            ),
+          ),
+          leftReceipt(job),
+        );
+        assert.equal(
+          await sql(
+            `select count(*)from private.job_waitlist where job_id=${q(job)}and user_id=${q(privateLecturer)}`,
+          ),
+          "0",
+        );
+        await actor(
+          admin,
+          `select public.set_account_roles(${q(privateLecturer)},array['lecturer'])`,
+          "aal2",
+        );
+      }
     },
   );
   console.log(`${checks} actual waitlist authority PostgreSQL groups passed.`);

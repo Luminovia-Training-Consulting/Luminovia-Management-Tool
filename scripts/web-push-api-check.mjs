@@ -23,7 +23,7 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, url }) => {
       "Delete only own push notices/outbox",
     );
     await sql(
-      `update private.push_configuration set enabled=${previous.enabled},public_key=${previous.public_key === null ? "null" : q(previous.public_key)}`,
+      `update private.push_configuration set enabled=${previous.enabled},public_key=${previous.public_key === null ? "null" : q(previous.public_key)} where singleton=true`,
     );
   });
   const vapid = webPush.generateVAPIDKeys();
@@ -34,6 +34,9 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, url }) => {
     }),
     "Configure disposable public push key",
   );
+  const configured = await checked(owner.client.rpc("my_push_devices"));
+  assert.equal(configured.enabled, true);
+  assert.equal(configured.public_key, vapid.publicKey);
   assert.equal(
     (
       await owner.client.rpc("configure_web_push", {
@@ -84,14 +87,12 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, url }) => {
   );
   const notice = randomUUID();
   await checked(
-    service
-      .from("notifications")
-      .insert({
-        id: notice,
-        user_id: owner.id,
-        kind: "claim_cancelled",
-        resource_id: randomUUID(),
-      }),
+    service.from("notifications").insert({
+      id: notice,
+      user_id: owner.id,
+      kind: "claim_cancelled",
+      resource_id: randomUUID(),
+    }),
     "Commit scoped push notification",
   );
   let sent = 0;
