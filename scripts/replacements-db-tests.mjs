@@ -390,5 +390,33 @@ await withTestDatabase("replacement_test", async ({ sql, actor }) => {
       );
     },
   );
+  await check(
+    "A replay after later cancellation never reports a live confirmation, and revoked roles cannot reuse receipts",
+    async () => {
+      const c = await create(),
+        offer = await request(c.claim),
+        key = randomUUID();
+      const result = await take(offer, c.terms, first, key);
+      assert.equal(result.status, "confirmed");
+      await actor(
+        first,
+        `select public.cancel_job_assignment('${result.claim_id}','Fictional later cancellation','${randomUUID()}')`,
+      );
+      assert.equal(
+        (await take(offer, c.terms, first, key)).status,
+        "cancelled",
+      );
+      await sql(`delete from public.user_roles where user_id='${first}'`);
+      assert.equal(
+        (await take(offer, c.terms, first, key)).status,
+        "not_eligible",
+      );
+      const other = await create(),
+        managerKey = randomUUID();
+      await request(other.claim, manager, managerKey);
+      await sql(`delete from public.user_roles where user_id='${manager}'`);
+      await assert.rejects(request(other.claim, manager, managerKey), /42501/);
+    },
+  );
   console.log(`\n${checks} replacement PostgreSQL groups passed.`);
 });

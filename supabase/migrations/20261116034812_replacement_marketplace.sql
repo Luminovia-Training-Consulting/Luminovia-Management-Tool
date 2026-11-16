@@ -104,10 +104,10 @@ begin
  or cardinality(p_invited_user_ids)<>(select count(distinct u) from unnest(p_invited_user_ids)u) then raise exception 'Invalid replacement request' using errcode='22023';end if;
  payload=jsonb_build_object('action','request','claim',p_claim_id,'reason',trim(p_reason),'mode',p_mode,'invited',p_invited_user_ids,'emergency',p_emergency);
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('replacement:'||auth.uid()::text||p_request_id::text,0));
- select * into prior from private.replacement_requests where actor_id=auth.uid() and request_id=p_request_id;
- if found then if prior.payload<>payload then raise exception 'Replacement idempotency conflict' using errcode='22023';end if;return (prior.result->>'id')::uuid;end if;
  select * into c from public.job_claims where id=p_claim_id;
  if c.id is null or not (c.lecturer_id=auth.uid() and private.lecturer_actor() or private.has_permission('jobs.manage')) then raise exception 'Assignment access denied' using errcode='42501';end if;
+ select * into prior from private.replacement_requests where actor_id=auth.uid() and request_id=p_request_id;
+ if found then if prior.payload<>payload then raise exception 'Replacement idempotency conflict' using errcode='22023';end if;return (prior.result->>'id')::uuid;end if;
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(c.lecturer_id::text,0));
  select * into j from public.jobs where id=c.job_id for update;
  select * into c from public.job_claims where id=p_claim_id for update;
@@ -136,10 +136,10 @@ begin
  if p_request_id is null or p_expected_version is null then raise exception 'Invalid replacement request' using errcode='22023';end if;
  payload=jsonb_build_object('action','cancel','offer',p_offer_id,'version',p_expected_version);
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('replacement:'||auth.uid()::text||p_request_id::text,0));
- select * into prior from private.replacement_requests where actor_id=auth.uid() and request_id=p_request_id;
- if found then if prior.payload<>payload then raise exception 'Replacement idempotency conflict' using errcode='22023';end if;return p_offer_id;end if;
  select * into o from private.replacement_offers where id=p_offer_id for update;
  if o.id is null or not(exists(select 1 from public.job_claims where id=o.original_claim_id and lecturer_id=auth.uid()) or private.has_permission('jobs.manage')) then raise exception 'Replacement access denied' using errcode='42501';end if;
+ select * into prior from private.replacement_requests where actor_id=auth.uid() and request_id=p_request_id;
+ if found then if prior.payload<>payload then raise exception 'Replacement idempotency conflict' using errcode='22023';end if;return p_offer_id;end if;
  if o.version<>p_expected_version or o.status<>'open' then raise exception 'Replacement changed; reload' using errcode='40001';end if;
  update private.replacement_offers set status='cancelled',version=version+1 where id=o.id;
  insert into public.audit_events(actor_id,action,resource_id) values(auth.uid(),'replacement.cancelled',o.id);
@@ -153,11 +153,16 @@ language plpgsql security definer set search_path='' as $$
 declare o private.replacement_offers; c public.job_claims; j public.jobs; prior private.replacement_requests; payload jsonb; result jsonb; target uuid;
 begin
  if not private.actor_active() then raise exception 'Active account required' using errcode='42501';end if;
+ if not private.lecturer_actor() then return jsonb_build_object('status','not_eligible');end if;
  if p_request_id is null or p_expected_version is null or p_terms_version is null then raise exception 'Invalid replacement request' using errcode='22023';end if;
  payload=jsonb_build_object('action','claim','offer',p_offer_id,'version',p_expected_version,'terms_version',p_terms_version);
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('replacement:'||auth.uid()::text||p_request_id::text,0));
  select * into prior from private.replacement_requests where actor_id=auth.uid() and request_id=p_request_id;
- if found then if prior.payload<>payload then raise exception 'Replacement idempotency conflict' using errcode='22023';end if;return prior.result;end if;
+ if found then
+  if prior.payload<>payload then raise exception 'Replacement idempotency conflict' using errcode='22023';end if;
+  select * into c from public.job_claims where id=(prior.result->>'claim_id')::uuid and lecturer_id=auth.uid();
+  return jsonb_set(prior.result,'{status}',to_jsonb(coalesce(c.status,'unavailable')));
+ end if;
  select claimed.* into c from public.job_claims claimed join private.replacement_offers r on r.original_claim_id=claimed.id where r.id=p_offer_id;
  if c.id is null then return jsonb_build_object('status','unavailable');end if;
  -- Consistent sorted profile/lecturer locks, then job, claim, offer, room.

@@ -12,7 +12,7 @@ The exact additional [implementation prompt](OPERATIONS_EXTENSION_PROMPT.txt) is
 - [ ] Publish focused signed/labelled PRs and verify exact-head required CI, independent review and merge eligibility. Honour Carina's coordinated main-merge hold while PR15 is completed.
 - [ ] Verify merged source and actual authorised development activation separately. No production/public Website/DNS/real-mail/purchase action is implied.
 
-Initial SQL evidence: readiness16, delivery12, replacement9, support12groups. Whole-source257tests and unchanged coverage floors pass; TypeScript/ESLint pass. The canonical complete command returned exit1 before startup because another checkout holds shared QA ownership; this is not a full integration pass.
+Initial SQL evidence: readiness16, delivery12, replacement10, support12groups. Whole-source257tests and unchanged coverage floors pass; TypeScript/ESLint pass. The canonical complete command returned exit1 before startup because another checkout holds shared QA ownership; this is not a full integration pass.
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 

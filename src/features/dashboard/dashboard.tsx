@@ -23,7 +23,7 @@ import { Button } from "../../components/ui/button";
 import { ErrorState, Loading, TextLink } from "../../components/common";
 import { validZone } from "../../lib/dates";
 import { DashboardCalendarPreview, DashboardWidgets } from "./widgets";
-import { DashboardReadinessWidget } from "../readiness/readiness";
+import { DashboardReadinessWidget } from "../readiness/widget";
 import "./i18n";
 export function Dashboard() {
   const { t, i18n } = useTranslation();
