@@ -1,10 +1,8 @@
 # Reading and safely extending SQL migrations
 
-This guide inventories **68 SQL files: 62 unchanged published Main17 migrations and six pending PR24 operational additions**. Actual accepted main is `4cc20874edc1f865b71106b7bb1299e16fec5aad`. All 62 published bodies remain byte-identical, and the six pending files retain their CLI-created dependency order. Their post-wait authority corrections and the two notification files’ owner-only resolver boundary remain recorded in [WORKLOG](WORKLOG.md). Earlier 36-, 42- and candidate-prefix counts describe their named pre-merge checkpoints.
+This guide covers the **68 published SQL source files** present in accepted main `2c7d326` on 17 November 2026. PR17's operational cohort and PR24's six additional files are merged; earlier candidate/pending descriptions apply only to their historical checkpoints. The ordered source versions and byte hashes are bound into the generated [API reference](API_REFERENCE.md).
 
-Application, SQL, E2E, database helper, generated API and package/lock bytes remain identical to the complete local `2c850fc488165e37887807a74e92414e4fa0a25e` pass, which replayed all 68 migrations and real APIs before 150 application browser and 4 built-PWA cases and checked cleanup. Accepted Main36 runner routing and Main17’s 30-minute browser aggregate are newer executor evidence; no repeated complete local run is claimed for that delta. Accidental accounting integration remains excluded through the history-preserving signed revert.
-
-Published SQL participates in preview, update and recovery fingerprints and must never be rewritten. New business changes require separate additive migrations and matching guide updates. Source identity does not establish what a hosted database has applied. Final current-head full system, browser, actual native and all 15 required CI checks remain mandatory before PR24 delivery. Ordinary `./portal test` stays complete; one split CI phase is not a full pass. Manual-only publication remains unchanged.
+Published SQL participates in preview, update and recovery fingerprints and must remain byte-identical. New business changes require additive migrations. Repository history does not establish what an installed or hosted database has applied. Read [QA_RESULTS](QA_RESULTS.md) for source-specific executed checks and [FUNCTIONAL_ACCEPTANCE](FUNCTIONAL_ACCEPTANCE.md) for the current acceptance contract. A split CI phase alone is not complete application acceptance; publication remains a separate authorised manual operation.
 
 The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API inventory. [ERD](ERD.md), [DEVELOPER_GUIDE](DEVELOPER_GUIDE.md) and the relevant feature guides explain how the parts connect.
 
@@ -534,7 +532,7 @@ An idempotent leave request is own-state cleanup, not a foreign job lookup. Afte
 
 Stored own interest does not grant access to later private job edits. Exact and own-list projections redact draft/archived titles unless the caller currently has ordinary job-read authority. The existing reduced published/filled marketplace projection remains intact. The UI labels hidden interest generically, omits its job-detail link and retains its own leave action; no private title or job-existence oracle is introduced by withdrawal. The preceding 60 migration files and public API/grant identities remain unchanged.
 
-Test entry point: [waitlist-authority-db-tests.mjs](../scripts/waitlist-authority-db-tests.mjs). All eight focused authority/privacy PostgreSQL groups pass on the 61-source fixture, including the existing observed profile-lock races, guessed-ID withdrawal, retained-interest private-title changes and own-notice cleanup. Restoring the vulnerable 60-source leave implementation makes the new metadata regression fail. These bounded results are separate from full 61-source native/Auth/browser acceptance; exact broader outcomes belong in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
+Test entry point: [waitlist-authority-db-tests.mjs](../scripts/waitlist-authority-db-tests.mjs). All eight focused authority/privacy PostgreSQL groups pass on the 61-source fixture, including the existing observed profile-lock races, guessed-ID withdrawal, retained-interest private-title changes and own-notice cleanup. Restoring the vulnerable 60-source leave implementation makes the new metadata regression fail. These bounded results are separate from full 61-source native/Auth/browser acceptance; exact broader outcomes belong in [QA_RESULTS](QA_RESULTS.md).
 
 ### 62. Explicit safe-update targets for service-only Push configuration
 
@@ -542,7 +540,7 @@ Source: [20261116101427_web_push_safe_update_targets.sql](../supabase/migrations
 
 Preserves the existing private `configure_web_push` signature, public invoker wrapper, service-only execution grants and public-key validation. A changed VAPID public key invalidates only currently active subscriptions with an explicit `WHERE active` predicate. The configuration write targets its existing singleton with `WHERE singleton=true`. Inactive device history is retained; the database's safe-update protection remains enabled rather than being disabled to permit unbounded updates.
 
-The preceding 61 SQL files remain unchanged, and no API or browser privilege is added. All six focused [safe-update PostgreSQL groups](../scripts/web-push-safeupdate-db-tests.mjs) passed with the actual installed safe-update module loaded and enabled in the RPC backend. They cover initial/same-key configuration, active-only rotation with unchanged inactive history, disable/re-enable behavior, validation and service-only grants. Restoring the original routine reproduces `21000` under the same test. Existing [Push PostgreSQL checks](../scripts/web-push-db-tests.mjs) and [actual Auth/PostgREST acceptance](../scripts/web-push-api-check.mjs) exercise configuration and device behavior. Exact safe-update negative-control and corrected-source results belong in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md); a focused source/SQL pass does not establish the full 62-source application/native gate or external Push delivery.
+The preceding 61 SQL files remain unchanged, and no API or browser privilege is added. All six focused [safe-update PostgreSQL groups](../scripts/web-push-safeupdate-db-tests.mjs) passed with the actual installed safe-update module loaded and enabled in the RPC backend. They cover initial/same-key configuration, active-only rotation with unchanged inactive history, disable/re-enable behavior, validation and service-only grants. Restoring the original routine reproduces `21000` under the same test. Existing [Push PostgreSQL checks](../scripts/web-push-db-tests.mjs) and [actual Auth/PostgREST acceptance](../scripts/web-push-api-check.mjs) exercise configuration and device behavior. Exact safe-update negative-control and corrected-source results belong in [QA_RESULTS](QA_RESULTS.md); a focused source/SQL pass does not establish the full 62-source application/native gate or external Push delivery.
 
 ### 63. Derived course readiness and scoped preparation
 
@@ -614,14 +612,14 @@ Tests: automatically discovered [operational-forward-db-tests.mjs](../scripts/op
 
 ## Historical pre-release source version reconciliation
 
-At this historical pre-PR17-release checkpoint, the accepted main prefix contained 36 published SQL files. The table retains its status at that time; actual Main17 now publishes all 62 files described above. Nine shared branch sources are byte-identical to their published canonical files and are represented once. The 23 still-undelivered PR17 files were assigned new forward identifiers with the installed CLI, preserving every SQL byte, SHA-256 and relative dependency order. This is source-file reconciliation before release, not an installed-database history repair. No ordinary or hosted database was reset, backdated or given fabricated migration records. The separate 60th source adds the post-lock waitlist authority correction described above; it does not rewrite those 59 files.
+At this historical pre-PR17-release checkpoint, the accepted main prefix contained 36 published SQL files. The table retains its status at that time; accepted main now includes these files in the 68-source inventory above. Nine shared branch sources are byte-identical to their published canonical files and are represented once. The 23 then-undelivered PR17 files were assigned new forward identifiers with the installed CLI, preserving every SQL byte, SHA-256 and relative dependency order. This is source-file reconciliation before release, not an installed-database history repair. No ordinary or hosted database was reset, backdated or given fabricated migration records. The separate 60th source adds the post-lock waitlist authority correction described above; it does not rewrite those 59 files.
 
-| Earlier branch version | Current source version | Status                   |
+| Earlier branch version | Current source version | Status at reconciliation |
 | ---------------------- | ---------------------- | ------------------------ |
-| 20261116021141         | 20261116091007         | Pending PR17 file        |
-| 20261116021232         | 20261116091009         | Pending PR17 file        |
-| 20261116022220         | 20261116091010         | Pending PR17 file        |
-| 20261116022729         | 20261116091011         | Pending PR17 file        |
+| 20261116021141         | 20261116091007         | Then pending PR17 file   |
+| 20261116021232         | 20261116091009         | Then pending PR17 file   |
+| 20261116022220         | 20261116091010         | Then pending PR17 file   |
+| 20261116022729         | 20261116091011         | Then pending PR17 file   |
 | 20261116022730         | 20261116080730         | Published canonical file |
 | 20261116022731         | 20261116080732         | Published canonical file |
 | 20261116022732         | 20261116080735         | Published canonical file |
@@ -630,26 +628,26 @@ At this historical pre-PR17-release checkpoint, the accepted main prefix contain
 | 20261116022735         | 20261116080741         | Published canonical file |
 | 20261116022736         | 20261116080743         | Published canonical file |
 | 20261116022737         | 20261116080746         | Published canonical file |
-| 20261116031429         | 20261116091012         | Pending PR17 file        |
-| 20261116031533         | 20261116091013         | Pending PR17 file        |
-| 20261116031728         | 20261116091015         | Pending PR17 file        |
-| 20261116032008         | 20261116091016         | Pending PR17 file        |
-| 20261116032842         | 20261116091017         | Pending PR17 file        |
-| 20261116034053         | 20261116091018         | Pending PR17 file        |
-| 20261116034638         | 20261116091019         | Pending PR17 file        |
-| 20261116040854         | 20261116091020         | Pending PR17 file        |
-| 20261116041354         | 20261116091022         | Pending PR17 file        |
-| 20261116042100         | 20261116091023         | Pending PR17 file        |
-| 20261116044535         | 20261116091024         | Pending PR17 file        |
-| 20261116045011         | 20261116091025         | Pending PR17 file        |
+| 20261116031429         | 20261116091012         | Then pending PR17 file   |
+| 20261116031533         | 20261116091013         | Then pending PR17 file   |
+| 20261116031728         | 20261116091015         | Then pending PR17 file   |
+| 20261116032008         | 20261116091016         | Then pending PR17 file   |
+| 20261116032842         | 20261116091017         | Then pending PR17 file   |
+| 20261116034053         | 20261116091018         | Then pending PR17 file   |
+| 20261116034638         | 20261116091019         | Then pending PR17 file   |
+| 20261116040854         | 20261116091020         | Then pending PR17 file   |
+| 20261116041354         | 20261116091022         | Then pending PR17 file   |
+| 20261116042100         | 20261116091023         | Then pending PR17 file   |
+| 20261116044535         | 20261116091024         | Then pending PR17 file   |
+| 20261116045011         | 20261116091025         | Then pending PR17 file   |
 | 20261116045609         | 20261116080748         | Published canonical file |
-| 20261116051736         | 20261116091026         | Pending PR17 file        |
-| 20261116052704         | 20261116091027         | Pending PR17 file        |
-| 20261116052910         | 20261116091029         | Pending PR17 file        |
-| 20261116054135         | 20261116091030         | Pending PR17 file        |
-| 20261116055929         | 20261116091031         | Pending PR17 file        |
-| 20261116063201         | 20261116091032         | Pending PR17 file        |
-| 20261116065156         | 20261116091034         | Pending PR17 file        |
+| 20261116051736         | 20261116091026         | Then pending PR17 file   |
+| 20261116052704         | 20261116091027         | Then pending PR17 file   |
+| 20261116052910         | 20261116091029         | Then pending PR17 file   |
+| 20261116054135         | 20261116091030         | Then pending PR17 file   |
+| 20261116055929         | 20261116091031         | Then pending PR17 file   |
+| 20261116063201         | 20261116091032         | Then pending PR17 file   |
+| 20261116065156         | 20261116091034         | Then pending PR17 file   |
 
 A private experimental database that applied earlier unmerged identifiers needs separate inspection; never reset or falsify its history. Actual hosted history and any planned installation require the existing exact-source migration review, backup, writer-stop and recovery gates. The reviewed updater plan is an operating-controller extension, not a migration; [REVIEWED_MIGRATION_PLANS](REVIEWED_MIGRATION_PLANS.md) documents its release/history binding and one-shot approval. Source documentation proves no live activation or complete acceptance.
 
@@ -659,4 +657,4 @@ A private experimental database that applied earlier unmerged identifiers needs 
 2. Create a **new additive migration** with the installed Supabase CLI. Include an explicit outer BEGIN/COMMIT envelope for exact-source atomic history replay. Do not rewrite released SQL files, production history or accepted snapshots.
 3. Comment new tables, functions, lock ordering, actor/MFA checks, `search_path`, versioning/idempotency and grants directly in the new SQL source. New internal helpers need explicit EXECUTE revokes; do not broadly expand wrapper/definer boundaries.
 4. Check a fresh replay, actual RLS/concurrency and the affected Auth/API/browser flows. Updating an existing database and preserving actual Storage bytes require separate evidence. Use the existing isolated full verification command and document the stages actually reached.
-5. Update the API reference only through its intended actual replay; also update this guide, feature documentation, plan and work log. Hosted migrations follow the existing operations and approval path.
+5. Update the API reference only through its intended actual replay; also update this guide, feature documentation and PR validation evidence. Hosted migrations follow the existing operations and approval path.

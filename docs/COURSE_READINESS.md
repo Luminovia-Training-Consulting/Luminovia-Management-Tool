@@ -2,8 +2,8 @@
 
 The preparation centre extends existing course runs, confirmed assignments, contract versions, qualification attestations, scanned files and customer records. `/readiness` lists accessible preparations; `/readiness/:id` shows the checklist, authorised documents, meeting or venue, instructions and tasks. The dashboard widget reads the same server projection. It complements personal teaching preparation and does not replace that separate private workflow.
 
-
 Readiness writes lock the current caller profile before waiting for the course gate. Management permissions, active status and assigned-lecturer/task authority are read after any profile wait and remain protected through the mutation or retained request reply. A role/status change that commits first prevents a stale browser request from confirming preparation.
+
 ## Authoritative calculation
 
 No percentage or readiness state can be edited. PostgreSQL recalculates applicable checks from current records for every response. The percentage is the number of complete applicable checks divided by applicable checks, rounded to a whole percentage. Customer organisation and contact are distinct checks so missing contact information is visible.
@@ -30,7 +30,7 @@ Queries refresh on focus/reconnect and every 30 seconds while the centre is open
 
 ## API and schema
 
-The additive `20261116034641_course_readiness.sql` migration creates five private RLS-enabled ledgers: settings, tasks, instruction receipts, request idempotency and preparation events. Historical migrations are unchanged. These public authenticated functions form the API:
+The additive `20261116121554_course_readiness.sql` migration creates five private RLS-enabled ledgers: settings, tasks, instruction receipts, request idempotency and preparation events. Historical migrations are unchanged. These public authenticated functions form the API:
 
 | RPC                                                                         | Purpose                                                                                                                                                                      |
 | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -47,6 +47,6 @@ Preparation events keep detailed before/after records privately. Company-wide au
 
 Executed focused evidence at the initial source checkpoint: 16 actual PostgreSQL groups in an owned networkless disposable fixture; 13 unit/component/API-adapter cases; whole-project TypeScript; focused ESLint. These cover incomplete courses, applicability, agreement/qualification revocation, clean/current material and membership rules, exact scheduling, stale/concurrent settings, idempotent retries, instruction versioning, task permissions/corrections, customer contact privacy, suspension/cancellation, private-ledger/anonymous denial, literal authored content, offline mutations, server failures, DE/EN draft preservation and untrusted links.
 
-`scripts/readiness-api-check.mjs` additionally exercises actual native Auth/MFA/REST, a real Edge/ClamAV/Storage material upload, instruction/task flows and immediate suspension. `tests/e2e/readiness.spec.ts` exercises actual management and lecturer UI, outsider denial, DE/EN, light/dark, responsive overflow, axe checks and offline refusal on desktop/mobile. At authoring time these native/browser cases are **authored but not executed**; the canonical isolated `./portal test` run and exact PR CI must supply their actual results. The whole regression, native upgrade/retention, PWA and deployment status is recorded separately in the work log and PR, not inferred from these focused checks.
+`scripts/readiness-api-check.mjs` additionally exercises actual native Auth/MFA/REST, a real Edge/ClamAV/Storage material upload, instruction/task flows and immediate suspension. `tests/e2e/readiness.spec.ts` exercises actual management and lecturer UI, outsider denial, DE/EN, light/dark, responsive overflow, axe checks and offline refusal on desktop/mobile. These are canonical native/browser acceptance entry points; consult the source-bound [QA results](QA_RESULTS.md) for their actual execution rather than inferring a pass from their presence. The whole regression, native upgrade/retention, PWA and deployment status is recorded separately in the PR and QA results, not inferred from these focused checks.
 
 No hosted database, real customer, production service, SMTP recipient or public marketing website was changed for this feature. X-platform installation and legal acceptance are not claimed.
