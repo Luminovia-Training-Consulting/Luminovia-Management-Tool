@@ -28,6 +28,10 @@ Effective main rules and repository roles were read through REST/GraphQL; the ex
 
 References: [rulesets and exceptions](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository), [Rules API](https://docs.github.com/en/rest/repos/rules). Checks and coverage are explained in [CI_QUALITY](CI_QUALITY.md).
 
+## PR preview packages and deployment records
+
+After complete quality, coverage, application and native acceptance, PRs produce a seven-day source package for a complete local preview. A separate trusted default-branch publisher updates GitHub Deployments using actual current PR, workflow and artifact metadata. Contribution code receives no write token or hosting secrets. The deployment URL opens the downloadable package; successful publication does not claim a hosted website. Closed, superseded and expired previews become inactive. The packaged launcher uses owned local database identities and distinct ports. See [PR previews](PR_PREVIEWS.md) for permissions, local operation and first activation.
+
 ## Labels and metadata validation
 
 [labels.json](../.github/labels.json) is the shared catalogue of managed labels used by local and CI validation. The nine existing GitHub standard labels are preserved. Every PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. Other labels may be added; unknown values within these three categories are rejected. The [pull request guide](PULL_REQUEST_GUIDE.md#pull-request-labels) explains how to choose them.

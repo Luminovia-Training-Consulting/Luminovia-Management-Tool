@@ -5,9 +5,10 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 ## PR23 mobile acceptance continuation
 
 - [x] Record exact failed82/84mobile/browser acceptance; preserve actual successful SQL/API/persistence evidence and stages not reached.
-- [x] Reproduce the UI in bounded local source-CSS and actual-React/fictional-API probes; label the original CI cause unproven.
+- [x] Reproduce the exact CI435px layout/412px visual viewport failure with the actual React UI and broad system font, including a failing ordinary click without screenshots.
 - [x] Add strict pointer hit-target readiness/geometry and a native covered-control/scroll/capture regression; both desktop/mobile fixture cases pass without changing business assertions, retries or timeouts.
-- [x] Integrate current main43504b8 comments/fixture corrections, preserve customer-neutral wording and extend MIGRATION_GUIDE.
+- [x] Integrate current mainfabd71a comments, private role pricing/welcome and previews, preserving26published SQL sources, customer-neutral wording and MIGRATION_GUIDE.
+- [x] Correct the nonwrapping German course tabs with scoped wrapping; four real-source-CSS pointer/layout regressions pass, and overflow checks use document clientWidth.
 - Current exact-source full application/native/security acceptance, feature screenshots and the user-authorised merge are owned by [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23). A partial screenshot artifact or source submission does not mark that acceptance complete.
 
 ## Current correction — customer-independent catalogue and authorised Git delivery
@@ -18,6 +19,32 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [x] Submit signed [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23) with main-compatible preservation checks, required complete application/security/native gates and a six-screenshot fictional artifact. Actual CI completion, visual evidence and the user-authorised merge are recorded on that PR; submission alone is not acceptance.
 
 Customer organisations remain privately configured and reusable templates support multiple explicit organisation scopes. Publication of this source does not assert hosted migration installation or production acceptance.
+
+## PR18 complete-CI repair
+
+- [x] Correct the missing disposable compensation bootstrap after real retention, with explicit owned QA identity and three executable orchestration regressions.
+- [x] Cover candidate-only settings after the older native-selfhost baseline upgrades and passes retention/readiness; preserve no-policy normal startup.
+- [x] Integrate current main e75f55d, retaining account welcome, Portal tour and public help/demo.
+- [x] Observe actual application/quality/security success on21959fa:249unit/component tests,88desktop/mobile cases,2built-PWA cases, real retention/SQL/API and checked cleanup.
+- [x] Reproduce native replay refusal for the pending Welcome migration, add its atomic envelope without changing released history, and pass the actual24→26local selfhost retention/API/TLS/cleanup rehearsal against the prepared incoming main source.
+- [x] Integrate actual PR20/PR15 main43504b8 without losing private-pricing behavior, source comments or MFA fixture guards; normalized source review and native rehearsal passed.
+- [ ] Complete exact final-head GitHub application/native-selfhost/preview-package CI and record the observed result. No production action is part of this CI repair; do not bypass coordinated main merge holds.
+
+## Current continuation — private roles/pricing, welcome guide and PR previews
+
+The latest request supersedes the earlier shared compensation default. Work is isolated on `codex/pr-preview-welcome-roles` from `1341b16`; existing accepted business history and the full module ledger below remain in scope. Actual business percentages are private Administration configuration because the source repository is public.
+
+- [x] Implement and separately test subordinate role delegation, guest access and self/equal/higher protection across role/activation/invitation APIs; company budget memberships remain Administration-only.
+- [x] Implement private versioned compensation configuration, captured offer policies, role-scoped quotes and server-bound consent; retain accepted claims/invoices and legacy history.
+- [x] Add administration setup and accurate per-offer preview, permission-scoped role controls and own quote rendering; 215 frontend tests and the existing coverage floors pass before full acceptance.
+- [x] Add a DE/EN sequential welcome guide with own persistent progress, pause/resume/skip/restart and permission-aware links; focused frontend/SQL checks pass.
+- [x] Add read-only gated local PR packages and a separate trusted GitHub Deployment metadata publisher, with real artifact URLs, stale-run/expiry cleanup and no production-host connection.
+- [ ] Finish exact-source combined native Auth/API/desktop/mobile/PWA/retained-data acceptance; fix any actual failures without weakening assertions.
+- [ ] Publish the signed PR and observe exact-head quality/security/application/native outcomes and real downloadable artifact; record a first-PR metadata bootstrap only if actually run.
+- [ ] A continuously hosted URL per PR requires separately configured isolated hosting/backend. The implemented artifact deployment does not claim such a service.
+- [ ] Production policy setup/migration/deployment is a separate operational step; this request does not authorise production or real email changes.
+
+[Roles and private pricing](DELEGATED_ROLES_PRICING.md), [welcome guide](WELCOME_GUIDE.md), [PR previews](PR_PREVIEWS.md). The verbatim original specification remains preserved; these explicit user extensions update its operating details without dropping any remaining modules.
 
 ## Comprehensive code comments and agent guide
 

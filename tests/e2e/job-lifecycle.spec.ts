@@ -177,8 +177,8 @@ test("reasoned cancellation, explicit reopening, same-page reclaim and safe copy
     await lecturerPage.bringToFront();
     const refreshedJobs = lecturerPage.waitForResponse(
       (response) =>
-        new URL(response.url()).pathname.endsWith("/rest/v1/jobs") &&
-        response.request().method() === "GET" &&
+        new URL(response.url()).pathname.endsWith("/rest/v1/rpc/job_offers") &&
+        response.request().method() === "POST" &&
         response.status() === 200,
     );
     // TanStack's browser focus manager listens on window. A non-bubbling

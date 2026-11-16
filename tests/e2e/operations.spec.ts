@@ -74,7 +74,9 @@ test("readonly operations catalogue is accessible and private client directory i
   await a11y(page);
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
     ),
   ).toBe(true);
   await page.screenshot({

@@ -133,14 +133,22 @@ const commissionJob = (
         requires_contract: false,
         ...extra,
       }),
-      50,
+      null,
       randomUUID(),
     ],
     "aal2",
   );
+const quoteOffer = (who, job) =>
+  value(who, "job_offers")
+    .then(JSON.parse)
+    .then((rows) => rows.find((row) => row.id === job));
 /** Calls the actual claim RPC; only the database result confirms whole-block allocation. */
-const claim = (who, job, version = 2) =>
-  value(who, "claim_job", [job, randomUUID(), version]).then(JSON.parse);
+const claim = async (who, job, version) =>
+  value(who, "claim_job", [
+    job,
+    randomUUID(),
+    version ?? (await quoteOffer(who, job)).terms_version,
+  ]).then(JSON.parse);
 let r, job, winner, accepted;
 try {
   await sql(`create database ${database}`, "postgres");
@@ -161,8 +169,9 @@ try {
   await sql(
     `insert into auth.users(id) values ${[admin, owner, management, client, otherClient, lecturer, senior, ...candidates].map((id) => `('${id}')`).join(",")};insert into public.user_roles(user_id,role) values('${admin}','admin'),('${owner}','owner'),('${management}','management'),('${client}','client'),('${otherClient}','client'),('${lecturer}','lecturer'),('${senior}','senior_lecturer'),${candidates.map((id) => `('${id}','lecturer')`).join(",")};insert into public.organisations(id,name) values('${org}','Fictional customer A'),('${otherOrg}','Fictional customer B');update public.profiles set display_name='Fictional safe name';`,
   );
+  await value(admin, "configure_compensation_policy", [31, 73, 0], "aal2");
   await check(
-    "Owner inherits admin capabilities while management/senior never receive gross or role-management permission",
+    "Owner inherits administrative capabilities while management/senior never receive private gross access",
     async () => {
       for (const who of [admin, owner]) {
         const permissions = JSON.parse(
@@ -195,7 +204,7 @@ try {
         value(
           management,
           "manage_client_organisation",
-          [client, org, false],
+          [admin, org, false],
           "aal2",
         ),
         /membership management/,
@@ -256,7 +265,13 @@ try {
         "0",
       );
       await assert.rejects(
-        value(client, "publish_client_request", [r, 50, "Terms", false, null]),
+        value(client, "publish_client_request", [
+          r,
+          null,
+          "Terms",
+          false,
+          null,
+        ]),
         /Gross finance permission/,
       );
     },
@@ -281,19 +296,19 @@ try {
     },
   );
   await check(
-    "Publication derives exact net plus residual-conserving 50/50 rounding without gross public columns",
+    "Publication derives private role-specific net and residual-conserving rounding without readable public rates",
     async () => {
       job = await value(
         admin,
         "publish_client_request",
-        [r, 50, "Immutable net compensation", false, null],
+        [r, null, "Immutable net compensation", false, null],
         "aal2",
       );
       assert.equal(
         await value(
           admin,
           "publish_client_request",
-          [r, 50, "Immutable net compensation", false, null],
+          [r, null, "Immutable net compensation", false, null],
           "aal2",
         ),
         job,
@@ -304,8 +319,9 @@ try {
           `select row_to_json(j) from public.jobs j where id='${job}'`,
         ),
       );
-      assert.equal(Number(publicJob.amount), 50);
-      assert.equal(Number(publicJob.total_amount), 50);
+      assert.equal(Number(publicJob.amount), 0);
+      assert.equal(Number(publicJob.total_amount), 0);
+      assert.equal(Number((await quoteOffer(lecturer, job)).total_amount), 31);
       assert.ok(
         !Object.keys(publicJob).some((k) =>
           /gross|commission|platform/.test(k),
@@ -315,8 +331,8 @@ try {
         (x) => x.job_id === job,
       );
       assert.equal(Number(report.gross_total_amount), 100.01);
-      assert.equal(Number(report.platform_total_amount), 50.01);
-      assert.equal(Number(report.lecturer_net_total_amount), 50);
+      assert.equal(Number(report.platform_total_amount), 69.01);
+      assert.equal(Number(report.lecturer_net_total_amount), 31);
       for (const who of [client, otherClient, lecturer, senior, management])
         await assert.rejects(
           rows(who, "commission_report", [], "aal2"),
@@ -338,23 +354,23 @@ try {
   await check(
     "Commission changes before acceptance require fresh terms and clients see final own-org gross only",
     async () => {
-      await value(owner, "set_job_commission", [job, 120, 120, 25], "aal2");
+      await value(owner, "set_job_commission", [job, 120, 120, null], "aal2");
       assert.equal((await claim(lecturer, job, 2)).status, "terms_changed");
       assert.equal(
         Number((await rows(client, "client_requests"))[0].gross_total_amount),
         120,
       );
-      const result = await claim(lecturer, job, 3);
+      const result = await claim(lecturer, job);
       assert.equal(result.status, "confirmed");
       accepted = result.claim_id;
       assert.equal(
         await sql(
           `select total_amount from public.job_claims where id='${accepted}'`,
         ),
-        "90.00",
+        "37.20",
       );
       await assert.rejects(
-        value(admin, "set_job_commission", [job, 500, 500, 50], "aal2"),
+        value(admin, "set_job_commission", [job, 500, 500, null], "aal2"),
         /Only unaccepted/,
       );
       await assert.rejects(
@@ -459,7 +475,7 @@ try {
         "0",
       );
       await assert.rejects(
-        value(admin, "set_job_commission", [legacy, 750, 750, 50], "aal2"),
+        value(admin, "set_job_commission", [legacy, 750, 750, null], "aal2"),
         /Only unaccepted/,
       );
     },
@@ -477,7 +493,7 @@ try {
         assert.equal(result.status, "confirmed");
         assert.ok(
           (await rows(who, "finance_earnings")).some(
-            (x) => x.job_id === id && Number(x.total_amount) === 200,
+            (x) => x.job_id === id && Number(x.total_amount) === 124,
           ),
         );
         const doc = randomUUID(),
@@ -499,7 +515,7 @@ try {
             (await rows(who, "invoice_records")).find((x) => x.id === invoice)
               .total_amount,
           ),
-          200,
+          124,
         );
       }
       assert.equal(
@@ -551,7 +567,7 @@ try {
       );
       assert.equal(
         Number((await rows(owner, "invoice_records"))[0].total_amount),
-        200,
+        124,
       );
       await assert.rejects(
         actor(
@@ -643,14 +659,14 @@ try {
       const id = await value(
         owner,
         "create_commission_job",
-        [null, JSON.stringify(body), 50, key],
+        [null, JSON.stringify(body), null, key],
         "aal2",
       );
       assert.equal(
         await value(
           owner,
           "create_commission_job",
-          [null, JSON.stringify(body), 50, key],
+          [null, JSON.stringify(body), null, key],
           "aal2",
         ),
         id,
@@ -683,7 +699,7 @@ try {
         value(
           owner,
           "create_commission_job",
-          [null, JSON.stringify({ ...body, status: "published" }), 50, key],
+          [null, JSON.stringify({ ...body, status: "published" }), null, key],
           "aal2",
         ),
         /idempotency conflict/,

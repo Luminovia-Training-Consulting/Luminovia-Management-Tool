@@ -14,7 +14,12 @@ async function pointerGeometry(target: Locator) {
     const hit = document.elementFromPoint(x, y);
     const viewport = window.visualViewport;
     return {
-      ready: Boolean(hit && (node === hit || node.contains(hit))),
+      ready: Boolean(
+        hit &&
+        (node === hit || node.contains(hit)) &&
+        document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ),
       target: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
       hit: hit
         ? { tag: hit.tagName, classes: hit.getAttribute("class") }
@@ -32,13 +37,16 @@ async function pointerGeometry(target: Locator) {
         touchPoints: navigator.maxTouchPoints,
       },
       documentWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
     };
   });
 }
 
 /**
  * Scroll once, then require the real centre hit target before the unchanged
- * ordinary click. This retries only a read-only assertion, never an action or
+ * ordinary click. Reject horizontal overflow too: mobile Chromium can expand
+ * innerWidth while retaining a narrower visual viewport, misplacing input.
+ * This retries only a read-only assertion, never an action or
  * business request. A covered control must fail; no force-click or timeout boost.
  */
 export async function assertPointerReady(

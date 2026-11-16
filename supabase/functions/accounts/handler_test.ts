@@ -76,7 +76,7 @@ Deno.test(
         email: "a@example.invalid",
         role: "client",
         idempotency_key: key,
-      }),
+      })?.organisation_id,
       null,
     );
     assert.equal(

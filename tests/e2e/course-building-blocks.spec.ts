@@ -32,7 +32,9 @@ async function a11y(page: Page) {
   ).toEqual([]);
   expect(
     await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
     ),
   ).toBe(true);
 }
@@ -195,7 +197,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
       .single(),
   );
   expect(created.course_run_id).toBe(run.id);
-  expect(created.total_amount).toBe(500);
+  expect(created.total_amount).toBe(0);
   expect(created.job_sessions).toHaveLength(10);
   expect(
     created.job_sessions
@@ -220,7 +222,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
     await login(lecturerPage, teacher.email);
     await lecturerPage.goto(`/jobs/${created.id}`);
     await expect(lecturerPage.locator(".claim-panel .amount")).toHaveText(
-      /500,00/,
+      /310,00/,
     );
     await expect(lecturerPage.getByText(/1\.000,00/)).toHaveCount(0);
     await expect(
@@ -250,7 +252,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
         .eq("job_id", created.id),
     );
     expect(claims).toHaveLength(1);
-    expect(claims[0].total_amount).toBe(500);
+    expect(claims[0].total_amount).toBe(310);
     expect(claims[0].assignment_sessions).toHaveLength(10);
     await a11y(lecturerPage);
     await lecturerPage.screenshot({
