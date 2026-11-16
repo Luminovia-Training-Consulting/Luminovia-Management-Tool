@@ -175,6 +175,20 @@ erDiagram
 
 `profile_details` separates the new authored country/languages/experience/labels from private contacts/evidence. `course_enrolments` keeps current membership/completion/removal, while `course_reviews` carries course/actual lecturer/author, versioned text/rating and moderation/withdrawal state. Direct review table reads are denied; identity-safe RPCs project each reader's authorised view. Existing `invitation_requests` now binds the requested role/organisation/display name; both invitation handlers use this single lifecycle. Exact schema/arguments are in [API_REFERENCE](API_REFERENCE.md) and the three additive M3 migrations.
 
+## Implemented private policy and welcome progress
+
+```mermaid
+erDiagram
+  PROFILES ||--o| PRIVATE_WELCOME_PROGRESS : owns
+  PROFILES ||--o| PRIVATE_COMPENSATION_POLICY : last_updates
+  JOBS ||--o| PRIVATE_JOB_COMMISSION_OFFERS : captures_policy_fields
+  JOB_CLAIMS ||--o| PRIVATE_CLAIM_REVENUE_LEDGER : preserves_accepted_rate
+```
+
+`private.welcome_progress.user_id` is both the primary key and a cascading profile foreign key. Its step/status/version are personal presentation state. The table has no direct client grants or administrator bypass; only active own-account RPCs can read/change progress, with compare-and-swap versions.
+
+`private.compensation_policy` is an optional singleton whose `updated_by` references the responsible administrator profile. It contains no seeded business values. `private.job_commission_offers` stores its own regular/senior percentage and policy-version snapshot; these are copied values, not foreign keys to the mutable singleton. Later policy edits cannot alter existing offers or accepted revenue rows. The existing private revenue ledger still freezes actual accepted gross/net/platform amounts per claim. Raw role-priced `jobs` columns contain no alternate-role fee; `job_offers()` projects the current actor's net quote. [Detailed authority and upgrade rules](DELEGATED_ROLES_PRICING.md).
+
 ## Implemented M4 source catalogue, avatars and discussions
 
 ```mermaid

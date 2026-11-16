@@ -1,6 +1,6 @@
 # Reading and safely extending SQL migrations
 
-The first **24 entries describe the accepted main baseline** without changing its SQL bytes. The operational extension below adds five separately versioned migrations; its presence in source does not claim installation. Accepted migrations form part of the local preview, update and recovery fingerprints. Even an added SQL comment would produce a different source hash. New migrations are added separately; extend this guide and the relevant feature guides when that happens.
+This guide preserves the 24 original baseline migrations and the two released role/pricing/welcome migrations byte-for-byte. The following operational extension adds five separate migration files; source availability is not installation evidence. Accepted SQL hashes participate in preview/update/recovery checks, so future changes use new additive files rather than editing released history.
 
 The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API inventory. [ERD](ERD.md), [DEVELOPER_GUIDE](DEVELOPER_GUIDE.md) and the relevant feature guides explain how the parts connect.
 
@@ -200,7 +200,25 @@ Requires the current `audit.read` capability and MFA; only explicitly reviewed a
 
 Test entry point: [admin-audit-db-tests.mjs](../scripts/admin-audit-db-tests.mjs).
 
-### 25. Derived course readiness and scoped preparation
+### 25. Subordinate roles and private role-specific compensation
+
+Source: [20261116020953_delegated_roles_and_private_role_pricing.sql](../supabase/migrations/20261116020953_delegated_roles_and_private_role_pricing.sql).
+
+Current database authority controls the assignable role catalogue, account lifecycle and invitation completion. Management can assign subordinate roles; self, equal and higher targets remain protected. Guest provides no business capability. Company budget memberships stay administrative, and incompatible staff/company combinations cannot combine private gross and net access.
+
+Administration configures a private versioned compensation policy with current MFA; no business percentages are seeded. Commissioned offers capture their policy and keep raw public price sentinels at zero. `job_offers()` returns only the current actor's net quote, and claim consent binds that quote to the current role. Later role/policy changes do not rewrite accepted revenue, compensation or invoice history. Legacy net-only offers keep their original meaning.
+
+Test entry points: [delegated-pricing-db-tests.mjs](../scripts/delegated-pricing-db-tests.mjs), [commission-api-check.mjs](../scripts/commission-api-check.mjs) and [roles-pricing.spec.ts](../tests/e2e/roles-pricing.spec.ts). [Detailed operating rules](DELEGATED_ROLES_PRICING.md).
+
+### 26. Personal welcome progress
+
+Source: [20261116021008_welcome_guide_progress.sql](../supabase/migrations/20261116021008_welcome_guide_progress.sql).
+
+Own-account invoker RPCs read and version personal step/status state in the unexposed private schema. There is no target-user parameter or administrative bypass. Advancing, pausing or skipping the guide grants no role, MFA level or completed business action. The new source includes an outer BEGIN/COMMIT transaction so retained-data replay records the exact SQL and its history entry atomically; the native migration inventory regression checks this contract for every file.
+
+Test entry points: [welcome-db-tests.mjs](../scripts/welcome-db-tests.mjs), [welcome-api-check.mjs](../scripts/welcome-api-check.mjs), [welcome-guide.spec.ts](../tests/e2e/welcome-guide.spec.ts) and [selfhost-candidate-check.test.mjs](../deploy/hostinger/maintenance/selfhost-candidate-check.test.mjs). [Welcome guide](WELCOME_GUIDE.md).
+
+### 27. Derived course readiness and scoped preparation
 
 Source: [20261116034641_course_readiness.sql](../supabase/migrations/20261116034641_course_readiness.sql).
 
@@ -208,7 +226,7 @@ Private settings/tasks/instruction receipts complement live assignment, agreemen
 
 Tests: [readiness-db-tests.mjs](../scripts/readiness-db-tests.mjs), [readiness-api-check.mjs](../scripts/readiness-api-check.mjs).
 
-### 26. Private support tickets and dedicated attachments
+### 28. Private support tickets and dedicated attachments
 
 Source: [20261116034757_internal_support_desk.sql](../supabase/migrations/20261116034757_internal_support_desk.sql).
 
@@ -216,7 +234,7 @@ Own ticket history and explicit MFA support authority replace an administrator-w
 
 Tests: [support-db-tests.mjs](../scripts/support-db-tests.mjs), [support-api-check.mjs](../scripts/support-api-check.mjs).
 
-### 27. Whole-block replacement without premature release
+### 29. Whole-block replacement without premature release
 
 Source: [20261116034812_replacement_marketplace.sql](../supabase/migrations/20261116034812_replacement_marketplace.sql).
 
@@ -224,7 +242,7 @@ Open/selected emergency searches keep the original confirmed allocation. Sorted 
 
 Tests: [replacements-db-tests.mjs](../scripts/replacements-db-tests.mjs), [replacements-api-check.mjs](../scripts/replacements-api-check.mjs).
 
-### 28. Immutable lecturer delivery evidence
+### 30. Immutable lecturer delivery evidence
 
 Source: [20261116034826_attendance_delivery.sql](../supabase/migrations/20261116034826_attendance_delivery.sql).
 
@@ -232,7 +250,7 @@ Assignment sessions own drafts, immutable submitted revisions and independent re
 
 Tests: [delivery-db-tests.mjs](../scripts/delivery-db-tests.mjs), [delivery-api-check.mjs](../scripts/delivery-api-check.mjs).
 
-### 29. Current-authority operational inbox targets
+### 31. Current-authority operational inbox targets
 
 Source: [20261116035802_operations_notification_integration.sql](../supabase/migrations/20261116035802_operations_notification_integration.sql).
 
@@ -251,7 +269,7 @@ Strict non-trigger body diagnostics are additionally checked by [operations-lint
 ## Before changing SQL
 
 1. Find the definition, later replacements, triggers, RLS/grants and every API caller. An internal trigger or documented RPC without a browser import is not automatically dead code.
-2. Create a **new additive migration** with the installed Supabase CLI. Do not rewrite existing SQL files, production history or accepted snapshots.
+2. Create a **new additive migration** with the installed Supabase CLI. Include an explicit outer BEGIN/COMMIT envelope for exact-source atomic history replay. Do not rewrite released SQL files, production history or accepted snapshots.
 3. Comment new tables, functions, lock ordering, actor/MFA checks, `search_path`, versioning/idempotency and grants directly in the new SQL source. New internal helpers need explicit EXECUTE revokes; do not broadly expand wrapper/definer boundaries.
 4. Check a fresh replay, actual RLS/concurrency and the affected Auth/API/browser flows. Updating an existing database and preserving actual Storage bytes require separate evidence. Use the existing isolated full verification command and document the stages actually reached.
 5. Update the API reference only through its intended actual replay; also update this guide, feature documentation, plan and work log. Hosted migrations follow the existing operations and approval path.

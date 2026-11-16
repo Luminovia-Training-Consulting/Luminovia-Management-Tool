@@ -4,6 +4,8 @@ The authoritative additional user prompt is preserved verbatim in [OPERATIONS_EX
 
 ## Current checkpoint
 
+PR24 source5ee979a passed the full actual application/native pipeline: 257 frontend tests, all four new actual API suites, 92 browser cases and 2 built-PWA cases; native29migrations/23API suites included TLS/WebSockets, 50claims and retained credentials/MFA/roles/private events/file bytes. This is evidence for that exact source. The new integration of accepted mainfabd71a has 31migrations,280passing frontend tests and6actual role-pricing replacement compatibility groups; the combined complete pipeline is pending. All26released main migration files remain byte-identical.
+
 Initial implementation source is isolated on `codex/operations-extensions`, initially from e75f55d and updated to accepted main d4c1f49. Existing unrelated changes in the original checkout remain untouched. All historical migrations remain unchanged; every new schema change is additive and CLI-generated.
 
 | Requested module               | Backend/frontend/integration                                                                                                                                                                                     | Executed focused tests                | Unverified or remaining                                                                                                                           |
@@ -22,7 +24,7 @@ All four initial UIs use existing light/dark/system styles, online confirmed mut
 
 The first source checkpoint passes whole-project TypeScript/ESLint, all257frontend tests and unchanged coverage floors (S52.04/B47.09/F42.28/L53.86%). The focused SQL suites use separately owned random databases, never normal/hosted records. `./portal test` refused before startup because another checkout owns the global QA lock. No foreign service was stopped. Run the unchanged canonical command once ownership becomes available, and correct actual failures.
 
-Current live main requires signed history, strict checks, resolved findings and independent review/latest-push approval. The user's conditional feature merge authority remains subject to those gates. An additional coordination message, relaying Carina's explicit request, temporarily holds all main merges until the chat finishing PR15 sends its release. Branch work/tests may continue. Do not modify PR15's branch or bypass that hold.
+Current live main requires signed history, resolved findings and all 15 strict checks, including PR preview package. The active review rules retain their existing Maintainer/Admin PR-only exceptions; no self-review is represented as independent approval. Carina confirmed PR18 merged as fabd71a and normal work resumed. The latest coordination then reserved manual main merges for its coordinator: prepare tested ready PRs, do not independently merge or enable auto-merge, and preserve existing rules.
 
 Eligible main merges may trigger the existing authorised development VPS updater. Do not claim VPS installation without actual activation evidence. Production, public Website, DNS, hosting changes, real emails, purchases and new services keep their separate approval boundaries.
 
