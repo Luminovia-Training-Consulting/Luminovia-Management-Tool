@@ -36,10 +36,21 @@ try{
  assert.deepEqual((await checked(client.client.rpc('client_organisations'),'Own client organisations')).map(o=>o.id),[org]);
  assert.ok((await client.client.rpc('manage_client_organisation',{p_user_id:client.id,p_organisation_id:otherOrg})).error);
  assert.ok((await client.client.rpc('create_client_request',{p_organisation_id:otherOrg,p_payload:payload(),p_client_id:randomUUID()})).error,'Cross-org request denied');
+ const cancellation=await checked(client.client.rpc('create_client_request',{p_organisation_id:org,p_payload:payload(7),p_client_id:randomUUID()}),'Create request for real cancellation workflow');
+ assert.equal((await other.client.rpc('cancel_client_request',{p_request_id:cancellation})).error?.code,'42501','Other client cannot cancel cross-organisation request');
+ assert.equal((await lecturer.client.rpc('cancel_client_request',{p_request_id:cancellation})).error?.code,'42501','Lecturer cannot cancel a client request');
+ assert.equal((await checked(client.client.rpc('client_requests'),'Rejected cancellation preserves submitted request')).find(r=>r.id===cancellation).status,'submitted');
+ await checked(client.client.rpc('cancel_client_request',{p_request_id:cancellation}),'Client cancels own unsubmitted-to-market request');
+ await checked(client.client.rpc('cancel_client_request',{p_request_id:cancellation}),'Cancelled request retry is idempotent');
+ const cancelled=(await checked(client.client.rpc('client_requests'),'Read cancelled request')).find(r=>r.id===cancellation);assert.equal(cancelled.status,'cancelled');assert.equal(cancelled.job_id,null);
+ assert.equal((await admin.client.rpc('publish_client_request',{p_request_id:cancellation,p_requires_contract:false})).error?.code,'22023','Cancelled request cannot be published');
+ const cancelAudit=await checked(service.from('audit_events').select('id').eq('action','client.request_cancelled').eq('resource_id',cancellation),'Read actual cancellation audit');assert.equal(cancelAudit.length,1,'Retry preserves a single cancellation audit');
  const requestKey=randomUUID(),requestArgs={p_organisation_id:org,p_payload:payload(),p_client_id:requestKey};const request=await checked(client.client.rpc('create_client_request',requestArgs),'Create real scoped gross request');assert.equal(await checked(client.client.rpc('create_client_request',requestArgs),'Retry scoped request'),request);
  assert.deepEqual(await checked(other.client.rpc('client_requests',{p_organisation_id:org}),'Other client request isolation'),[]);
  assert.ok((await client.client.rpc('publish_client_request',{p_request_id:request,p_requires_contract:false})).error,'Client cannot set lecturer offer/commission');
  const job=await checked(admin.client.rpc('publish_client_request',{p_request_id:request,p_requires_contract:false,p_terms:'Immutable actual API net fee'}),'Publish gross request atomically at default50/50');jobs.push(job);
+ assert.equal((await client.client.rpc('cancel_client_request',{p_request_id:request})).error?.code,'22023','A published request must use audited job cancellation, not erase the published offer');
+ assert.equal((await checked(client.client.rpc('client_requests'),'Rejected cancellation preserves published request')).find(r=>r.id===request).job_id,job);
  const offer=await checked(lecturer.client.from('jobs').select('*').eq('id',job).single(),'Actual lecturer REST offer');assert.equal(Number(offer.amount),50);assert.equal(Number(offer.total_amount),50);assert.ok(!Object.keys(offer).some(k=>/gross|platform|commission/.test(k)));
  assert.ok((await lecturer.client.schema('private').from('job_commission_offers').select('*')).error,'Private schema cannot be queried through REST');assert.ok((await lecturer.client.from('job_commission_offers').select('*')).error,'No public gross mirror');
  await checked(lecturer.client.auth.updateUser({data:{roles:['owner'],role:'owner'}}),'Forge editable metadata');assert.equal((await checked(lecturer.client.rpc('commission_access'),'Metadata ignored')).can_manage_gross,false);
@@ -59,7 +70,7 @@ try{
  const currencies=await checked(client.client.rpc('client_spend_summary'),'Separate original-currency spend');assert.deepEqual(new Set(currencies.map(r=>r.currency)),new Set(['EUR','AUD']));
  await checked(admin.client.rpc('manage_client_organisation',{p_user_id:client.id,p_organisation_id:org,p_remove:true}),'Revoke current membership');assert.deepEqual(await checked(client.client.rpc('client_requests'),'Old token loses client requests'),[]);assert.deepEqual(await checked(client.client.rpc('client_spend_summary'),'Old token loses spend'),[]);
  const ownEvent=await checked(lecturer.client.from('personal_events').insert({user_id:lecturer.id,title:'Private commission test',starts_at:'2045-01-01T08:00:00Z',ends_at:'2045-01-01T09:00:00Z'}).select('id').single(),'Create actual private event');assert.deepEqual(await checked(owner.client.from('personal_events').select('id').eq('id',ownEvent.id),'Owner functional role does not bypass private calendars'),[]);
- console.log('PASS: actual Auth/MFA/REST/ClamAV commission: client cross-org isolation and revocation, default50/50 rounding, hidden gross, atomic claims/revenue, immutable net invoice+labels, separate EUR/AUD, owner lecturer functionality and private-calendar boundary.');
+ console.log('PASS: actual Auth/MFA/REST/ClamAV commission: client request cancellation/idempotent audit and published-offer safeguards, cross-org isolation and revocation, default50/50 rounding, hidden gross, atomic claims/revenue, immutable net invoice+labels, separate EUR/AUD, owner lecturer functionality and private-calendar boundary.');
 }finally{
  for(const client of clients)await client.removeAllChannels();
  if(users.length){

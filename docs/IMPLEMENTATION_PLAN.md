@@ -2,6 +2,17 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Current functional/integration completion audit
+
+Current user priority: verify real connected user functions and repair missing behavior/test coverage, not rely on unit percentages. Isolated branch `codex/full-functional-integration-tests` starts at1341b16; concurrent shared-checkout onboarding/role/preview work is preserved and requires separate acceptance.
+
+- [x] Read complete specification, current owning source/migrations and actual domain discovery. Map existing A–N slices to [functional acceptance suites](FUNCTIONAL_ACCEPTANCE.md), preserving the complete remaining product ledger.
+- [x] Add real calendar lifecycle/DST/private/global browser workflows and six-source search/privacy/language/navigation checks.
+- [x] Extend existing knowledge/chat/commercial/commission HTTP suites for missing connected operations, state transitions, current MFA/qualification/contract checks and retry/privacy boundaries.
+- [x] Implement discovered-versus-executed browser enforcement, zero skipped/flaky/retried cases, separate application/PWA reports and source-bound stage evidence. Actual exit-zero-skipped/focused-suite negative probe passes.
+- [ ] Complete a fresh combined `./portal test`; fix actual failures without skipping or relaxing business assertions. Current run02 is in progress; exact outcomes belong in WORKLOG/QA_RESULTS.
+- [ ] Publish signed reviewable changes and observe exact-source GitHub checks. No production/hosted deployment belongs to this request.
+
 ## GitHub quality, coverage and maintainer merge continuation
 
 Current request: visible compilation/type/style/quality/security/coverage tasks, Dependabot and uninterrupted direct Maintainer merges. Work is isolated on `codex/github-quality-checks` from current accepted main9c2103b; no business migration, normal preview, VPS or production mutation belongs to this slice.

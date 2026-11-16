@@ -34,11 +34,13 @@ try {
  const contacts=await checked(a.client.rpc('chat_contacts'),'Names-only staff directory');
  assert.ok(contacts.some(p=>p.id===b.id));assert.ok(!contacts.some(p=>p.id===participant.id));assert.ok(contacts.every(p=>Object.keys(p).every(k=>['id','display_name','roles'].includes(k))));
  const dms=await Promise.all([checked(a.client.rpc('create_dm',{p_user_id:b.id}),'First DM'),checked(b.client.rpc('create_dm',{p_user_id:a.id}),'Concurrent reverse DM')]);assert.equal(dms[0],dms[1]);rooms.push(dms[0]);
+ const members=await checked(a.client.rpc('chat_room_members',{p_room_id:dms[0]}),'Actual private DM members');assert.deepEqual(new Set(members.map(m=>m.user_id)),new Set([a.id,b.id]));assert.ok(members.every(m=>Object.keys(m).every(k=>['user_id','display_name','joined_at'].includes(k))),'Membership projection contains no private profile fields');
  const dm=dms[0],key=randomUUID();const message=await checked(a.client.rpc('send_message',{p_room_id:dm,p_body:'Actual private message',p_client_id:key}),'Send actual private message');
  assert.equal(await checked(a.client.rpc('send_message',{p_room_id:dm,p_body:'Actual private message',p_client_id:key}),'Retry actual message'),message);
  assert.equal((await checked(service.from('messages').select('id').eq('room_id',dm),'Check durable message row')).length,1);
  for(const actor of [outsider,admin,participant]){
   assert.equal((await checked(actor.client.from('messages').select('id').eq('room_id',dm),'Private-message RLS')).length,0);
+  assert.equal((await actor.client.rpc('chat_room_members',{p_room_id:dm})).error?.code,'42501','Nonmember cannot enumerate private room members');
   assert.ok((await actor.client.rpc('chat_messages',{p_room_id:dm})).error);
   assert.ok((await actor.client.rpc('send_message',{p_room_id:dm,p_body:'Forged',p_client_id:randomUUID()})).error);
  }
@@ -51,6 +53,7 @@ try {
  await checked(a.client.rpc('edit_message',{p_message_id:message,p_body:'Private corrected text'}),'Edit actual message');
  assert.equal((await checked(admin.client.from('chat_message_revisions').select('id').eq('message_id',message),'Private audit RLS')).length,0);
  const group=await checked(a.client.rpc('create_chat_group',{p_title:'Fictional Realtime test group',p_member_ids:[b.id]}),'Create actual topic group');rooms.push(group);
+ assert.deepEqual(new Set((await checked(b.client.rpc('chat_room_members',{p_room_id:group}),'Actual group membership')).map(m=>m.user_id)),new Set([a.id,b.id]));
  const ownerEvents=[], memberEvents=[], outsiderEvents=[];
  await subscribe(a.client,group,ownerEvents,'owner');await subscribe(b.client,group,memberEvents,'member');await subscribe(outsider.client,group,outsiderEvents,'outsider');
  const visible=await checked(a.client.rpc('send_message',{p_room_id:group,p_body:'Visible before removal',p_client_id:randomUUID()}),'Send Realtime fixture');
@@ -61,6 +64,8 @@ try {
  await eventually(()=>ownerEvents.some(m=>m.id===hidden),'Owner Realtime remains healthy after removal');await delay(1200);
  assert.ok(!memberEvents.some(m=>m.id===hidden),'An already subscribed removed member receives no later message');
  assert.ok((await b.client.rpc('chat_messages',{p_room_id:group})).error);
+ assert.equal((await b.client.rpc('chat_room_members',{p_room_id:group})).error?.code,'42501','Already signed-in removed member cannot enumerate membership');
+ assert.deepEqual((await checked(a.client.rpc('chat_room_members',{p_room_id:group}),'Removed member disappears from current projection')).map(m=>m.user_id),[a.id]);
  assert.ok((await b.client.rpc('send_message',{p_room_id:group,p_body:'Removed member forged send',p_client_id:randomUUID()})).error);
  assert.equal((await checked(b.client.from('messages').select('id').eq('room_id',group),'Revoked direct REST read')).length,0);
  await checked(a.client.rpc('manage_chat_member',{p_room_id:group,p_user_id:b.id,p_remove:false}),'Re-add fixture member');
@@ -69,6 +74,7 @@ try {
  await eventually(()=>ownerEvents.some(m=>m.id===suspended),'Owner delivery remains healthy after suspension');await delay(1200);
  assert.ok(!memberEvents.some(m=>m.id===suspended),'A subscribed suspended account receives no later persisted event');
  assert.deepEqual(await checked(b.client.rpc('chat_rooms_list'),'Suspended room list'),[]);
+ assert.equal((await b.client.rpc('chat_room_members',{p_room_id:group})).error?.code,'42501','Already signed-in suspended member cannot enumerate membership');
  await checked(a.client.rpc('delete_message',{p_message_id:message}),'Delete via tombstone');
  const deleted=await checked(a.client.rpc('chat_messages',{p_room_id:dm}),'Read deleted tombstone');assert.equal(deleted[0].body,'');assert.ok(deleted[0].deleted_at);
  console.log('PASS: actual Auth/REST and real WebSockets: race-safe private DMs, durable/idempotent messages, minimal directory, unread/reactions/edit/delete, admin/outsider/participant privacy, forged writes denied, active Realtime before removal, no later delivery after revocation or suspension.');

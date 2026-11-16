@@ -11,7 +11,8 @@ import {
 } from "node:fs";
 import { join, basename } from "node:path";
 import { tmpdir } from "node:os";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
+import { browserPlan, browserAcceptance } from "./testing/browser-evidence.mjs";
 import { runtimeSnapshotSource } from "./runtime-snapshot.mjs";
 import {
   acquireTestLock,
@@ -68,6 +69,20 @@ const env = cleanEnvironment({
 let failure;
 let localDockerReady = false;
 const cancellation = new AbortController();
+const evidence = {
+  version: 1,
+  project,
+  startedAt: new Date().toISOString(),
+  status: "running",
+  stages: [],
+  browsers: {},
+};
+const saveEvidence = () =>
+  privateWrite(
+    join(artifacts, "acceptance.json"),
+    JSON.stringify(evidence, null, 2) + "\n",
+  );
+saveEvidence();
 const cancel = () => {
   console.log("Test wird abgebrochen; isolierte Dienste werden aufgeräumt …");
   cancellation.abort();
@@ -85,6 +100,26 @@ try {
     recursive: true,
     filter: (source) => runtimeSnapshotSource(source, root),
   });
+  // Fingerprint the actual sanitized source, including uncommitted/untracked
+  // work. A Git HEAD alone would misidentify the bytes that are being tested.
+  const sourceHash = createHash("sha256");
+  function hashSource(directory, prefix = "") {
+    for (const entry of readdirSync(directory, { withFileTypes: true }).sort(
+      (a, b) => a.name.localeCompare(b.name),
+    )) {
+      const path = join(directory, entry.name);
+      const name = `${prefix}${entry.name}`;
+      if (entry.isDirectory()) hashSource(path, `${name}/`);
+      else {
+        const bytes = readFileSync(path);
+        sourceHash.update(JSON.stringify([name, bytes.length]) + "\n");
+        sourceHash.update(bytes);
+      }
+    }
+  }
+  hashSource(scratch);
+  evidence.sourceSha256 = sourceHash.digest("hex");
+  saveEvidence();
   // Independent cache directories; only immutable package contents are shared.
   mkdirSync(join(scratch, "node_modules"));
   for (const entry of readdirSync(join(root, "node_modules"), {
@@ -107,12 +142,85 @@ try {
   writeFileSync(configPath, config);
   const step = async (label, file, args, extra = {}) => {
     console.log(`\n[TEST] ${label}`);
-    return await command(file, args, {
-      cwd: scratch,
-      env: { ...env, ...extra },
-      timeoutMs: 1200000,
-      signal: cancellation.signal,
+    const item = {
+      label,
+      command: [basename(file), ...args],
+      status: "running",
+      startedAt: new Date().toISOString(),
+    };
+    evidence.stages.push(item);
+    saveEvidence();
+    try {
+      const output = await command(file, args, {
+        cwd: scratch,
+        env: { ...env, ...extra },
+        timeoutMs: 1200000,
+        signal: cancellation.signal,
+      });
+      item.status = "passed";
+      return output;
+    } catch (error) {
+      item.status = "failed";
+      throw error;
+    } finally {
+      item.completedAt = new Date().toISOString();
+      saveEvidence();
+    }
+  };
+  const browserStage = async (stage, label, args, extra = {}) => {
+    const directory = join(scratch, ".local/browser", stage);
+    privateDirectory(directory);
+    const stageEnv = { ...extra, PORTAL_BROWSER_STAGE: stage };
+    const expectedFiles = readdirSync(join(scratch, "tests/e2e"), {
+      recursive: true,
+    })
+      .filter(
+        (file) =>
+          file.endsWith(".spec.ts") &&
+          (stage === "pwa") === (file === "pwa.spec.ts"),
+      )
+      .sort();
+    const planPath = join(directory, "plan.json");
+    await step(
+      `${label}: vollständige Testauswahl`,
+      "npx",
+      [
+        "--no-install",
+        "playwright",
+        "test",
+        ...args,
+        "--list",
+        "--reporter=json",
+      ],
+      { ...stageEnv, PLAYWRIGHT_JSON_OUTPUT_NAME: planPath },
+    );
+    const planned = browserPlan(JSON.parse(readFileSync(planPath, "utf8")), {
+      files: expectedFiles,
+      projects: ["desktop-chromium", "mobile-chromium"],
     });
+    evidence.browsers[stage] = {
+      status: "planned",
+      planned: planned.length,
+      files: expectedFiles,
+    };
+    saveEvidence();
+    try {
+      await step(
+        label,
+        "npx",
+        ["--no-install", "playwright", "test", ...args],
+        stageEnv,
+      );
+      evidence.browsers[stage] = browserAcceptance(
+        JSON.parse(readFileSync(join(directory, "report.json"), "utf8")),
+        planned,
+      );
+    } catch (error) {
+      evidence.browsers[stage].status = "failed";
+      throw error;
+    } finally {
+      saveEvidence();
+    }
   };
   await step("Lint", "npm", ["run", "lint"]);
   await step("TypeScript", "npm", ["run", "typecheck"]);
@@ -285,10 +393,7 @@ try {
     ...(process.env.CI === "true" ? ["--with-deps"] : []),
     "chromium",
   ]);
-  await step("Desktop- und Mobilbrowser", "npm", [
-    "run",
-    "test:e2e",
-    "--",
+  await browserStage("application", "Desktop- und Mobilbrowser", [
     "--grep-invert",
     "built PWA",
   ]);
@@ -298,10 +403,10 @@ try {
     "scripts/runtime-test-preview.mjs",
     "start",
   ]);
-  await step(
+  await browserStage(
+    "pwa",
     "PWA, Offline-Shell und keine privaten Caches",
-    "npx",
-    ["--no-install", "playwright", "test", "tests/e2e/pwa.spec.ts"],
+    ["tests/e2e/pwa.spec.ts"],
     { E2E_PWA: "1", E2E_BASE_URL: "http://127.0.0.1:4273" },
   );
 } catch (error) {
@@ -351,6 +456,10 @@ try {
   for (const name of ["playwright-report", "test-results"])
     if (existsSync(join(scratch, name)))
       cpSync(join(scratch, name), join(artifacts, name), { recursive: true });
+  if (existsSync(join(scratch, ".local/browser")))
+    cpSync(join(scratch, ".local/browser"), join(artifacts, "browser"), {
+      recursive: true,
+    });
   if (existsSync(join(scratch, "docs/screenshots")))
     cpSync(join(scratch, "docs/screenshots"), join(artifacts, "screenshots"), {
       recursive: true,
@@ -364,12 +473,18 @@ try {
   process.removeListener("SIGTERM", cancel);
 }
 if (failure) {
+  evidence.status = "failed";
+  evidence.completedAt = new Date().toISOString();
+  saveEvidence();
   privateWrite(join(artifacts, "RESULT.txt"), `FAIL\n${failure.message}\n`);
   console.error(
     `Isolierter Test fehlgeschlagen. Bericht: .local/tests/${run}/RESULT.txt`,
   );
   throw failure;
 }
+evidence.status = "passed";
+evidence.completedAt = new Date().toISOString();
+saveEvidence();
 privateWrite(
   join(artifacts, "RESULT.txt"),
   `PASS\nProject: ${project}\nCompleted: ${new Date().toISOString()}\nDevelopment database and object volumes were not targeted.\n`,
