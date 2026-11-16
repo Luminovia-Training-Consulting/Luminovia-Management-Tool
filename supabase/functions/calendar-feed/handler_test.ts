@@ -52,13 +52,16 @@ Deno.test("revocation after snapshot prevents late confidential response", async
   assert(!(await response.text()).includes(item.title));
 });
 Deno.test("invalid, duplicated or unrecognized capability query never reaches database", async () => {
-  let calls = 0;
+  let calls = 0, rechecks = 0;
   const handler = createCalendarFeedHandler({
     snapshot: async () => {
       calls++;
       return null;
     },
-    recheck: async () => false,
+    recheck: async () => {
+      rechecks++;
+      return false;
+    },
   });
   for (
     const path of [
@@ -74,13 +77,16 @@ Deno.test("invalid, duplicated or unrecognized capability query never reaches da
     );
   }
   assert(calls === 0);
-  assert(
-    (await handler(
-      new Request("https://example.invalid/feed?token=" + token, {
-        method: "POST",
-      }),
-    )).status === 405,
+  const refused = await handler(
+    new Request("https://example.invalid/feed?token=" + token, {
+      method: "POST",
+    }),
   );
+  assert(refused.status === 405);
+  assert(refused.headers.get("allow") === "GET");
+  assert(refused.headers.get("cache-control")?.includes("no-store"));
+  assert(await refused.text() === "method_not_allowed");
+  assert(calls === 0 && rechecks === 0);
 });
 Deno.test("unavailable data/errors stay generic and do not expose token or content", async () => {
   for (const kind of ["missing", "error"]) {

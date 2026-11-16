@@ -139,9 +139,18 @@ await withApiFixture(async ({ actor, service, checked, defer, url }) => {
     method: "POST",
     signal: AbortSignal.timeout(15000),
   });
-  // Only exact GET bypasses the router JWT gate. Authenticated wrong methods
-  // reach the handler's method contract; anonymous POST must fail earlier.
-  assert.equal(wrongMethod.status, 401);
+  // The owned native fixture validates its exact candidate identity before
+  // reaching this test. Its router exempts only GET from JWT verification.
+  // CLI verify_jwt=false reaches the capability handler for every method;
+  // that handler refuses POST before any token lookup. Assert each precise
+  // runtime contract instead of accepting an arbitrary denial status.
+  const nativeRouter = process.env.PORTAL_CANDIDATE_OWNER !== undefined;
+  assert.equal(wrongMethod.status, nativeRouter ? 401 : 405);
+  if (!nativeRouter) {
+    assert.equal(wrongMethod.headers.get("allow"), "GET");
+    assert.ok(wrongMethod.headers.get("cache-control").includes("no-store"));
+    assert.equal(await wrongMethod.text(), "method_not_allowed");
+  }
   const session = await checked(owner.client.auth.getSession());
   const authenticatedWrongMethod = await fetch(endpoint, {
     method: "POST",
@@ -153,6 +162,10 @@ await withApiFixture(async ({ actor, service, checked, defer, url }) => {
   });
   assert.equal(authenticatedWrongMethod.status, 405);
   assert.equal(authenticatedWrongMethod.headers.get("allow"), "GET");
+  assert.ok(
+    authenticatedWrongMethod.headers.get("cache-control").includes("no-store"),
+  );
+  assert.equal(await authenticatedWrongMethod.text(), "method_not_allowed");
   await checked(
     owner.client.rpc("revoke_calendar_subscription", {
       p_id: created.id,

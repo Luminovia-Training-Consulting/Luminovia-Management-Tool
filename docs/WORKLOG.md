@@ -1,5 +1,13 @@
 # Luminovia Portal — development work log
 
+## 16 November 2026 — PR17 calendar subscription runtime-fixture correction
+
+Exact first integrated CI43838939146 on signed `bfc217e` passed the complete60-source migration/lint/security/SQL stages and the first nine actual API suites, then failed calendar subscription anonymous POST: actual405 versus a fixture's assumed401. Local CLI deliberately sets `verify_jwt=false` for the owner-capability feed, so unsupported methods reach the handler and are refused405 before any token/database access. The native router intentionally exempts only exactGET and returns401 for anonymousPOST. Independent read-only review confirmed these are distinct correct runtime boundaries; no application permission or method behavior changes.
+
+The API fixture now asserts exactly the one applicable status using the already validated native-candidate identity, keeps native401 and authenticatedPOST405, and additionally checks fixed refusal body, Allow:GET and no-store. The Edge regression also proves neither snapshot nor recheck runs for POST. Five actual Edge cases, canonical test-lint exclusions and ESLint pass. The corrected real Auth/REST/Edge fixture passed in the already owned local QA481fe3b3 with exact cleanup of its fictional accounts and events. All token rotation, foreign isolation and revocation assertions remain unchanged.
+
+The unchanged old-source local full run had passed source/restart retention and was in SQL acceptance. It is intentionally cancelled through its verified own runtime PID and normal cleanup before a fresh corrected-source full run; it is not a full local pass. The failed remote run and stages not reached remain recorded. The next signed source/current-head full/native/CI acceptance remains required.
+
 ## 16 November 2026 — PR17 final current-main review and acceptance
 
 Carina explicitly selects PR17 as the next merge after PR10, with a source/functionality review and correction before merging. Work is isolated in `codex/pr17-final-20261116` from original signed `8990dd2`; original smart-operations and ordinary development checkouts remain untouched. Actual accepted main `1de544d` is being integrated, including manual-only publication, the neutral course catalogue, strict fifteen checks and PR10's archive-query race fix. Older merge/QA reservations below are historical and do not block this current instruction. No deployment, worker activation or real mail is authorised by this code delivery.
