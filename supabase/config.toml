@@ -404,6 +404,13 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
+[functions.calendar-feed]
+# Owner-issued revocable capability; the handler performs its own live checks.
+verify_jwt = false
+
+[functions.course-documents]
+static_files = ["./functions/course-documents/assets/DejaVuSans.ttf"]
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

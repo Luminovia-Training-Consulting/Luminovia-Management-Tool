@@ -117,8 +117,8 @@ jobs:
     # A broken scope job must fail this required gate instead of skipping it.
     if: always() && !cancelled()
     runs-on: ubuntu-latest
-    # Main/manual complete acceptance took 38m53s near its old 40m outer limit.
-    # PR system work is split; request/test/stage deadlines remain unchanged.
+    # Earlier complete acceptance took 38m53s; PR17 reached browsers after 31m.
+    # Keep room for Main/manual all-phase work; individual deadlines stay fixed.
     timeout-minutes: 60
     steps:
       - name: Require a successful recognized scope

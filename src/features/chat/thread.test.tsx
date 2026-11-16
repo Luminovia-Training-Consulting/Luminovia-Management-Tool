@@ -6,6 +6,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 import { ChatThread } from "./thread";
 import type { ChatRoom } from "./types";
 const { rpc } = vi.hoisted(() => ({
@@ -46,12 +47,14 @@ it("retains exactly one composer and its unsent draft across room-list refreshes
   });
   const element = (next: ChatRoom) => (
     <QueryClientProvider client={client}>
-      <ChatThread
-        actor="actor"
-        room={next}
-        canManageCourses={false}
-        onBack={() => undefined}
-      />
+      <MemoryRouter>
+        <ChatThread
+          actor="actor"
+          room={next}
+          canManageCourses={false}
+          onBack={() => undefined}
+        />
+      </MemoryRouter>
     </QueryClientProvider>
   );
   const view = render(element(room));
@@ -123,12 +126,14 @@ function populatedThread() {
   };
   const element = () => (
     <QueryClientProvider client={client}>
-      <ChatThread
-        actor="actor"
-        room={room}
-        canManageCourses={false}
-        onBack={() => undefined}
-      />
+      <MemoryRouter>
+        <ChatThread
+          actor="actor"
+          room={room}
+          canManageCourses={false}
+          onBack={() => undefined}
+        />
+      </MemoryRouter>
     </QueryClientProvider>
   );
   const view = render(element());

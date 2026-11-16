@@ -67,6 +67,11 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
     reviewedVersion,
   ) => {
     const version = reviewedVersion ?? (await quoteVersion(job, who));
+    assert.match(
+      version,
+      /^[1-9][0-9]*$/,
+      "Claims must carry a previously observed numeric quote token",
+    );
     return JSON.parse(
       await actor(who, `select public.claim_job('${job}','${key}',${version})`),
     );
