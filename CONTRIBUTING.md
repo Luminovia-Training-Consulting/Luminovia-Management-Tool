@@ -1,6 +1,6 @@
 # Contributing to Luminovia Portal
 
-> Status as of 16 November 2026: Maintainers and administrators have a permanent `always` exception for direct merges. Additional review/check requirements for other contributors remain prepared but disabled until the maintenance App path has been verified. [Current activation status](docs/GITHUB_WORKFLOW.md#activation-still-pending).
+> Live policy verified on 16 November 2026: all 15 required checks and signatures are mandatory, with no CI or history bypass. Human Maintain/Repository-admin accounts have a PR-only review exception; the maintenance App has no review exception. The native automatic-merge controller is prepared and still needs its own exact-source CI, merge and default-branch execution. [Current rules and delivery boundary](docs/GITHUB_WORKFLOW.md#rules-for-main).
 
 Welcome! This guide explains how to turn an idea or bug report into a tested, reviewable change. **Use English for issues, pull requests and contributor-facing documentation.** Application interface changes must provide both German and English strings; authored course content keeps its original language.
 
@@ -68,15 +68,17 @@ Every PR needs exactly one `type:*` label, at least one `area:*` label and exact
 
 ## Review and merge
 
-The normal contribution process uses a pull request, an independent approving review, resolved conversations and current passing checks. New changes invalidate earlier approvals where the prepared review policy is enforced.
+Ordinary contributors need an independent current-head approval, resolved conversations, latest-push approval and all 15 current required checks. New changes invalidate earlier approval under the active review policy. No human or App account may bypass the required-check or history/signature rules.
 
-Maintainers and administrators have an explicit role-based exception and may **merge directly at any time**, including while reviews or checks are pending or failing. This replaces the former personal PR-only exception. Ordinary write access does not grant this bypass. The exception applies to the acting person; GitHub may require an explicit bypass action. Review and clear test evidence remain the recommended workflow.
+Human Maintain and Repository-admin accounts have a `pull_request` exception in the review ruleset only. An authorised person can use that exception while merging a PR, including their own; it does not allow a direct push to `main` or an early merge before required checks pass. The exception follows the person performing the merge, not the PR author. Ordinary write access and the maintenance App have no such exception.
 
-Build, Typecheck, Lint, Formatting, Code quality and Tests and coverage run alongside `verify`, `Actual isolated selfhost image compatibility` and `PR metadata`. [CI_QUALITY](docs/CI_QUALITY.md) explains their scopes, CodeQL and Dependabot. The additional mandatory review/check rules for ordinary contributors remain disabled until the maintenance App path is verified; committed JSON alone does not prove active enforcement.
+The prepared [native automatic-merge controller](docs/AUTO_MERGE.md) uses the ordinary reviewed path for **every** PR, including maintainer/admin and App-authored work: an independent approval of the exact head and native `clean` mergeability. Reviewer independence uses the actual source push bound to the CI check suite, not the workflow actor, retry initiator or commit email. Missing push evidence grants no exception; contradictory evidence blocks the candidate.
 
-A direct maintainer merge does not skip publication checks: the development release job waits for its gates in `ci.yml`. Failed checks do not produce an approved installation package. The separate Security workflow provides additional analysis. The existing daily maintenance path remains unchanged until the App setup is coordinated; no unverified bot bypass is assumed.
+All 15 required contexts are listed in [GitHub administration](docs/GITHUB_WORKFLOW.md#required-checks-and-native-auto-merge). They include the complete application/native checks, PR preview package and separate CodeQL findings result. A successful unit run, scanner job or preview artifact does not replace the other gates. Coverage reports describe measured source and do not promise universal bug freedom or 100% whole-system coverage.
 
-A merge may trigger the existing **development release automation**. Production installation, risky migrations, and changes to hosting, DNS or real data still require the relevant separate authorization. A GitHub merge does not replace that operational approval.
+Repository auto-merge availability is enabled, but it does not prove that the new controller is delivered. The controller-only source remains prepared until its own exact-source CI, merge and successful default-branch execution are observed. Keep work as a draft or add `merge:hold` to pause it; the required metadata check also rejects the hold. Native merging can create a commit different from the synthetic test merge; the controller makes no exact-test-merge-SHA guarantee.
+
+Merging and successful verification do not themselves authorise release publication, installation, production, SMTP, DNS, risky migrations or real-data changes. Follow the separate owning workflows and [deployment runbook](docs/DEPLOYMENT_RUNBOOK.md); claim a release or installation only from its actual evidence.
 
 ## Tags and releases
 
@@ -87,3 +89,7 @@ Existing `cms-dev-*` tags belong to development release automation. Do not move 
 ## License and collaboration
 
 The repository uses GNU GPLv3. Preserve existing license and provenance notices; bundled fonts and brand assets retain their respective notices. Discuss technical disagreements factually, explain decisions and respond respectfully to feedback.
+
+## Contributors
+
+The [GitHub contributor graph](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/graphs/contributors) records actual contributions. Git author-name variants are not separate team members. Use this guide and the complete project plan to find useful work; no contributor list implies extra repository permission or review authority.

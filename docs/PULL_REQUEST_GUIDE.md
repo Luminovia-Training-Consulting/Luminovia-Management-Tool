@@ -1,10 +1,10 @@
 # Creating, reviewing and merging pull requests
 
-> Status on 16 November 2026: Maintainers and administrators have a permanent `always` bypass for direct merges. Additional review and check requirements for ordinary contributors remain prepared but disabled until the maintenance App path has been proven. [Current activation status](GITHUB_WORKFLOW.md#activation-still-pending).
+> Live policy verified on 16 November 2026: all 15 checks and signatures are mandatory without CI/history bypass. Human Maintain/Admin accounts have a PR-only review exception; the App has no review exception. The native controller remains prepared until its own exact-source CI, merge and default-branch execution. [Current rules and delivery status](GITHUB_WORKFLOW.md#rules-for-main).
 
 This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
-The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). These merges do not activate the pending server-side review rules. The source catalogue [labels.json](../.github/labels.json) contains 35 managed labels; nine original GitHub labels are also preserved.
+The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). Historical guide merges do not prove current controller delivery. The source catalogue [labels.json](../.github/labels.json) contains 36 managed labels; nine original GitHub labels are also preserved.
 
 ## Branch and title
 
@@ -55,7 +55,7 @@ Choose every area that is materially affected. The original area labels remain a
 | `area:accessibility` | Keyboard access, accessible controls and WCAG checks    |
 | `area:design`        | Luminovia branding, layout and visual design            |
 
-A documentation change receives `area:docs` and any relevant documented area; general contribution rules also use `area:github`. A test does not need every label used by the whole system. A feature with a migration should include the product and technical areas it actually changes. The 35 managed labels comprise eight types, 24 areas and three risk levels; additional original GitHub labels do not replace a required category. Add new managed labels to the shared catalogue before applying them. [Metadata operation and historical rechecks](GITHUB_WORKFLOW.md#labels-and-metadata-validation).
+A documentation change receives `area:docs` and any relevant documented area; general contribution rules also use `area:github`. A test does not need every label used by the whole system. A feature with a migration should include the product and technical areas it actually changes. The 36 managed labels comprise eight types, 24 areas, three risk levels and the independent `merge:hold` pause; additional original GitHub labels do not replace a required category. Add new managed labels to the shared catalogue before applying them. [Metadata operation and historical rechecks](GITHUB_WORKFLOW.md#labels-and-metadata-validation).
 
 | Risk          | Meaning                                                                                             |
 | ------------- | --------------------------------------------------------------------------------------------------- |
@@ -85,24 +85,21 @@ Use `./portal github test` for an independent test of current `main`. `./portal 
 
 ## Review rules for `main`
 
-The intended contributor process uses a pull request and at least one approval from another authorised person. Self-approval does not count as independent review; new changes invalidate old approvals. Approval of the latest push must come from someone other than its author. Resolve review conversations before merging and address feedback against current code. The additional server-side requirements remain disabled as explained below.
+The active ordinary review path requires an independent approval of the exact current head, latest-push approval and resolved conversations. A changed head invalidates earlier approval. All 15 required checks must pass against the applicable current base; neither people nor Apps have a check or history/signature bypass. [Exact contexts and producer Apps](GITHUB_WORKFLOW.md#required-checks-and-native-auto-merge).
 
-Maintainers and administrators have a permanent role-based bypass (`always`) and can merge directly at any time, including while reviews or checks are pending. This replaces the earlier personal PR-only exception. The bypass follows the person acting, not the PR author; ordinary write access alone is insufficient. GitHub may require an explicit bypass action in the merge dialog.
+Human Maintain and Repository-admin accounts may use their PR-only exception in the review ruleset when personally merging a PR. That exception follows the acting person, not the PR author. It does not allow direct-main writes or bypass any required check. Ordinary writers and the maintenance App have no review exception.
 
-Checks still run and provide inspectable results:
+The prepared [verified native controller](AUTO_MERGE.md) requires independent current-head approval and GitHub's native `clean` state for **all** candidates. A human author's role grants the App no exemption. The reviewer must have current writer/admin authority and be independent of the author and any proven source pusher. Actual source pushes are bound to the exact CI check suite; a workflow actor, retry/reopen event or commit email is not push authority. Missing push evidence grants no exemption; contradictory evidence blocks the candidate.
 
-- `Build`, `Typecheck`, `Lint`, `Formatting` and `Code quality` check compilation, rules, style and actual source connections.
-- `Tests and coverage` runs unit/component tests with complete frontend source coverage reporting and enforced thresholds.
-- `verify` runs the complete real application/SQL/API/browser/PWA/maintenance suites; `Actual isolated selfhost image compatibility` checks real runtime behaviour and retained data.
-- `PR metadata` checks required labels; CodeQL analyses security patterns. See [CI_QUALITY](CI_QUALITY.md).
+Keep unfinished work as a draft or add `merge:hold`; the required metadata check also rejects the hold. A passing scanner job does not replace the generated CodeQL findings check, and a preview package is not a hosted acceptance result. The complete list includes build/type/lint/format/connectivity, unit coverage, full application/native compatibility, PR metadata, PR preview package and the separate security outcomes.
 
-A maintainer may deliberately merge early. This does not turn failed tests green or publish an unverified development update: the release job waits for every gate explicitly defined in `ci.yml`; the additional Security workflow runs separately. Independent review and passing, current tests remain the intended process for other contributors. Additional server-side PR/check rules stay disabled until the maintenance App integration is proven; see the [current status](GITHUB_WORKFLOW.md#activation-still-pending).
+Repository auto-merge availability and prepared source do not prove that this controller has reached main. Its own exact-source CI, merge and successful default-branch execution remain required. Historical work-log results are revision-specific and cannot certify a new head.
 
 ## Merge and publication
 
-Maintainers and administrators can merge directly and explicitly use the configured `always` bypass. The normal process is to review the description, labels, tests and open conversations first. An early merge remains a deliberate choice; it does not mean failed CI or pending operational approvals have passed.
+Use GitHub's native PR merge path after the applicable review, current-base checks and signature requirements pass. The controller submits the expected head SHA and `merge_method: merge`; it does not PATCH the main ref or force an update. Native merging may create a commit different from the synthetic test merge, so there is no exact-test-merge-SHA guarantee. A refused or unconfirmed merge must not be described as completed.
 
-A merge can start the existing development release process. Its immutable `cms-dev-*` packages and hosted migration checks remain separate. Production operation, real data, SMTP, DNS and risky maintenance need the appropriate separate approvals. Claim a hosted installation only when actual operational evidence exists.
+The controller requests missing current-main verification separately. It does not publish a release, install a package, change hosting or authorise production, real data, SMTP, DNS or risky maintenance. Follow the separate owning workflows and deployment runbook, and claim publication or installation only from actual evidence. This documentation change does not claim that release or installation switches have been changed.
 
 Signed annotated `milestone/*` tags identify verified historical development states. They are not PR labels or a promise of a Semver or production version. Do not move existing tags; create tags only on the intended commit.
 

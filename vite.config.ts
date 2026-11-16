@@ -88,15 +88,20 @@ export default defineConfig(({ mode }) => {
         reporter: ["text-summary", "html", "lcov", "json-summary", "json"],
         reportOnFailure: true,
         thresholds: {
-          // Whole-source regression floor, measured with uncovered UI included.
+          // Ratchet the measured 26-migration main baseline with a small margin:
+          // S51.28/B46.15/F41.66/L53.00, including uncovered UI modules.
           // End-to-end browser execution is not merged into these unit figures.
-          statements: 46.5,
-          branches: 41,
-          functions: 36.5,
-          lines: 48,
+          statements: 51,
+          branches: 45.8,
+          functions: 41.4,
+          lines: 52.7,
           "**/scripts/public-config.ts": { 100: true },
           "**/src/lib/dates.ts": { 100: true },
           "**/src/features/operations/schedule.ts": { 100: true },
+          // These client boundaries now cover both success and rejected-response
+          // paths; retain all measured branches when future features extend them.
+          "**/src/features/jobs/lifecycle-api.ts": { 100: true },
+          "**/src/features/notifications/api.ts": { 100: true },
           "**/src/features/knowledge/content.ts": {
             statements: 95,
             branches: 85,

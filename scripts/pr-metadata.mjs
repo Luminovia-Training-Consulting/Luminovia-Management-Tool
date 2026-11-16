@@ -125,6 +125,12 @@ export function validatePullRequestMetadata(event, catalogue, context = {}) {
       selected[category].push(label.name);
     }
   }
+  // A hold must also block GitHub's native auto-merge through this required
+  // check, including manual rechecks that use current trusted-main metadata.
+  requireMetadata(
+    !seen.has("merge:hold"),
+    "Merging is paused by merge:hold; remove it only after the concern is resolved.",
+  );
   requireMetadata(
     selected.type.length === 1,
     "Exactly one type: label is required.",

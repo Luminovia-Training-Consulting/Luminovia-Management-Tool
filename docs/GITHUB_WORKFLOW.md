@@ -4,29 +4,55 @@ Contributors should start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue gu
 
 ## Rules for `main`
 
-The JSON files under `.github/rulesets/` reflect the repository configuration that was actually read back from GitHub. Files alone do not activate a rule; the [server-side rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. The current instruction replaces the earlier personal PR-only exception: **maintainers and administrators may merge directly at any time and bypass rules when necessary.**
+The current server readback and matching source JSON replace the earlier disabled-rule and broad-`always` snapshots. The [server-side rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative; committing JSON alone does not activate or change a rule.
 
-| Rule                          | Source                                           | Current status                                                                                                                                                                                         |
-| ----------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Branch Protection             | [history.json](../.github/rulesets/history.json) | Active: signatures, deletion/force-push restrictions and existing deployment/code-quality rules. Existing `always` exceptions for repository roles `maintain` (ID 2) and `admin` (ID 5) are preserved. |
-| Main pull requests and review | [review.json](../.github/rulesets/review.json)   | Prepared but still disabled: PR, one independent approval, latest-push approval and resolved conversations. Both roles have `always` instead of the earlier personal PR-only exception.                |
-| Main verified checks          | [checks.json](../.github/rulesets/checks.json)   | Prepared but still disabled: complete application, native selfhost compatibility, metadata and the new build/quality/coverage checks; both roles have `always`.                                        |
+| Layer                    | Live ID    | Source                                           | Active exceptions                                                                                                 |
+| ------------------------ | ---------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| History and integrity    | `27315671` | [history.json](../.github/rulesets/history.json) | None: signatures, deletion/force-update restrictions and the existing history rules apply.                        |
+| Pull requests and review | `27329000` | [review.json](../.github/rulesets/review.json)   | Human Maintain (`RepositoryRole:2`) and Repository admin (`RepositoryRole:5`) through PRs only. No App exception. |
+| Required verification    | `27329142` | [checks.json](../.github/rulesets/checks.json)   | None: strict current-base checks apply to humans and Apps.                                                        |
 
-`always` applies to the person acting with an actual Maintainer/Admin role, regardless of the PR author, self-review or pending/failed checks. GitHub may require an explicit bypass action in its interface. A maintainer merge still starts checks; it does not make them artificially pass. Automatic publication and VPS installation still wait for the successful complete `ci.yml` run; the separate Security workflow provides additional analysis and is not another release gate. Ordinary write access does not receive this bypass. No additional people were invited or roles assigned.
+All three rulesets are active. The human review exception follows the person performing the merge, not the PR author; it grants no direct-main push, CI bypass or history/signature bypass. Ordinary writers still need independent current-head approval, latest-push approval and resolved review conversations. The maintenance App uses the ordinary reviewed native path and has no review or check exception.
 
-## Activation still pending
+## Required checks and native auto-merge
 
-The additional review/check rules (IDs 27329000/27329142) remain deliberately disabled. Activating them without verification would block the existing signed daily direct promotion using the standard `GITHUB_TOKEN`. The Maintainer/Admin exception in the active rule already applies; the additional requirements for other contributors are **not yet enforced server-side**.
+All **15** contexts are required. The first 14 below come from GitHub Actions integration `15368`; the generated findings result comes from integration `57789`.
 
-The earlier real test [43755067933](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43755067933) showed that a bot-user exception does not reliably bypass the temporary PR/missing-check rule for the standard token. Its temporary rules and branches were removed. The general GitHub Actions App 15368 remains the verified source of status checks, not an assumed bypass identity.
+- Build
+- Typecheck
+- Lint
+- Formatting
+- Code quality
+- Tests and coverage
+- verify
+- Actual isolated selfhost image compatibility
+- PR metadata
+- PR preview package
+- CodeQL (javascript-typescript)
+- CodeQL (python)
+- CodeQL (actions)
+- Dependency review
+- CodeQL — generated findings result, integration `57789`
 
-The latest inventory confirmed that the private **Luminovia Portal Maintenance** App exists, with integration ID 5776881, a `selected` installation 182397724 and `contents/actions: write`. The earlier general statement that no App exists is outdated. This task did not prove the exact selected repository scope or a working installation-token promotion; the required repository variables/secrets and App workflow have not been confirmed as fully configured on current main.
+A successful scan is not a zero-finding report, and a passing unit run is not application/native acceptance. A changed head or base requires applicable current evidence. Native auto-merge availability is enabled; queuing a PR grants no new exception. Do not disable or bypass checks to make a merge finish.
 
-Before later activation: coordinate the existing App setup, verify its actual repository scope and short-lived token, execute the protected signing/promotion test, adopt the App workflow and precise App exception together, and only then activate and read back the additional rules. Maintainer/Admin `always` remains in place. No App, private key or paid feature was newly registered for this CI task.
+The prepared [native controller](AUTO_MERGE.md) requires independent review and native `clean` mergeability for every candidate, including human Maintain/Admin authors and automated authors. A human's personal review exception is not inherited by the App. Actual push provenance comes from the exact CI check suite and source push; workflow actors, retry/reopen events and commit emails cannot supply review authority. Missing evidence grants no exemption, and inconsistent evidence blocks the candidate.
 
-Effective main rules and repository roles were read through REST/GraphQL; the existing token could not list organisation-wide rules. This configuration does not claim to change other repositories or the organisation.
+<a id="activation-still-pending"></a>
 
-References: [rulesets and exceptions](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository), [Rules API](https://docs.github.com/en/rest/repos/rules). Checks and coverage are explained in [CI_QUALITY](CI_QUALITY.md).
+## Controller delivery still pending
+
+The legacy fragment above remains valid for older links. **Branch rules are active; controller delivery is the pending item.** This narrow follow-up is prepared against main `fabd71a7` and still requires its own exact-source CI, merge and successful default-branch execution. Source files, repository auto-merge availability and a configured App token do not prove that the controller is running on accepted main.
+
+The existing App `5776881` (`luminovia-portal-maintenance`) remains scoped to this repository. Its existing protected `maintenance-signing` credentials are reused; no new App, permission scope, personal token or server credential is introduced. The standard Actions token reads REST and a fixed GraphQL operation. Only the separate App token may call the native PR merge endpoint or the two main-verification dispatch endpoints. It has no main-ref/force-write route and no native-rule bypass.
+
+The controller submits an expected head SHA to GitHub's native merge endpoint with `merge_method: merge`. GitHub may create a different commit from the synthetic test merge; there is no exact-test-merge-SHA or atomic-base claim. Native strict checks, reviews and signatures remain authoritative. Current main verification is reconciled separately after a confirmed merge and on recovery sweeps; this does not publish or deploy an application.
+
+The successful [read-only proof 43809731348](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43809731348) verified restricted-token access to all 15 check contexts, CodeQL records, the source push and current pusher permission. The probe used signed fictional commit `f7f0bee`; its owned temporary branch was removed. No App/main write occurred. This is metadata-access evidence only, not automatic-merge, controller, release or product acceptance.
+
+Earlier standard-token/ref-promotion probes and historical broad exemptions describe their recorded configurations. They grant no exception under the current rules. The separate maintenance/signature mechanisms must obey their current owning controls; an old signing probe is not review approval.
+
+References: [rulesets and exceptions](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository), [Rules API](https://docs.github.com/en/rest/repos/rules), [native PR merge endpoint](https://docs.github.com/en/rest/pulls/pulls#merge-a-pull-request), [controller evidence policy](AUTO_MERGE.md). [CI_QUALITY](CI_QUALITY.md) records historical check/coverage evidence; the current rule table above supersedes its earlier governance snapshots.
 
 ## PR preview packages and deployment records
 
@@ -34,7 +60,7 @@ After complete quality, coverage, application and native acceptance, PRs produce
 
 ## Labels and metadata validation
 
-[labels.json](../.github/labels.json) is the shared catalogue of managed labels used by local and CI validation. The nine existing GitHub standard labels are preserved. Every PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. Other labels may be added; unknown values within these three categories are rejected. The [pull request guide](PULL_REQUEST_GUIDE.md#pull-request-labels) explains how to choose them.
+[labels.json](../.github/labels.json) is the shared catalogue of managed labels used by local and CI validation. The nine existing GitHub standard labels are preserved. Every PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. The catalogue contains 36 managed labels, including `merge:hold`, alongside the preserved defaults. Unknown values within the three required categories are rejected. `merge:hold` independently blocks the required metadata check and pauses merging until removed. The [pull request guide](PULL_REQUEST_GUIDE.md#pull-request-labels) explains how to choose them.
 
 The [metadata workflow](../.github/workflows/pr-metadata.yml) responds to changes on open PRs through the ordinary `pull_request` event. It explicitly checks out `refs/heads/main` from this repository, so current labels are checked against the current shared catalogue rather than an obsolete contribution snapshot. It never checks out or executes contribution code, installs dependencies or uses secrets. Permissions remain only `contents: read` and `pull-requests: read`; no elevated event is needed. Repository, PR number and live head identity are validated; titles, bodies and labels remain data. Its regression tests are discovered automatically by `./portal test`:
 
@@ -60,7 +86,7 @@ Labels classify issues and pull requests. Git tags identify an immutable source 
 | `milestone/m4-cbw-templates`       | `b9cdcc89758451bc8258f3a9f173e95ee1a23736` | Building-block templates, avatars and comments; PR #4.                |
 | `milestone/m5-system-audit`        | `bb322746d3cf18b1a0f1eae0eaa96450d26e26cd` | System review and concrete functional/performance corrections; PR #5. |
 
-These tags are not production approvals or new Semver releases. They do not change existing `cms-dev-*` release tags. Current workflows publish development packages after successful main CI; pushing these `milestone/*` tags does not start those release jobs. Do not move or replace published tags.
+These tags are not production approvals or new Semver releases. They do not change existing `cms-dev-*` release tags. Release publication and installation follow their separate owning workflows and operational authorisation; successful main CI or pushing a milestone tag alone is not evidence of a published or installed package. Do not move or replace published tags.
 
 ## Public and private reports
 
