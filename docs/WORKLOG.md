@@ -2,6 +2,14 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — independent CI exposed a search-navigation fixture race
+
+Published be1ef25 [CI43804535426](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43804535426) correctly failed at04:57:17UTC:63prior stages, including all SQL and actual API suites, passed; **89/90application browser cases passed with zero skips/retries/flaky outcomes**. Only desktop search timed out at its initial hidden mobile-menu click. The sign-in helper confirms the URL before shell rendering finishes; the immediate non-waiting `searchLink.isVisible()` snapshot could choose the mobile branch on desktop. Mobile search and both calendar/keyboard projects passed. Built-PWA was not reached and native compatibility was skipped; no full pass is inferred.
+
+The safe artifact is retained at `.local/functional-ci/pr12-be1ef25/7f5d7279/acceptance.json`, source SHA-256 `9b64235c87c68fa1eceebb85075370ec1bf29c3e90982b13fc4864e13400b9a2`. Correct the actual readiness race without retries, sleeps, forced clicks or weaker search/privacy assertions, then require a fresh complete check of the final roles-integrated source. PR18's independent native check and explicit main hold remain separate.
+
+The correction now awaits the visible union of the exact search link/mobile disclosure before deciding the responsive branch, then requires the search link to be visible before clicking. All business/privacy assertions remain unchanged. ESLint, Prettier and strict standalone TypeScript pass. A real Chromium diagnostic executes that exact source block against initially absent, explicitly released responsive navigation: desktop1440 and mobile412 both pass with exactly1search click, correct disclosure state and zero page errors. Owned browser closed; no server/business service was used. Evidence `.local/search-navigation-probe/result.json` is diagnostic only; full corrected business acceptance remains required.
+
 ## 16 November 2026 — functional tests combined with delegated roles and private pricing
 
 PR15 merged as43504b80 and its coordinator formally released the earlier pause. Published PR12 headbe1ef25 includes that actual main ancestry. A subsequent explicit coordination request holds further main merges until PR18 completes; this task respects that request and prepares its integration only on the owned PR12 branch. PR18's coordinator branch is untouched. Carina's standing signed commit→push→prepared PR→direct merge instruction remains binding once the current combined checks pass and the hold is released.

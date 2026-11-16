@@ -18,6 +18,7 @@ Current user priority: verify real connected user functions and repair missing b
 - [x] Push signed reviewable source as draft PR12, preserving concurrent independent product changes.
 - [x] Accept the corrected board in exact-source full CI/native verification on signed1e72507:all68 stages,234SQL/all18APIs/78application+2PWA,zero skips/retries;actual retained password/MFA/roles/private event/scanned bytes/TLS/WebSockets/50claims/cleanup passed. Local run04 safely refused a competing checkout's QA lock; no local pass is invented. First77/78 CI failure remains historical. [Exact results](QA_RESULTS.md).
 - [x] Preserve per-project failure evidence without miscounting a passed sibling browser;7 focused guards include genuine Playwright skip/focus/single-project-failure probes. Application/migrations/journeys remain unchanged after accepted1e72507; final PR checks are independently inspectable. No production/hosted deployment belongs to this request.
+- [ ] Correct the independent be1ef25 desktop search-navigation readiness race (89/90cases passed; no skip/retry), then accept the final roles-integrated source in complete application/native/security CI before direct merge.
 
 
 ## PR18 complete-CI repair

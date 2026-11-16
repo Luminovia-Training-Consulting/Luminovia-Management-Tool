@@ -179,8 +179,12 @@ test("real portal search combines authorized sources, excludes foreign private r
     name: "Im Portal suchen",
     exact: true,
   });
-  if (!(await searchLink.isVisible()))
-    await page.getByLabel("Mehr", { exact: true }).click();
+  const more = page.getByLabel("Mehr", { exact: true });
+  // The Auth redirect can precede the shell. Wait for its actual responsive
+  // navigation before deciding whether the mobile disclosure is needed.
+  await expect(searchLink.or(more).filter({ visible: true })).toBeVisible();
+  if (!(await searchLink.isVisible())) await more.click();
+  await expect(searchLink).toBeVisible();
   await searchLink.click();
   const search = page.getByRole("searchbox", {
     name: "Im Portal suchen",
