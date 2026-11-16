@@ -10,8 +10,9 @@ This latest user instruction removes the maintenance App exception as well. It s
 - [x] Wire protected main-only selected-repository short-lived App tokens and the missing official age prerequisites for full candidate tests; update current guides and rule snapshots.
 - [x] Run lint/type/source-connection/coverage/build/workflow checks and49Node+13Python offline guards;226unit/component cases pass with existing floors. No frontend runtime module or export is statically unconnected.
 - [x] Complete independent final review; correct the invalid GraphQL interface selection and remove unsupported hold-label behavior. All20maintenance groups pass, including a concurrent classification-change rejection.
-- [ ] Complete signed PR delivery and exact-head full/security/native CI; record actual runs and any failures before merge.
-- [ ] Confirm the existing App's additional pull_requests:write scope at browser action time, verify installation/token scope and actual App-created PR/signature/CI. The configured environment key/ID alone is not execution proof.
+- [x] Deliver signed [PR22](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/22); its durable GitHub record owns final exact-head full/security/native CI and merge acceptance. All14checks must pass before merging; an open PR is not a passed full run.
+- [x] Obtain explicit action-time confirmation and grant the existing App only additional pull_requests:write; UI confirms one selected repository and REST confirms the installed permissions, with no rule bypass.
+- [ ] Verify actual short-lived App token/signature/PR CI after the source reaches protected main. The configured environment key/ID and installed scopes alone are not execution proof.
 
 No App review exemption is restored: automated PRs need normal independent approval/latest-push approval and resolved conversations as well as all14required checks. An outdated open maintenance PR must be explicitly resolved before regeneration; no reviewed content is overwritten. The unmerged direct-ref auto-merger in PR19 is not part of this implementation.
 
