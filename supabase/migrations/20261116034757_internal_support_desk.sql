@@ -70,6 +70,42 @@ alter table private.support_requests enable row level security;
 alter table private.support_attachments enable row level security;
 revoke all on private.support_tickets,private.support_messages,private.support_events,private.support_requests,private.support_attachments from public,anon,authenticated;
 
+-- Dedicated ticket evidence cannot also be a course resource. The optional
+-- learning workspace has a separate registry, so checking only document scope
+-- or its ordinary download predicate would miss that independent access path.
+-- Include removed registry history: previous recipients may already know the
+-- exact version. The caller holds the document row before this check.
+create function private.support_document_has_course_reference(p_document uuid) returns boolean
+language plpgsql stable security definer set search_path='' as $$
+declare registry regclass:=to_regclass('private.course_resources'); referenced boolean;
+begin
+ if registry is null then return false;end if;
+ execute format('select exists(select 1 from %s r join public.document_versions v on v.id=r.version_id where v.document_id=$1)',registry)
+  into referenced using p_document;
+ return referenced;
+end;$$;
+-- Serialize the reverse registration order on the same document row. A course
+-- registry insert must wait for an in-flight ticket attachment and then refuse
+-- that dedicated version, including for its original uploader.
+create function private.support_course_resource_guard() returns trigger
+language plpgsql security definer set search_path='' as $$
+declare document uuid;
+begin
+ select document_id into document from public.document_versions where id=new.version_id;
+ if document is null then return new;end if;
+ perform 1 from public.documents where id=document for update;
+ if exists(select 1 from private.support_attachments a where a.document_id=document) then
+  raise exception 'Dedicated support evidence cannot be shared as course material' using errcode='42501';
+ end if;
+ return new;
+end;$$;
+do $$begin
+ if to_regclass('private.course_resources') is not null then
+  execute 'create trigger support_course_resource_guard before insert or update of version_id on private.course_resources for each row execute function private.support_course_resource_guard()';
+ end if;
+end;$$;
+revoke all on function private.support_document_has_course_reference(uuid),private.support_course_resource_guard() from public,anon,authenticated,service_role;
+
 create function private.can_read_support(p_ticket_id uuid) returns boolean
 language sql stable security definer set search_path='' as $$
  select private.actor_active() and exists(select 1 from private.support_tickets t where t.id=p_ticket_id
@@ -233,6 +269,7 @@ begin
   if internal and not manager then raise exception 'Support management required' using errcode='42501'; end if;
   select * into d from public.documents where id=(p_payload->>'document_id')::uuid for update;
   if not found or d.owner_id<>auth.uid() or d.uploaded_by<>auth.uid() or d.scope<>'personal' or d.kind<>'material' or d.status<>'clean' or d.deleted_at is not null then raise exception 'Dedicated clean attachment required' using errcode='42501'; end if;
+  if private.support_document_has_course_reference(d.id) then raise exception 'Course resources cannot become dedicated support evidence' using errcode='42501';end if;
   select * into v from public.document_versions where id=d.current_version_id;
   if not found or v.status<>'clean' or v.sha256 is null or v.version<>1 or (select count(*) from public.document_versions where document_id=d.id)<>1 then raise exception 'Dedicated clean attachment required' using errcode='42501'; end if;
   insert into private.support_attachments(ticket_id,document_id,version_id,attached_by,internal) values(ticket.id,d.id,v.id,auth.uid(),internal);

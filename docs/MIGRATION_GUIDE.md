@@ -234,6 +234,8 @@ Own ticket history and explicit MFA support authority replace an administrator-w
 
 Tests: [support-db-tests.mjs](../scripts/support-db-tests.mjs), [support-api-check.mjs](../scripts/support-api-check.mjs).
 
+The support migration also rejects existing/removed optional course-resource references and guards the reverse registry insertion with the same document lock. The automatically discovered [support/course contract tests](../scripts/support-course-registry-db-tests.mjs) distinguish synthetic optional-schema contracts from the strict manual actual-module gate. [Chronology and evidence](SUPPORT_COURSE_RESOURCE_REGRESSION.md).
+
 ### 29. Whole-block replacement without premature release
 
 Source: [20261116034812_replacement_marketplace.sql](../supabase/migrations/20261116034812_replacement_marketplace.sql).
