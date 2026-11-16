@@ -2,12 +2,18 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 
-await withApiFixture(async ({ actor, service, checked }) => {
+await withApiFixture(async ({ actor, service, checked, defer }) => {
   const owner = await actor("calendar-export-owner", "lecturer");
   const peer = await actor("calendar-export-peer", "lecturer");
   const admin = await actor("calendar-export-admin", "admin");
   const own = randomUUID(),
     foreign = randomUUID();
+  defer(async () => {
+    await checked(
+      service.from("personal_events").delete().in("id", [own, foreign]),
+      "Remove only the two owned calendar fixtures before account cleanup",
+    );
+  });
   await checked(
     service.from("personal_events").insert([
       {

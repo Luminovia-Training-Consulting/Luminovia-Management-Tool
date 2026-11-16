@@ -16,16 +16,14 @@ test("calendar ICS is a fresh authorized download, private events require opt-in
     .plus({ days: 2, hours: 9 });
   const id = randomUUID();
   await checked(
-    service
-      .from("personal_events")
-      .insert({
-        id,
-        user_id: owner.id,
-        title: "Fictional original calendar title",
-        starts_at: start.toUTC().toISO()!,
-        ends_at: start.plus({ hours: 1 }).toUTC().toISO()!,
-        time_zone: "Europe/Berlin",
-      }),
+    service.from("personal_events").insert({
+      id,
+      user_id: owner.id,
+      title: "Fictional original calendar title",
+      starts_at: start.toUTC().toISO()!,
+      ends_at: start.plus({ hours: 1 }).toUTC().toISO()!,
+      time_zone: "Europe/Berlin",
+    }),
   );
   try {
     await login(page, owner.email);
@@ -75,6 +73,7 @@ test("calendar ICS is a fresh authorized download, private events require opt-in
     ).toBeDisabled();
     await context.setOffline(false);
   } finally {
+    await checked(service.from("personal_events").delete().eq("id", id));
     await checked(service.auth.admin.deleteUser(owner.id));
   }
 });
