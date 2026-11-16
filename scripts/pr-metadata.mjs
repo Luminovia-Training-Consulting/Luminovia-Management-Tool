@@ -12,7 +12,7 @@ function requireMetadata(condition, message) {
 function allowedLabels(catalogue) {
   requireMetadata(
     Array.isArray(catalogue),
-    "Der Label-Katalog muss eine Liste sein.",
+    "The label catalogue must be a list.",
   );
   const names = new Set();
   for (const label of catalogue) {
@@ -21,14 +21,14 @@ function allowedLabels(catalogue) {
         typeof label.name === "string" &&
         label.name.length > 0 &&
         !names.has(label.name),
-      "Der Label-Katalog enthält einen ungültigen oder doppelten Namen.",
+      "The label catalogue contains an invalid or duplicate name.",
     );
     names.add(label.name);
   }
   for (const category of categories)
     requireMetadata(
       [...names].some((name) => name.startsWith(category + ":")),
-      "Im Label-Katalog fehlt eine Pflichtkategorie.",
+      "The label catalogue is missing a required category.",
     );
   return names;
 }
@@ -40,7 +40,7 @@ function checkIdentity(pullRequest, number) {
       pullRequest.base?.repo?.full_name === repository &&
       typeof pullRequest.head?.sha === "string" &&
       /^[a-f0-9]{40}$/.test(pullRequest.head.sha),
-    "Die Pull-Request-Identität ist ungültig.",
+    "The pull request identity is invalid.",
   );
 }
 
@@ -51,7 +51,7 @@ function checkEventIdentity(event, context) {
       event?.repository?.full_name === repository &&
       Number.isSafeInteger(event.number) &&
       event.number > 0,
-    "Die Prüfung benötigt ein Pull-Request-Ereignis dieses Repositorys.",
+    "This check requires a pull_request event from this repository.",
   );
   checkIdentity(event.pull_request, event.number);
 }
@@ -63,11 +63,11 @@ export function validatePullRequestMetadata(event, catalogue, context = {}) {
   checkIdentity(pullRequest, event.number);
   requireMetadata(
     pullRequest.head.sha === event.pull_request.head.sha,
-    "Der Pull Request wurde inzwischen geändert; der neuere Prüflauf ist maßgeblich.",
+    "The pull request has changed; use the newer check run.",
   );
   requireMetadata(
     Array.isArray(pullRequest.labels),
-    "Die Pull-Request-Labels fehlen oder sind ungültig.",
+    "Pull request labels are missing or invalid.",
   );
   const allowed = allowedLabels(catalogue);
   const selected = Object.fromEntries(
@@ -77,29 +77,29 @@ export function validatePullRequestMetadata(event, catalogue, context = {}) {
   for (const label of pullRequest.labels) {
     requireMetadata(
       label && typeof label.name === "string" && !seen.has(label.name),
-      "Der Pull Request enthält ungültige oder doppelte Labels.",
+      "The pull request contains invalid or duplicate labels.",
     );
     seen.add(label.name);
     for (const category of categories) {
       if (!label.name.startsWith(category + ":")) continue;
       requireMetadata(
         allowed.has(label.name),
-        `Ein Label der Kategorie ${category} ist nicht im gemeinsamen Katalog enthalten.`,
+        `A label in category ${category} is not in the shared catalogue.`,
       );
       selected[category].push(label.name);
     }
   }
   requireMetadata(
     selected.type.length === 1,
-    "Genau ein type:-Label ist erforderlich.",
+    "Exactly one type: label is required.",
   );
   requireMetadata(
     selected.risk.length === 1,
-    "Genau ein risk:-Label ist erforderlich.",
+    "Exactly one risk: label is required.",
   );
   requireMetadata(
     selected.area.length > 0,
-    "Mindestens ein area:-Label ist erforderlich.",
+    "At least one area: label is required.",
   );
   return {
     number: event.number,
@@ -110,7 +110,10 @@ export function validatePullRequestMetadata(event, catalogue, context = {}) {
 }
 
 async function main() {
-  requireMetadata(process.env.GITHUB_EVENT_PATH, "GITHUB_EVENT_PATH fehlt.");
+  requireMetadata(
+    process.env.GITHUB_EVENT_PATH,
+    "GITHUB_EVENT_PATH is missing.",
+  );
   const event = JSON.parse(
     await readFile(process.env.GITHUB_EVENT_PATH, "utf8"),
   );
@@ -126,7 +129,7 @@ async function main() {
   const token = process.env.GH_TOKEN;
   requireMetadata(
     process.env.GITHUB_ACTIONS !== "true" || token,
-    "Der GitHub-Prüflauf benötigt sein eingeschränktes Lesetoken.",
+    "The GitHub check requires its restricted read-only token.",
   );
   if (token) {
     let response;
@@ -143,17 +146,13 @@ async function main() {
         },
       );
     } catch {
-      throw new Error(
-        "Die aktuellen Pull-Request-Metadaten konnten nicht gelesen werden.",
-      );
+      throw new Error("Unable to read the current pull request metadata.");
     }
-    requireMetadata(response.ok, "GitHub hat die Metadatenabfrage abgelehnt.");
+    requireMetadata(response.ok, "GitHub rejected the metadata request.");
     try {
       context.livePullRequest = await response.json();
     } catch {
-      throw new Error(
-        "GitHub hat keine gültigen Pull-Request-Metadaten geliefert.",
-      );
+      throw new Error("GitHub did not return valid pull request metadata.");
     }
   }
   const result = validatePullRequestMetadata(event, catalogue, context);
@@ -167,7 +166,7 @@ if (
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
   main().catch((error) => {
-    console.error(`PR-Metadaten ungültig: ${error.message}`);
+    console.error(`Invalid PR metadata: ${error.message}`);
     process.exitCode = 1;
   });
 }

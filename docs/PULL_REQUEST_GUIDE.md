@@ -1,104 +1,104 @@
-# Pull Requests erstellen, prüfen und mergen
+# Creating, reviewing and merging pull requests
 
-> Stand 16. November 2026: Maintainer und Administratoren haben eine dauerhafte `always`-Ausnahme zum direkten Merge. Die zusätzlichen Review-/Checkpflichten für gewöhnliche Beitragende bleiben bis zum nachgewiesenen Wartungs-App-Pfad deaktiviert vorbereitet. [Aktueller Aktivierungsstand](GITHUB_WORKFLOW.md#aktivierung-noch-ausstehend).
+> Status on 16 November 2026: Maintainers and administrators have a permanent `always` bypass for direct merges. Additional review and check requirements for ordinary contributors remain prepared but disabled until the maintenance App path has been proven. [Current activation status](GITHUB_WORKFLOW.md#activation-still-pending).
 
-Dieser Leitfaden beschreibt die Abnahme einer Änderung. Einrichtung und lokale Entwicklung stehen in [CONTRIBUTING](../CONTRIBUTING.md) und [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); Meldungen beginnen mit dem [Issue-Leitfaden](ISSUE_GUIDE.md).
+This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
-Die Beitragsunterlagen wurden mit [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`) geliefert, der getrennte lokale GitHub-Vorschaustarter mit [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). Diese Merges aktivieren die oben genannten noch offenen serverseitigen Reviewregeln nicht. Der Quellenkatalog [labels.json](../.github/labels.json) enthält inzwischen 30 verwaltete Labels; neun ursprüngliche GitHub-Labels bleiben zusätzlich erhalten.
+The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). These merges do not activate the pending server-side review rules. The source catalogue [labels.json](../.github/labels.json) now contains 30 managed labels; nine original GitHub labels are also preserved.
 
-## Branch und Titel
+## Branch and title
 
-Erstelle einen eigenen Branch vom aktuellen `main`; externe Beitragende verwenden einen Fork. Ein PR löst ein zusammenhängendes Problem. Agentenbranches beginnen mit `codex/`. Ein früher Draft ist sinnvoll, wenn du fachliches Feedback brauchst, bevor die Umsetzung prüfbereit ist.
+Create a branch from the current `main`; external contributors use a fork. Keep each pull request focused on one related problem. Agent branches start with `codex/`. An early draft is useful when you need feedback before the implementation is ready for review.
 
-Wähle einen Titel, der das Ergebnis beschreibt, etwa `fix: keep accepted fee when editing a course` oder `docs: explain private file permissions`. Ein Präfix hilft beim Lesen, ersetzt aber kein Label. Commits sollen signiert und inhaltlich nachvollziehbar sein.
+Choose a title that describes the outcome, such as `fix: keep accepted fee when editing a course` or `docs: explain private file permissions`. A prefix helps readers but does not replace a label. Commits should be signed and clearly describe their changes.
 
-## Inhalt der Beschreibung
+## Pull request description
 
-Fülle die PR-Vorlage aus. Beschreibe das konkrete Problem und das Verhalten nach der Änderung. Verlinke das Issue mit `Closes #123`, wenn dessen Ziel vollständig erfüllt ist; verwende sonst `Refs #123`.
+Complete the pull request template. Describe the concrete problem and the resulting behaviour. Link the issue with `Closes #123` when its goal is fully met; otherwise use `Refs #123`.
 
-Gib ausgeführte Prüfungen mit Befehl und Ergebnis an. Schreibe „nicht ausgeführt“, wenn ein Nachweis fehlt, und begründe es. Neue Tests allein beweisen noch keinen bestandenen Lauf. Trenne lokale, CI-, native Supabase- und tatsächliche gehostete Abnahme klar.
+List the checks you actually ran, including commands and results. State when a check was not run and explain why. Adding a test does not prove that it passed. Distinguish local checks, CI, native Supabase verification and actual hosted acceptance.
 
-Bei sichtbaren Änderungen helfen fiktive Desktop-/Mobil-Screenshots mit DE/EN und heller/dunkler Darstellung. Beschreibe bei Datenbankänderungen Migration, vorhandene Daten, RLS/Grants und Wiederherstellung. Halte veröffentlichte Migrationen unverändert; eine zusätzliche Migration trägt die neue Änderung.
+For visible changes, include fictional desktop and mobile screenshots covering German and English, light and dark themes. For database changes, explain migrations, existing data, RLS/grants and recovery. Keep published migrations unchanged; add another migration for new changes.
 
-## Labels für Pull Requests
+## Pull request labels
 
-Jeder PR braucht **genau ein Typ-Label**, **mindestens ein Bereichslabel** und **genau ein Risikolabel**. `PR metadata` prüft diese Einordnung. Die vorhandenen allgemeinen GitHub-Labels werden beibehalten; `bug` oder `documentation` allein erfüllen die PR-Kategorien nicht.
+Every pull request needs **exactly one type label**, **at least one area label** and **exactly one risk label**. `PR metadata` validates these categories. Existing general GitHub labels remain available; `bug` or `documentation` alone does not satisfy the pull request categories.
 
-| Typ                 | Verwendung                                                      |
-| ------------------- | --------------------------------------------------------------- |
-| `type:fix`          | Fehler in geliefertem Verhalten korrigieren                     |
-| `type:feature`      | Neues fachliches Verhalten ergänzen                             |
-| `type:docs`         | Anleitungen oder Referenzen ändern                              |
-| `type:refactor`     | Struktur bei beabsichtigt gleichem Verhalten verbessern         |
-| `type:tests`        | Eigenständige Testverbesserung ohne fachliche Änderung          |
-| `type:maintenance`  | Laufzeit-, Build- oder Repositorypflege                         |
-| `type:security`     | Abgestimmte Sicherheitskorrektur; keine öffentliche Erstmeldung |
-| `type:dependencies` | Geprüfte Abhängigkeitsaktualisierung                            |
+| Type                | Use                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------ |
+| `type:fix`          | Correct a defect in delivered behaviour                                              |
+| `type:feature`      | Add new product behaviour                                                            |
+| `type:docs`         | Update guides or reference documentation                                             |
+| `type:refactor`     | Improve structure while preserving intended behaviour                                |
+| `type:tests`        | Improve tests without changing product behaviour                                     |
+| `type:maintenance`  | Maintain runtime, build or repository tooling                                        |
+| `type:security`     | Coordinate a security fix; never use a public PR as the initial vulnerability report |
+| `type:dependencies` | Update reviewed dependencies                                                         |
 
-Wähle alle tatsächlich wesentlich betroffenen Bereiche. Die ursprünglichen Bereichslabels bleiben erhalten: `area:frontend`, `area:backend`, `area:database`, `area:auth`, `area:files`, `area:finance`, `area:courses`, `area:devops` und `area:github`. Zehn weitere Bereiche ergänzen die Einordnung:
+Choose every area that is materially affected. The original area labels remain available: `area:frontend`, `area:backend`, `area:database`, `area:auth`, `area:files`, `area:finance`, `area:courses`, `area:devops` and `area:github`. Ten additional areas provide more specific classifications:
 
-| Bereich              | Verwendung                                               |
-| -------------------- | -------------------------------------------------------- |
-| `area:chat`          | Nachrichten, Kurs-/Interessengruppen und Realtime        |
-| `area:knowledge`     | Wiki, Forum und Wissensverwaltung                        |
-| `area:calendar`      | Termine, Verfügbarkeit, Sperrzeiten und Zeitzonen        |
-| `area:notifications` | Posteingang, Meldungen und Zustellpräferenzen            |
-| `area:profiles`      | Profile, Qualifikationen und Dozierendenverzeichnis      |
-| `area:clients`       | Auftraggeberkonten, Organisationen und Geschäftskontakte |
-| `area:pwa`           | Installation, Service Worker, Offlinezustand und Updates |
-| `area:testing`       | QA, Regressionen, Browser- und Berechtigungsprüfungen    |
-| `area:docs`          | Anleitungen, API-Referenzen und Betriebsdokumentation    |
-| `area:taxonomy`      | Themen, Werkzeuge, Programmiersprachen und Hierarchien   |
+| Area                 | Use                                                     |
+| -------------------- | ------------------------------------------------------- |
+| `area:chat`          | Messages, course/interest groups and Realtime           |
+| `area:knowledge`     | Wiki, forum and knowledge management                    |
+| `area:calendar`      | Events, availability, blocked time and time zones       |
+| `area:notifications` | Inbox, notices and delivery preferences                 |
+| `area:profiles`      | Profiles, qualifications and lecturer directory         |
+| `area:clients`       | Client accounts, organisations and business contacts    |
+| `area:pwa`           | Installation, service worker, offline state and updates |
+| `area:testing`       | QA, regressions, browser and permission checks          |
+| `area:docs`          | Guides, API references and operational documentation    |
+| `area:taxonomy`      | Topics, tools, programming languages and hierarchies    |
 
-Eine Dokumentationsänderung erhält `area:docs` und gegebenenfalls den dokumentierten Fachbereich; allgemeine Beitragsregeln zusätzlich `area:github`. Ein Test allein erfordert nicht jedes vom Gesamtsystem verwendete Label. Umgekehrt braucht eine Funktionsänderung mit Migration die tatsächlich betroffenen Fach- und Technikbereiche. Die 30 verwalteten Labels ergeben sich aus acht Typen, 19 Bereichen und drei Risikostufen; zusätzliche ursprüngliche GitHub-Labels ersetzen keine Pflichtkategorie.
+A documentation change receives `area:docs` and any relevant documented area; general contribution rules also use `area:github`. A test does not need every label used by the whole system. A feature with a migration should include the product and technical areas it actually changes. The 30 managed labels comprise eight types, 19 areas and three risk levels; additional original GitHub labels do not replace a required category.
 
-| Risiko        | Einordnung                                                                                                             |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `risk:low`    | Eng begrenzte Änderung mit geringen Auswirkungen, zum Beispiel eine korrigierte Anleitung                              |
-| `risk:medium` | Geändertes Verhalten oder mehrere verbundene Komponenten mit überschaubarer Rückwirkung                                |
-| `risk:high`   | Berechtigungen, Auth, Geld, Migrationen, Datenverlust-/Wiederherstellungsrisiko oder vergleichbar weitreichende Folgen |
+| Risk          | Meaning                                                                                             |
+| ------------- | --------------------------------------------------------------------------------------------------- |
+| `risk:low`    | A narrowly scoped change with limited impact, such as a corrected guide                             |
+| `risk:medium` | Changed behaviour or several connected components with bounded effects                              |
+| `risk:high`   | Permissions, authentication, money, migrations, data loss/recovery or similarly significant effects |
 
-Beispiele: Eine Anleitungskorrektur kann `type:docs`, `area:github`, `risk:low` erhalten. Eine Buchungskorrektur mit Migration kann `type:fix`, `area:backend`, `area:database`, `area:courses`, `risk:high` benötigen. Ein Label schafft keine Deployfreigabe und ersetzt keine Prüfung.
+For example, a documentation correction can use `type:docs`, `area:github`, `risk:low`. A booking fix with a migration may need `type:fix`, `area:backend`, `area:database`, `area:courses`, `risk:high`. A label does not authorise deployment or replace verification.
 
-Externe Autorinnen und Autoren haben meist keine Labelrechte. Schlage die passenden Werte in der Beschreibung vor; ein Maintainer setzt sie. Bis dahin darf `PR metadata` fehlende Labels anzeigen. Bei Änderungen an Umfang oder Risiko wird die Einordnung angepasst. Auch eigene PRs von `CarinaSchoppe` brauchen die Pflichtlabels.
+External contributors usually cannot manage labels. Suggest the appropriate values in your description and a maintainer will apply them. Until then, `PR metadata` may report missing labels. Update the classification when scope or risk changes. Pull requests by `CarinaSchoppe` also need the required labels.
 
-## Welche Nachweise nötig sind
+## Required evidence
 
-| Änderung             | Relevante Nachweise                                                                                                     |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Fehlerkorrektur      | Reproduzierbarer Fehler, aussagekräftiger Regressionstest und verbesserter Fehlerpfad                                   |
-| UI/Formular          | Komponenten-/Browserprüfung, Tastatur und Mobilansicht, DE/EN, Lade-/Leer-/Fehlerzustände                               |
-| API/Berechtigung     | Tatsächliche Aufrufe mit getrennten Konten, erlaubter und verweigerter Zugriff, entzogene Rechte und vorhandene Sitzung |
-| Datenbank/Buchung    | Frische und vorhandene Daten, Constraints/RLS/Grants, atomarer Fehlerfall und reale Nebenläufigkeit                     |
-| Dateien/Profilbilder | Versions-/Scan-/Byteprüfung, Berechtigungen und Entzug, fehlgeschlagene Anfragen und Cache-Lebensdauer                  |
-| Laufzeit/Deployment  | Gezielte Prozess-/Konfigurationsprüfungen, Datenübernahme, sichere Rückkehr und bestehende Operatorgrenzen              |
-| Dokumentation        | Auflösbare Links, zutreffende Befehle und klare Trennung von geprüftem und offenem Stand                                |
+| Change             | Relevant evidence                                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------------------------- |
+| Bug fix            | Reproducible failure, meaningful regression test and corrected failure path                           |
+| UI/form            | Component/browser checks, keyboard and mobile use, DE/EN, loading/error/empty states                  |
+| API/permissions    | Real calls by separate accounts, allowed and denied access, revoked permissions and existing sessions |
+| Database/booking   | Fresh and retained data, constraints/RLS/grants, atomic failures and real concurrency                 |
+| Files/avatars      | Versions, scanning, bytes, permissions/revocation, failed requests and cache lifecycle                |
+| Runtime/deployment | Targeted process/configuration checks, retained data, safe recovery and existing operator boundaries  |
+| Documentation      | Working links, accurate commands and clear separation of tested and pending work                      |
 
-Führe während der Entwicklung passende gezielte Prüfungen aus. Der vollständige lokale Abnahmebefehl ist `./portal test`. Die CI verlangt zusätzlich den separaten nativen Supabase-Nachweis. Verwende fiktive Daten und veröffentliche keine unbearbeiteten Traces, Zugangsdaten oder privaten Datenbank-/Dateisicherungen.
+Run targeted checks during development. The complete local acceptance command is `./portal test`. CI also requires the separate native Supabase verification. Use fictional data and do not publish raw traces, credentials or private database/file backups.
 
-Für einen unabhängigen Test des aktuellen Hauptzweigs gibt es `./portal github test`. `./portal github` startet stattdessen eine eigene persistente Vorschau auf `5373`/`563xx`; sie verändert weder die normale Entwicklung noch den PR-Branch. Eine erfolgreiche Prüfung von `main` beweist nicht die Abnahme eines abweichenden PR-Heads. [Vorschau, Datenhaltung und Migrationsplan](GITHUB_LOCAL_PREVIEW.md).
+Use `./portal github test` for an independent test of current `main`. `./portal github` instead starts a separate persistent preview on `5373`/`563xx`; it changes neither normal development nor the PR branch. A passing check of `main` does not prove acceptance of a different PR head. See [preview, persistence and migration controls](GITHUB_LOCAL_PREVIEW.md).
 
-## Review-Regeln für `main`
+## Review rules for `main`
 
-Beiträge benötigen einen PR. Für gewöhnliche Beitragende muss mindestens eine andere berechtigte Person zustimmen. Eine eigene Zustimmung zählt nicht als unabhängige Review; neue Änderungen verwerfen alte Zustimmungen. Die Zustimmung zum letzten Push muss von einer anderen Person als der zuletzt pushenden kommen. Löse offene Review-Gespräche vor dem Merge und beantworte Rückfragen mit Bezug auf den aktuellen Code.
+The intended contributor process uses a pull request and at least one approval from another authorised person. Self-approval does not count as independent review; new changes invalidate old approvals. Approval of the latest push must come from someone other than its author. Resolve review conversations before merging and address feedback against current code. The additional server-side requirements remain disabled as explained below.
 
-Maintainer und Administratoren erhalten eine dauerhafte Rollen-Ausnahme (`always`) und können jederzeit direkt mergen, auch bei ausstehenden Reviews oder Checks. Die frühere persönliche PR-only-Ausnahme ist ersetzt. Die Ausnahme folgt der handelnden Person, nicht dem PR-Autor; gewöhnliche Schreibrechte allein reichen nicht. GitHub kann im Merge-Dialog eine ausdrückliche Bypass-Aktion verlangen.
+Maintainers and administrators have a permanent role-based bypass (`always`) and can merge directly at any time, including while reviews or checks are pending. This replaces the earlier personal PR-only exception. The bypass follows the person acting, not the PR author; ordinary write access alone is insufficient. GitHub may require an explicit bypass action in the merge dialog.
 
-Die Prüfungen laufen weiterhin und liefern nachvollziehbare Ergebnisse:
+Checks still run and provide inspectable results:
 
-- `Build`, `Typecheck`, `Lint`, `Formatting` und `Code quality` prüfen Kompilierung, Regeln, Stil und tatsächliche Quellverbindungen.
-- `Tests and coverage` führt Unit-/Komponententests mit ehrlicher vollständiger Frontend-Erfassung und Mindestwerten aus.
-- `verify` führt die vollständigen realen Anwendungs-/SQL-/API-/Browser-/PWA-/Wartungstests aus; `Actual isolated selfhost image compatibility` prüft echte Laufzeit und Datenübernahme.
-- `PR metadata` prüft Pflichtlabels; CodeQL analysiert Sicherheitsmuster. Details: [CI_QUALITY](CI_QUALITY.md).
+- `Build`, `Typecheck`, `Lint`, `Formatting` and `Code quality` check compilation, rules, style and actual source connections.
+- `Tests and coverage` runs unit/component tests with complete frontend source coverage reporting and enforced thresholds.
+- `verify` runs the complete real application/SQL/API/browser/PWA/maintenance suites; `Actual isolated selfhost image compatibility` checks real runtime behaviour and retained data.
+- `PR metadata` checks required labels; CodeQL analyses security patterns. See [CI_QUALITY](CI_QUALITY.md).
 
-Ein Maintainer kann einen Merge bewusst vorziehen. Das macht fehlgeschlagene Tests nicht grün und veröffentlicht kein ungeprüftes Entwicklungsupdate: Der Releasejob wartet auf alle ausdrücklich in `ci.yml` definierten Gates; der zusätzliche Security-Workflow läuft getrennt. Für andere Beitragende bleiben unabhängige Review und grüne, aktuelle Tests der vorgesehene Ablauf. Die zusätzlichen serverseitigen PR-/Checkregeln bleiben bis zur bewiesenen Wartungs-App-Anbindung deaktiviert; [aktueller Zustand](GITHUB_WORKFLOW.md#aktivierung-noch-ausstehend).
+A maintainer may deliberately merge early. This does not turn failed tests green or publish an unverified development update: the release job waits for every gate explicitly defined in `ci.yml`; the additional Security workflow runs separately. Independent review and passing, current tests remain the intended process for other contributors. Additional server-side PR/check rules stay disabled until the maintenance App integration is proven; see the [current status](GITHUB_WORKFLOW.md#activation-still-pending).
 
-## Merge und Veröffentlichung
+## Merge and publication
 
-Maintainer und Administratoren können jederzeit selbst mergen und die konfigurierte `always`-Ausnahme ausdrücklich verwenden. Im normalen Ablauf prüfen sie Beschreibung, Labels, Tests und offene Gespräche vorab. Ein vorgezogener Merge bleibt eine bewusste Entscheidung; fehlgeschlagene CI oder ausstehende Betriebsfreigaben werden dadurch nicht als bestanden bezeichnet.
+Maintainers and administrators can merge directly and explicitly use the configured `always` bypass. The normal process is to review the description, labels, tests and open conversations first. An early merge remains a deliberate choice; it does not mean failed CI or pending operational approvals have passed.
 
-Ein Merge kann den vorhandenen Entwicklungsrelease-Prozess anstoßen. Seine unveränderlichen `cms-dev-*`-Pakete und die gehosteten Migrationsprüfungen bleiben davon getrennt. Produktionsbetrieb, echte Daten, SMTP, DNS und riskante Wartung benötigen die vorgesehenen gesonderten Freigaben. Behaupte eine gehostete Installation nur mit tatsächlichem Betriebsnachweis.
+A merge can start the existing development release process. Its immutable `cms-dev-*` packages and hosted migration checks remain separate. Production operation, real data, SMTP, DNS and risky maintenance need the appropriate separate approvals. Claim a hosted installation only when actual operational evidence exists.
 
-Die signierten annotierten `milestone/*`-Tags markieren geprüfte historische Entwicklungsstände. Sie sind keine PR-Labels und keine Zusage einer Semver- oder Produktionsversion. Verschiebe bestehende Tags nicht und erstelle Tags nur auf dem tatsächlich beabsichtigten Commit.
+Signed annotated `milestone/*` tags identify verified historical development states. They are not PR labels or a promise of a Semver or production version. Do not move existing tags; create tags only on the intended commit.
 
-Nach dem Merge ergänze bei Bedarf den Issue-Abschluss und dokumentiere verbleibende Aufgaben separat. Eine neue Aufgabe darf die ursprünglichen Abnahmekriterien nicht stillschweigend erweitern oder als bereits erledigt erscheinen lassen.
+After merging, update the issue resolution when needed and track remaining tasks separately. A new task must not silently expand the original acceptance criteria or be described as already completed.

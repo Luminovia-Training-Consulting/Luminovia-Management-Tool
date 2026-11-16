@@ -1,59 +1,59 @@
-# GitHub-Verwaltung und Beitragsablauf
+# GitHub administration and contribution workflow
 
-Für Beitragende beginnt der Ablauf bei [CONTRIBUTING](../CONTRIBUTING.md), dem [Issue-Leitfaden](ISSUE_GUIDE.md) und dem [PR-Leitfaden](PULL_REQUEST_GUIDE.md). Diese Seite erklärt die administrativen Quellen und die Grenzen der Ausnahmen.
+Contributors should start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue guide](ISSUE_GUIDE.md) and the [pull request guide](PULL_REQUEST_GUIDE.md). This page explains the administrative sources and the boundaries of rule exceptions. Public contribution guidance and new contribution discussions use English; the product interface remains German and English.
 
-## Regeln für `main`
+## Rules for `main`
 
-Die JSON-Dateien unter `.github/rulesets/` spiegeln die tatsächlich ausgelesene Repository-Konfiguration. Dateien allein aktivieren keine Regel; maßgeblich bleiben die [Serverregeln](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules). Die aktuelle Anweisung ersetzt die frühere persönliche PR-only-Ausnahme: **Maintainer und Administratoren dürfen jederzeit direkt mergen und Regeln bei Bedarf übergehen.**
+The JSON files under `.github/rulesets/` reflect the repository configuration that was actually read back from GitHub. Files alone do not activate a rule; the [server-side rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) are authoritative. The current instruction replaces the earlier personal PR-only exception: **maintainers and administrators may merge directly at any time and bypass rules when necessary.**
 
-| Regel                         | Quelle                                           | Aktueller Zustand                                                                                                                                                                                        |
-| ----------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Branch Protection             | [history.json](../.github/rulesets/history.json) | Aktiv; Signaturen, kein Löschen/Force-Push, vorhandene Deployment-/Codequalitätsregeln. Bereits vorhandene `always`-Ausnahmen für Repository-Rollen `maintain` (ID2) und `admin` (ID5) bleiben erhalten. |
-| Main pull requests and review | [review.json](../.github/rulesets/review.json)   | Weiter deaktiviert vorbereitet: PR, eine unabhängige Zustimmung, letzter Push und gelöste Gespräche. Beide Rollen erhalten `always` statt der alten persönlichen PR-only-Ausnahme.                       |
-| Main verified checks          | [checks.json](../.github/rulesets/checks.json)   | Weiter deaktiviert vorbereitet: vollständige Anwendung, native Selfhost-Kompatibilität, Metadaten sowie die neuen Build-/Qualitäts-/Coverage-Checks; beide Rollen erhalten `always`.                     |
+| Rule                          | Source                                           | Current status                                                                                                                                                                                         |
+| ----------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Branch Protection             | [history.json](../.github/rulesets/history.json) | Active: signatures, deletion/force-push restrictions and existing deployment/code-quality rules. Existing `always` exceptions for repository roles `maintain` (ID 2) and `admin` (ID 5) are preserved. |
+| Main pull requests and review | [review.json](../.github/rulesets/review.json)   | Prepared but still disabled: PR, one independent approval, latest-push approval and resolved conversations. Both roles have `always` instead of the earlier personal PR-only exception.                |
+| Main verified checks          | [checks.json](../.github/rulesets/checks.json)   | Prepared but still disabled: complete application, native selfhost compatibility, metadata and the new build/quality/coverage checks; both roles have `always`.                                        |
 
-`always` gilt für die handelnde Person mit tatsächlicher Maintainer-/Adminrolle, unabhängig von PR-Autor, eigener Review oder noch laufenden/fehlgeschlagenen Checks. In GitHubs Oberfläche kann dafür eine ausdrückliche Bypass-Aktion nötig sein. Ein Maintainer-Merge startet die Prüfungen weiterhin; er macht sie nicht künstlich grün. Die automatische Veröffentlichung und VPS-Installation warten unverändert auf den erfolgreichen vollständigen `ci.yml`-Lauf; der separate Security-Workflow liefert zusätzliche Analyse und ist kein weiterer Release-Gate. Gewöhnliche Schreibrechte erhalten keinen solchen Bypass. Es wurden keine zusätzlichen Personen eingeladen oder Rollen vergeben.
+`always` applies to the person acting with an actual Maintainer/Admin role, regardless of the PR author, self-review or pending/failed checks. GitHub may require an explicit bypass action in its interface. A maintainer merge still starts checks; it does not make them artificially pass. Automatic publication and VPS installation still wait for the successful complete `ci.yml` run; the separate Security workflow provides additional analysis and is not another release gate. Ordinary write access does not receive this bypass. No additional people were invited or roles assigned.
 
-## Aktivierung noch ausstehend
+## Activation still pending
 
-Die zusätzlichen Review-/Checkregeln (IDs27329000/27329142) bleiben bewusst deaktiviert. Ihr ungeprüftes Aktivieren würde die bestehende signierte tägliche Direktpromotion mit dem normalen `GITHUB_TOKEN` blockieren. Die tatsächliche Maintainer-/Admin-Ausnahme der aktiven Regel gilt bereits; die zusätzlichen Pflichten für andere Beitragende sind dadurch **noch nicht serverseitig erzwungen**.
+The additional review/check rules (IDs 27329000/27329142) remain deliberately disabled. Activating them without verification would block the existing signed daily direct promotion using the standard `GITHUB_TOKEN`. The Maintainer/Admin exception in the active rule already applies; the additional requirements for other contributors are **not yet enforced server-side**.
 
-Der frühere echte Test [43755067933](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43755067933) zeigte, dass eine Bot-User-Ausnahme die temporäre PR-/fehlender-Check-Regel für das Standardtoken nicht zuverlässig umgeht. Seine temporären Regeln/Zweige wurden entfernt. Die allgemeine GitHub-Actions-App15368 bleibt die geprüfte Herkunft der Statuschecks, nicht eine erfundene Bypass-Identität.
+The earlier real test [43755067933](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43755067933) showed that a bot-user exception does not reliably bypass the temporary PR/missing-check rule for the standard token. Its temporary rules and branches were removed. The general GitHub Actions App 15368 remains the verified source of status checks, not an assumed bypass identity.
 
-Bei der aktuellen Bestandsaufnahme existiert inzwischen die private App **Luminovia Portal Maintenance**, Integrations-ID5776881, mit einer `selected`-Installation182397724 und `contents/actions: write`. Die bisherige pauschale Aussage, es gebe noch keine App, ist überholt. Der genaue ausgewählte Repositoryumfang und eine funktionierende Installationstoken-Promotion wurden in dieser Aufgabe nicht nachgewiesen; die nötigen Repositoryvariablen/-Secrets und der App-Workflow sind auf aktuellem Main nicht als vollständig eingerichtet bestätigt.
+The latest inventory confirmed that the private **Luminovia Portal Maintenance** App exists, with integration ID 5776881, a `selected` installation 182397724 and `contents/actions: write`. The earlier general statement that no App exists is outdated. This task did not prove the exact selected repository scope or a working installation-token promotion; the required repository variables/secrets and App workflow have not been confirmed as fully configured on current main.
 
-Für spätere Aktivierung: bestehenden App-Auftrag koordinieren, tatsächlichen Repositoryumfang und kurzlebige Token prüfen, geschützten Signatur-/Promotiontest ausführen, App-Workflow und präzise App-Ausnahme gemeinsam übernehmen und erst danach zusätzliche Regeln aktivieren/auslesen. Maintainer-/Admin-`always` bleibt erhalten. Keine App, privaten Schlüssel oder Bezahlfunktion wurde für diese CI-Aufgabe neu registriert.
+Before later activation: coordinate the existing App setup, verify its actual repository scope and short-lived token, execute the protected signing/promotion test, adopt the App workflow and precise App exception together, and only then activate and read back the additional rules. Maintainer/Admin `always` remains in place. No App, private key or paid feature was newly registered for this CI task.
 
-Die effektiven Main-Regeln und Repository-Rollen wurden über REST/GraphQL ausgelesen; die allgemeine Organisations-Regelauflistung war mit dem bestehenden Token nicht verfügbar. Die Konfiguration behauptet keine Änderung anderer Repositorys oder der Organisation.
+Effective main rules and repository roles were read through REST/GraphQL; the existing token could not list organisation-wide rules. This configuration does not claim to change other repositories or the organisation.
 
-Grundlagen: [Rulesets und Ausnahmen](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository), [Rules-API](https://docs.github.com/en/rest/repos/rules). Prüfungen und Coverage erklärt [CI_QUALITY](CI_QUALITY.md).
+References: [rulesets and exceptions](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository), [Rules API](https://docs.github.com/en/rest/repos/rules). Checks and coverage are explained in [CI_QUALITY](CI_QUALITY.md).
 
-## Labels und Metadatenprüfung
+## Labels and metadata validation
 
-[labels.json](../.github/labels.json) ist der gemeinsame Katalog für 20 zusätzliche Labels und die lokale/CI-Prüfung. Die neun vorhandenen GitHub-Standardlabels bleiben erhalten. Genau ein `type:*`, genau ein `risk:*` und mindestens ein `area:*` sind für jeden PR erforderlich. Andere Labels dürfen hinzukommen; unbekannte Werte innerhalb dieser drei Kategorien werden abgelehnt. Der [PR-Leitfaden](PULL_REQUEST_GUIDE.md#labels-für-pull-requests) erklärt die Auswahl.
+[labels.json](../.github/labels.json) is the shared catalogue of managed labels used by local and CI validation. The nine existing GitHub standard labels are preserved. Every PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. Other labels may be added; unknown values within these three categories are rejected. The [pull request guide](PULL_REQUEST_GUIDE.md#pull-request-labels) explains how to choose them.
 
-Der [Metadatenworkflow](../.github/workflows/pr-metadata.yml) reagiert auch auf Labeländerungen. Er liest die aktuellen Labels, prüft Repository, PR-Nummer und Commitidentität und behandelt Texte als Daten. Er installiert keine Abhängigkeiten und fordert ausschließlich `contents: read` und `pull-requests: read` an. Die acht Regressionstests werden durch `./portal test` automatisch entdeckt:
+The [metadata workflow](../.github/workflows/pr-metadata.yml) also responds to label changes. It reads current labels, verifies the repository, PR number and commit identity, and treats text as data. It installs no dependencies and requests only `contents: read` and `pull-requests: read`. Its eight regression tests are discovered automatically by `./portal test`:
 
 ```bash
 node --test scripts/runtime-pr-metadata.test.mjs scripts/runtime-documentation.test.mjs
 ```
 
-Externe Autorinnen und Autoren können ihre vorgeschlagenen Labels in der Beschreibung nennen; ein Maintainer setzt sie. Fehlende Labels sollen nicht durch einen erfundenen grünen Status übergangen werden. Auch Workflowänderungen selbst müssen geprüft werden, da normale PR-Workflows ihren vorgeschlagenen Quellstand ausführen.
+External contributors can suggest labels in the description; a maintainer applies them. Missing labels must not be bypassed by inventing a green status. Workflow changes themselves need review because ordinary PR workflows execute the proposed source version.
 
-## Git-Tags und Entwicklungspakete
+## Git tags and development packages
 
-Labels ordnen Issues und PRs ein. Git-Tags markieren einen unveränderlichen Quellstand. Die folgenden signierten annotierten Tags benennen bereits gemergte Entwicklungsmeilensteine:
+Labels classify issues and pull requests. Git tags identify an immutable source revision. These signed annotated tags name already merged development milestones:
 
-| Tag                                | Tatsächlicher Merge-Commit                 | Bedeutung                                                          |
-| ---------------------------------- | ------------------------------------------ | ------------------------------------------------------------------ |
-| `milestone/m3-accounts-commission` | `00db7c9630dbf413000feab7ec7e0c2f56cb5b3a` | Konten, Profile, Auftraggeber und Umsatzteilung; PR #3.            |
-| `milestone/m4-cbw-templates`       | `b9cdcc89758451bc8258f3a9f173e95ee1a23736` | Bausteinvorlagen, Profilbilder und Kommentare; PR #4.              |
-| `milestone/m5-system-audit`        | `bb322746d3cf18b1a0f1eae0eaa96450d26e26cd` | Systemprüfung und konkrete Funktions-/Leistungskorrekturen; PR #5. |
+| Tag                                | Actual merge commit                        | Meaning                                                               |
+| ---------------------------------- | ------------------------------------------ | --------------------------------------------------------------------- |
+| `milestone/m3-accounts-commission` | `00db7c9630dbf413000feab7ec7e0c2f56cb5b3a` | Accounts, profiles, clients and revenue sharing; PR #3.               |
+| `milestone/m4-cbw-templates`       | `b9cdcc89758451bc8258f3a9f173e95ee1a23736` | Building-block templates, avatars and comments; PR #4.                |
+| `milestone/m5-system-audit`        | `bb322746d3cf18b1a0f1eae0eaa96450d26e26cd` | System review and concrete functional/performance corrections; PR #5. |
 
-Diese Tags sind keine Produktionsfreigaben oder neuen Semver-Versionen. Sie verändern keine bestehenden `cms-dev-*`-Release-Tags. Die vorhandenen Workflows veröffentlichen Entwicklungspakete nach erfolgreicher Main-CI; ein Push dieser `milestone/*`-Tags löst keinen dieser Releasejobs aus. Verschiebe oder ersetze veröffentlichte Tags nicht.
+These tags are not production approvals or new Semver releases. They do not change existing `cms-dev-*` release tags. Current workflows publish development packages after successful main CI; pushing these `milestone/*` tags does not start those release jobs. Do not move or replace published tags.
 
-## Öffentliche und private Meldungen
+## Public and private reports
 
-Fehler und Funktionswünsche beginnen über die [Issue-Auswahl](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/issues/new/choose). Freie leere Issues sind zugunsten der Vorlagen deaktiviert. Das ist eine Einstellung der Auswahloberfläche, keine technische Zugriffssperre für die Issue-API.
+Bug reports and feature requests start with the [issue chooser](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/issues/new/choose). Blank issues are disabled in favour of the forms. This is a setting of the chooser interface, not a technical restriction on the issue API.
 
-GitHubs private Sicherheitsmeldungen sind aktiviert und über [SECURITY](../SECURITY.md) erreichbar. Das macht weder Secret-Scanning noch andere kostenpflichtige Dienste automatisch aktiv. Es wurden keine Personen eingeladen, keine Nachrichten versendet und keine Hosting- oder Produktionsänderungen vorgenommen.
+GitHub private vulnerability reporting is enabled and linked from [SECURITY](../SECURITY.md). Enabling it does not automatically enable Secret Scanning or other paid services. No people were invited, messages sent, or hosting/production settings changed as part of this administration work.
