@@ -13,6 +13,8 @@ Current request: visible compilation/type/style/quality/security/coverage tasks,
 - [x] Read back current Maintainer/Admin ALWAYS; synchronize both dormant review/check rules and source JSON with the same current role preference and9check names. No roles/invitations/Appkeys added.
 - [x] Complete local workflow/format/build/guard checks and actual exact-head PRquality/coverage/security acceptance; PR11 merged as6648651, proving direct Maintainer merge while full checks run. Main repeats the complete application/native/release gates; its actual outcome is taken from CI and the operational evidence record, not assumed from this checkbox.
 
+The first whole-main CodeQL baseline reports existing warnings beyond the earlier PR diff; [bounded triage](CODE_SCANNING_TRIAGE.md) records actual contexts, three tested small hardenings and remaining local-reader/scanner/Origin follow-up. No false zero-finding or complete security-certification claim is made.
+
 The additional PR-/check rules remain disabled until the independently prepared maintenance App has a proven token/promotion path; current effective Maintainer/Admin merge freedom is already present. The older personal PR-only preference below is superseded. Full remaining product scope stays unchanged.
 
 ## M6 continuation — complete operations and latest-source local preview

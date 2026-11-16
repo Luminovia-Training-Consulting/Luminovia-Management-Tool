@@ -219,8 +219,9 @@ test("daily discovery selects independent stable majors and rebuilt digests with
         ];
       if (url === "https://jsr.io/@panva/jose/meta.json")
         return { latest: "6.2.17", versions: { "6.2.17": {} } };
-      if (url.includes("registry.npmjs.org")) {
-        const name = decodeURIComponent(url.split("/").at(-2));
+      const endpoint = new URL(url);
+      if (endpoint.origin === "https://registry.npmjs.org") {
+        const name = decodeURIComponent(endpoint.pathname.split("/").at(-2));
         return { name, version: name === "typescript" ? "2.0.0" : "1.0.0" };
       }
       if (url.endsWith("supabase/postgres/releases?per_page=100"))

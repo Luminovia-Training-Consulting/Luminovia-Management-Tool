@@ -8,6 +8,7 @@ import {
   rmSync,
   symlinkSync,
   renameSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -328,9 +329,14 @@ createServer(async(req,res)=>{let body='';for await(const chunk of req)body+=chu
     },
   );
   await check(
-    "maintenance blocks backend writes while preserving the frontend",
+    "owner-only maintenance marker blocks backend writes while preserving the frontend",
     async () => {
-      file("site/maintenance.enabled", "fictional update window");
+      const marker = join(directory, "site/maintenance.enabled");
+      writeFileSync(marker, "fictional update window", {
+        mode: 0o600,
+        flag: "wx",
+      });
+      assert.equal(statSync(marker).mode & 0o777, 0o600);
       const response = await request("/backend/rest/v1/rpc/check", {
         method: "POST",
         body: "must-not-reach-api",
@@ -339,7 +345,7 @@ createServer(async(req,res)=>{let body='';for await(const chunk of req)body+=chu
       assert.equal(response.headers.get("retry-after"), "60");
       assert.equal(response.headers.get("cache-control"), "no-store, private");
       assert.equal((await request("/")).status, 200);
-      rmSync(join(directory, "site/maintenance.enabled"));
+      rmSync(marker);
       assert.equal((await request("/backend/rest/v1/probe")).status, 200);
     },
   );

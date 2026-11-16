@@ -394,10 +394,11 @@ class CompleteBackup:
     def quiesce(self):
         if self.maintenance.exists() or self.maintenance.is_symlink():
             raise BackupError("maintenance_already_active")
-        descriptor = os.open(self.maintenance, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644)
+        # Caddy checks existence with stat; its matcher does not read this file.
+        descriptor = os.open(self.maintenance, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
         with os.fdopen(descriptor, "w") as out:
             out.write("Daily encrypted recovery backup.\n")
-        self.maintenance.chmod(0o644)
+        self.maintenance.chmod(0o600)
         self.flag_owned = True
         # Stop exactly the previously running application services. Database stays
         # running only for logical dumps; Caddy/TLS and SQLite Mailpit become stable.

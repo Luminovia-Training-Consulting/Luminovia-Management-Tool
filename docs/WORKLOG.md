@@ -2,6 +2,14 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — first whole-main security baseline and bounded hardening
+
+The actual whole-main scan of d3ace919 reports28open CodeQL hints (12high/16medium), unlike the earlier diff-aware PR result. No warning was dismissed, excluded or silently accepted as a confirmed exploit. Bounded source/owner/lock/HTTP-target review is recorded in [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md):10race and15HTTP/fileflow warnings are mostly controlled private fixtures/operator paths, with explicit residual local-reader/scanner-start/Origin hardening work. No external exploit or secret exfiltration was demonstrated; this is not a full security certification.
+
+Three concrete small corrections avoid permissive backup-marker creation, the second test registry substring and fixture-code path interpolation. The private0600marker passed25backup/native-age safety tests plus10actual isolated Caddy HTTP cases, including503fencing/Frontend200/API200after removal. The URL/argv corrections pass13maintenance plus4actual process timeout/cancellation tests. O_EXCL/O_NOFOLLOW, backups, lifecycle/resume logic and application data remain unchanged. These new source changes justify a fresh exact-main CI/security run; they do not claim all remaining static-analysis hints closed. The already accepted197unit/component/48.89%line coverage and direct Maintainer merge proof remain intact.
+
+Dependabot's first actual Actions update job43787086280 accepted the configured group, checked7usages/6distinctActions and found every pin current; no update PR was invented. This is actual processing evidence beyond merely committing YAML. All source changes remain signed; no VM/real-mail/production mutation belongs to this CI task.
+
 ## 16 November 2026 — CI setup merged and direct Maintainer merge proved
 
 [PR11](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/11) merged as `664865190785c6894664b20420428cdbca699963` at2026-11-16T01:34:43UTC through the authenticated Maintainer/Admin identity, without another review and while the full application job was still running. This is an actual direct-merge proof, not only accepted ruleset JSON. All6new quality/coverage checks, PRmetadata and the exact corrected Security run had already passed. Maintainer merge freedom does not make incomplete tests green or bypass the separate release's successful whole-CI requirement.
