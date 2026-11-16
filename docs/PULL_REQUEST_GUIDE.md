@@ -1,10 +1,10 @@
 # Creating, reviewing and merging pull requests
 
-> Status on 16 November 2026: Maintainers and administrators have a permanent `always` bypass for direct merges. Additional review and check requirements for ordinary contributors remain prepared but disabled until the maintenance App path has been proven. [Current activation status](GITHUB_WORKFLOW.md#activation-still-pending).
+> Status read back on 16 November 2026 after 02:33 UTC: review and required-check rules are active. Maintainers and administrators may bypass independent review through a PR, but must wait for all nine required checks against the current base. The maintenance App has a separate `always` exception. [Current rule and App delivery status](GITHUB_WORKFLOW.md#activation-still-pending).
 
 This guide explains how a change is accepted. Setup and local development are covered in [CONTRIBUTING](../CONTRIBUTING.md) and [LOCAL_DEVELOPMENT](LOCAL_DEVELOPMENT.md); reports start with the [issue guide](ISSUE_GUIDE.md). Please write new pull requests and contribution discussions in English. The product interface remains bilingual in German and English.
 
-The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). These merges do not activate the pending server-side review rules. The source catalogue [labels.json](../.github/labels.json) now contains 30 managed labels; nine original GitHub labels are also preserved.
+The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). These historical merges did not themselves activate server-side review rules; the current live activation is described below. The source catalogue [labels.json](../.github/labels.json) now contains 30 managed labels; nine original GitHub labels are also preserved.
 
 ## Branch and title
 
@@ -80,22 +80,22 @@ Use `./portal github test` for an independent test of current `main`. `./portal 
 
 ## Review rules for `main`
 
-The intended contributor process uses a pull request and at least one approval from another authorised person. Self-approval does not count as independent review; new changes invalidate old approvals. Approval of the latest push must come from someone other than its author. Resolve review conversations before merging and address feedback against current code. The additional server-side requirements remain disabled as explained below.
+The active contributor rules require a pull request and at least one approval from another authorised person. Self-approval does not count as independent review; new changes dismiss old approvals. Approval of the latest push must come from someone other than its pusher. Resolve review conversations before merging and address feedback against current code.
 
-Maintainers and administrators have a permanent role-based bypass (`always`) and can merge directly at any time, including while reviews or checks are pending. This replaces the earlier personal PR-only exception. The bypass follows the person acting, not the PR author; ordinary write access alone is insufficient. GitHub may require an explicit bypass action in the merge dialog.
+Maintainers and administrators have a role-based `pull_request` exception on the review rule. They may bypass independent review when merging a PR, including their own PR. This exception does not allow direct pushes to `main` or bypass the separate required-check rule. Ordinary write access alone grants no review exception. GitHub may require an explicit bypass action in the merge dialog.
 
-Checks still run and provide inspectable results:
+All nine required checks must pass against the current base:
 
 - `Build`, `Typecheck`, `Lint`, `Formatting` and `Code quality` check compilation, rules, style and actual source connections.
 - `Tests and coverage` runs unit/component tests with complete frontend source coverage reporting and enforced thresholds.
 - `verify` runs the complete real application/SQL/API/browser/PWA/maintenance suites; `Actual isolated selfhost image compatibility` checks real runtime behaviour and retained data.
-- `PR metadata` checks required labels; CodeQL analyses security patterns. See [CI_QUALITY](CI_QUALITY.md).
+- `PR metadata` checks required labels. CodeQL analyses security patterns in a separate workflow; it is not one of these nine required statuses. See [CI_QUALITY](CI_QUALITY.md).
 
-A maintainer may deliberately merge early. This does not turn failed tests green or publish an unverified development update: the release job waits for every gate explicitly defined in `ci.yml`; the additional Security workflow runs separately. Independent review and passing, current tests remain the intended process for other contributors. Additional server-side PR/check rules stay disabled until the maintenance App integration is proven; see the [current status](GITHUB_WORKFLOW.md#activation-still-pending).
+If main changes, update the PR as required and wait for checks against the current base. The history ruleset's Maintainer/Admin `always` exception does not override the separate active review/check rules. The maintenance App, integration `5776881`, has its own `always` exception on those two rules. Server-side activation and that exception do not prove the App workflow is already delivered on main; see the [current rule and App delivery status](GITHUB_WORKFLOW.md#activation-still-pending).
 
 ## Merge and publication
 
-Maintainers and administrators can merge directly and explicitly use the configured `always` bypass. The normal process is to review the description, labels, tests and open conversations first. An early merge remains a deliberate choice; it does not mean failed CI or pending operational approvals have passed.
+Maintainers and administrators can merge a PR without an independent approval through their review exception once the nine required checks and current-base requirement are satisfied. Check the description, labels, tests and unresolved conversations first. Pending operational approvals remain separate from repository merge eligibility.
 
 A merge can start the existing development release process. Its immutable `cms-dev-*` packages and hosted migration checks remain separate. Production operation, real data, SMTP, DNS and risky maintenance need the appropriate separate approvals. Claim a hosted installation only when actual operational evidence exists.
 

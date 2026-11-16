@@ -1,9 +1,9 @@
 # 0002 — Main protection and merge authority
 
-Status: existing policy, verified again on 16 November 2026.
+Status: live server snapshot on 16 November 2026 after the concurrent 02:33 UTC activation; supersedes earlier dormant-rule/unrestricted-bypass descriptions.
 
-The default branch has active signature/history protection. Repository Maintainer and Administrator roles have `always` bypass, satisfying the user's requirement to retain direct merge authority. Ordinary Write access does not gain that exception.
+All three rulesets are active. Default-branch signatures/history are protected. Maintainer/Admin history exceptions do not override the other rules: the review exception is PR-only, so those roles can merge their own PRs without a separate approving reviewer; all nine required checks and strict current-base verification still apply. The required-check ruleset has no human bypass.
 
-Additional independent-review and required-check rules are prepared but disabled until the separate repository-scoped maintenance App path proves it can promote signed tested source under protection. Enabling those rules before that proof would break the current automated maintenance workflow. No extra account, App or broad token is introduced by the documentation increment.
+Maintenance App `5776881` has explicit `always` bypass on the active review/check rules. Registration, protected promotion proof and source delivery belong to separate ongoing work; this documentation readback does not independently certify the complete promotion path on main. Source JSON mirrors the live rules without changing server settings.
 
-Consequences: explain effective settings separately from the contributor process; preserve successful full-CI requirements for automatic development releases even when a human merges early. [GitHub administration](../GITHUB_WORKFLOW.md) holds exact IDs, sources, readback commands and next actions.
+Consequences: wait for current complete checks, preserve independent release gates and document effective settings separately from historical policy. [GitHub administration](../GITHUB_WORKFLOW.md) holds exact IDs, sources, readback commands and boundaries.
