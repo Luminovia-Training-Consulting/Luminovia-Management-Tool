@@ -9,16 +9,23 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import "../../lib/i18n";
 import { JobDetail, Jobs } from "./jobs";
-import { filtersFromParams, jobDiscoveryQuery } from "./discovery-api";
+import {
+  filtersFromParams,
+  jobDetailQuery,
+  jobDiscoveryQuery,
+} from "./discovery-api";
 import type { Job } from "../../lib/types";
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "lecturer-a" } } }),
 }));
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc }) }));
+const failedDetailClients: QueryClient[] = [];
 afterEach(() => {
   cleanup();
+  failedDetailClients.splice(0).forEach((client) => client.clear());
   vi.clearAllMocks();
+  rpc.mockReset();
 });
 const job: Job & {
   created_at: string;
@@ -85,6 +92,8 @@ function setup(
   });
   client.setQueryData(["user-roles", "lecturer-a"], ["lecturer"]);
   client.setQueryData(["saved-job-views", "lecturer-a"], []);
+  client.setQueryData(["job-substitutions", "lecturer-a", "inbox"], []);
+  client.setQueryData(["my-job-waitlist", "lecturer-a"], []);
   if (list) {
     const parsed = filtersFromParams(
       new URL(route, "https://example.invalid").searchParams,
@@ -148,7 +157,8 @@ describe("safe marketplace interactions", () => {
     expect(
       screen.getByRole("button", { name: "Auftrag übernehmen" }),
     ).toBeDisabled();
-    expect(screen.queryByText("0,00 €")).not.toBeInTheDocument();
+    expect(screen.queryByText(/0,00/)).not.toBeInTheDocument();
+    expect(rpc.mock.calls.some(([name]) => name === "claim_job")).toBe(false);
   });
   it("requires new consent when an offer version changes during a refetch", async () => {
     const user = userEvent.setup();
@@ -223,4 +233,160 @@ describe("safe marketplace interactions", () => {
       screen.getByRole("link", { name: "Python Block" }),
     ).toBeInTheDocument();
   });
+});
+
+// A filled offer may deny the general detail RPC while an independent reduced
+// waitlist projection still permits registering interest. Exercise both actual
+// query errors and retained cached detail, never a fabricated null-success DTO.
+const filledJobId = "302ef67e-03ec-44fb-ad3a-f2397e7b81fd";
+async function setupFailedDetail(
+  error: unknown,
+  cached = false,
+  waitlistDenied = false,
+) {
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, retryOnMount: false, staleTime: Infinity },
+    },
+  });
+  failedDetailClients.push(client);
+  const waitlist = {
+    job_id: filledJobId,
+    title: "Fictional reduced filled offer",
+    joined: false,
+    can_join: true,
+    available: false,
+  };
+  rpc.mockImplementation((name: string) => {
+    const result =
+      name === "job_detail"
+        ? { data: null, error }
+        : name === "job_waitlist"
+          ? {
+              data: waitlistDenied ? null : waitlist,
+              error: waitlistDenied ? { code: "42501" } : null,
+            }
+          : {
+              data: { ...waitlist, joined: true, can_join: false },
+              error: null,
+            };
+    const request = {
+      abortSignal: () => request,
+      then: (resolve: (value: unknown) => unknown) =>
+        Promise.resolve(result).then(resolve),
+    };
+    return request;
+  });
+  client.setQueryData(["permissions", "lecturer-a"], []);
+  client.setQueryData(["topics"], []);
+  client.setQueryData(["claims", "lecturer-a"], []);
+  client.setQueryData(["profile", "lecturer-a"], {
+    time_zone: "Europe/Berlin",
+  });
+  const options = jobDetailQuery("lecturer-a", filledJobId);
+  if (cached)
+    client.setQueryData(options.queryKey, {
+      ...job,
+      id: filledJobId,
+      title: "PRIVATE retained detail title",
+      description: "PRIVATE retained detail description",
+      terms: "PRIVATE retained agreed terms",
+    });
+  await expect(client.fetchQuery({ ...options, staleTime: 0 })).rejects.toBe(
+    error,
+  );
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[`/jobs/${filledJobId}`]}>
+        <Routes>
+          <Route path="/jobs/:id" element={<JobDetail />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  return client;
+}
+
+describe("independent waitlist after a denied job detail", () => {
+  it.each([false, true])(
+    "offers the reduced filled-job waitlist after42501 without rendering private cached detail: cached=%s",
+    async (cached) => {
+      await setupFailedDetail(
+        { code: "42501", message: "Job access denied" },
+        cached,
+      );
+      const join = await screen.findByRole("button", {
+        name: "Auf Warteliste setzen",
+      });
+      expect(screen.getByText("Fictional reduced filled offer")).toBeVisible();
+      expect(screen.queryByText(/PRIVATE retained/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Auftrag übernehmen" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Erneut versuchen" }),
+      ).not.toBeInTheDocument();
+      await userEvent.click(join);
+      expect(
+        await screen.findByText("Du stehst auf der Warteliste."),
+      ).toBeVisible();
+      expect(
+        rpc.mock.calls.filter(([name]) => name === "set_job_waitlist"),
+      ).toEqual([
+        ["set_job_waitlist", { p_job_id: filledJobId, p_join: true }],
+      ]);
+    },
+  );
+
+  it("keeps private or unknown waitlist denials generic after the detail is denied", async () => {
+    const client = await setupFailedDetail({ code: "42501" }, true, true);
+    await waitFor(() =>
+      expect(
+        client.getQueryState(["job-waitlist", "lecturer-a", filledJobId])
+          ?.status,
+      ).toBe("error"),
+    );
+    expect(screen.queryByText(/PRIVATE retained/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Fictional reduced filled offer"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Auf Warteliste setzen" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Auftrag übernehmen" }),
+    ).not.toBeInTheDocument();
+    expect(
+      rpc.mock.calls.filter(([name]) => name === "set_job_waitlist"),
+    ).toHaveLength(0);
+  });
+
+  it.each([
+    ["transport failure", new TypeError("Failed to fetch")],
+    ["server failure", { code: "XX000", message: "Fictional server failure" }],
+    [
+      "expired authentication",
+      { code: "PGRST301", message: "Fictional expired token" },
+    ],
+  ])(
+    "retains retry ErrorState for %s without mounting a waitlist or stale detail",
+    async (_label, error) => {
+      await setupFailedDetail(error, true);
+      const retry = screen.getByRole("button", { name: "Erneut versuchen" });
+      expect(retry).toBeVisible();
+      expect(screen.queryByText(/PRIVATE retained/)).not.toBeInTheDocument();
+      expect(
+        rpc.mock.calls.filter(([name]) => name === "job_waitlist"),
+      ).toHaveLength(0);
+      const reads = rpc.mock.calls.filter(
+        ([name]) => name === "job_detail",
+      ).length;
+      await userEvent.click(retry);
+      await waitFor(() =>
+        expect(
+          rpc.mock.calls.filter(([name]) => name === "job_detail"),
+        ).toHaveLength(reads + 1),
+      );
+    },
+  );
 });

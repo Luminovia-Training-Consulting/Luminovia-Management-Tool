@@ -119,12 +119,12 @@ try {
     .replaceAll(":5173", ":5273");
   writeFileSync(configPath, config);
   /** Runs one named stage in the isolated snapshot with a timeout and shared cancellation signal. */
-  const step = async (label, file, args, extra = {}) => {
+  const step = async (label, file, args, extra = {}, timeoutMs = 1200000) => {
     console.log(`\n[TEST] ${label}`);
     return await command(file, args, {
       cwd: scratch,
       env: { ...env, ...extra },
-      timeoutMs: 1200000,
+      timeoutMs,
       signal: cancellation.signal,
     });
   };
@@ -186,6 +186,7 @@ try {
         join(scratch, "node_modules/deno/bin.cjs"),
         "test",
         "--allow-env",
+        `--allow-read=${join(functions, "course-documents/assets")}`,
         ...handlerTests,
       ]);
     }
@@ -196,6 +197,17 @@ try {
         [join(scratch, "node_modules/deno/bin.cjs"), "check", entry],
       );
     // Keep release/update safety in the same local command as application QA.
+    await step("SMTP-Benachrichtigungsschutz", "python3", [
+      "-W",
+      "error::ResourceWarning",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts",
+      "-p",
+      "test_notification_mail_worker.py",
+    ]);
     // These checks use fixtures and owned proxy containers, never the hosted VM.
     const hosting = join(scratch, "deploy/hostinger");
     if (existsSync(hosting)) {
@@ -325,13 +337,15 @@ try {
       ...(process.env.CI === "true" ? ["--with-deps"] : []),
       "chromium",
     ]);
-    await step("Desktop- und Mobilbrowser", "npm", [
-      "run",
-      "test:e2e",
-      "--",
-      "--grep-invert",
-      "built PWA",
-    ]);
+    // CI43858966704 passed 136/142 cases before this aggregate's former 20m cap.
+    // Only the whole browser command gets 30m; all individual tests stay bounded.
+    await step(
+      "Desktop- und Mobilbrowser",
+      "npm",
+      ["run", "test:e2e", "--", "--grep-invert", "built PWA"],
+      {},
+      1800000,
+    );
     await step("Produktions-Build", "npm", ["run", "build"]);
     // The test supervisor serves the built artifact from a separate, owned preview.
     await step("Gebautes PWA starten", process.execPath, [

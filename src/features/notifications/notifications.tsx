@@ -14,6 +14,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
 import { Bell } from "lucide-react";
+import { PushSettings } from "./push-settings";
 import { useAuth } from "../auth/auth-context";
 import { Button } from "../../components/ui/button";
 import {
@@ -40,6 +41,7 @@ import {
 } from "./api";
 import "./i18n";
 import "./notifications.css";
+import { DeliverySettings } from "./delivery-settings";
 import { QuietHoursSettings } from "./attention-settings";
 import "./attention-i18n";
 
@@ -54,6 +56,21 @@ const knownKinds = new Set([
   "session_reminder",
   "contract_expiring",
   "contract_available",
+  "job_waitlist_available",
+  "substitution_proposed",
+  "substitution_closed",
+  "task_assigned",
+  "task_due",
+  "timesheet_reviewed",
+  "qualification_expiring",
+  "course_preparation_updated",
+  "course_question",
+  "course_answer",
+  "course_resource_shared",
+  "course_quiz_published",
+  "course_attendance_updated",
+  "course_completion_issued",
+  "course_completion_revoked",
   "portal_announcement",
 ]);
 /** Connect confirmed read-state mutations to targeted revalidation of the actor's inbox. */
@@ -377,6 +394,8 @@ export function SettingsPage() {
         />
       )}
       <QuietHoursSettings />
+      <DeliverySettings actor={actor} />
+      <PushSettings key={actor} actor={actor} />
     </>
   );
 }

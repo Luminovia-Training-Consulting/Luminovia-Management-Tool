@@ -153,6 +153,7 @@ function saveBlob(blob: Blob, name: string) {
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+/** Download reviewed document bytes, then dispose the temporary browser URL. */
 export async function saveDownload(
   id: string,
   name: string,
