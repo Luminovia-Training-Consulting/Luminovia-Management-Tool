@@ -1,5 +1,7 @@
 # M4 development migration review
 
+Historical, fixed-source 14→17 review only. For a current release with later migrations use [REVIEWED_MIGRATION_PLANS](REVIEWED_MIGRATION_PLANS.md); this verifier deliberately refuses later inventories. Recorded local proof below does not establish current hosted state.
+
 This is a read-only operator handoff for the existing CMS **development** instance. It does not approve production, change the ordinary updater, apply SQL, reset data or broaden the one-off M3 backfill. The exact merged application still needs its canonical tests and immutable tested-main release verification.
 
 ## Why the automatic gate remains closed
@@ -58,4 +60,4 @@ Native Auth password/MFA and Storage object recovery must be checked by the actu
 
 The preservation fixture includes four fictional Auth id/email rows, existing profiles/labels/roles, an edited course and its customer, accepted fee/contract metadata, invoice/payment and exact document-version metadata, a private event, prior enrolment/review and custom 11 GiB/2 GiB quotas. Only 22 new templates and their new source/block rows are added. It uses Auth stubs and no stored binary objects: it does **not** prove native password hashes, MFA secrets, live user data or physical Storage preservation. The helper's optional `migrationsThrough` ceiling is strictly 14 digits; normal test callers still replay all migrations by default.
 
-The complete combined canonical result remains in [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md). Hosted M4 rollout remains subject to this explicit review; the automatic gate was not weakened.
+The complete combined canonical result remains in [QA_RESULTS](QA_RESULTS.md). Hosted M4 rollout remains subject to this explicit review; the automatic gate was not weakened.

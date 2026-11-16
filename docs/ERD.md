@@ -4,7 +4,9 @@
 
 Readiness settings/tasks/instruction receipts/events reference course_runs and currently assigned profiles; percentages derive from current source records. Delivery records reference assignment_sessions, with immutable submissions and events plus actor/request receipts. Replacement offers link original job_claims to a new accepted job_claim only after atomic handover; allocation history remains in assignment_sessions. Support tickets link their requester, optional authorised course/claim/organisation and support assignee; separate messages/events/attachments enforce hidden internal entries. All new persistent operational tables are private, RLS-enabled and accessed by reviewed invoker RPCs over scoped implementations. [Schema/workflow guides](OPERATIONS_EXTENSION_STATUS.md) and additive migration source own exact columns and acceptance.
 
-The target diagrams retain the complete product map; conceptual target entities do not claim that every table exists. The implemented diagrams depict a selected subset of physical relations represented in the current **68 SQL sources in this local candidate**, with `PRIVATE_*` aliases mapped to unexposed private relations below. They are not a complete schema dump or a claim that every later replacement routine, optional-module adapter or constraint is diagrammed. Actual accepted Main17 `4cc20874` contains 62 published SQL sources, all byte-identical here. Six pending PR24 operational additions follow that released prefix. Actual migration replay, SQL constraints, explicit grants/RLS and owning tests are authoritative. This source map does not claim the current combined native gate, hosted installation or platform acceptance has passed. See [ARCHITECTURE](ARCHITECTURE.md), [MIGRATION_GUIDE](MIGRATION_GUIDE.md), [QA_RESULTS](QA_RESULTS.md) and [WORKLOG](WORKLOG.md).
+The target diagrams preserve the complete product map; conceptual entities do not claim that every table exists. Implemented diagrams show selected physical relations in the **69 published SQL sources** at accepted main `4f7f6c0`, with `PRIVATE_*` aliases mapped to unexposed private relations. PR17, PR24 and PR25 cohorts are merged. This is a domain map, not a complete schema dump. Later routine replacements, triggers and constraints must be read in source order. [ARCHITECTURE](ARCHITECTURE.md), [MIGRATION_GUIDE](MIGRATION_GUIDE.md) and [API_REFERENCE](API_REFERENCE.md) explain the current boundaries. Source identity and a diagram do not establish hosted installation or complete acceptance; see [QA_RESULTS](QA_RESULTS.md).
+
+The enquiry cohort adds private original-submission, history and retry records, with links to authorised management, directory organisations/contacts and an explicitly converted course run. These selected diagrams do not enumerate the complete enquiry schema. [WEBSITE_ENQUIRIES](WEBSITE_ENQUIRIES.md) and its owning migration describe exact columns and grants; directory linkage does not create customer-account membership.
 
 ## Core target relations
 
@@ -478,11 +480,11 @@ changing claim/upload/channel mutation APIs. No per-option RPC or all-pages loop
 is added. The administrative board remains separately limited to 500. See
 [JOB_PICKERS](JOB_PICKERS.md).
 
-The three additive sources are `20261116022735_scoped_administrative_job_pickers`,
-`20261116022736_global_calendar_publications` and
-`20261116022737_qualification_evidence_and_attestation_history`. Together with the
+The three additive sources are `20261116080741_scoped_administrative_job_pickers`,
+`20261116080743_global_calendar_publications` and
+`20261116080746_qualification_evidence_and_attestation_history`. Together with the
 29 earlier migration sources these form the historical 32-migration M7/M8 model.
-The following diagram covers the fourteen-source operational cohort depicted here, not every later addition in the current 62-source inventory. Focused source,
+The following diagram covers the fourteen-source operational cohort depicted here, not every later addition in the current 69-source inventory. Focused source,
 SQL/component/Edge checks do not establish combined native acceptance.
 
 ## Implemented personal settings and external delivery
@@ -638,4 +640,4 @@ Additional operational boundaries:
 | Calendar capability / offline schedule   | Explicit owner opt-in; expiry/revocation and identity clearing  | No administrator calendar bypass; no general private-response cache                 |
 | Notification channel/device              | Own preference/device; current eligible event                   | Service-only delivery leases do not grant browser data access                       |
 
-See [CHAT_SECURITY](CHAT_SECURITY.md), [KNOWLEDGE_SECURITY](KNOWLEDGE_SECURITY.md), [COMMERCIAL_SECURITY](COMMERCIAL_SECURITY.md), [OPERATIONS](OPERATIONS.md) and [BACKEND_SECURITY_REVIEW](BACKEND_SECURITY_REVIEW.md) for tested boundaries and outstanding acceptance. Current combined 62-source native acceptance is recorded separately in QA/work logs; authored cases and focused passes do not establish that result. Tombstones, archives and audit revisions preserve data; none is a production legal-erasure or retention-policy guarantee.
+See [CHAT_SECURITY](CHAT_SECURITY.md), [KNOWLEDGE_SECURITY](KNOWLEDGE_SECURITY.md), [COMMERCIAL_SECURITY](COMMERCIAL_SECURITY.md), [OPERATIONS](OPERATIONS.md) and [BACKEND_SECURITY_REVIEW](BACKEND_SECURITY_REVIEW.md) for tested boundaries and outstanding acceptance. Current combined 62-source native acceptance is recorded separately in QA results; authored cases and focused passes do not establish that result. Tombstones, archives and audit revisions preserve data; none is a production legal-erasure or retention-policy guarantee.

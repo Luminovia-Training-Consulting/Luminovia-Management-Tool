@@ -1,6 +1,6 @@
 # Verification plan and acceptance evidence
 
-Run the checks relevant to the changed slice, fix observed failures, then record exact commands/results in [WORKLOG.md](WORKLOG.md). A planned test is not a passed test. Use the lockfile and actual package scripts; inspect `--help` before using evolving Supabase CLI commands. No real customer/person records or production endpoints in tests.
+Run the checks relevant to the changed slice, fix observed failures, then record exact commands/results in [QA evidence](QA_RESULTS.md). A planned test is not a passed test. Use the lockfile and actual package scripts; inspect `--help` before using evolving Supabase CLI commands. No real customer/person records or production endpoints in tests.
 
 ## GitHub quality and measured coverage
 
@@ -10,7 +10,7 @@ Separate Build, Typecheck, Lint, Formatting, Code quality and Tests and coverage
 
 [Functional acceptance](FUNCTIONAL_ACCEPTANCE.md) maps implemented module slices to real SQL/API/browser suites. The complete runner rejects skipped, flaky, retried, empty or incomplete browser selections and preserves separate application/PWA evidence plus a source-bound machine-readable acceptance summary. A real Playwright negative probe verifies that exit-zero skips cannot pass the acceptance guard.
 
-Run `./portal test` for all mutating integration/browser verification. It creates a sanitized temporary checkout with a random independent Supabase project, separate ports/volumes and scoped cleanup, preserving the normal local development instance. It includes actual restart persistence, all `*-db-tests.mjs` / `*-api-check.mjs`, all Edge tests, browser/axe and a separate built-PWA stage. Reports stay in ignored `.local/tests/<run>/`. CI uses the same command.
+Run `./portal test` for all mutating integration/browser verification. It creates a sanitized temporary checkout with a random independent Supabase project, separate ports/volumes and scoped cleanup, preserving the normal local development instance. It includes actual restart persistence, all `*-db-tests.mjs` / `*-api-check.mjs`, all Edge tests, browser/axe and a separate built-PWA stage. Reports stay in ignored `.local/tests/<run>/`. Main/manual CI uses the complete command. Full-profile PR CI partitions its unchanged stage set into independent `--phase system` and `--phase browser` stacks; neither partial phase alone is a complete pass. Documentation-only and ordinary frontend profiles perform narrower checks, as described in [CI_QUALITY](CI_QUALITY.md).
 
 Individual `npm run test:e2e` and legacy broad API checks are guarded against accidental normal-development mutation. Use isolated mode through the canonical runner. `./portal start` / `stop` are persistent development operations, never test reset commands.
 
@@ -21,10 +21,10 @@ npm ci
 npm run typecheck
 npm run lint
 npm test
-npm run build
+./portal check
 ```
 
-Use `npm run format:check` for formatting validation where configured. Do not repeat passing unchanged checks without a reason. Dependency audit results should record severity/scope and actual resolution, not imply that scanning alone proves security.
+`./portal check` also performs source/GitHub formatting, compiler integrity, coverage and a production build using synthetic public configuration. A standalone `npm run build` needs `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; it does not start a backend. Use `npm run format:check` for source formatting. Do not repeat passing unchanged checks without a reason. Dependency audit results should record severity/scope and actual resolution, not imply that scanning alone proves security.
 
 ## Local backend setup and data tests
 
@@ -65,7 +65,7 @@ Cross-browser smoke tests and real mobile/installed PWA acceptance remain releas
 
 ## Evidence ledger
 
-Record date, source commit (when available), exact command, environment, counts/result and limitations in WORKLOG. Do not mark all modules complete because M1 checks pass. Production gates include staging demo, security/privacy review, real SMTP, DB+storage restore drill and reviewed rollback.
+Record date, source commit (when available), exact command, environment, counts/result and limitations in QA_RESULTS. Do not mark all modules complete because M1 checks pass. Production gates include staging demo, security/privacy review, real SMTP, DB+storage restore drill and reviewed rollback.
 
 ## Approved M3 account/profile/commission acceptance
 
@@ -75,7 +75,7 @@ Record date, source commit (when available), exact command, environment, counts/
 - Profiles/reviews: authored labels/languages/experience validation and intentional safe projections; actual current/upcoming/past assignment instants; viewer-authorised course links; manager enrolment; only completed real attendance/assigned lecturer can review; no self review or ordinary reviewer-identity disclosure; optimistic edits/withdrawals and reasoned MFA moderation; immediate revocation/suspension.
 - Integration/audit: delivered literal frontend RPC names resolve to executable migrated invoker APIs; all public tables retain RLS; new owner/admin functional roles preserve private DM/calendar boundaries. Late initial Auth lookup cannot restore a signed-out/prior actor. Real desktop/mobile browser actors use separate BrowserContexts to avoid sharing Supabase login storage.
 
-Executed counts and exact pass/fail checkpoints belong in QA_RESULTS/WORKLOG, not this plan. `scripts/generate-api-reference.mjs` derives the API inventory from a disposable database; it is an explicit documentation task, not a mutating implicit test step.
+Executed counts and exact pass/fail checkpoints belong in QA_RESULTS, not this plan. `scripts/generate-api-reference.mjs` derives the API inventory from a disposable database; it is an explicit documentation task, not a mutating implicit test step.
 
 ## M4 templates, avatars, comments and integration
 
@@ -85,7 +85,7 @@ Executed counts and exact pass/fail checkpoints belong in QA_RESULTS/WORKLOG, no
 - Audit/error paths: recovery Enter, pending/rejected SDK operations, MFA initialization/enrolment/challenge retry, bilingual notices, logout failure and committed search-URL changes. Compiler fixtures must detect disconnected modules/exports/routes/assets and renamed/transitive RPC wrappers; bind literal calls to actual migrated APIs. Keep functional headless/server/vendor interfaces rather than deleting them solely because the browser does not import them.
 - Local/release boundaries: copy a synthetic tree and assert nested real env/private/site paths stay outside the scratch snapshot while source/example configuration remains. Discover scanner HTTP/TCP, package/review and Python updater tests, then run actual isolated Envoy/Caddy checks in the same canonical command. The exact M4 history/source review and disposable rollback/old-row preservation probe are documented in [REVIEWED_M4_MIGRATIONS](REVIEWED_M4_MIGRATIONS.md); neither authorises a hosted installation.
 
-Run counts and failures remain in QA_RESULTS/WORKLOG. The combined full command and exact PR CI are required after integrating concurrent hosting source; the earlier isolated application run alone does not accept that integration.
+Run counts and failures remain in QA_RESULTS. The combined full command and exact PR CI are required after integrating concurrent hosting source; the earlier isolated application run alone does not accept that integration.
 
 ## M5 system and performance regressions
 

@@ -8,7 +8,7 @@ The supported entry point is the executable `./portal` in the repository root. I
 ./portal start
 ```
 
-Requirements: a Linux host (CachyOS locally / Ubuntu CI), Node.js >=22.12 (26 LTS tested), npm, a running Docker Engine and Docker Compose 2.20.2 or later with healthcheck `start_interval` support. Full verification additionally needs Python 3 for the updater fixtures and util-linux `flock` for the shared host/user QA lock. Complete encrypted-backup guards require official `age`/`age-keygen` 1.x (tested 1.3.2) on PATH, or the explicit `AGE_TEST_BINARY`/`AGE_KEYGEN_TEST_BINARY` fixture paths; missing tools fail before crypto tests can skip. The launcher installs exact lockfile dependencies when required, starts the local services, applies new migrations without resetting tables, initializes fictional fixtures only for an empty first bootstrap, waits for the actual invitation handler and frontend to be ready, and prints the local URLs.
+Requirements: a Linux host (CachyOS locally / Ubuntu CI), Node.js as pinned in [`.node-version`](../.node-version) (the package minimum is 22.12), npm, Docker Engine 25 or later and Docker Compose 2.20.2 or later with healthcheck `start_interval` support. Full verification additionally needs Python 3 for the updater fixtures and util-linux `flock` for the shared host/user QA lock. Complete encrypted-backup guards require official `age`/`age-keygen` 1.x (tested 1.3.2) on PATH, or the explicit `AGE_TEST_BINARY`/`AGE_KEYGEN_TEST_BINARY` fixture paths; missing tools fail before crypto tests can skip. The launcher installs exact lockfile dependencies when required, starts the local services, applies new migrations without resetting tables, initializes fictional fixtures only for an empty first bootstrap, waits for the actual invitation handler and frontend to be ready, and prints the local URLs.
 
 - Portal: <http://127.0.0.1:5173>
 - Supabase API: <http://127.0.0.1:54321>
@@ -39,7 +39,7 @@ The password is stored in the permission-restricted ignored `.local/ACCOUNTS.txt
 
 An empty owned Docker network is removed after its containers stop. Data volumes are independent of this disposable network. A network still used by a container is left in place with an error; the launcher never detaches unrelated containers to force cleanup.
 
-Use `./portal restart` for a data-preserving stop/start, or `./portal up` to stay attached and stop with Ctrl+C. Local services started with `start` remain running until `stop`, system shutdown or a fatal child-service failure. Source/plan/work log persist independently in Git; a process is not a substitute for durable source.
+Use `./portal restart` for a data-preserving stop/start, or `./portal up` to stay attached and stop with Ctrl+C. Local services started with `start` remain running until `stop`, system shutdown or a fatal child-service failure. Source/plan/QA evidence ledger persist independently in Git; a process is not a substitute for durable source.
 
 Do not manually delete Docker volumes or `.local` credentials if their data are needed. A volume is persistence, not an off-site backup. Production backup of PostgreSQL and Storage objects, retention and restore drills remain separate release requirements.
 
@@ -71,9 +71,9 @@ New test harnesses must honour `PORTAL_DB_CONTAINER`, `E2E_BASE_URL`, `E2E_MAILP
 
 ## Honest limits
 
-A complete local command does not mean every target-product module already exists. The full product scope and remaining work stay in `IMPLEMENTATION_PLAN.md`. The local environment does not prove hosted SMTP deliverability, Hostinger headers, GDPR/legal acceptance, physical iOS/Safari PWA installation or a tested production disaster-recovery process.
+A complete local command does not mean every target-product module already exists. The full product scope and remaining work stay in [ROADMAP.md](../ROADMAP.md). The local environment does not prove hosted SMTP deliverability, Hostinger headers, GDPR/legal acceptance, physical iOS/Safari PWA installation or a tested production disaster-recovery process.
 
-## Runtime verification checkpoint — 15 November 2026
+## Historical runtime verification — 15 November 2026
 
 Executed locally during this continuation:
 
@@ -83,15 +83,15 @@ Executed locally during this continuation:
 - The actual normal stack was moved without data loss to the owned bridge; Docker inspection confirmed only `127.0.0.1` on API54321, database54322 and Mailpit54324, with no scanner host port. The real Auth/MFA/profile/private-event/Storage-byte persistence check passed after this change; existing thirteen fixtures remained untouched.
 - Targeted ESLint, Node syntax checks and shell syntax checks passed for the runtime files.
 
-The complete isolated `./portal test` invocation is executed after concurrent SQL/UI files are frozen; see the latest WORKLOG/QA_RESULTS checkpoint for actual aggregate results. An empty migration is intentionally refused before starting a fresh stack. Source-only checks and the persistence rehearsal above are not a substitute for that final whole-command run; the integrated result belongs in the main work log and QA record.
+The following aggregate checkpoint records the later complete isolated run. For acceptance of a newer source revision, use its exact-source result in [QA_RESULTS](QA_RESULTS.md). An empty migration is intentionally refused before starting a fresh stack. Source-only checks and the persistence rehearsal above are not a substitute for that final whole-command run; the integrated result belongs in the main QA evidence ledger and QA record.
 
-## Complete command acceptance
+## Historical complete-command acceptance — 15 November 2026
 
-The complete command passed on 2026-11-15 at 13:53:47 UTC, report `.local/tests/999c091e/RESULT.txt`: 42 source, 7 runtime, 11 Edge, 78 SQL, all actual API/Mailpit suites, 40 desktop/mobile workflows, current build and 2 built-PWA checks, followed by successful owned cleanup. Temporary persistence records are removed with checked results. A targeted later mobile-input visual correction and exact GitHub revision status are recorded in WORKLOG/QA_RESULTS.
+The complete command passed on 2026-11-15 at 13:53:47 UTC, report `.local/tests/999c091e/RESULT.txt`: 42 source, 7 runtime, 11 Edge, 78 SQL, all actual API/Mailpit suites, 40 desktop/mobile workflows, current build and 2 built-PWA checks, followed by successful owned cleanup. Temporary persistence records are removed with checked results. A targeted later mobile-input visual correction and exact GitHub revision status are recorded in QA_RESULTS.
 
 Development HMR ignores generated QA reports, private `.local` state, coverage and documentation. A real filesystem-watcher regression keeps actual source changes watched while report HTML no longer triggers application reloads.
 
-The inherited actual selfhost image/retained-data compatibility gate remains a separate CI job after the same complete application command. It is required before a development release is published. Offline maintenance/backup guards belong to `./portal test`; separately running a native encrypted three-database restore remains an explicit operation.
+The actual native selfhost image/retained-data rehearsal is a separate CI job. Full-profile PRs run system and browser phases in independent stacks; main/manual runs retain the complete command. Documentation-only and ordinary frontend PRs select narrower profiles described in [CI_QUALITY](CI_QUALITY.md). Explicit development publication requires successful complete application and native gates. Offline maintenance/backup guards belong to `./portal test`; separately running a native encrypted three-database restore remains an explicit operation.
 
 ## Latest GitHub preview
 

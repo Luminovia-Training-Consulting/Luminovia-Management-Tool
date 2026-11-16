@@ -68,7 +68,7 @@ The eleven `runtime-github.test.mjs` cases use real temporary Git repositories a
 node --test scripts/runtime-github.test.mjs
 ```
 
-The regular complete command discovers these cases automatically. Actual complete/native checks and the real preview restart are recorded separately in [WORKLOG](WORKLOG.md) and [QA_RESULTS](QA_RESULTS.md).
+The regular complete command discovers these cases automatically. Actual complete/native checks and the real preview restart are recorded separately in [QA evidence](QA_RESULTS.md).
 
 ## Executed M6 upgrade checkpoint — 16 November 2026
 
