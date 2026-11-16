@@ -106,3 +106,60 @@ test("integrity guard identifies an orphan, missing lazy import and disconnected
     rmSync(fixture, { recursive: true, force: true });
   }
 });
+
+test("terminal splats accept their base and descendants without accepting adjacent or wrong static paths", () => {
+  const fixture = mkdtempSync(join(tmpdir(), "luminovia-splat-probe-"));
+  try {
+    mkdirSync(join(fixture, "src"));
+    const valid = [
+      "/demo",
+      "/demo/",
+      "/demo/jobs",
+      "/demo/admin/accounts",
+      "/demo/jobs?module=jobs#practice",
+      "/docs/v1.0",
+      "/docs/v1.0/intro",
+      "/teams/alpha/demo",
+      "/teams/alpha/demo/files/one",
+      "/jobs/offer-a",
+      "/jobs/offer-a/",
+      "/settings",
+    ];
+    const invalid = [
+      "/demography",
+      "/demos/jobs",
+      "/demo-other/jobs",
+      "/docs/v1x0/intro",
+      "/teams/alpha/demography",
+      "/teams/alpha/other/files",
+      "/teams//demo",
+      "/jobs",
+      "/jobs/offer-a/unregistered",
+      "/settings/nested",
+      "/unregistered",
+    ];
+    writeFileSync(
+      join(fixture, "src/main.tsx"),
+      `
+      const view = <>
+        <Route path="/demo/*" />
+        <Route path="/docs/v1.0/*" />
+        <Route path="/teams"><Route path=":teamId/demo/*" /></Route>
+        <Route path="/jobs/:id" />
+        <Route path="/settings" />
+        <Route path="*" />
+        ${[...valid, ...invalid].map((path) => `<Link to=${JSON.stringify(path)} />`).join("\n")}
+      </>;
+    `,
+    );
+    const observed = auditFrontend(fixture);
+    assert.deepEqual(
+      observed.invalidLinks.map((entry) => entry.path),
+      invalid,
+    );
+    assert.ok(observed.routes.includes("/teams/:teamId/demo/*"));
+    assert.deepEqual(observed.unreachable, []);
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});

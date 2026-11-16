@@ -29,6 +29,9 @@ export function ErrorState({ retry }: { retry?: () => void }) {
           {t("retry")}
         </Button>
       )}
+      <a className="text-link" href="/help?topic=troubleshooting">
+        {t("errorHelp")}
+      </a>
     </div>
   );
 }
