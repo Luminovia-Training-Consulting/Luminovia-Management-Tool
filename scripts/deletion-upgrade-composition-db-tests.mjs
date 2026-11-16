@@ -6,24 +6,38 @@ import { randomUUID } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import { quoteSql as q, withTestDatabase } from "./testing/database.mjs";
 
-const ceiling = "20261116121605";
 const directory = new URL("../supabase/migrations/", import.meta.url);
-const upgrades = (await readdir(directory))
-  .filter((name) => name.endsWith(".sql") && name.slice(0, 14) > ceiling)
+const migrations = (await readdir(directory))
+  .filter((name) => /^\d{14}_.+\.sql$/.test(name))
   .sort();
-assert.equal(
-  upgrades.length,
-  3,
-  "Exactly the three unaccepted deletion migrations follow Main",
-);
+const suffixes = [
+  "permanent_resource_deletion.sql",
+  "company_job_deletion_authority.sql",
+  "deletion_smart_operations_dependencies.sql",
+];
+const upgrades = suffixes.map((suffix) => {
+  const matches = migrations.filter((name) => name.slice(15) === suffix);
+  assert.equal(
+    matches.length,
+    1,
+    `One unaccepted deletion migration owns ${suffix}`,
+  );
+  return matches[0];
+});
 assert.deepEqual(
-  upgrades.map((name) => name.slice(15)),
-  [
-    "permanent_resource_deletion.sql",
-    "company_job_deletion_authority.sql",
-    "deletion_smart_operations_dependencies.sql",
-  ],
+  upgrades,
+  [...upgrades].sort(),
+  "Deletion migrations preserve dependency order",
 );
+const firstUpgrade = migrations.indexOf(upgrades[0]);
+assert(firstUpgrade > 0, "An accepted predecessor must exist before deletion");
+assert.deepEqual(
+  migrations.slice(firstUpgrade),
+  upgrades,
+  "Every accepted migration precedes all three unaccepted deletion migrations",
+);
+const prefix = migrations.slice(0, firstUpgrade);
+const ceiling = prefix.at(-1).slice(0, 14);
 let checks = 0;
 await withTestDatabase(
   "deletion_upgrade_composition",
@@ -47,6 +61,11 @@ await withTestDatabase(
     const notification = await metadata(
       "private.notification_target(text,uuid)",
     );
+    const enquiry = prefix.some((name) =>
+      name.endsWith("_website_enquiry_intake.sql"),
+    )
+      ? await metadata("private.enquiry_notification_target(text,uuid)")
+      : null;
     const teacher = randomUUID(),
       formerStaff = randomUUID(),
       staff = randomUUID(),
@@ -115,6 +134,11 @@ await withTestDatabase(
           await metadata("private.notification_target(text,uuid)"),
           notification,
         );
+        if (enquiry)
+          assert.deepEqual(
+            await metadata("private.enquiry_notification_target(text,uuid)"),
+            enquiry,
+          );
         const upgraded = await metadata("private.can_access_document(uuid)");
         assert.notEqual(upgraded.source, originalSupport.source);
         assert.deepEqual(

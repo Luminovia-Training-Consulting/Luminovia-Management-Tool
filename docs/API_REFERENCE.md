@@ -307,6 +307,9 @@ Profiles/reviews/labels/avatars, courses/enrolment/source provenance, resource c
 | edit_message | p_message_id uuid, p_body text | void | Authenticated; resource/capability checks apply |
 | edit_message_with_mentions | p_message_id uuid, p_body text, p_expected_version integer, p_client_id uuid, p_mention_ids uuid[] | jsonb | Authenticated; resource/capability checks apply |
 | edit_resource_comment | p_comment_id uuid, p_body text, p_version integer | void | Authenticated; resource/capability checks apply |
+| enquiry_context | none | jsonb | Authenticated; resource/capability checks apply |
+| enquiry_detail | p_enquiry_id uuid | jsonb | Authenticated; resource/capability checks apply |
+| enquiry_inbox | p_search text, p_status text, p_before_at timestamp with time zone, p_before_id uuid, p_limit integer | jsonb | Authenticated; resource/capability checks apply |
 | enrolment_candidates | none | jsonb | Authenticated; resource/capability checks apply |
 | ensure_general_chat | none | uuid | Authenticated; resource/capability checks apply |
 | export_my_calendar | p_from timestamp with time zone, p_until timestamp with time zone, p_include_private boolean | jsonb | Authenticated; resource/capability checks apply |
@@ -343,6 +346,7 @@ Profiles/reviews/labels/avatars, courses/enrolment/source provenance, resource c
 | manage_chat_member | p_room_id uuid, p_user_id uuid, p_remove boolean | void | Authenticated; resource/capability checks apply |
 | manage_client_organisation | p_user_id uuid, p_organisation_id uuid, p_remove boolean | void | Authenticated; resource/capability checks apply |
 | manage_course_enrolment | p_course_run_id uuid, p_user_id uuid, p_status text | void | Authenticated; resource/capability checks apply |
+| manage_enquiry | p_enquiry_id uuid, p_action text, p_payload jsonb, p_expected_version integer, p_request_id uuid | uuid | Authenticated; resource/capability checks apply |
 | manage_global_event | p_id uuid, p_action text, p_expected_version integer, p_request_id uuid, p_payload jsonb | jsonb | Authenticated; resource/capability checks apply |
 | manage_job_offer | p_job_id uuid, p_action text, p_expected_version integer, p_request_id uuid, p_payload jsonb | uuid | Authenticated; resource/capability checks apply |
 | manage_timesheet | p_id uuid, p_action text, p_expected_version integer, p_request_id uuid, p_reason text | jsonb | Authenticated; resource/capability checks apply |
@@ -375,6 +379,7 @@ Profiles/reviews/labels/avatars, courses/enrolment/source provenance, resource c
 | qualification_history | p_user_id uuid, p_topic_id uuid, p_before_at timestamp with time zone, p_before_id uuid, p_limit integer | jsonb | Authenticated; resource/capability checks apply |
 | qualification_review | p_user_id uuid, p_topic_id uuid | jsonb | Authenticated; resource/capability checks apply |
 | react_to_message | p_message_id uuid, p_emoji text, p_remove boolean | void | Authenticated; resource/capability checks apply |
+| receive_website_enquiry | p_sender_hash text, p_submission_id uuid, p_payload jsonb | uuid | Server-only |
 | recheck_calendar_subscription | p_token_hash text | boolean | Server-only |
 | recommended_jobs | none | jsonb | Authenticated; resource/capability checks apply |
 | record_invoice_payment | p_invoice_id uuid, p_amount numeric, p_paid_at timestamp with time zone, p_reference text, p_client_id uuid | uuid | Authenticated; resource/capability checks apply |

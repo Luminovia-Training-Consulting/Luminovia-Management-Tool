@@ -1,5 +1,15 @@
 # Reading and safely extending SQL migrations
 
+Current PR35 integration preserves all69accepted main sources through `4f7f6c0` and adds only3later deletion migrations (72total). Earlier inventory paragraphs record their named historical checkpoints.
+
+## PR25 integration on accepted main
+
+PR24 is accepted as main `99add7de8598bf415977c7cae79f1c5f6993626d` with 68 published SQL files. The unpublished enquiry source is resequenced with the installed CLI as `20261116143242_website_enquiry_intake.sql`, after that complete prefix. All 68 released files remain byte-identical. This produces 69 sources; source presence does not claim hosted installation.
+
+The enquiry helper is discovered by main's existing owner-only notification resolver. The obsolete resolver rename/wrapper and authenticated EXECUTE grant are removed from the unpublished source, preserving the accepted resolver's identity, fallback branches and restricted ACL. Current SQL tests exercise the actual inbox projection and denied direct helper calls. HTTP fixtures must validate either the canonical disposable backend or the exact ownership-checked native candidate, including its private TLS trust; ordinary services remain excluded.
+
+This guide inventories **68 SQL files: 62 unchanged published Main17 migrations and six pending PR24 operational additions**. Actual accepted main is `4cc20874edc1f865b71106b7bb1299e16fec5aad`. All 62 published bodies remain byte-identical, and the six pending files retain their CLI-created dependency order. Their post-wait authority corrections and the two notification files’ owner-only resolver boundary remain recorded in [WORKLOG](WORKLOG.md). Earlier 36-, 42- and candidate-prefix counts describe their named pre-merge checkpoints.
+
 ## Permanent deletion extension
 
 `20261116152708_permanent_resource_deletion.sql`, `20261116152710_company_job_deletion_authority.sql` and `20261116152712_deletion_smart_operations_dependencies.sql` were created with the installed CLI after the complete accepted main history, including operational modules. The previous names existed only on the unaccepted PR and cannot be replayed before an already installed main migration. The accepted sources remain byte-identical. They introduce a closed typed deletion registry, actor-bound expiring dependency previews, irreversible confirmation, current-authority service permits, upload leases and durable exact Storage-path fences. Owned children are explicitly distinguished from protected incoming references. Direct Auth/Storage administration remains in the existing account Edge function; relational-only SQL success is not native cleanup acceptance.

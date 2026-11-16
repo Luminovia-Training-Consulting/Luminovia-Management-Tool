@@ -4,10 +4,10 @@
 
 - [x] Reproduce the current SQL blocker and trace the fresh-account browser blocker to accepted request-revision and profile-preference dependencies.
 - [x] Add a forward-only private deletion-scope integration; preserve released SQL, granular permissions, shared evidence, accepted commercial history and uncertain external delivery barriers.
-- [x] Place all3unaccepted deletion migrations after the68accepted sources; preserve exact installed support/qualification document gates and pass4actual upgrade composition groups.
+- [x] Place all3unaccepted deletion migrations after the accepted prefix; preserve all69current accepted sources, exact support/qualification/enquiry helper composition and4actual upgrade groups.
 - [x] Reproduce planner-dependent snapshot reordering and order both catalogue walks; retain exact protected-dependency and concurrent-change assertions.
 - [x] Pass8company and25permanent-deletion PostgreSQL groups with ownership/preservation/delivery regressions and bilingual impact labels.
-- [x] Pass `./portal check`:697frontend cases/91files, coverage floors, types/lint/format/compiler and production/PWA build.
+- [x] Pass integrated `./portal check`:704frontend cases/92files, coverage floors, types/lint/format/compiler and production/PWA build.
 - [ ] Finish current-head full required CI, including native Auth/Storage/browser acceptance; canonical local invocation initially refused a foreign-owned shared QA lock.
 - [ ] Merge only PR35 after current checks pass and repository rules permit; no release publication or production operation is authorised by this repair.
 
@@ -33,6 +33,22 @@ The complete target and all unrelated pending work remain below.
 - [x] Pass complete canonical local acceptance on signed67b749d:29native API suites,116application+2PWA browsers, all SQL/source checks and actual cleanup. Keep this evidence source-bound.
 - [x] Close remaining company history/earnings/calendar/raw-RLS paths and pass8expanded SQL groups; improve reviewed impact clarity and pass23focused deletion cases.
 - [ ] Verify the final follow-up with native company deletion/revocation and new screenshots; integrate only actual accepted main and replay the final migration order before current required CI and the authorised PR35 merge.
+
+## PR25 mergeability continuation — 17 November 2026
+
+- [x] Resolve both documentation conflicts against accepted main `2c7d326`, preserving all released migrations and complete ledgers.
+- [x] Correct native candidate TLS leaf semantics without disabling validation; actual enquiry-runtime positive/untrusted/wrong-host HTTPS and socket/candidate suite passes29cases.
+- [x] Pass combined `./portal check` (681frontend),173runtime and74Edge cases with unchanged gates. Full local acceptance refuses a foreign-owned shared QA lock before startup.
+- [ ] Push signed correction, inspect fresh exact-head full system/browser/native/security/package CI, repair any failures and complete the authorised PR25 merge when repository rules permit. No production/publication action is included.
+
+## PR25 repair on accepted PR24 — 17 November 2026
+
+- [x] Bind private enquiry intake to accepted main `99add7d`, preserving all 68 published migrations and incoming application/operational workflows.
+- [x] Resequence the one unpublished enquiry migration after the released prefix; use the accepted owner-only notification resolver without restoring direct authenticated execution.
+- [ ] Verify canonical and native enquiry adapter startup, actual SQL permissions/inbox/conversion, frontend and complete isolated acceptance. Record actual results in WORKLOG; previous PR24 results do not accept PR25.
+- [ ] Push signed repair to PR25, refresh its stale stacked description and draft status when ready, observe all required current-revision checks, and merge only when repository rules permit. No release or production action is included.
+
+All complete product and seven-module ledgers below remain required. Prior coordination notes describe their historical checkpoints; this PR repair follows the current user request.
 
 ## Current final delivery on actual 68-migration main
 
