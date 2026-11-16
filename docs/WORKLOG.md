@@ -2,6 +2,14 @@
 
 **Read this file first on every continuation**, then `IMPLEMENTATION_PLAN.md`, `AGENTS.md` and the authoritative `UNIVERSAL_MASTER_PROMPT.txt`. Preserve functioning source and unrelated changes. Record actual commands/results; planned checks do not count as passed. Date context is Australia/Brisbane.
 
+## 16 November 2026 — repair historical PR metadata CI
+
+User explicitly requests fixes, updates and merging for PRs6/7/8/9/14/11. Live GitHub inspection confirms all six are already merged;14 is an isolated fixture merged only into its temporary base. The five regular PRs passed their final exact-head application runs. Their later red metadata runs use obsolete contribution catalogues against newly added live labels. Five live area labels are also absent from current main. Original application failures (preview fixture ports, API/capacity assertions and real transient theme contrast) were corrected before those successful final runs; no new application defect is inferred from their historical red runs.
+
+Isolated branch `codex/resolve-historical-pr-ci` starts at maine75f55d and preserves every unrelated worktree. The shared catalogue now matches all35managed labels, including API/security/performance/accessibility/design. The ordinary read-only metadata workflow explicitly checks out only this repository's current main, skips automatic closed-PR events and offers a strictly main-only positive-number manual recheck. No elevated event, contribution execution, dependency installation, secret, token write permission or existing application/security/native gate is introduced. The validator retains canonical repository/number/head checks, rejects stale automatic events and records actual historical heads for explicit rechecks. [Evidence and operating boundary](PR_CI_REPAIR_20261116.md).
+
+Executed:12Node metadata/documentation regressions, actionlint, formatting and diff checks; real read-only GitHub requests through the new CLI pass current labels on all six requested PRs. Actual GitHub workflow publication, exact-head acceptance, authorised merge and six current-main rechecks remain pending at this source checkpoint and will be recorded from observed results. Public Website, production, hosted records and real mail are unchanged. The full product ledger remains required.
+
 ## 16 November 2026 — bilingual guided demo, live tour and practical help
 
 User-authorised work is isolated on `codex/guided-demo-help` from main1341b16, preserving the original checkout's unrelated unpublished roles/preview/welcome-checklist work. This feature complements that account checklist; it neither incorporates nor replaces those unfinished changes. The public Website and production services are unchanged.

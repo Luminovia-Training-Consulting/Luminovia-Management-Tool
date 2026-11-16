@@ -148,5 +148,30 @@
     "name": "area:taxonomy",
     "color": "5319e7",
     "description": "Topics, tools, programming languages and hierarchies."
+  },
+  {
+    "name": "area:api",
+    "color": "0e8a16",
+    "description": "Account and domain APIs, RPC contracts and integration clients."
+  },
+  {
+    "name": "area:security",
+    "color": "b60205",
+    "description": "Authorization, protected data and security hardening."
+  },
+  {
+    "name": "area:performance",
+    "color": "5319e7",
+    "description": "Loading, query budgets, caching and runtime performance."
+  },
+  {
+    "name": "area:accessibility",
+    "color": "bfd4f2",
+    "description": "Keyboard access, accessible controls and WCAG checks."
+  },
+  {
+    "name": "area:design",
+    "color": "7d88d8",
+    "description": "Luminovia branding, layout and visual design."
   }
 ]
