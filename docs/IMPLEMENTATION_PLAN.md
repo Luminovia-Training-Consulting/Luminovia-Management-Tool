@@ -1,5 +1,13 @@
 # Persistent implementation plan
 
+## Current final delivery after accepted PR36 main
+
+- [x] Retain the user's PR12-first priority and accepted main `7fbdb956`; preserve all 36 released SQL bytes and actual independent system/browser/native gate semantics. Temporarily hold the other previously-ready PR review states while sources/tests continue; record original heads for appropriate release after PR12 merges.
+- [x] Complete phase integration with explicit safe evidence labels, strict source/browser validation in the browser phase, independent safe verify/browser artifacts and unchanged missing-evidence failures. Keep default local `all`, full stage partition and cancellation-after-cleanup failure behavior.
+- [x] Pass combined source/build/coverage checks with 515 frontend/65 files and all 144 runtime cases without skips, including real-controller phase/source/browser/privacy/cancellation regressions; formatting/actionlint/diff checks pass. Preserve exact6ff's separately completed 15-gate/120+2/91-stage full checkpoint as history.
+- [ ] Preserve the parallel remote Main36 reconciliation in ordinary ancestry, publish the signed final source and require fresh full-profile system AND browser reports plus native/security/preview success on the current base.
+- [ ] Merge and verify PR12 normally, then release the temporary review-state hold where still applicable. No renewed merge approval, unaccepted feature collection or production dispatch.
+
 ## Current priority: deliver PR12 first
 
 - [x] Apply the user's direct priority change: PR12 now precedes the earlier feature queue. Merge after current required checks without renewed approval; do not import unaccepted PR17 source.
@@ -55,6 +63,15 @@
 - [x] Pass combined local source/build acceptance with254frontend cases/52files,102runtime cases,23maintenance guards and16focused publication/GitHub/documentation guards; workflow/diff checks pass. No new full PC/native pass is inferred.
 - [ ] Complete the coordinated full PC slot naturally, preserve actual logs/exit/cleanup, and integrate PR27's actual main plus any required newer main before final exact-head15-check acceptance.
 - [ ] Keep PR12's temporary draft state and no-auto-merge instruction until its reserved merge is released; no source/QA work waits for a larger collected branch.
+## Full PR acceptance critical path — further authorised continuation
+
+- [x] Measure two-worker SQL5m07s, complete native/retained-data success, and historical full browser13.9m versus13s Chromium setup; preserve canonical SQL lint/advisor and native-engine checks.
+- [x] Route sensitive PR system and browser acceptance onto separate owned runners; preserve main/manual/local complete acceptance and all existing required context names.
+- [x] Pass56focused phase/bootstrap/snapshot/safety/worker/scope/preview/policy cases and38actual shell boundary/routing cases; validate launcher normalization, complete stage partition, fresh service/persistence/seed setup and failure/cancellation cleanup. Scoped lint/format/compiler connectivity/actionlint pass; actual Docker/complete child-process evidence remains pending CI.
+- [ ] Publish signed exact source, observe every final-head system/browser/native/security/package gate, measure actual wall time, and complete the user-authorised protected merge.
+
+The complete product scope and earlier actual-source evidence below remain in force.
+
 ## Safe development-speed improvements — explicit continuation
 
 - [x] Observe signed608687f/PR34 Portal43855915270 success in11m36s (approximately59%less than28m),351actual SQL groups and every required context; fix missing metadata labels and observe green43856170205.
@@ -62,8 +79,8 @@
 - [x] Add conservative actual-merge docs/standard/full selection, full sensitive/unknown/main/manual acceptance, early independent jobs and required-gate preflights that fail on scope errors or fast non-PR profiles.
 - [x] Preserve source/rules/dependencies/migrations, all15required statuses, coverage/security/release requirements; make preview evidence profile explicit and reject missing CLI profile.
 - [x] Pass26focused local scope/worker/routing/preview/governance cases and scoped lint/format/actionlint; record local subprocess/Docker limitations and independent read-only review.
-- [ ] Publish final signed source, verify exact remote bytes, pass actual SQL-worker plus full application/native/security/package CI and measure the new SQL duration.
-- [ ] Perform the expressly authorised protected PR34 merge only when every final-current-head check passes; observe main acceptance separately without dispatching a release.
+- [x] Publish signed8f29147 and verify13exact remote blobs; Portal43860971674 passes complete SQL/native/application/security/package gates in32m35s, including SQL5m07s,114desktop/mobile and2built-PWA cases.
+- [x] Observe the user-performed protected PR34 merge after every final-head check passed: signedmain c528100. Main acceptance is a separate run; no release was dispatched.
 
 This continuation preserves the complete remaining product scope and prior source-bound evidence below.
 

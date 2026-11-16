@@ -11,6 +11,10 @@ import {
   browserAcceptance,
   browserFailure,
 } from "./testing/browser-evidence.mjs";
+import {
+  runtimeTestArguments,
+  runtimeTestPhasePlan,
+} from "./runtime-test-phase.mjs";
 
 const source = readFileSync(
   new URL("./runtime-test.mjs", import.meta.url),
@@ -24,14 +28,19 @@ assert.equal(
 );
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
-async function runFixture({ failPersistence = false, failSeed = false } = {}) {
+async function runFixture({
+  failPersistence = false,
+  failSeed = false,
+  args = [],
+} = {}) {
   const calls = [],
     reports = [];
   // The CLI process boundary supplies virtual reports, while the real evidence
   // validators still run. Genuine Playwright parsing/execution is exercised by
   // runtime-browser-evidence.test.mjs and the canonical native browser stage.
-  const browserReport = (path) =>
-    JSON.stringify({
+  const browserReport = (path) => {
+    const discovery = path.endsWith("plan.json");
+    return JSON.stringify({
       config: {
         rootDir: "/owned-qa/scratch/tests/e2e",
         projects: ["desktop-chromium", "mobile-chromium"].map((name) => ({
@@ -46,15 +55,15 @@ async function runFixture({ failPersistence = false, failSeed = false } = {}) {
             {
               file: path.includes("/pwa/") ? "pwa.spec.ts" : "workflow.spec.ts",
               title: "service-boundary fixture",
-              ok: true,
+              ok: !discovery,
               tests: ["desktop-chromium", "mobile-chromium"].map(
                 (projectName) => ({
                   projectName,
                   expectedStatus: "passed",
-                  status: "expected",
-                  results: [
-                    { status: "passed", retry: 0, duration: 0, errors: [] },
-                  ],
+                  status: discovery ? "skipped" : "expected",
+                  results: discovery
+                    ? []
+                    : [{ status: "passed", retry: 0, duration: 0, errors: [] }],
                 }),
               ),
             },
@@ -63,6 +72,7 @@ async function runFixture({ failPersistence = false, failSeed = false } = {}) {
       ],
       stats: { expected: 2, unexpected: 0, flaky: 0, skipped: 0, duration: 0 },
     });
+  };
   const bindings = {
     cpSync() {},
     mkdirSync() {},
@@ -96,6 +106,8 @@ async function runFixture({ failPersistence = false, failSeed = false } = {}) {
     root: "/owned-qa/source",
     runtimeDir: "/owned-qa/reports",
     runtimeSnapshotSource: () => true,
+    runtimeTestPhasePlan,
+    runtimeTestArguments,
     acquireTestLock: () => () => {},
     assertTestPortsAvailable: async () => {},
     privateDirectory() {},
@@ -114,6 +126,7 @@ async function runFixture({ failPersistence = false, failSeed = false } = {}) {
       return "";
     },
     process: {
+      argv: [process.execPath, "scripts/runtime-test.mjs", ...args],
       execPath: process.execPath,
       pid: process.pid,
       env: {},
@@ -179,6 +192,17 @@ test("actual QA runner seeds commercial fixtures after retention and before SQL/
     result.reports.some((report) => report.value.startsWith("PASS\n")),
     true,
   );
+  const evidence = JSON.parse(
+    result.reports
+      .filter((report) => report.path.endsWith("acceptance.json"))
+      .at(-1).value,
+  );
+  assert.equal(evidence.phase, "all");
+  assert.equal(evidence.status, "passed");
+  assert.deepEqual(evidence.stagePlan, runtimeTestPhasePlan().stages);
+  assert.match(evidence.sourceSha256, /^[a-f0-9]{64}$/);
+  assert.equal(evidence.browsers.application.passed, 2);
+  assert.equal(evidence.browsers.pwa.passed, 2);
 });
 
 test("failed retention prevents the explicit fixture bootstrap and every SQL/API acceptance stage", async () => {

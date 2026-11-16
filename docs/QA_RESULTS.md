@@ -1,5 +1,17 @@
 # QA evidence — 2026-11-16
 
+## Main36 combined controller/source checks passed
+
+The combined phase-aware source passes 515 frontend cases/65 files and all existing coverage floors (S65.18/B59.74/F56.60/L67.28%), types/lint/format/compiler checks and production/PWA build (66 entries/2799.81 KiB). All 144 runtime cases pass, zero skips; actionlint/workflow formatting/whitespace checks pass. Private logs: `.local/full-functional/main36-source-check.log` and `main36-runtime.log`. Real-controller fixtures keep real hashing and browser validators, truthful phase/discovery/execution evidence, full stage partition and all-phase cleanup-cancellation failures. The workflow regression evaluates both actual safe upload conditions and unique artifact names. These are controlled service-boundary/source results; fresh real phase/native CI remains pending.
+
+Previous6ff completed all 15 gates separately: 91 stages, 120 application + two PWA cases, zero skips/retries, 351 SQL groups, 28 business API suites, checked cleanup and actual native36/29/50claims. Source fingerprint `016ab8b6e94a954637f70597f93ee9981156081373b7d3959f741316116b39f4`; private run5a16f9b7 lasts 12:33:40.580–13:06:23.594 UTC. Exact full-profile preview passed 13:07:06 UTC, matching archive SHA-256 `b51eb628be0d2173b27b8d7281f97c715452fe7d923417c96034c6e77b9e3c94`, hosted=false. Its private proof is `.local/functional-ci/pr12-6ff7470/agent-readback-43867519903/`. That earlier complete proof is not relabelled as the new phase integration.
+
+## Accepted PR36 phase integration: new final evidence required
+
+Actual main `7fbdb956` adds explicit independent system/browser CI phases and a final gate that requires both. This integration retains complete default local `all`, source hashing, complete browser inventory/execution, safe per-job evidence and post-cleanup cancellation failures. Partial summaries state their phase and selected plan; neither alone is a complete pass. Final current-head system/browser reports must both pass and identify matching source, alongside actual native compatibility and every required check.
+
+Exact previous6ff native compatibility passed at 12:46:35 UTC with 36 migrations/29 suites/50 claims, actual retained Auth/MFA/private events/scanned bytes, TLS/WebSockets and cleanup. Its application job ran under the older single-run architecture. It does not certify this later integration. All app/API/browser/dependency/migration bytes remain unchanged; focused fixture/source checks and fresh phased full-profile CI are pending. No unmerged PR17 source or new shared-PC run is imported.
+
 ## Final PR34 combined local acceptance
 
 The normal signed main/remote reconciliation retains all accepted histories and immutable 36-migration bytes; app/API/browser/dependency source is unchanged over accepted3daf. Actual source-derived routing is full for 27 changed paths. The upload-condition regression was red on the original actual workflow and passes after the bounded fix: ten cases cover reduced skipped/unstarted applications and full success/failure/cancellation, with unchanged exact summary allowlist and strict missing-evidence errors.

@@ -12,6 +12,14 @@ The complete command is `./portal test` (`npm run test:all`). It runs the real a
 
 The source fingerprint identifies the actual copied bytes, including uncommitted and untracked source. Git HEAD alone would misidentify an uncommitted working tree. It is an audit identifier, not a signed build attestation or a code coverage percentage.
 
+## Explicit CI phases
+
+The default local `./portal test` still selects `all` and runs complete acceptance on one owned stack. Full-profile PR CI runs explicit `system` and `browser` phases on separate fresh runners, each with its own real services, retained-data rehearsal, fictional policy seed and checked cleanup. This preserves the full work while allowing the two paths to run concurrently.
+
+Every new `acceptance.json` records its `phase`, selected `stagePlan`, actual stage results and sanitized `sourceSha256`. A passed `system` phase claims its SQL/API/Edge/operating checks; a passed `browser` phase claims its complete application/build/PWA selection. Neither partial phase alone establishes complete acceptance. Both successful phase reports must identify the same copied source, and the final PR gate requires both jobs plus native compatibility, quality, coverage and security before a full-profile package can pass.
+
+CI retains separate safe summary artifacts for the verify and browser jobs, avoiding an upload-name collision. Uploads follow actual success/failure/cancellation of the respective stage, skip unstarted/reduced-profile stages and still fail if required evidence is missing. Raw traces/reports stay private. A complete `all` run remains independently distinguishable from the combined CI phase evidence.
+
 ## Existing module slices and their connected suites
 
 This maps the authoritative specification A–N to executable evidence. Each row describes the **implemented slice**. The full remaining feature list in [IMPLEMENTATION_PLAN](IMPLEMENTATION_PLAN.md) is still required; these suite associations do not claim that every target feature or every branch already exists or is covered.
