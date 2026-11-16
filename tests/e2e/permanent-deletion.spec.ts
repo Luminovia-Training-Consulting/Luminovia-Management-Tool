@@ -8,7 +8,7 @@ import { actor, adminLogin, api, checked } from "./helpers/accounts-support";
 
 test("permanent account deletion requires reviewed confirmation and removes native identity", async ({
   page,
-}) => {
+}, testInfo) => {
   test.setTimeout(120000);
   const suffix = randomUUID().slice(0, 8);
   const admin = await actor(`Deletion Admin ${suffix}`, "admin");
@@ -18,6 +18,7 @@ test("permanent account deletion requires reviewed confirmation and removes nati
   try {
     await adminLogin(page, admin);
     await page.goto("/admin/accounts");
+    await page.getByLabel("Farbschema", { exact: true }).selectOption("light");
     await page
       .getByRole("searchbox", { name: "Konten suchen", exact: true })
       .fill(target.name);
@@ -42,6 +43,15 @@ test("permanent account deletion requires reviewed confirmation and removes nati
         exact: true,
       }),
     ).toBeDisabled();
+    await page.evaluate(() => document.fonts.ready);
+    const lightAccessibility = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
+      .analyze();
+    expect(lightAccessibility.violations.map((value) => value.id)).toEqual([]);
+    await page.screenshot({
+      path: `docs/screenshots/${testInfo.project.name}-permanent-deletion-light-de.png`,
+      fullPage: true,
+    });
     await dialog
       .getByRole("button", { name: "Schließen", exact: true })
       .last()
@@ -51,6 +61,7 @@ test("permanent account deletion requires reviewed confirmation and removes nati
       (await checked(service.auth.admin.getUserById(target.id))).user?.id,
     ).toBe(target.id);
     await page.getByLabel("Sprache", { exact: true }).selectOption("en");
+    await page.getByLabel("Theme", { exact: true }).selectOption("dark");
     await page
       .getByRole("button", {
         name: `Delete permanently: ${target.name}`,
@@ -97,6 +108,10 @@ test("permanent account deletion requires reviewed confirmation and removes nati
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    await page.screenshot({
+      path: `docs/screenshots/${testInfo.project.name}-permanent-deletion-dark-en.png`,
+      fullPage: true,
+    });
     await dialog
       .getByRole("button", { name: "Delete irreversibly now", exact: true })
       .click();
