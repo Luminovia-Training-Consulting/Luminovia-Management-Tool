@@ -1,5 +1,5 @@
 /**
- * Filesystem, loopback and controlled candidate cases exercise isolation, unique ownership and carried fixtures. The separate native run must prove actual Auth/Storage persistence.
+ * Filesystem/socket candidate cases exercise isolation, unique ownership and carried fixtures. The separate native run must prove actual Auth/Storage persistence.
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -20,8 +20,8 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import {
   adaptCandidateApiFixture,
+  allocateCandidatePorts,
   assertCandidateConfiguration,
-  availableCandidatePorts,
   candidateApiSuites,
   checkCandidate,
   migrationWithHistory,
@@ -36,6 +36,7 @@ function recyclingPortFixture(failAt = 0) {
   const listeners = [];
   const allocations = [];
   const releases = [];
+  const closeAttempts = [];
   const createListener = () => {
     const listener = new EventEmitter();
     listeners.push(listener);
@@ -60,6 +61,19 @@ function recyclingPortFixture(failAt = 0) {
       return listener;
     };
     listener.close = (done) => {
+      closeAttempts.push(position);
+      if (!listener.listening) {
+        // Match net.Server.close after a failed bind: there is no lease to
+        // release, and the allocator may ignore only this specific close error.
+        queueMicrotask(() =>
+          done(
+            Object.assign(new Error("fictional listener not running"), {
+              code: "ERR_SERVER_NOT_RUNNING",
+            }),
+          ),
+        );
+        return listener;
+      }
       const port = listener.address().port;
       releases.push(port);
       queueMicrotask(() => {
@@ -71,7 +85,14 @@ function recyclingPortFixture(failAt = 0) {
     };
     return listener;
   };
-  return { createListener, active, listeners, allocations, releases };
+  return {
+    createListener,
+    active,
+    listeners,
+    allocations,
+    releases,
+    closeAttempts,
+  };
 }
 
 test("candidate port selection retains a complete group when the allocator reuses released ports", async () => {
@@ -86,7 +107,7 @@ test("candidate port selection retains a complete group when the allocator reuse
   }
   assert.equal(new Set(sequential).size, 1);
   const current = recyclingPortFixture();
-  assert.deepEqual(await availableCandidatePorts(current.createListener), {
+  assert.deepEqual(await allocateCandidatePorts(current.createListener), {
     public: 41000,
     api: 41001,
     mail: 41002,
@@ -103,49 +124,103 @@ test("a failed candidate port bind releases every preceding reservation", async 
   for (const position of [1, 2, 3]) {
     const fixture = recyclingPortFixture(position);
     await assert.rejects(
-      availableCandidatePorts(fixture.createListener),
+      allocateCandidatePorts(fixture.createListener),
       /fictional bind failure/,
     );
     assert.equal(fixture.active.size, 0);
     assert.equal(fixture.releases.length, position - 1);
+    assert.equal(fixture.closeAttempts.length, position);
     assert(fixture.listeners.every((listener) => !listener.listening));
   }
 });
 
-test("real loopback candidate listeners coexist and release all selected TCP ports", async (t) => {
+// These helpers touch only test-owned loopback sockets, with no Docker services
+// or application stack. Rebinding proves the allocator released OS resources.
+const listen = (server, port = 0) =>
+  new Promise((done, fail) =>
+    server.once("error", fail).listen(port, "127.0.0.1", done),
+  );
+const close = (server) =>
+  new Promise((done, fail) =>
+    server.close((error) => {
+      if (error && error.code !== "ERR_SERVER_NOT_RUNNING") fail(error);
+      else done();
+    }),
+  );
+
+test("candidate ports are distinct while all three real leases are held and are released on success", async (t) => {
   const listeners = [];
-  const allocations = [];
-  // Cleanup remains bounded to these real fixture-owned sockets if an assertion
-  // fails; no application ports, processes or external services are contacted.
-  t.after(async () => {
-    await Promise.all(
-      listeners
-        .filter((listener) => listener.listening)
-        .map((listener) => new Promise((done) => listener.close(done))),
-    );
-  });
-  const ports = await availableCandidatePorts(() => {
-    const listener = createServer();
-    listeners.push(listener);
-    listener.once("listening", () => {
-      allocations.push(listeners.filter((item) => item.listening).length);
-      assert.equal(listener.address().address, "127.0.0.1");
+  const held = [];
+  t.after(() => Promise.all(listeners.map(close)));
+  const ports = await allocateCandidatePorts(() => {
+    const server = createServer();
+    listeners.push(server);
+    server.once("listening", () => {
+      // Capture actual bound addresses before allocator cleanup. At least one
+      // observation must contain all three simultaneous, distinct reservations.
+      held.push(
+        listeners
+          .filter((listener) => listener.listening)
+          .map((listener) => listener.address()),
+      );
     });
-    return listener;
+    return server;
   });
-  assert.equal(new Set(Object.values(ports)).size, 3);
-  assert.deepEqual(allocations, [1, 2, 3]);
-  assert(listeners.every((listener) => !listener.listening));
-  // Rebind the exact complete group, proving that successful return waits for
-  // all three closes rather than merely scheduling their eventual cleanup.
+  const simultaneous = held.find((addresses) => addresses.length === 3);
+  assert(simultaneous, "All three ports must be reserved at the same time.");
+  assert(simultaneous.every((address) => address.address === "127.0.0.1"));
+  assert.equal(new Set(simultaneous.map(({ port }) => port)).size, 3);
+  assert.deepEqual(
+    Object.values(ports),
+    simultaneous.map(({ port }) => port),
+  );
+  assert(listeners.every((server) => !server.listening));
+  // Hold all exact ports together again, proving group release completed
+  // before return. The test's own cleanup covers partially rebound groups too.
   for (const port of Object.values(ports)) {
-    const listener = createServer();
-    listeners.push(listener);
-    await new Promise((done, fail) =>
-      listener.once("error", fail).listen(port, "127.0.0.1", done),
-    );
+    const rebound = createServer();
+    listeners.push(rebound);
+    await listen(rebound, port);
   }
-  assert.equal(listeners.filter((listener) => listener.listening).length, 3);
+  assert.equal(listeners.filter((server) => server.listening).length, 3);
+});
+
+test("candidate port bind failure releases earlier leases and preserves an unrelated listener", async (t) => {
+  const blocker = createServer();
+  const listeners = [];
+  let firstPort;
+  t.after(() => Promise.all([blocker, ...listeners].map(close)));
+  await listen(blocker);
+  const occupiedPort = blocker.address().port;
+  await assert.rejects(
+    allocateCandidatePorts(() => {
+      const server = createServer();
+      listeners.push(server);
+      if (listeners.length === 1)
+        server.once("listening", () => {
+          firstPort = server.address().port;
+        });
+      else {
+        // Force a genuine EADDRINUSE on the second owned socket, after the first
+        // lease exists. No global network API or other process is modified.
+        const originalListen = server.listen;
+        t.mock.method(server, "listen", function (_port, host, done) {
+          return originalListen.call(this, occupiedPort, host, done);
+        });
+      }
+      return server;
+    }),
+    { code: "EADDRINUSE" },
+  );
+  assert.equal(typeof firstPort, "number");
+  assert(listeners.every((server) => !server.listening));
+  assert(blocker.listening, "Cleanup must not close an unrelated listener.");
+  const rebound = createServer();
+  try {
+    await listen(rebound, firstPort);
+  } finally {
+    await close(rebound);
+  }
 });
 
 const project = "luminovia-portal-test-" + "a".repeat(24);

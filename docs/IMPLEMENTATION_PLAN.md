@@ -1,5 +1,9 @@
 # Persistent implementation plan
 
+## Latest PR23 port-correction ancestry
+
+PR23 advanced to `7767564` with an independently developed correction for the same duplicate-port failure. This normal merge preserves that actual head, both prior PR23 heads and the earlier reviewed port correction. The selector and complementary recycling, real-socket and cleanup regressions are reconciled into one implementation; all ownership/isolation/unique-port gates remain. Current evidence and the final combined PR13 checks govern acceptance. Older records below describe their exact named source checkpoints and do not establish the current live policy, source tree or complete final native pass.
+
 ## Current PR13 continuation — latest personal policy and native fixture
 
 The verified06:42UTC correction restores active review27329000 with only User29256704 (`CarinaSchoppe`) in `pull_request` mode and its original independent-review conditions. There are no extra scanning/quality/Copilot rules in that layer. History/checks remain active, without bypass and with all15mandatory statuses/signatures. All older always/disabled/role-based records below are timestamped history; no server rule is written here.
@@ -101,6 +105,13 @@ The user requests English general documentation, detailed contribution/issue/PR 
 
 The full product and operational ledger remains below; open PR #10 and concurrent source are not silently included in this documentation acceptance.
 
+## PR23 current native gate correction
+
+- [x] Retain exact d448fab application-verify success and the actual native setup failure (two unique ports where three were required); no native SQL/API proof or preview completion is inferred.
+- [x] Hold three temporary loopback listeners together and release all on success/failure; preserve the original assertion and all acceptance gates. Ten native unit cases pass, including real bind-failure cleanup and successful rebinding.
+- [x] Preserve parallel main319ab69/PR22 and all26published SQL bytes, both verification ledgers and current Draft/no-auto-merge queue. No global-QA reservation is bypassed.
+- Fresh exact-head full CI/native/preview acceptance and subsequent sequential merge remain recorded on [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23); PR27 owns the next actual merge.
+
 ## PR23 current-main conflict resolution
 
 - [x] Integrate accepted main `0a6002a` / PR21, preserving both ledger histories, all guided-experience fixes and all26published main migration bytes.
@@ -114,6 +125,10 @@ The full product and operational ledger remains below; open PR #10 and concurren
 - [x] Add strict pointer hit-target readiness/geometry and a native covered-control/scroll/capture regression; both desktop/mobile fixture cases pass without changing business assertions, retries or timeouts.
 - [x] Integrate current mainfabd71a comments, private role pricing/welcome and previews, preserving26published SQL sources, customer-neutral wording and MIGRATION_GUIDE.
 - [x] Correct the nonwrapping German course tabs with scoped wrapping; four real-source-CSS pointer/layout regressions pass, and overflow checks use document clientWidth.
+- [x] Complete exacta793da4/fabd71a acceptance:249frontend,263SQL,92browser,2PWA; native27migration upgrade/retention/20API suites; all quality/security/preview gates. Six fresh screenshots inspected and OCR checked.
+- [x] Retain newly merged main0a6002a guided-help/compiler fixes; this new combined source needs its own acceptance.
+- [x] Current-main focused local254frontend/89runtime/type/lint/format/compiler checks pass. Local complete3250296d passes90/92browsers and all4course/source cases; two initial-login module loads fail with recorded ERR_NETWORK_CHANGED. Keep this failed run distinct from the accepted prior CI.
+- [x] Diagnose coincident host container-interface churn without changing assertions;20fresh actual-React login renders pass in a separate backend-free diagnostic. Respect the explicit PC-QA reservation for any complete rerun.
 - Current exact-source full application/native/security acceptance, feature screenshots and the user-authorised merge are owned by [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23). A partial screenshot artifact or source submission does not mark that acceptance complete.
 
 ## Current correction — customer-independent catalogue and authorised Git delivery

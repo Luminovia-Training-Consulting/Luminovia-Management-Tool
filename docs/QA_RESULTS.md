@@ -1,5 +1,9 @@
 # QA evidence — 2026-11-16
 
+## Latest PR23 port-correction ancestry
+
+PR23 advanced to `7767564` with an independently developed correction for the same duplicate-port failure. This normal merge preserves that actual head, both prior PR23 heads and the earlier reviewed port correction. The selector and complementary recycling, real-socket and cleanup regressions are reconciled into one implementation; all ownership/isolation/unique-port gates remain. The reconciled source passes all12candidate cases without skips, plus targeted ESLint, Prettier, syntax and whitespace checks. The original8boundary cases are unchanged on both sides; no Docker or ordinary service is invoked by this focused validation. Current evidence and the final combined PR13 checks govern acceptance. Older records below describe their exact named source checkpoints and do not establish the current live policy, source tree or complete final native pass.
+
 ## Current PR13 continuation — latest personal policy and native fixture
 
 The verified06:42UTC correction restores active review27329000 with only User29256704 (`CarinaSchoppe`) in `pull_request` mode and its original independent-review conditions. There are no extra scanning/quality/Copilot rules in that layer. History/checks remain active, without bypass and with all15mandatory statuses/signatures. All older always/disabled/role-based records below are timestamped history; no server rule is written here.
@@ -13,6 +17,22 @@ Historical06:30UTC checkpoint: review enforcement was disabled externally while 
 ## Final PR13/PR23 composition — acceptance remains separate
 
 The actual PR13 remote moved to `af3bd61` with signed PR23 `d448fab`. Its product/catalogue/migration27/UI/browser changes are preserved alongside reviewed documentation candidate `84fc41c`. The earlier254frontend/88runtime checkpoint applies to its named unchanged-product source, not automatically to this composition. Actual accepted PR27/main, focused current-source checks and all15fresh mandatory GitHub outcomes are still required. The06:25UTC checkpoint granted only CarinaSchoppe User29256704 the personal `always` exception and additional review-layer rules (superseded at06:42UTC); signatures and history/check gates have no bypass. Older role-based source snapshots below are superseded.
+
+## PR23 native setup: reproduced port allocation defect corrected
+
+Run43814253694/d448fab passed complete application verify, then native failed before services/migrations: serially released ephemeral ports produced only2distinct values for3roles. The fix retains all3loopback listeners until collection finishes, then closes all owned resources in finally. Ten unit cases pass, including two real-socket regressions for simultaneous uniqueness, rebinding, and genuine bind-failure cleanup without touching an unrelated listener. The existing uniqueness assertion and all gates remain. Combined maintenance/M4 guards pass41cases;89runtime,lint/type/format/compiler checks pass. Accepted main319ab69 is preserved; no new complete/native-PWA pass is claimed until current-head CI finishes. Draft/no-auto-merge and the explicit local-PC/main-merge queue remain in force.
+
+## PR23 current-main local run: failed transport, own course flows passed
+
+Current-main0a6002a focused local checks pass254frontend/89runtime/type/lint/format/compiler inventory. Canonical3250296d is **FAIL**,90/92browsers: dashboard.desktop and a chat member's mobile context lost initial source/ReactDOM modules with `ERR_NETWORK_CHANGED`, leaving no login form before either business check began. All4course/source journeys pass;263SQL cases/groups,19real API suites plus Edge/Mailpit and restart persistence pass. Build/PWA were not reached. No permission assertion, retries0 or timeout was weakened.
+
+Read-only host journal correlates container-interface creation19ms before the chat failure and1.5–1.8s before dashboard failures; exact owner/causal attribution remains unproven. A separate backend-free actual-React login-load diagnostic passes20fresh contexts with no failed module loads or observed network events. No new complete rerun bypasses the user's reserved PC-QA order. The earlier a793da4 complete CI/native/PWA success below remains separate evidence; later exact-head acceptance/merge is recorded on [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23).
+
+## PR23 complete accepted source and newer main baseline
+
+[a793da4 / CI43809580902](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43809580902) against fabd71a passed249frontend,263SQL cases/groups,19real API suites plus Edge/Mailpit,92/92browsers,build and2/2PWA with checked cleanup. Native passed27migration main26→candidate upgrade, retained password/MFA/private event/file,20API/invitation suites,TLS/WSS,50claims and cleanup. Quality/security and runnable-preview gates passed. Six feature PNGs were downloaded/visually reviewed and OCR checked without the historical customer label. Actual mobile geometry is412×839/offset0 and both ordinary clicks pass.
+
+Main then advanced to0a6002a. That guided-help/compiler source is integrated next; the prior green run is separate evidence, not current-base acceptance. PR27 has the next actual merge reservation for manual-only publication; PR23 auto-merge is disabled. Exact later CI/merge is recorded on [PR23](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/23). No hosted installation or production operation is asserted.
 
 ## PR23 exact mobile overflow reproduced and corrected
 

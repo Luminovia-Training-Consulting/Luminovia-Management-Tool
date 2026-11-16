@@ -215,33 +215,38 @@ export function adaptCandidateApiFixture(source, { project, apiPort }) {
     .replace(client, identity + client);
 }
 
-// Hold the complete port group while selecting it: an OS may immediately reuse
-// an ephemeral port after close. Release every owned listener together, including
-// earlier reservations when a later bind fails. Compose subsequently owns binds;
-// this selector cannot reserve ports across the handoff to Docker.
-export async function availableCandidatePorts(createListener = createServer) {
+// Hold all three loopback reservations together so the OS cannot return a port
+// released by an earlier allocation. The factory seam lets the socket regression
+// exercise a real bind failure; production always creates ordinary net servers.
+// An injected factory must return fresh, unbound servers owned by this call.
+// Return only after every temporary listener is closed, including partial failure.
+// Docker owns the subsequent binds; these reservations cannot span that handoff.
+export async function allocateCandidatePorts(createListener = createServer) {
   const listeners = [];
   try {
     const ports = {};
-    for (const name of ["public", "api", "mail"]) {
-      const listener = createListener();
-      listeners.push(listener);
+    for (const kind of ["public", "api", "mail"]) {
+      const server = createListener();
+      listeners.push(server);
       await new Promise((done, fail) =>
-        listener.once("error", fail).listen(0, "127.0.0.1", done),
+        server.once("error", fail).listen(0, "127.0.0.1", done),
       );
-      ports[name] = listener.address().port;
+      ports[kind] = server.address().port;
     }
     return ports;
   } finally {
     await Promise.all(
-      listeners
-        .filter((listener) => listener.listening)
-        .map(
-          (listener) =>
-            new Promise((done, fail) =>
-              listener.close((error) => (error ? fail(error) : done())),
-            ),
-        ),
+      listeners.map(
+        (server) =>
+          new Promise((done, fail) =>
+            server.close((error) => {
+              // A failed bind has no listening handle, but earlier leases still
+              // need closing. Other close errors must fail the native gate.
+              if (error && error.code !== "ERR_SERVER_NOT_RUNNING") fail(error);
+              else done();
+            }),
+          ),
+      ),
     );
   }
 }
@@ -453,7 +458,7 @@ export async function checkCandidate({
       join(scratch, "supabase/config.toml"),
       `project_id = "${project}"\n`,
     );
-    const ports = await availableCandidatePorts();
+    const ports = await allocateCandidatePorts();
     assert.equal(new Set(Object.values(ports)).size, 3);
     const origin = "https://127.0.0.1:" + ports.public;
     const generated = createConfiguration({
