@@ -1,0 +1,35 @@
+# Operational extension ownership and integration
+
+This guide maps the seven additional requested modules to the existing application. It replaces the initial open-PR queue snapshot; current delivery status is in [OPERATIONS_EXTENSION_STATUS](OPERATIONS_EXTENSION_STATUS.md) and the complete target remains in [ROADMAP](../ROADMAP.md). The original extension specification remains verbatim in [OPERATIONS_EXTENSION_PROMPT.txt](OPERATIONS_EXTENSION_PROMPT.txt).
+
+## Ownership and interfaces to reuse
+
+| Module                           | Existing interfaces and ownership                                                                                                                           | Integration boundary                                                                                                                                                                                          |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Course readiness                 | `src/features/readiness/`, course runs/sessions, current claims, agreements, qualification checks, authorised clean resources and directory links.          | Authoritative readiness is distinct from the personal teaching-preparation checklist. Status does not expose private evidence or give access to a linked resource.                                            |
+| Attendance and proof of delivery | `src/features/delivery/`, immutable submitted records/history, accepted claim/session snapshots, invoice links and scoped customer confirmation.            | Completion/review corrections preserve accepted rates and earlier evidence. Personal preparation is not delivery confirmation.                                                                                |
+| Replacement marketplace          | `src/features/replacements/`, existing eligibility/quote/claim locks, directed substitution, calendar exclusions, chat/file predicates and current consent. | A complete eligible future block transfers atomically; preserve the original until the successor succeeds. Cancellation/reopening alone is not a handover.                                                    |
+| Formal change requests           | Future request/amendment workflow; reuse current claim, revenue, contract and lifecycle versioning.                                                         | Existing accepted deals stay immutable; explicit amendments need their own validation, history and connected acceptance. This module is absent from the reviewed main baseline.                               |
+| Website-to-portal enquiries      | Future minimal intake ledger/Edge interface and permissioned management workflow; existing client course requests and origin/idempotency controls.          | The public Website is a separate read-only reference. Intake activation, anti-abuse services and real mail are separate operational decisions. This module is absent from the reviewed main baseline.         |
+| Accounting integration           | Future adapter/validator using original-currency invoices, payments and formula-safe CSV.                                                                   | CSV export does not establish XRechnung/ZUGFeRD validity. Genuine required party/tax data and external-format validation need explicit implementation. This module is absent from the reviewed main baseline. |
+| Support desk                     | `src/features/support/`, ticket/reply/internal-note lifecycle, current support capabilities/MFA, dedicated scanned evidence and scoped inbox destinations.  | Support grants no unrelated course, chat, private-calendar, contract or finance access. Its dedicated evidence must remain exclusive of course-resource sharing.                                              |
+
+## Shared integration points
+
+Navigation and translations belong to the application shell and each feature's DE/EN catalogue. TanStack Query state remains identity-scoped. Domain APIs and current database permissions are authoritative; the browser cannot claim success or grant authority using submitted role/user IDs.
+
+New schema behavior uses additive CLI-created migrations. Released SQL files remain byte-identical. Reconcile actual accepted main before creating the next version; do not rename delivered migrations or import a foreign unmerged feature merely to make its tests pass. The [migration guide](MIGRATION_GUIDE.md) identifies the current chronology.
+
+The [forward integration](OPERATIONAL_FORWARD_INTEGRATION.md) preserves current-authorised notification destinations and reconciles directed versus marketplace handovers. [Role-aware handover](ROLE_AWARE_HANDOVER_INTEGRATION.md) binds recipient-specific private pricing and exact consent. [Support/course registry checks](SUPPORT_COURSE_RESOURCE_REGRESSION.md) protect file-dedication boundaries. Optional-module checks must state whether they use actual installed APIs or a narrowly labelled fixture.
+
+## Verification and delivery
+
+Develop bounded features in isolated worktrees. Validate relevant components, real SQL/RLS/locks, actual Auth/API/scanner flows and desktop/mobile/browser/PWA journeys; then require the final source's applicable CI checks. Existing branch results and test discovery do not certify a later composition. The [acceptance matrix](FUNCTIONAL_ACCEPTANCE.md) maps the delivered suites; [QA_RESULTS](QA_RESULTS.md) retains named passes, failures and their limits.
+
+Use the [GitHub workflow guide](GITHUB_WORKFLOW.md) for the reviewed protection snapshot and read back live settings before merging. Source snapshots do not prove active server rules. Never invent an independent review, skip a failed gate or weaken source/history/security checks to force integration. Security findings belong in [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md), separately from successful scanner execution.
+
+## Publication boundary
+
+A merge does not publish a CMS release. The current `Portal checks` workflow requires an explicitly authorised manual dispatch on `main`, `publish_release=true`, the exact current SHA in `expected_commit` and successful complete publication gates. PR deployment metadata has its own manual action; a downloadable local preview is not an internet-hosted portal. See [CI_QUALITY](CI_QUALITY.md) and [PR_PREVIEWS](PR_PREVIEWS.md).
+
+The configured development updater may consume an eligible explicitly published exact-main release after validating immutable assets, source history, public configuration and migration policy. Source implementation or a successful merge does not prove installation. Production, public DNS/marketing Website, hosting purchases, real messages and external worker activation require the corresponding authorisation and actual acceptance evidence.
