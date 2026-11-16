@@ -431,6 +431,154 @@ async function advanceFilter() {
     expect.objectContaining({ p_tag: "visible-filter" }),
   );
 }
+it("restores only the open menu ID when its authorized row returns after the real filter debounce and archives exactly once", async () => {
+  const fixture = pendingFilter();
+  mount();
+  await screen.findByText(fixture.initial.original_name);
+  vi.useFakeTimers();
+  try {
+    fireEvent.change(screen.getByLabelText("Eigenes Tag filtern"), {
+      target: { value: "visible-filter" },
+    });
+    const summary = screen.getByLabelText(
+      `Dateiname: ${fixture.initial.original_name}`,
+    );
+    fireEvent.click(summary);
+    expect(summary.closest("details")).toHaveAttribute("open");
+    await advanceFilter();
+    await drainTargetQueries();
+    expect(document.querySelectorAll(".document-list > li")).toHaveLength(0);
+    expect(
+      screen.queryByText(fixture.initial.original_name),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Archivieren" }),
+    ).not.toBeInTheDocument();
+    expect(state.exact).not.toHaveBeenCalled();
+    await act(async () => {
+      fixture.finishFilter({
+        data: { items: [fixture.initial], has_more: false, next_cursor: null },
+        error: null,
+      });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await drainTargetQueries();
+    const returnedSummary = screen.getByLabelText(
+      `Dateiname: ${fixture.initial.original_name}`,
+    );
+    expect(returnedSummary).not.toBe(summary);
+    expect(returnedSummary.closest("details")).toHaveAttribute("open");
+    // A detached native details element may still deliver its queued toggle.
+    fireEvent(summary.closest("details")!, new Event("toggle"));
+    expect(returnedSummary.closest("details")).toHaveAttribute("open");
+    fireEvent.click(screen.getByRole("button", { name: "Archivieren" }));
+    await drainTargetQueries();
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Archivieren",
+      }),
+    );
+    await drainTargetQueries();
+    expect(
+      state.rpc.mock.calls.filter(([name]) => name === "rename_document"),
+    ).toEqual([
+      [
+        "rename_document",
+        {
+          p_id: fixture.initial.id,
+          p_name: fixture.initial.original_name,
+          p_delete: true,
+        },
+      ],
+    ]);
+    await act(async () => {
+      fixture.finishMutation({ data: null, error: null });
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await drainTargetQueries();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(returnedSummary.closest("details")).not.toHaveAttribute("open");
+    expect(
+      state.rpc.mock.calls.filter(([name]) => name === "rename_document"),
+    ).toHaveLength(1);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+it("keeps only one menu open and ignores delayed native toggle events from the previously open row", async () => {
+  state.rpc.mockReturnValue(
+    response({ items: [item(), item(1)], has_more: false, next_cursor: null }),
+  );
+  mount();
+  await screen.findByText(item().original_name);
+  const first = screen.getByLabelText(`Dateiname: ${item().original_name}`);
+  const second = screen.getByLabelText(`Dateiname: ${item(1).original_name}`);
+  fireEvent.click(first);
+  expect(first.closest("details")).toHaveAttribute("open");
+  fireEvent.click(second);
+  expect(first.closest("details")).not.toHaveAttribute("open");
+  expect(second.closest("details")).toHaveAttribute("open");
+  fireEvent(first.closest("details")!, new Event("toggle"));
+  expect(second.closest("details")).toHaveAttribute("open");
+  expect(
+    within(first.closest("details")!).getByRole("button", {
+      name: "Archivieren",
+    }),
+  ).not.toBeVisible();
+  expect(
+    within(second.closest("details")!).getByRole("button", {
+      name: "Archivieren",
+    }),
+  ).toBeVisible();
+  fireEvent.click(second);
+  expect(second.closest("details")).not.toHaveAttribute("open");
+  expect(
+    within(second.closest("details")!).getByRole("button", {
+      name: "Archivieren",
+    }),
+  ).not.toBeVisible();
+  expect(state.exact).not.toHaveBeenCalled();
+  expect(
+    state.rpc.mock.calls.every(([name]) => name === "document_discovery"),
+  ).toBe(true);
+});
+it("discards a denied target's open menu before a genuinely renewed list grant restores the row", async () => {
+  state.rpc.mockImplementation((name) =>
+    name === "document_discovery"
+      ? response({ items: [item()], has_more: false, next_cursor: null })
+      : response(null, { code: "42501" }),
+  );
+  const { client } = mount();
+  await screen.findByText(item().original_name);
+  const user = userEvent.setup();
+  await user.click(screen.getByLabelText(`Dateiname: ${item().original_name}`));
+  await user.click(screen.getByRole("button", { name: "Archivieren" }));
+  const confirm = within(await screen.findByRole("dialog")).getByRole(
+    "button",
+    {
+      name: "Archivieren",
+    },
+  );
+  await waitFor(() => expect(confirm).toBeEnabled());
+  await user.click(confirm);
+  await waitFor(() => {
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByText(item().original_name)).not.toBeInTheDocument();
+  });
+  await act(() => client.invalidateQueries({ queryKey: ["documents"] }));
+  const restored = await screen.findByLabelText(
+    `Dateiname: ${item().original_name}`,
+  );
+  expect(restored.closest("details")).not.toHaveAttribute("open");
+  expect(
+    within(restored.closest("details")!).getByRole("button", {
+      name: "Archivieren",
+    }),
+  ).not.toBeVisible();
+  expect(
+    state.rpc.mock.calls.filter(([name]) => name === "rename_document"),
+  ).toHaveLength(1);
+});
 it("keeps the identical archive confirmation across pending and empty filter results, then sends exactly one confirmed mutation", async () => {
   const fixture = pendingFilter();
   mount();
