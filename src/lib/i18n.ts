@@ -3,6 +3,12 @@ import { initReactI18next } from "react-i18next";
 import { readPreference, writePreference } from "./preferences";
 const pairs: Record<string, [string, string]> = {
   announcements: ["Ankündigungen", "Announcements"],
+  tryDemo: ["Demo mit Beispieldaten ausprobieren", "Try the sample-data demo"],
+  helpGuides: ["Hilfe & Anleitungen", "Help & guides"],
+  errorHelp: [
+    "Problem verstehen und nächste Schritte finden",
+    "Understand the problem and find next steps",
+  ],
   auditLog: ["Administrationsprotokoll", "Administration log"],
   availability: ["Verfügbarkeit", "Availability"],
   topics: ["Themen & Tools", "Topics & tools"],

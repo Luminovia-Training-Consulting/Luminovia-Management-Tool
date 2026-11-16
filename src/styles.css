@@ -2418,3 +2418,10 @@ legend {
 .account-roles input {
   width: auto;
 }
+.login-learning-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.3rem;
+}

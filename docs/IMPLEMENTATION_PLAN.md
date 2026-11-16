@@ -2,15 +2,35 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
+## Current combined acceptance after Demo/Help integration
+
+- [x] Preserve all32 migrations, M7/M8 resource/privacy boundaries, the complete master-specification ledger and accepted incoming Demo/Help/Tour source from PR16/main `e75f55d`.
+- [x] Record exact `9c42730` CI43794921492 as **failed**:316 SQL cases,26 actual business API suites and real restart persistence passed;92/94 browser journeys passed and both global-calendar DE→EN journeys failed. Earlier29-migration failures remain historical evidence in WORKLOG.
+- [x] Reproduce the dialog-loss regression and correct only semantic calendar range handling in `bf09f19`;12 Calendar cases, TypeScript, lint and formatting pass. Equal-range language signals preserve the same detail; real navigation still clears it and introduces no duplicate range queries.
+- [ ] Complete integration checks and a fresh full isolated run of the combined M7/M8/Demo/Help source, then observe both exact application and retained-data CI gates. Do not reuse individual branch or pre-merge counts as combined acceptance.
+- [ ] After the tested product merge, execute the actual main-only maintenance-App workflow proof. Preserve the independently strengthened14 required checks, mandatory signatures and review-only Maintain/Admin PR exception; do not restore an older nine-check policy. Review-hold decisions for separate PR13/19 remain separate from this product gate.
+
+## Guided exploration and practical help
+
+User requested a complete bilingual guided experience, safe fictional test system, practical problem explanations and a tested PR/merge. Work is isolated on `codex/guided-demo-help`; unrelated original roles/preview/welcome-checklist changes remain outside this PR.
+
+- [x] Public fictional demo for all25current portal modules, guided route sequence and meaningful in-memory exercises; explicit simulation labels, reset/reload erasure, DE/EN and shared themes.
+- [x] Authenticated permission-aware Portal tour with explicit navigation, pause/resume/restart and per-account session progress; unchanged server permissions, MFA and online confirmation.
+- [x] Public searchable bilingual help with practical workflows, module deep links, general recovery and entry points from login/tour/errors.
+- [x] Source checks, production build, actual public desktop/mobile acceptance, initial whole-source coverage above unchanged gates and precise usage/security documentation. See WORKLOG for executed counts and remaining exact-source checks.
+- Accepted [PR16](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/16) is included through incoming main `e75f55d`. Its independent evidence is retained; the current combined32-migration source still requires fresh complete application/native retained-data/security acceptance. No production deployment is implied.
+
+[Guided demo and help](GUIDED_DEMO_AND_HELP.md) complements the full target below. These educational simulations do not mark any unimplemented business module complete and do not replace the independent account welcome checklist.
+
 ## Concurrent quality baseline and current governance
 
-Incoming main `3256d1a` adds visible build/type/lint/format/connectivity checks, enforceable V8 coverage floors and reports, independent CodeQL, Dependency Review and dependency-update guidance. These are preserved. The pre-incoming 316-unit result is historical; the integrated 342-test coverage run now passes every configured threshold. Complete native acceptance is next. See [CI_QUALITY](CI_QUALITY.md) and [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md).
+Incoming main `3256d1a` adds visible build/type/lint/format/connectivity checks, enforceable V8 coverage floors and reports, independent CodeQL, Dependency Review and dependency-update guidance. These are preserved. The pre-incoming316-unit result and pre-Demo342-test coverage pass are historical source-bound checkpoints. The first32-migration exact CI subsequently failed the two Calendar language journeys; the corrected combined source requires the fresh complete acceptance above. See [CI_QUALITY](CI_QUALITY.md) and [CODE_SCANNING_TRIAGE](CODE_SCANNING_TRIAGE.md).
 
-The three live rules are active after the user's clarification: Maintain/Admin review exception through PRs only; nine required CI contexts and signatures remain compulsory for humans; only the scoped tested maintenance App has its technical review/check exception. History has no bypass. The configured App's actual main-only workflow probe remains after the tested product merge. Auto-Merge availability is enabled. Source and live rule details are in [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md).
+The three live rules are active after the user's clarification: Maintain/Admin review exception through PRs only; all14 currently required CI contexts and signatures remain compulsory for humans; only the scoped tested maintenance App has its technical review/check exception. History has no bypass. The configured App's actual main-only workflow probe remains after the tested product merge. Auto-Merge availability is enabled. Source and live rule details are in [GITHUB_WORKFLOW](GITHUB_WORKFLOW.md).
 
 ## Current combined source — complete acceptance next
 
-The primary `codex/community-and-resource-completion` branch now combines all eight additive M7/M8 migrations with the approved repository-scoped maintenance workflow and reviewed file-dialog fixes. There are **32 migrations / 155 public RPCs**. Functional source is frozen; integrated lint/types and **342 Vitest cases / 54 files** with all coverage thresholds passed. The graph has **128 reachable modules / 32 routes** with no detected disconnected runtime source. Full native integration and both exact CI gates remain mandatory.
+The primary `codex/community-and-resource-completion` branch combines all eight additive M7/M8 migrations with the approved repository-scoped maintenance workflow, reviewed file-dialog fixes, Calendar correction and incoming Demo/Help/Tour source. There are **32 migrations / 155 public RPCs**; PR16 introduces no migration. Historical pre-Demo checks passed lint/types and **342 Vitest cases / 54 files** with all coverage thresholds; the earlier M7/M8 graph inventoried **128 reachable modules / 32 routes** with no detected disconnected runtime source. Those counts do not verify this new integration. A fresh source inventory, full native integration and both exact CI gates remain mandatory.
 
 The next steps are to run the complete isolated command, fix real failures, record actual evidence, merge PR10 only after application and retained-image checks pass, then probe the App workflow on main and recheck the active, precise review/check policies. Keep the separate persistent GitHub preview current through its reviewed migration plan. No production/public-website deployment is authorised.
 

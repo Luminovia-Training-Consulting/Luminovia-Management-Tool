@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -35,56 +35,9 @@ import { db } from "../lib/supabase";
 import { permissionsQuery, profileQuery, userRolesQuery } from "../lib/queries";
 import { Button } from "../components/ui/button";
 import { ErrorState, Loading, Notice } from "../components/common";
-import { readPreference, writePreference } from "../lib/preferences";
-export function Preferences() {
-  const { t, i18n } = useTranslation();
-  const [theme, setTheme] = useState(() => {
-    const saved = readPreference("theme");
-    return saved && ["light", "dark", "system"].includes(saved)
-      ? saved
-      : "system";
-  });
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const apply = () => {
-      document.documentElement.dataset.theme =
-        theme === "system" ? (media.matches ? "dark" : "light") : theme;
-    };
-    apply();
-    writePreference("theme", theme);
-    media.addEventListener("change", apply);
-    return () => media.removeEventListener("change", apply);
-  }, [theme]);
-  return (
-    <div className="preferences">
-      <label className="sr-only" htmlFor="language">
-        {t("language")}
-      </label>
-      <select
-        id="language"
-        aria-label={t("language")}
-        value={i18n.language}
-        onChange={(e) => void i18n.changeLanguage(e.target.value)}
-      >
-        <option value="de">DE</option>
-        <option value="en">EN</option>
-      </select>
-      <label className="sr-only" htmlFor="theme">
-        {t("theme")}
-      </label>
-      <select
-        id="theme"
-        aria-label={t("theme")}
-        value={theme}
-        onChange={(e) => setTheme(e.target.value)}
-      >
-        <option value="system">◐ {t("system")}</option>
-        <option value="light">☀ {t("light")}</option>
-        <option value="dark">☾ {t("dark")}</option>
-      </select>
-    </div>
-  );
-}
+import { Preferences } from "../components/preferences";
+import { PortalTour } from "../features/help/tour";
+export { Preferences } from "../components/preferences";
 export function Shell() {
   const { t } = useTranslation();
   const { session } = useAuth();
@@ -146,6 +99,7 @@ export function Shell() {
     { to: "/settings", icon: Settings2, label: "settings" },
     { to: "/profile", icon: UserRound, label: "profile" },
     { to: "/security", icon: ShieldCheck, label: "security" },
+    { to: "/help", icon: BookOpen, label: "helpGuides" },
     ...(manage ? [{ to: "/admin", icon: Settings2, label: "admin" }] : []),
   ];
   const mobilePrimary = [
@@ -301,6 +255,13 @@ export function Shell() {
           ) : (
             <>
               <AnnouncementBanners actor={session!.user.id} />
+              <PortalTour
+                key={session!.user.id}
+                actor={session!.user.id}
+                roles={roles.data ?? []}
+                permissions={permissions.data ?? []}
+                ready={permissions.isSuccess && roles.isSuccess}
+              />
               <Outlet />
             </>
           )}
