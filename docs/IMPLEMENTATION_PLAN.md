@@ -2,7 +2,6 @@
 
 Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](WORKLOG.md), then the verbatim [master specification](UNIVERSAL_MASTER_PROMPT.txt), source and actual test evidence. The full target remains required. A working development slice is not production approval.
 
-
 ## Main26 course precision and critical form recovery
 
 Independent delivery from exact main `fabd71a7958d7814c18e3403877e542c20c3bea2`; all 26 migrations, current server authority and the complete target ledger below are preserved. This slice contains no M7 product functionality or server/schema changes.
@@ -11,6 +10,9 @@ Independent delivery from exact main `fabd71a7958d7814c18e3403877e542c20c3bea2`;
 - [x] Preserve unchanged session endpoints by form-local original identity and zone; strictly parse edited/new endpoints, strip local identity from the RPC payload and compare PostgreSQL microseconds correctly.
 - [x] Pass 26 actual course component cases plus 28 finance/wiki failure-recovery cases, and the complete 303-test/55-file frontend suite. Measured coverage over 119 source files is S59.01/B53.55/F49.11/L61.23%; existing coverage gates/exclusions remain unchanged.
 - [x] Pass TypeScript, whole-tree ESLint, source formatting, compiler connectivity/export audit and synthetic production/PWA build.
+- [x] Integrate accepted guided-experience main `0a6002a5` with both ledgers preserved; rerun the full frontend suite: 308/308 tests, S59.11/B53.71/F49.17/L61.32%, 119 sources.
+- [x] Prepare a genuine PostgreSQL precision/atomicity contract and one real browser journey in both desktop/mobile projects; fix the discovered shared-fixture nullable typing without changing valid Auth/MFA or data-less writes. Strict E2E typing passes; actual SQL/browser execution is pending.
+- [ ] Run the canonical local isolated acceptance on the committed current source and record the actual SQL/API/browser/PWA results before publishing.
 - [ ] Publish the independently reviewed signed slice through its own PR; observe exact-head required security/application/native checks and merge only after their actual successful results. Local frontend acceptance does not certify SQL/API/browser/native or production behavior.
 
 ## Coordinated PR18 integration
@@ -55,6 +57,7 @@ The latest request supersedes the earlier shared compensation default. Work is i
 - [ ] Production policy setup/migration/deployment is a separate operational step; this request does not authorise production or real email changes.
 
 [Roles and private pricing](DELEGATED_ROLES_PRICING.md), [welcome guide](WELCOME_GUIDE.md), [PR previews](PR_PREVIEWS.md). The verbatim original specification remains preserved; these explicit user extensions update its operating details without dropping any remaining modules.
+
 ## Comprehensive code comments and agent guide
 
 Requested directly on `main`: explain the maintained code throughout and provide a project-specific `AGENTS.md`, using OpenXLR's guide as a structural reference. Work uses a dedicated review worktree so the original checkout's concurrent feature changes remain separate. The independent English community commit `3256d1a` is preserved; contributor guidance remains English and source commentary uses English.
