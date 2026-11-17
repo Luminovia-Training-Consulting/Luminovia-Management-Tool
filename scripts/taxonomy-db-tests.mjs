@@ -1,11 +1,16 @@
 /** Real temporary PostgreSQL checks. Native Auth is covered separately. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
+import {
+  applyPasswordOnlyPermissionPolicy,
+  withTestDatabase,
+  quoteSql as q,
+} from "./testing/database.mjs";
 
 await withTestDatabase(
   "taxonomy_test",
   async ({ sql, actor }) => {
+    await applyPasswordOnlyPermissionPolicy(sql);
     const admin = randomUUID(),
       manager = randomUUID(),
       lecturer = randomUUID(),
