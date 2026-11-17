@@ -1,5 +1,15 @@
 # Persistent implementation plan
 
+## Bug hunt — lazy route bundle correction (17 November 2026)
+
+- [x] Inspect clean published `main` independently of the dirty feature checkout and identify a measurable production build defect.
+- [x] Split shell-only announcements/notification components from their full pages and lazy-load those pages on direct routes as well as section hubs.
+- [x] Pass all 867 frontend tests, targeted UI tests, typecheck, lint and public-config production/PWA build; confirm ineffective dynamic-import warnings are gone and route chunks are emitted.
+- [x] Align stale SQL assertions with accepted self-declared expertise behavior; pass 25 PostgreSQL groups including 50 parallel claims, and pass the focused owned-cascade SQL suite after adding an explicit `oid[]` initializer migration.
+- [x] Resolve advisor warnings from redundant permissive guest-profile/role policies using a forward migration; `npm run test:db` passes all 25 groups, schema lint and database advisors (“No issues found”).
+- [ ] Complete canonical isolated SQL/API/desktop/mobile/PWA acceptance; the most recent full run passed through persistence and all 25 SQL groups before the now-fixed advisor warning, while the next retry stopped before startup because another checkout owns the shared lock.
+- [ ] Push the current signed branch through the repository PR workflow, monitor exact-head checks and merge when required checks pass.
+
 ## Documentation and API parity — 17 November 2026
 
 - [x] Audit the current consolidated root guides and public API against the actual 114-migration source, account OpenAPI and current application calls. Keep the original specification and dated evidence intact.
@@ -25,7 +35,6 @@ The latest user revision explicitly restores restricted guest accounts; particip
 - [x] Pass867 frontend tests,331 runtime checks, type/lint/format/export checks and production build; focused SQL/account-facade/native Auth/UI journeys pass. Native desktop/mobile/dark visual review passes, as do actual production PWA manifest/icons/active-service-worker/browser-installability checks. Full historical canonical acceptance and hosted exact-head CI remain separate unverified gates.
 - [x] Push integrated main and refresh retained-data local preview at5773: verified private archive, preserve Auth/Storage/project/password, apply four forward migrations and pass native admin login plus calendar/import, account creation dialog, administration board entry, support tab and profile heading smoke.
 
-
 ## Current exact-main CI repair — 17 November 2026
 
 - [x] Inspect current `origin/main` and failed `Portal checks` run 44072628974; fast CI gates passed, full isolated verification exposed stale password-only/MFA fixture expectations.
@@ -38,6 +47,7 @@ The latest user revision explicitly restores restricted guest accounts; particip
 - [x] Correct stale lifecycle authorization assertion; focused local PostgreSQL lifecycle suite passes 12/12 groups.
 - [ ] Run fresh full isolated system and browser acceptance on the corrected exact head, fix every failure, and inspect fresh GitHub `Portal checks` through completion.
 - [ ] Claim CI green only after every required current-head job succeeds; retain complete test scope.
+
 ## Calendar, marketplace and owned deletion revision — 17 November 2026
 
 The later user instructions supersede earlier admin-verified expertise and blanket commercial-history deletion blockers.
@@ -54,8 +64,6 @@ The later user instructions supersede earlier admin-verified expertise and blank
 - [x] Native confirmed lecturer and organisation deletion: Auth, exact scanned files/Storage, reservations, personal calendar and linked historical/current records removed; shared job reopened and unrelated template/peer data retained.
 - [x] Update the persistent local preview at5773 without a data reset: verified backup archive, preserved project/port overlay and Auth/Storage volumes, applied all three forward migrations, checked installed frozen-scope/file-fence definitions and passed native admin login/calendar/jobs smoke.
 - [ ] Full canonical historical API/E2E/PWA suite and hosted exact-head CI remain separate from focused native acceptance; do not claim those passed from this slice.
-
-
 
 ## User revision: simpler portal and supplied design — 17 November 2026
 

@@ -2,8 +2,8 @@
  * Bell menu, complete inbox and personal notification preferences. Preview/history share
  * appropriate caches while confirmed read state and version conflicts remain visible.
  */
-import { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   useInfiniteQuery,
   useMutation,
@@ -13,19 +13,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
-import {
-  Bell,
-  MessagesSquare,
-  CalendarDays,
-  ListChecks,
-  Wallet,
-  LifeBuoy,
-} from "lucide-react";
-import {
-  notificationCategories,
-  notificationCategory,
-  type NotificationCategory,
-} from "./categories";
+import { notificationCategory, type NotificationCategory } from "./categories";
 import { isGuestOnly } from "../auth/guest-navigation";
 import { PushSettings } from "./push-settings";
 import { useAuth } from "../auth/auth-context";
@@ -36,7 +24,6 @@ import {
   Notice,
   PageHeading,
 } from "../../components/common";
-import { dateTime } from "../../lib/dates";
 import {
   profileQuery,
   permissionsQuery,
@@ -46,16 +33,13 @@ import { Preferences } from "../../components/preferences";
 import { WelcomeGuideEntry } from "../onboarding/welcome";
 import { requireOnline, useOnline } from "../../lib/online";
 import {
-  markNotifications,
   mergeNotificationPages,
   notificationInboxQuery,
   notificationKeys,
   notificationPreferencesQuery,
   notificationPreferencesSchema,
-  notificationPreviewQuery,
   refreshNotifications,
   saveNotificationPreferences,
-  type NotificationItem,
   type NotificationPreferences,
 } from "./api";
 import "./i18n";
@@ -63,231 +47,9 @@ import "./notifications.css";
 import { DeliverySettings } from "./delivery-settings";
 import { QuietHoursSettings } from "./attention-settings";
 import "./attention-i18n";
+import { CategorySelector, NotificationRow } from "./notification-common";
+import { useReadState } from "./use-notification-read-state";
 
-/** Known notification kinds for translated labels; unknown kinds use the defined fallback. */
-const knownKinds = new Set([
-  "claim_confirmed",
-  "claim_cancelled",
-  "assignment_withdrawal_requested",
-  "assignment_withdrawal_approved",
-  "assignment_withdrawal_rejected",
-  "assignment_withdrawal_withdrawn",
-  "job_reopened",
-  "job_matching",
-  "chat_message",
-  "forum_reply",
-  "session_reminder",
-  "contract_expiring",
-  "contract_available",
-  "support_update",
-  "readiness_task",
-  "website_enquiry",
-  "replacement_available",
-  "replacement_completed",
-  "delivery_submitted",
-  "delivery_confirmed",
-  "delivery_disputed",
-  "delivery_correction_requested",
-  "delivery_customer_confirmed",
-  "job_waitlist_available",
-  "substitution_proposed",
-  "substitution_closed",
-  "task_assigned",
-  "task_due",
-  "timesheet_reviewed",
-  "qualification_expiring",
-  "course_preparation_updated",
-  "course_question",
-  "course_answer",
-  "course_resource_shared",
-  "course_quiz_published",
-  "course_attendance_updated",
-  "course_completion_issued",
-  "course_completion_revoked",
-  "portal_announcement",
-  "invoice_submitted",
-  "invoice_approved",
-  "invoice_paid",
-  "invoice_rejected",
-  "invoice_cancelled",
-  "payment_received",
-]);
-/** Categories filter only already-loaded authorized rows; neither totals nor server cursors change. */
-function CategorySelector({
-  value,
-  onChange,
-}: {
-  value: NotificationCategory;
-  onChange: (value: NotificationCategory) => void;
-}) {
-  const { t } = useTranslation("inbox");
-  const icons = {
-    all: Bell,
-    messages: MessagesSquare,
-    courses: CalendarDays,
-    tasks: ListChecks,
-    finance: Wallet,
-    support: LifeBuoy,
-  };
-  return (
-    <div
-      className="notification-category-selector"
-      role="group"
-      aria-label={t("categoryFilter")}
-    >
-      {notificationCategories.map((category) => {
-        const Icon = icons[category];
-        return (
-          <Button
-            key={category}
-            type="button"
-            variant="ghost"
-            size="sm"
-            aria-pressed={category === value}
-            onClick={() => onChange(category)}
-          >
-            <Icon size={16} aria-hidden="true" />
-            <span>{t(`category_${category}`)}</span>
-          </Button>
-        );
-      })}
-    </div>
-  );
-}
-/** Connect confirmed read-state mutations to targeted revalidation of the actor's inbox. */
-function useReadState(actor: string) {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: async ({
-      ids,
-      before,
-      read,
-    }: {
-      ids: string[] | null;
-      before: string | null;
-      read: boolean;
-    }) => {
-      requireOnline();
-      return markNotifications(ids, before, read);
-    },
-    onSuccess: () =>
-      client.invalidateQueries({ queryKey: notificationKeys.all(actor) }),
-  });
-}
-/** Display validated internal destinations and bind each notification to its read action. */
-function NotificationRow({
-  item,
-  zone,
-  compact,
-  disabled,
-  mark,
-}: {
-  item: NotificationItem;
-  zone: string;
-  compact?: boolean;
-  disabled: boolean;
-  mark: (id: string, read: boolean) => void;
-}) {
-  const { t, i18n } = useTranslation("inbox");
-  return (
-    <li
-      className={`notification-row ${item.read_at ? "" : "notification-unread"}`}
-    >
-      <strong>{t(knownKinds.has(item.kind) ? item.kind : "activity")}</strong>
-      {item.title && <p>{item.title}</p>}
-      <small>{dateTime(item.created_at, i18n.language, zone)}</small>
-      {item.href ? (
-        <Link to={item.href}>{t("open")}</Link>
-      ) : (
-        !compact && <p className="muted">{t("unavailable")}</p>
-      )}
-      {(!compact || !item.read_at) && (
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={disabled}
-          onClick={() => mark(item.id, !item.read_at)}
-        >
-          {t(item.read_at ? "markUnread" : "markRead")}
-        </Button>
-      )}
-    </li>
-  );
-}
-/** Observe the bounded own preview and expose the shared bell/unread state. */
-export function NotificationsMenu({ id, zone }: { id: string; zone: string }) {
-  const { t } = useTranslation("inbox");
-  const [category, setCategory] = useState<NotificationCategory>("all");
-  const online = useOnline();
-  const query = useQuery(notificationPreviewQuery(id));
-  const mark = useReadState(id);
-  const { t: attentionText } = useTranslation("attention");
-  const count = query.isError
-    ? 0
-    : (query.data?.attention_count ?? query.data?.unread_count ?? 0);
-  const quiet = !query.isError && query.data?.quiet_active;
-  const countLabel = query.isError
-    ? t("unavailable")
-    : quiet
-      ? `${attentionText("criticalCount", { count })}; ${attentionText("active")}; ${attentionText("totalCount", { count: query.data?.unread_count ?? 0 })}`
-      : t("count", { count });
-  const menu = useRef<HTMLDetailsElement>(null);
-  const location = useLocation();
-  useEffect(() => {
-    if (menu.current) menu.current.open = false;
-  }, [location.pathname, location.search]);
-  return (
-    <details className="notification-menu" ref={menu}>
-      <summary aria-label={`${t("title")}: ${countLabel}`}>
-        <Bell aria-hidden="true" size={21} />
-        {count > 0 && (
-          <span className="notification-count" aria-hidden="true">
-            {count}
-          </span>
-        )}
-      </summary>
-      <div className="notification-popover">
-        <h2>{t("title")}</h2>
-        <CategorySelector value={category} onChange={setCategory} />
-        <p className="notification-filter-scope">{t("recentScope")}</p>
-        {query.isPending ? (
-          <Loading />
-        ) : query.isError ? (
-          <ErrorState retry={() => void query.refetch()} />
-        ) : !query.data.items.some(
-            (item) =>
-              category === "all" ||
-              notificationCategory(item.kind) === category,
-          ) ? (
-          <p>{t(category === "all" ? "empty" : "categoryEmpty")}</p>
-        ) : (
-          <ul>
-            {query.data.items
-              .filter(
-                (item) =>
-                  category === "all" ||
-                  notificationCategory(item.kind) === category,
-              )
-              .map((item) => (
-                <NotificationRow
-                  key={item.id}
-                  item={item}
-                  zone={zone}
-                  compact
-                  disabled={!online || mark.isPending}
-                  mark={(id, read) =>
-                    mark.mutate({ ids: [id], before: null, read })
-                  }
-                />
-              ))}
-          </ul>
-        )}
-        {mark.isError && <Notice kind="error">{t("error")}</Notice>}
-        <Link to="/notifications">{t("inbox")}</Link>
-      </div>
-    </details>
-  );
-}
 /** Load inbox history on demand through cursors and keep filter/read state separate. */
 export function NotificationsPage() {
   const [category, setCategory] = useState<NotificationCategory>("all");

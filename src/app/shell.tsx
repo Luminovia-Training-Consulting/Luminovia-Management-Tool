@@ -14,7 +14,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { PermanentDeletionProvider } from "../features/deletions/deletions";
-import { AnnouncementBanners } from "../features/announcements/announcements";
+import { AnnouncementBanners } from "../features/announcements/announcement-banners";
 import {
   MessagesSquare,
   FolderOpen,
@@ -38,7 +38,7 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import { Avatar } from "../features/profile/avatar";
-import { NotificationsMenu } from "../features/notifications/notifications";
+import { NotificationsMenu } from "../features/notifications/notifications-menu";
 import {
   isGuestOnly,
   guestRouteAllowed,

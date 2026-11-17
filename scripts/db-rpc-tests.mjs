@@ -203,18 +203,20 @@ try {
     );
     assert.equal((await rpc(users[52], j)).status, "prerequisite_missing");
   });
-  await test("User-declared expertise remains eligible regardless of attestation expiry; valid contract version linked", async () => {
+  await test("Self-declared expertise remains eligible despite expired verification metadata", async () => {
     await sql(
-      `insert into public.lecturer_topics(user_id,topic_id,verified,valid_until) values('${users[55]}','${topic}',true,now()+interval '1 day')`,
+      `insert into public.lecturer_topics(user_id,topic_id,verified,valid_until) values('${users[55]}','${topic}',false,now()-interval '1 day')`,
     );
+    const declared = await rpc(
+      users[55],
+      await job({ topic_ids: [topic], sessions: laterSessions(10) }),
+    );
+    assert.equal(declared.status, "confirmed");
     assert.equal(
-      (
-        await rpc(
-          users[55],
-          await job({ topic_ids: [topic], sessions: laterSessions(10) }),
-        )
-      ).status,
-      "confirmed",
+      await sql(
+        `select count(*) from public.assignment_sessions where claim_id='${declared.claim_id}'`,
+      ),
+      "5",
     );
     await sql(
       `insert into public.contracts(user_id,status,effective_from,expires_at,version) values('${users[52]}','active',now()-interval '1 day',now()+interval '1 year',2)`,

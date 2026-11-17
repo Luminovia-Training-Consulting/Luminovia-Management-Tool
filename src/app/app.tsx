@@ -22,16 +22,26 @@ import { Dashboard } from "../features/dashboard/dashboard";
 import { WelcomeGuidePage } from "../features/onboarding/welcome";
 import { Jobs, JobDetail } from "../features/jobs/jobs";
 import { ProfilePage } from "../features/profile/profile";
-import { AnnouncementsPage } from "../features/announcements/announcements";
 // Job/profile widgets already load this module; another lazy wrapper only adds
 // a loading boundary and cannot produce an independent route chunk.
 import { FilesPage } from "../features/files/files";
 // The shared shell/provider and contextual actions already load this module.
 import { DeletionsPage } from "../features/deletions/deletions";
-import {
-  NotificationsPage,
-  SettingsPage,
-} from "../features/notifications/notifications";
+const AnnouncementsPage = lazy(() =>
+  import("../features/announcements/announcements").then((module) => ({
+    default: module.AnnouncementsPage,
+  })),
+);
+const NotificationsPage = lazy(() =>
+  import("../features/notifications/notifications").then((module) => ({
+    default: module.NotificationsPage,
+  })),
+);
+const SettingsPage = lazy(() =>
+  import("../features/notifications/notifications").then((module) => ({
+    default: module.SettingsPage,
+  })),
+);
 
 const AdminAuditPage = lazy(() =>
   import("../features/audit/audit").then((module) => ({
