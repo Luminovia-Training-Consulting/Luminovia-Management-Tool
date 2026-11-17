@@ -1,5 +1,9 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — PR35 native private-document acceptance alignment
+
+Current integrated CI failed in both application and selfhost acceptance because the native deletion API fixture asked an administrator to delete another actor's personal document. Accepted migration `20261116173902_permanent_resource_deletion.sql` deliberately denies administrator-wide access to private documents. Corrected the fixture to require an MFA-verified owner for confirmation and operation status, and added an explicit MFA administrator-denial assertion. This preserves the privacy boundary and exercises the real owner path; no authorization check was weakened. Fresh exact-head system, browser, native and required CI results remain pending.
+
 ## 17 November 2026 — private document deletion boundary
 
 Independent PR 35 review found that administrator-wide deletion authority preceded the document ownership check. The document branch now runs first: personal and room documents require ownership; authorised administrators retain deletion of job-scoped materials only when current job-management and document access both permit it. An actual PostgreSQL regression checks that an administrator, including one in the room, cannot enumerate or preview another person's personal or DM document, while the owner and an authorised job manager retain their respective paths.
@@ -57,6 +61,7 @@ The exact `5473a31` native CI passes all SQL suites but correctly refuses an upg
 The reordered source passes8company,25permanent-deletion,4actual-upgrade composition groups,33operational PL/pgSQL body checks and12native replay guards. The upgrade preserves original document OID/ACL, exact support/notification helper sources and an intentionally stricter contract predecessor; current support evidence and teaching-role changes are checked behaviorally. All68accepted main migration files remain byte-identical.
 
 The same CI run exposed a second, intermittent system failure: protected-account confirmation received40001instead of23503with unchanged data. A new real planner regression reproduces different dependency arrays under index/custom versus sequential/generic plans on the unfixed source. Both catalogue walks now explicitly order constraints, preserving generated scope aliases, blocker order and all actual fingerprints; the exact protected-dependency assertion remains unchanged. Independent read-only reproduction confirms the cause. Final current-source full/native/browser CI is required; earlier snapshot API/browser evidence is not substituted for this composition.
+
 ## 17 November 2026 — post-upload discovery race
 
 An initial document discovery request may still be pending when a successful upload commits. Invalidation alone can reuse that pre-commit request, blocking completion and omitting the new file. Upload success now cancels document list, exact-document and version-history queries before invalidating them, matching the broader safeguard in PR35. A controlled component regression failed without the fix and passed with it; the three original version/upload component tests and TypeScript passed locally; the regression also covers the three query prefixes. This race is a plausible contributor to the mobile CI file failures, but their precise cause is not established; the full browser and native gates must run again on the integrated revision.

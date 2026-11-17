@@ -152,6 +152,7 @@ try {
   );
   await mfa(admin);
   await mfa(peer);
+  await mfa(teacher);
   await checked(
     unused.client.rpc("save_profile_details", {
       p_payload: {
@@ -263,7 +264,17 @@ try {
     403,
     "Unrelated peer cannot purge private document",
   );
-  const pending = await confirm(admin, "document", reservation.document_id);
+  assert.equal(
+    (
+      await request(admin, "preview", {
+        kind: "document",
+        id: reservation.document_id,
+      })
+    ).status,
+    403,
+    "Administrator cannot purge another actor's private document",
+  );
+  const pending = await confirm(teacher, "document", reservation.document_id);
   assert.equal(pending.status, 202, JSON.stringify(pending.body));
   assert.equal(pending.body.status, "pending");
   assert.equal(
@@ -293,7 +304,7 @@ try {
   );
   leases.splice(leases.indexOf(lease), 1);
   const deleted = await request(
-    admin,
+    teacher,
     `operations/${pending.body.operation_id}`,
     {},
   );
@@ -347,7 +358,7 @@ try {
     [],
   );
   assert.equal(
-    (await request(admin, `operations/${pending.body.operation_id}`, {})).body
+    (await request(teacher, `operations/${pending.body.operation_id}`, {})).body
       .status,
     "completed",
     "Retry does not recreate removed resource",

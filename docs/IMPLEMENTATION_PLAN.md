@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## PR35 private-document acceptance follow-up — 17 November 2026
+
+- [x] Trace both current exact-head CI failures to the stale native fixture: an administrator attempted to preview another actor's private personal document after the accepted migration removed that bypass.
+- [x] Update real Auth/Storage acceptance to assert the MFA administrator is denied and the MFA owner confirms, polls and retries deletion; keep the privacy boundary unchanged.
+- [ ] Pass focused checks and fresh full exact-head/current-base CI, including local system, browser, selfhost retained-data, security and preview gates; merge PR35 only when all required checks pass.
+
 PR 35 follow-up: cancellation-marker publication and the announcement quiet-window fixture have focused passing local checks; rerun the complete required CI on the integrated head and address remaining failures before merge. The full product scope below remains unchanged.
 
 PR 35 review corrected the administrator-wide private-document deletion bypass; the 27-group disposable SQL suite passed. Full integrated CI remains required before merge.
