@@ -201,6 +201,12 @@ const pairs: Record<string, [string, string]> = {
     "The content will be replaced by a deletion notice. The action remains recorded.",
   ],
   messageActions: ["Nachrichtenaktionen", "Message actions"],
+  copyMessage: ["Nachrichtentext kopieren", "Copy message text"],
+  copySuccess: ["Nachrichtentext kopiert.", "Message text copied."],
+  copyError: [
+    "Der Nachrichtentext konnte nicht kopiert werden. Bitte wähle den Text manuell aus.",
+    "The message text could not be copied. Please select the text manually.",
+  ],
   reactionAdd: ["{{emoji}} hinzufügen", "Add {{emoji}}"],
   reactionRemove: ["{{emoji}} entfernen", "Remove {{emoji}}"],
   reactions: ["Reaktionen", "Reactions"],

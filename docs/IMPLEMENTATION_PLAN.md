@@ -1,5 +1,8 @@
 # Persistent implementation plan
 
+**17 November QoL programme:** The user requests one integrated PR covering the supplied QoL prompt. Initial scope/status and honest verification gaps are tracked in [QOL_PROGRAMME_STATUS](QOL_PROGRAMME_STATUS.md); the full scope below remains required.
+
+
 ## PR35 private-document acceptance follow-up — 17 November 2026
 
 - [x] Trace both current exact-head CI failures to the stale native fixture: an administrator attempted to preview another actor's private personal document after the accepted migration removed that bypass.

@@ -1,5 +1,9 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — quality-of-life programme started
+
+The user supplied the complete QoL programme and explicitly requested one large PR. Began a separate worktree from main `08f65719ad2464b567809e3b27499f6c4fd01a23`, preserving the original dirty checkout and concurrent PRs. [Initial inventory](QOL_PROGRAMME_STATUS.md) identifies its substantial unaudited scope; it is not a completion claim. Added accessible copy-message-text action with DE/EN feedback, clipboard failure handling and no action for deleted or empty messages. Focused component suite passed 10/10. `./portal check` passed typecheck, lint, formatting, source audit, 743 tests in 94 files with coverage floors, and production/PWA build; `./portal test` failed in runtime security checks because the snapshot lacked `node_modules/deno/deno` (ENOENT; report `.local/tests/5d18ec01/RESULT.txt`); database/API/browser integration acceptance was not reached. No production or hosted data were touched. Next: complete source/permission/test inventory, coordinate current PRs, implement remaining workflows and verify them before the requested integrated PR.
+
 ## 17 November 2026 — PR35 native private-document acceptance alignment
 
 Current integrated CI failed in both application and selfhost acceptance because the native deletion API fixture asked an administrator to delete another actor's personal document. Accepted migration `20261116173902_permanent_resource_deletion.sql` deliberately denies administrator-wide access to private documents. Corrected the fixture to require an MFA-verified owner for confirmation and operation status, and added an explicit MFA administrator-denial assertion. This preserves the privacy boundary and exercises the real owner path; no authorization check was weakened. Fresh exact-head system, browser, native and required CI results remain pending.

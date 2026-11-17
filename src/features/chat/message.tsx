@@ -9,7 +9,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pencil, SmilePlus, Trash2 } from "lucide-react";
+import { Copy, Pencil, SmilePlus, Trash2 } from "lucide-react";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Field, Notice } from "../../components/common";
@@ -75,6 +75,9 @@ export function MessageBubble({
     message.content_version ?? 1,
   );
   const [deleting, setDeleting] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<"success" | "error" | null>(
+    null,
+  );
   const [mentions, setMentions] = useState<ChatMention[]>(
     message.mentions ?? [],
   );
@@ -230,6 +233,24 @@ export function MessageBubble({
                 aria-label={t("messageActions")}
               >
                 <TaskFromMessageAction messageId={message.id} />
+                {message.body && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("copyMessage")}
+                    onClick={async () => {
+                      setCopyStatus(null);
+                      try {
+                        await navigator.clipboard.writeText(message.body);
+                        setCopyStatus("success");
+                      } catch {
+                        setCopyStatus("error");
+                      }
+                    }}
+                  >
+                    <Copy size={15} />
+                  </Button>
+                )}
                 <details className="chat-reaction-menu">
                   <summary aria-label={t("reactions")}>
                     <SmilePlus size={16} />
@@ -293,6 +314,11 @@ export function MessageBubble({
               </div>
             </div>
           </>
+        )}
+        {copyStatus && !message.deleted_at && (
+          <p role={copyStatus === "error" ? "alert" : "status"}>
+            {t(copyStatus === "success" ? "copySuccess" : "copyError")}
+          </p>
         )}
         {react.isError && <Notice kind="error">{t("actionError")}</Notice>}
       </article>

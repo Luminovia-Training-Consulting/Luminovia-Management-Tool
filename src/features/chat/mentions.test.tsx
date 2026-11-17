@@ -268,6 +268,40 @@ describe("structured conversation mentions", () => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
   });
+  it("copies the displayed message only after clipboard confirmation and handles rejection", async () => {
+    const user = userEvent.setup();
+    const writeText = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("denied"));
+    vi.spyOn(navigator.clipboard, "writeText").mockImplementation(writeText);
+    view(<MessageBubble message={message} actor="author" zone="UTC" now={0} />);
+    await user.click(
+      screen.getByRole("button", { name: "Nachrichtentext kopieren" }),
+    );
+    expect(writeText).toHaveBeenCalledWith("Fictional body");
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Nachrichtentext kopiert.",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Nachrichtentext kopieren" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("manuell");
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+  it("does not offer copying a deleted message", () => {
+    view(
+      <MessageBubble
+        message={{ ...message, deleted_at: "2035-01-01T08:02:00Z" }}
+        actor="author"
+        zone="UTC"
+        now={0}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Nachrichtentext kopieren" }),
+    ).not.toBeInTheDocument();
+  });
   it("uses the existing scanner for a dropped file and blocks send until clean", async () => {
     let clean!: (value: unknown) => void;
     fake.uploadDocument.mockImplementation(
