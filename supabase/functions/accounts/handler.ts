@@ -1,6 +1,8 @@
 /**
- * Account-management HTTP contract. Business RPCs use the caller's bearer token; only injected invitation delivery/completion uses server administration privileges.
+ * Account-management HTTP contract. Business RPCs use the caller's bearer token;
+ * injected invitation and confirmed-deletion adapters hold server privileges.
  */
+import type { DeletionResult } from "./deletion-worker.ts";
 export const roles = [
   "owner",
   "admin",
@@ -46,6 +48,10 @@ export interface AccountDependencies {
     displayName: string,
     success: boolean,
   ) => Promise<void>;
+  executeDeletion?: (
+    token: string,
+    operationId: string,
+  ) => Promise<DeletionResult>;
   openapi: unknown;
 }
 // Validate an input UUID's format; a valid identifier grants no access.
@@ -70,8 +76,9 @@ export function parseInvitation(value: unknown): Invitation | null {
           "idempotency_key",
         ].includes(key),
     )
-  )
+  ) {
     return null;
+  }
   const {
     email,
     display_name = "",
@@ -89,8 +96,9 @@ export function parseInvitation(value: unknown): Invitation | null {
     !uuid(idempotency_key) ||
     (organisation_id !== null && !uuid(organisation_id)) ||
     (role !== "client" && organisation_id !== null)
-  )
+  ) {
     return null;
+  }
   return {
     email: email.trim().toLowerCase(),
     display_name: display_name.trim(),
@@ -106,11 +114,13 @@ async function body(request: Request): Promise<unknown> {
       .get("content-type")
       ?.toLowerCase()
       .startsWith("application/json")
-  )
+  ) {
     throw new Error("json_required");
+  }
   const limit = 16 * 1024;
-  if (Number(request.headers.get("content-length") ?? 0) > limit)
+  if (Number(request.headers.get("content-length") ?? 0) > limit) {
     throw new Error("request_too_large");
+  }
   const reader = request.body?.getReader();
   if (!reader) throw new Error("invalid_request");
   const parts: Uint8Array[] = [];
@@ -150,7 +160,7 @@ export function createAccountHandler(deps: AccountDependencies) {
       "Referrer-Policy": "no-referrer",
       Vary: "Origin",
     };
-    if (origin && deps.origins.includes(origin))
+    if (origin && deps.origins.includes(origin)) {
       Object.assign(headers, {
         "Access-Control-Allow-Origin": origin,
         "Access-Control-Allow-Headers":
@@ -158,59 +168,205 @@ export function createAccountHandler(deps: AccountDependencies) {
         "Access-Control-Allow-Methods":
           "GET, PATCH, PUT, POST, DELETE, OPTIONS",
       });
+    }
     const response = (status: number, data: unknown) =>
       new Response(JSON.stringify(data), { status, headers });
-    if (origin && !deps.origins.includes(origin))
+    if (origin && !deps.origins.includes(origin)) {
       return response(403, { error: "origin_not_allowed" });
-    if (request.method === "OPTIONS")
+    }
+    if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers });
+    }
     const url = new URL(request.url);
     const segments = url.pathname.split("/").filter(Boolean);
     const index = segments.indexOf("accounts");
-    const path =
-      "/" + (index >= 0 ? segments.slice(index + 1) : segments).join("/");
-    if (path === "/openapi.json" && request.method === "GET")
+    const path = "/" +
+      (index >= 0 ? segments.slice(index + 1) : segments).join("/");
+    if (path === "/openapi.json" && request.method === "GET") {
       return response(200, deps.openapi);
+    }
     const token = /^Bearer (\S+)$/.exec(
       request.headers.get("authorization") ?? "",
     )?.[1];
     if (!token) return response(401, { error: "authentication_required" });
     try {
-      if (!(await deps.authenticate(token)))
+      if (!(await deps.authenticate(token))) {
         return response(401, { error: "authentication_required" });
+      }
       const call = async (name: string, args?: Record<string, unknown>) => {
         const result = await deps.rpc(token, name, args);
         if (result.error) {
-          const status =
-            result.error.code === "42501"
-              ? 403
-              : ["22023", "23514", "23505"].includes(result.error.code ?? "")
-                ? 400
-                : 503;
+          const status = result.error.code === "42501"
+            ? 403
+            : ["22023", "23514", "23505"].includes(result.error.code ?? "")
+            ? 400
+            : 503;
           return response(status, {
-            error:
-              status === 403
-                ? "permission_or_mfa_required"
-                : status === 400
-                  ? "invalid_request"
-                  : "service_unavailable",
+            error: status === 403
+              ? "permission_or_mfa_required"
+              : status === 400
+              ? "invalid_request"
+              : "service_unavailable",
           });
         }
         return response(200, result.data);
       };
+      // Deletion plans are opaque database-owned capabilities. Target IDs and
+      // kind names select a resource; they never establish authority or paths.
+      if (path.startsWith("/v1/deletions/")) {
+        const deletionCall = async (
+          name: string,
+          args?: Record<string, unknown>,
+        ) => {
+          const result = await deps.rpc(token, name, args);
+          if (result.error) {
+            if (result.error.code === "42501") {
+              throw new Error("permission_or_mfa_required");
+            }
+            if (["23503", "40001", "P0001"].includes(result.error.code ?? "")) {
+              throw new Error("deletion_conflict");
+            }
+            if (["22023", "23514", "23505"].includes(result.error.code ?? "")) {
+              throw new Error("invalid_request");
+            }
+            throw new Error("deletion_unavailable");
+          }
+          return result.data;
+        };
+        const execute = async (operationId: string) => {
+          if (!deps.executeDeletion) throw new Error("deletion_unavailable");
+          const result = await deps.executeDeletion(token, operationId);
+          return response(result.status === "completed" ? 200 : 202, result);
+        };
+        if (path === "/v1/deletions/access") {
+          if (request.method !== "GET") {
+            return response(405, { error: "method_not_allowed" });
+          }
+          return response(200, await deletionCall("deletion_access"));
+        }
+        if (path === "/v1/deletions/operations") {
+          if (request.method !== "GET") {
+            return response(405, { error: "method_not_allowed" });
+          }
+          return response(200, await deletionCall("deletion_operations"));
+        }
+        if (path === "/v1/deletions/resources") {
+          if (request.method !== "GET") {
+            return response(405, { error: "method_not_allowed" });
+          }
+          const kind = url.searchParams.get("kind") ?? "";
+          const query = url.searchParams.get("q") ?? "";
+          const cursor = url.searchParams.get("cursor");
+          const limit = Number(url.searchParams.get("limit") ?? 25);
+          if (
+            !/^[a-z_]{1,40}$/.test(kind) || query.length > 120 ||
+            (cursor !== null && !uuid(cursor)) || !Number.isInteger(limit) ||
+            limit < 1 || limit > 100
+          ) {
+            return response(400, { error: "invalid_request" });
+          }
+          return response(
+            200,
+            await deletionCall("deletion_resources", {
+              p_kind: kind,
+              p_query: query,
+              p_cursor: cursor,
+              p_limit: limit,
+            }),
+          );
+        }
+        if (
+          path === "/v1/deletions/preview" || path === "/v1/deletions/confirm"
+        ) {
+          if (request.method !== "POST") {
+            return response(405, { error: "method_not_allowed" });
+          }
+          const payload = await body(request);
+          if (!object(payload)) {
+            return response(400, { error: "invalid_request" });
+          }
+          if (path.endsWith("/preview")) {
+            if (
+              Object.keys(payload).some((key) =>
+                !["kind", "id"].includes(key)
+              ) ||
+              typeof payload.kind !== "string" ||
+              !/^[a-z_]{1,40}$/.test(payload.kind) || !uuid(payload.id)
+            ) {
+              return response(400, { error: "invalid_request" });
+            }
+            return response(
+              200,
+              await deletionCall("deletion_preview", {
+                p_kind: payload.kind,
+                p_id: payload.id,
+              }),
+            );
+          }
+          if (
+            Object.keys(payload).some((key) =>
+              !["plan_id", "request_id", "confirmation"].includes(key)
+            ) ||
+            !uuid(payload.plan_id) || !uuid(payload.request_id) ||
+            payload.confirmation !== "DELETE"
+          ) {
+            return response(400, { error: "invalid_request" });
+          }
+          const confirmed = await deletionCall("deletion_confirm", {
+            p_plan_id: payload.plan_id,
+            p_request_id: payload.request_id,
+            p_confirmation: payload.confirmation,
+          });
+          if (!object(confirmed) || !uuid(confirmed.operation_id)) {
+            throw new Error("deletion_unavailable");
+          }
+          // An idempotent retry can return a previously verified completion.
+          // Provider outages must never downgrade that committed result.
+          if (confirmed.status === "completed") return response(200, confirmed);
+          try {
+            return await execute(confirmed.operation_id);
+          } catch (error) {
+            // Confirmation has already committed the irreversible fence. Keep
+            // its receipt reachable when an external provider is unavailable;
+            // a 202 acknowledgement explicitly does not mean deletion success.
+            if (
+              error instanceof Error &&
+              error.message === "permission_or_mfa_required"
+            ) throw error;
+            return response(202, { ...confirmed, status: "pending" });
+          }
+        }
+        const operation = /^\/v1\/deletions\/operations\/([^/]+)$/.exec(path);
+        if (operation) {
+          if (request.method !== "POST") {
+            return response(405, { error: "method_not_allowed" });
+          }
+          const payload = await body(request);
+          if (
+            !uuid(operation[1]) || !object(payload) ||
+            Object.keys(payload).length > 0
+          ) {
+            return response(400, { error: "invalid_request" });
+          }
+          return await execute(operation[1]);
+        }
+        return response(404, { error: "not_found" });
+      }
       // Own-profile and management requests use the same caller-scoped RPC path; target IDs never replace the actor.
       if (path === "/v1/me") {
         if (request.method === "GET") return await call("account_me");
         if (request.method === "PATCH") {
           const payload = await body(request);
-          if (!object(payload))
+          if (!object(payload)) {
             return response(400, { error: "invalid_request" });
+          }
           return await call("save_account_profile", { p_payload: payload });
         }
         return response(405, { error: "method_not_allowed" });
       }
-      if (path === "/v1/roles" && request.method === "GET")
+      if (path === "/v1/roles" && request.method === "GET") {
         return await call("account_role_catalog");
+      }
       if (path === "/v1/users" && request.method === "GET") {
         const limit = Number(url.searchParams.get("limit") ?? 50);
         const offset = Number(url.searchParams.get("offset") ?? 0);
@@ -223,8 +379,9 @@ export function createAccountHandler(deps: AccountDependencies) {
           offset < 0 ||
           offset > 100000 ||
           search.length > 120
-        )
+        ) {
           return response(400, { error: "invalid_request" });
+        }
         return await call("account_users", {
           p_search: search,
           p_limit: limit,
@@ -234,10 +391,12 @@ export function createAccountHandler(deps: AccountDependencies) {
       const organisationTarget =
         /^\/v1\/users\/([^/]+)\/organisations\/([^/]+)$/.exec(path);
       if (organisationTarget) {
-        if (!uuid(organisationTarget[1]) || !uuid(organisationTarget[2]))
+        if (!uuid(organisationTarget[1]) || !uuid(organisationTarget[2])) {
           return response(400, { error: "invalid_request" });
-        if (!["PUT", "DELETE"].includes(request.method))
+        }
+        if (!["PUT", "DELETE"].includes(request.method)) {
           return response(405, { error: "method_not_allowed" });
+        }
         return await call("manage_client_organisation", {
           p_user_id: organisationTarget[1],
           p_organisation_id: organisationTarget[2],
@@ -246,14 +405,17 @@ export function createAccountHandler(deps: AccountDependencies) {
       }
       const target = /^\/v1\/users\/([^/]+)\/(roles|status)$/.exec(path);
       if (target) {
-        if (!uuid(target[1]))
+        if (!uuid(target[1])) {
           return response(400, { error: "invalid_request" });
+        }
         const expected = target[2] === "roles" ? "PUT" : "PATCH";
-        if (request.method !== expected)
+        if (request.method !== expected) {
           return response(405, { error: "method_not_allowed" });
+        }
         const payload = await body(request);
-        if (!object(payload))
+        if (!object(payload)) {
           return response(400, { error: "invalid_request" });
+        }
         if (target[2] === "roles") {
           if (
             Object.keys(payload).some((key) => key !== "roles") ||
@@ -261,8 +423,9 @@ export function createAccountHandler(deps: AccountDependencies) {
             payload.roles.length < 1 ||
             payload.roles.length > 7 ||
             payload.roles.some((role) => !roles.includes(role as AccountRole))
-          )
+          ) {
             return response(400, { error: "invalid_request" });
+          }
           return await call("set_account_roles", {
             p_user_id: target[1],
             p_roles: payload.roles,
@@ -271,16 +434,18 @@ export function createAccountHandler(deps: AccountDependencies) {
         if (
           Object.keys(payload).some((key) => key !== "active") ||
           typeof payload.active !== "boolean"
-        )
+        ) {
           return response(400, { error: "invalid_request" });
+        }
         return await call("set_user_active", {
           p_user_id: target[1],
           p_active: payload.active,
         });
       }
       if (path === "/v1/invitations" && request.method === "POST") {
-        if (!deps.invitationsEnabled)
+        if (!deps.invitationsEnabled) {
           return response(503, { error: "invitations_disabled" });
+        }
         const invitation = parseInvitation(await body(request));
         if (!invitation) return response(400, { error: "invalid_request" });
         // Complete the shared durable reservation before invoking external delivery.
@@ -291,29 +456,31 @@ export function createAccountHandler(deps: AccountDependencies) {
           p_organisation_id: invitation.organisation_id,
           p_idempotency_key: invitation.idempotency_key,
         });
-        if (reserved.error)
+        if (reserved.error) {
           return response(reserved.error.code === "42501" ? 403 : 400, {
-            error:
-              reserved.error.code === "42501"
-                ? "permission_or_mfa_required"
-                : "invalid_request",
+            error: reserved.error.code === "42501"
+              ? "permission_or_mfa_required"
+              : "invalid_request",
           });
+        }
         const result = reserved.data as {
           status: string;
           invitation_id?: string;
         };
         // Retries and throttling return existing state without sending another invitation.
-        if (result.status !== "reserved")
+        if (result.status !== "reserved") {
           return response(
             result.status === "throttled"
               ? 429
               : result.status === "idempotency_conflict"
-                ? 409
-                : 200,
+              ? 409
+              : 200,
             result,
           );
-        if (!uuid(result.invitation_id))
+        }
+        if (!uuid(result.invitation_id)) {
           return response(503, { error: "service_unavailable" });
+        }
         let userId: string;
         try {
           userId = await deps.sendInvitation(
@@ -348,23 +515,30 @@ export function createAccountHandler(deps: AccountDependencies) {
     } catch (error) {
       const code = error instanceof Error ? error.message : "";
       return response(
-        code === "request_too_large"
+        code === "permission_or_mfa_required"
+          ? 403
+          : code === "deletion_conflict"
+          ? 409
+          : code === "request_too_large"
           ? 413
           : code === "json_required"
-            ? 415
-            : code === "invalid_request" || error instanceof SyntaxError
-              ? 400
-              : 503,
+          ? 415
+          : code === "invalid_request" || error instanceof SyntaxError
+          ? 400
+          : 503,
         {
           error: [
-            "request_too_large",
-            "json_required",
-            "invalid_request",
-          ].includes(code)
+              "request_too_large",
+              "json_required",
+              "invalid_request",
+              "permission_or_mfa_required",
+              "deletion_conflict",
+              "deletion_unavailable",
+            ].includes(code)
             ? code
             : error instanceof SyntaxError
-              ? "invalid_request"
-              : "service_unavailable",
+            ? "invalid_request"
+            : "service_unavailable",
         },
       );
     }

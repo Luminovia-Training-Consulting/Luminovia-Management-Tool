@@ -16,6 +16,10 @@ The smart-operations model complements these workflows. The ordered model includ
 
 The [website enquiry gateway](WEBSITE_ENQUIRIES.md) is a bounded integration-only Edge entry point, disabled by default. It adds a private server credential above the existing gateway boundary, stores original consent-versioned submissions in private ledgers and exposes management decisions through current MFA/capability-checked invoker RPCs. Conversion creates an unpublished course plan atomically; it neither creates a quote nor activates a public Website transport.
 
+## Confirmed permanent deletion extension
+
+Permanent deletion uses the existing account Edge facade and public invoker RPCs, with private plan/operation/permit/lease journals. The browser submits only typed target IDs and actor-bound confirmation IDs. Current database authority and dependency fingerprints are checked again at confirmation and before privileged execution. Native Auth hard deletion and exact-version Storage removal remain server-only. Upload leases and durable path fences prevent completed deletion from being followed by late promotion. Private body ACLs remain authoritative; protected accepted financial/shared dependencies cause explicit blockers. See [PERMANENT_DELETION](PERMANENT_DELETION.md) for scope and failure recovery. Source/unit/SQL passes alone do not establish native or browser acceptance.
+
 ## ADR-001 — separate private portal and static frontend
 
 Use the existing `Luminovia-Training-Consulting/Luminovia-Management-Tool` repository. The public `Website` is solely a brand reference. React/TypeScript/Vite supplies the static SPA; no independent Node/Express application service is required. The original 15 November hosting decision used managed Supabase and reserved Docker/Supabase CLI for development. That hosting decision is historical: the user subsequently authorised the official Supabase Docker distribution on the Hostinger VPS as described in ADR-012.

@@ -20,6 +20,8 @@ import {
   Tags,
   Trash2,
 } from "lucide-react";
+import { deletionAccessQuery } from "../deletions/api";
+import { PermanentDeleteAction } from "../deletions/deletions";
 import { useAuth } from "../auth/auth-context";
 import { db } from "../../lib/supabase";
 import { permissionsQuery } from "../../lib/queries";
@@ -89,8 +91,9 @@ export function FileUpload({
       );
     },
     onSuccess: async (document) => {
-      // A discovery request started before the upload committed may still be
-      // pending without cached data. Cancel it before asking for fresh rows.
+      // An initial in-flight list or version read can predate this committed
+      // upload. Cancel it before refetching so its older snapshot cannot hide
+      // the newly confirmed document or replacement.
       await client.cancelQueries({ queryKey: ["documents"] });
       await client.cancelQueries({ queryKey: ["document"] });
       await client.cancelQueries({ queryKey: ["document-versions"] });
@@ -362,6 +365,10 @@ function DocumentList({
 }) {
   const { t, i18n } = useTranslation("files");
   const { session } = useAuth();
+  const deletionAccess = useQuery(deletionAccessQuery(session!.user.id));
+  const canDelete =
+    !deletionAccess.isError &&
+    Boolean(deletionAccess.data?.kinds.includes("document"));
   const client = useQueryClient();
   const online = useOnline();
   const [selected, setSelected] = useState<PortalDocument | null>(null);
@@ -557,7 +564,7 @@ function DocumentList({
               >
                 <History size={18} />
               </Button>
-              {file.owner_id === session!.user.id && (
+              {(file.owner_id === session!.user.id || canDelete) && (
                 <details open={openMenuId === file.id}>
                   <summary
                     aria-label={`${t("name")}: ${file.original_name}`}
@@ -574,25 +581,34 @@ function DocumentList({
                     ···
                   </summary>
                   <div className="file-more">
-                    <Button
-                      variant="ghost"
-                      onClick={() => select(file, "rename")}
-                    >
-                      {t("rename")}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => select(file, "replace")}
-                    >
-                      {t("replace")}
-                    </Button>
-                    <Button
-                      variant="danger"
-                      onClick={() => select(file, "archive")}
-                    >
-                      <Trash2 size={14} />
-                      {t("archive")}
-                    </Button>
+                    {file.owner_id === session!.user.id && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          onClick={() => select(file, "rename")}
+                        >
+                          {t("rename")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          onClick={() => select(file, "replace")}
+                        >
+                          {t("replace")}
+                        </Button>
+                        <Button
+                          variant="danger"
+                          onClick={() => select(file, "archive")}
+                        >
+                          <Trash2 size={14} />
+                          {t("archive")}
+                        </Button>
+                      </>
+                    )}
+                    <PermanentDeleteAction
+                      kind="document"
+                      id={file.id}
+                      label={file.original_name}
+                    />
                   </div>
                 </details>
               )}

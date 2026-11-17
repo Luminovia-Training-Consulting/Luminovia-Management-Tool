@@ -425,8 +425,10 @@ await withTestDatabase("announcements", async ({ sql, actor }) => {
           `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
       const quiet = {
         enabled: true,
-        start_time: clock((minute + 1439) % 1440),
-        end_time: clock((minute + 1) % 1440),
+        // Keep the excluded minute roughly twelve hours away so a slow CI run
+        // cannot cross the quiet-window boundary during this assertion.
+        start_time: clock((minute + 720) % 1440),
+        end_time: clock((minute + 719) % 1440),
         time_zone: "UTC",
       };
       await actor(
