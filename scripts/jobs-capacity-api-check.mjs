@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
+import { mapBoundedSettled } from "./testing/run-bounded.mjs";
 
 await withApiFixture(
   async ({ service, actor, mfa, sql, defer, checked, suffix }) => {
@@ -259,7 +260,12 @@ await withApiFixture(
     );
 
     const offer = await checked(
-      teachers[0].client.rpc("job_offers").then(({data,error})=>({data:data?.find(row=>row.id===job),error})),
+      teachers[0].client
+        .rpc("job_offers")
+        .then(({ data, error }) => ({
+          data: data?.find((row) => row.id === job),
+          error,
+        })),
       "Read actual lecturer-visible net offer",
     );
     assert.equal(Number(offer.amount), 31);
@@ -276,12 +282,11 @@ await withApiFixture(
         p_terms_version: offer.terms_version,
       },
     }));
-    // Each SDK request performs an actual HTTP POST, using one of ten separately
-    // authenticated lecturer sessions and a distinct retry key. Do not serialize.
-    const settled = await Promise.allSettled(
-      attempts.map(({ who, args }) =>
-        checked(who.client.rpc("claim_job", args), "One of fifty HTTP claims"),
-      ),
+    // Keep ten actual requests in flight: this still exceeds the three-slot
+    // limit by over 3x while avoiding a 50-connection spike in small selfhost
+    // Postgres containers. Every HTTP result settles before fixture cleanup.
+    const settled = await mapBoundedSettled(attempts, 10, ({ who, args }) =>
+      checked(who.client.rpc("claim_job", args), "One of fifty HTTP claims"),
     );
     // Even a failed HTTP response must settle before cleanup can delete an
     // offer that another in-flight claim is still trying to lock.

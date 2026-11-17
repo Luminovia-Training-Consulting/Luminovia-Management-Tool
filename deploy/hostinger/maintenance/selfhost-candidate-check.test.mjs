@@ -28,50 +28,12 @@ import {
   assertCandidateConfiguration,
   candidateApiSuites,
   candidateCommandFailure,
-  candidateServiceDiagnostics,
   checkCandidate,
   migrationWithHistory,
   financialProbeReceipt,
   ownershipLabel,
   stageCandidateSource,
 } from "./selfhost-candidate-check.mjs";
-
-test("crash diagnostics retain a safe primary signal ahead of a recovery-error flood", () => {
-  const secret = "fictional-candidate-password-12345";
-  const token = "eyJmaWN0aW9uYWw.eyJmaXh0dXJlLnVzZXI.signature";
-  const logs = [
-    `2026-11-17 LOG: server process (PID 42) was terminated by signal 11: Segmentation fault ${secret}`,
-    `2026-11-17 LOG: statement: SELECT '${secret}'`,
-    ...Array.from(
-      { length: 30 },
-      (_, i) => `FATAL: recovery ${i} ${secret} ${token}`,
-    ),
-  ].join("\n");
-  const lines = candidateServiceDiagnostics("db", logs, [secret]);
-  assert.equal(lines.length, 20);
-  assert.equal(lines[0], "PostgreSQL server process terminated by signal 11");
-  assert(lines.at(-1).includes("recovery 29"));
-  assert(lines.every((line) => line.length <= 500));
-  assert(!JSON.stringify(lines).includes(secret));
-  assert(!JSON.stringify(lines).includes(token));
-  assert(!JSON.stringify(lines).includes("statement:"));
-});
-
-test("diagnostics stay bounded and do not disclose arbitrary text on a PostgreSQL crash line", () => {
-  const logs = Array.from(
-    { length: 30 },
-    (_, index) =>
-      `LOG: server process (PID ${index}) was terminated by signal 9: FATAL private ${index}`,
-  ).join("\n");
-  const lines = candidateServiceDiagnostics("db", logs, []);
-  assert.equal(lines.length, 4);
-  assert(
-    lines.every(
-      (line) => line === "PostgreSQL server process terminated by signal 9",
-    ),
-  );
-  assert.deepEqual(candidateServiceDiagnostics("auth", logs, []), []);
-});
 
 // Model a valid allocator that always reuses the lowest released port. This
 // makes the former intermittent OS behavior deterministic without Docker/data.

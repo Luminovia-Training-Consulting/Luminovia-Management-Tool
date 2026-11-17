@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { runBounded } from "./testing/run-bounded.mjs";
+import { mapBoundedSettled, runBounded } from "./testing/run-bounded.mjs";
 
 test("runs every independent check within the configured concurrency", async () => {
   let active = 0;
@@ -41,6 +41,27 @@ test("rejects invalid concurrency limits", async () => {
     runBounded([], 0, async () => {}),
     /positive integer/,
   );
+});
+
+test("settles every request in order within the configured concurrency", async () => {
+  let active = 0;
+  let maximum = 0;
+  const results = await mapBoundedSettled([0, 1, 2, 3, 4], 2, async (item) => {
+    active++;
+    maximum = Math.max(maximum, active);
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    active--;
+    if (item === 2) throw new Error("fixture failure");
+    return item * 2;
+  });
+  assert.equal(maximum, 2);
+  assert.deepEqual(results, [
+    { status: "fulfilled", value: 0 },
+    { status: "fulfilled", value: 2 },
+    { status: "rejected", reason: new Error("fixture failure") },
+    { status: "fulfilled", value: 6 },
+    { status: "fulfilled", value: 8 },
+  ]);
 });
 
 test("preserves even a deliberately thrown undefined rejection", async () => {
