@@ -1328,3 +1328,6 @@ The migration-order regression now accepts later independent migrations while pr
 
 - [x] Align comments moderation API acceptance with the installed `jobs.manage` authorization contract after MFA/AAL gates were removed.
 - [ ] Complete exact-head full verification after the moderation fixture update.
+
+- [x] Align all-contract API acceptance with current `contracts.read` authorization rather than the removed MFA gate.
+- [ ] Complete current-head isolated system and selfhost CI after this correction.
