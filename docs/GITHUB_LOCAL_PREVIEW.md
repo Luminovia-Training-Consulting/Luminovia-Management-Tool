@@ -15,6 +15,22 @@ This command fetches the current `main` from **Luminovia-Training-Consulting/Lum
 
 Requirements are the same as for [local development](LOCAL_DEVELOPMENT.md): Linux, Node/npm, Git, Docker Engine/Compose, Python 3 and util-linux `flock`. The first start downloads the locked dependencies, Supabase services and scanner signatures. Concurrent development and preview environments each need memory for their own scanner; complete QA needs additional resources.
 
+### Local-only administrator
+
+The separately owned GitHub preview creates a fictional account at startup. On
+`http://127.0.0.1:5373`, sign in with username **admin** and password **admin**.
+The shortcut is available only when the browser and API are on the dedicated
+loopback preview addresses. Supabase Auth still authenticates the account and
+normal administrator MFA requirements apply. This intentionally weak account
+must never be created on a hosted instance or copied into any non-test database.
+
+The account is separate from the existing `admin@example.invalid` fixture. If
+the preview account already exists, its password and MFA are retained, so a
+later password change is not reset to the original value. The ordinary local
+development stack, PR previews and isolated QA stacks do not create this
+account. The existing generated fixture credentials remain available through
+`./portal github credentials`.
+
 ## Commands
 
 | Command                                      | Effect                                                                                                                                   |

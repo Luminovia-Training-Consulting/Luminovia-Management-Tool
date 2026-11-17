@@ -187,3 +187,37 @@ describe("recoverable Auth request failures", () => {
     });
   });
 });
+
+describe("local preview username", () => {
+  it("translates the alias only for the exact loopback preview and backend", async () => {
+    const { previewLoginEmail } = await import("./preview-login");
+    expect(
+      previewLoginEmail(
+        "admin",
+        "http://127.0.0.1:5373",
+        "http://127.0.0.1:56321",
+      ),
+    ).toBe("local-preview-admin@example.invalid");
+    expect(
+      previewLoginEmail(
+        "admin",
+        "https://cms.luminovia.org",
+        "https://cms.luminovia.org/backend",
+      ),
+    ).toBe("admin");
+    expect(
+      previewLoginEmail(
+        "admin",
+        "http://127.0.0.1:5373",
+        "https://cms.luminovia.org/backend",
+      ),
+    ).toBe("admin");
+    expect(
+      previewLoginEmail(
+        "other@example.invalid",
+        "http://127.0.0.1:5373",
+        "http://127.0.0.1:56321",
+      ),
+    ).toBe("other@example.invalid");
+  });
+});

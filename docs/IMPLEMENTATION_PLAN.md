@@ -1,5 +1,19 @@
 # Persistent implementation plan
 
+## Automatic verified CMS development releases — 17 November 2026
+
+- [x] Prepare exact-current-main automatic publisher after both full Portal checks and Security analysis push runs pass; preserve manual publication and share per-SHA publication lock.
+- [x] Preserve server-side immutable artifact, migration, backup, health and rollback controls; document that operator review may still block an update.
+- [x] Execute 28 policy/preview/documentation tests and relevant formatting/lint checks; verify read-only GitHub workflow query syntax.
+- [ ] Complete exact-head CI and observe a real automatic workflow publication and the existing KVM1 updater outcome; investigate any refusal without bypassing controls.
+
+
+## Local-only preview administrator
+
+- [x] Add a separate fictional account and `admin` username alias guarded by owned GitHub-preview identity and loopback endpoints; never reset an existing account or weaken the regular password policy.
+- [x] Run focused ownership, existing-account, UI/Auth component, source quality and compiler checks.
+- [ ] Verify actual first login, administrator MFA, stop/restart and existing-password preservation with a separately owned real preview once the shared fixed ports and system resources are available. Complete exact-head CI remains required.
+
 PR43 correction: retain the full 50-way simultaneous HTTP capacity race; the preceding ten-in-flight experiment is superseded because the native PostgreSQL crash cause is not yet established. The existing complete cleanup and current-head native CI remain required.
 
 ## Browser test runtime — 17 November 2026
@@ -11,6 +25,7 @@ PR43 correction: retain the full 50-way simultaneous HTTP capacity race; the pre
 - [x] Scale independent PR SQL shards to at most four isolated workers; keep retained selfhost API suites sequential after the same GoTrue cleanup failure. Retain real migration/restart/image, auth, browser, concurrency, and cleanup proofs.
 - [x] Replay migrations once per isolated PostgreSQL worker into an owned ephemeral template and clone a fresh database per SQL suite; keep main migration acceptance and every historical-bound migration check unchanged. Exact-head SQL/template suites passed.
 - [ ] Complete exact-head CI with serial browser/API fixtures and collect successful per-job timings before claiming the final speedup. Do not trim coverage.
+
 ## PR35 private-document acceptance follow-up — 17 November 2026
 
 - [x] Trace the native fixture cleanup failure to dependent membership-origin rows blocking deletion of its owned participant room.
@@ -22,7 +37,7 @@ PR43 correction: retain the full 50-way simultaneous HTTP capacity race; the pre
 - [x] Track new assignment-derived and explicit participant-room membership without guessing legacy provenance; fail closed and provide an authorized explicit resolution.
 - [x] Preserve independently authorized membership and active additional course claims or enrolments; re-evaluate enrolment removal and both handover paths.
 - [ ] Complete independent security review and exact-head CI, including native Auth and browser acceptance; do not infer hosted migration or production readiness.
-PR40 browser acceptance repair: single shared preferences and visible mobile sign-out are implemented; 25 focused component tests, TypeScript and ESLint pass locally. The complete exact-head GitHub/browser/native gates remain pending.
+      PR40 browser acceptance repair: single shared preferences and visible mobile sign-out are implemented; 25 focused component tests, TypeScript and ESLint pass locally. The complete exact-head GitHub/browser/native gates remain pending.
 
 ## PR31 after accepted documentation main — 17 November 2026
 
