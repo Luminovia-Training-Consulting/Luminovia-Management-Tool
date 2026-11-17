@@ -92,6 +92,8 @@ export function FileUpload({
       // A discovery request started before the upload committed may still be
       // pending without cached data. Cancel it before asking for fresh rows.
       await client.cancelQueries({ queryKey: ["documents"] });
+      await client.cancelQueries({ queryKey: ["document"] });
+      await client.cancelQueries({ queryKey: ["document-versions"] });
       await client.invalidateQueries({ queryKey: ["documents"] });
       await client.invalidateQueries({ queryKey: ["document"] });
       await client.invalidateQueries({ queryKey: ["document-versions"] });

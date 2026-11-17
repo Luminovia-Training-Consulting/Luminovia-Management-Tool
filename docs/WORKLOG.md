@@ -2,7 +2,7 @@
 
 ## 17 November 2026 — post-upload discovery race
 
-An initial document discovery request may still be pending when a successful upload commits. Invalidation alone can reuse that pre-commit request, blocking completion and omitting the new file. Upload success now cancels document queries before invalidating them, matching the existing archive safeguard. A controlled component regression failed without the fix and passed with it; all three version/upload component tests and TypeScript passed locally. This race is a plausible contributor to the mobile CI file failures, but their precise cause is not established; the full browser and native gates must run again on the integrated revision.
+An initial document discovery request may still be pending when a successful upload commits. Invalidation alone can reuse that pre-commit request, blocking completion and omitting the new file. Upload success now cancels document list, exact-document and version-history queries before invalidating them, matching the broader safeguard in PR35. A controlled component regression failed without the fix and passed with it; the three original version/upload component tests and TypeScript passed locally; the regression also covers the three query prefixes. This race is a plausible contributor to the mobile CI file failures, but their precise cause is not established; the full browser and native gates must run again on the integrated revision.
 
 ## 17 November 2026 — PR31 reconciled with accepted documentation main
 
