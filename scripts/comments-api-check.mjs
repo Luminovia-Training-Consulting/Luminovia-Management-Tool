@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 
-await withApiFixture(async ({ service, actor, passwordOnly, sql, defer, checked }) => {
+await withApiFixture(async ({ service, actor, sql, defer, checked }) => {
   const teacher = await actor("comment-teacher", "lecturer"),
     peer = await actor("comment-peer", "lecturer"),
     admin = await actor("comment-admin", "admin"),
