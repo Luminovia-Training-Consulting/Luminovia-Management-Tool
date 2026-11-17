@@ -179,11 +179,15 @@ test("documentation keeps only the required project records under docs", async (
     "QOL_MASTER_PROMPT.txt",
     "QOL_PROGRAMME_STATUS.md",
     "UNIVERSAL_MASTER_PROMPT.txt",
+    "UI_ACCEPTANCE_20261117.md",
     "WORKLOG.md",
   ]);
   const deliveredRecords = (await readdir("docs")).sort();
   assert.deepEqual(deliveredRecords, [...requiredRecords].sort());
-  const generator = await readFile("scripts/generate-api-reference.mjs", "utf8");
+  const generator = await readFile(
+    "scripts/generate-api-reference.mjs",
+    "utf8",
+  );
   const runner = await readFile("scripts/runtime-test.mjs", "utf8");
   assert.match(generator, /"API_REFERENCE\.md"/);
   assert.doesNotMatch(generator, /docs\/API_REFERENCE\.md/);
