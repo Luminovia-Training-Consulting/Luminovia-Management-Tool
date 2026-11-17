@@ -429,24 +429,20 @@ try {
         )
       : [];
     if (messages.length) {
+      const messageIds = messages.map((message) => message.id);
       await checked(
-        service
-          .from("notifications")
-          .delete()
-          .in(
-            "resource_id",
-            messages.map((m) => m.id),
-          ),
+        service.from("notifications").delete().in("resource_id", messageIds),
         "Clean scoped notifications",
       );
       await checked(
         service
-          .from("messages")
+          .from("chat_message_revisions")
           .delete()
-          .in(
-            "id",
-            messages.map((m) => m.id),
-          ),
+          .in("message_id", messageIds),
+        "Clean scoped message revisions",
+      );
+      await checked(
+        service.from("messages").delete().in("id", messageIds),
         "Clean scoped messages",
       );
     }
