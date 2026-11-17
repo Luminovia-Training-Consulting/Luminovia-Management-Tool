@@ -7,7 +7,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { MessageCircle, Star } from "lucide-react";
-import { PermanentDeleteAction } from "../deletions/deletions";
+import { PersonManagementActions } from "../accounts/person-actions";
 import { Avatar } from "../profile/avatar";
 import { PersonContact } from "./person-contact";
 import { useAuth } from "../auth/auth-context";
@@ -212,6 +212,7 @@ export function PersonProfile() {
       />
       <Avatar userId={id} name={details.display_name} size="large" />
       <div className="page-actions">
+        <PersonManagementActions id={id} name={details.display_name} />
         <Button asChild variant="ghost">
           <Link to="/people">{t("back")}</Link>
         </Button>
@@ -225,11 +226,7 @@ export function PersonProfile() {
             </Button>
           )}
       </div>
-      <PermanentDeleteAction
-        kind="account"
-        id={id}
-        label={details.display_name}
-      />
+
       <PersonContact actor={actor} target={id} />
       <div className="people-details-grid">
         <section className="panel">

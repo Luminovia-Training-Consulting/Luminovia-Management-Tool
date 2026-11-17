@@ -45,6 +45,10 @@ vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: state.actor } } }),
 }));
 vi.mock("../../lib/queries", () => ({
+  permissionsQuery: (actor: string) => ({
+    queryKey: ["permissions", actor],
+    queryFn: async () => [],
+  }),
   profileQuery: (actor: string) => ({
     queryKey: ["profile", actor],
     queryFn: async () => ({ time_zone: "UTC" }),
@@ -73,6 +77,11 @@ const initialPreferences = {
   version: 1,
 };
 beforeEach(async () => {
+  vi.stubGlobal("matchMedia", () => ({
+    matches: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
   state.actor = "actor-a";
   state.online = true;
   state.rejectMark = false;
@@ -363,6 +372,7 @@ it("opening the inbox closes the native notification popover", async () => {
 describe("effective quiet-hour settings", () => {
   it("retains an unsaved time/checkbox across language changes and saves its independent version", async () => {
     view(<SettingsPage />);
+    await userEvent.click(screen.getByText("Ruhezeiten & Zustellung"));
     const enabled = await screen.findByRole("checkbox", {
       name: "Tägliche Ruhezeit aktivieren",
     });
@@ -396,6 +406,7 @@ describe("effective quiet-hour settings", () => {
   });
   it("a stale server version keeps the quiet draft until explicit reload", async () => {
     view(<SettingsPage />);
+    await userEvent.click(screen.getByText("Ruhezeiten & Zustellung"));
     const enabled = await screen.findByRole("checkbox", {
       name: "Tägliche Ruhezeit aktivieren",
     });
@@ -428,6 +439,7 @@ describe("effective quiet-hour settings", () => {
   it("offline edits remain a local draft and cannot issue a preference mutation", async () => {
     state.online = false;
     view(<SettingsPage />);
+    await userEvent.click(screen.getByText("Ruhezeiten & Zustellung"));
     await userEvent.click(
       await screen.findByRole("checkbox", {
         name: "Tägliche Ruhezeit aktivieren",
@@ -444,6 +456,7 @@ describe("effective quiet-hour settings", () => {
   });
   it("invalid editable zones show a useful error instead of sending or confirming them", async () => {
     view(<SettingsPage />);
+    await userEvent.click(screen.getByText("Ruhezeiten & Zustellung"));
     await screen.findByRole("checkbox", {
       name: "Tägliche Ruhezeit aktivieren",
     });

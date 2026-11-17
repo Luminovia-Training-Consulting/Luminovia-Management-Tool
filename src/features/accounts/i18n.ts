@@ -6,6 +6,15 @@ import i18n from "../../lib/i18n";
 // Static UI resources use the namespace's shared interpolation and pluralization contract.
 // Authored content is separate from these i18next interface strings.
 const de = {
+  profileLanguage: "Anzeigesprache",
+  profileSaveFailed:
+    "Profil konnte nicht gespeichert werden. Prüfe die Eingaben oder lade das Profil bei zwischenzeitlichen Änderungen erneut.",
+  editProfile: "Profil bearbeiten",
+  editAccess: "Rollen und Zugriffe bearbeiten",
+  manageEvidence: "Qualifikationen und Nachweise",
+  statusHint:
+    "Die Änderung wird erst nach Serverbestätigung wirksam. Aufträge und vereinbarte Honorare bleiben erhalten.",
+  confirmStatus: "Kontostatus bestätigen",
   title: "Konten & Zugänge",
   invited:
     "Die Einladung wurde versandt und der Zugang mit der gewählten Rolle angelegt.",
@@ -60,6 +69,15 @@ const de = {
   inactive: "Gesperrt",
 };
 const en: typeof de = {
+  profileLanguage: "Display language",
+  profileSaveFailed:
+    "The profile could not be saved. Check the entries or reload if another change was made in the meantime.",
+  editProfile: "Edit profile",
+  editAccess: "Edit roles and access",
+  manageEvidence: "Qualifications and evidence",
+  statusHint:
+    "The change takes effect only after server confirmation. Assignments and agreed fees are retained.",
+  confirmStatus: "Confirm account status",
   title: "Accounts & access",
   invited:
     "The invitation was sent and access was created with the selected role.",

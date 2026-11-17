@@ -1041,6 +1041,39 @@ export function CoursesPage() {
       >
         {detail && (
           <>
+            <div className="page-actions course-record-actions">
+              {manage && (
+                <>
+                  <Button
+                    disabled={!online}
+                    onClick={() => {
+                      setParams({}, { replace: true });
+                      setRunEdit(detail);
+                    }}
+                  >
+                    {t("edit")}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={!online || visibility.isPending}
+                    onClick={() =>
+                      visibility.mutate({
+                        run: detail,
+                        published: detail.published,
+                        archived: !detail.archived_at,
+                      })
+                    }
+                  >
+                    {t(detail.archived_at ? "restore" : "archive")}
+                  </Button>
+                </>
+              )}
+              <PermanentDeleteAction
+                kind="course_run"
+                id={detail.id}
+                label={findTemplate(detail)?.title ?? t("courses")}
+              />
+            </div>
             <BuildingBlockReference
               buildingBlockId={findTemplate(detail)?.building_block_id}
               sourceId={findTemplate(detail)?.building_block_source_id}
@@ -1053,11 +1086,6 @@ export function CoursesPage() {
                 {t("learning:openWorkspace")}
               </Link>
             </Button>
-            <PermanentDeleteAction
-              kind="course_run"
-              id={detail.id}
-              label={findTemplate(detail)?.title ?? t("courses")}
-            />
             <h3>{t("syllabus")}</h3>
             <p className="preserve-text">
               {findTemplate(detail)?.syllabus || "—"}

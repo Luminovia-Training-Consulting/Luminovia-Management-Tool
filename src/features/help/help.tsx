@@ -126,8 +126,9 @@ function searchText(module: GuideModule) {
     .toLocaleLowerCase();
 }
 /** Resolve public catalog topics from the URL and keep search/filter state local to this page. */
-export function HelpCenter() {
+export function HelpCenter({ embedded = false }: { embedded?: boolean }) {
   const { i18n } = useTranslation();
+  const Content = embedded ? "section" : "main";
   const text = <T,>(value: { de: T; en: T }) => guideText(value, i18n.language);
   const [params, setParams] = useSearchParams();
   const location = useLocation();
@@ -148,26 +149,31 @@ export function HelpCenter() {
   );
   function choose(id?: string) {
     setQuery("");
-    setParams(id ? { topic: id } : {});
+    const next = new URLSearchParams(params);
+    if (id) next.set("topic", id);
+    else next.delete("topic");
+    setParams(next);
   }
   return (
-    <div className="help-page">
+    <div className={embedded ? "help-page help-embedded" : "help-page"}>
       <a className="skip-link" href="#help-main">
         {i18n.language.startsWith("de") ? "Zum Inhalt" : "Skip to content"}
       </a>
-      <header className="help-header">
-        <Link className="help-brand" to="/help" aria-label="Luminovia Portal">
-          <img src="/brand/luminovia-logo-mark-160.webp" alt="" />
-          <span>
-            Luminovia <small>PORTAL</small>
-          </span>
-        </Link>
-        <div className="help-header-actions">
-          <Preferences />
-          <Link to="/login">{text(labels.login)}</Link>
-        </div>
-      </header>
-      <main id="help-main" className="help-main" tabIndex={-1}>
+      {!embedded && (
+        <header className="help-header">
+          <Link className="help-brand" to="/help" aria-label="Luminovia Portal">
+            <img src="/brand/luminovia-logo-mark-160.webp" alt="" />
+            <span>
+              Luminovia <small>PORTAL</small>
+            </span>
+          </Link>
+          <div className="help-header-actions">
+            <Preferences />
+            <Link to="/login">{text(labels.login)}</Link>
+          </div>
+        </header>
+      )}
+      <Content id="help-main" className="help-main" tabIndex={-1}>
         <section className="help-hero" aria-labelledby="help-title">
           <div className="eyebrow">LUMINOVIA PORTAL</div>
           <h1 id="help-title">{text(labels.title)}</h1>
@@ -329,7 +335,7 @@ export function HelpCenter() {
             </div>
           )}
         </section>
-      </main>
+      </Content>
     </div>
   );
 }

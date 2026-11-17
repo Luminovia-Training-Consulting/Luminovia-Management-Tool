@@ -23,7 +23,7 @@ import {
 import { JobCard } from "../jobs/jobs";
 import { jobDashboardQuery } from "../jobs/discovery-api";
 import { ErrorState, Loading, TextLink } from "../../components/common";
-import { validZone } from "../../lib/dates";
+import { dateTime, validZone } from "../../lib/dates";
 import { DashboardCalendarPreview, DashboardWidgets } from "./widgets";
 import { DashboardReadinessWidget } from "../readiness/widget";
 import "./i18n";
@@ -31,7 +31,7 @@ import "./dashboard.css";
 
 /** Compose personal entry points, actual offers and confirmed assignments from shared queries. */
 export function Dashboard() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const dashboard = useTranslation("dashboard").t;
   const { session } = useAuth();
   const profile = useQuery(profileQuery(session!.user.id));
@@ -73,11 +73,14 @@ export function Dashboard() {
       : "Europe/Berlin";
   return (
     <section className="dashboard-page" aria-label={t("workspace")}>
-      <h1>
-        {t("greeting", {
-          name: profile.data?.display_name.split(" ")[0] || "Luminovia",
-        })}
-      </h1>
+      <header className="dashboard-welcome">
+        <h1>
+          {t("greeting", {
+            name: profile.data?.display_name.split(" ")[0] || "Luminovia",
+          })}
+        </h1>
+        <p>{dashboard("workspaceIntro")}</p>
+      </header>
       {staff && (
         <div className="dashboard-metrics">
           {[
@@ -129,7 +132,66 @@ export function Dashboard() {
       )}
       <FinancialSummaryCards />
       {staff ? (
-        <div className="dashboard-lower">
+        <div className="dashboard-overview">
+          <section
+            className="panel dashboard-assignments"
+            aria-label={dashboard("nextAssignments")}
+          >
+            <div className="section-heading">
+              <h2>{dashboard("nextAssignments")}</h2>
+              <CalendarDays size={22} aria-hidden="true" />
+            </div>
+            {next.length ? (
+              <ol className="dashboard-preview-list">
+                {next.slice(0, 3).map((assignment) => (
+                  <li key={assignment.id}>
+                    <Link
+                      to={
+                        assignment.job
+                          ? `/jobs/${assignment.job.id}`
+                          : "/calendar"
+                      }
+                    >
+                      {assignment.job?.title ?? dashboard("assignment")}
+                    </Link>
+                    <small>
+                      {dateTime(assignment.starts_at, i18n.language, zone)}
+                    </small>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="muted">{dashboard("noConfirmedAssignments")}</p>
+            )}
+            <TextLink to="/calendar">{dashboard("openCalendar")}</TextLink>
+          </section>
+          <DashboardReadinessWidget actor={session!.user.id} />
+          <DashboardCalendarPreview
+            actor={session!.user.id}
+            zone={zone}
+            assignments={next}
+          />
+        </div>
+      ) : (
+        <section className="panel dashboard-account-destination">
+          <h2>{t(clientAccount ? "clientPortal" : "myCourses")}</h2>
+          <TextLink to={destination}>
+            {t(clientAccount ? "requestCourses" : "courses")}
+          </TextLink>
+          {clientAccount && (
+            <TextLink to="/my-reviews">{dashboard("companyReviews")}</TextLink>
+          )}
+        </section>
+      )}
+      {!staff && (
+        <DashboardCalendarPreview
+          actor={session!.user.id}
+          zone={zone}
+          assignments={[]}
+        />
+      )}
+      {staff && (
+        <div className="dashboard-offers">
           <section aria-label={matching ? dashboard("matches") : t("openJobs")}>
             <div className="section-heading">
               <h2>{matching ? dashboard("matches") : t("openJobs")}</h2>
@@ -153,26 +215,7 @@ export function Dashboard() {
               </div>
             )}
           </section>
-          <DashboardCalendarPreview
-            actor={session!.user.id}
-            zone={zone}
-            assignments={next}
-          />
         </div>
-      ) : (
-        <section className="panel dashboard-account-destination">
-          <h2>{t(clientAccount ? "clientPortal" : "myCourses")}</h2>
-          <TextLink to={destination}>
-            {t(clientAccount ? "requestCourses" : "courses")}
-          </TextLink>
-        </section>
-      )}
-      {!staff && (
-        <DashboardCalendarPreview
-          actor={session!.user.id}
-          zone={zone}
-          assignments={[]}
-        />
       )}
       <DashboardWidgets
         actor={session!.user.id}
@@ -181,7 +224,6 @@ export function Dashboard() {
         clientAccount={clientAccount}
         jobCounts={jobs.data?.management ?? undefined}
       />
-      {staff && <DashboardReadinessWidget actor={session!.user.id} />}
     </section>
   );
 }

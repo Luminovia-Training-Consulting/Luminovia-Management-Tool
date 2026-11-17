@@ -3475,3 +3475,58 @@ tr + tr td {
     max-width: none;
   }
 }
+
+/* Shared operational hierarchy: clear headings, consistent controls and restrained cards. */
+.page-heading {
+  gap: 20px;
+}
+.page-heading > div {
+  min-width: 0;
+  flex: 1;
+}
+.page-heading > .button,
+.page-heading > .operations-actions {
+  flex-shrink: 0;
+}
+.page-heading h1 {
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.page-heading p {
+  line-height: 1.65;
+  margin-bottom: 0;
+}
+.panel > .section-heading:first-child {
+  margin-top: 0;
+}
+.section-heading {
+  gap: 12px;
+}
+.section-heading h2 {
+  line-height: 1.35;
+  min-width: 0;
+}
+.button {
+  min-height: 40px;
+}
+.button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
+}
+.field > label {
+  font-weight: 600;
+  line-height: 1.4;
+}
+@media (max-width: 760px) {
+  .page-heading {
+    flex-wrap: wrap;
+  }
+  .page-heading > div {
+    flex-basis: 100%;
+  }
+  .button {
+    min-height: 44px;
+  }
+}

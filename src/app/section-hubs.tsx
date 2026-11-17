@@ -3,6 +3,9 @@ import { lazy, Suspense } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Loading } from "../components/common";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "../features/auth/auth-context";
+import { userRolesQuery } from "../lib/queries";
 const Courses = lazy(() =>
   import("../features/operations/courses").then((m) => ({
     default: m.CoursesPage,
@@ -46,7 +49,6 @@ const sections = {
   courses: [
     ["catalogue", "Kurse", "Courses", Courses],
     ["readiness", "Kursbereitschaft", "Readiness", Readiness],
-    ["replacements", "Vertretungen", "Replacements", Replacements],
     ["reviews", "Dozent:innen bewerten", "Review lecturers", Reviews],
   ],
   knowledge: [
@@ -62,7 +64,13 @@ const sections = {
 export function SectionHub({ kind }: { kind: keyof typeof sections }) {
   const { i18n } = useTranslation();
   const [params, setParams] = useSearchParams();
-  const items = sections[kind];
+  const actor = useAuth().session!.user.id;
+  const roles = useQuery(userRolesQuery(actor));
+  const items = sections[kind].filter(
+    (item) =>
+      item[0] !== "reviews" ||
+      roles.data?.some((role) => ["client", "owner", "admin"].includes(role)),
+  );
   const selected =
     items.find((item) => item[0] === params.get("section")) ?? items[0];
   const Page = selected[3];
@@ -75,7 +83,11 @@ export function SectionHub({ kind }: { kind: keyof typeof sections }) {
         {items.map((item) => (
           <button
             key={item[0]}
-            className="button button-secondary"
+            className={
+              item === selected
+                ? "button button-primary"
+                : "button button-secondary"
+            }
             aria-current={item === selected ? "page" : undefined}
             onClick={() => setParams({ section: item[0] })}
           >
@@ -84,7 +96,21 @@ export function SectionHub({ kind }: { kind: keyof typeof sections }) {
         ))}
       </nav>
       <Suspense fallback={<Loading />}>
-        <Page />
+        {kind === "knowledge" && selected[0] === "help" ? (
+          <Help embedded />
+        ) : (
+          <Page />
+        )}
+        {kind === "courses" && selected[0] === "catalogue" && (
+          <details className="panel replacement-discovery">
+            <summary>
+              {i18n.language.startsWith("de")
+                ? "Vertretung für einen Kurs finden oder übernehmen"
+                : "Find or claim a course replacement"}
+            </summary>
+            <Replacements />
+          </details>
+        )}
       </Suspense>
     </>
   );

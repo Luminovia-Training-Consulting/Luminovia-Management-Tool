@@ -132,3 +132,18 @@
 :root[data-theme="dark"] .notification-count {
   color: #102755;
 }
+
+.settings-section {
+  margin-block: 1rem;
+}
+.settings-section > summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding: 0.6rem 0;
+}
+.settings-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}

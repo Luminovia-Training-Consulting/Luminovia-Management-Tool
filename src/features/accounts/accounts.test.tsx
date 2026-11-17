@@ -157,7 +157,15 @@ describe("Account administration", () => {
     expect(
       await screen.findByRole("checkbox", { name: "Senior-Dozent:in" }),
     ).toBeVisible();
-    expect(screen.getByRole("checkbox", { name: "Gast" })).toBeVisible();
+    expect(
+      screen.queryByRole("checkbox", { name: "Gast" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: "Gast" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("checkbox", { name: "Kursteilnehmer:in" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("checkbox", { name: "Management" }),
     ).not.toBeInTheDocument();

@@ -13,7 +13,11 @@ Implemented from `todos.txt` and the supplied portal images:
 - [x] Participant-only/guest-only accounts denied server-side and frontend; removed participant enrolment controls. Company-to-lecturer reviews enforced by current customer membership.
 - [x] 852 Vitest tests, ESLint, TypeScript and production/PWA build pass. Two real isolated PostgreSQL groups verify current-role denial, review eligibility/revocation and full migration replay.
 - [ ] Full logged-in desktop/mobile/PWA/API acceptance: canonical `./portal test` is blocked by another checkout holding the shared QA lock. Existing participant-focused historical test fixtures must be updated for the retired participant product contract.
-- [ ] Further polish of the full dashboard/course-workspace compositions against the reference images and simplification of administration settings. Website enquiry integration remains available under its existing route; a rewritten explanatory flow is pending. Retired module sources/historical database records are retained, not erased.
+- [x] Dashboard composition uses live assignments/readiness/calendar and the shared rainbow/pastel design. Person records have actual basic editing, roles/access, block/reactivate and delete actions at the top. Course records have Edit/Archive/Delete at the top; course workspace is operational rather than learner-facing.
+- [x] Remove retired availability, delivery-evidence, participant enrolment, workbench and timesheet frontend modules and their obsolete UI tests. Shared calendar/finance functions remain connected and tested.
+- [x] Group settings into appearance/account/notifications/quiet-hours/organisation, embed help/FAQ without a second public header and retain its section on topic navigation, place replacement discovery inside the course catalogue rather than its own tab.
+- [x] Add current-authority managed-profile editing and actual course destinations (company, lecturers, exact permitted chats and assignments); full-migrated PostgreSQL regressions pass.
+- [ ] Verify the complete authenticated application visually at desktop/mobile breakpoints and run API/browser acceptance after the shared test lock is available. CSS fixture checks establish layout bounds only, not full visual equivalence to every reference screen.
 
 ## Internal UI redesign — 17 November 2026
 

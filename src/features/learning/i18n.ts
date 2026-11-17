@@ -19,7 +19,7 @@ const pairs: Record<string, [string, string]> = {
     "Das Dokument enthält Zeichen, die die eingebettete Schrift nicht unterstützt. Bitte melde dies dem Lehrteam; der Name wird nicht stillschweigend verändert.",
     "The document contains characters unsupported by the embedded font. Contact the teaching team; your name will not be silently changed.",
   ],
-  hub: ["Meine Kursräume", "My course workspaces"],
+  hub: ["Kursübersicht", "Course overview"],
   hubHelp: [
     "Aktuelle, kommende und absolvierte Kurse mit den für dein Konto freigegebenen Unterlagen und Funktionen.",
     "Current, upcoming and completed courses with materials and actions authorised for your account.",
@@ -29,12 +29,12 @@ const pairs: Record<string, [string, string]> = {
     "No course workspaces are available to your account yet.",
   ],
   unscheduled: ["Termine folgen", "Schedule to follow"],
-  openWorkspace: ["Kursraum öffnen", "Open course workspace"],
+  openWorkspace: ["Kurs öffnen", "Open course workspace"],
   workspaceHelp: [
-    "Vorbereitung, freigegebene Unterlagen und gemeinsames Lernen im konkreten Kurs.",
-    "Preparation, agreed materials and learning activities for this course.",
+    "Kursinformationen, Termine, Vorbereitung und freigegebene Dateien.",
+    "Course information, dates, preparation and shared files.",
   ],
-  back: ["Alle Kursräume", "All course workspaces"],
+  back: ["Alle Kurse", "All courses"],
   refresh: ["Kursraum aktualisieren", "Refresh workspace"],
   save: ["Speichern", "Save"],
   saved: [
@@ -85,10 +85,7 @@ const pairs: Record<string, [string, string]> = {
   ],
   writeEmail: ["E-Mail schreiben", "Write email"],
   call: ["Anrufen", "Call"],
-  resources: [
-    "Vereinbarte Materialien & Berichte",
-    "Agreed materials & reports",
-  ],
+  resources: ["Kursdateien", "Course files"],
   resourceHelp: [
     "Jede Freigabe gilt für eine konkret geprüfte Dateifassung. Eine Bestätigung dokumentiert den Empfang dieser Fassung.",
     "Each share refers to one reviewed file version. Acknowledgement records receipt of that version.",

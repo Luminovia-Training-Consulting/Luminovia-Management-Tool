@@ -16,6 +16,7 @@ vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "learner-a" } } }),
 }));
 vi.mock("../../lib/supabase", () => ({ db: () => fake }));
+vi.mock("./destinations", () => ({ CourseDestinations: () => null }));
 const clients: QueryClient[] = [];
 function fixture(): CourseWorkspace {
   return {
@@ -29,10 +30,10 @@ function fixture(): CourseWorkspace {
     ended: true,
     access: {
       manager: false,
-      teacher: false,
-      learner: true,
+      teacher: true,
+      learner: false,
       client: false,
-      staff: false,
+      staff: true,
     },
     settings_version: 0,
     contact: null,
@@ -97,66 +98,56 @@ function setup() {
   return client;
 }
 describe("connected course workspace", () => {
-  it("confirms whole-course cancellation only after the server commits", async () => {
-    const user = userEvent.setup();
+  it("shows operational course details without retired learner and delivery workflows", async () => {
     setup();
-    await user.click(
-      await screen.findByRole("button", { name: "Kursteilnahme stornieren" }),
-    );
     expect(
-      screen.getByText(/gesamte Kursteilnahme bis spätestens sieben Tage/),
+      await screen.findByRole("heading", { name: "Kursübersicht & Termine" }),
     ).toBeVisible();
-    let resolve!: (value: unknown) => void;
-    fake.pending = new Promise((r) => (resolve = r));
-    await user.click(
-      screen.getByRole("button", {
-        name: "Gesamte Teilnahme verbindlich stornieren",
-      }),
-    );
-    expect(fake.rpc).toHaveBeenCalledWith("cancel_own_course_enrolment", {
-      p_course_run_id: "course-a",
-    });
-    expect(screen.queryByText("Course list")).not.toBeInTheDocument();
-    await act(async () => resolve(null));
-    expect(await screen.findByText("Course list")).toBeVisible();
-  });
-  it("keeps the enrolment open when the server rejects cancellation", async () => {
-    const user = userEvent.setup();
-    setup();
-    await user.click(
-      await screen.findByRole("button", { name: "Kursteilnahme stornieren" }),
-    );
-    fake.error = { message: "Cancellation deadline passed" };
-    await user.click(
-      screen.getByRole("button", {
-        name: "Gesamte Teilnahme verbindlich stornieren",
-      }),
-    );
     expect(
-      await screen.findByText(/Die Stornierung wurde nicht bestätigt/),
-    ).toBeVisible();
-    expect(screen.queryByText("Course list")).not.toBeInTheDocument();
-  });
-  it("keeps staff preparation and other learners' attendance controls out of the participant experience", async () => {
-    fake.workspace.preparation = [
-      {
-        id: "staff-task",
-        label: "Staff-only preparation",
-        done: false,
-        client_visible: true,
-        version: 1,
-      },
-    ];
-    setup();
-    expect(await screen.findByText("Shared safe description")).toBeVisible();
+      screen.getByRole("link", { name: "Kurs verwalten" }),
+    ).toHaveAttribute("href", "/courses?run=course-a");
     expect(
-      screen.queryByText("Staff-only preparation"),
+      screen.getByRole("link", { name: "Kursbereitschaft" }),
+    ).toHaveAttribute("href", "/readiness/course-a");
+    expect(
+      screen.queryByLabelText("Persönliche Kursnotizen"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Kursteilnahme stornieren" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Anwesenheit bestätigen" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Persönliche Kursnotizen")).toHaveValue(
-      "My private draft",
+  });
+
+  it("shares an authorized file version with operational audiences only", async () => {
+    fake.workspace.access.manager = true;
+    fake.workspace.share_options = [
+      { id: "clean-version", name: "Course notes", version: 2 },
+    ];
+    const user = userEvent.setup();
+    setup();
+    const versions = await screen.findByRole("combobox", {
+      name: "Geprüfte Dateifassung",
+    });
+    await user.selectOptions(versions, "clean-version");
+    const audience = screen.getByRole("combobox", { name: "Sichtbarkeit" });
+    expect(
+      screen.queryByRole("option", { name: "Teilnehmende" }),
+    ).not.toBeInTheDocument();
+    await user.selectOptions(audience, "staff");
+    await user.click(screen.getByRole("button", { name: "Fassung freigeben" }));
+    await waitFor(() =>
+      expect(fake.rpc).toHaveBeenCalledWith(
+        "course_workspace_action",
+        expect.objectContaining({
+          p_action: "resource_share",
+          p_payload: expect.objectContaining({
+            version_id: "clean-version",
+            audience: "staff",
+          }),
+        }),
+      ),
     );
   });
   it("copies only the authorized validated teaching link after clipboard confirmation, and explains failure", async () => {
@@ -221,36 +212,6 @@ describe("connected course workspace", () => {
       screen.queryByRole("button", { name: "Unterrichtslink kopieren" }),
     ).not.toBeInTheDocument();
   });
-  it("stores the actor-owned notebook with its current version and confirms only after the response", async () => {
-    const user = userEvent.setup();
-    setup();
-    const notes = await screen.findByLabelText("Persönliche Kursnotizen");
-    await user.clear(notes);
-    await user.type(notes, "My revised notes");
-    let resolve!: (value: unknown) => void;
-    fake.pending = new Promise((r) => (resolve = r));
-    const form = notes.closest("form")!;
-    await user.click(form.querySelector("button")!);
-    expect(
-      screen.queryByText("Änderung auf dem Server gespeichert."),
-    ).not.toBeInTheDocument();
-    expect(fake.rpc).toHaveBeenCalledWith("course_workspace_action", {
-      p_run_id: "course-a",
-      p_action: "notebook",
-      p_payload: { body: "My revised notes" },
-      p_expected_version: 2,
-    });
-    fake.workspace = {
-      ...fake.workspace,
-      notebook: { body: "My revised notes", version: 3 },
-    };
-    await act(async () => resolve({ id: null, saved: true }));
-    await waitFor(() =>
-      expect(screen.getByLabelText("Persönliche Kursnotizen")).toHaveValue(
-        "My revised notes",
-      ),
-    );
-  });
   it("waits for committed shared preparation state and exposes read-only progress to a client", async () => {
     fake.workspace.access = {
       manager: false,
@@ -289,9 +250,7 @@ describe("connected course workspace", () => {
   });
   it("never renders retained private workspace data after a revoked read", async () => {
     const client = setup();
-    expect(await screen.findByLabelText("Persönliche Kursnotizen")).toHaveValue(
-      "My private draft",
-    );
+    expect(await screen.findByText("Shared safe description")).toBeVisible();
     fake.error = { code: "42501" };
     await act(async () => {
       await client.invalidateQueries({ queryKey: ["course-workspace"] });
@@ -304,39 +263,5 @@ describe("connected course workspace", () => {
     expect(
       screen.queryByText("Shared safe description"),
     ).not.toBeInTheDocument();
-  });
-  it("submits only chosen quiz answers and an idempotency key, preserving DE/EN cached state", async () => {
-    fake.workspace.quiz = {
-      version: 3,
-      published: true,
-      pass_percent: 80,
-      max_attempts: 2,
-      questions: [{ prompt: "Read directory?", options: ["ls", "rm"] }],
-      attempts: 0,
-      passed: false,
-      last_score: null,
-    };
-    const user = userEvent.setup();
-    setup();
-    await user.click(await screen.findByRole("radio", { name: "ls" }));
-    await user.click(
-      screen.getByRole("button", { name: "Antworten verbindlich abgeben" }),
-    );
-    await waitFor(() =>
-      expect(fake.rpc).toHaveBeenCalledWith(
-        "course_workspace_action",
-        expect.objectContaining({
-          p_action: "quiz_attempt",
-          p_expected_version: 3,
-          p_payload: { answers: [0], request_id: expect.any(String) },
-        }),
-      ),
-    );
-    const calls = fake.rpc.mock.calls.length;
-    await act(async () => {
-      await i18n.changeLanguage("en");
-    });
-    expect(screen.getByRole("heading", { name: "Mini quiz" })).toBeVisible();
-    expect(fake.rpc).toHaveBeenCalledTimes(calls);
   });
 });

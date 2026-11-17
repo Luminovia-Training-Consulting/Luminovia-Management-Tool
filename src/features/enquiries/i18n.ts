@@ -1,9 +1,9 @@
 /** Complete paired UI copy; submitted contact details and requirements stay authored text. */
 import i18n from "../../lib/i18n";
 const en = {
-  title: "Website enquiries",
+  title: "Customer enquiries",
   description:
-    "Review incoming training requests, link the customer and continue with course planning.",
+    "Requests received through the connected website appear here. Assign a contact, create or link the company, then plan the requested course.",
   connection:
     "The Website connection is configured separately. This inbox does not confirm that the public Website is connected.",
   denied: "Enquiries require current customer-management permission.",
@@ -87,7 +87,7 @@ const en = {
   event_note: "Management note added",
 };
 const de: typeof en = {
-  title: "Website-Anfragen",
+  title: "Kundenanfragen",
   description:
     "Prüfe eingegangene Trainingsanfragen, ordne den Auftraggeber zu und fahre mit der Kursplanung fort.",
   connection:

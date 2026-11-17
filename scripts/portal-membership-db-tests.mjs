@@ -45,6 +45,38 @@ await withTestDatabase("portal_membership", async ({ sql, actor }) => {
       .length,
     1,
   );
+  const room = randomUUID();
+  await sql(`insert into public.chat_rooms(id,job_id,kind,title) values('${room}','${job}','lecturer_course','Course team') on conflict(job_id) do update set title=excluded.title;
+    insert into public.chat_members(room_id,user_id) select id,'${lecturer}' from public.chat_rooms where job_id='${job}' on conflict(room_id,user_id) do update set removed_at=null;`);
+  const destinations = JSON.parse(
+    await actor(
+      lecturer,
+      `select public.course_operation_destinations('${run}')`,
+    ),
+  );
+  assert.equal(destinations.organisation.name, "Fictional Academy");
+  assert.equal(destinations.lecturers.length, 1);
+  assert.equal(destinations.jobs[0].id, job);
+  assert.equal(destinations.rooms.length, 1);
+  await sql(
+    `update public.chat_members set removed_at=now() where user_id='${lecturer}' and room_id in (select id from public.chat_rooms where job_id='${job}')`,
+  );
+  assert.equal(
+    JSON.parse(
+      await actor(
+        lecturer,
+        `select public.course_operation_destinations('${run}')`,
+      ),
+    ).rooms.length,
+    0,
+  );
+  await assert.rejects(
+    actor(participant, `select public.course_operation_destinations('${run}')`),
+    /Active course account required/,
+  );
+  console.log(
+    "PASS course destinations use current course, job and exact chat membership",
+  );
   const review = await actor(
     company,
     `select public.submit_course_review('${run}','${lecturer}',5,'Helpful instruction',0)`,

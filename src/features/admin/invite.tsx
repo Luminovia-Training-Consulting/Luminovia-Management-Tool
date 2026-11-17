@@ -102,7 +102,10 @@ export function InviteForm({
     enabled: allRoles && Boolean(actor),
   });
   const availableRoles =
-    catalog.data?.filter((entry) => entry.assignable) ?? [];
+    catalog.data?.filter(
+      (entry) =>
+        entry.assignable && !["participant", "guest"].includes(entry.role),
+    ) ?? [];
   const accountText = useTranslation("accounts").t;
   const organisations = useQuery({
     queryKey: ["invite-organisations", actor],

@@ -5,6 +5,16 @@
 import i18n from "../../lib/i18n";
 
 const pairs: Record<string, [string, string]> = {
+  companyReviews: ["Dozent:innen bewerten", "Review lecturers"],
+  workspaceIntro: [
+    "Kurse, Aufträge und Zusammenarbeit – dein Überblick für heute.",
+    "Courses, assignments and collaboration – your overview for today.",
+  ],
+  nextAssignments: ["Meine nächsten Einsätze", "My next assignments"],
+  noConfirmedAssignments: [
+    "Du hast noch keine bestätigten Einsätze.",
+    "You have no confirmed assignments yet.",
+  ],
   customize: ["Dashboard anpassen", "Customize dashboard"],
   customizeHelp: [
     "Blende persönliche Vorschaukarten ein oder aus und ändere ihre Reihenfolge. Deine Auswahl wird für dein Konto gespeichert; Rollenrechte bleiben maßgeblich.",

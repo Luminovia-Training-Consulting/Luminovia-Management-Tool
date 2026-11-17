@@ -1,8 +1,8 @@
+/** Scoped finance forecast and operations queries, with bounded period validation. */
 import { queryOptions } from "@tanstack/react-query";
 import { DateTime } from "luxon";
 import { z } from "zod";
 import { db } from "../../lib/supabase";
-import { requireOnline } from "../../lib/online";
 import { validZone } from "../../lib/dates";
 
 const uuid = z.string().uuid(),
@@ -23,147 +23,6 @@ export const financePeriodSchema = z
     );
   });
 export type FinancePeriod = z.infer<typeof financePeriodSchema>;
-export function initialFinancePeriod(): FinancePeriod {
-  return {
-    from: DateTime.now().minus({ days: 30 }).toISODate()!,
-    until: DateTime.now().plus({ days: 1 }).toISODate()!,
-  };
-}
-export const timesheetSchema = z.object({
-  id: uuid,
-  session_id: uuid,
-  lecturer_id: uuid,
-  claim_id: uuid,
-  job_id: uuid,
-  title: z.string(),
-  lecturer_name: z.string(),
-  time_zone: zone,
-  starts_at: instant,
-  ends_at: instant,
-  break_minutes: z.number().int().nonnegative(),
-  minutes: z.number().int().positive(),
-  note: z.string(),
-  state: z.enum(["draft", "submitted", "approved", "rejected"]),
-  version: z.number().int().positive(),
-  reviewed_by: uuid.nullable(),
-  reviewed_at: instant.nullable(),
-  review_note: z.string(),
-  created_at: instant,
-  updated_at: instant,
-});
-export type Timesheet = z.infer<typeof timesheetSchema>;
-export const timesheetsSchema = z.object({
-  time_zone: zone,
-  can_review: z.boolean(),
-  items: z.array(timesheetSchema).max(500),
-  sessions: z
-    .array(
-      z.object({
-        id: uuid,
-        claim_id: uuid,
-        job_id: uuid,
-        title: z.string(),
-        starts_at: instant,
-        ends_at: instant,
-        time_zone: zone,
-        editable: z.boolean(),
-      }),
-    )
-    .max(500),
-});
-export type Timesheets = z.infer<typeof timesheetsSchema>;
-export async function fetchTimesheets(
-  period: FinancePeriod,
-  all: boolean,
-  signal?: AbortSignal,
-) {
-  financePeriodSchema.parse(period);
-  const query = db().rpc("timesheets", {
-    p_from: period.from,
-    p_until: period.until,
-    p_all: all,
-  });
-  const { data, error } = await (signal ? query.abortSignal(signal) : query);
-  if (error) throw error;
-  return timesheetsSchema.parse(data);
-}
-export const timesheetsKey = (actor: string) => ["timesheets", actor] as const;
-export const timesheetsQuery = (
-  actor: string,
-  period: FinancePeriod,
-  all: boolean,
-) =>
-  queryOptions({
-    queryKey: [...timesheetsKey(actor), period, all],
-    queryFn: ({ signal }) => fetchTimesheets(period, all, signal),
-    staleTime: 15000,
-    retry: false,
-  });
-export interface TimesheetDraft {
-  session_id: string;
-  starts_at: string;
-  ends_at: string;
-  break_minutes: number;
-  note: string;
-}
-export async function saveTimesheet(
-  id: string,
-  payload: TimesheetDraft,
-  version: number,
-) {
-  requireOnline();
-  const { data, error } = await db().rpc("save_timesheet", {
-    p_id: id,
-    p_payload: payload,
-    p_expected_version: version,
-  });
-  if (error) throw error;
-  return timesheetSchema.parse(data);
-}
-export type TimesheetAction =
-  "submit" | "approve" | "reject" | "request_correction";
-export async function manageTimesheet(
-  item: Timesheet,
-  action: TimesheetAction,
-  request: string,
-  reason: string,
-) {
-  requireOnline();
-  const { data, error } = await db().rpc("manage_timesheet", {
-    p_id: item.id,
-    p_action: action,
-    p_expected_version: item.version,
-    p_request_id: request,
-    p_reason: reason,
-  });
-  if (error) throw error;
-  return timesheetSchema.parse(data);
-}
-export const timesheetHistoryQuery = (actor: string, id: string) =>
-  queryOptions({
-    queryKey: ["timesheet-history", actor, id],
-    queryFn: async ({ signal }) => {
-      const { data, error } = await db()
-        .rpc("timesheet_history", { p_id: id })
-        .abortSignal(signal);
-      if (error) throw error;
-      return z
-        .array(
-          z.object({
-            id: uuid,
-            timesheet_id: uuid,
-            actor_id: uuid,
-            action: z.string(),
-            before_state: z.record(z.string(), z.unknown()).nullable(),
-            after_state: z.record(z.string(), z.unknown()),
-            created_at: instant,
-          }),
-        )
-        .parse(data);
-    },
-    staleTime: 0,
-    retry: false,
-  });
 const forecastSchema = z.object({
   from: z.string(),
   until: z.string(),

@@ -3,8 +3,7 @@
  * and course sessions. Visible ranges bound global discovery; each source keeps
  * its own ACL. Private form times become instants before server-confirmed writes.
  */
-import { Link, useBlocker, useSearchParams } from "react-router-dom";
-import "../availability/i18n";
+import { useBlocker, useSearchParams } from "react-router-dom";
 import { assignmentJobTitlesQuery } from "../jobs/discovery-api";
 import { runsQuery, templatesQuery } from "../operations/data";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -315,7 +314,6 @@ function EventForm({
 /** Combine separately authorized calendar sources and display them in the selected IANA zone. */
 export function CalendarPage() {
   const { t, i18n } = useTranslation();
-  const availabilityText = useTranslation("availability").t;
   const confirmText = useTranslation("calendarConfirmation").t;
   const filterText = useTranslation("calendarFilter").t;
   const [search, setSearch] = useState("");
@@ -566,9 +564,7 @@ export function CalendarPage() {
           </Button>
         }
       />
-      <Button asChild variant="secondary">
-        <Link to="/availability">{availabilityText("title")}</Link>
-      </Button>
+      <Button asChild variant="secondary"></Button>
       <div className="calendar-controls">
         <div className="segmented">
           <Button

@@ -24,7 +24,9 @@ import {
   PageHeading,
 } from "../../components/common";
 import { dateTime } from "../../lib/dates";
-import { profileQuery } from "../../lib/queries";
+import { profileQuery, permissionsQuery } from "../../lib/queries";
+import { Preferences } from "../../components/preferences";
+import { WelcomeGuideEntry } from "../onboarding/welcome";
 import { requireOnline, useOnline } from "../../lib/online";
 import {
   markNotifications,
@@ -386,30 +388,84 @@ function PreferencesForm({
 }
 /** Load the actor's versioned notification preferences and handle errors before opening the editor. */
 export function SettingsPage() {
-  const { t } = useTranslation("inbox");
+  const { t, i18n } = useTranslation("inbox");
+  const de = i18n.language.startsWith("de");
   const actor = useAuth().session!.user.id;
+  const [showGuide, setShowGuide] = useState(false);
   const preferences = useQuery(notificationPreferencesQuery(actor));
+  const permissions = useQuery(permissionsQuery(actor));
   return (
     <>
       <PageHeading title={t("settings")} description={t("settingsHelp")} />
-      {preferences.isPending ? (
-        <Loading />
-      ) : preferences.isError ? (
-        <ErrorState retry={() => void preferences.refetch()} />
-      ) : (
-        <PreferencesForm
-          key={actor}
-          actor={actor}
-          initial={preferences.data}
-          reload={async () => {
-            const result = await preferences.refetch();
-            return result.isSuccess ? result.data : undefined;
-          }}
-        />
+      <section className="panel settings-section">
+        <h2>{de ? "Darstellung & Sprache" : "Appearance & language"}</h2>
+        <Preferences />
+      </section>
+      <section className="panel settings-section">
+        <h2>{de ? "Mein Konto" : "My account"}</h2>
+        <p>
+          {de
+            ? "Profil, Passwort und persönliche Kontaktdaten verwalten."
+            : "Manage your profile, password and personal contact details."}
+        </p>
+        <Link className="text-link" to="/profile">
+          {de ? "Profil bearbeiten" : "Edit profile"}
+        </Link>
+      </section>
+      <details className="panel settings-section" open>
+        <summary>{de ? "Benachrichtigungen" : "Notifications"}</summary>
+        {preferences.isPending ? (
+          <Loading />
+        ) : preferences.isError ? (
+          <ErrorState retry={() => void preferences.refetch()} />
+        ) : (
+          <PreferencesForm
+            key={actor}
+            actor={actor}
+            initial={preferences.data}
+            reload={async () => {
+              const result = await preferences.refetch();
+              return result.isSuccess ? result.data : undefined;
+            }}
+          />
+        )}
+      </details>
+      <details className="panel settings-section">
+        <summary>
+          {de ? "Ruhezeiten & Zustellung" : "Quiet hours & delivery"}
+        </summary>
+        <QuietHoursSettings />
+        <DeliverySettings actor={actor} />
+        <PushSettings key={actor} actor={actor} />
+      </details>
+      <details
+        className="panel settings-section"
+        onToggle={(event) => setShowGuide(event.currentTarget.open)}
+      >
+        <summary>{de ? "Erste Schritte" : "Getting started"}</summary>
+        {showGuide && <WelcomeGuideEntry placement="/settings" />}
+      </details>
+      {permissions.data?.includes("jobs.manage") && (
+        <section className="panel settings-section">
+          <h2>{de ? "Organisation & Betrieb" : "Organisation & operations"}</h2>
+          <div className="settings-links">
+            <Link to="/control-center">
+              {de ? "Betriebsübersicht" : "Operations overview"}
+            </Link>
+            <Link to="/topics">{de ? "Themen & Tools" : "Topics & tools"}</Link>
+            {permissions.data.includes("users.manage") && (
+              <Link to="/admin/accounts">
+                {de ? "Benutzer & Rollen" : "Users & roles"}
+              </Link>
+            )}
+            {permissions.data.includes("organisations.manage") && (
+              <Link to="/enquiries">
+                {de ? "Neue Kundenanfragen" : "New customer enquiries"}
+              </Link>
+            )}
+          </div>
+        </section>
       )}
-      <QuietHoursSettings />
-      <DeliverySettings actor={actor} />
-      <PushSettings key={actor} actor={actor} />
     </>
   );
 }

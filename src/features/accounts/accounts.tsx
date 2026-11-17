@@ -2,7 +2,7 @@
  * Account directory and controlled role/activation changes. Load current permissions before
  * using the accounts API; a visible role selector or submitted user ID grants no authority.
  */
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -42,7 +42,8 @@ function AccountsDirectory({
   const common = useTranslation().t;
   const online = useOnline();
   const cache = useQueryClient();
-  const [search, setSearch] = useState("");
+  const [params] = useSearchParams();
+  const [search, setSearch] = useState(params.get("q") ?? "");
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<AccountPerson | null>(null);
   const [roles, setRoles] = useState<AccountRole[]>([]);
@@ -61,7 +62,10 @@ function AccountsDirectory({
     enabled: canAssign,
   });
   const assignableRoles =
-    catalog.data?.filter((entry) => entry.assignable) ?? [];
+    catalog.data?.filter(
+      (entry) =>
+        entry.assignable && !["participant", "guest"].includes(entry.role),
+    ) ?? [];
   const organisations = useQuery({
     queryKey: ["account-organisations", actorId],
     enabled: canLinkOrganisations && selected !== null,
@@ -142,7 +146,9 @@ function AccountsDirectory({
           {accounts.data.items.map((person) => (
             <li key={person.id}>
               <div>
-                <strong>{person.display_name || person.email}</strong>
+                <Link to={`/people/${person.id}`}>
+                  <strong>{person.display_name || person.email}</strong>
+                </Link>
                 <small>{person.email}</small>
                 <span className="badge">
                   {t(person.active ? "active" : "inactive")}

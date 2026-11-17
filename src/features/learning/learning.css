@@ -103,3 +103,27 @@
     padding: 18px;
   }
 }
+
+.course-workspace-sessions {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0;
+  list-style: none;
+}
+.course-workspace-sessions li {
+  display: grid;
+  gap: 0.3rem;
+  border-left: 4px solid var(--brand);
+  padding: 0.7rem;
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--mint) 25%, var(--surface));
+}
+.course-operations-workspace > :nth-child(2) {
+  border-top: 4px solid var(--peach);
+}
+.course-operations-workspace > :nth-child(3) {
+  border-top: 4px solid var(--mint);
+}
+.course-operations-workspace > :nth-child(4) {
+  border-top: 4px solid var(--lilac);
+}

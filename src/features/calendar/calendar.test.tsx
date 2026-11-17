@@ -17,6 +17,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  Link,
   createMemoryRouter,
   RouterProvider,
   useLocation,
@@ -762,6 +763,7 @@ it("blocks an internal navigation until the dirty appointment is explicitly disc
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
+        <Link to="/profile">Profil öffnen</Link>
         <CalendarPage />
         <Location />
       </MemoryRouter>
@@ -769,10 +771,10 @@ it("blocks an internal navigation until the dirty appointment is explicitly disc
   );
   const user = userEvent.setup();
   const nav = await screen.findByRole("link", {
-    name: "Verfügbarkeit & Sperrzeiten",
+    name: "Profil öffnen",
   });
   await user.click(
-    screen.getByRole("button", { name: "Privaten Termin hinzufügen" }),
+    await screen.findByRole("button", { name: "Privaten Termin hinzufügen" }),
   );
   const form = screen.getByRole("dialog", {
     name: "Privaten Termin hinzufügen",
@@ -794,9 +796,7 @@ it("blocks an internal navigation until the dirty appointment is explicitly disc
   await user.click(
     within(confirm).getByRole("button", { name: "Änderungen verwerfen" }),
   );
-  expect(screen.getByLabelText("current route")).toHaveTextContent(
-    "/availability",
-  );
+  expect(screen.getByLabelText("current route")).toHaveTextContent("/profile");
   client.clear();
 });
 

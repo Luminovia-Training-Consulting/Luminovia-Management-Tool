@@ -15,7 +15,7 @@ import {
   PageHeading,
 } from "../../components/common";
 import { controlCenterQuery, forecastQuery } from "./finance-api";
-import { FinancePeriodFilter } from "./timesheets";
+import { FinancePeriodFilter } from "./finance-period";
 import "./finance-i18n";
 import "./finance.css";
 
@@ -91,7 +91,6 @@ export function ControlCenterPage() {
                 {t("refresh")}
               </Button>
               <Link to="/admin/audit">{t("openHistory")}</Link>
-              <Link to="/timesheets">{t("timesheets")}</Link>
             </div>
             <div className="control-grid">
               <Section title={t("unstaffed")} count={info.unstaffed.length}>

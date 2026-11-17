@@ -20,9 +20,9 @@ import { welcomeSteps } from "./steps";
 import "./i18n";
 import "./welcome.css";
 
-export function WelcomeGuideEntry() {
+export function WelcomeGuideEntry({ placement = "/" }: { placement?: string }) {
   const { pathname } = useLocation();
-  return pathname === "/" ? <WelcomeGuide compact /> : null;
+  return pathname === placement ? <WelcomeGuide compact /> : null;
 }
 export function WelcomeGuidePage() {
   return <WelcomeGuide />;

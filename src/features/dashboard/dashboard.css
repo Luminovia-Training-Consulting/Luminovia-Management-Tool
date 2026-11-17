@@ -178,3 +178,156 @@
   border-radius: 50%;
   background: color-mix(in srgb, var(--surface) 75%, transparent);
 }
+
+/* Dashboard composition mirrors the reference's hero and three operational cards. */
+.dashboard-welcome {
+  padding: clamp(22px, 3vw, 36px);
+  padding-right: clamp(22px, 20vw, 300px);
+  border: 1px solid #fff9;
+  border-radius: 22px;
+  background:
+    radial-gradient(
+      ellipse 160px 145px at 103% 150%,
+      var(--lilac) 99%,
+      transparent
+    ),
+    radial-gradient(ellipse 140px 140px at 88% 160%, #0758e8 99%, transparent),
+    radial-gradient(
+      ellipse 140px 140px at 77% 185%,
+      var(--mint) 99%,
+      transparent
+    ),
+    radial-gradient(
+      ellipse 180px 160px at 80% 180%,
+      var(--yellow) 99%,
+      transparent
+    ),
+    linear-gradient(110deg, #ffe0df, #fff5ec);
+  color: #14233b;
+  box-shadow: var(--shadow);
+}
+.dashboard-welcome h1 {
+  margin: 0 0 8px;
+  font-size: clamp(28px, 3vw, 43px);
+  letter-spacing: -0.045em;
+  line-height: 1.15;
+}
+.dashboard-welcome p {
+  margin: 0;
+  line-height: 1.6;
+  max-width: 780px;
+}
+.dashboard-overview {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1fr;
+  align-items: stretch;
+  gap: 18px;
+  min-width: 0;
+}
+.dashboard-overview > section {
+  min-width: 0;
+}
+.dashboard-assignments {
+  border-top: 5px solid var(--coral);
+}
+.dashboard-assignments .dashboard-preview-list li {
+  padding: 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--blue-soft) 45%, var(--surface));
+}
+.dashboard-assignments .dashboard-preview-list li:nth-child(2) {
+  background: color-mix(in srgb, var(--lilac) 30%, var(--surface));
+}
+.dashboard-assignments .dashboard-preview-list li:nth-child(3) {
+  background: color-mix(in srgb, var(--mint) 30%, var(--surface));
+}
+.dashboard-assignments .dashboard-preview-list small {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+}
+.dashboard-offers {
+  min-width: 0;
+}
+.dashboard-page .dashboard-widgets {
+  margin-top: 0;
+}
+.dashboard-page .dashboard-customize {
+  margin-top: 0;
+}
+[data-theme="dark"] .dashboard-welcome {
+  color: var(--ink);
+  border-color: var(--line);
+  background:
+    radial-gradient(
+      ellipse 160px 140px at 100% 160%,
+      #7d88d850 99%,
+      transparent
+    ),
+    radial-gradient(
+      ellipse 170px 130px at 83% 180%,
+      #1749b550 99%,
+      transparent
+    ),
+    linear-gradient(110deg, #253553, #1b2840);
+}
+@media (max-width: 1150px) {
+  .dashboard-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dashboard-overview > .dashboard-calendar {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 760px) {
+  .dashboard-welcome {
+    padding: 22px;
+  }
+  .dashboard-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dashboard-overview > .dashboard-calendar {
+    grid-column: auto;
+  }
+}
+
+/* Existing scoped shortcuts become action tiles rather than another text-heavy toolbar. */
+.dashboard-page .dashboard-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+.dashboard-page .dashboard-shortcuts > strong {
+  grid-column: 1 / -1;
+}
+.dashboard-page .dashboard-shortcuts a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--blue-soft);
+  color: var(--ink);
+  min-height: 46px;
+}
+.dashboard-page .dashboard-shortcuts a::after {
+  content: "→";
+  margin-left: 12px;
+}
+.dashboard-page .dashboard-shortcuts a:first-of-type {
+  background: #0758e8;
+  border-color: #0758e8;
+  color: #fff;
+}
+@media (max-width: 760px) {
+  .dashboard-page .dashboard-shortcuts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 380px) {
+  .dashboard-page .dashboard-shortcuts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
