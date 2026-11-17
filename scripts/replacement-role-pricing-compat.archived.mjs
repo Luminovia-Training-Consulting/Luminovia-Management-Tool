@@ -3,9 +3,10 @@
  * rewriting either history. Every account, price and policy below is fictional;
  * a random owned UUID database is removed by the standard fixture afterwards.
  * SQL authorization assertions exercise the current permission gate, not native Auth/TOTP.
- * This remains a manual test until the real pricing prerequisite is accepted on
- * main; it intentionally has no auto-discovered -db-tests suffix.
- * Run: PORTAL_DB_CONTAINER=<owned-test-container> node scripts/replacement-role-pricing-compat.mjs */
+ * This historical role-based pricing probe is superseded by individual lecturer
+ * compensation. It is archived outside automatic acceptance discovery; current
+ * replacement behavior is covered by replacement-directed-handover-db-tests.mjs.
+ * Archived historical fixture: not part of current product acceptance. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
@@ -105,11 +106,15 @@ await withTestDatabase("replacement_role_compat", async ({ sql, actor }) => {
     ]);
 
   await check(
-    "Fictional policy setup requires current permission in password-only AAL1 and preserves an empty-policy start",
+    "Fictional policy setup requires current permission and preserves an empty-policy start",
     async () => {
       assert.equal(
         await sql("select count(*) from private.compensation_policy"),
         "0",
+      );
+      await assert.rejects(
+        rpc(admin, "configure_compensation_policy", ["29.17", "76.43", "0"]),
+        /42501/,
       );
       const configured = await rpc(
         admin,
