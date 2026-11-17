@@ -1,0 +1,99 @@
+# Publish only the exact current main after independently successful full and
+# security workflows. The VPS retains its own immutable-release, migration,
+# backup, health and rollback gates; no server credentials are held here.
+name: Automatic verified CMS release
+on:
+  workflow_run:
+    workflows: [Portal checks, Security analysis]
+    types: [completed]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: automatic-verified-cms-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'Luminovia-Training-Consulting/Luminovia-Management-Tool' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: cms-release-${{ github.event.workflow_run.head_sha }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      # This gate runs before checkout or contributor-controlled code. The
+      # workflow_run definition itself comes from the protected default branch.
+      - name: Verify current main and both completed push workflows
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: Luminovia-Training-Consulting/Luminovia-Management-Tool
+          TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]
+          CURRENT_SHA="$(gh api "repos/$GH_REPO/branches/main" --jq '.commit.sha')"
+          if test "$TARGET_SHA" != "$CURRENT_SHA"; then
+            echo 'A newer main exists; do not publish this revision.'
+            echo 'publish=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          for workflow in ci.yml security.yml; do
+            RESULT="$(gh api -X GET "repos/$GH_REPO/actions/workflows/$workflow/runs" -f branch=main -f event=push -f head_sha="$TARGET_SHA" -f per_page=1 --jq '[.workflow_runs[] | select(.head_sha == env.TARGET_SHA and .head_branch == "main" and .event == "push")][0] | if . == null then "missing" else .status + ":" + (.conclusion // "pending") end')"
+            if test "$RESULT" != completed:success; then
+              echo "$workflow is not yet successful for this exact main revision."
+              echo 'publish=false' >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo 'publish=true' >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.gate.outputs.publish == 'true'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.gate.outputs.publish == 'true'
+        with:
+          node-version-file: ".node-version"
+          cache: npm
+      - if: steps.gate.outputs.publish == 'true'
+        run: npm ci
+      - name: Build verified development release
+        if: steps.gate.outputs.publish == 'true'
+        env:
+          TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+          VITE_SUPABASE_URL: ${{ vars.CMS_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.CMS_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test -n "$VITE_SUPABASE_URL"
+          test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
+          npx vite build
+          node deploy/hostinger/updates/package.mjs --commit "$TARGET_SHA" --output "$RUNNER_TEMP/cms-release"
+      - name: Publish immutable release for still-current main
+        if: steps.gate.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: Luminovia-Training-Consulting/Luminovia-Management-Tool
+          TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          test "$(gh api "repos/$GH_REPO/branches/main" --jq '.commit.sha')" = "$TARGET_SHA"
+          RELEASE_TAG="cms-dev-$TARGET_SHA"
+          if gh release view "$RELEASE_TAG" --json isDraft > "$RUNNER_TEMP/cms-existing-release.json" 2>/dev/null; then
+            if test "$(jq -r .isDraft "$RUNNER_TEMP/cms-existing-release.json")" = false; then
+              echo 'The immutable release is already published.'
+              exit 0
+            fi
+            echo 'An existing draft requires operator inspection; it will not be overwritten.' >&2
+            exit 1
+          else
+            gh release create "$RELEASE_TAG" --target "$TARGET_SHA" --draft --prerelease --title "CMS development $TARGET_SHA" --notes 'Automatically published after exact-main application and security checks passed.'
+          fi
+          gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/cms-release/cms-release.tar.gz" "$RUNNER_TEMP/cms-release/cms-release.json"
+          gh release edit "$RELEASE_TAG" --draft=false

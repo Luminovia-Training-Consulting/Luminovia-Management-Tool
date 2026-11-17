@@ -218,6 +218,7 @@ const pairs: Record<string, [string, string]> = {
   login: ["Anmelden", "Sign in"],
   logout: ["Abmelden", "Sign out"],
   email: ["E-Mail", "Email"],
+  previewEmailOrUsername: ["E-Mail oder Benutzername", "Email or username"],
   password: ["Passwort", "Password"],
   forgot: ["Passwort vergessen?", "Forgot password?"],
   recover: ["Link anfordern", "Request reset link"],

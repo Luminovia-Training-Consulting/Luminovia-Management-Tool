@@ -269,7 +269,35 @@ try {
     "Commercial picker reveals names and IDs only",
   );
   const original = pdf("Fictional externally executed contract - QA only.");
-  const contractDoc = await upload(admin, original, "contract", a.id);
+  const contractDoc = await upload(a, original, "contract", a.id);
+  assert.equal(
+    (await download(admin, contractDoc.id, contractDoc.current_version_id))
+      .status,
+    403,
+    "MFA manager cannot download another lecturer's contract",
+  );
+  const ownerBytes = await download(
+    a,
+    contractDoc.id,
+    contractDoc.current_version_id,
+  );
+  assert.equal(ownerBytes.status, 200);
+  assert.deepEqual(new Uint8Array(await ownerBytes.arrayBuffer()), original);
+  const candidates = await checked(
+    admin.client.rpc("contract_registration_candidates", { p_user_id: a.id }),
+    "Read bounded contract candidates",
+  );
+  assert.ok(
+    candidates.some(
+      (candidate) => candidate.version_id === contractDoc.current_version_id,
+    ),
+  );
+  assert.ok(
+    candidates.every(
+      (candidate) =>
+        Object.keys(candidate).sort().join(",") === "file_name,version_id",
+    ),
+  );
   const version = await checked(
     a.client
       .from("document_versions")
@@ -592,7 +620,7 @@ try {
   const replacement = pdf(
     "Future replacement must not modify accepted contract evidence.",
   );
-  await upload(admin, replacement, "contract", a.id, contractDoc.id);
+  await upload(a, replacement, "contract", a.id, contractDoc.id);
   const oldDownload = await download(a, contractDoc.id, version.id);
   assert.equal(oldDownload.status, 200);
   assert.deepEqual(new Uint8Array(await oldDownload.arrayBuffer()), original);
