@@ -6,9 +6,9 @@ await withTestDatabase("owned_cascade", async ({ sql, actor }) => {
   const scopeDefinition = await sql(
     `select pg_catalog.pg_get_functiondef('private.deletion_scope(text,uuid)'::regprocedure)`,
   );
-  assert.match(scopeDefinition, /processed oid\[\]\s*:=\s*array\[\]::oid\[\]/);
+  assert.match(scopeDefinition, /processed oid\[\]\s*:=\s*'\{\}'/);
   console.log(
-    "PASS owned-cascade visited-constraint array is explicitly typed",
+    "PASS owned-cascade visited-constraint array has an empty oid[] initializer",
   );
   const privateDoc = randomUUID(),
     privateVersion = randomUUID();
