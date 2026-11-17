@@ -7,7 +7,8 @@
 - [x] Fix the pinned Deno installer for clean npm 12 installs and verify the public demo on desktop and mobile emulation.
 - [x] Complete the local isolated SQL/API/browser/build/PWA run on the pre-dashboard audit snapshot: 162 desktop/mobile and 4 PWA cases passed with checked cleanup.
 - [ ] Complete combined exact-head CI and integrate current `main` before any permitted merge.
-- [ ] Recheck the current local preview after its fixed ports become available. The overall product and release requirements below remain open.
+- [x] Start a separate fictional-data preview of the PR45 snapshot on alternate loopback ports and check the actual lecturer login/contract screen; existing preview services remain untouched.
+- [ ] Verify a fresh latest-main preview after the relevant PRs merge. The overall product and release requirements below remain open.
 
 ## PR35 private-document acceptance follow-up — 17 November 2026
 
