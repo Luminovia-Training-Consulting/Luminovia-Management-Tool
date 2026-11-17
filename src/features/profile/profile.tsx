@@ -8,6 +8,7 @@ import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
 import { AvatarEditor } from "./avatar";
 import { OwnContactVisibility } from "./contact-visibility";
+import { OwnTopicVisibility } from "./topic-visibility";
 import { OwnQualificationPassport } from "../qualifications/passport";
 import { OwnProfileDetails } from "../people/profile-details";
 import { AccountSettings } from "./account-settings";
@@ -223,6 +224,7 @@ export function ProfilePage() {
       </div>
       <OwnProfileDetails />
       <OwnContactVisibility actor={session!.user.id} />
+      <OwnTopicVisibility actor={session!.user.id} />
       <OwnQualificationPassport
         key={session!.user.id}
         actor={session!.user.id}
