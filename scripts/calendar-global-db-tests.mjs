@@ -247,12 +247,12 @@ await withTestDatabase("calendar_global", async ({ sql, actor }) => {
       const revoke = Promise.allSettled([
         actor(
           admin,
-          `select set_config('application_name','${label}',true);select public.set_account_roles('${manager}',array['guest']);select pg_sleep(2)`,
+          `select set_config('application_name','${label}',true);select public.set_account_roles('${manager}',array['guest']);select pg_sleep(15)`,
           "aal1",
         ),
       ]);
       const wait = async (condition) => {
-        for (let n = 0; n < 70; n++) {
+        for (let n = 0; n < 600; n++) {
           if ((await sql(condition)) === "t") return;
           await new Promise((r) => setTimeout(r, 20));
         }

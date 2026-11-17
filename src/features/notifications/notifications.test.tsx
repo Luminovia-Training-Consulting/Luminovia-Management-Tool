@@ -16,11 +16,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../lib/i18n";
-import {
-  NotificationsMenu,
-  NotificationsPage,
-  SettingsPage,
-} from "./notifications";
+import { NotificationsPage, SettingsPage } from "./notifications";
+import { NotificationsMenu } from "./notifications-menu";
 import {
   notificationInboxQuery,
   notificationPreviewQuery,

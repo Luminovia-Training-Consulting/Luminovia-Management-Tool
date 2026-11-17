@@ -3,6 +3,13 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withTestDatabase } from "./testing/database.mjs";
 await withTestDatabase("owned_cascade", async ({ sql, actor }) => {
+  const scopeDefinition = await sql(
+    `select pg_catalog.pg_get_functiondef('private.deletion_scope(text,uuid)'::regprocedure)`,
+  );
+  assert.match(scopeDefinition, /processed oid\[\]\s*:=\s*'\{\}'::oid\[\]/);
+  console.log(
+    "PASS owned-cascade visited-constraint array is explicitly typed",
+  );
   const privateDoc = randomUUID(),
     privateVersion = randomUUID();
   const admin = randomUUID(),
