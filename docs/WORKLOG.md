@@ -1,5 +1,11 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — PR40 browser acceptance repair
+
+The first full CI exposed duplicate language/theme fields and mobile sign-out hidden in the More disclosure; the old dashboard greeting assertion also no longer matches the revised dashboard. A single shared preference control is now always available in the top bar, and mobile sign-out is directly accessible. The browser test checks the actual named dashboard region. The desktop rail still holds search, notifications and sign-out.
+
+Actual local checks: 25 shell, actor-boundary and dashboard tests pass; TypeScript and ESLint pass. Full browser, native and GitHub acceptance are pending on the exact new head. No production services or local business data were touched.
+
 ## 17 November 2026 — PR31 reconciled with accepted documentation main
 
 Accepted PR38/main `bcba673` updates documentation and the generated API format. Resolved the integration conflicts while preserving the briefing contract and the user-required work log and plan. Regenerated the API reference from an isolated actual 70-migration replay: 254 public application functions, excluding extension-owned functions. The owned database/container were verified removed. The existing 69→70 upgrade, briefing12 and lifecycle12 database proof remains source-bound; SQL bodies did not change.

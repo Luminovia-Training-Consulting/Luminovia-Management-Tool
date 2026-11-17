@@ -224,15 +224,11 @@ describe("native mobile More navigation", () => {
     expect(
       within(menu).getByRole("link", { name: "Mein Profil" }),
     ).toHaveAttribute("href", "/profile");
+    expect(screen.getByRole("combobox", { name: "Sprache" })).toBeVisible();
+    expect(screen.getByRole("combobox", { name: "Farbschema" })).toBeVisible();
     expect(
-      within(menu).getByRole("combobox", { name: "Sprache" }),
-    ).toBeVisible();
-    expect(
-      within(menu).getByRole("combobox", { name: "Farbschema" }),
-    ).toBeVisible();
-    expect(
-      within(menu).getByRole("button", { name: "Abmelden" }),
-    ).toBeVisible();
+      screen.getByRole("banner").querySelector(".mobile-signout"),
+    ).toBeInTheDocument();
   });
 
   it("closes on header-search navigation without stealing focus from the search input", async () => {
@@ -351,11 +347,7 @@ describe("Royal workspace sidebar preference", () => {
     ).toHaveAttribute("aria-expanded", "true");
     expect(localStorage.getItem("luminovia.sidebar-collapsed")).toBe("false");
     expect(files).toHaveTextContent("Dateien");
-    expect(
-      within(screen.getByRole("complementary")).getByRole("combobox", {
-        name: "Sprache",
-      }),
-    ).toBeVisible();
+    expect(screen.getByRole("combobox", { name: "Sprache" })).toBeVisible();
     expect(
       within(screen.getByRole("complementary")).getByRole("button", {
         name: "Abmelden",

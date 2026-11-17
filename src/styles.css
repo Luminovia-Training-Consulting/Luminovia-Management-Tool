@@ -2969,3 +2969,14 @@ legend {
     justify-content: flex-start;
   }
 }
+
+.mobile-signout {
+  display: none;
+}
+@media (max-width: 760px) {
+  .topbar-actions .mobile-signout {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}

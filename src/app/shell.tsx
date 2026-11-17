@@ -387,7 +387,6 @@ export function Shell() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <Preferences />
           <Button
             variant="ghost"
             className="sidebar-signout"
@@ -414,6 +413,16 @@ export function Shell() {
       <div className="workspace">
         <header className="topbar" aria-label={t("workspace")}>
           <div className="topbar-actions">
+            <Preferences />
+            <Button
+              variant="ghost"
+              className="mobile-signout"
+              onClick={() => void logout()}
+              aria-label={t("logout")}
+              disabled={signoutPending}
+            >
+              <LogOut size={18} aria-hidden="true" />
+            </Button>
             <details className="mobile-more" ref={mobileMore}>
               <summary
                 aria-label={t("more")}
@@ -456,18 +465,6 @@ export function Shell() {
                     </NavLink>
                   ))}
                 </nav>
-                <div className="mobile-navigation-controls">
-                  <Preferences />
-                  <Button
-                    variant="ghost"
-                    onClick={() => void logout()}
-                    aria-label={t("logout")}
-                    disabled={signoutPending}
-                  >
-                    <LogOut size={18} aria-hidden="true" />
-                    {t("logout")}
-                  </Button>
-                </div>
               </div>
             </details>
           </div>

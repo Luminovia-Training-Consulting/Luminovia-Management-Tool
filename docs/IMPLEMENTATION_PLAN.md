@@ -1,5 +1,7 @@
 # Persistent implementation plan
 
+PR40 browser acceptance repair: single shared preferences and visible mobile sign-out are implemented; 25 focused component tests, TypeScript and ESLint pass locally. The complete exact-head GitHub/browser/native gates remain pending.
+
 ## PR31 after accepted documentation main — 17 November 2026
 
 - [x] Integrate accepted PR38/main `bcba673`, preserve the briefing contract, and regenerate the API reference from the actual 70-migration replay (254 application functions).

@@ -72,7 +72,7 @@ test('private routes require real authentication and login is accessible', async
 
 test('lecturer signs in, edits bilingual profile and persists it on reload', async ({ page }, testInfo) => {
   await login(page);
-  await expect(page.getByRole('heading', { name: /Schön, dass du da bist/ })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Arbeitsbereich' })).toBeVisible();
   await page.screenshot({ path: `docs/screenshots/${testInfo.project.name}-dashboard.png`, fullPage: true });
   await page.goto('/profile');
   const text = `Lokale QA ${testInfo.project.name}`;
