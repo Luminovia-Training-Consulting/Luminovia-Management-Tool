@@ -42,3 +42,12 @@ test("rejects invalid concurrency limits", async () => {
     /positive integer/,
   );
 });
+
+test("preserves even a deliberately thrown undefined rejection", async () => {
+  await assert.rejects(
+    runBounded([0], 1, async () => {
+      throw undefined;
+    }),
+    (error) => error === undefined,
+  );
+});
