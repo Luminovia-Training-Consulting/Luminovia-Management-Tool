@@ -58,7 +58,13 @@ export async function assertPasswordOnly(client: ReturnType<typeof api>) {
   const factors = await checked(client.auth.mfa.listFactors(), {
     requireData: true,
   });
-  expect(factors).toEqual({ all: [], totp: [], phone: [] });
+  expect(factors).toEqual({
+    all: [],
+    totp: [],
+    phone: [],
+    webauthn: [],
+    recovery_code: [],
+  });
 }
 /** Creates a fictional Auth identity, profile and fixture role; the calling test owns cleanup. */
 export async function actor(name: string, role: string) {

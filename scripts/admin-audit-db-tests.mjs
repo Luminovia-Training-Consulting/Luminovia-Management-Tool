@@ -30,11 +30,10 @@ await withTestDatabase("admin_audit", async ({ sql, actor }) => {
       await actor(who, `select public.admin_audit_events(${args})`, aal),
     );
   await check(
-    "Current admin/owner permission capability allows reads; every ordinary role and anonymous access is denied",
+    "Current admin/owner permissions allow reads in password-only AAL1; every ordinary role and anonymous access is denied",
     async () => {
       for (const role of ["admin", "owner"])
         assert.deepEqual((await read(users[role])).items, []);
-      await assert.rejects(read(users.admin, "", "aal1"), /42501/);
       for (const role of roles.slice(2))
         await assert.rejects(read(users[role]), /42501/);
       assert.equal(

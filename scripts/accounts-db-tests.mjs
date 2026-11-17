@@ -43,8 +43,11 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
       const me = await rpc(lecturer, "account_me");
       assert.equal(me.profile.id, lecturer);
       assert.deepEqual(me.roles, ["lecturer"]);
-      assert.ok(me.permissions.includes("jobs.read"));
+      assert.deepEqual(me.permissions, []);
       assert.equal("assurance_level" in me, false);
+      const adminMe = await rpc(admin, "account_me");
+      assert.ok(adminMe.permissions.includes("jobs.manage"));
+      assert.equal("assurance_level" in adminMe, false);
       assert.ok(me.profile.email.endsWith("@example.invalid"));
       assert.equal("password" in me, false);
       assert.equal("service_role" in me, false);

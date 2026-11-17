@@ -196,7 +196,13 @@ try {
     next.auth.mfa.listFactors(),
     "Confirm no MFA factors",
   );
-  assert.deepEqual(factors, { all: [], totp: [], phone: [] });
+  assert.deepEqual(factors, {
+    all: [],
+    totp: [],
+    phone: [],
+    webauthn: [],
+    recovery_code: [],
+  });
   const object = await checked(
     service.storage.from(bucket).download("marker.txt"),
     "Download persisted actual object",

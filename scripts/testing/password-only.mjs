@@ -9,5 +9,11 @@ export async function assertPasswordOnly(client) {
   const { data: factors, error: factorsError } =
     await client.auth.mfa.listFactors();
   assert.equal(factorsError, null, factorsError?.message);
-  assert.deepEqual(factors, { all: [], totp: [], phone: [] });
+  assert.deepEqual(factors, {
+    all: [],
+    totp: [],
+    phone: [],
+    webauthn: [],
+    recovery_code: [],
+  });
 }
