@@ -1,7 +1,6 @@
 /** Real browser workflows on the owned QA stack, isolated from development data. */
 import { defineConfig, devices } from "@playwright/test";
 import { existsSync } from "node:fs";
-import { availableParallelism } from "node:os";
 
 // The launcher creates this private per-environment file; it must stay out of Git.
 if (existsSync(".env.test.local")) process.loadEnvFile(".env.test.local");
@@ -19,10 +18,11 @@ const reportRoot = stage ? `.local/browser/${stage}` : undefined;
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  // Tests within each spec stay ordered, while independent spec files use two
-  // workers. Fixtures create unique records in the owned QA database.
+  // The shared isolated Supabase Auth service returns database errors when
+  // multiple browser specs delete their fictional accounts concurrently.
+  // Keep lifecycle-heavy journeys sequential; retain all desktop/mobile cases.
   fullyParallel: false,
-  workers: Math.max(2, Math.min(4, availableParallelism() - 1)),
+  workers: 1,
   retries: 0,
   forbidOnly: true,
   failOnFlakyTests: true,

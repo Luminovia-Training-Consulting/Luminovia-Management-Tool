@@ -479,10 +479,13 @@ try {
     const apiSuites = readdirSync(join(scratch, "scripts"))
       .filter((name) => name.endsWith("-api-check.mjs"))
       .sort();
-    // API suites provision unique fictional accounts and scope cleanup to them.
-    await runBounded(apiSuites, suiteWorkers, (script) =>
-      step(`Echte API ${script}`, process.execPath, [`scripts/${script}`]),
-    );
+    // These suites share one Supabase Auth service. Concurrent account
+    // deletion can fail inside GoTrue even with unique fixtures, so keep API
+    // lifecycle checks sequential while SQL suites use isolated DB clones.
+    for (const script of apiSuites)
+      await step(`Echte API ${script}`, process.execPath, [
+        `scripts/${script}`,
+      ]);
     await step("Echte Edge-Einladung und Mailpit", process.execPath, [
       "scripts/local-invite-check.mjs",
     ]);

@@ -16,7 +16,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
-import { availableParallelism, tmpdir, totalmem } from "node:os";
+import { tmpdir, totalmem } from "node:os";
 import { createServer } from "node:net";
 import { request as httpsRequest } from "node:https";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
@@ -29,7 +29,6 @@ import {
   assertLocalDocker,
   cleanEnvironment,
 } from "../../../scripts/runtime-lib.mjs";
-import { runBounded } from "../../../scripts/testing/run-bounded.mjs";
 
 export const ownershipLabel = "org.luminovia.candidate";
 const root = resolve(import.meta.dirname, "../../..");
@@ -904,8 +903,9 @@ export async function checkCandidate({
         }),
       );
     const suites = candidateApiSuites(scratch);
-    const suiteWorkers = Math.max(1, Math.min(4, availableParallelism()));
-    await runBounded(suites, suiteWorkers, async (suite) => {
+    // The candidate shares one Supabase Auth service; concurrent fixture
+    // deletion can fail inside GoTrue despite unique account IDs.
+    for (const suite of suites) {
       await owned("supabase_db_" + project);
       await owned("portal_scanner_" + project);
       await run(process.execPath, [join(scratch, "scripts", suite)], {
@@ -913,7 +913,7 @@ export async function checkCandidate({
         timeout: 240000,
       });
       console.log("PASS candidate " + suite);
-    });
+    }
     summary = {
       status: "passed",
       topology: "actual candidate ten-service selfhost Compose",
