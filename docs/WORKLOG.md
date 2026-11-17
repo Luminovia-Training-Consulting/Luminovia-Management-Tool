@@ -2197,6 +2197,8 @@ The exact PR #42 run `44012150083` showed the `verify` and retained-data selfhos
 
 To reduce browser wall time without dropping any browser/device cases, PR #42 now runs the complete browser inventory in two independent jobs: one desktop Chromium lane and one mobile Chromium lane. Each lane owns its own isolated Supabase stack, verifies discovery and execution against exactly its assigned project, and keeps the existing built-PWA tests. Local acceptance without a lane selector still runs both projects. This duplicates isolated service startup but allows both complete device inventories to run at once. The final preview gate waits for both matrix legs. Validation before submission: focused browser-evidence tests, syntax/format checks; full acceptance pending on the new PR head.
 
+The first matrix CI run correctly caught stale workflow-policy fixtures that still expected one unsuffixed browser job. Updated them to assert the two exact matrix lanes and continue checking that the browser job runs only for pull requests. This is a test expectation update; all required matrix jobs remain fail-closed in the existing final gate.
+
 ## Imported PR15 and PR20 delivery history
 
 The following isolated branch checkpoints are historical evidence. Current fourteen-check, signature and review-only policy is recorded above and in GITHUB_WORKFLOW; older always/disabled descriptions do not change it. These branch-only checks do not establish combined32 acceptance.
