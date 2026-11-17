@@ -357,6 +357,27 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
       assert.equal((await rpc(lecturer, "account_me")).profile.active, true);
     },
   );
+  await check(
+    "Deleting an account cascades its recipient-owned notifications",
+    async () => {
+      const disposable = randomUUID();
+      await sql(
+        `insert into auth.users(id,email) values('${disposable}','notification-cleanup@example.invalid');insert into public.notifications(user_id,kind) values('${disposable}','account_cleanup_test');delete from auth.users where id='${disposable}';`,
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from public.notifications where user_id='${disposable}'`,
+        ),
+        "0",
+      );
+      assert.equal(
+        await sql(
+          `select count(*) from public.profiles where id='${disposable}'`,
+        ),
+        "0",
+      );
+    },
+  );
 });
 console.log(
   `\n${checks} account PostgreSQL checks passed (identity, roles, invitation binding and lifecycle races).`,

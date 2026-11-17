@@ -24,6 +24,8 @@
 - [x] Push test and documentation fixes directly to `main`, without a PR. Current-head Portal checks and retained-data self-host candidate are running; no production deployment is in scope.
 - [x] Correct the commission API fixture for the current individual-pricing model: explicitly configure the fictional regular and senior lecturer rates through `save_lecturer_compensation` before creating offers, instead of relying on retired role-wide net defaults.
 - [ ] Re-run full current-head Portal checks and retained-data self-host acceptance after the commission fixture correction; the `b3055150` run passed migration replay and 18 actual API suites, then stopped at the stale 31% assertion (`50.01` was the expected product default quote for a 100.01 offer).
+- [x] Trace the next cleanup failure to a blocking `notifications_user_id_fkey`; add a forward cascade for recipient-owned notifications and an account database regression covering Auth-user/profile/inbox deletion.
+- [ ] Validate the notification-cascade migration and account regression in fresh PostgreSQL replay, then complete all current-head CI and retained-data self-host acceptance.
 
 ## Current delivered-feature API parity — 18 November 2026
 
