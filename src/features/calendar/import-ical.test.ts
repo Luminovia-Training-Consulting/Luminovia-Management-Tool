@@ -1,0 +1,95 @@
+import { describe, expect, it } from "vitest";
+import { parseCalendarImport } from "./import-ical";
+const file = (...events: string[]) =>
+  [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    ...events.map((event) => `BEGIN:VEVENT\r\n${event}\r\nEND:VEVENT`),
+    "END:VCALENDAR",
+  ].join("\r\n");
+const parse = (source: string, from = "2026-03-01", until = "2026-03-31") =>
+  parseCalendarImport(source, "Europe/Berlin", from, until, "Termin");
+describe("reviewed ICS import", () => {
+  it("unfolds escaped text and preserves explicit instants and private description", () => {
+    const [event] = parse(
+      file(
+        "UID:owned-a\r\nDTSTART:20260308T090000Z\r\nDTEND:20260308T100000Z\r\nSUMMARY:Ein langer\r\n  Titel\\, mit Text\r\nDESCRIPTION:Zeile 1\\nZeile 2",
+      ),
+    );
+    expect(event).toMatchObject({
+      title: "Ein langer Titel, mit Text",
+      description: "Zeile 1\nZeile 2",
+      starts_at: "2026-03-08T09:00:00.000Z",
+      time_zone: "UTC",
+    });
+  });
+  it("uses the chosen zone for floating appointments and exclusive all-day ends", () => {
+    const events = parse(
+      file(
+        "UID:floating\r\nDTSTART:20260308T090000\r\nDTEND:20260308T100000",
+        "UID:day\r\nDTSTART;VALUE=DATE:20260309\r\nDTEND;VALUE=DATE:20260310",
+      ),
+    );
+    expect(events[0].starts_at).toBe("2026-03-08T08:00:00.000Z");
+    expect(events[1].ends_at).toBe("2026-03-09T23:00:00.000Z");
+  });
+  it("materialises bounded recurrences across DST, exclusions and moved exceptions", () => {
+    const events = parse(
+      file(
+        "UID:series\r\nDTSTART;TZID=Europe/Berlin:20260327T090000\r\nDTEND;TZID=Europe/Berlin:20260327T100000\r\nRRULE:FREQ=DAILY;COUNT=5\r\nEXDATE;TZID=Europe/Berlin:20260328T090000\r\nSUMMARY:Serie",
+        "UID:series\r\nRECURRENCE-ID;TZID=Europe/Berlin:20260330T090000\r\nDTSTART;TZID=Europe/Berlin:20260330T120000\r\nDTEND;TZID=Europe/Berlin:20260330T130000\r\nSUMMARY:Verschoben",
+      ),
+    );
+    expect(events).toHaveLength(4);
+    expect(events.map((e) => e.starts_at)).toEqual([
+      "2026-03-27T08:00:00.000Z",
+      "2026-03-29T07:00:00.000Z",
+      "2026-03-30T10:00:00.000Z",
+      "2026-03-31T07:00:00.000Z",
+    ]);
+    expect(events[2].title).toBe("Verschoben");
+  });
+  it("deduplicates UID/instant within one file and excludes cancelled events", () => {
+    const a = "UID:twice\r\nDTSTART:20260308T090000Z\r\nDTEND:20260308T100000Z";
+    expect(
+      parse(
+        file(
+          a,
+          a,
+          "UID:cancelled\r\nDTSTART:20260309T090000Z\r\nDTEND:20260309T100000Z\r\nSTATUS:CANCELLED",
+        ),
+      ),
+    ).toHaveLength(1);
+  });
+  it("bounds infinite rules to the selected window and rejects unsupported or malformed input", () => {
+    expect(
+      parse(
+        file(
+          "UID:forever\r\nDTSTART:20260301T090000Z\r\nDTEND:20260301T100000Z\r\nRRULE:FREQ=DAILY",
+        ),
+        "2026-03-01",
+        "2026-03-03",
+      ),
+    ).toHaveLength(3);
+    expect(() =>
+      parse(
+        file(
+          "UID:bad\r\nDTSTART;TZID=Unknown/Zone:20260301T090000\r\nDTEND;TZID=Unknown/Zone:20260301T100000",
+        ),
+      ),
+    ).toThrow("unsupported_zone");
+    expect(() => parse("not calendar")).toThrow();
+    expect(() =>
+      parse(
+        file("UID:bad\r\nDTSTART:20260301T100000Z\r\nDTEND:20260301T090000Z"),
+      ),
+    ).toThrow("invalid_time");
+    expect(() =>
+      parse(
+        file("UID:bad\r\nDTSTART:20260301T100000Z\r\nDTEND:20260301T110000Z"),
+        "2026-03-02",
+        "2026-03-01",
+      ),
+    ).toThrow("invalid_window");
+  });
+});

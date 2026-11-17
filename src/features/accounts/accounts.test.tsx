@@ -15,8 +15,14 @@ import { AccountsPage } from "./accounts";
 import { accountRoles } from "./api";
 const fake = vi.hoisted(() => ({
   capabilities: [] as string[],
+  companyAccess: false,
   invoke: vi.fn(),
   rpc: vi.fn(),
+}));
+vi.mock("../commercial/lecturer-compensation", () => ({
+  LecturerCompensation: ({ userId }: { userId: string }) => (
+    <span data-testid="lecturer-compensation">{userId}</span>
+  ),
 }));
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "own-actor" } } }),
@@ -25,14 +31,20 @@ vi.mock("../../lib/supabase", () => ({
   db: () => ({
     rpc: fake.rpc,
     functions: { invoke: fake.invoke },
-    from: () => {
+    from: (table: string) => {
       const query = {
         select: () => query,
         is: () => query,
         eq: () => query,
         order: () => query,
         then: (resolve: (result: unknown) => unknown) =>
-          Promise.resolve({ data: [], error: null }).then(resolve),
+          Promise.resolve({
+            data:
+              table === "organisations"
+                ? [{ id: "company-a", name: "Fictional conversion company" }]
+                : [],
+            error: null,
+          }).then(resolve),
       };
       return query;
     },
@@ -57,10 +69,14 @@ beforeEach(() => {
     },
   });
   fake.capabilities = [];
+  fake.companyAccess = false;
   fake.invoke.mockReset();
   fake.rpc.mockReset();
-  fake.rpc.mockImplementation(async () => ({
-    data: fake.capabilities,
+  fake.rpc.mockImplementation(async (name: string) => ({
+    data:
+      name === "commission_access"
+        ? { can_manage_client_memberships: fake.companyAccess }
+        : fake.capabilities,
     error: null,
   }));
   fake.invoke.mockImplementation(async (path: string) => {
@@ -157,12 +173,8 @@ describe("Account administration", () => {
     expect(
       await screen.findByRole("checkbox", { name: "Senior-Dozent:in" }),
     ).toBeVisible();
-    expect(
-      screen.queryByRole("checkbox", { name: "Gast" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("option", { name: "Gast" }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Gast" })).toBeVisible();
+
     expect(
       screen.queryByRole("checkbox", { name: "Kursteilnehmer:in" }),
     ).not.toBeInTheDocument();
@@ -174,6 +186,88 @@ describe("Account administration", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("option", { name: "Management" }),
+    ).not.toBeInTheDocument();
+  });
+  it("requires an authorised organisation before converting a lecturer to a company", async () => {
+    fake.capabilities = ["users.manage", "users.roles.manage"];
+    page();
+    const edit = await screen.findByRole("button", {
+      name: "Rollen bearbeiten: Anna",
+    });
+    await waitFor(() => expect(edit).toBeEnabled());
+    await userEvent.click(edit);
+    await userEvent.click(
+      await screen.findByRole("checkbox", { name: "Dozent:in" }),
+    );
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Unternehmen" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Rollen speichern" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByText(
+        "Die Administration ordnet diesem Konto anschließend eine Organisation zu.",
+      ),
+    ).toBeVisible();
+    expect(
+      fake.invoke.mock.calls.some((call) => call[1]?.method === "PUT"),
+    ).toBe(false);
+  });
+  it("sends company role conversion and chosen organisation together after confirmation", async () => {
+    fake.capabilities = ["users.manage", "users.roles.manage"];
+    fake.companyAccess = true;
+    page();
+    const edit = await screen.findByRole("button", {
+      name: "Rollen bearbeiten: Anna",
+    });
+    await waitFor(() => expect(edit).toBeEnabled());
+    await userEvent.click(edit);
+    await userEvent.click(
+      await screen.findByRole("checkbox", { name: "Dozent:in" }),
+    );
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Unternehmen" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Rollen speichern" }),
+    ).toBeDisabled();
+    await userEvent.selectOptions(
+      await screen.findByLabelText("Auftraggeber-Organisation"),
+      "company-a",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Rollen speichern" }),
+    );
+    await userEvent.click(
+      screen.getAllByRole("button", { name: "Rollen speichern" }).at(-1)!,
+    );
+    await waitFor(() =>
+      expect(fake.invoke).toHaveBeenCalledWith(
+        "accounts/v1/users/teacher-id/roles",
+        {
+          method: "PUT",
+          body: { roles: ["client"], organisation_id: "company-a" },
+        },
+      ),
+    );
+  });
+  it("does not mount lecturer compensation for a company account", async () => {
+    fake.capabilities = ["users.manage", "users.roles.manage"];
+    const previous = fake.invoke.getMockImplementation()!;
+    fake.invoke.mockImplementation(async (path: string) => {
+      const result = await previous(path);
+      if (path.includes("/users?")) result.data.items[0].roles = ["client"];
+      return result;
+    });
+    page();
+    const edit = await screen.findByRole("button", {
+      name: "Rollen bearbeiten: Anna",
+    });
+    await waitFor(() => expect(edit).toBeEnabled());
+    await userEvent.click(edit);
+    expect(
+      screen.queryByTestId("lecturer-compensation"),
     ).not.toBeInTheDocument();
   });
   it("does not offer editing for a server-protected target", async () => {

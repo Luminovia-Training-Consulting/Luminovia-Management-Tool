@@ -4,7 +4,13 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import {
+  Navigate,
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { PermanentDeletionProvider } from "../features/deletions/deletions";
@@ -30,10 +36,13 @@ import {
   Users,
   PanelLeftClose,
   PanelLeftOpen,
-  LifeBuoy,
 } from "lucide-react";
 import { Avatar } from "../features/profile/avatar";
 import { NotificationsMenu } from "../features/notifications/notifications";
+import {
+  isGuestOnly,
+  guestRouteAllowed,
+} from "../features/auth/guest-navigation";
 import { useAuth } from "../features/auth/auth-context";
 import { useAuthorizationRefresh } from "../features/auth/authorization-refresh";
 import { db } from "../lib/supabase";
@@ -102,9 +111,17 @@ export function Shell() {
   const [signoutFailed, setSignoutFailed] = useState(false);
   const [signoutPending, setSignoutPending] = useState(false);
   const profile = useQuery(profileQuery(session!.user.id));
-  const permissions = useQuery(permissionsQuery(session!.user.id));
   const roles = useQuery(userRolesQuery(session!.user.id));
-  useAuthorizationRefresh(session!.user.id, roles.data, permissions.data);
+  const guestOnly = isGuestOnly(roles.data);
+  const permissions = useQuery({
+    ...permissionsQuery(session!.user.id),
+    enabled: !roles.isPending && !roles.isError && !guestOnly,
+  });
+  useAuthorizationRefresh(
+    session!.user.id,
+    roles.data,
+    guestOnly ? [] : permissions.data,
+  );
   const online = useOnline();
   function toggleSidebar() {
     setCollapsed((current) => {
@@ -120,7 +137,10 @@ export function Shell() {
   const profileDenied =
     profile.data?.active === false || (profile.isSuccess && !profile.data);
   const minimalOffline =
-    !online && !profileDenied && (profile.isPending || profile.isError);
+    !guestOnly &&
+    !online &&
+    !profileDenied &&
+    (profile.isPending || profile.isError);
   // A known inactive/missing profile never falls back to an old snapshot. This
   // clears only the opt-in schedule; native Auth/session semantics stay intact.
   useEffect(() => {
@@ -136,34 +156,43 @@ export function Shell() {
     permissions.data?.includes("jobs.manage") ||
     permissions.data?.includes("announcements.manage"),
   );
-  const navigation = [
-    { to: "/", icon: Home, label: "home" },
-    ...(staff ? [{ to: "/jobs", icon: BriefcaseBusiness, label: "jobs" }] : []),
-    { to: "/calendar", icon: CalendarDays, label: "calendar" },
-    { to: "/courses", icon: GraduationCap, label: "courses" },
-    ...(permissions.data?.includes("organisations.manage")
-      ? [{ to: "/clients", icon: Building2, label: "clients" }]
-      : []),
-    { to: "/people", icon: Users, label: "staffDirectory" },
-    { to: "/chats", icon: MessagesSquare, label: "chats" },
-    { to: "/files", icon: FolderOpen, label: "files" },
-    ...(teaching || permissions.data?.includes("contracts.read")
-      ? [{ to: "/contracts", icon: FileCheck2, label: "contracts" }]
-      : []),
-    ...(teaching || permissions.data?.includes("finance.manage")
-      ? [{ to: "/finance", icon: Wallet, label: "finance" }]
-      : []),
-    ...(clientPortalAccess
-      ? [{ to: "/client", icon: Building2, label: "clientPortal" }]
-      : []),
-    { to: "/wiki", icon: BookOpen, label: "knowledgeHelp" },
-    ...(staff ? [{ to: "/forum", icon: MessageCircle, label: "forum" }] : []),
-    { to: "/topics", icon: BookOpen, label: "topics" },
-    ...(manage ? [{ to: "/admin", icon: Settings2, label: "admin" }] : []),
-    { to: "/settings", icon: Settings2, label: "settings" },
-    { to: "/profile", icon: UserRound, label: "profile" },
-    { to: "/support", icon: LifeBuoy, label: "supportDesk" },
-  ];
+  const navigation = guestOnly
+    ? [
+        { to: "/profile", icon: UserRound, label: "profile" },
+        { to: "/settings", icon: Settings2, label: "settings" },
+        { to: "/wiki", icon: BookOpen, label: "knowledgeHelp" },
+      ]
+    : [
+        { to: "/", icon: Home, label: "home" },
+        ...(staff
+          ? [{ to: "/jobs", icon: BriefcaseBusiness, label: "jobs" }]
+          : []),
+        { to: "/calendar", icon: CalendarDays, label: "calendar" },
+        { to: "/courses", icon: GraduationCap, label: "courses" },
+        ...(permissions.data?.includes("organisations.manage")
+          ? [{ to: "/clients", icon: Building2, label: "clients" }]
+          : []),
+        { to: "/people", icon: Users, label: "staffDirectory" },
+        { to: "/chats", icon: MessagesSquare, label: "chats" },
+        { to: "/files", icon: FolderOpen, label: "files" },
+        ...(teaching || permissions.data?.includes("contracts.read")
+          ? [{ to: "/contracts", icon: FileCheck2, label: "contracts" }]
+          : []),
+        ...(teaching || permissions.data?.includes("finance.manage")
+          ? [{ to: "/finance", icon: Wallet, label: "finance" }]
+          : []),
+        ...(clientPortalAccess
+          ? [{ to: "/client", icon: Building2, label: "clientPortal" }]
+          : []),
+        { to: "/wiki", icon: BookOpen, label: "knowledgeHelp" },
+        ...(staff
+          ? [{ to: "/forum", icon: MessageCircle, label: "forum" }]
+          : []),
+        { to: "/topics", icon: BookOpen, label: "topics" },
+        ...(manage ? [{ to: "/admin", icon: Settings2, label: "admin" }] : []),
+        { to: "/settings", icon: Settings2, label: "settings" },
+        { to: "/profile", icon: UserRound, label: "profile" },
+      ];
   async function logout() {
     setSignoutFailed(false);
     setSignoutPending(true);
@@ -190,6 +219,14 @@ export function Shell() {
       left: bounds.right + 8,
     });
   }
+  // Paused role reads cannot replace the existing actor-scoped offline schedule
+  // fallback or conceal a profile already known to be inactive/missing.
+  if (online && !profileDenied && !profile.isError && roles.isPending)
+    return <Loading />;
+  if (online && !profileDenied && !profile.isError && roles.isError)
+    return <ErrorState retry={() => void roles.refetch()} />;
+  if (guestOnly && !guestRouteAllowed(location.pathname))
+    return <Navigate to="/profile" replace />;
   return (
     <div className={`app-shell ${collapsed ? "is-collapsed" : ""}`}>
       <a className="skip-link" href="#main">
@@ -249,7 +286,9 @@ export function Shell() {
         </Button>
         <nav aria-label={t("menu")}>
           {navigation
-            .filter(({ to }) => !["/settings", "/profile"].includes(to))
+            .filter(
+              ({ to }) => guestOnly || !["/settings", "/profile"].includes(to),
+            )
             .map(({ to, icon: Icon, label }) => (
               <NavLink
                 key={to}
@@ -303,37 +342,45 @@ export function Shell() {
       </aside>
       <div className="workspace">
         <header className="topbar" aria-label={t("workspace")}>
-          <form
-            className="global-search header-global-search"
-            role="search"
-            onSubmit={(event) => {
-              event.preventDefault();
-              navigate(`/search?q=${encodeURIComponent(search)}`);
-            }}
-          >
-            <Search size={20} aria-hidden="true" />
-            <label htmlFor="portal-global-search" className="sr-only">
-              {t("portalSearch")}
-            </label>
-            <input
-              id="portal-global-search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={t("portalSearch")}
-            />
-          </form>
+          {!guestOnly && (
+            <form
+              className="global-search header-global-search"
+              role="search"
+              onSubmit={(event) => {
+                event.preventDefault();
+                navigate(`/search?q=${encodeURIComponent(search)}`);
+              }}
+            >
+              <Search size={20} aria-hidden="true" />
+              <label htmlFor="portal-global-search" className="sr-only">
+                {t("portalSearch")}
+              </label>
+              <input
+                id="portal-global-search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t("portalSearch")}
+              />
+            </form>
+          )}
           <div className="topbar-actions">
-            {profile.data?.active && !minimalOffline && (
+            {profile.data?.active && !minimalOffline && !guestOnly && (
               <NotificationsMenu id={actor} zone={profile.data.time_zone} />
             )}
             <Preferences />
             <details className="account-menu" ref={accountMenu}>
               <summary aria-label={t("profile")} title={t("profile")}>
-                <Avatar
-                  userId={actor}
-                  name={profile.data?.display_name ?? ""}
-                  decorative
-                />
+                {guestOnly ? (
+                  <span className="profile-avatar" aria-hidden="true">
+                    {profile.data?.display_name?.slice(0, 1) || "G"}
+                  </span>
+                ) : (
+                  <Avatar
+                    userId={actor}
+                    name={profile.data?.display_name ?? ""}
+                    decorative
+                  />
+                )}
                 <span>
                   {profile.data?.display_name}
                   <small>{t("profile")}</small>
@@ -369,28 +416,30 @@ export function Shell() {
                 <Menu size={20} aria-hidden="true" />
               </summary>
               <div className="mobile-menu-panel">
-                <form
-                  className="global-search mobile-global-search"
-                  role="search"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    navigate(`/search?q=${encodeURIComponent(search)}`);
-                    mobileMore.current?.removeAttribute("open");
-                    mobileMore.current?.querySelector("summary")?.focus();
-                  }}
-                >
-                  <Search size={18} aria-hidden="true" />
-                  <label htmlFor="mobile-global-search" className="sr-only">
-                    {t("search")}
-                  </label>
-                  <input
-                    id="mobile-global-search"
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder={t("portalSearch")}
-                  />
-                </form>
-                {profile.data?.active && !minimalOffline && (
+                {!guestOnly && (
+                  <form
+                    className="global-search mobile-global-search"
+                    role="search"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      navigate(`/search?q=${encodeURIComponent(search)}`);
+                      mobileMore.current?.removeAttribute("open");
+                      mobileMore.current?.querySelector("summary")?.focus();
+                    }}
+                  >
+                    <Search size={18} aria-hidden="true" />
+                    <label htmlFor="mobile-global-search" className="sr-only">
+                      {t("search")}
+                    </label>
+                    <input
+                      id="mobile-global-search"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      placeholder={t("portalSearch")}
+                    />
+                  </form>
+                )}
+                {profile.data?.active && !minimalOffline && !guestOnly && (
                   <NotificationsMenu
                     id={session!.user.id}
                     zone={profile.data.time_zone}
@@ -430,6 +479,8 @@ export function Shell() {
             <ErrorState retry={() => void profile.refetch()} />
           ) : !profile.data?.active ? (
             <Notice kind="error">{t("profileMissing")}</Notice>
+          ) : guestOnly ? (
+            <Outlet />
           ) : (
             <>
               <AnnouncementBanners actor={session!.user.id} />

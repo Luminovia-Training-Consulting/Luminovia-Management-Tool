@@ -1,10 +1,11 @@
 /** Shared entry points for related workflows, retaining server-scoped module data. */
 import { lazy, Suspense } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Loading } from "../components/common";
+import { ErrorState, Loading } from "../components/common";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../features/auth/auth-context";
+import { isGuestOnly } from "../features/auth/guest-navigation";
 import { userRolesQuery } from "../lib/queries";
 const Courses = lazy(() =>
   import("../features/operations/courses").then((m) => ({
@@ -26,6 +27,11 @@ const Wiki = lazy(() =>
 );
 const Help = lazy(() =>
   import("../features/help/help").then((m) => ({ default: m.HelpCenter })),
+);
+const Support = lazy(() =>
+  import("../features/support/support").then((m) => ({
+    default: m.SupportDeskPage,
+  })),
 );
 const Forum = lazy(() =>
   import("../features/knowledge/forum").then((m) => ({ default: m.ForumPage })),
@@ -54,6 +60,7 @@ const sections = {
   knowledge: [
     ["wiki", "Wiki", "Wiki", Wiki],
     ["help", "Hilfe & FAQ", "Help & FAQ", Help],
+    ["support", "Support", "Support", Support],
   ],
   updates: [
     ["forum", "Forum", "Forum", Forum],
@@ -71,7 +78,11 @@ export function SectionHub({ kind }: { kind: keyof typeof sections }) {
       role,
     ),
   );
+  if (roles.isPending) return <Loading />;
+  if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
   const items = sections[kind].filter((item) => {
+    if (isGuestOnly(roles.data))
+      return kind === "knowledge" && item[0] === "help";
     if (kind === "knowledge" && item[0] === "wiki") return staff;
     return (
       item[0] !== "reviews" ||
@@ -80,6 +91,7 @@ export function SectionHub({ kind }: { kind: keyof typeof sections }) {
   });
   const selected =
     items.find((item) => item[0] === params.get("section")) ?? items[0];
+  if (!selected) return <Navigate to="/profile" replace />;
   const Page = selected[3];
   return (
     <>

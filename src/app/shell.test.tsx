@@ -25,7 +25,7 @@ import "../lib/i18n";
 const { signOut, access, refetchPermissions, refetchRoles } = vi.hoisted(
   () => ({
     signOut: vi.fn(),
-    access: { failed: false },
+    access: { failed: false, roles: [] as string[] },
     refetchPermissions: vi.fn(),
     refetchRoles: vi.fn(),
   }),
@@ -49,14 +49,16 @@ vi.mock("@tanstack/react-query", async (original) => {
               display_name: "Fictional User",
               time_zone: "Europe/Berlin",
             }
-          : options.queryKey[0] === "notifications" &&
-              options.queryKey[2] === "preview"
-            ? ({
-                items: [],
-                unread_count: 0,
-                as_of: "2026-11-15T12:00:00Z",
-              } satisfies InboxPage)
-            : [],
+          : options.queryKey[0] === "user-roles"
+            ? access.roles
+            : options.queryKey[0] === "notifications" &&
+                options.queryKey[2] === "preview"
+              ? ({
+                  items: [],
+                  unread_count: 0,
+                  as_of: "2026-11-15T12:00:00Z",
+                } satisfies InboxPage)
+              : [],
       isPending: false,
       isSuccess: !access.failed,
       isError:
@@ -74,6 +76,7 @@ afterEach(() => {
   cleanup();
   localStorage.removeItem("luminovia.sidebar-collapsed");
   access.failed = false;
+  access.roles = [];
   vi.clearAllMocks();
   vi.unstubAllGlobals();
 });
@@ -98,6 +101,7 @@ function setup(path = "/", initiallyCollapsed = true) {
           <Route element={<Shell />}>
             <Route index element={<p>Private workspace</p>} />
             <Route path="settings" element={<NavigationTarget />} />
+            <Route path="profile" element={<NavigationTarget />} />
             <Route path="files" element={<NavigationTarget />} />
             <Route path="search" element={<NavigationTarget />} />
           </Route>
@@ -157,28 +161,34 @@ describe("server-confirmed logout", () => {
   });
 });
 
-describe("tour access recovery", () => {
-  it("explains an actual permission query failure and retries both owning queries", async () => {
+describe("role access recovery", () => {
+  it("does not mount private routes or tour before role authority can be established", async () => {
     access.failed = true;
     const { user, client } = setup("/settings");
-    const tour = within(
-      screen.getByRole("region", { name: "Portal-Rundgang" }),
-    );
-    expect(tour.getByRole("alert")).toHaveTextContent(
-      "Die Zugriffsrechte konnten nicht geladen werden",
-    );
+    expect(screen.getByRole("alert")).toBeVisible();
     expect(
-      tour.getByRole("button", { name: "Portal-Rundgang" }),
-    ).toBeDisabled();
-    await user.click(
-      tour.getByRole("button", { name: "Zugriffsrechte erneut laden" }),
-    );
-    expect(refetchPermissions).toHaveBeenCalledTimes(1);
+      screen.queryByRole("region", { name: "Portal-Rundgang" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Erneut versuchen" }));
     expect(refetchRoles).toHaveBeenCalledTimes(1);
     expect(client.getQueryData(["private", "actor"])).toBe(
       "Owned private data",
     );
   });
+});
+it("guest-only navigation exposes own profile/settings/help and no operational controls", async () => {
+  access.roles = ["guest"];
+  setup("/settings");
+  expect(screen.queryByRole("search")).not.toBeInTheDocument();
+  expect(document.querySelector(".notification-menu")).toBeNull();
+  const sidebar = screen.getByRole("complementary");
+  expect(
+    within(sidebar).queryByRole("link", { name: "Dateien" }),
+  ).not.toBeInTheDocument();
+  expect(
+    within(sidebar).getByRole("link", { name: "Mein Profil" }),
+  ).toBeInTheDocument();
+  expect(document.querySelector(".portal-tour")).toBeNull();
 });
 
 /** Observe real router transitions; the history action is outside the More disclosure. */

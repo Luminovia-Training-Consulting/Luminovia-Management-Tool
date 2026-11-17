@@ -127,13 +127,17 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
       await rpc(
         owner,
         "set_account_roles",
-        [peer, "{lecturer,participant}"],
+        [peer, "{lecturer,senior_lecturer}"],
         "aal1",
       );
       assert.deepEqual((await rpc(peer, "account_me")).roles, [
         "lecturer",
-        "participant",
+        "senior_lecturer",
       ]);
+      await assert.rejects(
+        rpc(admin, "set_account_roles", [peer, "{participant}"], "aal1"),
+        /42501/,
+      );
       await assert.rejects(
         rpc(admin, "set_account_roles", [peer, "{fake_role}"], "aal1"),
         /Invalid roles/,
@@ -328,13 +332,7 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
       const pending = await rpc(
         manager,
         "reserve_account_invitation",
-        [
-          "student-api@example.invalid",
-          "Student",
-          "participant",
-          null,
-          randomUUID(),
-        ],
+        ["guest-api@example.invalid", "Guest", "guest", null, randomUUID()],
         "aal1",
       );
       await sql(`delete from public.user_roles where user_id='${manager}'`);

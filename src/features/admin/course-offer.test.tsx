@@ -128,7 +128,7 @@ it("creates a referenced offer from trusted course defaults using only financial
   const total = screen.getByLabelText("Voller Auftragspreis gesamt");
   await user.clear(total);
   await user.type(total, "1000");
-  await user.click(screen.getByRole("button", { name: "Stelle speichern" }));
+  await user.click(screen.getByRole("button", { name: "Auftrag speichern" }));
   const link = await screen.findByRole("link", {
     name: "Erstellten Auftrag öffnen",
   });
@@ -152,7 +152,7 @@ it("creates a referenced offer from trusted course defaults using only financial
   expect(calls[0][1]).not.toHaveProperty("p_platform_percent");
   expect(calls[0][1].p_payload).not.toHaveProperty("customer_name");
   expect(
-    screen.getByRole("button", { name: "Stelle speichern" }),
+    screen.getByRole("button", { name: "Auftrag speichern" }),
   ).toBeDisabled();
 });
 
@@ -178,7 +178,7 @@ it("retains the reviewed source during background changes and shows a stale-prev
     });
   });
   expect(screen.getByRole("heading", { name: source.title })).toBeVisible();
-  await user.click(screen.getByRole("button", { name: "Stelle speichern" }));
+  await user.click(screen.getByRole("button", { name: "Auftrag speichern" }));
   await screen.findByText(
     "Der Kurs wurde seit dieser Vorschau geändert. Prüfe den aktuellen Kurs und öffne sein Auftragsformular erneut.",
   );
@@ -203,7 +203,7 @@ it("keeps fixed-total net offers consistent for management without submitting gr
   await user.clear(total);
   await user.type(total, "750");
   expect(screen.getByLabelText("Honorar")).toHaveValue(750);
-  await user.click(screen.getByRole("button", { name: "Stelle speichern" }));
+  await user.click(screen.getByRole("button", { name: "Auftrag speichern" }));
   await waitFor(() =>
     expect(
       mock.rpc.mock.calls.some(([name]) => name === "create_course_run_job"),

@@ -405,7 +405,7 @@ Deno.test(
     const response = await handler(
       request("v1/invitations", "POST", {
         email: "new@example.invalid",
-        role: "participant",
+        role: "guest",
         idempotency_key: key,
       }),
     );
@@ -435,7 +435,7 @@ Deno.test(
       const response = await handler(
         request("v1/invitations", "POST", {
           email: "new@example.invalid",
-          role: "participant",
+          role: "guest",
           idempotency_key: key,
         }),
       );
@@ -461,7 +461,7 @@ Deno.test(
     });
     const body = {
       email: "new@example.invalid",
-      role: "participant",
+      role: "guest",
       idempotency_key: key,
     };
     assert.equal(

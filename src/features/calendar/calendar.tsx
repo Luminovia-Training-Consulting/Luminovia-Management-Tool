@@ -20,6 +20,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { Plus, X } from "lucide-react";
 import { CalendarExport } from "./export";
+import { CalendarImport } from "./import";
 import { OfflineSchedule } from "./offline";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -780,6 +781,11 @@ export function CalendarPage() {
         )}
       </div>
       {message && <Notice>{message}</Notice>}
+      <CalendarImport
+        key={`import-${session!.user.id}`}
+        actor={session!.user.id}
+        zone={zone}
+      />
       <CalendarExport
         key={session!.user.id}
         actor={session!.user.id}

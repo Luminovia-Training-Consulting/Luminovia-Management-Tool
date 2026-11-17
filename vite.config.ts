@@ -8,6 +8,7 @@ import { validatePublicConfig } from "./scripts/public-config.ts";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { resolve } from "node:path";
 export default defineConfig(({ mode }) => {
   // VITE_ values enter the browser bundle. The shared validator rejects
   // privileged keys and requires public configuration for production builds.
@@ -21,6 +22,30 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       tailwindcss(),
+      {
+        name: "portal-owned-output-watch",
+        configResolved(config) {
+          if (config.server.watch === null) return;
+          const previous = config.server.watch?.ignored;
+          config.server.watch = {
+            ...config.server.watch,
+            ignored: [
+              ...(previous
+                ? Array.isArray(previous)
+                  ? previous
+                  : [previous]
+                : []),
+              ...[
+                ".local",
+                "docs",
+                "playwright-report",
+                "test-results",
+                "coverage",
+              ].map((directory) => `${resolve(config.root, directory)}/**`),
+            ],
+          };
+        },
+      },
       VitePWA({
         // Do not discard an in-progress form by immediately activating a new
         // service worker; the interface offers the update to the user.
@@ -62,17 +87,6 @@ export default defineConfig(({ mode }) => {
     ],
     // Generated report HTML otherwise triggers full-page reloads despite having
     // no application import. Keep private diagnostics and QA output out of HMR.
-    server: {
-      watch: {
-        ignored: [
-          "**/.local/**",
-          "**/docs/**",
-          "**/playwright-report/**",
-          "**/test-results/**",
-          "**/coverage/**",
-        ],
-      },
-    },
     test: {
       // This suite uses DOM/SDK fixtures. The managed ./portal test command
       // also verifies actual Auth, SQL and browser workflows.

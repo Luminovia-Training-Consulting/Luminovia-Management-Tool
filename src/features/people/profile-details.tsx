@@ -5,7 +5,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
 import { useAuth } from "../auth/auth-context";
 import { useOnline, requireOnline } from "../../lib/online";
 import { Button } from "../../components/ui/button";
@@ -106,7 +105,6 @@ function DetailsForm({ details }: { details: ProfileDetails }) {
 /** Read own private details before opening the experience/country/language/label form. */
 export function OwnProfileDetails() {
   const { session } = useAuth();
-  const { t } = useTranslation("people");
   const query = useQuery({
     queryKey: ["own-profile-details", session!.user.id],
     queryFn: () => peopleRpc<ProfileDetails>("own_profile_details"),
@@ -120,9 +118,6 @@ export function OwnProfileDetails() {
       ) : (
         <DetailsForm details={query.data} />
       )}
-      <Button asChild variant="secondary">
-        <Link to={`/people/${session!.user.id}`}>{t("open")}</Link>
-      </Button>
     </div>
   );
 }

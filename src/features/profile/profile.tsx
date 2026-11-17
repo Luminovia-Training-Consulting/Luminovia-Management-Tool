@@ -3,6 +3,7 @@
  * Self-declared expertise is separate from management verification; the own
  * qualification card follows the current role gate and server permissions.
  */
+import "./profile-layout.css";
 import { OwnQualificationEvidence } from "../qualifications/evidence";
 import { selectableTopics } from "../taxonomy/selection";
 import "../taxonomy/i18n";
@@ -27,6 +28,7 @@ import {
   profileQuery,
   topicsQuery,
   permissionsQuery,
+  userRolesQuery,
 } from "../../lib/queries";
 import type { Profile } from "../../lib/types";
 import { validZone } from "../../lib/dates";
@@ -138,9 +140,21 @@ export function ProfilePage() {
   const online = useOnline();
   const client = useQueryClient();
   const profile = useQuery(profileQuery(session!.user.id));
-  const topics = useQuery(topicsQuery);
-  const expertise = useQuery(expertiseQuery(session!.user.id));
-  const permissions = useQuery(permissionsQuery(session!.user.id));
+  const roles = useQuery(userRolesQuery(session!.user.id));
+  const guestOnly =
+    roles.isSuccess &&
+    roles.data.length > 0 &&
+    roles.data.every((role) => role === "guest");
+  const operational = roles.isSuccess && !guestOnly;
+  const topics = useQuery({ ...topicsQuery, enabled: operational });
+  const expertise = useQuery({
+    ...expertiseQuery(session!.user.id),
+    enabled: operational,
+  });
+  const permissions = useQuery({
+    ...permissionsQuery(session!.user.id),
+    enabled: operational,
+  });
   const edit = useMutation({
     mutationFn: async ({ topic, add }: { topic: string; add: boolean }) => {
       requireOnline();
@@ -158,22 +172,54 @@ export function ProfilePage() {
     onSuccess: () =>
       client.invalidateQueries({ queryKey: ["expertise", session!.user.id] }),
   });
-  if (profile.isPending || topics.isPending || expertise.isPending)
+  if (
+    profile.isPending ||
+    roles.isPending ||
+    (operational && (topics.isPending || expertise.isPending))
+  )
     return <Loading />;
-  if (profile.isError || topics.isError || expertise.isError)
+  if (
+    profile.isError ||
+    roles.isError ||
+    (operational && (topics.isError || expertise.isError))
+  )
     return (
       <ErrorState
         retry={() => {
           void profile.refetch();
-          void topics.refetch();
-          void expertise.refetch();
+          void roles.refetch();
+          if (operational) {
+            void topics.refetch();
+            void expertise.refetch();
+          }
         }}
       />
     );
   if (!profile.data) return <Notice kind="error">{t("profileMissing")}</Notice>;
+  if (guestOnly)
+    return (
+      <>
+        <PageHeading title={t("profile")} description={session!.user.email} />
+        <ProfileForm profile={profile.data} />
+        <AccountSettings email={session!.user.email ?? ""} />
+        <datalist id="time-zones">
+          <option>Europe/Berlin</option>
+          <option>Australia/Brisbane</option>
+          <option>UTC</option>
+        </datalist>
+      </>
+    );
   return (
     <>
-      <PageHeading title={t("profile")} description={session!.user.email} />
+      <PageHeading
+        title={t("profile")}
+        description={session!.user.email}
+        action={
+          <Button asChild variant="secondary">
+            <Link to={`/people/${session!.user.id}`}>{t("people:open")}</Link>
+          </Button>
+        }
+      />
       <AvatarEditor name={profile.data.display_name} />
       <AccountSettings email={session!.user.email ?? ""} />
       <div className="profile-layout">
@@ -188,10 +234,10 @@ export function ProfilePage() {
           )}
           <div className="expertise-list">
             {selectableTopics(
-              topics.data,
-              expertise.data.map((entry) => entry.topic_id),
+              topics.data ?? [],
+              (expertise.data ?? []).map((entry) => entry.topic_id),
             ).map((topic) => {
-              const selected = expertise.data.find(
+              const selected = (expertise.data ?? []).find(
                 (e) => e.topic_id === topic.id,
               );
               return (
@@ -219,16 +265,18 @@ export function ProfilePage() {
         </section>
       </div>
       <OwnProfileDetails />
-      <OwnContactVisibility actor={session!.user.id} />
-      <OwnTopicVisibility actor={session!.user.id} />
+      <div className="profile-privacy-grid">
+        <OwnContactVisibility actor={session!.user.id} />
+        <OwnTopicVisibility actor={session!.user.id} />
+      </div>
       <OwnQualificationPassport
         key={session!.user.id}
         actor={session!.user.id}
       />
       <ProfileEvidence ownerId={session!.user.id} />
       <OwnQualificationEvidence
-        topics={topics.data.filter((topic) =>
-          expertise.data.some((value) => value.topic_id === topic.id),
+        topics={(topics.data ?? []).filter((topic) =>
+          (expertise.data ?? []).some((value) => value.topic_id === topic.id),
         )}
       />
       <datalist id="time-zones">

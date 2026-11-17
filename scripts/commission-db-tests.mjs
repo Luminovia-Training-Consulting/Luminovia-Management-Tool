@@ -303,7 +303,7 @@ try {
     },
   );
   await check(
-    "Publication derives private role-specific net and residual-conserving rounding without readable public rates",
+    "Publication derives default50 private personal net and residual-conserving rounding without readable public rates",
     async () => {
       job = await value(
         admin,
@@ -328,7 +328,7 @@ try {
       );
       assert.equal(Number(publicJob.amount), 0);
       assert.equal(Number(publicJob.total_amount), 0);
-      assert.equal(Number((await quoteOffer(lecturer, job)).total_amount), 31);
+      assert.equal(Number((await quoteOffer(lecturer, job)).total_amount), 50.01);
       assert.ok(
         !Object.keys(publicJob).some((k) =>
           /gross|commission|platform/.test(k),
@@ -374,7 +374,7 @@ try {
         await sql(
           `select total_amount from public.job_claims where id='${accepted}'`,
         ),
-        "37.20",
+        "60.00",
       );
       await assert.rejects(
         value(admin, "set_job_commission", [job, 500, 500, null], "aal1"),
@@ -417,12 +417,12 @@ try {
       assert.equal(before.claims.length, 1);
       assert.equal(before.claims[0].id, confirmed.claim_id);
       assert.equal(before.claims[0].lecturer_id, first);
-      assert.equal(Number(before.claims[0].total_amount), 93);
+      assert.equal(Number(before.claims[0].total_amount), 150);
       assert.equal(before.claims[0].terms, "Immutable net compensation");
       assert.equal(before.revenue.length, 1);
       assert.equal(Number(before.revenue[0].gross_total_amount), 300);
-      assert.equal(Number(before.revenue[0].lecturer_net_total_amount), 93);
-      assert.equal(Number(before.revenue[0].platform_total_amount), 207);
+      assert.equal(Number(before.revenue[0].lecturer_net_total_amount), 150);
+      assert.equal(Number(before.revenue[0].platform_total_amount), 150);
       assert.equal(before.revenue[0].currency, "EUR");
       assert.equal(before.allocations.length, sessions.length);
       assert.equal(
@@ -585,7 +585,7 @@ try {
         assert.equal(result.status, "confirmed");
         assert.ok(
           (await rows(who, "finance_earnings")).some(
-            (x) => x.job_id === id && Number(x.total_amount) === 124,
+            (x) => x.job_id === id && Number(x.total_amount) === 200,
           ),
         );
         const doc = randomUUID(),
@@ -607,7 +607,7 @@ try {
             (await rows(who, "invoice_records")).find((x) => x.id === invoice)
               .total_amount,
           ),
-          124,
+          200,
         );
       }
       assert.equal(
@@ -655,7 +655,7 @@ try {
       );
       assert.equal(
         Number((await rows(owner, "invoice_records"))[0].total_amount),
-        124,
+        200,
       );
       await assert.rejects(
         actor(

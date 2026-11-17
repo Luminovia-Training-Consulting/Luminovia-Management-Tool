@@ -10,9 +10,6 @@ export const roles = [
   "senior_lecturer",
   "lecturer",
   "client",
-  "participant",
-  "guest",
-  "guest",
   "guest",
 ] as const;
 // Allowed target roles are input values, not evidence of the caller's authority.
@@ -42,6 +39,15 @@ export interface AccountDependencies {
     args?: Record<string, unknown>,
   ) => Promise<RpcResult>;
   sendInvitation: (invitation: Invitation, redirect: string) => Promise<string>;
+  createAccount?: (
+    account: Invitation & { password: string },
+  ) => Promise<string>;
+  completeAccount?: (
+    id: string,
+    userId: string | null,
+    success: boolean,
+  ) => Promise<void>;
+  removeCreatedAccount?: (id: string) => Promise<void>;
   completeInvitation: (
     id: string,
     userId: string | null,
@@ -377,6 +383,80 @@ export function createAccountHandler(deps: AccountDependencies) {
       if (path === "/v1/roles" && request.method === "GET") {
         return await call("account_role_catalog");
       }
+      if (path === "/v1/users" && request.method === "POST") {
+        if (
+          !deps.createAccount ||
+          !deps.completeAccount ||
+          !deps.removeCreatedAccount
+        )
+          return response(503, { error: "creation_disabled" });
+        const payload = await body(request);
+        if (
+          !object(payload) ||
+          typeof payload.password !== "string" ||
+          payload.password.length < 12 ||
+          payload.password.length > 128 ||
+          /[\x00-\x1f\x7f]/.test(payload.password)
+        )
+          return response(400, { error: "invalid_request" });
+        const { password, ...metadata } = payload;
+        const creation = parseInvitation(metadata);
+        if (
+          !creation ||
+          !creation.display_name ||
+          creation.role === "owner" ||
+          (creation.role === "client" && !creation.organisation_id)
+        )
+          return response(400, { error: "invalid_request" });
+        const reserved = await deps.rpc(token, "reserve_account_creation", {
+          p_email: creation.email,
+          p_display_name: creation.display_name,
+          p_role: creation.role,
+          p_organisation_id: creation.organisation_id,
+          p_request_id: creation.idempotency_key,
+        });
+        if (reserved.error)
+          return response(
+            reserved.error.code === "42501"
+              ? 403
+              : reserved.error.code === "40001"
+                ? 409
+                : 400,
+            {
+              error:
+                reserved.error.code === "42501"
+                  ? "permission_required"
+                  : "invalid_request",
+            },
+          );
+        const result = reserved.data as {
+          status: string;
+          creation_id?: string;
+          user_id?: string;
+        };
+        if (result.status !== "reserved")
+          return response(result.status === "created" ? 200 : 409, result);
+        if (!uuid(result.creation_id))
+          return response(503, { error: "service_unavailable" });
+        let createdId: string | null = null;
+        try {
+          createdId = await deps.createAccount({ ...creation, password });
+          if (!uuid(createdId)) throw new Error("creation_failed");
+          await deps.completeAccount(result.creation_id, createdId, true);
+        } catch {
+          // Only the freshly created identity can be rolled back. Existing email
+          // addresses are rejected by Auth and are never reused or reset.
+          if (createdId && uuid(createdId))
+            await deps.removeCreatedAccount(createdId);
+          await deps.completeAccount(result.creation_id, null, false);
+          return response(502, { error: "creation_failed" });
+        }
+        return response(201, {
+          status: "created",
+          creation_id: result.creation_id,
+          user_id: createdId,
+        });
+      }
       if (path === "/v1/users" && request.method === "GET") {
         const limit = Number(url.searchParams.get("limit") ?? 50);
         const offset = Number(url.searchParams.get("offset") ?? 0);
@@ -428,7 +508,11 @@ export function createAccountHandler(deps: AccountDependencies) {
         }
         if (target[2] === "roles") {
           if (
-            Object.keys(payload).some((key) => key !== "roles") ||
+            Object.keys(payload).some(
+              (key) => !["roles", "organisation_id"].includes(key),
+            ) ||
+            (payload.organisation_id !== undefined &&
+              !uuid(payload.organisation_id)) ||
             !Array.isArray(payload.roles) ||
             payload.roles.length < 1 ||
             payload.roles.length > 7 ||
@@ -436,10 +520,18 @@ export function createAccountHandler(deps: AccountDependencies) {
           ) {
             return response(400, { error: "invalid_request" });
           }
-          return await call("set_account_roles", {
-            p_user_id: target[1],
-            p_roles: payload.roles,
-          });
+          return await call(
+            payload.organisation_id === undefined
+              ? "set_account_roles"
+              : "set_account_roles_with_organisation",
+            {
+              p_user_id: target[1],
+              p_roles: payload.roles,
+              ...(payload.organisation_id === undefined
+                ? {}
+                : { p_organisation_id: payload.organisation_id }),
+            },
+          );
         }
         if (
           Object.keys(payload).some((key) => key !== "active") ||

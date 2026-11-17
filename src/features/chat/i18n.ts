@@ -4,6 +4,15 @@
  */
 import i18n from "../../lib/i18n";
 const pairs: Record<string, [string, string]> = {
+  composerHelp: [
+    "Hinweise zum Schreiben & Anhängen",
+    "Writing & attachment tips",
+  ],
+  conversationTools: [
+    "Suche, angeheftete Nachrichten & Hinweise",
+    "Search, pinned messages & information",
+  ],
+  searchActive: ["Suche aktiv", "Search active"],
   mentionPeople: ["Personen erwähnen", "Mention people"],
   selectedMentions: ["Ausgewählte Erwähnungen", "Selected mentions"],
   mentionedPeople: ["Erwähnte Personen", "Mentioned people"],

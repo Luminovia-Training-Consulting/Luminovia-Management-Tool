@@ -13,7 +13,20 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
-import { Bell } from "lucide-react";
+import {
+  Bell,
+  MessagesSquare,
+  CalendarDays,
+  ListChecks,
+  Wallet,
+  LifeBuoy,
+} from "lucide-react";
+import {
+  notificationCategories,
+  notificationCategory,
+  type NotificationCategory,
+} from "./categories";
+import { isGuestOnly } from "../auth/guest-navigation";
 import { PushSettings } from "./push-settings";
 import { useAuth } from "../auth/auth-context";
 import { Button } from "../../components/ui/button";
@@ -24,7 +37,11 @@ import {
   PageHeading,
 } from "../../components/common";
 import { dateTime } from "../../lib/dates";
-import { profileQuery, permissionsQuery } from "../../lib/queries";
+import {
+  profileQuery,
+  permissionsQuery,
+  userRolesQuery,
+} from "../../lib/queries";
 import { Preferences } from "../../components/preferences";
 import { WelcomeGuideEntry } from "../onboarding/welcome";
 import { requireOnline, useOnline } from "../../lib/online";
@@ -88,7 +105,55 @@ const knownKinds = new Set([
   "course_completion_issued",
   "course_completion_revoked",
   "portal_announcement",
+  "invoice_submitted",
+  "invoice_approved",
+  "invoice_paid",
+  "invoice_rejected",
+  "invoice_cancelled",
+  "payment_received",
 ]);
+/** Categories filter only already-loaded authorized rows; neither totals nor server cursors change. */
+function CategorySelector({
+  value,
+  onChange,
+}: {
+  value: NotificationCategory;
+  onChange: (value: NotificationCategory) => void;
+}) {
+  const { t } = useTranslation("inbox");
+  const icons = {
+    all: Bell,
+    messages: MessagesSquare,
+    courses: CalendarDays,
+    tasks: ListChecks,
+    finance: Wallet,
+    support: LifeBuoy,
+  };
+  return (
+    <div
+      className="notification-category-selector"
+      role="group"
+      aria-label={t("categoryFilter")}
+    >
+      {notificationCategories.map((category) => {
+        const Icon = icons[category];
+        return (
+          <Button
+            key={category}
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-pressed={category === value}
+            onClick={() => onChange(category)}
+          >
+            <Icon size={16} aria-hidden="true" />
+            <span>{t(`category_${category}`)}</span>
+          </Button>
+        );
+      })}
+    </div>
+  );
+}
 /** Connect confirmed read-state mutations to targeted revalidation of the actor's inbox. */
 function useReadState(actor: string) {
   const client = useQueryClient();
@@ -152,6 +217,7 @@ function NotificationRow({
 /** Observe the bounded own preview and expose the shared bell/unread state. */
 export function NotificationsMenu({ id, zone }: { id: string; zone: string }) {
   const { t } = useTranslation("inbox");
+  const [category, setCategory] = useState<NotificationCategory>("all");
   const online = useOnline();
   const query = useQuery(notificationPreviewQuery(id));
   const mark = useReadState(id);
@@ -182,26 +248,38 @@ export function NotificationsMenu({ id, zone }: { id: string; zone: string }) {
       </summary>
       <div className="notification-popover">
         <h2>{t("title")}</h2>
+        <CategorySelector value={category} onChange={setCategory} />
+        <p className="notification-filter-scope">{t("recentScope")}</p>
         {query.isPending ? (
           <Loading />
         ) : query.isError ? (
           <ErrorState retry={() => void query.refetch()} />
-        ) : !query.data.items.length ? (
-          <p>{t("empty")}</p>
+        ) : !query.data.items.some(
+            (item) =>
+              category === "all" ||
+              notificationCategory(item.kind) === category,
+          ) ? (
+          <p>{t(category === "all" ? "empty" : "categoryEmpty")}</p>
         ) : (
           <ul>
-            {query.data.items.map((item) => (
-              <NotificationRow
-                key={item.id}
-                item={item}
-                zone={zone}
-                compact
-                disabled={!online || mark.isPending}
-                mark={(id, read) =>
-                  mark.mutate({ ids: [id], before: null, read })
-                }
-              />
-            ))}
+            {query.data.items
+              .filter(
+                (item) =>
+                  category === "all" ||
+                  notificationCategory(item.kind) === category,
+              )
+              .map((item) => (
+                <NotificationRow
+                  key={item.id}
+                  item={item}
+                  zone={zone}
+                  compact
+                  disabled={!online || mark.isPending}
+                  mark={(id, read) =>
+                    mark.mutate({ ids: [id], before: null, read })
+                  }
+                />
+              ))}
           </ul>
         )}
         {mark.isError && <Notice kind="error">{t("error")}</Notice>}
@@ -212,6 +290,7 @@ export function NotificationsMenu({ id, zone }: { id: string; zone: string }) {
 }
 /** Load inbox history on demand through cursors and keep filter/read state separate. */
 export function NotificationsPage() {
+  const [category, setCategory] = useState<NotificationCategory>("all");
   const { t } = useTranslation("inbox");
   const actor = useAuth().session!.user.id;
   const client = useQueryClient();
@@ -233,6 +312,10 @@ export function NotificationsPage() {
   return (
     <>
       <PageHeading title={t("title")} description={t("description")} />
+      <div className="panel notification-category-panel">
+        <CategorySelector value={category} onChange={setCategory} />
+        <p className="notification-filter-scope">{t("loadedScope")}</p>
+      </div>
       <div className="panel inbox-toolbar">
         <label htmlFor="inbox-filter">{t("title")}</label>
         <select
@@ -280,18 +363,29 @@ export function NotificationsPage() {
         <div className="empty-state">{t("empty")}</div>
       ) : (
         <section className="panel">
+          {!items.some(
+            (item) =>
+              category === "all" ||
+              notificationCategory(item.kind) === category,
+          ) && <p>{t("categoryEmpty")}</p>}
           <ul className="inbox-list">
-            {items.map((item) => (
-              <NotificationRow
-                key={item.id}
-                item={item}
-                zone={profile.data?.time_zone ?? "Europe/Berlin"}
-                disabled={!online || mark.isPending}
-                mark={(id, read) =>
-                  mark.mutate({ ids: [id], before: null, read })
-                }
-              />
-            ))}
+            {items
+              .filter(
+                (item) =>
+                  category === "all" ||
+                  notificationCategory(item.kind) === category,
+              )
+              .map((item) => (
+                <NotificationRow
+                  key={item.id}
+                  item={item}
+                  zone={profile.data?.time_zone ?? "Europe/Berlin"}
+                  disabled={!online || mark.isPending}
+                  mark={(id, read) =>
+                    mark.mutate({ ids: [id], before: null, read })
+                  }
+                />
+              ))}
           </ul>
           {query.hasNextPage && (
             <Button
@@ -392,8 +486,36 @@ export function SettingsPage() {
   const de = i18n.language.startsWith("de");
   const actor = useAuth().session!.user.id;
   const [showGuide, setShowGuide] = useState(false);
-  const preferences = useQuery(notificationPreferencesQuery(actor));
-  const permissions = useQuery(permissionsQuery(actor));
+  const roles = useQuery(userRolesQuery(actor));
+  const guestOnly = isGuestOnly(roles.data);
+  const operational = !roles.isPending && !roles.isError && !guestOnly;
+  const preferences = useQuery({
+    ...notificationPreferencesQuery(actor),
+    enabled: operational,
+  });
+  const permissions = useQuery({
+    ...permissionsQuery(actor),
+    enabled: operational,
+  });
+  if (roles.isPending) return <Loading />;
+  if (roles.isError) return <ErrorState retry={() => void roles.refetch()} />;
+  if (guestOnly)
+    return (
+      <>
+        <PageHeading title={t("settings")} />
+        <section className="panel settings-section">
+          <h2>{de ? "Darstellung & Sprache" : "Appearance & language"}</h2>
+          <Preferences />
+        </section>
+        <section className="panel settings-section">
+          <h2>{de ? "Mein Konto" : "My account"}</h2>
+          <Link className="text-link" to="/profile">
+            {de ? "Profil bearbeiten" : "Edit profile"}
+          </Link>
+        </section>
+      </>
+    );
+
   return (
     <>
       <PageHeading title={t("settings")} description={t("settingsHelp")} />

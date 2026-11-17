@@ -6,6 +6,24 @@ import i18n from "../../lib/i18n";
 // Static UI resources use the namespace's shared interpolation and pluralization contract.
 // Authored content is separate from these i18next interface strings.
 const de = {
+  categoryFilter: "Meldungen nach Bereich filtern",
+  category_all: "Alle",
+  category_messages: "Nachrichten",
+  category_courses: "Kurse",
+  category_tasks: "Aufgaben",
+  category_finance: "Finanzen",
+  category_support: "Support",
+  recentScope: "Filtert die zuletzt geladenen Meldungen dieser Vorschau.",
+  loadedScope:
+    "Filtert geladene Meldungen. Weitere Meldungen kannst du unten nachladen.",
+  categoryEmpty: "Keine geladenen Meldungen in diesem Bereich.",
+  invoice_submitted: "Rechnung eingereicht",
+  invoice_approved: "Rechnung freigegeben",
+  invoice_paid: "Rechnung bezahlt",
+  invoice_rejected: "Rechnung abgelehnt",
+  invoice_cancelled: "Rechnung storniert",
+  payment_received: "Zahlung eingegangen",
+
   title: "Benachrichtigungen",
   description:
     "Deine Meldungen und Erinnerungen, mit aktuell geprüften Verweisen.",
@@ -83,6 +101,24 @@ const de = {
   course_completion_revoked: "Abschlussnachweis widerrufen",
 };
 const en: Record<keyof typeof de, string> = {
+  categoryFilter: "Filter notifications by area",
+  category_all: "All",
+  category_messages: "Messages",
+  category_courses: "Courses",
+  category_tasks: "Tasks",
+  category_finance: "Finance",
+  category_support: "Support",
+  recentScope: "Filters the recent notifications loaded in this preview.",
+  loadedScope:
+    "Filters loaded notifications. Load more notifications below to include them.",
+  categoryEmpty: "No loaded notifications in this area.",
+  invoice_submitted: "Invoice submitted",
+  invoice_approved: "Invoice approved",
+  invoice_paid: "Invoice paid",
+  invoice_rejected: "Invoice rejected",
+  invoice_cancelled: "Invoice cancelled",
+  payment_received: "Payment received",
+
   support_update: "New support reply or status change",
   readiness_task: "Preparation task assigned or changed",
   website_enquiry: "New training enquiry received",

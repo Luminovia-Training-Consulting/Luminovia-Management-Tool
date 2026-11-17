@@ -189,24 +189,17 @@ export function MessageComposer({
         id="chat-message-body"
         label={t("message")}
         error={Boolean(form.formState.errors.body) || empty}
-        hint={t("messageHint")}
       >
         <textarea
           id="chat-message-body"
-          rows={3}
+          rows={2}
           maxLength={8000}
           {...form.register("body")}
           disabled={busy}
           placeholder={t("message")}
         />
       </Field>
-      <MentionPicker
-        actor={actor}
-        room={room}
-        value={mentions}
-        onChange={setMentions}
-        disabled={busy}
-      />
+
       {attachment && (
         <div className="chat-draft-attachment">
           <Paperclip size={16} />
@@ -233,6 +226,13 @@ export function MessageComposer({
         </div>
       )}
       <div className="chat-composer-actions">
+        <MentionPicker
+          actor={actor}
+          room={room}
+          value={mentions}
+          onChange={setMentions}
+          disabled={busy}
+        />
         <input
           ref={input}
           hidden
@@ -271,7 +271,12 @@ export function MessageComposer({
           {t(send.isPending ? "sending" : "send")}
         </Button>
       </div>
-      <small>{t("dropHint")}</small>
+      <details className="chat-composer-help">
+        <summary>{t("composerHelp")}</summary>
+        <small>
+          {t("messageHint")} {t("dropHint")}
+        </small>
+      </details>
       {badDrop && <Notice kind="error">{t("oneFileDrop")}</Notice>}
       {send.isSuccess && <Notice>{t("sent")}</Notice>}
       {send.isError && !empty && <Notice kind="error">{t("sendError")}</Notice>}

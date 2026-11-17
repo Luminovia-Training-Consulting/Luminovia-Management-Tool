@@ -1,0 +1,29 @@
+/** Own profile preferences share a compact responsive row without changing publication semantics. */
+.profile-privacy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 22px;
+  margin-block: 24px;
+}
+.profile-privacy-grid > .profile-form,
+.profile-privacy-grid .contact-visibility-form {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  min-width: 0;
+}
+.profile-privacy-grid p {
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.profile-privacy-grid h2 {
+  margin-top: 0;
+  font-size: 20px;
+}
+@media (max-width: 850px) {
+  .profile-privacy-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -65,6 +65,20 @@ it("retains exactly one composer and its unsent draft across room-list refreshes
     screen.getByLabelText("Deine Nachricht"),
     "Ungesendeter Entwurf",
   );
+  // Optional tools must not consume the initial transcript or remount an unsent draft.
+  const tools = document.querySelector(".chat-thread-tools")!;
+  expect(tools).not.toHaveAttribute("open");
+  await user.click(
+    screen.getByText("Suche, angeheftete Nachrichten & Hinweise"),
+  );
+  expect(tools).toHaveAttribute("open");
+  expect(screen.getByLabelText("Deine Nachricht")).toHaveValue(
+    "Ungesendeter Entwurf",
+  );
+  await user.click(
+    screen.getByText("Suche, angeheftete Nachrichten & Hinweise"),
+  );
+  expect(tools).not.toHaveAttribute("open");
   for (let count = 1; count <= 4; count++) {
     view.rerender(
       element({

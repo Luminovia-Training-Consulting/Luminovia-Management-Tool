@@ -24,6 +24,7 @@ import {
 } from "./lifecycle-api";
 import "./lifecycle-i18n";
 import "./lifecycle.css";
+import { ManualAssignment } from "./manual-assignment";
 
 /** Derive the shared lifecycle action's exact input contract instead of maintaining a second parameter definition. */
 type OfferInput = Parameters<typeof manageOffer>[0];
@@ -135,6 +136,22 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
         </div>
         <PermanentDeleteAction kind="job" id={job.id} label={job.title} />
       </div>
+      {info.can_manage && (
+        <div className="page-actions">
+          <ManualAssignment
+            jobId={job.id}
+            version={info.version}
+            published={job.status === "published"}
+          />
+          {job.status === "draft" && (
+            <p>
+              {i18n.language.startsWith("de")
+                ? "Zum Zuweisen den Auftrag zuerst veröffentlichen."
+                : "Publish the assignment before allocating a lecturer."}
+            </p>
+          )}
+        </div>
+      )}
       <div className="job-life-capacity">
         <strong>
           {capacity} {t("positions")}

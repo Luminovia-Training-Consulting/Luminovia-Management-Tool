@@ -30,6 +30,7 @@ const state = vi.hoisted(() => ({
   rpc: vi.fn(),
   actor: "actor-a",
   online: true,
+  roles: ["lecturer"] as string[],
   rejectMark: false,
   staleSave: false,
   attention: {
@@ -45,6 +46,10 @@ vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: state.actor } } }),
 }));
 vi.mock("../../lib/queries", () => ({
+  userRolesQuery: (actor: string) => ({
+    queryKey: ["user-roles", actor],
+    queryFn: async () => state.roles,
+  }),
   permissionsQuery: (actor: string) => ({
     queryKey: ["permissions", actor],
     queryFn: async () => [],
@@ -83,6 +88,7 @@ beforeEach(async () => {
     removeEventListener: vi.fn(),
   }));
   state.actor = "actor-a";
+  state.roles = ["lecturer"];
   state.online = true;
   state.rejectMark = false;
   state.staleSave = false;
@@ -151,6 +157,7 @@ function view(component: React.ReactNode) {
     },
   });
   clients.push(client);
+  client.setQueryData(["user-roles", state.actor], state.roles);
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>{component}</MemoryRouter>
@@ -507,4 +514,62 @@ describe("effective quiet-hour settings", () => {
       state.rpc.mock.calls.filter(([name]) => name === "mark_notifications"),
     ).toHaveLength(0);
   });
+});
+
+it("guest settings load only appearance and own-profile links without notification RPCs", async () => {
+  state.roles = ["guest"];
+  view(<SettingsPage />);
+  expect(
+    await screen.findByRole("link", { name: "Profil bearbeiten" }),
+  ).toBeVisible();
+  expect(screen.queryByText("Ruhezeiten & Zustellung")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText("Benachrichtigungen einstellen"),
+  ).not.toBeInTheDocument();
+  expect(
+    state.rpc.mock.calls.some(([name]) =>
+      [
+        "notification_preferences",
+        "attention_preferences",
+        "notification_delivery_preferences",
+      ].includes(name),
+    ),
+  ).toBe(false);
+});
+it("filters only loaded preview categories and retains invoice and message rows under All", async () => {
+  const invoice = {
+    ...notice,
+    id: "65e9754a-5475-41fc-85d7-f33a263f08a2",
+    kind: "invoice_paid",
+    title: "Fictional paid invoice",
+    href: "/finance",
+  };
+  state.rpc.mockImplementation((name: string) => {
+    const request = Promise.resolve({
+      data:
+        name === "notification_inbox"
+          ? {
+              items: [notice, invoice],
+              unread_count: 45,
+              as_of: "2026-11-15T11:00:00Z",
+            }
+          : null,
+      error: null,
+    });
+    return Object.assign(request, { abortSignal: () => request });
+  });
+  view(<NotificationsMenu id="actor-a" zone="UTC" />);
+  fireEvent.click(document.querySelector(".notification-menu>summary")!);
+  await screen.findByText(invoice.title);
+  await userEvent.click(screen.getByRole("button", { name: "Finanzen" }));
+  expect(screen.getByText(invoice.title)).toBeVisible();
+  expect(screen.queryByText(notice.title)).not.toBeInTheDocument();
+  expect(
+    screen.getByText(
+      "Filtert die zuletzt geladenen Meldungen dieser Vorschau.",
+    ),
+  ).toBeVisible();
+  await userEvent.click(screen.getByRole("button", { name: "Alle" }));
+  expect(screen.getByText(notice.title)).toBeVisible();
+  expect(screen.getByText(invoice.title)).toBeVisible();
 });

@@ -11,9 +11,13 @@ import test from "node:test";
 import { createServer } from "vite";
 
 test("development watches real source without reacting to generated QA/private reports", async () => {
-  const fixture = await mkdtemp(join(tmpdir(), "portal-vite-watch-"));
+  const parent = await mkdtemp(join(tmpdir(), "portal-vite-watch-"));
+  // Local previews themselves live below .local. Ignore only output inside
+  // this application root, never the ancestor containing its real source.
+  const fixture = join(parent, ".local", "source");
   let server;
   try {
+    await mkdir(fixture, { recursive: true });
     await writeFile(
       join(fixture, "index.html"),
       "<h1>Fictional watch fixture</h1>",
@@ -64,6 +68,6 @@ test("development watches real source without reacting to generated QA/private r
     );
   } finally {
     await server?.close();
-    await rm(fixture, { recursive: true, force: true });
+    await rm(parent, { recursive: true, force: true });
   }
 });

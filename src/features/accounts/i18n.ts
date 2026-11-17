@@ -6,6 +6,17 @@ import i18n from "../../lib/i18n";
 // Static UI resources use the namespace's shared interpolation and pluralization contract.
 // Authored content is separate from these i18next interface strings.
 const de = {
+  conversionOrganisation:
+    "Wähle die Organisation für das Unternehmenskonto. Rollen und Organisationszugriff werden gemeinsam gespeichert.",
+  createTitle: "Benutzerkonto erstellen",
+  creating: "Konto wird erstellt …",
+  createHint:
+    "Lege einen eigenen Zugang mit Rolle und Startpasswort an. Es wird keine E-Mail versendet. Teile das Startpasswort persönlich mit; die Person kann es anschließend ändern.",
+  initialPassword: "Startpasswort (mindestens 12 Zeichen)",
+  createError:
+    "Das Konto wurde nicht bestätigt. Prüfe Berechtigung, Organisation und ob diese E-Mail-Adresse bereits vergeben ist.",
+  created: "Benutzerkonto wurde erstellt.",
+  openCreated: "Benutzerkonto öffnen",
   publicProfileUnavailable:
     "Das öffentliche Profil ist derzeit nicht verfügbar. Die berechtigte Kontoverwaltung bleibt möglich.",
   profileLanguage: "Anzeigesprache",
@@ -61,7 +72,7 @@ const de = {
   next: "Weiter",
   count: "{{count}} Konten",
   roleHint:
-    "Du kannst nur die freigegebenen untergeordneten Rollen vergeben. Der eigene Zugang sowie gleich- und höhergestellte Konten sind geschützt. Private Chats und persönliche Termine behalten ihre Zugriffsgrenzen.",
+    "Du kannst die für dein Konto freigegebenen Rollen vergeben. Administration kann weitere Administrationskonten anlegen und verwalten; die Plattformleitung und der eigene Zugang bleiben geschützt. Private Chats und persönliche Termine behalten ihre Zugriffsgrenzen.",
   protected:
     "Dieser Zugang ist vor Rollenänderungen durch dein Konto geschützt.",
   api: "API-Referenz",
@@ -71,6 +82,17 @@ const de = {
   inactive: "Gesperrt",
 };
 const en: typeof de = {
+  conversionOrganisation:
+    "Choose this company account’s organisation. Its role and organisation access are saved together.",
+  createTitle: "Create user account",
+  creating: "Creating account …",
+  createHint:
+    "Create an individual login with a role and initial password. No email is sent. Share the initial password personally; the person can change it afterwards.",
+  initialPassword: "Initial password (at least 12 characters)",
+  createError:
+    "Account creation was not confirmed. Check your permission, organisation and whether this email address is already registered.",
+  created: "User account created.",
+  openCreated: "Open user account",
   publicProfileUnavailable:
     "The public profile is currently unavailable. Authorized account management remains available.",
   profileLanguage: "Display language",
@@ -125,7 +147,7 @@ const en: typeof de = {
   next: "Next",
   count: "{{count}} accounts",
   roleHint:
-    "You can assign only the permitted subordinate roles. Your own account and accounts with equal or higher privileges are protected. Private chats and personal events retain their resource access boundaries.",
+    "You can assign the roles permitted for your account. Administrators can create and manage other administrative accounts; platform ownership and your own account remain protected. Private chats and personal events retain their resource access boundaries.",
   protected: "This account is protected from role changes by your account.",
   api: "API reference",
   apiHint:

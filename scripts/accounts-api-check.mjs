@@ -171,15 +171,23 @@ try {
   assert.equal(
     (
       await request(admin, `users/${teacher.id}/roles`, "PUT", {
-        roles: ["lecturer", "participant"],
+        roles: ["lecturer", "senior_lecturer"],
       })
     ).status,
     200,
   );
   assert.deepEqual((await request(teacher, "me")).body.roles, [
     "lecturer",
-    "participant",
+    "senior_lecturer",
   ]);
+  assert.equal(
+    (
+      await request(admin, `users/${teacher.id}/roles`, "PUT", {
+        roles: ["participant"],
+      })
+    ).status,
+    400,
+  );
   assert.equal(
     (
       await request(admin, `users/${admin.id}/roles`, "PUT", {
@@ -378,7 +386,11 @@ try {
     ).status,
     200,
   );
-  assert.equal((await request(teacher, "me")).status, 401);
+  const guestMe = await request(teacher, "me");
+  assert.equal(guestMe.status, 200);
+  assert.deepEqual(guestMe.body.roles, ["guest"]);
+  assert.deepEqual(guestMe.body.permissions, []);
+  assert.equal((await request(teacher, "users")).status, 403);
   assert.equal(
     (
       await request(manager, `users/${teacher.id}/roles`, "PUT", {
@@ -412,7 +424,11 @@ try {
   assert.equal("senior_lecturer_percent" in privatePolicy, false);
   const catalog = await request(admin, "roles");
   assert.equal(catalog.status, 200);
-  assert.ok(catalog.body.some((row) => row.role === "owner"));
+  assert.equal(
+    catalog.body.some((row) => ["owner", "participant"].includes(row.role)),
+    false,
+  );
+  assert.ok(catalog.body.some((row) => row.role === "admin" && row.assignable));
   assert.ok(catalog.body.some((row) => row.role === "client"));
   const spec = await fetch(`${url}/functions/v1/accounts/openapi.json`, {
     headers: {

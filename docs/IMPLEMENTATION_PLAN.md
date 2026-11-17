@@ -1,5 +1,19 @@
 # Persistent implementation plan
 
+## Workspace clarity, account creation and manual planning — 17 November 2026
+
+The latest user revision explicitly restores restricted guest accounts; participants remain retired. Individual lecturer defaults replace role-based price defaults for new commissioned offers without rewriting accepted snapshots.
+
+- [x] Increase usable chat transcript area, collapse secondary controls, compact composer/sidebar, separate lounge/tabs; move profile link to heading and arrange profile privacy blocks as responsive tiles.
+- [x] Put Support inside Knowledge & Help, keep old ticket deep links, add icon/category navigation to recent bell and loaded inbox history; create genuine invoice/payment inbox events with current-resource title/link checks.
+- [x] Organise administration into clear course/assignment/account/customer entry points; add current-authority manual complete-job lecturer allocation and keep course-run/customer organisation membership linkage.
+- [x] Add per-lecturer percentage/default50 or EURday/default200 settings and authoritative quote revision checks; retain accepted conditions and private gross visibility boundaries.
+- [x] Add admin direct account creation and role editing, including admin/management/senior lecturer/lecturer/client and restricted guest. Company accounts require organisation binding; guests receive no business permission widening.
+- [x] Add reviewed local ICS import: floating/IANA/UTC times, all-day exclusive ends, bounded recurrences/exclusions/exceptions; atomic owner-only batches, duplicate skipping and confirmed-assignment conflict denial.
+- [x] Pass867 frontend tests,331 runtime checks, type/lint/format/export checks and production build; focused SQL/account-facade/native Auth/UI journeys pass. Native desktop/mobile/dark visual review passes, as do actual production PWA manifest/icons/active-service-worker/browser-installability checks. Full historical canonical acceptance and hosted exact-head CI remain separate unverified gates.
+- [ ] Push integrated main and refresh retained-data local preview after acceptance.
+
+
 ## Current exact-main CI repair — 17 November 2026
 
 - [x] Inspect current `origin/main` and failed `Portal checks` run 44072628974; fast CI gates passed, full isolated verification exposed stale password-only/MFA fixture expectations.

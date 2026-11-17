@@ -1,3 +1,13 @@
+# Latest workspace controls
+
+Administration starts with course, assignment, account and customer entry points. Open a course run to associate its organisation and publish its assignment, or use the standalone assignment action. The assignment detail offers manual complete-block allocation to an eligible lecturer; all results require database confirmation. The administrative assignment board remains available under **Manage assignments**.
+
+In account administration, **Create user account** creates a password login with the selected role. Company accounts require an organisation; converting an existing lecturer to a company account assigns that organisation with the role change. Guest accounts see only their own profile, settings and static help. Use a lecturer's account detail to configure a percentage(default50) or daily fee(defaultEUR200). New commissioned quotes use the saved setting; confirmed historical compensation remains unchanged. Legacy offers without a private gross amount retain their original net fee.
+
+Knowledge & Help includes Support. The header bell shows recent activity by category, including real invoice/payment updates; the full inbox lets you load more history. The category filter applies to the recent/loaded items indicated on screen.
+
+Calendar **Import ICS file** opens a review before saving private appointments. Choose a recurrence window, select the file and confirm the preview. Reimporting the same UID/start identities skips duplicates. Recurrences become individual appointments; there is no continuing subscription. Floating dates use your chosen calendar time zone; IANA and UTC zones are supported, unknown zones require re-export. An invalid batch or confirmed-assignment conflict rejects the batch atomically. After a lost connection, retry safely to distinguish existing imports from new ones.
+
 # Guide
 
 

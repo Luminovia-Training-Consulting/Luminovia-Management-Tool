@@ -27,7 +27,7 @@ import {
 } from "./commission-api";
 import "./platform-i18n";
 import "./platform.css";
-/** Show role-specific previews only to an actor whose server projection permits gross access. */
+/** An indicative default only; selecting a lecturer resolves their current server quote. */
 export function RoleFeePreview({
   gross,
   currency,
@@ -37,36 +37,29 @@ export function RoleFeePreview({
   currency: string;
   access: CommissionAccess | undefined;
 }) {
-  const { t } = useTranslation("platform");
-  if (
-    !access?.can_manage_gross ||
-    !Number.isFinite(gross) ||
-    gross < 0 ||
-    !Number.isFinite(access.regular_lecturer_percent) ||
-    !Number.isFinite(access.senior_lecturer_percent)
-  )
+  const { i18n } = useTranslation();
+  const de = i18n.language.startsWith("de");
+  if (!access?.can_manage_gross || !Number.isFinite(gross) || gross < 0)
     return null;
   return (
-    <div>
-      {(
-        [
-          ["regularLecturer", access.regular_lecturer_percent!],
-          ["seniorLecturer", access.senior_lecturer_percent!],
-        ] as const
-      ).map(([label, share]) => (
-        <section key={label}>
-          <h3>
-            {t(label)} · {share}%
-          </h3>
-          <FeeSplitPreview
-            gross={gross}
-            percent={100 - share}
-            lecturerAmount={splitFee(gross, share).platform}
-            currency={currency}
-          />
-        </section>
-      ))}
-    </div>
+    <section>
+      <h3>
+        {de
+          ? "Standardhonorar bei 50 % Anteil"
+          : "Default compensation at a 50% share"}
+      </h3>
+      <FeeSplitPreview
+        gross={gross}
+        percent={50}
+        lecturerAmount={Math.round(gross * 50) / 100}
+        currency={currency}
+      />
+      <p className="muted">
+        {de
+          ? "Individuelle Prozentsätze oder Tagessätze werden im Dozentenprofil gepflegt. Die Zuweisung zeigt das tatsächlich berechnete Honorar."
+          : "Individual percentages or daily rates are maintained on the lecturer profile. Assignment shows the actual calculated compensation."}
+      </p>
+    </section>
   );
 }
 /** Explain local cent allocation without presenting it as a binding server snapshot. */
@@ -134,12 +127,8 @@ function EditPrice({
   const client = useQueryClient();
   const [amount, setAmount] = useState(String(record?.gross_amount ?? ""));
   const [total, setTotal] = useState(String(record?.gross_total_amount ?? ""));
-  const percent =
-    access.regular_lecturer_percent == null
-      ? NaN
-      : 100 - access.regular_lecturer_percent;
+  const percent = 50;
   const valid =
-    access.policy_configured &&
     Number.isFinite(Number(amount)) &&
     Number.isFinite(Number(total)) &&
     Number.isFinite(Number(percent)) &&
@@ -325,10 +314,7 @@ export function PublishClientRequest({
   const online = useOnline();
   const client = useQueryClient();
   const access = useQuery(commissionAccessQuery(actor));
-  const percent =
-    access.data?.regular_lecturer_percent == null
-      ? NaN
-      : 100 - access.data.regular_lecturer_percent;
+  const percent = 50;
   const [terms, setTerms] = useState("");
   const [contract, setContract] = useState(true);
   const publish = useMutation({
@@ -390,7 +376,6 @@ export function PublishClientRequest({
             publish.isPending ||
             !terms.trim() ||
             !access.data?.can_manage_gross ||
-            !access.data.policy_configured ||
             !Number.isFinite(percent) ||
             Number(percent) < 0 ||
             Number(percent) > 100

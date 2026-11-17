@@ -2,6 +2,7 @@
  * Offer editor for standalone jobs and jobs derived from a course run. Retain the reviewed
  * source while editing; the server checks actual sessions and prices on save.
  */
+import { OfferBoard } from "../jobs/board";
 import { useRef, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -12,15 +13,12 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Plus, Trash2 } from "lucide-react";
 import { DateTime } from "luxon";
 import { RoleFeePreview } from "../commercial/pricing";
-import { CompensationPolicyPanel } from "../commercial/compensation-policy";
 import {
   commissionAccessQuery,
   clientOrganisationsQuery,
   commissionKeys,
 } from "../commercial/commission-api";
 import "../commercial/platform-i18n";
-import { InviteForm } from "./invite";
-import { OfferBoard } from "../jobs/board";
 import { BuildingBlockReference } from "../operations/building-blocks";
 import {
   courseRunJobDefaultsQuery,
@@ -202,8 +200,6 @@ function JobForm({
         total_amount,
         ...rest
       } = values;
-      if (gross && !pricing.data?.policy_configured)
-        throw new Error("pricing_policy_unavailable");
       const deadline = claim_deadline
         ? zonedInstant(claim_deadline, values.time_zone)
         : null;
@@ -636,7 +632,6 @@ function JobForm({
         disabled={
           !online ||
           create.isPending ||
-          (gross && !pricing.data?.policy_configured) ||
           (done && (!isDirty || Boolean(courseRun)))
         }
       >
@@ -675,7 +670,7 @@ function JobForm({
 }
 /** Choose a standalone draft or server-loaded course source from the route and current capabilities. */
 export function AdminPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const courseText = useTranslation("courseOffer").t;
   const { session } = useAuth();
   const permissions = useQuery(permissionsQuery(session!.user.id));
@@ -699,28 +694,138 @@ export function AdminPage() {
         <Notice kind="error">{t("noAccess")}</Notice>
       </>
     );
+  const de = i18n.language.startsWith("de");
+  const creating = Boolean(runId || params.get("create") === "job");
   return (
     <>
-      <PageHeading title={t("admin")} description={t("adminIntro")} />
-      <CompensationPolicyPanel />
-      {runId ? (
-        !permissions.data.includes("courses.manage") ? (
-          <Notice kind="error">{t("noAccess")}</Notice>
-        ) : course.isPending ? (
-          <Loading />
-        ) : course.isError ? (
-          <ErrorState retry={() => void course.refetch()} />
-        ) : !course.data.organisation_id ? (
-          <Notice kind="error">{courseText("customerRequired")}</Notice>
-        ) : (
-          <JobForm key={runId} courseRun={course.data} />
-        )
+      <PageHeading
+        title={
+          de ? "Kurse & Aufträge verwalten" : "Manage courses & assignments"
+        }
+        description={
+          de
+            ? "Kursdurchführungen planen, Kunden zuordnen und vollständige Lehrblöcke vergeben."
+            : "Plan course runs, link customers and allocate complete teaching blocks."
+        }
+      />
+      {creating ? (
+        <>
+          <Button asChild variant="ghost">
+            <Link to="/admin">
+              {de
+                ? "Zur Verwaltungsübersicht"
+                : "Back to administration overview"}
+            </Link>
+          </Button>
+          {runId ? (
+            !permissions.data.includes("courses.manage") ? (
+              <Notice kind="error">{t("noAccess")}</Notice>
+            ) : course.isPending ? (
+              <Loading />
+            ) : course.isError ? (
+              <ErrorState retry={() => void course.refetch()} />
+            ) : !course.data.organisation_id ? (
+              <Notice kind="error">{courseText("customerRequired")}</Notice>
+            ) : (
+              <JobForm key={runId} courseRun={course.data} />
+            )
+          ) : (
+            <JobForm key="standalone" />
+          )}
+        </>
+      ) : params.get("view") === "jobs" ? (
+        <>
+          <div className="form-actions">
+            <Button asChild variant="ghost">
+              <Link to="/admin">
+                {de
+                  ? "Zur Verwaltungsübersicht"
+                  : "Back to administration overview"}
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to="/admin?create=job">
+                {de ? "Auftrag anlegen" : "Create assignment"}
+              </Link>
+            </Button>
+          </div>
+          <OfferBoard />
+        </>
       ) : (
-        <JobForm key="standalone" />
+        <div className="operations-grid">
+          <section className="panel">
+            <h2>{de ? "Kursdurchführungen" : "Course runs"}</h2>
+            <p>
+              {de
+                ? "Kursinhalt, Unternehmen und Termine gemeinsam planen. Aus einer Durchführung wird ein Auftrag mit den gleichen Terminen."
+                : "Plan course content, company and dates together. Create an assignment using the same course dates."}
+            </p>
+            <Button asChild>
+              <Link to="/courses">{de ? "Kurse öffnen" : "Open courses"}</Link>
+            </Button>
+          </section>
+          <section className="panel">
+            <h2>
+              {de
+                ? "Aufträge & Dozentenzuweisung"
+                : "Assignments & lecturer allocation"}
+            </h2>
+            <p>
+              {de
+                ? "Bestehende Aufträge öffnen, veröffentlichen und Dozent:innen für den gesamten Unterrichtsblock zuweisen."
+                : "Open and publish assignments and allocate lecturers for complete teaching blocks."}
+            </p>
+            <div className="form-actions">
+              <Button asChild>
+                <Link to="/admin?view=jobs">
+                  {de ? "Aufträge verwalten" : "Manage assignments"}
+                </Link>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link to="/admin?create=job">
+                  {de
+                    ? "Eigenständigen Auftrag anlegen"
+                    : "Create standalone assignment"}
+                </Link>
+              </Button>
+            </div>
+          </section>
+          {permissions.data.includes("users.manage") && (
+            <section className="panel">
+              <h2>{de ? "Dozent:innen & Konten" : "Lecturers & accounts"}</h2>
+              <p>
+                {de
+                  ? "Personen einladen und Profile, Rollen sowie individuelle Honorare an der Person verwalten."
+                  : "Invite people and manage profiles, roles and individual compensation on their records."}
+              </p>
+              <Button asChild variant="secondary">
+                <Link to="/admin/accounts">
+                  {de ? "Konten verwalten" : "Manage accounts"}
+                </Link>
+              </Button>
+            </section>
+          )}
+          {permissions.data.includes("organisations.manage") && (
+            <section className="panel">
+              <h2>
+                {de
+                  ? "Kunden & Unternehmenszugänge"
+                  : "Customers & company access"}
+              </h2>
+              <p>
+                {de
+                  ? "Unternehmen anlegen, dem Kurs zuordnen und freigegebene Kundenkonten mit dem Unternehmen verknüpfen. Die Unternehmenszuordnung bestimmt den Kundenzugriff."
+                  : "Create companies, link them to courses and grant customer accounts access to their company. Company membership determines customer access."}
+              </p>
+              <Button asChild variant="secondary">
+                <Link to="/clients">
+                  {de ? "Kunden verwalten" : "Manage customers"}
+                </Link>
+              </Button>
+            </section>
+          )}
+        </div>
       )}
-      {(permissions.data.includes("users.manage") ||
-        permissions.data.includes("users.invite")) && <InviteForm />}
-      <OfferBoard />
     </>
   );
 }

@@ -114,6 +114,9 @@ it("awaits pin confirmation, shows current context, navigates and unpins", async
             : Promise.resolve({ data: null, error: null }),
   );
   view();
+  await user.click(
+    screen.getByText("Suche, angeheftete Nachrichten & Hinweise"),
+  );
   const pin = await screen.findByRole("button", {
     name: "Nachricht in Gruppe anheften",
   });
@@ -162,6 +165,9 @@ it("removes the prior pinned context on an authoritative room denial", async () 
     },
   ];
   const { client } = view();
+  await userEvent.click(
+    screen.getByText("Suche, angeheftete Nachrichten & Hinweise"),
+  );
   const region = await screen.findByRole("region", {
     name: "Angeheftete Nachrichten",
   });

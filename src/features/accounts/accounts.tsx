@@ -8,6 +8,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
 import { PermanentDeleteAction } from "../deletions/deletions";
+import { CreateAccountForm } from "./create-account";
+import { LecturerCompensation } from "../commercial/lecturer-compensation";
 import { InviteForm } from "../admin/invite";
 import { commissionAccessQuery } from "../commercial/commission-api";
 import { permissionsQuery } from "../../lib/queries";
@@ -44,6 +46,7 @@ function AccountsDirectory({
   const cache = useQueryClient();
   const [params] = useSearchParams();
   const [search, setSearch] = useState(params.get("q") ?? "");
+  const [createOpen, setCreateOpen] = useState(false);
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<AccountPerson | null>(null);
   const [roles, setRoles] = useState<AccountRole[]>([]);
@@ -64,7 +67,7 @@ function AccountsDirectory({
   const assignableRoles =
     catalog.data?.filter(
       (entry) =>
-        entry.assignable && !["participant", "guest"].includes(entry.role),
+        entry.assignable && !["participant", "owner"].includes(entry.role),
     ) ?? [];
   const organisations = useQuery({
     queryKey: ["account-organisations", actorId],
@@ -98,6 +101,9 @@ function AccountsDirectory({
       if (!selected) throw new Error("account_required");
       return await accountRequest(`users/${selected.id}/roles`, "PUT", {
         roles,
+        ...(roles.includes("client") && organisation
+          ? { organisation_id: organisation }
+          : {}),
       });
     },
     onSuccess: async () => {
@@ -128,6 +134,16 @@ function AccountsDirectory({
     return <ErrorState retry={() => void accounts.refetch()} />;
   return (
     <>
+      {canAssign && (
+        <div className="page-actions">
+          <Button
+            disabled={!online || !catalog.isSuccess}
+            onClick={() => setCreateOpen(true)}
+          >
+            {t("createTitle")}
+          </Button>
+        </div>
+      )}
       <section className="panel">
         <Field id="account-search" label={t("search")}>
           <input
@@ -170,6 +186,7 @@ function AccountsDirectory({
                   onClick={() => {
                     setSelected(person);
                     setRoles(person.roles);
+                    setOrganisation("");
                     change.reset();
                     link.reset();
                   }}
@@ -201,6 +218,20 @@ function AccountsDirectory({
       {catalog.isError && canAssign && (
         <ErrorState retry={() => void catalog.refetch()} />
       )}
+      <Dialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title={t("createTitle")}
+        description={t("createHint")}
+      >
+        {createOpen && canAssign && catalog.isSuccess && (
+          <CreateAccountForm
+            actor={actorId}
+            roles={catalog.data}
+            canLinkOrganisations={canLinkOrganisations}
+          />
+        )}
+      </Dialog>
       <InviteForm allRoles canAssignRoles={canAssign} />
       <Dialog
         open={selected !== null}
@@ -211,6 +242,9 @@ function AccountsDirectory({
         description={selected?.display_name || selected?.email || ""}
       >
         <p>{t("roleHint")}</p>
+        {selected?.roles.some((role) =>
+          ["lecturer", "senior_lecturer", "admin", "owner"].includes(role),
+        ) && <LecturerCompensation userId={selected.id} />}
         <fieldset className="account-roles">
           <legend>{t("role")}</legend>
           {assignableRoles.map(({ role }) => (
@@ -233,7 +267,13 @@ function AccountsDirectory({
         </fieldset>
         <Button
           disabled={
-            !online || !roles.length || change.isPending || link.isPending
+            !online ||
+            !roles.length ||
+            change.isPending ||
+            link.isPending ||
+            (roles.includes("client") &&
+              !selected?.roles.includes("client") &&
+              (!canLinkOrganisations || !organisation))
           }
           onClick={() => setConfirm(true)}
         >
@@ -242,10 +282,16 @@ function AccountsDirectory({
         {change.isError && !confirm && (
           <Notice kind="error">{t("error")}</Notice>
         )}
+        {roles.includes("client") && !canLinkOrganisations && (
+          <Notice>{t("organisationAdmin")}</Notice>
+        )}
         {roles.includes("client") && canLinkOrganisations && (
           <section>
             <h3>{t("organisation")}</h3>
             <p>{t("organisationHint")}</p>
+            {!selected?.roles.includes("client") && (
+              <Notice>{t("conversionOrganisation")}</Notice>
+            )}
             {organisations.isPending || membership.isPending ? (
               <Loading />
             ) : organisations.isError || membership.isError ? (

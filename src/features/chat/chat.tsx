@@ -243,7 +243,7 @@ export function ChatPage() {
             />
           </div>
           <div
-            className="form-actions"
+            className="chat-room-tabs"
             role="group"
             aria-label={archiveText("filter")}
           >

@@ -126,6 +126,27 @@ Deno.serve(
           return result.data as DeletionResult;
         },
       }),
+    createAccount: async (account) => {
+      const result = await service.auth.admin.createUser({
+        email: account.email,
+        password: account.password,
+        email_confirm: true,
+      });
+      if (result.error || !result.data.user) throw new Error("creation_failed");
+      return result.data.user.id;
+    },
+    completeAccount: async (id, userId, success) => {
+      const result = await service.rpc("complete_account_creation", {
+        p_creation_id: id,
+        p_user_id: userId,
+        p_success: success,
+      });
+      if (result.error) throw new Error("creation_failed");
+    },
+    removeCreatedAccount: async (id) => {
+      const result = await service.auth.admin.deleteUser(id);
+      if (result.error) throw new Error("creation_cleanup_failed");
+    },
     sendInvitation: async (invitation, redirectTo) => {
       const result = await service.auth.admin.inviteUserByEmail(
         invitation.email,

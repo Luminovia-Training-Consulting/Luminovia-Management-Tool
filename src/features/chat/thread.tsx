@@ -289,72 +289,84 @@ export function ChatThread({
           </Button>
         </div>
       </header>
-      {room.kind === "participant_course" && (
-        <div className="chat-channel-note">{t("participantNote")}</div>
-      )}
-      {room.kind === "lecturer_course" && (
-        <div className="chat-channel-note">{t("lecturerNote")}</div>
-      )}
-      {room.kind === "dm" && (
-        <div className="chat-channel-note">{t("messagePrivate")}</div>
-      )}
-      {room.kind !== "dm" && (
-        <div className="chat-channel-note">{t("groupModerationPolicy")}</div>
-      )}
-      {room.kind === "topic" && online && status === "connected" && (
-        <TopicMessagePins
-          pins={
-            topicPins.query.isSuccess && !topicPins.query.isFetching
-              ? topicPins.query.data
-              : []
-          }
-          loading={topicPins.query.isPending || topicPins.query.isFetching}
-          error={topicPins.query.isError}
-          onRetry={() => void topicPins.query.refetch()}
-          onJump={(id) => void jumpToPinned(id)}
-          jumping={jumping || messages.isFetchingNextPage || messages.isError}
-          searchActive={Boolean(search)}
-          jumpFailed={jumpFailed}
-        />
-      )}
+      <details className="chat-thread-tools">
+        <summary>
+          {t("conversationTools")}
+          {search && <span className="badge">{t("searchActive")}</span>}
+        </summary>
+        <div className="chat-thread-tools-content">
+          {room.kind === "participant_course" && (
+            <div className="chat-channel-note">{t("participantNote")}</div>
+          )}
+          {room.kind === "lecturer_course" && (
+            <div className="chat-channel-note">{t("lecturerNote")}</div>
+          )}
+          {room.kind === "dm" && (
+            <div className="chat-channel-note">{t("messagePrivate")}</div>
+          )}
+          {room.kind !== "dm" && (
+            <div className="chat-channel-note">
+              {t("groupModerationPolicy")}
+            </div>
+          )}
+          {room.kind === "topic" && online && status === "connected" && (
+            <TopicMessagePins
+              pins={
+                topicPins.query.isSuccess && !topicPins.query.isFetching
+                  ? topicPins.query.data
+                  : []
+              }
+              loading={topicPins.query.isPending || topicPins.query.isFetching}
+              error={topicPins.query.isError}
+              onRetry={() => void topicPins.query.refetch()}
+              onJump={(id) => void jumpToPinned(id)}
+              jumping={
+                jumping || messages.isFetchingNextPage || messages.isError
+              }
+              searchActive={Boolean(search)}
+              jumpFailed={jumpFailed}
+            />
+          )}
+          <form
+            className="chat-message-search"
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setSearch(searchInput.trim());
+            }}
+          >
+            <Search size={17} />
+            <Field id="chat-message-search" label={t("searchMessages")}>
+              <input
+                id="chat-message-search"
+                type="search"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                maxLength={200}
+              />
+            </Field>
+            <Button variant="ghost" size="sm">
+              {t("runSearch")}
+            </Button>
+            {search && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearch("");
+                  setSearchInput("");
+                }}
+              >
+                {t("clearSearch")}
+              </Button>
+            )}
+          </form>
+        </div>
+      </details>
       {topicPins.toggle.isError && (
         <Notice kind="error">{pinText("failed")}</Notice>
       )}
-      <form
-        className="chat-message-search"
-        role="search"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setSearch(searchInput.trim());
-        }}
-      >
-        <Search size={17} />
-        <Field id="chat-message-search" label={t("searchMessages")}>
-          <input
-            id="chat-message-search"
-            type="search"
-            value={searchInput}
-            onChange={(event) => setSearchInput(event.target.value)}
-            maxLength={200}
-          />
-        </Field>
-        <Button variant="ghost" size="sm">
-          {t("runSearch")}
-        </Button>
-        {search && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setSearch("");
-              setSearchInput("");
-            }}
-          >
-            {t("clearSearch")}
-          </Button>
-        )}
-      </form>
       <div
         className="chat-message-scroll"
         aria-busy={messages.isFetching && !messages.isFetchingNextPage}

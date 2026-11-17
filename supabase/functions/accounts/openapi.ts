@@ -30,15 +30,11 @@ const userId = [
 const role = {
   type: "string",
   enum: [
-    "owner",
     "admin",
     "management",
     "senior_lecturer",
     "lecturer",
     "client",
-    "participant",
-    "guest",
-    "guest",
     "guest",
   ],
 };
@@ -202,6 +198,48 @@ export const accountOpenApi = {
       },
     },
     "/v1/users": {
+      post: {
+        summary: "Create an individual account without sending email",
+        description:
+          "Requires current account/role administration. Company accounts require an organisation. Owner and retired participant roles cannot be assigned. The password is transient and is never returned or stored in the creation request.",
+        requestBody: jsonBody({
+          type: "object",
+          additionalProperties: false,
+          required: [
+            "email",
+            "display_name",
+            "password",
+            "role",
+            "idempotency_key",
+          ],
+          properties: {
+            email: { type: "string", format: "email", maxLength: 254 },
+            display_name: { type: "string", minLength: 1, maxLength: 120 },
+            password: {
+              type: "string",
+              minLength: 12,
+              maxLength: 128,
+              writeOnly: true,
+            },
+            role,
+            organisation_id: { type: ["string", "null"], format: "uuid" },
+            idempotency_key: { type: "string", format: "uuid" },
+          },
+        }),
+        responses: {
+          "201": jsonResponse(),
+          "200": jsonResponse(),
+          "409": {
+            description:
+              "A previous creation request is still running or failed",
+          },
+          "502": {
+            description:
+              "Account creation was not confirmed; no invitation was sent",
+          },
+          ...errors,
+        },
+      },
       get: {
         operationId: "listAccounts",
         summary: "Capability-authorised account directory",
@@ -251,6 +289,12 @@ export const accountOpenApi = {
           required: ["roles"],
           properties: {
             roles: { type: "array", minItems: 1, maxItems: 7, items: role },
+            organisation_id: {
+              type: "string",
+              format: "uuid",
+              description:
+                "For company conversion, atomically assign the client role and this authorised organisation.",
+            },
           },
         }),
         responses: { "200": jsonResponse(), ...errors },

@@ -10,7 +10,7 @@ import "../deletions/i18n";
 import { permissionsQuery } from "../../lib/queries";
 /** Show sections allowed by loaded capabilities; links do not replace server permissions. */
 export function AdminNavigation() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { session } = useAuth();
   const permissions = useQuery(permissionsQuery(session!.user.id));
   return (
@@ -18,7 +18,9 @@ export function AdminNavigation() {
       <nav className="admin-tabs" aria-label={t("admin")}>
         {permissions.data?.includes("jobs.manage") && (
           <NavLink to="/admin" end>
-            {t("jobs")}
+            {i18n.language.startsWith("de")
+              ? "Kurse & Aufträge"
+              : "Courses & assignments"}
           </NavLink>
         )}
         {permissions.data?.includes("users.manage") &&
