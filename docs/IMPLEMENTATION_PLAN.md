@@ -18,9 +18,9 @@
 
 - [x] Split shell announcement/notification affordances from page modules so those routes genuinely lazy-load; current production chunks no longer show ineffective dynamic-import warnings.
 - [x] Pass 871 frontend tests, 334 runtime tests, 100 Edge tests, 148 packaging/release tests, zero production dependency vulnerabilities, local persistent Auth/profile/calendar/Storage restart, 25 primary PostgreSQL groups including 50 concurrent claims, schema lint and database advisors. Coverage: 73.63% statements, 68.14% branches, 65.04% functions, 76.21% lines.
-- [x] Assert the permission-only knowledge-category diagnostic already corrected by the current forward migration.
-- [x] Serialize historical migration replay across test databases with a PostgreSQL advisory lock after exact-main tests exposed concurrent updates to the shared authenticator role.
-- [ ] Complete full isolated acceptance after correcting password-only/retired-role and nested cascade helper fixtures; latest run reached extended SQL checks, then found old cascade/cancellation and notification-eligibility expectations. Do not report the full gate passed until the rerun completes.
+- [x] Align the knowledge permission assertion with the actual forward-migrated `permission required` denial text; no duplicate migration is needed.
+- [x] Serialize every historical migration replay path, including standalone and upgrade fixtures, with a PostgreSQL advisory lock after parallel tests exposed concurrent updates to the shared authenticator role.
+- [ ] Complete full isolated acceptance after the replay-lock and knowledge-assertion corrections. Fast gates and dozens of extended PostgreSQL groups pass, but the corrected exact-head system/browser run is still pending. Do not report the full gate passed until it completes.
 - [ ] Integrate against the latest `origin/main`, commit and push directly to `main` as instructed, then check current-head CI. No PR or production deployment is in scope.
 
 ## Current delivered-feature API parity — 18 November 2026
