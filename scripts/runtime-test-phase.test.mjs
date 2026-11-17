@@ -367,6 +367,13 @@ test("actual default runner retains all quality, Edge, operational, SQL/API and 
   assert.match(all.reports.at(-1).value, /Complete local acceptance/);
   assert.equal(all.locks, 1);
   assert.equal(all.released, 1);
+  assert(contains(all, "vite"));
+  assert(
+    !all.calls.some(
+      ({ file, args }) => file === "npm" && args.join(" ") === "run build",
+    ),
+    "The browser production build must not repeat the required TypeScript check.",
+  );
 });
 
 test("system PR phase delegates only independently required quality and coverage gates", async () => {

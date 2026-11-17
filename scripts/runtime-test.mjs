@@ -490,7 +490,8 @@ try {
       {},
       1800000,
     );
-    await step("Produktions-Build", "npm", ["run", "build"]);
+    // The required parallel Typecheck gate covers these exact source bytes.
+    await step("Produktions-Build", "npx", ["--no-install", "vite", "build"]);
     // The test supervisor serves the built artifact from a separate, owned preview.
     await step("Gebautes PWA starten", process.execPath, [
       "scripts/runtime-test-preview.mjs",
