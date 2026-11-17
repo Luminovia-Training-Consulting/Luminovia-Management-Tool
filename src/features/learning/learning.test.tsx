@@ -85,6 +85,7 @@ function setup() {
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={["/courses/course-a/workspace"]}>
         <Routes>
+          <Route path="/learning" element={<p>Course list</p>} />
           <Route
             path="/courses/:id/workspace"
             element={<CourseWorkspacePage />}
@@ -96,6 +97,46 @@ function setup() {
   return client;
 }
 describe("connected course workspace", () => {
+  it("confirms whole-course cancellation only after the server commits", async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Kursteilnahme stornieren" }),
+    );
+    expect(
+      screen.getByText(/gesamte Kursteilnahme bis spätestens sieben Tage/),
+    ).toBeVisible();
+    let resolve!: (value: unknown) => void;
+    fake.pending = new Promise((r) => (resolve = r));
+    await user.click(
+      screen.getByRole("button", {
+        name: "Gesamte Teilnahme verbindlich stornieren",
+      }),
+    );
+    expect(fake.rpc).toHaveBeenCalledWith("cancel_own_course_enrolment", {
+      p_course_run_id: "course-a",
+    });
+    expect(screen.queryByText("Course list")).not.toBeInTheDocument();
+    await act(async () => resolve(null));
+    expect(await screen.findByText("Course list")).toBeVisible();
+  });
+  it("keeps the enrolment open when the server rejects cancellation", async () => {
+    const user = userEvent.setup();
+    setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Kursteilnahme stornieren" }),
+    );
+    fake.error = { message: "Cancellation deadline passed" };
+    await user.click(
+      screen.getByRole("button", {
+        name: "Gesamte Teilnahme verbindlich stornieren",
+      }),
+    );
+    expect(
+      await screen.findByText(/Die Stornierung wurde nicht bestätigt/),
+    ).toBeVisible();
+    expect(screen.queryByText("Course list")).not.toBeInTheDocument();
+  });
   it("keeps staff preparation and other learners' attendance controls out of the participant experience", async () => {
     fake.workspace.preparation = [
       {

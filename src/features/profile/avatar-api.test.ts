@@ -2,11 +2,29 @@
  * Regressions for encoded image dimensions and bounded browser preparation. Byte/DOM fixtures do
  * not replace actual avatar scanning and access checks.
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
-import { sourceImageSize } from "./avatar-api";
+import { prepareAvatar, sourceImageSize } from "./avatar-api";
 
 describe("bounded source decoding", () => {
+  it("rejects 1 MB before decoding and inspects images below that limit", async () => {
+    const oversized = new File([new Uint8Array(1_000_000)], "image.png", {
+      type: "image/png",
+    });
+    const read = vi.spyOn(oversized, "arrayBuffer");
+    await expect(prepareAvatar(oversized)).rejects.toThrow(
+      "avatar_file_too_large",
+    );
+    expect(read).not.toHaveBeenCalled();
+    const below = new File([new Uint8Array(999_999)], "image.png", {
+      type: "image/png",
+    });
+    const readBelow = vi
+      .spyOn(below, "arrayBuffer")
+      .mockResolvedValue(new ArrayBuffer(1));
+    await expect(prepareAvatar(below)).rejects.toThrow("avatar_image_invalid");
+    expect(readBelow).toHaveBeenCalledOnce();
+  });
   it("recognises actual PNG, JPEG and lossy/lossless WebP dimensions before decoding", async () => {
     const image = sharp({
       create: { width: 16, height: 8, channels: 4, background: "blue" },

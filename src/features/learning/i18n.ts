@@ -1,5 +1,19 @@
 import i18n from "../../lib/i18n";
 const pairs: Record<string, [string, string]> = {
+  cancelEnrolment: ["Kursteilnahme stornieren", "Cancel course enrolment"],
+  cancelEnrolmentHelp: [
+    "Du kannst deine gesamte Kursteilnahme bis spätestens sieben Tage vor Beginn des ersten Termins stornieren. Einzelne Kurstage können nicht storniert werden.",
+    "You can cancel your entire course enrolment up to seven days before the first session starts. Individual course days cannot be cancelled.",
+  ],
+  keepEnrolment: ["Teilnahme behalten", "Keep enrolment"],
+  confirmCancelEnrolment: [
+    "Gesamte Teilnahme verbindlich stornieren",
+    "Confirm cancellation of entire enrolment",
+  ],
+  cancelEnrolmentError: [
+    "Die Stornierung wurde nicht bestätigt. Möglicherweise ist die Frist abgelaufen oder eine Chatmitgliedschaft muss vom Kursteam geklärt werden. Bitte aktualisiere den Kursraum oder wende dich an das Kursteam.",
+    "Cancellation was not confirmed. The deadline may have passed or the course team may need to resolve a chat membership. Refresh the workspace or contact the course team.",
+  ],
   reloadNotebook: ["Gespeicherte Notizen neu laden", "Reload saved notes"],
   unsupportedGlyph: [
     "Das Dokument enthält Zeichen, die die eingebettete Schrift nicht unterstützt. Bitte melde dies dem Lehrteam; der Name wird nicht stillschweigend verändert.",

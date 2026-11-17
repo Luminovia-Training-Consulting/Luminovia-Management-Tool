@@ -2,6 +2,10 @@
 
 Consolidated reference. Source and tests remain authoritative for current behavior.
 
+## Preview administrator bootstrap — 17 November 2026
+
+The GitHub preview uses a private ownership marker and atomic database finalization to recover interrupted creation of its fictional administrator without resetting existing credentials or MFA. Five focused tests pass; a separate isolated GoTrue/PostgreSQL rehearsal passed real process interruption, login, wrong-password denial and TOTP/AAL2. That rehearsal used a minimal schema and does not establish a complete browser or PostgREST pass. Full current-head local and CI acceptance remains pending.
+
 
 <a id="section-developer-guide"></a>
 

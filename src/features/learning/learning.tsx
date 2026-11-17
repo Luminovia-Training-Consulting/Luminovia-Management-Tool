@@ -1,12 +1,13 @@
 /** Bilingual course workspace using server-scoped roles, exact resources and confirmed learner state. */
 import { useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Plus, BookOpen, CheckCircle2, Download } from "lucide-react";
 import { DateTime } from "luxon";
 import { useAuth } from "../auth/auth-context";
-import { useOnline } from "../../lib/online";
+import { requireOnline, useOnline } from "../../lib/online";
+import { peopleRpc } from "../people/api";
 import { dateTime, zonedInstant } from "../../lib/dates";
 import { Button } from "../../components/ui/button";
 import {
@@ -1243,6 +1244,63 @@ function RepeatBooking({ course }: WorkProps) {
     </section>
   );
 }
+/** A learner cancels their entire enrolment only after the database confirms it. */
+function CancelEnrolment({ course, actor }: WorkProps) {
+  const { t } = useTranslation("learning");
+  const online = useOnline();
+  const navigate = useNavigate();
+  const client = useQueryClient();
+  const [confirming, setConfirming] = useState(false);
+  const cancellation = useMutation({
+    mutationFn: async () => {
+      requireOnline();
+      await peopleRpc("cancel_own_course_enrolment", {
+        p_course_run_id: course.id,
+      });
+    },
+    onSuccess: async () => {
+      await client.invalidateQueries({
+        queryKey: ["course-workspaces", actor],
+      });
+      client.removeQueries({ queryKey: courseWorkspaceKey(actor, course.id) });
+      navigate("/learning", { replace: true });
+    },
+  });
+  return (
+    <section className="panel learning-panel" aria-label={t("cancelEnrolment")}>
+      <h2>{t("cancelEnrolment")}</h2>
+      <p>{t("cancelEnrolmentHelp")}</p>
+      {!confirming ? (
+        <Button
+          variant="secondary"
+          disabled={!online}
+          onClick={() => setConfirming(true)}
+        >
+          {t("cancelEnrolment")}
+        </Button>
+      ) : (
+        <div className="page-actions">
+          <Button
+            variant="secondary"
+            disabled={cancellation.isPending}
+            onClick={() => setConfirming(false)}
+          >
+            {t("keepEnrolment")}
+          </Button>
+          <Button
+            disabled={!online || cancellation.isPending}
+            onClick={() => cancellation.mutate()}
+          >
+            {t("confirmCancelEnrolment")}
+          </Button>
+        </div>
+      )}
+      {cancellation.isError && (
+        <Notice kind="error">{t("cancelEnrolmentError")}</Notice>
+      )}
+    </section>
+  );
+}
 /** Loads the current account’s scoped course and removes content when access is unavailable. */
 export function CourseWorkspacePage() {
   const { id = "" } = useParams();
@@ -1268,6 +1326,9 @@ export function CourseWorkspacePage() {
         </Button>
       </div>
       <div className="learning-workspace">
+        {course.access.learner && (
+          <CancelEnrolment course={course} actor={actor} />
+        )}
         <CourseContact course={course} actor={actor} />
         {(course.access.staff || course.access.client) && (
           <Preparation course={course} actor={actor} />
