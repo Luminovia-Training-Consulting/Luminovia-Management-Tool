@@ -1254,5 +1254,6 @@ The migration-order regression now accepts later independent migrations while pr
 - [x] Align password-only role/API fixtures, administrator wiki draft review, and declared-expertise claim expectations with current migrations.
 - [x] Fix runtime schema-lint warnings with forward-only migrations; released SQL bytes remain unchanged.
 - [x] Make the amendment forecast fixture explicitly select the individual rate being tested.
+- [x] Move the calendar import implementation behind a private-schema function and retain an invoker-only public RPC wrapper.
 - [ ] Rerun complete local system and browser acceptance after the last fixture correction.
 - [ ] Push all corrections directly to `main`, then inspect every fresh exact-head required CI job through completion.
