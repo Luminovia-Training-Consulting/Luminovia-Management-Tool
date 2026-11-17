@@ -132,7 +132,10 @@ test("Draft checks are bounded while ready events and main/manual retain complet
     application.run,
     /node scripts\/runtime-test\.mjs --phase system/,
   );
-  assert.match(application.run, /else\s+\.\/portal test\s+fi/);
+  assert.match(
+    application.run,
+    /else\s+node scripts\/runtime-test\.mjs --phase all --external-gates quality,coverage\s+fi/,
+  );
   const browserJob = ci.jobs["verify-browser"];
   assert.equal(browserJob.name, "Isolated browser acceptance");
   assert.equal(browserJob.needs, "scope");
