@@ -207,18 +207,14 @@ try {
     await sql(
       `insert into public.lecturer_topics(user_id,topic_id,verified,valid_until) values('${users[55]}','${topic}',false,now()-interval '1 day')`,
     );
-    assert.equal(
-      (
-        await rpc(
-          users[55],
-          await job({ topic_ids: [topic], sessions: laterSessions(10) }),
-        )
-      ).status,
-      "confirmed",
+    const declared = await rpc(
+      users[55],
+      await job({ topic_ids: [topic], sessions: laterSessions(10) }),
     );
+    assert.equal(declared.status, "confirmed");
     assert.equal(
       await sql(
-        `select count(*) from public.assignment_sessions where claim_id=(select id from public.job_claims where user_id='${users[55]}' order by created_at desc limit 1)`,
+        `select count(*) from public.assignment_sessions where claim_id='${declared.claim_id}'`,
       ),
       "5",
     );
