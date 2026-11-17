@@ -2209,6 +2209,10 @@ The next exact-head run passed those policy fixtures and then caught the accepta
 
 The native SQL rerun confirmed the Unicode limits but PostgreSQL wrapped the expected Base64 text, making a string comparison false. The test now compares stored UTF-8 bytes (`bytea`) directly against decoded expected bytes, while retaining the full API response equality and explicit character/byte counts.
 
+### PR #42 / #43 dependency
+
+Stack PR #42 on PR #43: full runtime acceptance invokes Deno for Edge lint/tests/type checks, while clean `npm ci` previously skipped Deno's installer. The #43 pinned-installer fix is therefore a prerequisite for an honest #42 speedup run. The #42 branch now includes the #43 head as its base; its diff remains focused on the CI/test changes. Validate #43 first, then the sped-up #42 checks on the stacked head.
+
 ## Imported PR15 and PR20 delivery history
 
 The following isolated branch checkpoints are historical evidence. Current fourteen-check, signature and review-only policy is recorded above and in GITHUB_WORKFLOW; older always/disabled descriptions do not change it. These branch-only checks do not establish combined32 acceptance.
