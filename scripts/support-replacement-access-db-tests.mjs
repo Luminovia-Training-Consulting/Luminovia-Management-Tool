@@ -11,6 +11,7 @@ import { randomUUID } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import { promisify } from "node:util";
 import {
+  applyPasswordOnlyPermissionPolicy,
   withMigrationReplayLock,
   withTestDatabase,
   quoteSql as q,
@@ -159,6 +160,7 @@ for (const mode of modes) {
           await sql(body);
         }
       });
+      await applyPasswordOnlyPermissionPolicy(sql);
       /** Count meaningful permission groups independently from their assertions. */
       const check = async (name, run) => {
         await run();
@@ -170,8 +172,8 @@ for (const mode of modes) {
         randomUUID,
       );
       await sql(`insert into auth.users(id,email)values${[manager, source, target, outsider, support].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};
-insert into public.user_roles(user_id,role)values(${q(manager)},'admin'),(${q(source)},'lecturer'),(${q(target)},'lecturer'),(${q(outsider)},'lecturer'),(${q(support)},'participant');
-insert into public.role_permissions(role,permission)values('participant','support.manage');
+insert into public.user_roles(user_id,role)values(${q(manager)},'admin'),(${q(source)},'lecturer'),(${q(target)},'lecturer'),(${q(outsider)},'lecturer'),(${q(support)},'senior_lecturer');
+insert into public.role_permissions(role,permission)values('senior_lecturer','support.manage');
 update public.profiles set display_name='Fictional private access fixture',time_zone='UTC';`);
       /** Execute with the real SQL actor/assurance boundary, never fixture superuser rights. */
       const call = (who, expression, aal = "aal1") =>
