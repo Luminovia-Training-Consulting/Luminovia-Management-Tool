@@ -60,7 +60,7 @@ test("profile picture is rasterised, scanned, retained across reload and visible
         element.naturalHeight,
       ]),
     )
-    .toEqual([512, 512]);
+    .toEqual([480, 480]);
   await page.reload();
   await expect(editor.locator("img")).toHaveAttribute("src", /^blob:/);
   await expect
@@ -69,7 +69,7 @@ test("profile picture is rasterised, scanned, retained across reload and visible
         .locator("img")
         .evaluate((element: HTMLImageElement) => element.naturalWidth),
     )
-    .toBe(512);
+    .toBe(480);
   const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const selected = await checked(
     service
@@ -127,7 +127,7 @@ test("profile picture is rasterised, scanned, retained across reload and visible
           (element: HTMLImageElement) => element.naturalWidth,
         ),
       )
-      .toBe(512);
+      .toBe(480);
     await page.getByLabel("Sprache", { exact: true }).selectOption("en");
     await expect(
       editor.getByRole("heading", { name: "Profile picture", exact: true }),

@@ -2,6 +2,14 @@
 
 PR43 correction: retain the full 50-way simultaneous HTTP capacity race; the preceding ten-in-flight experiment is superseded because the native PostgreSQL crash cause is not yet established. The existing complete cleanup and current-head native CI remain required.
 
+## Profile pictures and course cancellation — 17 November 2026
+
+- [x] Enforce strictly less than 1 MB for new profile pictures at browser, gateway and database boundaries; preserve legacy reads.
+- [x] Allow an authenticated participant to cancel the whole enrolment up to seven days before the first session, with transactional chat-origin reconciliation and DE/EN confirmation.
+- [x] Add separate company lecturer acceptance/rejection, computed 72-hour automatic acceptance and invoiced-case finance review, preserving confirmed claims and historical financial records.
+- [ ] Implement and verify final resolution and invoice correction for finance-review cases; archived/inactive offers still require management review.
+- [ ] Run exact-head native/browser, security and full CI acceptance. Historic unknown chat origins currently require authorized resolution.
+
 ## Browser test runtime — 17 November 2026
 
 - [x] Keep both Chromium projects, every browser scenario/assertion, per-file ordering and zero retries. Restore one browser worker: the first parallel run reproduced shared Supabase Auth account-deletion failures.

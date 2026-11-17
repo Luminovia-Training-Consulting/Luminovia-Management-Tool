@@ -154,7 +154,16 @@ export function AvatarEditor({ name }: { name: string }) {
             {t("busy")} {progress > 0 && `${progress} %`}
           </p>
         )}
-        {mutation.isError && <Notice kind="error">{t("error")}</Notice>}
+        {mutation.isError && (
+          <Notice kind="error">
+            {t(
+              mutation.error instanceof Error &&
+                mutation.error.message === "avatar_file_too_large"
+                ? "tooLarge"
+                : "error",
+            )}
+          </Notice>
+        )}
         {mutation.isSuccess && (
           <Notice>{t(removed ? "removed" : "saved")}</Notice>
         )}

@@ -120,7 +120,7 @@ beforeEach(async () => {
       return Promise.resolve({ data: earnings, error: null });
     if (name === "invoice_records")
       return Promise.resolve({ data: invoices, error: null });
-    if (name === "invoice_payments")
+    if (name === "invoice_payments" || name === "company_invoice_reviews")
       return Promise.resolve({ data: [], error: null });
     return state.mutate(name, payload);
   });

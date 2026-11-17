@@ -1,4 +1,8 @@
 import { CompanyJobDeletions } from "../deletions/deletions";
+import {
+  AdditionalCompanyDecisions,
+  CompanyDecisions,
+} from "./company-decisions";
 /**
  * Organization-scoped course requests and client spending views. Membership limits available
  * organizations; publication and lecturer allocation remain separate server operations.
@@ -519,6 +523,13 @@ function RequestCard({
             : t("unassigned")}
         </span>
       </div>
+      {!manager && request.job_id && (
+        <CompanyDecisions
+          actor={actor}
+          job={request.job_id}
+          zone={request.time_zone}
+        />
+      )}
       <RequestBriefPanel actor={actor} request={request} />
       {submitted && (
         <div className="form-actions">
@@ -753,6 +764,15 @@ export function ClientPortalPage() {
             </div>
           )}
         </>
+      )}
+      {!access.data.can_manage_gross && (
+        <AdditionalCompanyDecisions
+          actor={actor}
+          excludedJobs={(requests.data ?? []).flatMap((request) =>
+            request.job_id ? [request.job_id] : [],
+          )}
+          zone={profile.data?.time_zone ?? "Europe/Berlin"}
+        />
       )}
       <CompanyJobDeletions />
       <Dialog

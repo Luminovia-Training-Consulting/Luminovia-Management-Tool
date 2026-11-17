@@ -45,6 +45,7 @@ import type { EarningRecord, InvoicePayment, InvoiceRecord } from "./types";
 import { CommercialPdfUpload } from "./pdf-upload";
 import { InvoiceLabels } from "./invoice-labels";
 import { RevenuePanel } from "./revenue";
+import { CompanyFinanceReviews } from "./company-finance-reviews";
 import "./i18n";
 import "./platform-i18n";
 import "./commercial.css";
@@ -851,6 +852,7 @@ export function FinancePage() {
         }
       />
       <RevenuePanel />
+      {manager && <CompanyFinanceReviews actor={actor} zone={zone} />}
       {manager && (
         <label className="checkbox-label">
           <input

@@ -4,6 +4,45 @@
  */
 import i18n from "../../lib/i18n";
 const pairs: Record<string, [string, string]> = {
+  companyOtherJobs: ["Weitere Aufträge", "Other assignments"],
+  companyDecisionHeading: ["Dozierende bestätigen", "Confirm lecturers"],
+  companyDecisionLoading: [
+    "Entscheidungen werden geladen …",
+    "Loading decisions …",
+  ],
+  companyDecisionFailed: [
+    "Die Entscheidung konnte nicht geladen oder gespeichert werden. Bitte erneut versuchen; für bereits berechnete Aufträge wende dich an die Verwaltung.",
+    "The decision could not be loaded or saved. Please retry; contact management if the assignment was already invoiced.",
+  ],
+  companyDecisionPending: ["Entscheidung offen", "Decision pending"],
+  companyDecisionAccepted: ["Bestätigt", "Accepted"],
+  companyDecisionReviewRequired: [
+    "Ablehnung vorgemerkt – Abrechnung muss geprüft werden; der Einsatz bleibt bestehen.",
+    "Rejection recorded – finance review pending; the assignment remains active.",
+  ],
+  companyFinanceReviews: [
+    "Vorgemerkte Ablehnungen mit Rechnung",
+    "Rejection requests with invoices",
+  ],
+  companyFinanceHint: [
+    "Die Rechnung und der Einsatz bleiben bestehen. Prüfe die Abrechnung und kläre die Ablehnung über die bestehenden Rechnungs- und Auftragsabläufe.",
+    "The invoice and assignment remain active. Review the billing and resolve the rejection through the existing invoice and assignment workflows.",
+  ],
+  companyFinanceNone: [
+    "Keine vorgemerkten Ablehnungen mit Rechnung.",
+    "No pending rejection requests with invoices.",
+  ],
+  companyDecisionAutomatic: ["Automatisch bestätigt", "Automatically accepted"],
+  companyDecisionDeadline: [
+    "Ohne Entscheidung automatisch bestätigt ab {{deadline}} ({{zone}}).",
+    "Automatically accepted without a decision after {{deadline}} ({{zone}}).",
+  ],
+  companyDecisionAccept: ["Bestätigen", "Accept"],
+  companyDecisionReject: ["Ablehnen", "Reject"],
+  companyDecisionRejectHint: [
+    "Bis zum Beginn wird der Einsatz storniert und der freie Platz wieder veröffentlicht. Ist bereits eine Rechnung vorhanden, wird die Ablehnung stattdessen vorgemerkt und die Abrechnung geprüft; der Einsatz bleibt bestehen.",
+    "Before the start, the assignment is cancelled and the position reopened. If an invoice exists, the rejection is recorded for finance review and the assignment remains active.",
+  ],
   location: ["Ort / Link", "Location / link"],
   unknownGross: [
     "{{count}} angenommene Bestandsaufträge haben keine volle Preis-/Plattformhistorie. Ihre Dozierendenhonorare sind enthalten; unbekannte volle Preise werden nicht als null Euro ausgegeben.",
