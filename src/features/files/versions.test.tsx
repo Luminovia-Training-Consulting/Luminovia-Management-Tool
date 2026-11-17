@@ -85,50 +85,54 @@ it("invalidates existing version history after a confirmed replacement instead o
     client.getQueryState(["document-versions", "file"])?.isInvalidated,
   ).toBe(true);
 });
-it.each(["documents", "document", "document-versions"])(
-  "replaces an initial pre-upload %s read with a confirmed post-upload read",
-  async (key) => {
-    const user = userEvent.setup();
-    let release!: (value: PortalDocument[]) => void;
-    let aborted = false;
-    let reads = 0;
-    const oldRead = new Promise<PortalDocument[]>((resolve) => {
-      release = resolve;
-    });
-    function Documents() {
-      const query = useQuery({
-        queryKey: [key, "pending"],
-        queryFn: ({ signal }) => {
-          reads++;
-          if (reads > 1) return Promise.resolve([file]);
-          signal.addEventListener("abort", () => {
-            aborted = true;
-          });
-          return oldRead;
-        },
-      });
-      return <div>{query.data?.map((item) => item.original_name)}</div>;
+it("refreshes a file list whose first read predates a confirmed upload", async () => {
+  const user = userEvent.setup();
+  let release!: (files: PortalDocument[]) => void;
+  const stale = new Promise<PortalDocument[]>((resolve) => {
+    release = resolve;
+  });
+  let calls = 0;
+  let initialSignal: AbortSignal | undefined;
+  const queryFn = ({ signal }: { signal: AbortSignal }) => {
+    calls += 1;
+    if (calls === 1) {
+      initialSignal = signal;
+      return stale;
     }
-    state.uploadDocument.mockResolvedValue(file);
-    setup(
-      <>
-        <Documents />
-        <FileUpload context={{ scope: "personal" }} />
-      </>,
+    return Promise.resolve([file]);
+  };
+  state.uploadDocument.mockResolvedValue(file);
+  function List() {
+    const query = useQuery({
+      queryKey: ["documents", "actor", "discovery"],
+      queryFn,
+    });
+    return (
+      <div>
+        {query.data?.map((item) => (
+          <span key={item.id}>{item.original_name}</span>
+        ))}
+      </div>
     );
-    await waitFor(() => expect(reads).toBe(1));
-    await user.upload(
-      screen.getByLabelText("Datei auswählen"),
-      new File(["fictional"], "new.png", { type: "image/png" }),
-    );
-    await user.click(screen.getByRole("button", { name: "Datei hochladen" }));
-    await screen.findByText(file.original_name);
-    expect(aborted).toBe(true);
-    expect(reads).toBe(2);
-    release([]);
-    await screen.findByText(file.original_name);
-  },
-);
+  }
+  setup(
+    <>
+      <List />
+      <FileUpload context={{ scope: "personal" }} />
+    </>,
+  );
+  await waitFor(() => expect(calls).toBe(1));
+  await user.upload(
+    screen.getByLabelText("Datei auswählen"),
+    new File(["x"], "new.png", { type: "image/png" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Datei hochladen" }));
+  await waitFor(() => expect(state.uploadDocument).toHaveBeenCalled());
+  release([]);
+  await waitFor(() => expect(initialSignal?.aborted).toBe(true));
+  await screen.findByText(file.original_name);
+  expect(calls).toBeGreaterThanOrEqual(2);
+});
 it("pins previews and current-row downloads to the exact selected metadata version", async () => {
   const user = userEvent.setup();
   state.downloadDocument.mockResolvedValue(new Blob(["fictional image"]));

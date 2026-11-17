@@ -3,13 +3,181 @@
  */
 import assert from "node:assert/strict";
 import {
+  type AccountDependencies,
   createAccountHandler,
   parseInvitation,
-  type AccountDependencies,
 } from "./handler.ts";
 import { accountOpenApi } from "./openapi.ts";
 const id = "44444444-4444-4444-8444-444444444444";
 const key = "55555555-5555-4555-8555-555555555555";
+// The permanent-delete facade must preserve explicit confirmation and bind all
+// execution to the database-issued operation, never a submitted actor/path.
+Deno.test("deletion rejects unconfirmed or injected requests before any RPC", async () => {
+  const { handler, request, calls } = fixture();
+  for (
+    const payload of [
+      { plan_id: id, request_id: key },
+      { plan_id: id, request_id: key, confirmation: "yes" },
+      { plan_id: id, request_id: key, confirmation: "DELETE", actor_id: id },
+    ]
+  ) {
+    calls.length = 0;
+    assert.equal(
+      (await handler(request("v1/deletions/confirm", "POST", payload))).status,
+      400,
+    );
+    assert.deepEqual(calls, ["authenticate"]);
+  }
+  assert.equal(
+    (await handler(request("v1/deletions/operations/invalid", "POST", {})))
+      .status,
+    400,
+  );
+  assert.equal(
+    (await handler(
+      request(`v1/deletions/operations/${id}`, "POST", { paths: [] }),
+    )).status,
+    400,
+  );
+});
+Deno.test("confirmed operation uses caller token and reports pending until worker completion", async () => {
+  let complete = false;
+  const { handler, request } = fixture({
+    rpc: async (token, name, args) => {
+      assert.equal(token, "test-token");
+      assert.equal(name, "deletion_confirm");
+      assert.deepEqual(args, {
+        p_plan_id: id,
+        p_request_id: key,
+        p_confirmation: "DELETE",
+      });
+      return {
+        data: { operation_id: key, status: "pending", kind: "job", id },
+      };
+    },
+    executeDeletion: async (token, operationId) => {
+      assert.equal(token, "test-token");
+      assert.equal(operationId, key);
+      return {
+        operation_id: key,
+        status: complete ? "completed" : "pending",
+        kind: "job",
+        id,
+      };
+    },
+  });
+  const payload = { plan_id: id, request_id: key, confirmation: "DELETE" };
+  const pending = await handler(
+    request("v1/deletions/confirm", "POST", payload),
+  );
+  assert.equal(pending.status, 202);
+  assert.equal((await pending.json()).status, "pending");
+  complete = true;
+  assert.equal(
+    (await handler(request(`v1/deletions/operations/${key}`, "POST", {})))
+      .status,
+    200,
+  );
+});
+Deno.test("deletion conflicts, permission loss and worker outages never return success", async () => {
+  for (
+    const [code, status] of [["42501", 403], ["40001", 409], ["23503", 409], [
+      "22023",
+      400,
+    ], ["XX000", 503]] as const
+  ) {
+    const { handler, request } = fixture({
+      rpc: async () => ({ data: null, error: { code } }),
+    });
+    assert.equal(
+      (await handler(
+        request("v1/deletions/preview", "POST", { kind: "job", id }),
+      )).status,
+      status,
+    );
+  }
+  const { handler, request } = fixture({
+    executeDeletion: async () => {
+      throw new Error("deletion_unavailable");
+    },
+  });
+  const failed = await handler(
+    request(`v1/deletions/operations/${id}`, "POST", {}),
+  );
+  assert.equal(failed.status, 503);
+  assert.deepEqual(await failed.json(), { error: "deletion_unavailable" });
+});
+Deno.test("deletion target list bounds and exact kind dispatch stay caller scoped", async () => {
+  const { handler, request, calls } = fixture({
+    rpc: async (token, name, args) => {
+      assert.equal(token, "test-token");
+      assert.equal(name, "deletion_resources");
+      assert.deepEqual(args, {
+        p_kind: "job",
+        p_query: "Own",
+        p_cursor: null,
+        p_limit: 25,
+      });
+      return { data: { items: [], next_cursor: null } };
+    },
+  });
+  for (
+    const path of [
+      "kind=jobs;drop",
+      "kind=job&limit=101",
+      "kind=job&cursor=forged",
+    ]
+  ) {
+    assert.equal(
+      (await handler(request(`v1/deletions/resources?${path}`))).status,
+      400,
+    );
+  }
+  assert.equal(
+    (await handler(request("v1/deletions/resources?kind=job&q=Own"))).status,
+    200,
+  );
+  assert.ok(calls.length > 0);
+});
+Deno.test("committed confirmation retains an operation receipt when external cleanup fails", async () => {
+  const { handler, request } = fixture({
+    rpc: async () => ({
+      data: { operation_id: key, kind: "document", id, status: "pending" },
+    }),
+    executeDeletion: async () => {
+      throw new Error("deletion_unavailable");
+    },
+  });
+  const result = await handler(request("v1/deletions/confirm", "POST", {
+    plan_id: id,
+    request_id: key,
+    confirmation: "DELETE",
+  }));
+  assert.equal(result.status, 202);
+  assert.deepEqual(await result.json(), {
+    operation_id: key,
+    kind: "document",
+    id,
+    status: "pending",
+  });
+});
+Deno.test("completed confirmation retries do not depend on external providers", async () => {
+  const { handler, request } = fixture({
+    rpc: async () => ({
+      data: { operation_id: key, kind: "document", id, status: "completed" },
+    }),
+    executeDeletion: async () => {
+      throw new Error("must_not_execute");
+    },
+  });
+  const result = await handler(request("v1/deletions/confirm", "POST", {
+    plan_id: id,
+    request_id: key,
+    confirmation: "DELETE",
+  }));
+  assert.equal(result.status, 200);
+  assert.equal((await result.json()).status, "completed");
+});
 // Create controlled owned fixtures with replaceable external responses.
 function fixture(overrides: Partial<AccountDependencies> = {}) {
   const calls: string[] = [];
@@ -25,10 +193,9 @@ function fixture(overrides: Partial<AccountDependencies> = {}) {
     rpc: async (_token, name) => {
       calls.push(name);
       return {
-        data:
-          name === "reserve_account_invitation"
-            ? { status: "reserved", invitation_id: id }
-            : { ok: true },
+        data: name === "reserve_account_invitation"
+          ? { status: "reserved", invitation_id: id }
+          : { ok: true },
         error: null,
       };
     },
@@ -230,13 +397,15 @@ Deno.test(
 Deno.test(
   "durable retry/conflict/throttle results never send another email",
   async () => {
-    for (const status of [
-      "already_sent",
-      "in_progress",
-      "failed",
-      "idempotency_conflict",
-      "throttled",
-    ]) {
+    for (
+      const status of [
+        "already_sent",
+        "in_progress",
+        "failed",
+        "idempotency_conflict",
+        "throttled",
+      ]
+    ) {
       const { handler, request, calls } = fixture({
         rpc: async () => ({ data: { status, invitation_id: id } }),
       });
@@ -252,8 +421,8 @@ Deno.test(
         status === "throttled"
           ? 429
           : status === "idempotency_conflict"
-            ? 409
-            : 200,
+          ? 409
+          : 200,
       );
       assert.equal(calls.includes("send"), false);
     }

@@ -1,3 +1,4 @@
+import { PermanentDeleteAction } from "../deletions/deletions";
 /**
  * Explicit offer metadata, capacity and cancellation actions. Confirmation state retains
  * reviewed version/request ID; background changes must not silently authorize an action.
@@ -129,6 +130,7 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
     <section className="panel job-lifecycle" aria-label={t("heading")}>
       <h2>{t("heading")}</h2>
       <p className="muted">{t("help")}</p>
+      <PermanentDeleteAction kind="job" id={job.id} label={job.title} />
       <div className="job-life-capacity">
         <strong>
           {capacity} {t("positions")}
@@ -326,6 +328,11 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
                     {event.reason}
                   </p>
                 ))}
+              <PermanentDeleteAction
+                kind="assignment"
+                id={claim.id}
+                label={claim.lecturer_name}
+              />
               {claim.can_cancel && (
                 <Button
                   variant="secondary"

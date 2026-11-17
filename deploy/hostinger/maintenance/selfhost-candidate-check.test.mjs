@@ -27,6 +27,7 @@ import {
   allocateCandidatePorts,
   assertCandidateConfiguration,
   candidateApiSuites,
+  candidateCommandFailure,
   checkCandidate,
   migrationWithHistory,
   financialProbeReceipt,
@@ -361,6 +362,48 @@ test("candidate boundary accepts only the fictional isolated topology", () => {
     change(configuration);
     assert.throws(() => assertCandidateConfiguration(configuration, scope));
   }
+});
+
+test("real failing child diagnostics preserve primary and cleanup errors without exposing candidate secrets", () => {
+  const registered = "fictional-candidate-password-12345";
+  const token = "eyJmaWN0aW9uYWw.eyJmaXh0dXJlLnVzZXI.signature";
+  const key = "sb_secret_fictional_fixture_key";
+  const first = "PRIMARY_BUSINESS_ASSERTION";
+  const last = "FINAL_OWNED_CLEANUP_ASSERTION";
+  const child = spawnSync(
+    process.execPath,
+    [
+      "-e",
+      `
+    process.stderr.write(${JSON.stringify(first + " " + registered + " " + token + " " + key + "\n" + ".".repeat(20000) + "\n" + last + " " + registered)});
+    process.stdout.write("Fictional failed child output");
+    process.exitCode = 1;
+  `,
+    ],
+    { encoding: "utf8", timeout: 10000 },
+  );
+  assert.equal(child.status, 1);
+  const diagnostic = candidateCommandFailure(
+    "fixture-child",
+    child.stderr,
+    child.stdout,
+    [registered],
+  );
+  assert(diagnostic.includes(first));
+  assert(diagnostic.includes(last));
+  assert(diagnostic.includes("diagnostic middle omitted"));
+  assert(diagnostic.includes("[redacted JWT]"));
+  assert(diagnostic.includes("[redacted key]"));
+  for (const secret of [registered, token, key])
+    assert(!diagnostic.includes(secret));
+  assert(
+    diagnostic.length <=
+      "Candidate operation failed: fixture-child ".length + 12000,
+  );
+  assert.equal(
+    candidateCommandFailure("fixture-child", "short failure", "", []),
+    "Candidate operation failed: fixture-child short failure\n",
+  );
 });
 
 test("migration replay preserves every original SQL dollar and exact history source", () => {

@@ -62,6 +62,119 @@ export const accountOpenApi = {
     },
   },
   paths: {
+    "/v1/deletions/access": {
+      get: {
+        operationId: "deletionAccess",
+        summary:
+          "Current typed permanent-deletion capabilities; no private content",
+        responses: { "200": jsonResponse(), ...errors },
+      },
+    },
+    "/v1/deletions/resources": {
+      get: {
+        operationId: "deletionResources",
+        summary:
+          "Authorised metadata targets; companies see only current own jobs",
+        parameters: [
+          {
+            name: "kind",
+            in: "query",
+            required: true,
+            schema: { type: "string", pattern: "^[a-z_]{1,40}$" },
+          },
+          {
+            name: "q",
+            in: "query",
+            schema: { type: "string", maxLength: 120 },
+          },
+          {
+            name: "cursor",
+            in: "query",
+            schema: { type: "string", format: "uuid" },
+          },
+          {
+            name: "limit",
+            in: "query",
+            schema: { type: "integer", minimum: 1, maximum: 100, default: 25 },
+          },
+        ],
+        responses: { "200": jsonResponse(), ...errors },
+      },
+    },
+    "/v1/deletions/preview": {
+      post: {
+        operationId: "deletionPreview",
+        summary:
+          "Review exact target, dependency counts and blockers before irreversible confirmation",
+        requestBody: jsonBody({
+          type: "object",
+          additionalProperties: false,
+          required: ["kind", "id"],
+          properties: {
+            kind: { type: "string", pattern: "^[a-z_]{1,40}$" },
+            id: { type: "string", format: "uuid" },
+          },
+        }),
+        responses: {
+          "200": jsonResponse(),
+          "409": { description: "Target or dependency conflict" },
+          ...errors,
+        },
+      },
+    },
+    "/v1/deletions/confirm": {
+      post: {
+        operationId: "deletionConfirm",
+        summary:
+          "Confirm an unexpired actor-bound plan; no trash, undo or optimistic success",
+        requestBody: jsonBody({
+          type: "object",
+          additionalProperties: false,
+          required: ["plan_id", "request_id", "confirmation"],
+          properties: {
+            plan_id: { type: "string", format: "uuid" },
+            request_id: { type: "string", format: "uuid" },
+            confirmation: { const: "DELETE" },
+          },
+        }),
+        responses: {
+          "200": jsonResponse(),
+          "202": {
+            description:
+              "Irreversible deletion is still pending; not completed",
+          },
+          "409": {
+            description: "Plan expired, scope changed or dependencies conflict",
+          },
+          ...errors,
+        },
+      },
+    },
+    "/v1/deletions/operations": {
+      get: {
+        operationId: "deletionOperations",
+        summary:
+          "Recover currently authorised incomplete deletion receipts after reload",
+        responses: { "200": jsonResponse(), ...errors },
+      },
+    },
+    "/v1/deletions/operations/{id}": {
+      post: {
+        operationId: "deletionResume",
+        summary:
+          "Resume a confirmed operation under current caller permissions and assurance",
+        parameters: userId,
+        requestBody: jsonBody({ type: "object", additionalProperties: false }),
+        responses: {
+          "200": jsonResponse(),
+          "202": {
+            description: "Pending; active writers or external work remain",
+          },
+          "409": { description: "Dependency conflict" },
+          ...errors,
+        },
+      },
+    },
     "/v1/me": {
       get: {
         operationId: "accountMe",

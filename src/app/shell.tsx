@@ -7,6 +7,8 @@ import { createPortal } from "react-dom";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { PermanentDeletionProvider } from "../features/deletions/deletions";
+import { deletionAccessQuery } from "../features/deletions/api";
 import { AnnouncementBanners } from "../features/announcements/announcements";
 import {
   MessagesSquare,
@@ -113,6 +115,7 @@ export function Shell() {
   const profile = useQuery(profileQuery(session!.user.id));
   const permissions = useQuery(permissionsQuery(session!.user.id));
   const roles = useQuery(userRolesQuery(session!.user.id));
+  const deletions = useQuery(deletionAccessQuery(session!.user.id));
   useAuthorizationRefresh(session!.user.id, roles.data, permissions.data);
   const online = useOnline();
   useEffect(() => {
@@ -225,6 +228,9 @@ export function Shell() {
     { to: "/help", icon: BookOpen, label: "helpGuides" },
     { to: "/welcome", icon: Compass, label: "welcome:nav" },
     ...(manage ? [{ to: "/admin", icon: Settings2, label: "admin" }] : []),
+    ...(!deletions.isError && deletions.data?.can_admin
+      ? [{ to: "/admin/deletions", icon: Settings2, label: "deletions:title" }]
+      : []),
   ];
   async function logout() {
     setSignoutFailed(false);
@@ -521,7 +527,9 @@ export function Shell() {
               >
                 <WelcomeGuideEntry />
               </PortalTour>
-              <Outlet />
+              <PermanentDeletionProvider>
+                <Outlet />
+              </PermanentDeletionProvider>
             </>
           )}
         </main>
