@@ -5,7 +5,11 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from "@tanstack/react-query";
 import { FileUpload, SubjectDocuments } from "./files";
 import type { PortalDocument } from "./api";
 
@@ -80,6 +84,47 @@ it("invalidates existing version history after a confirmed replacement instead o
   expect(
     client.getQueryState(["document-versions", "file"])?.isInvalidated,
   ).toBe(true);
+});
+it("replaces an initial pre-upload document read with a confirmed post-upload read", async () => {
+  const user = userEvent.setup();
+  let release!: (value: PortalDocument[]) => void;
+  let aborted = false;
+  let reads = 0;
+  const oldRead = new Promise<PortalDocument[]>((resolve) => {
+    release = resolve;
+  });
+  function Documents() {
+    const query = useQuery({
+      queryKey: ["documents", "pending"],
+      queryFn: ({ signal }) => {
+        reads++;
+        if (reads > 1) return Promise.resolve([file]);
+        signal.addEventListener("abort", () => {
+          aborted = true;
+        });
+        return oldRead;
+      },
+    });
+    return <div>{query.data?.map((item) => item.original_name)}</div>;
+  }
+  state.uploadDocument.mockResolvedValue(file);
+  setup(
+    <>
+      <Documents />
+      <FileUpload context={{ scope: "personal" }} />
+    </>,
+  );
+  await waitFor(() => expect(reads).toBe(1));
+  await user.upload(
+    screen.getByLabelText("Datei auswählen"),
+    new File(["fictional"], "new.png", { type: "image/png" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Datei hochladen" }));
+  await screen.findByText(file.original_name);
+  expect(aborted).toBe(true);
+  expect(reads).toBe(2);
+  release([]);
+  await screen.findByText(file.original_name);
 });
 it("pins previews and current-row downloads to the exact selected metadata version", async () => {
   const user = userEvent.setup();
