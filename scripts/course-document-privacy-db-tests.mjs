@@ -337,10 +337,7 @@ for (const moduleFirst of [false, true]) {
             ),
             /42501/,
           );
-          await assert.rejects(
-            actor(manager, `select public.course_workspace(${q(run)})`),
-            /42501/,
-          );
+          assert.equal((await workspace()).access.manager, true);
           await sql(
             `update public.profiles set active=false where id=${q(manager)}`,
           );

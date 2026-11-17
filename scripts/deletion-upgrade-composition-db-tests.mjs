@@ -117,8 +117,11 @@ await withTestDatabase(
       async () => {
         assert.equal(await allowed(formerStaff, own.document), "t");
         assert.equal(await allowed(formerStaff, contract.document), "f");
-        assert.equal(await allowed(formerStaff, internal.document), "t");
-        assert.equal(await allowed(staff, internal.document), "t");
+        assert.equal(
+          await allowed(formerStaff, internal.document, "aal2"),
+          "t",
+        );
+        assert.equal(await allowed(staff, internal.document, "aal2"), "t");
         assert.equal(await allowed(teacher, internal.document), "f");
         assert.equal(await allowed(teacher, jobFile.document), "t");
       },
@@ -205,12 +208,15 @@ await withTestDatabase(
     await check(
       "Dedicated internal evidence cannot fall back to uploader ownership after authority loss; current support and personal material remain intact",
       async () => {
-        assert.equal(await allowed(formerStaff, internal.document), "t");
+        assert.equal(
+          await allowed(formerStaff, internal.document, "aal2"),
+          "t",
+        );
         await sql(
           `delete from public.user_roles where user_id=${q(formerStaff)};insert into public.user_roles(user_id,role) values(${q(formerStaff)},'lecturer');`,
         );
         assert.equal(await allowed(formerStaff, internal.document), "f");
-        assert.equal(await allowed(staff, internal.document), "t");
+        assert.equal(await allowed(staff, internal.document, "aal2"), "t");
         assert.equal(await allowed(staff, internal.document, "aal1"), "f");
         assert.equal(await allowed(teacher, internal.document), "f");
         assert.equal(await allowed(formerStaff, own.document), "t");
