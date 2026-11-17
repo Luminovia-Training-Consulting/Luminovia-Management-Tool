@@ -233,6 +233,18 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
   });
   const adminPage = await adminContext.newPage();
   const pdf = fictionalPdf();
+  await login(page, lecturer);
+  await page.goto("/contracts");
+  await page
+    .getByLabel("Ausgeführter Vertrag als PDF", { exact: true })
+    .setInputFiles({
+      name: "fictional-contract.pdf",
+      mimeType: "application/pdf",
+      buffer: pdf,
+    });
+  await expect(page.getByText(/PDF geprüft und bereit/)).toBeVisible({
+    timeout: 45_000,
+  });
   await adminMfa(adminPage, administrator);
   await adminPage.goto("/contracts");
   await adminPage
@@ -248,16 +260,14 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
     .selectOption(lecturer.id);
   await dialog.getByLabel("Titel", { exact: true }).fill(title);
   await dialog.getByLabel(/Gültig ab/).fill("2026-01-01T00:00");
+  await expect(
+    dialog
+      .getByLabel("Hochgeladene Vertragsdatei")
+      .locator("option", { hasText: "fictional-contract.pdf" }),
+  ).toHaveCount(1);
   await dialog
-    .getByLabel("Ausgeführter Vertrag als PDF", { exact: true })
-    .setInputFiles({
-      name: "fictional-contract.pdf",
-      mimeType: "application/pdf",
-      buffer: pdf,
-    });
-  await expect(dialog.getByText(/PDF geprüft und bereit/)).toBeVisible({
-    timeout: 45_000,
-  });
+    .getByLabel("Hochgeladene Vertragsdatei")
+    .selectOption({ label: "fictional-contract.pdf" });
   await dialog
     .getByRole("button", { name: "Vertrag speichern", exact: true })
     .click();
@@ -268,7 +278,6 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
   await expect(
     adminPage.getByRole("heading", { name: title, exact: true }),
   ).toBeVisible();
-  await login(page, lecturer);
   await page.goto("/contracts");
   const contract = page
     .locator("article")
