@@ -1,7 +1,7 @@
 /**
  * Narrow avatar-read path through the currently visible selection. Return one exact clean version without granting broad access to personal documents or Storage URLs.
  */
-import { MAX_AVATAR_SIZE, validateAvatar } from "./avatar.ts";
+import { LEGACY_MAX_AVATAR_SIZE, validateAvatar } from "./avatar.ts";
 
 // Exact server-read version; recheck status and document binding before returning bytes.
 interface AvatarVersion {
@@ -43,7 +43,7 @@ export async function selectedAvatarBytes(
     version.id !== selected.version_id ||
     version.status !== "clean" ||
     version.mime_type !== "image/png" ||
-    version.size_bytes > MAX_AVATAR_SIZE
+    version.size_bytes > LEGACY_MAX_AVATAR_SIZE
   )
     throw new Error("avatar_unavailable");
   const document = await dependencies.document(version.document_id);
@@ -57,7 +57,7 @@ export async function selectedAvatarBytes(
     throw new Error("access_denied");
   const bytes = await dependencies.download(version.object_path);
   if (!bytes) throw new Error("avatar_unavailable");
-  await validateAvatar(bytes);
+  await validateAvatar(bytes, LEGACY_MAX_AVATAR_SIZE + 1);
   // Membership, suspension and selection may change during the Storage read.
   // The same target must still expose this exact version before any byte leaves.
   const current = await dependencies.selection(target);

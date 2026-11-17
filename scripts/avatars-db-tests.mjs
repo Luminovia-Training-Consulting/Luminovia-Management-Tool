@@ -66,8 +66,16 @@ await withTestDatabase("avatars_test", async ({ sql, actor }) => {
   await check(
     "Avatar metadata rejects ordinary files, oversized PNGs and nonpersonal scopes at the database boundary",
     async () => {
+      const belowLimit = JSON.parse(
+        await actor(
+          teacher,
+          `select public.reserve_document('small.png','image/png',999999,'personal','avatar',null,null,'${randomUUID()}')`,
+        ),
+      );
+      assert.ok(belowLimit.version_id);
       for (const [mime, size] of [
         ["application/pdf", 100],
+        ["image/png", 1000000],
         ["image/png", 2097153],
       ])
         await assert.rejects(

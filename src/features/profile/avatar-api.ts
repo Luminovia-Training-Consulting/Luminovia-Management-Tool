@@ -143,11 +143,11 @@ export function sourceImageSize(
   return [width, height];
 }
 
-/** Rasterize the checked image into a centred PNG of at most 512 pixels and close the ImageBitmap even on failure. */
+/** Rasterize the checked image into a centred PNG of at most 480 pixels and close the ImageBitmap even on failure. */
 export async function prepareAvatar(file: File): Promise<File> {
+  if (file.size >= 1_000_000) throw new Error("avatar_file_too_large");
   if (
     file.size < 1 ||
-    file.size > 10 * 1024 * 1024 ||
     !["image/png", "image/jpeg", "image/webp"].includes(file.type)
   )
     throw new Error("avatar_image_invalid");
@@ -162,7 +162,7 @@ export async function prepareAvatar(file: File): Promise<File> {
       image.height > 8192
     )
       throw new Error("avatar_image_invalid");
-    const side = Math.min(512, image.width, image.height);
+    const side = Math.min(480, image.width, image.height);
     const sourceSide = Math.min(image.width, image.height);
     const canvas = document.createElement("canvas");
     canvas.width = side;
@@ -187,7 +187,7 @@ export async function prepareAvatar(file: File): Promise<File> {
         "image/png",
       ),
     );
-    if (blob.size > 2 * 1024 * 1024) throw new Error("avatar_image_invalid");
+    if (blob.size >= 1_000_000) throw new Error("avatar_file_too_large");
     // New PNG bytes copy neither the original filename nor EXIF metadata.
     // The result is still an unverified upload until the actual server scan succeeds.
     return new File([blob], "avatar.png", { type: "image/png" });

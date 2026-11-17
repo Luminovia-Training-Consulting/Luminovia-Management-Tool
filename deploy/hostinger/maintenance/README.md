@@ -26,6 +26,10 @@ The candidate-owned `candidate-upgrade-probe.mjs` runs against both source phase
 Before upgrading, real fictional password-only Auth sessions create a
 scanned executed-contract PDF and lecturer receipt, accept a two-session legacy
 net-only job, and submit an own scanned invoice through the business APIs. A
+Before upgrading, the lecturer uploads their own scanned executed-contract PDF;
+an MFA administrator registers it and records the lecturer's receipt. The same
+real Auth sessions accept a two-session legacy net-only job and submit an own
+scanned invoice through the business APIs. A
 commission-capable baseline additionally creates and accepts a second complete
 job using that baseline's existing policy. The probe never chooses percentages,
 changes policy or runs the candidate-only bootstrap before retention is checked.

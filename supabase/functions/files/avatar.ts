@@ -1,7 +1,9 @@
 /**
  * Additional structural validation for canonical small PNG avatars. Check headers, CRCs, allowed chunks and bounded decompressed scanlines; malware scanning remains mandatory and separate.
  */
-export const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
+export const MAX_AVATAR_SIZE = 1_000_000;
+// Images accepted before the smaller upload limit remain readable.
+export const LEGACY_MAX_AVATAR_SIZE = 2 * 1024 * 1024;
 const MAX_AVATAR_EDGE = 512;
 const signature = [137, 80, 78, 71, 13, 10, 26, 10];
 const table = Uint32Array.from({ length: 256 }, (_, value) => {
@@ -25,8 +27,11 @@ function invalid(): never {
  * chunks, correct CRCs and bounded decoded scanlines. ClamAV remains mandatory;
  * image structure validation is an additional boundary, not a scan substitute. */
 // Validate the bounded canonical PNG and decompressed row length; reject foreign metadata chunks.
-export async function validateAvatar(bytes: Uint8Array): Promise<void> {
-  if (bytes.length > MAX_AVATAR_SIZE || bytes.length < 57) invalid();
+export async function validateAvatar(
+  bytes: Uint8Array,
+  maxExclusive = MAX_AVATAR_SIZE,
+): Promise<void> {
+  if (bytes.length >= maxExclusive || bytes.length < 57) invalid();
   if (!signature.every((value, i) => bytes[i] === value)) invalid();
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let at = 8,

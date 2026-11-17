@@ -1,7 +1,7 @@
 /**
  * Synthetic PNG pieces with real CRC/Deflate data exercise valid and altered avatars. Structural tests do not replace ClamAV.
  */
-import { crc32, validateAvatar } from "./avatar.ts";
+import { crc32, LEGACY_MAX_AVATAR_SIZE, validateAvatar } from "./avatar.ts";
 // Fail a specific fixture condition as a real test failure; never substitute silent success.
 function assert(value: unknown, message = "assertion failed"): asserts value {
   if (!value) throw new Error(message);
@@ -109,6 +109,24 @@ Deno.test(
       await rejects(
         await image(1, 1, undefined, chunk(type, new Uint8Array([0]))),
       );
+    await rejects(new Uint8Array(1000000));
     await rejects(new Uint8Array(2097153));
+  },
+);
+
+Deno.test(
+  "new limit rejects an old large valid PNG while legacy reads remain possible",
+  async () => {
+    const rowBytes = 1 + 512 * 4;
+    const rows = new Uint8Array(rowBytes * 512);
+    for (let offset = 0; offset < rows.length; offset += 65536)
+      crypto.getRandomValues(
+        rows.subarray(offset, Math.min(rows.length, offset + 65536)),
+      );
+    for (let y = 0; y < 512; y++) rows[y * rowBytes] = 0;
+    const png = await image(512, 512, rows);
+    assert(png.length >= 1_000_000 && png.length <= LEGACY_MAX_AVATAR_SIZE);
+    await rejects(png);
+    await validateAvatar(png, LEGACY_MAX_AVATAR_SIZE + 1);
   },
 );

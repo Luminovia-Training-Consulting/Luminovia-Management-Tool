@@ -4,9 +4,12 @@ The [product specification](PRODUCT.md#section-product-spec), verbatim [original
 
 ## Source coverage and remaining requirements
 
-### Authentication policy — 17 November 2026
+### Current preview and release continuation
 
-- [ ] Remove MFA factors, enrollment/challenge UI and AAL-based authorization while retaining active-account checks, database roles, RLS and resource-scoped permissions. Hosted verification is still pending.
+- [x] Prepare an owned local preview administrator and interruption-safe bootstrap; keep existing passwords and MFA.
+- [x] Prepare automatic CMS development publication gated by exact-main application and security checks; retain server migration, backup and recovery guards.
+- [ ] Complete full current-head local and CI acceptance, verify an actual preview browser login, and observe the real automatic publication and KVM1 updater outcome.
+
 
 | Area                         | Present source                                                                                                                                                 | Remaining scope or acceptance                                                                                                           |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |

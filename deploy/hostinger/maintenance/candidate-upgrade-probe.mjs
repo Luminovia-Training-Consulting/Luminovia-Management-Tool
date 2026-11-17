@@ -358,11 +358,12 @@ export async function createFinancialWitness({
   const contractBytes = financialProbePdf(
     "Fictional executed agreement - native upgrade witness only.",
   );
+  // Personal contract bytes are uploaded by their owner. Administration still
+  // records the executed contract below through the contracts.manage RPC.
   const contractDocument = await upload(
-    manager,
+    lecturer,
     contractBytes,
     "contract",
-    actorId,
   );
   const start = new Date(Date.now() + 90 * 86400000);
   start.setUTCHours(8, 0, 0, 0);
@@ -551,8 +552,8 @@ export async function runUpgradeProbe(mode) {
     capabilities.invoices,
     "The retained upgrade baseline must support the existing invoice business API",
   );
-  // Use the real caller session and gateway/scan path, including the existing
-  // contracts.manage boundary for a contract uploaded for this fixed lecturer.
+  // Use the real caller session and gateway/scan path. Personal contract files
+  // stay owner-uploaded; later registration exercises contracts.manage.
   const uploadFinancial = async (who, bytes, kind, subject) => {
     const { session } = await checked(who.auth.getSession());
     const form = new FormData();
