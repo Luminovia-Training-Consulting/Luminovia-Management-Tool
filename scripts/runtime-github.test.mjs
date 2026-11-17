@@ -713,7 +713,7 @@ await p.locked(async()=>{writeFileSync(${JSON.stringify(ready)},'ready');await n
     assert(existsSync(ready));
     await assert.rejects(
       f.preview.locked(async () => {}),
-      /läuft bereits/,
+      /already running/,
     );
     child.kill("SIGKILL");
     await closed;
