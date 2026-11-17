@@ -35,9 +35,19 @@ const pairs: Record<string, [string, string]> = {
   ownOnly: ["Meine Unterlagen", "My documents"],
   register: ["Ausgeführten Vertrag hinterlegen", "Register executed contract"],
   registerHint: [
-    "Hinterlege einen bereits ausgeführten Vertrag als PDF. Eine Empfangsbestätigung im Portal ersetzt keine rechtsverbindliche Unterzeichnung.",
-    "Upload an already executed contract as a PDF. A portal receipt acknowledgement does not replace a legally binding signature.",
+    "Wähle einen von der dozierenden Person hochgeladenen ausgeführten Vertrag. Eine Empfangsbestätigung ersetzt keine rechtsverbindliche Unterzeichnung.",
+    "Select an executed contract uploaded by the lecturer. A portal receipt acknowledgement does not replace a legally binding signature.",
   ],
+  ownContractUploadHint: [
+    "Lade deinen ausgeführten Vertrag selbst hoch. Die Verwaltung kann ihn für den Vertragseintrag auswählen, aber nicht herunterladen.",
+    "Upload your executed contract yourself. Management can select it for the contract record but cannot download it.",
+  ],
+  contractCandidate: ["Hochgeladene Vertragsdatei", "Uploaded contract file"],
+  contractCandidateHint: [
+    "Nur die dozierende Person kann den Dateiinhalt öffnen.",
+    "Only the lecturer can open the file contents.",
+  ],
+  selectContractCandidate: ["Datei auswählen", "Select a file"],
   person: ["Dozent:in", "Lecturer"],
   selectPerson: ["Person auswählen", "Choose a person"],
   title: ["Titel", "Title"],
@@ -60,8 +70,8 @@ const pairs: Record<string, [string, string]> = {
     "Uploading and checking PDF … {{progress}}%",
   ],
   uploadFailed: [
-    "Das PDF konnte nicht freigegeben werden. Bitte prüfe Dateityp und Größe oder versuche es erneut.",
-    "The PDF could not be approved. Check its type and size or try again.",
+    "Das PDF wurde nicht hochgeladen oder freigegeben. Prüfe Dateityp, Größe und Verbindung und versuche es erneut; bei wiederholtem Fehler kann die Sicherheitsprüfung nicht verfügbar sein.",
+    "The PDF was not uploaded or approved. Check its type, size and connection and retry; repeated failures may mean scanning is unavailable.",
   ],
   fileReady: ["PDF geprüft und bereit.", "PDF checked and ready."],
   registerSave: ["Vertrag speichern", "Save contract"],

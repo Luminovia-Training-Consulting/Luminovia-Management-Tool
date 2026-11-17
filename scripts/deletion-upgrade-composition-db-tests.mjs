@@ -36,6 +36,8 @@ assert.deepEqual(
   upgrades,
   "Deletion migrations remain consecutive and in dependency order; later migrations are tested separately",
 );
+// Later additive migrations are deliberately excluded: this fixture verifies
+// the original predecessor-to-deletion upgrade, not a frozen repository tip.
 const prefix = migrations.slice(0, firstUpgrade);
 const ceiling = prefix.at(-1).slice(0, 14);
 let checks = 0;

@@ -32,7 +32,7 @@ export async function assertTestPortsAvailable(
       probe.once("error", () =>
         reject(
           new Error(
-            `Testport ${port} ist bereits belegt oder nicht verfügbar. Ein anderer Checkout/Prozess bleibt unverändert; warte auf dessen Abschluss.`,
+            `Test port ${port} is already in use or unavailable. Another checkout or process remains untouched; wait for it to finish.`,
           ),
         ),
       );
@@ -81,7 +81,7 @@ export function acquireTestLock({
       );
     if (result.status === 1)
       throw new Error(
-        "Ein isolierter Portal-Test läuft bereits in einem anderen Checkout. Die gemeinsamen Testports bleiben geschützt; warte auf dessen Abschluss.",
+        "An isolated Portal test is already running in another checkout. Shared test ports remain protected; wait for it to finish.",
       );
     ftruncateSync(fd, 0);
     writeSync(
