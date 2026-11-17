@@ -187,6 +187,7 @@ test("documentation keeps only the required project records under docs", async (
   const runner = await readFile("scripts/runtime-test.mjs", "utf8");
   assert.match(generator, /"API_REFERENCE\.md"/);
   assert.doesNotMatch(generator, /docs\/API_REFERENCE\.md/);
+  assert.match(generator, /\.\.\/supabase\/migrations\//);
   assert.match(runner, /\.local\/screenshots/);
   assert.doesNotMatch(runner, /docs\/screenshots/);
 });

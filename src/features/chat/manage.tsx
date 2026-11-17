@@ -18,6 +18,7 @@ import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { chatContactsQuery, chatKeys, chatMembersQuery } from "./api";
 import type { ChatContact, ChatRoom } from "./types";
 import { GroupOwnership } from "./group-ownership";
+import { TopicInvitationManager } from "./topic-invitations";
 import "./i18n";
 /** Use the permitted display name or translated fallback for unnamed contacts. */
 const contactName = (
@@ -471,6 +472,16 @@ export function MembersPanel({
             )}
           </form>
         )}
+        {room.kind === "topic" &&
+          room.owner_id === actor &&
+          members.isSuccess &&
+          contacts.isSuccess && (
+            <TopicInvitationManager
+              actor={actor}
+              room={room.id}
+              candidates={available}
+            />
+          )}
         {room.kind === "topic" && members.isSuccess && (
           <GroupOwnership
             actor={actor}

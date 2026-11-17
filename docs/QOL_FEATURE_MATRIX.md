@@ -12,7 +12,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.1 Conversation types | Separate participant/course chats | Source present; acceptance pending | `src/features/chat/manage.tsx`; `supabase/migrations/20261115121922_secure_chat_collaboration.sql`. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.1 Conversation types | Management groups | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.1 Conversation types | Customer-specific conversations where explicitly authorised | Not yet assessed | Pending |
-| COMPLETE CHAT & MESSAGING SYSTEM / 2.1 Conversation types | Private invitation-only groups | Not yet assessed | Pending |
+| COMPLETE CHAT & MESSAGING SYSTEM / 2.1 Conversation types | Private invitation-only groups | Partial | Topic-group invites require consent, but existing owner-authorized direct additions remain available; strict invitation-only setting is not implemented. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.1 Conversation types | Discoverable groups where appropriate | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | Create a group | Source present; acceptance pending | `src/features/chat/manage.tsx`; `supabase/migrations/20261115141620_client_commission_revenue.sql`. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | Enter a group name | Source present; acceptance pending | `src/features/chat/manage.tsx`; `supabase/migrations/20261115141620_client_commission_revenue.sql`. |
@@ -21,7 +21,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | Choose a group category | Partial | `src/features/chat/manage.tsx` chooses topic or participant course; arbitrary category is not established. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | Add searchable topic tags | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | Select privacy/visibility settings | Not yet assessed | Pending |
-| COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | Invite members | Not yet assessed | Pending |
+| COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | Invite members | Partial; acceptance pending | Topic owners may invite active staff via `topic-invitations.tsx` and `20261117130014_chat_topic_invitations.sql`; course-group invitations and notifications are not implemented. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | Search for members | Partial | `src/features/chat/manage.tsx` has a search in the DM picker, while group creation uses checkboxes. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | Add multiple members | Source present; acceptance pending | `src/features/chat/manage.tsx`; `supabase/migrations/20261115141620_client_commission_revenue.sql`. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | Remove members | Source present; acceptance pending | `src/features/chat/manage.tsx`; `supabase/migrations/20261115141620_client_commission_revenue.sql`. |
@@ -38,10 +38,10 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | View group information | Partial; isolated tests passed | `src/features/chat/group-settings.tsx`; `supabase/migrations/20261117130001_chat_group_settings.sql`; `scripts/chat-group-settings-db-tests.mjs` 5 checks and `src/features/chat/group-settings.test.tsx` passed in this worktree; E2E pending. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | View group members | Source present; acceptance pending | `src/features/chat/manage.tsx`; `supabase/migrations/20261115141620_client_commission_revenue.sql`. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | View creation and relevant activity information | Not yet assessed | Pending |
-| COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | View and manage pending invitations | Not yet assessed | Pending |
+| COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | View and manage pending invitations | Partial; acceptance pending | Topic owners may list and revoke, recipients may list pending; browser acceptance remains pending. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Join a group when permitted | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Request membership when approval is required | Not yet assessed | Pending |
-| COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Accept or reject invitations | Not yet assessed | Pending |
+| COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Accept or reject invitations | Partial; acceptance pending | Topic invitees accept/reject against current server authority; no access before acceptance. Desktop/mobile acceptance remains pending. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Withdraw membership requests | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Leave voluntarily | Partial; isolated tests passed | `src/features/chat/group-ownership.tsx`; `scripts/chat-group-ownership-db-tests.mjs` 4 checks passed; limited to topic groups. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Remove members | Source present; acceptance pending | `src/features/chat/manage.tsx`; `supabase/migrations/20261115141620_client_commission_revenue.sql`. |
@@ -51,7 +51,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Automatically update access after assignment changes | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Revoke access after lecturer replacement or account suspension | Partial | `supabase/migrations/20261116173907_deletion_smart_operations_dependencies.sql`; `supabase/migrations/20261115121922_secure_chat_collaboration.sql`; exact replacement/suspension acceptance pending. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Public/discoverable groups | Not yet assessed | Pending |
-| COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Private invitation-only groups | Not yet assessed | Pending |
+| COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Private invitation-only groups | Partial | Topic-group invites require consent, but direct owner additions remain possible; no strict invitation-only setting. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | System-managed course groups | Source present; acceptance pending | `supabase/migrations/20261115210814_job_capacity_and_board.sql`; `src/features/chat/types.ts`. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Restricted management groups | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Pin conversations | Partial; component tests passed | `src/features/chat/chat.tsx`; `supabase/migrations/20261117130002_chat_personal_pins.sql`; `src/features/chat/pins.test.tsx` passed in this worktree; end-to-end pending. |
@@ -351,7 +351,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | NOTIFICATIONS AND PERSONAL PREFERENCES | New assignment notices | Not yet assessed | Pending |
 | NOTIFICATIONS AND PERSONAL PREFERENCES | Assignment confirmations | Not yet assessed | Pending |
 | NOTIFICATIONS AND PERSONAL PREFERENCES | Cancellation notices | Not yet assessed | Pending |
-| NOTIFICATIONS AND PERSONAL PREFERENCES | Group invitations | Not yet assessed | Pending |
+| NOTIFICATIONS AND PERSONAL PREFERENCES | Group invitations | Partial | Topic invitations appear in a permission-filtered in-app inbox; email/push delivery and invitation notifications for other group kinds are not implemented. |
 | NOTIFICATIONS AND PERSONAL PREFERENCES | Mention notifications | Partial | `supabase/migrations/20261116080730_chat_structured_mentions.sql`; dispatch and delivery on the current head remain unverified. |
 | NOTIFICATIONS AND PERSONAL PREFERENCES | Direct message notifications | Not yet assessed | Pending |
 | NOTIFICATIONS AND PERSONAL PREFERENCES | Course announcements | Not yet assessed | Pending |

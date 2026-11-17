@@ -13,7 +13,7 @@ await withTestDatabase("api_reference", async ({ sql }) => {
     ),
   );
   const migrations = (
-    await readdir(new URL("supabase/migrations/", import.meta.url))
+    await readdir(new URL("../supabase/migrations/", import.meta.url))
   )
     .filter((name) => name.endsWith(".sql"))
     .sort();
@@ -24,7 +24,7 @@ await withTestDatabase("api_reference", async ({ sql }) => {
       sha256: createHash("sha256")
         .update(
           await readFile(
-            new URL(`supabase/migrations/${name}`, import.meta.url),
+            new URL(`../supabase/migrations/${name}`, import.meta.url),
           ),
         )
         .digest("hex"),

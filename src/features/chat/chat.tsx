@@ -37,6 +37,7 @@ import { ContactPicker, CreateGroup, RoomIcon } from "./manage";
 import { ChatThread } from "./thread";
 import { RoomActivity } from "./room-activity";
 import { RoomUnread } from "./room-unread";
+import { TopicInvitationInbox } from "./topic-invitations";
 import "./room-unread-i18n";
 import "./i18n";
 import "./pins-i18n";
@@ -228,6 +229,7 @@ export function ChatPage() {
             </button>
           )}
           {general.isError && <Notice kind="error">{t("actionError")}</Notice>}
+          {staff && <TopicInvitationInbox actor={actor} onRoom={selectRoom} />}
           {(pin.isError || movePin.isError) && (
             <Notice kind="error">{t("pinError")}</Notice>
           )}
