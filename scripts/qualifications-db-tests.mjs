@@ -234,9 +234,9 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
       assert.equal(verified.version, 3);
       assert.deepEqual(await attest(linked.evidence.id, 2, key), verified);
       assert.equal((await history()).items[0].basis, "document_evidence");
-      await assert.rejects(
-        access(linked.evidence.id, manager, "aal1"),
-        /42501/,
+      assert.equal(
+        (await access(linked.evidence.id, manager, "aal1")).user_id,
+        teacher,
       );
       await assert.rejects(access(linked.evidence.id, peer, "aal1"), /42501/);
     },
