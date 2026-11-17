@@ -2290,3 +2290,7 @@ The first preview CI43761274867 correctly failed its runtime fixtures before sta
 ## Imported PR15 and PR20 delivery history
 
 The following isolated branch checkpoints are historical evidence. Current fourteen-check, signature and review-only policy is recorded above and in GITHUB_WORKFLOW; older always/disabled descriptions do not change it. These branch-only checks do not establish combined32 acceptance.
+
+## 17 November 2026 — PR35 candidate diagnostic lint fix
+
+GitHub Lint failed on PR35 because the selfhost candidate's post-failure Auth/database log filter called an undefined `redact`. Replaced that call with the existing `redactCandidateDiagnostic(logs, secrets)` helper, preserving the registered-secret/JWT/key redaction boundary before filtering and truncation. No execution, migration, service or acceptance behavior changed. Executed `npx eslint deploy/hostinger/maintenance/selfhost-candidate-check.mjs --max-warnings 0`, `npm run lint`, `node --test deploy/hostinger/maintenance/selfhost-candidate-check.test.mjs` (26/26), and `git diff --check`: all passed. This documents the observed CI lint correction only; other in-progress PR checks remain separate.

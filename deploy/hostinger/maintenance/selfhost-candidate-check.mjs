@@ -1099,7 +1099,7 @@ export async function checkCandidate({
           includeStderr: true,
           timeout: 10000,
         });
-        const errors = redact(logs)
+        const errors = redactCandidateDiagnostic(logs, secrets)
           .split("\n")
           .filter((line) => /\b(error|fatal|panic)\b/i.test(line))
           .slice(-20)
