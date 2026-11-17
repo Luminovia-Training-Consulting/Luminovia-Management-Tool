@@ -47,7 +47,8 @@ jobs:
       matrix:
         include:
           - name: Build
-            command: npm run build
+            # Typecheck runs beside this job; npm run build would execute tsc -b again.
+            command: npx vite build
           - name: Typecheck
             command: npm run typecheck
           - name: Lint
@@ -350,7 +351,8 @@ jobs:
         run: |
           test -n "$VITE_SUPABASE_URL"
           test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
-          npm run build
+          # The exact same-run Typecheck gate already passed before this release job.
+          npx vite build
           node deploy/hostinger/updates/package.mjs --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/cms-release"
       - name: Publish immutable update after verification
         env:
