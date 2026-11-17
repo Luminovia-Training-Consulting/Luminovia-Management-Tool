@@ -489,8 +489,7 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
           aal,
         );
       await assert.rejects(createTask(teacher, "aal1"), /42501/);
-      await assert.rejects(createTask(admin, "aal1"), /42501/);
-      const task = await createTask();
+      const task = await createTask(admin, "aal1");
       let state = await snap(run);
       assert.equal(testCheck(state, "tasks").complete, false);
       const complete = (who, version, decision = true, key = randomUUID()) =>

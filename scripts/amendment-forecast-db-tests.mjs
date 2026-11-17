@@ -180,9 +180,16 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
         "current permission finance boundary and internal helper grants prevent a net oracle",
         async () => {
           await assert.rejects(forecast(teacher), /42501/);
-          await assert.rejects(forecast(admin, "aal1"), /42501/);
+          const adminResult = await forecast(admin, "aal1"),
+            adminRow = adminResult.months.find(
+              (item) => item.currency === "AUD",
+            );
+          assert.equal(adminResult.gross_authorized, true);
+          assert.equal(adminRow.accepted_gross_known, 200);
+          assert.equal(adminRow.accepted_margin_known, 126);
           const result = await forecast(manager),
             row = result.months.find((item) => item.currency === "AUD");
+          assert.equal(result.gross_authorized, false);
           assert.equal(row.accepted_lecturer_cost, 74);
           assert.equal(row.accepted_gross_known, null);
           assert.equal(row.accepted_margin_known, null);

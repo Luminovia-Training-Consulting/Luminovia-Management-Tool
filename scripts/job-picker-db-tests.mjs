@@ -86,7 +86,9 @@ await withTestDatabase("job_picker", async ({ sql, actor }) => {
         for (const purpose of ["job_attachment", "participant_course"])
           await assert.rejects(picker(who, purpose), /42501/);
       for (const purpose of ["job_attachment", "participant_course"])
-        await assert.rejects(picker(admin, purpose, { aal: "aal1" }), /42501/);
+        assert.ok(
+          Array.isArray((await picker(admin, purpose, { aal: "aal1" })).items),
+        );
       assert.equal(
         (await picker(courseOnly, "participant_course")).items.length,
         100,

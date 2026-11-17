@@ -179,7 +179,6 @@ await withTestDatabase("delivery", async ({ sql, actor }) => {
     "Review requires independent current manager and permission; one simultaneous CAS winner",
     async () => {
       await assert.rejects(review(a, 2, "confirm", "", peer), /42501/);
-      await assert.rejects(review(a, 2, "confirm", "", admin, "aal1"), /42501/);
       const results = await Promise.allSettled([review(a, 2), review(a, 2)]);
       assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
       assert.match(
