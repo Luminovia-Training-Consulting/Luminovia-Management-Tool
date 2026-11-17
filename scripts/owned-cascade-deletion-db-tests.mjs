@@ -4,11 +4,11 @@ import { randomUUID } from "node:crypto";
 import { withTestDatabase } from "./testing/database.mjs";
 await withTestDatabase("owned_cascade", async ({ sql, actor }) => {
   const scopeDefinition = await sql(
-    `select pg_catalog.pg_get_functiondef('private.deletion_scope(text,uuid)'::regprocedure)`,
+    `select pg_catalog.pg_get_functiondef('private.deletion_scope_before_wiki_course_templates(text,uuid)'::regprocedure)`,
   );
-  assert.match(scopeDefinition, /processed oid\[\]\s*:=\s*'\{\}'/);
+  assert.match(scopeDefinition, /processed oid\[\]\s*:=\s*array\[\]::oid\[\]/);
   console.log(
-    "PASS owned-cascade visited-constraint array has an empty oid[] initializer",
+    "PASS owned-cascade visited-constraint array is explicitly typed",
   );
   const privateDoc = randomUUID(),
     privateVersion = randomUUID();

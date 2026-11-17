@@ -5,7 +5,16 @@ import { createClient } from "@supabase/supabase-js";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 await withApiFixture(
-  async ({ actor, passwordOnly, service, checked, sql, defer, url, suffix }) => {
+  async ({
+    actor,
+    passwordOnly,
+    service,
+    checked,
+    sql,
+    defer,
+    url,
+    suffix,
+  }) => {
     const admin = await actor("calendar-global-admin", "admin"),
       manager = await actor("calendar-global-manager", "management"),
       teacher = await actor("calendar-global-teacher", "lecturer"),
@@ -227,7 +236,7 @@ await withApiFixture(
     await checked(
       admin.client.rpc("set_account_roles", {
         p_user_id: manager.id,
-        p_roles: ["participant"],
+        p_roles: ["guest"],
       }),
       "Revoke own manager role",
     );
