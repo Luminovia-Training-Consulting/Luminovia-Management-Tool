@@ -267,6 +267,14 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
         ),
         "0",
       );
+      // Definer callers also depend on this gate, independently of restrictive RLS.
+      assert.equal(
+        await actor(
+          owner,
+          `select private.can_access_document(${q(document.document_id)})`,
+        ),
+        "f",
+      );
       await expectCode(
         service(
           `update public.documents set status='clean' where id=${q(document.document_id)}`,

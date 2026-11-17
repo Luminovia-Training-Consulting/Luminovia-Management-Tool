@@ -94,19 +94,19 @@ setTimeout(()=>process.exit(2),5000);
 test("stop returns success only after its supervisor acknowledges completed cleanup", async () => {
   const result = await stopFixture("stopped");
   assert.equal(result.error, undefined);
-  assert.match(result.output, /gestoppt/);
+  assert.match(result.output, /stopped/);
   assert.equal(result.state.phase, "stopped");
 });
 
 test("a supervisor cleanup failure makes the CLI stop fail rather than claim success", async () => {
   const result = await stopFixture("failed");
   assert.equal(result.state.phase, "failed");
-  assert.match(result.error?.message ?? "", /Stopp.*bestätigt/);
+  assert.match(result.error?.message ?? "", /shutdown was not confirmed/);
   assert(!result.output);
 });
 
 test("an exited supervisor without cleanup acknowledgement cannot report a completed stop", async () => {
   const result = await stopFixture("missing");
   assert.equal(result.state.phase, "ready");
-  assert.match(result.error?.message ?? "", /Stopp.*bestätigt/);
+  assert.match(result.error?.message ?? "", /shutdown was not confirmed/);
 });
