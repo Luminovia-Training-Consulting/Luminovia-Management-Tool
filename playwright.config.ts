@@ -18,10 +18,10 @@ const reportRoot = stage ? `.local/browser/${stage}` : undefined;
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  // Scenarios mutate real fictional records. Sequential execution keeps resource
-  // ownership traceable; failed cases are not hidden with retries.
+  // Tests within each spec stay ordered, while independent spec files use two
+  // workers. Fixtures create unique records in the owned QA database.
   fullyParallel: false,
-  workers: 1,
+  workers: 2,
   retries: 0,
   forbidOnly: true,
   failOnFlakyTests: true,

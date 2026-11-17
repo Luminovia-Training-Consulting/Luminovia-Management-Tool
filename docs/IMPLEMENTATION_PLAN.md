@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## Browser test runtime — 17 November 2026
+
+- [x] Keep both Chromium projects, every browser scenario/assertion, per-file ordering and zero retries; allow two independent spec files to run concurrently.
+- [x] Use Playwright's virtual clock for the 15-second stale-query behavior and shorten the idle observation only to 10.1 seconds, beyond the prior 10-second polling boundary.
+- [ ] Check formatting/type and browser inventory, then publish a signed PR and measure a fresh full browser CI run. Adjust worker count only if actual CI shows resource contention or no improvement; do not trim coverage.
+
 ## PR31 after accepted documentation main — 17 November 2026
 
 - [x] Integrate accepted PR38/main `bcba673`, preserve the briefing contract, and regenerate the API reference from the actual 70-migration replay (254 application functions).

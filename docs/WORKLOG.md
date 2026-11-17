@@ -1,5 +1,9 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — browser test runtime
+
+The user clarified that the browser tests themselves need to run faster. Playwright now runs two independent spec files at a time, keeping each spec ordered, both desktop/mobile projects, all assertions and zero retries. Replaced the lifecycle test's 16-second wall-clock wait with Playwright's virtual clock for the 15-second stale-query boundary. Reduced the file-idle observation from 12 to 10.1 seconds, still beyond the 10-second prior polling interval. Target runtime checks and the fresh full browser CI result are pending; no speedup is claimed until measured.
+
 ## 17 November 2026 — post-upload discovery race
 
 An initial document discovery request may still be pending when a successful upload commits. Invalidation alone can reuse that pre-commit request, blocking completion and omitting the new file. Upload success now cancels document list, exact-document and version-history queries before invalidating them, matching the broader safeguard in PR35. A controlled component regression failed without the fix and passed with it; the three original version/upload component tests and TypeScript passed locally; the regression also covers the three query prefixes. This race is a plausible contributor to the mobile CI file failures, but their precise cause is not established; the full browser and native gates must run again on the integrated revision.
