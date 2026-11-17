@@ -59,6 +59,37 @@ async function accessibleWithoutOverflow(page: Page) {
 
 // Rejected attempts stay retryable; simulated success survives role/language
 // changes until reset. Light/dark scans cover only the rendered demo state.
+test("mobile demo navigation explains and permits access to its remaining sections", async ({
+  page,
+}, testInfo) => {
+  await page.goto("/demo");
+  const hint = page.locator("#demo-navigation-scroll");
+  const nav = page.getByRole("navigation", { name: "Demo-Bereiche" });
+  await expect(hint).toHaveText(
+    "Alle Bereiche ansehen: Auf kleinen Bildschirmen in der Liste nach unten scrollen.",
+  );
+  await expect(nav).toHaveAttribute(
+    "aria-describedby",
+    "demo-navigation-scroll",
+  );
+  if (testInfo.project.name === "mobile-chromium") {
+    await expect(hint).toBeVisible();
+    expect(
+      await nav.evaluate((node) => node.scrollHeight > node.clientHeight),
+    ).toBe(true);
+    const last = nav.getByRole("link").last();
+    await last.focus();
+    await expect(last).toBeInViewport();
+    expect(await nav.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  } else {
+    await expect(hint).toBeHidden();
+  }
+  await page.getByLabel("Sprache", { exact: true }).selectOption("en");
+  await expect(hint).toHaveText(
+    "Browse all sections: on smaller screens, scroll down within the list.",
+  );
+});
+
 test("fictional job outcomes never reserve real work, and language changes retain practice state", async ({
   page,
 }, testInfo) => {
