@@ -8,7 +8,7 @@ await withTestDatabase("course_workspace", async ({ sql, actor }) => {
     randomUUID,
   );
   await sql(`insert into auth.users(id,email) values ${[admin, teacher, learner, second, third, client, foreign].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};
- insert into public.user_roles(user_id,role) values(${q(admin)},'admin'),(${q(teacher)},'lecturer'),(${q(learner)},'participant'),(${q(second)},'participant'),(${q(third)},'participant'),(${q(client)},'client'),(${q(foreign)},'lecturer');`);
+ insert into public.user_roles(user_id,role) values(${q(admin)},'admin'),(${q(teacher)},'lecturer'),(${q(learner)},'participant'),(${q(second)},'participant'),(${q(third)},'participant'),(${q(client)},'client'),(${q(foreign)},'lecturer');insert into public.user_roles(user_id,role)values(${q(learner)},'client'),(${q(second)},'client'),(${q(third)},'client');`);
   const [
     org,
     otherorg,
