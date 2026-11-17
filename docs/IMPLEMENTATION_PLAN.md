@@ -1,5 +1,13 @@
 # Persistent implementation plan
 
+## Current contract privacy and local audit — 17 November 2026
+
+- [x] Reproduce the personal contract access boundary and implement owner-only file access with bounded administrative registration metadata in a new migration.
+- [x] Pass isolated SQL privacy and actual Auth/MFA/Storage contract download, registration and replacement checks; retain historical files and accepted records.
+- [x] Fix the pinned Deno installer for clean npm 12 installs and verify the public demo on desktop and mobile emulation.
+- [ ] Finish the complete local browser/build/PWA run and combined exact-head CI; integrate current `main` before any permitted merge.
+- [ ] Recheck the current local preview after its fixed ports become available. The overall product and release requirements below remain open.
+
 PR40 browser acceptance repair: single shared preferences and visible mobile sign-out are implemented; 25 focused component tests, TypeScript and ESLint pass locally. The complete exact-head GitHub/browser/native gates remain pending.
 
 ## PR31 after accepted documentation main — 17 November 2026

@@ -1,5 +1,13 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — contract privacy and current local audit
+
+An isolated audit of main `086b394` reproduced personal lecturer contract document visibility for an unrelated MFA administrator. A forward-only migration limits personal contract documents and versions to their owner, blocks foreign contract uploads and offers MFA-authorised contract managers a minimal filename/version picker for registration. Existing files and accepted contract history are retained; lecturers now upload their own executed PDFs.
+
+On the pre-dashboard audit snapshot, lint, types and formatting passed; the complete isolated run passed all SQL groups, including owner/other lecturer/MFA administration and historically uploaded file cases. Its real Auth/MFA/Storage/ClamAV commercial API test passed exact owner-byte downloads, foreign administrator denial, registration and replacement. The desktop/mobile browser suite and build/PWA remain in progress. This snapshot does not test the subsequently merged dashboard changes; combined exact-head CI is required. No hosted migration or real email was performed. [PR #45](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/45) tracks the fix and final acceptance.
+
+The clean npm 12 installation had blocked Deno's postinstall, preventing local acceptance. The exact pinned installer was reviewed and allowed; a fresh `npm ci` and Deno version check passed. [PR #43](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/43) tracks delivery. Public demo desktop/mobile emulation passed 12 cases with a bilingual scroll hint, tracked in [PR #44](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/44). Existing previews occupy the fixed current-preview ports, so no newer persistent preview was started or foreign service stopped.
+
 ## 17 November 2026 — PR19 native Auth failure diagnosis
 
 The current selfhost CI run passed retained-data upgrade and 34 real API suites, then GoTrue returned HTTP 500 while creating a fictional qualification-passport actor. The prior cleanup removed the candidate containers without recording the underlying service error. The candidate checker now collects at most 20 bounded, redacted error lines from its own Auth and PostgreSQL containers before cleanup on failure; no gate or retry behavior changes. Twenty-five focused checker tests and formatting pass locally. The exact new-head full CI is pending; the root cause is not yet asserted.
