@@ -1,16 +1,8 @@
 # Luminovia Portal — development work log
 
-## 17 November 2026 — user-authorised automatic development releases
+## 17 November 2026 — own account settings
 
-The user requests that the KVM1 development instance keep up with latest main. This source adds a separate trusted-default-branch publisher triggered by completed workflows. It confirms the triggering event is a successful main push, queries both Portal checks and Security analysis for the exact current main commit, runs no checkout/build before the gate, rechecks main immediately before release publication, and serializes publication per SHA with the existing explicit manual path. Releases remain immutable and the VPS updater retains its independent exact-main CI, content, migration, backup, health and rollback gates. Failed, pending, unavailable or superseded checks do not publish automatically. A release can still require operator review and successful publication does not prove installation.
-
-Local evidence: the executable workflow gate and existing publication boundary suite pass 8 cases; combined with the PR-preview and documentation boundary suites 28 cases pass. ESLint, actionlint, relevant changed-file Prettier and `git diff --check` pass; the two persistent ledgers retain their pre-existing formatting. A live read-only GitHub API call verified that the query syntax selects the exact main security workflow. No release, VPS mutation, production change, credentials or hosted acceptance was performed; exact-head CI and a real default-branch workflow run are still required.
-
-## 17 November 2026 — local-only GitHub preview administrator
-
-A dedicated fictional preview administrator accepts `admin` / `admin` only on the owned GitHub preview. Its creation checks the registered checkout/project, local Auth/API/PostgreSQL addresses and Docker container ownership labels; normal development, QA, PR previews and hosted services never create it. Existing accounts, passwords and MFA remain unchanged. Supabase Auth still verifies the password, and privileged actions retain their existing AAL2 checks. The public UI only translates the local alias under the exact loopback frontend/backend combination.
-
-Executed: isolated login/component tests 8/8; runtime GitHub/local-preview ownership tests 22/22; TypeScript, targeted ESLint, source formatting and compiler graph/exports passed. PostgreSQL's installed `extensions.crypt` and `gen_salt` were read-only verified on the local preview service. **Not tested:** genuine new-preview Auth/MFA login and restart; the fixed preview port belongs to another active checkout and local swap is nearly full. No foreign services were stopped. Complete exact-head browser, native and security CI remain required.
+Added a personal account section linking the existing authenticated password form and requesting an email change through native Supabase Auth. The profile form retains own display-name editing; sign-in remains email-based. An accepted email request is reported as pending until Auth confirms the address, with no optimistic email replacement. The UI handles invalid, unchanged, offline and failed requests, and supports DE/EN. Focused component/Auth tests pass 9 cases; TypeScript and focused ESLint pass. Actual two-address confirmation, delivery, callback and selfhost acceptance remain unverified until the isolated full CI runs; no real email was sent.
 
 ## 17 November 2026 — preserve capacity stress coverage
 

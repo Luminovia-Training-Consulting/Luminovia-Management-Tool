@@ -1,18 +1,10 @@
 # Persistent implementation plan
 
-## Automatic verified CMS development releases — 17 November 2026
+## Own account settings — 17 November 2026
 
-- [x] Prepare exact-current-main automatic publisher after both full Portal checks and Security analysis push runs pass; preserve manual publication and share per-SHA publication lock.
-- [x] Preserve server-side immutable artifact, migration, backup, health and rollback controls; document that operator review may still block an update.
-- [x] Execute 28 policy/preview/documentation tests and relevant formatting/lint checks; verify read-only GitHub workflow query syntax.
-- [ ] Complete exact-head CI and observe a real automatic workflow publication and the existing KVM1 updater outcome; investigate any refusal without bypassing controls.
-
-
-## Local-only preview administrator
-
-- [x] Add a separate fictional account and `admin` username alias guarded by owned GitHub-preview identity and loopback endpoints; never reset an existing account or weaken the regular password policy.
-- [x] Run focused ownership, existing-account, UI/Auth component, source quality and compiler checks.
-- [ ] Verify actual first login, administrator MFA, stop/restart and existing-password preservation with a separately owned real preview once the shared fixed ports and system resources are available. Complete exact-head CI remains required.
+- [x] Expose own display name, email-change request and existing password change through the profile, with bilingual pending and error states.
+- [x] Pass focused UI/Auth tests, TypeScript and focused lint.
+- [ ] Verify actual two-address email confirmation, callback, login after change, and password update in the isolated native/browser acceptance; record CI results before claiming complete end-to-end verification.
 
 PR43 correction: retain the full 50-way simultaneous HTTP capacity race; the preceding ten-in-flight experiment is superseded because the native PostgreSQL crash cause is not yet established. The existing complete cleanup and current-head native CI remain required.
 
