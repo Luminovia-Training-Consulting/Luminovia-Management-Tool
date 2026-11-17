@@ -12,6 +12,7 @@
 
 - [x] Add a separate fictional account and `admin` username alias guarded by owned GitHub-preview identity and loopback endpoints; never reset an existing account or weaken the regular password policy.
 - [x] Run focused ownership, existing-account, UI/Auth component, source quality and compiler checks.
+- [x] Recover an interrupted first-account creation using a private identity marker and atomic finalization; process-kill and unchanged-password regressions pass.
 - [ ] Verify actual first login, administrator MFA, stop/restart and existing-password preservation with a separately owned real preview once the shared fixed ports and system resources are available. Complete exact-head CI remains required.
 
 PR43 correction: retain the full 50-way simultaneous HTTP capacity race; the preceding ten-in-flight experiment is superseded because the native PostgreSQL crash cause is not yet established. The existing complete cleanup and current-head native CI remain required.
