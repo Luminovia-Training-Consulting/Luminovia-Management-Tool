@@ -83,7 +83,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
     async () => {
       await assert.rejects(get(peer, ticket), /Support access denied/);
       await assert.rejects(get(peer, randomUUID()), /Support access denied/);
-      await assert.rejects(get(inactive, ticket), /Active account required/);
+      await assert.rejects(get(inactive, ticket), /Support access denied/);
       await assert.rejects(
         sql("set role anon;select public.support_context()"),
         /permission denied/,
