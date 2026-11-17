@@ -26,7 +26,7 @@ The later user instructions supersede earlier admin-verified expertise and blank
 - [x] Native self-declared claim: actual login, unverified own-topic insertion, HTTP200 confirmed full claim and both sessions allocated; missing topic denied, no JS errors/mobile overflow.
 - [x] Native marketplace at 1440/390px: blank card area opens detail, one native link, filters collapsed, no standalone saved-view heading, management gap20px, no overflow/page errors.
 - [x] Native confirmed lecturer and organisation deletion: Auth, exact scanned files/Storage, reservations, personal calendar and linked historical/current records removed; shared job reopened and unrelated template/peer data retained.
-- [ ] Update the persistent local preview without resetting its data.
+- [x] Update the persistent local preview at5773 without a data reset: verified backup archive, preserved project/port overlay and Auth/Storage volumes, applied all three forward migrations, checked installed frozen-scope/file-fence definitions and passed native admin login/calendar/jobs smoke.
 - [ ] Full canonical historical API/E2E/PWA suite and hosted exact-head CI remain separate from focused native acceptance; do not claim those passed from this slice.
 
 
