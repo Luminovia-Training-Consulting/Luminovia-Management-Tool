@@ -149,7 +149,7 @@ test("individual account roles, scoped invitations and linked status management 
     ),
   ).toBe(true);
   await page.screenshot({
-    path: `docs/screenshots/${testInfo.project.name}-accounts.png`,
+    path: `.local/screenshots/${testInfo.project.name}-accounts.png`,
     fullPage: true,
   });
 });

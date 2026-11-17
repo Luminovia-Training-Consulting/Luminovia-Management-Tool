@@ -196,7 +196,7 @@ test("real lecturer delivery, independent correction and confirmation preserve i
       ),
     ).toBe(true);
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-delivery-dark-en.png`,
+      path: `.local/screenshots/${testInfo.project.name}-delivery-dark-en.png`,
       fullPage: true,
     });
     const peerApi = api(process.env.SUPABASE_ANON_KEY!);

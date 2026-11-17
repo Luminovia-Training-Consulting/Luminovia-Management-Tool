@@ -117,7 +117,7 @@ test("private blockout editing and explicit management sharing retain notes and 
     await page.getByLabel("Theme", { exact: true }).selectOption("dark");
     await a11y(page);
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-availability.png`,
+      path: `.local/screenshots/${testInfo.project.name}-availability.png`,
       fullPage: true,
     });
     await page

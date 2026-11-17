@@ -2,7 +2,7 @@
 
 This reference describes the current repository API. It is generated from a disposable replay of **76 migration files** through version **20261117120001**, containing **272 application public functions**. It excludes extension-owned functions. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): `0d1d1cfc59a1e524f914ca8b615af4d5c44218fe9fcd7319cf547983c4057770`.
 
-Regenerate with `PORTAL_DB_CONTAINER=<owned-test-container> node scripts/generate-api-reference.mjs`. The generator creates and drops a random database; it never inspects user records. Use an owned isolated test container, following [local development](LOCAL_DEVELOPMENT.md). Replay uses SQL Auth helpers, so this inventory alone does not verify native Auth, HTTP gateway availability, business eligibility or deployment. [Functional acceptance](FUNCTIONAL_ACCEPTANCE.md) and [QA results](QA_RESULTS.md) define that evidence.
+Regenerate with `PORTAL_DB_CONTAINER=<owned-test-container> node scripts/generate-api-reference.mjs`. The generator creates and drops a random database; it never inspects user records. Use an owned isolated test container, following [local development](DEVELOPMENT.md#section-local-development). Replay uses SQL Auth helpers, so this inventory alone does not verify native Auth, HTTP gateway availability, business eligibility or deployment. [Functional acceptance](DEVELOPMENT.md#section-functional-acceptance) and QA results define that evidence.
 
 ## Base URLs and authentication
 
@@ -12,7 +12,7 @@ Use Supabase Auth for invitation-only login, recovery, sessions, password/email 
 
 ## Account HTTP facade
 
-Base: `/functions/v1/accounts/v1`. Machine-readable OpenAPI: `/functions/v1/accounts/openapi.json`; owning contract: [openapi.ts](../supabase/functions/accounts/openapi.ts), enforced by [handler.ts](../supabase/functions/accounts/handler.ts).
+Base: `/functions/v1/accounts/v1`. Machine-readable OpenAPI: `/functions/v1/accounts/openapi.json`; owning contract: [openapi.ts](supabase/functions/accounts/openapi.ts), enforced by [handler.ts](supabase/functions/accounts/handler.ts).
 
 | Method      | Path relative to facade base                                   | Purpose                                                                     |
 | ----------- | -------------------------------------------------------------- | --------------------------------------------------------------------------- |
@@ -32,7 +32,7 @@ The facade permits allowlisted browser Origins; authenticated non-browser client
 
 ## Permanent deletion
 
-Permanent deletion requires current AAL2 and live resource authority. Preview and confirmation recheck actor-bound dependencies; accepted financial references and private-resource ACLs remain authoritative. The account Edge facade uses a database-issued execution permit for exact all-version native Storage cleanup and Auth hard deletion, drains active writer leases and returns completed only after verified absence. Pending receipts survive reload through the own permitted operations projection. Company jobs require consistent current organisation links; former lecturer claims do not grant staff job/file access. No trash or restore is provided. Read [the deletion contract](PERMANENT_DELETION.md).
+Permanent deletion requires current AAL2 and live resource authority. Preview and confirmation recheck actor-bound dependencies; accepted financial references and private-resource ACLs remain authoritative. The account Edge facade uses a database-issued execution permit for exact all-version native Storage cleanup and Auth hard deletion, drains active writer leases and returns completed only after verified absence. Pending receipts survive reload through the own permitted operations projection. Company jobs require consistent current organisation links; former lecturer claims do not grant staff job/file access. No trash or restore is provided. Read [the deletion contract](GUIDE.md#section-permanent-deletion).
 
 ## Integration-only website enquiries
 
@@ -40,7 +40,7 @@ Permanent deletion requires current AAL2 and live resource authority. Preview an
 
 The closed JSON payload contains a stable `submission_id` UUID, bounded company/contact/email/topic/message/preferences fields, recognised IANA time zone, `de`/`en` locale, the configured `privacy_notice_version` and literal `consent: true`. Actual streamed bodies are limited to 24,000 bytes. Only a confirmed durable database result returns `202 {"received":true,"receipt":"<submission-id>"}`; no internal enquiry or customer ID is exposed. Identical retries return the original receipt; changed retries return 409. Persistent sender limits reject new submissions over 10 per minute or 100 per rolling day.
 
-Management uses current MFA-protected `enquiry_context`, `enquiry_inbox`, `enquiry_detail` and versioned decision/conversion RPCs from the inventory below. Read [WEBSITE_ENQUIRIES](WEBSITE_ENQUIRIES.md) and the [deployed handler](../supabase/functions/website-enquiries/handler.ts) for exact fields, error envelopes, permissions and public-activation prerequisites. Source presence does not connect or publish the public Website.
+Management uses current MFA-protected `enquiry_context`, `enquiry_inbox`, `enquiry_detail` and versioned decision/conversion RPCs from the inventory below. Read [WEBSITE_ENQUIRIES](GUIDE.md#section-website-enquiries) and the [deployed handler](supabase/functions/website-enquiries/handler.ts) for exact fields, error envelopes, permissions and public-activation prerequisites. Source presence does not connect or publish the public Website.
 
 ## Native RPC use
 
@@ -58,7 +58,7 @@ if (error) throw error;
 // Inspect the returned status before showing confirmed allocation.
 ```
 
-Keep a retry's operation UUID and reviewed payload stable. Version/cursor conflicts require a fresh authorised read and renewed consent where applicable. Accepted rates, currencies, contract versions and session snapshots are immutable. Monetary values remain in their original currency. See [job lifecycle](JOB_LIFECYCLE.md), [role-specific pricing](DELEGATED_ROLES_PRICING.md) and [discovery](JOB_DISCOVERY.md).
+Keep a retry's operation UUID and reviewed payload stable. Version/cursor conflicts require a fresh authorised read and renewed consent where applicable. Accepted rates, currencies, contract versions and session snapshots are immutable. Monetary values remain in their original currency. See [job lifecycle](GUIDE.md#section-job-lifecycle), [role-specific pricing](GUIDE.md#section-delegated-roles-pricing) and [discovery](GUIDE.md#section-job-discovery).
 
 ## Replayed public function inventory
 
@@ -341,17 +341,17 @@ The grants column reports effective PostgreSQL EXECUTE privileges for the three 
 
 ## Files and printable documents
 
-All private responses use no-store semantics and current resource checks. IDs are selectors, never access tokens. The [files gateway](../supabase/functions/files/index.ts) accepts `POST /functions/v1/files` with an approved Origin and bearer JWT:
+All private responses use no-store semantics and current resource checks. IDs are selectors, never access tokens. The [files gateway](supabase/functions/files/index.ts) accepts `POST /functions/v1/files` with an approved Origin and bearer JWT:
 
 - Multipart upload: `file`, `client_id`, optional `scope`, `kind`, `room_id`, `job_id`, `replace_id` and `owner_id`. RPCs validate targets, rights, quotas and retry identity. Actual byte validation, quarantine and successful scanning precede clean availability.
 - JSON exact-version download: `{ "action": "download", "id": "<document-id>", "version_id": "<version-id>" }`; omitting `version_id` selects the current version. Rights are rechecked around private Storage reads.
 - Avatar: `{ "action": "avatar", "user_id": "<profile-id>" }` returns only the current permitted clean selection.
 - Qualification evidence: `{ "action": "qualification_evidence_download", "evidence_id": "<evidence-id>" }` uses its separate exact-version grant.
 
-`POST /functions/v1/course-documents` serves authorised course/client resources and renders attendance/completion documents, assignment confirmations, earnings statements and own qualification passports. Its closed, kind-specific JSON inputs and permission recheck are defined in [the handler](../supabase/functions/course-documents/handler.ts), with workflows in [course workspace](COURSE_LEARNING_WORKSPACE.md), [finance](TIMESHEETS_FINANCE_CONTROL_CENTER.md) and [qualification passport](QUALIFICATION_PASSPORT.md). These PDFs do not assert a legal signature or professional certification.
+`POST /functions/v1/course-documents` serves authorised course/client resources and renders attendance/completion documents, assignment confirmations, earnings statements and own qualification passports. Its closed, kind-specific JSON inputs and permission recheck are defined in [the handler](supabase/functions/course-documents/handler.ts), with workflows in [course workspace](GUIDE.md#section-course-learning-workspace), [finance](GUIDE.md#section-timesheets-finance-control-center) and [qualification passport](GUIDE.md#section-qualification-passport). These PDFs do not assert a legal signature or professional certification.
 
 ## Calendar feeds, source revisions and privacy
 
-`GET /functions/v1/calendar-feed?token=<private-token>` is a distinct token-authorised iCalendar subscription, not a bearer-authenticated account endpoint. The high-entropy secret grants the selected private feed; store/share it accordingly. SQL stores its hash and the gateway repeats revocation checks. [Calendar connections](CALENDAR_CONNECTIONS.md) owns scope, expiry and revocation details.
+`GET /functions/v1/calendar-feed?token=<private-token>` is a distinct token-authorised iCalendar subscription, not a bearer-authenticated account endpoint. The high-entropy secret grants the selected private feed; store/share it accordingly. SQL stores its hash and the gateway repeats revocation checks. [Calendar connections](GUIDE.md#section-calendar-connections) owns scope, expiry and revocation details.
 
-Course-run job publication binds a trusted source revision and exact session references; stale previews reject rather than silently changing the teaching block. [Course building blocks](COURSE_BUILDING_BLOCKS.md) and [staff comments](RESOURCE_COMMENTS.md) explain their separate resource rights. Client or learner access does not grant staff discussion access. [Architecture](ARCHITECTURE.md) records the explicit opt-in minimal own offline teaching snapshot; generic authenticated responses and private file bytes are not cached offline.
+Course-run job publication binds a trusted source revision and exact session references; stale previews reject rather than silently changing the teaching block. [Course building blocks](GUIDE.md#section-course-building-blocks) and [staff comments](GUIDE.md#section-resource-comments) explain their separate resource rights. Client or learner access does not grant staff discussion access. [Architecture](DEVELOPMENT.md#section-architecture) records the explicit opt-in minimal own offline teaching snapshot; generic authenticated responses and private file bytes are not cached offline.

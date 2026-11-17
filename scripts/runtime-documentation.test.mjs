@@ -44,6 +44,11 @@ test("repository documentation links and heading fragments resolve", async () =>
     "CONTRIBUTING.md",
     "SECURITY.md",
     "ROADMAP.md",
+    "PRODUCT.md",
+    "DEVELOPMENT.md",
+    "OPERATIONS.md",
+    "GUIDE.md",
+    "API_REFERENCE.md",
   ];
   /** Collects delivered Markdown documents recursively for local link validation. */
   async function walk(directory) {
@@ -53,7 +58,6 @@ test("repository documentation links and heading fragments resolve", async () =>
       else if (item.name.endsWith(".md")) files.push(path);
     }
   }
-  await walk("docs");
   await walk(".github");
   const broken = [];
   let links = 0;
@@ -133,6 +137,11 @@ test("public guidance and current catalogue contain no historical customer ident
     "SECURITY.md",
     "data/course-building-blocks.json",
     "ROADMAP.md",
+    "PRODUCT.md",
+    "DEVELOPMENT.md",
+    "OPERATIONS.md",
+    "GUIDE.md",
+    "API_REFERENCE.md",
   ];
   async function collect(directory) {
     for (const item of await readdir(directory, { withFileTypes: true })) {
@@ -141,7 +150,6 @@ test("public guidance and current catalogue contain no historical customer ident
       else if (/\.(?:md|txt)$/.test(item.name)) files.push(path);
     }
   }
-  await collect("docs");
   await collect(".github");
   const leaks = [];
   for (const file of files) {
@@ -159,4 +167,15 @@ test("public guidance and current catalogue contain no historical customer ident
     [],
     "Public customer-independent content must exclude historical customer labels",
   );
+});
+
+// Browser evidence and generated documentation must not recreate the removed directory.
+test("documentation and browser evidence do not depend on a docs directory", async () => {
+  await assert.rejects(access("docs"), { code: "ENOENT" });
+  const generator = await readFile("scripts/generate-api-reference.mjs", "utf8");
+  const runner = await readFile("scripts/runtime-test.mjs", "utf8");
+  assert.match(generator, /"API_REFERENCE\.md"/);
+  assert.doesNotMatch(generator, /docs\/API_REFERENCE\.md/);
+  assert.match(runner, /\.local\/screenshots/);
+  assert.doesNotMatch(runner, /docs\/screenshots/);
 });

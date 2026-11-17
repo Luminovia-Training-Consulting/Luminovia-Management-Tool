@@ -1,8 +1,15 @@
 # Luminovia Portal roadmap
 
-The [product specification](docs/PRODUCT_SPEC.md), verbatim [original brief](docs/UNIVERSAL_MASTER_PROMPT.txt), [smart operations requirements](docs/SMART_OPERATIONS_SPEC.md) and [operational extension brief](docs/OPERATIONS_EXTENSION_PROMPT.txt) retain the full target. This overview describes source coverage and remaining product/release work, with no promised delivery dates. It is not an execution diary or a release approval.
+The [product specification](PRODUCT.md#section-product-spec), verbatim [original brief](PRODUCT_BRIEF.txt), [smart operations requirements](PRODUCT.md#section-smart-operations-spec) and [operational extension brief](OPERATIONS_BRIEF.txt) retain the full target. This overview describes source coverage and remaining product/release work, with no promised delivery dates. It is not an execution diary or a release approval.
 
 ## Source coverage and remaining requirements
+
+### Current preview and release continuation
+
+- [x] Prepare an owned local preview administrator and interruption-safe bootstrap; keep existing passwords and MFA.
+- [x] Prepare automatic CMS development publication gated by exact-main application and security checks; retain server migration, backup and recovery guards.
+- [ ] Complete full current-head local and CI acceptance, verify an actual preview browser login, and observe the real automatic publication and KVM1 updater outcome.
+
 
 | Area                         | Present source                                                                                                                                                 | Remaining scope or acceptance                                                                                                           |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
@@ -21,16 +28,16 @@ The [product specification](docs/PRODUCT_SPEC.md), verbatim [original brief](doc
 | M — Notifications            | Own inbox/preferences, quiet hours, announcements, transactional delivery source, optional device-consented Push                                               | Authorized provider/worker operation, recurring delivery monitoring, real supported-device acceptance and remaining lifecycle reminders |
 | N — Administration           | User/qualification/catalogue administration, finite audit projection, support, Control Center, reviewed migration/update/backup tools                          | Granular permission/brand settings, retention, recoverable bulk operations, richer diagnostics and operational handoff                  |
 
-Detailed contracts and explicit limits are linked in the [documentation index](docs/README.md). Presence in this table means connected source exists; it does not mean every target requirement, physical platform or hosted operation has passed acceptance.
+Detailed contracts and explicit limits are linked in the [project guides](README.md#documentation). Presence in this table means connected source exists; it does not mean every target requirement, physical platform or hosted operation has passed acceptance.
 
-The additional requested formal change-request/amendment workflow and validated accounting interoperability remain separate unfinished deliverables. Portal-side enquiry intake/management is now present; public Website connection and activation still require approved trusted transport and abuse controls. Existing lifecycle controls, course requests or CSV exports do not complete them. See [operational extension status](docs/OPERATIONS_EXTENSION_STATUS.md).
+The additional requested formal change-request/amendment workflow and validated accounting interoperability remain separate unfinished deliverables. Portal-side enquiry intake/management is now present; public Website connection and activation still require approved trusted transport and abuse controls. Existing lifecycle controls, course requests or CSV exports do not complete them. See operational extension status.
 
 ## Acceptance and operational priorities
 
-1. Every behavioral increment needs source-specific database/API/browser checks and current PR gates. [Functional acceptance](docs/FUNCTIONAL_ACCEPTANCE.md) maps the A–N journeys; [QA results](docs/QA_RESULTS.md) records actual checkpoints and failures.
+1. Every behavioral increment needs source-specific database/API/browser checks and current PR gates. [Functional acceptance](DEVELOPMENT.md#section-functional-acceptance) maps the A–N journeys; QA results records actual checkpoints and failures.
 2. Retain immutable migration history, accepted financial/session snapshots and private resource boundaries. Review additive migrations against real retained data; do not reset ordinary databases.
 3. Validate supported desktop/mobile installations, Safari/Firefox where required, manual keyboard/accessibility, calendar subscriptions, Push and realistic concurrent usage in their actual environments.
 4. Before operating delivery workers or publishing an update, verify the authorized target, private credentials, opt-ins, monitoring and rollback. A merged PR, SMTP proof or downloadable preview package is not a running service.
 5. Complete privacy/legal review, processor locations/contracts, retention/deletion, real SMTP deliverability, recurring off-site backups, production-scale restore/rollback and operational ownership before a separately authorized production release.
 
-Development is local by default. CMS release publication and PR deployment records are explicitly manual; production, hosting/DNS changes, real-message delivery and risky data operations retain separate authorization. See the [deployment runbook](docs/DEPLOYMENT_RUNBOOK.md) and [current contribution policy](docs/GITHUB_WORKFLOW.md).
+Development is local by default. CMS release publication and PR deployment records are explicitly manual; production, hosting/DNS changes, real-message delivery and risky data operations retain separate authorization. See the [deployment runbook](OPERATIONS.md#section-deployment-runbook) and [current contribution policy](DEVELOPMENT.md#section-github-workflow).

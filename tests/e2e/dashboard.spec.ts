@@ -171,7 +171,7 @@ test("dashboard previews show actual own activity, scanned files and private app
     })),
   ).toEqual([]);
   await page.screenshot({
-    path: `docs/screenshots/${testInfo.project.name}-dashboard-activity.png`,
+    path: `.local/screenshots/${testInfo.project.name}-dashboard-activity.png`,
     fullPage: true,
   });
 });

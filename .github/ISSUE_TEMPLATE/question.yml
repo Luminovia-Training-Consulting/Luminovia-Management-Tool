@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Read [CONTRIBUTING](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/CONTRIBUTING.md)
-        and the [issue guide](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/ISSUE_GUIDE.md) first.
+        and the [issue guide](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/DEVELOPMENT.md#section-issue-guide) first.
         Do not post credentials, tokens, MFA codes, private documents or real personal and customer data.
         Report suspected security vulnerabilities through [GitHub's private reporting channel](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/security/advisories/new).
   - type: textarea

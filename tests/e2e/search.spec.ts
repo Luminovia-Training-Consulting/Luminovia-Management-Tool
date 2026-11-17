@@ -349,7 +349,7 @@ test("real portal search combines authorized sources, excludes foreign private r
     })),
   ).toEqual([]);
   await page.screenshot({
-    path: `docs/screenshots/${testInfo.project.name}-functional-search.png`,
+    path: `.local/screenshots/${testInfo.project.name}-functional-search.png`,
     fullPage: true,
   });
 });
