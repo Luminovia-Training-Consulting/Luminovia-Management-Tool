@@ -79,6 +79,6 @@ The [product specification](PRODUCT.md#section-product-spec), original [master b
 
 Read [CONTRIBUTING](CONTRIBUTING.md) before opening an English issue or pull request. The [contributor list](CONTRIBUTORS.md) records verified attribution; the [pull request guide](DEVELOPMENT.md#section-pull-request-guide) explains the shared type/area/risk labels and current merge gates. Application UI changes need German and English. Report vulnerabilities through the private channel in [SECURITY](SECURITY.md). Use fictional data and customer-neutral examples throughout.
 
-A merge does not publish a CMS release or hosted PR deployment. Publication requires the explicit manual controls in [the runbook](OPERATIONS.md#section-deployment-runbook) and [CI guide](DEVELOPMENT.md#section-ci-quality). Production, hosting/DNS changes, risky data operations and real-message delivery need their own authorization.
+A merge does not publish a hosted PR deployment record. A push to `main` can trigger an automatic **development CMS** release only after the exact-main application and security runs pass; a separate manual exact-SHA dispatch is also available. See [the runbook](OPERATIONS.md#section-deployment-runbook) and [CI guide](DEVELOPMENT.md#section-ci-quality). Production, hosting/DNS changes, risky data operations and real-message delivery need their own authorization.
 
 Licensed under [GNU GPLv3](LICENSE); bundled assets retain their notices and [brand provenance](DEVELOPMENT.md#section-brand-design-system).

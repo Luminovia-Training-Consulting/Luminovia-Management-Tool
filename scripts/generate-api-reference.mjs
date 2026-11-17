@@ -36,6 +36,27 @@ await withTestDatabase("api_reference", async ({ sql }) => {
       `select jsonb_agg(jsonb_build_object('name',p.proname,'args',pg_get_function_arguments(p.oid),'result',pg_get_function_result(p.oid),'authenticated',has_function_privilege('authenticated',p.oid,'EXECUTE'),'anon',has_function_privilege('anon',p.oid,'EXECUTE'),'service',has_function_privilege('service_role',p.oid,'EXECUTE'),'definer',p.prosecdef) order by p.proname,pg_get_function_identity_arguments(p.oid)) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prokind='f' and not exists(select 1 from pg_depend d where d.classid='pg_proc'::regclass and d.objid=p.oid and d.deptype='e')`,
     ),
   );
+  const restRows = JSON.parse(
+    await sql(`select coalesce(jsonb_agg(jsonb_build_object(
+      'name',c.relname,
+      'kind',case when c.relkind in ('v','m') then 'view' else 'table' end,
+      'rls',c.relrowsecurity,
+      'select',has_table_privilege('authenticated',c.oid,'SELECT') or has_any_column_privilege('authenticated',c.oid,'SELECT'),
+      'insert',has_table_privilege('authenticated',c.oid,'INSERT') or has_any_column_privilege('authenticated',c.oid,'INSERT'),
+      'update',has_table_privilege('authenticated',c.oid,'UPDATE') or has_any_column_privilege('authenticated',c.oid,'UPDATE'),
+      'delete',has_table_privilege('authenticated',c.oid,'DELETE'),
+      'columns',(select coalesce(jsonb_agg(a.attname order by a.attnum),'[]'::jsonb)
+        from pg_attribute a where a.attrelid=c.oid and a.attnum>0 and not a.attisdropped
+        and (has_column_privilege('authenticated',c.oid,a.attname,'SELECT')
+          or has_column_privilege('authenticated',c.oid,a.attname,'INSERT')
+          or has_column_privilege('authenticated',c.oid,a.attname,'UPDATE')))
+    ) order by c.relname),'[]'::jsonb)
+    from pg_class c join pg_namespace n on n.oid=c.relnamespace
+    where n.nspname='public' and c.relkind in ('r','p','v','m')
+      and not exists(select 1 from pg_depend d where d.classid='pg_class'::regclass and d.objid=c.oid and d.deptype='e')
+      and (has_table_privilege('authenticated',c.oid,'SELECT,INSERT,UPDATE,DELETE')
+        or has_any_column_privilege('authenticated',c.oid,'SELECT,INSERT,UPDATE'))`),
+  );
   const migrations = (
     await readdir(new URL("../supabase/migrations/", import.meta.url))
   )
@@ -71,7 +92,7 @@ await withTestDatabase("api_reference", async ({ sql }) => {
       .join(", ") || "No listed API role";
   const text = `# Platform API reference
 
-This reference describes the current repository API. It is generated from a disposable replay of **${migrations.length} migration files** through version **${sources.at(-1).version}**, containing **${rows.length} application public functions**. It excludes extension-owned functions. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): \`${fingerprint}\`.
+This reference describes the current repository API. It is generated from a disposable replay of **${migrations.length} migration files** through version **${sources.at(-1).version}**, containing **${rows.length} application public functions** and **${restRows.length} authenticated REST relations**. It excludes extension-owned functions and relations. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): \`${fingerprint}\`.
 
 Regenerate with \`PORTAL_DB_CONTAINER=<owned-test-container> node scripts/generate-api-reference.mjs\`. The generator creates and drops a random database; it never inspects user records. Use an owned isolated test container, following [local development](DEVELOPMENT.md#section-local-development). Replay uses SQL Auth helpers, so this inventory alone does not verify native Auth, HTTP gateway availability, business eligibility or deployment. [Functional acceptance](DEVELOPMENT.md#section-functional-acceptance) and [QA results](DEVELOPMENT.md#section-test-plan) define that evidence.
 
@@ -144,12 +165,22 @@ The same account JWT can call the listed public RPCs, the account facade, and RL
 
 ### Recent settings and action contracts
 
-- \`wiki_course_templates(p_page_id)\` returns references from the currently readable published wiki revision, filtered by the caller's current course-template permission. \`manage_wiki_course_template(p_page_id,p_revision,p_template_id,p_remove)\` changes only an unpublished draft at the observed revision; callers must be able to edit the wiki page and read the template. The 20-reference limit, revision check and published-snapshot boundary are enforced by the database.
+- \`wiki_course_templates(p_page_id)\` selects the current draft revision for the page owner or a current \`wiki.manage\` actor, and the published revision for other permitted readers. Every returned template is filtered by the caller's current template permission. \`manage_wiki_course_template(p_page_id,p_revision,p_template_id,p_remove)\` changes only an unpublished draft at the observed revision; callers must be able to edit the wiki page and read the template. The 20-reference limit, revision check and published-snapshot boundary are enforced by the database.
 
 - \`lecturer_compensation(p_user_id)\` returns the current private mode, percent, daily rate, currency and version only to an authorised gross-finance administrator. \`save_lecturer_compensation\` requires \`p_mode\` \`percent\` or \`daily\`, percent 0–100 with two decimals, nonnegative daily rate with two decimals, \`EUR\` or \`AUD\`, and the observed \`p_expected_version\`. The unset default is 50 percent or EUR 200 per day. A version conflict requires reload; saved settings apply to future quotes and do not edit accepted deals. A daily-rate currency/budget mismatch makes a quote unavailable.
 - \`manual_assignment_candidates(p_job_id,p_search)\` returns at most 50 active lecturer candidates with eligibility, quote where permitted and the current terms version. \`manual_assign_job\` requires the selected lecturer, reviewed terms version, observed job lifecycle version and stable request UUID. Inspect \`status\`: \`confirmed\` with \`claim_id\`, or a refusal such as \`filled\`, \`conflict\`, \`not_eligible\`, \`terms_changed\`, \`quote_unavailable\` or \`unavailable\`. A 2xx transport response alone is not allocation.
 - \`import_my_calendar(p_events)\` accepts an array of 1–500 reviewed appointments. Each object supplies UID, title, start/end instants and IANA time zone; optional description is bounded. It returns \`created\` and \`skipped\` counts. The server derives the owner from the JWT, ignores duplicate import identities and rolls back the entire batch on invalid input or confirmed-assignment overlap. Recurrence expansion and preview are client-side; no subscription is created.
 - \`POST /functions/v1/accounts/v1/users\` creates one account with email, display name, transient password, role and idempotency UUID; company accounts additionally need an organisation. Its \`201\`/\`200\` response confirms the current request, while \`409\` indicates unresolved/conflicting creation and \`502\` means creation was not confirmed. It sends no invitation. Refer to the machine-readable schema for exact fields and role values.
+
+The active theme and language switch are stored in this browser's local storage, not through an account settings API; \`profiles.locale\` is a separate stored profile field. Do not infer cross-device synchronisation from the presence of profile or preference RPCs.
+
+## Replayed authenticated REST relations
+
+For a direct Data API call, use \`/rest/v1/{relation}\` with the same JWT and public API key. The methods below reflect effective \`authenticated\` PostgreSQL table/column grants at replay time: GET=SELECT, POST=INSERT, PATCH=UPDATE, DELETE=DELETE. The column list is the grant-visible union for those methods, **not** a per-method write schema. RLS, current actor/resource checks, constraints and column-specific grants can further deny a row, operation or field; a listed method does not promise a successful call for every account. Views use their own security definition rather than table RLS. The runtime gateway's generated OpenAPI and owning migration define exact request/filter/response shapes.
+
+| Relation | Kind | Granted methods | Table RLS | Grant-visible columns |
+| --- | --- | --- | --- | --- |
+${restRows.map((row) => `| ${cell(row.name)} | ${row.kind} | ${[row.select && "GET", row.insert && "POST", row.update && "PATCH", row.delete && "DELETE"].filter(Boolean).join(", ")} | ${row.kind === "view" ? "view definition" : row.rls ? "enabled" : "disabled"} | ${cell(row.columns.join(", "))} |`).join("\n")}
 
 ## Replayed public function inventory
 

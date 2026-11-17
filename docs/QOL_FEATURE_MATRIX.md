@@ -1,6 +1,6 @@
 # QoL feature inventory
 
-This checklist extracts requested actions and criteria from [the user prompt](QOL_MASTER_PROMPT.txt). “Source present” denotes inspected implementation, not end-to-end acceptance; “Partial” explicitly leaves additional scope or verification open. “Not yet assessed” does not mean absent. Isolated test results name their earlier source snapshots and do not certify later concurrent changes. PRs #37, #43 and #44 were merged into main after the initial audit; #45 and #46 need current status verification. #47 is the programme draft. No row implies production or complete acceptance.
+This checklist extracts requested actions and criteria from [the user prompt](QOL_MASTER_PROMPT.txt). It is a dated initial audit matrix, not a current implementation inventory. “Source present” denotes inspected implementation, not end-to-end acceptance; “Partial” explicitly leaves additional scope or verification open. “Not yet assessed” does not mean absent. Isolated test results name their earlier source snapshots and do not certify later concurrent changes. PR #47 has since merged; earlier PR status statements and unassessed rows below remain historical. Use the [current roadmap](../ROADMAP.md), [implementation plan](IMPLEMENTATION_PLAN.md) and owning source for present behavior. No row implies production or complete acceptance.
 
 | Module | Requested feature or criterion | Status | Evidence / tests / PR |
 |---|---|---|---|
@@ -290,7 +290,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | DOCUMENTS, WIKI AND FORUM / Wiki | Permissions | Not yet assessed | Pending |
 | DOCUMENTS, WIKI AND FORUM / Wiki | Archiving | Partial | `src/features/knowledge/wiki.tsx`; `src/features/knowledge/api.ts`. |
 | DOCUMENTS, WIKI AND FORUM / Forum | Create discussion | Partial | `src/features/knowledge/forum.tsx`; server RPC and role details require full acceptance. |
-| DOCUMENTS, WIKI AND FORUM / Forum | Edit own discussion | Partial; component and isolated database tests passed | Owners can edit title/category with version conflicts; MFA moderators can edit locked discussions. Browser test prepared, not yet run. |
+| DOCUMENTS, WIKI AND FORUM / Forum | Edit own discussion | Partial; component and isolated database tests passed at the initial baseline | Owners can edit title/category with version conflicts; current moderator permission can edit locked discussions. The earlier browser result is not a current acceptance claim. |
 | DOCUMENTS, WIKI AND FORUM / Forum | Reply | Partial | `src/features/knowledge/forum.tsx`; server RPC and role details require full acceptance. |
 | DOCUMENTS, WIKI AND FORUM / Forum | Quote | Partial; component tests passed | `src/features/knowledge/forum.tsx`; isolated browser test prepared but not run. |
 | DOCUMENTS, WIKI AND FORUM / Forum | Subscribe | Partial | `src/features/knowledge/forum.tsx`; server RPC and role details require full acceptance. |

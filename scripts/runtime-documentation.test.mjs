@@ -50,16 +50,25 @@ test("repository documentation links and heading fragments resolve", async () =>
     "OPERATIONS.md",
     "GUIDE.md",
     "API_REFERENCE.md",
+    "CONTRIBUTORS.md",
+    "design-qa.md",
   ];
   /** Collects delivered Markdown documents recursively for local link validation. */
   async function walk(directory) {
     for (const item of await readdir(directory, { withFileTypes: true })) {
       const path = `${directory}/${item.name}`;
+      // The pinned Supabase upstream snapshot retains links to files in the
+      // original vendor repository. Validate maintained project guidance here.
+      if (path === "deploy/hostinger/supabase/upstream") continue;
       if (item.isDirectory()) await walk(path);
       else if (item.name.endsWith(".md")) files.push(path);
     }
   }
   await walk(".github");
+  await walk("docs");
+  await walk("deploy/hostinger");
+  await walk("supabase/functions/course-documents/assets");
+  assert.ok(files.length >= 24, "Include maintained project Markdown records");
   const broken = [];
   let links = 0;
   for (const file of files) {
@@ -244,7 +253,50 @@ test("feature and settings guide names only inventoried public RPCs", async () =
   const available = new Set(
     [...inventory.matchAll(/^\| ([a-z_]+)\s+\|/gm)].map((match) => match[1]),
   );
-  const named = [...matrix.matchAll(/`([a-z][a-z_]+)`/g)].map((match) => match[1]);
+  const named = [...matrix.matchAll(/`([a-z][a-z_]+)`/g)].map(
+    (match) => match[1],
+  );
   assert.ok(named.length > 45, "Check all product areas, not a small sample");
-  assert.deepEqual(named.filter((name) => !available.has(name)), []);
+  assert.deepEqual(
+    named.filter((name) => !available.has(name)),
+    [],
+  );
+});
+
+test("direct frontend Data API relations appear in the replayed REST inventory", async () => {
+  const reference = await readFile("API_REFERENCE.md", "utf8");
+  const inventory = reference
+    .split("## Replayed authenticated REST relations")[1]
+    .split("## Replayed public function inventory")[0];
+  const available = new Set(
+    [...inventory.matchAll(/^\| ([a-z_]+)\s+\|\s+(?:table|view)\s+\|/gm)].map(
+      (match) => match[1],
+    ),
+  );
+  const used = new Set();
+  async function visit(directory) {
+    for (const item of await readdir(directory, { withFileTypes: true })) {
+      const path = `${directory}/${item.name}`;
+      if (item.isDirectory()) await visit(path);
+      else if (/\.tsx?$/.test(path) && !/\.test\.tsx?$/.test(path)) {
+        const source = await readFile(path, "utf8");
+        for (const match of source.matchAll(/\.from\("([a-z_]+)"\)/g))
+          used.add(match[1]);
+      }
+    }
+  }
+  await visit("src");
+  assert.ok(used.size >= 12, "Inspect the live frontend Data API calls");
+  assert.deepEqual(
+    [...used].filter((name) => !available.has(name)),
+    [],
+  );
+  assert.match(
+    inventory,
+    /^\| personal_events\s+\| table\s+\| GET, POST, PATCH, DELETE\s+\|/m,
+  );
+  assert.match(
+    inventory,
+    /^\| lecturer_topics\s+\| table\s+\| GET, POST, DELETE\s+\|/m,
+  );
 });

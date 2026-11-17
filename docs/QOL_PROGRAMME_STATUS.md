@@ -2,6 +2,8 @@
 
 Source: user-provided [QoL master prompt](QOL_MASTER_PROMPT.txt), preserved verbatim on 17 November 2026. This supplements, and does not replace, `UNIVERSAL_MASTER_PROMPT.txt`. The user requested one integrated PR rather than the source document's suggested focused PRs. Baseline inspected: main `08f65719ad2464b567809e3b27499f6c4fd01a23`. The [454-item feature checklist](QOL_FEATURE_MATRIX.md) preserves individual requests; most items remain unassessed. This is not a completed feature-by-feature audit.
 
+**Archived baseline:** the table and PR list below record that initial inspection, not current branch status. PR #47 is now merged into `main`, and customer/topic job sorting exists in the current discovery API and migration. Use the [current roadmap](../ROADMAP.md), [implementation plan](IMPLEMENTATION_PLAN.md) and owning source for present behavior. The remaining 454-item review has not been completed merely by merging that PR.
+
 | Module / requirement | Observed status | Evidence and remaining work |
 |---|---|---|
 | Chat: direct/group/course rooms, member controls, message edit, reactions and moderation | Existing implementation; complete acceptance against the new prompt not yet assessed | `src/features/chat`, current migrations and tests. Audit lifecycle, permissions, deletion and realtime end to end. |
@@ -21,7 +23,7 @@ Open PRs at initial inspection: #37, #43, #44 and #45. They may change independe
 These observations identify code to verify; they do not assert whole-workflow acceptance:
 
 - Contacts and profiles provide directory, direct chat navigation, course/expertise references and contact links (`src/features/people`); existing contact-visibility controls cover email/telephone, with separately configurable qualification/document visibility still to assess.
-- Job discovery has saved filters and several sort options; customer/topic sort is not present in its current schema (`src/features/jobs/discovery-api.ts`). PR #37 owns the separate short-notice withdrawal request.
+- At the initial baseline, job discovery had saved filters and several sort options but customer/topic sort had not yet been delivered. The current schema now implements both (`src/features/jobs/discovery-api.ts`, migration `20261117130006_job_discovery_customer_topic_sort.sql`). PR #37 addressed the separate short-notice withdrawal request.
 - Personal and published calendars, ICS/subscriptions and optional offline schedule exist (`src/features/calendar`). The existing guide explicitly lists global-event attachments/invitations and private drag editing as pending. Course templates/runs, readiness and delivery are present (`src/features/operations`, `readiness`, `delivery`); cross-module actions need individual checks.
 - Document scanning, search and personal tags, wiki publication/versioning, and forum discussion/moderation exist (`src/features/files`, `knowledge`). The user guide lists wiki/forum attachments and course-template references as pending. Personal organisation is not evidence of shared document move support.
 - Administration, contracts and invoice workflows exist (`src/features/admin`, `commercial`); PR #45 separately changes contract access. Review bulk, renewal and retention actions individually.

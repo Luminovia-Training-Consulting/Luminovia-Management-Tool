@@ -14,7 +14,7 @@ The development branch `main` is maintained. Historical milestone tags and CMS d
 
 ## Security model and limits
 
-Supabase Auth identifies the actor; current PostgreSQL roles, MFA, grants, RLS and resource membership enforce access. Browser role flags and user-editable metadata grant no authority. Job claims require online atomic confirmation, and accepted commercial snapshots remain immutable. Private DMs, calendars and contracts have no blanket administrator read bypass.
+Supabase password Auth identifies the actor; current PostgreSQL roles, active-account status, grants, RLS and resource membership enforce access. MFA factors and AAL gates are disabled in the current source. Browser role flags and user-editable metadata grant no authority. Job claims require online atomic confirmation, and accepted commercial snapshots remain immutable. Private DMs, calendars and contracts have no blanket administrator read bypass.
 
 Files use private storage, quarantine/scanning and currently authorized exact-version access. Service/secret credentials must remain outside browser bundles, Git, public logs and screenshots. The PWA must not generically cache authenticated responses or private document bytes offline. An explicit opt-in [minimal own teaching schedule](GUIDE.md#section-calendar-connections) stores only the documented bounded snapshot, with expiry and account-change cleanup.
 

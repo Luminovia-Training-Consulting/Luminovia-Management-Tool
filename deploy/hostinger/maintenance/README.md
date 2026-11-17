@@ -12,7 +12,7 @@ The PR publisher accepts only fixed dependency/version/image files with exact te
 
 An existing open same-repository `codex/daily-maintenance-*` PR carrying the maintenance marker blocks publication of a second update PR with `maintenance_existing_pr_requires_resolution`. The publisher never automatically rewrites or closes a reviewed or human-edited PR. If main advances and the PR becomes outdated, a maintainer closes it; the next daily scan retests and regenerates the candidate against actual current main. Strict up-to-date CI blocks merging the old base.
 
-The maintenance App has no main-rule exception. Native auto-merge waits for an independent review, latest-push approval, resolved conversations, all 15 required CI/security checks and an up-to-date PR. An already clean, ready PR may instead use the normal PR merge endpoint bound to its exact expected head SHA; the same native rules remain authoritative. The publisher never writes the main ref or dispatches main CI before merge. The protected `maintenance-signing` environment supplies a short-lived repository-scoped App token; the publisher token needs only `contents: write` and `pull_requests: write`. The existing App/environment credentials are present and the additional PR permission was approved and granted for the single selected repository. Real token/publication workflow acceptance remains pending at this checkpoint. See [GitHub operational status](../../../DEVELOPMENT.md#section-github-workflow-activation-still-pending). Active branch protection stays enforced while setup is pending.
+The maintenance App has no main-rule exception. Native auto-merge waits for an independent review, latest-push approval, resolved conversations, all 15 required CI/security checks and an up-to-date PR. An already clean, ready PR may instead use the normal PR merge endpoint bound to its exact expected head SHA; the same native rules remain authoritative. The publisher never writes the main ref or dispatches main CI before merge. The protected `maintenance-signing` environment supplies a short-lived repository-scoped App token; the publisher token needs only `contents: write` and `pull_requests: write`. The existing App/environment credentials are present and the additional PR permission was approved and granted for the single selected repository. Real token/publication workflow acceptance remains pending at this checkpoint. See [GitHub operational status](../../../DEVELOPMENT.md#activation-still-pending). Active branch protection stays enforced while setup is pending.
 
 After the normal PR merge, main CI again verifies the application and actual self-host images. The user-authorised automatic CMS publisher releases exact current main only after both complete application and security push workflows pass; daily maintenance itself does not dispatch CI or publish a release because one is absent. An unchanged scan skips the privileged publisher job entirely. The existing five-minute server timer installs only the release for exact current main with successful whole CI, immutable tag/assets and every archive hash checked. Transient network failures back off without permanently suppressing that revision.
 
@@ -23,11 +23,8 @@ The manual `signature_probe_only` input checks the existing App credentials thro
 ## Retained accepted compensation and invoices
 
 The candidate-owned `candidate-upgrade-probe.mjs` runs against both source phases.
-Before upgrading, real fictional password-only Auth sessions create a
-scanned executed-contract PDF and lecturer receipt, accept a two-session legacy
-net-only job, and submit an own scanned invoice through the business APIs. A
 Before upgrading, the lecturer uploads their own scanned executed-contract PDF;
-an MFA administrator registers it and records the lecturer's receipt. The same
+an active password-authenticated administrator registers it and records the lecturer's receipt. The same
 real Auth sessions accept a two-session legacy net-only job and submit an own
 scanned invoice through the business APIs. A
 commission-capable baseline additionally creates and accepts a second complete
