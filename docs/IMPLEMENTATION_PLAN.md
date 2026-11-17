@@ -1,5 +1,12 @@
 # Persistent implementation plan
 
+## Direct-main CI repair — 18 November 2026
+
+- [x] Push current expertise, job capacity-token, current guest-role concurrency fixture and admin handover-permission expectations directly to `main` (`cb4570d3`, `e0c2f3c4`). The local capacity SQL suite passed 8/8; the hosted exact-head run later passed job discovery 9/9.
+- [x] Correct the password-only service pre-request boundary with forward migrations and remove MFA wording from active database denial messages without restoring any factor gate.
+- [ ] Rerun focused local PostgreSQL and native Auth/API checks, regenerate the migration-counted API inventory, then complete full isolated system/browser acceptance and inspect current-head `Portal checks` to completion.
+- [ ] Do not report CI green until `verify` and the retained-data self-host candidate pass on the same `main` SHA. Previous current-head fast gates (format, typecheck, lint, build, unit/coverage, code quality and scope) passed; full verification exposed stale permission text and a service-role helper ACL issue now under repair.
+
 ## Current delivered-feature API parity — 18 November 2026
 
 - [x] Compare implemented frontend RPCs and direct Data API relations with the latest replayed inventory; no missing business endpoint or grant was found.
