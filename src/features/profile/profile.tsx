@@ -14,6 +14,7 @@ import { OwnProfileDetails } from "../people/profile-details";
 import { AccountSettings } from "./account-settings";
 import { ProfileEvidence } from "../files/profile-evidence";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,7 +23,12 @@ import { useTranslation } from "react-i18next";
 import { CheckCircle2 } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
 import { db } from "../../lib/supabase";
-import { expertiseQuery, profileQuery, topicsQuery } from "../../lib/queries";
+import {
+  expertiseQuery,
+  profileQuery,
+  topicsQuery,
+  permissionsQuery,
+} from "../../lib/queries";
 import type { Profile } from "../../lib/types";
 import { validZone } from "../../lib/dates";
 import { requireOnline, useOnline } from "../../lib/online";
@@ -38,7 +44,6 @@ import {
 const schema = z.object({
   display_name: z.string().trim().min(1).max(120),
   bio_de: z.string().max(4000),
-  bio_en: z.string().max(4000),
   phone: z.string().max(50),
   time_zone: z.string().refine(validZone),
 });
@@ -54,14 +59,18 @@ function ProfileForm({ profile }: { profile: Profile }) {
     formState: { errors },
   } = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
-    defaultValues: { ...profile, phone: profile.phone ?? "" },
+    defaultValues: {
+      ...profile,
+      bio_de: profile.bio_de || profile.bio_en || "",
+      phone: profile.phone ?? "",
+    },
   });
   const mutation = useMutation({
     mutationFn: async (values: z.infer<typeof schema>) => {
       requireOnline();
       const { data, error } = await db()
         .from("profiles")
-        .update({ ...values, locale: i18n.language })
+        .update({ ...values, bio_en: values.bio_de, locale: i18n.language })
         .eq("id", profile.id)
         .select("id")
         .single();
@@ -112,11 +121,8 @@ function ProfileForm({ profile }: { profile: Profile }) {
       >
         <input id="profile-zone" list="time-zones" {...register("time_zone")} />
       </Field>
-      <Field id="bio-de" label={t("bioDe")} error={Boolean(errors.bio_de)}>
+      <Field id="bio-de" label={t("aboutMe")} error={Boolean(errors.bio_de)}>
         <textarea id="bio-de" rows={5} {...register("bio_de")} />
-      </Field>
-      <Field id="bio-en" label={t("bioEn")} error={Boolean(errors.bio_en)}>
-        <textarea id="bio-en" rows={5} {...register("bio_en")} />
       </Field>
       <Button disabled={!online || mutation.isPending}>
         {t(mutation.isPending ? "saving" : "saveProfile")}
@@ -135,6 +141,7 @@ export function ProfilePage() {
   const profile = useQuery(profileQuery(session!.user.id));
   const topics = useQuery(topicsQuery);
   const expertise = useQuery(expertiseQuery(session!.user.id));
+  const permissions = useQuery(permissionsQuery(session!.user.id));
   const edit = useMutation({
     mutationFn: async ({ topic, add }: { topic: string; add: boolean }) => {
       requireOnline();
@@ -175,6 +182,11 @@ export function ProfilePage() {
         <section className="panel">
           <h2>{t("expertise")}</h2>
           <p>{t("expertiseHelp")}</p>
+          {permissions.data?.includes("taxonomy.manage") && (
+            <Button asChild variant="secondary">
+              <Link to="/topics">{t("manageExpertise")}</Link>
+            </Button>
+          )}
           <div className="expertise-list">
             {selectableTopics(
               topics.data,

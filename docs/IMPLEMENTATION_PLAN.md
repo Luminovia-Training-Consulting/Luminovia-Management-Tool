@@ -1,5 +1,20 @@
 # Persistent implementation plan
 
+
+## User revision: simpler portal and supplied design — 17 November 2026
+
+Implemented from `todos.txt` and the supplied portal images:
+
+- [x] Simplified primary navigation; topbar search and fixed-size bell; Support last; no standalone welcome, delivery, learning, workbench, timesheets, availability or deletion navigation entries.
+- [x] Cream/navy/blue and pastel styling, rainbow heading arcs, coloured course cards/tags, aligned file centre; responsive stylesheet checks at 320/760/1280px.
+- [x] One authored biography, numerical teaching years with legacy-text retention, no generic public labels, plain password link, expertise maintenance via current admin/management taxonomy permissions.
+- [x] Course overview tiles link across their full area; course hub combines catalogue/readiness/representations, knowledge combines wiki/help, communication combines forum/announcements/notifications.
+- [x] Tour launcher only in Settings; contextual permanent deletion in person/course/template details.
+- [x] Participant-only/guest-only accounts denied server-side and frontend; removed participant enrolment controls. Company-to-lecturer reviews enforced by current customer membership.
+- [x] 852 Vitest tests, ESLint, TypeScript and production/PWA build pass. Two real isolated PostgreSQL groups verify current-role denial, review eligibility/revocation and full migration replay.
+- [ ] Full logged-in desktop/mobile/PWA/API acceptance: canonical `./portal test` is blocked by another checkout holding the shared QA lock. Existing participant-focused historical test fixtures must be updated for the retired participant product contract.
+- [ ] Further polish of the full dashboard/course-workspace compositions against the reference images and simplification of administration settings. Website enquiry integration remains available under its existing route; a rewritten explanatory flow is pending. Retired module sources/historical database records are retained, not erased.
+
 ## Internal UI redesign — 17 November 2026
 
 - [x] Refresh the shared authenticated shell, official sidebar branding, readable navigation, page headings, panels, inputs, buttons, tables and dashboard metrics in line with the supplied clean navy/blue/pastel reference direction.

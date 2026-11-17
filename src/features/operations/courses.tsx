@@ -1,3 +1,4 @@
+import { PermanentDeleteAction } from "../deletions/deletions";
 /**
  * Reusable templates and actual course runs with concrete sessions. Content, participant
  * management, course publication and job offers remain distinct operations.
@@ -7,7 +8,6 @@ import "../taxonomy/i18n";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import "../learning/i18n";
-import { EnrolmentManager } from "../people/enrolments";
 import { ResourceComments } from "../comments/comments";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { z } from "zod";
@@ -980,6 +980,13 @@ export function CoursesPage() {
                 {t("planRun")}
               </Button>
             )}
+            {templateDetail && (
+              <PermanentDeleteAction
+                kind="course_template"
+                id={templateDetail.id}
+                label={templateDetail.title}
+              />
+            )}
             <ResourceComments
               kind="template"
               resourceId={
@@ -1030,9 +1037,7 @@ export function CoursesPage() {
         title={
           detail ? (findTemplate(detail)?.title ?? t("courses")) : t("courses")
         }
-        description={
-          manage ? t("enrolmentHelp", { ns: "people" }) : t("readOnly")
-        }
+        description={t("readOnly")}
       >
         {detail && (
           <>
@@ -1048,6 +1053,11 @@ export function CoursesPage() {
                 {t("learning:openWorkspace")}
               </Link>
             </Button>
+            <PermanentDeleteAction
+              kind="course_run"
+              id={detail.id}
+              label={findTemplate(detail)?.title ?? t("courses")}
+            />
             <h3>{t("syllabus")}</h3>
             <p className="preserve-text">
               {findTemplate(detail)?.syllabus || "—"}
@@ -1077,9 +1087,6 @@ export function CoursesPage() {
             <p>
               {detail.time_zone} · {detail.venue}
             </p>
-            {manage && (
-              <EnrolmentManager key={detail.id} courseRunId={detail.id} />
-            )}
           </>
         )}
       </Dialog>

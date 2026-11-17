@@ -6,6 +6,7 @@
   align-items: start;
 }
 .readiness-card {
+  position: relative;
   border-top: 4px solid var(--mint);
   min-width: 0;
   display: grid;
@@ -291,4 +292,16 @@
     gap: 0.8rem;
     flex-wrap: wrap;
   }
+}
+
+/* The existing course title link covers the card while keeping native link semantics. */
+.readiness-card h2 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.readiness-card:focus-within {
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
 }

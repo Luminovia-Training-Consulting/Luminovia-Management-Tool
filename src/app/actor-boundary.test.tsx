@@ -36,7 +36,10 @@ vi.mock("../lib/supabase", () => ({
     },
   },
   db: () => ({
-    rpc: async () => ({ data: [], error: null }),
+    rpc: async (name: string) => ({
+      data: name === "portal_access" ? true : [],
+      error: null,
+    }),
     from: (table: string) => {
       const builder: Record<string, unknown> = {};
       for (const method of ["select", "eq", "order", "limit", "maybeSingle"])
@@ -136,10 +139,9 @@ it("clears real Shell local search state when a native Auth event changes actor 
   const { client, user } = setup();
   await screen.findByText("Fictional workspace");
   // The persisted desktop rail starts compact, so open its search control first.
-  await user.click(screen.getByRole("button", { name: "Stellen durchsuchen" }));
   const search = screen
-    .getByRole("complementary")
-    .querySelector<HTMLInputElement>("#sidebar-global-search")!;
+    .getByRole("banner")
+    .querySelector<HTMLInputElement>("#portal-global-search")!;
   await user.type(search, "Private actor A search draft");
   client.setQueryData(
     ["private", "actor-a"],
@@ -153,14 +155,13 @@ it("clears real Shell local search state when a native Auth event changes actor 
 it("preserves protected local drafts on same-actor token refresh and rerenders", async () => {
   const { user } = setup();
   await screen.findByText("Fictional workspace");
-  await user.click(screen.getByRole("button", { name: "Stellen durchsuchen" }));
   const search = screen
-    .getByRole("complementary")
-    .querySelector<HTMLInputElement>("#sidebar-global-search")!;
+    .getByRole("banner")
+    .querySelector<HTMLInputElement>("#portal-global-search")!;
   await user.type(search, "Same actor draft");
   await sessionEvent("TOKEN_REFRESHED", "actor-a");
   expect(
-    screen.getByRole("complementary").querySelector("#sidebar-global-search"),
+    screen.getByRole("banner").querySelector("#portal-global-search"),
   ).toHaveValue("Same actor draft");
 });
 it("keeps the public invitation/recovery callback mounted when Auth establishes another actor", async () => {

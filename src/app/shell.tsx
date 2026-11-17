@@ -8,7 +8,6 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { PermanentDeletionProvider } from "../features/deletions/deletions";
-import { deletionAccessQuery } from "../features/deletions/api";
 import { AnnouncementBanners } from "../features/announcements/announcements";
 import {
   MessagesSquare,
@@ -29,18 +28,10 @@ import {
   Settings2,
   UserRound,
   Users,
-  Star,
   PanelLeftClose,
   PanelLeftOpen,
-  ListChecks,
-  ClipboardCheck,
   LifeBuoy,
-  ArrowRightLeft,
-  Inbox,
-  Compass,
-  X,
 } from "lucide-react";
-import { WelcomeGuideEntry } from "../features/onboarding/welcome";
 import { NotificationsMenu } from "../features/notifications/notifications";
 import { useAuth } from "../features/auth/auth-context";
 import { useAuthorizationRefresh } from "../features/auth/authorization-refresh";
@@ -72,9 +63,6 @@ export function Shell() {
   const navigate = useNavigate();
   const location = useLocation();
   const mobileMore = useRef<HTMLDetailsElement>(null);
-  const sidebarSearchInput = useRef<HTMLInputElement>(null);
-  const sidebarSearchButton = useRef<HTMLButtonElement>(null);
-  const restoreSearchFocus = useRef(false);
   const [railTooltip, setRailTooltip] = useState<{
     label: string;
     top: number;
@@ -101,33 +89,19 @@ export function Shell() {
     }
   });
   const [search, setSearch] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
   const previousActor = useRef(actor);
   useEffect(() => {
     if (previousActor.current === actor) return;
     previousActor.current = actor;
     setSearch("");
-    setSearchOpen(false);
   }, [actor]);
   const [signoutFailed, setSignoutFailed] = useState(false);
   const [signoutPending, setSignoutPending] = useState(false);
   const profile = useQuery(profileQuery(session!.user.id));
   const permissions = useQuery(permissionsQuery(session!.user.id));
   const roles = useQuery(userRolesQuery(session!.user.id));
-  const deletions = useQuery(deletionAccessQuery(session!.user.id));
   useAuthorizationRefresh(session!.user.id, roles.data, permissions.data);
   const online = useOnline();
-  useEffect(() => {
-    if (searchOpen && collapsed) sidebarSearchInput.current?.focus();
-    if (!searchOpen && restoreSearchFocus.current) {
-      restoreSearchFocus.current = false;
-      sidebarSearchButton.current?.focus();
-    }
-  }, [searchOpen, collapsed]);
-  function closeSidebarSearch() {
-    if (collapsed) restoreSearchFocus.current = true;
-    setSearchOpen(false);
-  }
   function toggleSidebar() {
     setCollapsed((current) => {
       const next = !current;
@@ -156,10 +130,6 @@ export function Shell() {
   const clientPortalAccess =
     roles.data?.some((role) => ["owner", "admin", "client"].includes(role)) ??
     false;
-  const reviews =
-    roles.data?.some((role) =>
-      ["owner", "admin", "participant"].includes(role),
-    ) ?? false;
   const manage = Boolean(
     permissions.data?.includes("jobs.manage") ||
     permissions.data?.includes("announcements.manage"),
@@ -168,67 +138,33 @@ export function Shell() {
     { to: "/", icon: Home, label: "home" },
     ...(staff ? [{ to: "/jobs", icon: BriefcaseBusiness, label: "jobs" }] : []),
     { to: "/calendar", icon: CalendarDays, label: "calendar" },
-    { to: "/chats", icon: MessagesSquare, label: "chats" },
-    { to: "/files", icon: FolderOpen, label: "files" },
-    { to: "/search", icon: Search, label: "portalSearch" },
     { to: "/courses", icon: GraduationCap, label: "courses" },
-    ...(staff
-      ? [
-          { to: "/readiness", icon: ListChecks, label: "courseReadiness" },
-          { to: "/replacements", icon: ArrowRightLeft, label: "replacements" },
-        ]
-      : []),
-    ...(staff || clientPortalAccess
-      ? [{ to: "/delivery", icon: ClipboardCheck, label: "teachingDelivery" }]
-      : []),
-    { to: "/support", icon: LifeBuoy, label: "supportDesk" },
-    { to: "/learning", icon: BookOpen, label: "learning:hub" },
-    { to: "/workbench", icon: FileCheck2, label: "workbench:title" },
-    ...(staff
-      ? [{ to: "/timesheets", icon: Wallet, label: "financeOps:timesheets" }]
-      : []),
-    ...(manage
-      ? [
-          {
-            to: "/control-center",
-            icon: Settings2,
-            label: "financeOps:controlCenter",
-          },
-        ]
+    ...(permissions.data?.includes("organisations.manage")
+      ? [{ to: "/clients", icon: Building2, label: "clients" }]
       : []),
     { to: "/people", icon: Users, label: "staffDirectory" },
-    ...(clientPortalAccess
-      ? [{ to: "/client", icon: Building2, label: "clientPortal" }]
-      : []),
-    ...(reviews ? [{ to: "/my-reviews", icon: Star, label: "myReviews" }] : []),
+    { to: "/chats", icon: MessagesSquare, label: "chats" },
+    { to: "/files", icon: FolderOpen, label: "files" },
     ...(teaching || permissions.data?.includes("contracts.read")
       ? [{ to: "/contracts", icon: FileCheck2, label: "contracts" }]
       : []),
     ...(teaching || permissions.data?.includes("finance.manage")
       ? [{ to: "/finance", icon: Wallet, label: "finance" }]
       : []),
-    ...(permissions.data?.includes("organisations.manage")
+    ...(clientPortalAccess
+      ? [{ to: "/client", icon: Building2, label: "clientPortal" }]
+      : []),
+    ...(staff
       ? [
-          { to: "/clients", icon: Building2, label: "clients" },
-          { to: "/enquiries", icon: Inbox, label: "websiteEnquiries" },
+          { to: "/wiki", icon: BookOpen, label: "wiki" },
+          { to: "/forum", icon: MessageCircle, label: "forum" },
         ]
       : []),
-    ...(staff ? [{ to: "/wiki", icon: BookOpen, label: "wiki" }] : []),
-    ...(staff ? [{ to: "/forum", icon: MessageCircle, label: "forum" }] : []),
-    { to: "/notifications", icon: MessageCircle, label: "notifications" },
-    { to: "/announcements", icon: MessageCircle, label: "announcements" },
     { to: "/topics", icon: BookOpen, label: "topics" },
-    ...(staff
-      ? [{ to: "/availability", icon: CalendarDays, label: "availability" }]
-      : []),
+    ...(manage ? [{ to: "/admin", icon: Settings2, label: "admin" }] : []),
     { to: "/settings", icon: Settings2, label: "settings" },
     { to: "/profile", icon: UserRound, label: "profile" },
-    { to: "/help", icon: BookOpen, label: "helpGuides" },
-    { to: "/welcome", icon: Compass, label: "welcome:nav" },
-    ...(manage ? [{ to: "/admin", icon: Settings2, label: "admin" }] : []),
-    ...(!deletions.isError && deletions.data?.can_admin
-      ? [{ to: "/admin/deletions", icon: Settings2, label: "deletions:title" }]
-      : []),
+    { to: "/support", icon: LifeBuoy, label: "supportDesk" },
   ];
   async function logout() {
     setSignoutFailed(false);
@@ -257,9 +193,7 @@ export function Shell() {
     });
   }
   return (
-    <div
-      className={`app-shell ${collapsed ? "is-collapsed" : ""} ${searchOpen ? "has-sidebar-search-open" : ""}`}
-    >
+    <div className={`app-shell ${collapsed ? "is-collapsed" : ""}`}>
       <a className="skip-link" href="#main">
         {t("skip")}
       </a>
@@ -315,71 +249,6 @@ export function Shell() {
           )}
           <span>{t(collapsed ? "expand" : "collapse")}</span>
         </Button>
-        <form
-          className={`global-search sidebar-global-search ${collapsed && !searchOpen ? "is-icon-only" : ""}`}
-          role="search"
-          onSubmit={(event) => {
-            event.preventDefault();
-            navigate(`/search?q=${encodeURIComponent(search)}`);
-            closeSidebarSearch();
-          }}
-        >
-          {collapsed && !searchOpen ? (
-            <Button
-              ref={sidebarSearchButton}
-              type="button"
-              variant="ghost"
-              aria-label={t("search")}
-              aria-describedby="sidebar-nav-tooltip"
-              onClick={() => setSearchOpen(true)}
-              onMouseEnter={(event) =>
-                showRailTooltip("search", event.currentTarget)
-              }
-              onMouseLeave={() => setRailTooltip(null)}
-              onFocus={(event) =>
-                showRailTooltip("search", event.currentTarget)
-              }
-              onBlur={() => setRailTooltip(null)}
-            >
-              <Search size={19} aria-hidden="true" />
-            </Button>
-          ) : (
-            <>
-              <Search size={18} aria-hidden="true" />
-              <label htmlFor="sidebar-global-search" className="sr-only">
-                {t("search")}
-              </label>
-              <input
-                id="sidebar-global-search"
-                ref={sidebarSearchInput}
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t("portalSearch")}
-              />
-              {collapsed && (
-                <button
-                  type="button"
-                  className="sidebar-search-close"
-                  aria-label={t("close")}
-                  onClick={closeSidebarSearch}
-                >
-                  <X size={16} aria-hidden="true" />
-                </button>
-              )}
-            </>
-          )}
-        </form>
-        {profile.data?.active && !minimalOffline && (
-          <div
-            className="sidebar-notifications"
-            data-tooltip={t("notifications")}
-          >
-            <NotificationsMenu
-              id={session!.user.id}
-              zone={profile.data.time_zone}
-            />
-          </div>
-        )}
         <nav aria-label={t("menu")}>
           {navigation.map(({ to, icon: Icon, label }) => (
             <NavLink
@@ -434,7 +303,29 @@ export function Shell() {
       </aside>
       <div className="workspace">
         <header className="topbar" aria-label={t("workspace")}>
+          <form
+            className="global-search header-global-search"
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              navigate(`/search?q=${encodeURIComponent(search)}`);
+            }}
+          >
+            <Search size={20} aria-hidden="true" />
+            <label htmlFor="portal-global-search" className="sr-only">
+              {t("portalSearch")}
+            </label>
+            <input
+              id="portal-global-search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={t("portalSearch")}
+            />
+          </form>
           <div className="topbar-actions">
+            {profile.data?.active && !minimalOffline && (
+              <NotificationsMenu id={actor} zone={profile.data.time_zone} />
+            )}
             <Preferences />
             <Button
               variant="ghost"
@@ -529,9 +420,7 @@ export function Shell() {
                   void permissions.refetch();
                   void roles.refetch();
                 }}
-              >
-                <WelcomeGuideEntry />
-              </PortalTour>
+              ></PortalTour>
               <PermanentDeletionProvider>
                 <Outlet />
               </PermanentDeletionProvider>

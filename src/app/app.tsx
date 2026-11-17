@@ -1,3 +1,4 @@
+import { SectionHub } from "./section-hubs";
 /**
  * SPA routes, global error boundary and PWA notices. Public Auth, demo and help routes stay
  * outside the protected user-keyed subtree; feature pages load on demand.
@@ -7,6 +8,7 @@ import { Navigate, Outlet, Route, Routes, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { useAuth } from "../features/auth/auth-context";
+import { PortalAccess } from "../features/auth/portal-access";
 import { AuthCallback } from "../features/auth/callback";
 import { Login } from "../features/auth/login";
 import { Password } from "../features/auth/password";
@@ -49,11 +51,6 @@ const DemoPage = lazy(() =>
 const HelpCenter = lazy(() =>
   import("../features/help/help").then((module) => ({
     default: module.HelpCenter,
-  })),
-);
-const AvailabilityPage = lazy(() =>
-  import("../features/availability/availability").then((module) => ({
-    default: module.AvailabilityPage,
   })),
 );
 
@@ -111,21 +108,12 @@ const ClientsPage = lazy(() =>
   })),
 );
 
-const CoursesPage = lazy(() =>
-  import("../features/operations/courses").then((module) => ({
-    default: module.CoursesPage,
-  })),
-);
 const CourseReadinessPage = lazy(() =>
   import("../features/readiness/readiness").then((module) => ({
     default: module.CourseReadinessPage,
   })),
 );
-const TeachingDelivery = lazy(() =>
-  import("../features/delivery/delivery").then((module) => ({
-    default: module.TeachingDelivery,
-  })),
-);
+
 const SupportDeskPage = lazy(() =>
   import("../features/support/support").then((module) => ({
     default: module.SupportDeskPage,
@@ -146,16 +134,7 @@ const LearningHubPage = lazy(() =>
     default: module.LearningHubPage,
   })),
 );
-const WorkbenchPage = lazy(() =>
-  import("../features/workbench/workbench").then((module) => ({
-    default: module.WorkbenchPage,
-  })),
-);
-const TimesheetsPage = lazy(() =>
-  import("../features/workbench/timesheets").then((module) => ({
-    default: module.TimesheetsPage,
-  })),
-);
+
 const ControlCenterPage = lazy(() =>
   import("../features/workbench/control-center").then((module) => ({
     default: module.ControlCenterPage,
@@ -170,18 +149,6 @@ const CourseWorkspacePage = lazy(() =>
 const PortalSearch = lazy(() =>
   import("../features/search/search").then((module) => ({
     default: module.PortalSearch,
-  })),
-);
-
-const WikiPage = lazy(() =>
-  import("../features/knowledge/wiki").then((module) => ({
-    default: module.WikiPage,
-  })),
-);
-
-const ForumPage = lazy(() =>
-  import("../features/knowledge/forum").then((module) => ({
-    default: module.ForumPage,
   })),
 );
 
@@ -216,7 +183,9 @@ function Protected() {
   return isConfigured && session ? (
     // Auth clears remote queries separately. Remount private local state too
     // when a different account signs in through another tab/native Auth event.
-    <Outlet key={session.user.id} />
+    <PortalAccess key={session.user.id}>
+      <Outlet />
+    </PortalAccess>
   ) : (
     <Navigate to="/login" replace />
   );
@@ -285,10 +254,13 @@ export function App() {
               <Route path="people" element={<PeopleDirectory />} />
               <Route path="people/:id" element={<PersonProfile />} />
               <Route path="my-reviews" element={<MyCourseReviews />} />
-              <Route path="courses" element={<CoursesPage />} />
+              <Route path="courses" element={<SectionHub kind="courses" />} />
               <Route path="readiness" element={<CourseReadinessPage />} />
               <Route path="readiness/:id" element={<CourseReadinessPage />} />
-              <Route path="delivery" element={<TeachingDelivery />} />
+              <Route
+                path="delivery"
+                element={<Navigate to="/courses" replace />}
+              />
               <Route path="support" element={<SupportDeskPage />} />
               <Route path="support/:id" element={<SupportDeskPage />} />
               <Route
@@ -298,8 +270,11 @@ export function App() {
               <Route path="enquiries" element={<EnquiriesPage />} />
               <Route path="enquiries/:id" element={<EnquiriesPage />} />
               <Route path="learning" element={<LearningHubPage />} />
-              <Route path="workbench" element={<WorkbenchPage />} />
-              <Route path="timesheets" element={<TimesheetsPage />} />
+              <Route path="workbench" element={<Navigate to="/" replace />} />
+              <Route
+                path="timesheets"
+                element={<Navigate to="/finance" replace />}
+              />
               <Route path="control-center" element={<ControlCenterPage />} />
               <Route
                 path="courses/:id/workspace"
@@ -307,15 +282,18 @@ export function App() {
               />
               <Route path="contracts" element={<ContractsPage />} />
               <Route path="finance" element={<FinancePage />} />
-              <Route path="wiki" element={<WikiPage />} />
-              <Route path="forum" element={<ForumPage />} />
+              <Route path="wiki" element={<SectionHub kind="knowledge" />} />
+              <Route path="forum" element={<SectionHub kind="updates" />} />
               <Route path="files" element={<FilesPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="announcements" element={<AnnouncementsPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="topics" element={<TaxonomyPage />} />
-              <Route path="availability" element={<AvailabilityPage />} />
+              <Route
+                path="availability"
+                element={<Navigate to="/calendar" replace />}
+              />
               <Route
                 path="security"
                 element={<Navigate to="/settings" replace />}

@@ -322,3 +322,60 @@
     margin-bottom: 0.5rem;
   }
 }
+
+/* File rows keep a consistent icon/name/action baseline regardless of tags or scan text. */
+.document-list > li {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 96px;
+  padding: 16px 0;
+}
+.document-list .file-icon {
+  width: 50px;
+  height: 50px;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+}
+.document-list .file-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  max-width: 220px;
+}
+.file-discovery-filters > .field {
+  display: grid;
+  grid-template-rows: minmax(2.5em, auto) auto;
+  align-content: end;
+  margin-bottom: 0;
+}
+.file-discovery-filters label {
+  align-self: end;
+}
+.file-discovery-filters input,
+.file-discovery-filters select {
+  min-height: 44px;
+  width: 100%;
+}
+@media (max-width: 600px) {
+  .document-list > li {
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 12px;
+  }
+  .document-list .file-icon {
+    width: 42px;
+    height: 42px;
+    padding: 9px;
+  }
+  .document-list .file-info {
+    min-width: 0;
+  }
+  .document-list .file-actions {
+    grid-column: 2;
+    max-width: 100%;
+  }
+  .file-discovery-filters > .field {
+    grid-template-rows: auto auto;
+  }
+}

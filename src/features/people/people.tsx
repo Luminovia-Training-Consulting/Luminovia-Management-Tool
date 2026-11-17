@@ -7,6 +7,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { MessageCircle, Star } from "lucide-react";
+import { PermanentDeleteAction } from "../deletions/deletions";
 import { Avatar } from "../profile/avatar";
 import { PersonContact } from "./person-contact";
 import { useAuth } from "../auth/auth-context";
@@ -37,10 +38,9 @@ export function PeopleDirectory() {
   const { t, i18n } = useTranslation("people");
   const { session } = useAuth();
   const [search, setSearch] = useState("");
-  const [label, setLabel] = useState("");
   const [topic, setTopic] = useState("");
   const people = useQuery(
-    peopleDirectoryQuery(session!.user.id, search, label, topic),
+    peopleDirectoryQuery(session!.user.id, search, "", topic),
   );
   const topics = useQuery(topicsQuery);
   return (
@@ -54,15 +54,6 @@ export function PeopleDirectory() {
             maxLength={100}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-          />
-        </Field>
-        <Field id="people-label" label={t("labelFilter")}>
-          <input
-            id="people-label"
-            maxLength={40}
-            placeholder={t("allLabels")}
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
           />
         </Field>
         <Field id="people-topic" label={t("topicFilter")}>
@@ -99,18 +90,8 @@ export function PeopleDirectory() {
                 <Link to={`/people/${person.id}`}>{person.display_name}</Link>
               </h2>
               <p>
-                {(i18n.language === "de" ? person.bio_de : person.bio_en).slice(
-                  0,
-                  180,
-                ) || t("noBio")}
+                {(person.bio_de || person.bio_en).slice(0, 180) || t("noBio")}
               </p>
-              <div className="person-labels">
-                {person.labels.map((item) => (
-                  <span className="badge" key={item}>
-                    {item}
-                  </span>
-                ))}
-              </div>
               <small>
                 {person.country}
                 {person.languages.length
@@ -222,7 +203,7 @@ export function PersonProfile() {
   if (person.isPending) return <Loading />;
   if (person.isError) return <ErrorState retry={() => void person.refetch()} />;
   const details = person.data;
-  const bio = i18n.language === "de" ? details.bio_de : details.bio_en;
+  const bio = details.bio_de || details.bio_en;
   return (
     <>
       <PageHeading
@@ -244,18 +225,17 @@ export function PersonProfile() {
             </Button>
           )}
       </div>
+      <PermanentDeleteAction
+        kind="account"
+        id={id}
+        label={details.display_name}
+      />
       <PersonContact actor={actor} target={id} />
       <div className="people-details-grid">
         <section className="panel">
           <h2>{t("details")}</h2>
           <p className="person-prose">{bio || t("noBio")}</p>
-          <div className="person-labels">
-            {details.labels.map((label) => (
-              <span className="badge" key={label}>
-                {label}
-              </span>
-            ))}
-          </div>
+
           {details.languages.length > 0 && (
             <p>{details.languages.join(", ")}</p>
           )}

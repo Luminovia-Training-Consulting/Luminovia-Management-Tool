@@ -20,8 +20,12 @@ function DetailsForm({ details }: { details: ProfileDetails }) {
   const client = useQueryClient();
   const [country, setCountry] = useState(details.country);
   const [languages, setLanguages] = useState(details.languages.join(", "));
-  const [labels, setLabels] = useState(details.labels.join(", "));
-  const [experience, setExperience] = useState(details.teaching_experience);
+  const numericExperience = /^\d{1,2}$/.test(
+    details.teaching_experience.trim(),
+  );
+  const [experience, setExperience] = useState(
+    numericExperience ? details.teaching_experience.trim() : "",
+  );
   const [invalid, setInvalid] = useState(false);
   const mutation = useMutation({
     mutationFn: async () => {
@@ -29,8 +33,8 @@ function DetailsForm({ details }: { details: ProfileDetails }) {
       const payload = {
         country,
         languages: labelText(languages, 15, 50),
-        labels: labelText(labels),
-        teaching_experience: experience,
+        labels: details.labels,
+        teaching_experience: experience || details.teaching_experience,
       };
       await peopleRpc("save_profile_details", { p_payload: payload });
     },
@@ -47,7 +51,6 @@ function DetailsForm({ details }: { details: ProfileDetails }) {
         e.preventDefault();
         setInvalid(false);
         try {
-          labelText(labels);
           labelText(languages, 15, 50);
           mutation.mutate();
         } catch {
@@ -74,23 +77,22 @@ function DetailsForm({ details }: { details: ProfileDetails }) {
           onChange={(e) => setLanguages(e.target.value)}
         />
       </Field>
-      <Field id="profile-labels" label={t("labels")} error={invalid}>
-        <input
-          id="profile-labels"
-          maxLength={850}
-          value={labels}
-          onChange={(e) => setLabels(e.target.value)}
-        />
-      </Field>
       <Field id="profile-experience" label={t("experience")}>
-        <textarea
+        <input
           id="profile-experience"
-          maxLength={4000}
-          rows={5}
+          type="number"
+          min={0}
+          max={99}
+          step={1}
           value={experience}
           onChange={(e) => setExperience(e.target.value)}
         />
       </Field>
+      {!numericExperience && details.teaching_experience && (
+        <p className="muted">
+          {t("previousExperience")}: {details.teaching_experience}
+        </p>
+      )}
       <Button disabled={!online || mutation.isPending}>
         {t(mutation.isPending ? "pending" : "save")}
       </Button>

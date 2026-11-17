@@ -3226,3 +3226,252 @@ tr + tr td {
     padding: 18px;
   }
 }
+
+/* Supplied portal design: warm paper, navy navigation and overlapping brand arcs.
+ * Decorative backgrounds carry no data; operational content remains server-derived. */
+:root {
+  --paper: #f8f5ee;
+  --surface: #fffdf8;
+  --ink: #14233b;
+  --muted: #4f5b70;
+  --line: #e4dedc;
+  --brand: #0758e8;
+  --brand-hover: #0648c2;
+  --navy: #102345;
+  --shadow: 0 3px 9px #382b2510;
+  --radius: 18px;
+}
+:root[data-theme="dark"] {
+  --paper: #111a2e;
+  --surface: #1b2840;
+  --ink: #f6f9ff;
+  --muted: #c7d3e9;
+  --line: #425370;
+  --brand: #b5cdff;
+  --brand-hover: #d4e2ff;
+  --navy: #0d1830;
+  --shadow: 0 3px 12px #0002;
+}
+.page-heading,
+.dashboard-page > h1 {
+  background:
+    radial-gradient(
+      ellipse 135px 135px at 100% 140%,
+      var(--lilac) 99%,
+      transparent
+    ),
+    radial-gradient(ellipse 120px 120px at 88% 160%, #0758e8 99%, transparent),
+    radial-gradient(
+      ellipse 120px 120px at 78% 175%,
+      var(--mint) 99%,
+      transparent
+    ),
+    radial-gradient(
+      ellipse 170px 160px at 83% 170%,
+      var(--yellow) 99%,
+      transparent
+    ),
+    linear-gradient(110deg, #ffe0df, #fff5ec);
+  border-color: #fff9;
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  color: #14233b;
+}
+.page-heading > div,
+.dashboard-page > h1 {
+  text-wrap: pretty;
+}
+.page-heading p {
+  color: #273853;
+}
+[data-theme="dark"] .page-heading,
+[data-theme="dark"] .dashboard-page > h1 {
+  background:
+    radial-gradient(
+      ellipse 110px 100px at 100% 160%,
+      #7d88d850 99%,
+      transparent
+    ),
+    radial-gradient(
+      ellipse 140px 120px at 86% 180%,
+      #1749b550 99%,
+      transparent
+    ),
+    linear-gradient(110deg, #253553, #1b2840);
+  border-color: var(--line);
+  color: var(--ink);
+}
+[data-theme="dark"] .page-heading p {
+  color: var(--muted);
+}
+.sidebar {
+  background:
+    radial-gradient(ellipse 110px 110px at 100% 105%, #4264ec 99%, transparent),
+    radial-gradient(
+      ellipse 100px 105px at 34% 108%,
+      var(--mint) 99%,
+      transparent
+    ),
+    radial-gradient(
+      ellipse 125px 115px at 75% 109%,
+      var(--yellow) 99%,
+      transparent
+    ),
+    radial-gradient(
+      ellipse 110px 110px at 3% 107%,
+      var(--coral) 99%,
+      transparent
+    ),
+    linear-gradient(160deg, #0c2047, var(--navy));
+  background-attachment: local;
+}
+.sidebar nav a {
+  border-radius: 12px;
+}
+.sidebar nav a.active {
+  background: linear-gradient(110deg, #0758ff, #0648d8);
+  box-shadow: 0 4px 9px #001b6c38;
+}
+@media (max-width: 760px) {
+  .page-heading {
+    background:
+      radial-gradient(
+        ellipse 80px 70px at 104% 110%,
+        #ded2fa99 99%,
+        transparent
+      ),
+      linear-gradient(110deg, #ffe0df, #fff5ec);
+  }
+  [data-theme="dark"] .page-heading {
+    background: linear-gradient(110deg, #253553, #1b2840);
+  }
+}
+
+/* Header search and bell stay inside the workspace at every sidebar width. */
+.topbar {
+  min-width: 0;
+  height: auto;
+  min-height: 76px;
+  gap: 18px;
+  padding-block: 12px;
+}
+.header-global-search {
+  display: flex;
+  flex: 1 1 360px;
+  width: 100%;
+  min-width: 0;
+  max-width: 620px;
+  margin-left: auto;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 2px 5px #172b4b08;
+}
+.header-global-search:focus-within {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.header-global-search > svg {
+  flex: 0 0 20px;
+}
+.header-global-search input {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 8px 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: var(--ink);
+  font-size: 14px;
+}
+.header-global-search input:focus-visible {
+  outline: 0;
+}
+.topbar-actions {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+.topbar-actions > .notification-menu {
+  flex: 0 0 44px;
+  width: 44px;
+  margin: 0;
+}
+.topbar-actions > .notification-menu > summary {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.topbar-actions > .notification-menu > summary > svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  flex-shrink: 0;
+  stroke-width: 1.8;
+}
+.topbar-actions > .notification-menu > summary:hover,
+.topbar-actions > .notification-menu[open] > summary {
+  background: var(--blue-soft);
+}
+.topbar-actions > .notification-menu > .notification-popover {
+  right: 0;
+  top: 52px;
+  max-height: calc(100dvh - 100px);
+  overflow: auto;
+}
+@media (max-width: 1000px) and (min-width: 761px) {
+  .topbar {
+    gap: 10px;
+    padding-inline: 16px;
+  }
+  .header-global-search {
+    flex-basis: 220px;
+  }
+  .topbar-actions {
+    gap: 8px;
+  }
+}
+@media (max-width: 760px) {
+  .topbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 10px 14px;
+  }
+  .topbar::before {
+    content: none;
+  }
+  .header-global-search {
+    order: 2;
+    flex: 1 0 100%;
+    max-width: none;
+  }
+  .topbar-actions {
+    width: auto;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .topbar-actions > .notification-menu {
+    margin: 0;
+  }
+  .topbar-actions > .notification-menu > .notification-popover {
+    position: fixed;
+    top: 64px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+  }
+}

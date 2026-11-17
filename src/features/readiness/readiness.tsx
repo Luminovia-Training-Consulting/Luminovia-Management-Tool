@@ -837,7 +837,6 @@ function Overview({ courses }: { courses: CourseReadiness[] }) {
                   )}
                 </p>
               )}
-              <TextLink to={`/readiness/${course.id}`}>{t("detail")}</TextLink>
             </article>
           ))}
         </div>
