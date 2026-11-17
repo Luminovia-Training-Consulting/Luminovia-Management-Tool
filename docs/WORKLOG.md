@@ -1,5 +1,9 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — PR19 native Auth failure diagnosis
+
+The current selfhost CI run passed retained-data upgrade and 34 real API suites, then GoTrue returned HTTP 500 while creating a fictional qualification-passport actor. The prior cleanup removed the candidate containers without recording the underlying service error. The candidate checker now collects at most 20 bounded, redacted error lines from its own Auth and PostgreSQL containers before cleanup on failure; no gate or retry behavior changes. Twenty-five focused checker tests and formatting pass locally. The exact new-head full CI is pending; the root cause is not yet asserted.
+
 ## 17 November 2026 — post-upload discovery race
 
 An initial document discovery request may still be pending when a successful upload commits. Invalidation alone can reuse that pre-commit request, blocking completion and omitting the new file. Upload success now cancels document list, exact-document and version-history queries before invalidating them, matching the broader safeguard in PR35. A controlled component regression failed without the fix and passed with it; the three original version/upload component tests and TypeScript passed locally; the regression also covers the three query prefixes. This race is a plausible contributor to the mobile CI file failures, but their precise cause is not established; the full browser and native gates must run again on the integrated revision.

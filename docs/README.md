@@ -14,6 +14,8 @@ Start with the guide for your task. User workflows describe current source behav
 | Operate an authorized environment | [Deployment runbook](DEPLOYMENT_RUNBOOK.md), [operations](OPERATIONS.md)                                      |
 | Report a vulnerability            | [Private reporting](../SECURITY.md)                                                                           |
 
+The prepared quality integration includes accepted Main38 `bcba6734`, retaining Main25's 69 released migrations and application source. The pre-Main38 local quality results and still-pending `02dc8a84` full workflow are separately scoped in [QA results](QA_RESULTS.md#quality-integration-on-the-69-migration-source). New combined-source acceptance remains pending; all fifteen required contexts and actual browser execution evidence remain required. [GitHub administration](GITHUB_WORKFLOW.md) records the active personal-only review exception, strict checks and history protections; roles and the maintenance App gain no bypass. Public Website/provider activation and production approval remain separate.
+
 Documentation uses English; the application supports German/English and user-authored content retains its language. The original [master brief](UNIVERSAL_MASTER_PROMPT.txt) and [operations extension brief](OPERATIONS_EXTENSION_PROMPT.txt) remain verbatim historical requirements. Later explicit user decisions take precedence. The separate implementation plan, work log and root changelog were removed at Carina's request; validation belongs in the relevant guide and PR, without recreating those files.
 
 ## Product and user workflows
@@ -91,7 +93,7 @@ Documentation uses English; the application supports German/English and user-aut
 - [GitHub checks, security and coverage](CI_QUALITY.md)
 - [Verification plan and acceptance evidence](TEST_PLAN.md)
 - [Functional and integration acceptance](FUNCTIONAL_ACCEPTANCE.md)
-- [QA evidence — 2026-11-16](QA_RESULTS.md)
+- [Source-bound QA evidence](QA_RESULTS.md)
 - [Functional and code-connection audit](FUNCTIONAL_CODE_AUDIT.md)
 - [System audit: functionality, performance and failure paths](SYSTEM_AUDIT.md)
 - [Guided experience functional and connectivity audit](GUIDED_EXPERIENCE_AUDIT.md)

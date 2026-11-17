@@ -209,6 +209,142 @@ await withTestDatabase("schedule_finite", async ({ sql, actor }) => {
       );
     },
   );
+  await check(
+    "Course-run RPC preserves six-digit DST-fold instants on metadata-only resave and rejects nonpositive microsecond intervals atomically",
+    async () => {
+      // Create fictional references through the same public RPC surface as the
+      // application; the controlled authenticated actor still needs current AAL2.
+      const organisation = await actor(
+        admin,
+        `select public.save_organisation(null,${quoteSql(JSON.stringify({ name: "Fictional precision academy", time_zone: "Europe/Berlin" }))}::jsonb)`,
+        "aal2",
+      );
+      const template = await actor(
+        admin,
+        `select public.save_course_template(null,${quoteSql(JSON.stringify({ title: "Fictional precise course", topic_ids: [] }))}::jsonb)`,
+        "aal2",
+      );
+      const initial = {
+        template_id: template,
+        organisation_id: organisation,
+        time_zone: "Europe/Berlin",
+        delivery_type: "online",
+        venue: "Original fictional venue",
+        published: true,
+        archived: false,
+        sessions: [
+          {
+            starts_at: "2030-10-27T02:30:37.123456+02:00",
+            ends_at: "2030-10-27T02:30:42.654321+01:00",
+          },
+        ],
+      };
+      /** Invoke the unchanged public contract without any JavaScript date conversion. */
+      const saveRun = (id, values) =>
+        actor(
+          admin,
+          `select public.save_course_run(${id === null ? "null" : quoteSql(id)},${quoteSql(JSON.stringify(values))}::jsonb)`,
+          "aal2",
+        );
+      const run = await saveRun(null, initial);
+      /** Format stored PostgreSQL values directly so six digits are not truncated by JS. */
+      const storedIntervals = async () =>
+        JSON.parse(
+          await actor(
+            admin,
+            `select jsonb_agg(jsonb_build_object(
+              'starts_at',to_char(starts_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
+              'ends_at',to_char(ends_at at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
+              'berlin_start',to_char(starts_at at time zone 'Europe/Berlin','YYYY-MM-DD"T"HH24:MI'),
+              'berlin_end',to_char(ends_at at time zone 'Europe/Berlin','YYYY-MM-DD"T"HH24:MI'),
+              'microseconds',extract(epoch from (ends_at-starts_at))*1000000
+            ) order by starts_at,ends_at)::text from public.course_sessions where course_run_id=${quoteSql(run)}`,
+            "aal2",
+          ),
+        );
+      const folded = [
+        {
+          starts_at: "2030-10-27T00:30:37.123456Z",
+          ends_at: "2030-10-27T01:30:42.654321Z",
+          berlin_start: "2030-10-27T02:30",
+          berlin_end: "2030-10-27T02:30",
+          microseconds: 3605530865,
+        },
+      ];
+      assert.deepEqual(await storedIntervals(), folded);
+      assert.equal(
+        await saveRun(run, { ...initial, venue: "Amended fictional venue" }),
+        run,
+      );
+      assert.deepEqual(await storedIntervals(), folded);
+      assert.deepEqual(
+        JSON.parse(
+          await actor(
+            admin,
+            `select jsonb_build_object('venue',venue,'zone',time_zone,'published',published)::text from public.course_runs where id=${quoteSql(run)}`,
+            "aal2",
+          ),
+        ),
+        {
+          zone: "Europe/Berlin",
+          venue: "Amended fictional venue",
+          published: true,
+        },
+      );
+
+      const oneMicrosecond = {
+        ...initial,
+        venue: "One-microsecond fictional fixture",
+        sessions: [
+          {
+            starts_at: "2030-04-01T07:00:00.000000Z",
+            ends_at: "2030-04-01T07:00:00.000001Z",
+          },
+        ],
+      };
+      assert.equal(await saveRun(run, oneMicrosecond), run);
+      assert.deepEqual(await storedIntervals(), [
+        {
+          ...oneMicrosecond.sessions[0],
+          berlin_start: "2030-04-01T09:00",
+          berlin_end: "2030-04-01T09:00",
+          microseconds: 1,
+        },
+      ]);
+
+      // A rejected update reaches the real transaction after metadata changes,
+      // old-row deletion and a first valid insertion. The complete saved graph,
+      // including row IDs and audit history, must nevertheless remain identical.
+      const snapshot = () =>
+        sql(`select jsonb_build_object(
+          'run',(select to_jsonb(r) from public.course_runs r where r.id=${quoteSql(run)}),
+          'sessions',(select jsonb_agg(to_jsonb(s) order by s.id) from public.course_sessions s where s.course_run_id=${quoteSql(run)}),
+          'audit',(select coalesce(jsonb_agg(to_jsonb(a) order by a.id),'[]'::jsonb) from public.audit_events a where a.resource_id=${quoteSql(run)})
+        )::text`);
+      const before = await snapshot();
+      for (const ends_at of [
+        "2030-10-28T01:00:00.000001Z",
+        "2030-10-28T01:00:00.000000Z",
+      ]) {
+        await assert.rejects(
+          saveRun(run, {
+            ...oneMicrosecond,
+            venue: "Rejected metadata must roll back",
+            published: false,
+            sessions: [
+              initial.sessions[0],
+              {
+                starts_at: "2030-10-28T01:00:00.000001Z",
+                ends_at,
+              },
+            ],
+          }),
+          /Invalid or overlapping sessions/,
+        );
+        assert.equal(await snapshot(), before);
+      }
+    },
+  );
 });
 
 await withTestDatabase(
@@ -253,5 +389,5 @@ await withTestDatabase(
   { migrationsThrough: "20261115155208" },
 );
 console.log(
-  `\n${checks} finite-schedule PostgreSQL checks passed (API rollback, private intervals, validated constraints and old-data refusal).`,
+  `\n${checks} finite-schedule PostgreSQL checks passed (API rollback, exact course precision, private intervals, validated constraints and old-data refusal).`,
 );

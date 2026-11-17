@@ -20,6 +20,60 @@ Convert the pending maintenance PR to draft to keep it paused across future dail
 
 The manual `signature_probe_only` input checks the existing App credentials through a signed temporary branch and a real draft PR. It confirms PR classification, closes the draft and removes its branch; it never queues the diagnostic PR for merge. Its output identifies the probe PR/commit for operator inspection. Lost branch/PR responses are recovered only through the exact owned identity; existing refs, changed heads or unconfirmed commits are preserved for inspection and never reported as a successful cleanup. Normal PR workflows may start for that temporary commit; observing or canceling those diagnostic runs is separate from claiming complete application acceptance. The application source must already have passed its own required checks.
 
+## Retained accepted compensation and invoices
+
+The candidate-owned `candidate-upgrade-probe.mjs` runs against both source phases.
+Before upgrading, real fictional Auth sessions and administrative TOTP create a
+scanned executed-contract PDF and lecturer receipt, accept a two-session legacy
+net-only job, and submit an own scanned invoice through the business APIs. A
+commission-capable baseline additionally creates and accepts a second complete
+job using that baseline's existing policy. The probe never chooses percentages,
+changes policy or runs the candidate-only bootstrap before retention is checked.
+
+After upgrading, fresh password/MFA sessions must reproduce the same accepted
+amounts, original AUD currency, conditions/version, exact session digests,
+gross/platform/net ledger, contract receipt, invoice/item/status/payment rows and
+exact PDF hashes/bytes. Own RLS and business projections are compared with a
+read-only physical snapshot. A separate lecturer must still receive no guessed
+claim/invoice rows or contract/invoice metadata/bytes. Existing password, MFA,
+roles, private-event and scanned-file checks also remain required. Credentials
+and captured records stay in the owned scratch directory's private ledger;
+published summaries contain only anonymous counts, completed-check flags and the
+canonical snapshot digest, never credentials or captured rows.
+
+Older invoice-capable baselines without private role pricing may use their
+existing exact, RLS-protected job projection when `job_offers()` does not yet
+exist. Private role-pricing schemas must provide their actor-quote API; an API
+error never falls back to raw price sentinels. A baseline predating invoice
+support fails explicitly instead of claiming invoice retention. New schema
+columns are allowed, while missing or changed pre-existing financial values fail
+verification. A newly introduced revenue table must not fabricate legacy gross.
+
+Focused contract/orchestration cases run with
+`node --test deploy/hostinger/maintenance/candidate-upgrade-probe.test.mjs` and are
+discovered by the canonical maintenance-test inventory. They use controlled SDK
+fixtures; **the new combined native retained-data run remains required** before
+claiming this witness passed on real Auth, PostgreSQL, Storage and the scanner.
+
+The current accepted baseline is main
+`1de544d872706eebc95a942a1956254ed87ae40d`, with **36** released migration files.
+Their bytes remain unchanged by this witness. The historical native pass on
+`5876224200fc72d5d7fb312f03eb5e58a582d8c1` used the older 26-migration baseline
+`e048edb7785bb40c29ddc2d5a76bd40b02580062`; it does not establish native acceptance
+of this current integration. Under the shared QA lock, archive the exact current
+accepted baseline separately and run the candidate checkout's controller:
+
+```sh
+node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run \
+  --baseline-root "$BASELINE_ROOT" \
+  --baseline-commit 1de544d872706eebc95a942a1956254ed87ae40d
+```
+
+Record the exact tested candidate commit, baseline, discovered migration/API-suite
+counts, both equal financial receipts and checked owned cleanup. The 36-migration
+native run is still pending. An unchanged database image is a retained-data/source
+upgrade check, not proof of a PostgreSQL image-version upgrade.
+
 ## PostgreSQL and automatic recovery
 
 PostgreSQL stays on the supported Supabase 17 series. A future 17.x pin needs a real retained-data candidate proof bound to both image digests and the exact migration inventory. PostgreSQL 18 requires a separately designed major migration. An unavailable or incompatible latest candidate is held visibly rather than labelled installed.

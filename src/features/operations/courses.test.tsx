@@ -1,3 +1,8 @@
+/**
+ * Protect actual course forms against timestamp truncation and false saves.
+ * Fictional rows and controlled transport replies isolate the UI contract;
+ * real database authorization and native/browser acceptance remain separate.
+ */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   act,
@@ -15,6 +20,7 @@ import i18n from "../../lib/i18n";
 import { CoursesPage } from "./courses";
 import type { BuildingBlock, CourseRun, Template } from "./data";
 
+// Each cache belongs to a fictional manager; no service or account is contacted.
 const actor = "fictional-course-manager";
 const templateId = "c1000000-0000-4000-8000-000000000001";
 const runId = "c2000000-0000-4000-8000-000000000001";
@@ -61,6 +67,7 @@ const run: CourseRun = {
 };
 const clients: QueryClient[] = [];
 
+/** Mount the production page with actor-scoped query data and real form/dialog state. */
 function renderCourses({
   permissions = ["courses.manage"],
   templates = [template],
@@ -100,6 +107,7 @@ function renderCourses({
   return client;
 }
 
+/** Open a genuine new-run dialog through its visible management control. */
 async function newRun() {
   await userEvent.click(
     screen.getByRole("button", { name: "Durchführung anlegen" }),
@@ -107,6 +115,7 @@ async function newRun() {
   return screen.getByRole("dialog", { name: "Durchführung anlegen" });
 }
 
+/** Change only the requested row's minute inputs, keeping React Hook Form ownership. */
 function interval(dialog: HTMLElement, start: string, end: string, index = 1) {
   fireEvent.change(
     within(dialog).getByLabelText(`Beginn ${index}`, { exact: true }),
@@ -140,6 +149,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  // Release observers and the online-state override; no retries survive a case.
   cleanup();
   clients.splice(0).forEach((client) => client.clear());
   vi.restoreAllMocks();

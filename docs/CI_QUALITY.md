@@ -1,27 +1,48 @@
 # GitHub checks, security and coverage
 
-> Reviewed source policy and latest integration readback: all three `main` rulesets are active. Only CarinaSchoppe's personal account (`User:29256704`) has a `pull_request` review exception; every other user and App needs independent/latest-push approval. History/signatures and all15strict producer-bound checks have no bypass. A temporary disabled review-layer drift was observed and subsequently restored through a separate coordinated operational action, then independently read back. Committing these source snapshots does not itself activate a rule; the [live server rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) remain authoritative.
+> The recorded 16 November 2026 06:42:36 UTC snapshot had three active `main` rulesets and the sole personal PR-only review exception for `CarinaSchoppe` (`User:29256704`). The 12:16:58 UTC disabled-review readback is historical. A subsequent live readback confirms review ruleset `27329000` active after its 13:38 UTC update; all fifteen strict checks and the separate history/signature layer retain no bypass actors, and neither roles nor the maintenance App gain a review exception. Root changed no server settings. [GitHub administration](GITHUB_WORKFLOW.md#active-rule-layers) retains the dated chronology. The prepared App controller still requires independent current-head review for every author, and active policy alone does not prove its delivery.
+
+The prepared integration now includes accepted Main38 `bcba6734`, with all 69 released SQL files and Main25 production application bytes unchanged. Its support browser fixture and API-generator/documentation changes still require fresh combined-source acceptance. [QA results](QA_RESULTS.md#quality-integration-on-the-69-migration-source) scopes the pre-Main38 697/358/31/8 local checks and pending `02dc8a84` workflow; [ROADMAP](../ROADMAP.md) retains the full A–N scope. The retired implementation plan/work log are not recreated, and neither prior evidence nor source presence establishes controller/App-merge delivery or production acceptance.
+
+**Pre-Main38 Main25 evidence:** Current Main25 quality composition includes accepted `4f7f6c06` and exactly 69 SQL sources, with the previous 68 unchanged. Local checks pass 697 frontend cases/91 files, V8 S66.70/B62.08/F56.69/L68.84%, both critical APIs 100% across 65 included cases, 358 runtime/maintenance cases including 17 real Deno HTTP cases, 31 package cases in 10.2 seconds and eight production enquiry Edge-handler cases. Full types/ESLint/actionlint/source-workflow-doc formatting, production Edge lint, graph (200 modules / 48 routes / 56 links / 190 RPCs / one Edge call / zero issues) and production/PWA build (89 entries) pass. The [enquiry guide](WEBSITE_ENQUIRIES.md) owns the private intake and separate public-activation boundary. Historical `a084859d`/Main12-base native and 158 desktop/mobile plus four built-PWA passes do not verify this later composition. Fresh current-head/current-base full system/browser/native/security/package CI remains required, with all fifteen contexts and the separate actual browser prerequisite; no final system outcome or current-source complete pass is inferred.
+
+**Historical Main12 checkpoint:** Current Main12 quality composition includes accepted `2c7d326` and all 68 unchanged SQL files. Local checks pass 690 frontend cases/90 files, 341 unique runtime/maintenance cases (260 + 81), full types/lint/actionlint/format, the 197-module/46-route graph with zero issues and the production/PWA build with 86 precache entries. Whole-source V8 is S66.57/B61.98/F56.92/L68.70%; both APIs retain 100% across the 65 focused cases included in the frontend total. Package-concurrency correction `c24` is integrated as signed `5c8444d`, with 31/31 package cases passing in 6.78 seconds and the post-package combined 341-case run passing in 9.18 seconds. Remote merge `2659618` is preserved normally without changing those source bytes. The older `b9043df` CI against `99add7de` passed native compatibility, but system/browser were cancelled at 15:10 UTC after the remote update; no complete green or rebased acceptance is claimed. Fresh final-source system/browser/native/security/package gates remain required.
+
+**Historical Main24 checkpoint:** Current accepted Main24 `99add7de` has 68 released SQL sources. Local quality composition `a0a7b48` passes 690 frontend cases/90 files, 331 runtime/maintenance cases, full TypeScript/ESLint and the production/PWA build. V8 whole-source coverage is S66.75/B62.14/F56.93/L68.87%, with both critical lifecycle/notification APIs separately at 100% across 65 focused cases. The older 62-migration workflow passed 144 application browsers, four built-PWA cases, security and its native SQL-worker step, then system/native were cancelled at 14:28 UTC after an external PR-head update. Its dependent preview failed the cancelled prerequisites; this is not complete acceptance of the current composition. Fresh final-source system/browser/native/security/package gates remain required. Current Main24 does not yet machine-enforce `merge:hold`; Draft guards PR19 until the assigned Ready transition triggers fresh full verification.
 
 Every PR retains quality/build, full-source unit coverage, CodeQL, dependency
-review and metadata. The checked-out two-parent merge determines the work below;
-labels and caller-supplied paths cannot select a cheaper profile. Missing Git
-history, invalid paths and unknown source locations conservatively select full.
+review and metadata. Only a verified open Draft event bound to its canonical PR
+ref, repository and exact tested merge parents may use a cheaper path below.
+Ready PRs always select full, including documentation-only work. Labels and
+caller-supplied paths cannot select a cheaper profile. Missing event/Git evidence,
+invalid paths and unknown source locations conservatively select full.
 
 | Change profile                                                                                                                | Acceptance beyond quality/coverage/security                                                                                                                  |
 | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Documentation/templates only                                                                                                  | Runtime/Edge/audit checks; no SQL or native run is claimed.                                                                                                  |
-| Ordinary frontend/static changes                                                                                              | Runtime/Edge/audit plus every existing SQL migration/RLS/race suite, split exhaustively between two separate digest-pinned, networkless PostgreSQL clusters. |
-| Backend, Auth, private file/chat access, shared app/cache code, dependencies, test/delivery infrastructure or unknown changes | All system/SQL/API and desktop/mobile/PWA stages on separate isolated runners, plus the actual native retained-data rehearsal and both SQL workers.          |
+| Verified Draft: documentation/templates only                                                                                  | Runtime/Edge/audit checks; no SQL or native run is claimed.                                                                                                  |
+| Verified Draft: ordinary frontend/static changes                                                                              | Runtime/Edge/audit plus every existing SQL migration/RLS/race suite, split exhaustively between two separate digest-pinned, networkless PostgreSQL clusters. |
+| Backend, Auth, private file/chat access, shared app/cache code, dependencies, test/delivery infrastructure or unknown changes | Full system/SQL/API and desktop/mobile/PWA phases on separate isolated PR runners, plus actual native retained-data acceptance and both SQL workers.         |
+| Every ready PR, including `ready_for_review`                                                                                  | Full system, browser and native acceptance; Draft-only evidence does not authorize merging.                                                                  |
 | Every main push or manual run                                                                                                 | Complete unchanged application and native retained-data acceptance in parallel.                                                                              |
 
 The required verification jobs start after the small scope job instead of waiting
 for the quality matrix. Their first shell step independently rejects a failed,
-missing or invalid scope, and rejects every non-full main/manual profile. Thus a
+missing or invalid scope, and rejects every non-full ready/main/manual profile. Thus a
 broken selector cannot convert a required check into a successful skipped job.
 No required context is removed and no threshold, race count or security assertion
-is reduced. A manual branch run remains available for full pre-merge acceptance.
+is reduced. The workflow explicitly subscribes to `ready_for_review` as well as
+the default PR actions, so a transition to Ready starts a fresh full run even
+without a source push. See [GitHub's PR event types](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request).
+Wait for that full run before queuing a native merge; a completed Draft package
+is not full acceptance. Full-profile PR acceptance requires actual successful
+system, browser and native steps behind the current canonical check jobs. The
+controller browser-job binding is implemented. Its pre-union `41866c6` evidence
+and the then-pending queued-source validation are historical. The later Main24
+composition passes 690 frontend and 331 runtime/maintenance cases; fresh final
+68-migration system/browser/native/security/package CI remains required.
+A manual branch run remains available for complete verification.
 
-Sensitive PRs split the complete runner into explicit `--phase system` and
+Full-profile PRs, including every ready PR, split the runner into explicit `--phase system` and
 `--phase browser` invocations. Each owns a fresh random stack, database, test
 snapshot, credentials, ports, lock and cleanup on a separate runner. Both start
 the real services and exercise persistence before seeding fictional commercial

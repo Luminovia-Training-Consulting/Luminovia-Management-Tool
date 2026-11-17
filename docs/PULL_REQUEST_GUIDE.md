@@ -6,6 +6,8 @@ This guide explains how a change is accepted. Setup and local development are co
 
 The contribution guides were delivered through [PR #6](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/6) (`18ce633`), and the separate local GitHub preview launcher through [PR #7](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/7) (`5f89986`). These historical merges did not themselves activate server-side review rules; the current live activation is described below. The source catalogue [labels.json](../.github/labels.json) now contains 36 managed labels; nine original GitHub labels are also preserved.
 
+The native controller and continuous read-only probe remain prepared; a manual metadata-access proof does not establish their default-branch execution.
+
 ## Branch and title
 
 Create a branch from the current `main`; external contributors use a fork. Keep each pull request focused on one related problem. Agent branches start with `codex/`. An early draft is useful when you need feedback before the implementation is ready for review.
@@ -105,6 +107,14 @@ All fifteen required checks must pass against the current base:
 Fourteen statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. All fifteen are required for merging. See [CI_QUALITY](CI_QUALITY.md).
 
 If main changes, update the PR as required and wait for checks against the current base. The required-check and history/signature rulesets have no bypass actors. The reviewed source ruleset grants only `CarinaSchoppe` (`User:29256704`) the personal PR-only exception within that layer. No App has a review or required-check exception. Historical App-token tests grant no current merge authority; see the [current rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
+
+The prepared [verified native controller](AUTO_MERGE.md) requires independent current-head approval and GitHub's native `clean` state for **all** candidates. A human author's role grants the App no exemption. The reviewer must have current writer/admin authority and be independent of the author and any proven source pusher. Actual source pushes are bound to the exact CI check suite; a workflow actor, retry/reopen event or commit email is not push authority. Missing push evidence grants no exemption; contradictory evidence blocks the candidate.
+
+Keep unfinished work Draft and disable queued native auto-merge while held. The proposed metadata validator rejects `merge:hold`, but accepted Main38 does not yet enforce that label; it is a coordination marker until delivery. Changing to Ready must start fresh full system, browser and native acceptance through `ready_for_review`. A passing scanner job does not replace the generated CodeQL findings check, and a preview package is not a hosted acceptance result. The complete list includes build/type/lint/format/connectivity, unit coverage, full application/native compatibility, PR metadata, PR preview package and the separate security outcomes.
+
+Repository auto-merge availability and prepared source do not prove that this controller has reached main. Its own exact-source CI, merge and successful default-branch execution remain required. Historical [QA records](QA_RESULTS.md) are revision-specific and cannot certify a new head or base.
+
+Daily maintenance follows the same protected PR process: a signed separate branch, `type:dependencies`, `area:devops` and `risk:high` labels, independent review and all 15 current checks. Native auto-merge grants no App or role exception. PR22/main `319ab69f` provides the publisher source; [protected maintenance operation](GITHUB_WORKFLOW.md#protected-daily-maintenance) distinguishes it from actual token/workflow acceptance and explains existing-PR and diagnostic cleanup behavior.
 
 ## Merge and publication
 
