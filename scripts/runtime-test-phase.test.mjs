@@ -11,11 +11,13 @@ import {
   browserPlan,
   browserAcceptance,
   browserFailure,
+  browserProjectSelection,
 } from "./testing/browser-evidence.mjs";
 import {
   runtimeTestArguments,
   runtimeTestPhasePlan,
 } from "./runtime-test-phase.mjs";
+import { runBounded } from "./testing/run-bounded.mjs";
 
 const source = readFileSync(
   new URL("./runtime-test.mjs", import.meta.url),
@@ -54,6 +56,9 @@ async function runFixture({
     const discovery = path.endsWith("plan.json");
     const stage = path.includes("/pwa/") ? "pwa" : "application";
     const name = stage === "pwa" ? "pwa.spec.ts" : "workflow.spec.ts";
+    const browserNames = inherited.PORTAL_BROWSER_PROJECT
+      ? [inherited.PORTAL_BROWSER_PROJECT]
+      : ["desktop-chromium", "mobile-chromium"];
     const report = {
       config: {
         rootDir: "/owned-qa/scratch/tests/e2e",
@@ -70,34 +75,32 @@ async function runFixture({
               file: name,
               title: "service-boundary workflow",
               ok: !discovery,
-              tests: ["desktop-chromium", "mobile-chromium"].map(
-                (projectName) => ({
-                  projectName,
-                  expectedStatus: "passed",
-                  status: discovery ? "skipped" : "expected",
-                  results: discovery
-                    ? []
-                    : [
-                        {
-                          status: "passed",
-                          retry: 0,
-                          duration: 1,
-                          errors: [],
-                          stdout: [{ text: "private-browser-session-fixture" }],
-                        },
-                      ],
-                }),
-              ),
+              tests: browserNames.map((projectName) => ({
+                projectName,
+                expectedStatus: "passed",
+                status: discovery ? "skipped" : "expected",
+                results: discovery
+                  ? []
+                  : [
+                      {
+                        status: "passed",
+                        retry: 0,
+                        duration: 1,
+                        errors: [],
+                        stdout: [{ text: "private-browser-session-fixture" }],
+                      },
+                    ],
+              })),
             },
           ],
         },
       ],
       stats: {
-        expected: discovery ? 0 : 2,
+        expected: discovery ? 0 : browserNames.length,
         unexpected: 0,
         flaky: 0,
         skipped: 0,
-        duration: discovery ? 0 : 2,
+        duration: discovery ? 0 : browserNames.length,
       },
     };
     mutateBrowserReport(report, { stage, discovery });
@@ -155,15 +158,18 @@ async function runFixture({
     join,
     basename,
     randomBytes,
+    availableParallelism: () => 4,
     createHash,
     browserPlan,
     browserAcceptance,
     browserFailure,
+    browserProjectSelection,
     tmpdir: () => "/owned-qa/tmp",
     root: "/owned-qa/source",
     runtimeDir: "/owned-qa/reports",
     runtimeSnapshotSource: () => true,
     runtimeTestPhasePlan,
+    runBounded,
     runtimeTestArguments,
     acquireTestLock() {
       locks++;
@@ -249,6 +255,41 @@ const acceptance = (result) =>
     result.reports.filter(({ path }) => path.endsWith("acceptance.json")).at(-1)
       .value,
   );
+
+test("a browser lane cannot reduce complete or system acceptance before acquiring any resource", async () => {
+  for (const args of [
+    [],
+    ["--phase", "all"],
+    ["--phase", "all", "--external-gates", "quality,coverage"],
+    ["--phase", "system"],
+  ]) {
+    const result = await runFixture({
+      args,
+      inherited: { PORTAL_BROWSER_PROJECT: "desktop-chromium" },
+    });
+    assert.match(result.error?.message ?? "", /only.*browser phase/i);
+    assert.equal(result.locks, 0);
+    assert.equal(result.snapshots, 0);
+    assert.equal(result.calls.length, 0);
+  }
+});
+
+test("an explicit browser phase may execute one selected CI lane", async () => {
+  const result = await runFixture({
+    args: ["--phase", "browser"],
+    inherited: { PORTAL_BROWSER_PROJECT: "mobile-chromium" },
+  });
+  assert.equal(result.error, undefined);
+  for (const stage of ["application", "pwa"]) {
+    for (const discovery of [true, false]) {
+      const call = browserCommand(result, stage, discovery);
+      assert.ok(call);
+      const index = call.args.indexOf("--project");
+      assert.ok(index >= 0);
+      assert.equal(call.args[index + 1], "mobile-chromium");
+    }
+  }
+});
 
 test("no arguments remain complete; explicit phase arguments reject every unknown or partial option", () => {
   const expected = [

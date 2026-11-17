@@ -1,5 +1,17 @@
 # Persistent implementation plan
 
+PR43 correction: retain the full 50-way simultaneous HTTP capacity race; the preceding ten-in-flight experiment is superseded because the native PostgreSQL crash cause is not yet established. The existing complete cleanup and current-head native CI remain required.
+
+## Browser test runtime — 17 November 2026
+
+- [x] Keep both Chromium projects, every browser scenario/assertion, per-file ordering and zero retries. Restore one browser worker: the first parallel run reproduced shared Supabase Auth account-deletion failures.
+- [x] Use Playwright's virtual clock for the 15-second stale-query behavior and shorten the idle observation only to 10.1 seconds, beyond the prior 10-second polling boundary.
+- [x] Baseline exact-head timings from the last green main-based CI: browser cases 20m34s; system verify 35m32s. About 17 minutes came from separate SQL/API suites run serially.
+- [x] Use a bounded pool for independent SQL suites (up to four isolated databases); retain stop-on-failure and wait-for-in-flight cleanup semantics. API suites stay sequential because they share one GoTrue service and parallel cleanup failed in CI.
+- [x] Scale independent PR SQL shards to at most four isolated workers; keep retained selfhost API suites sequential after the same GoTrue cleanup failure. Retain real migration/restart/image, auth, browser, concurrency, and cleanup proofs.
+- [x] Replay migrations once per isolated PostgreSQL worker into an owned ephemeral template and clone a fresh database per SQL suite; keep main migration acceptance and every historical-bound migration check unchanged. Exact-head SQL/template suites passed.
+- [ ] Complete exact-head CI with serial browser/API fixtures and collect successful per-job timings before claiming the final speedup. Do not trim coverage.
+
 ## Current contract privacy and local audit — 17 November 2026
 
 - [x] Reproduce the personal contract access boundary and implement owner-only file access with bounded administrative registration metadata in a new migration.
