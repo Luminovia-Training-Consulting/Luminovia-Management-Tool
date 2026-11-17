@@ -10,6 +10,7 @@ import {
   browserPlan,
   browserAcceptance,
   browserFailure,
+  browserProjectSelection,
 } from "./testing/browser-evidence.mjs";
 import {
   runtimeTestArguments,
@@ -115,6 +116,7 @@ async function runFixture({
     browserPlan,
     browserAcceptance,
     browserFailure,
+    browserProjectSelection,
     tmpdir: () => "/owned-qa/tmp",
     root: "/owned-qa/source",
     runtimeDir: "/owned-qa/reports",

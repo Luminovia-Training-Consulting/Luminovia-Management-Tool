@@ -11,9 +11,34 @@ import {
   browserPlan,
   browserAcceptance,
   browserFailure,
+  browserProjectNames,
+  browserProjectSelection,
 } from "./testing/browser-evidence.mjs";
 
 const projects = ["desktop-chromium", "mobile-chromium"];
+
+test("browser lanes select exactly one project while local acceptance keeps both", () => {
+  assert.deepEqual(browserProjectSelection(undefined), browserProjectNames);
+  assert.deepEqual(browserProjectSelection("desktop-chromium"), [projects[0]]);
+  assert.deepEqual(browserProjectSelection("mobile-chromium"), [projects[1]]);
+  assert.throws(
+    () => browserProjectSelection("webkit"),
+    /Unknown isolated browser project/,
+  );
+});
+
+test("a browser lane accepts its selected project from a config containing both projects", () => {
+  const selected = report();
+  for (const suite of selected.suites)
+    for (const spec of suite.specs)
+      spec.tests = spec.tests.filter(
+        ({ projectName }) => projectName === projects[0],
+      );
+  assert.equal(
+    browserPlan(selected, { files, projects: [projects[0]] }).length,
+    files.length,
+  );
+});
 const files = ["calendar.spec.ts", "search.spec.ts"];
 function report() {
   return {
@@ -195,7 +220,7 @@ test("a partial/empty/sharded or duplicate run cannot substitute for the discove
   }
   assert.throws(
     () => browserPlan(report(), { files, projects: [projects[0]] }),
-    /projects differ/,
+    /Browser projects differ/,
   );
 });
 

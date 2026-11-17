@@ -2,6 +2,18 @@
 import assert from "node:assert/strict";
 import { isAbsolute, relative } from "node:path";
 
+export const browserProjectNames = ["desktop-chromium", "mobile-chromium"];
+
+/** Select one independently provisioned CI browser lane, or both for local acceptance. */
+export function browserProjectSelection(value) {
+  if (value === undefined || value === "") return [...browserProjectNames];
+  assert.ok(
+    browserProjectNames.includes(value),
+    "Unknown isolated browser project.",
+  );
+  return [value];
+}
+
 /** Flatten nested suites into stable file/title/project identities, rejecting malformed or duplicate evidence. */
 function cases(report, { allowErrors = false } = {}) {
   assert.ok(Array.isArray(report?.suites), "Browser report is missing suites.");
@@ -91,19 +103,19 @@ export function browserFailure(report) {
   };
 }
 
-/** Bind a real Playwright --list report to every source spec and both supported
- * browser projects before mutations. This is an inventory, not a passed test. */
+/** Bind a real Playwright --list report to every source spec in the selected
+ * browser project lanes before mutations. This is an inventory, not a passed test. */
 export function browserPlan(report, { files, projects }) {
   assert.ok(
     files.length > 0 && projects.length > 0,
     "An expected browser inventory is required.",
   );
+  const discovered = cases(report);
   assert.deepEqual(
-    report.config.projects.map(({ name }) => name).sort(),
+    [...new Set(discovered.map(({ project }) => project))].sort(),
     [...projects].sort(),
     "Browser projects differ from the required desktop/mobile inventory.",
   );
-  const discovered = cases(report);
   for (const item of discovered) {
     assert.ok(
       files.includes(item.file),

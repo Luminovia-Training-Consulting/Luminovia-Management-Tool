@@ -6,6 +6,7 @@
 import { spawn } from "node:child_process";
 import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
+import { collectUtf8 } from "./utf8-stream.mjs";
 /** Quotes one SQL literal; database names and other identifiers have separate validation. */
 export const quoteSql = (value) => `'${String(value).replaceAll("'", "''")}'`;
 const ownedTemplate = (value) => {
@@ -81,14 +82,15 @@ export async function prepareTestDatabaseTemplate({
         ],
         { stdio: ["pipe", "pipe", "pipe"] },
       );
-      let out = "",
-        err = "";
-      child.stdout.on("data", (data) => (out += data));
-      child.stderr.on("data", (data) => (err += data));
+      const stdout = collectUtf8(child.stdout);
+      const stderr = collectUtf8(child.stderr);
       child.on("error", reject);
-      child.on("close", (code) =>
-        code === 0 ? resolve(out.trim()) : reject(new Error(err || out)),
-      );
+      child.on("close", (code) => {
+        const out = stdout();
+        const err = stderr();
+        if (code === 0) resolve(out.trim());
+        else reject(new Error(err || out));
+      });
       child.stdin.end(text);
     });
   const sql = execute ?? dockerSql;
@@ -141,14 +143,13 @@ export async function dropTestDatabaseTemplate({
       ],
       { stdio: ["pipe", "ignore", "pipe"] },
     );
-    let err = "";
-    child.stderr.on("data", (data) => (err += data));
+    const stderr = collectUtf8(child.stderr);
     child.on("error", reject);
-    child.on("close", (code) =>
-      code === 0
-        ? resolve()
-        : reject(new Error(err || "Template cleanup failed.")),
-    );
+    child.on("close", (code) => {
+      const err = stderr();
+      if (code === 0) resolve();
+      else reject(new Error(err || "Template cleanup failed."));
+    });
     child.stdin.end(`drop database if exists ${name} with (force)`);
   });
 }
@@ -198,14 +199,15 @@ export async function withTestDatabase(
         ],
         { stdio: ["pipe", "pipe", "pipe"] },
       );
-      let out = "",
-        err = "";
-      child.stdout.on("data", (data) => (out += data));
-      child.stderr.on("data", (data) => (err += data));
+      const stdout = collectUtf8(child.stdout);
+      const stderr = collectUtf8(child.stderr);
       child.on("error", reject);
-      child.on("close", (code) =>
-        code === 0 ? resolve(out.trim()) : reject(new Error(err || out)),
-      );
+      child.on("close", (code) => {
+        const out = stdout();
+        const err = stderr();
+        if (code === 0) resolve(out.trim());
+        else reject(new Error(err || out));
+      });
       child.stdin.end(text);
     });
   /** Executes the check as a specific identity so administrative fixture privileges cannot mask the tested access. */

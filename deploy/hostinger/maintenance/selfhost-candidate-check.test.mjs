@@ -956,6 +956,10 @@ test("M4 scratch API adapter preserves loopback guards and requires exact candid
   symlinkSync(resolve("node_modules"), join(directory, "node_modules"));
   writeFileSync(join(directory, "api.mjs"), adapted);
   writeFileSync(
+    join(directory, "utf8-stream.mjs"),
+    readFileSync(resolve("scripts/testing/utf8-stream.mjs"), "utf8"),
+  );
+  writeFileSync(
     join(directory, "supabase/config.toml"),
     'project_id = "' + project + '"\n',
   );

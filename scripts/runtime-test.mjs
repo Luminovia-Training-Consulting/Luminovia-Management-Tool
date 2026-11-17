@@ -21,6 +21,7 @@ import {
   browserPlan,
   browserAcceptance,
   browserFailure,
+  browserProjectSelection,
 } from "./testing/browser-evidence.mjs";
 import { runtimeSnapshotSource } from "./runtime-snapshot.mjs";
 import {
@@ -45,6 +46,11 @@ import {
 // Parse before acquiring a lock, copying source or reaching a Docker engine.
 // Without explicit CLI arguments the canonical command always runs everything.
 const phase = runtimeTestPhasePlan(runtimeTestArguments(process.argv, root));
+const browserProjects = browserProjectSelection(
+  process.env.PORTAL_BROWSER_PROJECT,
+);
+const browserProjectArgs =
+  browserProjects.length === 1 ? ["--project", browserProjects[0]] : [];
 const run = randomBytes(4).toString("hex");
 const project = `luminovia-portal-test-${run}`;
 const artifacts = join(runtimeDir, "tests", run);
@@ -226,6 +232,7 @@ try {
         "playwright",
         "test",
         ...args,
+        ...browserProjectArgs,
         "--list",
         "--reporter=json",
       ],
@@ -233,7 +240,7 @@ try {
     );
     const planned = browserPlan(JSON.parse(readFileSync(planPath, "utf8")), {
       files: expectedFiles,
-      projects: ["desktop-chromium", "mobile-chromium"],
+      projects: browserProjects,
     });
     evidence.browsers[stage] = {
       status: "planned",
@@ -245,7 +252,7 @@ try {
       await step(
         label,
         "npx",
-        ["--no-install", "playwright", "test", ...args],
+        ["--no-install", "playwright", "test", ...args, ...browserProjectArgs],
         stageEnv,
         timeoutMs,
       );

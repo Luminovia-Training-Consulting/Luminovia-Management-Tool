@@ -320,12 +320,29 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
         contact_name: "😀".repeat(120),
         reference_description: "😀".repeat(4000),
       };
-      const storedUnicode = await save(job, unicode, version);
-      assert.equal(storedUnicode.contact_name, unicode.contact_name);
-      assert.equal(
-        storedUnicode.reference_description,
-        unicode.reference_description,
+      const storedUnicode = JSON.parse(
+        await actor(
+          admin,
+          `with saved as (select public.save_job_briefing(${q(job)},${version},${q(randomUUID())},${q(JSON.stringify(unicode))}::jsonb) as value)
+           select jsonb_build_object(
+             'name_characters', char_length(value->>'contact_name'),
+             'name_bytes', octet_length(value->>'contact_name'),
+             'name_exact', encode(convert_to(value->>'contact_name','UTF8'),'base64')=${q(Buffer.from(unicode.contact_name).toString("base64"))},
+             'description_characters', char_length(value->>'reference_description'),
+             'description_bytes', octet_length(value->>'reference_description'),
+             'description_exact', encode(convert_to(value->>'reference_description','UTF8'),'base64')=${q(Buffer.from(unicode.reference_description).toString("base64"))}
+           ) from saved`,
+          "aal2",
+        ),
       );
+      assert.deepEqual(storedUnicode, {
+        name_characters: 120,
+        name_bytes: 480,
+        name_exact: true,
+        description_characters: 4000,
+        description_bytes: 16000,
+        description_exact: true,
+      });
       await assert.rejects(
         save(
           job,
