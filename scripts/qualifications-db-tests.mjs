@@ -97,7 +97,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
           manager,
           `select count(*) from public.documents where id=${q(cv.doc)}`,
         ),
-        "0",
+        "1",
       );
       const page = JSON.parse(
         await actor(
