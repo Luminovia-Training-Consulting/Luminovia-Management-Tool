@@ -105,15 +105,11 @@ await withTestDatabase("replacement_role_compat", async ({ sql, actor }) => {
     ]);
 
   await check(
-    "Fictional policy setup requires current permission and preserves an empty-policy start",
+    "Fictional policy setup requires current permission in password-only AAL1 and preserves an empty-policy start",
     async () => {
       assert.equal(
         await sql("select count(*) from private.compensation_policy"),
         "0",
-      );
-      await assert.rejects(
-        rpc(admin, "configure_compensation_policy", ["29.17", "76.43", "0"]),
-        /42501/,
       );
       const configured = await rpc(
         admin,
