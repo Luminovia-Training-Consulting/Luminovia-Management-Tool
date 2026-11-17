@@ -1,6 +1,17 @@
 # Persistent implementation plan
 
-## PR37 participant-origin CI repair — 17 November 2026
+PR43 correction: retain the full 50-way simultaneous HTTP capacity race; the preceding ten-in-flight experiment is superseded because the native PostgreSQL crash cause is not yet established. The existing complete cleanup and current-head native CI remain required.
+
+## Browser test runtime — 17 November 2026
+
+- [x] Keep both Chromium projects, every browser scenario/assertion, per-file ordering and zero retries. Restore one browser worker: the first parallel run reproduced shared Supabase Auth account-deletion failures.
+- [x] Use Playwright's virtual clock for the 15-second stale-query behavior and shorten the idle observation only to 10.1 seconds, beyond the prior 10-second polling boundary.
+- [x] Baseline exact-head timings from the last green main-based CI: browser cases 20m34s; system verify 35m32s. About 17 minutes came from separate SQL/API suites run serially.
+- [x] Use a bounded pool for independent SQL suites (up to four isolated databases); retain stop-on-failure and wait-for-in-flight cleanup semantics. API suites stay sequential because they share one GoTrue service and parallel cleanup failed in CI.
+- [x] Scale independent PR SQL shards to at most four isolated workers; keep retained selfhost API suites sequential after the same GoTrue cleanup failure. Retain real migration/restart/image, auth, browser, concurrency, and cleanup proofs.
+- [x] Replay migrations once per isolated PostgreSQL worker into an owned ephemeral template and clone a fresh database per SQL suite; keep main migration acceptance and every historical-bound migration check unchanged. Exact-head SQL/template suites passed.
+- [ ] Complete exact-head CI with serial browser/API fixtures and collect successful per-job timings before claiming the final speedup. Do not trim coverage.
+## PR35 private-document acceptance follow-up — 17 November 2026
 
 - [x] Trace the native fixture cleanup failure to dependent membership-origin rows blocking deletion of its owned participant room.
 - [x] Make provenance rows follow room/profile lifecycle with cascading foreign keys and add an actual database assertion for room cleanup.
@@ -973,15 +984,21 @@ These are remaining implementation candidates, not delivered functions or extra 
 
 ## Current acceptance and next continuation actions
 
-### PR #37 test cleanup follow-up — 2026-11-17
+### CI test throughput follow-up — 2026-11-17
 
-The corrected migration passed through candidate setup, retained-data upgrade and preceding API suites. The next failure was the job-picker test deleting its room before removing existing `chat_members` references. Remove the fixture-owned memberships first, then verify the new participant-origin metadata cascades when the room is deleted. This is fixture cleanup, not a runtime authorization or schema weakening. The full current-head selfhost, application and browser gates still need to pass.
+PR #42's failed run `44012150083` exposed concurrent Supabase Auth fixture cleanup returning `Database error deleting user` in both application verification and native selfhost acceptance; the same run's unit/coverage job passed. Fix the shared-service contention by keeping Auth-backed API suites sequential while independent database suites use separate clones of one migrated template. Retain every current SQL, API, browser and native acceptance assertion.
+
+The browser lane now uses a two-entry desktop/mobile matrix. Each entry runs all existing browser specs in exactly one Chromium project on its own isolated stack; together they still require every existing app and PWA workflow for both layouts. The preview package's existing dependency gate requires both matrix entries. The first post-serialization full rerun no longer reported the Auth deletion failure; it then failed the job-briefing SQL check while comparing a 4,000-emoji database result. The SQL subprocess helpers now preserve UTF-8 characters split across output chunks, with a dedicated regression test; the large-text acceptance also uses an exact compact server-side byte proof. Full current-head CI must pass before calling these optimizations accepted. Potential follow-up is limited to evidence-backed runtime changes that retain exact API, migration, desktop/mobile and built-PWA coverage.
+
+The first CI run of the new matrix failed two local workflow-policy assertions because they still expected the old single job name. Those now verify both matrix projects and the pull-request-only browser gate. The next exact-head run passed them and found the acceptance-report artifact test still expected one browser filename. That expectation now includes the matrix project; all 17 workflow-scope tests pass locally. The native SQL rerun confirmed Unicode character/byte limits but exposed PostgreSQL's Base64 line wrapping; compare the actual stored UTF-8 bytes directly to decoded expected bytes, retaining API response equality. Complete CI on the corrected commit.
+
+PR #42 is stacked on PR #43 because full acceptance uses Deno Edge checks and clean `npm ci` must install the exact pinned Deno toolchain. The #42 branch includes the #43 head as its base, so its own diff contains only speedup/test changes while its CI exercises the required installer fix. Validate/merge #43 before treating #42 as independently ready.
 
 1. Preserve all normal persistent records and prior verified ledgers. Last recorded hosted application acceptance is `bb322746`, exact-main CI43753910114 plus automatic installation/post-checks and the schema18complete restore. PR6/PR7 merges and M6 source are distinct. Recheck actual hosted/main state on continuation; no later source/documentation change proves installation.
 2. M3 was merged through [PR #3](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/3), then integrated with the authorised self-hosted development and automatic-release path. No merge remains pending for that application slice. The system now consumes tested main releases without manual cloning; destructive/backdated/major migrations remain reviewed operations. Production deployment is separate.
 3. M6 passed the combined application and retained-data gates and merged through PR8(dc8e9a7). Continue the isolated M7 source-derived discovery/community slices above; preserve all24accepted migrations, private-resource boundaries, old commercial snapshots and the complete remaining master-prompt ledger. Each further slice requires its own complete integration acceptance.
 4. Continue the authorised self-hosted CMS development and configure real SMTP only when approved; no managed-backend dependency is intended. Development native all-database/file/key restore and physical VM rollback have passed. Complete remaining hosted/manual/cross-browser/physical-PWA, privacy, monitoring, recurring off-site and production-scale recovery acceptance before a concrete production approval request.
 
-### PR #37 merge gate — 2026-11-17
+### PR #43 merge gate — 2026-11-17
 
-The migration-order regression now accepts later independent migrations while preserving the ordered deletion-upgrade composition test. Push the signed repair, then require exact-head application, SQL, browser, selfhost and governance checks before merging PR #37.
+Bound the selfhost capacity stress at ten simultaneous HTTP claims while retaining all fifty requests and exact capacity/race assertions. The new unit regression verifies bounded concurrency, input-order results and full settlement after a rejection. Push the signed repair and require fresh exact-head CI, including selfhost, before merging PR #43.

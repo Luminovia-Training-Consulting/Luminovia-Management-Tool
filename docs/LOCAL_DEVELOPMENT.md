@@ -10,6 +10,8 @@ The supported entry point is the executable `./portal` in the repository root. I
 
 Requirements: a Linux host (CachyOS locally / Ubuntu CI), Node.js as pinned in [`.node-version`](../.node-version) (the package minimum is 22.12), npm, Docker Engine 25 or later and Docker Compose 2.20.2 or later with healthcheck `start_interval` support. Full verification additionally needs Python 3 for the updater fixtures and util-linux `flock` for the shared host/user QA lock. Complete encrypted-backup guards require official `age`/`age-keygen` 1.x (tested 1.3.2) on PATH, or the explicit `AGE_TEST_BINARY`/`AGE_KEYGEN_TEST_BINARY` fixture paths; missing tools fail before crypto tests can skip. The launcher installs exact lockfile dependencies when required, starts the local services, applies new migrations without resetting tables, initializes fictional fixtures only for an empty first bootstrap, waits for the actual invitation handler and frontend to be ready, and prints the local URLs.
 
+The pinned Deno package needs its reviewed postinstall script to copy the platform executable into place. `package.json` explicitly allows that exact version for npm versions that otherwise block dependency scripts. When updating Deno, review its installer and update the version-specific `allowScripts` entry together with the dependency and lockfile; do not enable all dependency scripts globally.
+
 - Portal: <http://127.0.0.1:5173>
 - Supabase API: <http://127.0.0.1:54321>
 - Local email capture: <http://127.0.0.1:54324>

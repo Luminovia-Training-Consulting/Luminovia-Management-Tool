@@ -178,7 +178,8 @@ test("reasoned cancellation, explicit reopening, same-page reclaim and safe copy
     await expect(reopen).not.toBeVisible();
     // Observe the real stale-query focus contract without reloading/remounting the
     // lecturer page: its retired claim key and confirmed-result state must stay safe.
-    await lecturerPage.waitForTimeout(16000);
+    await lecturerPage.clock.install();
+    await lecturerPage.clock.fastForward(15_001);
     await lecturerPage.bringToFront();
     const refreshedJobs = lecturerPage.waitForResponse(
       (response) =>
