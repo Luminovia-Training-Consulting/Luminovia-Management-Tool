@@ -14,13 +14,24 @@ import { useAuth } from "./auth-context";
 import { Button } from "../../components/ui/button";
 import { Field, Loading, Notice } from "../../components/common";
 import { useOnline } from "../../lib/online";
+import { previewLoginEmail } from "./preview-login";
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({ email: z.email(), password: z.string().min(1) });
+const previewSchema = z.object({
+  email: z.union([z.email(), z.literal("admin")]),
+  password: z.string().min(1),
+});
 /** Use native sign-in and recovery requests with separate form states. */
 export function Login() {
   const { t } = useTranslation();
   const { session, loading } = useAuth();
   const online = useOnline();
+  const preview =
+    previewLoginEmail(
+      "admin",
+      window.location.origin,
+      import.meta.env.VITE_SUPABASE_URL,
+    ) !== "admin";
   const [recover, setRecover] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const [message, setMessage] = useState("");
@@ -30,7 +41,9 @@ export function Login() {
     getValues,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema) });
+  } = useForm<z.infer<typeof schema>>({
+    resolver: zodResolver(preview ? previewSchema : schema),
+  });
   if (loading) return <Loading />;
   if (session) return <Navigate to="/" replace />;
   async function submit(values: z.infer<typeof schema>) {
@@ -38,7 +51,20 @@ export function Login() {
     setFailed(false);
     if (!online) return;
     try {
-      const { error } = await db().auth.signInWithPassword(values);
+      const email = previewLoginEmail(
+        values.email,
+        window.location.origin,
+        import.meta.env.VITE_SUPABASE_URL,
+      );
+      if (!z.email().safeParse(email).success) {
+        setFailed(true);
+        setMessage("validation");
+        return;
+      }
+      const { error } = await db().auth.signInWithPassword({
+        ...values,
+        email,
+      });
       if (!error) return;
     } catch {
       // Transport/storage failures may reject instead of returning an Auth error.
@@ -115,12 +141,14 @@ export function Login() {
             >
               <Field
                 id="email"
-                label={t("email")}
+                label={t(
+                  preview && !recover ? "previewEmailOrUsername" : "email",
+                )}
                 error={Boolean(errors.email)}
               >
                 <input
                   id="email"
-                  type="email"
+                  type={preview && !recover ? "text" : "email"}
                   autoComplete="username"
                   {...register("email")}
                   aria-invalid={Boolean(errors.email)}

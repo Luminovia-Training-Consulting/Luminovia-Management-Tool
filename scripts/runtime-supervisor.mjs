@@ -222,6 +222,10 @@ try {
       }) + "\n",
     );
   }
+  if (/^luminovia-portal-github-[a-f0-9]{12}$/.test(config.id ?? "")) {
+    const { ensurePreviewAdmin } = await import("./local-preview-admin.mjs");
+    await ensurePreviewAdmin(root);
+  }
   if (existsSync(join(root, "scripts/local-scanner.mjs"))) {
     stage("Starte lokalen Malware-Scanner für Datei-Uploads …");
     scannerTouched = true;

@@ -6,13 +6,7 @@ The review layer was reactivated after its 13:38 UTC update. An earlier 12:16 UT
 
 Contributors should start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue guide](ISSUE_GUIDE.md) and the [pull request guide](PULL_REQUEST_GUIDE.md). This page explains the administrative sources and the boundaries of rule exceptions. Public contribution guidance and new contribution discussions use English; the product interface remains German and English.
 
-Current publication policy: use `./portal check` for fast local feedback and
-`./portal test` for complete local acceptance. Ordinary PR/main activity keeps
-its GitHub quality/security checks but creates no automatic deployment record or
-CMS release. Releases require an authorised manual `Portal checks` dispatch on
-`main`, `publish_release=true`, the exact current `main` SHA in `expected_commit`
-and every existing release gate. PR metadata publication/cleanup is manual-only;
-see [PR_PREVIEWS](PR_PREVIEWS.md). The existing VPS polling timer is unchanged.
+Current publication policy: `./portal check` and `./portal test` remain the local verification commands. After exact-current-main push runs of both Portal checks and Security analysis succeed, the trusted automatic CMS publisher can publish the immutable development release. The existing manual exact-SHA `Portal checks` dispatch remains available. PR deployment metadata remains manual-only; see [PR_PREVIEWS](PR_PREVIEWS.md). The VPS independently applies its migration, backup and health gates; publication is not proof of installation.
 
 <a id="rules-for-main"></a>
 
