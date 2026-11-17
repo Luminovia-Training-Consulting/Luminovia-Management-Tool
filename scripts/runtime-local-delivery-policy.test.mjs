@@ -4,7 +4,15 @@
  */
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
 import { parsers } from "prettier/plugins/yaml";
@@ -339,6 +347,109 @@ test("release shell preflight independently rejects missing or mismatched revisi
     );
     assert.ifError(result.error);
     assert.equal(result.status === 0, success, JSON.stringify(overrides));
+  }
+});
+
+test("automatic CMS publication requires current main and both exact successful push runs", () => {
+  const automatic = workflow("automatic-cms-release");
+  assert.deepEqual(automatic.on.workflow_run.workflows, [
+    "Portal checks",
+    "Security analysis",
+  ]);
+  assert.deepEqual(automatic.on.workflow_run.types, ["completed"]);
+  const job = automatic.jobs.publish;
+  assert.match(job.if, /workflow_run\.event == 'push'/);
+  assert.match(job.if, /workflow_run\.head_branch == 'main'/);
+  assert.match(job.if, /workflow_run\.conclusion == 'success'/);
+  assert.equal(job.permissions.contents, "write");
+  assert.equal(job.permissions.actions, "read");
+  assert.equal(
+    job.concurrency.group,
+    "cms-release-${{ github.event.workflow_run.head_sha }}",
+  );
+  assert.equal(
+    workflow("ci").jobs["release-cms"].concurrency.group,
+    "cms-release-${{ github.sha }}",
+  );
+  const gate = job.steps[0];
+  assert.equal(gate.id, "gate");
+  assert.match(job.steps[1].uses, /^actions\/checkout@/);
+  assert.equal(job.steps[1].if, "steps.gate.outputs.publish == 'true'");
+  const dir = mkdtempSync(join(tmpdir(), "cms-gate-"));
+  try {
+    const gh = join(dir, "gh");
+    writeFileSync(
+      gh,
+      '#!/usr/bin/env bash\nif [[ "$*" == *"/branches/main"* ]]; then printf "%s\\n" "$FAKE_MAIN"; elif [[ "$*" == *"/ci.yml/runs"* ]]; then printf "%s\\n" "$FAKE_CI"; elif [[ "$*" == *"/security.yml/runs"* ]]; then printf "%s\\n" "$FAKE_SECURITY"; else exit 7; fi\n',
+    );
+    chmodSync(gh, 0o700);
+    const sha = "a".repeat(40);
+    const output = join(dir, "output");
+    for (const [changes, allowed] of [
+      [{}, true],
+      [{ FAKE_MAIN: "b".repeat(40) }, false],
+      [{ FAKE_CI: "in_progress:pending" }, false],
+      [{ FAKE_CI: "completed:failure" }, false],
+      [{ FAKE_SECURITY: "missing" }, false],
+      [{ FAKE_SECURITY: "completed:failure" }, false],
+    ]) {
+      writeFileSync(output, "");
+      const result = spawnSync(
+        "bash",
+        ["-e", "-u", "-o", "pipefail", "-c", gate.run],
+        {
+          env: {
+            PATH: `${dir}:${process.env.PATH}`,
+            GH_REPO: "fictional/example",
+            TARGET_SHA: sha,
+            GITHUB_OUTPUT: output,
+            FAKE_MAIN: sha,
+            FAKE_CI: "completed:success",
+            FAKE_SECURITY: "completed:success",
+            ...changes,
+          },
+          encoding: "utf8",
+          timeout: 1000,
+        },
+      );
+      assert.ifError(result.error);
+      assert.equal(result.status, 0, result.stderr);
+      assert.equal(
+        readFileSync(output, "utf8").trim(),
+        `publish=${allowed}`,
+        JSON.stringify(changes),
+      );
+    }
+    const rejected = spawnSync(
+      "bash",
+      ["-e", "-u", "-o", "pipefail", "-c", gate.run],
+      {
+        env: {
+          PATH: `${dir}:${process.env.PATH}`,
+          GH_REPO: "fictional/example",
+          TARGET_SHA: "bad",
+          GITHUB_OUTPUT: output,
+          FAKE_MAIN: sha,
+          FAKE_CI: "completed:success",
+          FAKE_SECURITY: "completed:success",
+        },
+        encoding: "utf8",
+        timeout: 1000,
+      },
+    );
+    assert.notEqual(rejected.status, 0);
+    const publication = job.steps.at(-1);
+    assert.match(publication.run, /branches\/main/);
+    assert.match(publication.run, /test .*TARGET_SHA/);
+    assert.match(publication.run, /cms-dev-\$TARGET_SHA/);
+    assert.match(publication.run, /--draft=false/);
+    assert.match(
+      publication.run,
+      /existing draft requires operator inspection/,
+    );
+    assert.doesNotMatch(publication.run, /--clobber/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });
 
