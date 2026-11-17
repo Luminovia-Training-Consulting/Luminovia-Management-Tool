@@ -113,15 +113,18 @@ test("optional external reference and contact are saved, shown after claim and h
   await expect(
     editor.getByLabel("Sichtbarkeit der Kontaktangaben", { exact: true }),
   ).toHaveValue("after_claim");
-  const savedResponse = page.waitForResponse(
-    (response) =>
-      response.url().endsWith("/rest/v1/rpc/save_job_briefing") &&
-      response.status() === 200,
+  const savedResponse = page.waitForResponse((response) =>
+    response.url().endsWith("/rest/v1/rpc/save_job_briefing"),
   );
   await editor
     .getByRole("button", { name: "Angaben speichern", exact: true })
     .click();
-  const stored = await (await savedResponse).json();
+  const response = await savedResponse;
+  const responseBody = await response.json();
+  expect(response.status(), JSON.stringify(responseBody).slice(0, 1000)).toBe(
+    200,
+  );
+  const stored = responseBody;
   expect(stored.version).toBe(1);
   expect(stored.contact_visibility).toBe("after_claim");
   await expect(editor).not.toBeVisible();
