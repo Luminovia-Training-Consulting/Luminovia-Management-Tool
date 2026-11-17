@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { withTestDatabase } from "./testing/database.mjs";
 await withTestDatabase("owned_cascade", async ({ sql, actor }) => {
   const scopeDefinition = await sql(
-    `select pg_catalog.pg_get_functiondef('private.deletion_scope_before_owned_cascade(text,uuid)'::regprocedure)`,
+    `select pg_catalog.pg_get_functiondef('private.deletion_scope(text,uuid)'::regprocedure)`,
   );
   assert.match(scopeDefinition, /processed oid\[\]\s*:=\s*array\[\]::oid\[\]/);
   console.log(
