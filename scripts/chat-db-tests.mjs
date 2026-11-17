@@ -584,7 +584,7 @@ try {
     },
   );
   await check(
-    "Participant course channel needs manager permission+real course and separates commercial channels",
+    "Participant course channel uses password-only manager permission and a real course; separates commercial channels",
     async () => {
       const start = new Date(Date.now() + 90 * 86400000).toISOString(),
         end = new Date(Date.now() + 90 * 86400000 + 3600000).toISOString();
@@ -608,15 +608,6 @@ try {
         admin,
         `select public.create_job(${quote(JSON.stringify(payload))}::jsonb)`,
         "aal1",
-      );
-      await assert.rejects(
-        value(admin, "create_chat_group", [
-          "Participants",
-          `{${participant}}`,
-          "participant_course",
-          job,
-        ]),
-        /required/i,
       );
       const room = await value(
         admin,

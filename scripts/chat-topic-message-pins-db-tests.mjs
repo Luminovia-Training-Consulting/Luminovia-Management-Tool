@@ -32,7 +32,7 @@ await withTestDatabase("topic_message_pins", async ({ sql, actor }) => {
     );
   await assert.rejects(change(member, msg, true), /42501/);
   await assert.rejects(change(foreign, msg, true, "aal2"), /42501/);
-  await assert.rejects(change(admin, msg, true), /42501/);
+  await change(admin, msg, true);
   await Promise.all([change(owner, msg, true), change(owner, msg, true)]);
   assert.equal((await pins(member)).length, 1);
   assert.equal((await pins(member))[0].body, "Fictional pinned message");
@@ -51,7 +51,7 @@ await withTestDatabase("topic_message_pins", async ({ sql, actor }) => {
   );
   assert.equal(messageScope.counts["private.chat_topic_message_pins"], 1);
   console.log(
-    "PASS owner, MFA moderator and current membership determine group pins; retry and deletion scope are exact",
+    "PASS owner, permission-based moderator and current membership determine group pins; retry and deletion scope are exact",
   );
   await change(admin, msg, false, "aal2");
   assert.equal((await pins(member)).length, 0);

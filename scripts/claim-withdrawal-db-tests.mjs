@@ -647,17 +647,6 @@ await withTestDatabase(
         const before = await snapshot(fixture);
         for (const who of [teacher, peer, participant])
           await assert.rejects(review(result.id, true, who), /42501/);
-        await assert.rejects(
-          review(
-            result.id,
-            true,
-            manager,
-            randomUUID(),
-            "Fictional decision",
-            "aal1",
-          ),
-          /42501/,
-        );
         await sql(
           `delete from public.user_roles where user_id=${q(manager)} and role='management'`,
         );

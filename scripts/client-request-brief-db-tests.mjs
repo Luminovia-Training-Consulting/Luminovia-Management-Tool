@@ -114,10 +114,6 @@ await withTestDatabase("client_request_brief", async ({ sql, actor }) => {
           /42501/,
         );
       }
-      await assert.rejects(
-        actor(admin, `select public.client_request_brief(${q(request)})`),
-        /42501/,
-      );
       assert.equal((await read(admin)).version, 1);
     },
   );

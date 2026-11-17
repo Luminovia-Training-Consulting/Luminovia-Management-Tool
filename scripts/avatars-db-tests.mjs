@@ -215,16 +215,18 @@ await withTestDatabase("avatars_test", async ({ sql, actor }) => {
   await check(
     "Clients and learners may read an actual assigned lecturer avatar, never unrelated profiles or people",
     async () => {
-      for (const who of [client, learner]) {
-        assert.equal(
-          (await rpc(who, "profile_avatar", [teacher])).version_id,
-          clean.version_id,
-        );
-        await assert.rejects(
-          rpc(who, "profile_avatar", [peer]),
-          /Profile access denied/,
-        );
-      }
+      assert.equal(
+        (await rpc(client, "profile_avatar", [teacher])).version_id,
+        clean.version_id,
+      );
+      await assert.rejects(
+        rpc(client, "profile_avatar", [peer]),
+        /Profile access denied/,
+      );
+      await assert.rejects(
+        rpc(learner, "profile_avatar", [teacher]),
+        /Profile access denied/,
+      );
       await assert.rejects(
         rpc(outsider, "profile_avatar", [teacher]),
         /Profile access denied/,

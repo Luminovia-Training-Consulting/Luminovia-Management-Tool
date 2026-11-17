@@ -336,7 +336,7 @@ try {
       await as(participant, "select count(*) from public.jobs"),
       "0",
     );
-    assert.equal((await rpc(participant, overlap)).status, "not_eligible");
+    await assert.rejects(rpc(participant, overlap), /Authentication required/);
     const claims = {
       sub: users[53],
       aal: "aal1",

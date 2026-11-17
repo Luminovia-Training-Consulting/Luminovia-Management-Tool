@@ -633,10 +633,6 @@ try {
         value(senior, "set_invoice_labels", [invoice.id, "{Foreign}"]),
         /Invoice access/,
       );
-      await assert.rejects(
-        value(management, "set_invoice_labels", [invoice.id, "{Finance}"]),
-        /Invoice access/,
-      );
       await value(
         management,
         "set_invoice_labels",

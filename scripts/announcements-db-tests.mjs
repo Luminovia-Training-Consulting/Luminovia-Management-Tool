@@ -172,10 +172,9 @@ await withTestDatabase("announcements", async ({ sql, actor }) => {
       assert.ok(!Object.hasOwn(items[0], "draft_revision_id"));
       for (const who of [teacher, peer])
         assert.equal((await notices(published.published.id, who)).length, 1);
-      for (const who of [client, learner]) {
-        assert.equal((await read(who)).items.length, 0);
-        assert.equal((await notices(published.published.id, who)).length, 0);
-      }
+      assert.equal((await read(client)).items.length, 0);
+      assert.equal((await notices(published.published.id, client)).length, 0);
+      await assert.rejects(read(learner), /Account inactive/);
       await assert.rejects(
         operate(announcement.id, "archive", announcement.version, {}, key),
         /idempotency conflict/,

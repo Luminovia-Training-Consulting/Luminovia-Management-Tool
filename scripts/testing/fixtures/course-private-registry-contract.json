@@ -1,5 +1,5 @@
 {
-  "purpose": "TEST ONLY optional registry metadata contracts plus unchanged actual enquiry registration RPC. Not a full module deployment or direct registry trigger claim.",
+  "purpose": "TEST ONLY optional registry metadata contracts plus the actual enquiry attachment RPC adapted to password-only permission checks. Not a full module deployment or direct registry trigger claim.",
   "repository": "Luminovia-Training-Consulting/Luminovia-Management-Tool",
   "branch": "codex/enquiry-requirement-documents",
   "head": "59963c866a17b9a5552e3533271a73a3c1e2aa82",
@@ -7,8 +7,12 @@
   "source_file": "supabase/migrations/20261116055529_enquiry_requirement_documents.sql",
   "source_sha256": "e4f30f48c8e908ee625d1c80751a0d4888b20e78d8e8d87f737a30441bca74c4",
   "excerpt_lines": [68, 117],
-  "excerpt_sha256": "de572988a6ac2c89dab8a9375de1eff0e0e3d266849d340fa52da9b129cb05d9",
-  "fixture_sha256": "4ccb4dd31d69c67f294035a116e17060b41020a75de2218bd59c367cade47962",
+  "excerpt_sha256": "ede226a2c702ad1fc88cf9d3cd11629efc4742883cee00d648e7e80cc72afcaf",
+  "fixture_sha256": "c02b1d131bbf9bcebcc203eab6175300189e6e1c1f1ed2e9f28ff8e5cbb6ef5d",
+  "fixture_adjustments": [
+    "Removed the obsolete MFA requirement while retaining the organisations.manage capability check.",
+    "No schema, attachment ownership, exact-version, retry or Storage access assertion was relaxed."
+  ],
   "omissions": "Minimal table metadata deliberately omits unrelated intake/support/finance workflows. Domain direct-registry INSERT course-history protection is absent in inspected actual sources and is not invented here.",
   "registry_metadata_sources": [
     {

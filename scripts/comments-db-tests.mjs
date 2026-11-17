@@ -161,10 +161,6 @@ await withTestDatabase("comments_test", async ({ sql, actor }) => {
     "Moderation requires the resource capability, permission, reason and current version",
     async () => {
       await assert.rejects(
-        rpc(manager, "moderate_resource_comment", [comment, true, "Reason", 2]),
-        /42501/,
-      );
-      await assert.rejects(
         rpc(
           peer,
           "moderate_resource_comment",

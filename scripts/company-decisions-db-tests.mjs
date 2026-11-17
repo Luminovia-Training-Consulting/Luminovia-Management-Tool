@@ -236,10 +236,6 @@ await withTestDatabase("company_decision", async ({ sql, actor }) => {
     actor(company, "select public.company_invoice_reviews()"),
     /Finance management/,
   );
-  await assert.rejects(
-    actor(manager, "select public.company_invoice_reviews()"),
-    /Finance management/,
-  );
   const accountSnapshot = JSON.parse(
     await sql(`select private.deletion_snapshot('account','${company}')`),
   );
@@ -261,13 +257,13 @@ await withTestDatabase("company_decision", async ({ sql, actor }) => {
     true,
   );
   const queue = JSON.parse(
-    await actor(manager, "select public.company_invoice_reviews()", "aal2"),
+    await actor(manager, "select public.company_invoice_reviews()", "aal1"),
   );
   assert.equal(queue.length, 1);
   assert.equal(queue[0].claim_id, replacement.claim_id);
   assert.equal(queue[0].invoices[0].number, "FICT-1");
   console.log(
-    "Invoiced rejection remains pending in MFA-protected finance list; invoice, allocation and claim preserved, audit is idempotent.",
+    "Invoiced rejection remains pending in the password-only finance list; invoice, allocation and claim preserved, audit is idempotent.",
   );
   const token4 = await actor(
     teacher4,
@@ -344,21 +340,14 @@ await withTestDatabase("company_decision", async ({ sql, actor }) => {
     actor(
       manager,
       `select public.resolve_company_invoice_rejection('${replacement.claim_id}','Review documented')`,
-    ),
-    /Finance management/,
-  );
-  await assert.rejects(
-    actor(
-      manager,
-      `select public.resolve_company_invoice_rejection('${replacement.claim_id}','Review documented')`,
-      "aal2",
+      "aal1",
     ),
     /Reject or cancel every invoice/,
   );
   await actor(
     manager,
     `select public.review_invoice('${invoice}','rejected','Fictional correction reviewed')`,
-    "aal2",
+    "aal1",
   );
   const historicalPayment = randomUUID();
   await sql(
@@ -368,7 +357,7 @@ await withTestDatabase("company_decision", async ({ sql, actor }) => {
     actor(
       manager,
       `select public.resolve_company_invoice_rejection('${replacement.claim_id}','Review documented')`,
-      "aal2",
+      "aal1",
     ),
     /resolve active payments first/,
   );
@@ -382,19 +371,19 @@ await withTestDatabase("company_decision", async ({ sql, actor }) => {
     actor(
       manager,
       `select public.resolve_company_invoice_rejection('${replacement.claim_id}','short')`,
-      "aal2",
+      "aal1",
     ),
     /Review note required/,
   );
   await actor(
     manager,
     `select public.resolve_company_invoice_rejection('${replacement.claim_id}','Correction verified with lecturer')`,
-    "aal2",
+    "aal1",
   );
   await actor(
     manager,
     `select public.resolve_company_invoice_rejection('${replacement.claim_id}','Correction verified with lecturer')`,
-    "aal2",
+    "aal1",
   );
   assert.equal(
     await sql(
@@ -418,7 +407,7 @@ await withTestDatabase("company_decision", async ({ sql, actor }) => {
     actor(
       manager,
       `select public.review_invoice('${invoice}','approved','must not reactivate')`,
-      "aal2",
+      "aal1",
     ),
     /Only confirmed assignments/,
   );
@@ -430,7 +419,7 @@ await withTestDatabase("company_decision", async ({ sql, actor }) => {
   );
   assert.equal(
     JSON.parse(
-      await actor(manager, "select public.company_invoice_reviews()", "aal2"),
+      await actor(manager, "select public.company_invoice_reviews()", "aal1"),
     ).some((x) => x.claim_id === replacement.claim_id),
     false,
   );
@@ -443,13 +432,13 @@ await withTestDatabase("company_decision", async ({ sql, actor }) => {
   await actor(
     manager,
     `select public.review_invoice('${raceInvoice}','cancelled','Fictional invoice correction')`,
-    "aal2",
+    "aal1",
   );
   await sql(`update public.jobs set status='archived' where id='${job}'`);
   await actor(
     manager,
     `select public.resolve_company_invoice_rejection('${raceClaim.claim_id}','Invoice cancelled after review')`,
-    "aal2",
+    "aal1",
   );
   assert.equal(
     await sql(`select status from public.jobs where id='${job}'`),

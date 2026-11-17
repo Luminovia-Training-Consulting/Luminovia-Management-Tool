@@ -2,7 +2,11 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
+import {
+  applyPasswordOnlyPermissionPolicy,
+  withTestDatabase,
+  quoteSql as q,
+} from "./testing/database.mjs";
 import { cataloguePath, originalCatalogue } from "./course-catalogue.mjs";
 
 const catalogue = JSON.parse(readFileSync(cataloguePath, "utf8"));
@@ -28,6 +32,7 @@ await withTestDatabase(
       clients = [randomUUID(), randomUUID()];
     await sql(`insert into auth.users(id,email) values ${[admin, teacher, ...clients].map((id) => `(${q(id)},${q(`${id}@example.invalid`)})`).join(",")};
     insert into public.user_roles(user_id,role) values(${q(admin)},'admin'),(${q(teacher)},'lecturer'),${clients.map((id) => `(${q(id)},'client')`).join(",")};`);
+    await applyPasswordOnlyPermissionPolicy(sql);
     const rpc = async (id, name, args = [], aal = "aal1") => {
       const result = await actor(
         id,

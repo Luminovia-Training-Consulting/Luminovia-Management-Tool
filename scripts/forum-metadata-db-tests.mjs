@@ -50,14 +50,14 @@ await withTestDatabase("forum_metadata", async ({ sql, actor }) => {
   await call(owner, "accept_forum_answer", [thread, reply]);
   await call(peer, "subscribe_forum_thread", [thread, true]);
   await assert.rejects(edit(peer, "Forbidden", cat, 1), /42501/);
-  await assert.rejects(edit(admin, "No MFA", cat, 1), /42501/);
+  assert.equal(await edit(admin, "Admin edit", cat, 1), "2");
   await assert.rejects(edit(owner, "", cat, 1), /22023/);
   await assert.rejects(edit(owner, "Wrong category", wiki, 1), /22023/);
-  assert.equal(await edit(owner, "  Revised  ", cat, 1), "2");
-  await assert.rejects(edit(owner, "Stale", cat, 1), /40001/);
+  assert.equal(await edit(owner, "  Revised  ", cat, 2), "3");
+  await assert.rejects(edit(owner, "Stale", cat, 2), /40001/);
   const race = await Promise.allSettled([
-    edit(owner, "Concurrent A", cat, 2),
-    edit(owner, "Concurrent B", cat, 2),
+    edit(owner, "Concurrent A", cat, 3),
+    edit(owner, "Concurrent B", cat, 3),
   ]);
   assert.equal(race.filter((x) => x.status === "fulfilled").length, 1);
   assert.match(
@@ -65,16 +65,11 @@ await withTestDatabase("forum_metadata", async ({ sql, actor }) => {
     /40001/,
   );
   const before = JSON.parse(await call(owner, "forum_thread", [thread]));
-  assert.equal(before.metadata_version, 3);
+  assert.equal(before.metadata_version, 4);
   assert.equal(before.accepted_post_id, reply);
-  await call(
-    admin,
-    "moderate_forum_thread",
-    [thread, true, true, null],
-    "aal2",
-  );
-  await assert.rejects(edit(owner, "Locked", cat, 3), /42501/);
-  assert.equal(await edit(admin, "Moderator", cat, 3, "aal2"), "4");
+  await call(admin, "moderate_forum_thread", [thread, true, true, null]);
+  await assert.rejects(edit(owner, "Locked", cat, 4), /42501/);
+  assert.equal(await edit(admin, "Moderator", cat, 4), "5");
   const after = JSON.parse(await call(owner, "forum_thread", [thread]));
   assert.equal(after.accepted_post_id, reply);
   assert.equal(after.locked, true);

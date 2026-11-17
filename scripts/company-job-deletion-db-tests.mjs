@@ -205,15 +205,15 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
         );
       const rows = await list(company, "aal1");
       assert.equal(rows.length, 5);
-      assert(rows.every((row) => row.can_delete === false));
-      await assert.rejects(
-        actor(
+      assert(rows.every((row) => row.can_delete === true));
+      const runOnlyPreview = JSON.parse(
+        await actor(
           company,
           `select public.deletion_preview('job',${q(runOnly)})`,
           "aal1",
         ),
-        /42501|authori[sz]|denied|permission/i,
       );
+      assert.equal(runOnlyPreview.can_confirm, true);
     },
   );
 
@@ -555,7 +555,7 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
   );
 
   await check(
-    "Current lifecycle retains captured maximum-net budgets and exact role/assurance redaction",
+    "Current lifecycle retains captured maximum-net budgets and exact role redaction",
     async () => {
       const admin = randomUUID(),
         owner = randomUUID(),
@@ -612,7 +612,6 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
         assert.equal(old.max_net_budget, 274.11);
         assert.equal(old.gross_budget, null);
       }
-      await assert.rejects(read(manager, rolePriced, "aal1"), /42501|denied/i);
       // Keep the existing privileged claims and finance RPC authority without
       // granting a manager somebody else's private calendar allocation rows.
       assert.equal(

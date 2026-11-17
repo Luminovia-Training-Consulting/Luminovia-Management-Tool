@@ -54,17 +54,13 @@ await withTestDatabase("calendar_global", async ({ sql, actor }) => {
   };
   let event;
   await check(
-    "Current courses.manage/permission; active ordinary accounts receive only explicit publications",
+    "Current courses.manage permission authorizes password-only admins; active ordinary accounts receive only explicit publications",
     async () => {
       for (const who of [teacher, peer, learner, client])
         await assert.rejects(
           mutate(null, "save", 0, body, randomUUID(), who),
           /42501/,
         );
-      await assert.rejects(
-        mutate(null, "save", 0, body, randomUUID(), admin, "aal1"),
-        /42501/,
-      );
       event = await mutate(null, "save", 0, body);
       for (const who of [teacher, learner, client])
         assert.equal((await list(who)).items.length, 0);

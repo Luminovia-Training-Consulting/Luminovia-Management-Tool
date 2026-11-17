@@ -110,7 +110,9 @@ try {
   assert.deepEqual(own.body.roles, ["lecturer"]);
   assert.match(own.headers.get("cache-control"), /no-store/);
   assert.equal((await request(teacher, "users")).status, 403);
-  assert.equal((await request(admin, "users")).status, 403);
+  const passwordOnlyAccounts = await request(admin, "users");
+  assert.equal(passwordOnlyAccounts.status, 200);
+  assert.ok(Array.isArray(passwordOnlyAccounts.body.items));
   await passwordOnly(admin);
   const accounts = await request(admin, `users?q=${suffix}&limit=2&offset=0`);
   assert.equal(accounts.status, 200);

@@ -6,7 +6,7 @@
 
 - Source visual truth: the four user-provided dashboard, course workspace, jobs and operations screenshots attached in the conversation. Their listed local paths under `/home/carinaschoppe/Downloads/` are unavailable from this checkout, so exact pixel dimensions and density could not be inspected here.
 - Intended implementation: authenticated Luminovia Portal shell and corresponding dashboard, course, jobs and operations routes in this repository.
-- Implementation screenshot: not captured. The local portal startup failed with `Expected local service kong is not running`. The requested Codex in-app browser surface was unavailable to the controller (`agent is not defined`).
+- Implementation screenshot: not captured. The local portal is now running and its URL was opened in Codex; the requested Codex in-app browser surface remains unavailable to the controller (`agent is not defined`).
 - Viewport, CSS dimensions and device scale: not captured; no source/implementation normalization was possible.
 - Intended state: signed-in customer/staff workspace, using each actor's real authorized data and capabilities. Screenshot names and records are illustrative only.
 
@@ -29,4 +29,4 @@ No rendered comparison pass occurred. No P0/P1/P2 findings were recorded from an
 
 ## Blocker and next review
 
-Repair the local isolated Supabase runtime startup, make the authenticated app available in Codex Desktop's in-app browser, then capture and compare desktop and mobile screenshots for the four supplied workflow types. Fix any P0/P1/P2 issues and repeat the comparison before changing the result to `passed`.
+Capture and compare authenticated desktop and mobile screenshots for the four supplied workflow types in the Codex Desktop in-app browser once its controller is available. Fix any P0/P1/P2 issues and repeat the comparison before changing the result to `passed`.
