@@ -1,5 +1,9 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — own account settings
+
+Added a personal account section linking the existing authenticated password form and requesting an email change through native Supabase Auth. The profile form retains own display-name editing; sign-in remains email-based. An accepted email request is reported as pending until Auth confirms the address, with no optimistic email replacement. The UI handles invalid, unchanged, offline and failed requests, and supports DE/EN. Focused component/Auth tests pass 9 cases; TypeScript and focused ESLint pass. Actual two-address confirmation, delivery, callback and selfhost acceptance remain unverified until the isolated full CI runs; no real email was sent.
+
 ## 17 November 2026 — preserve capacity stress coverage
 
 The captured native CI logs establish PostgreSQL recovery but do not identify why its process crashed. The later ten-request concurrency cap reduced the existing capacity-three test's 50-way HTTP race without a demonstrated cause, so the test again starts all fifty requests together and waits for every result before cleanup. The separate bounded SQL/CI worker scheduler remains unchanged. Exact-head selfhost CI is required; the earlier crash is not described as resolved.

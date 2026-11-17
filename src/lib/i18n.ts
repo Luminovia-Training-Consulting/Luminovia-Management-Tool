@@ -354,6 +354,26 @@ const pairs: Record<string, [string, string]> = {
   explore: ["Möglichkeiten entdecken", "Explore opportunities"],
   today: ["Heute", "Today"],
   displayName: ["Anzeigename", "Display name"],
+  accountSettings: ["Zugangsdaten", "Account credentials"],
+  currentEmail: ["Aktuelle E-Mail-Adresse", "Current email address"],
+  newEmail: ["Neue E-Mail-Adresse", "New email address"],
+  changeEmail: ["E-Mail-Adresse ändern", "Change email address"],
+  emailChangeInvalid: [
+    "Gib eine gültige neue E-Mail-Adresse ein.",
+    "Enter a valid new email address.",
+  ],
+  emailChangePending: [
+    "Die Änderung wurde angefordert. Bitte bestätige sie über die E-Mails an deine bisherige und neue Adresse. Bis dahin gilt deine bisherige Adresse.",
+    "The change was requested. Confirm it using the emails sent to your current and new addresses. Your current address remains active until then.",
+  ],
+  emailChangeSaved: [
+    "Deine E-Mail-Adresse wurde geändert.",
+    "Your email address was changed.",
+  ],
+  accountNameHelp: [
+    "Deinen Anzeigenamen änderst du unten im Profil. Die Anmeldung erfolgt mit deiner E-Mail-Adresse.",
+    "Change your display name in your profile below. Sign in with your email address.",
+  ],
   bioDe: ["Über mich (Deutsch)", "About me (German)"],
   bioEn: ["About me (English)", "About me (English)"],
   phone: ["Telefon", "Phone"],
