@@ -64,9 +64,12 @@ begin
  if p_kind='payment' then return private.has_permission('finance.manage') and exists(select 1 from public.payment_records where id=p_id and private.can_read_invoice(invoice_id));end if;
  if p_kind='chat_room' then return exists(select 1 from public.chat_rooms r where r.id=p_id and private.can_access_chat_room(r.id) and (r.owner_id=auth.uid() or (r.kind in('participant_course','lecturer_course') and private.has_permission('courses.manage'))));end if;
  if p_kind='message' then return exists(select 1 from public.messages m join public.chat_rooms r on r.id=m.room_id where m.id=p_id and private.can_access_chat_room(r.id) and (m.sender_id=auth.uid() or (r.kind<>'dm' and (r.owner_id=auth.uid() or private.has_permission('chat.moderate')))));end if;
+ -- Private documents and room attachments never inherit administrator-wide
+ -- deletion rights. Owners retain their own control; administrators may
+ -- manage only job-scoped materials they are currently authorised to read.
+ if p_kind='document' then return exists(select 1 from public.documents d where d.id=p_id and (d.owner_id=auth.uid() or (d.scope in('job_before','job_after') and private.deletion_admin(auth.uid()) and private.has_permission('jobs.manage') and private.can_access_document(d.id))));end if;
  if private.deletion_admin(auth.uid()) then return true;end if;
  if p_kind='job' then return private.deletion_can_manage_job(p_id);end if;
- if p_kind='document' then return exists(select 1 from public.documents where id=p_id and owner_id=auth.uid());end if;
  return false;
 end;$$;
 

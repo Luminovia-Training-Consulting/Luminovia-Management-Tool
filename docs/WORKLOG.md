@@ -1,5 +1,11 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — private document deletion boundary
+
+Independent PR 35 review found that administrator-wide deletion authority preceded the document ownership check. The document branch now runs first: personal and room documents require ownership; authorised administrators retain deletion of job-scoped materials only when current job-management and document access both permit it. An actual PostgreSQL regression checks that an administrator, including one in the room, cannot enumerate or preview another person's personal or DM document, while the owner and an authorised job manager retain their respective paths.
+
+The initial isolated SQL run found a duplicate fixture DM key and was corrected. Final `PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-pr35-privacy node scripts/permanent-deletion-db-tests.mjs` passed all 27 groups on a newly created networkless/no-published-port PostgreSQL container, which was then stopped and removed. Exact-head CI remains pending.
+
 ## 17 November 2026 — PR 35 CI fixture timing corrections
 
 The latest PR 35 CI exposed two independent timing races: the process cancellation fixture observed its marker before the JSON write completed, and the announcement SQL test's two-minute quiet window expired during slow execution. The marker is now published by atomic rename after writing; the quiet window excludes only a minute approximately twelve hours away. Both retain their original behavioral assertions.

@@ -125,6 +125,35 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
     },
   );
   await check(
+    "Administrators cannot enumerate or purge another person's private or DM files but can manage authorised job material",
+    async () => {
+      const room = randomUUID(),
+        dmFile = randomUUID(),
+        job = randomUUID(),
+        jobFile = randomUUID();
+      await sql(`insert into public.chat_rooms(id,kind,dm_key) values(${q(room)},'dm',${q([owner, manager].sort().join(":"))});
+      insert into public.chat_members(room_id,user_id) values(${q(room)},${q(owner)}),(${q(room)},${q(manager)}),(${q(room)},${q(admin)});
+      insert into public.jobs(id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms) values(${q(job)},'Fictional document job','Fictional organisation','online','archived',50,50,'EUR','fixed_total','Fictional terms');
+      insert into public.documents(id,owner_id,uploaded_by,scope,kind,room_id,original_name,mime_type,size_bytes,status,client_id) values(${q(dmFile)},${q(owner)},${q(owner)},'room','chat',${q(room)},'Fictional DM attachment.txt','text/plain',100,'clean',${q(randomUUID())});
+      insert into public.documents(id,owner_id,uploaded_by,scope,kind,job_id,original_name,mime_type,size_bytes,status,client_id) values(${q(jobFile)},${q(owner)},${q(owner)},'job_before','material',${q(job)},'Fictional job material.txt','text/plain',100,'clean',${q(randomUUID())})`);
+      for (const id of [document.document_id, dmFile]) {
+        await expectCode(plan("document", id), "42501");
+        const listed = await call(
+          admin,
+          "deletion_resources",
+          `'document',${q(id)},null,30`,
+        );
+        assert.deepEqual(listed.items, []);
+      }
+      assert.equal(
+        (await plan("document", document.document_id, owner)).can_confirm,
+        true,
+      );
+      assert.equal((await plan("document", dmFile, owner)).can_confirm, true);
+      assert.equal((await plan("document", jobFile, admin)).can_confirm, true);
+    },
+  );
+  await check(
     "Preview changes nothing; wrong confirmation, target kind and actor are denied",
     async () => {
       const p = await plan("document", document.document_id, owner);
