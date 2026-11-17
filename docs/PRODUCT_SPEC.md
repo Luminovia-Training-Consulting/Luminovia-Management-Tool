@@ -10,6 +10,17 @@ A private, bilingual German/English, responsive PWA for approximately eleven fre
 
 The original brief names `portal.luminovia.org` as the production target. Later accepted development uses the self-hosted Supabase tooling in this repository; the initial managed-backend default is superseded for that environment. Production architecture, capacity, processor/location review and release approval remain separate gates. No production deployment is authorised by the development task. The public marketing site is a read-only brand source.
 
+## Short-notice assignment withdrawals — 17 November 2026
+
+Lecturers may directly withdraw from a confirmed future teaching block with at
+least seven days (168 elapsed hours) before its first session. With less notice,
+they must supply a reason in a withdrawal application. Administration or Management
+reviews it and approves or rejects with a decision note; the author cannot review
+their own application. Pending/rejected applications leave the whole assignment
+binding. Approval releases the entire block while preserving accepted commercial
+history. Decisions appear in the personal inbox. Started or invoiced work needs
+separate review. [Workflow contract](ASSIGNMENT_WITHDRAWALS.md).
+
 ## Roles and privacy boundaries
 
 Users may hold compatible combinations of `owner`, `admin`, `management`, `senior_lecturer`, `lecturer`, `client`, `participant`, `guest`. Management may assign subordinate teaching/company/participant/guest roles; Administration may additionally assign Management. Self, equal and higher authority targets remain protected in role changes, invitations, organisation grants and account activation. Client and teaching/management functions use separate non-administrative accounts to avoid joining private gross and net projections. Guest grants no business capabilities. Sensitive capabilities require MFA and private resource boundaries remain intact. Senior lecturer status alone confers no access to other lecturers' contracts/rates. A standard administrator cannot read private DMs or private personal calendar events through a blanket role bypass. Sensitive documents require explicit resource-level authorisation. Deactivation must revoke access even while an existing token is still valid.

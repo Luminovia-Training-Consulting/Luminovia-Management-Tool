@@ -178,7 +178,9 @@ jobs:
         with:
           name: portal-course-building-blocks-${{ github.run_id }}-${{ github.run_attempt }}
           # Exact feature allowlist only: no traces, credentials or other reports.
-          path: .local/tests/*/screenshots/*-course-building-blocks-*.png
+          path: |
+            .local/tests/*/screenshots/*-course-building-blocks-*.png
+            .local/tests/*/screenshots/*-withdrawal-*.png
           # The parent .local directory is hidden; the PNG allowlist remains exact.
           include-hidden-files: true
           if-no-files-found: error
@@ -229,12 +231,14 @@ jobs:
       - name: Explain bounded PR verification
         if: needs.scope.outputs.profile != 'full'
         run: echo 'The selected docs/standard profile does not claim browser acceptance; the final gate still requires its applicable checks.' >> "$GITHUB_STEP_SUMMARY"
-      - name: Upload fictional course-building-block screenshots
+      - name: Upload fictional feature screenshots
         if: always() && (steps.browser.outcome == 'success' || steps.browser.outcome == 'failure')
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: portal-course-building-blocks-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .local/tests/*/screenshots/*-course-building-blocks-*.png
+          path: |
+            .local/tests/*/screenshots/*-course-building-blocks-*.png
+            .local/tests/*/screenshots/*-withdrawal-*.png
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14

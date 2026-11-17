@@ -12,6 +12,8 @@ After PR35 merged to main, integrated its three earlier migrations before the ne
 
 Exact-head native CI then failed in the historical deletion-upgrade fixture because it assumed no migration could ever follow the three accepted deletion migrations. The fixture now still enforces that those three are consecutive and correctly ordered, while replaying the same historical predecessor-to-deletion upgrade. All five real upgrade groups pass with the later contract migration present; the separate final-state composition tests above cover the subsequent migration. The owned networkless fixture was removed, and fresh CI is required.
 
+After PR37 merged, the unreleased contract migration was resequenced after the new accepted participant-origin migration without altering its SQL body. An owned networkless database replayed all 76 migrations, regenerated the 272-function API reference and passed the contract privacy, five historical deletion-upgrade and 33 withdrawal groups. The fixture was removed. The persistent local preview remains on its earlier explicitly identified snapshot; the combined exact-head browser/native checks are still pending.
+
 ## 17 November 2026 — PR35 native private-document acceptance alignment
 
 Current integrated CI failed in both application and selfhost acceptance because the native deletion API fixture asked an administrator to delete another actor's personal document. Accepted migration `20261116173902_permanent_resource_deletion.sql` deliberately denies administrator-wide access to private documents. Corrected the fixture to require an MFA-verified owner for confirmation and operation status, and added an explicit MFA administrator-denial assertion. This preserves the privacy boundary and exercises the real owner path; no authorization check was weakened. Fresh exact-head system, browser, native and required CI results remain pending.
@@ -2310,6 +2312,10 @@ The first independently reviewable runtime slice adds `./portal github` and `sta
 
 The first preview CI43761274867 correctly failed its runtime fixtures before starting services: they copied the canonical runner's already-rewritten553xx/5273 config instead of normal upstream543xx/5173 config. Replaced only the fictional upstream input with self-contained normal TOML and added an explicit rejection of nested QA/preview overlays; production guards remain unchanged. The native rehearsal from signed278ce9b separately passed18 migrations, actual Auth/MFA/profile/private event/Storage bytes across stop/start, then removed only its own project and confirmed original5173/scratchDB remained running. Logs are private .local/m6-preview-native. The corrected exact-source CI remains the release gate.
 
+### PR #37 native cleanup follow-up — 2026-11-17
+
+The current selfhost CI run passed the API suites through `job-discovery-api-check.mjs`, then the new room-origin cascade regression failed because the test room still had rows in the existing `chat_members` table. The old `chat_members.room_id` FK correctly prevented deleting a referenced room. The fixture now deletes its own membership rows before deleting the test room, then keeps the assertion that the new `participant_chat_origins` rows cascade with that room. This changes test cleanup only; the feature migration and access rules are unchanged. Fresh exact-head selfhost CI remains required.
+
 ## Imported PR15 and PR20 delivery history
 
 The following isolated branch checkpoints are historical evidence. Current fourteen-check, signature and review-only policy is recorded above and in GITHUB_WORKFLOW; older always/disabled descriptions do not change it. These branch-only checks do not establish combined32 acceptance.
@@ -2317,3 +2323,7 @@ The following isolated branch checkpoints are historical evidence. Current fourt
 ## 17 November 2026 — PR35 candidate diagnostic lint fix
 
 GitHub Lint failed on PR35 because the selfhost candidate's post-failure Auth/database log filter called an undefined `redact`. Replaced that call with the existing `redactCandidateDiagnostic(logs, secrets)` helper, preserving the registered-secret/JWT/key redaction boundary before filtering and truncation. No execution, migration, service or acceptance behavior changed. Executed `npx eslint deploy/hostinger/maintenance/selfhost-candidate-check.mjs --max-warnings 0`, `npm run lint`, `node --test deploy/hostinger/maintenance/selfhost-candidate-check.test.mjs` (26/26), and `git diff --check`: all passed. This documents the observed CI lint correction only; other in-progress PR checks remain separate.
+
+### PR #37 current-head CI repair — 2026-11-17
+
+Run `44024696923` on head `992150e` passed fast checks but failed both `verify` and PR SQL before the database fixture: `deletion-upgrade-composition-db-tests.mjs` required the three deletion migrations to be the complete migration-list suffix. The participant chat-origin migration now validly follows them. Narrowed the guard to assert the three target deletion migrations remain contiguous and ordered after the accepted prefix; the composition fixture still replays the full accepted prefix before the three deletion migrations. Local `node --check` and `git diff --check` passed. Exact-head GitHub CI remains required before merge.

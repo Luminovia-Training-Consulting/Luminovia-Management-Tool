@@ -10,6 +10,17 @@
 - [x] Start a separate fictional-data preview of the PR45 snapshot on alternate loopback ports and check the actual lecturer login/contract screen; existing preview services remain untouched.
 - [ ] Verify a fresh latest-main preview after the relevant PRs merge. The overall product and release requirements below remain open.
 
+## PR37 participant-origin CI repair — 17 November 2026
+
+- [x] Trace the native fixture cleanup failure to dependent membership-origin rows blocking deletion of its owned participant room.
+- [x] Make provenance rows follow room/profile lifecycle with cascading foreign keys and add an actual database assertion for room cleanup.
+- [ ] Pass focused checks and fresh full exact-head/current-base system, browser, SQL, native/selfhost, security and preview checks; merge only when all required gates pass.
+
+## Participant chat membership origins
+
+- [x] Track new assignment-derived and explicit participant-room membership without guessing legacy provenance; fail closed and provide an authorized explicit resolution.
+- [x] Preserve independently authorized membership and active additional course claims or enrolments; re-evaluate enrolment removal and both handover paths.
+- [ ] Complete independent security review and exact-head CI, including native Auth and browser acceptance; do not infer hosted migration or production readiness.
 ## PR35 private-document acceptance follow-up — 17 November 2026
 
 - [x] Trace both current exact-head CI failures to the stale native fixture: an administrator attempted to preview another actor's private personal document after the accepted migration removed that bypass.
@@ -1037,7 +1048,15 @@ These are remaining implementation candidates, not delivered functions or extra 
 
 ## Current acceptance and next continuation actions
 
+### PR #37 test cleanup follow-up — 2026-11-17
+
+The corrected migration passed through candidate setup, retained-data upgrade and preceding API suites. The next failure was the job-picker test deleting its room before removing existing `chat_members` references. Remove the fixture-owned memberships first, then verify the new participant-origin metadata cascades when the room is deleted. This is fixture cleanup, not a runtime authorization or schema weakening. The full current-head selfhost, application and browser gates still need to pass.
+
 1. Preserve all normal persistent records and prior verified ledgers. Last recorded hosted application acceptance is `bb322746`, exact-main CI43753910114 plus automatic installation/post-checks and the schema18complete restore. PR6/PR7 merges and M6 source are distinct. Recheck actual hosted/main state on continuation; no later source/documentation change proves installation.
 2. M3 was merged through [PR #3](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/3), then integrated with the authorised self-hosted development and automatic-release path. No merge remains pending for that application slice. The system now consumes tested main releases without manual cloning; destructive/backdated/major migrations remain reviewed operations. Production deployment is separate.
 3. M6 passed the combined application and retained-data gates and merged through PR8(dc8e9a7). Continue the isolated M7 source-derived discovery/community slices above; preserve all24accepted migrations, private-resource boundaries, old commercial snapshots and the complete remaining master-prompt ledger. Each further slice requires its own complete integration acceptance.
 4. Continue the authorised self-hosted CMS development and configure real SMTP only when approved; no managed-backend dependency is intended. Development native all-database/file/key restore and physical VM rollback have passed. Complete remaining hosted/manual/cross-browser/physical-PWA, privacy, monitoring, recurring off-site and production-scale recovery acceptance before a concrete production approval request.
+
+### PR #37 merge gate — 2026-11-17
+
+The migration-order regression now accepts later independent migrations while preserving the ordered deletion-upgrade composition test. Push the signed repair, then require exact-head application, SQL, browser, selfhost and governance checks before merging PR #37.
