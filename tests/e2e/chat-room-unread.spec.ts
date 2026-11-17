@@ -54,9 +54,14 @@ test("manual unread survives reload and is personal to each member", async ({
       }),
     ).toBeVisible();
     await expect(otherRow.getByLabel("Als ungelesen markiert")).toHaveCount(0);
-    await row
-      .getByRole("button", { name: `${title} als gelesen markieren` })
-      .click();
+    const cleared = page.waitForResponse(
+      (response) =>
+        response.url().includes("/rpc/clear_chat_manual_unread") &&
+        response.ok(),
+    );
+    await row.locator(".chat-room-button").click();
+    await cleared;
+    await page.goto("/chats");
     await expect(row.getByLabel("Als ungelesen markiert")).toHaveCount(0);
   } finally {
     await context.close();

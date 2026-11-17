@@ -19,6 +19,9 @@ import { chatContactsQuery, chatKeys, chatMembersQuery } from "./api";
 import type { ChatContact, ChatRoom } from "./types";
 import { GroupOwnership } from "./group-ownership";
 import { TopicInvitationManager } from "./topic-invitations";
+import { TopicInviteOnly } from "./topic-invite-only";
+import { useTopicInviteOnly } from "./topic-invite-only-api";
+import "./topic-invite-only-i18n";
 import "./i18n";
 /** Use the permitted display name or translated fallback for unnamed contacts. */
 const contactName = (
@@ -123,6 +126,7 @@ const groupSchema = z.object({
   kind: z.enum(["topic", "participant_course"]),
   job: z.string(),
   members: z.array(z.string()).max(60),
+  invitationOnly: z.boolean(),
 });
 /** Create an explicit group with selected members through the chat server contract. */
 export function CreateGroup({
@@ -139,14 +143,25 @@ export function CreateGroup({
   onRoom: (room: string) => void;
 }) {
   const { t } = useTranslation("chat");
+  const strictText = useTranslation("topicInviteOnly").t;
   const online = useOnline();
   const client = useQueryClient();
   const contacts = useQuery({ ...chatContactsQuery(actor), enabled: open });
   const form = useForm<z.infer<typeof groupSchema>>({
     resolver: zodResolver(groupSchema),
-    defaultValues: { title: "", kind: "topic", job: "", members: [] },
+    defaultValues: {
+      title: "",
+      kind: "topic",
+      job: "",
+      members: [],
+      invitationOnly: false,
+    },
   });
   const kind = useWatch({ control: form.control, name: "kind" });
+  const invitationOnly = useWatch({
+    control: form.control,
+    name: "invitationOnly",
+  });
   const selectedJob = useWatch({ control: form.control, name: "job" });
   const create = useMutation({
     mutationFn: async (values: z.infer<typeof groupSchema>) => {
@@ -156,12 +171,19 @@ export function CreateGroup({
         (!canManageCourses || !values.job)
       )
         throw new Error("missing_course");
-      const { data, error } = await db().rpc("create_chat_group", {
-        p_title: values.title,
-        p_member_ids: values.members,
-        p_kind: values.kind,
-        p_job_id: values.kind === "participant_course" ? values.job : null,
-      });
+      const { data, error } =
+        values.kind === "topic" && values.invitationOnly
+          ? await db().rpc("create_invitation_only_topic", {
+              p_title: values.title,
+              p_invitee_ids: values.members,
+            })
+          : await db().rpc("create_chat_group", {
+              p_title: values.title,
+              p_member_ids: values.members,
+              p_kind: values.kind,
+              p_job_id:
+                values.kind === "participant_course" ? values.job : null,
+            });
       if (error) throw error;
       return data as string;
     },
@@ -224,6 +246,19 @@ export function CreateGroup({
               </option>
             </select>
           </Field>
+        )}
+        {kind === "topic" && (
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              {...form.register("invitationOnly")}
+              disabled={create.isPending}
+            />
+            {strictText("create")}
+          </label>
+        )}
+        {kind === "topic" && invitationOnly && (
+          <p>{strictText("createHint")}</p>
         )}
         <fieldset className="chat-member-fieldset">
           <legend>{t("selectMembers")}</legend>
@@ -313,6 +348,11 @@ export function MembersPanel({
     ...chatContactsQuery(actor),
     enabled: open && canManage,
   });
+  const inviteMode = useTopicInviteOnly(
+    actor,
+    room.id,
+    open && room.kind === "topic",
+  );
   const [person, setPerson] = useState("");
   const [remove, setRemove] = useState<{ id: string; name: string } | null>(
     null,
@@ -436,42 +476,52 @@ export function MembersPanel({
             ))}
           </ul>
         )}
-        {canManage && (
-          <form
-            className="chat-member-add"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (person) change.mutate({ id: person, remove: false });
-            }}
-          >
-            <Field id="chat-add-member" label={t("memberToAdd")}>
-              <select
-                id="chat-add-member"
-                value={person}
-                onChange={(event) => setPerson(event.target.value)}
-                disabled={change.isPending}
-              >
-                <option value="">{t("memberToAdd")}</option>
-                {available.map((contact) => (
-                  <option key={contact.id} value={contact.id}>
-                    {contactName(contact, t("unnamed"))}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Button
-              disabled={
-                !person || !online || change.isPending || contacts.isError
-              }
-            >
-              <UserPlus size={16} />
-              {t("addMember")}
-            </Button>
-            {contacts.isError && (
-              <Notice kind="error">{common("error")}</Notice>
-            )}
-          </form>
+        {room.kind === "topic" && (
+          <TopicInviteOnly
+            actor={actor}
+            room={room.id}
+            owner={room.owner_id === actor}
+            mode={inviteMode}
+          />
         )}
+        {canManage &&
+          (room.kind !== "topic" ||
+            (inviteMode.isSuccess && !inviteMode.data)) && (
+            <form
+              className="chat-member-add"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (person) change.mutate({ id: person, remove: false });
+              }}
+            >
+              <Field id="chat-add-member" label={t("memberToAdd")}>
+                <select
+                  id="chat-add-member"
+                  value={person}
+                  onChange={(event) => setPerson(event.target.value)}
+                  disabled={change.isPending}
+                >
+                  <option value="">{t("memberToAdd")}</option>
+                  {available.map((contact) => (
+                    <option key={contact.id} value={contact.id}>
+                      {contactName(contact, t("unnamed"))}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Button
+                disabled={
+                  !person || !online || change.isPending || contacts.isError
+                }
+              >
+                <UserPlus size={16} />
+                {t("addMember")}
+              </Button>
+              {contacts.isError && (
+                <Notice kind="error">{common("error")}</Notice>
+              )}
+            </form>
+          )}
         {room.kind === "topic" &&
           room.owner_id === actor &&
           members.isSuccess &&

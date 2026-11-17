@@ -11,6 +11,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -775,8 +776,12 @@ it.each(["back", "programmatic"] as const)(
         name: "Änderungen verwerfen",
       }),
     );
-    expect(screen.getByLabelText("route")).toHaveTextContent(
-      mode === "back" ? "/previous" : "/destination",
+    // POP retries can complete after the confirmation click returns, especially
+    // while the wider suite is running; assert the eventual router transition.
+    await waitFor(() =>
+      expect(screen.getByLabelText("route")).toHaveTextContent(
+        mode === "back" ? "/previous" : "/destination",
+      ),
     );
     client.clear();
   },

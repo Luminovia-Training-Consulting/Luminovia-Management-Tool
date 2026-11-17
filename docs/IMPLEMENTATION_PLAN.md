@@ -6,10 +6,16 @@
 
 - [x] Merge current `main` through `cc6218e` normally; retain the consolidated root documentation and the user-required project ledgers and verbatim prompt under `docs/`.
 - [x] Place the 13 programme migrations after the accepted contract-owner migration without changing their SQL bodies.
-- [x] Pass the integrated networkless migration replay and focused SQL suites for privacy, restore, navigation, chat replies/unread, membership origin, wiki attachments, API grants and deletion; regenerate the API reference from 303 migrated functions after adding topic invitations, personal archiving, message pins and forum thread metadata.
+- [x] Pass the integrated networkless migration replay and focused SQL suites for privacy, restore, navigation, chat replies/unread, membership origin, wiki attachments, API grants, deletion, forum metadata, profile expertise privacy and strict group invitations; regenerate the API reference from 308 migrated functions.
 - [ ] Implement all remaining QoL prompt criteria; use the feature matrix to track each criterion and its actual evidence.
 - [ ] Pass exact-current-head unit/source checks, complete database/API integration, desktop/mobile browser and PWA acceptance, security checks and required CI. Prior source snapshots are not evidence for the final head.
 - [ ] Keep the draft PR open and user-owned. No production deployment, real mail, production data changes, or PR merge is included.
+
+### Combined local source acceptance — 17 November 2026
+
+- [x] `./portal check`: 836 tests in 118 files; typecheck, lint, formatting, code-quality check, production build and PWA generation pass. Coverage: statements 70.81%, branches 66.72%, functions 61.36%, lines 73.18%.
+- [x] Regenerate API reference from 95 migration files/308 public functions through `20261117130019` in a disposable database.
+- [ ] Run complete `./portal test` and current-head GitHub CI. Local browser/QA port 55321 belongs to another checkout and remains untouched; browser E2E cases are discovered but not executed locally.
 
 ### Topic-group invitations — 17 November 2026
 
@@ -35,6 +41,13 @@
 - [x] Add owner title/category editing and MFA-qualified moderator edits, with optimistic-concurrency checks that preserve drafts on conflict.
 - [x] Pass two component cases and isolated PostgreSQL authorization, validation, race and state-preservation checks; regenerate the API reference from 93 migrations/303 public functions.
 - [ ] Run actual desktop/mobile browser acceptance and integrated full-head checks. Existing creation, replies, subscriptions, moderation, attachments and search still require complete prompt-wide acceptance.
+
+### Expertise visibility and strict group invitations — 17 November 2026
+
+- [x] Add an independent owner preference for showing expertise in authorised profile and directory/filter projections; preserve owner self-view, qualification checks, contact preferences and job eligibility.
+- [x] Add optional invitation-only topic-group creation and owner mode changes, with consent-gated membership and a locked server-side direct-add check; retain established members.
+- [x] Pass the profile SQL and component suites (including existing 14 profile SQL and 22 profile/people component cases), four invitation-only SQL groups, six unread SQL groups and 11 focused chat UI/group cases.
+- [ ] Run actual Auth/REST and desktop/mobile browser acceptance. Duplicate strict-group creation after an uncertain network outcome remains possible; additional group kinds are not covered.
 
 ## PR35 private-document acceptance follow-up — 17 November 2026
 

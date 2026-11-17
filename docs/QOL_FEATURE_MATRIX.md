@@ -12,7 +12,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.1 Conversation types | Separate participant/course chats | Source present; acceptance pending | `src/features/chat/manage.tsx`; `supabase/migrations/20261115121922_secure_chat_collaboration.sql`. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.1 Conversation types | Management groups | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.1 Conversation types | Customer-specific conversations where explicitly authorised | Not yet assessed | Pending |
-| COMPLETE CHAT & MESSAGING SYSTEM / 2.1 Conversation types | Private invitation-only groups | Partial | Topic-group invites require consent, but existing owner-authorized direct additions remain available; strict invitation-only setting is not implemented. |
+| COMPLETE CHAT & MESSAGING SYSTEM / 2.1 Conversation types | Private invitation-only groups | Partial; isolated SQL and component coverage passed | Topic groups can be created/changed to invitation-only; the server blocks direct additions until invitees accept. Desktop/mobile E2E is prepared, not run. Other group kinds and automatic retry identity for uncertain group creation remain open. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.1 Conversation types | Discoverable groups where appropriate | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | Create a group | Source present; acceptance pending | `src/features/chat/manage.tsx`; `supabase/migrations/20261115141620_client_commission_revenue.sql`. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.2 Group creation and management | Enter a group name | Source present; acceptance pending | `src/features/chat/manage.tsx`; `supabase/migrations/20261115141620_client_commission_revenue.sql`. |
@@ -171,7 +171,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | CONTACTS, USERS AND PROFILES | View qualifications where authorised | Not yet assessed | Pending |
 | CONTACTS, USERS AND PROFILES | Access appropriate CVs and attachments | Not yet assessed | Pending |
 | CONTACTS, USERS AND PROFILES | Edit their own contact information | Source present; acceptance pending | `src/features/profile/profile.tsx`; `src/components/preferences.tsx`. |
-| CONTACTS, USERS AND PROFILES | Set profile visibility preferences | Partial | `src/features/profile/contact-visibility.tsx` controls email and telephone; broader settings unverified. |
+| CONTACTS, USERS AND PROFILES | Set profile visibility preferences | Partial; expertise setting has isolated SQL and component coverage | `src/features/profile/contact-visibility.tsx` controls email/telephone; `src/features/profile/topic-visibility.tsx` controls own expertise in profile and directory/filter results. Browser acceptance pending. |
 | CONTACTS, USERS AND PROFILES | Upload or change profile pictures | Source present; acceptance pending | `src/features/profile/profile.tsx`; `src/components/preferences.tsx`. |
 | CONTACTS, USERS AND PROFILES | View their current role | Not yet assessed | Pending |
 | CONTACTS, USERS AND PROFILES | Select preferred language and time zone | Source present; acceptance pending | `src/features/profile/profile.tsx`; `src/components/preferences.tsx`. |
