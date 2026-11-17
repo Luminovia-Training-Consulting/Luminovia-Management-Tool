@@ -74,6 +74,35 @@ test("every missing category fails; multiple type or risk labels cannot pass", (
     );
 });
 
+// A maintainer hold must have the same meaning for scheduled/native merging
+// and for trusted-main historical rechecks; removing it restores valid metadata.
+test("merge:hold blocks automatic and manual metadata checks until removed", () => {
+  const held = event(["type:docs", "area:github", "risk:low", "merge:hold"]);
+  assert.throws(
+    () => validatePullRequestMetadata(held, catalogue, context),
+    /paused by merge:hold/,
+  );
+  const manual = {
+    repository: { full_name: repository },
+    inputs: { pull_request_number: "23" },
+  };
+  const manualContext = {
+    eventName: "workflow_dispatch",
+    repository,
+    ref: "refs/heads/main",
+    livePullRequest: held.pull_request,
+  };
+  assert.throws(
+    () => validatePullRequestMetadata(manual, catalogue, manualContext),
+    /paused by merge:hold/,
+  );
+  held.pull_request.labels = labels(["type:docs", "area:github", "risk:low"]);
+  assert.equal(
+    validatePullRequestMetadata(manual, catalogue, manualContext).headSha,
+    held.pull_request.head.sha,
+  );
+});
+
 test("unknown prefixed labels fail even beside an otherwise valid selection", () => {
   for (const name of ["type:typo", "risk:negligible", "area:unknown"])
     assert.throws(

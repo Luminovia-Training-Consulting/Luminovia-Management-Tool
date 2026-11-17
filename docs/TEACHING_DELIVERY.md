@@ -1,6 +1,6 @@
 # Attendance and proof of teaching delivery
 
-The workflow is present in accepted main's published migration `20261116121600_attendance_delivery.sql`, with its frontend, actual API fixtures and desktop/mobile journeys. Focused evidence below describes its original source checkpoint; current complete execution is recorded in [QA_RESULTS](QA_RESULTS.md) under the [functional acceptance contract](FUNCTIONAL_ACCEPTANCE.md). Source merge does not establish hosted installation or production acceptance.
+The workflow is present in accepted main's published migration `20261116121600_attendance_delivery.sql`, with its frontend, actual API fixtures and desktop/mobile journeys. Focused evidence below describes its original source checkpoint; current complete execution is recorded in [QA_RESULTS](QA_RESULTS.md) under the [functional acceptance contract](FUNCTIONAL_ACCEPTANCE.md). Main38 retains this application and its SQL unchanged within the 69-file released history; the current quality integration still needs its own complete gates. Source merge does not establish hosted installation or production acceptance.
 
 ## Daily workflow
 

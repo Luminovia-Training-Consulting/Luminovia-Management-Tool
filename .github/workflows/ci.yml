@@ -1,11 +1,12 @@
-# Scope only reduces ordinary UI/docs PR work. Backend/auth/delivery changes
-# and all main/manual runs retain complete acceptance; uncertain scope is full.
+# Scope only reduces verified Draft UI/docs work. Ready PRs, backend/auth/delivery
+# changes and all main/manual runs retain complete acceptance; uncertain is full.
 # Every release still requires explicit exact-main approval and complete gates.
 name: Portal checks
 on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
     inputs:
       expected_commit:
@@ -42,6 +43,14 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Only metadata reads, including the continuous exact source-push probe.
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
+      checks: read
+      statuses: read
+      security-events: read
     strategy:
       fail-fast: false
       matrix:
@@ -66,6 +75,11 @@ jobs:
           node-version-file: ".node-version"
           cache: npm
       - run: npm ci
+      - name: Verify read-only source metadata access
+        if: matrix.name == 'Code quality'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/pr-auto-merge.mjs --probe-source "$GITHUB_RUN_ID"
       - name: Run ${{ matrix.name }}
         # Public, fictional build values; PRs need no repository configuration.
         env:
@@ -98,26 +112,30 @@ jobs:
           if-no-files-found: error
           retention-days: 14
   verify:
-    # PRs avoid repeating quality/coverage or starting the complete service stack.
-    # Sensitive PRs separate system and browser work across owned stacks.
-    # Main/manual retains the unchanged canonical acceptance and owned cleanup.
+    # Draft UI/docs may use bounded checks. Ready/sensitive PRs retain complete
+    # system and browser phases on separate owned runners; main/manual runs all.
     needs: scope
     # A broken scope job must fail this required gate instead of skipping it.
     if: always() && !cancelled()
     runs-on: ubuntu-latest
-    # Full PR17 acceptance reached browsers after 31m on run43858966704.
-    # Retain room for the complete suite; individual test deadlines stay fixed.
+    # Earlier complete acceptance took 38m53s; PR17 reached browsers after 31m.
+    # Keep room for Main/manual all-phase work; individual deadlines stay fixed.
     timeout-minutes: 60
     steps:
       - name: Require a successful recognized scope
         env:
           SCOPE_RESULT: ${{ needs.scope.result }}
           EVENT_NAME: ${{ github.event_name }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          PR_ACTION: ${{ github.event.action }}
           PROFILE: ${{ needs.scope.outputs.profile }}
         run: |
           test "$SCOPE_RESULT" = success
           case "$PROFILE" in docs|standard|full) ;; *) exit 1 ;; esac
           if test "$EVENT_NAME" != pull_request; then test "$PROFILE" = full; fi
+          if test "$EVENT_NAME" = pull_request; then
+            if test "$PR_DRAFT" != true || test "$PR_ACTION" = ready_for_review; then test "$PROFILE" = full; fi
+          fi
       - name: Verify explicitly requested revision
         env:
           EXPECTED_COMMIT: ${{ inputs.expected_commit }}
@@ -176,11 +194,14 @@ jobs:
         env:
           SCOPE_RESULT: ${{ needs.scope.result }}
           EVENT_NAME: ${{ github.event_name }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          PR_ACTION: ${{ github.event.action }}
           PROFILE: ${{ needs.scope.outputs.profile }}
         run: |
           test "$SCOPE_RESULT" = success
           test "$EVENT_NAME" = pull_request
           case "$PROFILE" in docs|standard|full) ;; *) exit 1 ;; esac
+          if test "$PR_DRAFT" != true || test "$PR_ACTION" = ready_for_review; then test "$PROFILE" = full; fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: needs.scope.outputs.profile == 'full'
         with:
@@ -219,7 +240,7 @@ jobs:
           retention-days: 14
   verify-selfhost:
     # Two PR SQL workers own separate pinned networkless clusters; docs-only
-    # changes explicitly require no SQL. Sensitive PRs/main/manual additionally
+    # Draft changes explicitly require no SQL. Ready/sensitive PRs/main/manual
     # verify the complete native upgrade, independent of full application QA.
     name: Actual isolated selfhost image compatibility
     needs: scope
@@ -232,11 +253,16 @@ jobs:
         env:
           SCOPE_RESULT: ${{ needs.scope.result }}
           EVENT_NAME: ${{ github.event_name }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          PR_ACTION: ${{ github.event.action }}
           PROFILE: ${{ needs.scope.outputs.profile }}
         run: |
           test "$SCOPE_RESULT" = success
           case "$PROFILE" in docs|standard|full) ;; *) exit 1 ;; esac
           if test "$EVENT_NAME" != pull_request; then test "$PROFILE" = full; fi
+          if test "$EVENT_NAME" = pull_request; then
+            if test "$PR_DRAFT" != true || test "$PR_ACTION" = ready_for_review; then test "$PROFILE" = full; fi
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         if: needs.scope.outputs.profile != 'docs'
         with:
@@ -260,7 +286,8 @@ jobs:
         run: |
           mkdir -m 700 "$RUNNER_TEMP/selfhost-baseline"
           git archive HEAD^ | tar -x -C "$RUNNER_TEMP/selfhost-baseline"
-      - if: needs.scope.outputs.profile == 'full'
+      - name: Complete isolated native selfhost verification
+        if: needs.scope.outputs.profile == 'full'
         run: node deploy/hostinger/maintenance/selfhost-candidate-check.mjs --run --baseline-root "$RUNNER_TEMP/selfhost-baseline" --baseline-commit "$(git rev-parse HEAD^)" --proof-output "$RUNNER_TEMP/postgres-candidate-proof.json"
   preview-package:
     name: PR preview package

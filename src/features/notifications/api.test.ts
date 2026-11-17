@@ -1,3 +1,8 @@
+/**
+ * Exercise the current inbox/preferences client contract using real query
+ * observers and fictional transport replies. Preserve cursor identity, reject
+ * unsafe DTOs and never turn a denied acknowledgement into a successful count.
+ */
 import { InfiniteQueryObserver, QueryClient } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -12,9 +17,12 @@ import {
   type NotificationItem,
 } from "./api";
 
+// No account or database is contacted. Query execution, response validation and
+// cache ownership remain the production implementations under test.
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ rpc }) }));
 const clients: QueryClient[] = [];
+/** Isolate actor caches and expose a failed request without automatic retries. */
 function client() {
   const value = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
@@ -22,6 +30,7 @@ function client() {
   clients.push(value);
   return value;
 }
+// All authored content, IDs and timestamps below belong to fictional fixtures.
 const notice: NotificationItem = {
   id: "5b7275ea-b1a5-4570-9141-8d22a2756de3",
   kind: "claim_confirmed",
@@ -37,11 +46,13 @@ const preferences = {
   reminders: false,
   version: 4,
 };
+/** Build a finite server page; unread totals deliberately exceed loaded items. */
 const page = (items = [notice]): InboxPage => ({
   items,
   unread_count: 50,
   as_of: "2030-01-01T11:00:00Z",
 });
+/** Mimic the awaitable RPC/abortSignal interface without bypassing DTO parsing. */
 function response(data: unknown, error: unknown = null) {
   const result = Promise.resolve({ data, error });
   return Object.assign(result, {
@@ -50,6 +61,7 @@ function response(data: unknown, error: unknown = null) {
 }
 beforeEach(() => rpc.mockReset());
 afterEach(() => {
+  // Observers are destroyed by their scenarios; release the remaining caches.
   clients.splice(0).forEach((value) => value.clear());
 });
 
@@ -184,6 +196,7 @@ describe("notification response trust boundaries", () => {
     "/jobs/job-a\t",
     "/jobs/job-a\u007f",
     "/jobs/job a",
+    "//foreign.example.invalid",
     "https://foreign.example.invalid",
     "data:text/html,unsafe",
     "\\\\foreign.example.invalid",

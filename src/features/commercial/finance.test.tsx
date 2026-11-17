@@ -1,3 +1,9 @@
+/**
+ * Exercise the invoice/payment UI through real React Hook Form and
+ * QueryClient state. Only Auth, RPC responses and document transport are mocked;
+ * fictional fees protect retry, currency and confirmation boundaries without
+ * claiming database, scanned-byte, banking or native browser acceptance.
+ */
 import {
   act,
   cleanup,
@@ -35,6 +41,7 @@ const clients: QueryClient[] = [];
 let earnings: EarningRecord[];
 let invoices: InvoiceRecord[];
 let access: CommercialAccess;
+/** Return an actor-owned accepted fee in its original currency. */
 function earning(id: string, currency: "EUR" | "AUD" = "EUR"): EarningRecord {
   return {
     claim_id: id,
@@ -53,6 +60,7 @@ function earning(id: string, currency: "EUR" | "AUD" = "EUR"): EarningRecord {
     invoice_id: null,
   };
 }
+/** Supply a confirmed invoice with a known remaining payment balance. */
 function invoice(): InvoiceRecord {
   return {
     id: "invoice-a",
@@ -122,6 +130,7 @@ afterEach(() => {
   clients.splice(0).forEach((client) => client.clear());
   vi.restoreAllMocks();
 });
+/** Mount real commercial queries with a fresh actor-scoped cache per test. */
 function view() {
   const client = new QueryClient({
     defaultOptions: {
@@ -140,6 +149,7 @@ function view() {
   );
   return client;
 }
+/** Prepare an owned scanned-PDF fixture and one real claim selection. */
 async function invoiceForm() {
   await userEvent.click(
     await screen.findByRole("button", {
@@ -171,6 +181,7 @@ async function invoiceForm() {
     }),
   };
 }
+/** Open the real payment form using an explicit Berlin local timestamp. */
 async function paymentForm() {
   await userEvent.click(
     await screen.findByRole("button", {

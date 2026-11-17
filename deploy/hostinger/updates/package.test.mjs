@@ -2,16 +2,19 @@
  * Package tests use owned temporary directories and synthetic public build values. Exercise path boundaries, hashes, secret detection and immutable pins without publishing a release.
  */
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs, {
+  chmodSync,
   cpSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
+  renameSync,
   rmSync,
+  lstatSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -285,6 +288,392 @@ test("real archive and manifest contain only runtime files with exact byte hashe
     verifyGit: false,
   });
   assert.equal(second.manifest.archiveSha256, result.manifest.archiveSha256);
+  assert.throws(() => release(), /overwrite/);
+});
+
+test("competing release packagers retain the successful archive, manifest and checksums", async (t) => {
+  const { root } = fixture(t);
+  const gate = join(root, "continue-first-packager");
+  const script = join(root, "race-packager.mjs");
+  // Pause one real process at its staging boundary. On the vulnerable source
+  // both callers have passed the output preflight; the other process completes
+  // before the paused one resumes. No release/network command is invoked.
+  writeFileSync(
+    script,
+    `import fs from 'node:fs';
+import {syncBuiltinESMExports} from 'node:module';
+const options=JSON.parse(process.argv[2]);
+if(process.argv[3]==='pause'){
+  const original=fs.mkdtempSync;
+  fs.mkdtempSync=(prefix,...args)=>{
+    if(String(prefix).includes('luminovia-release-')){
+      process.send({ready:true});
+      const deadline=Date.now()+15000;
+      while(!fs.existsSync(${JSON.stringify(gate)})){
+        if(Date.now()>deadline)throw new Error('Owned race gate timed out');
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,10);
+      }
+    }
+    return original(prefix,...args);
+  };
+  syncBuiltinESMExports();
+}
+const {createRelease}=await import(${JSON.stringify(pathToFileURL(join(repositoryRoot, "deploy/hostinger/updates/package.mjs")).href)});
+try{
+  const result=createRelease(options);
+  process.stdout.write(JSON.stringify({ok:true,archiveSha256:result.manifest.archiveSha256}));
+}catch(error){
+  process.stdout.write(JSON.stringify({ok:false,message:error.message}));
+}
+process.disconnect();
+`,
+  );
+  const options = JSON.stringify({
+    sourceRoot: root,
+    outputDirectory: join(root, "out"),
+    commit,
+    publicConfig: { apiUrl: API_URL, publishableKey: publicKey },
+    verifyGit: false,
+  });
+  // These child processes and the gate belong exclusively to this fixture.
+  const launch = (pause) => {
+    const child = spawn(
+      process.execPath,
+      [script, options, pause ? "pause" : "run"],
+      {
+        stdio: ["ignore", "pipe", "pipe", "ipc"],
+        timeout: 20000,
+      },
+    );
+    const ready = new Promise((accept, reject) => {
+      child.once("message", accept);
+      child.once("error", reject);
+      child.once("exit", () =>
+        reject(new Error("Packager exited before its race gate")),
+      );
+    });
+    // The non-paused process never announces a gate; its rejection is observed.
+    ready.catch(() => {});
+    const chunks = [];
+    child.stdout.on("data", (chunk) => chunks.push(chunk));
+    const finished = new Promise((accept, reject) => {
+      child.once("error", reject);
+      child.once("close", (code) => {
+        if (code !== 0)
+          return reject(new Error("Owned packager process failed"));
+        try {
+          accept(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+    finished.catch(() => {});
+    t.after(async () => {
+      // A failed assertion/gate still terminates and joins only this owned
+      // process; do not leave a child waiting for a deleted fixture gate.
+      if (child.exitCode === null && child.signalCode === null)
+        child.kill("SIGKILL");
+      await finished.catch(() => {});
+    });
+    return { ready, finished };
+  };
+  const first = launch(true);
+  await first.ready;
+  const second = launch(false);
+  let secondResult;
+  try {
+    secondResult = await second.finished;
+  } finally {
+    writeFileSync(gate, "continue");
+  }
+  const results = [await first.finished, secondResult];
+  assert.equal(results.filter((result) => result.ok).length, 1);
+  assert.equal(results.filter((result) => !result.ok).length, 1);
+  const manifest = JSON.parse(
+    readFileSync(join(root, "out/cms-release.json"), "utf8"),
+  );
+  const archiveHash = digest(
+    readFileSync(join(root, "out/cms-release.tar.gz")),
+  );
+  assert.equal(manifest.archiveSha256, archiveHash);
+  assert.equal(results.find((result) => result.ok).archiveSha256, archiveHash);
+});
+
+test("safe existing output directories retain unrelated files, permissions and private artifacts", (t) => {
+  const { root, release } = fixture(t);
+  const output = join(root, "out");
+  mkdirSync(output, { mode: 0o755 });
+  chmodSync(output, 0o755);
+  writeFileSync(join(output, "unrelated.keep"), "Fictional unrelated output");
+  const result = release();
+  assert.equal(lstatSync(output).mode & 0o777, 0o755);
+  assert.equal(
+    readFileSync(join(output, "unrelated.keep"), "utf8"),
+    "Fictional unrelated output",
+  );
+  assert.equal(lstatSync(result.archivePath).mode & 0o777, 0o600);
+  assert.equal(lstatSync(result.manifestPath).mode & 0o777, 0o600);
+  assert.equal(lstatSync(result.archivePath).nlink, 1);
+  assert.equal(lstatSync(result.manifestPath).nlink, 1);
+  assert.deepEqual(readdirSync(output).sort(), [
+    "cms-release.json",
+    "cms-release.tar.gz",
+    "unrelated.keep",
+  ]);
+});
+
+for (const mode of [0o770, 0o777])
+  test(`shared-write output mode ${mode.toString(8)} is rejected without permission changes`, (t) => {
+    const { root, release } = fixture(t);
+    const output = join(root, "out");
+    mkdirSync(output);
+    chmodSync(output, mode);
+    writeFileSync(join(output, "unrelated.keep"), "Fictional existing output");
+    assert.throws(() => release(), /without shared write access/);
+    assert.equal(lstatSync(output).mode & 0o777, mode);
+    assert.deepEqual(readdirSync(output), ["unrelated.keep"]);
+  });
+
+for (const dangling of [false, true])
+  test(`output directory ${dangling ? "dangling " : ""}symlinks are never followed`, (t) => {
+    const { root, release } = fixture(t);
+    const target = join(root, "outside-output");
+    if (!dangling) mkdirSync(target, { mode: 0o700 });
+    symlinkSync(target, join(root, "out"));
+    assert.throws(() => release());
+    assert(lstatSync(join(root, "out")).isSymbolicLink());
+    if (dangling) assert(!existsSync(target));
+    else assert.deepEqual(readdirSync(target), []);
+  });
+
+for (const name of ["cms-release.tar.gz", "cms-release.json"])
+  test(`an existing ${name} symlink and its outside bytes remain untouched`, (t) => {
+    const { root, release } = fixture(t);
+    const output = join(root, "out");
+    mkdirSync(output, { mode: 0o700 });
+    const outside = join(root, "outside-artifact");
+    writeFileSync(outside, "Fictional outside artifact");
+    symlinkSync(outside, join(output, name));
+    assert.throws(() => release(), /overwrite/);
+    assert(lstatSync(join(output, name)).isSymbolicLink());
+    assert.equal(readFileSync(outside, "utf8"), "Fictional outside artifact");
+    assert.deepEqual(readdirSync(output), [name]);
+  });
+
+for (const failure of ["archive digest", "staged manifest write"])
+  test(`${failure} failure closes owned descriptors and cleans only private staging`, (t) => {
+    const { root, release } = fixture(t);
+    const output = join(root, "out");
+    const opened = new Set();
+    const archives = new Set();
+    const originalOpen = fs.openSync;
+    const originalClose = fs.closeSync;
+    const originalRead = fs.readSync;
+    const originalWrite = fs.writeFileSync;
+    const fault = new Error("Fictional package I/O failure");
+    let failed = false;
+    // Track only the output descriptors owned by this call; dependency reads
+    // continue unchanged. Faults happen after a real private archive exists.
+    t.mock.method(fs, "openSync", (path, ...args) => {
+      const descriptor = originalOpen(path, ...args);
+      if (
+        String(path) === output ||
+        String(path).includes("/.luminovia-release-") ||
+        String(path).endsWith("/cms-release.tar.gz")
+      ) {
+        opened.add(descriptor);
+        if (String(path).endsWith("/cms-release.tar.gz"))
+          archives.add(descriptor);
+      }
+      return descriptor;
+    });
+    t.mock.method(fs, "closeSync", (descriptor) => {
+      opened.delete(descriptor);
+      archives.delete(descriptor);
+      return originalClose(descriptor);
+    });
+    t.mock.method(fs, "readSync", (descriptor, ...args) => {
+      if (failure === "archive digest" && archives.has(descriptor)) {
+        failed = true;
+        throw fault;
+      }
+      return originalRead(descriptor, ...args);
+    });
+    t.mock.method(fs, "writeFileSync", (path, ...args) => {
+      if (
+        failure === "staged manifest write" &&
+        String(path).startsWith(`/proc/${process.pid}/fd/`) &&
+        String(path).endsWith("/cms-release.json")
+      ) {
+        failed = true;
+        throw fault;
+      }
+      return originalWrite(path, ...args);
+    });
+    syncBuiltinESMExports();
+    t.after(() => {
+      t.mock.restoreAll();
+      syncBuiltinESMExports();
+    });
+    assert.throws(
+      () => release(),
+      (error) => error === fault,
+    );
+    assert.equal(failed, true);
+    assert.equal(opened.size, 0);
+    assert.deepEqual(readdirSync(output), []);
+  });
+
+test("output directory replacement cannot redirect staged writes or failure cleanup", (t) => {
+  const { root, release } = fixture(t);
+  const output = join(root, "out");
+  const moved = join(root, "original-output");
+  const sentinel = Buffer.from(
+    "Fictional replacement directory must remain unchanged",
+  );
+  const originalOpen = fs.openSync;
+  const originalClose = fs.closeSync;
+  const originalStat = fs.fstatSync;
+  const originalRead = fs.readSync;
+  const opened = new Set();
+  const archives = new Set();
+  const fault = new Error("Fictional archive read failure after replacement");
+  let outputDescriptor;
+  let replaced = false;
+  t.mock.method(fs, "openSync", (path, ...args) => {
+    const descriptor = originalOpen(path, ...args);
+    opened.add(descriptor);
+    if (String(path) === output) outputDescriptor = descriptor;
+    if (String(path).endsWith("/cms-release.tar.gz")) archives.add(descriptor);
+    return descriptor;
+  });
+  t.mock.method(fs, "closeSync", (descriptor) => {
+    opened.delete(descriptor);
+    archives.delete(descriptor);
+    return originalClose(descriptor);
+  });
+  t.mock.method(fs, "fstatSync", (descriptor, ...args) => {
+    const state = originalStat(descriptor, ...args);
+    if (descriptor === outputDescriptor && !replaced) {
+      replaced = true;
+      renameSync(output, moved);
+      mkdirSync(output, { mode: 0o700 });
+      writeFileSync(join(output, "foreign.keep"), sentinel);
+    }
+    return state;
+  });
+  t.mock.method(fs, "readSync", (descriptor, ...args) => {
+    if (archives.has(descriptor)) throw fault;
+    return originalRead(descriptor, ...args);
+  });
+  syncBuiltinESMExports();
+  t.after(() => {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  });
+  // Replacing the pathname after the authentic directory check cannot move
+  // private generation/cleanup into that replacement, including on failure.
+  assert.throws(
+    () => release(),
+    (error) => error === fault,
+  );
+  assert.equal(replaced, true);
+  assert.equal(opened.size, 0);
+  assert.deepEqual(readdirSync(moved), []);
+  assert.deepEqual(readdirSync(output), ["foreign.keep"]);
+  assert.deepEqual(readFileSync(join(output, "foreign.keep")), sentinel);
+});
+
+for (const collision of [
+  "archive",
+  "manifest",
+  "replacement before I/O failure",
+])
+  test(`late ${collision} never rolls back another writer's final bytes`, (t) => {
+    const { root, release } = fixture(t);
+    const output = join(root, "out");
+    const archive = join(output, "cms-release.tar.gz");
+    const manifest = join(output, "cms-release.json");
+    const foreign = Buffer.from("Fictional competing writer artifact");
+    const originalLink = fs.linkSync;
+    let publications = 0;
+    // Mutate actual directory entries at the publication boundary. A final
+    // path no longer proves ownership, even when this attempt linked it first.
+    t.mock.method(fs, "linkSync", (source, destination) => {
+      publications++;
+      if (publications === 1 && collision === "archive")
+        writeFileSync(archive, foreign, { flag: "wx" });
+      if (publications === 2) {
+        if (collision === "manifest")
+          writeFileSync(manifest, foreign, { flag: "wx" });
+        else if (collision === "replacement before I/O failure") {
+          rmSync(archive);
+          writeFileSync(archive, foreign, { flag: "wx" });
+          throw Object.assign(new Error("Fictional publication I/O failure"), {
+            code: "EIO",
+          });
+        }
+      }
+      return originalLink(source, destination);
+    });
+    syncBuiltinESMExports();
+    t.after(() => {
+      t.mock.restoreAll();
+      syncBuiltinESMExports();
+    });
+    assert.throws(() => release(), /Inspect the output before retrying/);
+    assert.equal(publications, collision === "archive" ? 1 : 2);
+    assert.deepEqual(
+      readFileSync(collision === "manifest" ? manifest : archive),
+      foreign,
+    );
+    assert(
+      !readdirSync(output).some((name) =>
+        name.startsWith(".luminovia-release-"),
+      ),
+    );
+    if (collision === "manifest") {
+      // A complete but unpaired owned archive is explicit failed output, never
+      // a successful release. Retrying preserves both artifacts for inspection.
+      assert(execFileSync("tar", ["-tzf", archive]).length > 0);
+      assert.throws(() => release(), /overwrite/);
+      assert.deepEqual(readFileSync(manifest), foreign);
+    } else assert(!existsSync(manifest));
+  });
+
+test("a late output-sync failure preserves the complete pair without reporting success", (t) => {
+  const { root, release } = fixture(t);
+  const originalSync = fs.fsyncSync;
+  let failed = false;
+  t.mock.method(fs, "fsyncSync", (descriptor) => {
+    if (fs.fstatSync(descriptor).isDirectory()) {
+      failed = true;
+      throw Object.assign(new Error("Fictional output sync failure"), {
+        code: "EIO",
+      });
+    }
+    return originalSync(descriptor);
+  });
+  syncBuiltinESMExports();
+  t.after(() => {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  });
+  assert.throws(() => release(), /Inspect the output before retrying/);
+  assert.equal(failed, true);
+  const output = join(root, "out");
+  const manifest = JSON.parse(
+    readFileSync(join(output, "cms-release.json"), "utf8"),
+  );
+  assert.equal(
+    manifest.archiveSha256,
+    digest(readFileSync(join(output, "cms-release.tar.gz"))),
+  );
+  assert.deepEqual(readdirSync(output).sort(), [
+    "cms-release.json",
+    "cms-release.tar.gz",
+  ]);
   assert.throws(() => release(), /overwrite/);
 });
 

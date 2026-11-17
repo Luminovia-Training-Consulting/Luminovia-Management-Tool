@@ -91,7 +91,7 @@ Documentation uses English; the application supports German/English and user-aut
 - [GitHub checks, security and coverage](CI_QUALITY.md)
 - [Verification plan and acceptance evidence](TEST_PLAN.md)
 - [Functional and integration acceptance](FUNCTIONAL_ACCEPTANCE.md)
-- [QA evidence — 2026-11-16](QA_RESULTS.md)
+- [Source-bound QA evidence](QA_RESULTS.md)
 - [Functional and code-connection audit](FUNCTIONAL_CODE_AUDIT.md)
 - [System audit: functionality, performance and failure paths](SYSTEM_AUDIT.md)
 - [Guided experience functional and connectivity audit](GUIDED_EXPERIENCE_AUDIT.md)

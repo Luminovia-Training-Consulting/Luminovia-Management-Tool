@@ -59,6 +59,8 @@ npm ci
 
 The complete command uses its own fictional data, credentials, ports and cleanup. Coordinate shared QA ownership; never stop another checkout's services. Unit tests and builds alone do not prove Auth, Storage, concurrency, browser, retained-data or physical-device behavior. [Testing](docs/TEST_PLAN.md), [CI profiles](docs/CI_QUALITY.md), [functional acceptance](docs/FUNCTIONAL_ACCEPTANCE.md) and [recorded QA](docs/QA_RESULTS.md) describe the separate evidence.
 
+The lifecycle and notification client APIs have 100% file-specific coverage gates; whole-source coverage is measured separately. The [native merge controller](docs/AUTO_MERGE.md) binds all required checks, actual system/browser/native execution, current-source security and independent review before its native merge request. It never rewrites the main ref or bypasses repository rules.
+
 For a frontend build, set the public `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` values; [developer setup](docs/DEVELOPER_GUIDE.md) explains configuration. Synthetic values verify compilation only.
 
 The frontend uses React, TypeScript, Vite, Tailwind/shadcn-style primitives, Router, TanStack Query, React Hook Form/Zod and i18next. Supabase supplies Auth, PostgreSQL, Storage, Realtime and Edge Functions; no separate business application server is required. See [architecture](docs/ARCHITECTURE.md), [data model](docs/ERD.md), [API reference](docs/API_REFERENCE.md) and [migration guide](docs/MIGRATION_GUIDE.md).
@@ -67,7 +69,7 @@ The frontend uses React, TypeScript, Vite, Tailwind/shadcn-style primitives, Rou
 
 The [product specification](docs/PRODUCT_SPEC.md), original [master brief](docs/UNIVERSAL_MASTER_PROMPT.txt) and [roadmap](ROADMAP.md) retain the full target and remaining requirements. Feature guides describe source behavior; exact PR checks establish acceptance of a particular revision. This README deliberately carries no rolling test totals or hosted-installation claim.
 
-Read [CONTRIBUTING](CONTRIBUTING.md) before opening an English issue or pull request. Application UI changes need German and English. Report vulnerabilities through the private channel in [SECURITY](SECURITY.md). Use fictional data and customer-neutral examples throughout.
+Read [CONTRIBUTING](CONTRIBUTING.md) before opening an English issue or pull request. The [contributor list](CONTRIBUTORS.md) records verified attribution; the [pull request guide](docs/PULL_REQUEST_GUIDE.md) explains the shared type/area/risk labels and current merge gates. Application UI changes need German and English. Report vulnerabilities through the private channel in [SECURITY](SECURITY.md). Use fictional data and customer-neutral examples throughout.
 
 A merge does not publish a CMS release or hosted PR deployment. Publication requires the explicit manual controls in [the runbook](docs/DEPLOYMENT_RUNBOOK.md) and [CI guide](docs/CI_QUALITY.md). Production, hosting/DNS changes, risky data operations and real-message delivery need their own authorization.
 

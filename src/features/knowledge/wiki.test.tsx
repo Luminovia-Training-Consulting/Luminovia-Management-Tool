@@ -1,3 +1,9 @@
+/**
+ * Exercise the Wiki form, versioned RPC payloads and real QueryClient
+ * refresh/permission state. A controlled text input replaces heavyweight Tiptap;
+ * these workflow tests do not claim editor-formatting or sanitisation coverage.
+ * All authored content, accounts and server responses are fictional.
+ */
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -93,6 +99,7 @@ const doc = (text: string): JSONContent => ({
     { type: "paragraph", content: text ? [{ type: "text", text }] : [] },
   ],
 });
+/** Provide an actor-owned draft at an explicit expected server version. */
 function initialRecord(): WikiPageRecord {
   return {
     id: "wiki-routing",
@@ -119,6 +126,7 @@ let save: (payload: Record<string, unknown>) => Promise<RpcResult>;
 const clients: QueryClient[] = [];
 const saveCalls = () =>
   state.rpc.mock.calls.filter(([name]) => name === "save_wiki_page");
+/** Model confirmed server state only after a test explicitly accepts the write. */
 function confirmSave(payload: Record<string, unknown>): RpcResult {
   record = {
     ...record,
@@ -178,6 +186,7 @@ afterEach(() => {
   clients.splice(0).forEach((client) => client.clear());
   vi.clearAllMocks();
 });
+/** Use an isolated real cache and Router while preserving mounted form state. */
 function view(path = "/wiki?page=wiki-routing") {
   const client = new QueryClient({
     defaultOptions: {
@@ -195,6 +204,7 @@ function view(path = "/wiki?page=wiki-routing") {
   );
   return client;
 }
+/** Enter the actual parent edit workflow before changing controlled fields. */
 async function editArticle() {
   await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
   return {

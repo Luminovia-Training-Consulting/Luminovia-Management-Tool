@@ -74,6 +74,9 @@ test("malformed JSON and invalid UTF-8 fail without exposing private contents", 
 test("insecure file permissions and hardlinked targets reject both reading and replacement", (t) => {
   const { directory, file } = fixture(t);
   writeFileSync(file, '{"retained":true}', { mode: 0o644 });
+  // Creation modes are filtered by the caller's umask. Establish the unsafe
+  // fixture explicitly so a secure 077 umask cannot turn this into a valid file.
+  chmodSync(file, 0o644);
   for (const operation of [
     () => readPrivateJson(file),
     () => writePrivateJson(file, { altered: true }),

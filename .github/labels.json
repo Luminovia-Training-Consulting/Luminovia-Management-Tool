@@ -176,7 +176,7 @@
   },
   {
     "name": "merge:hold",
-    "color": "d93f0b",
-    "description": "Pause verified automatic merging while a maintainer resolves an outstanding concern."
+    "color": "b60205",
+    "description": "Pauses merging until the maintainer concern is resolved."
   }
 ]
