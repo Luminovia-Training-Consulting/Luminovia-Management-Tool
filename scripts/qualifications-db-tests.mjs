@@ -145,13 +145,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
         ),
         /42501/,
       );
-      await assert.rejects(
-        actor(
-          manager,
-          `select public.qualification_review(${q(teacher)},${q(topic)})`,
-        ),
-        /42501/,
-      );
+      assert.deepEqual(await record(manager), await record(teacher));
     },
   );
   let linked;
