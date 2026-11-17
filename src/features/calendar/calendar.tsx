@@ -57,6 +57,7 @@ import { GlobalEventDetails, GlobalEventManagement } from "./publications";
 import "./publications-i18n";
 import "./confirmation-i18n";
 import "./personal-details-i18n";
+import "./filter-i18n";
 import { privateMeetingHref } from "./personal-details";
 /** Validate private-event form input; current server permissions and constraints remain authoritative. */
 const schema = z.object({
@@ -316,6 +317,9 @@ export function CalendarPage() {
   const { t, i18n } = useTranslation();
   const availabilityText = useTranslation("availability").t;
   const confirmText = useTranslation("calendarConfirmation").t;
+  const filterText = useTranslation("calendarFilter").t;
+  const [search, setSearch] = useState("");
+  const [eventType, setEventType] = useState("all");
   const [calendarParams] = useSearchParams();
   const { session } = useAuth();
   const profile = useQuery(profileQuery(session!.user.id));
@@ -569,19 +573,52 @@ export function CalendarPage() {
         <div className="segmented">
           <Button
             variant={!global ? "default" : "ghost"}
-            onClick={() => setGlobal(false)}
+            onClick={() => {
+              setGlobal(false);
+              setEventType("all");
+            }}
           >
             {t("privateCalendar")}
           </Button>
           <Button
             variant={global ? "default" : "ghost"}
-            onClick={() => setGlobal(true)}
+            onClick={() => {
+              setGlobal(true);
+              setEventType("all");
+            }}
           >
             {publicationText("global")}
           </Button>
         </div>
         <span className="badge">{zone}</span>
       </div>
+      <div className="form-row">
+        <Field id="calendar-search" label={filterText("search")}>
+          <input
+            id="calendar-search"
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </Field>
+        <Field id="calendar-event-type" label={filterText("type")}>
+          <select
+            id="calendar-event-type"
+            value={eventType}
+            onChange={(event) => setEventType(event.target.value)}
+          >
+            <option value="all">{filterText("all")}</option>
+            {(global ? ["global", "course"] : ["private", "assignment"]).map(
+              (kind) => (
+                <option key={kind} value={kind}>
+                  {filterText(kind)}
+                </option>
+              ),
+            )}
+          </select>
+        </Field>
+      </div>
+      <p>{filterText("scope")}</p>
       {message && <Notice>{message}</Notice>}
       <CalendarExport
         key={session!.user.id}
@@ -617,7 +654,13 @@ export function CalendarPage() {
             right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth",
           }}
           datesSet={handleDatesSet}
-          events={events}
+          events={events.filter(
+            (event) =>
+              (eventType === "all" || event.extendedProps.kind === eventType) &&
+              event.title
+                .toLocaleLowerCase()
+                .includes(search.trim().toLocaleLowerCase()),
+          )}
           height="auto"
           buttonIcons={false}
           dayCellDidMount={(arg) => arg.el.removeAttribute("aria-labelledby")}

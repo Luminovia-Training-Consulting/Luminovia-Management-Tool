@@ -147,6 +147,16 @@ test("real shared preparation, explicitly agreed contact and scanned file versio
   const f = await fixture();
   await adminLogin(page, f.manager);
   await page.goto(`/courses/${f.run}/workspace`);
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page
+    .getByRole("button", { name: "Unterrichtslink kopieren", exact: true })
+    .click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Unterrichtslink kopiert." }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    "https://example.invalid/class",
+  );
   const prep = page.getByRole("region", {
     name: "Gemeinsame Kursvorbereitung",
     exact: true,

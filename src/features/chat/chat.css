@@ -164,6 +164,13 @@
   color: var(--muted);
   margin-top: 5px;
 }
+.chat-room-copy .chat-room-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 3px;
+  max-width: 100%;
+}
 .chat-room-indicators {
   display: flex;
   flex-direction: column;

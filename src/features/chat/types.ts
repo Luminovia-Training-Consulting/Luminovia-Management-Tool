@@ -18,6 +18,7 @@ export interface ChatRoom {
   unread_count: number;
   manual_unread?: boolean;
   last_message_at: string | null;
+  last_message_preview?: string | null;
   muted: boolean;
   personal_archived?: boolean;
   pinned?: boolean;

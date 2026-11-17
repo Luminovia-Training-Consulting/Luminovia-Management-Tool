@@ -27,6 +27,7 @@ await withTestDatabase("course_workspace", async ({ sql, actor }) => {
  insert into public.client_organisation_memberships(user_id,organisation_id)values(${q(client)},${q(org)});
  insert into public.course_templates(id,title,syllabus)values(${q(template)},'Fictional practical Linux','Practise safe commands');
  insert into public.course_runs(id,template_id,organisation_id)values(${q(run)},${q(template)},${q(org)}),(${q(current)},${q(template)},${q(org)});
+ update public.course_runs set venue='https://example.invalid/fictional-course' where id=${q(run)};
  insert into public.course_sessions(id,course_run_id,starts_at,ends_at)values(${q(session)},${q(run)},now()-interval '2 days 1 hour',now()-interval '2 days'),(${q(currentSession)},${q(current)},now()-interval '30 minutes',now()+interval '30 minutes');
  insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms)values(${q(job)},${q(run)},'Fictional assigned course','Fictional customer','online','filled',100,'EUR','fixed_total',100,'Fictional terms');
  insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,currency,rate_unit,total_amount,terms,terms_version)values(${q(claim)},${q(job)},${q(teacher)},${q(randomUUID())},100,'EUR','fixed_total',100,'Fictional terms',1);
@@ -57,7 +58,12 @@ await withTestDatabase("course_workspace", async ({ sql, actor }) => {
   await check(
     "Exact course/org/enrolment rights, active identity and no administrator-without-MFA bypass",
     async () => {
-      assert.equal((await workspace(learner)).access.learner, true);
+      const learnerWorkspace = await workspace(learner);
+      assert.equal(learnerWorkspace.access.learner, true);
+      assert.equal(
+        learnerWorkspace.venue,
+        "https://example.invalid/fictional-course",
+      );
       assert.equal((await workspace(teacher)).access.teacher, true);
       assert.equal((await workspace(client)).access.client, true);
       await assert.rejects(workspace(foreign), /42501/);

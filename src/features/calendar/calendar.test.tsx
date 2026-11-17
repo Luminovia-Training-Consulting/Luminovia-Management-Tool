@@ -197,6 +197,93 @@ afterEach(() => {
   state.events = [];
   vi.clearAllMocks();
 });
+it("filters loaded private, assignment, global and course titles without extra queries and supports both languages", async () => {
+  const jobID = "d7000000-0000-4000-8000-000000000001";
+  state.events = [
+    {
+      id: "private-one",
+      title: "Private planning",
+      starts_at: "2060-01-01T08:00:00Z",
+      ends_at: "2060-01-01T09:00:00Z",
+    },
+  ];
+  state.claims = [
+    {
+      id: "claim",
+      job_id: jobID,
+      assignment_sessions: [
+        {
+          id: "session-a",
+          starts_at: "2060-01-01T08:00:00Z",
+          ends_at: "2060-01-01T10:00:00Z",
+        },
+      ],
+    },
+  ];
+  state.rpc.mockImplementation((name) => {
+    const data =
+      name === "my_calendar_subscriptions"
+        ? []
+        : name === "global_calendar_events"
+          ? {
+              items: [
+                {
+                  id: "c8000000-0000-4000-8000-000000000001",
+                  title: "Global seminar",
+                  description: "",
+                  link_url: "",
+                  time_zone: "UTC",
+                  published: true,
+                  archived_at: null,
+                  version: 1,
+                  updated_at: "2060-01-01T00:00:00Z",
+                  starts_at: "2060-01-01T08:00:00Z",
+                  ends_at: "2060-01-01T09:00:00Z",
+                },
+              ],
+              has_more: false,
+              next_cursor: null,
+            }
+          : [{ id: jobID, title: "Teaching assignment" }];
+    const result = Promise.resolve({ data, error: null });
+    return Object.assign(result, { abortSignal: () => result });
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  await screen.findByText("Private planning");
+  expect(screen.getByText("Teaching assignment")).toBeInTheDocument();
+  const search = screen.getByLabelText("Kalendertermine suchen");
+  await user.type(search, "PLANNING");
+  expect(screen.getByText("Private planning")).toBeInTheDocument();
+  expect(screen.queryByText("Teaching assignment")).not.toBeInTheDocument();
+  await user.clear(search);
+  await user.selectOptions(screen.getByLabelText("Terminart"), "assignment");
+  expect(screen.queryByText("Private planning")).not.toBeInTheDocument();
+  expect(screen.getByText("Teaching assignment")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Globale Termine" }));
+  expect(await screen.findByText("Global seminar")).toBeInTheDocument();
+  expect(await screen.findByText("Published course")).toBeInTheDocument();
+  const count = calendarCalls().length;
+  await user.selectOptions(screen.getByLabelText("Terminart"), "course");
+  expect(screen.queryByText("Global seminar")).not.toBeInTheDocument();
+  expect(screen.getByText("Published course")).toBeInTheDocument();
+  await act(() => i18n.changeLanguage("en"));
+  expect(screen.getByLabelText("Event type")).toHaveValue("course");
+  await user.type(screen.getByLabelText("Search calendar events"), "missing");
+  expect(screen.queryByText("Published course")).not.toBeInTheDocument();
+  expect(calendarCalls()).toHaveLength(count);
+  client.clear();
+});
+
 it("global published session links open the precise authorised course detail rather than an unselected catalogue", async () => {
   state.rpc.mockImplementation((name) => {
     const response = Promise.resolve({

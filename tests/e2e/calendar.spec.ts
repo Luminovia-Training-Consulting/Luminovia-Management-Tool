@@ -448,3 +448,49 @@ test("browser history preserves a personal draft until explicitly discarded", as
   await confirm.getByRole("button", { name: "Änderungen verwerfen" }).click();
   await expect(page).toHaveURL(/\/availability/);
 });
+
+test("calendar search and event type filter the current user's loaded events", async ({
+  page,
+}) => {
+  const owner = await actor("Fictional calendar search owner", "lecturer");
+  const client = await signedIn(owner);
+  const marker = randomUUID().slice(0, 8);
+  const start = DateTime.now().startOf("day").plus({ hours: 10 });
+  await checked(
+    client.from("personal_events").insert([
+      {
+        user_id: owner.id,
+        title: `Fictional alpha ${marker}`,
+        starts_at: start.toUTC().toISO(),
+        ends_at: start.plus({ hours: 1 }).toUTC().toISO(),
+        time_zone: "UTC",
+      },
+      {
+        user_id: owner.id,
+        title: `Fictional beta ${marker}`,
+        starts_at: start.plus({ hours: 2 }).toUTC().toISO(),
+        ends_at: start.plus({ hours: 3 }).toUTC().toISO(),
+        time_zone: "UTC",
+      },
+    ]),
+  );
+  await login(page, owner.email);
+  await page.goto("/calendar");
+  const alpha = page
+    .locator(".fc-event")
+    .filter({ hasText: `Fictional alpha ${marker}` });
+  const beta = page
+    .locator(".fc-event")
+    .filter({ hasText: `Fictional beta ${marker}` });
+  await expect(alpha).toBeVisible();
+  await expect(beta).toBeVisible();
+  await page.getByLabel("Kalendertermine suchen").fill(`ALPHA ${marker}`);
+  await expect(alpha).toBeVisible();
+  await expect(beta).toHaveCount(0);
+  await page.getByLabel("Terminart").selectOption("assignment");
+  await expect(alpha).toHaveCount(0);
+  await page.getByLabel("Terminart").selectOption("private");
+  await expect(alpha).toBeVisible();
+  await page.getByLabel("Kalendertermine suchen").clear();
+  await expect(beta).toBeVisible();
+});

@@ -313,6 +313,17 @@ export function ChatPage() {
                           : room.title || t(`kind_${room.kind}`)}
                       </strong>
                       <small>{t(`kind_${room.kind}`)}</small>
+                      {room.last_message_preview && (
+                        <small
+                          className="chat-room-preview"
+                          title={room.last_message_preview}
+                        >
+                          <span className="sr-only">
+                            {t("lastMessagePreview")}:
+                          </span>
+                          {room.last_message_preview}
+                        </small>
+                      )}
                       <RoomActivity
                         instant={room.last_message_at}
                         zone={profile.data?.time_zone}

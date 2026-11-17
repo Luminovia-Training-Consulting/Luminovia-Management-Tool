@@ -91,6 +91,10 @@ const pairs: Record<string, [string, string]> = {
   startDm: ["{{name}} eine Nachricht schreiben", "Message {{name}}"],
   unnamed: ["Person ohne Anzeigenamen", "Person without a display name"],
   searchRooms: ["Unterhaltungen suchen", "Search conversations"],
+  lastMessagePreview: [
+    "Vorschau der letzten Nachricht",
+    "Last message preview",
+  ],
   selected: ["Ausgewählt", "Selected"],
   kind_dm: ["Direktnachricht", "Direct message"],
   kind_general: ["Dozierenden-Lounge", "Lecturer lounge"],

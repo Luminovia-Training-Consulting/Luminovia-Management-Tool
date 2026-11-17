@@ -38,6 +38,20 @@ test("manual unread survives reload and is personal to each member", async ({
       .click();
     await page.goto("/chats");
     const row = page.locator(".chat-room-row").filter({ hasText: title });
+    await row.locator(".chat-room-button").click();
+    const composer = page.locator(".chat-composer");
+    const previewText = `Fictional latest preview ${tag}`;
+    await composer
+      .getByLabel("Deine Nachricht", { exact: true })
+      .fill(previewText);
+    await composer
+      .getByRole("button", { name: "Nachricht senden", exact: true })
+      .click();
+    await expect(row.locator(".chat-room-preview")).toHaveText(previewText);
+    await expect(row.locator(".chat-room-preview")).toHaveAttribute(
+      "title",
+      previewText,
+    );
     await row
       .getByRole("button", { name: `${title} als ungelesen markieren` })
       .click();

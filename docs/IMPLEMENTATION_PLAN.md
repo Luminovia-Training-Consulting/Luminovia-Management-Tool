@@ -13,9 +13,18 @@
 
 ### Combined local source acceptance — 17 November 2026
 
-- [x] `./portal check`: 836 tests in 118 files; typecheck, lint, formatting, code-quality check, production build and PWA generation pass. Coverage: statements 70.81%, branches 66.72%, functions 61.36%, lines 73.18%.
-- [x] Regenerate API reference from 95 migration files/308 public functions through `20261117130019` in a disposable database.
+- [x] `./portal check`: 845 tests in 119 files; typecheck, lint, formatting, code-quality check, production build and PWA generation pass. Coverage: statements 70.87%, branches 66.79%, functions 61.44%, lines 73.23%.
+- [x] Regenerate API reference from 96 migration files/308 public functions through `20261117130020` in a disposable database.
 - [ ] Run complete `./portal test` and current-head GitHub CI. Local browser/QA port 55321 belongs to another checkout and remains untouched; browser E2E cases are discovered but not executed locally.
+
+### Additional QoL slices — 17 November 2026
+
+- [x] Add searchable calendar title and event-type filters for loaded personal, assignment, global and course entries; disclose the loaded-page/date-range boundary.
+- [x] Add private file details from freshly authorized document metadata and the current RLS-protected version row; pass 47 focused component tests, 13 document SQL/API groups and author a desktop/mobile E2E case.
+- [x] Add DE/EN course teaching-link copy with server-authorized HTTPS validation and actual clipboard result; pass 10 component cases and 11 course PostgreSQL groups.
+- [x] Add actor-scoped chat room last-message previews; hidden content and tombstones are excluded. Pass the focused component/SQL checks and add a browser assertion.
+- [x] Audit bulk notification read: existing snapshot-bounded action is complete at source, with 15 isolated PostgreSQL groups and 71 component/API tests; no new implementation needed.
+- [ ] Execute the new browser cases in an isolated environment and complete the remaining feature matrix. External email/push delivery is not asserted.
 
 ### Topic-group invitations — 17 November 2026
 

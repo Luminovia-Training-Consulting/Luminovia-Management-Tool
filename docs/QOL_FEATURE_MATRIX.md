@@ -67,7 +67,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Search conversations | Source present; acceptance pending | `src/features/chat/chat.tsx`; `supabase/migrations/20261115121922_secure_chat_collaboration.sql`. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Filter conversations | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Display unread message counts | Source present; acceptance pending | `src/features/chat/chat.tsx`; `supabase/migrations/20261115121922_secure_chat_collaboration.sql`. |
-| COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Display the last message preview | Not yet assessed | Pending |
+| COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Display the last message preview | Partial; component and isolated SQL tests passed | Preview comes from a current-member RPC, excludes personally hidden bodies, and hides tombstones; desktop/mobile browser coverage pending. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Display the last activity timestamp | Partial; component tests passed | `src/features/chat/room-activity.tsx` displays last-message time, not every kind of group activity; `src/features/chat/room-activity.test.tsx` passed; E2E pending. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Open a conversation directly from a user profile | Source present; acceptance pending | `src/features/people/people.tsx`; `src/features/chat/chat.tsx`. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Open a relevant group directly from a course page | Not yet assessed | Pending |
@@ -219,8 +219,8 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | CALENDAR AND AVAILABILITY QoL | Meeting links | Partial; acceptance pending | `src/features/calendar/calendar.tsx`; `supabase/migrations/20261117130007_personal_event_details.sql` support private-event links; other event types remain unassessed. |
 | CALENDAR AND AVAILABILITY QoL | Event attachments | Not yet assessed | Pending |
 | CALENDAR AND AVAILABILITY QoL | Event reminders | Not yet assessed | Pending |
-| CALENDAR AND AVAILABILITY QoL | Event search | Not yet assessed | Pending |
-| CALENDAR AND AVAILABILITY QoL | Event filtering | Not yet assessed | Pending |
+| CALENDAR AND AVAILABILITY QoL | Event search | Partial; component tests passed | Searches loaded personal/assignment/course/global event titles. Global pages are limited to the visible date range; desktop/mobile browser case pending. |
+| CALENDAR AND AVAILABILITY QoL | Event filtering | Partial; component tests passed | Filters loaded calendar events by type; personal, assignment, global and course contexts are tested in components. Browser case pending. |
 | CALENDAR AND AVAILABILITY QoL | Event colour categories | Not yet assessed | Pending |
 | CALENDAR AND AVAILABILITY QoL | Personal calendar preferences | Not yet assessed | Pending |
 | CALENDAR AND AVAILABILITY QoL | Direct navigation to associated courses | Not yet assessed | Pending |
@@ -257,7 +257,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | COURSES AND TEACHING WORKSPACES | Open chat | Not yet assessed | Pending |
 | COURSES AND TEACHING WORKSPACES | Open calendar | Not yet assessed | Pending |
 | COURSES AND TEACHING WORKSPACES | View documents | Not yet assessed | Pending |
-| COURSES AND TEACHING WORKSPACES | Copy meeting link | Not yet assessed | Pending |
+| COURSES AND TEACHING WORKSPACES | Copy meeting link | Partial; component and Playwright assertions authored | Copies the authorised course workspace teaching link with DE/EN confirmation and failure status; browser execution pending. |
 | COURSES AND TEACHING WORKSPACES | Contact customer | Not yet assessed | Pending |
 | COURSES AND TEACHING WORKSPACES | Confirm preparation | Partial | `src/features/readiness/readiness.tsx`; `src/features/readiness/api.ts`. |
 | COURSES AND TEACHING WORKSPACES | Report a problem | Not yet assessed | Pending |
@@ -275,7 +275,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | DOCUMENTS, WIKI AND FORUM / Documents | Archiving | Partial | `src/features/files/files.tsx`; `src/features/files/api.ts`. |
 | DOCUMENTS, WIKI AND FORUM / Documents | Deleting where permitted | Partial | `src/features/deletions/deletions.tsx`; file archive in `src/features/files/files.tsx`. |
 | DOCUMENTS, WIKI AND FORUM / Documents | Linking files to courses/jobs/messages | Not yet assessed | Pending |
-| DOCUMENTS, WIKI AND FORUM / Documents | Viewing file details | Not yet assessed | Pending |
+| DOCUMENTS, WIKI AND FORUM / Documents | Viewing file details | Partial; 47 component tests and 13 isolated SQL/API groups passed | Fresh exact-document authorization plus RLS current-version query; shows type, size, scan state, scope, category and upload time. Desktop/mobile browser coverage pending. |
 | DOCUMENTS, WIKI AND FORUM / Documents | Viewing upload/scanning status | Partial | `src/features/files/files.tsx`; `src/features/files/api.ts`. |
 | DOCUMENTS, WIKI AND FORUM / Wiki | Article creation | Partial | `src/features/knowledge/wiki.tsx`; `src/features/knowledge/api.ts`. |
 | DOCUMENTS, WIKI AND FORUM / Wiki | Editing | Partial | `src/features/knowledge/wiki.tsx`; `src/features/knowledge/api.ts`. |
@@ -344,7 +344,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | ADMINISTRATION, CUSTOMERS, CONTRACTS AND FINANCE / Finance | Resolve invoice questions | Not yet assessed | Pending |
 | NOTIFICATIONS AND PERSONAL PREFERENCES | In-app notifications | Partial | `src/features/notifications/notifications.tsx`; `src/features/notifications/attention-settings.tsx`. |
 | NOTIFICATIONS AND PERSONAL PREFERENCES | Read/unread status | Partial | `src/features/notifications/notifications.tsx`; `src/features/notifications/attention-settings.tsx`. |
-| NOTIFICATIONS AND PERSONAL PREFERENCES | Mark all as read | Partial | `src/features/notifications/notifications.tsx`; `src/features/notifications/attention-settings.tsx`. |
+| NOTIFICATIONS AND PERSONAL PREFERENCES | Mark all as read | Partial; 15 isolated PostgreSQL groups and 71 component/API tests passed | Uses the current server snapshot and own-account scope; later arrivals remain unread. Existing real API/E2E cases not executed in this pass; email and push delivery not established. |
 | NOTIFICATIONS AND PERSONAL PREFERENCES | Per-category preferences | Partial | `src/features/notifications/notifications.tsx`; `src/features/notifications/attention-settings.tsx`. |
 | NOTIFICATIONS AND PERSONAL PREFERENCES | Muting conversations | Source present; acceptance pending | `src/features/chat/thread.tsx`; `supabase/migrations/20261115121922_secure_chat_collaboration.sql`. |
 | NOTIFICATIONS AND PERSONAL PREFERENCES | Quiet hours | Partial | `src/features/notifications/notifications.tsx`; `src/features/notifications/attention-settings.tsx`. |

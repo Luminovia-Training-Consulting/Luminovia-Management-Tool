@@ -300,3 +300,25 @@
     grid-template-columns: 1fr;
   }
 }
+
+.document-details {
+  display: grid;
+  grid-template-columns: minmax(8rem, auto) minmax(0, 1fr);
+  gap: 0.65rem 1rem;
+}
+.document-details dt {
+  font-weight: 600;
+}
+.document-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 400px) {
+  .document-details {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.25rem;
+  }
+  .document-details dd {
+    margin-bottom: 0.5rem;
+  }
+}

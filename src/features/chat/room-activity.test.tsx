@@ -33,6 +33,7 @@ it("renders the existing server message time using the cached preferred zone and
         unread_count: 0,
         muted: false,
         last_message_at: "2026-10-25T00:30:00Z",
+        last_message_preview: "Fictional latest message",
       },
       {
         id: "b",
@@ -61,6 +62,7 @@ it("renders the existing server message time using the cached preferred zone and
   expect(time).toHaveTextContent(formatted("de", "Europe/Berlin"));
   expect(time).toHaveAttribute("datetime", "2026-10-25T00:30:00Z");
   expect(screen.getByText(/Letzte Nachricht:/)).toBeVisible();
+  expect(screen.getByText("Fictional latest message")).toBeVisible();
   expect(view.container.querySelectorAll("time")).toHaveLength(1);
   expect(fake.rpc).not.toHaveBeenCalled();
   expect(fake.from).not.toHaveBeenCalled();

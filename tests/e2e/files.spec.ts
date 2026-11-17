@@ -22,7 +22,7 @@ async function login(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
 }
-test("real private upload is scanned, downloaded, versioned and archived through the file centre", async ({
+test("real private upload exposes authorized scan and current-version details, downloads and archives", async ({
   page,
 }, testInfo) => {
   test.setTimeout(65_000);
@@ -45,6 +45,24 @@ test("real private upload is scanned, downloaded, versioned and archived through
     .getByRole("listitem")
     .filter({ has: page.getByText(name, { exact: true }) });
   await expect(row.getByText("Geprüft", { exact: true })).toBeVisible();
+  // Both configured Chromium layouts exercise this real scanned upload and
+  // the authorized exact-current-version read, without a mocked backend.
+  await row
+    .getByRole("button", { name: `Dateidetails: ${name}`, exact: true })
+    .click();
+  const details = page.getByRole("dialog", { name: "Dateidetails" });
+  await expect(details.getByText(name, { exact: true })).toBeVisible();
+  await expect(details.getByText("text/plain", { exact: true })).toBeVisible();
+  await expect(
+    details.locator("dt", { hasText: "Dateigröße" }).locator("+ dd"),
+  ).toHaveText(`${Buffer.byteLength(text)} Byte`);
+  await expect(
+    details.locator("dt", { hasText: "Aktuelle Version" }).locator("+ dd"),
+  ).toHaveText("1");
+  await expect(
+    details.locator("dt", { hasText: "Prüfstatus" }).locator("+ dd"),
+  ).toHaveText("Geprüft");
+  await details.getByRole("button", { name: "Schließen", exact: true }).click();
   const received = page.waitForEvent("download");
   await row
     .getByRole("button", { name: `Herunterladen: ${name}`, exact: true })
