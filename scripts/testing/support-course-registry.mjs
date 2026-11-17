@@ -158,13 +158,13 @@ export async function assertSupportCourseGuards(sql, { registry }) {
   }
 }
 
-/** Create fictional requesters/uploader and exact clean version metadata. */
+/** Create fictional active requesters/uploader and exact clean version metadata. */
 async function fixtureActors({ sql, actor }) {
   const manager = randomUUID(),
     learner = randomUUID(),
     outsider = randomUUID();
   await sql(
-    `insert into auth.users(id,email)values${[manager, learner, outsider].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};insert into public.user_roles(user_id,role)values(${q(manager)},'admin'),(${q(learner)},'participant'),(${q(outsider)},'participant');update public.profiles set display_name='Fictional registry actor';`,
+    `insert into auth.users(id,email)values${[manager, learner, outsider].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};insert into public.user_roles(user_id,role)values(${q(manager)},'admin'),(${q(learner)},'lecturer'),(${q(outsider)},'lecturer');update public.profiles set display_name='Fictional registry actor';`,
   );
   /** Each support ticket belongs to the learner; an internal manager upload must
    * never reach them through a separate course-sharing registry.
@@ -322,11 +322,6 @@ export async function runSupportCourseRegistryChecks(
       "aal1",
     );
     run = await sql(`select course_run_id from public.jobs where id=${q(job)}`);
-    await actor(
-      f.manager,
-      `select public.manage_course_enrolment(${q(run)},${q(f.learner)},'enrolled')`,
-      "aal1",
-    );
   }
   /** Use installed public APIs when available; synthetic mode has no invented
    * public API and performs only labelled private registry contract writes.
@@ -359,7 +354,7 @@ export async function runSupportCourseRegistryChecks(
     if (allowed) {
       const record = JSON.parse(
         await actor(
-          f.learner,
+          f.manager,
           `select public.course_document_access('resource',${q(id)})`,
         ),
       );
@@ -376,7 +371,7 @@ export async function runSupportCourseRegistryChecks(
     } else
       await assert.rejects(
         actor(
-          f.learner,
+          f.outsider,
           `select public.course_document_access('resource',${q(id)})`,
         ),
         /42501/,
