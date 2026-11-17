@@ -64,7 +64,13 @@ The same CI run exposed a second, intermittent system failure: protected-account
 
 ## 17 November 2026 — post-upload discovery race
 
-An initial document discovery request may still be pending when a successful upload commits. Invalidation alone can reuse that pre-commit request, blocking completion and omitting the new file. Upload success now cancels document list, exact-document and version-history queries before invalidating them, matching the broader safeguard in PR35. A controlled component regression failed without the fix and passed with it; the three original version/upload component tests and TypeScript passed locally; the regression also covers the three query prefixes. This race is a plausible contributor to the mobile CI file failures, but their precise cause is not established; the full browser and native gates must run again on the integrated revision.
+Mobile search now restores focus to the visible More summary after submitting; collapsed desktop search restores focus to its search button on submit or close. The dashboard again has a visible translated level-one heading. Controlled shell/dashboard component tests pass 24 cases, and TypeScript passes. These component results do not replace the pending complete browser acceptance.
+
+## 17 November 2026 — PR40 browser acceptance repair
+
+The first full CI exposed duplicate language/theme fields and mobile sign-out hidden in the More disclosure; the old dashboard greeting assertion also no longer matches the revised dashboard. A single shared preference control is now always available in the top bar, and mobile sign-out is directly accessible. The browser test checks the actual named dashboard region. The desktop rail still holds search, notifications and sign-out.
+
+Actual local checks: 25 shell, actor-boundary and dashboard tests pass; TypeScript and ESLint pass. Full browser, native and GitHub acceptance are pending on the exact new head. No production services or local business data were touched.
 
 ## 17 November 2026 — PR31 reconciled with accepted documentation main
 

@@ -2049,6 +2049,344 @@ legend {
   }
 }
 
+/* Royal workspace-shell pilot: keep the Luminovia palette while presenting a compact
+   collapsible rail, action toolbar and a complete touch/keyboard navigation disclosure. */
+.app-shell,
+.app-shell.is-collapsed {
+  grid-template-columns: 240px minmax(0, 1fr);
+}
+.app-shell.is-collapsed {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+.sidebar {
+  z-index: 2;
+  gap: 8px;
+  padding: 14px 10px;
+  overflow: visible;
+  border-right: 1px solid color-mix(in srgb, #fff 12%, transparent);
+}
+.sidebar-global-search {
+  margin: 0;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  min-height: 42px;
+}
+.sidebar-global-search input {
+  min-width: 0;
+  color: #e9f0ff;
+}
+.sidebar-global-search input::placeholder {
+  color: #b8cbe7;
+}
+.sidebar-global-search.is-icon-only {
+  justify-content: center;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+.sidebar-global-search.is-icon-only > button {
+  width: 100%;
+  min-height: 42px;
+  color: #d1dcef;
+}
+.app-shell.has-sidebar-search-open {
+  grid-template-columns: 240px minmax(0, 1fr);
+}
+.sidebar-search-close {
+  border: 0;
+  background: transparent;
+  color: #e9f0ff;
+  cursor: pointer;
+}
+.sidebar-notifications {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+.app-shell.is-collapsed .sidebar-notifications::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  z-index: 121;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: #14233b;
+  color: #fff;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.app-shell.is-collapsed .sidebar-notifications:hover::after,
+.app-shell.is-collapsed .sidebar-notifications:focus-within::after {
+  opacity: 1;
+  visibility: visible;
+}
+.sidebar-notifications .notification-menu summary {
+  width: 42px;
+  height: 42px;
+  border-radius: 9px;
+  color: #d1dcef;
+  cursor: pointer;
+}
+.sidebar-notifications .notification-menu summary:hover,
+.sidebar-notifications .notification-menu summary:focus-visible {
+  background: #223e62;
+}
+.app-shell.is-collapsed .sidebar-notifications .notification-popover {
+  top: 0;
+  right: auto;
+  left: calc(100% + 8px);
+}
+.app-shell:not(.is-collapsed) .sidebar-notifications {
+  justify-content: flex-start;
+}
+.mobile-global-search {
+  width: 100%;
+  max-width: none;
+  margin: 0 0 8px;
+  min-height: 44px;
+}
+.mobile-menu-panel > .notification-menu {
+  margin-bottom: 8px;
+}
+.mobile-menu-panel > .notification-menu summary {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+}
+.sidebar nav {
+  flex: 1;
+  gap: 4px;
+  margin-top: 4px;
+  overflow-y: auto;
+}
+.sidebar nav a {
+  position: relative;
+  min-height: 42px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  gap: 12px;
+}
+.sidebar nav a:focus-visible,
+.collapse-button:focus-visible,
+.sidebar-signout:focus-visible,
+.topbar-actions :is(button, summary, select, input):focus-visible,
+.mobile-more nav a:focus-visible {
+  /* The white inner ring reads on the navy rail; the blue outer ring reads on light surfaces. */
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px #1749b5;
+}
+.sidebar nav a .sidebar-tooltip {
+  position: absolute;
+  z-index: 5;
+  left: calc(100% + 9px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: #14233b;
+  color: #fff;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.app-shell.is-collapsed .sidebar nav a:hover .sidebar-tooltip,
+.app-shell.is-collapsed .sidebar nav a:focus-visible .sidebar-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+.collapse-button {
+  flex: none;
+  width: 100%;
+  justify-content: flex-start;
+  min-height: 42px;
+  padding: 8px 12px;
+  border-radius: 9px;
+}
+.app-shell.is-collapsed .sidebar nav a {
+  justify-content: center;
+  padding: 9px;
+}
+.app-shell.is-collapsed .sidebar-link-label,
+.app-shell.is-collapsed .collapse-button span {
+  display: none;
+}
+.app-shell.is-collapsed .collapse-button {
+  justify-content: center;
+}
+.topbar {
+  height: 64px;
+  min-height: 64px;
+  gap: 12px;
+  padding-inline: 20px;
+}
+.global-search {
+  margin: 0 auto 0 0;
+  max-width: 280px;
+  width: 100%;
+  min-width: 120px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.global-search input {
+  width: 100%;
+  min-width: 0;
+}
+.topbar-actions {
+  gap: 8px;
+}
+.topbar-actions .button-icon {
+  min-width: 38px;
+  min-height: 38px;
+}
+.preferences select {
+  min-height: 36px;
+  border-color: var(--line);
+  border-radius: 7px;
+}
+.workspace-footer,
+.mobile-nav {
+  display: none !important;
+}
+.mobile-more {
+  display: none;
+}
+@media (max-width: 1250px) {
+  .app-shell:not(.is-collapsed) {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .app-shell.has-sidebar-search-open {
+    display: block;
+  }
+  .mobile-menu-panel > .notification-menu summary {
+    width: 44px;
+    height: 44px;
+  }
+  .app-shell,
+  .app-shell.is-collapsed {
+    display: block;
+  }
+  .sidebar {
+    display: none;
+  }
+  .topbar {
+    height: 62px;
+    min-height: 62px;
+    padding-inline: 10px;
+    gap: 6px;
+  }
+  .global-search {
+    display: flex;
+    max-width: none;
+    min-width: 50px;
+    padding-inline: 7px;
+    flex: 1;
+  }
+  .global-search input {
+    font-size: 12px;
+  }
+  .topbar-actions {
+    width: auto;
+    flex: none;
+    gap: 2px;
+  }
+  .topbar-actions .preferences select {
+    max-width: 64px;
+    min-height: 36px;
+    padding-inline: 3px;
+    font-size: 10px;
+  }
+  .topbar-actions > .button {
+    width: 36px;
+    min-width: 36px;
+    padding: 0;
+  }
+  .mobile-more {
+    display: block;
+    position: relative;
+  }
+  .mobile-more summary {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 38px;
+    list-style: none;
+    color: var(--muted);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .mobile-more summary::-webkit-details-marker {
+    display: none;
+  }
+  .mobile-more nav {
+    position: fixed;
+    top: 58px;
+    right: 8px;
+    left: 8px;
+    max-height: calc(100dvh - 76px);
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    z-index: 70;
+  }
+  .mobile-more nav a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px;
+    border-radius: 7px;
+    font-size: 12px;
+  }
+  .mobile-more nav a:hover,
+  .mobile-more nav a.active {
+    background: var(--blue-soft);
+  }
+  .topbar:before {
+    content: none;
+  }
+  .workspace {
+    min-height: 100vh;
+    padding-bottom: 0;
+  }
+  .workspace-footer {
+    display: none !important;
+  }
+}
+@media (max-width: 480px) {
+  .global-search {
+    display: flex;
+  }
+  .topbar-actions {
+    width: auto;
+    justify-content: flex-start;
+  }
+  .topbar-actions .notification-menu {
+    margin-left: 0;
+  }
+}
+
 @media (max-width: 480px) {
   .global-search {
     display: none;
@@ -2410,6 +2748,42 @@ legend {
   padding: 20px;
   height: 100%;
 }
+/* Final shell overrides follow legacy responsive declarations so the pilot wins at all widths. */
+.app-shell.is-collapsed .sidebar nav a .sidebar-tooltip {
+  display: block;
+}
+@media (max-width: 760px) {
+  .topbar:before {
+    content: none;
+  }
+  .mobile-more nav {
+    position: fixed;
+    top: 58px;
+    right: 8px;
+    left: 8px;
+    max-height: calc(100dvh - 76px);
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex-direction: initial;
+  }
+  .mobile-more nav a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px;
+  }
+}
+@media (max-width: 480px) {
+  .global-search {
+    display: flex;
+  }
+  .topbar-actions {
+    width: auto;
+    justify-content: flex-start;
+  }
+}
 .portal-search-results strong {
   font-size: 14px;
   white-space: pre-wrap;
@@ -2474,4 +2848,135 @@ legend {
   align-items: center;
   gap: 1rem;
   margin-top: 1.3rem;
+}
+
+/* Portal-layer hints escape both the fixed rail and its independently scrolling link list. */
+.sidebar-tooltip-portal {
+  position: fixed;
+  z-index: 120;
+  transform: translateY(-50%);
+  max-width: min(280px, calc(100vw - 100px));
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: #14233b;
+  color: #fff;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.sidebar-bottom {
+  flex: none;
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+.sidebar-bottom .preferences {
+  display: grid;
+  gap: 5px;
+}
+.sidebar-bottom .preferences select {
+  width: 100%;
+  max-width: 100%;
+  min-height: 40px;
+  border-color: color-mix(in srgb, #fff 25%, transparent);
+  color: #e9f0ff;
+}
+.sidebar-bottom .preferences option {
+  color: #14233b;
+  background: #fffdf8;
+}
+.sidebar-signout {
+  min-height: 44px;
+  justify-content: flex-start;
+  gap: 12px;
+  color: #d1dcef;
+}
+.app-shell.is-collapsed .sidebar-signout {
+  justify-content: center;
+  padding-inline: 8px;
+}
+.app-shell.is-collapsed .sidebar-signout span {
+  display: none;
+}
+.app-shell.is-collapsed .sidebar-bottom .preferences select {
+  display: none;
+}
+@media (max-width: 760px) {
+  .topbar-actions .mobile-more summary,
+  .topbar-actions .notification-menu summary {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .global-search input {
+    min-height: 44px;
+  }
+  .mobile-more .mobile-menu-panel {
+    position: fixed;
+    z-index: 70;
+    top: 62px;
+    right: 8px;
+    left: 8px;
+    max-height: calc(100dvh - 74px);
+    overflow-y: auto;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .mobile-more .mobile-menu-panel nav {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    max-height: none;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  .mobile-more .mobile-menu-panel nav a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px;
+    border-radius: 7px;
+  }
+  .mobile-navigation-controls {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+  .mobile-navigation-controls .preferences {
+    display: flex;
+    gap: 8px;
+  }
+  .mobile-navigation-controls .preferences select {
+    flex: 1;
+    min-height: 44px;
+    max-width: none;
+    font-size: 12px;
+  }
+  .mobile-navigation-controls > button {
+    min-height: 44px;
+    justify-content: flex-start;
+  }
+}
+
+.mobile-signout {
+  display: none;
+}
+@media (max-width: 760px) {
+  .topbar-actions .mobile-signout {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+  }
 }

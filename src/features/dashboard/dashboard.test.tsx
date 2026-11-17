@@ -267,6 +267,12 @@ const rpcCalls = (name: string) =>
   fake.calls.filter((call) => call.method === "rpc" && call.table === name);
 
 describe("role-aware dashboard previews", () => {
+  it("provides a named page-level heading", async () => {
+    setup();
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
+      "Fictional",
+    );
+  });
   it("accepts a restricted suggestion without inventing a zero-price compensation", async () => {
     (fake.rpcData.job_dashboard as { suggestions: unknown[] }).suggestions = [
       job("restricted quote", { amount: null, total_amount: null }),
@@ -329,8 +335,11 @@ describe("role-aware dashboard previews", () => {
     expect(await screen.findByText("Fictional handout.txt")).toBeVisible();
     expect(await screen.findByText("Fictional course update")).toBeVisible();
     expect(
-      screen.getByRole("heading", { name: /Schön, dass du da bist/ }),
+      screen.getByRole("region", { name: "Arbeitsbereich" }),
     ).toBeVisible();
+    expect(
+      screen.queryByText("Dein Raum für gute Lehre."),
+    ).not.toBeInTheDocument();
   });
   it("access errors hide retained file metadata instead of showing a stale private title", async () => {
     const { client } = setup();

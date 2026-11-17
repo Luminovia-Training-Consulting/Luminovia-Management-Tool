@@ -1,0 +1,149 @@
+/**
+ * Compact operational layout for the dashboard feature. Brand colors remain
+ * owned by the Luminovia theme tokens; these rules only define arrangement.
+ */
+.dashboard-page {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
+.dashboard-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-metric {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 8px;
+  min-height: 92px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  color: var(--navy);
+  transition: transform 0.15s ease;
+}
+
+.dashboard-metric:hover {
+  transform: translateY(-2px);
+}
+
+.dashboard-metric:focus-visible {
+  outline-color: var(--brand);
+}
+
+.dashboard-metric > span {
+  grid-column: 1 / -1;
+  padding-right: 14px;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.dashboard-metric > strong {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.dashboard-metric > svg:not(.dashboard-metric-arrow) {
+  align-self: end;
+  margin-right: 4px;
+}
+
+.dashboard-metric-arrow {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  opacity: 0.65;
+}
+
+.dashboard-metric--mint {
+  background: var(--mint);
+}
+
+.dashboard-metric--peach {
+  background: var(--peach);
+}
+
+.dashboard-metric--yellow {
+  background: var(--yellow);
+}
+
+.dashboard-metric--lilac {
+  background: var(--lilac);
+}
+
+.dashboard-lower {
+  align-items: start;
+  gap: 20px;
+}
+
+.dashboard-lower > section {
+  min-width: 0;
+}
+
+.dashboard-account-destination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin: 0;
+}
+
+.dashboard-account-destination h2 {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .dashboard-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .dashboard-page {
+    gap: 20px;
+  }
+
+  .dashboard-metrics {
+    gap: 10px;
+  }
+
+  .dashboard-metric {
+    min-height: 86px;
+    padding: 14px 12px;
+    column-gap: 6px;
+  }
+
+  .dashboard-metric > span {
+    font-size: 11px;
+  }
+
+  .dashboard-metric > strong {
+    font-size: 25px;
+  }
+
+  .dashboard-metric > svg:not(.dashboard-metric-arrow) {
+    width: 19px;
+  }
+
+  .dashboard-lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-metric {
+    transition: none;
+  }
+
+  .dashboard-metric:hover {
+    transform: none;
+  }
+}

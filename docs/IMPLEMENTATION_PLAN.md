@@ -65,6 +65,7 @@ The complete target and all unrelated pending work remain below.
 - [x] Pass complete canonical local acceptance on signed67b749d:29native API suites,116application+2PWA browsers, all SQL/source checks and actual cleanup. Keep this evidence source-bound.
 - [x] Close remaining company history/earnings/calendar/raw-RLS paths and pass8expanded SQL groups; improve reviewed impact clarity and pass23focused deletion cases.
 - [ ] Verify the final follow-up with native company deletion/revocation and new screenshots; integrate only actual accepted main and replay the final migration order before current required CI and the authorised PR35 merge.
+PR40 browser acceptance repair: single shared preferences and visible mobile sign-out are implemented; 25 focused component tests, TypeScript and ESLint pass locally. The complete exact-head GitHub/browser/native gates remain pending.
 
 ## PR31 after accepted documentation main — 17 November 2026
 
