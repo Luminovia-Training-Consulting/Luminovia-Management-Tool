@@ -1,10 +1,10 @@
-/** Actual local Auth/MFA/REST taxonomy journey, guarded by the canonical fixture. */
+/** Actual local Auth/password-only authentication/REST taxonomy journey, guarded by the canonical fixture. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 
 await withApiFixture(
-  async ({ service, actor, mfa, checked, defer, suffix }) => {
+  async ({ service, actor, passwordOnly, checked, defer, suffix }) => {
     const manager = await actor("taxonomy-manager", "management"),
       lecturer = await actor("taxonomy-lecturer", "lecturer"),
       client = await actor("taxonomy-client", "client"),
@@ -48,11 +48,11 @@ await withApiFixture(
       (
         await manager.client.rpc("save_taxonomy_topic", {
           p_id: null,
-          p_payload: payload("AAL1 denied"),
+          p_payload: payload("password-only AAL1 denied"),
           p_version: 0,
         })
       ).error,
-      "Real AAL1 manager must not mutate",
+      "Real password-only AAL1 manager must not mutate",
     );
     assert.ok(
       (
@@ -63,7 +63,7 @@ await withApiFixture(
         })
       ).error,
     );
-    await mfa(manager.client);
+    await passwordOnly(manager.client);
     // Parent/child records are created through the real API; their references must stay stable after later archival.
     const parent = await checked(
       manager.client.rpc("save_taxonomy_topic", {
@@ -210,7 +210,7 @@ await withApiFixture(
           .update({ label_de: "Direct forged mutation" })
           .eq("id", child)
       ).error,
-      "Even MFA managers cannot bypass CRUD RPC",
+      "Even password-only authentication managers cannot bypass CRUD RPC",
     );
     await checked(
       service.from("profiles").update({ active: false }).eq("id", manager.id),
@@ -227,7 +227,7 @@ await withApiFixture(
       "Existing suspended token immediately denied",
     );
     console.log(
-      "PASS: actual Auth/MFA/REST taxonomy creation/search/hierarchy, private related-template projection, optimistic conflict, archive/restore and preserved historic expertise, direct-write and existing-token suspension denial.",
+      "PASS: actual Auth/password-only authentication/REST taxonomy creation/search/hierarchy, private related-template projection, optimistic conflict, archive/restore and preserved historic expertise, direct-write and existing-token suspension denial.",
     );
   },
 );

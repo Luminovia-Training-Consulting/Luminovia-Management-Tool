@@ -122,7 +122,9 @@ afterEach(async () => {
 describe("Account administration", () => {
   it("does not request the private account directory before administrative permission is available", async () => {
     page();
-    await screen.findByText(/Für die Kontoverwaltung sind Verwaltungsrechte/);
+    await screen.findByText(
+      /Für die Kontoverwaltung sind aktuelle Verwaltungsrechte/,
+    );
     expect(fake.invoke).not.toHaveBeenCalled();
     expect(screen.queryByText("anna@example.invalid")).not.toBeInTheDocument();
   });

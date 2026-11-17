@@ -105,7 +105,7 @@ await withTestDatabase(
         assert.equal(current.state, "draft");
         assert.deepEqual(await save(teacher, id, first), current);
         await assert.rejects(
-          actor(admin, "select * from private.teaching_timesheets", "aal2"),
+          actor(admin, "select * from private.teaching_timesheets", "aal1"),
           /permission denied/,
         );
       },
@@ -135,7 +135,7 @@ await withTestDatabase(
       },
     );
     await check(
-      "Submit/review require current actor/MFA and exact version, with idempotent action receipts",
+      "Submit/review require current actor/permission and exact version, with idempotent action receipts",
       async () => {
         const key = randomUUID();
         current = await manage(teacher, id, "submit", current.version, key);
@@ -160,7 +160,7 @@ await withTestDatabase(
           current.version,
           randomUUID(),
           "Fictional reviewed hours",
-          "aal2",
+          "aal1",
         );
         assert.equal(current.state, "approved");
         await assert.rejects(
@@ -186,7 +186,7 @@ await withTestDatabase(
             current.version,
             randomUUID(),
             "bad",
-            "aal2",
+            "aal1",
           ),
           /22023/,
         );
@@ -197,7 +197,7 @@ await withTestDatabase(
           current.version,
           randomUUID(),
           "Fictional documented correction required",
-          "aal2",
+          "aal1",
         );
         assert.equal(current.state, "rejected");
         current = await save(teacher, id, first, current.version, {
@@ -231,7 +231,7 @@ await withTestDatabase(
           manager,
           "timesheets",
           [...range, "true"],
-          "aal2",
+          "aal1",
         );
         assert.equal(all.items.length, 1);
         assert.equal(
@@ -270,7 +270,7 @@ await withTestDatabase(
               admin,
               "assignment_confirmation",
               [q(first.claim)],
-              "aal2",
+              "aal1",
             )
           ).hash,
           confirmation.hash,
@@ -290,7 +290,7 @@ await withTestDatabase(
           manager,
           "finance_statement",
           [...range, "true"],
-          "aal2",
+          "aal1",
         );
         assert.deepEqual(
           new Set(all.data.totals.map((t) => t.currency)),
@@ -310,7 +310,7 @@ await withTestDatabase(
           current.version,
           randomUUID(),
           "Fictional corrected approval",
-          "aal2",
+          "aal1",
         );
         const statement = await rpc(teacher, "finance_statement", [
           ...range,
@@ -326,7 +326,7 @@ await withTestDatabase(
             current.version,
             randomUUID(),
             "Fictional too late correction",
-            "aal2",
+            "aal1",
           ),
           /22023/,
         );
@@ -341,7 +341,7 @@ await withTestDatabase(
             current.version,
             randomUUID(),
             "Still must not rewrite invoice history",
-            "aal2",
+            "aal1",
           ),
           /22023/,
         );
@@ -363,7 +363,7 @@ await withTestDatabase(
           manager,
           "review_invoice",
           [q(inv), q("approved"), q("Fictional original-currency approval")],
-          "aal2",
+          "aal1",
         );
         await call(
           manager,
@@ -375,7 +375,7 @@ await withTestDatabase(
             q("Fictional one-cent partial payment"),
             q(randomUUID()),
           ],
-          "aal2",
+          "aal1",
         );
         const allocations = await Promise.all(
           parts.map((f) =>
@@ -403,7 +403,7 @@ await withTestDatabase(
       },
     );
     await check(
-      "Forecast requires finance MFA, separates known costs/gross and labels lecturer payment records",
+      "Forecast requires finance permission, separates known costs/gross and labels lecturer payment records",
       async () => {
         await assert.rejects(
           rpc(teacher, "finance_forecast", [...range, "0.5"]),
@@ -417,7 +417,7 @@ await withTestDatabase(
           manager,
           "finance_forecast",
           [...range, "0.5"],
-          "aal2",
+          "aal1",
         );
         assert.equal(limited.gross_authorized, false);
         assert.ok(limited.months.every((m) => m.accepted_gross_known === null));
@@ -426,14 +426,14 @@ await withTestDatabase(
           admin,
           "finance_forecast",
           [...range, "0.5"],
-          "aal2",
+          "aal1",
         );
         assert.equal(full.gross_authorized, true);
         assert.ok(full.months.some((m) => m.currency === "AUD"));
         assert.ok(full.months.some((m) => m.unknown_gross_claims > 0));
         for (const probability of ["-1", "2", q("NaN")])
           await assert.rejects(
-            rpc(admin, "finance_forecast", [...range, probability], "aal2"),
+            rpc(admin, "finance_forecast", [...range, probability], "aal1"),
             /22023/,
           );
       },
@@ -448,7 +448,7 @@ await withTestDatabase(
    (${q(shared)},${q(manager)},${q(manager)},'operations','Fictional shared overdue task','open','2020-01-15T10:00:00Z',${q(randomUUID())},'{}');`);
         await assert.rejects(rpc(teacher, "control_center", range), /42501/);
         await assert.rejects(rpc(admin, "control_center", range), /42501/);
-        const center = await rpc(manager, "control_center", range, "aal2");
+        const center = await rpc(manager, "control_center", range, "aal1");
         assert.ok(center.overdue_tasks.some((t) => t.id === shared));
         assert.ok(!JSON.stringify(center).includes(privateTask));
         assert.ok(!JSON.stringify(center).includes("PRIVATE"));
@@ -483,13 +483,13 @@ await withTestDatabase(
             manager,
             "finance_forecast",
             [...dates, "0"],
-            "aal2",
+            "aal1",
           ),
           scenario = await rpc(
             manager,
             "finance_forecast",
             [...dates, "0.25"],
-            "aal2",
+            "aal1",
           );
         assert.equal(
           zero.months.reduce(
@@ -518,7 +518,7 @@ await withTestDatabase(
         await sql(`insert into public.course_templates(id,title) values(${q(template)},'Fictional quality course');insert into public.course_runs(id,template_id) values(${q(run)},${q(template)});insert into public.course_sessions(course_run_id,starts_at,ends_at) values(${q(run)},'2020-01-20T08:00:00Z','2020-01-20T16:00:00Z');
           insert into private.course_feedback(run_id,user_id,kind,rating,comment) values(${q(run)},${q(teacher)},'participant',4,'PRIVATE fictional feedback A'),(${q(run)},${q(peer)},'participant',4,'PRIVATE fictional feedback B');`);
         const hidden = (
-          await rpc(manager, "control_center", range, "aal2")
+          await rpc(manager, "control_center", range, "aal1")
         ).quality.find((row) => row.run_id === run);
         assert.equal(hidden.responses, 2);
         assert.equal(hidden.average_rating, null);
@@ -526,7 +526,7 @@ await withTestDatabase(
           `insert into private.course_feedback(run_id,user_id,kind,rating,comment) values(${q(run)},${q(admin)},'participant',4,'PRIVATE fictional feedback C')`,
         );
         const visible = (
-          await rpc(manager, "control_center", range, "aal2")
+          await rpc(manager, "control_center", range, "aal1")
         ).quality.find((row) => row.run_id === run);
         assert.equal(visible.average_rating, 4);
         assert.ok(!JSON.stringify(visible).includes("PRIVATE"));

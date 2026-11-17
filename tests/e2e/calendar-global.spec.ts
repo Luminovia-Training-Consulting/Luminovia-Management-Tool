@@ -12,7 +12,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Global calendar fixtures require the canonical disposable stack.",
 );
-test("MFA global publication, descriptions/HTTPS links, draft withdrawal and archive/recover stay connected", async ({
+test("password-only authentication global publication, descriptions/HTTPS links, draft withdrawal and archive/recover stay connected", async ({
   page,
   browser,
   context,

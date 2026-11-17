@@ -164,9 +164,8 @@ const en: Record<keyof typeof de, string> = {
   empty: "There are no timesheets for this period.",
   noSessions:
     "There is no completed, editable teaching session of yours in this period.",
-  reviewHelp:
-    "Financial review requires the relevant permission and a current two-factor sign-in.",
-  security: "Open two-factor sign-in",
+  reviewHelp: "Financial review requires the relevant permission.",
+  security: "Account settings",
   csv: "Download timesheets as CSV",
   statement: "Download earnings statement PDF",
   confirmation: "Assignment confirmation PDF",
@@ -186,8 +185,7 @@ const en: Record<keyof typeof de, string> = {
   approveAction: "Approved",
   rejectAction: "Correction requested",
   correctionAction: "Documented correction opened",
-  denied:
-    "This view requires a current management permission and two-factor sign-in.",
+  denied: "This view requires current management permission.",
   unstaffed: "Unstaffed courses",
   missing_documents: "Missing course materials",
   cancellations: "Cancellations and handovers",

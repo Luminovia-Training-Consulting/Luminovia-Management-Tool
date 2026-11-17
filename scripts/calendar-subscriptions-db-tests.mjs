@@ -63,7 +63,7 @@ await withTestDatabase("calendar_subscription_test", async ({ sql, actor }) => {
     /22023/,
   );
   await assert.rejects(
-    actor(admin, "select * from private.calendar_subscriptions", "aal2"),
+    actor(admin, "select * from private.calendar_subscriptions", "aal1"),
     /permission denied/,
   );
   await assert.rejects(

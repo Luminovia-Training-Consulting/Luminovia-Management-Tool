@@ -62,7 +62,7 @@ await withTestDatabase(
       admin,
       "configure_compensation_policy",
       ["29.17", "76.43", "0"],
-      "aal2",
+      "aal1",
     );
 
     /** Polls an observable lock fact with a bounded deadline, not a timing guess. */
@@ -173,7 +173,7 @@ await withTestDatabase(
           q(organisation),
           "null",
         ],
-        "aal2",
+        "aal1",
       );
       const originalQuote = (await rpc(original, "job_offers")).find(
         (row) => row.id === job,
@@ -198,7 +198,7 @@ await withTestDatabase(
           q("participant_course"),
           q(job),
         ],
-        "aal2",
+        "aal1",
       );
       const rooms = JSON.parse(
         await sql(

@@ -36,7 +36,7 @@ await withTestDatabase("replacement_test", async ({ sql, actor }) => {
       capacity === 1
         ? `select public.create_job(${q(JSON.stringify(payload))}::jsonb)`
         : `select public.create_capacity_job(${q(JSON.stringify(payload))}::jsonb,${capacity},'${randomUUID()}')`,
-      "aal2",
+      "aal1",
     );
     const terms = await sql(
       `select terms_version from public.jobs where id='${job}'`,
@@ -60,7 +60,7 @@ await withTestDatabase("replacement_test", async ({ sql, actor }) => {
     actor(
       who,
       `select public.request_replacement('${c}', 'Fictional scheduling conflict',${q(mode)},array[${invited.map(q).join(",")}]::uuid[],false,'${key}')`,
-      who === manager ? "aal2" : "aal1",
+      "aal1",
     );
   const list = async (who = first, aal = "aal1") =>
     JSON.parse(
@@ -85,7 +85,7 @@ await withTestDatabase("replacement_test", async ({ sql, actor }) => {
     console.log(`PASS ${name}`);
   };
   await check(
-    "Only original or MFA job management may open an offer; private tables, unauthenticated and suspended deny",
+    "Only original or permission job management may open an offer; private tables, unauthenticated and suspended deny",
     async () => {
       const c = await create();
       for (const who of [first, outsider, inactive])
@@ -99,7 +99,7 @@ await withTestDatabase("replacement_test", async ({ sql, actor }) => {
       );
       for (const who of [manager, first])
         await assert.rejects(
-          actor(who, "select * from private.replacement_offers", "aal2"),
+          actor(who, "select * from private.replacement_offers", "aal1"),
           /permission denied/,
         );
       await assert.rejects(

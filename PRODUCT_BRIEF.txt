@@ -44,7 +44,7 @@ Use pinned dependency versions/lockfile, linting/formatting and a feature-based 
 4. REQUIRED BACKEND AND DEPLOYMENT STACK
 Default architecture: managed Supabase backend + static React/Vite frontend on existing compatible Hostinger web hosting. No extra Node/Express/Nest/Django service, self-hosted Supabase stack, Kubernetes, Redis or microservices unless a clearly demonstrated requirement justifies the added complexity.
 - Supabase PostgreSQL is the transactional source of truth.
-- Supabase Auth provides invitation-only accounts, authenticated sessions, verification, password recovery and MFA for privileged users.
+- Supabase Auth provides invitation-only accounts, authenticated sessions, email verification and password recovery. This product uses no MFA factors or MFA/AAL-based authorization gates; enforce active-account state and server-side database permissions for every protected action.
 - Row Level Security (RLS) and precisely scoped GRANTs enforce access in every exposed table. Never trust role or user IDs supplied by the browser for authorisation.
 - Supabase Realtime provides message delivery and relevant UI updates; persist messages in PostgreSQL.
 - Supabase Storage uses private-by-default buckets for course materials, chat attachments, CVs/certificates and contracts; metadata in PostgreSQL.
@@ -89,7 +89,7 @@ Start with a relational, migration-based model; write an ER diagram and document
 
 Search only records the current actor is authorised to access. Add indexes for job filters and message/wiki search. Use realistic but fictional sample data, not real personal CVs, customer secrets, addresses or financial records. Seed 11 illustrative lecturer accounts/profiles only in staging/test, with fictional details. Never claim an email or user was invited unless actually sent/created.
 7. SECURITY, RELIABILITY, PRIVACY AND QUALITY BARS
-- Require login before private routes. Granular permission enforcement at DB/API layer; RLS on every exposed Supabase table and private storage. Privileged admin claims should be reviewed and logged. Least privilege, MFA for admins, secure session handling and explicit revocation.
+- Require login before private routes. Granular permission enforcement at DB/API layer; RLS on every exposed Supabase table and private storage. Privileged admin claims should be reviewed and logged. Least privilege, secure password/session handling and explicit revocation. MFA is intentionally absent throughout the product, including sensitive actions.
 - Protect contracts, CVs, qualifications, invoices, private calendar entries, messages and customer details from horizontal access (forged IDs, guessed storage paths, direct API queries, altered claims and modified JWT/user metadata).
 - Use standard web protections: form validation, HTML sanitisation, safe URL handling, anti-spam/rate limiting, Content Security Policy where compatible, dependency scanning, secure secrets and no credentials in Git or browser bundles.
 - Calendar times should be stored as canonical instants with the intended time zone preserved; display local times correctly and document ambiguities around DST.

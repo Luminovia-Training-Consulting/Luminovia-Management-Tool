@@ -180,8 +180,8 @@ export function createAccountHandler(deps: AccountDependencies) {
     const url = new URL(request.url);
     const segments = url.pathname.split("/").filter(Boolean);
     const index = segments.indexOf("accounts");
-    const path = "/" +
-      (index >= 0 ? segments.slice(index + 1) : segments).join("/");
+    const path =
+      "/" + (index >= 0 ? segments.slice(index + 1) : segments).join("/");
     if (path === "/openapi.json" && request.method === "GET") {
       return response(200, deps.openapi);
     }
@@ -196,17 +196,19 @@ export function createAccountHandler(deps: AccountDependencies) {
       const call = async (name: string, args?: Record<string, unknown>) => {
         const result = await deps.rpc(token, name, args);
         if (result.error) {
-          const status = result.error.code === "42501"
-            ? 403
-            : ["22023", "23514", "23505"].includes(result.error.code ?? "")
-            ? 400
-            : 503;
+          const status =
+            result.error.code === "42501"
+              ? 403
+              : ["22023", "23514", "23505"].includes(result.error.code ?? "")
+                ? 400
+                : 503;
           return response(status, {
-            error: status === 403
-              ? "permission_or_mfa_required"
-              : status === 400
-              ? "invalid_request"
-              : "service_unavailable",
+            error:
+              status === 403
+                ? "permission_required"
+                : status === 400
+                  ? "invalid_request"
+                  : "service_unavailable",
           });
         }
         return response(200, result.data);
@@ -221,7 +223,7 @@ export function createAccountHandler(deps: AccountDependencies) {
           const result = await deps.rpc(token, name, args);
           if (result.error) {
             if (result.error.code === "42501") {
-              throw new Error("permission_or_mfa_required");
+              throw new Error("permission_required");
             }
             if (["23503", "40001", "P0001"].includes(result.error.code ?? "")) {
               throw new Error("deletion_conflict");
@@ -259,9 +261,12 @@ export function createAccountHandler(deps: AccountDependencies) {
           const cursor = url.searchParams.get("cursor");
           const limit = Number(url.searchParams.get("limit") ?? 25);
           if (
-            !/^[a-z_]{1,40}$/.test(kind) || query.length > 120 ||
-            (cursor !== null && !uuid(cursor)) || !Number.isInteger(limit) ||
-            limit < 1 || limit > 100
+            !/^[a-z_]{1,40}$/.test(kind) ||
+            query.length > 120 ||
+            (cursor !== null && !uuid(cursor)) ||
+            !Number.isInteger(limit) ||
+            limit < 1 ||
+            limit > 100
           ) {
             return response(400, { error: "invalid_request" });
           }
@@ -276,7 +281,8 @@ export function createAccountHandler(deps: AccountDependencies) {
           );
         }
         if (
-          path === "/v1/deletions/preview" || path === "/v1/deletions/confirm"
+          path === "/v1/deletions/preview" ||
+          path === "/v1/deletions/confirm"
         ) {
           if (request.method !== "POST") {
             return response(405, { error: "method_not_allowed" });
@@ -287,11 +293,12 @@ export function createAccountHandler(deps: AccountDependencies) {
           }
           if (path.endsWith("/preview")) {
             if (
-              Object.keys(payload).some((key) =>
-                !["kind", "id"].includes(key)
+              Object.keys(payload).some(
+                (key) => !["kind", "id"].includes(key),
               ) ||
               typeof payload.kind !== "string" ||
-              !/^[a-z_]{1,40}$/.test(payload.kind) || !uuid(payload.id)
+              !/^[a-z_]{1,40}$/.test(payload.kind) ||
+              !uuid(payload.id)
             ) {
               return response(400, { error: "invalid_request" });
             }
@@ -304,10 +311,11 @@ export function createAccountHandler(deps: AccountDependencies) {
             );
           }
           if (
-            Object.keys(payload).some((key) =>
-              !["plan_id", "request_id", "confirmation"].includes(key)
+            Object.keys(payload).some(
+              (key) => !["plan_id", "request_id", "confirmation"].includes(key),
             ) ||
-            !uuid(payload.plan_id) || !uuid(payload.request_id) ||
+            !uuid(payload.plan_id) ||
+            !uuid(payload.request_id) ||
             payload.confirmation !== "DELETE"
           ) {
             return response(400, { error: "invalid_request" });
@@ -331,8 +339,9 @@ export function createAccountHandler(deps: AccountDependencies) {
             // a 202 acknowledgement explicitly does not mean deletion success.
             if (
               error instanceof Error &&
-              error.message === "permission_or_mfa_required"
-            ) throw error;
+              error.message === "permission_required"
+            )
+              throw error;
             return response(202, { ...confirmed, status: "pending" });
           }
         }
@@ -343,7 +352,8 @@ export function createAccountHandler(deps: AccountDependencies) {
           }
           const payload = await body(request);
           if (
-            !uuid(operation[1]) || !object(payload) ||
+            !uuid(operation[1]) ||
+            !object(payload) ||
             Object.keys(payload).length > 0
           ) {
             return response(400, { error: "invalid_request" });
@@ -458,9 +468,10 @@ export function createAccountHandler(deps: AccountDependencies) {
         });
         if (reserved.error) {
           return response(reserved.error.code === "42501" ? 403 : 400, {
-            error: reserved.error.code === "42501"
-              ? "permission_or_mfa_required"
-              : "invalid_request",
+            error:
+              reserved.error.code === "42501"
+                ? "permission_required"
+                : "invalid_request",
           });
         }
         const result = reserved.data as {
@@ -473,8 +484,8 @@ export function createAccountHandler(deps: AccountDependencies) {
             result.status === "throttled"
               ? 429
               : result.status === "idempotency_conflict"
-              ? 409
-              : 200,
+                ? 409
+                : 200,
             result,
           );
         }
@@ -515,30 +526,30 @@ export function createAccountHandler(deps: AccountDependencies) {
     } catch (error) {
       const code = error instanceof Error ? error.message : "";
       return response(
-        code === "permission_or_mfa_required"
+        code === "permission_required"
           ? 403
           : code === "deletion_conflict"
-          ? 409
-          : code === "request_too_large"
-          ? 413
-          : code === "json_required"
-          ? 415
-          : code === "invalid_request" || error instanceof SyntaxError
-          ? 400
-          : 503,
+            ? 409
+            : code === "request_too_large"
+              ? 413
+              : code === "json_required"
+                ? 415
+                : code === "invalid_request" || error instanceof SyntaxError
+                  ? 400
+                  : 503,
         {
           error: [
-              "request_too_large",
-              "json_required",
-              "invalid_request",
-              "permission_or_mfa_required",
-              "deletion_conflict",
-              "deletion_unavailable",
-            ].includes(code)
+            "request_too_large",
+            "json_required",
+            "invalid_request",
+            "permission_required",
+            "deletion_conflict",
+            "deletion_unavailable",
+          ].includes(code)
             ? code
             : error instanceof SyntaxError
-            ? "invalid_request"
-            : "service_unavailable",
+              ? "invalid_request"
+              : "service_unavailable",
         },
       );
     }

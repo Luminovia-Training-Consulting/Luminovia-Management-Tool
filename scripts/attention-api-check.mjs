@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { withApiFixture } from "./testing/api.mjs";
 await withApiFixture(
-  async ({ actor, mfa, service, checked, sql, defer, url }) => {
+  async ({ actor, passwordOnly, service, checked, sql, defer, url }) => {
     const owner = await actor("attention-owner", "lecturer"),
       peer = await actor("attention-peer", "lecturer"),
       admin = await actor("attention-admin", "admin"),
@@ -68,7 +68,7 @@ await withApiFixture(
     const saved = await preferences(owner);
     assert.equal(saved.version, 1);
     assert.equal((await preferences(peer)).version, 0);
-    await mfa(admin.client);
+    await passwordOnly(admin.client);
     assert.equal((await preferences(admin)).version, 0);
     for (const who of [owner, peer, admin]) {
       const direct = await who.client
@@ -267,7 +267,7 @@ await withApiFixture(
     assert.ok(deniedSave.error);
     assert.equal(deniedSave.data, null);
     console.log(
-      "PASS actual Auth/MFA/REST: own initial/versioned quiet settings, concurrent CAS, invalid/foreign/admin/anonymous/old-token boundaries, independent legacy four flags, current database-minute quiet counter3 of20, explicit read only, no deleted notifications and full counter after disabling. No email/push/scheduler claim.",
+      "PASS actual Auth/password-only authentication/REST: own initial/versioned quiet settings, concurrent CAS, invalid/foreign/admin/anonymous/old-token boundaries, independent legacy four flags, current database-minute quiet counter3 of20, explicit read only, no deleted notifications and full counter after disabling. No email/push/scheduler claim.",
     );
   },
 );

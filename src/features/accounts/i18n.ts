@@ -21,7 +21,7 @@ const de = {
     "Die Änderungen gelten sofort für neue API-Anfragen. Bestehende Aufträge und Honorare bleiben erhalten.",
   saved: "Rollen wurden gespeichert.",
   denied:
-    "Für die Kontoverwaltung sind Verwaltungsrechte und eine bestätigte Mehrfaktor-Anmeldung erforderlich.",
+    "Für die Kontoverwaltung sind aktuelle Verwaltungsrechte erforderlich.",
   error:
     "Die Änderung konnte nicht bestätigt werden. Bitte Berechtigungen und Verbindung prüfen.",
   self: "Eigener Zugang",
@@ -74,8 +74,7 @@ const en: typeof de = {
   confirmHint:
     "Changes apply immediately to new API requests. Existing assignments and agreed fees remain intact.",
   saved: "Roles saved.",
-  denied:
-    "Account administration requires management capability and verified multi-factor authentication.",
+  denied: "Account administration requires current management capability.",
   error:
     "The change could not be confirmed. Check your permissions and connection.",
   self: "Your account",

@@ -673,9 +673,7 @@ export function TimesheetsPage() {
           </Dialog>
         </>
       )}
-      <p>
-        {t("reviewHelp")} <Link to="/security">{t("security")}</Link>
-      </p>
+      <p>{t("reviewHelp")}</p>
       <Dialog
         open={Boolean(history)}
         onOpenChange={(open) => {

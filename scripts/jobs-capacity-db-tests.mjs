@@ -10,7 +10,11 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
   await sql(
     `insert into auth.users(id,email) values('${manager}','capacity-admin@example.invalid'),('${client}','capacity-client@example.invalid'),${teachers.map((id, i) => `('${id}','capacity-${i}@example.invalid')`).join(",")};insert into public.user_roles(user_id,role) values('${manager}','admin'),('${client}','client'),${teachers.map((id) => `('${id}','lecturer')`).join(",")}`,
   );
-  await actor(manager, "select public.configure_compensation_policy(31,73,0)", "aal2");
+  await actor(
+    manager,
+    "select public.configure_compensation_policy(31,73,0)",
+    "aal1",
+  );
   let day = 0;
   /** Creates a controlled job with an explicit currency and gross/net pricing variant. */
   const body = (gross = false, currency = "EUR") => {
@@ -45,10 +49,10 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
     actor(
       manager,
       `select public.create_capacity_job(${quoteSql(JSON.stringify(payload))}::jsonb,${capacity},'${key}')`,
-      "aal2",
+      "aal1",
     );
-  /** Reads the current versioned management projection at the specified MFA level. */
-  const meta = async (job, who = manager, aal = "aal2") =>
+  /** Reads the current versioned management projection at the specified permission level. */
+  const meta = async (job, who = manager, aal = "aal1") =>
     JSON.parse(await actor(who, `select public.job_lifecycle('${job}')`, aal));
   /** Calls the actual claim RPC; only the database result confirms whole-block allocation. */
   const claim = async (job, who, key = randomUUID()) => {
@@ -70,7 +74,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
     actor(
       manager,
       `select public.manage_job_offer('${job}','reopen',${(await meta(job)).version},'${randomUUID()}', '{"reason":"Fictional replacement position required"}')`,
-      "aal2",
+      "aal1",
     );
   /** Counts and reports a case only after all of its assertions have completed successfully. */
   const check = async (name, run) => {
@@ -79,7 +83,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
     console.log("PASS " + name);
   };
   await check(
-    "New explicitly per-position creation is atomic/idempotent and rejects invalid capacity or missing MFA",
+    "New explicitly per-position creation is atomic/idempotent and rejects invalid capacity or missing permission",
     async () => {
       for (const capacity of [0, 21])
         await assert.rejects(create(capacity), /22023/);
@@ -111,7 +115,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
         job = await actor(
           manager,
           `select public.create_job(${quoteSql(JSON.stringify(payload))}::jsonb)`,
-          "aal2",
+          "aal1",
         );
       assert.equal((await meta(job)).capacity, 1);
       assert.equal((await meta(job)).capacity_basis, "single_position");
@@ -119,7 +123,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
         actor(
           manager,
           `select public.set_job_capacity('${job}',3,${(await meta(job)).version},'${randomUUID()}')`,
-          "aal2",
+          "aal1",
         ),
         /Only new explicitly/,
       );
@@ -192,14 +196,14 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
       await actor(
         manager,
         `select public.set_job_capacity('${job}',3,${initial.version},'${randomUUID()}')`,
-        "aal2",
+        "aal1",
       );
       assert.equal((await meta(job)).capacity, 3);
       await assert.rejects(
         actor(
           manager,
           `select public.set_job_capacity('${job}',4,${initial.version},'${randomUUID()}')`,
-          "aal2",
+          "aal1",
         ),
         /40001/,
       );
@@ -209,7 +213,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
         actor(
           manager,
           `select public.set_job_capacity('${job}',4,${(await meta(job)).version},'${randomUUID()}')`,
-          "aal2",
+          "aal1",
         ),
         /Only new explicitly/,
       );
@@ -231,7 +235,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
       await actor(
         manager,
         `select public.manage_client_organisation('${client}','${org}')`,
-        "aal2",
+        "aal1",
       );
       const claimed = [];
       for (const who of teachers.slice(0, 3))
@@ -374,7 +378,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
       await actor(
         manager,
         `select public.manage_chat_member('${managedRoom}','${teachers[8]}',false)`,
-        "aal2",
+        "aal1",
       );
       const lastJob = await create(3),
         last = await claim(lastJob, teachers[5]);
@@ -409,7 +413,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
     },
   );
   await check(
-    "Board metadata is management/MFA-only and accepted rows cannot transition by dragging or legacy API",
+    "Board metadata is management/permission-only and accepted rows cannot transition by dragging or legacy API",
     async () => {
       await assert.rejects(
         actor(teachers[0], "select public.job_board()"),
@@ -420,7 +424,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
         /42501/,
       );
       const board = JSON.parse(
-        await actor(manager, "select public.job_board()", "aal2"),
+        await actor(manager, "select public.job_board()", "aal1"),
       );
       assert.ok(board.some((row) => row.can_transition === false));
       assert.ok(
@@ -433,7 +437,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
         actor(
           manager,
           `select public.manage_job_offer('${row.id}','published',${row.version},'${randomUUID()}')`,
-          "aal2",
+          "aal1",
         ),
         /Cancel confirmed/,
       );
@@ -441,7 +445,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
         actor(
           manager,
           `select public.set_job_status('${row.id}','published')`,
-          "aal2",
+          "aal1",
         ),
         /frozen/,
       );

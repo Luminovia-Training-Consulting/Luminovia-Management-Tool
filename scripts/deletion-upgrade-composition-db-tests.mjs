@@ -94,7 +94,7 @@ await withTestDatabase(
     await sql(
       `insert into private.support_attachments(ticket_id,document_id,version_id,attached_by,internal) values(${q(ticket)},${q(internal.document)},${q(internal.version)},${q(formerStaff)},true);`,
     );
-    const allowed = (who, document, aal = "aal2") =>
+    const allowed = (who, document, aal = "aal1") =>
       actor(who, `select private.can_access_document(${q(document)})`, aal);
 
     // An independently stricter predecessor is legal installed state. Keep this

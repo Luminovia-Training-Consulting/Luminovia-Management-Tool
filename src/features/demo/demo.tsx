@@ -618,11 +618,9 @@ export function DemoPage() {
                             path === "/admin/people" ||
                             path === "/admin/accounts"
                           ? "profile"
-                          : path === "/security"
-                            ? "security"
-                            : path === "/clients"
-                              ? "organisation"
-                              : "course",
+                          : path === "/clients"
+                            ? "organisation"
+                            : "course",
                     )}
                   </h3>
                   <p>{description}</p>

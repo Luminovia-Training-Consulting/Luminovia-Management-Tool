@@ -697,9 +697,6 @@ export function AdminPage() {
       <>
         <PageHeading title={t("admin")} />
         <Notice kind="error">{t("noAccess")}</Notice>
-        <Button asChild>
-          <Link to="/security">{t("security")}</Link>
-        </Button>
       </>
     );
   return (

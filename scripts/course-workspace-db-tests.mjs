@@ -36,7 +36,7 @@ await withTestDatabase("course_workspace", async ({ sql, actor }) => {
       await actor(
         who,
         `select to_jsonb(public.${name}(${args.join(",")}))`,
-        who === admin ? "aal2" : "aal1",
+        "aal1",
       ),
     );
   const workspace = (who, course = run) =>
@@ -55,7 +55,7 @@ await withTestDatabase("course_workspace", async ({ sql, actor }) => {
     count++;
   };
   await check(
-    "Exact course/org/enrolment rights, active identity and no administrator-without-MFA bypass",
+    "Exact course/org/enrolment rights, active identity and no administrator-without-permission bypass",
     async () => {
       assert.equal((await workspace(learner)).access.learner, true);
       assert.equal((await workspace(teacher)).access.teacher, true);

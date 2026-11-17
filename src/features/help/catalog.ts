@@ -105,44 +105,42 @@ export const guideModules: GuideModule[] = [
   },
   {
     id: "security",
-    path: "/security",
+    path: "/auth/password",
     title: { de: "Anmeldung & Sicherheit", en: "Sign-in & security" },
     summary: {
-      de: "Sichere dein Konto und bestätige sensible Aktionen mit Mehrfaktor-Authentifizierung.",
-      en: "Secure your account and verify sensitive actions with multifactor authentication.",
+      de: "Melde dich mit deinem Konto an und verwalte dein Passwort.",
+      en: "Sign in with your account and manage your password.",
     },
     steps: {
       de: [
         "Melde dich mit dem eingeladenen Konto an; die Demo benötigt keine Zugangsdaten.",
-        "Richte in Sicherheit einen Authenticator ein und bestätige den aktuellen Code.",
+        "Verwende für die Anmeldung deine E-Mail-Adresse und dein Passwort.",
         "Bewahre Zugangsdaten und Wiederherstellungsmöglichkeiten sicher auf; teile keine Codes.",
       ],
       en: [
         "Sign in with your invited account; the demo needs no credentials.",
-        "Set up an authenticator under Security and confirm its current code.",
+        "Use your email address and password to sign in.",
         "Keep credentials and recovery options secure; never share codes.",
       ],
     },
     problem: {
-      de: "Anmeldung, Passwort-Wiederherstellung oder MFA schlägt fehl.",
-      en: "Sign-in, password recovery or MFA fails.",
+      de: "Anmeldung oder Passwort-Wiederherstellung schlägt fehl.",
+      en: "Sign-in or password recovery fails.",
     },
     resolution: {
       de: [
-        "Prüfe E-Mail-Adresse, Verbindung und beim Authenticator die automatische Gerätezeit. Verwende den neuesten Wiederherstellungslink.",
-        "Bei fehlender Einladung oder verlorenem MFA-Gerät wende dich an die zuständige Verwaltung. Sende keine Passwörter oder Codes mit.",
+        "Prüfe E-Mail-Adresse und Verbindung. Verwende den neuesten Wiederherstellungslink.",
+        "Bei fehlender Einladung wende dich an die zuständige Verwaltung. Sende keine Passwörter oder Codes mit.",
       ],
       en: [
-        "Check your email address, connection and automatic device time for the authenticator. Use the newest recovery link.",
-        "For a missing invitation or lost MFA device, contact the responsible administrator. Never include passwords or codes.",
+        "Check your email address and connection. Use the newest recovery link.",
+        "For a missing invitation, contact the responsible administrator. Never include passwords or codes.",
       ],
     },
     keywords: [
       "login",
       "passwort",
       "password",
-      "mfa",
-      "authenticator",
       "einladung",
       "invitation",
       "recovery",
@@ -697,11 +695,11 @@ export const guideModules: GuideModule[] = [
     },
     resolution: {
       de: [
-        "Prüfe, ob dein Konto die Organisationsverwaltung ausführen darf und erforderliche MFA aktuell ist.",
+        "Prüfe, ob dein Konto die Organisationsverwaltung ausführen darf.",
         "Bitte die zuständige Verwaltung um Prüfung. Ein Dozierendenzugang gewährt keinen allgemeinen Zugriff auf Kundenkontakte.",
       ],
       en: [
-        "Check whether your account may manage organisations and whether required MFA is current.",
+        "Check whether your account may manage organisations.",
         "Ask the responsible administrator to check. Lecturer access does not grant general access to client contacts.",
       ],
     },
@@ -951,12 +949,12 @@ export const guideModules: GuideModule[] = [
     steps: {
       de: [
         "Erstelle einen Entwurf mit allen Terminen, Anforderungen und Vergütungsangaben.",
-        "Prüfe den vollständigen Block und veröffentliche ihn mit aktueller erforderlicher MFA.",
+        "Prüfe den vollständigen Block und veröffentliche ihn mit der erforderlichen Berechtigung.",
         "Bearbeite Lebenszyklusänderungen im vorgesehenen Ablauf; Stornierung und Wiederöffnung sind ausdrückliche Aktionen.",
       ],
       en: [
         "Create a draft with all sessions, requirements and fee details.",
-        "Review the complete block and publish with current MFA where required.",
+        "Review the complete block and publish with the required permission.",
         "Use the lifecycle workflow for changes; cancellation and reopening are explicit actions.",
       ],
     },
@@ -966,11 +964,11 @@ export const guideModules: GuideModule[] = [
     },
     resolution: {
       de: [
-        "Prüfe Pflichtfelder, gültige Termine, Voraussetzungen, Berechtigungen und MFA.",
+        "Prüfe Pflichtfelder, gültige Termine, Voraussetzungen und Berechtigungen.",
         "Lade bei einer Versionsmeldung neu. Akzeptierte Vergütungen und bestätigte Einsätze dürfen durch Entwurfsänderungen nicht überschrieben werden.",
       ],
       en: [
-        "Check required fields, valid sessions, prerequisites, permissions and MFA.",
+        "Check required fields, valid sessions, prerequisites and permissions.",
         "Reload after a version conflict. Draft changes must not overwrite accepted fees or confirmed assignments.",
       ],
     },
@@ -996,12 +994,12 @@ export const guideModules: GuideModule[] = [
     steps: {
       de: [
         "Suche vor einer Einladung nach einem vorhandenen Konto.",
-        "Prüfe E-Mail-Adresse und die zulässige Rolle sorgfältig; sensible Aktionen erfordern MFA.",
+        "Prüfe E-Mail-Adresse und die zulässige Rolle sorgfältig.",
         "Sende die Einladung ausdrücklich und prüfe das tatsächliche Ergebnis. Die Demo versendet nichts.",
       ],
       en: [
         "Search for an existing account before inviting someone.",
-        "Check the email address and permitted role carefully; sensitive actions require MFA.",
+        "Check the email address and permitted role carefully.",
         "Send the invitation explicitly and check the actual result. The demo sends nothing.",
       ],
     },
@@ -1059,11 +1057,11 @@ export const guideModules: GuideModule[] = [
     },
     resolution: {
       de: [
-        "Prüfe die Rechte für Benutzerverwaltung und Qualifikationsprüfung sowie die erforderliche MFA und die Gültigkeit des Nachweises.",
+        "Prüfe die Rechte für Benutzerverwaltung und Qualifikationsprüfung sowie die Gültigkeit des Nachweises.",
         "Eigene Sperren und Änderungen am letzten geschützten Verwaltungskonto sind eingeschränkt. Kläre die Änderung mit einer weiteren berechtigten Person.",
       ],
       en: [
-        "Check user-management and qualification-review permissions, required MFA and evidence validity.",
+        "Check user-management and qualification-review permissions and evidence validity.",
         "Self-suspension and changes to the last protected administrator are restricted. Resolve the change with another authorised person.",
       ],
     },
@@ -1083,8 +1081,8 @@ export const guideModules: GuideModule[] = [
     permission: "audit.read",
     title: { de: "Administrationsprotokoll", en: "Administration log" },
     summary: {
-      de: "Prüfe freigegebene Verwaltungsereignisse mit aktuellem Auditrecht und erforderlicher MFA.",
-      en: "Review authorised administrative events with current audit permission and required MFA.",
+      de: "Prüfe freigegebene Verwaltungsereignisse mit aktuellem Auditrecht.",
+      en: "Review authorised administrative events with current audit permission.",
     },
     steps: {
       de: [
@@ -1104,11 +1102,11 @@ export const guideModules: GuideModule[] = [
     },
     resolution: {
       de: [
-        "Prüfe Zeitraum, Filter, aktuelles Auditrecht und MFA.",
+        "Prüfe Zeitraum, Filter und aktuelles Auditrecht.",
         "Nicht jede Aktivität ist Teil dieses Verwaltungsprotokolls. Sammle für eine Rückfrage nur Zeitpunkt, Bereich und sichtbare Fehlermeldung, keine Geheimnisse.",
       ],
       en: [
-        "Check date range, filters, current audit permission and MFA.",
+        "Check date range, filters and current audit permission.",
         "Not every activity belongs in this administration log. For support, collect only time, section and visible error text, never secrets.",
       ],
     },

@@ -1,9 +1,9 @@
 /**
- * Checks real Auth/MFA/profile/calendar/Storage persistence across stop and restart.
+ * Checks real password Auth/profile/calendar/Storage persistence across stop and restart.
  * An owned fictional probe actor and exact object bytes distinguish retained data from mere service readiness.
  */
 import assert from "node:assert/strict";
-import { randomUUID, createHmac } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import {
   command,
@@ -22,7 +22,7 @@ assert.ok(
 const service = createClient(url.href, env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
-/** Creates a separate nonpersistent Auth client for actual password and MFA persistence checks. */
+/** Creates a separate nonpersistent Auth client for actual password persistence checks. */
 const anon = () =>
   createClient(url.href, env.SUPABASE_ANON_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -43,22 +43,6 @@ async function checked(promise, label) {
   const { data, error } = await promise;
   assert.equal(error, null, `${label}: ${error?.message}`);
   return data;
-}
-/** Computes the fixture's current TOTP for the real MFA challenge. */
-function code(secret) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const bits = [...secret.replace(/=+$/, "")]
-    .map((char) => alphabet.indexOf(char).toString(2).padStart(5, "0"))
-    .join("");
-  const key = Buffer.from(
-    bits.match(/.{8}/g).map((byte) => Number.parseInt(byte, 2)),
-  );
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
-  const digest = createHmac("sha1", key).update(counter).digest();
-  return ((digest.readUInt32BE(digest.at(-1) & 15) & 0x7fffffff) % 1000000)
-    .toString()
-    .padStart(6, "0");
 }
 try {
   if (process.env.PORTAL_TEST_MODE === "1") {
@@ -177,20 +161,6 @@ try {
     actor.auth.signInWithPassword({ email, password }),
     "Sign in persistence account",
   );
-  const factor = await checked(
-    actor.auth.mfa.enroll({
-      factorType: "totp",
-      friendlyName: "Persistence probe",
-    }),
-    "Enroll real MFA",
-  );
-  await checked(
-    actor.auth.mfa.challengeAndVerify({
-      factorId: factor.id,
-      code: code(factor.totp.secret),
-    }),
-    "Verify real MFA",
-  );
   await checked(
     service.storage.createBucket(bucket, { public: false }),
     "Create private persistence bucket",
@@ -224,13 +194,15 @@ try {
   assert.equal(savedEvent.title, payload);
   const factors = await checked(
     next.auth.mfa.listFactors(),
-    "Read persisted factors",
+    "Confirm no MFA factors",
   );
-  assert.ok(
-    factors.totp.some(
-      (saved) => saved.id === factor.id && saved.status === "verified",
-    ),
-  );
+  assert.deepEqual(factors, {
+    all: [],
+    totp: [],
+    phone: [],
+    webauthn: [],
+    recovery_code: [],
+  });
   const object = await checked(
     service.storage.from(bucket).download("marker.txt"),
     "Download persisted actual object",
@@ -242,7 +214,7 @@ try {
   );
   assert.equal(bucketMetadata.public, false);
   console.log(
-    "PASS: actual stop/start preserves Auth password, verified MFA, edited profile/timezone, private appointment and private Storage object bytes.",
+    "PASS: actual stop/start preserves password-only Auth, edited profile/timezone, private appointment and private Storage object bytes; no MFA factors are present.",
   );
 } catch (error) {
   probeFailure = error;

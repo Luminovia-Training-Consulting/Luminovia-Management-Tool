@@ -81,7 +81,7 @@ export async function runOperationalForwardChecks({
           ["claim_confirmed", claim, "/jobs/" + job],
         ];
         /** A real own notification reaches the resolver only through the public
-         * inbox boundary, with current caller identity and MFA. The implementation
+         * inbox boundary, with current caller identity and permission. The implementation
          * helper itself remains owner-only, as in the accepted predecessor. */
         const resolve = async (who, kind, id, aal = "aal1") => {
           await sql(
@@ -179,7 +179,7 @@ export async function runOperationalForwardChecks({
                   (await sql(`select to_regclass(${q(table)}) is not null`)) ===
                   "t";
               if (!installed) {
-                assert.deepEqual(await resolve(admin, kind, id, "aal2"), {
+                assert.deepEqual(await resolve(admin, kind, id, "aal1"), {
                   href: null,
                   title: "",
                 });
@@ -197,7 +197,7 @@ export async function runOperationalForwardChecks({
                   `insert into private.assignment_change_requests(id,claim_id,requester_id,lecturer_id,reason,original,proposed,source_hash) values(${q(id)},${q(claim)},${q(admin)},${q(owner)},'Fictional formal request',${q(JSON.stringify({ title: "Fictional formal request" }))}::jsonb,'{}'::jsonb,'fictional')`,
                 );
               assert.equal(
-                (await resolve(admin, kind, id, "aal2")).href,
+                (await resolve(admin, kind, id, "aal1")).href,
                 (kind === "website_enquiry" ? "/enquiries/" : "/changes/") + id,
               );
               assert.deepEqual(await resolve(admin, kind, id), {
@@ -273,7 +273,7 @@ export async function runOperationalForwardChecks({
                     admin,
                     "course_preparation_updated",
                     preparation,
-                    "aal2",
+                    "aal1",
                   )
                 ).href,
                 "/courses/" + run + "/workspace",

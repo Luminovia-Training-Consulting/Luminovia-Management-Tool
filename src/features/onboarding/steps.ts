@@ -15,7 +15,6 @@ export function welcomeSteps(
   return [
     { id: "welcome" },
     { id: "profile", path: "/profile" },
-    { id: "security", path: "/security" },
     ...(staff
       ? [
           { id: "jobs" as const, path: "/jobs" },

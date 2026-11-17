@@ -12,7 +12,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { CheckCircle2, ShieldCheck, UserRound } from "lucide-react";
 import { DateTime } from "luxon";
 import { useAuth } from "../auth/auth-context";
@@ -493,9 +493,6 @@ export function PeopleAdminPage() {
       <>
         <PageHeading title={t("people")} />
         <Notice kind="error">{t("noAccess")}</Notice>
-        <Button asChild>
-          <Link to="/security">{t("security")}</Link>
-        </Button>
       </>
     );
   return (

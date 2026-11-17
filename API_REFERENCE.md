@@ -1,6 +1,6 @@
 # Platform API reference
 
-This reference describes the current repository API. It is generated from a disposable replay of **81 migration files** through version **20261118030000**, containing **279 application public functions**. It excludes extension-owned functions. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): `929e036f1edceb4116cc58d9545a4a17f966fda0738a90c665b7030c14e72a64`.
+This reference describes the current repository API. It is generated from a disposable replay of **77 migration files** through version **20261117130000**, containing **272 application public functions**. It excludes extension-owned functions. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): `19659e1073957075c184bc3dfc605338a0bdbda69251503e122e4a7adea4fcb2`.
 
 Regenerate with `PORTAL_DB_CONTAINER=<owned-test-container> node scripts/generate-api-reference.mjs`. The generator creates and drops a random database; it never inspects user records. Use an owned isolated test container, following [local development](DEVELOPMENT.md#section-local-development). Replay uses SQL Auth helpers, so this inventory alone does not verify native Auth, HTTP gateway availability, business eligibility or deployment. [Functional acceptance](DEVELOPMENT.md#section-functional-acceptance) and QA results define that evidence.
 
@@ -8,7 +8,7 @@ Regenerate with `PORTAL_DB_CONTAINER=<owned-test-container> node scripts/generat
 
 Paths below are relative to the configured Supabase API URL, not necessarily the website origin. Local development normally uses `http://127.0.0.1:54321`; a selfhost gateway can expose the API beneath `/backend`. Read `VITE_SUPABASE_URL` from the approved environment rather than hard-coding a deployment hostname.
 
-Use Supabase Auth for invitation-only login, recovery, sessions, password/email changes and TOTP. Public signup is disabled. Authenticated API requests carry the public `apikey` and `Authorization: Bearer <user-access-token>`. Service-role keys are server-only. Database roles, active status, current resource membership and required MFA remain authoritative on every operation; neither user metadata nor a submitted user ID grants access.
+Use Supabase Auth for invitation-only password login, recovery, sessions and password/email changes. MFA factors and MFA/AAL authorization are not supported. Public signup is disabled. Authenticated API requests carry the public `apikey` and `Authorization: Bearer <user-access-token>`. Service-role keys are server-only. Database roles, active status and current resource membership remain authoritative on every operation; neither user metadata nor a submitted user ID grants access.
 
 ## Account HTTP facade
 
@@ -17,7 +17,7 @@ Base: `/functions/v1/accounts/v1`. Machine-readable OpenAPI: `/functions/v1/acco
 | Method      | Path relative to facade base                                   | Purpose                                                                     |
 | ----------- | -------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | GET, PATCH  | /me                                                            | Own identity, roles, capabilities and safe profile edits                    |
-| GET         | /users?q=&limit=&offset=                                       | MFA-authorised bounded account directory                                    |
+| GET         | /users?q=&limit=&offset=                                       | Bounded account directory; requires current database capability             |
 | GET         | /roles                                                         | Current role catalogue and assignability                                    |
 | PUT         | /users/{id}/roles                                              | Audited subordinate-role assignment                                         |
 | PATCH       | /users/{id}/status                                             | Reversible suspension/reactivation                                          |
@@ -32,7 +32,7 @@ The facade permits allowlisted browser Origins; authenticated non-browser client
 
 ## Permanent deletion
 
-Permanent deletion requires current AAL2 and live resource authority. Preview and confirmation recheck actor-bound dependencies; accepted financial references and private-resource ACLs remain authoritative. The account Edge facade uses a database-issued execution permit for exact all-version native Storage cleanup and Auth hard deletion, drains active writer leases and returns completed only after verified absence. Pending receipts survive reload through the own permitted operations projection. Company jobs require consistent current organisation links; former lecturer claims do not grant staff job/file access. No trash or restore is provided. Read [the deletion contract](GUIDE.md#section-permanent-deletion).
+Permanent deletion requires current live resource authority. Preview and confirmation recheck actor-bound dependencies; accepted financial references and private-resource ACLs remain authoritative. The account Edge facade uses a database-issued execution permit for exact all-version native Storage cleanup and Auth hard deletion, drains active writer leases and returns completed only after verified absence. Pending receipts survive reload through the own permitted operations projection. Company jobs require consistent current organisation links; former lecturer claims do not grant staff job/file access. No trash or restore is provided. Read [the deletion contract](GUIDE.md#section-permanent-deletion).
 
 ## Integration-only website enquiries
 
@@ -40,7 +40,7 @@ Permanent deletion requires current AAL2 and live resource authority. Preview an
 
 The closed JSON payload contains a stable `submission_id` UUID, bounded company/contact/email/topic/message/preferences fields, recognised IANA time zone, `de`/`en` locale, the configured `privacy_notice_version` and literal `consent: true`. Actual streamed bodies are limited to 24,000 bytes. Only a confirmed durable database result returns `202 {"received":true,"receipt":"<submission-id>"}`; no internal enquiry or customer ID is exposed. Identical retries return the original receipt; changed retries return 409. Persistent sender limits reject new submissions over 10 per minute or 100 per rolling day.
 
-Management uses current MFA-protected `enquiry_context`, `enquiry_inbox`, `enquiry_detail` and versioned decision/conversion RPCs from the inventory below. Read [WEBSITE_ENQUIRIES](GUIDE.md#section-website-enquiries) and the [deployed handler](supabase/functions/website-enquiries/handler.ts) for exact fields, error envelopes, permissions and public-activation prerequisites. Source presence does not connect or publish the public Website.
+Management uses capability-protected `enquiry_context`, `enquiry_inbox`, `enquiry_detail` and versioned decision/conversion RPCs from the inventory below. Read [WEBSITE_ENQUIRIES](GUIDE.md#section-website-enquiries) and the [deployed handler](supabase/functions/website-enquiries/handler.ts) for exact fields, error envelopes, permissions and public-activation prerequisites. Source presence does not connect or publish the public Website.
 
 ## Native RPC use
 

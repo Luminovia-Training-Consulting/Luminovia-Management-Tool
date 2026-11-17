@@ -14,12 +14,12 @@ declare enquiry private.website_enquiries; previous private.website_enquiry_atta
  signature jsonb; result uuid; document uuid; shared_resource boolean:=false; course_registry regclass;
 begin
  perform 1 from public.profiles where id=auth.uid() and active for share;
- if not found or not private.has_permission('organisations.manage') then raise exception 'Enquiry management and MFA required' using errcode='42501';end if;
+ if not found or not private.has_permission('organisations.manage') then raise exception 'Enquiry management permission required' using errcode='42501';end if;
  if p_enquiry_id is null or p_version_id is null or p_request_id is null or p_expected_version is null
  or p_label is null or length(trim(p_label)) not between 1 and 200 then raise exception 'Reviewed enquiry, exact clean version, document purpose and request key required' using errcode='22023';end if;
  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('enquiry-actor:'||auth.uid()::text,0));
  select * into enquiry from private.website_enquiries where id=p_enquiry_id for update;
- if not found or not private.has_permission('organisations.manage') then raise exception 'Enquiry management and MFA required' using errcode='42501';end if;
+ if not found or not private.has_permission('organisations.manage') then raise exception 'Enquiry management permission required' using errcode='42501';end if;
  signature=jsonb_build_object('enquiry',p_enquiry_id,'version',p_version_id,'label',trim(p_label),'expected',p_expected_version);
  select * into previous from private.website_enquiry_attachment_requests where actor_id=auth.uid() and request_id=p_request_id;
  if found then

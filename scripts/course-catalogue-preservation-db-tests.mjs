@@ -28,7 +28,7 @@ await withTestDatabase(
       clients = [randomUUID(), randomUUID()];
     await sql(`insert into auth.users(id,email) values ${[admin, teacher, ...clients].map((id) => `(${q(id)},${q(`${id}@example.invalid`)})`).join(",")};
     insert into public.user_roles(user_id,role) values(${q(admin)},'admin'),(${q(teacher)},'lecturer'),${clients.map((id) => `(${q(id)},'client')`).join(",")};`);
-    const rpc = async (id, name, args = [], aal = "aal2") => {
+    const rpc = async (id, name, args = [], aal = "aal1") => {
       const result = await actor(
         id,
         `select public.${name}(${args.map((value) => (value === null ? "null" : typeof value === "number" ? String(value) : q(typeof value === "object" ? JSON.stringify(value) : value))).join(",")})`,

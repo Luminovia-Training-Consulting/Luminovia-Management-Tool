@@ -51,7 +51,7 @@ while (Date.now() < deadline) {
     // the actual handler's anonymous-denial response, which cannot reserve/send.
     if (response.status === 403) {
       const body = await response.json();
-      if (body?.error === "permission_or_mfa_required") {
+      if (body?.error === "permission_required") {
         console.log(
           "Local invitation handler is ready; anonymous POST was correctly rejected.",
         );

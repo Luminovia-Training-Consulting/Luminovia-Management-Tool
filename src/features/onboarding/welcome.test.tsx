@@ -73,6 +73,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("server-confirmed personal welcome guide", () => {
+  it("does not present MFA as an onboarding feature", () => {
+    expect(
+      welcomeSteps(
+        ["owner", "admin", "management", "lecturer", "client"],
+        ["users.manage"],
+      ).map((step) => step.id as string),
+    ).not.toContain("security");
+  });
+
   it("introduces each area sequentially and waits for the actual save before advancing", async () => {
     let finish!: (value: unknown) => void;
     rpc.mockReturnValueOnce(

@@ -40,7 +40,7 @@ await withTestDatabase("smart_notifications", async ({ sql, actor }) => {
   const claims = JSON.stringify({
     sub: peer,
     role: "authenticated",
-    aal: "aal2",
+    aal: "aal1",
     custom: "preserved",
   });
   assert.equal(
@@ -218,7 +218,7 @@ await withTestDatabase("smart_notifications", async ({ sql, actor }) => {
     actor(
       admin,
       `select public.course_workspace_action(${q(run)},'resource_share',${q(JSON.stringify(sharePayload))},0)`,
-      "aal2",
+      "aal1",
     );
   const resource = JSON.parse(await share()).id;
   assert.equal(
@@ -240,7 +240,7 @@ await withTestDatabase("smart_notifications", async ({ sql, actor }) => {
   await actor(
     admin,
     `select public.course_workspace_action(${q(run)},'resource_remove',jsonb_build_object('id',${q(resource)}),0)`,
-    "aal2",
+    "aal1",
   );
   await share();
   assert.equal(

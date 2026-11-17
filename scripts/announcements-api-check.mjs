@@ -1,10 +1,10 @@
-/** Real Auth/MFA/REST publication, revision ACK, quiet attention and old-token isolation. */
+/** Real Auth/password-only authentication/REST publication, revision ACK, quiet attention and old-token isolation. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 
-await withApiFixture(async ({ actor, mfa, sql, defer, checked, suffix }) => {
+await withApiFixture(async ({ actor, passwordOnly, sql, defer, checked, suffix }) => {
   const admin = await actor("announcement-admin", "admin"),
     manager = await actor("announcement-management", "management"),
     teacher = await actor("announcement-lecturer", "lecturer"),
@@ -74,8 +74,8 @@ await withApiFixture(async ({ actor, mfa, sql, defer, checked, suffix }) => {
     ).error?.code,
     "42501",
   );
-  await mfa(admin.client);
-  await mfa(manager.client);
+  await passwordOnly(admin.client);
+  await passwordOnly(manager.client);
   let draft = await manage(args(null, "save", 0, payload()));
   assert.equal((await list()).items.length, 0);
   assert.equal(
@@ -97,7 +97,7 @@ await withApiFixture(async ({ actor, mfa, sql, defer, checked, suffix }) => {
   );
   assert.ok(management.draft.id);
   pass(
-    "actual password/MFA roles gate management and draft IDs remain unavailable to ordinary accounts",
+    "actual password/password-only authentication roles gate management and draft IDs remain unavailable to ordinary accounts",
   );
 
   const publish = args(draft.id, "publish", draft.version),
@@ -324,5 +324,5 @@ await withApiFixture(async ({ actor, mfa, sql, defer, checked, suffix }) => {
   pass(
     "information notices stay inbox-free; real administrative cursors are bounded and future starts remain explicitly manual",
   );
-  console.log(`${checks} actual Auth/MFA/REST announcement groups passed.`);
+  console.log(`${checks} actual Auth/password-only authentication/REST announcement groups passed.`);
 });

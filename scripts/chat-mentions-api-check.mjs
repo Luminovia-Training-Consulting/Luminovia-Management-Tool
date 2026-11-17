@@ -1,10 +1,10 @@
-/** Actual password sessions, MFA and HTTP APIs. Only the canonical disposable stack. */
+/** Actual password sessions, password-only authentication and HTTP APIs. Only the canonical disposable stack. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 
-await withApiFixture(async ({ actor, mfa, sql, defer, checked }) => {
+await withApiFixture(async ({ actor, passwordOnly, sql, defer, checked }) => {
   const author = await actor("mention-author", "lecturer"),
     target = await actor("mention-target", "lecturer"),
     peer = await actor("mention-peer", "lecturer"),
@@ -295,7 +295,7 @@ await withApiFixture(async ({ actor, mfa, sql, defer, checked }) => {
     }),
     "Real private direct message mention",
   );
-  await mfa(admin.client);
+  await passwordOnly(admin.client);
   assert.equal(
     (await admin.client.rpc("chat_messages_with_mentions", { p_room_id: dm }))
       .error?.code,
@@ -310,7 +310,7 @@ await withApiFixture(async ({ actor, mfa, sql, defer, checked }) => {
     ).every((message) => message.can_moderate === false),
   );
   pass(
-    "actual old-token revocation and MFA administrator isolation from foreign direct messages",
+    "actual old-token revocation and password-only authentication administrator isolation from foreign direct messages",
   );
 
   const peerMessage = await checked(
@@ -353,6 +353,6 @@ await withApiFixture(async ({ actor, mfa, sql, defer, checked }) => {
     "visible moderation metadata agrees with the real delete policy and private mention history stays inaccessible",
   );
   console.log(
-    `${checks} actual Auth/MFA/REST structured mention groups passed.`,
+    `${checks} actual Auth/password-only authentication/REST structured mention groups passed.`,
   );
 });

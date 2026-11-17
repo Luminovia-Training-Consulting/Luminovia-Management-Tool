@@ -197,8 +197,12 @@ try {
   assert.equal(auth.GOTRUE_DISABLE_SIGNUP, "true");
   assert.equal(auth.GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED, "false");
   assert.equal(auth.GOTRUE_EXTERNAL_PHONE_ENABLED, "false");
-  assert.equal(auth.GOTRUE_MFA_TOTP_ENROLL_ENABLED, "true");
-  assert.equal(auth.GOTRUE_MFA_TOTP_VERIFY_ENABLED, "true");
+  assert.equal(auth.GOTRUE_MFA_TOTP_ENROLL_ENABLED, "false");
+  assert.equal(auth.GOTRUE_MFA_TOTP_VERIFY_ENABLED, "false");
+  assert.equal(auth.GOTRUE_MFA_PHONE_ENROLL_ENABLED, "false");
+  assert.equal(auth.GOTRUE_MFA_PHONE_VERIFY_ENABLED, "false");
+  assert.equal(auth.GOTRUE_MFA_WEB_AUTHN_ENROLL_ENABLED, "false");
+  assert.equal(auth.GOTRUE_MFA_WEB_AUTHN_VERIFY_ENABLED, "false");
   assert.equal(auth.GOTRUE_MAILER_AUTOCONFIRM, "false");
   const workers = [
     "files",

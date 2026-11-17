@@ -281,7 +281,7 @@ describe("course form failure and confirmation boundaries", () => {
       "Diese Inhalte sind mit bestehenden Aufträgen verbunden und geschützt.",
     ],
     [
-      "courses.manage and MFA required",
+      "courses.manage permission required",
       "Die Änderung konnte nicht gespeichert werden.",
     ],
     [
@@ -296,7 +296,9 @@ describe("course form failure and confirmation boundaries", () => {
         error: {
           message,
           code:
-            message === "courses.manage and MFA required" ? "42501" : "22023",
+            message === "courses.manage permission required"
+              ? "42501"
+              : "22023",
         },
       });
       renderCourses({ runs: [run] });
@@ -429,7 +431,7 @@ describe("course form failure and confirmation boundaries", () => {
     );
     state.rpc.mockResolvedValue({
       data: null,
-      error: { message: "courses.manage and MFA required", code: "42501" },
+      error: { message: "courses.manage permission required", code: "42501" },
     });
     await userEvent.click(
       within(dialog).getByRole("button", { name: "Speichern" }),

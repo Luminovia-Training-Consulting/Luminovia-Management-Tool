@@ -5,8 +5,9 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { assertPointerReady } from "./helpers/pointer-readiness";
+import { assertPasswordOnly } from "./helpers/accounts-support";
 import { createClient } from "@supabase/supabase-js";
-import { randomUUID, createHmac } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { DateTime } from "luxon";
 test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
@@ -46,22 +47,6 @@ async function a11y(page: Page) {
       })),
     })),
   ).toEqual([]);
-}
-/** Computes the fixture's current TOTP for the real MFA challenge. */
-function code(secret: string) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const bits = [...secret.replace(/=+$/, "")]
-    .map((char) => alphabet.indexOf(char).toString(2).padStart(5, "0"))
-    .join("");
-  const key = Buffer.from(
-    bits.match(/.{8}/g)!.map((byte) => Number.parseInt(byte, 2)),
-  );
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
-  const digest = createHmac("sha1", key).update(counter).digest();
-  return ((digest.readUInt32BE(digest.at(-1)! & 15) & 0x7fffffff) % 1000000)
-    .toString()
-    .padStart(6, "0");
 }
 test("readonly operations catalogue is accessible and private client directory is denied", async ({
   page,
@@ -113,28 +98,8 @@ test("admin persists private customer/contact, course template/run and safe unpu
       })
     ).error,
   ).toBeNull();
-  const enrolled = await client.auth.mfa.enroll({
-    factorType: "totp",
-    friendlyName: "Operations UI QA",
-  });
-  expect(enrolled.error).toBeNull();
-  expect(
-    (
-      await client.auth.mfa.challengeAndVerify({
-        factorId: enrolled.data!.id,
-        code: code(enrolled.data!.totp.secret),
-      })
-    ).error,
-  ).toBeNull();
+  await assertPasswordOnly(client);
   await login(page, email);
-  await page.goto("/security");
-  await page
-    .getByLabel("Sechsstelliger Code", { exact: true })
-    .fill(code(enrolled.data!.totp.secret));
-  await page
-    .getByRole("button", { name: "Code bestätigen", exact: true })
-    .click();
-  await expect(page.getByRole("status")).toContainText("zwei Faktoren");
   const suffix = randomUUID().slice(0, 8);
   const company = `Fiktive Akademie ${suffix}`;
   const title = `Linux Kurs ${suffix}`;

@@ -47,12 +47,12 @@ const scopedCounts = `select jsonb_build_object('organisations',(select count(*)
 
 await withTestDatabase("schedule_finite", async ({ sql, actor }) => {
   await seed(sql);
-  /** Submits the controlled job as AAL2 management through create_job so real interval constraints apply. */
+  /** Submits the controlled job as AAL1 management through create_job so real interval constraints apply. */
   const create = async (values = payload) =>
     await actor(
       admin,
       `select public.create_job(${quoteSql(JSON.stringify(values))}::jsonb)`,
-      "aal2",
+      "aal1",
     );
   await check(
     "Legacy job API rejects an infinite final session and rolls back its whole organisation/course/job graph",
@@ -213,16 +213,16 @@ await withTestDatabase("schedule_finite", async ({ sql, actor }) => {
     "Course-run RPC preserves six-digit DST-fold instants on metadata-only resave and rejects nonpositive microsecond intervals atomically",
     async () => {
       // Create fictional references through the same public RPC surface as the
-      // application; the controlled authenticated actor still needs current AAL2.
+      // application; the controlled authenticated actor still needs current AAL1.
       const organisation = await actor(
         admin,
         `select public.save_organisation(null,${quoteSql(JSON.stringify({ name: "Fictional precision academy", time_zone: "Europe/Berlin" }))}::jsonb)`,
-        "aal2",
+        "aal1",
       );
       const template = await actor(
         admin,
         `select public.save_course_template(null,${quoteSql(JSON.stringify({ title: "Fictional precise course", topic_ids: [] }))}::jsonb)`,
-        "aal2",
+        "aal1",
       );
       const initial = {
         template_id: template,
@@ -244,7 +244,7 @@ await withTestDatabase("schedule_finite", async ({ sql, actor }) => {
         actor(
           admin,
           `select public.save_course_run(${id === null ? "null" : quoteSql(id)},${quoteSql(JSON.stringify(values))}::jsonb)`,
-          "aal2",
+          "aal1",
         );
       const run = await saveRun(null, initial);
       /** Format stored PostgreSQL values directly so six digits are not truncated by JS. */
@@ -259,7 +259,7 @@ await withTestDatabase("schedule_finite", async ({ sql, actor }) => {
               'berlin_end',to_char(ends_at at time zone 'Europe/Berlin','YYYY-MM-DD"T"HH24:MI'),
               'microseconds',extract(epoch from (ends_at-starts_at))*1000000
             ) order by starts_at,ends_at)::text from public.course_sessions where course_run_id=${quoteSql(run)}`,
-            "aal2",
+            "aal1",
           ),
         );
       const folded = [
@@ -282,7 +282,7 @@ await withTestDatabase("schedule_finite", async ({ sql, actor }) => {
           await actor(
             admin,
             `select jsonb_build_object('venue',venue,'zone',time_zone,'published',published)::text from public.course_runs where id=${quoteSql(run)}`,
-            "aal2",
+            "aal1",
           ),
         ),
         {
@@ -354,7 +354,7 @@ await withTestDatabase(
     const job = await actor(
       admin,
       `select public.create_job(${quoteSql(JSON.stringify(payload))}::jsonb)`,
-      "aal2",
+      "aal1",
     );
     const claim = JSON.parse(
       await actor(teacher, `select public.claim_job('${job}','${request}',1)`),

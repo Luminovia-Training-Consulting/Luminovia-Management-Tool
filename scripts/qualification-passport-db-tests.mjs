@@ -52,7 +52,7 @@ await withTestDatabase("passport", async ({ sql, actor }) => {
   );
   for (const who of [peer, admin])
     assert.deepEqual(
-      (await passport(who, "en", stamp, "aal2")).data.qualifications,
+      (await passport(who, "en", stamp, "aal1")).data.qualifications,
       [],
     );
   await assert.rejects(passport(learner), /42501/);
@@ -69,7 +69,7 @@ await withTestDatabase("passport", async ({ sql, actor }) => {
     "f",
   );
   console.log(
-    "PASS Peer and MFA administrator export only themselves; participant, anonymous and service-role invocation denied",
+    "PASS Peer and permission administrator export only themselves; participant, anonymous and service-role invocation denied",
   );
   const bound = JSON.parse(
     await actor(
@@ -80,7 +80,7 @@ await withTestDatabase("passport", async ({ sql, actor }) => {
   await actor(
     admin,
     `select public.attest_qualification(${q(teacher)},${q(verified)},true,null,${q(bound.evidence.id)},1,${q(randomUUID())})`,
-    "aal2",
+    "aal1",
   );
   result = await passport();
   let entry = result.data.qualifications.find((x) => x.topic_id === verified);

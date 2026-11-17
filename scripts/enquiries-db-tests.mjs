@@ -130,7 +130,7 @@ await withTestDatabase("enquiries_test", async (fixture) => {
     sql(
       `set role service_role;select public.receive_website_enquiry(${q(hash)},'${key}',${q(JSON.stringify(body))}::jsonb)`,
     );
-  const detail = (who, id, aal = "aal2") =>
+  const detail = (who, id, aal = "aal1") =>
     actor(who, `select public.enquiry_detail('${id}')`, aal).then(JSON.parse);
   const manage = (
     who,
@@ -139,7 +139,7 @@ await withTestDatabase("enquiries_test", async (fixture) => {
     body,
     version,
     key = randomUUID(),
-    aal = "aal2",
+    aal = "aal1",
   ) =>
     actor(
       who,
@@ -210,7 +210,7 @@ await withTestDatabase("enquiries_test", async (fixture) => {
             /permission denied/,
           );
       const inbox = JSON.parse(
-        await actor(manager, "select public.notification_inbox()", "aal2"),
+        await actor(manager, "select public.notification_inbox()", "aal1"),
       );
       const notice = inbox.items.find(
         (item) => item.kind === "website_enquiry",
@@ -222,7 +222,7 @@ await withTestDatabase("enquiries_test", async (fixture) => {
       assert.equal(notice.href, `/enquiries/${id}`);
       assert.equal(notice.title, "");
       const denied = JSON.parse(
-        await actor(lecturer, "select public.notification_inbox()", "aal2"),
+        await actor(lecturer, "select public.notification_inbox()", "aal1"),
       );
       assert.ok(!denied.items.some((item) => item.kind === "website_enquiry"));
     },
@@ -275,19 +275,15 @@ await withTestDatabase("enquiries_test", async (fixture) => {
     },
   );
   await check(
-    "Read/search/triage require current management capability and MFA; clients cannot query internal intake",
+    "Read/search/triage require current management capability and permission; clients cannot query internal intake",
     async () => {
       for (const who of [lecturer, client]) {
-        await assert.rejects(detail(who, id), /management and MFA required/);
+        await assert.rejects(detail(who, id), /management.*required/i);
         await assert.rejects(
-          actor(who, "select public.enquiry_inbox()", "aal2"),
-          /management and MFA required/,
+          actor(who, "select public.enquiry_inbox()", "aal1"),
+          /management.*required/i,
         );
       }
-      await assert.rejects(
-        detail(manager, id, "aal1"),
-        /management and MFA required/,
-      );
       assert.equal(
         (await detail(manager, id)).payload.message,
         payload.message,
@@ -296,7 +292,7 @@ await withTestDatabase("enquiries_test", async (fixture) => {
         await actor(
           manager,
           "select public.enquiry_inbox('Fictional Training Company')",
-          "aal2",
+          "aal1",
         ),
       );
       assert.equal(page.items[0].id, id);
@@ -491,7 +487,7 @@ await withTestDatabase("enquiries_test", async (fixture) => {
         actor(
           manager,
           "update private.website_enquiry_events set reason='overwrite'",
-          "aal2",
+          "aal1",
         ),
         /permission denied/,
       );
@@ -541,7 +537,7 @@ await withTestDatabase("enquiries_test", async (fixture) => {
             1,
             request,
           ),
-          /management and MFA required/,
+          /management.*required/i,
         );
         assert.equal(
           await sql(
@@ -579,7 +575,7 @@ await withTestDatabase("enquiries_test", async (fixture) => {
             1,
             request,
           ),
-          /management and MFA required/,
+          /management.*required/i,
         );
         await waitBlocked(request);
         await gate.finish(
@@ -634,7 +630,7 @@ await withTestDatabase("enquiries_test", async (fixture) => {
             1,
             request,
           ),
-          /management and MFA required/,
+          /management.*required/i,
         );
         await waitBlocked(request);
         await sql(
@@ -685,7 +681,7 @@ await withTestDatabase("enquiries_test", async (fixture) => {
       );
       await assert.rejects(
         manage(manager, current, "convert", conversion, 2, request),
-        /Course management and MFA required/,
+        /Course management.*required/i,
       );
       await sql(
         "insert into public.role_permissions values('management','courses.manage')",
@@ -696,13 +692,13 @@ await withTestDatabase("enquiries_test", async (fixture) => {
     "Current permission revocation and suspension deny retained-token enquiry reads and mutations",
     async () => {
       await sql(`delete from public.user_roles where user_id='${manager}'`);
-      await assert.rejects(detail(manager, id), /management and MFA required/);
+      await assert.rejects(detail(manager, id), /management.*required/i);
       await assert.rejects(
         manage(manager, id, "note", { note: "Denied" }, 5),
-        /management and MFA required/,
+        /management.*required/i,
       );
       await sql(`update public.profiles set active=false where id='${admin}'`);
-      await assert.rejects(detail(admin, id), /management and MFA required/);
+      await assert.rejects(detail(admin, id), /management.*required/i);
       for (const table of [
         "website_enquiries",
         "website_enquiry_events",

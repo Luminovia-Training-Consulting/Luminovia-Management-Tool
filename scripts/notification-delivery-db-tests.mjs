@@ -226,7 +226,7 @@ await withTestDatabase(
           ],
         ]) {
           await assert.rejects(
-            actor(admin, `select public.${fn}(${args})`, "aal2"),
+            actor(admin, `select public.${fn}(${args})`, "aal1"),
             /permission denied/,
           );
           await assert.rejects(

@@ -124,7 +124,7 @@ it("renders safe authored reference text but never exposes redacted contact valu
   ).toBeVisible();
 });
 
-it("keeps empty optional sections out of ordinary views and gives management an MFA entry point", () => {
+it("keeps empty optional sections out of ordinary views and explains missing permission", () => {
   const view = setup({
     ...empty,
     can_manage: false,
@@ -137,9 +137,9 @@ it("keeps empty optional sections out of ordinary views and gives management an 
     { ...empty, can_manage: false, can_edit: false, contact_visible: false },
     true,
   );
-  expect(
-    screen.getByRole("link", { name: "Sicherheit öffnen" }),
-  ).toHaveAttribute("href", "/security");
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "Für diese Aktion fehlt dir die aktuelle Berechtigung.",
+  );
   expect(
     screen.queryByRole("button", {
       name: "Kontakt oder Webverweis bearbeiten",
@@ -147,16 +147,14 @@ it("keeps empty optional sections out of ordinary views and gives management an 
   ).not.toBeInTheDocument();
 });
 
-it("shows a read-only reason for archived management instead of asking for redundant MFA", () => {
+it("shows a read-only reason for archived management", () => {
   setup({ ...empty, can_edit: false }, true, true);
   expect(
     screen.getByText(
       "Die Angaben dieses archivierten Auftrags können nicht bearbeitet werden.",
     ),
   ).toBeVisible();
-  expect(
-    screen.queryByRole("link", { name: "Sicherheit öffnen" }),
-  ).not.toBeInTheDocument();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
 
 it("waits for acknowledgement and retries an unchanged uncertain write with exactly one request identity", async () => {

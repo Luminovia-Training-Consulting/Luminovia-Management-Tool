@@ -1041,6 +1041,10 @@ test("M4 scratch API adapter preserves loopback guards and requires exact candid
     readFileSync(resolve("scripts/testing/utf8-stream.mjs"), "utf8"),
   );
   writeFileSync(
+    join(directory, "password-only.mjs"),
+    readFileSync(resolve("scripts/testing/password-only.mjs"), "utf8"),
+  );
+  writeFileSync(
     join(directory, "supabase/config.toml"),
     'project_id = "' + project + '"\n',
   );

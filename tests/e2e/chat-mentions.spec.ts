@@ -138,7 +138,7 @@ test("profile opens an actual DM, current member mentions and a dropped scanned 
   });
 });
 
-test("an authorized MFA group moderator removes a foreign contribution while foreign DMs remain inaccessible", async ({
+test("an authorized password-only authentication group moderator removes a foreign contribution while foreign DMs remain inaccessible", async ({
   page,
 }) => {
   test.setTimeout(90000);

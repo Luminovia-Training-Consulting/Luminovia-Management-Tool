@@ -115,7 +115,7 @@ insert into public.job_sessions(job_id,starts_at,ends_at)values(${q(job)},'2055-
     const revoked = actor(
       admin,
       `set local application_name=${q(revokeTag)};select ${change};select pg_sleep(2)`,
-      "aal2",
+      "aal1",
     );
     let writer;
     try {
@@ -157,7 +157,7 @@ insert into public.job_sessions(job_id,starts_at,ends_at)values(${q(job)},'2055-
       await actor(
         admin,
         `select public.set_user_active(${q(waiter)},true)`,
-        "aal2",
+        "aal1",
       );
     },
   );
@@ -177,7 +177,7 @@ insert into public.job_sessions(job_id,starts_at,ends_at)values(${q(job)},'2055-
       await actor(
         admin,
         `select public.set_user_active(${q(waiter)},true)`,
-        "aal2",
+        "aal1",
       );
     },
   );
@@ -201,7 +201,7 @@ insert into public.job_sessions(job_id,starts_at,ends_at)values(${q(job)},'2055-
       await actor(
         admin,
         `select public.set_account_roles(${q(waiter)},array['lecturer'])`,
-        "aal2",
+        "aal1",
       );
     },
   );
@@ -381,7 +381,7 @@ values(${q(job)},'Fictional confidential private title','Fictional private acade
         await actor(
           admin,
           `select public.set_account_roles(${q(privateLecturer)},array['participant'])`,
-          "aal2",
+          "aal1",
         );
         await assert.rejects(
           actor(privateLecturer, `select public.job_waitlist(${q(job)})`),
@@ -418,7 +418,7 @@ values(${q(job)},'Fictional confidential private title','Fictional private acade
         await actor(
           admin,
           `select public.set_account_roles(${q(privateLecturer)},array['lecturer'])`,
-          "aal2",
+          "aal1",
         );
       }
     },

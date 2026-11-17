@@ -42,7 +42,7 @@ await withTestDatabase("announcements", async ({ sql, actor }) => {
     body = {},
     key = randomUUID(),
     who = admin,
-    aal = "aal2",
+    aal = "aal1",
   ) =>
     JSON.parse(
       await actor(
@@ -53,7 +53,7 @@ await withTestDatabase("announcements", async ({ sql, actor }) => {
     );
   const detail = async (id) =>
     JSON.parse(
-      await actor(admin, `select public.admin_announcement(${q(id)})`, "aal2"),
+      await actor(admin, `select public.admin_announcement(${q(id)})`, "aal1"),
     );
   const read = async (
     who = teacher,
@@ -85,7 +85,7 @@ await withTestDatabase("announcements", async ({ sql, actor }) => {
   };
   let announcement, published;
   await check(
-    "Only current MFA owner/admin/management may create or inspect management data",
+    "Only current permission owner/admin/management may create or inspect management data",
     async () => {
       for (const who of [admin, owner, manager]) {
         await assert.rejects(
@@ -501,7 +501,7 @@ await withTestDatabase("announcements", async ({ sql, actor }) => {
         await actor(
           admin,
           "select public.admin_announcements('Fictional page','published',null,null,2)",
-          "aal2",
+          "aal1",
         ),
       );
       assert.equal(adminPage.items.length, 2);
@@ -514,7 +514,7 @@ await withTestDatabase("announcements", async ({ sql, actor }) => {
         actor(
           admin,
           "select public.admin_announcements('','',null,null,51)",
-          "aal2",
+          "aal1",
         ),
         /22023/,
       );
@@ -585,7 +585,7 @@ await withTestDatabase("announcements", async ({ sql, actor }) => {
         writer = actor(
           manager,
           `set local application_name=${q(writeTag)};select public.manage_announcement(null,'save',0,${q(key)},${q(JSON.stringify(payload()))}::jsonb)`,
-          "aal2",
+          "aal1",
         );
         // Attach a rejection handler before sampling the lock, preventing an
         // unhandled promise if the barrier transaction unexpectedly ends early.
@@ -688,7 +688,7 @@ await withTestDatabase("announcements", async ({ sql, actor }) => {
         /permission denied/,
       );
       const actions = JSON.parse(
-        await actor(admin, "select public.admin_audit_events()", "aal2"),
+        await actor(admin, "select public.admin_audit_events()", "aal1"),
       );
       assert.ok(actions.actions.includes("announcement.published"));
       assert.ok(

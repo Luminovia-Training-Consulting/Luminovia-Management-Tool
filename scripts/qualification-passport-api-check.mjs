@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 await withApiFixture(
-  async ({ service, actor, mfa, sql, defer, checked, url }) => {
+  async ({ service, actor, passwordOnly, sql, defer, checked, url }) => {
     const teacher = await actor("passport-teacher", "lecturer"),
       peer = await actor("passport-peer", "lecturer"),
       admin = await actor("passport-admin", "admin"),
@@ -40,7 +40,7 @@ await withApiFixture(
     );
     assert.equal(own.data.qualifications.length, 1);
     assert.equal(own.data.qualifications[0].status, "unverified");
-    await mfa(admin.client);
+    await passwordOnly(admin.client);
     for (const who of [peer, admin])
       assert.deepEqual(
         (
@@ -116,7 +116,7 @@ await withApiFixture(
       401,
     );
     console.log(
-      "PASS Own Auth/REST/actual PDF in DE/EN, MFA peer isolation, strict subject-free request, no-store and suspension",
+      "PASS Own Auth/REST/actual PDF in DE/EN, password-only authentication peer isolation, strict subject-free request, no-store and suspension",
     );
   },
 );

@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 
-await withApiFixture(async ({ actor, service, checked, sql, defer, mfa }) => {
+await withApiFixture(async ({ actor, service, checked, sql, defer, passwordOnly }) => {
   const original = await actor("handover-original", "lecturer"),
     replacement = await actor("handover-replacement", "lecturer"),
     peer = await actor("handover-peer", "lecturer"),
@@ -181,7 +181,7 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, mfa }) => {
     ).error?.code,
     "42501",
   );
-  await mfa(admin.client);
+  await passwordOnly(admin.client);
   assert.ok(
     Array.isArray(
       await checked(
@@ -343,6 +343,6 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, mfa }) => {
     "42501",
   );
   console.log(
-    "PASS actual Auth/REST waitlist private/unknown minimal receipts, dedup/no allocation, current candidate/MFA/privacy scope, immutable concrete proposal, exact recipient consent, revalidated qualifications, concurrent whole-block transfer, retained net deal, old chat revocation and inactive-token denial.",
+    "PASS actual Auth/REST waitlist private/unknown minimal receipts, dedup/no allocation, current candidate/password-only authentication/privacy scope, immutable concrete proposal, exact recipient consent, revalidated qualifications, concurrent whole-block transfer, retained net deal, old chat revocation and inactive-token denial.",
   );
 });

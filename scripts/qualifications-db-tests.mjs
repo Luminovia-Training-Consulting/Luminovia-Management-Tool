@@ -29,7 +29,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
     actor(
       who,
       `select public.qualification_review(${q(teacher)},${q(t)})`,
-      who === manager ? "aal2" : "aal1",
+      "aal1",
     ).then(JSON.parse);
   const save = (
     version,
@@ -42,7 +42,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
       who,
       `select public.save_qualification_evidence(${q(t)},${version ? q(version) : "null"},${expected},${q(key)})`,
     ).then(JSON.parse);
-  const access = (id, who = manager, aal = "aal2") =>
+  const access = (id, who = manager, aal = "aal1") =>
     actor(
       who,
       `select public.qualification_evidence_access(${q(id)})`,
@@ -52,13 +52,13 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
     actor(
       who,
       `select public.attest_qualification(${q(teacher)},${q(topic)},true,'2045-01-01T00:00Z',${evidence ? q(evidence) : "null"},${expected},${q(key)})`,
-      "aal2",
+      "aal1",
     ).then(JSON.parse);
   const history = (who = manager, limit = 20, cursor = null) =>
     actor(
       who,
       `select public.qualification_history(${q(teacher)},${q(topic)},${cursor ? q(cursor.at) : "null"},${cursor ? q(cursor.id) : "null"},${limit})`,
-      who === manager ? "aal2" : "aal1",
+      "aal1",
     ).then(JSON.parse);
   const check = async (name, run) => {
     await run();
@@ -66,13 +66,13 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
     console.log("PASS " + name);
   };
   await check(
-    "Foreign certificate blanket removed; independent MFA CV policy retained",
+    "Foreign certificate blanket removed; independent permission CV policy retained",
     async () => {
       assert.equal(
         await actor(
           manager,
           `select count(*) from public.documents where id=${q(cert.doc)}`,
-          "aal2",
+          "aal1",
         ),
         "0",
       );
@@ -80,7 +80,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
         await actor(
           manager,
           `select count(*) from public.document_versions where document_id=${q(cert.doc)}`,
-          "aal2",
+          "aal1",
         ),
         "0",
       );
@@ -88,7 +88,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
         await actor(
           manager,
           `select count(*) from public.documents where id=${q(cv.doc)}`,
-          "aal2",
+          "aal1",
         ),
         "1",
       );
@@ -118,7 +118,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
         actor(
           manager,
           `select public.reserve_document('Proof.txt','text/plain',3,'personal','certificate',null,null,${q(randomUUID())},null,${q(teacher)})`,
-          "aal2",
+          "aal1",
         ),
         /42501/,
       );
@@ -171,7 +171,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
         await actor(
           manager,
           `select count(*) from public.document_versions where document_id=${q(cert.doc)}`,
-          "aal2",
+          "aal1",
         ),
         "0",
       );
@@ -185,7 +185,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
         actor(
           manager,
           `select public.verify_lecturer_topic(${q(teacher)},${q(randomUUID())},true,null)`,
-          "aal2",
+          "aal1",
         ),
         /select this expertise first/,
       );
@@ -193,7 +193,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
         actor(
           manager,
           `select public.verify_lecturer_topic(${q(teacher)},${q(topic)},true,'2020-01-01T00:00Z')`,
-          "aal2",
+          "aal1",
         ),
         /in the future/,
       );
@@ -201,7 +201,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
         actor(
           manager,
           `select public.verify_lecturer_topic(${q(manager)},${q(topic)},true,null)`,
-          "aal2",
+          "aal1",
         ),
         /active lecturer/,
       );
@@ -213,7 +213,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
       await actor(
         manager,
         `select public.verify_lecturer_topic(${q(teacher)},${q(topic)},true,'2045-01-01T00:00Z')`,
-        "aal2",
+        "aal1",
       );
       const r = await record(manager);
       assert.equal(r.version, 2);
@@ -224,14 +224,14 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
         actor(
           manager,
           `select public.verify_lecturer_topic(${q(teacher)},${q(topic)},true,'2020-01-01T00:00Z')`,
-          "aal2",
+          "aal1",
         ),
         /22023/,
       );
     },
   );
   await check(
-    "Evidence attestation checks current binding, version, MFA and active lecturer",
+    "Evidence attestation checks current binding, version, permission and active lecturer",
     async () => {
       await assert.rejects(attest(randomUUID(), 2), /42501/);
       await assert.rejects(attest(linked.evidence.id, 1), /40001/);
@@ -244,7 +244,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
         access(linked.evidence.id, manager, "aal1"),
         /42501/,
       );
-      await assert.rejects(access(linked.evidence.id, peer, "aal2"), /42501/);
+      await assert.rejects(access(linked.evidence.id, peer, "aal1"), /42501/);
     },
   );
   await check(
@@ -296,7 +296,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
       await actor(
         manager,
         `select public.attest_qualification(${args})`,
-        "aal2",
+        "aal1",
       );
       const removed = await save(null, 2, randomUUID(), teacher, second);
       assert.equal(removed.evidence, null);
@@ -310,7 +310,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
           await actor(
             manager,
             `select public.attest_qualification(${args})`,
-            "aal2",
+            "aal1",
           ),
         ),
         removed,
@@ -443,7 +443,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
           writer = actor(
             manager,
             `set local application_name=${q(writeTag)};${query}`,
-            "aal2",
+            "aal1",
           );
           const settled = Promise.allSettled([revoke, writer]);
           await barrier(writeTag, "wait_event_type='Lock'");
@@ -528,7 +528,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
       await actor(
         manager,
         `select public.verify_lecturer_topic(${q(peer)},${q(topic)},true,null)`,
-        "aal2",
+        "aal1",
       );
       await save(foreign.v1, 1, randomUUID(), peer);
       await sql(

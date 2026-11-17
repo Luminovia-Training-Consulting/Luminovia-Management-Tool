@@ -5,7 +5,7 @@ import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
 
 await withTestDatabase("notification_test", async ({ sql, actor }) => {
   const [teacher, peer, admin] = Array.from({ length: 3 }, randomUUID);
-  /** Calls the business database API under the fixture's controlled identity/MFA claims. */
+  /** Calls the business database API under the fixture's controlled identity/permission claims. */
   const rpc = async (who, name, args = []) => {
     const value = await actor(who, `select public.${name}(${args.join(",")})`);
     return JSON.parse(value);
@@ -400,7 +400,7 @@ await withTestDatabase("notification_test", async ({ sql, actor }) => {
         const job = await actor(
           admin,
           `select public.create_capacity_job(${q(JSON.stringify({ title: "Fictional fanout instrumentation", customer_name: "Fictional fanout client", delivery_type: "online", status: "published", amount: 100, total_amount: 100, currency: "EUR", rate_unit: "fixed_total", terms: "Fictional per-position terms", topic_ids: [matchingTopicA], sessions: [{ starts_at: "2068-02-01T08:00:00Z", ends_at: "2068-02-01T09:00:00Z" }] }))}::jsonb,3,${q(randomUUID())})`,
-          "aal2",
+          "aal1",
         );
         assert.ok(
           Number(await sql("select n from public.test_matching_attempts")) > 0,
@@ -484,7 +484,7 @@ await withTestDatabase("notification_test", async ({ sql, actor }) => {
       const job = await actor(
         admin,
         `select public.create_job(${q(JSON.stringify({ title: "Critical receipt course", customer_name: "Fictional receipt client", delivery_type: "online", status: "published", amount: 100, total_amount: 100, currency: "EUR", rate_unit: "fixed_total", terms: "Immutable receipt terms", sessions: [{ starts_at: "2069-01-01T08:00:00Z", ends_at: "2069-01-01T09:00:00Z" }] }))}::jsonb)`,
-        "aal2",
+        "aal1",
       );
       const accepted = await rpc(teacher, "claim_job", [
         q(job),

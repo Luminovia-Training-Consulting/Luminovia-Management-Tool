@@ -1,6 +1,6 @@
 /**
  * PostgreSQL regression groups for resource-specific comments and reasoned moderation.
- * Real migrations define the contract; controlled role/MFA claims exercise it independently of the UI.
+ * Real migrations define the contract; controlled role/permission claims exercise it independently of the UI.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -31,7 +31,7 @@ await withTestDatabase("comments_test", async ({ sql, actor }) => {
  insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,time_zone,status,amount,total_amount,currency,rate_unit,terms) values
  ('${job}','${run}','Fictional discussion','Fictional academy','online','Europe/Berlin','published',100,100,'EUR','fixed_total','Immutable net terms'),
  ('${draft}',null,'Private draft','Fictional academy','online','Europe/Berlin','draft',100,100,'EUR','fixed_total','Immutable draft terms');`);
-  /** Calls the business database API under the fixture's controlled identity/MFA claims. */
+  /** Calls the business database API under the fixture's controlled identity/permission claims. */
   const rpc = (who, name, args = [], aal = "aal1") =>
     actor(
       who,
@@ -133,7 +133,7 @@ await withTestDatabase("comments_test", async ({ sql, actor }) => {
           manager,
           "edit_resource_comment",
           [comment, "Forged admin edit", 1],
-          "aal2",
+          "aal1",
         ),
         /42501/,
       );
@@ -158,7 +158,7 @@ await withTestDatabase("comments_test", async ({ sql, actor }) => {
     },
   );
   await check(
-    "Moderation requires the resource capability, MFA, reason and current version",
+    "Moderation requires the resource capability, permission, reason and current version",
     async () => {
       await assert.rejects(
         rpc(manager, "moderate_resource_comment", [comment, true, "Reason", 2]),
@@ -169,7 +169,7 @@ await withTestDatabase("comments_test", async ({ sql, actor }) => {
           peer,
           "moderate_resource_comment",
           [comment, true, "Reason", 2],
-          "aal2",
+          "aal1",
         ),
         /42501/,
       );
@@ -178,7 +178,7 @@ await withTestDatabase("comments_test", async ({ sql, actor }) => {
           manager,
           "moderate_resource_comment",
           [comment, true, "", 2],
-          "aal2",
+          "aal1",
         ),
         /Moderation reason/,
       );
@@ -186,7 +186,7 @@ await withTestDatabase("comments_test", async ({ sql, actor }) => {
         manager,
         "moderate_resource_comment",
         [comment, true, "Fictional moderation", 2],
-        "aal2",
+        "aal1",
       );
       assert.deepEqual(await rpc(peer, "resource_comments", ["job", job]), []);
       const own = (await rpc(teacher, "resource_comments", ["job", job]))[0];
@@ -197,7 +197,7 @@ await withTestDatabase("comments_test", async ({ sql, actor }) => {
           manager,
           "moderate_resource_comment",
           [comment, false, "Restore", 2],
-          "aal2",
+          "aal1",
         ),
         /40001/,
       );
@@ -216,7 +216,7 @@ await withTestDatabase("comments_test", async ({ sql, actor }) => {
         manager,
         "moderate_resource_comment",
         [comment, false, "Reviewed revision", 4],
-        "aal2",
+        "aal1",
       );
       assert.equal(
         (await rpc(peer, "resource_comments", ["job", job]))[0].body,
@@ -247,7 +247,7 @@ await withTestDatabase("comments_test", async ({ sql, actor }) => {
         actor(
           manager,
           "select * from private.resource_comment_revisions",
-          "aal2",
+          "aal1",
         ),
         /permission denied/,
       );
@@ -387,7 +387,7 @@ await withTestDatabase("comments_test", async ({ sql, actor }) => {
         /42501/,
       );
       await assert.rejects(
-        actor(manager, "select * from private.resource_comments", "aal2"),
+        actor(manager, "select * from private.resource_comments", "aal1"),
         /permission denied/,
       );
     },

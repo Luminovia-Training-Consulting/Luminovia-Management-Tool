@@ -64,7 +64,7 @@ For the current canonical origin, the generator sets:
 
 This is required by the actual Auth v2.197.0 implementation: it resolves the configured mail path against the external URL. A leading /auth/v1/verify without /backend would discard the API prefix. X-Forwarded-Prefix does not repair that construction. Leave GOTRUE_MAILER_EXTERNAL_HOSTS unset; the configured external API URL remains authoritative.
 
-Exact frontend redirect URLs are /auth/callback and /auth/password at the selected frontend origin, without wildcard allowlists. Public signup, anonymous accounts and phone signup are disabled. Email login remains enabled, email autoconfirm stays off, TOTP enrollment/verification is explicitly enabled and phone MFA is disabled. Existing database capability and AAL2 checks remain authoritative.
+Exact frontend redirect URLs are /auth/callback and /auth/password at the selected frontend origin, without wildcard allowlists. Public signup, anonymous accounts and phone signup are disabled. Email login remains enabled and email autoconfirm stays off. TOTP, phone MFA and WebAuthn MFA enrollment/verification are all explicitly disabled. Current database capabilities, active-account status and resource scope remain authoritative.
 
 Auth templates are loaded from the selected frontend origin's /mail-templates/invite.html and /mail-templates/recovery.html. Root must serve the existing repository templates there before accepting invitations/recovery. CLI content_path configuration does not install self-hosted mail templates. Keep the invitation token-hash callback and recovery ConfirmationURL/PKCE flows unchanged.
 
@@ -97,7 +97,7 @@ Before applying application migrations, verify Auth and Storage have completed t
 
 Apply every current repository SQL migration in filename order with psql ON_ERROR_STOP, and maintain an exact version/hash ledger. Never run the project's local seed/reset/API mutation harness against this instance. Inspect RLS/grants, private buckets and publication membership after migration. The new private document capacity configuration should use the root task's development quotas, rather than assuming the future 100 GB target fits the purchased disk.
 
-Bootstrap only the reviewed initial operator through the server-side Auth admin API and audited database roles. Test TOTP before accepting management operations. Keep public secret/service keys out of browser configuration.
+Bootstrap only the reviewed initial operator through the server-side Auth admin API and audited database roles. Verify the operator can sign in with the configured password and that the database grants only intended capabilities. Keep public secret/service keys out of browser configuration.
 
 ## Verification and limits
 
@@ -107,7 +107,7 @@ Run the offline check:
 
 It verifies actual HMAC/ECDSA signatures and opaque-key checksums, /backend mail URL resolution, public-secret separation, exclusive 0600 writes, Compose bind sources and the no-public-backend-port/Auth configuration. It does not start containers or contact Supabase Cloud.
 
-Actual hosted development is accepted at [cms.luminovia.org](https://cms.luminovia.org). After the controlled PostgreSQL 17.12 patch, all eight CMS API suites passed again, including real TOTP/AAL2, private captured invitation/password/PKCE recovery, RLS rejection, clean/EICAR scans and fifty claims yielding one complete five-session allocation with idempotent retry. Existing-password/exact-private-file persistence and actual WSS membership revocation passed; owned test fixtures, sessions and tunnels were cleaned. Final inspection confirmed eight healthy backend services, three preserved Auth accounts, eleven migrations and unchanged matching ICU collation versions. The full evidence and limits are in [HOSTINGER_DEVELOPMENT](../../../OPERATIONS.md#section-hostinger-development).
+Historical hosted acceptance on this development instance included TOTP/AAL2 before the product changed to password-only authentication. That record does not verify the current no-MFA configuration or current release. Re-run the current hosted acceptance after its forward migration and reviewed release. Earlier evidence, including private invitations, RLS rejection, malware scans, complete job claims, file persistence and WSS revocation, remains historical and is documented in [HOSTINGER_DEVELOPMENT](../../../OPERATIONS.md#section-hostinger-development).
 
 The real off-site database plus object backup passed an isolated restore with exact roles/membership grantors/options, RLS, counts, quotas and private object SHA-256. A separate candidate restore into 17.12 also matched all eleven migration SQL sources. Neither drill overwrote the VPS. Backup/restore helpers accept only reviewed immutable 17.6/17.12 images and default recovery to the backup's own image. Secrets and Vault encryption material require their separate protected recovery source.
 

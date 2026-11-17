@@ -1,9 +1,9 @@
 /**
- * Two-phase native upgrade witness: create owned accounts/MFA/object bytes before upgrading, then verify the same data afterward. A private ledger joins the phases without publishing credentials.
+ * Two-phase native upgrade witness: create owned password accounts/object bytes before upgrading, then verify the same data afterward. A private ledger joins the phases without publishing credentials.
  */
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { createHash, createHmac, randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   closeSync,
   constants,
@@ -16,6 +16,7 @@ import {
 } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { readPrivateJson } from "../../../scripts/testing/private-state.mjs";
+import { assertPasswordOnly } from "../../../scripts/testing/password-only.mjs";
 
 import { pathToFileURL } from "node:url";
 
@@ -27,28 +28,6 @@ async function checked(promise) {
   assert.equal(result.error, null);
   return result.data;
 }
-// Calculate a time-based code for the MFA factor created only for this probe.
-function totp(secret) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const bits = [...secret.replace(/=+$/, "")]
-    .map((character) =>
-      alphabet.indexOf(character).toString(2).padStart(5, "0"),
-    )
-    .join("");
-  const key = Buffer.from(
-    bits.match(/.{8}/g).map((byte) => Number.parseInt(byte, 2)),
-  );
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
-  const digest = createHmac("sha1", key).update(counter).digest();
-  return (
-    (digest.readUInt32BE(digest[digest.length - 1] & 15) & 0x7fffffff) %
-    1000000
-  )
-    .toString()
-    .padStart(6, "0");
-}
-
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const ledgerName = ".candidate-upgrade-probe.json";
 const maxLedgerBytes = 64 * 1024;
@@ -541,7 +520,7 @@ export async function runUpgradeProbe(mode) {
   const service = make(process.env.SUPABASE_SERVICE_ROLE_KEY);
   const filesEndpoint = url.href.replace(/\/$/, "") + "/functions/v1/files";
   // This connection only observes physical snapshot rows. All business writes
-  // below use authenticated callers and the normal MFA/RPC/file boundaries.
+  // below use authenticated callers and the normal password/RPC/file boundaries.
   const readDatabase = (statement) =>
     JSON.parse(
       execFileSync(
@@ -668,7 +647,7 @@ export async function runUpgradeProbe(mode) {
     };
   };
   // Fixture bootstrap creates real Auth identities; it never forges a SQL JWT,
-  // skips MFA or inserts accepted claims/invoices directly.
+  // fabricates authorization or inserts accepted claims/invoices directly.
   const newFinancialActor = async (role) => {
     const email = "candidate-finance-" + randomUUID() + "@example.invalid";
     const password = "Retained!" + randomUUID() + "Aa9";
@@ -680,35 +659,12 @@ export async function runUpgradeProbe(mode) {
     );
     const client = make(process.env.SUPABASE_ANON_KEY);
     await checked(client.auth.signInWithPassword({ email, password }));
+    await assertPasswordOnly(client);
     const identity = { id: user.id, email, password };
-    if (role === "admin") {
-      const factor = await checked(
-        client.auth.mfa.enroll({
-          factorType: "totp",
-          friendlyName: "Retained financial management",
-        }),
-      );
-      await checked(
-        client.auth.mfa.challengeAndVerify({
-          factorId: factor.id,
-          code: totp(factor.totp.secret),
-        }),
-      );
-      Object.assign(identity, {
-        factorId: factor.id,
-        secret: factor.totp.secret,
-        counter: Math.floor(Date.now() / 30000),
-      });
-      assert.equal(
-        (await checked(client.auth.mfa.getAuthenticatorAssuranceLevel()))
-          .currentLevel,
-        "aal2",
-      );
-    }
     return { client, identity };
   };
   // Establish a new real session after upgrading; an old bearer cannot stand
-  // in for retained passwords, factors or current administrative assurance.
+  // in for retained passwords and current database roles.
   const retainedFinancialActor = async (identity) => {
     const client = make(process.env.SUPABASE_ANON_KEY);
     const login = await checked(
@@ -718,21 +674,7 @@ export async function runUpgradeProbe(mode) {
       }),
     );
     assert.equal(login.user.id, identity.id);
-    if (identity.factorId) {
-      while (Math.floor(Date.now() / 30000) <= identity.counter)
-        await new Promise((done) => setTimeout(done, 200));
-      await checked(
-        client.auth.mfa.challengeAndVerify({
-          factorId: identity.factorId,
-          code: totp(identity.secret),
-        }),
-      );
-      assert.equal(
-        (await checked(client.auth.mfa.getAuthenticatorAssuranceLevel()))
-          .currentLevel,
-        "aal2",
-      );
-    }
+    await assertPasswordOnly(client);
     return client;
   };
   // Guessed commercial IDs and exact version downloads stay denied to the
@@ -805,18 +747,7 @@ export async function runUpgradeProbe(mode) {
     );
     const client = make(process.env.SUPABASE_ANON_KEY);
     await checked(client.auth.signInWithPassword({ email, password }));
-    const factor = await checked(
-      client.auth.mfa.enroll({
-        factorType: "totp",
-        friendlyName: "Candidate existing factor",
-      }),
-    );
-    await checked(
-      client.auth.mfa.challengeAndVerify({
-        factorId: factor.id,
-        code: totp(factor.totp.secret),
-      }),
-    );
+    await assertPasswordOnly(client);
     const { session } = await checked(client.auth.getSession());
     const event = await checked(
       client
@@ -892,9 +823,6 @@ export async function runUpgradeProbe(mode) {
       id: user.id,
       email,
       password,
-      factorId: factor.id,
-      secret: factor.totp.secret,
-      counter: Math.floor(Date.now() / 30000),
       event,
       documentId: canonicalProbeUuid(document.id),
       sha256: hash(bytes),
@@ -916,26 +844,7 @@ export async function runUpgradeProbe(mode) {
       }),
     );
     assert.equal(data.user.id, probe.id);
-    const factors = await checked(client.auth.mfa.listFactors());
-    assert(
-      factors.totp.some(
-        (factor) =>
-          factor.id === probe.factorId && factor.status === "verified",
-      ),
-    );
-    while (Math.floor(Date.now() / 30000) <= probe.counter)
-      await new Promise((done) => setTimeout(done, 200));
-    await checked(
-      client.auth.mfa.challengeAndVerify({
-        factorId: probe.factorId,
-        code: totp(probe.secret),
-      }),
-    );
-    assert.equal(
-      (await checked(client.auth.mfa.getAuthenticatorAssuranceLevel()))
-        .currentLevel,
-      "aal2",
-    );
+    await assertPasswordOnly(client);
     assert.deepEqual(
       await checked(
         service
@@ -1016,7 +925,7 @@ export async function runUpgradeProbe(mode) {
     };
   }
   console.log(
-    "PASS scoped existing password/MFA/roles/private-event/scanned-file/accepted-finance/invoice " +
+    "PASS scoped existing password-only Auth/no factors/roles/private-event/scanned-file/accepted-finance/invoice " +
       mode,
   );
   // The parent may persist this anonymous digest/count receipt. No credentials,

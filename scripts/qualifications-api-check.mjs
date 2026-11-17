@@ -1,10 +1,10 @@
-/** Auth/TOTP, actual ClamAV upload, exact bytes and explicit qualification grants. */
+/** Auth/password-only authentication, actual ClamAV upload, exact bytes and explicit qualification grants. */
 import assert from "node:assert/strict";
 import { randomUUID, createHash } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 await withApiFixture(
-  async ({ service, actor, mfa, sql, defer, checked, suffix, url }) => {
+  async ({ service, actor, passwordOnly, sql, defer, checked, suffix, url }) => {
     const manager = await actor("qualification-manager", "management"),
       teacher = await actor("qualification-teacher", "lecturer"),
       peer = await actor("qualification-peer", "lecturer");
@@ -152,7 +152,7 @@ await withApiFixture(
       ).error?.code,
       "42501",
     );
-    await mfa(manager.client);
+    await passwordOnly(manager.client);
     assert.equal(
       (
         await checked(
@@ -172,7 +172,7 @@ await withApiFixture(
       403,
     );
     pass(
-      "Actual Auth/MFA and real clean scanner versions; no blanket certificate document/history access",
+      "Actual Auth/password-only authentication and real clean scanner versions; no blanket certificate document/history access",
     );
     const request = randomUUID(),
       linked = await bind(doc.current_version_id, 0, request);

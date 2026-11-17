@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 
-await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
+await withApiFixture(async ({ service, actor, passwordOnly, sql, defer, checked }) => {
   const teacher = await actor("comment-teacher", "lecturer"),
     peer = await actor("comment-peer", "lecturer"),
     admin = await actor("comment-admin", "admin"),
@@ -135,7 +135,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
     ).error?.code,
     "42501",
   );
-  await mfa(admin.client);
+  await passwordOnly(admin.client);
   await checked(
     admin.client.rpc("moderate_resource_comment", {
       p_comment_id: id,
@@ -191,6 +191,6 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
     ).error,
   );
   console.log(
-    "PASS: actual Auth/TOTP/RPC comments, staff-only resources, ten concurrent same-key retries/one row, literal text, stale/foreign edits denied, MFA moderation/author revisions/withdrawal, bounded cursor and immediate existing-token suspension.",
+    "PASS: actual Auth/password-only authentication/RPC comments, staff-only resources, ten concurrent same-key retries/one row, literal text, stale/foreign edits denied, password-only authentication moderation/author revisions/withdrawal, bounded cursor and immediate existing-token suspension.",
   );
 });

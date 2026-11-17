@@ -41,7 +41,7 @@ await withTestDatabase("client_request_brief", async ({ sql, actor }) => {
       await actor(
         who,
         `select to_jsonb(public.${name}(${args.join(",")}))`,
-        who === admin ? "aal2" : "aal1",
+        "aal1",
       ),
     );
   const create = (who, body = brief, key = randomUUID()) =>
@@ -103,7 +103,7 @@ await withTestDatabase("client_request_brief", async ({ sql, actor }) => {
     },
   );
   await check(
-    "Exact organisation/current-role access; no learner or administrator-without-MFA bypass",
+    "Exact organisation/current-role access; no learner or administrator-without-permission bypass",
     async () => {
       assert.equal((await read(peer)).version, 1);
       for (const user of [foreign, learner]) {
@@ -276,7 +276,7 @@ await withTestDatabase("client_request_brief", async ({ sql, actor }) => {
   await check(
     "Published requests are atomically read-only and publication is in revision history",
     async () => {
-      // Policy setup is a separate MFA-gated operation; publishing cannot
+      // Policy setup is a separate permission-gated operation; publishing cannot
       // inject a new percentage or bypass the captured role-pricing contract.
       await rpc(admin, "configure_compensation_policy", ["17", "31", "0"]);
       await assert.rejects(

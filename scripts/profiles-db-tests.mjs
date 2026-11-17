@@ -1,5 +1,5 @@
 /** Real disposable PostgreSQL/RLS checks for profiles, enrolment and reviews.
- * The separate profiles-api-check exercises actual Auth and management MFA.
+ * The separate profiles-api-check exercises actual Auth and management permission.
  */
 import { spawn } from "node:child_process";
 import { readFile, readdir } from "node:fs/promises";
@@ -67,7 +67,7 @@ const lecturer = randomUUID(),
 const run = randomUUID(),
   org = randomUUID(),
   template = randomUUID();
-/** Calls the business database API under the fixture's controlled identity/MFA claims. */
+/** Calls the business database API under the fixture's controlled identity/permission claims. */
 const rpc = (who, name, args = [], aal = "aal1") =>
   actor(
     who,
@@ -260,7 +260,7 @@ try {
         admin,
         "manage_course_enrolment",
         [selfRun, admin, "completed"],
-        "aal2",
+        "aal1",
       );
       await assert.rejects(
         rpc(admin, "submit_course_review", [
@@ -274,29 +274,25 @@ try {
     },
   );
   await check(
-    "Enrolment changes require manager MFA, real participant and completed course",
+    "Enrolment changes require manager permission, real participant and completed course",
     async () => {
-      await assert.rejects(
-        rpc(admin, "manage_course_enrolment", [run, student, "completed"]),
-        /MFA required/,
-      );
       await assert.rejects(
         rpc(
           lecturer,
           "manage_course_enrolment",
           [run, student, "completed"],
-          "aal2",
+          "aal1",
         ),
-        /MFA required/,
+        /required/i,
       );
       await rpc(
         admin,
         "manage_course_enrolment",
         [run, student, "enrolled"],
-        "aal2",
+        "aal1",
       );
       await assert.rejects(
-        rpc(admin, "manage_course_enrolment", [run, peer, "enrolled"], "aal2"),
+        rpc(admin, "manage_course_enrolment", [run, peer, "enrolled"], "aal1"),
         /Invalid participant/,
       );
       await assert.rejects(
@@ -332,7 +328,7 @@ try {
       );
       await assert.rejects(
         rpc(student, "course_enrolments", [run]),
-        /MFA required/,
+        /required/i,
       );
       assert.equal(
         await actor(student, "select count(*) from public.course_enrolments"),
@@ -344,7 +340,7 @@ try {
     admin,
     "manage_course_enrolment",
     [run, student, "completed"],
-    "aal2",
+    "aal1",
   );
   let review;
   await check(
@@ -399,7 +395,7 @@ try {
         "0",
       );
       assert.equal(
-        (await rpc(admin, "lecturer_reviews", [lecturer], "aal2"))[0]
+        (await rpc(admin, "lecturer_reviews", [lecturer], "aal1"))[0]
           .reviewer_id,
         student,
       );
@@ -426,21 +422,17 @@ try {
     },
   );
   await check(
-    "Moderation requires MFA/reason and author edits do not unhide a moderated review",
+    "Moderation requires permission/reason and author edits do not unhide a moderated review",
     async () => {
       await assert.rejects(
-        rpc(admin, "moderate_course_review", [review, true, "Reason"]),
-        /MFA required/,
-      );
-      await assert.rejects(
-        rpc(admin, "moderate_course_review", [review, true, ""], "aal2"),
+        rpc(admin, "moderate_course_review", [review, true, ""], "aal1"),
         /reason required/,
       );
       await rpc(
         admin,
         "moderate_course_review",
         [review, true, "Fictional policy reason"],
-        "aal2",
+        "aal1",
       );
       assert.deepEqual(await rpc(peer, "lecturer_reviews", [lecturer]), []);
       assert.equal(
@@ -460,7 +452,7 @@ try {
         admin,
         "moderate_course_review",
         [review, false, "Restored after review"],
-        "aal2",
+        "aal1",
       );
       assert.equal((await rpc(peer, "lecturer_reviews", [lecturer])).length, 1);
     },
@@ -472,7 +464,7 @@ try {
         admin,
         "manage_course_enrolment",
         [run, student, "removed"],
-        "aal2",
+        "aal1",
       );
       assert.deepEqual(await rpc(student, "people_directory"), []);
       assert.equal(
@@ -491,7 +483,7 @@ try {
         admin,
         "manage_course_enrolment",
         [run, student, "completed"],
-        "aal2",
+        "aal1",
       );
     },
   );

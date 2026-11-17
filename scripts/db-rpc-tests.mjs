@@ -53,9 +53,9 @@ const quote = (s) => `'${String(s).replaceAll("'", "''")}'`;
 function actorSql(id, text, aal = "aal1") {
   return `begin; set local role authenticated; set local request.jwt.claims=${quote(JSON.stringify({ sub: id, aal, role: "authenticated" }))}; ${text}; commit;`;
 }
-/** Executes real SQL with the test transaction's controlled identity and MFA claims. */
+/** Executes real SQL with the test transaction's controlled identity and password-session claims. */
 const as = (id, text, aal) => sql(actorSql(id, text, aal));
-/** Calls the business database API under the fixture's controlled identity/MFA claims. */
+/** Calls the business database API under the fixture's controlled identity/password-session claims. */
 const rpc = (id, job, key = randomUUID(), version = 1) =>
   as(id, `select public.claim_job('${job}','${key}',${version})`).then(
     JSON.parse,
@@ -101,7 +101,7 @@ async function job(overrides = {}) {
   return as(
     admin,
     `select public.create_job(${quote(JSON.stringify(jobPayload(overrides)))}::jsonb)`,
-    "aal2",
+    "aal1",
   );
 }
 try {
@@ -282,7 +282,7 @@ try {
       await as(
         admin,
         `select count(*) from public.personal_events where id='${event}'`,
-        "aal2",
+        "aal1",
       ),
       "0",
     );
@@ -339,7 +339,7 @@ try {
     assert.equal((await rpc(participant, overlap)).status, "not_eligible");
     const claims = {
       sub: users[53],
-      aal: "aal2",
+      aal: "aal1",
       role: "authenticated",
       user_metadata: { role: "admin" },
     };
@@ -364,20 +364,13 @@ try {
     );
     await assert.rejects(rpc(users[53], overlap), /Authentication required/);
   });
-  await test("Admin management RPC requires MFA; successful create preserves course/run/session relation", async () => {
-    await assert.rejects(
-      as(
-        admin,
-        `select public.create_job(${quote(JSON.stringify(jobPayload()))}::jsonb)`,
-      ),
-      /MFA required/,
-    );
+  await test("Password session with the admin role can create a job and preserves course/run/session relation", async () => {
     const j = await job();
     assert.equal(
       await as(
         admin,
         `select count(*) from public.job_sessions where job_id='${j}'`,
-        "aal2",
+        "aal1",
       ),
       "5",
     );
@@ -389,7 +382,7 @@ try {
     );
     assert.ok(
       JSON.parse(
-        await as(admin, "select to_json(public.get_my_permissions())", "aal2"),
+        await as(admin, "select to_json(public.get_my_permissions())", "aal1"),
       ).includes("jobs.manage"),
     );
   });
@@ -416,28 +409,21 @@ try {
       "0",
     );
   });
-  await test("Invitation reservation requires admin MFA; idempotency prevents duplicate sends", async () => {
+  await test("Invitation reservation requires the admin role; idempotency prevents duplicate sends", async () => {
     const key = randomUUID();
-    await assert.rejects(
-      as(
-        admin,
-        `select public.reserve_invitation('invite1@example.test','${key}')`,
-      ),
-      /MFA required/,
-    );
     await assert.rejects(
       as(
         users[54],
         `select public.reserve_invitation('invite1@example.test','${key}')`,
-        "aal2",
+        "aal1",
       ),
-      /MFA required/,
+      /users.manage/,
     );
     const r = JSON.parse(
       await as(
         admin,
         `select public.reserve_invitation('invite1@example.test','${key}')`,
-        "aal2",
+        "aal1",
       ),
     );
     assert.equal(r.status, "reserved");
@@ -445,7 +431,7 @@ try {
       await as(
         admin,
         `select public.reserve_invitation('invite1@example.test','${key}')`,
-        "aal2",
+        "aal1",
       ),
     );
     assert.equal(retry.status, "in_progress");
@@ -455,7 +441,7 @@ try {
         await as(
           admin,
           `select public.reserve_invitation('different@example.test','${key}')`,
-          "aal2",
+          "aal1",
         ),
       ).status,
       "idempotency_conflict",
@@ -465,7 +451,7 @@ try {
         await as(
           admin,
           `select public.reserve_invitation('invite1@example.test','${randomUUID()}')`,
-          "aal2",
+          "aal1",
         ),
       ).status,
       "in_progress",
@@ -474,7 +460,7 @@ try {
       as(
         admin,
         `select public.complete_invitation('${r.invitation_id}',null,'Fake',true)`,
-        "aal2",
+        "aal1",
       ),
       /permission denied/,
     );
@@ -492,7 +478,7 @@ try {
         await as(
           admin,
           `select public.reserve_invitation('invite1@example.test','${key}')`,
-          "aal2",
+          "aal1",
         ),
       ).status,
       "already_sent",
@@ -509,7 +495,7 @@ try {
           await as(
             admin,
             `select public.reserve_invitation('invite${i}@example.test','${randomUUID()}')`,
-            "aal2",
+            "aal1",
           ),
         ).status,
         "reserved",
@@ -519,33 +505,26 @@ try {
         await as(
           admin,
           `select public.reserve_invitation('invite6@example.test','${randomUUID()}')`,
-          "aal2",
+          "aal1",
         ),
       ).status,
       "throttled",
     );
   });
-  await test("Management attests only self-selected expertise, MFA and future expiry required", async () => {
-    await assert.rejects(
-      as(
-        admin,
-        `select public.verify_lecturer_topic('${users[54]}','${topic}',true,null)`,
-      ),
-      /MFA required/,
-    );
+  await test("Management attests only self-selected expertise and future expiry", async () => {
     await assert.rejects(
       as(
         users[54],
         `select public.verify_lecturer_topic('${users[54]}','${topic}',true,null)`,
-        "aal2",
+        "aal1",
       ),
-      /MFA required/,
+      /Qualification permission/,
     );
     await assert.rejects(
       as(
         admin,
         `select public.verify_lecturer_topic('${users[54]}','${topic}',true,null)`,
-        "aal2",
+        "aal1",
       ),
       /select this expertise first/,
     );
@@ -557,14 +536,14 @@ try {
       as(
         admin,
         `select public.verify_lecturer_topic('${users[54]}','${topic}',true,now()-interval '1 hour')`,
-        "aal2",
+        "aal1",
       ),
       /in the future/,
     );
     await as(
       admin,
       `select public.verify_lecturer_topic('${users[54]}','${topic}',true,now()+interval '1 year')`,
-      "aal2",
+      "aal1",
     );
     assert.equal(
       await as(
@@ -591,7 +570,7 @@ try {
     await as(
       admin,
       `select public.verify_lecturer_topic('${users[54]}','${topic}',false,null)`,
-      "aal2",
+      "aal1",
     );
     assert.equal(
       await as(
@@ -609,28 +588,24 @@ try {
       as(
         admin,
         `select public.verify_lecturer_topic('${participant}','${topic}',true,null)`,
-        "aal2",
+        "aal1",
       ),
       /active lecturer/,
     );
   });
-  await test("Account suspension needs MFA; immediately denies existing-session data and claiming", async () => {
+  await test("Account suspension requires the admin role and immediately denies existing-session data and claiming", async () => {
     await assert.rejects(
       as(
         users[54],
         `select public.set_user_active('${users[54]}',true)`,
-        "aal2",
+        "aal1",
       ),
-      /MFA required/,
-    );
-    await assert.rejects(
-      as(admin, `select public.set_user_active('${users[54]}',false)`),
-      /MFA required/,
+      /users.manage/,
     );
     await as(
       admin,
       `select public.set_user_active('${users[54]}',false)`,
-      "aal2",
+      "aal1",
     );
     assert.equal(
       await as(users[54], "select count(*) from public.topics"),
@@ -649,7 +624,7 @@ try {
     await as(
       admin,
       `select public.set_user_active('${users[54]}',true)`,
-      "aal2",
+      "aal1",
     );
     assert.equal(
       await as(users[54], "select count(*) from public.topics"),
@@ -658,7 +633,7 @@ try {
   });
   await test("Self-deactivation and subordinate authority cannot remove the sole active administrator", async () => {
     await assert.rejects(
-      as(admin, `select public.set_user_active('${admin}',false)`, "aal2"),
+      as(admin, `select public.set_user_active('${admin}',false)`, "aal1"),
       /Self-deactivation/,
     );
     const manager = randomUUID();
@@ -666,7 +641,7 @@ try {
       `insert into auth.users(id) values('${manager}');insert into public.user_roles(user_id,role) values('${manager}','management')`,
     );
     await assert.rejects(
-      as(manager, `select public.set_user_active('${admin}',false)`, "aal2"),
+      as(manager, `select public.set_user_active('${admin}',false)`, "aal1"),
       /Only subordinate account activation may be changed/,
     );
     assert.equal(
@@ -687,8 +662,8 @@ try {
       `insert into auth.users(id) values('${a}'),('${b}');insert into public.user_roles(user_id,role) values('${a}','admin'),('${b}','admin')`,
     );
     const r = await Promise.allSettled([
-      as(a, `select public.set_user_active('${b}',false)`, "aal2"),
-      as(b, `select public.set_user_active('${a}',false)`, "aal2"),
+      as(a, `select public.set_user_active('${b}',false)`, "aal1"),
+      as(b, `select public.set_user_active('${a}',false)`, "aal1"),
     ]);
     assert.equal(r.filter((x) => x.status === "fulfilled").length, 0);
     assert.equal(r.filter((x) => x.status === "rejected").length, 2);

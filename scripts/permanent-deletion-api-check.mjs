@@ -5,9 +5,10 @@
  * old-token denial; component fixtures alone cannot establish those properties.
  */
 import assert from "node:assert/strict";
-import { randomUUID, createHmac } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { assertPasswordOnly } from "./testing/password-only.mjs";
 if (process.env.PORTAL_TEST_MODE !== "1")
   throw new Error("Only isolated ./portal test may run deletion fixtures");
 process.loadEnvFile(".env.test.local");
@@ -42,22 +43,6 @@ async function checked(request, label) {
   );
   return result.data;
 }
-/** Derive one real challenge code in memory; no MFA values are emitted. */
-function totp(secret) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const bits = [...secret.replace(/=+$/, "").toUpperCase()]
-    .map((c) => alphabet.indexOf(c).toString(2).padStart(5, "0"))
-    .join("");
-  const key = Buffer.from(
-      bits.match(/.{8}/g).map((v) => Number.parseInt(v, 2)),
-    ),
-    counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
-  const digest = createHmac("sha1", key).update(counter).digest();
-  return ((digest.readUInt32BE(digest.at(-1) & 15) & 0x7fffffff) % 1000000)
-    .toString()
-    .padStart(6, "0");
-}
 /** Create an owned native identity; initial role inputs are fixture setup only. */
 async function actor(role) {
   const email = `permanent-delete-${randomUUID()}@example.invalid`;
@@ -85,22 +70,9 @@ async function actor(role) {
   );
   return { id: user.id, client };
 }
-/** Use actual TOTP verification rather than editing JWT claims. */
-async function mfa(user) {
-  const factor = await checked(
-    user.client.auth.mfa.enroll({
-      factorType: "totp",
-      friendlyName: "Permanent deletion QA",
-    }),
-    "Enroll TOTP",
-  );
-  await checked(
-    user.client.auth.mfa.challengeAndVerify({
-      factorId: factor.id,
-      code: totp(factor.totp.secret),
-    }),
-    "Verify TOTP",
-  );
+/** Confirms password-only sessions have password-only AAL1 and no enrolled factors. */
+async function passwordOnly(user) {
+  await assertPasswordOnly(user.client);
 }
 /** Send requests with the current actor's actual native access token. */
 async function request(actor, path, body) {
@@ -150,9 +122,9 @@ try {
     403,
     "Unverified administrator cannot delete",
   );
-  await mfa(admin);
-  await mfa(peer);
-  await mfa(teacher);
+  await passwordOnly(admin);
+  await passwordOnly(peer);
+  await passwordOnly(teacher);
   await checked(
     unused.client.rpc("save_profile_details", {
       p_payload: {
@@ -406,13 +378,13 @@ try {
   );
   users.splice(users.indexOf(unused.id), 1);
   console.log(
-    "PASS Native account hard deletion, actual profile/Auth absence, old-token denial and MFA/self/peer protections",
+    "PASS Native account hard deletion, actual profile/Auth absence, old-token denial and self/peer protections",
   );
 
   // Native company authority must reach the same worker through the caller's
   // real JWT, never through an administrative role or a submitted owner ID.
   const company = await actor("client");
-  await mfa(company);
+  await passwordOnly(company);
   const ownOrganisation = randomUUID(),
     foreignOrganisation = randomUUID();
   const template = randomUUID(),

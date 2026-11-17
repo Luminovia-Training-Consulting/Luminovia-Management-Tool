@@ -44,7 +44,7 @@ test("absent private state is null; exact JSON survives creation and atomic repl
   assert.deepEqual(readPrivateJson(file), state);
   assert.equal(first.mode & 0o7777, 0o600);
   assert.equal(first.uid, process.getuid());
-  const updated = { ...state, factorId: "replacement-factor" };
+  const updated = { ...state, credentialId: "replacement-credential" };
   writePrivateJson(file, updated);
   assert.deepEqual(readPrivateJson(file), updated);
   assert.notEqual(statSync(file).ino, first.ino);
@@ -53,7 +53,7 @@ test("absent private state is null; exact JSON survives creation and atomic repl
 
 test("malformed JSON and invalid UTF-8 fail without exposing private contents", (t) => {
   const { file } = fixture(t);
-  const privateText = "FICTIONAL_MFA_SECRET_MUST_NOT_APPEAR";
+  const privateText = "FICTIONAL_PRIVATE_CREDENTIAL_MUST_NOT_APPEAR";
   for (const bytes of [
     Buffer.from(`{"secret":"${privateText}`),
     Buffer.from([0xff, 0xfe]),

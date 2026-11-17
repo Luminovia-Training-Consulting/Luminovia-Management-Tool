@@ -12,7 +12,7 @@ export type TourState = {
 export const initialTour: TourState = { status: "idle", step: "home" };
 
 // These are navigation hints only. Every destination retains its normal server
-// permissions, MFA requirements and own authoritative mutation confirmation.
+// permissions and own authoritative mutation confirmation.
 export function permittedTourModules(
   roles: readonly string[],
   permissions: readonly string[],

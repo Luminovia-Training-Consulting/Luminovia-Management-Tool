@@ -76,7 +76,7 @@ await withTestDatabase("job_discovery", async ({ sql, actor }) => {
     },
   );
   await check(
-    "Actor scope, direct-ID access and aggregates preserve current role/MFA and hidden gross boundaries",
+    "Actor scope, direct-ID access and aggregates preserve current role/permission and hidden gross boundaries",
     async () => {
       for (const who of [client, learner])
         await assert.rejects(rpc(who), /42501/);
@@ -87,7 +87,7 @@ await withTestDatabase("job_discovery", async ({ sql, actor }) => {
         "select id from public.jobs where title='Private draft'",
       );
       await assert.rejects(detail(teacher, hidden), /42501/);
-      assert.equal((await detail(manager, hidden, "aal2")).status, "draft");
+      assert.equal((await detail(manager, hidden, "aal1")).status, "draft");
       await assert.rejects(detail(manager, hidden), /42501/);
       const page = await rpc(teacher, {}, null, 2);
       assert.ok(
@@ -240,7 +240,7 @@ await withTestDatabase("job_discovery", async ({ sql, actor }) => {
       );
       await assert.rejects(save(peer, "Forged foreign view", 1), /42501/);
       await assert.rejects(
-        actor(manager, `select public.remove_job_view('${id}',1)`, "aal2"),
+        actor(manager, `select public.remove_job_view('${id}',1)`, "aal1"),
         /42501/,
       );
       const writes = await Promise.allSettled([
@@ -386,7 +386,7 @@ await withTestDatabase("job_discovery", async ({ sql, actor }) => {
         await actor(
           manager,
           `select public.set_account_roles('${subject}',array['lecturer'])`,
-          "aal2",
+          "aal1",
         );
         const id = randomUUID(),
           label = `job_view_revocation_${operation}`;
@@ -401,7 +401,7 @@ await withTestDatabase("job_discovery", async ({ sql, actor }) => {
           actor(
             manager,
             `select set_config('application_name','${label}',true);select public.set_account_roles('${subject}',array['participant']);select pg_sleep(3)`,
-            "aal2",
+            "aal1",
           ),
         ]);
         await waitUntil(
@@ -460,7 +460,7 @@ await withTestDatabase("job_discovery", async ({ sql, actor }) => {
       await actor(
         manager,
         `select public.set_account_roles('${subject}',array['lecturer'])`,
-        "aal2",
+        "aal1",
       );
     },
   );
