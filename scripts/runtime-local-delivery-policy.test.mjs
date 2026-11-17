@@ -125,7 +125,10 @@ test("PR checks are bounded while main/manual retains complete acceptance", () =
     application.run,
     /node scripts\/runtime-test\.mjs --phase system/,
   );
-  assert.match(application.run, /else\s+\.\/portal test\s+fi/);
+  assert.match(
+    application.run,
+    /else\s+node scripts\/runtime-test\.mjs --phase all --external-gates quality,coverage\s+fi/,
+  );
   const browserJob = ci.jobs["verify-browser"];
   assert.equal(browserJob.needs, "scope");
   assert.equal(
