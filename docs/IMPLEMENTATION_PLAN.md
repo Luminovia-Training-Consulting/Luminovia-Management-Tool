@@ -1,5 +1,13 @@
 # Persistent implementation plan
 
+## Automatic verified CMS development releases — 17 November 2026
+
+- [x] Prepare exact-current-main automatic publisher after both full Portal checks and Security analysis push runs pass; preserve manual publication and share per-SHA publication lock.
+- [x] Preserve server-side immutable artifact, migration, backup, health and rollback controls; document that operator review may still block an update.
+- [x] Execute 28 policy/preview/documentation tests and relevant formatting/lint checks; verify read-only GitHub workflow query syntax.
+- [ ] Complete exact-head CI and observe a real automatic workflow publication and the existing KVM1 updater outcome; investigate any refusal without bypassing controls.
+
+
 PR43 correction: retain the full 50-way simultaneous HTTP capacity race; the preceding ten-in-flight experiment is superseded because the native PostgreSQL crash cause is not yet established. The existing complete cleanup and current-head native CI remain required.
 
 ## Browser test runtime — 17 November 2026
