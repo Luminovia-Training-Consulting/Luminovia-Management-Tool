@@ -22,6 +22,8 @@
 - [x] Serialize every historical migration replay path, including standalone and upgrade fixtures, with a PostgreSQL advisory lock after parallel tests exposed concurrent updates to the shared authenticator role.
 - [ ] Complete full isolated acceptance after correcting the replay race, permission wording, nested cascade helper and retired-participant API assertion. Fast gates and dozens of extended PostgreSQL groups pass, but a complete exact-head system/browser and self-host pass remains pending. Do not report the full gate passed until it completes.
 - [x] Push test and documentation fixes directly to `main`, without a PR. Current-head Portal checks and retained-data self-host candidate are running; no production deployment is in scope.
+- [x] Correct the commission API fixture for the current individual-pricing model: explicitly configure the fictional regular and senior lecturer rates through `save_lecturer_compensation` before creating offers, instead of relying on retired role-wide net defaults.
+- [ ] Re-run full current-head Portal checks and retained-data self-host acceptance after the commission fixture correction; the `b3055150` run passed migration replay and 18 actual API suites, then stopped at the stale 31% assertion (`50.01` was the expected product default quote for a 100.01 offer).
 
 ## Current delivered-feature API parity — 18 November 2026
 

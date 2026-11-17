@@ -192,6 +192,28 @@ try {
   await passwordOnly(admin);
   await passwordOnly(owner);
   await passwordOnly(management);
+  await checked(
+    admin.client.rpc("save_lecturer_compensation", {
+      p_user_id: lecturer.id,
+      p_mode: "percent",
+      p_percent: 31,
+      p_daily_rate: 200,
+      p_currency: "EUR",
+      p_expected_version: 1,
+    }),
+    "Set fictional regular lecturer quote",
+  );
+  await checked(
+    admin.client.rpc("save_lecturer_compensation", {
+      p_user_id: senior.id,
+      p_mode: "percent",
+      p_percent: 73,
+      p_daily_rate: 200,
+      p_currency: "EUR",
+      p_expected_version: 1,
+    }),
+    "Set fictional senior lecturer quote",
+  );
   for (const who of [management, lecturer, senior])
     assert.ok(
       (await who.client.rpc("commission_report")).error,
