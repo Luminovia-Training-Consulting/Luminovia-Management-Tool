@@ -1325,3 +1325,6 @@ The migration-order regression now accepts later independent migrations while pr
 
 - [x] Update suspended-account `chat_rooms_list` acceptance to require the server-side 42501 operational-access denial found by exact-head selfhost CI.
 - [ ] Re-run full isolated verification and current-head CI after the suspended-chat correction.
+
+- [x] Align comments moderation API acceptance with the installed `jobs.manage` authorization contract after MFA/AAL gates were removed.
+- [ ] Complete exact-head full verification after the moderation fixture update.

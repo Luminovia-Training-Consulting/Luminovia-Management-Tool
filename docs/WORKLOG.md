@@ -2579,3 +2579,5 @@ The direct-main audit corrected stale database acceptance fixtures to match the 
 Validation status: prior targeted suites and fast source gates passed as recorded below; rerun the full isolated suite and current-head GitHub CI after this final fixture correction. No production deployment or data changes were made.
 
 Exact-head CI follow-up: the selfhost API run found a suspended-account chat assertion that still expected an empty list. The server correctly denies the now non-operational account with SQLSTATE 42501; the acceptance test now asserts that authoritative denial. Full CI is rerunning on the new main head.
+
+Exact-head CI follow-up: the comments API check still expected a password-only administrator to be denied moderation for retired MFA/AAL reasons. The installed moderation policy uses current `jobs.manage` permission, so the stale denial and redundant later MFA step were replaced by one successful authorized moderation assertion; author visibility, revision conflict, withdrawal and audit checks remain.

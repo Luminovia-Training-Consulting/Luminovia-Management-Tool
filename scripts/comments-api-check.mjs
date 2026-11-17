@@ -124,18 +124,6 @@ await withApiFixture(async ({ service, actor, passwordOnly, sql, defer, checked 
   ]);
   assert.equal(edits.filter((row) => row.error === null).length, 1);
   assert.equal(edits.filter((row) => row.error?.code === "40001").length, 1);
-  assert.equal(
-    (
-      await admin.client.rpc("moderate_resource_comment", {
-        p_comment_id: id,
-        p_hidden: true,
-        p_reason: "Review",
-        p_version: 2,
-      })
-    ).error?.code,
-    "42501",
-  );
-  await passwordOnly(admin.client);
   await checked(
     admin.client.rpc("moderate_resource_comment", {
       p_comment_id: id,
@@ -143,6 +131,7 @@ await withApiFixture(async ({ service, actor, passwordOnly, sql, defer, checked 
       p_reason: "Fictional moderation reason",
       p_version: 2,
     }),
+    "Authorized administrator moderates with current jobs.manage permission",
   );
   assert.deepEqual(await read(), []);
   const own = await checked(
