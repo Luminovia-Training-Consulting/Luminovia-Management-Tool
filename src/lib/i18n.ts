@@ -497,6 +497,10 @@ const pairs: Record<string, [string, string]> = {
   copyright: ["Training & Consulting", "Training & Consulting"],
   collapse: ["Navigation einklappen", "Collapse navigation"],
   expand: ["Navigation ausklappen", "Expand navigation"],
+  uiPreferenceNotSaved: [
+    "Oberflächeneinstellung nicht im Konto gespeichert.",
+    "Interface setting was not saved to your account.",
+  ],
 };
 // Static UI resources use the namespace's shared interpolation and pluralization contract.
 // Authored content is separate from these i18next interface strings.

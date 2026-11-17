@@ -161,6 +161,7 @@ The same account JWT can call the listed public RPCs, the account facade, and RL
 | Wiki and forum | \`wiki_pages_list\`, \`wiki_page\`, \`wiki_course_templates\`, \`forum_threads_list\` | \`save_wiki_page\`, \`manage_wiki_course_template\`, \`save_knowledge_category\`, \`moderate_forum_thread\` |
 | Finance | \`finance_earnings\`, \`invoice_records\`, \`invoice_payments\`, \`finance_statement\` | \`lecturer_compensation\`, \`save_lecturer_compensation\`, \`record_invoice_payment\`; no bank transfer or tax engine |
 | Notifications | \`notification_inbox\`, \`attention_preferences\`, \`announcements\` | \`save_notification_preferences\`, \`save_attention_preferences\`, \`manage_announcement\`; external delivery needs separately operated workers |
+| Personal UI | \`ui_preferences\` | \`save_ui_preferences\` changes own language, theme or sidebar state and updates the notification locale when language changes |
 | Administration | \`admin_audit_events\`, \`control_center\`, deletion facade | Current role, audit and deletion capabilities; brand/permission-matrix/retention configuration is still pending |
 
 ### Recent settings and action contracts
@@ -172,7 +173,20 @@ The same account JWT can call the listed public RPCs, the account facade, and RL
 - \`import_my_calendar(p_events)\` accepts an array of 1–500 reviewed appointments. Each object supplies UID, title, start/end instants and IANA time zone; optional description is bounded. It returns \`created\` and \`skipped\` counts. The server derives the owner from the JWT, ignores duplicate import identities and rolls back the entire batch on invalid input or confirmed-assignment overlap. Recurrence expansion and preview are client-side; no subscription is created.
 - \`POST /functions/v1/accounts/v1/users\` creates one account with email, display name, transient password, role and idempotency UUID; company accounts additionally need an organisation. Its \`201\`/\`200\` response confirms the current request, while \`409\` indicates unresolved/conflicting creation and \`502\` means creation was not confirmed. It sends no invitation. Refer to the machine-readable schema for exact fields and role values.
 
-The active theme and language switch are stored in this browser's local storage, not through an account settings API; \`profiles.locale\` is a separate stored profile field. Do not infer cross-device synchronisation from the presence of profile or preference RPCs.
+\`ui_preferences()\` returns \`{language:"de"|"en",theme:"system"|"light"|"dark",sidebar_collapsed:boolean,version:number}\` for the authenticated account. \`save_ui_preferences(p_patch)\` accepts a nonempty object containing any subset of \`language\`, \`theme\` and \`sidebar_collapsed\`; unknown keys, nulls and invalid values fail. The actor is derived from the access token. A language patch also updates \`profiles.locale\`, which is used by email/push workers. The browser retains a best-effort local choice before login and if an API request fails; a successful account read supplies the next signed-in session's choices. Concurrent writes to the same personal field use last committed write, while patches to different fields preserve each other.
+
+For the other implemented personal settings, read the matching getter first and use its returned \`version\` as \`p_expected_version\` where the save function requires one. Common JSON payload contracts:
+
+| Read / save RPC | Save request shape | Owning validation |
+| --- | --- | --- |
+| \`dashboard_preferences\` / \`save_dashboard_preferences\` | \`p_payload:{widget_order:["teaching_day","activity","contracts","files","followups"],hidden_widgets:[]},p_expected_version:number\`; order is a permutation of the five IDs | [dashboard schema](src/features/dashboard/personal-api.ts) |
+| \`notification_preferences\` / \`save_notification_preferences\` | \`p_payload:{chat:boolean,forum:boolean,job_updates:boolean,reminders:boolean},p_expected_version:number\` | [notification schema](src/features/notifications/api.ts) |
+| \`attention_preferences\` / \`save_attention_preferences\` | \`p_payload:{enabled:boolean,start_time:"HH:mm",end_time:"HH:mm",time_zone:"Europe/Berlin"},p_expected_version:number\`; times must differ | [attention schema](src/features/notifications/attention-api.ts) |
+| \`delivery_preferences\` / \`save_delivery_preferences\` | \`p_payload:{email_enabled:boolean,quiet_start:null|"HH:mm",quiet_end:null|"HH:mm",time_zone:"Europe/Berlin"},p_expected_version:number\`; quiet times are both null or both distinct valid times | [delivery schema](src/features/notifications/delivery-api.ts) |
+
+The listed zone is an IANA example, not a required location. Save responses return the current settings and version. A stale version is a conflict requiring reload; supplied JSON still undergoes server-side validation. The source schemas and owning SQL define further constraints.
+
+The live help tour is intentionally tab-session state; the separate \`get_welcome_progress\`/\`save_welcome_progress\` API stores the durable account welcome checklist. Offline calendar snapshots and browser push permission/device state depend on the local device; authorized calendar data and push subscriptions are available through their respective APIs. ICS file parsing, recurrence preview and CSV/ICS byte generation are client-side transforms of authorized API data; external clients may submit the normalized \`import_my_calendar\` array and consume \`export_my_calendar\`/finance projections. These client transforms do not grant extra data access.
 
 ## Replayed authenticated REST relations
 

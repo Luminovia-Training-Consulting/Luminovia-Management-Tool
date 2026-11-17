@@ -30,6 +30,7 @@ import {
   userRolesQuery,
 } from "../../lib/queries";
 import { Preferences } from "../../components/preferences";
+import { saveUiPreferences } from "../../lib/ui-preferences-api";
 import { WelcomeGuideEntry } from "../onboarding/welcome";
 import { requireOnline, useOnline } from "../../lib/online";
 import {
@@ -267,7 +268,7 @@ export function SettingsPage() {
         <PageHeading title={t("settings")} />
         <section className="panel settings-section">
           <h2>{de ? "Darstellung & Sprache" : "Appearance & language"}</h2>
-          <Preferences />
+          <Preferences onSave={saveUiPreferences} />
         </section>
         <section className="panel settings-section">
           <h2>{de ? "Mein Konto" : "My account"}</h2>
@@ -283,7 +284,7 @@ export function SettingsPage() {
       <PageHeading title={t("settings")} description={t("settingsHelp")} />
       <section className="panel settings-section">
         <h2>{de ? "Darstellung & Sprache" : "Appearance & language"}</h2>
-        <Preferences />
+        <Preferences onSave={saveUiPreferences} />
       </section>
       <section className="panel settings-section">
         <h2>{de ? "Mein Konto" : "My account"}</h2>

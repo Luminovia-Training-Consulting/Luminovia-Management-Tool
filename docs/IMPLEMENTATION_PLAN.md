@@ -1,5 +1,12 @@
 # Persistent implementation plan
 
+## Current delivered-feature API parity — 18 November 2026
+
+- [x] Compare implemented frontend RPCs and direct Data API relations with the latest replayed inventory; no missing business endpoint or grant was found.
+- [x] Add own-account `ui_preferences` and `save_ui_preferences` for language, theme and sidebar state, including own-scope validation, guest access and locale alignment for notification workers. Keep pre-login browser choices usable.
+- [x] Document browser/session transforms (live tour, ICS preview, export bytes and offline/device-bound state) and their underlying authorized API operations without presenting them as server state.
+- [ ] Complete the separately planned, not-yet-implemented product features and hosted acceptance. The delivered-feature parity audit does not prove full target-spec completion.
+
 ## Current Markdown and API contract reconciliation — 18 November 2026
 
 - [x] Inventory all 28 tracked Markdown files; check the 24 maintained project files against current routes, Auth policy, compensation source, release workflow, API implementation and current migrations. Preserve the four pinned upstream Supabase documents and clearly dated historical evidence as provenance.

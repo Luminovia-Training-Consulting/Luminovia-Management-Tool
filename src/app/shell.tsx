@@ -56,6 +56,11 @@ import { PortalTour } from "../features/help/tour";
 import { OfflineSchedule } from "../features/calendar/offline";
 import { clearOfflineSchedule } from "../features/calendar/offline-store";
 import { useOnline } from "../lib/online";
+import {
+  loadUiPreferences,
+  saveUiPreferences,
+} from "../lib/ui-preferences-api";
+import { uiLocalChangeEvent } from "../lib/preferences";
 export { Preferences } from "../components/preferences";
 /**
  * Render private navigation and the actor-scoped tour; confirm sign-out before clearing private
@@ -66,7 +71,7 @@ export { Preferences } from "../components/preferences";
  * Router, Supabase-backed capability filtering and Luminovia's existing palette remain authoritative.
  */
 export function Shell() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { session } = useAuth();
   const actor = session!.user.id;
   const navigate = useNavigate();
@@ -101,6 +106,29 @@ export function Shell() {
       return true;
     }
   });
+  const [uiSaveFailed, setUiSaveFailed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    let changedLocally = false;
+    const changed = () => {
+      changedLocally = true;
+    };
+    window.addEventListener(uiLocalChangeEvent, changed);
+    void loadUiPreferences()
+      .then((saved) => {
+        if (!alive || changedLocally) return;
+        void i18n.changeLanguage(saved.language);
+        window.dispatchEvent(
+          new CustomEvent("luminovia-theme-changed", { detail: saved.theme }),
+        );
+        setCollapsed(saved.sidebar_collapsed);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+      window.removeEventListener(uiLocalChangeEvent, changed);
+    };
+  }, [actor, i18n]);
   const [search, setSearch] = useState("");
   const previousActor = useRef(actor);
   useEffect(() => {
@@ -124,6 +152,7 @@ export function Shell() {
   );
   const online = useOnline();
   function toggleSidebar() {
+    window.dispatchEvent(new Event(uiLocalChangeEvent));
     setCollapsed((current) => {
       const next = !current;
       try {
@@ -131,6 +160,10 @@ export function Shell() {
       } catch {
         // Keep the current shell usable when browser storage is unavailable.
       }
+      setUiSaveFailed(false);
+      void saveUiPreferences({ sidebar_collapsed: next }).catch(() =>
+        setUiSaveFailed(true),
+      );
       return next;
     });
   }
@@ -367,7 +400,7 @@ export function Shell() {
             {profile.data?.active && !minimalOffline && !guestOnly && (
               <NotificationsMenu id={actor} zone={profile.data.time_zone} />
             )}
-            <Preferences />
+            <Preferences onSave={saveUiPreferences} />
             <details className="account-menu" ref={accountMenu}>
               <summary aria-label={t("profile")} title={t("profile")}>
                 {guestOnly ? (
@@ -459,6 +492,9 @@ export function Shell() {
         </header>
         <main id="main" className="main-content" tabIndex={-1}>
           {signoutFailed && <Notice kind="error">{t("error")}</Notice>}
+          {uiSaveFailed && (
+            <Notice kind="error">{t("uiPreferenceNotSaved")}</Notice>
+          )}
           {profileDenied ? (
             <Notice kind="error">{t("profileMissing")}</Notice>
           ) : minimalOffline ? (

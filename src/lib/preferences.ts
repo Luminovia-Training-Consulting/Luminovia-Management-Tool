@@ -4,6 +4,7 @@
  */
 /** Non-sensitive UI preferences only, never Auth or business-data storage. */
 type Preference = "language" | "theme";
+export const uiLocalChangeEvent = "luminovia-ui-local-change";
 
 /**
  * Read a visual preference best-effort; denied/full storage returns null without blocking boot,

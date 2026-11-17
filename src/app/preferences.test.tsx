@@ -4,6 +4,7 @@
  */
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { waitFor } from "@testing-library/react";
 import { Preferences } from "./shell";
 import "../lib/i18n";
 
@@ -65,4 +66,21 @@ it("synchronizes header and settings theme controls without duplicate label targ
   fireEvent.change(themes[1], { target: { value: "dark" } });
   expect(themes[0]).toHaveValue("dark");
   expect(document.documentElement.dataset.theme).toBe("dark");
+});
+
+it("sends signed-in visual changes to the own-account API", async () => {
+  systemDark();
+  const saveUiPreferences = vi.fn().mockResolvedValue({
+    language: "de",
+    theme: "light",
+    sidebar_collapsed: false,
+    version: 1,
+  });
+  render(<Preferences onSave={saveUiPreferences} />);
+  fireEvent.change(screen.getByLabelText("Farbschema"), {
+    target: { value: "light" },
+  });
+  await waitFor(() =>
+    expect(saveUiPreferences).toHaveBeenCalledWith({ theme: "light" }),
+  );
 });
