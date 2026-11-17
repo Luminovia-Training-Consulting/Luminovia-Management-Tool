@@ -202,7 +202,7 @@ await withTestDatabase("operations_authority", async (fixture) => {
           gate: "replacement:" + successor + replacementRequest,
           revoke:
             change === "role"
-              ? roles(successor, "participant")
+              ? roles(successor, "guest")
               : status(successor, false),
           operation: () =>
             json(
@@ -246,7 +246,7 @@ await withTestDatabase("operations_authority", async (fixture) => {
         who: manager,
         request,
         gate: "course-readiness:" + run,
-        revoke: roles(manager, "participant"),
+        revoke: roles(manager, "guest"),
         operation: () =>
           call(
             manager,
@@ -284,7 +284,7 @@ await withTestDatabase("operations_authority", async (fixture) => {
         who: manager,
         request,
         gate: "support:" + manager,
-        revoke: roles(manager, "participant"),
+        revoke: roles(manager, "guest"),
         operation: () =>
           call(
             manager,
