@@ -63,6 +63,13 @@ The public fictional demo and practical help live in `src/features/demo/` and
 Demo actions remain in memory and must not import Supabase or change actual accounts.
 The authenticated tour may navigate only after explicit user choice; it grants no rights.
 
+Authenticated welcome and actor-owned server-persisted setup progress live in
+`src/features/onboarding/`. The customer-neutral course catalogue uses
+`src/features/operations/building-blocks-api.ts`,
+`src/features/operations/building-blocks.tsx` and `data/course-building-blocks.json`.
+[COURSE_BUILDING_BLOCKS](docs/COURSE_BUILDING_BLOCKS.md) explains its provenance,
+source versions and preservation contract.
+
 ## Rules the code already follows
 
 - Keep public documentation, filenames, source explanations, UI examples and screenshots customer-neutral. Never name actual customers or publish their records. Use fictional organisations in tests; actual customer names and account memberships are private application configuration.
@@ -189,21 +196,33 @@ physical PWA installation, mail delivery or production readiness.
 
 ## Git, parallel agents and delivery
 
-- Normally use a separate `codex/` branch/worktree. If Carina explicitly requests
-  `main`, follow that task-specific instruction. Never switch branches in a working
-  directory concurrently used by another agent. Use separate worktrees and explicit
-  working directories.
+- Use a separate `codex/` branch/worktree. Deliver changes to `main` through the
+  pull-request workflow below unless Carina explicitly instructs otherwise. Never switch branches in a working directory
+  concurrently used by another agent. Use separate worktrees and explicit working
+  directories.
 - Delegate bounded independent paths; one agent integrates the results. Do not stop
   foreign processes, reset files or stage unrelated changes. Recheck branch, diff
   and remote before committing and pushing.
-- For every requested change, create signed commits, push the branch and prepare a
-  pull request. Carina authorises merging promptly once all required CI checks on
-  the current revision succeed; do not request the same approval again. Respect
-  explicit instructions to hold a merge or leave a particular PR unmerged.
 - Sign commits. Describe the change and purpose plainly; preserve published tags
   and release/maintenance gates. [PULL_REQUEST_GUIDE](docs/PULL_REQUEST_GUIDE.md)
   explains labels and PR content; [GITHUB_WORKFLOW](docs/GITHUB_WORKFLOW.md) records
   actual server-side rules. A prepared ruleset is not necessarily active.
+- **Every requested repository change must be committed, pushed and delivered
+  through a fully prepared pull request targeting `main`.** Include the relevant
+  description, current catalogue labels and actual validation results. Do not stop
+  at a local commit, pushed branch or open PR.
+- Follow all required CI checks for the latest PR revision through completion.
+  Fix failures, update and retest as needed. Earlier-head results and checks still
+  running do not establish acceptance of the current revision.
+- **Once the required CI is green and repository review/protection requirements
+  permit merging, merge promptly without asking Carina for another confirmation.**
+  This is standing authorisation for delivery of the requested repository change.
+  Preserve the existing checks, signature requirements and protection rules.
+- Respect explicit instructions to hold a merge or leave a particular PR unmerged,
+  including active user-authorised merge coordination. If coordination temporarily
+  pauses merges, keep the prepared PR ready and resume delivery when the pause ends.
+  Report the actual merge commit and check results, or the concrete external
+  blocker if delivery cannot be completed.
 - Check dependencies and compatible peer families together. Do not add blanket
   `audit fix --force` or version upgrades to an unrelated task.
 - Merging or pushing `main` does not publish a CMS release. An authorised manual

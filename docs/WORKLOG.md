@@ -1,8 +1,8 @@
 # Luminovia Portal — development work log
 
-## 17 November 2026 — participant chat provenance on withdrawal
+## 17 November 2026 — post-upload discovery race
 
-A private membership-origin ledger now distinguishes explicit room membership from assignment-derived access. Unknown legacy memberships require a current room manager's explicit decision before an otherwise unprotected withdrawal; existing independent access, other assignments and enrolments are retained. Handover, withdrawal and later enrolment removal re-evaluate access atomically. Room management offers an explicit decision and DE/EN withdrawal errors explain the block. The change requires both withdrawal and origin migrations in the reviewed sequence; no hosted database was changed. SQL-only isolated checks do not establish native Auth, hosted operation or browser acceptance. An isolated no-network PostgreSQL 17 container replayed the migrations: 33 withdrawal SQL groups passed, including real overlapping claim/enrolment and claim/member-removal waits, and the two directed/marketplace handover races passed with recipient access revoked after its later cancellation. Focused withdrawal and chat component tests and TypeScript/ESLint were run locally; independent review and exact-head CI remain pending.
+An initial document discovery request may still be pending when a successful upload commits. Invalidation alone can reuse that pre-commit request, blocking completion and omitting the new file. Upload success now cancels document list, exact-document and version-history queries before invalidating them, matching the broader safeguard in PR35. A controlled component regression failed without the fix and passed with it; the three original version/upload component tests and TypeScript passed locally; the regression also covers the three query prefixes. This race is a plausible contributor to the mobile CI file failures, but their precise cause is not established; the full browser and native gates must run again on the integrated revision.
 
 ## 17 November 2026 — PR31 reconciled with accepted documentation main
 
