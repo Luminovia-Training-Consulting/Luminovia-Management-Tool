@@ -1,5 +1,11 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — PR 35 CI fixture timing corrections
+
+The latest PR 35 CI exposed two independent timing races: the process cancellation fixture observed its marker before the JSON write completed, and the announcement SQL test's two-minute quiet window expired during slow execution. The marker is now published by atomic rename after writing; the quiet window excludes only a minute approximately twelve hours away. Both retain their original behavioral assertions.
+
+Actual checks: `node --test scripts/runtime-command.test.mjs` passed 4/4. `PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-pr35-fixture node scripts/announcements-db-tests.mjs` passed all 16 groups in a newly created no-network/no-published-port PostgreSQL container, subsequently stopped and removed. Full exact-head GitHub checks and integration with newer main remain pending; these focused results do not certify the entire PR.
+
 ## 17 November 2026 — PR35 integration after PR31
 
 Merged accepted PR31/main `85b02b8` into the deletion branch, retaining both ledgers and feature documentation. The three unpublished deletion migrations were recreated with the Supabase CLI after the 70 accepted migrations; accepted SQL files remain unchanged. The reviewed job-deletion scope now counts and hashes owned job briefing and request records. A separate account request cleanup is actor-scoped; shared briefing attribution remains protected. The operator sees bilingual impact labels.

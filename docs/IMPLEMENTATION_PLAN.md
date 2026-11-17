@@ -1,5 +1,7 @@
 # Persistent implementation plan
 
+PR 35 follow-up: cancellation-marker publication and the announcement quiet-window fixture have focused passing local checks; rerun the complete required CI on the integrated head and address remaining failures before merge. The full product scope below remains unchanged.
+
 ## PR35 integration after PR31 — 17 November 2026
 
 - [x] Preserve the 70 accepted migration sources and replay the three unpublished deletion migrations after the accepted job briefing migration.
