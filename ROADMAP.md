@@ -4,6 +4,13 @@ The [product specification](PRODUCT.md#section-product-spec), verbatim [original
 
 ## Source coverage and remaining requirements
 
+### Current preview and release continuation
+
+- [x] Prepare an owned local preview administrator and interruption-safe bootstrap; keep existing passwords and MFA.
+- [x] Prepare automatic CMS development publication gated by exact-main application and security checks; retain server migration, backup and recovery guards.
+- [ ] Complete full current-head local and CI acceptance, verify an actual preview browser login, and observe the real automatic publication and KVM1 updater outcome.
+
+
 | Area                         | Present source                                                                                                                                                 | Remaining scope or acceptance                                                                                                           |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | A — Dashboard and navigation | Permission-aware shell/search, personal card layouts, Teaching Day, previews and operational follow-ups                                                        | Broader domain diagnostics, complete manual accessibility and realistic-scale usability                                                 |
