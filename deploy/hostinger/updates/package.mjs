@@ -6,12 +6,14 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
-  chmodSync,
   closeSync,
   constants,
   existsSync,
+  fchmodSync,
   lstatSync,
   fstatSync,
+  fsyncSync,
+  linkSync,
   mkdirSync,
   mkdtempSync,
   openSync,
@@ -22,7 +24,6 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isBuiltin } from "node:module";
@@ -290,6 +291,21 @@ function workerArtifacts(sourceRoot, tracked) {
 
 // Compute a stable SHA-256 digest for the source/artifact comparison.
 const hash = (data) => createHash("sha256").update(data).digest("hex");
+
+/** Hash the owned archive descriptor from byte zero. The tar child shares its
+ * current offset, so a path reopen or a current-offset read would be incorrect.
+ */
+function archiveDigest(descriptor) {
+  const digest = createHash("sha256");
+  const buffer = Buffer.alloc(64 * 1024);
+  let position = 0;
+  for (;;) {
+    const count = readSync(descriptor, buffer, 0, buffer.length, position);
+    if (!count) return digest.digest("hex");
+    digest.update(buffer.subarray(0, count));
+    position += count;
+  }
+}
 
 // Limit archive paths to the fixed app allowlist; reject traversal and private checkout paths.
 function safePath(name) {
@@ -661,13 +677,57 @@ export function createRelease(options) {
   mkdirSync(output, { recursive: true, mode: 0o700 });
   const archivePath = join(output, "cms-release.tar.gz");
   const manifestPath = join(output, "cms-release.json");
-  if (existsSync(archivePath) || existsSync(manifestPath))
-    throw new Error("Refusing to overwrite an existing release artifact.");
-  const stage = mkdtempSync(join(tmpdir(), "luminovia-release-"));
+  if (
+    process.platform !== "linux" ||
+    !Number.isInteger(constants.O_DIRECTORY) ||
+    !Number.isInteger(constants.O_NOFOLLOW)
+  )
+    throw new Error("Secure release output requires Linux descriptor flags.");
+  // Bind publication to this directory without following a supplied leaf link.
+  // Existing safe directories (including unrelated files) remain supported;
+  // never silently chmod a caller's existing directory into a different policy.
+  const outputDescriptor = openSync(
+    output,
+    constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
+  );
+  let stage;
+  let stageEntry;
+  let stageDescriptor;
+  let archiveDescriptor;
   const files = [];
   let total = 0;
   let configuredBundle = false;
   try {
+    const directory = fstatSync(outputDescriptor);
+    if (
+      !directory.isDirectory() ||
+      directory.uid !== process.getuid() ||
+      directory.mode & 0o022
+    )
+      throw new Error(
+        "Release output must be an owned directory without shared write access.",
+      );
+    const target = `/proc/self/fd/${outputDescriptor}`;
+    // Preserve the early refusal for existing artifacts. This is only a
+    // convenience check: exclusive publication remains authoritative if another
+    // writer creates either name while this attempt is generating its package.
+    if (
+      existsSync(join(target, "cms-release.tar.gz")) ||
+      existsSync(join(target, "cms-release.json"))
+    )
+      throw new Error("Refusing to overwrite an existing release artifact.");
+    // A private attempt lives on the output filesystem so exclusive hard-link
+    // publication is possible. Neither tar nor failure cleanup uses final names.
+    stageEntry = mkdtempSync(join(target, ".luminovia-release-"));
+    stageDescriptor = openSync(
+      stageEntry,
+      constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
+    );
+    // The child reads through the still-running parent's pinned directory FD;
+    // its own close-on-exec descriptor table cannot reinterpret this path.
+    stage = `/proc/${process.pid}/fd/${stageDescriptor}`;
+    const stagedArchive = join(stage, "cms-release.tar.gz");
+    const stagedManifest = join(stage, "cms-release.json");
     for (const file of WORKER_FILES) {
       plainFile(join(sourceRoot, file), sourceRoot);
       collected.set(file, join(sourceRoot, file));
@@ -745,6 +805,15 @@ export function createRelease(options) {
     writeFileSync(list, files.map((file) => file.path).join("\0") + "\0", {
       mode: 0o600,
     });
+    archiveDescriptor = openSync(
+      stagedArchive,
+      constants.O_RDWR |
+        constants.O_CREAT |
+        constants.O_EXCL |
+        constants.O_NOFOLLOW,
+      0o600,
+    );
+    fchmodSync(archiveDescriptor, 0o600);
     execFileSync(
       "tar",
       [
@@ -755,38 +824,64 @@ export function createRelease(options) {
         "--group=0",
         "--numeric-owner",
         "-czf",
-        archivePath,
+        "-",
         "--null",
         "--verbatim-files-from",
         "--files-from",
         list,
       ],
-      { cwd: stage, stdio: ["ignore", "pipe", "pipe"] },
+      {
+        cwd: stage,
+        stdio: ["ignore", archiveDescriptor, "pipe"],
+      },
     );
-    chmodSync(archivePath, 0o600);
+    fsyncSync(archiveDescriptor);
     const manifest = {
       schemaVersion: 1,
       repository: REPOSITORY,
       branch: "main",
       commit,
-      archiveSha256: hash(readFileSync(archivePath)),
+      archiveSha256: archiveDigest(archiveDescriptor),
       siteEntry: "site/index.html",
       publicBuild: { apiUrl: API_URL, publishableKeySha256: hash(publicKey) },
       files,
       migrations,
       runtime,
     };
-    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n", {
+    closeSync(archiveDescriptor);
+    archiveDescriptor = undefined;
+    writeFileSync(stagedManifest, JSON.stringify(manifest, null, 2) + "\n", {
       flag: "wx",
       mode: 0o600,
     });
+    try {
+      linkSync(stagedArchive, join(target, "cms-release.tar.gz"));
+      linkSync(stagedManifest, join(target, "cms-release.json"));
+      fsyncSync(outputDescriptor);
+    } catch {
+      // Two fixed names cannot be published as an atomic pair. A late collision
+      // or I/O failure may leave an unpaired archive: fail and require operator
+      // inspection. Unlinking a final name could destroy another writer's leaf.
+      throw new Error(
+        "Release publication failed; refusing to overwrite existing artifacts. Inspect the output before retrying.",
+      );
+    }
     return { archivePath, manifestPath, manifest };
-  } catch (error) {
-    rmSync(archivePath, { force: true });
-    rmSync(manifestPath, { force: true });
-    throw error;
   } finally {
-    rmSync(stage, { recursive: true, force: true });
+    try {
+      if (archiveDescriptor !== undefined) closeSync(archiveDescriptor);
+    } finally {
+      try {
+        if (stageEntry !== undefined)
+          rmSync(stageEntry, { recursive: true, force: true });
+      } finally {
+        try {
+          if (stageDescriptor !== undefined) closeSync(stageDescriptor);
+        } finally {
+          closeSync(outputDescriptor);
+        }
+      }
+    }
   }
 }
 
@@ -836,7 +931,7 @@ if (
     );
   } catch {
     console.error(
-      "CMS release packaging failed; verify source, public build configuration and reviewed runtime provenance.",
+      "CMS release packaging failed; verify source, public build configuration and reviewed runtime provenance. Inspect output artifacts before retrying: failed publication may leave an unpaired artifact.",
     );
     process.exitCode = 1;
   }

@@ -5,9 +5,13 @@
 import { createHash } from "node:crypto";
 import {
   chmodSync,
+  closeSync,
+  constants,
   existsSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readFileSync,
   realpathSync,
   readdirSync,
@@ -47,12 +51,29 @@ function ownedDirectory(path) {
     throw new Error("Unowned or symlinked GitHub preview directory refused.");
   chmodSync(path, 0o700);
 }
-/** Reads only an owned regular file; symlinked or foreign state is rejected by the ownership checks. */
+/** Validates and reads the same opened inode, so a pathname replacement cannot substitute its bytes. */
 function regularFile(path) {
-  const info = lstatSync(path);
-  if (!info.isFile() || info.isSymbolicLink() || info.uid !== process.getuid())
-    throw new Error("Unowned or symlinked GitHub preview file refused.");
-  return readFileSync(path, "utf8");
+  let descriptor;
+  try {
+    // Refuse a leaf symlink and avoid blocking on a FIFO before fstat rejects it.
+    try {
+      descriptor = openSync(
+        path,
+        constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+      );
+    } catch (error) {
+      if (error.code !== "ELOOP" && error.code !== "ENXIO") throw error;
+      // Symlink/socket opens retain the bounded non-regular-file error below.
+    }
+    if (descriptor === undefined)
+      throw new Error("Unowned or symlinked GitHub preview file refused.");
+    const info = fstatSync(descriptor);
+    if (!info.isFile() || info.uid !== process.getuid())
+      throw new Error("Unowned or symlinked GitHub preview file refused.");
+    return readFileSync(descriptor, "utf8");
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
 }
 /** Decodes the checked private record while preserving a clear error boundary. */
 function jsonFile(path) {

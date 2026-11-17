@@ -2,6 +2,8 @@
 
 > Reviewed server snapshot on 16 November 2026 at 15:08:47 UTC (17 November in Australia/Brisbane): all three `main` rulesets are active. Every change requires a PR, including maintenance-App changes. Only `CarinaSchoppe` (`User:29256704`) has a personal PR-only review exception (`bypass_mode: pull_request`). No repository role, other user, bot or App has that exception. All fifteen required checks and the separate history/signature rules remain mandatory. Live server rules are authoritative and may later differ. [Live rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules).
 
+The review layer was reactivated after its 13:38 UTC update. An earlier 12:16 UTC disabled-layer observation is historical and does not establish a current policy blocker. No Root server-setting change is claimed; active protection alone does not prove default-branch controller execution or an App merge.
+
 Contributors should start with [CONTRIBUTING](../CONTRIBUTING.md), the [issue guide](ISSUE_GUIDE.md) and the [pull request guide](PULL_REQUEST_GUIDE.md). This page explains the administrative sources and the boundaries of rule exceptions. Public contribution guidance and new contribution discussions use English; the product interface remains German and English.
 
 Current publication policy: use `./portal check` for fast local feedback and
@@ -20,27 +22,67 @@ see [PR_PREVIEWS](PR_PREVIEWS.md). The existing VPS polling timer is unchanged.
 
 The JSON files under `.github/rulesets/` preserve the verified 16 November 2026 15:08:47 UTC server readback: all three rulesets active, no history/check bypass, and only `CarinaSchoppe` (`User:29256704`) with `bypass_mode: pull_request` in the review rule. The readback covered rulesets `27315671` (history), `27329000` (review) and `27329142` (checks) through the read-only GitHub Rules API. It matched the committed configuration; no server rule was changed. The review layer contains only its pull-request rule. Committing JSON does not activate protection; later [server-side rules](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/rules) remain authoritative. The reviewed layers are:
 
-| Rule                          | Source                                           | Enforcement and exceptions                                                                                                                                                  |
-| ----------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Branch Protection             | [history.json](../.github/rulesets/history.json) | Signatures, deletion/force-push restrictions and existing deployment/code-quality rules. No bypass actors.                                                                  |
-| Main pull requests and review | [review.json](../.github/rulesets/review.json)   | PR, one independent approval, latest-push approval and resolved conversations. Only CarinaSchoppe's immutable personal account (`User:29256704`) has `pull_request` bypass. |
-| Main verified checks          | [checks.json](../.github/rulesets/checks.json)   | All 15 required application/native, quality/coverage, metadata and security checks; strict up-to-date testing. No bypass actors.                                            |
+| Layer                    | Ruleset ID | Source                                           | Recorded exceptions                                                                        |
+| ------------------------ | ---------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| History and integrity    | `27315671` | [history.json](../.github/rulesets/history.json) | None: signatures, deletion/force-update restrictions and the existing history rules apply. |
+| Pull requests and review | `27329000` | [review.json](../.github/rulesets/review.json)   | Only `CarinaSchoppe` (`User:29256704`) through PRs. No role or App exception.              |
+| Required verification    | `27329142` | [checks.json](../.github/rulesets/checks.json)   | None: strict current-base checks apply to humans and Apps.                                 |
 
-When the reviewed review layer is active, its personal exception applies only when Carina's own account performs the PR merge. Its exact actor entry is `{"actor_id":29256704,"actor_type":"User","bypass_mode":"pull_request"}`. PR authorship, pusher identity, repository roles and Apps do not inherit that exception. All other accounts, including maintainers and administrators, must satisfy independent approval, latest-push approval and conversation resolution. Nobody, including Carina, may push directly to `main` or skip mandatory checks or signatures. No actor has a bypass in the separate history or required-check rules. Administrators retain permission to edit repository settings; the current rules govern normal push and merge operations.
+Under that recorded active policy, the sole personal review exception follows `CarinaSchoppe` (immutable user ID `29256704`) when performing a native PR merge, not the PR author. It grants no direct-main push, CI bypass or history/signature bypass. Maintain/Admin roles confer no review exception; all other acting accounts need independent current-head approval, latest-push approval and resolved review conversations. The maintenance App uses the ordinary reviewed native path and has no review or check exception.
 
-The `PR preview package` job follows quality, coverage, runtime/Edge and isolated SQL acceptance. The source-derived profile uses explicit documentation-only verification, two independent SQL workers for ordinary UI work, or full native/application acceptance for sensitive/unknown changes. Sensitive PRs run system/SQL/API and all desktop/mobile/PWA stages on separate freshly owned stacks; the preview gate requires both phase results to succeed. Main/manual/local complete acceptance retains its original single-stack sequence. Main/manual always uses full acceptance, with independent jobs in parallel; selector failure cannot skip the required gates. It is now also a required Actions check, so all 15 PR checks must finish successfully before a merge. The main-only release job and separate preview-metadata workflow are not substituted for these PR checks.
+## Required checks and native auto-merge
 
-The App's earlier `always` exceptions and the former Maintain/Admin review exceptions are historical; none is present in the current policy. The reviewed source contains exactly one personal PR-only review exception and empty check/history bypass lists; the temporary disabled drift and its subsequently verified restoration above are separate server-state observations. The GitHub Actions integration 15368 and CodeQL integration 57789 identify the required checks' producers, not bypass actors. CI and coverage details are in [CI_QUALITY](CI_QUALITY.md).
+The `PR preview package` job follows quality, coverage and the source-derived verification profile. Only verified Drafts may use documentation-only verification or two independent SQL workers for ordinary UI work. Ready/sensitive/unknown PRs require full system, browser and native acceptance. Main36 runs full-PR system/SQL/API and desktop/mobile/PWA phases on separate freshly owned stacks; the preview gate requires both phase results plus native verification. Main/manual/local complete acceptance retains its original single-stack application sequence alongside native verification. Selector failure cannot skip the required gates. All 15 existing server-required contexts remain mandatory; the additional `Isolated browser acceptance` job is enforced through the preview prerequisite. The main-only release job and separate preview-metadata workflow are not substituted for these PR checks.
+
+The source-derived profile preserves Draft-only fast routing and `ready_for_review` full runs. Independent shell preflights reject a reduced Ready/main/manual profile. The prepared controller binds actual successful system, browser and native jobs/steps to their selected current canonical CI run, source head, suite, check URL and attempt. A retained successful earlier attempt of that same run remains valid when it backs the selected current check. Neither a single phase nor green job names with skipped full steps establish complete acceptance. Step metadata is not command-body attestation; review must also inspect the maintained workflow and tests. Source-specific results belong in [QA evidence](QA_RESULTS.md) and the PR, rather than being reused for a new head/base.
+
+All **15** contexts are required. The first 14 below come from GitHub Actions integration `15368`; the generated findings result comes from integration `57789`.
+
+- Build
+- Typecheck
+- Lint
+- Formatting
+- Code quality
+- Tests and coverage
+- verify
+- Actual isolated selfhost image compatibility
+- PR metadata
+- PR preview package
+- CodeQL (javascript-typescript)
+- CodeQL (python)
+- CodeQL (actions)
+- Dependency review
+- CodeQL — generated findings result, integration `57789`
+
+A successful scan is not a zero-finding report, and a passing unit run is not application/native acceptance. A changed head or base requires applicable current evidence. Native auto-merge availability is enabled; queuing a PR grants no new exception. Do not disable or bypass checks to make a merge finish.
+
+Accepted Main38 `bcba6734` does not yet machine-enforce `merge:hold` in its default-branch metadata validator. Keep held work Draft with native auto-merge disabled; the label is a coordination marker until this proposed guard is delivered. Publishing a signed integration as Draft does not accept a later Ready revision: `ready_for_review` must start fresh full verification before the permitted merge slot.
+
+The prepared [native controller](AUTO_MERGE.md) requires independent review and native `clean` mergeability for every candidate, including human Maintain/Admin authors and automated authors. Carina's personal review exception is not inherited by the App, and the controller grants no user, role or actor exception. Actual push provenance comes from the exact CI check suite and source push; workflow actors, retry/reopen events and commit emails cannot supply review authority. Missing evidence grants no exemption, and inconsistent evidence blocks the candidate.
 
 <a id="activation-still-pending"></a>
 
-## Maintenance delivery and operational verification
+## Controller delivery still pending
 
-**Rule activation is complete.** This section tracks the separate operational delivery of PR-based maintenance, not a reason to disable protection.
+The legacy fragment above remains valid for older links. **Controller delivery remains pending; the review layer is active as recorded above.** This proposed quality integration preserves the accepted 69-file SQL history, parallel system/browser/native acceptance, protected PR-based daily maintenance and Main38's English/customer-neutral documentation structure. It still requires its own final exact-head/current-base CI, permitted merge and successful default-branch execution. Source files, repository auto-merge availability and a configured App token do not prove that the controller is running on accepted main.
+
+The existing App `5776881` (`luminovia-portal-maintenance`) remains scoped to this repository. Its existing protected `maintenance-signing` credentials are reused; no new App, permission scope, personal token or server credential is introduced. The standard Actions token reads REST and a fixed GraphQL operation. Only the separate App token may call the native PR merge endpoint or the two main-verification dispatch endpoints. It has no main-ref/force-write route and no native-rule bypass.
+
+The controller submits an expected head SHA to GitHub's native merge endpoint with `merge_method: merge`. GitHub may create a different commit from the synthetic test merge; there is no exact-test-merge-SHA or atomic-base claim. Native strict checks, reviews and signatures remain authoritative. Current main verification is reconciled separately after a confirmed merge and on recovery sweeps; this does not publish or deploy an application.
+
+The successful [read-only proof 43809731348](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43809731348) verified restricted-token access to all 15 check contexts, CodeQL records, the source push and current pusher permission. The probe used signed fictional commit `f7f0bee`; its owned temporary branch was removed. No App/main write occurred. This is metadata-access evidence only, not automatic-merge, controller, release or product acceptance. The final fixed query, including immutable Bot IDs and GraphQL-to-REST Bot login mapping, passed [read-only run 43814730991](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/actions/runs/43814730991) using signed fictional fixture `2d0abce`; its owned branch was removed. It performed no App, deployment or main write and adds no native-merge acceptance claim.
+
+Earlier standard-token/ref-promotion probes, role-based review exceptions and historical broad exemptions describe their recorded configurations. They grant no exception under the current rules. The separate maintenance/signature mechanisms must obey their current owning controls; an old signing probe is not review approval.
+
+References: [rulesets and exceptions](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository), [Rules API](https://docs.github.com/en/rest/repos/rules), [native PR merge endpoint](https://docs.github.com/en/rest/pulls/pulls#merge-a-pull-request), [controller evidence policy](AUTO_MERGE.md). [CI_QUALITY](CI_QUALITY.md) records historical check/coverage evidence; the dated source snapshot and later operating readback above distinguish intended policy from live enforcement.
+
+## Protected daily maintenance
+
+PR22/main `319ab69f` supplies the protected PR-based maintenance source. Branch-rule activation was complete in the recorded 06:42:36 UTC snapshot; the later operating readback above governs current enforcement. Successful App-token creation and actual maintenance workflow execution are separate operational evidence, not a reason to weaken protection. Under the intended active source policy, only `CarinaSchoppe` (`User:29256704`) has the personal PR-only review exception. Maintain/Admin roles and the maintenance App have none; all 15 strict checks and the history/signature rules remain mandatory.
 
 The maintenance workflow uses the private **Luminovia Portal Maintenance** App and the protected `maintenance-signing` environment. Its source requests repository-scoped `contents/actions/pull_requests: write` permissions and creates short-lived tokens; a workflow declaration does not prove that installation access or secrets are currently configured. The earlier authorised App setup is historical operational evidence. Check the actual installation, token creation and PR workflow result before relying on unattended maintenance. This documentation audit read branch rules only and did not inspect credentials, change App access or execute publication.
 
-The new publisher validates the tested dependency-only patch, creates or reuses its deterministic separate branch, verifies the signed commit and exact parent, and opens or reuses the matching PR. It applies `type:dependencies`, `area:devops` and `risk:high`, then requests native auto-merge. The App token starts normal PR CI without the extra workflow approval associated with a `GITHUB_TOKEN`-created PR. Native auto-merge still waits for independent review and every required check. If GitHub already reports the PR clean and ready, the publisher may use the regular PR merge endpoint with the exact expected head SHA; all native protections still apply. It cannot change `main` directly or substitute a pre-merge main workflow dispatch for PR checks.
+The new publisher validates the tested dependency-only patch, creates or reuses its deterministic separate branch, verifies the signed commit and exact parent, and opens or reuses the matching PR. It applies `type:dependencies`, `area:devops` and `risk:high`, then requests native auto-merge. The App token starts normal PR CI without the extra workflow approval associated with a `GITHUB_TOKEN`-created PR. Under the intended active policy, native auto-merge still waits for independent review and every required check. If GitHub already reports the PR clean and ready, the publisher may use the regular PR merge endpoint with the exact expected head SHA; all native protections still apply. It cannot change `main` directly or substitute a pre-merge main workflow dispatch for PR checks.
 
 While another open same-repository `codex/daily-maintenance-*` PR carries the maintenance marker, the publisher refuses to open a second update PR and reports `maintenance_existing_pr_requires_resolution`. It does not rewrite or close reviewed or human-edited PRs. If main has advanced and the existing PR is outdated, a maintainer closes it; the next daily scan retests and regenerates the candidate against actual current main. Strict up-to-date CI prevents an old-base merge.
 
@@ -64,7 +106,7 @@ After the bounded quality, coverage, runtime/Edge and PostgreSQL PR suite, PRs p
 
 ## Labels and metadata validation
 
-[labels.json](../.github/labels.json) contains 36 managed entries: eight types, 24 areas, three risk levels and `merge:hold`. It is the shared catalogue used by local and CI validation. The stop signal grants no permission and does not replace categories or checks; preserve it until its stated concern is addressed. The nine existing GitHub standard labels are preserved. Every PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. Other labels may be added; unknown values within these three categories are rejected. The [pull request guide](PULL_REQUEST_GUIDE.md#pull-request-labels) explains how to choose them.
+[labels.json](../.github/labels.json) contains 36 managed entries: eight types, 24 areas, three risk levels and `merge:hold`. It is the shared catalogue used by local and CI validation. The stop signal grants no permission and does not replace categories or checks; preserve it until its stated concern is addressed. The nine existing GitHub standard labels are preserved. Every PR needs exactly one `type:*`, exactly one `risk:*` and at least one `area:*`. Other labels may be added; unknown values within these three categories are rejected. The [pull request guide](PULL_REQUEST_GUIDE.md#pull-request-labels) explains how to choose them. The proposed metadata gate also rejects `merge:hold`; until that source is accepted on main, use Draft and disable native auto-merge as described above. A label alone does not pause the existing native queue.
 
 The [metadata workflow](../.github/workflows/pr-metadata.yml) responds to changes on open PRs through the ordinary `pull_request` event. It explicitly checks out `refs/heads/main` from this repository, so current labels are checked against the current shared catalogue rather than an obsolete contribution snapshot. It never checks out or executes contribution code, installs dependencies or uses secrets. Permissions remain only `contents: read` and `pull-requests: read`; no elevated event is needed. Repository, PR number and live head identity are validated; titles, bodies and labels remain data. Its regression tests are discovered automatically by `./portal test`:
 
@@ -91,7 +133,7 @@ Labels classify issues and pull requests. Git tags identify an immutable source 
 | `milestone/m5-system-audit`         | `bb322746d3cf18b1a0f1eae0eaa96450d26e26cd` | Functional and performance corrections; PR #5.                                         |
 | `milestone/m6-connected-operations` | `dc8e9a7e65c96076038bf7067791676578d121d4` | Taxonomy, availability, lifecycle/capacity, dashboard, notifications and audit; PR #8. |
 
-These tags are not production approvals or new Semver releases. They do not change existing `cms-dev-*` release tags. Development packages require the explicit manual publication inputs and complete verification described above; successful automatic main CI alone does not publish one. Pushing `milestone/*` tags does not start release jobs. Do not move or replace published tags.
+These tags are not production approvals or new Semver releases. They do not change existing `cms-dev-*` release tags. Release publication and installation follow their separate owning workflows and operational authorisation; successful main CI or pushing a milestone tag alone is not evidence of a published or installed package. Do not move or replace published tags.
 
 ## Public and private reports
 

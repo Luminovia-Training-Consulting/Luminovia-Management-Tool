@@ -20,12 +20,32 @@ export function api(key: string) {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
-/** Requires actual SDK success before returning the response data. */
-export async function checked<T extends { data: unknown; error: unknown }>(
-  request: PromiseLike<T>,
-): Promise<T["data"]> {
-  const result = await request;
-  expect(result.error).toBeNull();
+/** SDK success/error unions must be inferred together, including nullable data. */
+type SdkResponse = { data: unknown; error: unknown };
+/** Require non-null data only for reads/Auth operations that promise a value. */
+export function checked<Response extends SdkResponse>(
+  request: PromiseLike<Response>,
+  options: { requireData: true },
+): Promise<NonNullable<Response["data"]>>;
+/** Successful PostgREST writes may legitimately return null with no error. */
+export function checked<Response extends SdkResponse>(
+  request: PromiseLike<Response>,
+): Promise<Response["data"]>;
+/** Bound failure text to the fixture contract; never print SDK/token responses. */
+export async function checked<Response extends SdkResponse>(
+  request: PromiseLike<Response>,
+  options?: { requireData: true },
+): Promise<Response["data"]> {
+  let result: Response;
+  try {
+    result = await request;
+  } catch {
+    throw new Error("Fictional fixture request was not confirmed");
+  }
+  if (result.error !== null)
+    throw new Error("Fictional fixture request was not confirmed");
+  if (options?.requireData && result.data == null)
+    throw new Error("Fictional fixture response data was not confirmed");
   return result.data;
 }
 /** Creates a fictional Auth identity, profile and fixture role; the calling test owns cleanup. */
@@ -38,8 +58,10 @@ export async function actor(name: string, role: string) {
       password: process.env.E2E_PASSWORD!,
       email_confirm: true,
     }),
+    { requireData: true },
   );
-  const id = data.user!.id;
+  if (!data.user) throw new Error("Fictional Auth identity was not confirmed");
+  const id = data.user.id;
   await checked(
     service.from("profiles").update({ display_name: name }).eq("id", id),
   );
@@ -84,18 +106,19 @@ export async function adminLogin(page: Page, user: { email: string }) {
       factorType: "totp",
       friendlyName: "People UI QA",
     }),
+    { requireData: true },
   );
   await checked(
     client.auth.mfa.challengeAndVerify({
-      factorId: factor!.id,
-      code: code(factor!.totp.secret),
+      factorId: factor.id,
+      code: code(factor.totp.secret),
     }),
   );
   await login(page, user.email);
   await page.goto("/security");
   await page
     .getByLabel("Sechsstelliger Code", { exact: true })
-    .fill(code(factor!.totp.secret));
+    .fill(code(factor.totp.secret));
   await page
     .getByRole("button", { name: "Code bestätigen", exact: true })
     .click();

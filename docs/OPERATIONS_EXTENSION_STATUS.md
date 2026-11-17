@@ -1,6 +1,6 @@
 # Operational extensions: source status and boundaries
 
-The additional product direction is preserved verbatim in [OPERATIONS_EXTENSION_PROMPT.txt](OPERATIONS_EXTENSION_PROMPT.txt). It extends the [original specification](UNIVERSAL_MASTER_PROMPT.txt). Current source status below was checked against repository baseline `4f7f6c0` on 17 November 2026; execution results remain separately source-bound in [QA_RESULTS](QA_RESULTS.md). The complete remaining product scope is in [ROADMAP](../ROADMAP.md).
+The additional product direction is preserved verbatim in [OPERATIONS_EXTENSION_PROMPT.txt](OPERATIONS_EXTENSION_PROMPT.txt). It extends the [original specification](UNIVERSAL_MASTER_PROMPT.txt). Accepted Main38 `bcba6734` retains the Main25 `4f7f6c0` operational application source and all 69 released SQL files. Local quality and earlier full-phase evidence remain source-bound in [QA_RESULTS](QA_RESULTS.md#quality-integration-on-the-69-migration-source); the new combined head still needs fresh full CI. The complete remaining product scope is in [ROADMAP](../ROADMAP.md).
 
 ## Source delivered in this repository
 

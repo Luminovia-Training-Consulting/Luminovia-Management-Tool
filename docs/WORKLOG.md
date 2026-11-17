@@ -1,8 +1,8 @@
 # Luminovia Portal — development work log
 
-## 17 November 2026 — PR37 participant-origin lifecycle and CI cleanup
+## 17 November 2026 — PR19 native Auth failure diagnosis
 
-Native CI failed while removing the fictional participant channel because `private.participant_chat_origins` retained rows that referenced the deleted room. These records are dependent membership-provenance metadata, so the feature migration now cascades their removal with either the room or account. The job-picker API regression verifies provenance exists and is removed with its room; no production permission or functional claim was relaxed. Fresh exact-head application, browser, SQL and selfhost checks remain required.
+The current selfhost CI run passed retained-data upgrade and 34 real API suites, then GoTrue returned HTTP 500 while creating a fictional qualification-passport actor. The prior cleanup removed the candidate containers without recording the underlying service error. The candidate checker now collects at most 20 bounded, redacted error lines from its own Auth and PostgreSQL containers before cleanup on failure; no gate or retry behavior changes. Twenty-five focused checker tests and formatting pass locally. The exact new-head full CI is pending; the root cause is not yet asserted.
 
 ## 17 November 2026 — post-upload discovery race
 

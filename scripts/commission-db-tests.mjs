@@ -138,13 +138,16 @@ const commissionJob = (
     ],
     "aal2",
   );
-/** Read actual authorised consent while the offer is visible; never invent a
- * base or fallback token after another actor has filled it. */
-const quoteOffer = async (who, job) => {
-  const offer = JSON.parse(await value(who, "job_offers")).find(
-    (row) => row.id === job,
-  );
+/** Read the actual actor-visible offer; a filled offer may legitimately be absent. */
+const quoteOffer = (who, job) =>
+  value(who, "job_offers")
+    .then(JSON.parse)
+    .then((rows) => rows.find((row) => row.id === job));
+/** Capture validated actor-specific consent before claims race; never invent a fallback token. */
+const reviewedOffer = async (who, job) => {
+  const offer = await quoteOffer(who, job);
   assert.ok(offer, "A current authorised offer must supply its consent");
+  assert.equal(offer.id, job);
   assert.ok(
     Number.isSafeInteger(offer.terms_version) && offer.terms_version > 0,
     "A visible offer must supply a positive integer consent version",
@@ -156,7 +159,7 @@ const claim = async (who, job, version) =>
   value(who, "claim_job", [
     job,
     randomUUID(),
-    version ?? (await quoteOffer(who, job)).terms_version,
+    version ?? (await reviewedOffer(who, job)).terms_version,
   ]).then(JSON.parse);
 let r, job, winner, accepted;
 try {
@@ -391,13 +394,66 @@ try {
     },
   );
   await check(
+    "Filled offers disappear for late readers while captured consent preserves accepted snapshots",
+    async () => {
+      const sessions = [...payload(30).sessions, ...payload(31).sessions];
+      const filledJob = await commissionJob(30, 300, "EUR", admin, {
+        sessions,
+      });
+      const [first, late] = candidates;
+      const [firstOffer, lateOffer] = await Promise.all([
+        reviewedOffer(first, filledJob),
+        reviewedOffer(late, filledJob),
+      ]);
+      const confirmed = await claim(first, filledJob, firstOffer.terms_version);
+      assert.equal(confirmed.status, "confirmed");
+      assert.equal(await quoteOffer(late, filledJob), undefined);
+      const snapshot = async () =>
+        JSON.parse(
+          await sql(`select jsonb_build_object(
+            'job',(select to_jsonb(j) from public.jobs j where j.id=${quote(filledJob)}),
+            'claims',(select coalesce(jsonb_agg(to_jsonb(c) order by c.id),'[]'::jsonb) from public.job_claims c where c.job_id=${quote(filledJob)}),
+            'revenue',(select coalesce(jsonb_agg(to_jsonb(r) order by r.claim_id),'[]'::jsonb) from private.claim_revenue_ledger r where r.job_id=${quote(filledJob)}),
+            'allocations',(select coalesce(jsonb_agg(to_jsonb(a) order by a.id),'[]'::jsonb) from public.assignment_sessions a join public.job_claims c on c.id=a.claim_id where c.job_id=${quote(filledJob)})
+          )::text`),
+        );
+      const before = await snapshot();
+      assert.equal(before.job.status, "filled");
+      assert.equal(before.claims.length, 1);
+      assert.equal(before.claims[0].id, confirmed.claim_id);
+      assert.equal(before.claims[0].lecturer_id, first);
+      assert.equal(Number(before.claims[0].total_amount), 93);
+      assert.equal(before.claims[0].terms, "Immutable net compensation");
+      assert.equal(before.revenue.length, 1);
+      assert.equal(Number(before.revenue[0].gross_total_amount), 300);
+      assert.equal(Number(before.revenue[0].lecturer_net_total_amount), 93);
+      assert.equal(Number(before.revenue[0].platform_total_amount), 207);
+      assert.equal(before.revenue[0].currency, "EUR");
+      assert.equal(before.allocations.length, sessions.length);
+      assert.equal(
+        await sql(`select count(*) from (
+          select starts_at,ends_at from public.job_sessions where job_id=${quote(filledJob)}
+          except all
+          select a.starts_at,a.ends_at from public.assignment_sessions a join public.job_claims c on c.id=a.claim_id where c.job_id=${quote(filledJob)}
+        ) missing`),
+        "0",
+      );
+      assert.equal(
+        (await claim(late, filledJob, lateOffer.terms_version)).status,
+        "filled",
+      );
+      assert.deepEqual(await snapshot(), before);
+      assert.equal(await quoteOffer(late, filledJob), undefined);
+    },
+  );
+  await check(
     "Concurrent instant claims create exactly one immutable revenue snapshot and complete allocation",
     async () => {
       const concurrentJob = await commissionJob(1, 300);
-      // All actors review their actual quote before the first competing claim.
-      // Later authorised-list reads may correctly omit the filled offer.
+      // Every actor captures its actual validated quote before the first claim;
+      // later discovery reads may legitimately omit the already filled offer.
       const reviewedQuotes = await Promise.all(
-        candidates.map((id) => quoteOffer(id, concurrentJob)),
+        candidates.map((id) => reviewedOffer(id, concurrentJob)),
       );
       const results = await Promise.all(
         candidates.map((id, index) =>
