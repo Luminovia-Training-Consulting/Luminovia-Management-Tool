@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile, readdir, access } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import ts from "typescript";
 
 /** Removes fenced examples before collecting links or heading targets. */
 function withoutFences(markdown) {
@@ -194,4 +195,37 @@ test("documentation keeps only the required project records under docs", async (
   assert.match(generator, /\.\.\/supabase\/migrations\//);
   assert.match(runner, /\.local\/screenshots/);
   assert.doesNotMatch(runner, /docs\/screenshots/);
+});
+
+// The hand-written facade route list once omitted account creation despite a
+// live handler and OpenAPI path. Compare every method/path against the generated
+// reference so future operations cannot silently disappear from human guidance.
+test("account HTTP reference covers the published OpenAPI routes", async () => {
+  const source = await readFile(
+    "supabase/functions/accounts/openapi.ts",
+    "utf8",
+  );
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.ESNext,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }).outputText;
+  const { accountOpenApi } = await import(
+    `data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`
+  );
+  const expected = Object.entries(accountOpenApi.paths).flatMap(
+    ([path, methods]) =>
+      Object.keys(methods).map(
+        (method) => `${method.toUpperCase()} ${path.replace(/^\/v1/, "")}`,
+      ),
+  );
+  const guide = await readFile("API_REFERENCE.md", "utf8");
+  const table = guide
+    .split("## Account HTTP facade")[1]
+    .split("## Permanent deletion")[0];
+  const actual = [
+    ...table.matchAll(/^\| (GET|POST|PATCH|PUT|DELETE)\s+\| (\/[^|]+?)\s+\|/gm),
+  ].map((match) => `${match[1]} ${match[2].trim()}`);
+  assert.deepEqual(actual, expected);
 });
