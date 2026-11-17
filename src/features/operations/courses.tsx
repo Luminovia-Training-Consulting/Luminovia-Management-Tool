@@ -810,7 +810,7 @@ export function CoursesPage() {
                         })
                       }
                     >
-                      {t(run.archived_at ? "restore" : "archive")}
+                      {t(run.archived_at ? "restore" : "archiveAction")}
                     </Button>
                     <Button
                       variant="ghost"
@@ -1064,7 +1064,7 @@ export function CoursesPage() {
                       })
                     }
                   >
-                    {t(detail.archived_at ? "restore" : "archive")}
+                    {t(detail.archived_at ? "restore" : "archiveAction")}
                   </Button>
                 </>
               )}

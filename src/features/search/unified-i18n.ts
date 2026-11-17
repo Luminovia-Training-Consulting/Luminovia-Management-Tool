@@ -1,8 +1,8 @@
-/** Search controls and task states are translated; authored result titles are not. */
+/** Search controls are translated; authored result titles are not. */
 import i18n from "../../lib/i18n";
 const de = {
   title: "Universelle Suche",
-  hint: "Durchsuche freigegebene Inhalte, eigene Aufgaben und persönliche Unterlagen. Jeder Abruf prüft deine aktuellen Rechte.",
+  hint: "Durchsuche freigegebene Inhalte und persönliche Unterlagen. Jeder Abruf prüft deine aktuellen Rechte.",
   query: "Suchbegriff",
   kind: "Bereich",
   all: "Alle Bereiche",
@@ -17,17 +17,12 @@ const de = {
   people: "Personen",
   courses: "Kurse",
   clients: "Kunden",
-  tasks: "Aufgaben",
   contracts: "Verträge",
   finance: "Rechnungen",
-  task_open: "Offen",
-  task_doing: "In Bearbeitung",
-  task_done: "Erledigt",
-  task_cancelled: "Abgebrochen",
 };
 const en: Record<keyof typeof de, string> = {
   title: "Universal search",
-  hint: "Search authorised content, your tasks and personal documents. Each request checks your current access.",
+  hint: "Search authorised content and personal documents. Each request checks your current access.",
   query: "Search term",
   kind: "Area",
   all: "All areas",
@@ -42,13 +37,8 @@ const en: Record<keyof typeof de, string> = {
   people: "People",
   courses: "Courses",
   clients: "Customers",
-  tasks: "Tasks",
   contracts: "Contracts",
   finance: "Invoices",
-  task_open: "Open",
-  task_doing: "In progress",
-  task_done: "Done",
-  task_cancelled: "Cancelled",
 };
 i18n.addResourceBundle("de", "unifiedSearch", de);
 i18n.addResourceBundle("en", "unifiedSearch", en);

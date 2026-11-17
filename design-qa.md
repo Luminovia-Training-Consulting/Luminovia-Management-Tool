@@ -1,4 +1,20 @@
-# Design QA — internal workspace refresh
+# Design QA — operational portal revision
+
+**Native review completed; full canonical suite pending.**
+
+On17November2026 the UI was inspected in real authenticated Chromium sessions against an owned local Supabase stack. The supplied dashboard/course/jobs/operations images and TODO list guided the review. The missing Codex in-app controller from the earlier attempt was worked around with the installed Playwright Chromium runtime; these are actual application screenshots, not HTML fixtures.
+
+- 52 administrator/lecturer/company route combinations at1440px desktop and390px mobile; no final page JavaScript errors or horizontal overflow.
+- 21 actual admin routes passed automated axe WCAG2A/AA/2.1AA checks.
+- Main dashboard, jobs, courses, workspace, files, profile/person management, settings, support, communication and knowledge views inspected. Settings/header additionally checked at320/760px and in English/dark mode.
+- Native form saves, blocking/reactivation, role changes, permanent deletion of a disposable lecturer, whole-course claim/overlap denial, company review and scoped-membership revocation verified against actual server results.
+- Corrected mobile file overflow/filter alignment, blocked-person management dead end, dashboard density/order, header/account navigation, duplicate theme-control IDs and synchronization, stale retired-module links/search results and misleading action labels.
+
+See [the complete TODO acceptance mapping](docs/UI_ACCEPTANCE_20261117.md). Private rendered evidence is retained in ignored .local/ui-acceptance, .local/design-review, .local/profile-audit and .local/ui-review. Only fictional local data were used. The owned review stack and its data volumes were removed after acceptance.
+
+This establishes the observed UI behaviour and responsive layouts, not pixel-for-pixel equivalence to generated concept images or every possible data-dependent state. The updated all-history canonical browser suite has not completed because its shared QA lock belongs to another checkout.
+
+## Historical review attempt (superseded by native review above)
 
 **Final result: blocked**
 

@@ -1,0 +1,46 @@
+# Portal UI revision — 17 November 2026
+
+This revision implements the user's `todos.txt` and uses the supplied dashboard, course workspace, jobs, operations and design-board images as visual references. Real records, roles and permissions govern the rendered content; illustrative screenshot counts and people were not copied. The official repository brand assets remain in use.
+
+## TODO implementation and observed acceptance
+
+| Requested change | Implemented behaviour and verification |
+| --- | --- |
+| Administrators and management add expertise | Existing server-authorized taxonomy maintenance is reachable from expertise; actual admin and management creation verified in the browser and database. |
+| One biography, no generic public labels, experience in years | Single authored biography survives language changes; years persist numerically; legacy descriptions are retained until explicitly replaced. Public generic labels and filter are removed. Native desktop/mobile saves verified. |
+| Password setup uses an ordinary action | Plain profile link; no separate coloured password CTA. |
+| Clear bell, working collapsed navigation/search, hover titles | Search and bell live in the top bar. Fixed icon dimensions, native header search with collapsed rail, focus/hover titles, profile/account menu. Header/settings theme controls synchronize and have unique label IDs. |
+| File centre aligned | Native desktop input tops align and heights are 44px. Checkbox sizing fixed the real mobile overflow. |
+| Coloured courses/tags and reference visual direction | Shared cream/navy/blue/pastel styling and rainbow arcs; real dashboard assignments/readiness/calendar/messages/tasks, compact action hierarchy and course cards. Desktop/mobile screens inspected. |
+| Tour only in settings, no welcome navigation tab | Settings owns the launcher; route and native browser check verified. |
+| Readiness tile clickable, direct filters | Full native link area with visible keyboard focus; filters already immediately visible. Native click outside title reaches exact detail. |
+| No teaching delivery evidence UI | Retired frontend module removed; old route redirects to Courses. |
+| Support last | Last primary navigation entry; support request actually created through its visible form and server-confirmed detail. |
+| No participant portal or learner course rooms | Current-role server gate and RLS exclude participant/guest-only accounts. Enrolment, attendance, notebook, quiz, completion and learner feedback UI removed. Operational workspace shows dates, contacts, preparation, files and scoped company/lecturer/chat/job destinations. |
+| Replacement discovery belongs to courses | In-course discovery disclosure, no separate replacement tab in the primary/course navigation. |
+| Search is top-level control rather than navigation tab | Header search navigates correctly with rail collapsed; mobile bounds checked. |
+| No timesheets/workbench/availability sections | Retired frontend modules and obsolete UI tests removed; old URLs have operational redirects. Dead task actions and task search results removed, including server search branch. Calendar/finance retained. |
+| No conflicting accepted course allocations | Native full two-session claim confirmed; overlapping claim disabled with explanation; direct authenticated server request also returned conflict. Released sessions do not falsely block. |
+| Companies review lecturers | Actual company review saved and database rating/version verified. Removing current organisation membership hides the course. Participant review UI is retired. |
+| Understandable website enquiries | Customer-enquiry label, explanation, status/actions and settings entry; native page reviewed without errors. Does not claim a hosted website integration has been activated. |
+| Forum/notifications/announcements together | Shared communication entry with sections; existing private notification scope preserved. |
+| Help, FAQ and wiki together | Embedded help without second public header, section preserved during topic navigation. Company accounts receive help while staff-only wiki data remain protected. |
+| Simpler administration/settings | Account actions belong to person detail, settings grouped by appearance/account/notifications/quiet-hours/organisation; duplicated admin customer destination removed from rail. |
+| Contextual person editing/blocking/deletion | Actual name/language/time-zone dialog, confirmed role/status operations and scoped delete flow. Blocking no longer removes authorized reactivation controls. A fresh disposable lecturer was permanently deleted through the native UI; Auth and profile absence verified before fixture cleanup. |
+| Contextual course editing/archiving/deletion | Course detail actions grouped at its top; real editor opened. Archive action uses an imperative label. Existing server-reviewed deletion flow remains authoritative. |
+
+## Actual verification
+
+- Native authenticated route review: **52 role/route combinations** for admin, lecturer and company accounts, each at desktop1440px and mobile390px. Zero page JavaScript errors and zero horizontal overflow after fixes. Deliberate direct access to non-company modules remains denied by the server; those denied modules are absent from company navigation.
+- Automatic axe checks: **21 actual authenticated administrative routes**, no reported WCAG2A/AA or WCAG2.1AA violations. This is automated evidence, not a legal accessibility certification.
+- Settings/header also tested at320,760 and1440px; actual German/English and dark-theme switching, synchronized theme controls, account-menu navigation and embedded FAQ topic navigation pass.
+- Native person/account tests ran at1440px and390px, including confirmed saves, authority denial, role updates, blocking/reactivation and a completed permanent deletion of an explicitly disposable record.
+- Native course tests cover actual top editor, operational workspace, full readiness tile, company review/membership revocation and whole-block acceptance/overlap denial.
+- Six real isolated PostgreSQL search groups replay all current migrations and test task retirement, private resources, hidden messages, current role/membership revocation and1005-row pagination. Earlier managed-profile and course-destination SQL acceptance remains recorded in WORKLOG.
+- Final unit/runtime/type/lint/build results are recorded in WORKLOG for the integrated source.
+
+Private native reports and screenshots are under ignored `.local/ui-acceptance/`, `.local/design-review/`, `.local/profile-audit/` and `.local/ui-review/`. Screenshots contain only fictional local fixtures. The temporary owned review stack is stopped and its data volumes removed after inspection.
+
+## Limits of this acceptance
+
+The canonical `./portal test` command was attempted again but another checkout held the shared QA lock. Updated canonical browser specs are maintained for the operational product, but a complete run of every historical SQL/API/browser/PWA suite is **not** claimed. The native review above exercised actual Auth, REST, database and browser paths independently. It does not establish physical-device/PWA installation, Safari/iOS compatibility, every possible data-dependent state or pixel-perfect identity with generated concept images. No hosted/production deployment or real email was performed.

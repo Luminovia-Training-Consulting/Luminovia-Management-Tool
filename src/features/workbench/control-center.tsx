@@ -144,23 +144,6 @@ export function ControlCenterPage() {
                   ))}
                 </ul>
               </Section>
-              <Section
-                title={t("overdue_tasks")}
-                count={info.overdue_tasks.length}
-              >
-                <ul>
-                  {info.overdue_tasks.map((item) => (
-                    <li key={item.id}>
-                      <Link to={`/workbench?task=${item.id}`}>
-                        {item.title}
-                      </Link>
-                      <p>
-                        {dateTime(item.due_at, i18n.language, info.time_zone)}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </Section>
               <Section title={t("requests")} count={info.requests.length}>
                 <ul>
                   {info.requests.map((item) => (

@@ -45,7 +45,11 @@ test("individual account roles, scoped invitations and linked status management 
     name: "Rollen bearbeiten",
     exact: true,
   });
-  await roleDialog.getByLabel("Kursteilnehmer:in", { exact: true }).check();
+  await expect(
+    roleDialog.getByLabel("Kursteilnehmer:in", { exact: true }),
+  ).toHaveCount(0);
+  await expect(roleDialog.getByLabel("Gast", { exact: true })).toHaveCount(0);
+  await roleDialog.getByLabel("Senior-Dozent:in", { exact: true }).check();
   await roleDialog
     .getByRole("button", { name: "Rollen speichern", exact: true })
     .click();
@@ -66,7 +70,7 @@ test("individual account roles, scoped invitations and linked status management 
   );
   expect(actualRoles.map((row) => row.role).sort()).toEqual([
     "lecturer",
-    "participant",
+    "senior_lecturer",
   ]);
   await page
     .getByRole("link", {
@@ -83,12 +87,12 @@ test("individual account roles, scoped invitations and linked status management 
   await page.goto("/admin/accounts");
   await page
     .getByLabel("Kontorolle", { exact: true })
-    .selectOption("participant");
+    .selectOption("senior_lecturer");
   const email = `account-ui-invite-${suffix}@example.invalid`;
   await page.getByLabel("E-Mail", { exact: true }).fill(email);
   await page
     .getByLabel("Anzeigename", { exact: true })
-    .fill(`Invited Participant ${suffix}`);
+    .fill(`Invited Lecturer ${suffix}`);
   await page
     .getByRole("button", { name: "Einladung senden", exact: true })
     .click();
@@ -105,7 +109,7 @@ test("individual account roles, scoped invitations and linked status management 
         service.from("user_roles").select("role").eq("user_id", invited!.id),
       )
     ).map((row) => row.role),
-  ).toEqual(["participant"]);
+  ).toEqual(["senior_lecturer"]);
   const lecturerContext = await browser.newContext({
     baseURL: process.env.E2E_BASE_URL!,
     viewport: testInfo.project.use.viewport,
@@ -118,7 +122,7 @@ test("individual account roles, scoped invitations and linked status management 
     await lecturerPage.goto("/admin/accounts");
     await expect(
       lecturerPage.getByText(
-        "Für die Kontoverwaltung sind Verwaltungsrechte und eine bestätigte Mehrfaktor-Anmeldung erforderlich.",
+        "Für die Kontoverwaltung sind aktuelle Verwaltungsrechte erforderlich.",
         { exact: true },
       ),
     ).toBeVisible();

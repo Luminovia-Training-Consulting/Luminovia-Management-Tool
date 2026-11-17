@@ -17,14 +17,15 @@ Implemented from `todos.txt` and the supplied portal images:
 - [x] Remove retired availability, delivery-evidence, participant enrolment, workbench and timesheet frontend modules and their obsolete UI tests. Shared calendar/finance functions remain connected and tested.
 - [x] Group settings into appearance/account/notifications/quiet-hours/organisation, embed help/FAQ without a second public header and retain its section on topic navigation, place replacement discovery inside the course catalogue rather than its own tab.
 - [x] Add current-authority managed-profile editing and actual course destinations (company, lecturers, exact permitted chats and assignments); full-migrated PostgreSQL regressions pass.
-- [ ] Verify the complete authenticated application visually at desktop/mobile breakpoints and run API/browser acceptance after the shared test lock is available. CSS fixture checks establish layout bounds only, not full visual equivalence to every reference screen.
+- [x] Review all principal authenticated views natively: 52 role/route combinations at desktop/mobile with no JS errors or overflow; 21 admin views pass automated axe checks. Native mutation journeys and each TODO are recorded in [UI_ACCEPTANCE_20261117](UI_ACCEPTANCE_20261117.md).
+- [ ] Complete the separate all-history canonical SQL/API/E2E/PWA run after the shared QA lock is available; native UI acceptance does not certify every historic suite.
 
 ## Internal UI redesign — 17 November 2026
 
 - [x] Refresh the shared authenticated shell, official sidebar branding, readable navigation, page headings, panels, inputs, buttons, tables and dashboard metrics in line with the supplied clean navy/blue/pastel reference direction.
 - [x] Keep UI data and actions bound to existing authenticated actor/customer scopes; do not seed or copy the illustrative screenshot records.
 - [x] Pass focused shell regression (12/12), lint, typecheck, formatting and frontend build with synthetic public-only Supabase build values.
-- [ ] Visually inspect authenticated desktop and mobile dashboard, course workspace, jobs and operations screens against the supplied reference states. The local runtime is now ready; the missing in-app browser controller still blocks screenshot capture; see `design-qa.md`.
+- [x] Inspect actual authenticated dashboard, course workspace, jobs, files and other principal routes at desktop/mobile; record real browser evidence and corrected defects in UI_ACCEPTANCE_20261117.
 - [ ] Continue the full exact-head local system, API and browser acceptance after repairing the isolated runtime startup/cleanup issue. CI is outside the requested local audit.
 - [x] Pass the availability, assignment-handover, job-briefing and announcement PostgreSQL suites after updating this checkout's local migrations: 8, 15, 12 and 16 groups respectively.
 - [ ] Re-run complete isolated system/browser acceptance; the earlier attempt stopped during service startup before the local persistent runtime was repaired.

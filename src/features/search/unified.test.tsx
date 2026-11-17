@@ -15,10 +15,10 @@ vi.mock("../auth/auth-context", () => ({
 const clients: QueryClient[] = [];
 const row = {
   id: "48a4e00a-5dbb-44f5-8bc0-5a52f77c771d",
-  kind: "tasks",
-  title: "Needle private task",
+  kind: "wiki",
+  title: "Needle private draft",
   detail: "",
-  url: "/workbench?task=48a4e00a-5dbb-44f5-8bc0-5a52f77c771d",
+  url: "/wiki?page=48a4e00a-5dbb-44f5-8bc0-5a52f77c771d",
 };
 beforeEach(async () => {
   await i18n.changeLanguage("de");
@@ -30,7 +30,7 @@ beforeEach(async () => {
           items: [row],
           has_more: true,
           next_cursor: {
-            kind: "tasks",
+            kind: "wiki",
             title: "i\u0307 server cursor",
             id: row.id,
           },
@@ -51,7 +51,7 @@ function view() {
   clients.push(client);
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={["/search?q=Needle&kind=tasks"]}>
+      <MemoryRouter initialEntries={["/search?q=Needle&kind=wiki"]}>
         <PortalSearch />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -60,7 +60,7 @@ function view() {
 it("uses authenticated server search and exact server-provided stable cursor rather than locale-guessing or client-side truncation", async () => {
   view();
   expect(
-    await screen.findByRole("link", { name: /Needle private task/ }),
+    await screen.findByRole("link", { name: /Needle private draft/ }),
   ).toHaveAttribute("href", row.url);
   await userEvent.click(
     screen.getByRole("button", { name: "Weitere Treffer laden" }),
@@ -68,8 +68,8 @@ it("uses authenticated server search and exact server-provided stable cursor rat
   await waitFor(() =>
     expect(state.rpc).toHaveBeenCalledWith("unified_search", {
       p_query: "Needle",
-      p_kind: "tasks",
-      p_after_kind: "tasks",
+      p_kind: "wiki",
+      p_after_kind: "wiki",
       p_after_title: "i\u0307 server cursor",
       p_after_id: row.id,
       p_limit: 40,
@@ -92,6 +92,11 @@ it("preserves an unsaved search across language changes", async () => {
   expect(field).toHaveValue("My draft");
 });
 it.each([
+  {
+    items: [{ ...row, kind: "tasks", url: "/workbench?task=" + row.id }],
+    has_more: false,
+    next_cursor: null,
+  },
   {
     items: [{ ...row, url: "javascript:alert(1)" }],
     has_more: false,

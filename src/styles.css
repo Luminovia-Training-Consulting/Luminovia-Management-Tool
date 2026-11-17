@@ -3530,3 +3530,69 @@ summary:focus-visible {
     min-height: 44px;
   }
 }
+
+.account-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+.account-menu summary {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 1rem;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 700;
+}
+.account-menu summary::-webkit-details-marker {
+  display: none;
+}
+.account-menu summary small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+.account-menu summary:hover,
+.account-menu summary:focus-visible {
+  background: var(--blue-soft);
+}
+.account-menu-panel {
+  position: absolute;
+  top: calc(100% + 0.6rem);
+  right: 0;
+  z-index: 140;
+  display: grid;
+  width: 15rem;
+  padding: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  box-shadow: var(--shadow);
+}
+.account-menu-panel a,
+.account-menu-panel button {
+  display: block;
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  padding: 0.8rem;
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
+}
+.account-menu-panel a:hover,
+.account-menu-panel button:hover {
+  background: var(--blue-soft);
+}
+@media (max-width: 900px) {
+  .account-menu summary > span {
+    display: none;
+  }
+  .account-menu summary {
+    padding: 0.2rem;
+  }
+}

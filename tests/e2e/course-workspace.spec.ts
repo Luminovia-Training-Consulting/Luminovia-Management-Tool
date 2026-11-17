@@ -97,14 +97,6 @@ async function fixture() {
     }),
   );
   await checked(
-    service.from("course_enrolments").insert({
-      course_run_id: run,
-      user_id: learner.id,
-      status: "completed",
-      enrolled_by: manager.id,
-    }),
-  );
-  await checked(
     service
       .from("client_organisation_memberships")
       .insert({ user_id: client.id, organisation_id: org }),
@@ -199,7 +191,7 @@ test("real shared preparation, explicitly agreed contact and scanned file versio
   await expect(dialog).toBeHidden({ timeout: 45000 });
   await page.goto(`/courses/${f.run}/workspace`);
   const resources = page.getByRole("region", {
-    name: "Vereinbarte Materialien & Berichte",
+    name: "Kursdateien",
     exact: true,
   });
   const selected = await checked(
@@ -222,8 +214,7 @@ test("real shared preparation, explicitly agreed contact and scanned file versio
   const customer = await otherContext.newPage();
   try {
     await login(customer, f.client.email);
-    await customer.goto("/learning");
-    await customer.getByRole("link", { name: f.title, exact: true }).click();
+    await customer.goto(`/courses/${f.run}/workspace`);
     await expect(
       customer.getByRole("checkbox", {
         name: "Fictional lab accounts ready",
@@ -247,7 +238,7 @@ test("real shared preparation, explicitly agreed contact and scanned file versio
     const download = customer.waitForEvent("download");
     await customer
       .getByRole("region", {
-        name: "Vereinbarte Materialien & Berichte",
+        name: "Kursdateien",
         exact: true,
       })
       .getByRole("button", { name: "Herunterladen", exact: true })
@@ -271,137 +262,85 @@ test("real shared preparation, explicitly agreed contact and scanned file versio
     await otherContext.close();
   }
 });
-test("enrolled learner persists private notes, posts course questions, passes eligible quiz and downloads a protected completion PDF", async ({
+test("company reviews are current-membership scoped and participant accounts cannot enter the workspace", async ({
   page,
-}, info) => {
-  test.setTimeout(90000);
+  browser,
+}) => {
   const f = await fixture();
-  const teacher = api(process.env.SUPABASE_ANON_KEY!);
-  await checked(
-    teacher.auth.signInWithPassword({
-      email: f.teacher.email,
-      password: process.env.E2E_PASSWORD!,
-    }),
-  );
-  const action = (
-    name: string,
-    payload: Record<string, unknown>,
-    version = 0,
-  ) =>
-    checked(
-      teacher.rpc("course_workspace_action", {
-        p_run_id: f.run,
-        p_action: name,
-        p_payload: payload,
-        p_expected_version: version,
-      }),
-    );
-  await action("attendance_verify", {
-    session_id: f.session,
-    user_id: f.learner.id,
-    state: "attended",
-    minutes: 60,
-    reason: "Fictional signed register checked",
-  });
-  await action("quiz_config", {
-    questions: [
-      { prompt: "Read a directory?", options: ["ls", "rm"], correct: 0 },
-    ],
-    pass_percent: 80,
-    max_attempts: 2,
-    published: true,
-  });
-  await login(page, f.learner.email);
-  await page.goto("/learning");
-  await page.getByRole("link", { name: f.title, exact: true }).click();
-  const notebook = page.locator(".learning-panel").filter({
-    has: page.getByRole("heading", {
-      name: "Mein privates Kursnotizbuch",
-      exact: true,
-    }),
-  });
-  await notebook
-    .getByLabel("Persönliche Kursnotizen", { exact: true })
-    .fill("Fictional private notebook persists");
-  await notebook
-    .getByRole("button", { name: "Speichern", exact: true })
-    .click();
+  await login(page, f.client.email);
+  await page.goto("/courses?section=reviews");
   await expect(
-    notebook.getByText("Änderung auf dem Server gespeichert.", { exact: true }),
+    page.getByRole("heading", { name: f.title, exact: true }),
   ).toBeVisible();
-  await page.reload();
-  await expect(
-    page.getByLabel("Persönliche Kursnotizen", { exact: true }),
-  ).toHaveValue("Fictional private notebook persists");
-  const questions = page.getByRole("region", {
-    name: "Fragen & Antworten",
-    exact: true,
-  });
-  await questions
-    .getByLabel("Neue Kursfrage", { exact: true })
-    .fill("Fictional question about least privilege");
-  await questions
-    .getByRole("button", { name: "Frage veröffentlichen", exact: true })
-    .click();
-  await expect(
-    questions.getByText("Fictional question about least privilege", {
-      exact: true,
-    }),
-  ).toBeVisible();
-  const quiz = page.getByRole("region", { name: "Mini-Quiz", exact: true });
-  await quiz.getByRole("radio", { name: "ls", exact: true }).check();
-  await quiz
-    .getByRole("button", { name: "Antworten verbindlich abgeben", exact: true })
-    .click();
-  await expect(quiz.getByText("Bestanden", { exact: false })).toBeVisible();
-  const completion = page.getByRole("region", {
-    name: "Mein Abschlussdokument",
-    exact: true,
-  });
-  await completion
-    .getByRole("button", {
-      name: "Voraussetzungen prüfen und Dokument ausstellen",
-      exact: true,
-    })
-    .click();
-  await expect(
-    completion.getByRole("button", { name: "Herunterladen", exact: true }),
-  ).toBeVisible();
-  const event = page.waitForEvent("download");
-  await completion
-    .getByRole("button", { name: "Herunterladen", exact: true })
-    .click();
-  const file = await event;
-  const bytes = await readFile((await file.path())!);
-  expect(bytes.subarray(0, 5).toString()).toBe("%PDF-");
-  expect(bytes.length).toBeGreaterThan(10000);
-  const feedback = page.getByRole("region", {
-    name: "Kursfeedback & Qualität",
-    exact: true,
-  });
-  await feedback
-    .getByLabel("Rückmeldung", { exact: true })
-    .fill("Fictional practical feedback without personal details");
-  const feedbackSaved = page.waitForResponse(
+  await page.getByLabel("Bewertung", { exact: true }).selectOption("5");
+  await page
+    .getByLabel("Deine Rückmeldung", { exact: true })
+    .fill("Fictional company review after the completed course.");
+  const submitted = page.waitForResponse(
     (response) =>
-      response.url().endsWith("/rpc/course_workspace_action") &&
+      response.url().endsWith("/rpc/submit_course_review") &&
       response.request().method() === "POST" &&
-      response.request().postDataJSON()?.p_action === "feedback" &&
       response.ok(),
   );
-  await feedback
-    .getByRole("button", { name: "Kursfeedback speichern", exact: true })
+  await page
+    .getByRole("button", { name: "Bewertung speichern", exact: true })
     .click();
-  await feedbackSaved;
-  await page.reload();
-  await expect(feedback.getByLabel("Rückmeldung", { exact: true })).toHaveValue(
-    "Fictional practical feedback without personal details",
+  await submitted;
+  const review = await checked(
+    f.service
+      .from("course_reviews")
+      .select("rating")
+      .eq("course_run_id", f.run)
+      .eq("reviewer_id", f.client.id)
+      .single(),
   );
-  await page.getByLabel("Sprache", { exact: true }).selectOption("en");
-  await page.getByLabel("Theme", { exact: true }).selectOption("dark");
-  await a11y(page);
-  await page.screenshot({
-    path: `.local/screenshots/${info.project.name}-course-participant-workspace.png`,
-    fullPage: true,
-  });
+  expect(review.rating).toBe(5);
+  await checked(
+    f.service
+      .from("client_organisation_memberships")
+      .update({ removed_at: new Date().toISOString() })
+      .eq("user_id", f.client.id)
+      .eq(
+        "organisation_id",
+        (
+          await checked(
+            f.service
+              .from("course_runs")
+              .select("organisation_id")
+              .eq("id", f.run)
+              .single(),
+          )
+        ).organisation_id,
+      ),
+  );
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: f.title, exact: true }),
+  ).toHaveCount(0);
+  const participantContext = await browser.newContext();
+  try {
+    const participant = await participantContext.newPage();
+    await participant.goto("/login");
+    await participant
+      .getByLabel("E-Mail", { exact: true })
+      .fill(f.learner.email);
+    await participant
+      .getByLabel("Passwort", { exact: true })
+      .fill(process.env.E2E_PASSWORD!);
+    await participant
+      .getByRole("button", { name: "Anmelden", exact: true })
+      .click();
+    await expect(
+      participant.getByText(/Dein Konto hat keinen Portalzugriff/),
+    ).toBeVisible();
+    await participant.goto(`/courses/${f.run}/workspace`);
+    await expect(
+      participant.getByText(/Dein Konto hat keinen Portalzugriff/),
+    ).toBeVisible();
+    await expect(
+      participant.getByRole("heading", { name: f.title, exact: true }),
+    ).toHaveCount(0);
+  } finally {
+    await participantContext.close();
+  }
 });

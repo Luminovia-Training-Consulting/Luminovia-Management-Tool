@@ -1,5 +1,5 @@
 /**
- * Browser workflows for shared profiles, course history and reviews by enrolled participants.
+ * Browser workflows for shared staff profiles, course history and reviews by authorised client companies.
  * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
 import { test, expect, type Page } from "@playwright/test";
@@ -34,7 +34,7 @@ async function a11y(page: Page) {
     ),
   ).toBe(true);
 }
-test("own labels connect searchable profiles, real course history, enrolled reviews and management moderation", async ({
+test("authored staff profiles connect real course history, company reviews and authorised moderation", async ({
   page,
   browser,
 }, testInfo) => {
@@ -43,9 +43,9 @@ test("own labels connect searchable profiles, real course history, enrolled revi
       `Profile Teacher ${randomUUID().slice(0, 8)}`,
       "lecturer",
     ),
-    student = await actor(
-      `Private Participant ${randomUUID().slice(0, 8)}`,
-      "participant",
+    customer = await actor(
+      `Private Company Contact ${randomUUID().slice(0, 8)}`,
+      "client",
     ),
     admin = await actor("Profile Administrator", "admin");
   const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -61,6 +61,11 @@ test("own labels connect searchable profiles, real course history, enrolled revi
     service
       .from("organisations")
       .insert({ id: org, name: "Fictional Review Academy" }),
+  );
+  await checked(
+    service
+      .from("client_organisation_memberships")
+      .insert({ user_id: customer.id, organisation_id: org }),
   );
   await checked(
     service.from("course_templates").insert({
@@ -125,32 +130,60 @@ test("own labels connect searchable profiles, real course history, enrolled revi
       ends_at: end,
     }),
   );
+  const teacherApi = api(process.env.SUPABASE_ANON_KEY!);
+  await checked(
+    teacherApi.auth.signInWithPassword({
+      email: teacher.email,
+      password: process.env.E2E_PASSWORD!,
+    }),
+  );
+  const forbiddenEdit = await teacherApi.rpc("managed_profile", {
+    p_user_id: admin.id,
+  });
+  expect(forbiddenEdit.error?.code).toBe("42501");
   await login(page, teacher.email);
   await page.goto("/profile");
+  const biography = `Authored profile <script>${randomUUID().slice(0, 8)}</script>`;
+  await page.getByLabel("Über mich", { exact: true }).fill(biography);
   await page
-    .getByLabel("Eigene Labels (mit Komma trennen)", { exact: true })
-    .fill("Python, Mentoring");
+    .getByRole("button", { name: "Profil speichern", exact: true })
+    .click();
+  await expect(page.getByLabel("Über mich", { exact: true })).toHaveValue(
+    biography,
+  );
+  await expect(
+    page.getByLabel("Eigene Labels (mit Komma trennen)", { exact: true }),
+  ).toHaveCount(0);
   await page.getByLabel("Land", { exact: true }).fill("Germany");
   await page
     .getByLabel("Sprachen (mit Komma trennen)", { exact: true })
     .fill("Deutsch, English");
-  await page
-    .getByLabel("Lehrerfahrung", { exact: true })
-    .fill("Fictional course teaching experience");
+  await page.getByLabel("Lehrerfahrung (Jahre)", { exact: true }).fill("8");
   const form = page.locator("form").filter({
-    has: page.getByLabel("Eigene Labels (mit Komma trennen)", {
-      exact: true,
-    }),
+    has: page.getByLabel("Lehrerfahrung (Jahre)", { exact: true }),
   });
   await form.getByRole("button", { name: "Speichern", exact: true }).click();
   await expect(form.getByRole("status")).toContainText("Gespeichert");
   await page.reload();
   await expect(
-    page.getByLabel("Eigene Labels (mit Komma trennen)", { exact: true }),
-  ).toHaveValue(/Mentoring.*Python|Python.*Mentoring/);
+    page.getByLabel("Lehrerfahrung (Jahre)", { exact: true }),
+  ).toHaveValue("8");
+  await expect(page.getByLabel("Über mich", { exact: true })).toHaveValue(
+    biography,
+  );
+  await page.getByLabel("Sprache", { exact: true }).selectOption("en");
+  await expect(page.getByLabel("About me", { exact: true })).toHaveValue(
+    biography,
+  );
+  await expect(
+    page.getByLabel("Teaching experience (years)", { exact: true }),
+  ).toHaveValue("8");
+  await page.getByLabel("Language", { exact: true }).selectOption("de");
   await page.goto("/people");
   await page.getByLabel("Person suchen", { exact: true }).fill(teacher.name);
-  await page.getByLabel("Label filtern", { exact: true }).fill("Python");
+  await expect(page.getByLabel("Label filtern", { exact: true })).toHaveCount(
+    0,
+  );
   await page.getByRole("link", { name: teacher.name, exact: true }).click();
   await expect(
     page.getByRole("heading", { name: teacher.name, exact: true }),
@@ -172,37 +205,68 @@ test("own labels connect searchable profiles, real course history, enrolled revi
     hasTouch: testInfo.project.use.hasTouch,
   };
   const managerContext = await browser.newContext(contextOptions);
-  const learnerContext = await browser.newContext(contextOptions);
+  const companyContext = await browser.newContext(contextOptions);
   try {
     const manager = await managerContext.newPage();
     await adminLogin(manager, admin);
-    await manager.goto(`/courses?run=${run}`);
-    const dialog = manager.getByRole("dialog", { name: title, exact: true });
-    await expect(
-      dialog.getByRole("heading", {
-        name: "Kursteilnehmende verwalten",
-        exact: true,
-      }),
-    ).toBeVisible();
-    await dialog
-      .getByLabel("Person auswählen", { exact: true })
-      .selectOption(student.id);
-    await dialog
-      .getByLabel("Teilnahmestatus", { exact: true })
-      .selectOption("completed");
-    await dialog
-      .getByRole("button", { name: "Zuordnung speichern", exact: true })
+    await manager.goto(`/people/${teacher.id}`);
+    await manager
+      .getByRole("button", { name: "Profil bearbeiten", exact: true })
       .click();
-    await expect(
-      dialog
-        .locator(".enrolment-list")
-        .getByText(student.name, { exact: true }),
-    ).toBeVisible();
-    const learner = await learnerContext.newPage();
-    await login(learner, student.email);
-    await learner.goto("/my-reviews");
-    const reviewForm = learner.locator("article").filter({
-      has: learner.getByRole("heading", { name: title, exact: true }),
+    const editDialog = manager.getByRole("dialog", {
+      name: "Profil bearbeiten",
+      exact: true,
+    });
+    await editDialog
+      .getByLabel("Zeitzone", { exact: true })
+      .fill("Australia/Brisbane");
+    await editDialog
+      .getByRole("button", { name: "Speichern", exact: true })
+      .click();
+    await expect(editDialog).toBeHidden();
+    expect(
+      (
+        await checked(
+          service
+            .from("profiles")
+            .select("time_zone")
+            .eq("id", teacher.id)
+            .single(),
+        )
+      ).time_zone,
+    ).toBe("Australia/Brisbane");
+    await manager
+      .getByRole("button", { name: "Zugang sperren", exact: true })
+      .click();
+    await manager
+      .getByRole("dialog")
+      .getByRole("button", { name: "Kontostatus bestätigen", exact: true })
+      .click();
+    await expect(manager.getByRole("dialog")).toBeHidden();
+    await manager
+      .getByRole("button", { name: "Zugang aktivieren", exact: true })
+      .click();
+    await manager
+      .getByRole("dialog")
+      .getByRole("button", { name: "Kontostatus bestätigen", exact: true })
+      .click();
+    await expect(manager.getByRole("dialog")).toBeHidden();
+    expect(
+      (
+        await checked(
+          service
+            .from("profiles")
+            .select("active")
+            .eq("id", teacher.id)
+            .single(),
+        )
+      ).active,
+    ).toBe(true);
+    const company = await companyContext.newPage();
+    await login(company, customer.email);
+    await company.goto("/my-reviews");
+    const reviewForm = company.locator("article").filter({
+      has: company.getByRole("heading", { name: title, exact: true }),
     });
     await reviewForm.getByLabel("Bewertung", { exact: true }).selectOption("4");
     const feedback = `Fictional clear teaching <script>${randomUUID().slice(0, 8)}</script>`;
@@ -220,7 +284,7 @@ test("own labels connect searchable profiles, real course history, enrolled revi
     ).toBeVisible();
     await page.goto(`/people/${teacher.id}`);
     await expect(page.getByText(feedback, { exact: true })).toBeVisible();
-    await expect(page.getByText(student.name, { exact: true })).toHaveCount(0);
+    await expect(page.getByText(customer.name, { exact: true })).toHaveCount(0);
     expect(await page.locator(".people-review-list script").count()).toBe(0);
     await a11y(page);
     await page.screenshot({
@@ -244,12 +308,12 @@ test("own labels connect searchable profiles, real course history, enrolled revi
     await expect(manager.getByRole("dialog")).toBeHidden();
     await page.reload();
     await expect(page.getByText(feedback, { exact: true })).toHaveCount(0);
-    await learner.reload();
+    await company.reload();
     await expect(
-      learner.getByText("Durch Moderation ausgeblendet", { exact: false }),
+      company.getByText("Durch Moderation ausgeblendet", { exact: false }),
     ).toBeVisible();
-    await a11y(learner);
+    await a11y(company);
   } finally {
-    await Promise.all([managerContext.close(), learnerContext.close()]);
+    await Promise.all([managerContext.close(), companyContext.close()]);
   }
 });

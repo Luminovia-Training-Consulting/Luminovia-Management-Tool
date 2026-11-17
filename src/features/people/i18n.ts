@@ -40,7 +40,7 @@ const de = {
   verified: "Geprüft",
   selfDeclared: "Selbst angegeben",
   noTopics: "Noch keine Themen angegeben.",
-  ratings: "Teilnehmendenbewertungen",
+  ratings: "Unternehmensbewertungen",
   noReviews: "Noch keine freigegebenen Bewertungen.",
   recentReviews:
     "Die Liste zeigt die 100 neuesten Bewertungen. Bewertende Personen bleiben anonym.",
@@ -56,9 +56,9 @@ const de = {
   reason: "Begründung",
   moderationHelp:
     "Die Änderung wird mit Begründung protokolliert. Der ursprüngliche Beitrag bleibt geschützt gespeichert.",
-  reviewTasks: "Meine Kursbewertungen",
+  reviewTasks: "Dozent:innen bewerten",
   reviewHelp:
-    "Du kannst tatsächlich abgeschlossene Kurse nach bestätigter Teilnahme bewerten. Der Name der bewertenden Person wird anderen Mitgliedern nicht angezeigt.",
+    "Als zuständiger Unternehmenskontakt kannst du Dozent:innen nach Abschluss eines Kurses deines Unternehmens bewerten. Der Name der bewertenden Person wird anderen Mitgliedern nicht angezeigt.",
   noReviewTasks:
     "Aktuell sind keine abgeschlossenen Kurse zur Bewertung freigegeben.",
   comment: "Deine Rückmeldung",
@@ -122,7 +122,7 @@ const en: typeof de = {
   verified: "Verified",
   selfDeclared: "Self declared",
   noTopics: "No topics yet.",
-  ratings: "Participant reviews",
+  ratings: "Company reviews",
   noReviews: "No published reviews yet.",
   recentReviews:
     "The list shows the 100 latest reviews. Reviewers remain anonymous.",
@@ -138,9 +138,9 @@ const en: typeof de = {
   reason: "Reason",
   moderationHelp:
     "The change and its reason are audited. The original contribution remains protected.",
-  reviewTasks: "My course reviews",
+  reviewTasks: "Review lecturers",
   reviewHelp:
-    "Review completed courses after your attendance has been confirmed. Other members do not see the reviewer's name.",
+    "As an authorized company contact, you can review lecturers after a course for your company has ended. Other members do not see the reviewer's name.",
   noReviewTasks: "No completed courses are currently available for review.",
   comment: "Your feedback",
   submit: "Save review",

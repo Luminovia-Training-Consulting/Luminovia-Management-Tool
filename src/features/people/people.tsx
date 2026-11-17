@@ -7,6 +7,7 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { MessageCircle, Star } from "lucide-react";
+import { UnavailablePerson } from "../accounts/unavailable-person";
 import { PersonManagementActions } from "../accounts/person-actions";
 import { Avatar } from "../profile/avatar";
 import { PersonContact } from "./person-contact";
@@ -201,7 +202,8 @@ export function PersonProfile() {
   });
   const [state, setState] = useState("");
   if (person.isPending) return <Loading />;
-  if (person.isError) return <ErrorState retry={() => void person.refetch()} />;
+  if (person.isError)
+    return <UnavailablePerson id={id} retry={() => void person.refetch()} />;
   const details = person.data;
   const bio = details.bio_de || details.bio_en;
   return (
@@ -211,7 +213,7 @@ export function PersonProfile() {
         description={details.country || details.time_zone}
       />
       <Avatar userId={id} name={details.display_name} size="large" />
-      <div className="page-actions">
+      <div className="page-actions people-profile-actions">
         <PersonManagementActions id={id} name={details.display_name} />
         <Button asChild variant="ghost">
           <Link to="/people">{t("back")}</Link>

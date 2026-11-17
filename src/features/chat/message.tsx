@@ -29,7 +29,6 @@ import { MentionPicker } from "./mentions";
 import type { ChatMessage, ChatMention } from "./types";
 import "./i18n";
 import "./hide-message-i18n";
-import { TaskFromMessageAction } from "../workbench/message-action";
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const editSchema = z.object({ body: z.string().max(8000) });
 /** Bound the quick emoji picker; the server validates actual reaction changes. */
@@ -274,7 +273,6 @@ export function MessageBubble({
                 role="group"
                 aria-label={t("messageActions")}
               >
-                <TaskFromMessageAction messageId={message.id} />
                 {onReply && (
                   <Button
                     variant="ghost"

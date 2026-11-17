@@ -72,6 +72,7 @@ const pairs: Record<string, [string, string]> = {
     "Contacts and internal notes are visible only to authorised management.",
   ],
   archive: ["Archiviert", "Archived"],
+  archiveAction: ["Archivieren", "Archive"],
   timezone: ["Zeitzone", "Time zone"],
   contacts: ["Ansprechpersonen", "Contacts"],
   newContact: ["Kontakt hinzufügen", "Add contact"],

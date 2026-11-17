@@ -32,6 +32,7 @@ import {
   PanelLeftOpen,
   LifeBuoy,
 } from "lucide-react";
+import { Avatar } from "../features/profile/avatar";
 import { NotificationsMenu } from "../features/notifications/notifications";
 import { useAuth } from "../features/auth/auth-context";
 import { useAuthorizationRefresh } from "../features/auth/authorization-refresh";
@@ -40,7 +41,6 @@ import { permissionsQuery, profileQuery, userRolesQuery } from "../lib/queries";
 import { Button } from "../components/ui/button";
 import { ErrorState, Loading, Notice } from "../components/common";
 import "../features/learning/i18n";
-import "../features/workbench/i18n";
 import "../features/workbench/finance-i18n";
 import { Preferences } from "../components/preferences";
 import { PortalTour } from "../features/help/tour";
@@ -63,6 +63,10 @@ export function Shell() {
   const navigate = useNavigate();
   const location = useLocation();
   const mobileMore = useRef<HTMLDetailsElement>(null);
+  const accountMenu = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    if (accountMenu.current) accountMenu.current.open = false;
+  }, [location]);
   const [railTooltip, setRailTooltip] = useState<{
     label: string;
     top: number;
@@ -127,9 +131,7 @@ export function Shell() {
       ["owner", "admin", "lecturer", "senior_lecturer"].includes(role),
     ) ?? false;
   const staff = teaching || Boolean(roles.data?.includes("management"));
-  const clientPortalAccess =
-    roles.data?.some((role) => ["owner", "admin", "client"].includes(role)) ??
-    false;
+  const clientPortalAccess = roles.data?.includes("client") ?? false;
   const manage = Boolean(
     permissions.data?.includes("jobs.manage") ||
     permissions.data?.includes("announcements.manage"),
@@ -154,12 +156,8 @@ export function Shell() {
     ...(clientPortalAccess
       ? [{ to: "/client", icon: Building2, label: "clientPortal" }]
       : []),
-    ...(staff
-      ? [
-          { to: "/wiki", icon: BookOpen, label: "wiki" },
-          { to: "/forum", icon: MessageCircle, label: "forum" },
-        ]
-      : []),
+    { to: "/wiki", icon: BookOpen, label: "knowledgeHelp" },
+    ...(staff ? [{ to: "/forum", icon: MessageCircle, label: "forum" }] : []),
     { to: "/topics", icon: BookOpen, label: "topics" },
     ...(manage ? [{ to: "/admin", icon: Settings2, label: "admin" }] : []),
     { to: "/settings", icon: Settings2, label: "settings" },
@@ -250,32 +248,34 @@ export function Shell() {
           <span>{t(collapsed ? "expand" : "collapse")}</span>
         </Button>
         <nav aria-label={t("menu")}>
-          {navigation.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === "/"}
-              aria-label={collapsed ? t(label) : undefined}
-              aria-describedby={collapsed ? "sidebar-nav-tooltip" : undefined}
-              onMouseEnter={(event) =>
-                showRailTooltip(label, event.currentTarget)
-              }
-              onMouseLeave={(event) => {
-                if (document.activeElement !== event.currentTarget) {
-                  setRailTooltip(null);
+          {navigation
+            .filter(({ to }) => !["/settings", "/profile"].includes(to))
+            .map(({ to, icon: Icon, label }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={to === "/"}
+                aria-label={collapsed ? t(label) : undefined}
+                aria-describedby={collapsed ? "sidebar-nav-tooltip" : undefined}
+                onMouseEnter={(event) =>
+                  showRailTooltip(label, event.currentTarget)
                 }
-              }}
-              onFocus={(event) => showRailTooltip(label, event.currentTarget)}
-              onBlur={(event) => {
-                if (!event.currentTarget.matches(":hover")) {
-                  setRailTooltip(null);
-                }
-              }}
-            >
-              <Icon size={20} aria-hidden="true" />
-              <span className="sidebar-link-label">{t(label)}</span>
-            </NavLink>
-          ))}
+                onMouseLeave={(event) => {
+                  if (document.activeElement !== event.currentTarget) {
+                    setRailTooltip(null);
+                  }
+                }}
+                onFocus={(event) => showRailTooltip(label, event.currentTarget)}
+                onBlur={(event) => {
+                  if (!event.currentTarget.matches(":hover")) {
+                    setRailTooltip(null);
+                  }
+                }}
+              >
+                <Icon size={20} aria-hidden="true" />
+                <span className="sidebar-link-label">{t(label)}</span>
+              </NavLink>
+            ))}
         </nav>
         <div className="sidebar-bottom">
           <Button
@@ -327,6 +327,31 @@ export function Shell() {
               <NotificationsMenu id={actor} zone={profile.data.time_zone} />
             )}
             <Preferences />
+            <details className="account-menu" ref={accountMenu}>
+              <summary aria-label={t("profile")} title={t("profile")}>
+                <Avatar
+                  userId={actor}
+                  name={profile.data?.display_name ?? ""}
+                  decorative
+                />
+                <span>
+                  {profile.data?.display_name}
+                  <small>{t("profile")}</small>
+                </span>
+                <span aria-hidden="true">⌄</span>
+              </summary>
+              <div className="account-menu-panel">
+                <NavLink to="/profile">{t("profile")}</NavLink>
+                <NavLink to="/settings">{t("settings")}</NavLink>
+                <button
+                  type="button"
+                  disabled={signoutPending}
+                  onClick={() => void logout()}
+                >
+                  {t("logout")}
+                </button>
+              </div>
+            </details>
             <Button
               variant="ghost"
               className="mobile-signout"

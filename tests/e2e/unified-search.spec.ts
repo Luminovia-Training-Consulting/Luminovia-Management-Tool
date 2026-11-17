@@ -3,9 +3,8 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";
 import { actor, api, checked, login } from "./helpers/accounts-support";
-import { cleanupWorkbenchUsers } from "./helpers/workbench-cleanup";
 
-test("universal search finds own tasks, keeps foreign tasks private and opens the selected result in DE/EN", async ({
+test("universal search finds own wiki drafts, keeps foreign drafts private and opens the selected result in DE/EN", async ({
   page,
 }, testInfo) => {
   const owner = await actor("Fictional search owner", "lecturer"),
@@ -16,8 +15,8 @@ test("universal search finds own tasks, keeps foreign tasks private and opens th
       api(process.env.SUPABASE_ANON_KEY!),
     ];
   const needle = `Search-${randomUUID()}`;
+  const pages: string[] = [];
   try {
-    const tasks = [];
     for (const [index, user] of [owner, peer].entries()) {
       await checked(
         clients[index].auth.signInWithPassword({
@@ -25,39 +24,46 @@ test("universal search finds own tasks, keeps foreign tasks private and opens th
           password: process.env.E2E_PASSWORD!,
         }),
       );
-      tasks.push(
-        await checked(
-          clients[index].rpc("save_work_task", {
-            p_id: null,
-            p_payload: {
-              title: `${needle} ${index ? "peer private" : "own task"}`,
-              description: "Fictional authored detail",
-              state: "open",
-              due_at: null,
-              time_zone: "Europe/Berlin",
-              scope: "private",
-              assignee_id: user.id,
-              source_message_id: null,
-            },
-            p_expected_version: 0,
-            p_client_id: randomUUID(),
-          }),
-        ),
+      const categories = await checked(
+        clients[index].rpc("knowledge_categories", { p_kind: "wiki" }),
+        { requireData: true },
       );
+      const saved = await checked(
+        clients[index].rpc("save_wiki_page", {
+          p_id: null,
+          p_title: `${needle} ${index ? "peer private" : "own draft"}`,
+          p_locale: "de",
+          p_category_id: categories[0].id,
+          p_content: {
+            type: "doc",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "Fictional authored private wiki draft",
+                  },
+                ],
+              },
+            ],
+          },
+          p_status: "draft",
+          p_expected_version: null,
+        }),
+        { requireData: true },
+      );
+      pages.push(saved.page_id);
     }
     await login(page, owner.email);
-    await page.goto(`/search?q=${encodeURIComponent(needle)}&kind=tasks`);
+    await page.goto(`/search?q=${encodeURIComponent(needle)}&kind=wiki`);
     await expect(
       page.getByRole("heading", { name: "Universelle Suche", exact: true }),
     ).toBeVisible();
     const result = page.getByRole("link", {
-      name: new RegExp(`${needle} own task`),
+      name: new RegExp(`${needle} own draft`),
     });
-    await expect(result).toHaveAttribute(
-      "href",
-      `/workbench?task=${tasks[0].id}`,
-    );
-    await expect(result.getByText("Offen", { exact: true })).toBeVisible();
+    await expect(result).toHaveAttribute("href", `/wiki?page=${pages[0]}`);
     await expect(
       page.getByText(`${needle} peer private`, { exact: true }),
     ).toHaveCount(0);
@@ -70,7 +76,6 @@ test("universal search finds own tasks, keeps foreign tasks private and opens th
     await expect(
       page.getByRole("searchbox", { name: "Search term", exact: true }),
     ).toHaveValue("Unsaved authored search");
-    await expect(result.getByText("Open", { exact: true })).toBeVisible();
     await page.reload();
     await expect(
       page.getByRole("searchbox", { name: "Search term", exact: true }),
@@ -92,15 +97,14 @@ test("universal search finds own tasks, keeps foreign tasks private and opens th
       fullPage: true,
     });
     await result.click();
-    await expect(page).toHaveURL(
-      new RegExp(`/workbench\\?task=${tasks[0].id}`),
-    );
+    await expect(page).toHaveURL(new RegExp(`/wiki\\?page=${pages[0]}`));
     await expect(
-      page.getByText(`${needle} own task`, { exact: true }).first(),
+      page.getByText(`${needle} own draft`, { exact: true }).first(),
     ).toBeVisible();
   } finally {
     for (const client of clients) await client.auth.signOut();
-    cleanupWorkbenchUsers([owner.id, peer.id]);
+    if (pages.length)
+      await checked(service.from("wiki_pages").delete().in("id", pages));
     await checked(
       service.from("notifications").delete().in("user_id", [owner.id, peer.id]),
     );

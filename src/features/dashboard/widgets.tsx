@@ -329,7 +329,12 @@ export function DashboardWidgets({
       <PersonalizedWidgets
         actor={actor}
         widgets={{
-          teaching_day: staff ? <TeachingDayWidget actor={actor} /> : null,
+          teaching_day: staff ? (
+            <details className="dashboard-teaching-details">
+              <summary>{t("teachingDay")}</summary>
+              <TeachingDayWidget actor={actor} />
+            </details>
+          ) : null,
           activity: <Activity actor={actor} zone={zone} />,
           contracts: staff ? (
             <PendingContracts actor={actor} zone={zone} />

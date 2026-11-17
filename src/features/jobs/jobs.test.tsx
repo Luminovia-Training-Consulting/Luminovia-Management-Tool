@@ -135,6 +135,69 @@ function setup(
   return client;
 }
 describe("safe marketplace interactions", () => {
+  it("disables a conflicting offer from confirmed assignment instants before consent", async () => {
+    const user = userEvent.setup();
+    const client = setup();
+    await act(async () =>
+      client.setQueryData(
+        ["claims", "lecturer-a"],
+        [
+          {
+            id: "confirmed-other",
+            job_id: "other-job",
+            status: "confirmed",
+            assignment_sessions: [
+              {
+                id: "assigned-session",
+                claim_id: "confirmed-other",
+                starts_at: job.job_sessions[0].starts_at,
+                ends_at: job.job_sessions[0].ends_at,
+              },
+            ],
+          },
+        ],
+      ),
+    );
+    expect(
+      await screen.findByText(
+        "Mindestens ein Termin überschneidet sich mit deinem Kalender.",
+      ),
+    ).toBeVisible();
+    await user.click(
+      screen.getByRole("checkbox", { name: "Konditionen akzeptieren" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Auftrag übernehmen" }),
+    ).toBeDisabled();
+    expect(rpc.mock.calls.some(([name]) => name === "claim_job")).toBe(false);
+    await act(async () =>
+      client.setQueryData(
+        ["claims", "lecturer-a"],
+        [
+          {
+            id: "released-other",
+            job_id: "other-job",
+            status: "confirmed",
+            assignment_sessions: [
+              {
+                id: "released-session",
+                claim_id: "released-other",
+                starts_at: job.job_sessions[0].starts_at,
+                ends_at: job.job_sessions[0].ends_at,
+                released_at: "2026-11-17T00:00:00Z",
+              },
+            ],
+          },
+        ],
+      ),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Auftrag übernehmen" }),
+      ).toBeEnabled(),
+    );
+  });
+
   it("retains the protected quote state in a paged discovery card", () => {
     setup("/jobs", true, { amount: null, total_amount: null });
     expect(screen.getByText("Honorar geschützt")).toBeVisible();

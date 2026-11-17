@@ -72,10 +72,34 @@ export function JobDetail() {
       ])
     : null;
   const ownClaim = claims.data?.find((c) => c.job_id === id);
+  // This is guidance from current server-confirmed assignments. The claim RPC
+  // still rechecks every instant atomically, including concurrent allocations.
+  const assignmentConflict = Boolean(
+    job &&
+    claims.data?.some(
+      (existing) =>
+        existing.job_id !== job.id &&
+        existing.assignment_sessions.some(
+          (assigned) =>
+            !assigned.released_at &&
+            job.job_sessions.some(
+              (offered) =>
+                Date.parse(offered.starts_at) < Date.parse(assigned.ends_at) &&
+                Date.parse(offered.ends_at) > Date.parse(assigned.starts_at),
+            ),
+        ),
+    ),
+  );
   const claim = useMutation({
     mutationFn: async () => {
       requireOnline();
-      if (!job || accepted !== consent) throw new Error("invalid");
+      if (
+        !job ||
+        accepted !== consent ||
+        assignmentConflict ||
+        !claims.isSuccess
+      )
+        throw new Error("invalid");
       // The browser submits no winner/lecturer ID. The server atomically checks
       // the current actor, eligibility, every session and accepted terms.
       const { data, error } = await db().rpc("claim_job", {
@@ -262,6 +286,9 @@ export function JobDetail() {
           ) : (
             <>
               <p>{t("claimHelp")}</p>
+              {assignmentConflict && (
+                <Notice kind="error">{t("claim_conflict")}</Notice>
+              )}
               <label className="checkbox-label">
                 <input
                   type="checkbox"
@@ -277,6 +304,8 @@ export function JobDetail() {
                 onClick={() => claim.mutate()}
                 disabled={
                   accepted !== consent ||
+                  assignmentConflict ||
+                  !claims.isSuccess ||
                   !online ||
                   claim.isPending ||
                   job.status !== "published" ||

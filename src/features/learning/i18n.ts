@@ -35,7 +35,7 @@ const pairs: Record<string, [string, string]> = {
     "Course information, dates, preparation and shared files.",
   ],
   back: ["Alle Kurse", "All courses"],
-  refresh: ["Kursraum aktualisieren", "Refresh workspace"],
+  refresh: ["Kurs aktualisieren", "Refresh course"],
   save: ["Speichern", "Save"],
   saved: [
     "Änderung auf dem Server gespeichert.",
@@ -73,7 +73,7 @@ const pairs: Record<string, [string, string]> = {
     "Share a customer contact for this course",
   ],
   contactHelp: [
-    "Nur ein Kontakt der zugeordneten Organisation wird im Kursraum für berechtigte Kursmitglieder sichtbar. Interne Kundennotizen bleiben privat.",
+    "Nur ein Kontakt der zugeordneten Organisation wird im Kurs für berechtigte Kursmitglieder sichtbar. Interne Kundennotizen bleiben privat.",
     "Only a contact from the linked organisation is shared with authorised course members. Internal customer notes stay private.",
   ],
   teachingLink: ["Unterrichtslink öffnen", "Open teaching link"],

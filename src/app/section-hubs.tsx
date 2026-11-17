@@ -66,11 +66,18 @@ export function SectionHub({ kind }: { kind: keyof typeof sections }) {
   const [params, setParams] = useSearchParams();
   const actor = useAuth().session!.user.id;
   const roles = useQuery(userRolesQuery(actor));
-  const items = sections[kind].filter(
-    (item) =>
-      item[0] !== "reviews" ||
-      roles.data?.some((role) => ["client", "owner", "admin"].includes(role)),
+  const staff = roles.data?.some((role) =>
+    ["owner", "admin", "management", "lecturer", "senior_lecturer"].includes(
+      role,
+    ),
   );
+  const items = sections[kind].filter((item) => {
+    if (kind === "knowledge" && item[0] === "wiki") return staff;
+    return (
+      item[0] !== "reviews" ||
+      roles.data?.some((role) => ["client", "owner", "admin"].includes(role))
+    );
+  });
   const selected =
     items.find((item) => item[0] === params.get("section")) ?? items[0];
   const Page = selected[3];

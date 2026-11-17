@@ -12,7 +12,6 @@ export const searchKinds = [
   "people",
   "courses",
   "clients",
-  "tasks",
   "contracts",
   "finance",
 ] as const;

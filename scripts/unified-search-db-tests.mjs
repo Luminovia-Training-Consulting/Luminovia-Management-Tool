@@ -32,7 +32,17 @@ await withTestDatabase("unified_search", async ({ sql, actor }) => {
   const serialized = JSON.stringify(result);
   assert.ok(result.items.some((row) => row.id === ownFile));
   assert.ok(result.items.some((row) => row.id === msg));
-  assert.ok(result.items.some((row) => row.id === task));
+  assert.ok(!result.items.some((row) => row.id === task));
+  assert.ok(
+    !result.items.some(
+      (row) => row.kind === "tasks" || row.url.startsWith("/workbench"),
+    ),
+  );
+  await assert.rejects(search(owner, "Needle", "tasks"), /Invalid search page/);
+  await assert.rejects(
+    search(owner, "Needle", "", { kind: "tasks", title: "needle", id: task }),
+    /Invalid search page/,
+  );
   assert.ok(!serialized.includes(foreignFile));
   const file = result.items.find((row) => row.id === ownFile);
   assert.equal(
@@ -47,7 +57,7 @@ await withTestDatabase("unified_search", async ({ sql, actor }) => {
   assert.ok(!privileged.includes(msg));
   assert.ok(!privileged.includes(task));
   console.log(
-    "PASS Universal search preserves own file/task and private DM boundaries, including permission administrators; exact Unicode URL escaping",
+    "PASS Universal search preserves own file and private DM boundaries, excludes retired tasks, including permission administrators; exact Unicode URL escaping",
   );
   // This is a security-definer projection, so direct-table RLS alone cannot
   // filter hidden messages. Exercise both identities and the p_limit boundary.
@@ -93,20 +103,9 @@ await withTestDatabase("unified_search", async ({ sql, actor }) => {
   console.log(
     "PASS Personally hidden messages are excluded before universal-search pagination without changing peer visibility or grants",
   );
-  result = await search(learner);
-  assert.ok(
-    result.items.some(
-      (row) => row.id === run && row.url === `/courses/${run}/workspace`,
-    ),
-  );
-  assert.ok(!result.items.some((row) => row.id === otherRun));
-  assert.ok(
-    !result.items.some((row) =>
-      ["jobs", "chats", "files", "tasks"].includes(row.kind),
-    ),
-  );
+  await assert.rejects(search(learner), /Active account required/);
   console.log(
-    "PASS Participant only discovers actual enrolled course, with no foreign course or staff/private spill",
+    "PASS Participant portal access is denied even with legacy course enrolment",
   );
   await sql(
     `insert into public.documents(owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id) select ${q(owner)},${q(owner)},'personal','material','PageNeedle '||lpad(i::text,4,'0')||'.txt','text/plain',1,'clean',gen_random_uuid() from generate_series(1,1005)i;`,

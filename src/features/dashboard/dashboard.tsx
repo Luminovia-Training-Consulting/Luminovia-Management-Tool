@@ -130,7 +130,6 @@ export function Dashboard() {
           ))}
         </div>
       )}
-      <FinancialSummaryCards />
       {staff ? (
         <div className="dashboard-overview">
           <section
@@ -190,6 +189,13 @@ export function Dashboard() {
           assignments={[]}
         />
       )}
+      <DashboardWidgets
+        actor={session!.user.id}
+        zone={zone}
+        staff={staff}
+        clientAccount={clientAccount}
+        jobCounts={jobs.data?.management ?? undefined}
+      />
       {staff && (
         <div className="dashboard-offers">
           <section aria-label={matching ? dashboard("matches") : t("openJobs")}>
@@ -217,13 +223,7 @@ export function Dashboard() {
           </section>
         </div>
       )}
-      <DashboardWidgets
-        actor={session!.user.id}
-        zone={zone}
-        staff={staff}
-        clientAccount={clientAccount}
-        jobCounts={jobs.data?.management ?? undefined}
-      />
+      <FinancialSummaryCards />
     </section>
   );
 }

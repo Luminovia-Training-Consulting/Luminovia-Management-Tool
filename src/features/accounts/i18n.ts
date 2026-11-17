@@ -6,6 +6,8 @@ import i18n from "../../lib/i18n";
 // Static UI resources use the namespace's shared interpolation and pluralization contract.
 // Authored content is separate from these i18next interface strings.
 const de = {
+  publicProfileUnavailable:
+    "Das öffentliche Profil ist derzeit nicht verfügbar. Die berechtigte Kontoverwaltung bleibt möglich.",
   profileLanguage: "Anzeigesprache",
   profileSaveFailed:
     "Profil konnte nicht gespeichert werden. Prüfe die Eingaben oder lade das Profil bei zwischenzeitlichen Änderungen erneut.",
@@ -69,6 +71,8 @@ const de = {
   inactive: "Gesperrt",
 };
 const en: typeof de = {
+  publicProfileUnavailable:
+    "The public profile is currently unavailable. Authorized account management remains available.",
   profileLanguage: "Display language",
   profileSaveFailed:
     "The profile could not be saved. Check the entries or reload if another change was made in the meantime.",

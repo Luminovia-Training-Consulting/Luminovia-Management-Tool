@@ -47,3 +47,22 @@ it("normalises an obsolete saved theme to the actual system theme", () => {
   expect(document.documentElement.dataset.theme).toBe("dark");
   expect(localStorage.getItem("luminovia.theme")).toBe("system");
 });
+
+it("synchronizes header and settings theme controls without duplicate label targets", () => {
+  systemDark();
+  render(
+    <>
+      <Preferences />
+      <Preferences />
+    </>,
+  );
+  const themes = screen.getAllByLabelText("Farbschema");
+  expect(themes).toHaveLength(2);
+  expect(themes[0].id).not.toBe(themes[1].id);
+  fireEvent.change(themes[0], { target: { value: "light" } });
+  expect(themes[1]).toHaveValue("light");
+  expect(document.documentElement.dataset.theme).toBe("light");
+  fireEvent.change(themes[1], { target: { value: "dark" } });
+  expect(themes[0]).toHaveValue("dark");
+  expect(document.documentElement.dataset.theme).toBe("dark");
+});

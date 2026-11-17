@@ -79,6 +79,7 @@ export interface Claim {
   assignment_sessions: {
     id: string;
     claim_id: string;
+    released_at?: string | null;
     starts_at: string;
     ends_at: string;
   }[];

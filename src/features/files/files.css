@@ -379,3 +379,43 @@
     grid-template-rows: auto auto;
   }
 }
+
+/* Only text filters stretch to the grid width; the folder checkbox keeps native size. */
+.file-discovery-filters > .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  grid-column: 1 / -1;
+  min-width: 0;
+  line-height: 1.5;
+}
+.file-discovery-filters input[type="checkbox"] {
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  min-height: 18px;
+  flex: 0 0 18px;
+}
+.file-discovery-filters > .field {
+  min-width: 0;
+}
+.file-discovery-filters > .field small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* Align text inputs by their labels, not by variable-height explanatory hints. */
+.file-discovery-filters {
+  align-items: start;
+}
+.file-discovery-filters > .field {
+  grid-template-rows: minmax(2.5em, auto) 44px auto;
+  align-content: start;
+}
+.file-discovery-filters > .button {
+  align-self: center;
+}
+@media (max-width: 760px) {
+  .file-discovery-filters > .field {
+    grid-template-rows: auto 44px auto;
+  }
+}

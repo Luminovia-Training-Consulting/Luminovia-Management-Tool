@@ -105,16 +105,7 @@ export function PortalSearch() {
                   <Link to={row.url}>
                     <span className="badge">{t(row.kind)}</span>
                     <strong>{row.title}</strong>
-                    {row.detail && (
-                      <small>
-                        {row.kind === "tasks" &&
-                        ["open", "doing", "done", "cancelled"].includes(
-                          row.detail,
-                        )
-                          ? t(`task_${row.detail}`)
-                          : row.detail}
-                      </small>
-                    )}
+                    {row.detail && <small>{row.detail}</small>}
                   </Link>
                 </li>
               ))}

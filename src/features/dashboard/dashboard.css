@@ -331,3 +331,140 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Keep operational summaries visible before secondary offers and finance on real accounts. */
+.dashboard-page {
+  gap: 18px;
+}
+.dashboard-welcome {
+  padding-block: 25px;
+}
+.dashboard-welcome h1 {
+  font-size: clamp(27px, 2.6vw, 38px);
+}
+.dashboard-overview > .panel {
+  padding: 18px;
+}
+.dashboard-overview .dashboard-widget-hint,
+.dashboard-overview p,
+.dashboard-overview li {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.dashboard-overview .readiness-widget-count {
+  font-size: 19px;
+}
+.dashboard-page .dashboard-widgets {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.dashboard-page .dashboard-widget {
+  padding: 18px;
+}
+.dashboard-page .dashboard-widget h2 {
+  font-size: 17px;
+}
+.dashboard-page .dashboard-widget p,
+.dashboard-page .dashboard-widget li {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.dashboard-page .dashboard-widget-hint {
+  font-size: 12px;
+  line-height: 1.45;
+  margin-bottom: 10px;
+}
+.dashboard-page .dashboard-preview-list {
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.dashboard-page .dashboard-preview-list small {
+  font-size: 11px;
+}
+.dashboard-page .dashboard-shortcuts a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.dashboard-page .dashboard-shortcuts a::after {
+  flex-shrink: 0;
+}
+.dashboard-page .dashboard-customize {
+  margin-top: 0;
+}
+@media (max-width: 1050px) {
+  .dashboard-page .dashboard-widgets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .dashboard-page .dashboard-widgets {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dashboard-welcome {
+    padding: 20px;
+  }
+}
+/* Today's expanded operational context remains available without duplicating the default overview. */
+.dashboard-teaching-details {
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--brand);
+  border-radius: 16px;
+  padding: 16px;
+  background: var(--surface);
+  height: 100%;
+}
+.dashboard-teaching-details > summary {
+  font-weight: 650;
+  font-size: 17px;
+}
+.dashboard-teaching-details > .dashboard-widget {
+  border: 0;
+  padding: 16px 0 0;
+  box-shadow: none;
+}
+/* Dense desktop summary rows match the reference without clipping real records. */
+.dashboard-page .dashboard-widget p {
+  margin-block: 8px;
+}
+.dashboard-page .dashboard-widget .section-heading {
+  margin-bottom: 10px;
+}
+.dashboard-page .dashboard-widget-slot:has(.dashboard-teaching-details) {
+  grid-column: 1 / -1;
+  order: 2;
+}
+.dashboard-page .dashboard-teaching-details {
+  height: auto;
+}
+.dashboard-page .dashboard-teaching-details > .dashboard-widget {
+  padding: 14px 0 0;
+}
+.dashboard-page
+  .dashboard-widget-slot:has(.dashboard-teaching-details)
+  > details:not([open]) {
+  padding-block: 12px;
+}
+@media (min-width: 1300px) {
+  .dashboard-page .dashboard-widgets {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.dashboard-offers .job-card {
+  padding: 16px;
+}
+.dashboard-offers .job-card h2 {
+  font-size: 17px;
+  margin-block: 8px;
+}
+.dashboard-offers .job-excerpt {
+  font-size: 12px;
+  line-height: 1.45;
+}
+.dashboard-offers .job-card-bottom {
+  margin-top: 12px;
+  padding-top: 12px;
+}
+.dashboard-offers .job-meta {
+  gap: 8px;
+}

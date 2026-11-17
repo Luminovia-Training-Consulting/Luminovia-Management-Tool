@@ -2,7 +2,13 @@
 import { expect, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { actor, api, checked, code, login } from "./helpers/accounts-support";
+import {
+  actor,
+  api,
+  checked,
+  assertPasswordOnly,
+  login,
+} from "./helpers/accounts-support";
 
 test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
@@ -32,19 +38,7 @@ test("wiki draft attachments become readable only after publication and are revo
     peerApi = await signIn(peer.email),
     learnerApi = await signIn(learner.email),
     managerApi = await signIn(manager.email);
-  const factor = await checked(
-    managerApi.auth.mfa.enroll({
-      factorType: "totp",
-      friendlyName: "Wiki attachment QA",
-    }),
-    { requireData: true },
-  );
-  await checked(
-    managerApi.auth.mfa.challengeAndVerify({
-      factorId: factor.id,
-      code: code(factor.totp.secret),
-    }),
-  );
+  await assertPasswordOnly(managerApi);
   const categories = await checked(
     authorApi.rpc("knowledge_categories", { p_kind: "wiki" }),
     { requireData: true },
