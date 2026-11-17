@@ -1337,3 +1337,6 @@ The migration-order regression now accepts later independent migrations while pr
 
 - [x] Align commission gross-report API acceptance with explicit `finance.gross.read` permission after the AAL gate removal; preserve denial for roles without that permission.
 - [ ] Finish exact-head system and selfhost CI after this role-policy assertion update.
+
+- [x] Preserve the already-deployed profile-directory migration version and move only the new owned-deletion forward migration to unique version `20261118172000` after selfhost replay detected the duplicate key.
+- [ ] Re-run current-head migration replay, system verification and selfhost compatibility on the corrected migration chain.
