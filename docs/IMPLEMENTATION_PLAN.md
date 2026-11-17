@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## PR37 participant-origin CI repair — 17 November 2026
+
+- [x] Trace the native fixture cleanup failure to dependent membership-origin rows blocking deletion of its owned participant room.
+- [x] Make provenance rows follow room/profile lifecycle with cascading foreign keys and add an actual database assertion for room cleanup.
+- [ ] Pass focused checks and fresh full exact-head/current-base system, browser, SQL, native/selfhost, security and preview checks; merge only when all required gates pass.
+
 ## Participant chat membership origins
 
 - [x] Track new assignment-derived and explicit participant-room membership without guessing legacy provenance; fail closed and provide an authorized explicit resolution.

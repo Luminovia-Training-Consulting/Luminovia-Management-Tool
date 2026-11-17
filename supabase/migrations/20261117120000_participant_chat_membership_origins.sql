@@ -2,8 +2,8 @@ begin;
 -- Only server workflows write these records. Missing records are legacy/unknown,
 -- never evidence that a membership is exclusively assignment-derived.
 create table private.participant_chat_origins (
- room_id uuid not null references public.chat_rooms(id),
- user_id uuid not null references public.profiles(id),
+ room_id uuid not null references public.chat_rooms(id) on delete cascade,
+ user_id uuid not null references public.profiles(id) on delete cascade,
  manual boolean not null default false,
  assignment boolean not null default false,
  unknown boolean not null default false,

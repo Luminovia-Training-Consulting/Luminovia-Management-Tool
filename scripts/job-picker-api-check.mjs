@@ -295,6 +295,22 @@ await withApiFixture(
       ),
       auditBeforeSelfWrite,
     );
+    assert.ok(
+      Number(
+        await sql(
+          `select count(*) from private.participant_chat_origins where room_id=${q(room)}`,
+        ),
+      ) > 0,
+      "The created participant room records its membership origins",
+    );
+    await sql(`delete from public.chat_rooms where id=${q(room)}`);
+    assert.equal(
+      await sql(
+        `select count(*) from private.participant_chat_origins where room_id=${q(room)}`,
+      ),
+      "0",
+      "Deleting an owned room cascades its dependent membership-origin metadata",
+    );
     await sql(
       `update public.profiles set active=false where id=${q(admin.id)}`,
     );

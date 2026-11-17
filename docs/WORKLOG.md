@@ -1,5 +1,9 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — PR37 participant-origin lifecycle and CI cleanup
+
+Native CI failed while removing the fictional participant channel because `private.participant_chat_origins` retained rows that referenced the deleted room. These records are dependent membership-provenance metadata, so the feature migration now cascades their removal with either the room or account. The job-picker API regression verifies provenance exists and is removed with its room; no production permission or functional claim was relaxed. Fresh exact-head application, browser, SQL and selfhost checks remain required.
+
 ## 17 November 2026 — post-upload discovery race
 
 An initial document discovery request may still be pending when a successful upload commits. Invalidation alone can reuse that pre-commit request, blocking completion and omitting the new file. Upload success now cancels document list, exact-document and version-history queries before invalidating them, matching the broader safeguard in PR35. A controlled component regression failed without the fix and passed with it; the three original version/upload component tests and TypeScript passed locally; the regression also covers the three query prefixes. This race is a plausible contributor to the mobile CI file failures, but their precise cause is not established; the full browser and native gates must run again on the integrated revision.
