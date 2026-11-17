@@ -40,7 +40,7 @@ Inputs require visible labels, validation text linked with `aria-describedby`, a
 
 ## Responsive patterns
 
-Desktop: navy sidebar, content workspace, top language/theme controls and user actions. Navigation supports collapsing where implemented. Mobile: touch navigation for Home/Jobs/Calendar/Chats/Profile when those modules function, additional destinations under More. Never expose non-working module navigation as completed functionality. Keep layouts usable at 360px, large text and keyboard zoom. Loading/error/empty/offline states use real copy in DE/EN rather than invented content or figures.
+Desktop: navy sidebar, content workspace, top language/theme controls and user actions. The authenticated workspace uses a persistent collapsible icon rail; the non-sensitive `luminovia.sidebar-collapsed` preference defaults to the compact rail and is local to the browser. Named tooltips remain available to pointer and keyboard users, and global search, notifications and sign-out remain reachable from the rail; language and theme controls are in the top bar. Mobile: preferences and sign-out remain in the top bar, while search, notifications and all permitted destinations are available in the More disclosure. Never expose non-working module navigation as completed functionality. Keep layouts usable at 360px, large text and keyboard zoom. Loading/error/empty/offline states use real copy in DE/EN rather than invented content or figures.
 
 ## State and content
 
