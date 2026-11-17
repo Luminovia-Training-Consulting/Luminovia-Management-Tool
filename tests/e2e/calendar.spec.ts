@@ -416,3 +416,35 @@ test("global calendar reveals published events and opens the precise published c
   ).toBeVisible();
   await expect(dialog.locator(".session-list li")).toHaveCount(1);
 });
+
+test("browser history preserves a personal draft until explicitly discarded", async ({
+  page,
+}) => {
+  const owner = await actor("Fictional history calendar owner", "lecturer");
+  await login(page, owner.email);
+  await page.goto("/calendar");
+  // Add a real in-app history entry; browser back must target the preceding route.
+  await page.getByRole("link", { name: "Verfügbarkeit & Sperrzeiten" }).click();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/calendar/);
+  await page
+    .getByRole("button", { name: "Privaten Termin hinzufügen" })
+    .click();
+  const form = page.getByRole("dialog", { name: "Privaten Termin hinzufügen" });
+  await form.getByLabel("Titel").fill("Fictional history draft");
+  await page.goForward();
+  let confirm = page.getByRole("dialog", {
+    name: "Ungespeicherte Änderungen verwerfen?",
+  });
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole("button", { name: "Entwurf behalten" }).click();
+  await expect(page).toHaveURL(/\/calendar/);
+  await expect(form.getByLabel("Titel")).toHaveValue("Fictional history draft");
+  await page.goForward();
+  confirm = page.getByRole("dialog", {
+    name: "Ungespeicherte Änderungen verwerfen?",
+  });
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole("button", { name: "Änderungen verwerfen" }).click();
+  await expect(page).toHaveURL(/\/availability/);
+});

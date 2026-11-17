@@ -4,7 +4,7 @@
  * Controlled Query/FullCalendar fixtures do not replace native ACL acceptance.
  */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { useEffect } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   act,
   cleanup,
@@ -15,9 +15,30 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import {
+  createMemoryRouter,
+  RouterProvider,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { CalendarPage } from "./calendar";
 import i18n from "../../lib/i18n";
+
+function MemoryRouter({
+  children,
+  initialEntries,
+}: {
+  children: ReactNode;
+  initialEntries?: string[];
+}) {
+  const [router] = useState(() =>
+    createMemoryRouter([{ path: "*", element: <>{children}</> }], {
+      initialEntries,
+    }),
+  );
+  return <RouterProvider router={router} />;
+}
+
 const state = vi.hoisted(() => ({
   claims: [] as unknown[],
   events: [] as unknown[],
@@ -690,6 +711,76 @@ it("blocks an internal navigation until the dirty appointment is explicitly disc
   );
   client.clear();
 });
+
+it.each(["back", "programmatic"] as const)(
+  "guards %s navigation and preserves or discards the draft on explicit choice",
+  async (mode) => {
+    state.rpc.mockImplementation(() => {
+      const result = Promise.resolve({ data: [], error: null });
+      return Object.assign(result, { abortSignal: () => result });
+    });
+    function Controls() {
+      const navigate = useNavigate();
+      const location = useLocation();
+      return (
+        <>
+          <output aria-label="route">{location.pathname}</output>
+          <button
+            onClick={() =>
+              mode === "back" ? navigate(-1) : navigate("/destination")
+            }
+          >
+            Go
+          </button>
+        </>
+      );
+    }
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={["/previous", "/calendar"]}>
+          <CalendarPage />
+          <Controls />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Privaten Termin hinzufügen" }),
+    );
+    const form = screen.getByRole("dialog", {
+      name: "Privaten Termin hinzufügen",
+    });
+    await user.type(within(form).getByLabelText("Titel"), "Draft retained");
+    fireEvent.click(screen.getByText("Go"));
+    let confirmation = await screen.findByRole("dialog", {
+      name: "Ungespeicherte Änderungen verwerfen?",
+    });
+    await user.click(
+      within(confirmation).getByRole("button", { name: "Entwurf behalten" }),
+    );
+    expect(screen.getByLabelText("route")).toHaveTextContent("/calendar");
+    expect(within(form).getByLabelText("Titel")).toHaveValue("Draft retained");
+    fireEvent.click(screen.getByText("Go"));
+    confirmation = await screen.findByRole("dialog", {
+      name: "Ungespeicherte Änderungen verwerfen?",
+    });
+    await user.click(
+      within(confirmation).getByRole("button", {
+        name: "Änderungen verwerfen",
+      }),
+    );
+    expect(screen.getByLabelText("route")).toHaveTextContent(
+      mode === "back" ? "/previous" : "/destination",
+    );
+    client.clear();
+  },
+);
 
 it("centres a job deep link only on an own confirmed assignment session", async () => {
   const jobID = "d7000000-0000-4000-8000-000000000001";

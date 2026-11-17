@@ -3,7 +3,7 @@
  * and course sessions. Visible ranges bound global discovery; each source keeps
  * its own ACL. Private form times become instants before server-confirmed writes.
  */
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useBlocker, useSearchParams } from "react-router-dom";
 import "../availability/i18n";
 import { assignmentJobTitlesQuery } from "../jobs/discovery-api";
 import { runsQuery, templatesQuery } from "../operations/data";
@@ -316,7 +316,6 @@ export function CalendarPage() {
   const { t, i18n } = useTranslation();
   const availabilityText = useTranslation("availability").t;
   const confirmText = useTranslation("calendarConfirmation").t;
-  const navigate = useNavigate();
   const [calendarParams] = useSearchParams();
   const { session } = useAuth();
   const profile = useQuery(profileQuery(session!.user.id));
@@ -380,11 +379,29 @@ export function CalendarPage() {
   const [discardAction, setDiscardAction] = useState<
     | { kind: "close" }
     | { kind: "event"; event: PersonalEvent | undefined }
-    | { kind: "navigate"; path: string }
     | null
   >(null);
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      open &&
+      (eventDirty || eventBusy) &&
+      (currentLocation.pathname !== nextLocation.pathname ||
+        currentLocation.search !== nextLocation.search ||
+        currentLocation.hash !== nextLocation.hash),
+  );
+  const cancelDiscard = () => {
+    setDiscardAction(null);
+    if (blocker.state === "blocked") blocker.reset();
+  };
   const applyDiscardAction = () => {
-    if (!discardAction || eventBusy) return;
+    if (eventBusy) return;
+    if (blocker.state === "blocked") {
+      setDiscardAction(null);
+      setEventDirty(false);
+      blocker.proceed();
+      return;
+    }
+    if (!discardAction) return;
     const action = discardAction;
     setDiscardAction(null);
     setEventDirty(false);
@@ -394,7 +411,6 @@ export function CalendarPage() {
       setOpen(true);
     } else {
       setOpen(false);
-      if (action.kind === "navigate") navigate(action.path);
     }
   };
   useEffect(() => {
@@ -403,45 +419,9 @@ export function CalendarPage() {
       event.preventDefault();
       event.returnValue = "";
     };
-    const guardLink = (event: MouseEvent) => {
-      if (
-        event.defaultPrevented ||
-        event.button !== 0 ||
-        event.metaKey ||
-        event.ctrlKey ||
-        event.shiftKey ||
-        event.altKey
-      )
-        return;
-      const element = event.target instanceof Element ? event.target : null;
-      const link = element?.closest("a[href]");
-      if (
-        !(link instanceof HTMLAnchorElement) ||
-        (link.target && link.target !== "_self") ||
-        link.hasAttribute("download")
-      )
-        return;
-      const destination = new URL(link.href, window.location.href);
-      if (
-        destination.origin !== window.location.origin ||
-        !["http:", "https:"].includes(destination.protocol)
-      )
-        return;
-      const path = destination.pathname + destination.search + destination.hash;
-      if (
-        path ===
-        window.location.pathname + window.location.search + window.location.hash
-      )
-        return;
-      event.preventDefault();
-      event.stopPropagation();
-      if (!eventBusy) setDiscardAction({ kind: "navigate", path });
-    };
     window.addEventListener("beforeunload", beforeUnload);
-    document.addEventListener("click", guardLink, true);
     return () => {
       window.removeEventListener("beforeunload", beforeUnload);
-      document.removeEventListener("click", guardLink, true);
     };
   }, [open, eventDirty, eventBusy]);
   const [selected, setSelected] = useState<PersonalEvent | undefined>();
@@ -728,6 +708,7 @@ export function CalendarPage() {
           onBusyChange={setEventBusy}
           onDirtyChange={setEventDirty}
           onDone={(deleted) => {
+            if (blocker.state === "blocked") blocker.reset();
             setEventDirty(false);
             setDiscardAction(null);
             setOpen(false);
@@ -735,22 +716,23 @@ export function CalendarPage() {
           }}
         />
         <Dialog
-          open={discardAction !== null}
+          open={discardAction !== null || blocker.state === "blocked"}
           onOpenChange={(next) => {
-            if (!next) setDiscardAction(null);
+            if (!next) cancelDiscard();
           }}
           title={confirmText("discardTitle")}
           description={confirmText("discardDescription")}
         >
           <div className="form-actions">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setDiscardAction(null)}
-            >
+            <Button type="button" variant="secondary" onClick={cancelDiscard}>
               {confirmText("keepDraft")}
             </Button>
-            <Button type="button" variant="danger" onClick={applyDiscardAction}>
+            <Button
+              type="button"
+              variant="danger"
+              disabled={eventBusy}
+              onClick={applyDiscardAction}
+            >
               {confirmText("discardDraft")}
             </Button>
           </div>
