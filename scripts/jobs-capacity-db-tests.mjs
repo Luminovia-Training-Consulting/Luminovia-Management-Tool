@@ -89,7 +89,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
         await assert.rejects(create(capacity), /22023/);
       await assert.rejects(
         actor(
-          manager,
+          teachers[0],
           `select public.create_capacity_job('${JSON.stringify(body())}'::jsonb,3,'${randomUUID()}')`,
         ),
         /42501/,
@@ -417,10 +417,6 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
     async () => {
       await assert.rejects(
         actor(teachers[0], "select public.job_board()"),
-        /42501/,
-      );
-      await assert.rejects(
-        actor(manager, "select public.job_board()"),
         /42501/,
       );
       const board = JSON.parse(

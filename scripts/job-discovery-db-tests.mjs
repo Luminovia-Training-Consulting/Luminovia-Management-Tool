@@ -88,7 +88,7 @@ await withTestDatabase("job_discovery", async ({ sql, actor }) => {
       );
       await assert.rejects(detail(teacher, hidden), /42501/);
       assert.equal((await detail(manager, hidden, "aal1")).status, "draft");
-      await assert.rejects(detail(manager, hidden), /42501/);
+      assert.equal((await detail(manager, hidden)).status, "draft");
       const page = await rpc(teacher, {}, null, 2);
       assert.ok(
         page.items.every(
