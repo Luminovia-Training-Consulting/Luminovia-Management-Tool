@@ -546,14 +546,10 @@ test("system and browser phases preserve the complete command partition, duplica
     /System SQL\/API\/Edge\/operational acceptance was not run/,
   );
   assert(
-    !system.messages.some((message) =>
-      /Alle isolierten Prüfungen/.test(message),
-    ),
+    !system.messages.some((message) => /All isolated checks/.test(message)),
   );
   assert(
-    !browser.messages.some((message) =>
-      /Alle isolierten Prüfungen/.test(message),
-    ),
+    !browser.messages.some((message) => /All isolated checks/.test(message)),
   );
 });
 

@@ -39,7 +39,7 @@ export async function runLocalCheck({
     ["Build", "npm", ["run", "build"]],
   ];
   for (const [label, file, args] of steps) {
-    report(`Lokale Prüfung: ${label}`);
+    report(`Local check: ${label}`);
     await run(file, args, {
       cwd: root,
       // Synthetic public values override inherited/backend build settings.
@@ -57,6 +57,6 @@ export async function runLocalCheck({
     });
   }
   report(
-    "Lokale Quellcode-, Test- und Build-Prüfungen bestanden. Datenbank/API/Browser: ./portal test.",
+    "Local source, test and build checks passed. For database/API/browser checks: ./portal test.",
   );
 }

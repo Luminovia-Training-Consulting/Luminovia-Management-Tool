@@ -165,7 +165,7 @@ test("unfinished migrations are rejected before bootstrap and new schema changes
   try {
     const file = join(migrations, "20261115000000_test.sql");
     writeFileSync(file, "-- unfinished migration\n/* still no SQL */");
-    assert.throws(() => migrationDigest(directory), /noch leer/);
+    assert.throws(() => migrationDigest(directory), /is empty/);
     writeFileSync(file, "begin; select 1; commit;");
     const before = migrationDigest(directory);
     writeFileSync(file, "begin; select 2; commit;");

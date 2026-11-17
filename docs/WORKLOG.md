@@ -1,8 +1,10 @@
 # Luminovia Portal — development work log
 
-## 17 November 2026 — own account settings
+## 17 November 2026 — English operational output and documentation
 
-Added a personal account section linking the existing authenticated password form and requesting an email change through native Supabase Auth. The profile form retains own display-name editing; sign-in remains email-based. An accepted email request is reported as pending until Auth confirms the address, with no optimistic email replacement. The UI handles invalid, unchanged, offline and failed requests, and supports DE/EN. Focused component/Auth tests pass 9 cases; TypeScript and focused ESLint pass. Actual two-address confirmation, delivery, callback and selfhost acceptance remain unverified until the isolated full CI runs; no real email was sent.
+Audited the current repository documentation, CI, scripts, launcher, tests and backend diagnostics for German operational text. The launcher, local supervisor, test stages and reports, GitHub preview, hosted-check account instructions and generated PR preview guidance now use English. The staff contact guide is translated; an obsolete conflicting reminder/web-push paragraph was removed. Bilingual product strings, intentional locale test data, authored course content, the verbatim master prompt, upstream code and released migrations remain intact. Message-dependent lock handling and its tests were updated together.
+
+Actual checks: `node --test scripts/runtime-*.test.mjs` passed 321 tests without skips. `./portal --help` displayed English. An initial canonical `./portal test` was externally interrupted during frontend coverage after passing lint, typecheck, formatting and runtime checks; no services had started. The exited process's own stale lock was removed after verifying its PID had gone and no test containers existed. A retry with TMPDIR inside the checkout correctly failed before startup because a checkout cannot be copied into itself; the next run uses a separate private temporary directory. `./portal check` passed typecheck, lint, formatting, code integrity, 752 frontend tests/96 files with coverage and the production/PWA build. A fresh canonical run is underway; its result and current-head CI must be observed before acceptance. No production or normal development data was changed.
 
 ## 17 November 2026 — preserve capacity stress coverage
 

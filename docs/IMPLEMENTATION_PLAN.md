@@ -1,10 +1,10 @@
 # Persistent implementation plan
 
-## Own account settings — 17 November 2026
+## English repository output — 17 November 2026
 
-- [x] Expose own display name, email-change request and existing password change through the profile, with bilingual pending and error states.
-- [x] Pass focused UI/Auth tests, TypeScript and focused lint.
-- [ ] Verify actual two-address email confirmation, callback, login after change, and password update in the isolated native/browser acceptance; record CI results before claiming complete end-to-end verification.
+- [x] Audit tracked documentation, scripts, CI, test names and backend diagnostics; translate operational output and the remaining German staff-contact guide, retaining intentional DE/EN product content and immutable history.
+- [x] Verify English launcher help and 321 runtime tests; preserve message-dependent lock behavior.
+- [ ] Complete the fresh canonical isolated acceptance and current-head CI; record actual results before merging. External services and production remain untouched.
 
 PR43 correction: retain the full 50-way simultaneous HTTP capacity race; the preceding ten-in-flight experiment is superseded because the native PostgreSQL crash cause is not yet established. The existing complete cleanup and current-head native CI remain required.
 
