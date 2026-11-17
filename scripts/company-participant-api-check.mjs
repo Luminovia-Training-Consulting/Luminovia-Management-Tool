@@ -11,7 +11,7 @@ await withApiFixture(async ({ actor, sql, defer, checked }) => {
     company = await actor("decision-company", "client"),
     outsider = await actor("decision-outsider", "client"),
     teacher = await actor("decision-teacher", "lecturer"),
-    learner = await actor("decision-learner", "participant"),
+    learner = await actor("decision-learner", "lecturer"),
     peer = await actor("decision-peer", "participant");
   const [org, foreignOrg, template, early, late, job, claim] = Array.from(
     { length: 7 },
@@ -86,8 +86,8 @@ await withApiFixture(async ({ actor, sql, defer, checked }) => {
         p_course_run_id: late,
       })
     ).error?.code,
-    "42501",
-    "Retired participant accounts are denied at the authenticated request boundary",
+    "22023",
+    "An active enrolled account is denied only when the cancellation deadline has passed",
   );
   assert.equal(
     await sql(
