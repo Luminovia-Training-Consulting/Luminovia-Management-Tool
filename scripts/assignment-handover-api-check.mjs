@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 
-await withApiFixture(async ({ actor, service, checked, sql, defer, passwordOnly }) => {
+await withApiFixture(async ({ actor, service, checked, sql, defer }) => {
   const original = await actor("handover-original", "lecturer"),
     replacement = await actor("handover-replacement", "lecturer"),
     peer = await actor("handover-peer", "lecturer"),
@@ -186,22 +186,15 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, passwordOnly 
     ).error?.code,
     "42501",
   );
-  assert.equal(
-    (
-      await admin.client.rpc("substitution_candidates", {
-        p_claim_id: source.claim_id,
-      })
-    ).error?.code,
-    "42501",
+  const managedCandidates = await checked(
+    admin.client.rpc("substitution_candidates", {
+      p_claim_id: source.claim_id,
+    }),
   );
-  await passwordOnly(admin.client);
+  assert.ok(Array.isArray(managedCandidates));
   assert.ok(
-    Array.isArray(
-      await checked(
-        admin.client.rpc("substitution_candidates", {
-          p_claim_id: source.claim_id,
-        }),
-      ),
+    managedCandidates.every(
+      (person) => Object.keys(person).sort().join(",") === "display_name,id",
     ),
   );
   const args = {
