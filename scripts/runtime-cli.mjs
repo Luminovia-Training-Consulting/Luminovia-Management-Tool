@@ -90,7 +90,7 @@ async function locked(operation) {
 /** Describes only commands actually offered and their local data storage. */
 function help() {
   console.log(
-    `Luminovia Portal – complete local runtime\n\n  ./portal start        Start all local services in the background\n  ./portal up           Start; Ctrl+C stops services while preserving data\n  ./portal restart      Restart while preserving data\n  ./portal status       Service status and local URLs\n  ./portal stop         Stop owned services while preserving data\n  ./portal check        Check source, tests and build without Docker\n  ./portal test         Run complete tests in an isolated environment\n  ./portal credentials  Show the original local test password\n  ./portal github       Try the latest GitHub main in a separate local preview\n  ./portal github test  Fully test the latest GitHub main in isolation\n\nNode.js >=22.12 and npm are required; services and full tests also require Docker.\nNo production, real email, or reset on startup.`,
+    `Luminovia Portal – complete local runtime\n\n  ./portal start        Start all local services in the background\n  ./portal up           Start; Ctrl+C stops services while preserving data\n  ./portal restart      Restart while preserving data\n  ./portal status       Service status and local URLs\n  ./portal stop         Stop owned services while preserving data\n  ./portal check        Check source, tests and build without Docker\n  ./portal test         Run complete tests in an isolated environment\n  ./portal credentials  Show the original local test password\n  ./portal reset-demo-admin  Reset the local demo administrator password\n  ./portal github       Try the latest GitHub main in a separate local preview\n  ./portal github test  Fully test the latest GitHub main in isolation\n\nNode.js >=22.12 and npm are required; services and full tests also require Docker.\nNo production, real email, or reset on startup.`,
   );
 }
 /** Shows service status and local URLs without exposing private keys. */
@@ -260,6 +260,18 @@ try {
       process.stdout.write(
         readFileSync(join(runtimeDir, "ACCOUNTS.txt"), "utf8"),
       );
+      if (existsSync(join(runtimeDir, "ADMIN-DEMO.txt")))
+        process.stdout.write(
+          `\n${readFileSync(join(runtimeDir, "ADMIN-DEMO.txt"), "utf8")}`,
+        );
+      break;
+    case "reset-demo-admin":
+      await locked(async () => {
+        await assertLocalDocker();
+        await (
+          await import("./local-admin-recovery.mjs")
+        ).resetLocalDemoAdmin();
+      });
       break;
     case "test":
       await ensureDependencies();
