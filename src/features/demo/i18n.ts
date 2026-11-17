@@ -89,6 +89,10 @@ const pairs = {
     "Participants use shared course information and their own reviews. Internal jobs and finances are outside their view.",
   ],
   navigation: ["Demo-Bereiche", "Demo sections"],
+  navigationScroll: [
+    "Alle Bereiche ansehen: Auf kleinen Bildschirmen in der Liste nach unten scrollen.",
+    "Browse all sections: on smaller screens, scroll down within the list.",
+  ],
   reset: ["Demo zurücksetzen", "Reset demo"],
   resetDone: [
     "Alle Demo-Übungen wurden zurückgesetzt.",
