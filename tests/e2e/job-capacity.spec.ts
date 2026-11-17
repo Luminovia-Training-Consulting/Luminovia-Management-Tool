@@ -276,7 +276,7 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
     });
     await expect(englishBoard).toBeVisible();
     await englishBoard.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-job-board.png`,
+      path: `.local/screenshots/${testInfo.project.name}-job-board.png`,
     });
   } finally {
     await context.close();

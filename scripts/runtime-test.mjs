@@ -600,8 +600,8 @@ try {
     cpSync(join(scratch, ".local/browser"), join(artifacts, "browser"), {
       recursive: true,
     });
-  if (phase.browser && existsSync(join(scratch, "docs/screenshots")))
-    cpSync(join(scratch, "docs/screenshots"), join(artifacts, "screenshots"), {
+  if (phase.browser && existsSync(join(scratch, ".local/screenshots")))
+    cpSync(join(scratch, ".local/screenshots"), join(artifacts, "screenshots"), {
       recursive: true,
     });
   if (existsSync(join(scratch, ".local/runtime.log")))

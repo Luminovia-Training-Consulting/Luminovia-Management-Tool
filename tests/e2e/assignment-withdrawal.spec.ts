@@ -166,7 +166,7 @@ test("short-notice withdrawal remains assigned until Management reviews it, with
     ).toBe(true);
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-withdrawal-pending-de-light.png`,
+      path: `.local/screenshots/${testInfo.project.name}-withdrawal-pending-de-light.png`,
       fullPage: true,
     });
     await adminLogin(reviewPage, manager);
@@ -258,7 +258,7 @@ test("short-notice withdrawal remains assigned until Management reviews it, with
       ),
     ).toBe(true);
     await reviewPage.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-withdrawal-approved-en-dark.png`,
+      path: `.local/screenshots/${testInfo.project.name}-withdrawal-approved-en-dark.png`,
       fullPage: true,
     });
     await page.goto("/notifications");

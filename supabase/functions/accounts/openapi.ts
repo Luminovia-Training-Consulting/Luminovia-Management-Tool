@@ -46,7 +46,7 @@ export const accountOpenApi = {
     title: "Luminovia Account API",
     version: "1.0.0",
     description:
-      "Bearer-authenticated account API. Admin operations require current database capabilities and AAL2. Course/job/chat/wiki/files/reviews/finance use the same JWT through Supabase /rest/v1/rpc and the authenticated files function; see docs/API_REFERENCE.md. Payments are tracking records and do not transfer money.",
+      "Bearer-authenticated account API. Admin operations require current database capabilities and AAL2. Course/job/chat/wiki/files/reviews/finance use the same JWT through Supabase /rest/v1/rpc and the authenticated files function; see API_REFERENCE.md. Payments are tracking records and do not transfer money.",
   },
   servers: [{ url: "/functions/v1/accounts" }],
   security: [{ bearerAuth: [], publicApiKey: [] }],

@@ -67,13 +67,13 @@ test('private routes require real authentication and login is accessible', async
   await expect(page).toHaveURL(/\/login/);
   await expect(page.getByRole('button', { name: 'Anmelden', exact: true })).toBeVisible();
   await a11y(page);
-  await page.screenshot({ path: `docs/screenshots/${testInfo.project.name}-login.png`, fullPage: true });
+  await page.screenshot({ path: `.local/screenshots/${testInfo.project.name}-login.png`, fullPage: true });
 });
 
 test('lecturer signs in, edits bilingual profile and persists it on reload', async ({ page }, testInfo) => {
   await login(page);
   await expect(page.getByRole('region', { name: 'Arbeitsbereich' })).toBeVisible();
-  await page.screenshot({ path: `docs/screenshots/${testInfo.project.name}-dashboard.png`, fullPage: true });
+  await page.screenshot({ path: `.local/screenshots/${testInfo.project.name}-dashboard.png`, fullPage: true });
   await page.goto('/profile');
   const text = `Lokale QA ${testInfo.project.name}`;
   await page.getByLabel('Über mich (Deutsch)', { exact: true }).fill(text);
@@ -136,7 +136,7 @@ test('combined filters find a real job, claim confirms all five sessions and imm
   expect(storedJob?.status).toBe('filled');
   await page.goto('/calendar');
   await expect(page.getByRole('heading', { name: /Kalender/ }).first()).toBeVisible();
-  await page.screenshot({ path: `docs/screenshots/${testInfo.project.name}-calendar.png`, fullPage: true });
+  await page.screenshot({ path: `.local/screenshots/${testInfo.project.name}-calendar.png`, fullPage: true });
 });
 
 test('private calendar event is persisted and invisible to another lecturer', async ({ page }, testInfo) => {
@@ -185,7 +185,7 @@ test('language changes preserve input, themes render accessibly, offline mutatio
   await page.getByLabel('Theme', { exact: true }).selectOption('dark');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await a11y(page);
-  await page.screenshot({ path: `docs/screenshots/${testInfo.project.name}-profile-dark-en.png`, fullPage: true });
+  await page.screenshot({ path: `.local/screenshots/${testInfo.project.name}-profile-dark-en.png`, fullPage: true });
   await page.getByLabel('Theme', { exact: true }).selectOption('light');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await a11y(page);
@@ -266,7 +266,7 @@ test('admin verifies a real TOTP factor and publishes a five-session job through
   const cleanup = await service().from('invitation_requests').delete().eq('email', email);
   expect(cleanup.error).toBeNull();
   await a11y(page);
-  await page.screenshot({ path: `docs/screenshots/${testInfo.project.name}-admin.png`, fullPage: true });
+  await page.screenshot({ path: `.local/screenshots/${testInfo.project.name}-admin.png`, fullPage: true });
 });
 
 test('admin verifies self-selected expertise and suspends/reactivates a fictional lecturer with immediate RLS enforcement', async ({ page }, testInfo) => {
@@ -320,5 +320,5 @@ test('admin verifies self-selected expertise and suspends/reactivates a fictiona
     return data?.active;
   }).toBe(true);
   await a11y(page);
-  await page.screenshot({ path: `docs/screenshots/${testInfo.project.name}-people.png`, fullPage: true });
+  await page.screenshot({ path: `.local/screenshots/${testInfo.project.name}-people.png`, fullPage: true });
 });

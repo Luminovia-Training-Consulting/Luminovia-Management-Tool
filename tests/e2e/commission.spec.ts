@@ -340,7 +340,7 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
       request.getByText("Lehrkraft zugeteilt", { exact: true }),
     ).toBeVisible();
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-client-portal.png`,
+      path: `.local/screenshots/${testInfo.project.name}-client-portal.png`,
       fullPage: true,
     });
     await ownerPage.goto(`/jobs/${linked.job_id}`);
@@ -420,7 +420,7 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
     );
     await a11y(teacherPage);
     await teacherPage.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-lecturer-net-invoice.png`,
+      path: `.local/screenshots/${testInfo.project.name}-lecturer-net-invoice.png`,
       fullPage: true,
     });
     await ownerPage.goto("/finance");
@@ -456,7 +456,7 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
     ).toBeVisible();
     await a11y(ownerPage);
     await ownerPage.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-platform-revenue.png`,
+      path: `.local/screenshots/${testInfo.project.name}-platform-revenue.png`,
       fullPage: true,
     });
   } finally {
