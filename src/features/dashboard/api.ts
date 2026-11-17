@@ -52,7 +52,10 @@ export const nextPersonalEventsQuery = (actor: string) =>
         .limit(5)
         .abortSignal(signal);
       if (error) throw error;
-      return (data ?? []) as PersonalEvent[];
+      return (data ?? []) as Omit<
+        PersonalEvent,
+        "description" | "meeting_url"
+      >[];
     },
     staleTime: 15000,
     retry: false,

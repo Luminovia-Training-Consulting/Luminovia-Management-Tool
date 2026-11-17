@@ -15,6 +15,7 @@ const state = vi.hoisted(() => ({
   claims: [] as unknown[],
   events: [] as unknown[],
   deleteEvent: vi.fn(),
+  saveEvent: vi.fn(),
   rpc: vi.fn(),
   datesSetOnLocale: false,
   callbacks: [] as unknown[],
@@ -31,6 +32,13 @@ vi.mock("../../lib/supabase", () => ({
     rpc: state.rpc,
     from: () => ({
       select: () => ({ eq: async () => ({ data: [], error: null }) }),
+      update: (payload: unknown) => ({
+        eq: () => ({
+          eq: () => ({
+            select: () => ({ single: () => state.saveEvent(payload) }),
+          }),
+        }),
+      }),
       delete: () => ({
         eq: () => ({
           eq: () => ({ select: () => ({ single: state.deleteEvent }) }),
@@ -479,3 +487,73 @@ it.each(["de", "en"])(
     client.clear();
   },
 );
+
+it("validates meeting links, preserves the private note on rejection, and saves both fields", async () => {
+  state.events = [
+    {
+      id: "event",
+      user_id: "actor",
+      title: "Fictional private appointment",
+      description: "Existing note",
+      meeting_url: "https://meet.example.invalid/old",
+      starts_at: "2035-01-01T08:00:00Z",
+      ends_at: "2035-01-01T09:00:00Z",
+      time_zone: "Europe/Berlin",
+    },
+  ];
+  state.rpc.mockImplementation(() => {
+    const response = Promise.resolve({ data: [], error: null });
+    return Object.assign(response, { abortSignal: () => response });
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  await user.click(await screen.findByText("Fictional private appointment"));
+  const dialog = screen.getByRole("dialog", { name: "Privater Termin" });
+  expect(
+    within(dialog).getByRole("link", { name: "Meeting-Link öffnen" }),
+  ).toHaveAttribute("href", "https://meet.example.invalid/old");
+  await user.clear(within(dialog).getByLabelText("Beschreibung oder Notiz"));
+  await user.type(
+    within(dialog).getByLabelText("Beschreibung oder Notiz"),
+    "Private fictional note",
+  );
+  await user.clear(within(dialog).getByLabelText("Meeting-Link (HTTPS)"));
+  await user.type(
+    within(dialog).getByLabelText("Meeting-Link (HTTPS)"),
+    "https://user:pass@example.invalid",
+  );
+  await user.click(
+    within(dialog).getByRole("button", { name: "Termin speichern" }),
+  );
+  expect(await within(dialog).findByRole("alert")).toBeVisible();
+  expect(state.saveEvent).not.toHaveBeenCalled();
+  expect(within(dialog).getByLabelText("Beschreibung oder Notiz")).toHaveValue(
+    "Private fictional note",
+  );
+  await user.clear(within(dialog).getByLabelText("Meeting-Link (HTTPS)"));
+  await user.type(
+    within(dialog).getByLabelText("Meeting-Link (HTTPS)"),
+    "https://meet.example.invalid/new",
+  );
+  state.saveEvent.mockResolvedValue({ data: { id: "event" }, error: null });
+  await user.click(
+    within(dialog).getByRole("button", { name: "Termin speichern" }),
+  );
+  expect(state.saveEvent).toHaveBeenCalledWith(
+    expect.objectContaining({
+      description: "Private fictional note",
+      meeting_url: "https://meet.example.invalid/new",
+    }),
+  );
+  expect(await screen.findByText("Termin gespeichert.")).toBeVisible();
+  client.clear();
+});

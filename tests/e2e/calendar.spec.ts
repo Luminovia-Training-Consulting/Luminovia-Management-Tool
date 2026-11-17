@@ -61,6 +61,9 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
   });
   const title = `Private calendar ${randomUUID().slice(0, 8)}`;
   await dialog.getByLabel("Titel", { exact: true }).fill(title);
+  await dialog
+    .getByLabel("Beschreibung oder Notiz", { exact: true })
+    .fill("Fictional private preparation note");
   await dialog.getByLabel("Zeitzone", { exact: true }).fill("Europe/Berlin");
   let writes = 0;
   page.on("request", (request) => {
@@ -103,6 +106,22 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
     .getByLabel("Ende", { exact: true })
     .fill(local(start.plus({ hours: 1 })));
   await dialog
+    .getByLabel("Meeting-Link (HTTPS)", { exact: true })
+    .fill("https://user:pass@example.invalid");
+  await dialog
+    .getByRole("button", { name: "Termin speichern", exact: true })
+    .click();
+  await expect(
+    dialog.getByLabel("Meeting-Link (HTTPS)", { exact: true }),
+  ).toHaveAttribute("aria-invalid", "true");
+  expect(writes).toBe(0);
+  await expect(
+    dialog.getByLabel("Beschreibung oder Notiz", { exact: true }),
+  ).toHaveValue("Fictional private preparation note");
+  await dialog
+    .getByLabel("Meeting-Link (HTTPS)", { exact: true })
+    .fill("https://meet.example.invalid/fictional-room");
+  await dialog
     .getByRole("button", { name: "Termin speichern", exact: true })
     .click();
   await expect(dialog).toBeHidden();
@@ -110,11 +129,15 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
   const original = (await checked(
     service
       .from("personal_events")
-      .select("id,title,starts_at,ends_at,time_zone")
+      .select("id,title,description,meeting_url,starts_at,ends_at,time_zone")
       .eq("user_id", owner.id)
       .single(),
   ))!;
   expect(original.title).toBe(title);
+  expect(original.description).toBe("Fictional private preparation note");
+  expect(original.meeting_url).toBe(
+    "https://meet.example.invalid/fictional-room",
+  );
   expect(new Date(original.starts_at).toISOString()).toBe(
     start.toUTC().toISO(),
   );
@@ -128,6 +151,12 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
   await expect(dialog.getByLabel("Beginn", { exact: true })).toHaveValue(
     local(start),
   );
+  await expect(
+    dialog.getByLabel("Beschreibung oder Notiz", { exact: true }),
+  ).toHaveValue("Fictional private preparation note");
+  await expect(
+    dialog.getByRole("link", { name: "Meeting-Link öffnen" }),
+  ).toHaveAttribute("href", "https://meet.example.invalid/fictional-room");
   const editedTitle = `${title} revised`;
   const editedStart = start.plus({ hours: 2 });
   await dialog.getByLabel("Titel", { exact: true }).fill(editedTitle);

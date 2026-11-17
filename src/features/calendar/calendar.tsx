@@ -56,9 +56,17 @@ import { globalEventsQuery } from "./publications-api";
 import { GlobalEventDetails, GlobalEventManagement } from "./publications";
 import "./publications-i18n";
 import "./confirmation-i18n";
+import "./personal-details-i18n";
+import { privateMeetingHref } from "./personal-details";
 /** Validate private-event form input; current server permissions and constraints remain authoritative. */
 const schema = z.object({
   title: z.string().trim().min(1).max(200),
+  description: z.string().max(10000),
+  meeting_url: z
+    .string()
+    .trim()
+    .max(2000)
+    .refine((v) => !v || Boolean(privateMeetingHref(v))),
   starts_at: z.string().min(1),
   ends_at: z.string().min(1),
   time_zone: z.string().refine(validZone),
@@ -79,6 +87,7 @@ function EventForm({
 }) {
   const { t } = useTranslation();
   const confirmText = useTranslation("calendarConfirmation").t;
+  const detailText = useTranslation("privateCalendarDetails").t;
   const [confirmDelete, setConfirmDelete] = useState(false);
   const client = useQueryClient();
   const online = useOnline();
@@ -92,6 +101,8 @@ function EventForm({
     defaultValues: event
       ? {
           ...event,
+          description: event.description ?? "",
+          meeting_url: event.meeting_url ?? "",
           starts_at: DateTime.fromISO(event.starts_at)
             .setZone(event.time_zone)
             .toFormat("yyyy-MM-dd'T'HH:mm"),
@@ -99,7 +110,14 @@ function EventForm({
             .setZone(event.time_zone)
             .toFormat("yyyy-MM-dd'T'HH:mm"),
         }
-      : { title: "", starts_at: "", ends_at: "", time_zone: zone },
+      : {
+          title: "",
+          description: "",
+          meeting_url: "",
+          starts_at: "",
+          ends_at: "",
+          time_zone: zone,
+        },
   });
   const save = useMutation({
     onMutate: () => onBusyChange(true),
@@ -115,6 +133,8 @@ function EventForm({
       }
       const payload = {
         title: values.title,
+        description: values.description,
+        meeting_url: values.meeting_url,
         starts_at: starts,
         ends_at: ends,
         time_zone: values.time_zone,
@@ -164,6 +184,42 @@ function EventForm({
       <Field id="event-title" label={t("title")} error={Boolean(errors.title)}>
         <input id="event-title" {...register("title")} />
       </Field>
+      <Field
+        id="event-description"
+        label={detailText("description")}
+        error={Boolean(errors.description)}
+      >
+        <textarea
+          id="event-description"
+          rows={4}
+          maxLength={10000}
+          {...register("description")}
+        />
+      </Field>
+      <Field
+        id="event-meeting"
+        label={detailText("meetingUrl")}
+        error={Boolean(errors.meeting_url)}
+      >
+        <input
+          id="event-meeting"
+          type="url"
+          maxLength={2000}
+          {...register("meeting_url")}
+        />
+      </Field>
+      {event?.meeting_url && privateMeetingHref(event.meeting_url) && (
+        <p>
+          <a
+            href={privateMeetingHref(event.meeting_url)!}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {detailText("openMeeting")}
+          </a>
+        </p>
+      )}
+      <p>{detailText("hint")}</p>
       <div className="form-row">
         <Field
           id="event-start"
