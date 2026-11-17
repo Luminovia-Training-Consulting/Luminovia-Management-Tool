@@ -190,10 +190,17 @@ test("optional external reference and contact are saved, shown after claim and h
   await expect(
     visible.getByRole("link", { name: "+49 40 123456", exact: true }),
   ).toHaveAttribute("href", "tel:+4940123456");
-  await lecturer
+  // Lecturers now submit a withdrawal request; management performs this
+  // immediate, reasoned cancellation after reviewing the assignment.
+  await page.goto(`/jobs/${job}`);
+  const managementLifecycle = page.getByRole("region", {
+    name: "Zuweisung und Auftragsverlauf",
+    exact: true,
+  });
+  await managementLifecycle
     .getByRole("button", { name: "Zuweisung stornieren", exact: true })
     .click();
-  const cancellation = lecturer.getByRole("dialog");
+  const cancellation = page.getByRole("dialog");
   await cancellation
     .getByLabel("Begründung (5–1000 Zeichen)", { exact: true })
     .fill("Fictional scheduling change with contact revocation");
@@ -201,6 +208,7 @@ test("optional external reference and contact are saved, shown after claim and h
     .getByRole("button", { name: "Stornierung bestätigen", exact: true })
     .click();
   await expect(cancellation).not.toBeVisible();
+  await lecturer.reload();
   await expect(visible.getByText(email, { exact: true })).toHaveCount(0);
   await expect(
     visible.getByText(
