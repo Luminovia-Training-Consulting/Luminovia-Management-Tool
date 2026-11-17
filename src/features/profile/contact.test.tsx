@@ -52,6 +52,7 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
   clients.splice(0).forEach((client) => client.clear());
+  vi.restoreAllMocks();
 });
 function setup(settings = false) {
   const client = new QueryClient({
@@ -89,6 +90,62 @@ describe("explicit staff contact visibility", () => {
       "href",
       "tel:+4940123456",
     );
+  });
+  it("copies only visible values, confirms success, and reports clipboard errors", async () => {
+    const user = userEvent.setup();
+    fake.responses.person_contact = {
+      email: "fictional@example.invalid",
+      phone: "+49 (40) 123456",
+    };
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("denied"));
+    setup();
+    await user.click(
+      await screen.findByRole("button", { name: "E-Mail-Adresse kopieren" }),
+    );
+    expect(writeText).toHaveBeenCalledWith("fictional@example.invalid");
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Kontaktangabe kopiert.",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Telefonnummer kopieren" }),
+    );
+    expect(writeText).toHaveBeenCalledWith("+49 (40) 123456");
+    expect(await screen.findByRole("alert")).toHaveTextContent("manuell");
+    await act(async () => {
+      await i18n.changeLanguage("en");
+    });
+    expect(
+      screen.getByRole("button", { name: "Copy email address" }),
+    ).toBeVisible();
+    expect(screen.getByRole("alert")).toHaveTextContent("manually");
+  });
+  it("removes copy actions when contact permission is revoked", async () => {
+    const user = userEvent.setup();
+    fake.responses.person_contact = {
+      email: "fictional@example.invalid",
+      phone: null,
+    };
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined);
+    const client = setup();
+    await user.click(
+      await screen.findByRole("button", { name: "E-Mail-Adresse kopieren" }),
+    );
+    fake.errors.person_contact = { code: "42501" };
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ["person-contact"] });
+    });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "E-Mail-Adresse kopieren" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(writeText).toHaveBeenCalledTimes(1);
   });
   it("publishes changed visibility only after an actual server save without a browser actor ID", async () => {
     const user = userEvent.setup();

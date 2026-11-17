@@ -34,7 +34,7 @@ assert(firstUpgrade > 0, "An accepted predecessor must exist before deletion");
 assert.deepEqual(
   migrations.slice(firstUpgrade, firstUpgrade + upgrades.length),
   upgrades,
-  "The three historical deletion migrations remain consecutive and ordered",
+  "Deletion migrations remain consecutive and in dependency order; later migrations are tested separately",
 );
 // Later additive migrations are deliberately excluded: this fixture verifies
 // the original predecessor-to-deletion upgrade, not a frozen repository tip.

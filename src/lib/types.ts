@@ -88,6 +88,8 @@ export interface PersonalEvent {
   id: string;
   user_id: string;
   title: string;
+  description: string;
+  meeting_url: string;
   starts_at: string;
   ends_at: string;
   time_zone: string;

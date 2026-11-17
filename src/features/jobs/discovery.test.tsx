@@ -657,3 +657,51 @@ it("hides a captured private dialog on the first denied response before an autom
     screen.queryByRole("option", { name: privateView.name }),
   ).not.toBeInTheDocument();
 });
+
+it.each([
+  [
+    "de",
+    "Sortieren",
+    "Filter anwenden",
+    "Auftraggeber A–Z",
+    "Erstes Thema A–Z (deutsche Bezeichnung; ohne Thema zuerst)",
+  ],
+  [
+    "en",
+    "Sort",
+    "Apply filters",
+    "Customer A–Z",
+    "First topic A–Z (German label; no topic first)",
+  ],
+])(
+  "offers authorized customer and explicit topic ordering in %s",
+  async (language, sortLabel, applyLabel, customerLabel, topicLabel) => {
+    await i18n.changeLanguage(language);
+    setup();
+    const user = userEvent.setup();
+    await screen.findByRole("link", { name: "Fictional discovery 1" });
+    const sort = screen.getByLabelText(sortLabel);
+    expect(
+      within(sort).getByRole("option", { name: customerLabel }),
+    ).toHaveValue("customer_asc");
+    expect(within(sort).getByRole("option", { name: topicLabel })).toHaveValue(
+      "topic_de_asc",
+    );
+    await user.selectOptions(sort, "customer_asc");
+    await user.click(screen.getByRole("button", { name: applyLabel }));
+    await waitFor(() =>
+      expect(
+        state.rpc.mock.calls.filter(([n]) => n === "job_discovery").at(-1)?.[1]
+          .p_filters.sort,
+      ).toBe("customer_asc"),
+    );
+    await user.selectOptions(screen.getByLabelText(sortLabel), "topic_en_asc");
+    await user.click(screen.getByRole("button", { name: applyLabel }));
+    await waitFor(() =>
+      expect(
+        state.rpc.mock.calls.filter(([n]) => n === "job_discovery").at(-1)?.[1]
+          .p_filters.sort,
+      ).toBe("topic_en_asc"),
+    );
+  },
+);

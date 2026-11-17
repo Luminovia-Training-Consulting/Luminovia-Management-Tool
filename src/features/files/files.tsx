@@ -17,9 +17,11 @@ import {
   FolderOpen,
   History,
   Image,
+  Info,
   Tags,
   Trash2,
 } from "lucide-react";
+import { ArchivedPersonalMaterials } from "./archived-personal";
 import { deletionAccessQuery } from "../deletions/api";
 import { PermanentDeleteAction } from "../deletions/deletions";
 import { useAuth } from "../auth/auth-context";
@@ -294,7 +296,11 @@ function CapturedDocumentGuard({
   actor: string;
   epoch?: string;
   onRevoked: () => void;
-  children: (authorised: boolean, status: ReactNode) => ReactNode;
+  children: (
+    authorised: boolean,
+    status: ReactNode,
+    exact: PortalDocument | null,
+  ) => ReactNode;
 }) {
   const online = useOnline();
   const [focusEpoch, setFocusEpoch] = useState(0);
@@ -341,6 +347,7 @@ function CapturedDocumentGuard({
     ) : !authorised ? (
       <Loading />
     ) : null,
+    authorised ? exact.data! : null,
   );
 }
 function documentPermissionDenied(error: unknown) {
@@ -349,6 +356,69 @@ function documentPermissionDenied(error: unknown) {
     typeof error === "object" &&
     "code" in error &&
     error.code === "42501",
+  );
+}
+/** Render only freshly authorized metadata; resolve the exact current version through RLS. */
+export function DocumentDetails({
+  file,
+  actor,
+}: {
+  file: PortalDocument;
+  actor: string;
+}) {
+  const { t, i18n } = useTranslation("files");
+  const version = useQuery({
+    queryKey: [
+      "document-details-version",
+      actor,
+      file.id,
+      file.current_version_id,
+    ],
+    queryFn: async ({ signal }) => {
+      const { data, error } = await db()
+        .from("document_versions")
+        .select("version")
+        .eq("document_id", file.id)
+        .eq("id", file.current_version_id!)
+        .abortSignal(signal)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { version: number } | null;
+    },
+    enabled: Boolean(file.current_version_id),
+    staleTime: 0,
+    refetchOnMount: "always",
+    retry: false,
+  });
+  return (
+    <dl className="document-details">
+      <dt>{t("name")}</dt>
+      <dd>{file.original_name}</dd>
+      <dt>{t("detailsType")}</dt>
+      <dd>{file.mime_type}</dd>
+      <dt>{t("detailsSize")}</dt>
+      <dd>
+        {file.size_bytes.toLocaleString(i18n.language)} {t("detailsBytes")}
+      </dd>
+      <dt>{t("detailsVersion")}</dt>
+      <dd>
+        {!file.current_version_id
+          ? "—"
+          : version.isFetching
+            ? t("detailsLoading")
+            : version.isError || !version.data
+              ? t("detailsUnavailable")
+              : version.data.version}
+      </dd>
+      <dt>{t("detailsScan")}</dt>
+      <dd>{t(file.status)}</dd>
+      <dt>{t("scope")}</dt>
+      <dd>{t(file.scope)}</dd>
+      <dt>{t("kind")}</dt>
+      <dd>{t(file.kind)}</dd>
+      <dt>{t("uploaded")}</dt>
+      <dd>{dateTime(file.created_at, i18n.language, "UTC")} UTC</dd>
+    </dl>
   );
 }
 /** Keep captured dialogs independent of filtered lists while revalidating their exact targets. */
@@ -373,7 +443,7 @@ function DocumentList({
   const online = useOnline();
   const [selected, setSelected] = useState<PortalDocument | null>(null);
   const [mode, setMode] = useState<
-    "preview" | "versions" | "rename" | "archive" | "replace"
+    "preview" | "versions" | "details" | "rename" | "archive" | "replace"
   >("preview");
   const [name, setName] = useState<{ id: string | null; value: string }>({
     id: null,
@@ -559,6 +629,15 @@ function DocumentList({
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label={`${t("details")}: ${file.original_name}`}
+                disabled={!online}
+                onClick={() => select(file, "details")}
+              >
+                <Info size={18} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 aria-label={`${t("versions")}: ${file.original_name}`}
                 onClick={() => select(file, "versions")}
               >
@@ -648,7 +727,7 @@ function DocumentList({
           epoch={currentEpoch}
           onRevoked={() => discardTarget(selected.id)}
         >
-          {(authorised, accessStatus) => (
+          {(authorised, accessStatus, exact) => (
             <Dialog
               open={selected !== null}
               onOpenChange={(open) => {
@@ -664,14 +743,18 @@ function DocumentList({
                     ? t("rename")
                     : mode === "replace"
                       ? t("replace")
-                      : mode === "versions"
-                        ? t("versions")
-                        : t("preview")
+                      : mode === "details"
+                        ? t("details")
+                        : mode === "versions"
+                          ? t("versions")
+                          : t("preview")
               }
               description={
                 mode === "archive"
                   ? t("archiveDescription", { name: selected?.original_name })
-                  : (selected?.original_name ?? "")
+                  : mode === "details"
+                    ? ""
+                    : (selected?.original_name ?? "")
               }
             >
               {accessStatus}
@@ -680,7 +763,11 @@ function DocumentList({
                   disabled={!authorised}
                   style={{ border: 0, padding: 0, margin: 0 }}
                 >
-                  {mode === "preview" ? (
+                  {mode === "details" ? (
+                    exact && (
+                      <DocumentDetails file={exact} actor={session!.user.id} />
+                    )
+                  ) : mode === "preview" ? (
                     <Preview
                       key={`${selected.id}:${selected.current_version_id}`}
                       file={selected}
@@ -851,6 +938,7 @@ export function FilesPage() {
         }
       />
       <section className="panel">
+        <ArchivedPersonalMaterials actor={session!.user.id} />
         <DocumentExplorer key={session!.user.id} actor={session!.user.id}>
           {(rows, pending, epoch, renewalEpoch) => (
             <DocumentList

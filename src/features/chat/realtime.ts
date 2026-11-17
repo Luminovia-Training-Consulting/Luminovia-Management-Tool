@@ -96,7 +96,9 @@ export function useChatRealtime(actor: string, room: string | undefined) {
             void client.invalidateQueries({ queryKey: chatKeys.rooms(actor) });
             return;
           }
-          refresh(false, true);
+          // Personal message visibility is persisted on this membership; other
+          // sessions must refetch history as well as the room directory.
+          refresh(payload.new.room_id === room, true);
         },
       )
       .subscribe((next) => {

@@ -2,7 +2,7 @@
  * Active conversation with search, history, read state, mute and member controls. Access loss
  * hides retained data; report messages read only online and in the visible tab.
  */
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -15,6 +15,7 @@ import {
   BellOff,
   BellRing,
   MessagesSquare,
+  Info,
   Search,
   UsersRound,
 } from "lucide-react";
@@ -31,8 +32,13 @@ import {
   orderedMessages,
 } from "./api";
 import { MessageComposer } from "./composer";
+import { GroupSettings } from "./group-settings";
 import { MembersPanel, RoomIcon } from "./manage";
 import { MessageBubble } from "./message";
+import { TopicMessagePins } from "./topic-message-pins";
+import { useTopicMessagePins } from "./topic-message-pins-api";
+import { messageDay, messageDayLabel } from "./message-days";
+import "./message-days.css";
 import { useChatRealtime } from "./realtime";
 import type { ChatRoom } from "./types";
 import "./i18n";
@@ -48,7 +54,7 @@ export function ChatThread({
   canManageCourses: boolean;
   onBack: () => void;
 }) {
-  const { t } = useTranslation("chat");
+  const { t, i18n } = useTranslation("chat");
   const online = useOnline();
   const client = useQueryClient();
   const profile = useQuery(profileQuery(actor));
@@ -59,14 +65,65 @@ export function ChatThread({
     return () => clearInterval(timer);
   }, []);
   const [searchInput, setSearchInput] = useState("");
+  const [replyId, setReplyId] = useState<string | null>(null);
   const [membersOpen, setMembersOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { status, revoked } = useChatRealtime(actor, room.id);
+  const pinText = useTranslation("topicMessagePins").t;
+  const topicPins = useTopicMessagePins(
+    actor,
+    room.id,
+    room.kind === "topic" && !revoked && online,
+  );
+  const [jumping, setJumping] = useState(false);
+  const [jumpFailed, setJumpFailed] = useState(false);
+  const [jumpId, setJumpId] = useState<string | null>(null);
+  const threadElement = useRef<HTMLElement>(null);
   const messages = useInfiniteQuery({
     ...chatMessagesQuery(actor, room.id, search),
     enabled: !revoked,
   });
   const ordered = orderedMessages(messages.data?.pages);
+  const pinnedIds = new Set((topicPins.query.data ?? []).map((pin) => pin.id));
   const latest = ordered[ordered.length - 1];
+  // Jump only to history that has just been fetched through the existing ACL-checked RPC.
+  // Bound one action to 20 pages; another click may continue where it stopped.
+  const jumpToPinned = async (id: string) => {
+    setJumping(true);
+    setJumpFailed(false);
+    try {
+      let found = ordered.some((message) => message.id === id);
+      let hasNext = messages.hasNextPage;
+      for (let count = 0; !found && hasNext && count < 20; count++) {
+        const next = await messages.fetchNextPage();
+        if (next.isError) throw next.error;
+        found = (next.data?.pages ?? []).some((page) =>
+          page.some((message) => message.id === id),
+        );
+        hasNext = next.hasNextPage;
+      }
+      if (found) setJumpId(id);
+      else setJumpFailed(true);
+    } catch {
+      setJumpFailed(true);
+    } finally {
+      setJumping(false);
+    }
+  };
+  useEffect(() => {
+    if (!jumpId) return;
+    const item = [
+      ...(threadElement.current?.querySelectorAll<HTMLElement>(
+        "[data-message-id]",
+      ) ?? []),
+    ].find((element) => element.dataset.messageId === jumpId);
+    if (item) {
+      item.scrollIntoView({ block: "center" });
+      item.focus();
+      setJumpId(null);
+    }
+  }, [jumpId, ordered]);
+  const zone = profile.data?.time_zone ?? "Europe/Berlin";
   const marked = useRef("");
   const end = useRef<HTMLDivElement>(null);
   // Room management is not a blanket administrator read bypass for private DMs.
@@ -78,13 +135,16 @@ export function ChatThread({
       (canManageCourses &&
         ["lecturer_course", "participant_course"].includes(room.kind)));
   const read = useMutation({
-    mutationFn: async (messageId: string) => {
+    mutationFn: async (messageId: string | null) => {
       requireOnline();
-      const { error } = await db().rpc("mark_chat_read", {
-        p_room_id: room.id,
-        p_message_id: messageId,
-        p_muted: null,
-      });
+      const { error } =
+        messageId === null
+          ? await db().rpc("clear_chat_manual_unread", { p_room_id: room.id })
+          : await db().rpc("mark_chat_read", {
+              p_room_id: room.id,
+              p_message_id: messageId,
+              p_muted: null,
+            });
       if (error) throw error;
     },
     onSuccess: () =>
@@ -92,7 +152,7 @@ export function ChatThread({
     onError: (_error, messageId) => {
       // The guard prevents duplicate in-flight receipts, not a permanent local
       // acknowledgement. An uncertain request must remain retryable.
-      if (marked.current === messageId) marked.current = "";
+      if (marked.current === (messageId ?? "empty")) marked.current = "";
     },
   });
   const mark = read.mutate;
@@ -100,22 +160,32 @@ export function ChatThread({
     // Search results or an invisible tab do not confirm that new messages were read.
     // The ref prevents concurrent duplicates only; onError allows an uncertain receipt to retry.
     const observeRead = () => {
+      const emptyMarked = messages.isSuccess && !latest && room.manual_unread;
+      const target = latest?.id ?? (emptyMarked ? "empty" : "");
       if (
-        !latest ||
+        !target ||
         search ||
         revoked ||
         !online ||
         document.visibilityState !== "visible" ||
-        marked.current === latest.id
+        marked.current === target
       )
         return;
-      marked.current = latest.id;
-      mark(latest.id);
+      marked.current = target;
+      mark(latest?.id ?? null);
     };
     observeRead();
     document.addEventListener("visibilitychange", observeRead);
     return () => document.removeEventListener("visibilitychange", observeRead);
-  }, [latest, search, revoked, online, mark]);
+  }, [
+    latest,
+    messages.isSuccess,
+    room.manual_unread,
+    search,
+    revoked,
+    online,
+    mark,
+  ]);
   const previousLatest = useRef("");
   useEffect(() => {
     if (!latest || latest.id === previousLatest.current || search) return;
@@ -137,7 +207,10 @@ export function ChatThread({
   });
   // Revocation outranks a previously successful history response.
   // Retained query data must not conceal the revoked state.
-  const lost = revoked || chatAccessDenied(messages.error);
+  const lost =
+    revoked ||
+    chatAccessDenied(messages.error) ||
+    (room.kind === "topic" && chatAccessDenied(topicPins.query.error));
   if (lost)
     return (
       <section className="chat-room-denied">
@@ -151,6 +224,7 @@ export function ChatThread({
   return (
     <section
       className="chat-thread"
+      ref={threadElement}
       data-realtime-status={status}
       aria-label={
         room.kind === "general"
@@ -186,6 +260,16 @@ export function ChatThread({
           </span>
         </div>
         <div className="chat-thread-controls">
+          {!["dm", "general"].includes(room.kind) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={i18n.t("title", { ns: "chatGroupSettings" })}
+              onClick={() => setSettingsOpen(true)}
+            >
+              <Info size={19} />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -216,6 +300,25 @@ export function ChatThread({
       )}
       {room.kind !== "dm" && (
         <div className="chat-channel-note">{t("groupModerationPolicy")}</div>
+      )}
+      {room.kind === "topic" && online && status === "connected" && (
+        <TopicMessagePins
+          pins={
+            topicPins.query.isSuccess && !topicPins.query.isFetching
+              ? topicPins.query.data
+              : []
+          }
+          loading={topicPins.query.isPending || topicPins.query.isFetching}
+          error={topicPins.query.isError}
+          onRetry={() => void topicPins.query.refetch()}
+          onJump={(id) => void jumpToPinned(id)}
+          jumping={jumping || messages.isFetchingNextPage || messages.isError}
+          searchActive={Boolean(search)}
+          jumpFailed={jumpFailed}
+        />
+      )}
+      {topicPins.toggle.isError && (
+        <Notice kind="error">{pinText("failed")}</Notice>
       )}
       <form
         className="chat-message-search"
@@ -282,20 +385,59 @@ export function ChatThread({
               </div>
             ) : (
               <ol className="chat-message-list" aria-label={t("title")}>
-                {ordered.map((message) => (
-                  <MessageBubble
-                    key={message.id}
-                    message={message}
-                    actor={actor}
-                    now={now}
-                    zone={profile.data?.time_zone ?? "Europe/Berlin"}
-                    attachment={
-                      message.document_id && !message.deleted_at ? (
-                        <DocumentAttachment documentId={message.document_id} />
-                      ) : undefined
-                    }
-                  />
-                ))}
+                {ordered.map((message, index) => {
+                  const day = messageDay(message.created_at, zone);
+                  const previous = ordered[index - 1];
+                  const showDay =
+                    !previous || messageDay(previous.created_at, zone) !== day;
+                  return (
+                    <Fragment key={message.id}>
+                      {showDay && (
+                        <li className="chat-date-separator">
+                          <time dateTime={day}>
+                            {messageDayLabel(
+                              message.created_at,
+                              zone,
+                              i18n.resolvedLanguage ?? i18n.language,
+                            )}
+                          </time>
+                        </li>
+                      )}
+                      <MessageBubble
+                        message={message}
+                        onReply={(target) => setReplyId(target.id)}
+                        topicPin={
+                          room.kind === "topic" &&
+                          message.can_moderate &&
+                          topicPins.query.isSuccess &&
+                          !topicPins.query.isFetching &&
+                          online &&
+                          status === "connected"
+                            ? {
+                                pinned: pinnedIds.has(message.id),
+                                disabled: topicPins.toggle.isPending,
+                                toggle: () =>
+                                  topicPins.toggle.mutate({
+                                    id: message.id,
+                                    pinned: !pinnedIds.has(message.id),
+                                  }),
+                              }
+                            : undefined
+                        }
+                        actor={actor}
+                        now={now}
+                        zone={zone}
+                        attachment={
+                          message.document_id && !message.deleted_at ? (
+                            <DocumentAttachment
+                              documentId={message.document_id}
+                            />
+                          ) : undefined
+                        }
+                      />
+                    </Fragment>
+                  );
+                })}
               </ol>
             )}
             <div ref={end} />
@@ -306,10 +448,10 @@ export function ChatThread({
       {read.isError && (
         <ErrorState
           retry={
-            online && latest
+            online && (latest || (messages.isSuccess && room.manual_unread))
               ? () => {
-                  marked.current = latest.id;
-                  mark(latest.id);
+                  marked.current = latest?.id ?? "empty";
+                  mark(latest?.id ?? null);
                 }
               : undefined
           }
@@ -324,11 +466,29 @@ export function ChatThread({
         key={`composer:${room.id}`}
         actor={actor}
         room={room.id}
+        replyId={replyId}
+        replyTarget={
+          messages.isError
+            ? undefined
+            : ordered.find((item) => item.id === replyId)
+        }
+        onCancelReply={() => setReplyId(null)}
       />
+      {settingsOpen && (
+        <GroupSettings
+          key={`settings:${room.id}`}
+          actor={actor}
+          room={room.id}
+          canManage={canManage}
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+        />
+      )}
       <MembersPanel
         key={`members:${room.id}`}
         actor={actor}
         room={room}
+        onLeft={onBack}
         canManage={canManage}
         open={membersOpen}
         onOpenChange={setMembersOpen}

@@ -25,9 +25,22 @@ export const chatRoomsQuery = (actor: string) =>
   queryOptions({
     queryKey: chatKeys.rooms(actor),
     queryFn: async () => {
-      const { data, error } = await db().rpc("chat_rooms_list");
-      if (error) throw error;
-      return (data ?? []) as ChatRoom[];
+      const [rooms, pins, archives] = await Promise.all([
+        db().rpc("chat_rooms_with_manual_unread"),
+        db().rpc("chat_pinned_rooms"),
+        db().rpc("chat_personal_archives"),
+      ]);
+      if (rooms.error) throw rooms.error;
+      if (pins.error) throw pins.error;
+      if (archives.error) throw archives.error;
+      const pinned = (pins.data ?? []) as string[];
+      const archived = new Set((archives.data ?? []) as string[]);
+      return ((rooms.data ?? []) as ChatRoom[]).map((room) => ({
+        ...room,
+        personal_archived: archived.has(room.id),
+        pinned: pinned.includes(room.id),
+        pinOrder: pinned.indexOf(room.id),
+      }));
     },
     refetchInterval: 3000,
     staleTime: 1000,
@@ -73,7 +86,23 @@ export const chatMessagesQuery = (
         p_limit: 40,
       });
       if (error) throw error;
-      return (data ?? []) as ChatMessage[];
+      const page = (data ?? []) as ChatMessage[];
+      if (!page.length) return page;
+      const previews = await db().rpc("chat_reply_previews", {
+        p_room_id: room,
+        p_message_ids: page.map((item) => item.id),
+        p_versions: page.map((item) => item.content_version ?? 1),
+      });
+      if (previews.error) throw previews.error;
+      const lookup = (previews.data ?? {}) as Record<
+        string,
+        ChatMessage["reply"]
+      >;
+      return page.map((item) =>
+        Object.hasOwn(lookup, item.id)
+          ? { ...item, reply: lookup[item.id] }
+          : item,
+      );
     },
     getNextPageParam: (page): MessageCursor | undefined => {
       const last = page[page.length - 1];

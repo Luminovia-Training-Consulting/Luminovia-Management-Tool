@@ -406,6 +406,32 @@ try {
     },
   );
   await check(
+    "File details read current authorized metadata and never expose private versions to other actors",
+    async () => {
+      const id = randomUUID(),
+        version = randomUUID(),
+        key = randomUUID();
+      await sql(
+        `insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,client_id) values('${id}','${owner}','${owner}','personal','material','Details.pdf','application/pdf',1234,'${key}');insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes) values('${version}','${id}','${owner}','${key}',2,'${owner}/${version}','Details.pdf','application/pdf',1234);update public.documents set current_version_id='${version}' where id='${id}';`,
+      );
+      const detail = `select original_name||':'||mime_type||':'||size_bytes from public.documents where id='${id}'`;
+      const current = `select version from public.document_versions where document_id='${id}' and id='${version}'`;
+      assert.equal(
+        await actor(owner, detail),
+        "Details.pdf:application/pdf:1234",
+      );
+      assert.equal(await actor(owner, current), "2");
+      for (const other of [otherOwner, manager]) {
+        assert.equal(await actor(other, detail, "aal2"), "");
+        assert.equal(await actor(other, current, "aal2"), "");
+      }
+      await sql(`update public.profiles set active=false where id='${owner}'`);
+      assert.equal(await actor(owner, detail), "");
+      assert.equal(await actor(owner, current), "");
+      await sql(`update public.profiles set active=true where id='${owner}'`);
+    },
+  );
+  await check(
     "Document metadata/version writes stay RPC-only and suspended actors cannot retry",
     async () => {
       await assert.rejects(

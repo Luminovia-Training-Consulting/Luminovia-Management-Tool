@@ -163,6 +163,26 @@ try {
       await assert.rejects(msg(admin, dm, "forged"), /access denied/i);
     },
   );
+  await check(
+    "Pins are personal, persist server-side and reject forged room access",
+    async () => {
+      assert.deepEqual(await value(a, "chat_pinned_rooms"), "{}");
+      await value(a, "set_chat_pin", [dm, true]);
+      assert.match(await value(a, "chat_pinned_rooms"), new RegExp(dm));
+      assert.equal(await value(b, "chat_pinned_rooms"), "{}");
+      await assert.rejects(
+        value(admin, "set_chat_pin", [dm, true], "aal2"),
+        /access denied/i,
+      );
+      await assert.rejects(
+        value(a, "set_chat_pin", [dm, null]),
+        /Invalid pin/i,
+      );
+      assert.match(await value(a, "chat_pinned_rooms"), new RegExp(dm));
+      await value(a, "set_chat_pin", [dm, false]);
+      assert.equal(await value(a, "chat_pinned_rooms"), "{}");
+    },
+  );
   const key = randomUUID();
   let first;
   await check(
@@ -209,6 +229,123 @@ try {
         "0",
       );
       assert.equal((await rows(b, "chat_rooms_list"))[0].muted, true);
+    },
+  );
+  await check(
+    "Personal hiding filters direct reads, both history APIs, search and unread without changing the other member",
+    async () => {
+      await value(b, "mark_chat_read", [dm, null, false]);
+      const hidden = await msg(a, dm, "personal hide fictional marker");
+      assert.equal(
+        await sql(
+          `select count(*) from public.notifications where user_id='${b}' and kind='chat_message' and resource_id='${hidden}'`,
+        ),
+        "1",
+      );
+      const unreadBefore = (await rows(b, "chat_rooms_list")).find(
+        (x) => x.id === dm,
+      ).unread_count;
+      await assert.rejects(
+        value(admin, "hide_chat_message", [hidden], "aal2"),
+        /access denied/i,
+      );
+      await value(b, "hide_chat_message", [hidden]);
+      await value(b, "hide_chat_message", [hidden]);
+      const inbox = JSON.parse(await value(b, "notification_inbox"));
+      assert.ok(inbox.items.some((item) => item.kind === "chat_message"));
+      assert.ok(
+        !JSON.stringify(inbox).includes("personal hide fictional marker"),
+      );
+      assert.equal(
+        await sql(
+          `select hidden_generation from public.chat_members where room_id='${dm}' and user_id='${b}'`,
+        ),
+        "1",
+      );
+      assert.equal(
+        (await rows(b, "chat_rooms_list")).find((x) => x.id === dm)
+          .unread_count,
+        unreadBefore - 1,
+      );
+      assert.equal(
+        (
+          await rows(b, "chat_messages", [
+            dm,
+            null,
+            null,
+            "personal hide fictional marker",
+            10,
+          ])
+        ).length,
+        0,
+      );
+      assert.equal(
+        (
+          await rows(b, "chat_messages_with_mentions", [
+            dm,
+            null,
+            null,
+            "personal hide fictional marker",
+            10,
+          ])
+        ).length,
+        0,
+      );
+      assert.equal(
+        await actor(
+          b,
+          `select count(*) from public.messages where id='${hidden}'`,
+        ),
+        "0",
+      );
+      assert.equal(
+        (
+          await rows(a, "chat_messages", [
+            dm,
+            null,
+            null,
+            "personal hide fictional marker",
+            10,
+          ])
+        ).length,
+        1,
+      );
+      await assert.rejects(
+        actor(b, "select * from private.chat_hidden_messages"),
+        /permission denied/i,
+      );
+      const firstVisiblePage = await rows(b, "chat_messages", [
+        dm,
+        null,
+        null,
+        "",
+        1,
+      ]);
+      assert.equal(firstVisiblePage.length, 1);
+      assert.notEqual(firstVisiblePage[0].id, hidden);
+      for (const [kind, id] of [
+        ["account", b],
+        ["chat_room", dm],
+      ]) {
+        const scope = JSON.parse(
+          await sql(`select private.deletion_snapshot('${kind}','${id}')`),
+        );
+        assert.equal(scope.counts["private.chat_hidden_messages"], 1);
+        assert.ok(
+          !scope.blockers.some(
+            (entry) => entry.kind === "private.chat_hidden_messages",
+          ),
+        );
+      }
+      const deletion = JSON.parse(
+        await sql(`select private.deletion_snapshot('message','${hidden}')`),
+      );
+      assert.equal(deletion.counts["private.chat_hidden_messages"], 1);
+      assert.ok(
+        !deletion.blockers.some(
+          (entry) => entry.kind === "private.chat_hidden_messages",
+        ),
+      );
     },
   );
   await check(
@@ -363,12 +500,62 @@ try {
     },
   );
   await check(
+    "Pin order is personal, persists, and rejects stale concurrent moves",
+    async () => {
+      await value(a, "set_chat_pin", [dm, true]);
+      await value(a, "set_chat_pin", [group, true]);
+      await value(b, "set_chat_pin", [dm, true]);
+      const reviewed = await value(a, "chat_pinned_rooms");
+      assert.equal(reviewed, `{${dm},${group}}`);
+      const moves = await Promise.allSettled([
+        value(a, "move_chat_pin", [group, "up", reviewed]),
+        value(a, "move_chat_pin", [group, "up", reviewed]),
+      ]);
+      assert.equal(
+        moves.filter((result) => result.status === "fulfilled").length,
+        1,
+      );
+      assert.equal(
+        moves.filter(
+          (result) =>
+            result.status === "rejected" &&
+            /order changed/.test(String(result.reason)),
+        ).length,
+        1,
+      );
+      assert.equal(await value(a, "chat_pinned_rooms"), `{${group},${dm}}`);
+      assert.equal(await value(b, "chat_pinned_rooms"), `{${dm}}`);
+      await assert.rejects(
+        value(b, "move_chat_pin", [group, "down", `{${dm}}`]),
+        /access denied/i,
+      );
+      await assert.rejects(
+        value(a, "move_chat_pin", [group, "up", `{${group},${dm}}`]),
+        /already at the edge/i,
+      );
+      await value(a, "set_chat_pin", [group, false]);
+      await value(a, "set_chat_pin", [dm, false]);
+      await value(b, "set_chat_pin", [dm, false]);
+    },
+  );
+  await check(
     "Revoked member immediately loses history/send/edit/reaction access but sees own revocation marker",
     async () => {
       const m = await msg(b, group, "Remove me");
+      await value(b, "set_chat_pin", [group, true]);
+      assert.match(await value(b, "chat_pinned_rooms"), new RegExp(group));
       await value(a, "manage_chat_member", [group, b, true]);
+      assert.doesNotMatch(
+        await value(b, "chat_pinned_rooms"),
+        new RegExp(group),
+      );
+      await assert.rejects(
+        value(b, "set_chat_pin", [group, false]),
+        /access denied/i,
+      );
       await assert.rejects(rows(b, "chat_messages", [group]), /access denied/);
       await assert.rejects(msg(b, group, "After removal"), /access denied/);
+      await assert.rejects(value(b, "hide_chat_message", [m]), /access denied/);
       await assert.rejects(
         value(b, "edit_message", [m, "After removal"]),
         /denied/,
@@ -509,10 +696,20 @@ try {
   await check(
     "Suspension denies all existing-session chat access, including Realtime RLS source",
     async () => {
+      await value(c, "set_chat_pin", [group, true]);
       await sql(`update public.profiles set active=false where id='${c}'`);
+      assert.equal(await value(c, "chat_pinned_rooms"), "{}");
+      await assert.rejects(
+        value(c, "set_chat_pin", [group, false]),
+        /access denied/i,
+      );
       assert.deepEqual(await rows(c, "chat_rooms_list"), []);
       assert.deepEqual(await rows(c, "chat_contacts"), []);
       await assert.rejects(msg(c, group, "suspended"), /access denied/);
+      await assert.rejects(
+        value(c, "hide_chat_message", [first]),
+        /access denied/,
+      );
       assert.equal(await actor(c, "select count(*) from public.messages"), "0");
     },
   );

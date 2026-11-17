@@ -169,13 +169,25 @@ test("public guidance and current catalogue contain no historical customer ident
   );
 });
 
-// Browser evidence and generated documentation must not recreate the removed directory.
-test("documentation and browser evidence do not depend on a docs directory", async () => {
-  await assert.rejects(access("docs"), { code: "ENOENT" });
+// The programme's governing AGENTS instructions require these durable source
+// records. Keep the consolidated product docs at the root and permit only the
+// specifically required records beneath docs/.
+test("documentation keeps only the required project records under docs", async () => {
+  const requiredRecords = new Set([
+    "IMPLEMENTATION_PLAN.md",
+    "QOL_FEATURE_MATRIX.md",
+    "QOL_MASTER_PROMPT.txt",
+    "QOL_PROGRAMME_STATUS.md",
+    "UNIVERSAL_MASTER_PROMPT.txt",
+    "WORKLOG.md",
+  ]);
+  const deliveredRecords = (await readdir("docs")).sort();
+  assert.deepEqual(deliveredRecords, [...requiredRecords].sort());
   const generator = await readFile("scripts/generate-api-reference.mjs", "utf8");
   const runner = await readFile("scripts/runtime-test.mjs", "utf8");
   assert.match(generator, /"API_REFERENCE\.md"/);
   assert.doesNotMatch(generator, /docs\/API_REFERENCE\.md/);
+  assert.match(generator, /\.\.\/supabase\/migrations\//);
   assert.match(runner, /\.local\/screenshots/);
   assert.doesNotMatch(runner, /docs\/screenshots/);
 });

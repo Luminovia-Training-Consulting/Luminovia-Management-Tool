@@ -82,6 +82,15 @@ describe("confirmed chat composer", () => {
       screen.getByRole("button", { name: "Nachricht senden" }),
     ).toBeDisabled();
     expect(rpc).not.toHaveBeenCalled();
+    expect(uploadDocument).toHaveBeenCalledWith(
+      expect.any(File),
+      expect.objectContaining({
+        scope: "room",
+        roomId: "room-a",
+        messageOnly: true,
+      }),
+      expect.any(Function),
+    );
     clean({ id: "clean-document", original_name: "lesson.txt" });
     await screen.findByText("lesson.txt");
     await waitFor(() =>

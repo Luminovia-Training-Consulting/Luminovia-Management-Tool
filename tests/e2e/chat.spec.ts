@@ -154,6 +154,18 @@ test("real private DM persists, delivers realtime, edits/deletes safely and deni
     });
     expect(await receiver.locator(".chat-message-body script").count()).toBe(0);
     const messageRow = page.locator(".chat-message").filter({ hasText: text });
+    await page
+      .context()
+      .grantPermissions(["clipboard-read", "clipboard-write"]);
+    await messageRow
+      .getByRole("button", { name: "Nachrichtentext kopieren", exact: true })
+      .click();
+    await expect(messageRow.getByRole("status")).toHaveText(
+      "Nachrichtentext kopiert.",
+    );
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      text,
+    );
     await messageRow.getByLabel("Reaktionen", { exact: true }).last().click();
     await messageRow
       .getByRole("button", { name: "👍 hinzufügen", exact: true })

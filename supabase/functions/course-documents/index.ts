@@ -14,25 +14,37 @@ const caller = (token: string) =>
     auth: { persistSession: false, autoRefreshToken: false },
   });
 const font = Deno.readFile(new URL("./assets/DejaVuSans.ttf", import.meta.url));
-Deno.serve(createCourseDocumentHandler({
-  origins: (Deno.env.get("PORTAL_ALLOWED_ORIGINS") ?? "").split(",").map(
-    (item) => item.trim(),
-  ).filter(Boolean),
-  authenticate: async (token) => {
-    const user = caller(token);
-    const result = await user.auth.getUser(token);
-    if (result.error || !result.data.user) return false;
-    const active = await user.rpc("account_me");
-    return !active.error;
-  },
-  rpc: async (token, name, args) => {
-    const { data, error } = await caller(token).rpc(name, args);
-    return { data, error };
-  },
-  download: async (path) => {
-    const result = await service.storage.from("portal-clean").download(path);
-    if (result.error || !result.data) throw new Error("resource_unavailable");
-    return new Uint8Array(await result.data.arrayBuffer());
-  },
-  render: async (kind, facts) => await renderFactPdf(kind, facts, await font),
-}));
+Deno.serve(
+  createCourseDocumentHandler({
+    origins: (Deno.env.get("PORTAL_ALLOWED_ORIGINS") ?? "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+    authenticate: async (token) => {
+      const user = caller(token);
+      const result = await user.auth.getUser(token);
+      if (result.error || !result.data.user) return false;
+      const active = await user.rpc("account_me");
+      return !active.error;
+    },
+    rpc: async (token, name, args) => {
+      const { data, error } = await caller(token).rpc(name, args);
+      return { data, error };
+    },
+    wikiPath: async (id, version) => {
+      const result = await service.rpc("wiki_attachment_storage_path", {
+        p_id: id,
+        p_version_id: version,
+      });
+      return result.error || typeof result.data !== "string"
+        ? null
+        : result.data;
+    },
+    download: async (path) => {
+      const result = await service.storage.from("portal-clean").download(path);
+      if (result.error || !result.data) throw new Error("resource_unavailable");
+      return new Uint8Array(await result.data.arrayBuffer());
+    },
+    render: async (kind, facts) => await renderFactPdf(kind, facts, await font),
+  }),
+);

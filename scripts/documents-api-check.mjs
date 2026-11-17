@@ -91,6 +91,7 @@ async function upload(
   form.set("client_id", clientId);
   for (const key of ["room_id", "job_id", "owner_id", "replace_id"])
     if (context[key]) form.set(key, context[key]);
+  if (context.message_only) form.set("message_only", "true");
   const response = await fetch(`${url}/functions/v1/files`, {
     method: "POST",
     headers: await headers(actor),
@@ -221,6 +222,46 @@ try {
     "Create real file room",
   );
   rooms.push(room);
+  const privateAttachment = await upload(a, bytes, "message-only.txt", {
+    scope: "room",
+    room_id: room,
+    message_only: true,
+  });
+  assert.equal(privateAttachment.status, 200);
+  const privateId = privateAttachment.body.document.id;
+  assert.equal(
+    (await download(b, privateId)).status,
+    403,
+    "unposted attachment is private",
+  );
+  const privateMessage = await checked(
+    a.client.rpc("send_message", {
+      p_room_id: room,
+      p_body: "Private attachment",
+      p_client_id: randomUUID(),
+      p_document_id: privateId,
+    }),
+    "Send message-only attachment",
+  );
+  assert.equal(
+    (await download(b, privateId)).status,
+    200,
+    "live message grants download",
+  );
+  await checked(
+    a.client.rpc("delete_message", { p_message_id: privateMessage }),
+    "Delete attachment message",
+  );
+  assert.equal(
+    (await download(b, privateId)).status,
+    403,
+    "deleting last message revokes the old URL",
+  );
+  assert.equal(
+    (await download(a, privateId)).status,
+    200,
+    "owner retains own attachment",
+  );
   const attachment = await upload(a, bytes, "chat.txt", {
     scope: "room",
     room_id: room,
@@ -360,24 +401,20 @@ try {
         )
       : [];
     if (messages.length) {
+      const messageIds = messages.map((message) => message.id);
       await checked(
-        service
-          .from("notifications")
-          .delete()
-          .in(
-            "resource_id",
-            messages.map((m) => m.id),
-          ),
+        service.from("notifications").delete().in("resource_id", messageIds),
         "Clean scoped notifications",
       );
       await checked(
         service
-          .from("messages")
+          .from("chat_message_revisions")
           .delete()
-          .in(
-            "id",
-            messages.map((m) => m.id),
-          ),
+          .in("message_id", messageIds),
+        "Clean scoped message revisions",
+      );
+      await checked(
+        service.from("messages").delete().in("id", messageIds),
         "Clean scoped messages",
       );
     }

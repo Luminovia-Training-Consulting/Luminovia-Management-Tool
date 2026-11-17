@@ -3,11 +3,11 @@
  * and course sessions. Visible ranges bound global discovery; each source keeps
  * its own ACL. Private form times become instants before server-confirmed writes.
  */
-import { Link } from "react-router-dom";
+import { Link, useBlocker, useSearchParams } from "react-router-dom";
 import "../availability/i18n";
 import { assignmentJobTitlesQuery } from "../jobs/discovery-api";
 import { runsQuery, templatesQuery } from "../operations/data";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { DatesSetArg } from "@fullcalendar/core";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -55,9 +55,19 @@ import {
 import { globalEventsQuery } from "./publications-api";
 import { GlobalEventDetails, GlobalEventManagement } from "./publications";
 import "./publications-i18n";
+import "./confirmation-i18n";
+import "./personal-details-i18n";
+import "./filter-i18n";
+import { privateMeetingHref } from "./personal-details";
 /** Validate private-event form input; current server permissions and constraints remain authoritative. */
 const schema = z.object({
   title: z.string().trim().min(1).max(200),
+  description: z.string().max(10000),
+  meeting_url: z
+    .string()
+    .trim()
+    .max(2000)
+    .refine((v) => !v || Boolean(privateMeetingHref(v))),
   starts_at: z.string().min(1),
   ends_at: z.string().min(1),
   time_zone: z.string().refine(validZone),
@@ -68,25 +78,35 @@ function EventForm({
   zone,
   event,
   onDone,
+  onBusyChange,
+  onDirtyChange,
 }: {
   userId: string;
   zone: string;
   event?: PersonalEvent;
   onDone: (deleted?: boolean) => void;
+  onBusyChange: (busy: boolean) => void;
+  onDirtyChange: (dirty: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const confirmText = useTranslation("calendarConfirmation").t;
+  const detailText = useTranslation("privateCalendarDetails").t;
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const client = useQueryClient();
   const online = useOnline();
   const [timeError, setTimeError] = useState(false);
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
     defaultValues: event
       ? {
-          ...event,
+          title: event.title,
+          time_zone: event.time_zone,
+          description: event.description ?? "",
+          meeting_url: event.meeting_url ?? "",
           starts_at: DateTime.fromISO(event.starts_at)
             .setZone(event.time_zone)
             .toFormat("yyyy-MM-dd'T'HH:mm"),
@@ -94,9 +114,19 @@ function EventForm({
             .setZone(event.time_zone)
             .toFormat("yyyy-MM-dd'T'HH:mm"),
         }
-      : { title: "", starts_at: "", ends_at: "", time_zone: zone },
+      : {
+          title: "",
+          description: "",
+          meeting_url: "",
+          starts_at: "",
+          ends_at: "",
+          time_zone: zone,
+        },
   });
+  useEffect(() => onDirtyChange(isDirty), [isDirty, onDirtyChange]);
   const save = useMutation({
+    onMutate: () => onBusyChange(true),
+    onSettled: () => onBusyChange(false),
     mutationFn: async (values: z.infer<typeof schema>) => {
       requireOnline();
       setTimeError(false);
@@ -108,6 +138,8 @@ function EventForm({
       }
       const payload = {
         title: values.title,
+        description: values.description,
+        meeting_url: values.meeting_url,
         starts_at: starts,
         ends_at: ends,
         time_zone: values.time_zone,
@@ -134,6 +166,8 @@ function EventForm({
     },
   });
   const remove = useMutation({
+    onMutate: () => onBusyChange(true),
+    onSettled: () => onBusyChange(false),
     mutationFn: async () => {
       requireOnline();
       const { data, error } = await db()
@@ -155,6 +189,42 @@ function EventForm({
       <Field id="event-title" label={t("title")} error={Boolean(errors.title)}>
         <input id="event-title" {...register("title")} />
       </Field>
+      <Field
+        id="event-description"
+        label={detailText("description")}
+        error={Boolean(errors.description)}
+      >
+        <textarea
+          id="event-description"
+          rows={4}
+          maxLength={10000}
+          {...register("description")}
+        />
+      </Field>
+      <Field
+        id="event-meeting"
+        label={detailText("meetingUrl")}
+        error={Boolean(errors.meeting_url)}
+      >
+        <input
+          id="event-meeting"
+          type="url"
+          maxLength={2000}
+          {...register("meeting_url")}
+        />
+      </Field>
+      {event?.meeting_url && privateMeetingHref(event.meeting_url) && (
+        <p>
+          <a
+            href={privateMeetingHref(event.meeting_url)!}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {detailText("openMeeting")}
+          </a>
+        </p>
+      )}
+      <p>{detailText("hint")}</p>
       <div className="form-row">
         <Field
           id="event-start"
@@ -190,7 +260,6 @@ function EventForm({
       {save.isError && (
         <Notice kind="error">{t(timeError ? "invalidTime" : "error")}</Notice>
       )}
-      {remove.isError && <Notice kind="error">{t("error")}</Notice>}
       <div className="form-actions">
         <Button disabled={!online || save.isPending || remove.isPending}>
           {t("saveEvent")}
@@ -200,12 +269,46 @@ function EventForm({
             type="button"
             variant="danger"
             disabled={!online || save.isPending || remove.isPending}
-            onClick={() => remove.mutate()}
+            onClick={() => {
+              remove.reset();
+              setConfirmDelete(true);
+            }}
           >
             {t("deleteEvent")}
           </Button>
         )}
       </div>
+      <Dialog
+        open={confirmDelete}
+        onOpenChange={(next) => {
+          if (!remove.isPending) setConfirmDelete(next);
+        }}
+        title={confirmText("deleteTitle")}
+        description={confirmText("deleteDescription")}
+      >
+        <p>{event?.title}</p>
+        {remove.isError && (
+          <Notice kind="error">{confirmText("deleteFailed")}</Notice>
+        )}
+        <div className="form-actions">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={remove.isPending}
+            onClick={() => setConfirmDelete(false)}
+          >
+            {t("cancel")}
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            disabled={!online || remove.isPending}
+            onClick={() => remove.mutate()}
+          >
+            {t("deleteEvent")}
+          </Button>
+        </div>
+      </Dialog>
     </form>
   );
 }
@@ -213,6 +316,11 @@ function EventForm({
 export function CalendarPage() {
   const { t, i18n } = useTranslation();
   const availabilityText = useTranslation("availability").t;
+  const confirmText = useTranslation("calendarConfirmation").t;
+  const filterText = useTranslation("calendarFilter").t;
+  const [search, setSearch] = useState("");
+  const [eventType, setEventType] = useState("all");
+  const [calendarParams] = useSearchParams();
   const { session } = useAuth();
   const profile = useQuery(profileQuery(session!.user.id));
   const claims = useQuery(claimsQuery(session!.user.id));
@@ -269,10 +377,67 @@ export function CalendarPage() {
   }, []);
   const activeGlobal = globalRows.find((event) => event.id === globalID);
   const [open, setOpen] = useState(false);
+  const [eventBusy, setEventBusy] = useState(false);
+  const [eventDirty, setEventDirty] = useState(false);
+  const [eventFormEpoch, setEventFormEpoch] = useState(0);
+  const [discardAction, setDiscardAction] = useState<
+    | { kind: "close" }
+    | { kind: "event"; event: PersonalEvent | undefined }
+    | null
+  >(null);
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      open &&
+      (eventDirty || eventBusy) &&
+      (currentLocation.pathname !== nextLocation.pathname ||
+        currentLocation.search !== nextLocation.search ||
+        currentLocation.hash !== nextLocation.hash),
+  );
+  const cancelDiscard = () => {
+    setDiscardAction(null);
+    if (blocker.state === "blocked") blocker.reset();
+  };
+  const applyDiscardAction = () => {
+    if (eventBusy) return;
+    if (blocker.state === "blocked") {
+      setDiscardAction(null);
+      setEventDirty(false);
+      blocker.proceed();
+      return;
+    }
+    if (!discardAction) return;
+    const action = discardAction;
+    setDiscardAction(null);
+    setEventDirty(false);
+    if (action.kind === "event") {
+      setEventFormEpoch((value) => value + 1);
+      setSelected(action.event);
+      setOpen(true);
+    } else {
+      setOpen(false);
+    }
+  };
+  useEffect(() => {
+    if (!open || (!eventDirty && !eventBusy)) return;
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+    };
+  }, [open, eventDirty, eventBusy]);
   const [selected, setSelected] = useState<PersonalEvent | undefined>();
   const [message, setMessage] = useState("");
   const online = useOnline();
   const zone = profile.data?.time_zone ?? "Europe/Berlin";
+  const assignment = calendarParams.get("assignment");
+  const assignmentStart = claims.data
+    ?.find((claim) => claim.job_id === assignment)
+    ?.assignment_sessions.map((session) => session.starts_at)
+    .filter((value) => Number.isFinite(Date.parse(value)))
+    .sort()[0];
   if (
     claims.isPending ||
     personal.isPending ||
@@ -386,8 +551,13 @@ export function CalendarPage() {
         action={
           <Button
             onClick={() => {
-              setSelected(undefined);
-              setOpen(true);
+              if (open && eventDirty)
+                setDiscardAction({ kind: "event", event: undefined });
+              else if (!eventBusy) {
+                setSelected(undefined);
+                setEventDirty(false);
+                setOpen(true);
+              }
             }}
             disabled={!online}
           >
@@ -403,19 +573,52 @@ export function CalendarPage() {
         <div className="segmented">
           <Button
             variant={!global ? "default" : "ghost"}
-            onClick={() => setGlobal(false)}
+            onClick={() => {
+              setGlobal(false);
+              setEventType("all");
+            }}
           >
             {t("privateCalendar")}
           </Button>
           <Button
             variant={global ? "default" : "ghost"}
-            onClick={() => setGlobal(true)}
+            onClick={() => {
+              setGlobal(true);
+              setEventType("all");
+            }}
           >
             {publicationText("global")}
           </Button>
         </div>
         <span className="badge">{zone}</span>
       </div>
+      <div className="form-row">
+        <Field id="calendar-search" label={filterText("search")}>
+          <input
+            id="calendar-search"
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </Field>
+        <Field id="calendar-event-type" label={filterText("type")}>
+          <select
+            id="calendar-event-type"
+            value={eventType}
+            onChange={(event) => setEventType(event.target.value)}
+          >
+            <option value="all">{filterText("all")}</option>
+            {(global ? ["global", "course"] : ["private", "assignment"]).map(
+              (kind) => (
+                <option key={kind} value={kind}>
+                  {filterText(kind)}
+                </option>
+              ),
+            )}
+          </select>
+        </Field>
+      </div>
+      <p>{filterText("scope")}</p>
       {message && <Notice>{message}</Notice>}
       <CalendarExport
         key={session!.user.id}
@@ -444,13 +647,20 @@ export function CalendarPage() {
           locale={i18n.language === "de" ? deLocale : enLocale}
           timeZone={zone}
           initialView={window.innerWidth < 700 ? "listMonth" : "dayGridMonth"}
+          initialDate={assignmentStart}
           headerToolbar={{
             left: "prev,next today",
             center: "title",
             right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth",
           }}
           datesSet={handleDatesSet}
-          events={events}
+          events={events.filter(
+            (event) =>
+              (eventType === "all" || event.extendedProps.kind === eventType) &&
+              event.title
+                .toLocaleLowerCase()
+                .includes(search.trim().toLocaleLowerCase()),
+          )}
           height="auto"
           buttonIcons={false}
           dayCellDidMount={(arg) => arg.el.removeAttribute("aria-labelledby")}
@@ -463,8 +673,14 @@ export function CalendarPage() {
               setGlobalID(info.event.id);
             }
             if (info.event.extendedProps.kind === "private") {
-              setSelected(personal.data.find((e) => e.id === info.event.id));
-              setOpen(true);
+              const next = personal.data.find((e) => e.id === info.event.id);
+              if (open && eventDirty)
+                setDiscardAction({ kind: "event", event: next });
+              else if (!eventBusy) {
+                setSelected(next);
+                setEventDirty(false);
+                setOpen(true);
+              }
             }
           }}
         />
@@ -519,20 +735,51 @@ export function CalendarPage() {
       )}
       <Dialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(next) => {
+          if (eventBusy) return;
+          if (!next && eventDirty) setDiscardAction({ kind: "close" });
+          else setOpen(next);
+        }}
         title={t(selected ? "privateEvent" : "addEvent")}
         description={t("eventHelp")}
       >
         <EventForm
-          key={selected?.id ?? "new"}
+          key={`${selected?.id ?? "new"}:${eventFormEpoch}`}
           userId={session!.user.id}
           zone={zone}
           event={selected}
+          onBusyChange={setEventBusy}
+          onDirtyChange={setEventDirty}
           onDone={(deleted) => {
+            if (blocker.state === "blocked") blocker.reset();
+            setEventDirty(false);
+            setDiscardAction(null);
             setOpen(false);
             setMessage(t(deleted ? "eventDeleted" : "eventSaved"));
           }}
         />
+        <Dialog
+          open={discardAction !== null || blocker.state === "blocked"}
+          onOpenChange={(next) => {
+            if (!next) cancelDiscard();
+          }}
+          title={confirmText("discardTitle")}
+          description={confirmText("discardDescription")}
+        >
+          <div className="form-actions">
+            <Button type="button" variant="secondary" onClick={cancelDiscard}>
+              {confirmText("keepDraft")}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              disabled={eventBusy}
+              onClick={applyDiscardAction}
+            >
+              {confirmText("discardDraft")}
+            </Button>
+          </div>
+        </Dialog>
       </Dialog>
     </>
   );

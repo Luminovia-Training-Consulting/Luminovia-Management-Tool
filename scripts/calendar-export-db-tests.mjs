@@ -36,6 +36,73 @@ await withTestDatabase("calendar_export", async ({ sql, actor }) => {
   await sql(`insert into public.personal_events(id,user_id,title,starts_at,ends_at,time_zone) values
     (${q(privateId)},${q(teacher)},'Private appointment',${q(ends)},'2026-10-25T02:30:00Z','Europe/Berlin'),
     (${q(randomUUID())},${q(peer)},'Foreign private appointment',${q(ends)},'2026-10-25T02:30:00Z','Europe/Berlin');`);
+  const inserted = await actor(
+    teacher,
+    `insert into public.personal_events(user_id,title,starts_at,ends_at,description,meeting_url) values(${q(teacher)},'Fictional separate appointment','2037-01-01T08:00Z','2037-01-01T09:00Z','Note','https://meet.example.invalid/ok') returning id`,
+  );
+  assert.ok(inserted);
+  await actor(
+    teacher,
+    `delete from public.personal_events where id=${q(inserted)}`,
+  );
+  await actor(
+    teacher,
+    `update public.personal_events set description='Private note café',meeting_url='https://meet.example.invalid/room?x=1' where id=${q(privateId)}`,
+  );
+  assert.equal(
+    await actor(
+      teacher,
+      `select description from public.personal_events where id=${q(privateId)}`,
+    ),
+    "Private note café",
+  );
+  for (const who of [peer, admin]) {
+    assert.equal(
+      await actor(
+        who,
+        `select count(*) from public.personal_events where id=${q(privateId)}`,
+        who === admin ? "aal2" : "aal1",
+      ),
+      "0",
+    );
+    assert.equal(
+      await actor(
+        who,
+        `with changed as (update public.personal_events set description='forged' where id=${q(privateId)} returning id) select count(*) from changed`,
+        who === admin ? "aal2" : "aal1",
+      ),
+      "0",
+    );
+  }
+  for (const url of [
+    "http://example.invalid",
+    "https://user:pass@example.invalid",
+    "javascript:alert(1)",
+    "https://example.invalid:99999/path",
+    "https://example.invalid:0/path",
+    "https://example.invalid/with space",
+  ]) {
+    await assert.rejects(
+      actor(
+        teacher,
+        `update public.personal_events set meeting_url=${q(url)} where id=${q(privateId)}`,
+      ),
+      /23514/,
+    );
+  }
+  await assert.rejects(
+    actor(
+      teacher,
+      `update public.personal_events set description=repeat('x',10001) where id=${q(privateId)}`,
+    ),
+    /23514/,
+  );
+  const snapshot = JSON.stringify(await exportFor(teacher, true));
+  assert.ok(!snapshot.includes("Private note café"));
+  assert.ok(!snapshot.includes("meet.example.invalid"));
+  console.log(
+    "PASS Private notes and HTTPS links remain owner-only, validate on the database and stay out of the existing export projection",
+  );
   const result = await exportFor(teacher);
   assert.deepEqual(
     result.map((e) => e.id),
@@ -79,5 +146,5 @@ await withTestDatabase("calendar_export", async ({ sql, actor }) => {
   await sql(`update public.profiles set active=false where id=${q(teacher)}`);
   await assert.rejects(exportFor(teacher), /42501/);
   console.log("PASS Current account suspension revokes export");
-  console.log("4 calendar export PostgreSQL groups passed");
+  console.log("5 calendar export PostgreSQL groups passed");
 });

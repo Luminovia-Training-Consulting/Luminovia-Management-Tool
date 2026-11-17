@@ -9,6 +9,7 @@ interface Dependencies {
     args: Record<string, unknown>,
   ) => Promise<{ data: Record<string, unknown> | null; error: unknown }>;
   download: (path: string) => Promise<Uint8Array>;
+  wikiPath?: (id: string, version: string) => Promise<string | null>;
   render: (kind: string, facts: Record<string, unknown>) => Promise<Uint8Array>;
 }
 const uuid = (value: unknown): value is string =>
@@ -96,11 +97,18 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
         name = "course_document_access";
         args = { p_kind: kind, p_id: body.id };
       } else if (
+        kind === "wiki_resource" &&
+        uuid(body.id) &&
+        Object.keys(body).every((key) => ["kind", "id"].includes(key))
+      ) {
+        name = "wiki_attachment_access";
+        args = { p_id: body.id };
+      } else if (
         kind === "request_resource" &&
         uuid(body.id) &&
         uuid(body.request_id) &&
         Object.keys(body).every((key) =>
-          ["kind", "id", "request_id"].includes(key)
+          ["kind", "id", "request_id"].includes(key),
         )
       ) {
         name = "client_request_document_access";
@@ -118,7 +126,7 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
         /^\d{4}-\d{2}-\d{2}$/.test(body.until) &&
         (body.all === undefined || typeof body.all === "boolean") &&
         Object.keys(body).every((key) =>
-          ["kind", "from", "until", "all"].includes(key)
+          ["kind", "from", "until", "all"].includes(key),
         )
       ) {
         name = "finance_statement";
@@ -133,14 +141,25 @@ export function createCourseDocumentHandler(dependencies: Dependencies) {
       let bytes: Uint8Array,
         mime = "application/pdf",
         filename = `luminovia-${kind}.pdf`;
-      if (kind === "resource" || kind === "request_resource") {
-        if (
-          typeof first.data.object_path !== "string" ||
-          typeof first.data.sha256 !== "string"
-        ) {
-          return json(403, "document_unavailable");
+      if (
+        kind === "resource" ||
+        kind === "request_resource" ||
+        kind === "wiki_resource"
+      ) {
+        let objectPath: string | null = null;
+        if (kind === "wiki_resource") {
+          if (!uuid(first.data.version_id) || !dependencies.wikiPath)
+            return json(403, "document_unavailable");
+          objectPath = await dependencies.wikiPath(
+            body.id,
+            first.data.version_id,
+          );
+        } else if (typeof first.data.object_path === "string") {
+          objectPath = first.data.object_path;
         }
-        bytes = await dependencies.download(first.data.object_path);
+        if (!objectPath || typeof first.data.sha256 !== "string")
+          return json(403, "document_unavailable");
+        bytes = await dependencies.download(objectPath);
         const digest = [
           ...new Uint8Array(
             await crypto.subtle.digest("SHA-256", new Uint8Array(bytes)),

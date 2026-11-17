@@ -173,6 +173,8 @@ beforeEach(async () => {
           return { data: [record], error: null };
         case "wiki_page":
           return { data: { ...record }, error: null };
+        case "wiki_attachments":
+          return { data: [], error: null };
         case "save_wiki_page":
           return save(payload);
         default:

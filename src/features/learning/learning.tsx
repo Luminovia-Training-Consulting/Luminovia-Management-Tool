@@ -223,6 +223,10 @@ function CourseContact({ course, actor }: WorkProps) {
   const online = useOnline();
   const save = useAction(course.id, actor);
   const [selected, setSelected] = useState("");
+  const [copyStatus, setCopyStatus] = useState<{
+    url: string;
+    status: "success" | "error";
+  } | null>(null);
   const email = course.contact?.email
     ? contactEmailLink(course.contact.email)
     : null;
@@ -237,9 +241,37 @@ function CourseContact({ course, actor }: WorkProps) {
       <p>{course.description}</p>
       <p className="preserve-text">{course.syllabus}</p>
       {url ? (
-        <a href={url} target="_blank" rel="noopener noreferrer">
-          {t("teachingLink")}
-        </a>
+        <div className="form-actions">
+          <a href={url} target="_blank" rel="noopener noreferrer">
+            {t("teachingLink")}
+          </a>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={async () => {
+              setCopyStatus(null);
+              try {
+                await navigator.clipboard.writeText(url);
+                setCopyStatus({ url, status: "success" });
+              } catch {
+                setCopyStatus({ url, status: "error" });
+              }
+            }}
+          >
+            {t("copyTeachingLink")}
+          </Button>
+          {copyStatus?.url === url && (
+            <span role={copyStatus.status === "error" ? "alert" : "status"}>
+              {t(
+                copyStatus.status === "success"
+                  ? "teachingLinkCopied"
+                  : "teachingLinkCopyFailed",
+              )}
+              {copyStatus.status === "error" && <code> {url}</code>}
+            </span>
+          )}
+        </div>
       ) : (
         <p>{course.venue}</p>
       )}

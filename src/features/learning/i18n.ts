@@ -77,6 +77,12 @@ const pairs: Record<string, [string, string]> = {
     "Only a contact from the linked organisation is shared with authorised course members. Internal customer notes stay private.",
   ],
   teachingLink: ["Unterrichtslink öffnen", "Open teaching link"],
+  copyTeachingLink: ["Unterrichtslink kopieren", "Copy teaching link"],
+  teachingLinkCopied: ["Unterrichtslink kopiert.", "Teaching link copied."],
+  teachingLinkCopyFailed: [
+    "Der Unterrichtslink konnte nicht kopiert werden. Bitte kopiere ihn manuell.",
+    "The teaching link could not be copied. Please copy it manually.",
+  ],
   writeEmail: ["E-Mail schreiben", "Write email"],
   call: ["Anrufen", "Call"],
   resources: [

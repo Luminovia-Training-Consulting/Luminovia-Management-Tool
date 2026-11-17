@@ -9,7 +9,16 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Pencil, SmilePlus, Trash2 } from "lucide-react";
+import {
+  Copy,
+  EyeOff,
+  Pencil,
+  Pin,
+  PinOff,
+  Reply,
+  SmilePlus,
+  Trash2,
+} from "lucide-react";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Field, Notice } from "../../components/common";
@@ -19,6 +28,7 @@ import { chatKeys } from "./api";
 import { MentionPicker } from "./mentions";
 import type { ChatMessage, ChatMention } from "./types";
 import "./i18n";
+import "./hide-message-i18n";
 import { TaskFromMessageAction } from "../workbench/message-action";
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const editSchema = z.object({ body: z.string().max(8000) });
@@ -59,15 +69,20 @@ export function MessageBubble({
   zone,
   attachment,
   now,
+  onReply,
+  topicPin,
 }: {
   message: ChatMessage;
   actor: string;
   zone: string;
   attachment?: ReactNode;
   now: number;
+  onReply?: (message: ChatMessage) => void;
+  topicPin?: { pinned: boolean; disabled: boolean; toggle: () => void };
 }) {
   const { t, i18n } = useTranslation("chat");
   const common = useTranslation().t;
+  const pinText = useTranslation("topicMessagePins").t;
   const client = useQueryClient();
   const online = useOnline();
   const [editing, setEditing] = useState(false);
@@ -75,6 +90,10 @@ export function MessageBubble({
     message.content_version ?? 1,
   );
   const [deleting, setDeleting] = useState(false);
+  const [hiding, setHiding] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<"success" | "error" | null>(
+    null,
+  );
   const [mentions, setMentions] = useState<ChatMention[]>(
     message.mentions ?? [],
   );
@@ -137,6 +156,19 @@ export function MessageBubble({
       setDeleting(false);
     },
   });
+  const hide = useMutation({
+    mutationFn: async () => {
+      requireOnline();
+      const { error } = await db().rpc("hide_chat_message", {
+        p_message_id: message.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await invalidate();
+      setHiding(false);
+    },
+  });
   const react = useMutation({
     mutationFn: async ({
       emoji,
@@ -164,6 +196,7 @@ export function MessageBubble({
     <li
       className={`chat-message ${own ? "chat-message-own" : ""}`}
       data-message-id={message.id}
+      tabIndex={-1}
     >
       <div className="chat-message-avatar" aria-hidden="true">
         {(message.sender_name || "?").slice(0, 1).toUpperCase()}
@@ -185,6 +218,18 @@ export function MessageBubble({
           <p className="chat-tombstone">{t("deleted")}</p>
         ) : (
           <>
+            {message.reply !== undefined && (
+              <blockquote className="chat-reply-preview">
+                {message.reply ? (
+                  <>
+                    <strong>{message.reply.sender_name}</strong>
+                    <span>{message.reply.body}</span>
+                  </>
+                ) : (
+                  t("replyUnavailable")
+                )}
+              </blockquote>
+            )}
             <p className="chat-message-body">
               <MessageText body={message.body} />
             </p>
@@ -230,6 +275,35 @@ export function MessageBubble({
                 aria-label={t("messageActions")}
               >
                 <TaskFromMessageAction messageId={message.id} />
+                {onReply && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("replyAction")}
+                    disabled={!online}
+                    onClick={() => onReply(message)}
+                  >
+                    <Reply size={15} />
+                  </Button>
+                )}
+                {message.body && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("copyMessage")}
+                    onClick={async () => {
+                      setCopyStatus(null);
+                      try {
+                        await navigator.clipboard.writeText(message.body);
+                        setCopyStatus("success");
+                      } catch {
+                        setCopyStatus("error");
+                      }
+                    }}
+                  >
+                    <Copy size={15} />
+                  </Button>
+                )}
                 <details className="chat-reaction-menu">
                   <summary aria-label={t("reactions")}>
                     <SmilePlus size={16} />
@@ -258,6 +332,31 @@ export function MessageBubble({
                     })}
                   </div>
                 </details>
+                {topicPin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    type="button"
+                    aria-label={pinText(topicPin.pinned ? "unpin" : "pin")}
+                    aria-pressed={topicPin.pinned}
+                    disabled={topicPin.disabled}
+                    onClick={topicPin.toggle}
+                  >
+                    {topicPin.pinned ? <PinOff size={15} /> : <Pin size={15} />}
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("hideMessage")}
+                  disabled={!online}
+                  onClick={() => {
+                    hide.reset();
+                    setHiding(true);
+                  }}
+                >
+                  <EyeOff size={15} />
+                </Button>
                 {canEdit && (
                   <Button
                     variant="ghost"
@@ -293,6 +392,11 @@ export function MessageBubble({
               </div>
             </div>
           </>
+        )}
+        {copyStatus && !message.deleted_at && (
+          <p role={copyStatus === "error" ? "alert" : "status"}>
+            {t(copyStatus === "success" ? "copySuccess" : "copyError")}
+          </p>
         )}
         {react.isError && <Notice kind="error">{t("actionError")}</Notice>}
       </article>
@@ -340,6 +444,29 @@ export function MessageBubble({
             </Notice>
           )}
         </form>
+      </Dialog>
+      <Dialog
+        open={hiding}
+        onOpenChange={setHiding}
+        title={t("hideConfirm")}
+        description={t("hideHint")}
+      >
+        <div className="form-actions">
+          <Button
+            variant="secondary"
+            onClick={() => setHiding(false)}
+            disabled={hide.isPending}
+          >
+            {common("cancel")}
+          </Button>
+          <Button
+            onClick={() => hide.mutate()}
+            disabled={!online || hide.isPending}
+          >
+            {t("hideMessage")}
+          </Button>
+        </div>
+        {hide.isError && <Notice kind="error">{t("actionError")}</Notice>}
       </Dialog>
       <Dialog
         open={deleting}

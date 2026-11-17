@@ -67,6 +67,9 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
   });
   const title = `Private calendar ${randomUUID().slice(0, 8)}`;
   await dialog.getByLabel("Titel", { exact: true }).fill(title);
+  await dialog
+    .getByLabel("Beschreibung oder Notiz", { exact: true })
+    .fill("Fictional private preparation note");
   await dialog.getByLabel("Zeitzone", { exact: true }).fill("Europe/Berlin");
   let writes = 0;
   page.on("request", (request) => {
@@ -109,6 +112,22 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
     .getByLabel("Ende", { exact: true })
     .fill(local(start.plus({ hours: 1 })));
   await dialog
+    .getByLabel("Meeting-Link (HTTPS)", { exact: true })
+    .fill("https://user:pass@example.invalid");
+  await dialog
+    .getByRole("button", { name: "Termin speichern", exact: true })
+    .click();
+  await expect(
+    dialog.getByLabel("Meeting-Link (HTTPS)", { exact: true }),
+  ).toHaveAttribute("aria-invalid", "true");
+  expect(writes).toBe(0);
+  await expect(
+    dialog.getByLabel("Beschreibung oder Notiz", { exact: true }),
+  ).toHaveValue("Fictional private preparation note");
+  await dialog
+    .getByLabel("Meeting-Link (HTTPS)", { exact: true })
+    .fill("https://meet.example.invalid/fictional-room");
+  await dialog
     .getByRole("button", { name: "Termin speichern", exact: true })
     .click();
   await expect(dialog).toBeHidden();
@@ -116,11 +135,15 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
   const original = (await checked(
     service
       .from("personal_events")
-      .select("id,title,starts_at,ends_at,time_zone")
+      .select("id,title,description,meeting_url,starts_at,ends_at,time_zone")
       .eq("user_id", owner.id)
       .single(),
   ))!;
   expect(original.title).toBe(title);
+  expect(original.description).toBe("Fictional private preparation note");
+  expect(original.meeting_url).toBe(
+    "https://meet.example.invalid/fictional-room",
+  );
   expect(new Date(original.starts_at).toISOString()).toBe(
     start.toUTC().toISO(),
   );
@@ -134,8 +157,44 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
   await expect(dialog.getByLabel("Beginn", { exact: true })).toHaveValue(
     local(start),
   );
+  await expect(
+    dialog.getByLabel("Beschreibung oder Notiz", { exact: true }),
+  ).toHaveValue("Fictional private preparation note");
+  await expect(
+    dialog.getByRole("link", { name: "Meeting-Link öffnen" }),
+  ).toHaveAttribute("href", "https://meet.example.invalid/fictional-room");
   const editedTitle = `${title} revised`;
   const editedStart = start.plus({ hours: 2 });
+  await dialog.getByLabel("Titel", { exact: true }).fill(editedTitle);
+  await dialog.getByLabel("Beginn", { exact: true }).fill(local(editedStart));
+  await dialog
+    .getByLabel("Ende", { exact: true })
+    .fill(local(editedStart.plus({ hours: 1 })));
+  await page.keyboard.press("Escape");
+  let discardDialog = page.getByRole("dialog", {
+    name: "Ungespeicherte Änderungen verwerfen?",
+    exact: true,
+  });
+  await expect(discardDialog).toBeVisible();
+  await discardDialog
+    .getByRole("button", { name: "Entwurf behalten", exact: true })
+    .click();
+  await expect(dialog.getByLabel("Titel", { exact: true })).toHaveValue(
+    editedTitle,
+  );
+  expect(writes, "Keeping a draft does not write an appointment").toBe(1);
+  await dialog.getByRole("button", { name: "Schließen", exact: true }).click();
+  discardDialog = page.getByRole("dialog", {
+    name: "Ungespeicherte Änderungen verwerfen?",
+    exact: true,
+  });
+  await discardDialog
+    .getByRole("button", { name: "Änderungen verwerfen", exact: true })
+    .click();
+  await expect(dialog).toBeHidden();
+  expect(writes, "Discarding a draft does not write an appointment").toBe(1);
+  dialog = await eventDialog(page, title);
+  await expect(dialog.getByLabel("Titel", { exact: true })).toHaveValue(title);
   await dialog.getByLabel("Titel", { exact: true }).fill(editedTitle);
   await dialog.getByLabel("Beginn", { exact: true }).fill(local(editedStart));
   await dialog
@@ -206,6 +265,39 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
     ),
   ).toEqual(stored);
   await dialog
+    .getByRole("button", { name: "Privaten Termin löschen", exact: true })
+    .click();
+  const confirmation = page.getByRole("dialog", {
+    name: "Privaten Termin löschen?",
+    exact: true,
+  });
+  await expect(confirmation).toBeVisible();
+  await expect(
+    confirmation.getByText(editedTitle, { exact: true }),
+  ).toBeVisible();
+  await confirmation
+    .getByRole("button", { name: "Abbrechen", exact: true })
+    .click();
+  await expect(confirmation).toBeHidden();
+  await expect(dialog).toBeVisible();
+  expect(
+    writes,
+    "Cancelling the confirmation never reaches the write API",
+  ).toBe(2);
+  expect(
+    await checked(
+      service
+        .from("personal_events")
+        .select("*")
+        .eq("id", original.id)
+        .single(),
+    ),
+  ).toEqual(stored);
+  await dialog
+    .getByRole("button", { name: "Privaten Termin löschen", exact: true })
+    .click();
+  await expect(confirmation).toBeVisible();
+  await confirmation
     .getByRole("button", { name: "Privaten Termin löschen", exact: true })
     .click();
   await expect(dialog).toBeHidden();
@@ -314,4 +406,82 @@ test("global calendar reveals published events and opens the precise published c
     dialog.getByText("Fictional published course detail", { exact: true }),
   ).toBeVisible();
   await expect(dialog.locator(".session-list li")).toHaveCount(1);
+});
+
+test("browser history preserves a personal draft until explicitly discarded", async ({
+  page,
+}) => {
+  const owner = await actor("Fictional history calendar owner", "lecturer");
+  await login(page, owner.email);
+  await page.goto("/calendar");
+  // Add a real in-app history entry; browser back must target the preceding route.
+  await page.getByRole("link", { name: "Verfügbarkeit & Sperrzeiten" }).click();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/calendar/);
+  await page
+    .getByRole("button", { name: "Privaten Termin hinzufügen" })
+    .click();
+  const form = page.getByRole("dialog", { name: "Privaten Termin hinzufügen" });
+  await form.getByLabel("Titel").fill("Fictional history draft");
+  await page.goForward();
+  let confirm = page.getByRole("dialog", {
+    name: "Ungespeicherte Änderungen verwerfen?",
+  });
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole("button", { name: "Entwurf behalten" }).click();
+  await expect(page).toHaveURL(/\/calendar/);
+  await expect(form.getByLabel("Titel")).toHaveValue("Fictional history draft");
+  await page.goForward();
+  confirm = page.getByRole("dialog", {
+    name: "Ungespeicherte Änderungen verwerfen?",
+  });
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole("button", { name: "Änderungen verwerfen" }).click();
+  await expect(page).toHaveURL(/\/availability/);
+});
+
+test("calendar search and event type filter the current user's loaded events", async ({
+  page,
+}) => {
+  const owner = await actor("Fictional calendar search owner", "lecturer");
+  const client = await signedIn(owner);
+  const marker = randomUUID().slice(0, 8);
+  const start = DateTime.now().startOf("day").plus({ hours: 10 });
+  await checked(
+    client.from("personal_events").insert([
+      {
+        user_id: owner.id,
+        title: `Fictional alpha ${marker}`,
+        starts_at: start.toUTC().toISO(),
+        ends_at: start.plus({ hours: 1 }).toUTC().toISO(),
+        time_zone: "UTC",
+      },
+      {
+        user_id: owner.id,
+        title: `Fictional beta ${marker}`,
+        starts_at: start.plus({ hours: 2 }).toUTC().toISO(),
+        ends_at: start.plus({ hours: 3 }).toUTC().toISO(),
+        time_zone: "UTC",
+      },
+    ]),
+  );
+  await login(page, owner.email);
+  await page.goto("/calendar");
+  const alpha = page
+    .locator(".fc-event")
+    .filter({ hasText: `Fictional alpha ${marker}` });
+  const beta = page
+    .locator(".fc-event")
+    .filter({ hasText: `Fictional beta ${marker}` });
+  await expect(alpha).toBeVisible();
+  await expect(beta).toBeVisible();
+  await page.getByLabel("Kalendertermine suchen").fill(`ALPHA ${marker}`);
+  await expect(alpha).toBeVisible();
+  await expect(beta).toHaveCount(0);
+  await page.getByLabel("Terminart").selectOption("assignment");
+  await expect(alpha).toHaveCount(0);
+  await page.getByLabel("Terminart").selectOption("private");
+  await expect(alpha).toBeVisible();
+  await page.getByLabel("Kalendertermine suchen").clear();
+  await expect(beta).toBeVisible();
 });

@@ -41,6 +41,13 @@ const pairs: Record<string, [string, string]> = {
   ],
   write: ["E-Mail schreiben", "Write email"],
   call: ["Anrufen", "Call"],
+  copyEmail: ["E-Mail-Adresse kopieren", "Copy email address"],
+  copyPhone: ["Telefonnummer kopieren", "Copy phone number"],
+  copySuccess: ["Kontaktangabe kopiert.", "Contact detail copied."],
+  copyError: [
+    "Kopieren nicht möglich. Bitte wähle die Kontaktangabe manuell aus.",
+    "Could not copy. Please select the contact detail manually.",
+  ],
   loadError: [
     "Kontaktangaben konnten nicht geladen werden.",
     "Contact details could not be loaded.",

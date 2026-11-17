@@ -49,6 +49,50 @@ await withTestDatabase("unified_search", async ({ sql, actor }) => {
   console.log(
     "PASS Universal search preserves own file/task and private DM boundaries, including permission administrators; exact Unicode URL escaping",
   );
+  // This is a security-definer projection, so direct-table RLS alone cannot
+  // filter hidden messages. Exercise both identities and the p_limit boundary.
+  const visibleMessage = randomUUID();
+  await sql(
+    `insert into public.messages(id,room_id,sender_id,body,client_id,request_hash) values(${q(visibleMessage)},${q(room)},${q(owner)},'Needle visible message',${q(randomUUID())},'fixture');`,
+  );
+  await actor(owner, `select public.hide_chat_message(${q(msg)})`);
+  const personal = await search(owner, "Needle", "chats");
+  assert.ok(!personal.items.some((row) => row.id === msg));
+  assert.ok(personal.items.some((row) => row.id === visibleMessage));
+  const other = await search(peer, "Needle", "chats");
+  assert.ok(other.items.some((row) => row.id === msg));
+  assert.ok(other.items.some((row) => row.id === visibleMessage));
+  const singlePage = JSON.parse(
+    await actor(
+      owner,
+      "select public.unified_search('Needle','chats',null,null,null,1)",
+    ),
+  );
+  assert.equal(singlePage.items.length, 1);
+  assert.equal(singlePage.items[0].id, visibleMessage);
+  assert.equal(singlePage.has_more, false);
+  assert.equal(singlePage.next_cursor, null);
+  assert.equal(
+    await sql(
+      "select has_function_privilege('anon','public.unified_search(text,text,text,text,uuid,integer)','execute')",
+    ),
+    "f",
+  );
+  assert.equal(
+    await sql(
+      "select has_function_privilege('authenticated','public.unified_search(text,text,text,text,uuid,integer)','execute')",
+    ),
+    "t",
+  );
+  assert.equal(
+    await sql(
+      "select has_function_privilege('service_role','public.unified_search(text,text,text,text,uuid,integer)','execute')",
+    ),
+    "f",
+  );
+  console.log(
+    "PASS Personally hidden messages are excluded before universal-search pagination without changing peer visibility or grants",
+  );
   result = await search(learner);
   assert.ok(
     result.items.some(
@@ -117,5 +161,5 @@ await withTestDatabase("unified_search", async ({ sql, actor }) => {
   console.log(
     "PASS Strict queries/cursors, anonymous denial and immediate existing-identity suspension",
   );
-  console.log("5 unified search PostgreSQL groups passed");
+  console.log("6 unified search PostgreSQL groups passed");
 });

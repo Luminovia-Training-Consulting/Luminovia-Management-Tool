@@ -678,8 +678,8 @@ await withTestDatabase(
 
     /** Observe actual database waits so the revocation regression cannot pass
      * merely because the writer happened to begin after the role change. */
-    const barrier = async (tag, condition) => {
-      for (let attempt = 0; attempt < 100; attempt++) {
+    const barrier = async (tag, condition, attempts = 100) => {
+      for (let attempt = 0; attempt < attempts; attempt++) {
         if (
           (await sql(
             `select exists(select 1 from pg_stat_activity where datname=current_database() and application_name=${q(tag)} and ${condition})`,
@@ -1214,32 +1214,60 @@ await withTestDatabase(
         // Capture a real quote outside the window; only elapsed wall time changes
         // between proposal and acceptance, so every consent field remains exact.
         await sql(`update public.assignment_sessions set starts_at=starts_at+shift.delta,ends_at=ends_at+shift.delta
-        from(select clock_timestamp()+interval '168 hours 1.5 seconds'-min(starts_at) delta from public.assignment_sessions where claim_id=${q(fixture.claim)})shift where claim_id=${q(fixture.claim)}`);
+        from(select clock_timestamp()+interval '168 hours 30 seconds'-min(starts_at) delta from public.assignment_sessions where claim_id=${q(fixture.claim)})shift where claim_id=${q(fixture.claim)}`);
         const offer = await targetOffer(await propose(fixture));
         const before = await handoverSnapshot(fixture);
         const lockTag = `cutoff_holder_${randomUUID().replaceAll("-", "")}`;
         const acceptTag = `cutoff_accept_${randomUUID().replaceAll("-", "")}`;
+        // The holder waits until explicitly cancelled, rather than releasing on a
+        // guessed delay. Its tag names only this disposable test backend.
         const holder = sql(
-          `begin;set local application_name=${q(lockTag)};select id from public.jobs where id=${q(fixture.job)} for update;select pg_sleep(2);commit`,
+          `begin;set local application_name=${q(lockTag)};select id from public.jobs where id=${q(fixture.job)} for update;select pg_sleep(120);commit`,
         );
+        // Attach a rejection handler immediately: cancellation is an expected SQL
+        // result and must never surface as an unhandled promise rejection.
+        const holderResult = Promise.allSettled([holder]);
         let writer;
         try {
-          await barrier(lockTag, "wait_event='PgSleep'");
-          assert.equal(
-            await sql(
-              `select min(starts_at)>clock_timestamp()+interval '168 hours' from public.assignment_sessions where claim_id=${q(fixture.claim)}`,
-            ),
-            "t",
-            "Acceptance begins outside the cutoff",
-          );
+          await barrier(lockTag, "wait_event='PgSleep'", 500);
+          // Reproduce a slow runner *after* the real job lock is acquired.
+          // It cannot make an elapsed-time assertion pass without a waiting writer.
+          await sql("select pg_sleep(4)");
           writer = actor(
             peer,
             `set local application_name=${q(acceptTag)};select public.respond_job_substitution(${q(offer.id)},'accept',${q(offer.quote_hash)},${q(randomUUID())},true)`,
           );
           const settled = Promise.allSettled([holder, writer]);
-          await barrier(acceptTag, "wait_event_type='Lock'");
+          await barrier(acceptTag, "wait_event_type='Lock'", 500);
+          assert.equal(
+            await sql(
+              `select a.query_start < (select min(starts_at)-interval '168 hours' from public.assignment_sessions where claim_id=${q(fixture.claim)}) from pg_stat_activity a where a.datname=current_database() and a.application_name=${q(acceptTag)} and a.wait_event_type='Lock'`,
+            ),
+            "t",
+            "The blocked acceptance statement actually started outside the cutoff",
+          );
+          // PostgreSQL's own clock controls the transition: no application clock
+          // or synthetic time override, and no second mutation of accepted terms.
+          await sql(
+            `select pg_sleep(greatest(0,extract(epoch from ((select min(starts_at)-interval '168 hours' from public.assignment_sessions where claim_id=${q(fixture.claim)})-clock_timestamp()))+0.05))`,
+          );
+          assert.equal(
+            await sql(
+              `select min(starts_at)<=clock_timestamp()+interval '168 hours' from public.assignment_sessions where claim_id=${q(fixture.claim)}`,
+            ),
+            "t",
+            "The real cutoff passed before releasing the row lock",
+          );
+          assert.equal(
+            await sql(
+              `select coalesce(bool_or(pg_cancel_backend(pid)),false) from pg_stat_activity where datname=current_database() and application_name=${q(lockTag)} and wait_event='PgSleep'`,
+            ),
+            "t",
+            "The exact fixture lock holder was released",
+          );
           const results = await settled;
-          assert.equal(results[0].status, "fulfilled");
+          assert.equal(results[0].status, "rejected");
+          assert.match(results[0].reason.message, /57014|canceling statement/i);
           assert.equal(results[1].status, "rejected");
           assert.match(
             results[1].reason.message,
@@ -1247,7 +1275,12 @@ await withTestDatabase(
           );
           assert.equal(await handoverSnapshot(fixture), before);
         } finally {
-          await Promise.allSettled([holder, ...(writer ? [writer] : [])]);
+          // Cleanup only this test's tagged connection even after an assertion failure.
+          await sql(
+            `select pg_cancel_backend(pid) from pg_stat_activity where datname=current_database() and application_name=${q(lockTag)} and pid<>pg_backend_pid()`,
+          ).catch(() => {});
+          await holderResult;
+          if (writer) await Promise.allSettled([writer]);
         }
       },
     );

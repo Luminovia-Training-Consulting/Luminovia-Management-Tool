@@ -137,7 +137,7 @@ beforeEach(async () => {
       unread_count: 2,
       as_of: ahead(0),
     },
-    chat_rooms_list: [
+    chat_rooms_with_manual_unread: [
       { id: "room-a", title: "Fictional room", unread_count: 3 },
     ],
     contract_records: [
@@ -447,7 +447,7 @@ describe("role-aware dashboard previews", () => {
       await vi.advanceTimersByTimeAsync(31000);
     });
     expect(rpcCalls("notification_inbox")).toHaveLength(2);
-    expect(rpcCalls("chat_rooms_list")).toHaveLength(1);
+    expect(rpcCalls("chat_rooms_with_manual_unread")).toHaveLength(1);
     expect(
       fake.calls.filter(
         (call) => call.method === "from" && call.table === "documents",

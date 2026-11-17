@@ -89,6 +89,18 @@
   flex-direction: column;
   gap: 8px;
 }
+.chat-room-row {
+  display: flex;
+  align-items: center;
+}
+.chat-pin-reorder {
+  display: flex;
+  flex-direction: column;
+}
+.chat-pin-reorder button {
+  width: 2rem;
+  height: 2rem;
+}
 .chat-room-button {
   display: flex;
   align-items: center;
@@ -151,6 +163,13 @@
   font-size: 9px;
   color: var(--muted);
   margin-top: 5px;
+}
+.chat-room-copy .chat-room-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 3px;
+  max-width: 100%;
 }
 .chat-room-indicators {
   display: flex;
@@ -953,4 +972,19 @@
 .chat-composer.is-dragging {
   outline: 2px solid var(--brand);
   outline-offset: -3px;
+}
+.chat-reply-preview,
+.chat-reply-draft {
+  border-inline-start: 3px solid var(--brand);
+  background: var(--surface);
+  padding: 0.5rem 0.75rem;
+  overflow-wrap: anywhere;
+}
+.chat-reply-preview strong,
+.chat-reply-preview span {
+  display: block;
+}
+.chat-reply-draft p {
+  white-space: pre-wrap;
+  margin: 0.25rem 0;
 }

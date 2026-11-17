@@ -146,6 +146,11 @@ const pairs: Record<string, [string, string]> = {
   subscribe: ["Thema abonnieren", "Subscribe to thread"],
   unsubscribe: ["Abonnement beenden", "Unsubscribe"],
   reply: ["Antwort schreiben", "Write a reply"],
+  quoteReply: ["Beitrag zitieren", "Quote post"],
+  quoteUnavailable: [
+    "Das Zitat ist nicht mehr verfügbar oder du hast keinen Zugriff mehr. Dein Entwurf bleibt erhalten.",
+    "The quoted post is no longer available or access was revoked. Your draft is preserved.",
+  ],
   postReply: ["Antwort veröffentlichen", "Post reply"],
   replying: ["Antwort wird veröffentlicht …", "Posting reply …"],
   replySent: [

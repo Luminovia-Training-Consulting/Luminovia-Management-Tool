@@ -159,6 +159,68 @@ describe("connected course workspace", () => {
       "My private draft",
     );
   });
+  it("copies only the authorized validated teaching link after clipboard confirmation, and explains failure", async () => {
+    const user = userEvent.setup();
+    const writeText = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("denied"));
+    vi.spyOn(navigator.clipboard, "writeText").mockImplementation(writeText);
+    setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Unterrichtslink kopieren" }),
+    );
+    expect(writeText).toHaveBeenCalledWith("https://example.invalid/class");
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Unterrichtslink kopiert.",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Unterrichtslink kopieren" }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("manuell");
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+  it("offers English copy controls only for valid HTTPS online courses", async () => {
+    await i18n.changeLanguage("en");
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.spyOn(navigator.clipboard, "writeText").mockImplementation(writeText);
+    setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Copy teaching link" }),
+    );
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Teaching link copied.",
+    );
+    expect(writeText).toHaveBeenCalledWith("https://example.invalid/class");
+  });
+  it("does not offer copying for an unsafe teaching URL", async () => {
+    fake.workspace.venue = "javascript:alert(1)";
+    setup();
+    expect(await screen.findByText("Shared safe description")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Unterrichtslink kopieren" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Unterrichtslink öffnen" }),
+    ).not.toBeInTheDocument();
+  });
+  it("does not offer a copy action for a physical course", async () => {
+    fake.workspace.delivery_type = "onsite";
+    setup();
+    expect(await screen.findByText("Shared safe description")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Unterrichtslink kopieren" }),
+    ).not.toBeInTheDocument();
+  });
+  it("does not expose a copy control when the server denies workspace access", async () => {
+    fake.error = { code: "42501" };
+    setup();
+    expect(await screen.findByRole("alert")).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Unterrichtslink kopieren" }),
+    ).not.toBeInTheDocument();
+  });
   it("stores the actor-owned notebook with its current version and confirms only after the response", async () => {
     const user = userEvent.setup();
     setup();

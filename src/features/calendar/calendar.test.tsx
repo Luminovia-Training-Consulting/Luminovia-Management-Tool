@@ -4,18 +4,51 @@
  * Controlled Query/FullCalendar fixtures do not replace native ACL acceptance.
  */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { useEffect } from "react";
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import {
+  createMemoryRouter,
+  RouterProvider,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { CalendarPage } from "./calendar";
 import i18n from "../../lib/i18n";
+
+function MemoryRouter({
+  children,
+  initialEntries,
+}: {
+  children: ReactNode;
+  initialEntries?: string[];
+}) {
+  const [router] = useState(() =>
+    createMemoryRouter([{ path: "*", element: <>{children}</> }], {
+      initialEntries,
+    }),
+  );
+  return <RouterProvider router={router} />;
+}
+
 const state = vi.hoisted(() => ({
   claims: [] as unknown[],
+  events: [] as unknown[],
+  deleteEvent: vi.fn(),
+  saveEvent: vi.fn(),
   rpc: vi.fn(),
   datesSetOnLocale: false,
   callbacks: [] as unknown[],
+  initialDate: undefined as string | undefined,
 }));
 // The real subscription panel remains mounted. Its independent metadata read
 // must not be mistaken for a global-range crawl or marketplace-title request.
@@ -29,6 +62,18 @@ vi.mock("../../lib/supabase", () => ({
     rpc: state.rpc,
     from: () => ({
       select: () => ({ eq: async () => ({ data: [], error: null }) }),
+      update: (payload: unknown) => ({
+        eq: () => ({
+          eq: () => ({
+            select: () => ({ single: () => state.saveEvent(payload) }),
+          }),
+        }),
+      }),
+      delete: () => ({
+        eq: () => ({
+          eq: () => ({ select: () => ({ single: state.deleteEvent }) }),
+        }),
+      }),
     }),
   }),
 }));
@@ -45,7 +90,10 @@ vi.mock("../../lib/queries", () => ({
     queryKey: ["claims"],
     queryFn: async () => state.claims,
   }),
-  eventsQuery: () => ({ queryKey: ["events"], queryFn: async () => [] }),
+  eventsQuery: () => ({
+    queryKey: ["events"],
+    queryFn: async () => state.events,
+  }),
 }));
 vi.mock("../operations/data", () => ({
   runsQuery: () => ({
@@ -77,6 +125,7 @@ vi.mock("@fullcalendar/react", () => ({
     datesSet,
     eventClick,
     locale,
+    initialDate,
   }: {
     events: {
       id: string;
@@ -90,8 +139,10 @@ vi.mock("@fullcalendar/react", () => ({
       jsEvent: { preventDefault: () => void };
     }) => void;
     locale: unknown;
+    initialDate?: string;
   }) {
     state.callbacks.push(datesSet);
+    state.initialDate = initialDate;
     // FullCalendar rebuilds its DateProfile when locale options change and may
     // deliver datesSet again even though the visible instants remain identical.
     useEffect(() => {
@@ -138,12 +189,101 @@ beforeEach(async () => {
   await i18n.changeLanguage("de");
   state.datesSetOnLocale = false;
   state.callbacks = [];
+  state.initialDate = undefined;
 });
 afterEach(() => {
   cleanup();
   state.claims = [];
+  state.events = [];
   vi.clearAllMocks();
 });
+it("filters loaded private, assignment, global and course titles without extra queries and supports both languages", async () => {
+  const jobID = "d7000000-0000-4000-8000-000000000001";
+  state.events = [
+    {
+      id: "private-one",
+      title: "Private planning",
+      starts_at: "2060-01-01T08:00:00Z",
+      ends_at: "2060-01-01T09:00:00Z",
+    },
+  ];
+  state.claims = [
+    {
+      id: "claim",
+      job_id: jobID,
+      assignment_sessions: [
+        {
+          id: "session-a",
+          starts_at: "2060-01-01T08:00:00Z",
+          ends_at: "2060-01-01T10:00:00Z",
+        },
+      ],
+    },
+  ];
+  state.rpc.mockImplementation((name) => {
+    const data =
+      name === "my_calendar_subscriptions"
+        ? []
+        : name === "global_calendar_events"
+          ? {
+              items: [
+                {
+                  id: "c8000000-0000-4000-8000-000000000001",
+                  title: "Global seminar",
+                  description: "",
+                  link_url: "",
+                  time_zone: "UTC",
+                  published: true,
+                  archived_at: null,
+                  version: 1,
+                  updated_at: "2060-01-01T00:00:00Z",
+                  starts_at: "2060-01-01T08:00:00Z",
+                  ends_at: "2060-01-01T09:00:00Z",
+                },
+              ],
+              has_more: false,
+              next_cursor: null,
+            }
+          : [{ id: jobID, title: "Teaching assignment" }];
+    const result = Promise.resolve({ data, error: null });
+    return Object.assign(result, { abortSignal: () => result });
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  await screen.findByText("Private planning");
+  expect(screen.getByText("Teaching assignment")).toBeInTheDocument();
+  const search = screen.getByLabelText("Kalendertermine suchen");
+  await user.type(search, "PLANNING");
+  expect(screen.getByText("Private planning")).toBeInTheDocument();
+  expect(screen.queryByText("Teaching assignment")).not.toBeInTheDocument();
+  await user.clear(search);
+  await user.selectOptions(screen.getByLabelText("Terminart"), "assignment");
+  expect(screen.queryByText("Private planning")).not.toBeInTheDocument();
+  expect(screen.getByText("Teaching assignment")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Globale Termine" }));
+  expect(await screen.findByText("Global seminar")).toBeInTheDocument();
+  expect(await screen.findByText("Published course")).toBeInTheDocument();
+  const count = calendarCalls().length;
+  await user.selectOptions(screen.getByLabelText("Terminart"), "course");
+  expect(screen.queryByText("Global seminar")).not.toBeInTheDocument();
+  expect(screen.getByText("Published course")).toBeInTheDocument();
+  await act(() => i18n.changeLanguage("en"));
+  expect(screen.getByLabelText("Event type")).toHaveValue("course");
+  await user.type(screen.getByLabelText("Search calendar events"), "missing");
+  expect(screen.queryByText("Published course")).not.toBeInTheDocument();
+  expect(calendarCalls()).toHaveLength(count);
+  client.clear();
+});
+
 it("global published session links open the precise authorised course detail rather than an unselected catalogue", async () => {
   state.rpc.mockImplementation((name) => {
     const response = Promise.resolve({
@@ -374,5 +514,413 @@ it("preserves the same global-event dialog/link across locale and equal-range si
     }),
   );
   expect(new Set(state.callbacks).size).toBe(1);
+  client.clear();
+});
+
+it.each(["de", "en"])(
+  "confirms private appointment deletion, preserves errors and blocks closing while pending (%s)",
+  async (language) => {
+    await i18n.changeLanguage(language);
+    state.events = [
+      {
+        id: "event",
+        user_id: "actor",
+        title: "Fictional private appointment",
+        starts_at: "2035-01-01T08:00:00Z",
+        ends_at: "2035-01-01T09:00:00Z",
+        time_zone: "Europe/Berlin",
+      },
+    ];
+    state.rpc.mockImplementation(() => {
+      const result = Promise.resolve({ data: [], error: null });
+      return Object.assign(result, { abortSignal: () => result });
+    });
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <CalendarPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    await user.click(await screen.findByText("Fictional private appointment"));
+    const deleteLabel =
+      language === "de"
+        ? "Privaten Termin löschen"
+        : "Delete private appointment";
+    const cancelLabel = language === "de" ? "Abbrechen" : "Cancel";
+    const title =
+      language === "de"
+        ? "Privaten Termin löschen?"
+        : "Delete private appointment?";
+    await user.click(screen.getByRole("button", { name: deleteLabel }));
+    let confirmation = screen.getByRole("dialog", { name: title });
+    await user.click(
+      within(confirmation).getByRole("button", { name: cancelLabel }),
+    );
+    expect(state.deleteEvent).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: deleteLabel }));
+    confirmation = screen.getByRole("dialog", { name: title });
+    state.deleteEvent.mockResolvedValueOnce({
+      data: null,
+      error: { message: "unconfirmed" },
+    });
+    await user.click(
+      within(confirmation).getByRole("button", { name: deleteLabel }),
+    );
+    expect(await within(confirmation).findByRole("alert")).toHaveTextContent(
+      language === "de" ? "nicht bestätigt" : "not confirmed",
+    );
+    expect(confirmation).toBeVisible();
+    let complete!: (value: unknown) => void;
+    state.deleteEvent.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve;
+        }),
+    );
+    await user.click(
+      within(confirmation).getByRole("button", { name: deleteLabel }),
+    );
+    expect(
+      within(confirmation).getByRole("button", { name: deleteLabel }),
+    ).toBeDisabled();
+    expect(
+      within(confirmation).getByRole("button", { name: cancelLabel }),
+    ).toBeDisabled();
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog", { name: title })).toBeVisible();
+    await act(async () => complete({ data: { id: "event" }, error: null }));
+    expect(
+      screen.queryByRole("dialog", { name: title }),
+    ).not.toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        language === "de" ? "Termin gelöscht." : "Appointment deleted.",
+      ),
+    ).toBeVisible();
+    client.clear();
+  },
+);
+
+it("validates meeting links, preserves the private note on rejection, and saves both fields", async () => {
+  state.events = [
+    {
+      id: "event",
+      user_id: "actor",
+      title: "Fictional private appointment",
+      description: "Existing note",
+      meeting_url: "https://meet.example.invalid/old",
+      starts_at: "2035-01-01T08:00:00Z",
+      ends_at: "2035-01-01T09:00:00Z",
+      time_zone: "Europe/Berlin",
+    },
+  ];
+  state.rpc.mockImplementation(() => {
+    const response = Promise.resolve({ data: [], error: null });
+    return Object.assign(response, { abortSignal: () => response });
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  await user.click(await screen.findByText("Fictional private appointment"));
+  const dialog = screen.getByRole("dialog", { name: "Privater Termin" });
+  expect(
+    within(dialog).getByRole("link", { name: "Meeting-Link öffnen" }),
+  ).toHaveAttribute("href", "https://meet.example.invalid/old");
+  await user.clear(within(dialog).getByLabelText("Beschreibung oder Notiz"));
+  await user.type(
+    within(dialog).getByLabelText("Beschreibung oder Notiz"),
+    "Private fictional note",
+  );
+  await user.clear(within(dialog).getByLabelText("Meeting-Link (HTTPS)"));
+  await user.type(
+    within(dialog).getByLabelText("Meeting-Link (HTTPS)"),
+    "https://user:pass@example.invalid",
+  );
+  await user.click(
+    within(dialog).getByRole("button", { name: "Termin speichern" }),
+  );
+  expect(await within(dialog).findByRole("alert")).toBeVisible();
+  expect(state.saveEvent).not.toHaveBeenCalled();
+  expect(within(dialog).getByLabelText("Beschreibung oder Notiz")).toHaveValue(
+    "Private fictional note",
+  );
+  await user.clear(within(dialog).getByLabelText("Meeting-Link (HTTPS)"));
+  await user.type(
+    within(dialog).getByLabelText("Meeting-Link (HTTPS)"),
+    "https://meet.example.invalid/new",
+  );
+  state.saveEvent.mockResolvedValue({ data: { id: "event" }, error: null });
+  await user.click(
+    within(dialog).getByRole("button", { name: "Termin speichern" }),
+  );
+  expect(state.saveEvent).toHaveBeenCalledWith(
+    expect.objectContaining({
+      description: "Private fictional note",
+      meeting_url: "https://meet.example.invalid/new",
+    }),
+  );
+  expect(await screen.findByText("Termin gespeichert.")).toBeVisible();
+  client.clear();
+});
+
+it.each([
+  [
+    "de",
+    "Privaten Termin hinzufügen",
+    "Titel",
+    "Ungespeicherte Änderungen verwerfen?",
+    "Entwurf behalten",
+    "Änderungen verwerfen",
+    "Schließen",
+  ],
+  [
+    "en",
+    "Add private appointment",
+    "Title",
+    "Discard unsaved changes?",
+    "Keep draft",
+    "Discard changes",
+    "Close",
+  ],
+])(
+  "preserves a dirty private appointment on escape or close until explicit discard (%s)",
+  async (language, add, field, prompt, keep, discard, close) => {
+    await i18n.changeLanguage(language);
+    state.rpc.mockImplementation(() => {
+      const result = Promise.resolve({ data: [], error: null });
+      return Object.assign(result, { abortSignal: () => result });
+    });
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <CalendarPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: add }));
+    const dialog = screen.getByRole("dialog", { name: add });
+    await user.type(
+      within(dialog).getByLabelText(field),
+      "Fictional unsaved event",
+    );
+    const unload = new Event("beforeunload", { cancelable: true });
+    expect(window.dispatchEvent(unload)).toBe(false);
+    await user.keyboard("{Escape}");
+    let confirmation = screen.getByRole("dialog", { name: prompt });
+    await user.click(within(confirmation).getByRole("button", { name: keep }));
+    expect(within(dialog).getByLabelText(field)).toHaveValue(
+      "Fictional unsaved event",
+    );
+    await user.click(within(dialog).getByRole("button", { name: close }));
+    confirmation = screen.getByRole("dialog", { name: prompt });
+    await user.click(
+      within(confirmation).getByRole("button", { name: discard }),
+    );
+    expect(screen.queryByRole("dialog", { name: add })).not.toBeInTheDocument();
+    expect(
+      window.dispatchEvent(new Event("beforeunload", { cancelable: true })),
+    ).toBe(true);
+    expect(state.saveEvent).not.toHaveBeenCalled();
+    client.clear();
+  },
+);
+
+it("blocks an internal navigation until the dirty appointment is explicitly discarded", async () => {
+  state.rpc.mockImplementation(() => {
+    const result = Promise.resolve({ data: [], error: null });
+    return Object.assign(result, { abortSignal: () => result });
+  });
+  function Location() {
+    return <output aria-label="current route">{useLocation().pathname}</output>;
+  }
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+        <Location />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  const nav = await screen.findByRole("link", {
+    name: "Verfügbarkeit & Sperrzeiten",
+  });
+  await user.click(
+    screen.getByRole("button", { name: "Privaten Termin hinzufügen" }),
+  );
+  const form = screen.getByRole("dialog", {
+    name: "Privaten Termin hinzufügen",
+  });
+  await user.type(within(form).getByLabelText("Titel"), "Fictional draft");
+  fireEvent.click(nav, { button: 0 });
+  let confirm = screen.getByRole("dialog", {
+    name: "Ungespeicherte Änderungen verwerfen?",
+  });
+  await user.click(
+    within(confirm).getByRole("button", { name: "Entwurf behalten" }),
+  );
+  expect(screen.getByLabelText("current route")).toHaveTextContent("/");
+  expect(within(form).getByLabelText("Titel")).toHaveValue("Fictional draft");
+  fireEvent.click(nav, { button: 0 });
+  confirm = screen.getByRole("dialog", {
+    name: "Ungespeicherte Änderungen verwerfen?",
+  });
+  await user.click(
+    within(confirm).getByRole("button", { name: "Änderungen verwerfen" }),
+  );
+  expect(screen.getByLabelText("current route")).toHaveTextContent(
+    "/availability",
+  );
+  client.clear();
+});
+
+it.each(["back", "programmatic"] as const)(
+  "guards %s navigation and preserves or discards the draft on explicit choice",
+  async (mode) => {
+    state.rpc.mockImplementation(() => {
+      const result = Promise.resolve({ data: [], error: null });
+      return Object.assign(result, { abortSignal: () => result });
+    });
+    function Controls() {
+      const navigate = useNavigate();
+      const location = useLocation();
+      return (
+        <>
+          <output aria-label="route">{location.pathname}</output>
+          <button
+            onClick={() =>
+              mode === "back" ? navigate(-1) : navigate("/destination")
+            }
+          >
+            Go
+          </button>
+        </>
+      );
+    }
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={["/previous", "/calendar"]}>
+          <CalendarPage />
+          <Controls />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Privaten Termin hinzufügen" }),
+    );
+    const form = screen.getByRole("dialog", {
+      name: "Privaten Termin hinzufügen",
+    });
+    await user.type(within(form).getByLabelText("Titel"), "Draft retained");
+    fireEvent.click(screen.getByText("Go"));
+    let confirmation = await screen.findByRole("dialog", {
+      name: "Ungespeicherte Änderungen verwerfen?",
+    });
+    await user.click(
+      within(confirmation).getByRole("button", { name: "Entwurf behalten" }),
+    );
+    expect(screen.getByLabelText("route")).toHaveTextContent("/calendar");
+    expect(within(form).getByLabelText("Titel")).toHaveValue("Draft retained");
+    fireEvent.click(screen.getByText("Go"));
+    confirmation = await screen.findByRole("dialog", {
+      name: "Ungespeicherte Änderungen verwerfen?",
+    });
+    await user.click(
+      within(confirmation).getByRole("button", {
+        name: "Änderungen verwerfen",
+      }),
+    );
+    // POP retries can complete after the confirmation click returns, especially
+    // while the wider suite is running; assert the eventual router transition.
+    await waitFor(() =>
+      expect(screen.getByLabelText("route")).toHaveTextContent(
+        mode === "back" ? "/previous" : "/destination",
+      ),
+    );
+    client.clear();
+  },
+);
+
+it("centres a job deep link only on an own confirmed assignment session", async () => {
+  const jobID = "d7000000-0000-4000-8000-000000000001";
+  state.claims = [
+    {
+      id: "claim",
+      job_id: jobID,
+      assignment_sessions: [
+        {
+          id: "session",
+          starts_at: "2060-01-01T08:00:00Z",
+          ends_at: "2060-01-01T10:00:00Z",
+        },
+      ],
+    },
+  ];
+  state.rpc.mockImplementation((name) => {
+    const result = Promise.resolve({
+      data:
+        name === "my_calendar_subscriptions"
+          ? []
+          : [{ id: jobID, title: "Fictional own job" }],
+      error: null,
+    });
+    return Object.assign(result, { abortSignal: () => result });
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const view = render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[`/calendar?assignment=${jobID}`]}>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("link", { name: "Fictional own job" });
+  expect(state.initialDate).toBe("2060-01-01T08:00:00Z");
+  view.unmount();
+  state.initialDate = undefined;
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={["/calendar?assignment=unrelated"]}>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("link", { name: "Fictional own job" });
+  expect(state.initialDate).toBeUndefined();
   client.clear();
 });
