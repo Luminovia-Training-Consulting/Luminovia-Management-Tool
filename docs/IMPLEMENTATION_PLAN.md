@@ -4,7 +4,9 @@
 
 - [x] Inspect current `origin/main` and failed `Portal checks` run 44072628974; fast CI gates passed, full isolated verification exposed stale password-only/MFA fixture expectations.
 - [x] Correct delegated-pricing historical policy setup and AAL1 expectations, current account revocation status, and delivery management projection expectations without weakening authorization.
-- [x] Focused local SQL verification: delegated pricing 18/18 groups; delivery 12/12 groups; `git diff --check` clean.
+- [x] Correct document fixture to exercise permission-authorized invoice upload at AAL1, and retain foreign/anonymous/RLS denials.
+- [x] Focused local SQL verification: delegated pricing 18/18 groups; delivery 12/12 groups; documents 13/13 groups; `git diff --check` clean.
+- [x] Fresh full system attempt passed 830 unit tests, 331 runtime checks, 95 Edge tests, startup/persistence, concurrent claims and SQL suites until the document assertion was corrected.
 - [ ] Run fresh full isolated system and browser acceptance on the corrected exact head, fix every failure, and inspect fresh GitHub `Portal checks` through completion.
 - [ ] Claim CI green only after every required current-head job succeeds; retain complete test scope.
 

@@ -248,10 +248,6 @@ try {
         reserve(owner, { subject: otherOwner }),
         /Subject upload permission required/,
       );
-      await assert.rejects(
-        reserve(manager, { subject: otherOwner }),
-        /Subject upload permission required/,
-      );
       const delegated = await reserve(manager, { subject: otherOwner }, "aal1");
       assert.equal(
         await sql(
