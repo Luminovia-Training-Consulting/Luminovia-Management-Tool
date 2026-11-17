@@ -4,6 +4,8 @@ The user confirmed a written rights agreement is now available for the external 
 
 # 18 November 2026 — bug-hunt verification follow-up
 
+After the company-course fixture was corrected, the candidate passed that API suite and then found one more stale participant assertion: querying the operational course catalogue as a retired participant now correctly fails at the shared REST request boundary (`42501`) instead of returning an empty RLS result. The course-building-block API check now explicitly verifies denial.
+
 The next current-head candidate passed migration replay and every API suite through commission, then exposed a stale company-course fixture: it used the retired `participant` role for both the active self-cancellation flow and the explicit retired-role denial. The fixture now uses an active lecturer account for its enrolled-user 72-hour and successful cancellation checks, while the separate participant peer remains denied with `42501`. The API test preserves both the deadline business rule and no-change-on-denial assertion.
 
 After the commission fixture was corrected, the exact-head self-host candidate passed the retained-data upgrade, complete migration replay and the first 18 actual API suites (including commission). Account cleanup then failed reproducibly: deleting a commissioned lecturer with a generated inbox notification is rejected by the original non-cascading `notifications_user_id_fkey`. Notifications are recipient-owned inbox state rather than audit history, so a forward migration now cascades them when the profile is deleted. Added an isolated account database regression that deletes an Auth user with a notification and asserts both profile and inbox cleanup. This fix is not yet validated by the full exact-head run.
