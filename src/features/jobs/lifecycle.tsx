@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { DateTime } from "luxon";
 import { useAuth } from "../auth/auth-context";
-import { dateTime, money, zonedInstant } from "../../lib/dates";
+import { dateTime, money, zonedInstantForEdit } from "../../lib/dates";
 import { useOnline } from "../../lib/online";
 import type { Job } from "../../lib/types";
 import { Button } from "../../components/ui/button";
@@ -45,6 +45,10 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [reason, setReason] = useState("");
   const [reopenDeadline, setReopenDeadline] = useState("");
+  const [reopenDeadlineOriginal, setReopenDeadlineOriginal] = useState<{
+    value: string;
+    instant: string | null;
+  }>({ value: "", instant: null });
   const [copyTitle, setCopyTitle] = useState(job.title);
   const [editing, setEditing] = useState(false);
   const [newCapacity, setNewCapacity] = useState<number | null>(null);
@@ -95,13 +99,14 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
   const cancelled = info.claims.some((claim) => claim.status === "cancelled");
   const openConfirmation = (kind: Confirmation["kind"], claim?: string) => {
     setReason("");
-    setReopenDeadline(
-      job.claim_deadline
-        ? DateTime.fromISO(job.claim_deadline)
-            .setZone(job.time_zone)
-            .toFormat("yyyy-MM-dd'T'HH:mm")
-        : "",
-    );
+    // Retain the exact instant behind an ambiguous fall-back wall time until the user edits it.
+    const deadline = job.claim_deadline
+      ? DateTime.fromISO(job.claim_deadline)
+          .setZone(job.time_zone)
+          .toFormat("yyyy-MM-dd'T'HH:mm")
+      : "";
+    setReopenDeadline(deadline);
+    setReopenDeadlineOriginal({ value: deadline, instant: job.claim_deadline });
     setCopyTitle(job.title);
     change.reset();
     setConfirmation({ kind, claim, version: info.version });
@@ -121,9 +126,12 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
             ? { title: copyTitle.trim() }
             : {
                 reason: reason.trim(),
-                claim_deadline: reopenDeadline
-                  ? zonedInstant(reopenDeadline, job.time_zone)
-                  : null,
+                claim_deadline: zonedInstantForEdit(
+                  reopenDeadline,
+                  job.time_zone,
+                  reopenDeadlineOriginal.value,
+                  reopenDeadlineOriginal.instant,
+                ),
               },
       });
   };
@@ -433,7 +441,12 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
               (confirmation?.kind === "reopen" &&
                 Boolean(
                   reopenDeadline &&
-                  !zonedInstant(reopenDeadline, job.time_zone),
+                  !zonedInstantForEdit(
+                    reopenDeadline,
+                    job.time_zone,
+                    reopenDeadlineOriginal.value,
+                    reopenDeadlineOriginal.instant,
+                  ),
                 ))
             }
           >
@@ -472,14 +485,22 @@ function EditOffer({
     [description, setDescription] = useState(job.description),
     [location, setLocation] = useState(job.location),
     [terms, setTerms] = useState(job.terms);
-  const [deadline, setDeadline] = useState(
-    job.claim_deadline
+  // Keep an unchanged reviewed wall time tied to its exact original instant.
+  const [initialDeadline] = useState(() => ({
+    value: job.claim_deadline
       ? DateTime.fromISO(job.claim_deadline)
           .setZone(job.time_zone)
           .toFormat("yyyy-MM-dd'T'HH:mm")
       : "",
+    instant: job.claim_deadline,
+  }));
+  const [deadline, setDeadline] = useState(initialDeadline.value);
+  const instant = zonedInstantForEdit(
+    deadline,
+    job.time_zone,
+    initialDeadline.value,
+    initialDeadline.instant,
   );
-  const instant = deadline ? zonedInstant(deadline, job.time_zone) : null;
   return (
     <form
       className="job-life-form"

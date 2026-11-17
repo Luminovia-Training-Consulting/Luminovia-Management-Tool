@@ -657,7 +657,12 @@ vacancies; it does not revoke the other confirmed lecturers.
   additionally requires gross-finance access. Past dates require a new plan.
 - Offer creation/edit/reopening has an optional finite future claim deadline,
   no later than the first session, interpreted in the displayed IANA time zone.
-  Empty means no claim deadline. There is no scheduled-publication worker.
+  Empty means no claim deadline. When editing or reopening, an unchanged local
+  deadline preserves its exact stored instant, including an instant in a repeated
+  daylight-saving hour. A newly entered or changed local time must resolve to one
+  instant; nonexistent spring-forward times and ambiguous fall-back times are
+  rejected instead of silently selecting an offset. There is no
+  scheduled-publication worker.
 
 <a id="section-job-lifecycle-explicit-per-position-pricing"></a>
 ## Explicit per-position pricing

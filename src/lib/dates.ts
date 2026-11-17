@@ -16,6 +16,16 @@ export function zonedInstant(value: string, zone: string): string | null {
     return null;
   return date.toUTC().toISO();
 }
+/** Preserve an exact reviewed instant only while its wall-time editor is unchanged; new edits still reject DST gaps and duplicates. */
+export function zonedInstantForEdit(
+  value: string,
+  zone: string,
+  originalValue: string,
+  originalInstant: string | null,
+): string | null {
+  if (value === originalValue) return originalInstant;
+  return value ? zonedInstant(value, zone) : null;
+}
 /** Format an instant in the requested language and explicit display zone. */
 export function dateTime(iso: string, language: string, zone: string) {
   return new Intl.DateTimeFormat(language, {

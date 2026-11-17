@@ -121,7 +121,11 @@ function CurrentLocation() {
   return <output aria-label="route">{location.pathname}</output>;
 }
 /** Render the subject with local provider/router fixtures and an isolated QueryClient. */
-function setup(meta = empty, write?: Parameters<typeof mock>[1]) {
+function setup(
+  meta = empty,
+  write?: Parameters<typeof mock>[1],
+  subject = job,
+) {
   mock(meta, write);
   const client = new QueryClient({
     defaultOptions: {
@@ -133,7 +137,7 @@ function setup(meta = empty, write?: Parameters<typeof mock>[1]) {
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={["/jobs/job"]}>
-        <JobLifecyclePanel job={job} />
+        <JobLifecyclePanel job={subject} />
         <CurrentLocation />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -249,6 +253,94 @@ it("captures the reviewed edit version across background refresh and language ch
       p_action: "edit",
       p_payload: expect.objectContaining({ title: "Reviewed draft" }),
     }),
+  );
+});
+it("keeps an unchanged ambiguous Berlin deadline exact when editing other offer fields", async () => {
+  const deadline = "2026-10-25T00:30:00Z";
+  setup(empty, undefined, { ...job, claim_deadline: deadline });
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Unangenommenen Auftrag bearbeiten",
+    }),
+  );
+  expect(screen.getByLabelText(/Übernahmefrist/)).toHaveValue(
+    "2026-10-25T02:30",
+  );
+  const save = screen.getByRole("button", { name: "Auftrag speichern" });
+  expect(save).toBeEnabled();
+  await user.clear(screen.getByLabelText("Auftragstitel"));
+  await user.type(screen.getByLabelText("Auftragstitel"), "Updated title");
+  await user.click(save);
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith(
+      "manage_job_offer",
+      expect.objectContaining({
+        p_action: "edit",
+        p_payload: expect.objectContaining({
+          title: "Updated title",
+          claim_deadline: deadline,
+        }),
+      }),
+    ),
+  );
+});
+it("preserves an unchanged ambiguous deadline when explicitly reopening a cancelled offer", async () => {
+  const deadline = "2026-10-25T00:30:00Z";
+  const cancelledState = structuredClone(empty);
+  cancelledState.claims = [
+    {
+      id: "old-claim",
+      lecturer_id: "other-lecturer",
+      lecturer_name: "Fictional lecturer",
+      status: "cancelled",
+      can_cancel: false,
+      created_at: "2026-01-01T12:00Z",
+      sessions: [
+        {
+          starts_at: "2039-01-01T08:00Z",
+          ends_at: "2039-01-01T09:00Z",
+          released_at: "2026-01-02T12:00Z",
+        },
+      ],
+      events: [
+        {
+          type: "cancelled",
+          created_at: "2026-01-02T12:00Z",
+          reason: "Fictional",
+        },
+      ],
+    },
+  ];
+  setup(cancelledState, undefined, {
+    ...job,
+    status: "draft",
+    claim_deadline: deadline,
+  });
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: "Auftrag wieder öffnen" }),
+  );
+  expect(screen.getByLabelText(/Übernahmefrist/)).toHaveValue(
+    "2026-10-25T02:30",
+  );
+  await user.type(
+    screen.getByLabelText("Begründung (5–1000 Zeichen)"),
+    "Reopen the fictional offer",
+  );
+  const confirm = within(screen.getByRole("dialog")).getByRole("button", {
+    name: "Auftrag wieder öffnen",
+  });
+  expect(confirm).toBeEnabled();
+  await user.click(confirm);
+  await waitFor(() =>
+    expect(state.rpc).toHaveBeenCalledWith(
+      "manage_job_offer",
+      expect.objectContaining({
+        p_action: "reopen",
+        p_payload: expect.objectContaining({ claim_deadline: deadline }),
+      }),
+    ),
   );
 });
 it("an unpublished duplicate retries safely and navigates only after the successful server reply", async () => {
