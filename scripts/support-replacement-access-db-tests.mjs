@@ -295,7 +295,7 @@ update public.documents set current_version_id=${q(version)}where id=${q(documen
           await fileAccess(support, internal, true, "aal1");
           await fileAccess(support, internal, false);
           await sql(
-            "delete from public.role_permissions where role='participant'and permission='support.manage'",
+            "delete from public.role_permissions where role='senior_lecturer'and permission='support.manage'",
           );
           await fileAccess(support, internal, false, "aal1");
           assert.equal(
