@@ -1,9 +1,15 @@
 /**
- * Deno account-API entry point connecting the testable handler to native Auth and caller-scoped RPCs. Keep the service client server-side and limited to reserved invitations.
+ * Deno account API connecting the handler to native Auth, caller-scoped RPCs,
+ * reserved invitations and database-confirmed permanent deletion operations.
  */
 import { createClient } from "npm:@supabase/supabase-js@2.119.0";
 import { createAccountHandler } from "./handler.ts";
 import { accountOpenApi } from "./openapi.ts";
+import {
+  type DeletionResult,
+  type DeletionWork,
+  executeDeletion,
+} from "./deletion-worker.ts";
 const url = Deno.env.get("SUPABASE_URL") ?? "";
 const publicKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const service = createClient(
@@ -22,13 +28,29 @@ const origins = (Deno.env.get("PORTAL_ALLOWED_ORIGINS") ?? "")
   .map((value) => value.trim())
   .filter(Boolean);
 const appOrigin = Deno.env.get("PORTAL_APP_ORIGIN") ?? "";
+/** Never leak provider errors, tokens, paths or private SQL details over HTTP. */
+function deletionError(error: { code?: string } | null): void {
+  if (error) {
+    throw new Error(
+      error.code === "42501"
+        ? "permission_or_mfa_required"
+        : ["23503", "40001", "P0001"].includes(error.code ?? "")
+        ? "deletion_conflict"
+        : "deletion_unavailable",
+    );
+  }
+}
+/** Service execution accepts only an opaque permit issued under a current JWT. */
+const deletionArgs = (operationId: string, permitId: string) => ({
+  p_operation_id: operationId,
+  p_permit_id: permitId,
+});
 Deno.serve(
   createAccountHandler({
     origins,
     appOrigin,
     openapi: accountOpenApi,
-    invitationsEnabled:
-      Deno.env.get("PORTAL_INVITES_ENABLED") === "true" &&
+    invitationsEnabled: Deno.env.get("PORTAL_INVITES_ENABLED") === "true" &&
       origins.includes(appOrigin),
     authenticate: async (token) => {
       const client = caller(token);
@@ -41,13 +63,76 @@ Deno.serve(
       const result = await caller(token).rpc(name, args);
       return { data: result.data, error: result.error };
     },
+    executeDeletion: (token, operationId) =>
+      executeDeletion(token, operationId, {
+        authorize: async (jwt, id) => {
+          const result = await caller(jwt).rpc("deletion_execution", {
+            p_operation_id: id,
+          });
+          deletionError(result.error);
+          if (!result.data || typeof result.data.permit_id !== "string") {
+            throw new Error("deletion_unavailable");
+          }
+          return result.data.permit_id;
+        },
+        work: async (id, permit) => {
+          const result = await service.rpc(
+            "_deletion_work",
+            deletionArgs(id, permit),
+          );
+          deletionError(result.error);
+          return result.data as DeletionWork;
+        },
+        removeObject: async (bucket, path) => {
+          const result = await service.storage.from(bucket).remove([path]);
+          if (result.error) throw new Error("deletion_unavailable");
+        },
+        objectAbsent: async (bucket, path) => {
+          const result = await service.storage.from(bucket).info(path);
+          if (!result.error) return false;
+          // Authentication, missing buckets and network failures are never absence.
+          if ("code" in result.error && result.error.code === "NoSuchKey") {
+            return true;
+          }
+          throw new Error("deletion_unavailable");
+        },
+        apply: async (id, permit) => {
+          const result = await service.rpc(
+            "_deletion_apply",
+            deletionArgs(id, permit),
+          );
+          deletionError(result.error);
+        },
+        deleteAuthUser: async (id) => {
+          const result = await service.auth.admin.deleteUser(id, false);
+          if (result.error && result.error.code !== "user_not_found") {
+            throw new Error("deletion_unavailable");
+          }
+        },
+        authUserAbsent: async (id) => {
+          const result = await service.auth.admin.getUserById(id);
+          if (result.error?.code === "user_not_found") return true;
+          if (result.error) throw new Error("deletion_unavailable");
+          return false;
+        },
+        complete: async (id, permit) => {
+          const result = await service.rpc("_deletion_complete", {
+            ...deletionArgs(id, permit),
+            p_storage_removed: true,
+            p_auth_removed: true,
+          });
+          deletionError(result.error);
+          return result.data as DeletionResult;
+        },
+      }),
     sendInvitation: async (invitation, redirectTo) => {
       const result = await service.auth.admin.inviteUserByEmail(
         invitation.email,
         { redirectTo },
       );
-      if (result.error || !result.data.user)
+      if (result.error || !result.data.user) {
         throw new Error("invitation_unavailable");
+      }
       return result.data.user.id;
     },
     completeInvitation: async (id, userId, displayName, success) => {

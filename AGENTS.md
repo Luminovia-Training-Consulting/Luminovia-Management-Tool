@@ -9,13 +9,15 @@ Agent assistance does not transfer that responsibility.
 
 ## Ground rules
 
-1. Read [README](README.md), the [documentation index](docs/README.md) and
-   [roadmap](ROADMAP.md) before choosing work.
+1. Read [WORKLOG](docs/WORKLOG.md) first, then
+   [IMPLEMENTATION_PLAN](docs/IMPLEMENTATION_PLAN.md), [README](README.md),
+   the [documentation index](docs/README.md) and [roadmap](ROADMAP.md).
 2. Read [UNIVERSAL_MASTER_PROMPT.txt](docs/UNIVERSAL_MASTER_PROMPT.txt).
    It preserves the complete product specification. Accepted later decisions and
    their boundaries are recorded in the product and feature documentation.
-   Carina explicitly removed the implementation plan, work log and root changelog
-   on 17 November 2026; do not recreate them despite the original brief's historical deliverable list. Do not replace the
+   Preserve the user-requested persistent implementation plan and work log,
+   recording actual results and immediate next actions. The removed root
+   changelog is not maintained. Do not replace the
    target with an MVP, a design prototype or decorative placeholders.
 3. Inspect `git status --short --branch`, `git remote -v` and `git worktree list`.
    Read the actual owning source, migrations and tests. Historical QA evidence

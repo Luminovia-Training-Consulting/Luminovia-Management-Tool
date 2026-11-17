@@ -6,6 +6,12 @@ Published SQL participates in preview, update and recovery fingerprints and must
 
 The running database reflects **all migrations applied in order**. A later `create or replace function` replaces the earlier implementation. To understand a current RPC, find every definition and read the newest one last. [API_REFERENCE](API_REFERENCE.md) inventories the API, parameters and grants actually read from a migration replay; this guide is not a second authoritative, automatically maintained API inventory. [ERD](ERD.md), [DEVELOPER_GUIDE](DEVELOPER_GUIDE.md) and the relevant feature guides explain how the parts connect.
 
+## Permanent deletion extension
+
+PR35 follows all 70 accepted sources with three CLI-created migrations: `20261116173902_permanent_resource_deletion.sql`, `20261116173905_company_job_deletion_authority.sql` and `20261116173907_deletion_smart_operations_dependencies.sql` (73 sources in this integration). No accepted source is renamed or edited. The typed deletion registry, actor-bound reviewed plans, execution permits, upload leases and exact Storage fences preserve current private-resource and immutable commercial boundaries. Company deletion requires consistent current organisation ownership; former lecturer history grants no staff file access.
+
+The document helper retains its original OID/ACL and delegates to the exact installed support/qualification implementation through a fully revoked private clone. The dependency repair explicitly owns accepted housekeeping and request histories while retaining shared-evidence and uncertain-delivery blockers. Both foreign-key catalogue walks have deterministic ordering, so valid planner choices cannot create a false stale scope. The actual accepted-prefix upgrade fixture derives its baseline from the complete source inventory and verifies retained support/notification/enquiry helper identity and ACLs. Source replay does not by itself prove native Auth/Storage/browser acceptance. See [PERMANENT_DELETION](PERMANENT_DELETION.md).
+
 ## Order and purpose
 
 The test files below are existing feature entry points. Listing them does not claim that this documentation pass reran a complete database acceptance test. Run mutating checks only in their own isolated stack through `./portal test`.
