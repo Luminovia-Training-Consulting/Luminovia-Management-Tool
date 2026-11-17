@@ -72,6 +72,7 @@ vi.mock("@tanstack/react-query", async (original) => {
 });
 afterEach(() => {
   cleanup();
+  localStorage.removeItem("luminovia.sidebar-collapsed");
   access.failed = false;
   vi.clearAllMocks();
   vi.unstubAllGlobals();
@@ -114,14 +115,18 @@ describe("server-confirmed logout", () => {
         });
       else signOut.mockRejectedValueOnce(new Error("Network unavailable"));
       const { client, user } = setup();
-      await user.click(screen.getByRole("button", { name: "Abmelden" }));
+      const signout = within(screen.getByRole("complementary")).getByRole(
+        "button",
+        { name: "Abmelden" },
+      );
+      await user.click(signout);
       expect(await screen.findByRole("alert")).toBeVisible();
       expect(screen.getByText("Private workspace")).toBeVisible();
       expect(client.getQueryData(["private", "actor"])).toBe(
         "Owned private data",
       );
       signOut.mockResolvedValueOnce({ error: null });
-      await user.click(screen.getByRole("button", { name: "Abmelden" }));
+      await user.click(signout);
       expect(await screen.findByText("Login screen")).toBeVisible();
       expect(client.getQueryData(["private", "actor"])).toBeUndefined();
     },
@@ -134,8 +139,12 @@ describe("server-confirmed logout", () => {
       }),
     );
     const { client, user } = setup();
-    await user.click(screen.getByRole("button", { name: "Abmelden" }));
-    expect(screen.getByRole("button", { name: "Abmelden" })).toBeDisabled();
+    const signout = within(screen.getByRole("complementary")).getByRole(
+      "button",
+      { name: "Abmelden" },
+    );
+    await user.click(signout);
+    expect(signout).toBeDisabled();
     expect(client.getQueryData(["private", "actor"])).toBe(
       "Owned private data",
     );
@@ -190,8 +199,11 @@ describe("native mobile More navigation", () => {
     const menu = summary.closest("details")!;
     await user.click(summary);
     expect(menu).toHaveProperty("open", true);
-    await user.tab();
     const files = within(menu).getByRole("link", { name: "Dateien" });
+    // Search and notifications now precede routes in the complete mobile disclosure.
+    for (let i = 0; i < 20 && document.activeElement !== files; i += 1) {
+      await user.tab();
+    }
     expect(files).toHaveFocus();
     await user.keyboard("{Enter}");
     expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
@@ -201,12 +213,30 @@ describe("native mobile More navigation", () => {
     expect(summary).toHaveFocus();
   });
 
-  it("closes on header-search navigation without stealing focus from the search input", async () => {
+  it("keeps account and settings routes reachable in the complete mobile disclosure", async () => {
+    const { user } = setup();
+    const summary = screen.getByLabelText("Mehr");
+    await user.click(summary);
+    const menu = summary.closest("details")!;
+    expect(
+      within(menu).getByRole("link", { name: "Einstellungen" }),
+    ).toHaveAttribute("href", "/settings");
+    expect(
+      within(menu).getByRole("link", { name: "Mein Profil" }),
+    ).toHaveAttribute("href", "/profile");
+    expect(screen.getByRole("combobox", { name: "Sprache" })).toBeVisible();
+    expect(screen.getByRole("combobox", { name: "Farbschema" })).toBeVisible();
+    expect(
+      screen.getByRole("banner").querySelector(".mobile-signout"),
+    ).toBeInTheDocument();
+  });
+
+  it("returns focus to the visible summary after mobile search navigation", async () => {
     const { user } = setup();
     const summary = screen.getByLabelText("Mehr");
     const menu = summary.closest("details")!;
     await user.click(summary);
-    const search = screen.getByLabelText("Stellen durchsuchen");
+    const search = within(menu).getByLabelText("Stellen durchsuchen");
     await user.type(search, "Fictional files");
     // Typing and unrelated Shell state renders are not navigation events.
     expect(menu).toHaveProperty("open", true);
@@ -215,7 +245,7 @@ describe("native mobile More navigation", () => {
       "/search?q=Fictional%20files",
     );
     await waitFor(() => expect(menu).toHaveProperty("open", false));
-    expect(search).toHaveFocus();
+    expect(summary).toHaveFocus();
     expect(search).toHaveValue("Fictional files");
   });
 
@@ -224,7 +254,10 @@ describe("native mobile More navigation", () => {
     const summary = screen.getByLabelText("Mehr");
     const menu = summary.closest("details")!;
     await user.click(summary);
-    await user.type(screen.getByLabelText("Stellen durchsuchen"), "updated");
+    await user.type(
+      within(menu).getByLabelText("Stellen durchsuchen"),
+      "updated",
+    );
     await user.keyboard("{Enter}");
     await waitFor(() =>
       expect(screen.getByLabelText("Fixture location")).toHaveTextContent(
@@ -243,5 +276,103 @@ describe("native mobile More navigation", () => {
       ),
     );
     expect(menu).toHaveProperty("open", false);
+  });
+});
+
+describe("Royal workspace sidebar preference", () => {
+  it("keeps global search and notifications in the sidebar and mobile navigation", async () => {
+    const { user } = setup();
+    const sidebar = screen.getByRole("complementary");
+    expect(within(sidebar).getByRole("search")).toBeInTheDocument();
+    expect(
+      screen
+        .getByRole("banner")
+        .querySelector(".global-search:not(.mobile-global-search)"),
+    ).toBeNull();
+
+    await user.click(
+      within(sidebar).getByRole("button", { name: "Stellen durchsuchen" }),
+    );
+    const desktopInput = within(sidebar).getByRole("textbox", {
+      name: "Stellen durchsuchen",
+    });
+    await user.type(desktopInput, "Fictional files");
+    await user.keyboard("{Enter}");
+    expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
+      "/search?q=Fictional%20files",
+    );
+    expect(
+      within(sidebar).getByRole("button", { name: "Stellen durchsuchen" }),
+    ).toHaveFocus();
+
+    const summary = screen.getByLabelText("Mehr");
+    await user.click(summary);
+    const menu = summary.closest("details")!;
+    expect(within(menu).getByRole("search")).toBeInTheDocument();
+    expect(
+      menu.querySelector(".notification-menu summary"),
+    ).toBeInTheDocument();
+  });
+
+  it("returns focus to the collapsed search button when its close control is used", async () => {
+    const { user } = setup();
+    const sidebar = screen.getByRole("complementary");
+    const button = within(sidebar).getByRole("button", {
+      name: "Stellen durchsuchen",
+    });
+    await user.click(button);
+    expect(
+      within(sidebar).getByRole("textbox", { name: "Stellen durchsuchen" }),
+    ).toHaveFocus();
+    await user.click(
+      within(sidebar).getByRole("button", { name: "Schließen" }),
+    );
+    expect(
+      within(sidebar).getByRole("button", { name: "Stellen durchsuchen" }),
+    ).toHaveFocus();
+  });
+
+  it("shows the collapsed rail toggle hint on keyboard focus", async () => {
+    const { user } = setup();
+    const toggle = screen.getByRole("button", {
+      name: "Navigation ausklappen",
+    });
+
+    // Skip link is first in the document; the next Tab focuses the rail control.
+    await user.tab();
+    await user.tab();
+
+    expect(toggle).toHaveFocus();
+    expect(
+      screen.getByRole("tooltip", { name: "Navigation ausklappen" }),
+    ).toBeVisible();
+  });
+
+  it("starts as an accessible icon rail and persists the expanded choice", async () => {
+    const { user } = setup();
+    const files = screen
+      .getByRole("complementary")
+      .querySelector('a[href="/files"]')!;
+    expect(files).toHaveAttribute("aria-label", "Dateien");
+    expect(files).toHaveAttribute("aria-describedby", "sidebar-nav-tooltip");
+    await user.hover(files);
+    const tooltip = screen.getByRole("tooltip", { name: "Dateien" });
+    expect(tooltip).toBeInTheDocument();
+    expect(tooltip.parentElement).toBe(document.body);
+    expect(tooltip.style.left).toMatch(/px$/);
+    await user.click(
+      screen.getByRole("button", { name: "Navigation ausklappen" }),
+    );
+    expect(
+      screen.getByRole("button", { name: "Navigation einklappen" }),
+    ).toHaveAttribute("aria-expanded", "true");
+    expect(localStorage.getItem("luminovia.sidebar-collapsed")).toBe("false");
+    expect(files).toHaveTextContent("Dateien");
+    expect(screen.getByRole("combobox", { name: "Sprache" })).toBeVisible();
+    expect(
+      within(screen.getByRole("complementary")).getByRole("button", {
+        name: "Abmelden",
+      }),
+    ).toBeVisible();
   });
 });

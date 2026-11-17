@@ -3,6 +3,7 @@
  * Loaded capabilities shape visible actions and guidance; the backend authorizes access.
  */
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -20,7 +21,6 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   ChevronLeft,
-  ChevronRight,
   Home,
   LogOut,
   Search,
@@ -37,10 +37,10 @@ import {
   ArrowRightLeft,
   Inbox,
   Compass,
+  X,
 } from "lucide-react";
 import { WelcomeGuideEntry } from "../features/onboarding/welcome";
 import { NotificationsMenu } from "../features/notifications/notifications";
-import { Avatar } from "../features/profile/avatar";
 import { useAuth } from "../features/auth/auth-context";
 import { useAuthorizationRefresh } from "../features/auth/authorization-refresh";
 import { db } from "../lib/supabase";
@@ -56,7 +56,14 @@ import { OfflineSchedule } from "../features/calendar/offline";
 import { clearOfflineSchedule } from "../features/calendar/offline-store";
 import { useOnline } from "../lib/online";
 export { Preferences } from "../components/preferences";
-/** Render private navigation and the actor-scoped tour; confirm sign-out before clearing private queries. */
+/**
+ * Render private navigation and the actor-scoped tour; confirm sign-out before clearing private
+ * queries. The layout adapts Royal's KW UI `workspace-shell` pattern
+ * (`kw-landingpage` 794d46f45b48ca2642e8e589d7be4cb8a5fa6c1d,
+ * `app/components/workspace/WorkspaceShell.vue`): collapsed icon rail,
+ * named focus/hover tooltips, a compact action toolbar and a complete mobile disclosure. React
+ * Router, Supabase-backed capability filtering and Luminovia's existing palette remain authoritative.
+ */
 export function Shell() {
   const { t } = useTranslation();
   const { session } = useAuth();
@@ -64,6 +71,14 @@ export function Shell() {
   const navigate = useNavigate();
   const location = useLocation();
   const mobileMore = useRef<HTMLDetailsElement>(null);
+  const sidebarSearchInput = useRef<HTMLInputElement>(null);
+  const sidebarSearchButton = useRef<HTMLButtonElement>(null);
+  const restoreSearchFocus = useRef(false);
+  const [railTooltip, setRailTooltip] = useState<{
+    label: string;
+    top: number;
+    left: number;
+  } | null>(null);
   // Native details survives route changes with the Shell. Close its overlay
   // after every actual navigation, including query changes and browser back.
   // Keep keyboard focus visible when its selected link becomes hidden, but do
@@ -76,8 +91,23 @@ export function Shell() {
     if (focusInside) menu.querySelector("summary")?.focus();
   }, [location]);
   const client = useQueryClient();
-  const [collapsed, setCollapsed] = useState(false);
+  // Match the Royal workspace rail default and remember only this visual choice.
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("luminovia.sidebar-collapsed") !== "false";
+    } catch {
+      return true;
+    }
+  });
   const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const previousActor = useRef(actor);
+  useEffect(() => {
+    if (previousActor.current === actor) return;
+    previousActor.current = actor;
+    setSearch("");
+    setSearchOpen(false);
+  }, [actor]);
   const [signoutFailed, setSignoutFailed] = useState(false);
   const [signoutPending, setSignoutPending] = useState(false);
   const profile = useQuery(profileQuery(session!.user.id));
@@ -85,6 +115,28 @@ export function Shell() {
   const roles = useQuery(userRolesQuery(session!.user.id));
   useAuthorizationRefresh(session!.user.id, roles.data, permissions.data);
   const online = useOnline();
+  useEffect(() => {
+    if (searchOpen && collapsed) sidebarSearchInput.current?.focus();
+    if (!searchOpen && restoreSearchFocus.current) {
+      restoreSearchFocus.current = false;
+      sidebarSearchButton.current?.focus();
+    }
+  }, [searchOpen, collapsed]);
+  function closeSidebarSearch() {
+    if (collapsed) restoreSearchFocus.current = true;
+    setSearchOpen(false);
+  }
+  function toggleSidebar() {
+    setCollapsed((current) => {
+      const next = !current;
+      try {
+        localStorage.setItem("luminovia.sidebar-collapsed", String(next));
+      } catch {
+        // Keep the current shell usable when browser storage is unavailable.
+      }
+      return next;
+    });
+  }
   const profileDenied =
     profile.data?.active === false || (profile.isSuccess && !profile.data);
   const minimalOffline =
@@ -174,15 +226,6 @@ export function Shell() {
     { to: "/welcome", icon: Compass, label: "welcome:nav" },
     ...(manage ? [{ to: "/admin", icon: Settings2, label: "admin" }] : []),
   ];
-  const mobilePrimary = [
-    "/",
-    staff ? "/jobs" : clientPortalAccess ? "/client" : "/courses",
-    "/calendar",
-    "/chats",
-  ].flatMap((path) => {
-    const item = navigation.find((link) => link.to === path);
-    return item ? [item] : [];
-  });
   async function logout() {
     setSignoutFailed(false);
     setSignoutPending(true);
@@ -199,121 +242,243 @@ export function Shell() {
       setSignoutPending(false);
     }
   }
+  /** Place the active collapsed-link hint in the document layer outside scroll clipping. */
+  function showRailTooltip(label: string, element: HTMLElement) {
+    if (!collapsed) return;
+    const bounds = element.getBoundingClientRect();
+    setRailTooltip({
+      label: t(label),
+      top: bounds.top + bounds.height / 2,
+      left: bounds.right + 8,
+    });
+  }
   return (
-    <div className={`app-shell ${collapsed ? "is-collapsed" : ""}`}>
+    <div
+      className={`app-shell ${collapsed ? "is-collapsed" : ""} ${searchOpen ? "has-sidebar-search-open" : ""}`}
+    >
       <a className="skip-link" href="#main">
         {t("skip")}
       </a>
-      <aside className="sidebar">
-        <NavLink className="sidebar-brand" to="/">
-          <img src="/brand/luminovia-logo-mark-160.webp" alt="" />
-          <span>
-            Luminovia <small>PORTAL</small>
-          </span>
-        </NavLink>
-        <div className="rainbow" />
-        <p className="sidebar-kicker">{t("workspace")}</p>
+      <aside className="sidebar" aria-label={t("menu")}>
+        <Button
+          variant="ghost"
+          className="collapse-button"
+          aria-label={t(collapsed ? "expand" : "collapse")}
+          aria-expanded={!collapsed}
+          aria-describedby={collapsed ? "sidebar-nav-tooltip" : undefined}
+          onClick={(event) => {
+            // When collapsing, the click itself does not trigger another focus or
+            // hover event, so place the newly relevant keyboard/mouse hint now.
+            const willCollapse = !collapsed;
+            toggleSidebar();
+            if (willCollapse) {
+              const bounds = event.currentTarget.getBoundingClientRect();
+              setRailTooltip({
+                label: t("expand"),
+                top: bounds.top + bounds.height / 2,
+                left: bounds.right + 8,
+              });
+            } else {
+              setRailTooltip(null);
+            }
+          }}
+          onMouseEnter={(event) =>
+            showRailTooltip(
+              collapsed ? "expand" : "collapse",
+              event.currentTarget,
+            )
+          }
+          onMouseLeave={() => setRailTooltip(null)}
+          onFocus={(event) =>
+            showRailTooltip(
+              collapsed ? "expand" : "collapse",
+              event.currentTarget,
+            )
+          }
+          onBlur={() => setRailTooltip(null)}
+        >
+          {collapsed ? (
+            <PanelLeftOpen size={20} />
+          ) : (
+            <PanelLeftClose size={20} />
+          )}
+          <span>{t(collapsed ? "expand" : "collapse")}</span>
+        </Button>
+        <form
+          className={`global-search sidebar-global-search ${collapsed && !searchOpen ? "is-icon-only" : ""}`}
+          role="search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            navigate(`/search?q=${encodeURIComponent(search)}`);
+            closeSidebarSearch();
+          }}
+        >
+          {collapsed && !searchOpen ? (
+            <Button
+              ref={sidebarSearchButton}
+              type="button"
+              variant="ghost"
+              aria-label={t("search")}
+              aria-describedby="sidebar-nav-tooltip"
+              onClick={() => setSearchOpen(true)}
+              onMouseEnter={(event) =>
+                showRailTooltip("search", event.currentTarget)
+              }
+              onMouseLeave={() => setRailTooltip(null)}
+              onFocus={(event) =>
+                showRailTooltip("search", event.currentTarget)
+              }
+              onBlur={() => setRailTooltip(null)}
+            >
+              <Search size={19} aria-hidden="true" />
+            </Button>
+          ) : (
+            <>
+              <Search size={18} aria-hidden="true" />
+              <label htmlFor="sidebar-global-search" className="sr-only">
+                {t("search")}
+              </label>
+              <input
+                id="sidebar-global-search"
+                ref={sidebarSearchInput}
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t("portalSearch")}
+              />
+              {collapsed && (
+                <button
+                  type="button"
+                  className="sidebar-search-close"
+                  aria-label={t("close")}
+                  onClick={closeSidebarSearch}
+                >
+                  <X size={16} aria-hidden="true" />
+                </button>
+              )}
+            </>
+          )}
+        </form>
+        {profile.data?.active && !minimalOffline && (
+          <div
+            className="sidebar-notifications"
+            data-tooltip={t("notifications")}
+          >
+            <NotificationsMenu
+              id={session!.user.id}
+              zone={profile.data.time_zone}
+            />
+          </div>
+        )}
         <nav aria-label={t("menu")}>
           {navigation.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
               to={to}
               end={to === "/"}
-              title={collapsed ? t(label) : undefined}
+              aria-label={collapsed ? t(label) : undefined}
+              aria-describedby={collapsed ? "sidebar-nav-tooltip" : undefined}
+              onMouseEnter={(event) =>
+                showRailTooltip(label, event.currentTarget)
+              }
+              onMouseLeave={(event) => {
+                if (document.activeElement !== event.currentTarget) {
+                  setRailTooltip(null);
+                }
+              }}
+              onFocus={(event) => showRailTooltip(label, event.currentTarget)}
+              onBlur={(event) => {
+                if (!event.currentTarget.matches(":hover")) {
+                  setRailTooltip(null);
+                }
+              }}
             >
-              <Icon size={21} />
-              <span>{t(label)}</span>
+              <Icon size={20} aria-hidden="true" />
+              <span className="sidebar-link-label">{t(label)}</span>
             </NavLink>
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="sidebar-note">
-            <span className="little-star">✳</span>
-            <p>{t("tagline")}</p>
-          </div>
           <Button
             variant="ghost"
-            className="collapse-button"
-            aria-label={t(collapsed ? "expand" : "collapse")}
-            onClick={() => setCollapsed(!collapsed)}
+            className="sidebar-signout"
+            onClick={() => void logout()}
+            aria-label={t("logout")}
+            aria-describedby={collapsed ? "sidebar-nav-tooltip" : undefined}
+            title={collapsed ? t("logout") : undefined}
+            onMouseEnter={(event) =>
+              showRailTooltip("logout", event.currentTarget)
+            }
+            onMouseLeave={(event) => {
+              if (document.activeElement !== event.currentTarget)
+                setRailTooltip(null);
+            }}
+            onFocus={(event) => showRailTooltip("logout", event.currentTarget)}
+            onBlur={() => setRailTooltip(null)}
+            disabled={signoutPending}
           >
-            {collapsed ? (
-              <PanelLeftOpen size={20} />
-            ) : (
-              <PanelLeftClose size={20} />
-            )}
-            <span>{t("collapse")}</span>
+            <LogOut size={18} aria-hidden="true" />
+            <span>{t("logout")}</span>
           </Button>
         </div>
       </aside>
       <div className="workspace">
-        <header className="topbar">
-          <div className="breadcrumb">
-            <span>Luminovia</span>
-            <ChevronRight size={14} />
-            <strong>Portal</strong>
-          </div>
-          <form
-            className="global-search"
-            role="search"
-            onSubmit={(e) => {
-              e.preventDefault();
-              navigate(`/search?q=${encodeURIComponent(search)}`);
-            }}
-          >
-            <Search size={18} />
-            <label htmlFor="global-search" className="sr-only">
-              {t("search")}
-            </label>
-            <input
-              id="global-search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("portalSearch")}
-            />
-          </form>
+        <header className="topbar" aria-label={t("workspace")}>
           <div className="topbar-actions">
-            {profile.data?.active && !minimalOffline && (
-              <NotificationsMenu
-                id={session!.user.id}
-                zone={profile.data.time_zone}
-              />
-            )}
             <Preferences />
-            <details className="mobile-more" ref={mobileMore}>
-              <summary aria-label={t("more")}>
-                <Menu size={20} />
-              </summary>
-              <nav>
-                {navigation
-                  .filter(
-                    (item) =>
-                      item.to !== "/profile" &&
-                      !mobilePrimary.some((primary) => primary.to === item.to),
-                  )
-                  .map(({ to, label }) => (
-                    <NavLink key={to} to={to}>
-                      {t(label)}
-                    </NavLink>
-                  ))}
-              </nav>
-            </details>
-            <NavLink to="/profile" className="avatar" aria-label={t("profile")}>
-              <Avatar
-                userId={session!.user.id}
-                name={profile.data?.display_name || session!.user.email || "L"}
-                decorative
-              />
-            </NavLink>
             <Button
               variant="ghost"
-              size="icon"
+              className="mobile-signout"
               onClick={() => void logout()}
               aria-label={t("logout")}
               disabled={signoutPending}
             >
-              <LogOut size={18} />
+              <LogOut size={18} aria-hidden="true" />
             </Button>
+            <details className="mobile-more" ref={mobileMore}>
+              <summary
+                aria-label={t("more")}
+                aria-controls="mobile-shell-navigation"
+              >
+                <Menu size={20} aria-hidden="true" />
+              </summary>
+              <div className="mobile-menu-panel">
+                <form
+                  className="global-search mobile-global-search"
+                  role="search"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    navigate(`/search?q=${encodeURIComponent(search)}`);
+                    mobileMore.current?.removeAttribute("open");
+                    mobileMore.current?.querySelector("summary")?.focus();
+                  }}
+                >
+                  <Search size={18} aria-hidden="true" />
+                  <label htmlFor="mobile-global-search" className="sr-only">
+                    {t("search")}
+                  </label>
+                  <input
+                    id="mobile-global-search"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder={t("portalSearch")}
+                  />
+                </form>
+                {profile.data?.active && !minimalOffline && (
+                  <NotificationsMenu
+                    id={session!.user.id}
+                    zone={profile.data.time_zone}
+                  />
+                )}
+                <nav id="mobile-shell-navigation" aria-label={t("menu")}>
+                  {navigation.map(({ to, icon: Icon, label }) => (
+                    <NavLink key={to} to={to} end={to === "/"}>
+                      <Icon size={18} aria-hidden="true" />
+                      {t(label)}
+                    </NavLink>
+                  ))}
+                </nav>
+              </div>
+            </details>
           </div>
         </header>
         <main id="main" className="main-content" tabIndex={-1}>
@@ -360,25 +525,20 @@ export function Shell() {
             </>
           )}
         </main>
-        <footer className="workspace-footer">
-          <span>
-            © {new Date().getFullYear()} Luminovia Training & Consulting
-          </span>
-          <span>IT · AI · BUSINESS</span>
-        </footer>
       </div>
-      <nav className="mobile-nav" aria-label={t("menu")}>
-        {mobilePrimary.map(({ to, icon: Icon, label }) => (
-          <NavLink key={to} to={to} end={to === "/"}>
-            <Icon size={20} />
-            <span>{t(label)}</span>
-          </NavLink>
-        ))}
-        <NavLink to="/profile">
-          <UserRound size={20} />
-          <span>{t("profile")}</span>
-        </NavLink>
-      </nav>
+      {collapsed &&
+        railTooltip &&
+        createPortal(
+          <span
+            id="sidebar-nav-tooltip"
+            className="sidebar-tooltip-portal"
+            role="tooltip"
+            style={{ top: railTooltip.top, left: railTooltip.left }}
+          >
+            {railTooltip.label}
+          </span>,
+          document.body,
+        )}
     </div>
   );
 }
