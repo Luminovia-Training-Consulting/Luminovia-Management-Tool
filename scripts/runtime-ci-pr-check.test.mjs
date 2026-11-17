@@ -104,6 +104,7 @@ function sqlFixture({
   const calls = [];
   const cancellation = new AbortController();
   let token;
+  let prepared = false;
   const id = "a".repeat(64);
   const run = async (file, args, options) => {
     calls.push({ file, args, options });
@@ -124,8 +125,19 @@ function sqlFixture({
         options.env.PORTAL_DB_CONTAINER,
         `supabase_db_luminovia-portal-test-${token}`,
       );
-      if (cancel) cancellation.abort();
-      if (failSuite || cancel) throw new Error("fictional SQL failure");
+      if (args[0] === "scripts/testing/prepare-database-template.mjs") {
+        if (args[1] === "--drop") return "";
+        prepared = true;
+        if (failStartup === "template")
+          throw new Error("fictional template failure");
+      } else if (
+        args[0] === "scripts/db-rpc-tests.mjs" ||
+        args[0]?.endsWith("-db-tests.mjs")
+      ) {
+        assert.equal(prepared, true);
+        if (cancel) cancellation.abort();
+        if (failSuite || cancel) throw new Error("fictional SQL failure");
+      }
     }
     if (args[0] === "inspect") {
       assert.equal(options.signal, undefined);
@@ -153,14 +165,33 @@ function sqlFixture({
   };
 }
 
-test("PR SQL replays every existing suite in one pinned networkless image and removes its owned container", async () => {
+test("PR SQL prepares one exact migration template, runs every suite in its owned image and cleans up", async () => {
   const fixture = sqlFixture();
   await runPrCheck("sql", fixture);
   assert.deepEqual(
     fixture.calls
       .filter(({ file }) => file === process.execPath)
       .map(({ args }) => args[0]),
-    prCheckPlan().sql,
+    [
+      "scripts/testing/prepare-database-template.mjs",
+      ...prCheckPlan().sql,
+      "scripts/testing/prepare-database-template.mjs",
+    ],
+  );
+  assert(
+    fixture.calls.some(
+      ({ args }) =>
+        args[0] === "scripts/testing/prepare-database-template.mjs" &&
+        args[1] === "--drop",
+    ),
+  );
+  const preparation = fixture.calls.find(({ args }) =>
+    args[0]?.endsWith("prepare-database-template.mjs"),
+  );
+  assert.equal(preparation.options.env.PORTAL_TEST_MODE, "1");
+  assert.match(
+    preparation.options.env.PORTAL_TEST_DB_TEMPLATE,
+    /^portal_test_template_[a-f0-9]{8}$/,
   );
   assert.equal(fixture.calls.filter(({ args }) => args[0] === "run").length, 1);
   assert.equal(fixture.calls.at(-1).args[0], "rm");
@@ -181,9 +212,13 @@ test("raw SQL workers bootstrap their diagnostic operator before running any sui
   );
   assert(bootstrapIndex >= 0);
   const firstSuiteIndex = fixture.calls.findIndex(
-    ({ file }) => file === process.execPath,
+    ({ file, args }) =>
+      file === process.execPath && prCheckPlan().sql.includes(args[0]),
   );
-  assert(firstSuiteIndex > bootstrapIndex);
+  const templateIndex = fixture.calls.findIndex(({ args }) =>
+    args[0]?.endsWith("prepare-database-template.mjs"),
+  );
+  assert(templateIndex > bootstrapIndex && firstSuiteIndex > templateIndex);
   const bootstrap = fixture.calls[bootstrapIndex].args.at(-1);
   const definitions = new Map(
     bootstrap
@@ -210,7 +245,10 @@ test("SQL failure/cancellation stops later suites but still cleans the exact own
     const fixture = sqlFixture({ failSuite: true, cancel });
     await assert.rejects(runPrCheck("sql", fixture), /fictional SQL failure/);
     assert.equal(
-      fixture.calls.filter(({ file }) => file === process.execPath).length,
+      fixture.calls.filter(
+        ({ file, args }) =>
+          file === process.execPath && prCheckPlan().sql.includes(args[0]),
+      ).length,
       1,
     );
     assert.equal(fixture.calls.at(-1).args[0], "rm");
@@ -225,13 +263,18 @@ test("SQL cleanup refuses a foreign ownership label even after failed acceptance
 
 // A failed pull owns nothing; startup/readiness/role errors still enter cleanup.
 test("SQL startup failures stop assertions and retain bounded owned cleanup", async () => {
-  for (const failStartup of ["pull", "run", "exec"]) {
+  for (const failStartup of ["pull", "run", "exec", "template"]) {
     const fixture = sqlFixture({ failStartup });
     await assert.rejects(
       runPrCheck("sql", fixture),
       new RegExp(`fictional ${failStartup} failure`),
     );
-    assert(!fixture.calls.some(({ file }) => file === process.execPath));
+    assert(
+      !fixture.calls.some(
+        ({ file, args }) =>
+          file === process.execPath && prCheckPlan().sql.includes(args[0]),
+      ),
+    );
     assert.equal(
       fixture.calls.some(({ args }) => args[0] === "rm"),
       failStartup !== "pull",
@@ -249,7 +292,10 @@ test("SQL shards partition every suite exactly once with distinct owned clusters
   );
   const suites = fixtures.map((fixture) =>
     fixture.calls
-      .filter(({ file }) => file === process.execPath)
+      .filter(
+        ({ file, args }) =>
+          file === process.execPath && prCheckPlan().sql.includes(args[0]),
+      )
       .map(({ args }) => args[0]),
   );
   assert.deepEqual(suites.flat().sort(), [...prCheckPlan().sql].sort());

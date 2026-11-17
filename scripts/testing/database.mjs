@@ -1,12 +1,157 @@
 /**
- * Creates an owned database for each SQL check and replays the real migrations.
- * Auth helpers are emulated for role tests; this does not replace native Auth or HTTP verification.
+ * Creates an owned database for each SQL check. Canonical runners may clone a
+ * per-run replayed migration template; historical-bound tests still replay.
+ * Auth helpers are emulated for role tests, not native Auth/HTTP verification.
  */
 import { spawn } from "node:child_process";
 import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 /** Quotes one SQL literal; database names and other identifiers have separate validation. */
 export const quoteSql = (value) => `'${String(value).replaceAll("'", "''")}'`;
+const ownedTemplate = (value) => {
+  if (!/^portal_test_template_[a-f0-9]{8}$/.test(value ?? ""))
+    throw new Error(
+      "Only this run's random isolated SQL template is permitted.",
+    );
+  return value;
+};
+async function initializeDatabase(
+  database,
+  sql,
+  migrationsThrough,
+  template = "template0",
+) {
+  await sql(`create database ${database} template ${template}`, "postgres");
+  await sql(
+    `create schema auth;create schema extensions;create table auth.users(id uuid primary key,email text);
+  create function auth.uid() returns uuid language sql stable as $$select (nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'sub')::uuid$$;
+  create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),'')::jsonb,'{}'::jsonb)$$;
+  grant usage on schema auth to authenticated,anon,service_role;grant execute on all functions in schema auth to authenticated,anon,service_role;`,
+    database,
+  );
+  for (const file of (
+    await readdir(new URL("../../supabase/migrations/", import.meta.url))
+  )
+    .filter(
+      (name) =>
+        name.endsWith(".sql") &&
+        (migrationsThrough === undefined ||
+          name.slice(0, 14) <= migrationsThrough),
+    )
+    .sort())
+    await sql(
+      await readFile(
+        new URL("../../supabase/migrations/" + file, import.meta.url),
+        "utf8",
+      ),
+      database,
+    );
+}
+
+/** Replay the exact checked-in migration set once in a uniquely owned disposable template. */
+export async function prepareTestDatabaseTemplate({
+  container,
+  template,
+  execute,
+}) {
+  const name = ownedTemplate(template);
+  if (
+    !/^supabase_db_luminovia-portal-test(?:-[a-zA-Z0-9_-]+)?$/.test(container)
+  )
+    throw new Error(
+      "Only an owned isolated portal test database is permitted.",
+    );
+  const dockerSql = (text, target = "postgres") =>
+    new Promise((resolve, reject) => {
+      const child = spawn(
+        "docker",
+        [
+          "exec",
+          "-i",
+          container,
+          "psql",
+          "-U",
+          "postgres",
+          "-d",
+          target,
+          "-X",
+          "-qAt",
+          "-v",
+          "ON_ERROR_STOP=1",
+        ],
+        { stdio: ["pipe", "pipe", "pipe"] },
+      );
+      let out = "",
+        err = "";
+      child.stdout.on("data", (data) => (out += data));
+      child.stderr.on("data", (data) => (err += data));
+      child.on("error", reject);
+      child.on("close", (code) =>
+        code === 0 ? resolve(out.trim()) : reject(new Error(err || out)),
+      );
+      child.stdin.end(text);
+    });
+  const sql = execute ?? dockerSql;
+  try {
+    await initializeDatabase(name, sql, undefined);
+  } catch (error) {
+    try {
+      await sql(`drop database if exists ${name} with (force)`);
+    } catch {
+      /* The owned QA stack cleanup remains responsible after a lost engine. */
+    }
+    throw error;
+  }
+  return name;
+}
+
+/** Drop only the unpredictable template name inside this run's owned QA container. */
+export async function dropTestDatabaseTemplate({
+  container,
+  template,
+  execute,
+}) {
+  const name = ownedTemplate(template);
+  if (
+    !/^supabase_db_luminovia-portal-test(?:-[a-zA-Z0-9_-]+)?$/.test(container)
+  )
+    throw new Error(
+      "Only an owned isolated portal test database is permitted.",
+    );
+  if (execute) {
+    await execute(`drop database if exists ${name} with (force)`);
+    return;
+  }
+  await new Promise((resolve, reject) => {
+    const child = spawn(
+      "docker",
+      [
+        "exec",
+        "-i",
+        container,
+        "psql",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-X",
+        "-qAt",
+        "-v",
+        "ON_ERROR_STOP=1",
+      ],
+      { stdio: ["pipe", "ignore", "pipe"] },
+    );
+    let err = "";
+    child.stderr.on("data", (data) => (err += data));
+    child.on("error", reject);
+    child.on("close", (code) =>
+      code === 0
+        ? resolve()
+        : reject(new Error(err || "Template cleanup failed.")),
+    );
+    child.stdin.end(`drop database if exists ${name} with (force)`);
+  });
+}
 /** Creates a random database, migrates up to the permitted bound and drops it even when assertions fail. */
 export async function withTestDatabase(
   prefix,
@@ -69,29 +214,13 @@ export async function withTestDatabase(
       `begin;set local role authenticated;set local request.jwt.claims=${quoteSql(JSON.stringify({ sub: id, aal, role: "authenticated" }))};${text};commit;`,
     );
   try {
-    await sql(`create database ${database}`, "postgres");
-    // SQL tests need auth.uid/auth.jwt and roles only. Native Auth is verified separately through real API fixtures.
-    await sql(`create schema auth;create schema extensions;create table auth.users(id uuid primary key,email text);
-  create function auth.uid() returns uuid language sql stable as $$select (nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'sub')::uuid$$;
-  create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),'')::jsonb,'{}'::jsonb)$$;
-  grant usage on schema auth to authenticated,anon,service_role;grant execute on all functions in schema auth to authenticated,anon,service_role;`);
-    // Real sorted migration history stays unchanged; an optional bound permits historical transition tests.
-    for (const file of (
-      await readdir(new URL("../../supabase/migrations/", import.meta.url))
-    )
-      .filter(
-        (name) =>
-          name.endsWith(".sql") &&
-          (migrationsThrough === undefined ||
-            name.slice(0, 14) <= migrationsThrough),
-      )
-      .sort())
-      await sql(
-        await readFile(
-          new URL("../../supabase/migrations/" + file, import.meta.url),
-          "utf8",
-        ),
-      );
+    const template =
+      migrationsThrough === undefined && process.env.PORTAL_TEST_DB_TEMPLATE
+        ? ownedTemplate(process.env.PORTAL_TEST_DB_TEMPLATE)
+        : undefined;
+    if (template)
+      await sql(`create database ${database} template ${template}`, "postgres");
+    else await initializeDatabase(database, sql, migrationsThrough);
     return await run({ sql, actor, database, container });
   } finally {
     await sql(`drop database if exists ${database} with (force)`, "postgres");

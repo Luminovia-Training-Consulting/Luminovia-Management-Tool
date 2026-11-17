@@ -145,6 +145,8 @@ export async function runPrCheck(
   const token = randomBytes(16).toString("hex");
   const name = `supabase_db_luminovia-portal-test-${token}`;
   env.PORTAL_DB_CONTAINER = name;
+  env.PORTAL_TEST_MODE = "1";
+  env.PORTAL_TEST_DB_TEMPLATE = `portal_test_template_${token.slice(0, 8)}`;
   const lock = JSON.parse(
     readFileSync(
       join(cwd, "deploy/hostinger/supabase/images.lock.json"),
@@ -223,6 +225,9 @@ export async function runPrCheck(
       // grants no operator capability to the ordinary tested API roles.
       "create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls; create role supabase_admin login superuser;",
     ]);
+    await step(process.execPath, [
+      "scripts/testing/prepare-database-template.mjs",
+    ]);
     // Each worker has its own PostgreSQL cluster and connection limit. Never
     // overlap independent 50-claim races inside one shared 100-connection cluster.
     for (const suite of plan.sql.filter(
@@ -242,6 +247,22 @@ export async function runPrCheck(
   } catch (error) {
     failure = error;
   } finally {
+    if (attempted) {
+      try {
+        await step(
+          process.execPath,
+          ["scripts/testing/prepare-database-template.mjs", "--drop"],
+          { quiet: true, signal: undefined, timeoutMs: 30000 },
+        );
+      } catch (error) {
+        failure = failure
+          ? new AggregateError(
+              [failure, error],
+              `${failure.message}; SQL template cleanup: ${error.message}`,
+            )
+          : error;
+      }
+    }
     if (attempted) {
       try {
         await cleanup();

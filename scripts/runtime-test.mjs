@@ -459,6 +459,12 @@ try {
       "run",
       "test:db",
     ]);
+    env.PORTAL_TEST_DB_TEMPLATE = `portal_test_template_${run}`;
+    await step(
+      "Einmaligen isolierten Migrations-Snapshot für SQL-Fixtures erstellen",
+      process.execPath,
+      ["scripts/testing/prepare-database-template.mjs"],
+    );
     const databaseSuites = readdirSync(join(scratch, "scripts"))
       .filter((name) => name.endsWith("-db-tests.mjs"))
       .sort();
@@ -520,6 +526,17 @@ try {
   );
 } finally {
   if (localDockerReady) {
+    if (env.PORTAL_TEST_DB_TEMPLATE) {
+      try {
+        await command(
+          process.execPath,
+          ["scripts/testing/prepare-database-template.mjs", "--drop"],
+          { cwd: scratch, env, quiet: true, timeoutMs: 30000 },
+        );
+      } catch (error) {
+        failure ??= error;
+      }
+    }
     if (phase.browser) {
       try {
         await command(

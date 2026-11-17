@@ -186,6 +186,9 @@ test("actual QA runner seeds commercial fixtures after retention and before SQL/
   const database = result.calls.findIndex((call) =>
     call.args.includes("test:db"),
   );
+  const template = result.calls.findIndex((call) =>
+    call.args.includes("scripts/testing/prepare-database-template.mjs"),
+  );
   const api = result.calls.findIndex((call) =>
     call.args.includes("scripts/commission-api-check.mjs"),
   );
@@ -193,7 +196,8 @@ test("actual QA runner seeds commercial fixtures after retention and before SQL/
     persistence >= 0 &&
       persistence < bootstrap &&
       bootstrap < database &&
-      database < api,
+      database < template &&
+      template < api,
   );
   assert.equal(seed.file, process.execPath);
   assert.equal(seed.cwd, "/owned-qa/scratch");
@@ -211,6 +215,21 @@ test("actual QA runner seeds commercial fixtures after retention and before SQL/
     result.calls[api].env.PORTAL_DB_CONTAINER,
   );
   assert.equal(seed.env.SUPABASE_URL, "http://127.0.0.1:55321");
+  assert.match(
+    result.calls[template].env.PORTAL_TEST_DB_TEMPLATE,
+    /^portal_test_template_[a-f0-9]{8}$/,
+  );
+  const cleanupTemplate = result.calls.findIndex(
+    (call) =>
+      call.args[0] === "scripts/testing/prepare-database-template.mjs" &&
+      call.args[1] === "--drop",
+  );
+  const stop = result.calls.findIndex(
+    (call) =>
+      call.args.includes("scripts/runtime-cli.mjs") &&
+      call.args.includes("stop"),
+  );
+  assert(cleanupTemplate > template && cleanupTemplate < stop);
   assert.equal(
     result.reports.some((report) => report.value.startsWith("PASS\n")),
     true,
