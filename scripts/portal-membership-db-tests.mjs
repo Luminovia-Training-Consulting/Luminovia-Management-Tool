@@ -117,7 +117,7 @@ await withTestDatabase("portal_membership", async ({ sql, actor }) => {
   await sql(`delete from public.user_roles where user_id='${lecturer}'`);
   await assert.rejects(
     actor(lecturer, "select public.require_portal_access()"),
-    /Portal access requires/,
+    /Operational portal access required/,
   );
   assert.equal(
     await sql(
