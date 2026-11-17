@@ -332,7 +332,7 @@ try {
           [null, "wiki", "forged", "Falsch", "Forged", false],
           "aal1",
         ),
-        /management and permission/,
+        /management permission/,
       );
       await assert.rejects(
         actor(a, `insert into public.wiki_pages(owner_id) values('${a}')`),

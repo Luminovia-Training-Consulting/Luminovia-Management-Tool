@@ -104,7 +104,7 @@ await withTestDatabase("operations_authority", async (fixture) => {
     randomUUID,
   );
   await sql(
-    `insert into auth.users(id,email)values ${[admin, original, successor, manager, requester].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};insert into public.user_roles(user_id,role)values(${q(admin)},'admin'),(${q(original)},'lecturer'),(${q(successor)},'lecturer'),(${q(manager)},'management'),(${q(requester)},'lecturer');`,
+    `insert into auth.users(id,email)values ${[admin, original, successor, manager, requester].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};insert into public.user_roles(user_id,role)values(${q(admin)},'admin'),(${q(original)},'lecturer'),(${q(successor)},'lecturer'),(${q(manager)},'management'),(${q(requester)},'lecturer');update public.profiles set active=true where id in (${[admin, original, successor, manager, requester].map(q).join(",")});`,
   );
   const call = (who, expression, aal = "aal1") =>
     actor(who, "select " + expression, aal);
@@ -210,10 +210,7 @@ await withTestDatabase("operations_authority", async (fixture) => {
               `public.claim_replacement(${q(offer)},1,1,${q(replacementRequest)})`,
             ),
         });
-        if (change === "role") {
-          assert.equal(result.error, undefined);
-          assert.deepEqual(result.value, { status: "not_eligible" });
-        } else denied(result);
+        denied(result);
         assert.equal(
           await sql(
             `select result::text from private.replacement_requests where actor_id=${q(successor)} and request_id=${q(replacementRequest)}`,

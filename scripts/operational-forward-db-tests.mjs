@@ -57,7 +57,7 @@ export async function runOperationalForwardChecks({
           randomUUID,
         );
         await sql(
-          `insert into auth.users(id,email) values ${[owner, target, outsider, admin].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};insert into public.user_roles(user_id,role) values(${q(owner)},'lecturer'),(${q(target)},'lecturer'),(${q(outsider)},'client'),(${q(admin)},'admin');`,
+`insert into auth.users(id,email) values ${[owner, target, outsider, admin].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};insert into public.user_roles(user_id,role) values(${q(owner)},'lecturer'),(${q(target)},'lecturer'),(${q(outsider)},'client'),(${q(admin)},'admin');update public.profiles set active=true where id in (${[owner, target, outsider, admin].map(q).join(",")});`
         );
         const [organisation, template, run, job, claim, session, allocation] =
           Array.from({ length: 7 }, randomUUID);
@@ -146,10 +146,20 @@ export async function runOperationalForwardChecks({
                 assert.equal(destination.href, href, kind);
                 assert.ok(destination.title.length > 0, kind);
               }
-              assert.deepEqual(await resolve(outsider, kind, id), {
-                href: null,
-                title: "",
-              });
+              const eligibleForPublicOffer =
+                kind === "replacement_available" &&
+                (await sql(
+                  `select private.replacement_eligible(${q(id)},${q(outsider)})`,
+                )) === "t";
+              assert.deepEqual(
+                await resolve(outsider, kind, id),
+                eligibleForPublicOffer
+                  ? {
+                      href: "/replacements",
+                      title: "Fictional composed assignment",
+                    }
+                  : { href: null, title: "" },
+              );
             }
             for (const [kind, id] of targets)
               await sql(

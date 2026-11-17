@@ -16,7 +16,7 @@ await withTestDatabase("participant_cancel", async ({ sql, actor }) => {
     derivedRoom,
   ] = Array.from({ length: 9 }, randomUUID);
   await sql(`insert into auth.users(id,email) values ${[admin, learner, other].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};
-  insert into public.user_roles(user_id,role) values(${q(admin)},'admin'),(${q(learner)},'participant'),(${q(other)},'participant');
+  insert into public.user_roles(user_id,role) values(${q(admin)},'admin'),(${q(learner)},'lecturer'),(${q(other)},'lecturer');
   insert into public.course_templates(id,title) values(${q(template)},'Fictional course');
   insert into public.course_runs(id,template_id) values(${q(early)},${q(template)}),(${q(late)},${q(template)}),(${q(unscheduled)},${q(template)});
   insert into public.course_sessions(course_run_id,starts_at,ends_at) values

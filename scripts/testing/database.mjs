@@ -44,6 +44,7 @@ async function initializeDatabase(
   sql,
   migrationsThrough,
   template = "template0",
+  container = process.env.PORTAL_DB_CONTAINER ?? "supabase_db_luminovia-portal",
 ) {
   await sql(`create database ${database} template ${template}`, "postgres");
   await sql(
@@ -53,7 +54,7 @@ async function initializeDatabase(
   grant usage on schema auth to authenticated,anon,service_role;grant execute on all functions in schema auth to authenticated,anon,service_role;`,
     database,
   );
-  for (const file of (
+  const files = (
     await readdir(new URL("../../supabase/migrations/", import.meta.url))
   )
     .filter(
@@ -62,14 +63,92 @@ async function initializeDatabase(
         (migrationsThrough === undefined ||
           name.slice(0, 14) <= migrationsThrough),
     )
-    .sort())
-    await sql(
-      await readFile(
-        new URL("../../supabase/migrations/" + file, import.meta.url),
-        "utf8",
-      ),
-      database,
+    .sort();
+  const replay = async () => {
+    for (const file of files)
+      await sql(
+        await readFile(
+          new URL("../../supabase/migrations/" + file, import.meta.url),
+          "utf8",
+        ),
+        database,
+      );
+  };
+  if (container) await withMigrationReplayLock(container, replay);
+  else await replay();
+}
+
+/** Several historical SQL suites replay migrations into separate databases
+ * concurrently in one PostgreSQL cluster. A few migrations alter cluster-wide
+ * role settings, so serialize only migration replay across those databases. */
+async function withMigrationReplayLock(container, run) {
+  if (
+    !/^supabase_db_luminovia-portal(?:-test(?:-[a-zA-Z0-9_-]+)?)?$/.test(
+      container,
+    )
+  )
+    throw new Error(
+      "Only an owned local portal migration container is permitted.",
     );
+  const child = spawn(
+    "docker",
+    [
+      "exec",
+      "-i",
+      container,
+      "psql",
+      "-U",
+      "postgres",
+      "-d",
+      "postgres",
+      "-X",
+      "-qAt",
+      "-v",
+      "ON_ERROR_STOP=1",
+    ],
+    { stdio: ["pipe", "pipe", "pipe"] },
+  );
+  let output = "",
+    error = "",
+    acquired = false;
+  let acquire;
+  const ready = new Promise((resolve, reject) => {
+    acquire = { resolve, reject };
+  });
+  const closed = new Promise((resolve, reject) => {
+    child.once("error", reject);
+    child.once("close", (code) =>
+      code === 0 ? resolve() : reject(Error(error || "Migration lock failed")),
+    );
+  });
+  void closed.catch(() => {});
+  child.stdout.on("data", (chunk) => {
+    output += chunk;
+    if (
+      !acquired &&
+      output.split(/\r?\n/).some((line) => line === "t" || line === "f")
+    ) {
+      acquired = true;
+      acquire.resolve();
+    }
+  });
+  child.stderr.on("data", (chunk) => (error += chunk));
+  child.once("close", () => {
+    if (!acquired)
+      acquire.reject(Error(error || "Migration lock closed early"));
+  });
+  child.stdin.write(
+    "select pg_catalog.pg_advisory_lock(1129740097,2048) is null;\n",
+  );
+  try {
+    await ready;
+    await run();
+  } finally {
+    child.stdin.end(
+      "select pg_catalog.pg_advisory_unlock(1129740097,2048);\n\\q\n",
+    );
+    await closed;
+  }
 }
 
 /** Replay the exact checked-in migration set once in a uniquely owned disposable template. */
@@ -118,7 +197,13 @@ export async function prepareTestDatabaseTemplate({
     });
   const sql = execute ?? dockerSql;
   try {
-    await initializeDatabase(name, sql, undefined);
+    await initializeDatabase(
+      name,
+      sql,
+      undefined,
+      "template0",
+      execute ? null : container,
+    );
   } catch (error) {
     try {
       await sql(`drop database if exists ${name} with (force)`);
@@ -245,7 +330,14 @@ export async function withTestDatabase(
         : undefined;
     if (template)
       await sql(`create database ${database} template ${template}`, "postgres");
-    else await initializeDatabase(database, sql, migrationsThrough);
+    else
+      await initializeDatabase(
+        database,
+        sql,
+        migrationsThrough,
+        "template0",
+        container,
+      );
     return await run({ sql, actor, database, container });
   } finally {
     await sql(`drop database if exists ${database} with (force)`, "postgres");
