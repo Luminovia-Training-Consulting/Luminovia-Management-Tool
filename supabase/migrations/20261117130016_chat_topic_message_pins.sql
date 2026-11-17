@@ -11,11 +11,9 @@ alter table public.messages add column pin_generation bigint not null default 0;
 
 create function private.chat_topic_pinned_messages(p_room_id uuid) returns jsonb
 language plpgsql stable security definer set search_path='' as $$
-declare room public.chat_rooms;
 begin
  if not private.can_access_chat_room(p_room_id) then raise exception 'Room access denied' using errcode='42501'; end if;
- select * into room from public.chat_rooms where id=p_room_id and kind='topic';
- if not found then raise exception 'Room access denied' using errcode='42501';end if;
+ if not exists(select 1 from public.chat_rooms where id=p_room_id and kind='topic') then raise exception 'Room access denied' using errcode='42501';end if;
  return coalesce((select jsonb_agg(jsonb_build_object('id',m.id,'sender_name',p.display_name,'body',m.body,'created_at',m.created_at) order by pin.pinned_at desc,m.id)
  from private.chat_topic_message_pins pin join public.messages m on m.id=pin.message_id join public.profiles p on p.id=m.sender_id
  where m.room_id=p_room_id and m.deleted_at is null and not private.chat_message_hidden(m.id)),'[]'::jsonb);
