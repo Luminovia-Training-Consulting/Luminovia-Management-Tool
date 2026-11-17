@@ -46,12 +46,7 @@ describe("calendar instants and DST safety", () => {
       ),
     ).toBeNull();
     expect(
-      zonedInstantForEdit(
-        "",
-        "Europe/Berlin",
-        "2026-10-25T02:30",
-        original,
-      ),
+      zonedInstantForEdit("", "Europe/Berlin", "2026-10-25T02:30", original),
     ).toBeNull();
   });
   it("rejects invalid zones and dates", () => {
