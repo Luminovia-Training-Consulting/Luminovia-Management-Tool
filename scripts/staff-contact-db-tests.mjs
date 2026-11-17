@@ -168,10 +168,10 @@ await withTestDatabase("staff_contact", async ({ sql, actor }) => {
     "Current staff role changes and target suspension override retained opt-in",
     async () => {
       await sql(`delete from public.user_roles where user_id=${q(peer)}`);
-      assert.deepEqual(await rpc(peer, "person_contact", [q(owner)]), {
-        email: null,
-        phone: null,
-      });
+      await assert.rejects(
+        rpc(peer, "person_contact", [q(owner)]),
+        /Active account required/,
+      );
       await sql(`update public.profiles set active=false where id=${q(owner)}`);
       assert.deepEqual(await rpc(admin, "person_contact", [q(owner)]), {
         email: null,
