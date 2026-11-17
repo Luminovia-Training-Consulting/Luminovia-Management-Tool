@@ -11,7 +11,7 @@ The latest user revision explicitly restores restricted guest accounts; particip
 - [x] Add admin direct account creation and role editing, including admin/management/senior lecturer/lecturer/client and restricted guest. Company accounts require organisation binding; guests receive no business permission widening.
 - [x] Add reviewed local ICS import: floating/IANA/UTC times, all-day exclusive ends, bounded recurrences/exclusions/exceptions; atomic owner-only batches, duplicate skipping and confirmed-assignment conflict denial.
 - [x] Pass867 frontend tests,331 runtime checks, type/lint/format/export checks and production build; focused SQL/account-facade/native Auth/UI journeys pass. Native desktop/mobile/dark visual review passes, as do actual production PWA manifest/icons/active-service-worker/browser-installability checks. Full historical canonical acceptance and hosted exact-head CI remain separate unverified gates.
-- [ ] Push integrated main and refresh retained-data local preview after acceptance.
+- [x] Push integrated main and refresh retained-data local preview at5773: verified private archive, preserve Auth/Storage/project/password, apply four forward migrations and pass native admin login plus calendar/import, account creation dialog, administration board entry, support tab and profile heading smoke.
 
 
 ## Current exact-main CI repair — 17 November 2026
