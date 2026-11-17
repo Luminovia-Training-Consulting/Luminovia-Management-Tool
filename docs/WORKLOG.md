@@ -2199,6 +2199,8 @@ To reduce browser wall time without dropping any browser/device cases, PR #42 no
 
 The first matrix CI run correctly caught stale workflow-policy fixtures that still expected one unsuffixed browser job. Updated them to assert the two exact matrix lanes and continue checking that the browser job runs only for pull requests. This is a test expectation update; all required matrix jobs remain fail-closed in the existing final gate.
 
+The next exact-head run passed those policy fixtures and then caught the acceptance-report artifact test still expecting the old single browser filename. The expectation now includes `${{ matrix.browser-project }}` so each lane uploads distinct evidence; its 17 local workflow-scope tests pass.
+
 ## Imported PR15 and PR20 delivery history
 
 The following isolated branch checkpoints are historical evidence. Current fourteen-check, signature and review-only policy is recorded above and in GITHUB_WORKFLOW; older always/disabled descriptions do not change it. These branch-only checks do not establish combined32 acceptance.
