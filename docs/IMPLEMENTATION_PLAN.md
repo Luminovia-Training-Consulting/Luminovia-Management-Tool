@@ -9,6 +9,7 @@
 - [x] Fresh full system attempt passed 830 unit tests, 331 runtime checks, 95 Edge tests, startup/persistence, concurrent claims and SQL suites until the document assertion was corrected.
 - [x] Align capacity, picker and discovery SQL fixtures with current active-role/password-only semantics; focused verification passes 8/8, 6/6 and 9/9 groups.
 - [x] Align actual audit API acceptance with `audit.read` permission and factor-free AAL1 admin/owner access; management and lecturer denial remains required.
+- [x] Correct stale lifecycle authorization assertion; focused local PostgreSQL lifecycle suite passes 12/12 groups.
 - [ ] Run fresh full isolated system and browser acceptance on the corrected exact head, fix every failure, and inspect fresh GitHub `Portal checks` through completion.
 - [ ] Claim CI green only after every required current-head job succeeds; retain complete test scope.
 

@@ -115,7 +115,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
           admin,
           `select public.manage_job_offer('${job}','archived',1,'${randomUUID()}')`,
         ),
-        /42501/,
+        /40001/,
       );
       await assert.rejects(cancel(c.claim_id, peer), /42501/);
       await assert.rejects(cancel(c.claim_id, participant), /42501/);
