@@ -74,6 +74,23 @@ test("lecturer explicitly shares saved contacts with staff and revokes them acro
     await expect(
       contact.getByRole("link", { name: "Anrufen", exact: true }),
     ).toHaveAttribute("href", "tel:+4940123456");
+    await peerContext.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await contact
+      .getByRole("button", { name: "E-Mail-Adresse kopieren", exact: true })
+      .click();
+    await expect(contact.getByRole("status")).toHaveText(
+      "Kontaktangabe kopiert.",
+    );
+    expect(await other.evaluate(() => navigator.clipboard.readText())).toBe(
+      owner.email,
+    );
+    await contact
+      .getByRole("button", { name: "Telefonnummer kopieren", exact: true })
+      .click();
+    expect(await other.evaluate(() => navigator.clipboard.readText())).toBe(
+      "+49 40 123456",
+    );
+
     await page.getByLabel("Sprache", { exact: true }).selectOption("en");
     await page.getByLabel("Theme", { exact: true }).selectOption("dark");
     await expect(
@@ -126,6 +143,9 @@ test("lecturer explicitly shares saved contacts with staff and revokes them acro
       }),
     ).toBeVisible();
     await expect(contact.getByRole("link")).toHaveCount(0);
+    await expect(
+      contact.getByRole("button", { name: /kopieren/i }),
+    ).toHaveCount(0);
   } finally {
     await peerContext.close();
   }

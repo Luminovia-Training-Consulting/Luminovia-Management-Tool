@@ -17,6 +17,7 @@ import { Dialog } from "../../components/ui/dialog";
 import { ErrorState, Field, Loading, Notice } from "../../components/common";
 import { chatContactsQuery, chatKeys, chatMembersQuery } from "./api";
 import type { ChatContact, ChatRoom } from "./types";
+import { GroupOwnership } from "./group-ownership";
 import "./i18n";
 /** Use the permitted display name or translated fallback for unnamed contacts. */
 const contactName = (
@@ -287,12 +288,14 @@ export function CreateGroup({
 export function MembersPanel({
   actor,
   room,
+  onLeft,
   canManage,
   open,
   onOpenChange,
 }: {
   actor: string;
   room: ChatRoom;
+  onLeft: () => void;
   canManage: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -430,6 +433,14 @@ export function MembersPanel({
               <Notice kind="error">{common("error")}</Notice>
             )}
           </form>
+        )}
+        {room.kind === "topic" && members.isSuccess && (
+          <GroupOwnership
+            actor={actor}
+            room={room}
+            members={members.data}
+            onLeft={onLeft}
+          />
         )}
         {saved && <Notice>{t("membershipSaved")}</Notice>}
         {change.isError && <Notice kind="error">{t("actionError")}</Notice>}

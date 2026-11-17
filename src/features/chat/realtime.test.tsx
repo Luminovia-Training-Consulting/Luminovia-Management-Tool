@@ -118,6 +118,17 @@ it("uses a bounded batching window so a continuous stream cannot postpone refres
   }
   expect(invalidate.mock.calls.length).toBeGreaterThan(0);
 });
+it("refreshes the current history after a personal visibility change from another session", async () => {
+  const { invalidate } = setup();
+  emit(state.channels[0], "chat_members:UPDATE", {
+    new: { room_id: "room-a", removed_at: null, hidden_generation: 1 },
+  });
+  await advance();
+  expect(invalidate.mock.calls).toEqual([
+    [{ queryKey: chatKeys.messages("actor-a", "room-a") }],
+    [{ queryKey: chatKeys.rooms("actor-a") }],
+  ]);
+});
 it("removes revoked private rows synchronously and cancels queued or late message refreshes", async () => {
   const { client, invalidate } = setup();
   const key = [...chatKeys.messages("actor-a", "room-a"), ""];

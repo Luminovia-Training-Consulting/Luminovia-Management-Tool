@@ -217,6 +217,39 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
   await dialog
     .getByRole("button", { name: "Privaten Termin löschen", exact: true })
     .click();
+  const confirmation = page.getByRole("dialog", {
+    name: "Privaten Termin löschen?",
+    exact: true,
+  });
+  await expect(confirmation).toBeVisible();
+  await expect(
+    confirmation.getByText(editedTitle, { exact: true }),
+  ).toBeVisible();
+  await confirmation
+    .getByRole("button", { name: "Abbrechen", exact: true })
+    .click();
+  await expect(confirmation).toBeHidden();
+  await expect(dialog).toBeVisible();
+  expect(
+    writes,
+    "Cancelling the confirmation never reaches the write API",
+  ).toBe(2);
+  expect(
+    await checked(
+      service
+        .from("personal_events")
+        .select("*")
+        .eq("id", original.id)
+        .single(),
+    ),
+  ).toEqual(stored);
+  await dialog
+    .getByRole("button", { name: "Privaten Termin löschen", exact: true })
+    .click();
+  await expect(confirmation).toBeVisible();
+  await confirmation
+    .getByRole("button", { name: "Privaten Termin löschen", exact: true })
+    .click();
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("status")).toHaveText("Termin gelöscht.");
   expect(writes).toBe(3);

@@ -13,6 +13,8 @@ import { CalendarPage } from "./calendar";
 import i18n from "../../lib/i18n";
 const state = vi.hoisted(() => ({
   claims: [] as unknown[],
+  events: [] as unknown[],
+  deleteEvent: vi.fn(),
   rpc: vi.fn(),
   datesSetOnLocale: false,
   callbacks: [] as unknown[],
@@ -29,6 +31,11 @@ vi.mock("../../lib/supabase", () => ({
     rpc: state.rpc,
     from: () => ({
       select: () => ({ eq: async () => ({ data: [], error: null }) }),
+      delete: () => ({
+        eq: () => ({
+          eq: () => ({ select: () => ({ single: state.deleteEvent }) }),
+        }),
+      }),
     }),
   }),
 }));
@@ -45,7 +52,10 @@ vi.mock("../../lib/queries", () => ({
     queryKey: ["claims"],
     queryFn: async () => state.claims,
   }),
-  eventsQuery: () => ({ queryKey: ["events"], queryFn: async () => [] }),
+  eventsQuery: () => ({
+    queryKey: ["events"],
+    queryFn: async () => state.events,
+  }),
 }));
 vi.mock("../operations/data", () => ({
   runsQuery: () => ({
@@ -142,6 +152,7 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
   state.claims = [];
+  state.events = [];
   vi.clearAllMocks();
 });
 it("global published session links open the precise authorised course detail rather than an unselected catalogue", async () => {
@@ -376,3 +387,95 @@ it("preserves the same global-event dialog/link across locale and equal-range si
   expect(new Set(state.callbacks).size).toBe(1);
   client.clear();
 });
+
+it.each(["de", "en"])(
+  "confirms private appointment deletion, preserves errors and blocks closing while pending (%s)",
+  async (language) => {
+    await i18n.changeLanguage(language);
+    state.events = [
+      {
+        id: "event",
+        user_id: "actor",
+        title: "Fictional private appointment",
+        starts_at: "2035-01-01T08:00:00Z",
+        ends_at: "2035-01-01T09:00:00Z",
+        time_zone: "Europe/Berlin",
+      },
+    ];
+    state.rpc.mockImplementation(() => {
+      const result = Promise.resolve({ data: [], error: null });
+      return Object.assign(result, { abortSignal: () => result });
+    });
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <CalendarPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    await user.click(await screen.findByText("Fictional private appointment"));
+    const deleteLabel =
+      language === "de"
+        ? "Privaten Termin löschen"
+        : "Delete private appointment";
+    const cancelLabel = language === "de" ? "Abbrechen" : "Cancel";
+    const title =
+      language === "de"
+        ? "Privaten Termin löschen?"
+        : "Delete private appointment?";
+    await user.click(screen.getByRole("button", { name: deleteLabel }));
+    let confirmation = screen.getByRole("dialog", { name: title });
+    await user.click(
+      within(confirmation).getByRole("button", { name: cancelLabel }),
+    );
+    expect(state.deleteEvent).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: deleteLabel }));
+    confirmation = screen.getByRole("dialog", { name: title });
+    state.deleteEvent.mockResolvedValueOnce({
+      data: null,
+      error: { message: "unconfirmed" },
+    });
+    await user.click(
+      within(confirmation).getByRole("button", { name: deleteLabel }),
+    );
+    expect(await within(confirmation).findByRole("alert")).toHaveTextContent(
+      language === "de" ? "nicht bestätigt" : "not confirmed",
+    );
+    expect(confirmation).toBeVisible();
+    let complete!: (value: unknown) => void;
+    state.deleteEvent.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve;
+        }),
+    );
+    await user.click(
+      within(confirmation).getByRole("button", { name: deleteLabel }),
+    );
+    expect(
+      within(confirmation).getByRole("button", { name: deleteLabel }),
+    ).toBeDisabled();
+    expect(
+      within(confirmation).getByRole("button", { name: cancelLabel }),
+    ).toBeDisabled();
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("dialog", { name: title })).toBeVisible();
+    await act(async () => complete({ data: { id: "event" }, error: null }));
+    expect(
+      screen.queryByRole("dialog", { name: title }),
+    ).not.toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        language === "de" ? "Termin gelöscht." : "Appointment deleted.",
+      ),
+    ).toBeVisible();
+    client.clear();
+  },
+);

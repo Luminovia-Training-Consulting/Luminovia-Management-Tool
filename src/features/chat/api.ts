@@ -25,9 +25,18 @@ export const chatRoomsQuery = (actor: string) =>
   queryOptions({
     queryKey: chatKeys.rooms(actor),
     queryFn: async () => {
-      const { data, error } = await db().rpc("chat_rooms_list");
-      if (error) throw error;
-      return (data ?? []) as ChatRoom[];
+      const [rooms, pins] = await Promise.all([
+        db().rpc("chat_rooms_list"),
+        db().rpc("chat_pinned_rooms"),
+      ]);
+      if (rooms.error) throw rooms.error;
+      if (pins.error) throw pins.error;
+      const pinned = (pins.data ?? []) as string[];
+      return ((rooms.data ?? []) as ChatRoom[]).map((room) => ({
+        ...room,
+        pinned: pinned.includes(room.id),
+        pinOrder: pinned.indexOf(room.id),
+      }));
     },
     refetchInterval: 3000,
     staleTime: 1000,

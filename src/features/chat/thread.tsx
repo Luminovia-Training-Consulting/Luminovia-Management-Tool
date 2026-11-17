@@ -2,7 +2,7 @@
  * Active conversation with search, history, read state, mute and member controls. Access loss
  * hides retained data; report messages read only online and in the visible tab.
  */
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -15,6 +15,7 @@ import {
   BellOff,
   BellRing,
   MessagesSquare,
+  Info,
   Search,
   UsersRound,
 } from "lucide-react";
@@ -31,8 +32,11 @@ import {
   orderedMessages,
 } from "./api";
 import { MessageComposer } from "./composer";
+import { GroupSettings } from "./group-settings";
 import { MembersPanel, RoomIcon } from "./manage";
 import { MessageBubble } from "./message";
+import { messageDay, messageDayLabel } from "./message-days";
+import "./message-days.css";
 import { useChatRealtime } from "./realtime";
 import type { ChatRoom } from "./types";
 import "./i18n";
@@ -48,7 +52,7 @@ export function ChatThread({
   canManageCourses: boolean;
   onBack: () => void;
 }) {
-  const { t } = useTranslation("chat");
+  const { t, i18n } = useTranslation("chat");
   const online = useOnline();
   const client = useQueryClient();
   const profile = useQuery(profileQuery(actor));
@@ -60,6 +64,7 @@ export function ChatThread({
   }, []);
   const [searchInput, setSearchInput] = useState("");
   const [membersOpen, setMembersOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { status, revoked } = useChatRealtime(actor, room.id);
   const messages = useInfiniteQuery({
     ...chatMessagesQuery(actor, room.id, search),
@@ -67,6 +72,7 @@ export function ChatThread({
   });
   const ordered = orderedMessages(messages.data?.pages);
   const latest = ordered[ordered.length - 1];
+  const zone = profile.data?.time_zone ?? "Europe/Berlin";
   const marked = useRef("");
   const end = useRef<HTMLDivElement>(null);
   // Room management is not a blanket administrator read bypass for private DMs.
@@ -186,6 +192,16 @@ export function ChatThread({
           </span>
         </div>
         <div className="chat-thread-controls">
+          {!["dm", "general"].includes(room.kind) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={i18n.t("title", { ns: "chatGroupSettings" })}
+              onClick={() => setSettingsOpen(true)}
+            >
+              <Info size={19} />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
@@ -282,20 +298,40 @@ export function ChatThread({
               </div>
             ) : (
               <ol className="chat-message-list" aria-label={t("title")}>
-                {ordered.map((message) => (
-                  <MessageBubble
-                    key={message.id}
-                    message={message}
-                    actor={actor}
-                    now={now}
-                    zone={profile.data?.time_zone ?? "Europe/Berlin"}
-                    attachment={
-                      message.document_id && !message.deleted_at ? (
-                        <DocumentAttachment documentId={message.document_id} />
-                      ) : undefined
-                    }
-                  />
-                ))}
+                {ordered.map((message, index) => {
+                  const day = messageDay(message.created_at, zone);
+                  const previous = ordered[index - 1];
+                  const showDay =
+                    !previous || messageDay(previous.created_at, zone) !== day;
+                  return (
+                    <Fragment key={message.id}>
+                      {showDay && (
+                        <li className="chat-date-separator">
+                          <time dateTime={day}>
+                            {messageDayLabel(
+                              message.created_at,
+                              zone,
+                              i18n.resolvedLanguage ?? i18n.language,
+                            )}
+                          </time>
+                        </li>
+                      )}
+                      <MessageBubble
+                        message={message}
+                        actor={actor}
+                        now={now}
+                        zone={zone}
+                        attachment={
+                          message.document_id && !message.deleted_at ? (
+                            <DocumentAttachment
+                              documentId={message.document_id}
+                            />
+                          ) : undefined
+                        }
+                      />
+                    </Fragment>
+                  );
+                })}
               </ol>
             )}
             <div ref={end} />
@@ -325,10 +361,21 @@ export function ChatThread({
         actor={actor}
         room={room.id}
       />
+      {settingsOpen && (
+        <GroupSettings
+          key={`settings:${room.id}`}
+          actor={actor}
+          room={room.id}
+          canManage={canManage}
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+        />
+      )}
       <MembersPanel
         key={`members:${room.id}`}
         actor={actor}
         room={room}
+        onLeft={onBack}
         canManage={canManage}
         open={membersOpen}
         onOpenChange={setMembersOpen}

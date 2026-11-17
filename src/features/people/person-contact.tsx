@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Mail, Phone } from "lucide-react";
+import { Copy, Mail, Phone } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import {
   contactEmailLink,
@@ -41,6 +42,7 @@ export function PersonContact({
           {email && (
             <div>
               <p>{email}</p>
+              <CopyContact key={`email:${email}`} value={email} kind="email" />
               {emailLink && (
                 <a href={emailLink}>
                   <Mail size={17} aria-hidden="true" />
@@ -52,6 +54,7 @@ export function PersonContact({
           {phone && (
             <div>
               <p>{phone}</p>
+              <CopyContact key={`phone:${phone}`} value={phone} kind="phone" />
               {phoneLink && (
                 <a href={phoneLink}>
                   <Phone size={17} aria-hidden="true" />
@@ -63,5 +66,42 @@ export function PersonContact({
         </>
       )}
     </section>
+  );
+}
+
+/** Copy only the value currently returned by the permission-filtered contact query. */
+function CopyContact({
+  value,
+  kind,
+}: {
+  value: string;
+  kind: "email" | "phone";
+}) {
+  const { t } = useTranslation("contact");
+  const [status, setStatus] = useState<"success" | "error" | null>(null);
+  return (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={async () => {
+          setStatus(null);
+          try {
+            await navigator.clipboard.writeText(value);
+            setStatus("success");
+          } catch {
+            setStatus("error");
+          }
+        }}
+      >
+        <Copy size={17} aria-hidden="true" />
+        {t(kind === "email" ? "copyEmail" : "copyPhone")}
+      </Button>
+      {status && (
+        <p role={status === "success" ? "status" : "alert"}>
+          {t(status === "success" ? "copySuccess" : "copyError")}
+        </p>
+      )}
+    </>
   );
 }

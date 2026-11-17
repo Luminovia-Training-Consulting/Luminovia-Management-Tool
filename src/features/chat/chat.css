@@ -89,6 +89,18 @@
   flex-direction: column;
   gap: 8px;
 }
+.chat-room-row {
+  display: flex;
+  align-items: center;
+}
+.chat-pin-reorder {
+  display: flex;
+  flex-direction: column;
+}
+.chat-pin-reorder button {
+  width: 2rem;
+  height: 2rem;
+}
 .chat-room-button {
   display: flex;
   align-items: center;

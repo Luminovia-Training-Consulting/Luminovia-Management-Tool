@@ -65,7 +65,12 @@ export function MessageComposer({
         uploadRetry.current = { signature, key: crypto.randomUUID() };
       return uploadDocument(
         file,
-        { scope: "room", roomId: room, clientId: uploadRetry.current.key },
+        {
+          scope: "room",
+          roomId: room,
+          clientId: uploadRetry.current.key,
+          messageOnly: true,
+        },
         setProgress,
       );
     },

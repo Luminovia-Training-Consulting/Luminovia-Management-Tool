@@ -62,7 +62,11 @@ Deno.serve(async(request:Request)=>{
    const roomId=form.get('room_id')||null;const jobId=form.get('job_id')||null;const replaceId=form.get('replace_id')||null;const ownerId=form.get('owner_id')||null;
    if((roomId&&!uuid(roomId))||(jobId&&!uuid(jobId))||(replaceId&&!uuid(replaceId))||(ownerId&&!uuid(ownerId)))return json(400,{error:'invalid_request'});
    // Owner/scope inputs identify targets only. RPCs enforce current permissions, quotas and idempotency.
-   const reserved=await user.rpc('reserve_document',{p_name:name,p_mime:mime,p_size:bytes.length,p_scope:scope,p_kind:kind,p_room_id:roomId,p_job_id:jobId,p_client_id:clientId,p_replace_id:replaceId,p_owner_id:ownerId});
+   const messageOnly=form.get('message_only');
+   if(messageOnly!==null && (messageOnly!=='true'||scope!=='room'||kind!=='chat'||!roomId||jobId||replaceId||ownerId))return json(400,{error:'invalid_request'});
+   const reserved=messageOnly==='true'
+    ? await user.rpc('reserve_message_document',{p_name:name,p_mime:mime,p_size:bytes.length,p_room_id:roomId,p_client_id:clientId})
+    : await user.rpc('reserve_document',{p_name:name,p_mime:mime,p_size:bytes.length,p_scope:scope,p_kind:kind,p_room_id:roomId,p_job_id:jobId,p_client_id:clientId,p_replace_id:replaceId,p_owner_id:ownerId});
    if(reserved.error)return json(403,{error:'upload_not_allowed'});
    const reservation=reserved.data as {document_id:string;version_id:string;object_path:string;status:string};
    if(!uuid(reservation.document_id)||!uuid(reservation.version_id))return json(503,{error:'upload_failed'});

@@ -7,8 +7,12 @@ import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
+  ArrowDown,
+  ArrowUp,
   BellOff,
   MessageCirclePlus,
+  Pin,
+  PinOff,
   MessagesSquare,
   Plus,
   Search,
@@ -16,7 +20,11 @@ import {
 import { useAuth } from "../auth/auth-context";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
-import { permissionsQuery, userRolesQuery } from "../../lib/queries";
+import {
+  permissionsQuery,
+  profileQuery,
+  userRolesQuery,
+} from "../../lib/queries";
 import { Button } from "../../components/ui/button";
 import {
   ErrorState,
@@ -27,7 +35,9 @@ import {
 import { chatKeys, chatRoomsQuery } from "./api";
 import { ContactPicker, CreateGroup, RoomIcon } from "./manage";
 import { ChatThread } from "./thread";
+import { RoomActivity } from "./room-activity";
 import "./i18n";
+import "./pins-i18n";
 import "./chat.css";
 /** Select rooms and start DMs using authorized contact/room projections. */
 export function ChatPage() {
@@ -39,6 +49,8 @@ export function ChatPage() {
   const [params, setParams] = useSearchParams();
   const selectedId = params.get("room");
   const rooms = useQuery(chatRoomsQuery(actor));
+  // The shell owns the profile request; observe its cached zone without initiating another request.
+  const profile = useQuery({ ...profileQuery(actor), enabled: false });
   const permissions = useQuery(permissionsQuery(actor));
   const roles = useQuery(userRolesQuery(actor));
   const [search, setSearch] = useState("");
@@ -106,12 +118,53 @@ export function ChatPage() {
       selectRoom(room);
     },
   });
+  const pin = useMutation({
+    mutationFn: async ({ room, pinned }: { room: string; pinned: boolean }) => {
+      requireOnline();
+      const { error } = await db().rpc("set_chat_pin", {
+        p_room_id: room,
+        p_pinned: pinned,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
+  });
+  const pinnedOrder = (rooms.data ?? [])
+    .filter((room) => room.pinned)
+    .sort((a, b) => (a.pinOrder ?? 0) - (b.pinOrder ?? 0))
+    .map((room) => room.id);
+  const movePin = useMutation({
+    mutationFn: async ({
+      room,
+      direction,
+    }: {
+      room: string;
+      direction: "up" | "down";
+    }) => {
+      requireOnline();
+      const { error } = await db().rpc("move_chat_pin", {
+        p_room_id: room,
+        p_direction: direction,
+        p_expected_order: pinnedOrder,
+      });
+      if (error) throw error;
+    },
+    onSettled: () =>
+      client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
+  });
   const filtered =
-    rooms.data?.filter((room) =>
-      room.title
-        .toLocaleLowerCase(i18n.language)
-        .includes(search.toLocaleLowerCase(i18n.language)),
-    ) ?? [];
+    rooms.data
+      ?.filter((room) =>
+        room.title
+          .toLocaleLowerCase(i18n.language)
+          .includes(search.toLocaleLowerCase(i18n.language)),
+      )
+      .sort(
+        (a, b) =>
+          Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) ||
+          (a.pinned && b.pinned ? (a.pinOrder ?? 0) - (b.pinOrder ?? 0) : 0),
+      ) ?? [];
   return (
     <>
       {contactFailed && <Notice kind="error">{t("error")}</Notice>}
@@ -173,6 +226,9 @@ export function ChatPage() {
             </button>
           )}
           {general.isError && <Notice kind="error">{t("actionError")}</Notice>}
+          {(pin.isError || movePin.isError) && (
+            <Notice kind="error">{t("pinError")}</Notice>
+          )}
           {rooms.isPending ? (
             <Loading />
           ) : rooms.isError ? (
@@ -180,7 +236,7 @@ export function ChatPage() {
           ) : filtered.length ? (
             <ul className="chat-room-list">
               {filtered.map((room) => (
-                <li key={room.id}>
+                <li key={room.id} className="chat-room-row">
                   <button
                     type="button"
                     className={`chat-room-button ${room.id === selectedId ? "is-selected" : ""}`}
@@ -200,6 +256,10 @@ export function ChatPage() {
                           : room.title || t(`kind_${room.kind}`)}
                       </strong>
                       <small>{t(`kind_${room.kind}`)}</small>
+                      <RoomActivity
+                        instant={room.last_message_at}
+                        zone={profile.data?.time_zone}
+                      />
                     </span>
                     <span className="chat-room-indicators">
                       {room.unread_count > 0 && (
@@ -217,6 +277,52 @@ export function ChatPage() {
                       )}
                     </span>
                   </button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t(room.pinned ? "unpinRoom" : "pinRoom", {
+                      title: room.title || t(`kind_${room.kind}`),
+                    })}
+                    aria-pressed={Boolean(room.pinned)}
+                    disabled={!online || pin.isPending || movePin.isPending}
+                    onClick={() =>
+                      pin.mutate({ room: room.id, pinned: !room.pinned })
+                    }
+                  >
+                    {room.pinned ? <PinOff size={16} /> : <Pin size={16} />}
+                  </Button>
+                  {room.pinned && (
+                    <div className="chat-pin-reorder">
+                      {(["up", "down"] as const).map((direction) => (
+                        <Button
+                          key={direction}
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t(
+                            direction === "up" ? "movePinUp" : "movePinDown",
+                            { title: room.title || t(`kind_${room.kind}`) },
+                          )}
+                          disabled={
+                            !online ||
+                            pin.isPending ||
+                            movePin.isPending ||
+                            (direction === "up"
+                              ? pinnedOrder[0] === room.id
+                              : pinnedOrder.at(-1) === room.id)
+                          }
+                          onClick={() =>
+                            movePin.mutate({ room: room.id, direction })
+                          }
+                        >
+                          {direction === "up" ? (
+                            <ArrowUp size={14} />
+                          ) : (
+                            <ArrowDown size={14} />
+                          )}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

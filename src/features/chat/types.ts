@@ -18,6 +18,8 @@ export interface ChatRoom {
   unread_count: number;
   last_message_at: string | null;
   muted: boolean;
+  pinned?: boolean;
+  pinOrder?: number;
 }
 /** Membership projection for the currently accessible room. */
 export interface ChatMember {

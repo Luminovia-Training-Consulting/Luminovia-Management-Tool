@@ -40,6 +40,9 @@ const jobFilterFieldsSchema = z
         "rate_desc",
         "duration_asc",
         "title",
+        "customer_asc",
+        "topic_de_asc",
+        "topic_en_asc",
       ])
       .default("newest"),
   })

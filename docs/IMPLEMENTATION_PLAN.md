@@ -1,6 +1,6 @@
 # Persistent implementation plan
 
-**17 November QoL programme:** The user requests one integrated PR covering the supplied QoL prompt. Initial scope/status and honest verification gaps are tracked in [QOL_PROGRAMME_STATUS](QOL_PROGRAMME_STATUS.md); the full scope below remains required.
+**17 November QoL programme:** The user requests one integrated PR covering the supplied QoL prompt. Initial scope/status and honest verification gaps are tracked in [QOL_PROGRAMME_STATUS](QOL_PROGRAMME_STATUS.md); the full scope below remains required. Current candidate includes chat, calendar, contacts and job-sort slices; source checks pass, integrated API/browser acceptance and most of the complete feature inventory remain pending.
 
 
 ## PR35 private-document acceptance follow-up — 17 November 2026

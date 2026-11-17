@@ -193,6 +193,9 @@ function FilterForm({
               "rate_desc",
               "duration_asc",
               "title",
+              "customer_asc",
+              "topic_de_asc",
+              "topic_en_asc",
             ].map((s) => (
               <option key={s} value={s}>
                 {t(s === "title" ? "titleSort" : s)}

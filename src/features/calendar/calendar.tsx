@@ -55,6 +55,7 @@ import {
 import { globalEventsQuery } from "./publications-api";
 import { GlobalEventDetails, GlobalEventManagement } from "./publications";
 import "./publications-i18n";
+import "./confirmation-i18n";
 /** Validate private-event form input; current server permissions and constraints remain authoritative. */
 const schema = z.object({
   title: z.string().trim().min(1).max(200),
@@ -68,13 +69,17 @@ function EventForm({
   zone,
   event,
   onDone,
+  onBusyChange,
 }: {
   userId: string;
   zone: string;
   event?: PersonalEvent;
   onDone: (deleted?: boolean) => void;
+  onBusyChange: (busy: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const confirmText = useTranslation("calendarConfirmation").t;
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const client = useQueryClient();
   const online = useOnline();
   const [timeError, setTimeError] = useState(false);
@@ -97,6 +102,8 @@ function EventForm({
       : { title: "", starts_at: "", ends_at: "", time_zone: zone },
   });
   const save = useMutation({
+    onMutate: () => onBusyChange(true),
+    onSettled: () => onBusyChange(false),
     mutationFn: async (values: z.infer<typeof schema>) => {
       requireOnline();
       setTimeError(false);
@@ -134,6 +141,8 @@ function EventForm({
     },
   });
   const remove = useMutation({
+    onMutate: () => onBusyChange(true),
+    onSettled: () => onBusyChange(false),
     mutationFn: async () => {
       requireOnline();
       const { data, error } = await db()
@@ -190,7 +199,6 @@ function EventForm({
       {save.isError && (
         <Notice kind="error">{t(timeError ? "invalidTime" : "error")}</Notice>
       )}
-      {remove.isError && <Notice kind="error">{t("error")}</Notice>}
       <div className="form-actions">
         <Button disabled={!online || save.isPending || remove.isPending}>
           {t("saveEvent")}
@@ -200,12 +208,46 @@ function EventForm({
             type="button"
             variant="danger"
             disabled={!online || save.isPending || remove.isPending}
-            onClick={() => remove.mutate()}
+            onClick={() => {
+              remove.reset();
+              setConfirmDelete(true);
+            }}
           >
             {t("deleteEvent")}
           </Button>
         )}
       </div>
+      <Dialog
+        open={confirmDelete}
+        onOpenChange={(next) => {
+          if (!remove.isPending) setConfirmDelete(next);
+        }}
+        title={confirmText("deleteTitle")}
+        description={confirmText("deleteDescription")}
+      >
+        <p>{event?.title}</p>
+        {remove.isError && (
+          <Notice kind="error">{confirmText("deleteFailed")}</Notice>
+        )}
+        <div className="form-actions">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={remove.isPending}
+            onClick={() => setConfirmDelete(false)}
+          >
+            {t("cancel")}
+          </Button>
+          <Button
+            type="button"
+            variant="danger"
+            disabled={!online || remove.isPending}
+            onClick={() => remove.mutate()}
+          >
+            {t("deleteEvent")}
+          </Button>
+        </div>
+      </Dialog>
     </form>
   );
 }
@@ -269,6 +311,7 @@ export function CalendarPage() {
   }, []);
   const activeGlobal = globalRows.find((event) => event.id === globalID);
   const [open, setOpen] = useState(false);
+  const [eventBusy, setEventBusy] = useState(false);
   const [selected, setSelected] = useState<PersonalEvent | undefined>();
   const [message, setMessage] = useState("");
   const online = useOnline();
@@ -519,7 +562,9 @@ export function CalendarPage() {
       )}
       <Dialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(next) => {
+          if (!eventBusy) setOpen(next);
+        }}
         title={t(selected ? "privateEvent" : "addEvent")}
         description={t("eventHelp")}
       >
@@ -528,6 +573,7 @@ export function CalendarPage() {
           userId={session!.user.id}
           zone={zone}
           event={selected}
+          onBusyChange={setEventBusy}
           onDone={(deleted) => {
             setOpen(false);
             setMessage(t(deleted ? "eventDeleted" : "eventSaved"));

@@ -9,7 +9,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Copy, Pencil, SmilePlus, Trash2 } from "lucide-react";
+import { Copy, EyeOff, Pencil, SmilePlus, Trash2 } from "lucide-react";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Field, Notice } from "../../components/common";
@@ -19,6 +19,7 @@ import { chatKeys } from "./api";
 import { MentionPicker } from "./mentions";
 import type { ChatMessage, ChatMention } from "./types";
 import "./i18n";
+import "./hide-message-i18n";
 import { TaskFromMessageAction } from "../workbench/message-action";
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const editSchema = z.object({ body: z.string().max(8000) });
@@ -75,6 +76,7 @@ export function MessageBubble({
     message.content_version ?? 1,
   );
   const [deleting, setDeleting] = useState(false);
+  const [hiding, setHiding] = useState(false);
   const [copyStatus, setCopyStatus] = useState<"success" | "error" | null>(
     null,
   );
@@ -138,6 +140,19 @@ export function MessageBubble({
     onSuccess: async () => {
       await invalidate();
       setDeleting(false);
+    },
+  });
+  const hide = useMutation({
+    mutationFn: async () => {
+      requireOnline();
+      const { error } = await db().rpc("hide_chat_message", {
+        p_message_id: message.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await invalidate();
+      setHiding(false);
     },
   });
   const react = useMutation({
@@ -279,6 +294,18 @@ export function MessageBubble({
                     })}
                   </div>
                 </details>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("hideMessage")}
+                  disabled={!online}
+                  onClick={() => {
+                    hide.reset();
+                    setHiding(true);
+                  }}
+                >
+                  <EyeOff size={15} />
+                </Button>
                 {canEdit && (
                   <Button
                     variant="ghost"
@@ -366,6 +393,29 @@ export function MessageBubble({
             </Notice>
           )}
         </form>
+      </Dialog>
+      <Dialog
+        open={hiding}
+        onOpenChange={setHiding}
+        title={t("hideConfirm")}
+        description={t("hideHint")}
+      >
+        <div className="form-actions">
+          <Button
+            variant="secondary"
+            onClick={() => setHiding(false)}
+            disabled={hide.isPending}
+          >
+            {common("cancel")}
+          </Button>
+          <Button
+            onClick={() => hide.mutate()}
+            disabled={!online || hide.isPending}
+          >
+            {t("hideMessage")}
+          </Button>
+        </div>
+        {hide.isError && <Notice kind="error">{t("actionError")}</Notice>}
       </Dialog>
       <Dialog
         open={deleting}
