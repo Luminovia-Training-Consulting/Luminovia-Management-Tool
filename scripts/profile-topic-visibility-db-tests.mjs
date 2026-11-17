@@ -42,8 +42,12 @@ await withTestDatabase("profile_topic_visibility", async ({ sql, actor }) => {
   assert.ok(entry);
   assert.deepEqual(entry.topics, []);
   assert.equal((await profile(owner)).topics[0].id, topic);
-  assert.deepEqual((await profile(admin)).topics, []);
-  assert.equal((await profile(admin, owner, "aal2")).topics[0].id, topic);
+  assert.equal((await profile(admin)).topics[0].id, topic);
+  assert.deepEqual(
+    (await profile(admin)).topics,
+    (await profile(admin, owner, "aal2")).topics,
+    "Current qualification permission applies equally to password-only and higher-assurance sessions",
+  );
   assert.equal(
     await actor(
       peer,
