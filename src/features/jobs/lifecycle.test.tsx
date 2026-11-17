@@ -72,13 +72,13 @@ const empty: JobLifecycle = {
 };
 const assigned: JobLifecycle = {
   version: 2,
-  can_manage: false,
+  can_manage: true,
   can_edit: false,
   can_duplicate: false,
   claims: [
     {
       id: "claim",
-      lecturer_id: "actor",
+      lecturer_id: "other-lecturer",
       lecturer_name: "Fictional lecturer",
       status: "confirmed",
       can_cancel: true,
@@ -154,7 +154,7 @@ it("honours an explicitly protected budget without falling back to a cached pers
     screen.queryByText(/Maximale Dozierendenvergütung/),
   ).not.toBeInTheDocument();
 });
-it("requires an explicit reason and server confirmation before releasing an own assignment", async () => {
+it("requires an explicit reason and server confirmation before releasing another lecturer’s assignment", async () => {
   const meta = structuredClone(assigned);
   setup(meta, (name) => {
     expect(name).toBe("cancel_job_assignment");
@@ -303,6 +303,16 @@ it("published outsiders receive no peer assignment history or lifecycle manageme
       screen.queryByText("Zuweisung und Auftragsverlauf"),
     ).not.toBeInTheDocument(),
   );
+  expect(
+    screen.queryByRole("button", { name: "Zuweisung stornieren" }),
+  ).not.toBeInTheDocument();
+});
+
+it("routes own withdrawals through the dedicated workflow instead of advertising direct administrative cancellation", async () => {
+  const meta = structuredClone(assigned);
+  meta.claims[0].lecturer_id = "actor";
+  setup(meta);
+  await screen.findByText("Fictional lecturer");
   expect(
     screen.queryByRole("button", { name: "Zuweisung stornieren" }),
   ).not.toBeInTheDocument();

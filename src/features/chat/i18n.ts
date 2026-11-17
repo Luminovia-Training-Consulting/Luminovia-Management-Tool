@@ -172,6 +172,23 @@ const pairs: Record<string, [string, string]> = {
     "Die Mitgliedschaft wurde aktualisiert.",
     "Membership updated.",
   ],
+  resolveOrigin: ["Zugangsgrund klären", "Resolve access basis"],
+  resolveOriginTitle: [
+    "Zugangsgrund für {{name}} festlegen",
+    "Set access basis for {{name}}",
+  ],
+  resolveOriginHint: [
+    "Wähle nur nach Prüfung: Ist der Zugang unabhängig vom Auftrag gewährt, bleibt er auch nach dessen Ende bestehen. Andernfalls hängt er von einem aktuellen Auftrag oder einer Einschreibung ab.",
+    "Choose only after checking: independent access remains after the assignment ends. Otherwise it depends on a current assignment or enrolment.",
+  ],
+  originIndependent: [
+    "Unabhängigen Zugang bestätigen",
+    "Confirm independent access",
+  ],
+  originAssignment: [
+    "Nur Auftrag oder Einschreibung",
+    "Assignment or enrolment only",
+  ],
   groupTitle: ["Neue Gruppe", "New group"],
   groupHint: [
     "Wähle einen Namen und die Personen für eure Unterhaltung.",

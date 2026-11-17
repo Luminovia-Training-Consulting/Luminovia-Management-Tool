@@ -111,7 +111,15 @@ export function EnrolmentManager({ courseRunId }: { courseRunId: string }) {
               {t("update")}
             </Button>
           </form>
-          {mutation.isError && <Notice kind="error">{t("error")}</Notice>}
+          {mutation.isError && (
+            <Notice kind="error">
+              {t(
+                "code" in mutation.error && mutation.error.code === "PZ002"
+                  ? "chatOriginBlocked"
+                  : "error",
+              )}
+            </Notice>
+          )}
           {mutation.isSuccess && <Notice>{t("saved")}</Notice>}
           {!query.data.length ? (
             <p>{t("noEnrolments")}</p>
