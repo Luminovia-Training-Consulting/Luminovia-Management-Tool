@@ -231,7 +231,7 @@ describe("native mobile More navigation", () => {
     ).toBeInTheDocument();
   });
 
-  it("closes on header-search navigation without stealing focus from the search input", async () => {
+  it("returns focus to the visible summary after mobile search navigation", async () => {
     const { user } = setup();
     const summary = screen.getByLabelText("Mehr");
     const menu = summary.closest("details")!;
@@ -245,7 +245,7 @@ describe("native mobile More navigation", () => {
       "/search?q=Fictional%20files",
     );
     await waitFor(() => expect(menu).toHaveProperty("open", false));
-    expect(search).toHaveFocus();
+    expect(summary).toHaveFocus();
     expect(search).toHaveValue("Fictional files");
   });
 
@@ -301,6 +301,9 @@ describe("Royal workspace sidebar preference", () => {
     expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
       "/search?q=Fictional%20files",
     );
+    expect(
+      within(sidebar).getByRole("button", { name: "Stellen durchsuchen" }),
+    ).toHaveFocus();
 
     const summary = screen.getByLabelText("Mehr");
     await user.click(summary);
@@ -309,6 +312,24 @@ describe("Royal workspace sidebar preference", () => {
     expect(
       menu.querySelector(".notification-menu summary"),
     ).toBeInTheDocument();
+  });
+
+  it("returns focus to the collapsed search button when its close control is used", async () => {
+    const { user } = setup();
+    const sidebar = screen.getByRole("complementary");
+    const button = within(sidebar).getByRole("button", {
+      name: "Stellen durchsuchen",
+    });
+    await user.click(button);
+    expect(
+      within(sidebar).getByRole("textbox", { name: "Stellen durchsuchen" }),
+    ).toHaveFocus();
+    await user.click(
+      within(sidebar).getByRole("button", { name: "Schließen" }),
+    );
+    expect(
+      within(sidebar).getByRole("button", { name: "Stellen durchsuchen" }),
+    ).toHaveFocus();
   });
 
   it("shows the collapsed rail toggle hint on keyboard focus", async () => {

@@ -72,6 +72,8 @@ export function Shell() {
   const location = useLocation();
   const mobileMore = useRef<HTMLDetailsElement>(null);
   const sidebarSearchInput = useRef<HTMLInputElement>(null);
+  const sidebarSearchButton = useRef<HTMLButtonElement>(null);
+  const restoreSearchFocus = useRef(false);
   const [railTooltip, setRailTooltip] = useState<{
     label: string;
     top: number;
@@ -115,7 +117,15 @@ export function Shell() {
   const online = useOnline();
   useEffect(() => {
     if (searchOpen && collapsed) sidebarSearchInput.current?.focus();
+    if (!searchOpen && restoreSearchFocus.current) {
+      restoreSearchFocus.current = false;
+      sidebarSearchButton.current?.focus();
+    }
   }, [searchOpen, collapsed]);
+  function closeSidebarSearch() {
+    if (collapsed) restoreSearchFocus.current = true;
+    setSearchOpen(false);
+  }
   function toggleSidebar() {
     setCollapsed((current) => {
       const next = !current;
@@ -300,11 +310,12 @@ export function Shell() {
           onSubmit={(event) => {
             event.preventDefault();
             navigate(`/search?q=${encodeURIComponent(search)}`);
-            setSearchOpen(false);
+            closeSidebarSearch();
           }}
         >
           {collapsed && !searchOpen ? (
             <Button
+              ref={sidebarSearchButton}
               type="button"
               variant="ghost"
               aria-label={t("search")}
@@ -339,7 +350,7 @@ export function Shell() {
                   type="button"
                   className="sidebar-search-close"
                   aria-label={t("close")}
-                  onClick={() => setSearchOpen(false)}
+                  onClick={closeSidebarSearch}
                 >
                   <X size={16} aria-hidden="true" />
                 </button>
@@ -438,6 +449,7 @@ export function Shell() {
                     event.preventDefault();
                     navigate(`/search?q=${encodeURIComponent(search)}`);
                     mobileMore.current?.removeAttribute("open");
+                    mobileMore.current?.querySelector("summary")?.focus();
                   }}
                 >
                   <Search size={18} aria-hidden="true" />

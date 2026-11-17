@@ -73,6 +73,11 @@ export function Dashboard() {
       : "Europe/Berlin";
   return (
     <section className="dashboard-page" aria-label={t("workspace")}>
+      <h1>
+        {t("greeting", {
+          name: profile.data?.display_name.split(" ")[0] || "Luminovia",
+        })}
+      </h1>
       {staff && (
         <div className="dashboard-metrics">
           {[
