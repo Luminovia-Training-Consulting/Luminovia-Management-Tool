@@ -526,7 +526,7 @@ await withTestDatabase("qualification", async ({ sql, actor }) => {
       );
       await save(foreign.v1, 1, randomUUID(), peer);
       await sql(
-        `update public.documents set current_version_id=null where owner_id=${q(peer)};delete from public.document_versions where document_id in(select id from public.documents where owner_id=${q(peer)});delete from public.documents where owner_id=${q(peer)};delete from auth.users where id=${q(peer)}`,
+        `delete from public.notifications where user_id=${q(peer)};update public.documents set current_version_id=null where owner_id=${q(peer)};delete from public.document_versions where document_id in(select id from public.documents where owner_id=${q(peer)});delete from public.documents where owner_id=${q(peer)};delete from auth.users where id=${q(peer)}`,
       );
       assert.equal(
         await sql(

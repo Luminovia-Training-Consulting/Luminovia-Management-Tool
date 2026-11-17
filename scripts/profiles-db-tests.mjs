@@ -188,7 +188,10 @@ try {
       const profile = await rpc(peer, "person_profile", [lecturer]);
       assert.equal(profile.teaching_experience, "Fictional experience");
       assert.equal("phone" in profile, false);
-      assert.deepEqual(await rpc(stranger, "people_directory"), []);
+      await assert.rejects(
+        rpc(stranger, "people_directory"),
+        /Active account required/,
+      );
       await assert.rejects(
         rpc(stranger, "person_profile", [lecturer]),
         /access denied/,
@@ -291,42 +294,31 @@ try {
     },
   );
   await check(
-    "Enrolment changes require manager permission, real participant and completed course",
+    "Retired participant accounts cannot use learner, directory, or review APIs",
     async () => {
-      await assert.rejects(
-        rpc(
-          lecturer,
-          "manage_course_enrolment",
-          [run, student, "completed"],
-          "aal1",
-        ),
-        /required/i,
-      );
-      await rpc(
-        admin,
-        "manage_course_enrolment",
-        [run, student, "enrolled"],
-        "aal1",
-      );
-      await assert.rejects(
-        rpc(admin, "manage_course_enrolment", [run, peer, "enrolled"], "aal1"),
-        /Invalid participant/,
-      );
-      await assert.rejects(
-        rpc(student, "submit_course_review", [run, lecturer, 5, "Too early"]),
-        /Completed enrolment/,
-      );
-    },
-  );
-  await check(
-    "Enrolled participant sees only their own course and its assigned lecturer, no other people",
-    async () => {
+      for (const account of [student, stranger]) {
+        await assert.rejects(
+          rpc(account, "people_directory"),
+          /Active account required/,
+        );
+        await assert.rejects(rpc(account, "profile_courses", [lecturer]));
+        await assert.rejects(rpc(account, "course_enrolments", [run]));
+        await assert.rejects(rpc(account, "reviewable_courses"));
+        await assert.rejects(
+          rpc(account, "submit_course_review", [
+            run,
+            lecturer,
+            5,
+            "Retired role",
+          ]),
+        );
+      }
       assert.equal(
         await actor(
           student,
           `select count(*) from public.course_runs where id='${run}'`,
         ),
-        "1",
+        "0",
       );
       assert.equal(
         await actor(
@@ -335,196 +327,9 @@ try {
         ),
         "0",
       );
-      assert.deepEqual(
-        (await rpc(student, "people_directory")).map((x) => x.id),
-        [lecturer],
-      );
       assert.equal(
-        (await rpc(student, "profile_courses", [lecturer])).length,
-        1,
-      );
-      await assert.rejects(
-        rpc(student, "course_enrolments", [run]),
-        /required/i,
-      );
-      assert.equal(
-        await actor(student, "select count(*) from public.course_enrolments"),
-        "1",
-      );
-    },
-  );
-  await rpc(
-    admin,
-    "manage_course_enrolment",
-    [run, student, "completed"],
-    "aal1",
-  );
-  let review;
-  await check(
-    "Only completed attendance can review its actual lecturer; concurrent create has one winner",
-    async () => {
-      await assert.rejects(
-        rpc(stranger, "submit_course_review", [run, lecturer, 5, "Forged"]),
-        /Completed enrolment/,
-      );
-      await assert.rejects(
-        rpc(student, "submit_course_review", [run, peer, 5, "Wrong lecturer"]),
-        /Completed enrolment/,
-      );
-      await assert.rejects(
-        rpc(student, "submit_course_review", [run, lecturer, 6, "Invalid"]),
-        /Invalid review/,
-      );
-      const results = await Promise.allSettled([
-        rpc(student, "submit_course_review", [
-          run,
-          lecturer,
-          4,
-          "Exact <script>text</script>",
-        ]),
-        rpc(student, "submit_course_review", [run, lecturer, 5, "Racing"]),
-      ]);
-      assert.equal(results.filter((x) => x.status === "fulfilled").length, 1);
-      review = results.find((x) => x.status === "fulfilled").value;
-      assert.equal((await rpc(student, "reviewable_courses")).length, 1);
-      assert.equal(
-        await sql(
-          `select count(*) from public.course_reviews where id='${review}'`,
-        ),
-        "1",
-      );
-    },
-  );
-  await check(
-    "Reviewer identity and table rows stay private; ratings use authorised anonymous projections",
-    async () => {
-      const visible = await rpc(peer, "lecturer_reviews", [lecturer]);
-      assert.equal(visible.length, 1);
-      assert.equal(visible[0].reviewer_id, null);
-      assert.equal(visible[0].reviewer_label, "participant");
-      assert.equal(JSON.stringify(visible).includes("Private Student"), false);
-      assert.equal(
-        await actor(peer, "select count(*) from public.course_reviews"),
+        await sql("select count(*) from public.course_reviews"),
         "0",
-      );
-      assert.equal(
-        await actor(lecturer, "select count(*) from public.course_reviews"),
-        "0",
-      );
-      assert.equal(
-        (await rpc(admin, "lecturer_reviews", [lecturer], "aal1"))[0]
-          .reviewer_id,
-        student,
-      );
-    },
-  );
-  await check(
-    "Optimistic edits reject stale writes and preserve literal authored code",
-    async () => {
-      await rpc(student, "submit_course_review", [
-        run,
-        lecturer,
-        5,
-        "Exact <script>text</script>",
-        1,
-      ]);
-      await assert.rejects(
-        rpc(student, "submit_course_review", [run, lecturer, 1, "Stale", 1]),
-        /review_version_conflict/,
-      );
-      assert.equal(
-        (await rpc(peer, "lecturer_reviews", [lecturer]))[0].comment,
-        "Exact <script>text</script>",
-      );
-    },
-  );
-  await check(
-    "Moderation requires permission/reason and author edits do not unhide a moderated review",
-    async () => {
-      await assert.rejects(
-        rpc(admin, "moderate_course_review", [review, true, ""], "aal1"),
-        /reason required/,
-      );
-      await rpc(
-        admin,
-        "moderate_course_review",
-        [review, true, "Fictional policy reason"],
-        "aal1",
-      );
-      assert.deepEqual(await rpc(peer, "lecturer_reviews", [lecturer]), []);
-      assert.equal(
-        (await rpc(student, "lecturer_reviews", [lecturer]))[0]
-          .moderation_reason,
-        "Fictional policy reason",
-      );
-      await rpc(student, "submit_course_review", [
-        run,
-        lecturer,
-        3,
-        "Edited after moderation",
-        3,
-      ]);
-      assert.deepEqual(await rpc(peer, "lecturer_reviews", [lecturer]), []);
-      await rpc(
-        admin,
-        "moderate_course_review",
-        [review, false, "Restored after review"],
-        "aal1",
-      );
-      assert.equal((await rpc(peer, "lecturer_reviews", [lecturer])).length, 1);
-    },
-  );
-  await check(
-    "Membership revocation immediately removes profile/course reads and further review writes",
-    async () => {
-      await rpc(
-        admin,
-        "manage_course_enrolment",
-        [run, student, "removed"],
-        "aal1",
-      );
-      assert.deepEqual(await rpc(student, "people_directory"), []);
-      assert.equal(
-        await actor(
-          student,
-          `select count(*) from public.course_runs where id='${run}'`,
-        ),
-        "0",
-      );
-      await assert.rejects(
-        rpc(student, "submit_course_review", [run, lecturer, 2, "Revoked", 5]),
-        /Completed enrolment/,
-      );
-      assert.deepEqual(await rpc(peer, "lecturer_reviews", [lecturer]), []);
-      await rpc(
-        admin,
-        "manage_course_enrolment",
-        [run, student, "completed"],
-        "aal1",
-      );
-    },
-  );
-  await check(
-    "Authors can withdraw text using a versioned tombstone and recover through eligible resubmission",
-    async () => {
-      await rpc(student, "delete_course_review", [review, 5]);
-      assert.deepEqual(await rpc(peer, "lecturer_reviews", [lecturer]), []);
-      assert.equal(
-        await sql(
-          `select comment from public.course_reviews where id='${review}'`,
-        ),
-        "",
-      );
-      await rpc(student, "submit_course_review", [
-        run,
-        lecturer,
-        4,
-        "Restored",
-        6,
-      ]);
-      assert.equal(
-        (await rpc(peer, "lecturer_reviews", [lecturer]))[0].rating,
-        4,
       );
     },
   );
@@ -534,7 +339,10 @@ try {
       await sql(
         `update public.profiles set active=false where id='${student}'`,
       );
-      await assert.rejects(rpc(student, "reviewable_courses"), /Active login/);
+      await assert.rejects(
+        rpc(student, "people_directory"),
+        /Active account required/,
+      );
       await assert.rejects(
         rpc(student, "save_profile_details", ["{}"]),
         /Active login/,
