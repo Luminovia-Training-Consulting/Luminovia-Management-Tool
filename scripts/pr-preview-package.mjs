@@ -151,7 +151,7 @@ Stop while keeping your fictional local data:
 The launcher installs locked dependencies, starts a separate local backend and
 captures fictional email in Mailpit. No connection to cms.luminovia.org is needed.
 Do not copy production credentials or real personal records into this preview.
-Details: portal/docs/LOCAL_DEVELOPMENT.md and portal/docs/PR_PREVIEWS.md.
+Details: portal/DEVELOPMENT.md.
 `,
   );
   return manifest;

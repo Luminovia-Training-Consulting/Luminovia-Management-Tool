@@ -1,5 +1,11 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — continued integration after documentation consolidation
+
+Integrated current `main` through `cc6218e` with a normal merge. The accepted documentation consolidation remains in place; the user-required `docs/WORKLOG.md`, `docs/IMPLEMENTATION_PLAN.md`, and verbatim product prompt are retained, alongside the QoL prompt, status, and feature matrix. The documentation regression test now permits only these six required records under `docs/` and continues to check root documentation and generated API paths. The 13 programme migrations were forward-renumbered to `20261117130001`–`20261117130013` after accepted `20261117120001_contract_owner_access.sql`; SQL bodies were preserved.
+
+An isolated networkless PostgreSQL replay of the integrated migrations and the focused contract privacy, personal restore, job navigation, chat reply/unread, participant-origin deletion, wiki attachment, API grants, and permanent deletion suites completed successfully. The API reference was generated from 293 migrated public functions. These results do not establish current-head browser/native acceptance. PR #47 remains draft and the full prompt inventory remains incomplete; group invitations and substantial other items are still being implemented. Do not mark complete or ready until exact-head unit, integration, browser/PWA and security checks pass and the matrix gaps are resolved.
+
 ## 17 November 2026 — further everyday workflows (integration pending)
 
 Implemented private calendar draft confirmation (dialog, internal links, beforeunload; browser history/programmatic SPA navigation remains unguarded), forum quoting from a fresh authorised post, message replies with current membership/version rechecks, and per-member unread markers with a separately protected read cursor. Independent review reproduced and corrected a stale composer preview; targeted component and isolated SQL race tests passed. Test specs exist for real browsers but are not yet accepted on this source.

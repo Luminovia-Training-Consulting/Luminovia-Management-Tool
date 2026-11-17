@@ -153,7 +153,7 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
       ),
     ).toBe(true);
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-quiet-hours.png`,
+      path: `.local/screenshots/${testInfo.project.name}-quiet-hours.png`,
       fullPage: true,
     });
     const receipt = page

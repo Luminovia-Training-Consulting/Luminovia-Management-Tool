@@ -9,7 +9,7 @@ body:
         Thanks for reporting a problem. First check whether a matching issue already exists.
         Use fictional or redacted examples only. Do not post passwords, tokens, MFA codes,
         private documents or personal customer data.
-        Report security vulnerabilities through the [private channel in the issue guide](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/ISSUE_GUIDE.md#reporting-security-vulnerabilities).
+        Report security vulnerabilities through the [private channel in the issue guide](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/DEVELOPMENT.md#section-issue-guide-reporting-security-vulnerabilities).
   - type: input
     id: revision
     attributes:

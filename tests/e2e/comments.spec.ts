@@ -176,7 +176,7 @@ test("job comments persist, stay literal, support own edits and reasoned MFA mod
       })),
     ).toEqual([]);
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-job-comments.png`,
+      path: `.local/screenshots/${testInfo.project.name}-job-comments.png`,
       fullPage: true,
     });
   } finally {

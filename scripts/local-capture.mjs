@@ -12,7 +12,7 @@ if (!["127.0.0.1", "localhost", "[::1]"].includes(new URL(baseURL).hostname)) {
     "Local screenshot capture only permits loopback frontend URLs.",
   );
 }
-mkdirSync("docs/screenshots", { recursive: true });
+mkdirSync(".local/screenshots", { recursive: true });
 const browser = await chromium.launch();
 try {
   for (const [name, device] of [
@@ -24,7 +24,7 @@ try {
     await page.goto("/login");
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({
-      path: `docs/screenshots/${name}-login.png`,
+      path: `.local/screenshots/${name}-login.png`,
       fullPage: true,
     });
     await page
@@ -43,7 +43,7 @@ try {
       .waitFor();
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({
-      path: `docs/screenshots/${name}-dashboard.png`,
+      path: `.local/screenshots/${name}-dashboard.png`,
       fullPage: true,
     });
     await page.goto("/jobs");
@@ -57,7 +57,7 @@ try {
       })
       .waitFor();
     await page.screenshot({
-      path: `docs/screenshots/${name}-jobs.png`,
+      path: `.local/screenshots/${name}-jobs.png`,
       fullPage: true,
     });
     await page.goto("/calendar");
@@ -66,7 +66,7 @@ try {
       .waitFor();
     await page.locator(".fc").waitFor();
     await page.screenshot({
-      path: `docs/screenshots/${name}-calendar.png`,
+      path: `.local/screenshots/${name}-calendar.png`,
       fullPage: true,
     });
     await page.goto("/profile");
@@ -86,7 +86,7 @@ try {
       );
     });
     await page.screenshot({
-      path: `docs/screenshots/${name}-profile-dark-en.png`,
+      path: `.local/screenshots/${name}-profile-dark-en.png`,
       fullPage: true,
     });
     await context.close();

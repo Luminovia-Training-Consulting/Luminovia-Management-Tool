@@ -20,6 +20,13 @@ const rootDocuments = new Set([
   "SECURITY.md",
   "CHANGELOG.md",
   "ROADMAP.md",
+  "PRODUCT.md",
+  "PRODUCT_BRIEF.txt",
+  "OPERATIONS_BRIEF.txt",
+  "DEVELOPMENT.md",
+  "OPERATIONS.md",
+  "GUIDE.md",
+  "API_REFERENCE.md",
   "LICENSE",
 ]);
 

@@ -147,7 +147,7 @@ test("real private upload is scanned, downloaded, versioned and archived through
     })),
   ).toEqual([]);
   await page.screenshot({
-    path: `docs/screenshots/${testInfo.project.name}-files.png`,
+    path: `.local/screenshots/${testInfo.project.name}-files.png`,
     fullPage: true,
   });
   const renamedRow = page

@@ -255,7 +255,7 @@ test("real private DM persists, delivers realtime, edits/deletes safely and deni
     expect(denied.error).toBeTruthy();
     await a11y(receiver);
     await receiver.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-chat.png`,
+      path: `.local/screenshots/${testInfo.project.name}-chat.png`,
       fullPage: true,
     });
   } finally {

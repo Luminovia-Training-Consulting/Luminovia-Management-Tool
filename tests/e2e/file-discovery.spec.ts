@@ -132,7 +132,7 @@ test("file discovery pages, scans, privately organises and downloads unchanged b
       ),
     ).toBe(true);
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-file-discovery.png`,
+      path: `.local/screenshots/${testInfo.project.name}-file-discovery.png`,
       fullPage: true,
     });
     peerContext = await browser.newContext({ viewport: page.viewportSize() });

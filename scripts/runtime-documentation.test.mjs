@@ -44,6 +44,11 @@ test("repository documentation links and heading fragments resolve", async () =>
     "CONTRIBUTING.md",
     "SECURITY.md",
     "ROADMAP.md",
+    "PRODUCT.md",
+    "DEVELOPMENT.md",
+    "OPERATIONS.md",
+    "GUIDE.md",
+    "API_REFERENCE.md",
   ];
   /** Collects delivered Markdown documents recursively for local link validation. */
   async function walk(directory) {
@@ -53,7 +58,6 @@ test("repository documentation links and heading fragments resolve", async () =>
       else if (item.name.endsWith(".md")) files.push(path);
     }
   }
-  await walk("docs");
   await walk(".github");
   const broken = [];
   let links = 0;
@@ -133,6 +137,11 @@ test("public guidance and current catalogue contain no historical customer ident
     "SECURITY.md",
     "data/course-building-blocks.json",
     "ROADMAP.md",
+    "PRODUCT.md",
+    "DEVELOPMENT.md",
+    "OPERATIONS.md",
+    "GUIDE.md",
+    "API_REFERENCE.md",
   ];
   async function collect(directory) {
     for (const item of await readdir(directory, { withFileTypes: true })) {
@@ -141,7 +150,6 @@ test("public guidance and current catalogue contain no historical customer ident
       else if (/\.(?:md|txt)$/.test(item.name)) files.push(path);
     }
   }
-  await collect("docs");
   await collect(".github");
   const leaks = [];
   for (const file of files) {
@@ -159,4 +167,26 @@ test("public guidance and current catalogue contain no historical customer ident
     [],
     "Public customer-independent content must exclude historical customer labels",
   );
+});
+
+// The programme's governing AGENTS instructions require these durable source
+// records. Keep the consolidated product docs at the root and permit only the
+// specifically required records beneath docs/.
+test("documentation keeps only the required project records under docs", async () => {
+  const requiredRecords = new Set([
+    "IMPLEMENTATION_PLAN.md",
+    "QOL_FEATURE_MATRIX.md",
+    "QOL_MASTER_PROMPT.txt",
+    "QOL_PROGRAMME_STATUS.md",
+    "UNIVERSAL_MASTER_PROMPT.txt",
+    "WORKLOG.md",
+  ]);
+  const deliveredRecords = (await readdir("docs")).sort();
+  assert.deepEqual(deliveredRecords, [...requiredRecords].sort());
+  const generator = await readFile("scripts/generate-api-reference.mjs", "utf8");
+  const runner = await readFile("scripts/runtime-test.mjs", "utf8");
+  assert.match(generator, /"API_REFERENCE\.md"/);
+  assert.doesNotMatch(generator, /docs\/API_REFERENCE\.md/);
+  assert.match(runner, /\.local\/screenshots/);
+  assert.doesNotMatch(runner, /docs\/screenshots/);
 });

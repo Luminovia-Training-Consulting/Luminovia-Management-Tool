@@ -1,6 +1,15 @@
 # Persistent implementation plan
 
-**17 November QoL programme:** The user requests one integrated PR covering the supplied QoL prompt. Initial scope/status and honest verification gaps are tracked in [QOL_PROGRAMME_STATUS](QOL_PROGRAMME_STATUS.md); the full scope below remains required. Current candidate includes chat, calendar, contacts and job-sort slices; source checks pass, integrated API/browser acceptance and most of the complete feature inventory remain pending.
+**17 November QoL programme:** The user requests one integrated PR covering the supplied QoL prompt. Scope/status and gaps are tracked in [QOL_PROGRAMME_STATUS](QOL_PROGRAMME_STATUS.md), and every prompt criterion is enumerated in [QOL_FEATURE_MATRIX](QOL_FEATURE_MATRIX.md). The programme remains incomplete. The current branch has chat, calendar, contacts, wiki, restore and job-navigation slices; an integrated SQL replay passed, while exact-head full CI, browser/PWA/native acceptance and substantial feature inventory remain open. Preserve the full requested scope and report incomplete criteria honestly.
+
+## QoL continuation after current main integration — 17 November 2026
+
+- [x] Merge current `main` through `cc6218e` normally; retain the consolidated root documentation and the user-required project ledgers and verbatim prompt under `docs/`.
+- [x] Place the 13 programme migrations after the accepted contract-owner migration without changing their SQL bodies.
+- [x] Pass the integrated networkless migration replay and focused SQL suites for privacy, restore, navigation, chat replies/unread, membership origin, wiki attachments, API grants and deletion; regenerate the API reference from 293 migrated functions.
+- [ ] Implement all remaining QoL prompt criteria; use the feature matrix to track each criterion and its actual evidence.
+- [ ] Pass exact-current-head unit/source checks, complete database/API integration, desktop/mobile browser and PWA acceptance, security checks and required CI. Prior source snapshots are not evidence for the final head.
+- [ ] Keep the draft PR open and user-owned. No production deployment, real mail, production data changes, or PR merge is included.
 
 
 ## PR35 private-document acceptance follow-up — 17 November 2026

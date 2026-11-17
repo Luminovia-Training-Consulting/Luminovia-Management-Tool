@@ -90,7 +90,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
   ).toHaveCSS("border-top-width", "5px");
   await a11y(page);
   await page.screenshot({
-    path: `docs/screenshots/${testInfo.project.name}-course-building-blocks-catalogue-dark-en.png`,
+    path: `.local/screenshots/${testInfo.project.name}-course-building-blocks-catalogue-dark-en.png`,
     fullPage: true,
   });
   await page.getByLabel("Language", { exact: true }).selectOption("de");
@@ -121,7 +121,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
   await expect(sourceDialog.getByText(note, { exact: true })).toBeVisible();
   await a11y(page);
   await page.screenshot({
-    path: `docs/screenshots/${testInfo.project.name}-course-building-blocks-source-reference.png`,
+    path: `.local/screenshots/${testInfo.project.name}-course-building-blocks-source-reference.png`,
     fullPage: true,
   });
   await sourceDialog
@@ -256,7 +256,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
     expect(claims[0].assignment_sessions).toHaveLength(10);
     await a11y(lecturerPage);
     await lecturerPage.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-course-building-blocks-linked-job.png`,
+      path: `.local/screenshots/${testInfo.project.name}-course-building-blocks-linked-job.png`,
       fullPage: true,
     });
   } finally {

@@ -122,7 +122,7 @@ test("MFA administrator filters and pages a redacted real audit trail; other rol
     await page.getByLabel("Theme", { exact: true }).selectOption("dark");
     await accessible(page);
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-admin-audit.png`,
+      path: `.local/screenshots/${testInfo.project.name}-admin-audit.png`,
       fullPage: true,
     });
     readerContext = await browser.newContext();
