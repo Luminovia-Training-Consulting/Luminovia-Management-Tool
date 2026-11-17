@@ -6,6 +6,7 @@
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import {
+  applyPasswordOnlyPermissionPolicy,
   withMigrationReplayLock,
   withTestDatabase,
 } from "./testing/database.mjs";
@@ -52,6 +53,7 @@ await withTestDatabase(
       ),
     );
     await fixture.sql(support);
+    await applyPasswordOnlyPermissionPolicy(fixture.sql);
     await runSupportCourseAbsenceChecks(fixture);
   },
   { migrationsThrough: courseAbsentThrough },
@@ -90,6 +92,7 @@ await withTestDatabase(
           ),
         );
     });
+    await applyPasswordOnlyPermissionPolicy(fixture.sql);
     await runSupportCourseRegistryChecks(fixture, {
       label: exists
         ? "current installed course RPCs"
