@@ -49,6 +49,7 @@ import {
 import { contentIsValid, documentText, emptyDocument } from "./content";
 import type { ForumPost, ForumThread, KnowledgeCategory } from "./types";
 import { KnowledgeEditor } from "./editor";
+import { ForumMetadataEditor } from "./forum-metadata";
 import { CategoryManager } from "./categories";
 import "./i18n";
 import "./knowledge.css";
@@ -703,6 +704,10 @@ function ForumThreadView({
           {t("replies", { count: Number(value.post_count) })}
         </p>
         <div className="forum-thread-controls">
+          {(canModerate ||
+            (value.owner_id === actor && !value.locked && !value.archived)) && (
+            <ForumMetadataEditor actor={actor} thread={value} />
+          )}
           <Button
             variant="secondary"
             size="sm"

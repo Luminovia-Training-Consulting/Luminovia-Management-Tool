@@ -6,7 +6,7 @@
 
 - [x] Merge current `main` through `cc6218e` normally; retain the consolidated root documentation and the user-required project ledgers and verbatim prompt under `docs/`.
 - [x] Place the 13 programme migrations after the accepted contract-owner migration without changing their SQL bodies.
-- [x] Pass the integrated networkless migration replay and focused SQL suites for privacy, restore, navigation, chat replies/unread, membership origin, wiki attachments, API grants and deletion; regenerate the API reference from 302 migrated functions after adding topic invitations, personal archiving and message pins.
+- [x] Pass the integrated networkless migration replay and focused SQL suites for privacy, restore, navigation, chat replies/unread, membership origin, wiki attachments, API grants and deletion; regenerate the API reference from 303 migrated functions after adding topic invitations, personal archiving, message pins and forum thread metadata.
 - [ ] Implement all remaining QoL prompt criteria; use the feature matrix to track each criterion and its actual evidence.
 - [ ] Pass exact-current-head unit/source checks, complete database/API integration, desktop/mobile browser and PWA acceptance, security checks and required CI. Prior source snapshots are not evidence for the final head.
 - [ ] Keep the draft PR open and user-owned. No production deployment, real mail, production data changes, or PR merge is included.
@@ -30,6 +30,11 @@
 - [x] Pass 3 isolated PostgreSQL groups, 16 focused component/thread/Realtime tests, and full `./portal check` (823 unit tests, source checks, build and PWA); regenerate the API reference from 92 migrations/302 public functions.
 - [ ] Run the new desktop/mobile E2E and full current-head API/browser/selfhost acceptance. Other room kinds remain outside this slice.
 
+### Forum thread metadata — 17 November 2026
+
+- [x] Add owner title/category editing and MFA-qualified moderator edits, with optimistic-concurrency checks that preserve drafts on conflict.
+- [x] Pass two component cases and isolated PostgreSQL authorization, validation, race and state-preservation checks; regenerate the API reference from 93 migrations/303 public functions.
+- [ ] Run actual desktop/mobile browser acceptance and integrated full-head checks. Existing creation, replies, subscriptions, moderation, attachments and search still require complete prompt-wide acceptance.
 
 ## PR35 private-document acceptance follow-up — 17 November 2026
 
@@ -94,6 +99,7 @@ PR 35 review corrected the administrator-wide private-document deletion bypass; 
 - [x] Track new assignment-derived and explicit participant-room membership without guessing legacy provenance; fail closed and provide an authorized explicit resolution.
 - [x] Preserve independently authorized membership and active additional course claims or enrolments; re-evaluate enrolment removal and both handover paths.
 - [ ] Complete independent security review and exact-head CI, including native Auth and browser acceptance; do not infer hosted migration or production readiness.
+
 ## PR35 private-document acceptance follow-up — 17 November 2026
 
 - [x] Trace both current exact-head CI failures to the stale native fixture: an administrator attempted to preview another actor's private personal document after the accepted migration removed that bypass.
@@ -159,7 +165,7 @@ The complete target and all unrelated pending work remain below.
 - [x] Pass complete canonical local acceptance on signed67b749d:29native API suites,116application+2PWA browsers, all SQL/source checks and actual cleanup. Keep this evidence source-bound.
 - [x] Close remaining company history/earnings/calendar/raw-RLS paths and pass8expanded SQL groups; improve reviewed impact clarity and pass23focused deletion cases.
 - [ ] Verify the final follow-up with native company deletion/revocation and new screenshots; integrate only actual accepted main and replay the final migration order before current required CI and the authorised PR35 merge.
-PR40 browser acceptance repair: single shared preferences and visible mobile sign-out are implemented; 25 focused component tests, TypeScript and ESLint pass locally. The complete exact-head GitHub/browser/native gates remain pending.
+      PR40 browser acceptance repair: single shared preferences and visible mobile sign-out are implemented; 25 focused component tests, TypeScript and ESLint pass locally. The complete exact-head GitHub/browser/native gates remain pending.
 
 ## PR31 after accepted documentation main — 17 November 2026
 

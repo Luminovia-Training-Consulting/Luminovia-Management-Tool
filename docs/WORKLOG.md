@@ -1,5 +1,11 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — forum metadata and API fixture repair
+
+Added `20261117130017_forum_thread_metadata.sql` and bilingual owner controls for editing a discussion title/category. MFA-qualified moderators can also edit locked topics. Version checks reject stale writes while preserving the user's draft; accepted answers, posts and subscriptions remain unchanged. Two component tests and the isolated PostgreSQL authorization, validation, locked-topic, concurrent-update, suspension and preservation checks passed. The desktop/mobile Playwright case is authored/discovered but not executed.
+
+`./portal check` on this source passes 825 tests across 115 files, typecheck, lint, format, code-quality checks, production build and PWA generation. The generated API reference now reflects 93 migrations and 303 public functions. A prior full `./portal test` reached real SQL/API integration and exposed an API fixture cleanup ordering defect: message revisions referenced the fixture messages. Cleanup now removes fixture notifications and revisions before deleting its messages; syntax and formatting checks passed, but the exact full command has not yet been rerun. A different checkout's service on port 55321 remains untouched. PR #47 remains one draft PR; the feature inventory and exact-head browser, PWA, selfhost and security acceptance remain incomplete.
+
 ## 17 November 2026 — continued integration after documentation consolidation
 
 Integrated current `main` through `cc6218e` with a normal merge. The accepted documentation consolidation remains in place; the user-required `docs/WORKLOG.md`, `docs/IMPLEMENTATION_PLAN.md`, and verbatim product prompt are retained, alongside the QoL prompt, status, and feature matrix. The documentation regression test now permits only these six required records under `docs/` and continues to check root documentation and generated API paths. The 13 programme migrations were forward-renumbered to `20261117130001`–`20261117130013` after accepted `20261117120001_contract_owner_access.sql`; SQL bodies were preserved.
@@ -135,7 +141,6 @@ The same CI run exposed a second, intermittent system failure: protected-account
 ## 17 November 2026 — PR19 native Auth failure diagnosis
 
 The current selfhost CI run passed retained-data upgrade and 34 real API suites, then GoTrue returned HTTP 500 while creating a fictional qualification-passport actor. The prior cleanup removed the candidate containers without recording the underlying service error. The candidate checker now collects at most 20 bounded, redacted error lines from its own Auth and PostgreSQL containers before cleanup on failure; no gate or retry behavior changes. Twenty-five focused checker tests and formatting pass locally. The exact new-head full CI is pending; the root cause is not yet asserted.
-
 
 ## 17 November 2026 — post-upload discovery race
 

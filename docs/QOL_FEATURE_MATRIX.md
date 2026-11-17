@@ -290,7 +290,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | DOCUMENTS, WIKI AND FORUM / Wiki | Permissions | Not yet assessed | Pending |
 | DOCUMENTS, WIKI AND FORUM / Wiki | Archiving | Partial | `src/features/knowledge/wiki.tsx`; `src/features/knowledge/api.ts`. |
 | DOCUMENTS, WIKI AND FORUM / Forum | Create discussion | Partial | `src/features/knowledge/forum.tsx`; server RPC and role details require full acceptance. |
-| DOCUMENTS, WIKI AND FORUM / Forum | Edit own discussion | Not yet assessed | Pending |
+| DOCUMENTS, WIKI AND FORUM / Forum | Edit own discussion | Partial; component and isolated database tests passed | Owners can edit title/category with version conflicts; MFA moderators can edit locked discussions. Browser test prepared, not yet run. |
 | DOCUMENTS, WIKI AND FORUM / Forum | Reply | Partial | `src/features/knowledge/forum.tsx`; server RPC and role details require full acceptance. |
 | DOCUMENTS, WIKI AND FORUM / Forum | Quote | Partial; component tests passed | `src/features/knowledge/forum.tsx`; isolated browser test prepared but not run. |
 | DOCUMENTS, WIKI AND FORUM / Forum | Subscribe | Partial | `src/features/knowledge/forum.tsx`; server RPC and role details require full acceptance. |

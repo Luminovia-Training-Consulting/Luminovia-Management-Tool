@@ -57,6 +57,7 @@ export interface ForumThread {
   locked: boolean;
   pinned: boolean;
   archived: boolean;
+  metadata_version?: number;
   accepted_post_id: string | null;
   post_count: number;
   subscribed: boolean;
