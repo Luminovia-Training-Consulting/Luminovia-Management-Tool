@@ -95,7 +95,7 @@ function allows(condition, github, inputs = {}, needs = {}) {
   );
 }
 
-test("PR checks are bounded while main/manual retains complete acceptance", () => {
+test("Draft checks are bounded while ready events and main/manual retain complete acceptance", () => {
   const ci = workflow("ci");
   assert.deepEqual(Object.keys(ci.on).sort(), [
     "pull_request",
@@ -103,6 +103,13 @@ test("PR checks are bounded while main/manual retains complete acceptance", () =
     "workflow_dispatch",
   ]);
   assert.deepEqual(ci.on.push.branches, ["main"]);
+  for (const action of [
+    "opened",
+    "synchronize",
+    "reopened",
+    "ready_for_review",
+  ])
+    assert.ok(ci.on.pull_request.types.includes(action));
   assert.equal(ci.permissions.contents, "read");
   assert.deepEqual(
     ci.jobs.quality.strategy.matrix.include.map((item) => item.name),
@@ -130,12 +137,17 @@ test("PR checks are bounded while main/manual retains complete acceptance", () =
     /else\s+node scripts\/runtime-test\.mjs --phase all --external-gates quality,coverage\s+fi/,
   );
   const browserJob = ci.jobs["verify-browser"];
+  assert.equal(browserJob.name, "Isolated browser acceptance");
   assert.equal(browserJob.needs, "scope");
   assert.equal(
     browserJob.if,
     "always() && !cancelled() && github.event_name == 'pull_request'",
   );
   const browser = browserJob.steps.find((step) => step.id === "browser");
+  assert.equal(
+    browser.name,
+    "Complete isolated desktop, mobile and built-PWA acceptance",
+  );
   assert.equal(browser.run, "node scripts/runtime-test.mjs --phase browser");
   assert.equal(browser.if, "needs.scope.outputs.profile == 'full'");
   const guards = ci.jobs.verify.steps.find(
@@ -150,7 +162,7 @@ test("PR checks are bounded while main/manual retains complete acceptance", () =
   const baseline = ci.jobs["verify-selfhost"].steps.find((step) =>
     step.run?.includes("git archive HEAD^"),
   );
-  // Risky PRs/main/manual run both complete suites; only proven UI/docs PRs
+  // Ready/risky PRs/main/manual run both complete suites; proven Draft UI/docs
   // take faster paths. SQL shards still exercise the new runner on a risky PR.
   for (const [event_name, profile] of [
     ["pull_request", "docs"],
@@ -176,6 +188,11 @@ test("PR checks are bounded while main/manual retains complete acceptance", () =
     assert.equal(scopeCheck.env.SCOPE_RESULT, "${{ needs.scope.result }}");
     assert.equal(scopeCheck.env.PROFILE, "${{ needs.scope.outputs.profile }}");
     assert.equal(scopeCheck.env.EVENT_NAME, "${{ github.event_name }}");
+    assert.equal(
+      scopeCheck.env.PR_DRAFT,
+      "${{ github.event.pull_request.draft }}",
+    );
+    assert.equal(scopeCheck.env.PR_ACTION, "${{ github.event.action }}");
     assert.match(
       scopeCheck.run,
       /if test "\$EVENT_NAME" != pull_request; then test "\$PROFILE" = full; fi/,
@@ -186,6 +203,11 @@ test("PR checks are bounded while main/manual retains complete acceptance", () =
       /case "\$PROFILE" in docs\|standard\|full\) ;; \*\) exit 1 ;; esac/,
     );
   }
+  assert.equal(
+    browserJob.steps[0].env.PR_DRAFT,
+    "${{ github.event.pull_request.draft }}",
+  );
+  assert.equal(browserJob.steps[0].env.PR_ACTION, "${{ github.event.action }}");
   assert.equal(
     ci.jobs["preview-package"].if,
     "always() && github.event_name == 'pull_request'",
@@ -371,26 +393,41 @@ test("PR deployment metadata is manual and runs only trusted main metadata code"
   assert.equal(commands[0].run, "node scripts/pr-preview-deployments.mjs");
 });
 
-// Exercise the maintained shell gate: a fast main/manual classification must
+// Exercise the maintained shell gate: a fast ready/main/manual classification must
 // independently fail even if a future classifier regresses.
-test("scope shell preflight fails closed for bad scope and fast non-PR profiles", () => {
+test("scope shell preflight rejects fast ready profiles and accepts only explicit Draft fast paths", () => {
   for (const job of [
     workflow("ci").jobs.verify,
     workflow("ci").jobs["verify-selfhost"],
+    workflow("ci").jobs["verify-browser"],
   ]) {
     const preflight = job.steps[0].run;
-    for (const [event, profile, result, allowed] of [
-      ["pull_request", "docs", "success", true],
-      ["pull_request", "standard", "success", true],
-      ["pull_request", "full", "success", true],
-      ["push", "full", "success", true],
-      ["workflow_dispatch", "full", "success", true],
-      ["push", "standard", "success", false],
-      ["workflow_dispatch", "docs", "success", false],
-      ["pull_request", "full", "failure", false],
-      ["pull_request", "full", "skipped", false],
-      ["pull_request", "", "success", false],
-      ["pull_request", "unknown", "success", false],
+    for (const [event, profile, result, draft, action, allowed] of [
+      ["pull_request", "docs", "success", "true", "synchronize", true],
+      ["pull_request", "standard", "success", "true", "opened", true],
+      ["pull_request", "full", "success", "false", "synchronize", true],
+      ["pull_request", "full", "success", "false", "ready_for_review", true],
+      ["pull_request", "docs", "success", "false", "synchronize", false],
+      ["pull_request", "standard", "success", "false", "synchronize", false],
+      ["pull_request", "docs", "success", "true", "ready_for_review", false],
+      [
+        "pull_request",
+        "standard",
+        "success",
+        "true",
+        "ready_for_review",
+        false,
+      ],
+      ["pull_request", "docs", "success", "", "synchronize", false],
+      ["pull_request", "standard", "success", "TRUE", "synchronize", false],
+      ["push", "full", "success", "", "", true],
+      ["workflow_dispatch", "full", "success", "", "", true],
+      ["push", "standard", "success", "", "", false],
+      ["workflow_dispatch", "docs", "success", "", "", false],
+      ["pull_request", "full", "failure", "true", "synchronize", false],
+      ["pull_request", "full", "skipped", "true", "synchronize", false],
+      ["pull_request", "", "success", "true", "synchronize", false],
+      ["pull_request", "unknown", "success", "true", "synchronize", false],
     ]) {
       const execution = spawnSync(
         "bash",
@@ -401,6 +438,8 @@ test("scope shell preflight fails closed for bad scope and fast non-PR profiles"
             EVENT_NAME: event,
             PROFILE: profile,
             SCOPE_RESULT: result,
+            PR_DRAFT: draft,
+            PR_ACTION: action,
           },
           timeout: 1000,
           encoding: "utf8",
@@ -409,8 +448,10 @@ test("scope shell preflight fails closed for bad scope and fast non-PR profiles"
       assert.ifError(execution.error);
       assert.equal(
         execution.status === 0,
-        allowed,
-        `${event}/${profile}/${result}`,
+        job.name === "Isolated browser acceptance" && event !== "pull_request"
+          ? false
+          : allowed,
+        `${event}/${profile}/${result}/${draft}/${action}`,
       );
     }
   }
@@ -460,26 +501,36 @@ test("browser scope preflight accepts only an exact successful PR profile", () =
     ["pull_request", "full", "cancelled", false],
     ["pull_request", "", "success", false],
     ["pull_request", "unknown", "success", false],
-  ]) {
-    const result = spawnSync(
-      "bash",
-      ["-e", "-u", "-o", "pipefail", "-c", preflight],
-      {
-        env: {
-          PATH: process.env.PATH,
-          EVENT_NAME: event,
-          PROFILE: profile,
-          SCOPE_RESULT: scopeResult,
+  ])
+    for (const [draft, action] of [
+      ["true", "synchronize"],
+      ["false", "synchronize"],
+      ["true", "ready_for_review"],
+      ["", ""],
+    ]) {
+      const result = spawnSync(
+        "bash",
+        ["-e", "-u", "-o", "pipefail", "-c", preflight],
+        {
+          env: {
+            PATH: process.env.PATH,
+            EVENT_NAME: event,
+            PROFILE: profile,
+            SCOPE_RESULT: scopeResult,
+            PR_DRAFT: draft,
+            PR_ACTION: action,
+          },
+          timeout: 1000,
+          encoding: "utf8",
         },
-        timeout: 1000,
-        encoding: "utf8",
-      },
-    );
-    assert.ifError(result.error);
-    assert.equal(
-      result.status === 0,
-      allowed,
-      `${event}/${profile}/${scopeResult}`,
-    );
-  }
+      );
+      assert.ifError(result.error);
+      assert.equal(
+        result.status === 0,
+        allowed &&
+          (profile === "full" ||
+            (draft === "true" && action !== "ready_for_review")),
+        `${event}/${profile}/${scopeResult}/${draft}/${action}`,
+      );
+    }
 });
