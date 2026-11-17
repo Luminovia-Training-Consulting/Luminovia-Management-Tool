@@ -59,6 +59,6 @@ A merge does not publish a PR deployment record. An exact-current-main push can 
 
 ## Licensing and collaboration
 
-Contributions use the repository's [GNU GPLv3 license](LICENSE). Preserve bundled font, upstream and brand notices. Explain technical disagreements plainly and respond respectfully. Published tags identify immutable revisions; do not move or replace them. Milestone tags and local preview packages do not certify production readiness.
+Contributions use the repository's current [GNU GPLv3 license](LICENSE), including the commercial-use rights that license grants. A pull request does not transfer an author's exclusive rights to Luminovia or grant the contributor a separate proprietary-use license. A future proprietary release would require separate written rights from each affected external contributor; the [transition status](docs/RELICENSING_STATUS.md) and proposed agreement are drafts, not current licensing terms. Preserve bundled font, upstream and brand notices. Explain technical disagreements plainly and respond respectfully. Published tags identify immutable revisions; do not move or replace them. Milestone tags and local preview packages do not certify production readiness.
 
 The [contributor list](CONTRIBUTORS.md) is a dated verified attribution snapshot; its linked GitHub graph is the current contribution record. Author-name variants are not separate team members. Attribution grants no repository permission or review authority. Use the existing [roadmap](ROADMAP.md) and feature guides to choose useful work.

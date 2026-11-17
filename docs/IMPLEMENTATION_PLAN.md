@@ -1,11 +1,11 @@
 # Persistent implementation plan
 
-## Direct-main CI repair — 18 November 2026
+## Proposed proprietary license — rights clearance pending (18 November 2026)
 
-- [x] Push current expertise, job capacity-token, current guest-role concurrency fixture and admin handover-permission expectations directly to `main` (`cb4570d3`, `e0c2f3c4`). The local capacity SQL suite passed 8/8; the hosted exact-head run later passed job discovery 9/9.
-- [x] Correct the password-only service pre-request boundary with forward migrations and remove MFA wording from active database denial messages without restoring any factor gate.
-- [ ] Rerun focused local PostgreSQL and native Auth/API checks, regenerate the migration-counted API inventory, then complete full isolated system/browser acceptance and inspect current-head `Portal checks` to completion.
-- [ ] Do not report CI green until `verify` and the retained-data self-host candidate pass on the same `main` SHA. Previous current-head fast gates (format, typecheck, lint, build, unit/coverage, code quality and scope) passed; full verification exposed stale permission text and a service-role helper ACL issue now under repair.
+- [x] Check current GPLv3 license, contributor history and separate bundled asset/upstream notices.
+- [x] Draft source-available proprietary terms and a separate external-contributor rights agreement; mark both non-effective while current rights remain unresolved.
+- [ ] Obtain the external author's express written proprietary relicensing permission or independently replace their merged work, verify the actual legal licensor and applicable law, and review the final texts professionally before changing root `LICENSE` or describing the current code as solely proprietary.
+- [ ] After clearance, update root license, README, contribution terms and release notices together. Existing GPL grants for prior copies remain effective.
 
 ## Current delivered-feature API parity — 18 November 2026
 
