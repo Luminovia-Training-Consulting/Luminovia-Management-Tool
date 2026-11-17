@@ -5,6 +5,7 @@ import { spawn } from "node:child_process";
 import { readFile, readdir } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import assert from "node:assert/strict";
+import { withMigrationReplayLock } from "./testing/database.mjs";
 
 const container =
   process.env.PORTAL_DB_CONTAINER ?? "supabase_db_luminovia-portal";
@@ -111,17 +112,19 @@ try {
  create function auth.uid() returns uuid language sql stable as $$select (nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'sub')::uuid$$;
  create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),'')::jsonb,'{}'::jsonb)$$;
  grant usage on schema auth to authenticated,anon,service_role;grant execute on all functions in schema auth to authenticated,anon,service_role;`);
-  for (const file of (
-    await readdir(new URL("../supabase/migrations/", import.meta.url))
-  )
-    .filter((f) => f.endsWith(".sql"))
-    .sort())
-    await sql(
-      await readFile(
-        new URL(`../supabase/migrations/${file}`, import.meta.url),
-        "utf8",
-      ),
-    );
+  await withMigrationReplayLock(container, async () => {
+    for (const file of (
+      await readdir(new URL("../supabase/migrations/", import.meta.url))
+    )
+      .filter((f) => f.endsWith(".sql"))
+      .sort())
+      await sql(
+        await readFile(
+          new URL(`../supabase/migrations/${file}`, import.meta.url),
+          "utf8",
+        ),
+      );
+  });
   await sql(
     `insert into auth.users(id) values ${[owner, otherOwner, quotaOwner, selfQuotaOwner, manager, manager2, largeOwner, versionOwner, globalOwner1, globalOwner2].map((id) => `('${id}')`).join(",")};insert into public.user_roles(user_id,role) values('${owner}','lecturer'),('${otherOwner}','lecturer'),('${quotaOwner}','lecturer'),('${selfQuotaOwner}','lecturer'),('${manager}','admin'),('${manager2}','management'),('${largeOwner}','lecturer'),('${versionOwner}','lecturer'),('${globalOwner1}','lecturer'),('${globalOwner2}','lecturer');`,
   );

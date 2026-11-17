@@ -81,7 +81,7 @@ async function initializeDatabase(
 /** Several historical SQL suites replay migrations into separate databases
  * concurrently in one PostgreSQL cluster. A few migrations alter cluster-wide
  * role settings, so serialize only migration replay across those databases. */
-async function withMigrationReplayLock(container, run) {
+export async function withMigrationReplayLock(container, run) {
   if (
     !/^supabase_db_luminovia-portal(?:-test(?:-[a-zA-Z0-9_-]+)?)?$/.test(
       container,

@@ -5,7 +5,11 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
-import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
+import {
+  withMigrationReplayLock,
+  withTestDatabase,
+  quoteSql as q,
+} from "./testing/database.mjs";
 
 const suffix = "_operational_module_notification_handover_integration.sql";
 /** Find the actual owned forward migration without assuming sibling P2 version
@@ -40,7 +44,7 @@ export async function runOperationalForwardChecks({
     const before = files.filter((name) => name < integration).at(-1);
     await withTestDatabase(
       upgrade ? "operational_forward_upgrade" : "operational_forward_fresh",
-      async ({ sql, actor }) => {
+      async ({ sql, actor, container }) => {
         const combined =
           (await sql(
             "select to_regprocedure('private.course_notification_target(text,uuid)') is not null",
@@ -57,7 +61,7 @@ export async function runOperationalForwardChecks({
           randomUUID,
         );
         await sql(
-`insert into auth.users(id,email) values ${[owner, target, outsider, admin].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};insert into public.user_roles(user_id,role) values(${q(owner)},'lecturer'),(${q(target)},'lecturer'),(${q(outsider)},'client'),(${q(admin)},'admin');update public.profiles set active=true where id in (${[owner, target, outsider, admin].map(q).join(",")});`
+          `insert into auth.users(id,email) values ${[owner, target, outsider, admin].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};insert into public.user_roles(user_id,role) values(${q(owner)},'lecturer'),(${q(target)},'lecturer'),(${q(outsider)},'client'),(${q(admin)},'admin');update public.profiles set active=true where id in (${[owner, target, outsider, admin].map(q).join(",")});`,
         );
         const [organisation, template, run, job, claim, session, allocation] =
           Array.from({ length: 7 }, randomUUID);
@@ -127,13 +131,15 @@ export async function runOperationalForwardChecks({
         if (upgrade) {
           // P2 histories can be delivered after the independent root forward
           // migration. Apply all remaining actual files in chronological order.
-          for (const file of files.filter((name) => name >= integration))
-            await sql(
-              await readFile(
-                new URL("../supabase/migrations/" + file, import.meta.url),
-                "utf8",
-              ),
-            );
+          await withMigrationReplayLock(container, async () => {
+            for (const file of files.filter((name) => name >= integration))
+              await sql(
+                await readFile(
+                  new URL("../supabase/migrations/" + file, import.meta.url),
+                  "utf8",
+                ),
+              );
+          });
         }
         await check(
           mode + ": all root targets and base fallback survive",

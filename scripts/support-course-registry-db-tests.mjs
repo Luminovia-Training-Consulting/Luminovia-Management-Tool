@@ -5,7 +5,10 @@
  */
 import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
-import { withTestDatabase } from "./testing/database.mjs";
+import {
+  withMigrationReplayLock,
+  withTestDatabase,
+} from "./testing/database.mjs";
 import {
   runSupportCourseAbsenceChecks,
   runSupportCourseRegistryChecks,
@@ -72,21 +75,21 @@ await withTestDatabase(
         "t",
         "Existing real registry must have its actual public APIs",
       );
-    await fixture.sql(support);
-    // Continue the actual current migration history after installing the
-    // pre-existing optional registry/support boundary. Real merged course RPCs
-    // therefore run their final implementation, not an older intermediate body.
-    for (const file of (
-      await readdir(new URL("../supabase/migrations/", import.meta.url))
-    )
-      .filter((name) => name.endsWith(".sql") && name > supportFile)
-      .sort())
-      await fixture.sql(
-        await readFile(
-          new URL("../supabase/migrations/" + file, import.meta.url),
-          "utf8",
-        ),
-      );
+    await withMigrationReplayLock(fixture.container, async () => {
+      await fixture.sql(support);
+      // Continue actual history under the same cluster-wide migration lock.
+      for (const file of (
+        await readdir(new URL("../supabase/migrations/", import.meta.url))
+      )
+        .filter((name) => name.endsWith(".sql") && name > supportFile)
+        .sort())
+        await fixture.sql(
+          await readFile(
+            new URL("../supabase/migrations/" + file, import.meta.url),
+            "utf8",
+          ),
+        );
+    });
     await runSupportCourseRegistryChecks(fixture, {
       label: exists
         ? "current installed course RPCs"

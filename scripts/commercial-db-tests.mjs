@@ -3,6 +3,7 @@
  */
 import { spawn } from "node:child_process";
 import { readFile, readdir } from "node:fs/promises";
+import { withMigrationReplayLock } from "./testing/database.mjs";
 import { randomUUID } from "node:crypto";
 import assert from "node:assert/strict";
 const container =
@@ -159,17 +160,19 @@ try {
   await sql(
     `create schema auth;create schema extensions;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql stable as $$select (nullif(current_setting('request.jwt.claims',true),'')::jsonb->>'sub')::uuid$$;create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),'')::jsonb,'{}'::jsonb)$$;grant usage on schema auth to authenticated,anon,service_role;grant execute on all functions in schema auth to authenticated,anon,service_role;`,
   );
-  for (const name of (
-    await readdir(new URL("../supabase/migrations/", import.meta.url))
-  )
-    .filter((f) => f.endsWith(".sql"))
-    .sort())
-    await sql(
-      await readFile(
-        new URL(`../supabase/migrations/${name}`, import.meta.url),
-        "utf8",
-      ),
-    );
+  await withMigrationReplayLock(container, async () => {
+    for (const name of (
+      await readdir(new URL("../supabase/migrations/", import.meta.url))
+    )
+      .filter((f) => f.endsWith(".sql"))
+      .sort())
+      await sql(
+        await readFile(
+          new URL(`../supabase/migrations/${name}`, import.meta.url),
+          "utf8",
+        ),
+      );
+  });
   await sql(
     `insert into auth.users(id) values('${a}'),('${b}'),('${admin}'),('${admin2}'),('${participant}');insert into public.user_roles(user_id,role) values('${a}','lecturer'),('${b}','senior_lecturer'),('${admin}','admin'),('${admin2}','admin'),('${participant}','participant');update public.profiles set display_name='Fictional commercial user'`,
   );

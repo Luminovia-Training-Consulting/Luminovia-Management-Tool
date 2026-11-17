@@ -10,7 +10,11 @@ import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import { promisify } from "node:util";
-import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
+import {
+  withMigrationReplayLock,
+  withTestDatabase,
+  quoteSql as q,
+} from "./testing/database.mjs";
 
 const git = promisify(execFile);
 const sourceRoot = new URL("../", import.meta.url);
@@ -119,40 +123,42 @@ for (const mode of modes) {
   );
   await withTestDatabase(
     "support_replacement_access",
-    async ({ sql, actor }) => {
+    async ({ sql, actor, container }) => {
       let originalOid,
         originalBody,
         checks = 0;
-      for (const [file, body] of sources) {
-        if (file === supportFile) {
-          if (mode === "strict") {
-            // Published qualification evidence is already stricter than the
-            // old blanket certificate permission. Strengthen the independent
-            // contract branch only in this disposable predecessor instead;
-            // no historical migration or installed policy is edited.
-            const previous = await sql(
-              "select pg_get_functiondef('private.can_access_document(uuid)'::regprocedure)",
+      await withMigrationReplayLock(container, async () => {
+        for (const [file, body] of sources) {
+          if (file === supportFile) {
+            if (mode === "strict") {
+              // Published qualification evidence is already stricter than the
+              // old blanket certificate permission. Strengthen the independent
+              // contract branch only in this disposable predecessor instead;
+              // no historical migration or installed policy is edited.
+              const previous = await sql(
+                "select pg_get_functiondef('private.can_access_document(uuid)'::regprocedure)",
+              );
+              const stronger = previous.replace(
+                /\s*or\s*\(d\.kind='contract' and private\.has_permission\('contracts\.read'\)\)/,
+                "",
+              );
+              assert.notEqual(
+                stronger,
+                previous,
+                "Stricter predecessor fixture must apply.",
+              );
+              await sql(stronger);
+            }
+            originalOid = await sql(
+              "select 'private.can_access_document(uuid)'::regprocedure::oid",
             );
-            const stronger = previous.replace(
-              /\s*or\s*\(d\.kind='contract' and private\.has_permission\('contracts\.read'\)\)/,
-              "",
+            originalBody = await sql(
+              "select prosrc from pg_proc where oid='private.can_access_document(uuid)'::regprocedure",
             );
-            assert.notEqual(
-              stronger,
-              previous,
-              "Stricter predecessor fixture must apply.",
-            );
-            await sql(stronger);
           }
-          originalOid = await sql(
-            "select 'private.can_access_document(uuid)'::regprocedure::oid",
-          );
-          originalBody = await sql(
-            "select prosrc from pg_proc where oid='private.can_access_document(uuid)'::regprocedure",
-          );
+          await sql(body);
         }
-        await sql(body);
-      }
+      });
       /** Count meaningful permission groups independently from their assertions. */
       const check = async (name, run) => {
         await run();
