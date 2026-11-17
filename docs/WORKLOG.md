@@ -1,6 +1,6 @@
-# 18 November 2026 — proprietary-license rights audit and non-effective draft
+# 18 November 2026 — proprietary source-available license
 
-The user requested Luminovia-exclusive distribution/use and project-only external contributions. Current root LICENSE is GPLv3; two substantive external-authored commits are on main (`31080250`, `1f1f86af`). The user confirmed no written proprietary relicensing permission from that author is yet available. Prepared a clearly non-effective proposed source-available license, contributor-rights agreement template and transition status without replacing the live GPL license or asserting ownership of third-party work. A future switch requires rights clearance and legal-entity/jurisdiction review. Existing GPL grants and bundled upstream/font licenses remain unchanged. No license publication on main, deployed release or external contact was performed.
+The user confirmed a written rights agreement is now available for the external contributions in this release. Replaced the root GPL text with proprietary source-available terms, removed `LICENSE.proposed`, and aligned current README, contribution and license-status guidance. The license preserves prior GPL grants and separate dependency/font/brand/upstream terms. This records the user's confirmation, not an independent review of the private agreement or a legal opinion; professional review for the applicable law remains pending. No deployment or external contact occurred.
 
 # 18 November 2026 — current delivered-feature API parity
 

@@ -1,11 +1,11 @@
 # Persistent implementation plan
 
-## Proposed proprietary license — rights clearance pending (18 November 2026)
+## Proprietary source-available license (18 November 2026)
 
 - [x] Check current GPLv3 license, contributor history and separate bundled asset/upstream notices.
-- [x] Draft source-available proprietary terms and a separate external-contributor rights agreement; mark both non-effective while current rights remain unresolved.
-- [ ] Obtain the external author's express written proprietary relicensing permission or independently replace their merged work, verify the actual legal licensor and applicable law, and review the final texts professionally before changing root `LICENSE` or describing the current code as solely proprietary.
-- [ ] After clearance, update root license, README, contribution terms and release notices together. Existing GPL grants for prior copies remain effective.
+- [x] Obtain confirmation that the written contributor rights agreement covers the external contributions included in this release.
+- [x] Replace the active root license and current README/contribution/status references; remove the superseded `LICENSE.proposed` draft. Keep historical GPLv3 grants and third-party licenses intact.
+- [ ] Review the final text and exact licensor identity with qualified counsel for the applicable jurisdiction.
 
 ## Current delivered-feature API parity — 18 November 2026
 
