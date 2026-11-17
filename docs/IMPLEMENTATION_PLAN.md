@@ -1322,3 +1322,6 @@ The migration-order regression now accepts later independent migrations while pr
 - [x] Fix the remaining portal-membership DB-test assertions to match the current server error text.
 - [x] Serialize all isolated migration replays so concurrent test groups do not race cluster-level role configuration.
 - [ ] Re-run full isolated verification and inspect CI for the exact pushed main revision; record every outcome before claiming completion.
+
+- [x] Update suspended-account `chat_rooms_list` acceptance to require the server-side 42501 operational-access denial found by exact-head selfhost CI.
+- [ ] Re-run full isolated verification and current-head CI after the suspended-chat correction.

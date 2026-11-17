@@ -2577,3 +2577,5 @@ The `4554e39e` CI run confirmed that the public pre-request wrapper remains `SEC
 The direct-main audit corrected stale database acceptance fixtures to match the live operational access boundary and serialized isolated migration replay across every standalone PostgreSQL suite. The latest discovered mismatch was the portal-membership test expecting the retired error wording; its assertions now match `Operational portal access required`.
 
 Validation status: prior targeted suites and fast source gates passed as recorded below; rerun the full isolated suite and current-head GitHub CI after this final fixture correction. No production deployment or data changes were made.
+
+Exact-head CI follow-up: the selfhost API run found a suspended-account chat assertion that still expected an empty list. The server correctly denies the now non-operational account with SQLSTATE 42501; the acceptance test now asserts that authoritative denial. Full CI is rerunning on the new main head.
