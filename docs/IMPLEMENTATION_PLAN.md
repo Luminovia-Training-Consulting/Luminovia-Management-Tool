@@ -26,6 +26,7 @@
 - [ ] Re-run full current-head Portal checks and retained-data self-host acceptance after the commission fixture correction; the `b3055150` run passed migration replay and 18 actual API suites, then stopped at the stale 31% assertion (`50.01` was the expected product default quote for a 100.01 offer).
 - [x] Trace the next cleanup failure to a blocking `notifications_user_id_fkey`; add a forward cascade for recipient-owned notifications and an account database regression covering Auth-user/profile/inbox deletion.
 - [ ] Validate the notification-cascade migration and account regression in fresh PostgreSQL replay, then complete all current-head CI and retained-data self-host acceptance.
+- [x] Align the company-course Auth/API fixture with the retired-participant request boundary (`42501`), preserving the assertion that denied self-cancellation leaves enrolment unchanged; the old `22023` path is covered only by the isolated SQL rule test.
 
 ## Current delivered-feature API parity — 18 November 2026
 

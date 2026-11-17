@@ -86,7 +86,8 @@ await withApiFixture(async ({ actor, sql, defer, checked }) => {
         p_course_run_id: late,
       })
     ).error?.code,
-    "22023",
+    "42501",
+    "Retired participant accounts are denied at the authenticated request boundary",
   );
   assert.equal(
     await sql(
