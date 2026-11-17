@@ -17,7 +17,7 @@
 - [x] Align stale SQL assertions with accepted self-declared expertise behavior; pass 25 PostgreSQL groups including 50 parallel claims, and pass the focused owned-cascade SQL suite after adding an explicit `oid[]` initializer migration.
 - [x] Resolve advisor warnings from redundant permissive guest-profile/role policies using a forward migration; `npm run test:db` passes all 25 groups, schema lint and database advisors (“No issues found”).
 - [ ] Complete canonical isolated SQL/API/desktop/mobile/PWA acceptance; the most recent full run passed through persistence and all 25 SQL groups before the now-fixed advisor warning, while the next retry stopped before startup because another checkout owns the shared lock.
-- [ ] Push the current signed branch through the repository PR workflow, monitor exact-head checks and merge when required checks pass.
+- [x] PR #59 was pushed and merged on 17 November. The user directed that merge before its CI completed; full current-head acceptance remains a separate open gate.
 
 ## Documentation and API parity — 17 November 2026
 
@@ -28,7 +28,7 @@
 - [x] Fast source check passed (`./portal check`), the generated 329-function reference replay passed, API-surface PostgreSQL checks passed 6/6, calendar-import/inbox PostgreSQL groups passed 4/4, and documentation tests passed 5/5 in an owned disposable container.
 - [x] Fix two stale full-SQL claim fixture expectations discovered by PR #58: missing declared expertise still fails; expired/withdrawn attestation no longer blocks a declared topic. All 25 PostgreSQL claim/RLS/concurrency groups pass against the full migrated schema, including 50 parallel claims. No business authorization was relaxed.
 - [x] Align forecast fixture with the actual accepted individual lecturer quote and explicit zero-percent setting; current-source forecast groups pass 5/5. Main's guarded forward migration types the owned-deletion scope's empty `oid[]`; strict `plpgsql_check` reports no issues, owned-cascade groups pass 2/2. Replace retired participant-role lock fixture with restricted guest; global-calendar groups pass 9/9. Regenerate the API reference from the merged 117 migrations and validate all A–N matrix RPC names against the inventory.
-- [ ] Run complete isolated Auth/HTTP/browser/PWA acceptance on this exact revision and observe the PR's required CI before merging. The first `./portal test` attempt exited before startup because another checkout holds the shared QA lock; no foreign service was stopped. The focused tests do not prove an installed host or production readiness.
+- [ ] Complete isolated Auth/HTTP/browser/PWA acceptance remains unverified after PR #58 was merged at the user's request without waiting for CI. The earlier `./portal test` attempt exited before startup because another checkout held the shared QA lock; no foreign service was stopped. Focused tests do not prove an installed host or production readiness.
 - [ ] Complete the still-missing product/API configuration in the roadmap, including brand and permission-matrix settings, retention controls and other unfinished module paths; an API inventory cannot make unimplemented features available.
 
 ## Workspace clarity, account creation and manual planning — 17 November 2026
