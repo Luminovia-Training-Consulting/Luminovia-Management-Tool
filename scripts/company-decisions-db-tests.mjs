@@ -332,6 +332,159 @@ await withTestDatabase("company_decision", async ({ sql, actor }) => {
   console.log(
     "Invoice submission and company rejection serialize; committed invoice causes review without cancellation.",
   );
+  // The company request can only be completed after explicit invoice review.
+  await assert.rejects(
+    actor(
+      company,
+      `select public.resolve_company_invoice_rejection('${replacement.claim_id}','Review documented')`,
+    ),
+    /Finance management/,
+  );
+  await assert.rejects(
+    actor(
+      manager,
+      `select public.resolve_company_invoice_rejection('${replacement.claim_id}','Review documented')`,
+    ),
+    /Finance management/,
+  );
+  await assert.rejects(
+    actor(
+      manager,
+      `select public.resolve_company_invoice_rejection('${replacement.claim_id}','Review documented')`,
+      "aal2",
+    ),
+    /Reject or cancel every invoice/,
+  );
+  await actor(
+    manager,
+    `select public.review_invoice('${invoice}','rejected','Fictional correction reviewed')`,
+    "aal2",
+  );
+  const historicalPayment = randomUUID();
+  await sql(
+    `insert into public.payment_records(id,invoice_id,amount,currency,paid_at,recorded_by,client_id) values('${historicalPayment}','${invoice}',10,'EUR',now(),'${manager}',gen_random_uuid())`,
+  );
+  await assert.rejects(
+    actor(
+      manager,
+      `select public.resolve_company_invoice_rejection('${replacement.claim_id}','Review documented')`,
+      "aal2",
+    ),
+    /resolve active payments first/,
+  );
+  await sql(
+    `update public.payment_records set voided_at=now(),voided_by='${manager}',void_reason='Fictional correction' where id='${historicalPayment}'`,
+  );
+  const rejectedInvoice = await sql(
+    `select to_jsonb(i)::text from public.invoices i where id='${invoice}'`,
+  );
+  await assert.rejects(
+    actor(
+      manager,
+      `select public.resolve_company_invoice_rejection('${replacement.claim_id}','short')`,
+      "aal2",
+    ),
+    /Review note required/,
+  );
+  await actor(
+    manager,
+    `select public.resolve_company_invoice_rejection('${replacement.claim_id}','Correction verified with lecturer')`,
+    "aal2",
+  );
+  await actor(
+    manager,
+    `select public.resolve_company_invoice_rejection('${replacement.claim_id}','Correction verified with lecturer')`,
+    "aal2",
+  );
+  assert.equal(
+    await sql(
+      `select status from public.job_claims where id='${replacement.claim_id}'`,
+    ),
+    "cancelled",
+  );
+  assert.equal(
+    await sql(
+      `select count(*) from public.assignment_sessions where claim_id='${replacement.claim_id}' and released_at is null`,
+    ),
+    "0",
+  );
+  assert.equal(
+    await sql(
+      `select to_jsonb(i)::text from public.invoices i where id='${invoice}'`,
+    ),
+    rejectedInvoice,
+  );
+  await assert.rejects(
+    actor(
+      manager,
+      `select public.review_invoice('${invoice}','approved','must not reactivate')`,
+      "aal2",
+    ),
+    /Only confirmed assignments/,
+  );
+  assert.equal(
+    await sql(
+      `select count(*) from public.audit_events where resource_id='${replacement.claim_id}' and action='company.rejection_finance_resolved'`,
+    ),
+    "1",
+  );
+  assert.equal(
+    JSON.parse(
+      await actor(manager, "select public.company_invoice_reviews()", "aal2"),
+    ).some((x) => x.claim_id === replacement.claim_id),
+    false,
+  );
+  console.log(
+    "Financial review resolves only after explicit invoice correction; history retained, retries idempotent and reactivation denied.",
+  );
+  const raceInvoice = await sql(
+    `select invoice_id from public.invoice_items where claim_id='${raceClaim.claim_id}'`,
+  );
+  await actor(
+    manager,
+    `select public.review_invoice('${raceInvoice}','cancelled','Fictional invoice correction')`,
+    "aal2",
+  );
+  await sql(`update public.jobs set status='archived' where id='${job}'`);
+  await actor(
+    manager,
+    `select public.resolve_company_invoice_rejection('${raceClaim.claim_id}','Invoice cancelled after review')`,
+    "aal2",
+  );
+  assert.equal(
+    await sql(`select status from public.jobs where id='${job}'`),
+    "archived",
+  );
+  assert.equal(
+    await sql(
+      `select status from public.job_claims where id='${raceClaim.claim_id}'`,
+    ),
+    "cancelled",
+  );
+  for (const status of ["draft", "archived"]) {
+    const inactiveJob = randomUUID(),
+      inactiveClaim = randomUUID();
+    await sql(`insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,capacity,capacity_basis,amount,currency,rate_unit,total_amount,terms) values('${inactiveJob}','${run}','Inactive fictional offer','Fictional firm','online','${status}',1,'per_position',100,'EUR','fixed_total',100,'Example terms');
+      insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,currency,rate_unit,total_amount,terms,terms_version) values('${inactiveClaim}','${inactiveJob}','${teacher}',gen_random_uuid(),100,'EUR','fixed_total',100,'Example terms',1);
+      insert into public.assignment_sessions(claim_id,lecturer_id,starts_at,ends_at) values('${inactiveClaim}','${teacher}',now()+interval '20 days',now()+interval '20 days 1 hour');`);
+    await actor(
+      company,
+      `select public.decide_company_lecturer('${inactiveClaim}','rejected')`,
+    );
+    assert.equal(
+      await sql(
+        `select status from public.job_claims where id='${inactiveClaim}'`,
+      ),
+      "cancelled",
+    );
+    assert.equal(
+      await sql(`select status from public.jobs where id='${inactiveJob}'`),
+      status,
+    );
+  }
+  console.log(
+    "Company releases future draft and archived assignments without publishing the offer.",
+  );
   console.log(
     "Company decision: organisation isolation, effective timeout, explicit acceptance/rejection, idempotency, multi-slot release, immutable amount start boundary and concurrent accept/reject pass.",
   );

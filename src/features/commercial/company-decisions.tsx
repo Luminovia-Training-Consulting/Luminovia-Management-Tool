@@ -8,6 +8,7 @@ import { Button } from "../../components/ui/button";
 import { Dialog } from "../../components/ui/dialog";
 import { Notice } from "../../components/common";
 import { commissionKeys } from "./commission-api";
+import { CompanyRejectedLecturers } from "./company-rejected";
 
 interface CompanyDecision {
   claim_id: string;
@@ -71,10 +72,12 @@ export function CompanyDecisions({
   if (decisions.isPending) return <p>{t("companyDecisionLoading")}</p>;
   if (decisions.isError)
     return <Notice kind="error">{t("companyDecisionFailed")}</Notice>;
-  if (!decisions.data.length) return null;
+  if (!decisions.data.length)
+    return <CompanyRejectedLecturers actor={actor} job={job} />;
   return (
     <section aria-label={t("companyDecisionHeading")}>
       <h3>{t("companyDecisionHeading")}</h3>
+      <CompanyRejectedLecturers actor={actor} job={job} />
       {decisions.data.map((item) => (
         <div key={item.claim_id} className="platform-teacher">
           <div>

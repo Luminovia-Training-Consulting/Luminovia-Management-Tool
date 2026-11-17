@@ -7,7 +7,8 @@ PR43 correction: retain the full 50-way simultaneous HTTP capacity race; the pre
 - [x] Enforce strictly less than 1 MB for new profile pictures at browser, gateway and database boundaries; preserve legacy reads.
 - [x] Allow an authenticated participant to cancel the whole enrolment up to seven days before the first session, with transactional chat-origin reconciliation and DE/EN confirmation.
 - [x] Add separate company lecturer acceptance/rejection, computed 72-hour automatic acceptance and invoiced-case finance review, preserving confirmed claims and historical financial records.
-- [ ] Implement and verify final resolution and invoice correction for finance-review cases; archived/inactive offers still require management review.
+- [x] Let authorised finance managers resolve reviewed rejection after invoice status and payment checks, preserve historic records, and keep draft/archived offer visibility. Invoice correction uses existing explicit workflows; no automatic credit note is claimed.
+- [x] Block a rejected lecturer from re-claiming or substituting until an authorised company explicitly lifts the decision; keep immutable receipts and audit events.
 - [ ] Run exact-head native/browser, security and full CI acceptance. Historic unknown chat origins currently require authorized resolution.
 
 ## Browser test runtime — 17 November 2026

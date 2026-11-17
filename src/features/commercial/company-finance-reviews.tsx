@@ -1,9 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { db } from "../../lib/supabase";
 import { dateTime } from "../../lib/dates";
 import { Notice } from "../../components/common";
+import { Button } from "../../components/ui/button";
+import { Dialog } from "../../components/ui/dialog";
+import { requireOnline, useOnline } from "../../lib/online";
 
 type Review = {
   claim_id: string;
@@ -24,6 +28,26 @@ export function CompanyFinanceReviews({
 }) {
   const { t, i18n } = useTranslation("platform");
   const invoiceText = useTranslation("commercial").t;
+  const client = useQueryClient();
+  const online = useOnline();
+  const [selected, setSelected] = useState<Review | null>(null);
+  const [note, setNote] = useState("");
+  const resolve = useMutation({
+    mutationFn: async () => {
+      requireOnline();
+      if (!selected) throw new Error("No selected review");
+      const { error } = await db().rpc("resolve_company_invoice_rejection", {
+        p_claim: selected.claim_id,
+        p_note: note.trim(),
+      });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await client.invalidateQueries();
+      setSelected(null);
+      setNote("");
+    },
+  });
   const reviews = useQuery({
     queryKey: ["company-invoice-reviews", actor],
     queryFn: async () => {
@@ -60,9 +84,51 @@ export function CompanyFinanceReviews({
                 </li>
               ))}
             </ul>
+            <Button
+              variant="secondary"
+              disabled={
+                !online ||
+                item.invoices.some(
+                  (invoice) =>
+                    !["cancelled", "rejected"].includes(invoice.status),
+                )
+              }
+              onClick={() => {
+                setSelected(item);
+                setNote("");
+                resolve.reset();
+              }}
+            >
+              {t("companyFinanceResolve")}
+            </Button>
           </article>
         ))
       )}
+      <Dialog
+        open={Boolean(selected)}
+        onOpenChange={(open) => {
+          if (!open && !resolve.isPending) setSelected(null);
+        }}
+        title={t("companyFinanceResolve")}
+        description={t("companyFinanceResolveHint")}
+      >
+        <label htmlFor="company-finance-note">{t("companyFinanceNote")}</label>
+        <textarea
+          id="company-finance-note"
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+          maxLength={1000}
+        />
+        {resolve.isError && (
+          <Notice kind="error">{t("companyFinanceResolveError")}</Notice>
+        )}
+        <Button
+          disabled={!online || resolve.isPending || note.trim().length < 10}
+          onClick={() => resolve.mutate()}
+        >
+          {t("companyFinanceResolveConfirm")}
+        </Button>
+      </Dialog>
     </section>
   );
 }
