@@ -131,7 +131,7 @@ test("real private upload is scanned, downloaded, versioned and archived through
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.getByText(renamed, { exact: true })).toBeVisible();
-  await page.waitForTimeout(12_000);
+  await page.waitForTimeout(10_100);
   expect(idleReads).toEqual([]);
   expect(navigations).toEqual([]);
   page.off("request", countReads);

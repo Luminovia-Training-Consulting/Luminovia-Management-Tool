@@ -326,6 +326,29 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
         storedUnicode.reference_description,
         unicode.reference_description,
       );
+      const exactUnicode = JSON.parse(
+        await actor(
+          admin,
+          `with saved as (select public.job_briefing(${q(job)}) as value)
+           select jsonb_build_object(
+             'name_characters', char_length(value->>'contact_name'),
+             'name_bytes', octet_length(value->>'contact_name'),
+             'name_exact', convert_to(value->>'contact_name','UTF8')=decode(${q(Buffer.from(unicode.contact_name).toString("base64"))},'base64'),
+             'description_characters', char_length(value->>'reference_description'),
+             'description_bytes', octet_length(value->>'reference_description'),
+             'description_exact', convert_to(value->>'reference_description','UTF8')=decode(${q(Buffer.from(unicode.reference_description).toString("base64"))},'base64')
+           ) from saved`,
+          "aal2",
+        ),
+      );
+      assert.deepEqual(exactUnicode, {
+        name_characters: 120,
+        name_bytes: 480,
+        name_exact: true,
+        description_characters: 4000,
+        description_bytes: 16000,
+        description_exact: true,
+      });
       await assert.rejects(
         save(
           job,

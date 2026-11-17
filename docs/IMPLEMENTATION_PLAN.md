@@ -35,39 +35,26 @@ PR 35 review corrected the administrator-wide private-document deletion bypass; 
 - [x] Pass704frontend cases,173runtime and92Edge cases,29candidate/TLS and3documentation checks plus existing source/coverage/build gates. The full local command remains refused before startup by a foreign-owned shared QA lock.
 - [ ] Publish the signed integration, inspect complete fresh current-head system/browser/native/security/package CI, fix any failures and merge PR35 under existing repository rules. No production/publication operation belongs to this work.
 
-## PR35 mergeability repair — 17 November 2026
+## Browser test runtime — 17 November 2026
 
-- [x] Reproduce the current SQL blocker and trace the fresh-account browser blocker to accepted request-revision and profile-preference dependencies.
-- [x] Add a forward-only private deletion-scope integration; preserve released SQL, granular permissions, shared evidence, accepted commercial history and uncertain external delivery barriers.
-- [x] Place all3unaccepted deletion migrations after the accepted prefix; preserve all69current accepted sources, exact support/qualification/enquiry helper composition and4actual upgrade groups.
-- [x] Reproduce planner-dependent snapshot reordering and order both catalogue walks; retain exact protected-dependency and concurrent-change assertions.
-- [x] Pass8company and25permanent-deletion PostgreSQL groups with ownership/preservation/delivery regressions and bilingual impact labels.
-- [x] Pass integrated `./portal check`:704frontend cases/92files, coverage floors, types/lint/format/compiler and production/PWA build.
-- [ ] Finish current-head full required CI, including native Auth/Storage/browser acceptance; canonical local invocation initially refused a foreign-owned shared QA lock.
-- [ ] Merge only PR35 after current checks pass and repository rules permit; no release publication or production operation is authorised by this repair.
+- [x] Keep both Chromium projects, every browser scenario/assertion, per-file ordering and zero retries. Restore one browser worker: the first parallel run reproduced shared Supabase Auth account-deletion failures.
+- [x] Use Playwright's virtual clock for the 15-second stale-query behavior and shorten the idle observation only to 10.1 seconds, beyond the prior 10-second polling boundary.
+- [x] Baseline exact-head timings from the last green main-based CI: browser cases 20m34s; system verify 35m32s. About 17 minutes came from separate SQL/API suites run serially.
+- [x] Use a bounded pool for independent SQL suites (up to four isolated databases); retain stop-on-failure and wait-for-in-flight cleanup semantics. API suites stay sequential because they share one GoTrue service and parallel cleanup failed in CI.
+- [x] Scale independent PR SQL shards to at most four isolated workers; keep retained selfhost API suites sequential after the same GoTrue cleanup failure. Retain real migration/restart/image, auth, browser, concurrency, and cleanup proofs.
+- [x] Replay migrations once per isolated PostgreSQL worker into an owned ephemeral template and clone a fresh database per SQL suite; keep main migration acceptance and every historical-bound migration check unchanged. Exact-head SQL/template suites passed.
+- [ ] Complete exact-head CI with serial browser/API fixtures and collect successful per-job timings before claiming the final speedup. Do not trim coverage.
+## PR35 private-document acceptance follow-up — 17 November 2026
 
-The complete target and all unrelated pending work remain below.
+- [x] Trace the native fixture cleanup failure to dependent membership-origin rows blocking deletion of its owned participant room.
+- [x] Make provenance rows follow room/profile lifecycle with cascading foreign keys and add an actual database assertion for room cleanup.
+- [ ] Pass focused checks and fresh full exact-head/current-base system, browser, SQL, native/selfhost, security and preview checks; merge only when all required gates pass.
 
-## All-open-PR merge continuation — permanent deletion
+## Participant chat membership origins
 
-- [x] Preserve actual accepted main `7fbdb956`, both additive ledgers and all released migration bytes; the latest direct user request supersedes earlier PR35-only merge sequencing.
-- [ ] Pass current integrated-source checks, then let the single coordinator perform the protected PR35 merge after every required current-head gate succeeds. No publication or deployment belongs to this request.
-
-## Confirmed permanent deletion — current user extension
-
-- [x] Record the latest direct decision: permanent confirmed deletion, no trash; companies only own jobs; this task does not merge unrelated PRs.
-- [x] Audit actual account/Storage/job/company/FK behavior on main1de544d; define the bounded [execution contract](PERMANENT_DELETION.md).
-- [x] Implement typed administrative deletion plans, current authority/MFA, dependency handling, irreversible fences and truthful completion;25new real SQL groups and reduced-content/executor recovery review pass.
-- [x] Implement server-only native Auth hard deletion and exact all-version Storage cleanup, upload leases/path fences and failure/retry orchestration;62Edge unit cases pass. Actual native byte/Auth/race acceptance remains pending below.
-- [x] Close inherited company job/history/attachment bypasses and expose only own-company deletion targets;7real company SQL groups pass.
-- [x] Implement bilingual admin/context confirmation UI with pending/error/success and server receipt recovery; retain archive separately;535frontend cases and actual source/build checks pass.
-- [ ] Execute targeted real SQL/Auth/Storage and browser checks in owned fictional fixtures, then complete the reserved local acceptance and current-head CI.
-- [x] Deliver signed commits and pushed [draft PR35](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/35), with actual checks and native/CI gaps stated.
-- [x] Correct actual SQL-lint failure, protected payment history, assignment room/file revocation, retained business audit visibility and full lifecycle budget contract;21deletion+8company SQL groups,64Edge cases and real PL/pgSQL checking pass.
-- [ ] Complete the reserved actual native/full local acceptance and fresh required CI, then merge only PR35 under the user's latest explicit instruction. No other PR merge or production operation is authorised.
-- [x] Pass complete canonical local acceptance on signed67b749d:29native API suites,116application+2PWA browsers, all SQL/source checks and actual cleanup. Keep this evidence source-bound.
-- [x] Close remaining company history/earnings/calendar/raw-RLS paths and pass8expanded SQL groups; improve reviewed impact clarity and pass23focused deletion cases.
-- [ ] Verify the final follow-up with native company deletion/revocation and new screenshots; integrate only actual accepted main and replay the final migration order before current required CI and the authorised PR35 merge.
+- [x] Track new assignment-derived and explicit participant-room membership without guessing legacy provenance; fail closed and provide an authorized explicit resolution.
+- [x] Preserve independently authorized membership and active additional course claims or enrolments; re-evaluate enrolment removal and both handover paths.
+- [ ] Complete independent security review and exact-head CI, including native Auth and browser acceptance; do not infer hosted migration or production readiness.
 PR40 browser acceptance repair: single shared preferences and visible mobile sign-out are implemented; 25 focused component tests, TypeScript and ESLint pass locally. The complete exact-head GitHub/browser/native gates remain pending.
 
 ## PR31 after accepted documentation main — 17 November 2026
@@ -1030,7 +1017,21 @@ These are remaining implementation candidates, not delivered functions or extra 
 
 ## Current acceptance and next continuation actions
 
+### CI test throughput follow-up — 2026-11-17
+
+PR #42's failed run `44012150083` exposed concurrent Supabase Auth fixture cleanup returning `Database error deleting user` in both application verification and native selfhost acceptance; the same run's unit/coverage job passed. Fix the shared-service contention by keeping Auth-backed API suites sequential while independent database suites use separate clones of one migrated template. Retain every current SQL, API, browser and native acceptance assertion.
+
+The browser lane now uses a two-entry desktop/mobile matrix. Each entry runs all existing browser specs in exactly one Chromium project on its own isolated stack; together they still require every existing app and PWA workflow for both layouts. The preview package's existing dependency gate requires both matrix entries. The first post-serialization full rerun no longer reported the Auth deletion failure; it then failed the job-briefing SQL check while comparing a 4,000-emoji database result. The SQL subprocess helpers now preserve UTF-8 characters split across output chunks, with a dedicated regression test; the large-text acceptance also uses an exact compact server-side byte proof. Full current-head CI must pass before calling these optimizations accepted. Potential follow-up is limited to evidence-backed runtime changes that retain exact API, migration, desktop/mobile and built-PWA coverage.
+
+The first CI run of the new matrix failed two local workflow-policy assertions because they still expected the old single job name. Those now verify both matrix projects and the pull-request-only browser gate. The next exact-head run passed them and found the acceptance-report artifact test still expected one browser filename. That expectation now includes the matrix project; all 17 workflow-scope tests pass locally. The native SQL rerun confirmed Unicode character/byte limits but exposed PostgreSQL's Base64 line wrapping; compare the actual stored UTF-8 bytes directly to decoded expected bytes, retaining API response equality. Complete CI on the corrected commit.
+
+PR #42 is stacked on PR #43 because full acceptance uses Deno Edge checks and clean `npm ci` must install the exact pinned Deno toolchain. The #42 branch includes the #43 head as its base, so its own diff contains only speedup/test changes while its CI exercises the required installer fix. Validate/merge #43 before treating #42 as independently ready.
+
 1. Preserve all normal persistent records and prior verified ledgers. Last recorded hosted application acceptance is `bb322746`, exact-main CI43753910114 plus automatic installation/post-checks and the schema18complete restore. PR6/PR7 merges and M6 source are distinct. Recheck actual hosted/main state on continuation; no later source/documentation change proves installation.
 2. M3 was merged through [PR #3](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/3), then integrated with the authorised self-hosted development and automatic-release path. No merge remains pending for that application slice. The system now consumes tested main releases without manual cloning; destructive/backdated/major migrations remain reviewed operations. Production deployment is separate.
 3. M6 passed the combined application and retained-data gates and merged through PR8(dc8e9a7). Continue the isolated M7 source-derived discovery/community slices above; preserve all24accepted migrations, private-resource boundaries, old commercial snapshots and the complete remaining master-prompt ledger. Each further slice requires its own complete integration acceptance.
 4. Continue the authorised self-hosted CMS development and configure real SMTP only when approved; no managed-backend dependency is intended. Development native all-database/file/key restore and physical VM rollback have passed. Complete remaining hosted/manual/cross-browser/physical-PWA, privacy, monitoring, recurring off-site and production-scale recovery acceptance before a concrete production approval request.
+
+### PR #43 merge gate — 2026-11-17
+
+Bound the selfhost capacity stress at ten simultaneous HTTP claims while retaining all fifty requests and exact capacity/race assertions. The new unit regression verifies bounded concurrency, input-order results and full settlement after a rejection. Push the signed repair and require fresh exact-head CI, including selfhost, before merging PR #43.

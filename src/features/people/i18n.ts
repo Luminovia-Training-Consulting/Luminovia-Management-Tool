@@ -68,6 +68,8 @@ const de = {
   enrolments: "Kursteilnehmende verwalten",
   enrolmentHelp:
     "Nur Management und Administration können Personen zuordnen und eine tatsächliche abgeschlossene Teilnahme bestätigen.",
+  chatOriginBlocked:
+    "Die Zuordnung bleibt bestehen. Eine für den Kurs-Chat verantwortliche Person muss unter „Zugangsgrund klären“ zuerst den Grund der bestehenden Chat-Mitgliedschaft bestätigen.",
   participantSelect: "Person auswählen",
   choose: "Bitte auswählen",
   enrolled: "Zugeordnet",
@@ -146,6 +148,8 @@ const en: typeof de = {
   enrolments: "Manage course participants",
   enrolmentHelp:
     "Only management and administrators can enrol people and confirm actual completed attendance.",
+  chatOriginBlocked:
+    "The enrolment remains unchanged. A course chat manager must first use ‘Resolve access basis’ to confirm why the existing chat membership was granted.",
   participantSelect: "Select person",
   choose: "Please select",
   enrolled: "Enrolled",

@@ -2307,6 +2307,22 @@ The first independently reviewable runtime slice adds `./portal github` and `sta
 
 The first preview CI43761274867 correctly failed its runtime fixtures before starting services: they copied the canonical runner's already-rewritten553xx/5273 config instead of normal upstream543xx/5173 config. Replaced only the fictional upstream input with self-contained normal TOML and added an explicit rejection of nested QA/preview overlays; production guards remain unchanged. The native rehearsal from signed278ce9b separately passed18 migrations, actual Auth/MFA/profile/private event/Storage bytes across stop/start, then removed only its own project and confirmed original5173/scratchDB remained running. Logs are private .local/m6-preview-native. The corrected exact-source CI remains the release gate.
 
+### CI runtime: isolated desktop and mobile browser lanes
+
+The exact PR #42 run `44012150083` showed the `verify` and retained-data selfhost gates failing in the same fictional Auth fixture cleanup: GoTrue returned HTTP 500 while deleting an account; the 699-test coverage job itself passed in 1m38s. Desktop/mobile browser acceptance had planned 160 workflows on one worker. Earlier PR #42 commits now run independent PostgreSQL suites concurrently against disposable migrated database clones and serialize Auth-backed API suites that share one GoTrue service. The following full run got past the Auth failure, then exposed a 4,000-emoji JSON result mismatch: the SQL helpers decoded each stdout chunk independently and could split a UTF-8 character. They now use a shared `StringDecoder` collector with a regression test for split supplementary characters. The large Unicode case also returns a compact server-side base64 equality proof plus character and byte counts, preserving an exact 120/4,000-character assertion without emitting a large Unicode value. Full current-head CI remains required.
+
+To reduce browser wall time without dropping any browser/device cases, PR #42 now runs the complete browser inventory in two independent jobs: one desktop Chromium lane and one mobile Chromium lane. Each lane owns its own isolated Supabase stack, verifies discovery and execution against exactly its assigned project, and keeps the existing built-PWA tests. Local acceptance without a lane selector still runs both projects. This duplicates isolated service startup but allows both complete device inventories to run at once. The final preview gate waits for both matrix legs. Validation before submission: focused browser-evidence tests, syntax/format checks; full acceptance pending on the new PR head.
+
+The first matrix CI run correctly caught stale workflow-policy fixtures that still expected one unsuffixed browser job. Updated them to assert the two exact matrix lanes and continue checking that the browser job runs only for pull requests. This is a test expectation update; all required matrix jobs remain fail-closed in the existing final gate.
+
+The next exact-head run passed those policy fixtures and then caught the acceptance-report artifact test still expecting the old single browser filename. The expectation now includes `${{ matrix.browser-project }}` so each lane uploads distinct evidence; its 17 local workflow-scope tests pass.
+
+The native SQL rerun confirmed the Unicode limits but PostgreSQL wrapped the expected Base64 text, making a string comparison false. The test now compares stored UTF-8 bytes (`bytea`) directly against decoded expected bytes, while retaining the full API response equality and explicit character/byte counts.
+
+### PR #42 / #43 dependency
+
+Stack PR #42 on PR #43: full runtime acceptance invokes Deno for Edge lint/tests/type checks, while clean `npm ci` previously skipped Deno's installer. The #43 pinned-installer fix is therefore a prerequisite for an honest #42 speedup run. The #42 branch now includes the #43 head as its base; its diff remains focused on the CI/test changes. Validate #43 first, then the sped-up #42 checks on the stacked head.
+
 ## Imported PR15 and PR20 delivery history
 
 The following isolated branch checkpoints are historical evidence. Current fourteen-check, signature and review-only policy is recorded above and in GITHUB_WORKFLOW; older always/disabled descriptions do not change it. These branch-only checks do not establish combined32 acceptance.
@@ -2314,3 +2330,7 @@ The following isolated branch checkpoints are historical evidence. Current fourt
 ## 17 November 2026 — PR35 candidate diagnostic lint fix
 
 GitHub Lint failed on PR35 because the selfhost candidate's post-failure Auth/database log filter called an undefined `redact`. Replaced that call with the existing `redactCandidateDiagnostic(logs, secrets)` helper, preserving the registered-secret/JWT/key redaction boundary before filtering and truncation. No execution, migration, service or acceptance behavior changed. Executed `npx eslint deploy/hostinger/maintenance/selfhost-candidate-check.mjs --max-warnings 0`, `npm run lint`, `node --test deploy/hostinger/maintenance/selfhost-candidate-check.test.mjs` (26/26), and `git diff --check`: all passed. This documents the observed CI lint correction only; other in-progress PR checks remain separate.
+
+### PR #43 candidate selfhost stress repair — 2026-11-17
+
+Run `44024832394` on head `e77580e` passed unit/quality/build checks and both desktop and mobile browser acceptance; actual selfhost then lost PostgreSQL during the 50-request capacity stress, and cleanup surfaced GoTrue database errors. The test still sends all 50 real claims with unique retry keys and requires exactly three winners for capacity three, but now caps simultaneous requests at ten and waits for every result before cleanup. Added ordered all-settled bounded-map behavior with a concurrency/failure regression test. Local targeted Node tests pass 5/5; ESLint, Prettier, syntax and diff checks pass. The captured logs establish a PostgreSQL crash/recovery at the point of stress, but do not identify a lower-level crash cause; the exact-head selfhost rerun is the acceptance gate.

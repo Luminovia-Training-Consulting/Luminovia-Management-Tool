@@ -259,7 +259,12 @@ await withApiFixture(
     );
 
     const offer = await checked(
-      teachers[0].client.rpc("job_offers").then(({data,error})=>({data:data?.find(row=>row.id===job),error})),
+      teachers[0].client
+        .rpc("job_offers")
+        .then(({ data, error }) => ({
+          data: data?.find((row) => row.id === job),
+          error,
+        })),
       "Read actual lecturer-visible net offer",
     );
     assert.equal(Number(offer.amount), 31);
@@ -276,8 +281,8 @@ await withApiFixture(
         p_terms_version: offer.terms_version,
       },
     }));
-    // Each SDK request performs an actual HTTP POST, using one of ten separately
-    // authenticated lecturer sessions and a distinct retry key. Do not serialize.
+    // Exercise all fifty HTTP calls concurrently. Wait for every result before
+    // cleanup so no in-flight claimant can outlive its fixture.
     const settled = await Promise.allSettled(
       attempts.map(({ who, args }) =>
         checked(who.client.rpc("claim_job", args), "One of fifty HTTP claims"),

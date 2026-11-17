@@ -316,6 +316,26 @@ export function MembersPanel({
   const [remove, setRemove] = useState<{ id: string; name: string } | null>(
     null,
   );
+  const [originPerson, setOriginPerson] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const origin = useMutation({
+    mutationFn: async (independent: boolean) => {
+      requireOnline();
+      if (!originPerson) throw new Error("Missing member");
+      const { error } = await db().rpc("resolve_participant_chat_origin", {
+        p_room: room.id,
+        p_user: originPerson.id,
+        p_independent: independent,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setOriginPerson(null);
+      setSaved(true);
+    },
+  });
   const [saved, setSaved] = useState(false);
   const change = useMutation({
     mutationFn: async ({ id, remove }: { id: string; remove: boolean }) => {
@@ -373,6 +393,23 @@ export function MembersPanel({
                     <small>{t("owner")}</small>
                   )}
                 </span>
+                {canManage &&
+                  room.kind === "participant_course" &&
+                  member.user_id !== room.owner_id && (
+                    <Button
+                      variant="ghost"
+                      disabled={!online || origin.isPending}
+                      onClick={() => {
+                        origin.reset();
+                        setOriginPerson({
+                          id: member.user_id,
+                          name: member.display_name || t("unnamed"),
+                        });
+                      }}
+                    >
+                      {t("resolveOrigin")}
+                    </Button>
+                  )}
                 {canManage &&
                   member.user_id !== room.owner_id &&
                   member.user_id !== actor && (
@@ -444,6 +481,31 @@ export function MembersPanel({
         )}
         {saved && <Notice>{t("membershipSaved")}</Notice>}
         {change.isError && <Notice kind="error">{t("actionError")}</Notice>}
+      </Dialog>
+      <Dialog
+        open={originPerson !== null}
+        onOpenChange={(next) => {
+          if (!next && !origin.isPending) setOriginPerson(null);
+        }}
+        title={t("resolveOriginTitle", { name: originPerson?.name ?? "" })}
+        description={t("resolveOriginHint")}
+      >
+        <div className="form-actions">
+          <Button
+            variant="secondary"
+            disabled={!online || origin.isPending}
+            onClick={() => origin.mutate(false)}
+          >
+            {t("originAssignment")}
+          </Button>
+          <Button
+            disabled={!online || origin.isPending}
+            onClick={() => origin.mutate(true)}
+          >
+            {t("originIndependent")}
+          </Button>
+        </div>
+        {origin.isError && <Notice kind="error">{t("actionError")}</Notice>}
       </Dialog>
       <Dialog
         open={remove !== null}

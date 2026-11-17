@@ -8,7 +8,7 @@ The permanent-deletion extension adds private `deletion_plans`, `deletion_operat
 
 Readiness settings/tasks/instruction receipts/events reference course_runs and currently assigned profiles; percentages derive from current source records. Delivery records reference assignment_sessions, with immutable submissions and events plus actor/request receipts. Replacement offers link original job_claims to a new accepted job_claim only after atomic handover; allocation history remains in assignment_sessions. Support tickets link their requester, optional authorised course/claim/organisation and support assignee; separate messages/events/attachments enforce hidden internal entries. All new persistent operational tables are private, RLS-enabled and accessed by reviewed invoker RPCs over scoped implementations. [Schema/workflow guides](OPERATIONS_EXTENSION_STATUS.md) and additive migration source own exact columns and acceptance.
 
-The target diagrams preserve the complete product map; conceptual entities do not claim that every table exists. Implemented diagrams show selected physical relations in the **69 published SQL sources** at accepted main `4f7f6c0`, with `PRIVATE_*` aliases mapped to unexposed private relations. PR17, PR24 and PR25 cohorts are merged. This is a domain map, not a complete schema dump. Later routine replacements, triggers and constraints must be read in source order. [ARCHITECTURE](ARCHITECTURE.md), [MIGRATION_GUIDE](MIGRATION_GUIDE.md) and [API_REFERENCE](API_REFERENCE.md) explain the current boundaries. Source identity and a diagram do not establish hosted installation or complete acceptance; see [QA_RESULTS](QA_RESULTS.md).
+The target diagrams preserve the complete product map; conceptual entities do not claim that every table exists. Implemented diagrams show selected physical relations in the **71 SQL sources** including the proposed withdrawal migration on top of accepted main `85b02b8`, with `PRIVATE_*` aliases mapped to unexposed private relations. PR17, PR24 and PR25 cohorts are merged. This is a domain map, not a complete schema dump. Later routine replacements, triggers and constraints must be read in source order. [ARCHITECTURE](ARCHITECTURE.md), [MIGRATION_GUIDE](MIGRATION_GUIDE.md) and [API_REFERENCE](API_REFERENCE.md) explain the current boundaries. Source identity and a diagram do not establish hosted installation or complete acceptance; see [QA_RESULTS](QA_RESULTS.md).
 
 The enquiry cohort adds private original-submission, history and retry records, with links to authorised management, directory organisations/contacts and an explicitly converted course run. These selected diagrams do not enumerate the complete enquiry schema. [WEBSITE_ENQUIRIES](WEBSITE_ENQUIRIES.md) and its owning migration describe exact columns and grants; directory linkage does not create customer-account membership.
 
@@ -645,6 +645,18 @@ Additional operational boundaries:
 | Notification channel/device              | Own preference/device; current eligible event                   | Service-only delivery leases do not grant browser data access                       |
 
 See [CHAT_SECURITY](CHAT_SECURITY.md), [KNOWLEDGE_SECURITY](KNOWLEDGE_SECURITY.md), [COMMERCIAL_SECURITY](COMMERCIAL_SECURITY.md), [OPERATIONS](OPERATIONS.md) and [BACKEND_SECURITY_REVIEW](BACKEND_SECURITY_REVIEW.md) for tested boundaries and outstanding acceptance. Current combined 62-source native acceptance is recorded separately in QA results; authored cases and focused passes do not establish that result. Tombstones, archives and audit revisions preserve data; none is a production legal-erasure or retention-policy guarantee.
+
+## Assignment withdrawal applications
+
+`private.assignment_withdrawals` references the immutable `job_claims` and its
+lecturer profile. It stores the bounded authored reason, pending/final status,
+reviewer, decision note and timestamps. A partial unique index allows one pending
+application per claim. `private.assignment_withdrawal_commands` binds each actor
+and request UUID to its exact payload and application for safe transport retries.
+Both tables have RLS and no client table grants; scoped RPCs expose only own or
+current MFA-authorized management work. Existing claim/session/commercial rows
+retain their identities and accepted snapshots. See
+[assignment withdrawals](ASSIGNMENT_WITHDRAWALS.md).
 
 ## Job briefing
 

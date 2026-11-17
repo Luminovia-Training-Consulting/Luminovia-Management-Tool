@@ -198,7 +198,13 @@ export function DemoPage() {
             )}
           </select>
           <p className="demo-role-hint">{t("roleHint")}</p>
-          <nav aria-label={t("navigation")}>
+          <p id="demo-navigation-scroll" className="demo-navigation-hint">
+            {t("navigationScroll")}
+          </p>
+          <nav
+            aria-label={t("navigation")}
+            aria-describedby="demo-navigation-scroll"
+          >
             {guideModules.map((item) => (
               <Link
                 key={item.path}
