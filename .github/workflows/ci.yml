@@ -47,7 +47,8 @@ jobs:
       matrix:
         include:
           - name: Build
-            command: npm run build
+            # Typecheck runs beside this job; npm run build would execute tsc -b again.
+            command: npx vite build
           - name: Typecheck
             command: npm run typecheck
           - name: Lint
@@ -140,9 +141,9 @@ jobs:
         if: needs.scope.outputs.profile == 'full'
         run: |
           if test "$GITHUB_EVENT_NAME" = pull_request; then
-            node scripts/runtime-test.mjs --phase system
+            node scripts/runtime-test.mjs --phase system --external-gates quality,coverage
           else
-            ./portal test
+            node scripts/runtime-test.mjs --phase all --external-gates quality,coverage
           fi
       - name: Preserve actual functional and integration acceptance
         if: always() && (steps.application.outcome == 'success' || steps.application.outcome == 'failure' || steps.application.outcome == 'cancelled')
@@ -241,14 +242,17 @@ jobs:
           case "$PROFILE" in docs|standard|full) ;; *) exit 1 ;; esac
           if test "$EVENT_NAME" != pull_request; then test "$PROFILE" = full; fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        if: needs.scope.outputs.profile != 'docs'
         with:
           persist-credentials: false
           fetch-depth: 2
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        if: needs.scope.outputs.profile != 'docs'
         with:
           node-version-file: ".node-version"
           cache: npm
-      - run: npm ci
+      - if: needs.scope.outputs.profile != 'docs'
+        run: npm ci
       - name: PR isolated PostgreSQL migration, permissions and concurrency checks
         if: github.event_name == 'pull_request' && needs.scope.outputs.profile != 'docs'
         run: node scripts/ci-pr-check.mjs sql
@@ -354,7 +358,8 @@ jobs:
         run: |
           test -n "$VITE_SUPABASE_URL"
           test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
-          npm run build
+          # The exact same-run Typecheck gate already passed before this release job.
+          npx vite build
           node deploy/hostinger/updates/package.mjs --commit "$GITHUB_SHA" --output "$RUNNER_TEMP/cms-release"
       - name: Publish immutable update after verification
         env:
