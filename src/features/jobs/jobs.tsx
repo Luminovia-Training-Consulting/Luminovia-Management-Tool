@@ -6,6 +6,7 @@
 import { JobPricingPanel } from "../commercial/pricing";
 import { JobLifecyclePanel } from "./lifecycle";
 import { JobWithdrawalPanel } from "./withdrawal";
+import { AssignmentChangePanel } from "./assignment-change";
 import { JobBriefing } from "./briefing";
 import { JobRelatedNavigation } from "./related-navigation";
 import { JobSubstitutionPanel, JobWaitlist } from "./lifecycle-extra";
@@ -154,6 +155,7 @@ export function JobDetail() {
       <JobRelatedNavigation actor={session!.user.id} jobId={job.id} />
       <JobLifecyclePanel job={job} />
       <JobWithdrawalPanel key={job.id} jobId={job.id} zone={job.time_zone} />
+      <AssignmentChangePanel key={`changes-${job.id}`} job={job} />
       <JobWaitlist jobId={job.id} />
       <JobSubstitutionPanel jobId={job.id} />
       <div className="detail-layout">
