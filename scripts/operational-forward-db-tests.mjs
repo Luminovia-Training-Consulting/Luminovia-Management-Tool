@@ -57,7 +57,7 @@ export async function runOperationalForwardChecks({
           randomUUID,
         );
         await sql(
-          `insert into auth.users(id,email) values ${[owner, target, outsider, admin].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};insert into public.user_roles(user_id,role) values(${q(owner)},'lecturer'),(${q(target)},'lecturer'),(${q(outsider)},'lecturer'),(${q(admin)},'admin');`,
+          `insert into auth.users(id,email) values ${[owner, target, outsider, admin].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};insert into public.user_roles(user_id,role) values(${q(owner)},'lecturer'),(${q(target)},'lecturer'),(${q(outsider)},'client'),(${q(admin)},'admin');`,
         );
         const [organisation, template, run, job, claim, session, allocation] =
           Array.from({ length: 7 }, randomUUID);
