@@ -378,7 +378,16 @@ try {
     ).status,
     200,
   );
-  assert.deepEqual((await request(teacher, "me")).body.roles, ["guest"]);
+  assert.equal((await request(teacher, "me")).status, 403);
+  assert.equal(
+    (
+      await request(manager, `users/${teacher.id}/roles`, "PUT", {
+        roles: ["lecturer"],
+      })
+    ).status,
+    200,
+  );
+  assert.deepEqual((await request(teacher, "me")).body.roles, ["lecturer"]);
   assert.equal(
     (
       await request(manager, `users/${teacher.id}/roles`, "PUT", {
