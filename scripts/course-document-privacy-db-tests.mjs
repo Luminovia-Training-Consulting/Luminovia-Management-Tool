@@ -5,7 +5,11 @@
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
-import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
+import {
+  withTestDatabase,
+  quoteSql as q,
+  applyPasswordOnlyPermissionPolicy,
+} from "./testing/database.mjs";
 
 const migrations = new URL("../supabase/migrations/", import.meta.url);
 // This provenance-checked metadata fixture deliberately models optional modules
@@ -70,6 +74,7 @@ for (const moduleFirst of [false, true]) {
         ))
           await sql(await readFile(new URL(file, migrations), "utf8"));
       }
+      await applyPasswordOnlyPermissionPolicy(sql);
       const check = async (name, fn) => {
         await fn();
         count++;
