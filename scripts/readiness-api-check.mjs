@@ -1,10 +1,10 @@
-/** Actual Auth, MFA, REST, Edge scanning and Storage for preparation. This
+/** Actual Auth, password-only authentication, REST, Edge scanning and Storage for preparation. This
  * harness refuses normal, hosted or user-owned business databases. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 await withApiFixture(
-  async ({ service, actor, mfa, checked, sql, defer, url }) => {
+  async ({ service, actor, passwordOnly, checked, sql, defer, url }) => {
     const teacher = await actor("readiness-teacher", "lecturer"),
       peer = await actor("readiness-peer", "lecturer"),
       admin = await actor("readiness-admin", "admin"),
@@ -71,9 +71,9 @@ await withApiFixture(
           p_request_id: randomUUID(),
         })
       ).error,
-      "MFA is authoritative",
+      "password-only authentication is authoritative",
     );
-    await mfa(admin.client);
+    await passwordOnly(admin.client);
     job = await checked(
       admin.client.rpc("create_job", {
         p_payload: {
@@ -323,7 +323,7 @@ await withApiFixture(
       false,
     );
     console.log(
-      "PASS Actual Auth/MFA/REST/Edge/ClamAV/Storage course readiness: assignment-only privacy, clean material availability, explicit applicability, schedule confirmation, versioned instructions and tasks, 100% only after committed requirements, stale denial and immediate suspension.",
+      "PASS Actual Auth/password-only authentication/REST/Edge/ClamAV/Storage course readiness: assignment-only privacy, clean material availability, explicit applicability, schedule confirmation, versioned instructions and tasks, 100% only after committed requirements, stale denial and immediate suspension.",
     );
   },
 );

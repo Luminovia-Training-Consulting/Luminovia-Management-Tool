@@ -79,7 +79,7 @@ const de = {
   update: "Zuordnung speichern",
   noEnrolments: "Noch keine Personen zugeordnet.",
   permission:
-    "Für die Teilnehmendenverwaltung sind eine Verwaltungsberechtigung und bestätigte MFA erforderlich.",
+    "Für die Teilnehmendenverwaltung ist eine aktuelle Verwaltungsberechtigung erforderlich.",
   message: "Nachricht schreiben",
   back: "Zur Übersicht",
   noBio: "Noch keine Beschreibung hinterlegt.",
@@ -159,7 +159,7 @@ const en: typeof de = {
   update: "Save enrolment",
   noEnrolments: "No participants enrolled yet.",
   permission:
-    "Participant management requires a management capability and verified MFA.",
+    "Participant management requires a current management permission.",
   message: "Send message",
   back: "Back to directory",
   noBio: "No biography yet.",

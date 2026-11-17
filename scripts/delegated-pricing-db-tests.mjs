@@ -62,13 +62,13 @@ await withTestDatabase(
       admin,
       "create_commission_job",
       [org, JSON.stringify(payload(0)), 50, randomUUID()],
-      "aal2",
+      "aal1",
     );
     const untouched = await rpc(
       admin,
       "create_commission_job",
       [org, JSON.stringify(payload(1)), 50, randomUUID()],
-      "aal2",
+      "aal1",
     );
     const historic = await rpc(teacher, "claim_job", [legacy, randomUUID(), 2]);
     assert.equal(historic.status, "confirmed");
@@ -87,8 +87,7 @@ await withTestDatabase(
         "utf8",
       ),
     );
-    const offers = (who) =>
-      rpc(who, "job_offers", [], who === manager ? "aal2" : "aal1");
+    const offers = (who) => rpc(who, "job_offers", [], "aal1");
     const offer = async (who, id) =>
       (await offers(who)).find((row) => row.id === id);
     const create = (day, gross = 100.01, capacity = 1) =>
@@ -102,7 +101,7 @@ await withTestDatabase(
           org,
           null,
         ],
-        "aal2",
+        "aal1",
       );
     const claim = async (who, id, key = randomUUID(), version) =>
       rpc(who, "claim_job", [
@@ -147,14 +146,14 @@ await withTestDatabase(
       "Policy remains empty until administrative setup, never guessing a private production setting",
       async () => {
         assert.equal(
-          (await rpc(admin, "commission_access", [], "aal2")).policy_configured,
+          (await rpc(admin, "commission_access", [], "aal1")).policy_configured,
           false,
         );
         assert.equal((await offer(teacher, untouched)).total_amount, null);
         await assert.rejects(create(9), /has not been configured/);
         for (const who of [manager, teacher, senior, company, guest])
           await assert.rejects(
-            rpc(who, "configure_compensation_policy", [31, 73, 0], "aal2"),
+            rpc(who, "configure_compensation_policy", [31, 73, 0], "aal1"),
             /42501/,
           );
         assert.equal(
@@ -163,13 +162,13 @@ await withTestDatabase(
               admin,
               "configure_compensation_policy",
               [31, 73, 0],
-              "aal2",
+              "aal1",
             )
           ).policy_version,
           1,
         );
         await assert.rejects(
-          rpc(admin, "configure_compensation_policy", [32, 74, 0], "aal2"),
+          rpc(admin, "configure_compensation_policy", [32, 74, 0], "aal1"),
           /40001/,
         );
       },
@@ -177,8 +176,8 @@ await withTestDatabase(
     await check(
       "Current catalogue gives admin/management only subordinate assignable roles and guest no permissions",
       async () => {
-        const adminRoles = await rpc(admin, "account_role_catalog", [], "aal2"),
-          managerRoles = await rpc(manager, "account_role_catalog", [], "aal2");
+        const adminRoles = await rpc(admin, "account_role_catalog", [], "aal1"),
+          managerRoles = await rpc(manager, "account_role_catalog", [], "aal1");
         assert.deepEqual(
           adminRoles
             .filter((row) => row.assignable)
@@ -205,28 +204,25 @@ await withTestDatabase(
           [],
         );
         assert.equal(
-          (await rpc(manager, "account_users", ["", 50, 0], "aal2")).items.find(
+          (await rpc(manager, "account_users", ["", 50, 0], "aal1")).items.find(
             (row) => row.id === owner,
           ).can_assign_roles,
           false,
         );
-        await assert.rejects(
-          rpc(manager, "account_role_catalog"),
-          /MFA required/,
-        );
+        await assert.rejects(rpc(manager, "account_role_catalog"), /required/i);
       },
     );
     await check(
       "Management assigns lecturer/senior/guest and never self/equal/higher or combined protected role targets",
       async () => {
-        await rpc(manager, "set_account_roles", [guest, "{guest}"], "aal2");
+        await rpc(manager, "set_account_roles", [guest, "{guest}"], "aal1");
         assert.deepEqual((await rpc(guest, "account_me")).roles, ["guest"]);
         assert.deepEqual(
           JSON.parse(
             await actor(
               guest,
               "select to_json(public.get_my_permissions())",
-              "aal2",
+              "aal1",
             ),
           ),
           [],
@@ -234,7 +230,7 @@ await withTestDatabase(
         assert.deepEqual(await offers(guest), []);
         for (const target of [owner, admin, manager])
           await assert.rejects(
-            rpc(manager, "set_account_roles", [target, "{lecturer}"], "aal2"),
+            rpc(manager, "set_account_roles", [target, "{lecturer}"], "aal1"),
             /42501/,
           );
         for (const roles of [
@@ -244,19 +240,19 @@ await withTestDatabase(
           "{lecturer,admin}",
         ])
           await assert.rejects(
-            rpc(manager, "set_account_roles", [guest, roles], "aal2"),
+            rpc(manager, "set_account_roles", [guest, roles], "aal1"),
             /42501/,
           );
-        await rpc(admin, "set_account_roles", [guest, "{management}"], "aal2");
+        await rpc(admin, "set_account_roles", [guest, "{management}"], "aal1");
         await assert.rejects(
-          rpc(manager, "set_account_roles", [guest, "{guest}"], "aal2"),
+          rpc(manager, "set_account_roles", [guest, "{guest}"], "aal1"),
           /42501/,
         );
         await assert.rejects(
-          rpc(admin, "set_account_roles", [admin, "{lecturer}"], "aal2"),
+          rpc(admin, "set_account_roles", [admin, "{lecturer}"], "aal1"),
           /42501/,
         );
-        await rpc(admin, "set_account_roles", [guest, "{guest}"], "aal2");
+        await rpc(admin, "set_account_roles", [guest, "{guest}"], "aal1");
       },
     );
     await check(
@@ -264,22 +260,22 @@ await withTestDatabase(
       async () => {
         for (const target of [owner, admin, manager])
           await assert.rejects(
-            rpc(manager, "set_user_active", [target, false], "aal2"),
+            rpc(manager, "set_user_active", [target, false], "aal1"),
             /42501/,
           );
         await assert.rejects(
-          rpc(admin, "set_user_active", [owner, false], "aal2"),
+          rpc(admin, "set_user_active", [owner, false], "aal1"),
           /42501/,
         );
-        await rpc(manager, "set_user_active", [guest, false], "aal2");
+        await rpc(manager, "set_user_active", [guest, false], "aal1");
         await assert.rejects(rpc(guest, "account_me"), /Active login/);
-        await rpc(manager, "set_user_active", [guest, true], "aal2");
+        await rpc(manager, "set_user_active", [guest, true], "aal1");
         await assert.rejects(
           rpc(
             manager,
             "manage_client_organisation",
             [admin, org, false],
-            "aal2",
+            "aal1",
           ),
           /42501/,
         );
@@ -288,7 +284,7 @@ await withTestDatabase(
             manager,
             "manage_client_organisation",
             [company, org, false],
-            "aal2",
+            "aal1",
           ),
           /42501/,
         );
@@ -296,7 +292,7 @@ await withTestDatabase(
           admin,
           "manage_client_organisation",
           [company, org, false],
-          "aal2",
+          "aal1",
         );
       },
     );
@@ -315,7 +311,7 @@ await withTestDatabase(
                 null,
                 randomUUID(),
               ],
-              "aal2",
+              "aal1",
             ),
             /42501/,
           );
@@ -330,7 +326,7 @@ await withTestDatabase(
               org,
               randomUUID(),
             ],
-            "aal2",
+            "aal1",
           ),
           /42501/,
         );
@@ -344,7 +340,7 @@ await withTestDatabase(
             null,
             randomUUID(),
           ],
-          "aal2",
+          "aal1",
         );
         assert.equal(noGrant.status, "reserved");
         const invitation = await rpc(
@@ -357,9 +353,9 @@ await withTestDatabase(
             null,
             randomUUID(),
           ],
-          "aal2",
+          "aal1",
         );
-        await rpc(admin, "set_account_roles", [manager, "{guest}"], "aal2");
+        await rpc(admin, "set_account_roles", [manager, "{guest}"], "aal1");
         await assert.rejects(
           sql(
             `begin;set local role service_role;select public.complete_account_invitation('${invitation.invitation_id}','${guest}','Fictional',true);commit`,
@@ -370,7 +366,7 @@ await withTestDatabase(
           admin,
           "set_account_roles",
           [manager, "{management}"],
-          "aal2",
+          "aal1",
         );
       },
     );
@@ -383,7 +379,7 @@ await withTestDatabase(
           "{client,management}",
         ])
           await assert.rejects(
-            rpc(admin, "set_account_roles", [guest, roles], "aal2"),
+            rpc(admin, "set_account_roles", [guest, roles], "aal1"),
             /separate accounts/,
           );
         await sql(
@@ -394,15 +390,15 @@ await withTestDatabase(
         await sql(
           `delete from public.user_roles where user_id='${company}' and role='lecturer'`,
         );
-        await rpc(manager, "set_account_roles", [company, "{guest}"], "aal2");
-        await rpc(manager, "set_account_roles", [company, "{client}"], "aal2");
+        await rpc(manager, "set_account_roles", [company, "{guest}"], "aal1");
+        await rpc(manager, "set_account_roles", [company, "{client}"], "aal1");
         assert.deepEqual(await rpc(company, "client_organisations"), []);
         await assert.rejects(
           rpc(
             manager,
             "manage_client_organisation",
             [company, org, false],
-            "aal2",
+            "aal1",
           ),
           /42501/,
         );
@@ -410,15 +406,15 @@ await withTestDatabase(
           admin,
           "manage_client_organisation",
           [company, org, false],
-          "aal2",
+          "aal1",
         );
       },
     );
     await check(
-      "Only administrative MFA responses contain policy, gross or platform amounts",
+      "Only administrative permission responses contain policy, gross or platform amounts",
       async () => {
         for (const who of [manager, teacher, senior, company, guest]) {
-          const access = await rpc(who, "commission_access", [], "aal2");
+          const access = await rpc(who, "commission_access", [], "aal1");
           assert.equal("regular_lecturer_percent" in access, false);
           assert.equal("senior_lecturer_percent" in access, false);
           await assert.rejects(
@@ -430,15 +426,15 @@ await withTestDatabase(
             /permission denied/,
           );
           await assert.rejects(
-            actor(who, "select * from public.commission_report()", "aal2"),
+            actor(who, "select * from public.commission_report()", "aal1"),
             /Gross finance permission/,
           );
           await assert.rejects(
-            rpc(who, "commission_offer_policy", [untouched], "aal2"),
+            rpc(who, "commission_offer_policy", [untouched], "aal1"),
             /Gross finance permission/,
           );
         }
-        const access = await rpc(admin, "commission_access", [], "aal2");
+        const access = await rpc(admin, "commission_access", [], "aal1");
         assert.equal(access.regular_lecturer_percent, 31);
         assert.equal(access.senior_lecturer_percent, 73);
         assert.equal(
@@ -455,13 +451,13 @@ await withTestDatabase(
           admin,
           "job_lifecycle",
           [budgetJob],
-          "aal2",
+          "aal1",
         );
         const ownerState = await rpc(
           owner,
           "job_lifecycle",
           [budgetJob],
-          "aal2",
+          "aal1",
         );
         assert.equal(adminState.max_net_budget, 219.03);
         assert.equal(ownerState.max_net_budget, 219.03);
@@ -471,14 +467,8 @@ await withTestDatabase(
         );
         for (const who of [manager, teacher, senior])
           assert.equal(
-            (
-              await rpc(
-                who,
-                "job_lifecycle",
-                [budgetJob],
-                who === manager ? "aal2" : "aal1",
-              )
-            ).max_net_budget,
+            (await rpc(who, "job_lifecycle", [budgetJob], "aal1"))
+              .max_net_budget,
             null,
           );
         assert.equal(
@@ -494,7 +484,7 @@ await withTestDatabase(
           `select row_to_json(r) from private.claim_revenue_ledger r where claim_id='${receipt.claim_id}'`,
         );
         assert.equal(
-          (await rpc(admin, "job_lifecycle", [budgetJob], "aal2"))
+          (await rpc(admin, "job_lifecycle", [budgetJob], "aal1"))
             .max_net_budget,
           219.03,
         );
@@ -511,11 +501,11 @@ await withTestDatabase(
           revenue,
         );
         assert.equal(
-          (await rpc(admin, "job_lifecycle", [legacy], "aal2")).max_net_budget,
+          (await rpc(admin, "job_lifecycle", [legacy], "aal1")).max_net_budget,
           50,
         );
         assert.equal(
-          (await rpc(manager, "job_lifecycle", [legacy], "aal2"))
+          (await rpc(manager, "job_lifecycle", [legacy], "aal1"))
             .max_net_budget,
           50,
         );
@@ -543,7 +533,7 @@ await withTestDatabase(
             await actor(
               who,
               `select row_to_json(j) from public.jobs j where id='${id}'`,
-              who === manager ? "aal2" : "aal1",
+              "aal1",
             ),
           );
           assert.equal(Number(raw.amount), 0);
@@ -584,7 +574,7 @@ await withTestDatabase(
           manager,
           "set_account_roles",
           [teacher, "{senior_lecturer}"],
-          "aal2",
+          "aal1",
         );
         assert.equal(
           (await claim(teacher, id, randomUUID(), quote.terms_version)).status,
@@ -595,7 +585,7 @@ await withTestDatabase(
           manager,
           "set_account_roles",
           [teacher, "{lecturer}"],
-          "aal2",
+          "aal1",
         );
       },
     );
@@ -638,7 +628,7 @@ await withTestDatabase(
           manager,
           "set_account_roles",
           [teacher, "{senior_lecturer}"],
-          "aal2",
+          "aal1",
         );
         const retry = await claim(teacher, id, key, 21);
         assert.equal(retry.status, "confirmed");
@@ -656,7 +646,7 @@ await withTestDatabase(
           /immutable/,
         );
         await assert.rejects(
-          rpc(admin, "set_job_commission", [id, 200, 200, null], "aal2"),
+          rpc(admin, "set_job_commission", [id, 200, 200, null], "aal1"),
           /Only unaccepted/,
         );
       },
@@ -670,7 +660,7 @@ await withTestDatabase(
           manager,
           "set_account_roles",
           [teacher, "{lecturer}"],
-          "aal2",
+          "aal1",
         );
         assert.equal(Number((await offer(teacher, tiny)).total_amount), 0.02);
         assert.equal((await claim(teacher, tiny)).status, "confirmed");
@@ -686,7 +676,7 @@ await withTestDatabase(
             admin,
             "create_commission_job",
             [org, JSON.stringify(payload(4)), 50, randomUUID()],
-            "aal2",
+            "aal1",
           ),
           /configured separately/,
         );
@@ -701,19 +691,19 @@ await withTestDatabase(
           admin,
           "configure_compensation_policy",
           [32, 74, 1],
-          "aal2",
+          "aal1",
         );
         assert.equal(updated.policy_version, 2);
         assert.deepEqual(await offer(teacher, pending), before);
         assert.equal(
-          (await rpc(admin, "job_lifecycle", [pending], "aal2")).max_net_budget,
+          (await rpc(admin, "job_lifecycle", [pending], "aal1")).max_net_budget,
           73,
         );
         const captured = await rpc(
           admin,
           "commission_offer_policy",
           [pending],
-          "aal2",
+          "aal1",
         );
         assert.equal(captured.regular_lecturer_percent, 31);
         assert.equal(captured.senior_lecturer_percent, 73);
@@ -726,13 +716,13 @@ await withTestDatabase(
           "confirmed",
         );
         await assert.rejects(
-          rpc(admin, "configure_compensation_policy", [99, 10, 2], "aal2"),
+          rpc(admin, "configure_compensation_policy", [99, 10, 2], "aal1"),
           /Invalid compensation/,
         );
         const audit = await actor(
           manager,
           "select coalesce(json_agg(a),'[]') from public.audit_events a",
-          "aal2",
+          "aal1",
         );
         assert.equal(
           /regular_percent|senior_percent|lecturer_percent/.test(audit),
@@ -753,10 +743,10 @@ await withTestDatabase(
           admin,
           "commission_offer_policy",
           [id],
-          "aal2",
+          "aal1",
         );
         assert.equal(sourcePolicy.policy_version, 1);
-        const sourceState = await rpc(admin, "job_lifecycle", [id], "aal2");
+        const sourceState = await rpc(admin, "job_lifecycle", [id], "aal1");
         const request = randomUUID();
         const parameters = [
           id,
@@ -769,10 +759,10 @@ await withTestDatabase(
           admin,
           "manage_job_offer",
           parameters,
-          "aal2",
+          "aal1",
         );
         assert.equal(
-          await rpc(admin, "manage_job_offer", parameters, "aal2"),
+          await rpc(admin, "manage_job_offer", parameters, "aal1"),
           duplicate,
         );
         assert.notEqual(duplicate, id);
@@ -780,7 +770,7 @@ await withTestDatabase(
           admin,
           "commission_offer_policy",
           [duplicate],
-          "aal2",
+          "aal1",
         );
         assert.deepEqual(captured, {
           regular_lecturer_percent: 32,
@@ -793,14 +783,14 @@ await withTestDatabase(
           ),
           "0.00,0.00",
         );
-        const draft = await rpc(admin, "job_lifecycle", [duplicate], "aal2");
+        const draft = await rpc(admin, "job_lifecycle", [duplicate], "aal1");
         await rpc(
           admin,
           "manage_job_offer",
           [duplicate, "published", draft.version, randomUUID(), "{}"],
-          "aal2",
+          "aal1",
         );
-        await rpc(manager, "set_account_roles", [guest, "{lecturer}"], "aal2");
+        await rpc(manager, "set_account_roles", [guest, "{lecturer}"], "aal1");
         const quote = await offer(guest, duplicate);
         assert.equal(Number(quote.amount), 32);
         assert.equal(Number(quote.total_amount), 32);
@@ -834,10 +824,10 @@ await withTestDatabase(
           sourceRevenue,
         );
         assert.deepEqual(
-          await rpc(admin, "commission_offer_policy", [id], "aal2"),
+          await rpc(admin, "commission_offer_policy", [id], "aal1"),
           sourcePolicy,
         );
-        await rpc(manager, "set_account_roles", [guest, "{guest}"], "aal2");
+        await rpc(manager, "set_account_roles", [guest, "{guest}"], "aal1");
       },
     );
     await check(
@@ -878,7 +868,7 @@ await withTestDatabase(
         );
         const answer = await actor(
           guest,
-          `set local request.jwt.claims=${q(JSON.stringify({ sub: guest, aal: "aal2", role: "authenticated", user_metadata: { roles: ["admin", "senior_lecturer"] } }))};select public.commission_access()`,
+          `set local request.jwt.claims=${q(JSON.stringify({ sub: guest, aal: "aal1", role: "authenticated", user_metadata: { roles: ["admin", "senior_lecturer"] } }))};select public.commission_access()`,
         );
         assert.equal(JSON.parse(answer).can_manage_gross, false);
       },

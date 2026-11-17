@@ -25,8 +25,8 @@ const labels = {
   },
   search: { de: "Suche in der Hilfe", en: "Search help" },
   placeholder: {
-    de: "Zum Beispiel: Übernahme, MFA, Upload …",
-    en: "For example: claim, MFA, upload …",
+    de: "Zum Beispiel: Übernahme, Passwort, Upload …",
+    en: "For example: claim, password, upload …",
   },
   demo: { de: "Demo ausprobieren", en: "Try the demo" },
   login: { de: "Zum Portal", en: "Open portal" },
@@ -82,8 +82,8 @@ const recovery = [
   {
     title: { de: "Zugriff verweigert", en: "Access denied" },
     body: {
-      de: "Prüfe das angemeldete Konto und gegebenenfalls die aktuelle MFA-Bestätigung. Bitte die zuständige Verwaltung um Prüfung deiner Berechtigung. Private Termine, Direktnachrichten und Vertragsunterlagen werden nicht durch einen allgemeinen Admin-Zugang freigegeben.",
-      en: "Check the signed-in account and current MFA verification where required. Ask the responsible administrator to review your permission. Private events, direct messages and contract documents are not shared through blanket administrator access.",
+      de: "Prüfe das angemeldete Konto und bitte die zuständige Verwaltung, deine Berechtigung zu prüfen. Private Termine, Direktnachrichten und Vertragsunterlagen werden nicht durch einen allgemeinen Admin-Zugang freigegeben.",
+      en: "Check the signed-in account and ask the responsible administrator to review your permission. Private events, direct messages and contract documents are not shared through blanket administrator access.",
     },
     topic: "security",
   },
@@ -287,8 +287,8 @@ export function HelpCenter() {
               </h3>
               <p>
                 {i18n.language.startsWith("de")
-                  ? "Notiere den Bereich, den Zeitpunkt mit Zeitzone, die ausgeführte Aktion und die sichtbare Fehlermeldung. Beschreibe, was du erwartet hast und was tatsächlich geschah. Entferne private Daten aus Screenshots. Teile keine Passwörter, MFA-Codes, Schlüssel, privaten Nachrichten oder Vertragsinhalte. Diese Hilfe sendet keine Nachricht; wende dich über euren vereinbarten Kontaktweg an die zuständige Verwaltung."
-                  : "Note the section, time with time zone, action and visible error message. Describe what you expected and what happened. Remove private data from screenshots. Never share passwords, MFA codes, keys, private messages or contract contents. This help page sends no message; contact the responsible administrator through your agreed support channel."}
+                  ? "Notiere den Bereich, den Zeitpunkt mit Zeitzone, die ausgeführte Aktion und die sichtbare Fehlermeldung. Beschreibe, was du erwartet hast und was tatsächlich geschah. Entferne private Daten aus Screenshots. Teile keine Passwörter, Schlüssel, privaten Nachrichten oder Vertragsinhalte. Diese Hilfe sendet keine Nachricht; wende dich über euren vereinbarten Kontaktweg an die zuständige Verwaltung."
+                  : "Note the section, time with time zone, action and visible error message. Describe what you expected and what happened. Remove private data from screenshots. Never share passwords, keys, private messages or contract contents. This help page sends no message; contact the responsible administrator through your agreed support channel."}
               </p>
             </aside>
           </section>

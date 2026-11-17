@@ -41,13 +41,13 @@ await withTestDatabase("unified_search", async ({ sql, actor }) => {
   );
   assert.ok(!/[\s\\]/.test(file.url));
   const privileged = JSON.stringify(
-    await search(admin, "Needle", "", null, "aal2"),
+    await search(admin, "Needle", "", null, "aal1"),
   );
   assert.ok(!privileged.includes(ownFile));
   assert.ok(!privileged.includes(msg));
   assert.ok(!privileged.includes(task));
   console.log(
-    "PASS Universal search preserves own file/task and private DM boundaries, including MFA administrators; exact Unicode URL escaping",
+    "PASS Universal search preserves own file/task and private DM boundaries, including permission administrators; exact Unicode URL escaping",
   );
   result = await search(learner);
   assert.ok(

@@ -16,7 +16,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
   await actor(
     admin,
     "select public.configure_compensation_policy(31,73,0)",
-    "aal2",
+    "aal1",
   );
   let day = 1;
   /** Creates this module's fictional inputs; authoritative validation remains on the server. */
@@ -40,7 +40,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
     const result = await actor(
       admin,
       `select public.create_job(${quoteSql(JSON.stringify(payload()))}::jsonb)`,
-      "aal2",
+      "aal1",
     );
     day += 3;
     return result;
@@ -77,14 +77,14 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
     );
   };
   /** Reads the actual versioned management state before the next comparison. */
-  const state = async (job, who = admin, aal = "aal2") =>
+  const state = async (job, who = admin, aal = "aal1") =>
     JSON.parse(await actor(who, `select public.job_lifecycle('${job}')`, aal));
   /** Sends an explicit lifecycle action with the expected version and retry identity to the database contract. */
   const action = async (job, type, values = {}, key = randomUUID(), version) =>
     actor(
       admin,
       `select public.manage_job_offer('${job}',${quoteSql(type)},${version ?? (await state(job)).version},'${key}',${quoteSql(JSON.stringify(values))}::jsonb)`,
-      "aal2",
+      "aal1",
     );
   /** Cancels a specific claim under the selected identity and requires the server's permission checks. */
   const cancel = async (
@@ -106,7 +106,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
     console.log("PASS " + name);
   };
   await check(
-    "Only active managers with MFA can mutate offers; foreign and participant cancellation/read fail",
+    "Only active managers with permission can mutate offers; foreign and participant cancellation/read fail",
     async () => {
       const job = await create();
       const c = await claim(job);
@@ -219,7 +219,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
         actor(
           admin,
           `select public.set_job_status('${job}','published')`,
-          "aal2",
+          "aal1",
         ),
         /frozen/,
       );
@@ -524,7 +524,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
       const job = await actor(
         admin,
         `select public.create_commission_job(null,${quoteSql(JSON.stringify({ ...offer, gross_amount: amount * 2, gross_total_amount: total_amount * 2, requires_contract: false }))}::jsonb,null,'${randomUUID()}')`,
-        "aal2",
+        "aal1",
       );
       const c = await claim(job);
       const before = await sql(
@@ -546,7 +546,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
           await actor(
             admin,
             `select to_jsonb(s)::text from public.client_spend_summary() s where organisation_id='${org}'`,
-            "aal2",
+            "aal1",
           ),
         );
       assert.equal(Number((await summary()).assigned_count), 0);
@@ -565,7 +565,7 @@ await withTestDatabase("job_lifecycle", async ({ sql, actor }) => {
         await actor(
           admin,
           `select coalesce(jsonb_agg(to_jsonb(r)),'[]') from public.commission_report('${org}') r`,
-          "aal2",
+          "aal1",
         ),
       );
       assert.equal(report.length, 1);

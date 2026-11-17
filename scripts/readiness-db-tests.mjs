@@ -23,7 +23,7 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
     checks++;
     console.log(`PASS ${name}`);
   };
-  const snap = async (run, who = admin, aal = "aal2") =>
+  const snap = async (run, who = admin, aal = "aal1") =>
     JSON.parse(
       await actor(who, `select public.course_readiness('${run}')`, aal),
     )[0];
@@ -46,7 +46,7 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
     version,
     key = randomUUID(),
     who = admin,
-    aal = "aal2",
+    aal = "aal1",
   ) =>
     actor(
       who,
@@ -57,7 +57,7 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
     actor(
       admin,
       `select public.confirm_course_sessions('${run}',${version ?? (await snap(run)).settings.version},'${key}')`,
-      "aal2",
+      "aal1",
     );
   const file = async (
     owner,
@@ -83,7 +83,7 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
     await actor(
       admin,
       `select public.register_executed_contract('${who}','Fictional executed agreement','${contractFile.version}','2020-01-01',null,'master',null,'${randomUUID()}')`,
-      "aal2",
+      "aal1",
     );
   }
   let day = 1;
@@ -119,7 +119,7 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
     const job = await actor(
       admin,
       `select public.create_job(${quoteSql(JSON.stringify(payload))}::jsonb)`,
-      "aal2",
+      "aal1",
     );
     const run = await sql(
       `select course_run_id from public.jobs where id='${job}'`,
@@ -284,19 +284,19 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
       await actor(
         admin,
         `select public.verify_lecturer_topic('${teacher}','${topic}',false,null)`,
-        "aal2",
+        "aal1",
       );
       assert.equal(testCheck(await snap(run), "qualification").complete, false);
       await actor(
         admin,
         `select public.verify_lecturer_topic('${teacher}','${topic}',true,'2038-01-01')`,
-        "aal2",
+        "aal1",
       );
       assert.equal(testCheck(await snap(run), "qualification").complete, false);
       await actor(
         admin,
         `select public.verify_lecturer_topic('${teacher}','${topic}',true,null)`,
-        "aal2",
+        "aal1",
       );
       assert.equal(testCheck(await snap(run), "qualification").complete, true);
     },
@@ -311,7 +311,7 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
       await actor(
         admin,
         `select public.set_contract_status('${contract}','expired')`,
-        "aal2",
+        "aal1",
       );
       const state = await snap(run, teacher, "aal1");
       assert.equal(testCheck(state, "agreement").complete, false);
@@ -320,7 +320,7 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
       await actor(
         admin,
         `select public.set_contract_status('${contract}','active')`,
-        "aal2",
+        "aal1",
       );
       assert.equal(testCheck(await snap(run), "agreement").complete, true);
     },
@@ -482,7 +482,7 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
         due_at: null,
         archived: false,
       };
-      const createTask = (who = admin, aal = "aal2") =>
+      const createTask = (who = admin, aal = "aal1") =>
         actor(
           who,
           `select public.save_readiness_task('${run}',null,${quoteSql(JSON.stringify(values))},0,'${randomUUID()}')`,
@@ -515,7 +515,7 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
       await actor(
         admin,
         `select public.save_readiness_task('${run}','${task}',${quoteSql(JSON.stringify({ ...values, archived: true }))},${row.version},'${randomUUID()}')`,
-        "aal2",
+        "aal1",
       );
       assert.equal(testCheck(await snap(run), "tasks").applicable, false);
       assert.equal(
@@ -539,7 +539,7 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
       await actor(
         admin,
         `select public.manage_client_organisation('${otherCustomer}','${organisation}',true)`,
-        "aal2",
+        "aal1",
       );
       await assert.rejects(snap(run, otherCustomer, "aal1"), /42501/);
       await sql(
@@ -583,7 +583,7 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
       await actor(
         admin,
         `select public.set_contract_status('${contract}','expired')`,
-        "aal2",
+        "aal1",
       );
       assert.equal(
         testCheck(await snap(strict.run), "agreement").complete,
@@ -592,7 +592,7 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
       await actor(
         admin,
         `select public.set_contract_status('${contract}','active')`,
-        "aal2",
+        "aal1",
       );
     },
   );
@@ -603,14 +603,14 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
       await actor(
         admin,
         `select public.set_user_active('${teacher}',false)`,
-        "aal2",
+        "aal1",
       );
       await assert.rejects(snap(run, teacher, "aal1"), /42501/);
       assert.equal(testCheck(await snap(run), "lecturer").complete, false);
       await actor(
         admin,
         `select public.set_user_active('${teacher}',true)`,
-        "aal2",
+        "aal1",
       );
     },
   );

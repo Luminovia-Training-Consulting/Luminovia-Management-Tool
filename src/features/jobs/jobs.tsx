@@ -134,7 +134,6 @@ export function JobDetail() {
       "prerequisite_missing",
       "terms_changed",
       "unavailable",
-      "mfa_required",
     ].includes(result)
       ? `claim_${result}`
       : "error";

@@ -5,8 +5,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { createClient } from '@supabase/supabase-js';
-import { createHmac, randomUUID } from 'node:crypto';
-import { readPrivateJson, writePrivateJson } from '../../scripts/testing/private-state.mjs';
+import { randomUUID } from 'node:crypto';
+import { assertPasswordOnly } from './helpers/accounts-support';
 
 const configured = Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.E2E_PASSWORD);
 test.skip(!configured, 'Real local Supabase fixtures required. Run scripts/local-start.sh and scripts/local-seed.mjs.');
@@ -50,18 +50,6 @@ async function a11y(page: Page) {
   }));
   expect(violations).toEqual([]);
 }
-/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
-function totp(secret: string) {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-  const bits = [...secret.replace(/=+$/, '').toUpperCase()].map((char) => alphabet.indexOf(char).toString(2).padStart(5, '0')).join('');
-  const key = Buffer.from(bits.match(/.{8}/g)!.map((byte) => Number.parseInt(byte, 2)));
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000)));
-  const digest = createHmac('sha1', key).update(counter).digest();
-  const offset = digest[digest.length - 1] & 15;
-  return ((digest.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).toString().padStart(6, '0');
-}
-
 test('private routes require real authentication and login is accessible', async ({ page }, testInfo) => {
   await page.goto('/jobs');
   await expect(page).toHaveURL(/\/login/);
@@ -199,33 +187,14 @@ test('language changes preserve input, themes render accessibly, offline mutatio
   await expect(page.getByRole('button', { name: 'Save profile', exact: true })).toBeEnabled();
 });
 
-/** Raises the real browser administration session to AAL2 with TOTP before privileged forms are used. */
+/** Uses the real password-only session before exercising database-authorized admin forms. */
 async function adminSession(page: Page) {
-  const statePath = '.local/e2e-admin-totp.json';
   const { client } = await signInApi(process.env.E2E_ADMIN_EMAIL!);
-  const { data: factors, error } = await client.auth.mfa.listFactors();
-  expect(error).toBeNull();
-  let state: { factorId: string; secret: string } | null = readPrivateJson(statePath);
-  if (!factors!.totp.some((factor) => factor.id === state?.factorId)) state = null;
+  await assertPasswordOnly(client);
   await login(page, process.env.E2E_ADMIN_EMAIL!);
-  await page.goto('/security');
-  if (!state) {
-    expect(factors!.totp.filter((factor) => factor.status === 'verified'), 'Use a disposable local admin with no unknown MFA factor').toEqual([]);
-    const responsePromise = page.waitForResponse((response) => response.url().endsWith('/auth/v1/factors') && response.request().method() === 'POST');
-    await page.getByRole('button', { name: 'Authenticator einrichten', exact: true }).click();
-    const response = await responsePromise;
-    const enrollment = await response.json();
-    expect(enrollment.id).toBeTruthy();
-    expect(enrollment.totp?.secret).toBeTruthy();
-    state = { factorId: enrollment.id, secret: enrollment.totp.secret };
-    writePrivateJson(statePath, state);
-  }
-  await page.getByLabel('Sechsstelliger Code', { exact: true }).fill(totp(state!.secret));
-  await page.getByRole('button', { name: 'Code bestätigen', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText(/zwei Faktoren bestätigt/);
 }
 
-test('admin verifies a real TOTP factor and publishes a five-session job through the UI', async ({ page }, testInfo) => {
+test('admin uses password-only access and publishes a five-session job through the UI', async ({ page }, testInfo) => {
   await adminSession(page);
   await page.goto('/admin');
   const title = `QA Verwaltung ${testInfo.project.name} ${randomUUID().slice(0, 8)}`;

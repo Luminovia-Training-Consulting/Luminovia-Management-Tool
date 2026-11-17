@@ -3,9 +3,10 @@
  * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
-import { randomUUID, createHmac } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { assertPasswordOnly } from "./testing/password-only.mjs";
 if (process.env.PORTAL_TEST_MODE !== "1")
   throw new Error("Profile API mutations run only in ./portal test.");
 const config = readFileSync("supabase/config.toml", "utf8");
@@ -74,26 +75,13 @@ async function fixture(name, role) {
   );
   return { id: data.user.id, client };
 }
-/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
-function totp(secret) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567",
-    bits = [...secret.replace(/=+$/, "").toUpperCase()]
-      .map((c) => alphabet.indexOf(c).toString(2).padStart(5, "0"))
-      .join(""),
-    key = Buffer.from(bits.match(/.{8}/g).map((x) => Number.parseInt(x, 2))),
-    counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
-  const h = createHmac("sha1", key).update(counter).digest();
-  return ((h.readUInt32BE(h[h.length - 1] & 15) & 0x7fffffff) % 1000000)
-    .toString()
-    .padStart(6, "0");
-}
 try {
   const teacher = await fixture("Teacher", "lecturer"),
     peer = await fixture("Peer", "lecturer"),
     student = await fixture("Student", "participant"),
     outsider = await fixture("Outsider", "participant"),
     admin = await fixture("Administrator", "admin");
+  await assertPasswordOnly(admin.client);
   await checked(
     teacher.client.rpc("save_profile_details", {
       p_payload: {
@@ -217,20 +205,6 @@ try {
       })
     ).error,
   );
-  const factor = await checked(
-    admin.client.auth.mfa.enroll({
-      factorType: "totp",
-      friendlyName: "Profile QA",
-    }),
-    "Enroll real admin TOTP",
-  );
-  await checked(
-    admin.client.auth.mfa.challengeAndVerify({
-      factorId: factor.id,
-      code: totp(factor.totp.secret),
-    }),
-    "Verify real admin TOTP",
-  );
   await checked(
     admin.client.rpc("manage_course_enrolment", {
       p_course_run_id: run,
@@ -310,7 +284,7 @@ try {
       p_hidden: true,
       p_reason: "Fictional policy review",
     }),
-    "MFA hide",
+    "password-only authentication hide",
   );
   assert.deepEqual(
     await checked(
@@ -325,7 +299,7 @@ try {
       p_hidden: false,
       p_reason: "Fictional review restored",
     }),
-    "MFA restore",
+    "password-only authentication restore",
   );
   await checked(
     admin.client.rpc("manage_course_enrolment", {
@@ -361,7 +335,7 @@ try {
     ).error,
   );
   console.log(
-    "PASS: actual Auth/TOTP/REST profile labels and safe directory, real completed-course enrolment, restricted history, anonymous author-versioned reviews, MFA moderation, cross-participant and existing-session revocation/suspension.",
+    "PASS: actual Auth/password-only authentication/REST profile labels and safe directory, real completed-course enrolment, restricted history, anonymous author-versioned reviews, password-only authentication moderation, cross-participant and existing-session revocation/suspension.",
   );
 } finally {
   for (const client of clients) await client.removeAllChannels();

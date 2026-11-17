@@ -49,7 +49,7 @@ const de = {
   noRelated: "Keine für dich zugängliche Kursvorlage zugeordnet.",
   empty: "Keine passenden Katalogeinträge.",
   readOnly:
-    "Der Katalog ist für dich lesbar. Änderungen erfordern die Katalogberechtigung und bestätigte MFA.",
+    "Der Katalog ist für dich lesbar. Änderungen erfordern die aktuelle Katalogberechtigung.",
   limit:
     "Bis zu 500 Einträge. Verfeinere die Suche bei umfangreichen Katalogen.",
   reload: "Aktuellen Stand laden",
@@ -100,7 +100,7 @@ const en: Record<keyof typeof de, string> = {
   noRelated: "No course template accessible to you is linked.",
   empty: "No matching catalogue entries.",
   readOnly:
-    "You can read the catalogue. Editing requires the catalogue capability and verified MFA.",
+    "You can read the catalogue. Editing requires the current catalogue permission.",
   limit: "Up to 500 entries. Refine the search for larger catalogues.",
   reload: "Reload current version",
   currentParent: "Child of {{name}}",

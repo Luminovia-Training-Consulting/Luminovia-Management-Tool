@@ -81,8 +81,8 @@ const pairs: Record<string, [string, string]> = {
     "The server confirmed the change.",
   ],
   forbidden: [
-    "Für die Verwaltung brauchst du die aktuelle Berechtigung und eine bestätigte Zwei-Faktor-Anmeldung.",
-    "Management requires current permission and verified two-factor sign-in.",
+    "Für die Verwaltung brauchst du die aktuelle Berechtigung.",
+    "Management requires current permission.",
   ],
   unavailable: [
     "Diese Revision ist nicht mehr für dich freigegeben.",

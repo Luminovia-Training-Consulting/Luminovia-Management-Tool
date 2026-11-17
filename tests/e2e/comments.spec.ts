@@ -1,5 +1,5 @@
 /**
- * Browser workflows for literal comments, own revisions and reasoned MFA moderation.
+ * Browser workflows for literal comments, own revisions and reasoned password-only authentication moderation.
  * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
 import { test, expect } from "@playwright/test";
@@ -17,7 +17,7 @@ test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
   "Discussions use only isolated real accounts.",
 );
-test("job comments persist, stay literal, support own edits and reasoned MFA moderation without impersonation", async ({
+test("job comments persist, stay literal, support own edits and reasoned password-only authentication moderation without impersonation", async ({
   page,
   browser,
 }, testInfo) => {

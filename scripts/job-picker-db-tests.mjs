@@ -26,7 +26,7 @@ await withTestDatabase("job_picker", async ({ sql, actor }) => {
       cursor = null,
       limit = 100,
       selected = null,
-      aal = "aal2",
+      aal = "aal1",
     } = {},
   ) =>
     JSON.parse(
@@ -80,7 +80,7 @@ await withTestDatabase("job_picker", async ({ sql, actor }) => {
     },
   );
   await check(
-    "Current purpose capability and MFA govern choices independently of marketplace roles or job statuses",
+    "Current purpose capability and permission govern choices independently of marketplace roles or job statuses",
     async () => {
       for (const who of [teacher, learner])
         for (const purpose of ["job_attachment", "participant_course"])
@@ -93,7 +93,7 @@ await withTestDatabase("job_picker", async ({ sql, actor }) => {
       );
       await assert.rejects(picker(courseOnly, "job_attachment"), /42501/);
       assert.equal(
-        await actor(courseOnly, "select private.lecturer_actor()", "aal2"),
+        await actor(courseOnly, "select private.lecturer_actor()", "aal1"),
         "f",
       );
       assert.equal(
@@ -207,7 +207,7 @@ await withTestDatabase("job_picker", async ({ sql, actor }) => {
       const room = await actor(
         courseOnly,
         `select public.create_chat_group('Fictional participant channel','{}'::uuid[],'participant_course','${selected.id}')`,
-        "aal2",
+        "aal1",
       );
       assert.equal(
         await sql(
@@ -225,7 +225,7 @@ await withTestDatabase("job_picker", async ({ sql, actor }) => {
         actor(
           courseOnly,
           `select public.create_chat_group('Fictional duplicate','{}'::uuid[],'participant_course','d8000000-0000-4000-8000-000000001062')`,
-          "aal2",
+          "aal1",
         ),
         /23505/,
       );
@@ -233,7 +233,7 @@ await withTestDatabase("job_picker", async ({ sql, actor }) => {
         await actor(
           filesOnly,
           `select public.reserve_document('Fictional-picker.txt','text/plain',12,'job_after','material',null,'d8000000-0000-4000-8000-000000000001','${randomUUID()}',null,null)`,
-          "aal2",
+          "aal1",
         ),
       );
       assert.equal(
@@ -250,13 +250,13 @@ await withTestDatabase("job_picker", async ({ sql, actor }) => {
       await actor(
         admin,
         `select public.set_account_roles('${courseOnly}',array['client'])`,
-        "aal2",
+        "aal1",
       );
       await assert.rejects(picker(courseOnly, "participant_course"), /42501/);
       await actor(
         admin,
         `select public.set_user_active('${filesOnly}',false)`,
-        "aal2",
+        "aal1",
       );
       await assert.rejects(picker(filesOnly, "job_attachment"), /42501/);
       assert.equal(

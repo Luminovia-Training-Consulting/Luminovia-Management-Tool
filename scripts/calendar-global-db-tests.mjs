@@ -28,7 +28,7 @@ await withTestDatabase("calendar_global", async ({ sql, actor }) => {
     payload = {},
     key = randomUUID(),
     who = admin,
-    aal = "aal2",
+    aal = "aal1",
   ) =>
     actor(
       who,
@@ -45,7 +45,7 @@ await withTestDatabase("calendar_global", async ({ sql, actor }) => {
     actor(
       who,
       `select public.global_calendar_events(${q(from)},${q(to)},${manage}${extra})`,
-      who === admin || who === manager ? "aal2" : "aal1",
+      "aal1",
     ).then(JSON.parse);
   const check = async (name, run) => {
     await run();
@@ -54,7 +54,7 @@ await withTestDatabase("calendar_global", async ({ sql, actor }) => {
   };
   let event;
   await check(
-    "Current courses.manage/MFA; active ordinary accounts receive only explicit publications",
+    "Current courses.manage/permission; active ordinary accounts receive only explicit publications",
     async () => {
       for (const who of [teacher, peer, learner, client])
         await assert.rejects(
@@ -251,7 +251,7 @@ await withTestDatabase("calendar_global", async ({ sql, actor }) => {
         actor(
           admin,
           `select set_config('application_name','${label}',true);select public.set_account_roles('${manager}',array['participant']);select pg_sleep(2)`,
-          "aal2",
+          "aal1",
         ),
       ]);
       const wait = async (condition) => {
@@ -268,7 +268,7 @@ await withTestDatabase("calendar_global", async ({ sql, actor }) => {
         actor(
           manager,
           `select set_config('application_name','${label}_waiting',true);select public.manage_global_event(null,'save',0,'${randomUUID()}',${q(JSON.stringify({ ...body, title: "Forbidden after revocation" }))})`,
-          "aal2",
+          "aal1",
         ),
       ]);
       await wait(
@@ -301,7 +301,7 @@ await withTestDatabase("calendar_global", async ({ sql, actor }) => {
           await actor(
             admin,
             `select public.admin_audit_events(p_action=>${q(action)})`,
-            "aal2",
+            "aal1",
           ),
         );
         assert.ok(result.items.length > 0);
@@ -343,7 +343,7 @@ await withTestDatabase("calendar_global", async ({ sql, actor }) => {
         await actor(
           admin,
           `select count(*)from public.personal_events where user_id='${teacher}'`,
-          "aal2",
+          "aal1",
         ),
         "0",
       );

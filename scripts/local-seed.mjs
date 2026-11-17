@@ -1,6 +1,6 @@
 /**
  * Adds only fictional local development data with stable reference IDs.
- * Existing accounts, changed passwords and MFA are preserved across restarts.
+ * Existing accounts and changed passwords are preserved across restarts. No MFA factors are used.
  */
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
@@ -37,7 +37,7 @@ const existingUsers = await checked(
   service.auth.admin.listUsers({ perPage: 1000 }),
   "List local users",
 );
-/** Adds only missing fictional accounts, preserving existing identities, passwords and MFA. */
+/** Adds only missing fictional accounts, preserving existing identities and passwords. */
 async function user(email, displayName, role) {
   let account = existingUsers.users.find((entry) => entry.email === email);
   if (account) return { id: account.id, created: false };
@@ -111,7 +111,7 @@ if (process.env.PORTAL_TEST_MODE === "1") {
       "ON_ERROR_STOP=1",
     ],
     {
-      input: `begin;set local role authenticated;set local request.jwt.claims='${JSON.stringify({ sub: admin.id, aal: "aal2", role: "authenticated" })}';do $$begin if not (public.commission_access()->>'policy_configured')::boolean then perform public.configure_compensation_policy(31,73,0);end if;end$$;commit;`,
+      input: `begin;set local role authenticated;set local request.jwt.claims='${JSON.stringify({ sub: admin.id, aal: "aal1", role: "authenticated" })}';do $$begin if not (public.commission_access()->>'policy_configured')::boolean then perform public.configure_compensation_policy(31,73,0);end if;end$$;commit;`,
       stdio: ["pipe", "pipe", "pipe"],
     },
   );
@@ -351,7 +351,7 @@ for (const [index, job] of jobs.entries()) {
   );
 }
 console.log(
-  `Initialised missing fictional fixtures; existing accounts, profiles, permissions, MFA and assignments were preserved. No emails were sent. Admin profile ${admin.id.slice(0, 8)}…`,
+  `Initialised missing fictional fixtures; existing accounts, profiles, permissions and assignments were preserved. No emails were sent. Admin profile ${admin.id.slice(0, 8)}…`,
 );
 console.log(
   "Use the accounts and generated password in ignored .env.test.local. Never reuse these fixtures in production.",

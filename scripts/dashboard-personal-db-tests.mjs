@@ -35,7 +35,7 @@ await withTestDatabase("dashboard_personal", async ({ sql, actor }) => {
         /permission denied/,
       );
       await assert.rejects(
-        actor(admin, "select * from private.teaching_preparation", "aal2"),
+        actor(admin, "select * from private.teaching_preparation", "aal1"),
         /permission denied/,
       );
       assert.equal(

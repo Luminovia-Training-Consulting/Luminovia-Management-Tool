@@ -1,10 +1,10 @@
-/** Actual native Auth/MFA/REST audit reader; canonical disposable stack only. */
+/** Actual native Auth/password-only authentication/REST audit reader; canonical disposable stack only. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { withApiFixture } from "./testing/api.mjs";
 
-await withApiFixture(async ({ actor, mfa, service, checked, suffix, url }) => {
+await withApiFixture(async ({ actor, passwordOnly, service, checked, suffix, url }) => {
   const administrator = await actor("audit-admin", "admin"),
     owner = await actor("audit-owner", "owner"),
     manager = await actor("audit-management", "management"),
@@ -13,9 +13,9 @@ await withApiFixture(async ({ actor, mfa, service, checked, suffix, url }) => {
     (await administrator.client.rpc("admin_audit_events")).error?.code,
     "42501",
   );
-  await mfa(administrator.client);
-  await mfa(owner.client);
-  await mfa(manager.client);
+  await passwordOnly(administrator.client);
+  await passwordOnly(owner.client);
+  await passwordOnly(manager.client);
   for (const who of [manager, teacher])
     assert.equal(
       (await who.client.rpc("admin_audit_events")).error?.code,
@@ -170,6 +170,6 @@ await withApiFixture(async ({ actor, mfa, service, checked, suffix, url }) => {
   assert.ok(denied.error);
   assert.equal(denied.data, null);
   console.log(
-    "PASS: actual Auth/MFA/REST audit capability, role/metadata boundaries, safe exact allowlist, no private JSON, same-timestamp keyset pagination, bounded validation, no client writes and old-token revocation.",
+    "PASS: actual Auth/password-only authentication/REST audit capability, role/metadata boundaries, safe exact allowlist, no private JSON, same-timestamp keyset pagination, bounded validation, no client writes and old-token revocation.",
   );
 });

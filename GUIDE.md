@@ -2,6 +2,8 @@
 
 Consolidated reference. Source and tests remain authoritative for current behavior.
 
+**Current authentication change:** the pending branch removes MFA from the product. Accounts use passwords; protected actions use active-account, current database-role, resource-scope and RLS checks. MFA-specific references in older workflow notes below describe previous revisions. The change is not yet installed on KVM1.
+
 
 <a id="section-user-guide"></a>
 

@@ -101,7 +101,7 @@ Deno.test("lost authority after external I/O stops remaining privileged phases",
   let authorized = true;
   const { calls, deps } = fixture({
     authorize: async () => {
-      if (!authorized) throw new Error("permission_or_mfa_required");
+      if (!authorized) throw new Error("permission_required");
       return "permit";
     },
     objectAbsent: async () => {
@@ -111,7 +111,7 @@ Deno.test("lost authority after external I/O stops remaining privileged phases",
   });
   await assert.rejects(
     () => executeDeletion("caller", id, deps),
-    /permission_or_mfa_required/,
+    /permission_required/,
   );
   assert.ok(!calls.includes("apply"));
   assert.ok(!calls.includes("delete-auth"));

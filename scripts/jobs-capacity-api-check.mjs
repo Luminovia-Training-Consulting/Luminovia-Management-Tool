@@ -1,11 +1,11 @@
-/** Real Auth/MFA/REST capacity proof. SQL is used only for owned fixture cleanup. */
+/** Real Auth/password-only authentication/REST capacity proof. SQL is used only for owned fixture cleanup. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 
 await withApiFixture(
-  async ({ service, actor, mfa, sql, defer, checked, suffix }) => {
+  async ({ service, actor, passwordOnly, sql, defer, checked, suffix }) => {
     const admin = await actor("capacity-admin", "admin"),
       client = await actor("capacity-client", "client"),
       teachers = [];
@@ -146,10 +146,10 @@ await withApiFixture(
     assert.equal(
       (await admin.client.rpc("create_capacity_job", createArgs)).error?.code,
       "42501",
-      "A signed-in administrator still needs actual MFA",
+      "A signed-in administrator still needs actual password-only authentication",
     );
     assert.equal((await admin.client.rpc("job_board")).error?.code, "42501");
-    await mfa(admin.client);
+    await passwordOnly(admin.client);
     for (const capacity of [0, 21])
       assert.equal(
         (
@@ -255,7 +255,7 @@ await withApiFixture(
       "Explicitly restore three available positions",
     );
     pass(
-      "real MFA/role enforcement, bounded/idempotent creation and versioned capacity edits",
+      "real password-only authentication/role enforcement, bounded/idempotent creation and versioned capacity edits",
     );
 
     const offer = await checked(
@@ -787,6 +787,6 @@ await withApiFixture(
     pass(
       "actual client and course building-block creation retain capacity one and reject retroactive budget multiplication",
     );
-    console.log(`${checks} real Auth/MFA/REST job capacity checks passed.`);
+    console.log(`${checks} real Auth/password-only authentication/REST job capacity checks passed.`);
   },
 );

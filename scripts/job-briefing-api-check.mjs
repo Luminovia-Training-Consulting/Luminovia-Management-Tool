@@ -1,4 +1,4 @@
-/** Actual isolated Auth/MFA/REST proof for optional job references and consented contacts. */
+/** Actual isolated Auth/password-only authentication/REST proof for optional job references and consented contacts. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
@@ -6,7 +6,7 @@ import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 
 await withApiFixture(
-  async ({ service, actor, mfa, sql, defer, checked, url }) => {
+  async ({ service, actor, passwordOnly, sql, defer, checked, url }) => {
     const manager = await actor("briefing-manager", "admin"),
       teacher = await actor("briefing-teacher", "lecturer"),
       peer = await actor("briefing-peer", "lecturer"),
@@ -44,7 +44,7 @@ await withApiFixture(
           service.from("organisations").delete().in("id", organisations),
         );
     });
-    await mfa(manager.client);
+    await passwordOnly(manager.client);
     // Existing atomic job creation is unchanged; optional information is added to its detail page.
     const create = async (day) => {
       const id = await checked(
@@ -118,10 +118,14 @@ await withApiFixture(
       contact_description: "Organisational questions only.",
       contact_visibility: "after_claim",
     };
-    const passwordOnly = await actor("briefing-aal1-manager", "management");
-    users.push(passwordOnly.id);
+    const passwordOnlyManager = await actor(
+      "briefing-aal1-manager",
+      "management",
+    );
+    users.push(passwordOnlyManager.id);
     assert.equal(
-      (await save(details, 0, randomUUID(), job, passwordOnly)).error?.code,
+      (await save(details, 0, randomUUID(), job, passwordOnlyManager)).error
+        ?.code,
       "42501",
     );
     assert.equal(
@@ -297,7 +301,7 @@ await withApiFixture(
     );
     assert.equal((await save(details, 5)).error?.code, "42501");
     console.log(
-      "PASS actual Auth/MFA/REST optional job briefing: exact references, strict validation, hidden/publicly consented contacts, claim/cancellation revocation, immutable accepted fees, retries/CAS races, archive and current-role boundaries.",
+      "PASS actual Auth/password-only authentication/REST optional job briefing: exact references, strict validation, hidden/publicly consented contacts, claim/cancellation revocation, immutable accepted fees, retries/CAS races, archive and current-role boundaries.",
     );
   },
 );

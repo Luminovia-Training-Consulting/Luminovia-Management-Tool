@@ -1,6 +1,6 @@
 /**
  * PostgreSQL regression groups for accounts, roles and reserved invitations.
- * Real migrations define the contract; controlled role/MFA claims exercise it independently of the UI.
+ * Real migrations define the contract; controlled role claims exercise it independently of the UI.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -24,7 +24,7 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
   await sql(
     `insert into auth.users(id,email) values${[admin, owner, manager, lecturer, peer, client, participant].map((id) => `('${id}','${id}@example.invalid')`).join(",")};insert into public.user_roles(user_id,role) values('${admin}','admin'),('${owner}','owner'),('${manager}','management'),('${lecturer}','lecturer'),('${peer}','lecturer'),('${client}','client'),('${participant}','participant');update public.profiles set display_name='Fictional account';insert into public.organisations(id,name) values('${org}','Fictional API customer');`,
   );
-  /** Calls the business database API under the fixture's controlled identity/MFA claims. */
+  /** Calls the business database API under the fixture's controlled identity claims. */
   const rpc = (who, name, args = [], aal = "aal1") =>
     actor(
       who,
@@ -43,6 +43,8 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
       const me = await rpc(lecturer, "account_me");
       assert.equal(me.profile.id, lecturer);
       assert.deepEqual(me.roles, ["lecturer"]);
+      assert.ok(me.permissions.includes("jobs.read"));
+      assert.equal("assurance_level" in me, false);
       assert.ok(me.profile.email.endsWith("@example.invalid"));
       assert.equal("password" in me, false);
       assert.equal("service_role" in me, false);
@@ -87,32 +89,23 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
     },
   );
   await check(
-    "Account directory requires current management MFA and excludes auth credential internals",
+    "Account directory follows current database roles and excludes auth credential internals",
     async () => {
-      await assert.rejects(rpc(admin, "account_users"), /MFA required/);
-      await assert.rejects(
-        rpc(lecturer, "account_users", [], "aal2"),
-        /MFA required/,
-      );
-      const result = await rpc(
-        admin,
-        "account_users",
-        ["API teacher", 25, 0],
-        "aal2",
-      );
+      await assert.rejects(rpc(lecturer, "account_users"), /42501/);
+      const result = await rpc(admin, "account_users", ["API teacher", 25, 0]);
       assert.equal(result.total, 1);
       assert.equal(result.items[0].id, lecturer);
       assert.equal("encrypted_password" in result.items[0], false);
       await assert.rejects(
-        rpc(admin, "account_users", ["", 101, 0], "aal2"),
+        rpc(admin, "account_users", ["", 101, 0], "aal1"),
         /Invalid pagination/,
       );
       await assert.rejects(
-        rpc(admin, "account_users", ["", null, 0], "aal2"),
+        rpc(admin, "account_users", ["", null, 0], "aal1"),
         /Invalid pagination/,
       );
       await assert.rejects(
-        rpc(admin, "account_users", ["", 10, null], "aal2"),
+        rpc(admin, "account_users", ["", 10, null], "aal1"),
         /Invalid pagination/,
       );
     },
@@ -121,25 +114,25 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
     "Owner/admin may assign multiple actual roles; staff cannot promote themselves",
     async () => {
       await assert.rejects(
-        rpc(manager, "set_account_roles", [lecturer, "{admin}"], "aal2"),
+        rpc(manager, "set_account_roles", [lecturer, "{admin}"], "aal1"),
         /42501/,
       );
       await assert.rejects(
-        rpc(lecturer, "set_account_roles", [lecturer, "{admin}"], "aal2"),
+        rpc(lecturer, "set_account_roles", [lecturer, "{admin}"], "aal1"),
         /42501/,
       );
       await rpc(
         owner,
         "set_account_roles",
         [peer, "{lecturer,participant}"],
-        "aal2",
+        "aal1",
       );
       assert.deepEqual((await rpc(peer, "account_me")).roles, [
         "lecturer",
         "participant",
       ]);
       await assert.rejects(
-        rpc(admin, "set_account_roles", [peer, "{fake_role}"], "aal2"),
+        rpc(admin, "set_account_roles", [peer, "{fake_role}"], "aal1"),
         /Invalid roles/,
       );
     },
@@ -148,11 +141,11 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
     "Self administrative removal and self suspension are protected and role mutations are audited",
     async () => {
       await assert.rejects(
-        rpc(admin, "set_account_roles", [admin, "{lecturer}"], "aal2"),
+        rpc(admin, "set_account_roles", [admin, "{lecturer}"], "aal1"),
         /Self administrative/,
       );
       await assert.rejects(
-        rpc(owner, "set_user_active", [owner, false], "aal2"),
+        rpc(owner, "set_user_active", [owner, false], "aal1"),
         /Self-deactivation/,
       );
       assert.equal(
@@ -167,8 +160,8 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
     "Concurrent mutual administrator removal cannot eliminate every administrator",
     async () => {
       const results = await Promise.allSettled([
-        rpc(admin, "set_account_roles", [owner, "{lecturer}"], "aal2"),
-        rpc(owner, "set_account_roles", [admin, "{lecturer}"], "aal2"),
+        rpc(admin, "set_account_roles", [owner, "{lecturer}"], "aal1"),
+        rpc(owner, "set_account_roles", [admin, "{lecturer}"], "aal1"),
       ]);
       assert.equal(
         results.filter((result) => result.status === "fulfilled").length,
@@ -189,8 +182,8 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
     "Role removal and suspension use the same lock and cannot race into zero active administrators",
     async () => {
       const results = await Promise.allSettled([
-        rpc(admin, "set_account_roles", [owner, "{lecturer}"], "aal2"),
-        rpc(owner, "set_user_active", [admin, false], "aal2"),
+        rpc(admin, "set_account_roles", [owner, "{lecturer}"], "aal1"),
+        rpc(owner, "set_user_active", [admin, false], "aal1"),
       ]);
       assert.equal(
         results.filter((result) => result.status === "fulfilled").length,
@@ -222,7 +215,7 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
           org,
           inviteKey,
         ],
-        "aal2",
+        "aal1",
       );
       assert.equal(invitation.status, "reserved");
       assert.equal(
@@ -237,7 +230,7 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
               org,
               inviteKey,
             ],
-            "aal2",
+            "aal1",
           )
         ).status,
         "in_progress",
@@ -254,7 +247,7 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
               null,
               inviteKey,
             ],
-            "aal2",
+            "aal1",
           )
         ).status,
         "idempotency_conflict",
@@ -270,7 +263,7 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
             null,
             randomUUID(),
           ],
-          "aal2",
+          "aal1",
         ),
         /Only subordinate invitation/,
       );
@@ -279,7 +272,7 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
           admin,
           "reserve_account_invitation",
           ["bad@example.invalid", "Client", "lecturer", org, randomUUID()],
-          "aal2",
+          "aal1",
         ),
         /Valid client organisation/,
       );
@@ -293,7 +286,7 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
           admin,
           "complete_account_invitation",
           [invitation.invitation_id, client, "Untrusted", true],
-          "aal2",
+          "aal1",
         ),
         /permission denied/,
       );
@@ -312,7 +305,7 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
               org,
               inviteKey,
             ],
-            "aal2",
+            "aal1",
           )
         ).status,
         "already_sent",
@@ -339,7 +332,7 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
           null,
           randomUUID(),
         ],
-        "aal2",
+        "aal1",
       );
       await sql(`delete from public.user_roles where user_id='${manager}'`);
       await assert.rejects(
@@ -353,13 +346,13 @@ await withTestDatabase("accounts_test", async ({ sql, actor }) => {
   await check(
     "Suspended accounts lose existing-token account/API access immediately",
     async () => {
-      await rpc(admin, "set_user_active", [lecturer, false], "aal2");
+      await rpc(admin, "set_user_active", [lecturer, false], "aal1");
       await assert.rejects(rpc(lecturer, "account_me"), /Active login/);
       await assert.rejects(
         rpc(lecturer, "save_account_profile", ["{}"]),
         /Active login/,
       );
-      await rpc(admin, "set_user_active", [lecturer, true], "aal2");
+      await rpc(admin, "set_user_active", [lecturer, true], "aal1");
       assert.equal((await rpc(lecturer, "account_me")).profile.active, true);
     },
   );

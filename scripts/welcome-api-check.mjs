@@ -22,15 +22,14 @@ await withApiFixture(async ({ service, actor, checked }) => {
     status: "active",
     version: 1,
   });
-  assert.deepEqual(await checked(save(first, "security", "paused", 1)), {
-    step: "security",
-    status: "paused",
-    version: 2,
-  });
+  assert.equal(
+    (await save(first, "security", "paused", 1)).error?.code,
+    "22023",
+  );
   assert.deepEqual(await read(first), {
-    step: "security",
-    status: "paused",
-    version: 2,
+    step: "profile",
+    status: "active",
+    version: 1,
   });
   assert.deepEqual(await read(peer), {
     step: "welcome",
@@ -42,13 +41,13 @@ await withApiFixture(async ({ service, actor, checked }) => {
     status: "active",
     version: 0,
   });
-  assert.equal((await save(first, "files", "active", 1)).error?.code, "40001");
+  assert.equal((await save(first, "files", "active", 0)).error?.code, "40001");
   assert.ok(
     (
       await first.client.rpc("save_welcome_progress", {
         p_step: "files",
         p_status: "active",
-        p_expected_version: 2,
+        p_expected_version: 1,
         p_user_id: peer.id,
       })
     ).error,
@@ -63,7 +62,7 @@ await withApiFixture(async ({ service, actor, checked }) => {
     "42501",
   );
   assert.equal(
-    (await save(first, "finish", "completed", 2)).error?.code,
+    (await save(first, "finish", "completed", 1)).error?.code,
     "42501",
   );
   console.log(

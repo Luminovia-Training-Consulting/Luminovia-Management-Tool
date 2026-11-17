@@ -1,4 +1,4 @@
-/** Real MFA management UI for a fictional server-received enquiry; no public Website or email mutation. */
+/** Real password-only authentication management UI for a fictional server-received enquiry; no public Website or email mutation. */
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { randomUUID } from "node:crypto";

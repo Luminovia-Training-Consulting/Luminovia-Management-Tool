@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 
-await withApiFixture(async ({ actor, service, checked, sql, defer, mfa }) => {
+await withApiFixture(async ({ actor, service, checked, sql, defer, passwordOnly }) => {
   const admin = await actor("recipient-admin", "admin"),
     regular = await actor("recipient-regular", "lecturer"),
     senior = await actor("recipient-senior", "senior_lecturer"),
@@ -45,7 +45,7 @@ commit;`);
     }
     await checked(service.from("organisations").delete().eq("id", org));
   });
-  await mfa(admin.client);
+  await passwordOnly(admin.client);
   assert.equal(
     (await checked(admin.client.rpc("commission_access"))).policy_configured,
     true,
@@ -448,6 +448,6 @@ commit;`);
     "42501",
   );
   console.log(
-    "PASS actual Auth/MFA/REST: recipient role pricing in both directions, exact net/ledger, source privacy, stale role consent, concurrent promotion and unknown open cost; no operational policy mutation.",
+    "PASS actual Auth/password-only authentication/REST: recipient role pricing in both directions, exact net/ledger, source privacy, stale role consent, concurrent promotion and unknown open cost; no operational policy mutation.",
   );
 });

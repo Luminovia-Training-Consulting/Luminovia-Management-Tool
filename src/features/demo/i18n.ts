@@ -253,8 +253,8 @@ const pairs = {
     "Demo question: Which exercises suit an introduction to the shell?",
   ],
   security: [
-    "Demo-Sicherheitscheck: Passwort und MFA im echten Konto selbst einrichten",
-    "Demo security check: Set up your own password and MFA in the real account",
+    "Demo-Sicherheitscheck: Passwort im eigenen echten Konto selbst festlegen",
+    "Demo security check: Set your password in your own real account",
   ],
   empty: ["Noch nicht ausprobiert", "Not practised yet"],
   done: ["Ausprobiert", "Practised"],

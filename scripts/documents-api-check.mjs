@@ -3,11 +3,12 @@
  * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
-import { createHash, createHmac, randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { assertPasswordOnly } from "./testing/password-only.mjs";
 process.loadEnvFile(".env.test.local");
 const url = process.env.SUPABASE_URL;
 assert.ok(
@@ -30,22 +31,6 @@ const checked = async (request, label) => {
   assert.equal(error, null, `${label}: ${error?.message}`);
   return data;
 };
-/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
-function totp(secret) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const bits = [...secret.replace(/=+$/, "").toUpperCase()]
-    .map((c) => alphabet.indexOf(c).toString(2).padStart(5, "0"))
-    .join("");
-  const key = Buffer.from(
-    bits.match(/.{8}/g).map((b) => Number.parseInt(b, 2)),
-  );
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
-  const h = createHmac("sha1", key).update(counter).digest();
-  return ((h.readUInt32BE(h[h.length - 1] & 15) & 0x7fffffff) % 1000000)
-    .toString()
-    .padStart(6, "0");
-}
 /** Creates separate fictional accounts and signs them in through Auth; their IDs belong only to the fixture. */
 async function fixture(role) {
   const created = await checked(
@@ -127,20 +112,7 @@ try {
   const a = await fixture("lecturer"),
     b = await fixture("lecturer"),
     admin = await fixture("admin");
-  const factor = await checked(
-    admin.client.auth.mfa.enroll({
-      factorType: "totp",
-      friendlyName: "Local document QA",
-    }),
-    "Enroll actual admin TOTP",
-  );
-  await checked(
-    admin.client.auth.mfa.challengeAndVerify({
-      factorId: factor.id,
-      code: totp(factor.totp.secret),
-    }),
-    "Verify actual admin TOTP",
-  );
+  await assertPasswordOnly(admin.client);
   const bytes = new TextEncoder().encode("Fictional secure lesson material.");
   const key = randomUUID();
   const stored = await upload(a, bytes, "lesson.txt", {}, key);

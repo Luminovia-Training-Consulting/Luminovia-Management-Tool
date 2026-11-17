@@ -1,8 +1,8 @@
-/** Real Auth/MFA/REST lifecycle proof; scoped to the canonical disposable stack. */
+/** Real Auth/password-only authentication/REST lifecycle proof; scoped to the canonical disposable stack. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
-await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
+await withApiFixture(async ({ service, actor, passwordOnly, sql, defer, checked }) => {
   const manager = await actor("lifecycle-manager", "admin"),
     teacher = await actor("lifecycle-teacher", "lecturer"),
     peer = await actor("lifecycle-peer", "lecturer"),
@@ -60,9 +60,9 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
       )
     ).error?.code,
     "42501",
-    "MFA is enforced by actual API",
+    "password-only authentication is enforced by actual API",
   );
-  await mfa(manager.client);
+  await passwordOnly(manager.client);
   const payload = {
     title: "Fictional actual lifecycle API",
     customer_name: "Fictional lifecycle API customer",
@@ -326,6 +326,6 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
     "42501",
   );
   console.log(
-    "PASS: actual Auth/MFA/REST job lifecycle: complete-block cancellation/reopen/reclaim, exact immutable snapshots/released intervals, foreign/learner/stale/suspended denial, old-token chat revocation, reasoned history and safe idempotent draft copy.",
+    "PASS: actual Auth/password-only authentication/REST job lifecycle: complete-block cancellation/reopen/reclaim, exact immutable snapshots/released intervals, foreign/learner/stale/suspended denial, old-token chat revocation, reasoned history and safe idempotent draft copy.",
   );
 });

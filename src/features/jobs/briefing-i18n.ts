@@ -42,8 +42,7 @@ const de = {
     "Bitte prüfe die markierten Angaben. Weblinks müssen HTTP oder HTTPS verwenden und dürfen keine Zugangsdaten enthalten.",
   offline:
     "Du bist offline. Zum Speichern und erneuten Laden ist eine Verbindung erforderlich.",
-  mfa: "Zum Bearbeiten sind die Verwaltungsberechtigung und eine aktuelle Zwei-Faktor-Bestätigung erforderlich.",
-  security: "Sicherheit öffnen",
+  permissionRequired: "Für diese Aktion fehlt dir die aktuelle Berechtigung.",
   readOnly:
     "Die Angaben dieses archivierten Auftrags können nicht bearbeitet werden.",
 };
@@ -85,8 +84,7 @@ const en: Record<keyof typeof de, string> = {
   invalid:
     "Check the marked fields. Web links must use HTTP or HTTPS and must not contain credentials.",
   offline: "You are offline. Saving and reloading require a connection.",
-  mfa: "Editing requires the management permission and a current two-factor confirmation.",
-  security: "Open security",
+  permissionRequired: "You do not have the current permission for this action.",
   readOnly: "Details of this archived job cannot be edited.",
 };
 i18n.addResourceBundle("de", "jobBriefing", de);

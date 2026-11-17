@@ -4,7 +4,7 @@ import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 
 await withApiFixture(
-  async ({ actor, service, checked, sql, defer, mfa, suffix }) => {
+  async ({ actor, service, checked, sql, defer, passwordOnly, suffix }) => {
     const manager = await actor("replacement-manager", "admin"),
       original = await actor("replacement-original", "lecturer"),
       first = await actor("replacement-first", "lecturer"),
@@ -141,7 +141,7 @@ await withApiFixture(
       ).length,
       0,
     );
-    await mfa(manager.client);
+    await passwordOnly(manager.client);
     assert.equal(
       (await checked(manager.client.rpc("replacement_marketplace"))).find(
         (row) => row.id === offer,

@@ -40,7 +40,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
       admin,
       "configure_compensation_policy",
       ["37", "61", "0"],
-      "aal2",
+      "aal1",
     );
     let sequence = 0,
       checks = 0;
@@ -106,7 +106,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
         admin,
         "create_capacity_job",
         [q(JSON.stringify(payload)), "2", q(randomUUID()), q(org), "null"],
-        "aal2",
+        "aal1",
       );
       const quote = await ownOffer(source, job);
       const receipt = await rpc(source, "claim_job", [
@@ -225,7 +225,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
           offer = await proposal(fixture);
         for (const [who, aal] of [
           [fixture.source, "aal1"],
-          [manager, "aal2"],
+          [manager, "aal1"],
         ]) {
           const projection = (
             await rpc(who, "job_substitutions", [q(fixture.job)], aal)
@@ -259,7 +259,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
         );
         assert.equal(
           (
-            await rpc(admin, "job_substitutions", [q(fixture.job)], "aal2")
+            await rpc(admin, "job_substitutions", [q(fixture.job)], "aal1")
           ).find((row) => row.id === offer.id).quote.total_amount,
           offer.quote.total_amount,
         );
@@ -275,7 +275,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
           admin,
           "set_account_roles",
           [q(regularB), "array['senior_lecturer']"],
-          "aal2",
+          "aal1",
         );
         assert.equal((await accept(regularB, offer)).status, "terms_changed");
         assert.equal(await claimFacts(fixture.claim), fixture.oldFacts);
@@ -306,7 +306,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
           admin,
           "set_account_roles",
           [q(regularB), "array['lecturer']"],
-          "aal2",
+          "aal1",
         );
       },
     );
@@ -320,7 +320,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
           admin,
           "configure_compensation_policy",
           ["38", "62", "1"],
-          "aal2",
+          "aal1",
         );
         assert.equal((await accept(fixture.target, offer)).status, "confirmed");
         const changed = await make(),
@@ -330,7 +330,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
             admin,
             "set_job_commission",
             [q(changed.job), "200", "200", "null"],
-            "aal2",
+            "aal1",
           ),
           /22023/,
         );
@@ -385,7 +385,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
             admin,
             "set_account_roles",
             [q(regularB), "array['senior_lecturer']"],
-            "aal2",
+            "aal1",
           ),
         ]);
         assert.ok(["confirmed", "terms_changed"].includes(receipt.status));
@@ -406,7 +406,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
           admin,
           "set_account_roles",
           [q(regularB), "array['lecturer']"],
-          "aal2",
+          "aal1",
         );
       },
     );
@@ -442,7 +442,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
         const revoked = actor(
           admin,
           `set local application_name=${q(tag)};select public.set_account_roles(${q(manager)},array['lecturer']);select pg_sleep(3)`,
-          "aal2",
+          "aal1",
         );
         let writer;
         try {
@@ -450,7 +450,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
           writer = actor(
             manager,
             `set local application_name=${q(writeTag)};select public.respond_job_substitution(${q(offer.id)},'withdraw',null,${q(randomUUID())},false)`,
-            "aal2",
+            "aal1",
           );
           const settled = Promise.allSettled([revoked, writer]);
           await barrier(writeTag, "wait_event_type='Lock'");
@@ -466,7 +466,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
           admin,
           "set_account_roles",
           [q(manager), "array['management']"],
-          "aal2",
+          "aal1",
         );
       },
     );
@@ -484,13 +484,13 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
             q("Fictional owner withdrawal after delegation ends"),
             q(randomUUID()),
           ],
-          "aal2",
+          "aal1",
         );
         await call(
           admin,
           "set_account_roles",
           [q(manager), "array['lecturer']"],
-          "aal2",
+          "aal1",
         );
         assert.equal(
           (
@@ -498,7 +498,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
               manager,
               "respond_job_substitution",
               [q(id), q("withdraw"), "null", q(randomUUID()), "false"],
-              "aal2",
+              "aal1",
             )
           ).status,
           "withdrawn",
@@ -507,7 +507,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
           admin,
           "set_account_roles",
           [q(manager), "array['management']"],
-          "aal2",
+          "aal1",
         );
         const next = await proposal(fixture);
         assert.equal(
@@ -628,7 +628,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
           admin,
           "set_account_roles",
           [q(fixture.target), "array['participant']"],
-          "aal2",
+          "aal1",
         );
         const before = await receiptState(fixture, offer, accepted.claim_id);
         assert.deepEqual(
@@ -663,7 +663,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
           admin,
           "set_account_roles",
           [q(fixture.target), "array['senior_lecturer']"],
-          "aal2",
+          "aal1",
         );
       },
     );
@@ -691,7 +691,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
           admin,
           "set_user_active",
           [q(fixture.target), "false"],
-          "aal2",
+          "aal1",
         );
         const before = await receiptState(fixture, offer, accepted.claim_id);
         await assert.rejects(
@@ -706,7 +706,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
           admin,
           "set_user_active",
           [q(fixture.target), "true"],
-          "aal2",
+          "aal1",
         );
       },
     );
@@ -741,7 +741,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
           const revoked = actor(
             admin,
             `set local application_name=${q(tag)};select ${mutation};select pg_sleep(3)`,
-            "aal2",
+            "aal1",
           );
           const barrier = async (name, condition) => {
             for (let attempt = 0; attempt < 100; attempt++) {
@@ -789,14 +789,14 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
               admin,
               "set_account_roles",
               [q(fixture.target), "array['senior_lecturer']"],
-              "aal2",
+              "aal1",
             );
           else
             await call(
               admin,
               "set_user_active",
               [q(fixture.target), "true"],
-              "aal2",
+              "aal1",
             );
         }
       },
@@ -810,7 +810,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional recipient p
             who,
             "finance_forecast",
             [q("2048-01-01"), q("2048-04-01"), "0.5"],
-            "aal2",
+            "aal1",
           );
           assert.ok(
             forecast.months.some(

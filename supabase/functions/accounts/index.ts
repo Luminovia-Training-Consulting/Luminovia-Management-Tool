@@ -33,10 +33,10 @@ function deletionError(error: { code?: string } | null): void {
   if (error) {
     throw new Error(
       error.code === "42501"
-        ? "permission_or_mfa_required"
+        ? "permission_required"
         : ["23503", "40001", "P0001"].includes(error.code ?? "")
-        ? "deletion_conflict"
-        : "deletion_unavailable",
+          ? "deletion_conflict"
+          : "deletion_unavailable",
     );
   }
 }
@@ -50,7 +50,8 @@ Deno.serve(
     origins,
     appOrigin,
     openapi: accountOpenApi,
-    invitationsEnabled: Deno.env.get("PORTAL_INVITES_ENABLED") === "true" &&
+    invitationsEnabled:
+      Deno.env.get("PORTAL_INVITES_ENABLED") === "true" &&
       origins.includes(appOrigin),
     authenticate: async (token) => {
       const client = caller(token);

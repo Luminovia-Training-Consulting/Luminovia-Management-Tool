@@ -89,7 +89,7 @@ for (const moduleFirst of [false, true]) {
           await actor(
             who,
             `select to_jsonb(public.${name}(${args.join(",")}))`,
-            who === manager ? "aal2" : "aal1",
+            "aal1",
           ),
         );
       const workspace = (who = manager) =>
@@ -151,7 +151,7 @@ for (const moduleFirst of [false, true]) {
         actor(
           manager,
           `${tag}select public.attach_enquiry_document(${q(enquiry)},${q(doc.version)},'Fictional purpose',${expected},${q(randomUUID())})`,
-          "aal2",
+          "aal1",
         );
       for (const registry of [
         "support_attachments",
@@ -262,7 +262,7 @@ for (const moduleFirst of [false, true]) {
             actor(
               manager,
               `select set_config('application_name',${q(tag)},true);select public.attach_enquiry_document(${q(enquiry)},${q(other.version)},'Race purpose',3,${q(randomUUID())});select pg_sleep(2)`,
-              "aal2",
+              "aal1",
             ),
           ]);
           await barrier(tag, "wait_event='PgSleep'");
@@ -271,7 +271,7 @@ for (const moduleFirst of [false, true]) {
             actor(
               manager,
               `select set_config('application_name',${q(waiter)},true);select public.course_workspace_action(${q(run)},'resource_share',${q(JSON.stringify({ version_id: other.version, audience: "participants", category: "material" }))},0)`,
-              "aal2",
+              "aal1",
             ),
           ]);
           await barrier(waiter, "wait_event_type='Lock'");
@@ -296,7 +296,7 @@ for (const moduleFirst of [false, true]) {
             actor(
               manager,
               `select set_config('application_name',${q(tag)},true);select public.course_workspace_action(${q(run)},'resource_share',${q(JSON.stringify({ version_id: doc.version, audience: "participants", category: "material" }))},0);select pg_sleep(2)`,
-              "aal2",
+              "aal1",
             ),
           ]);
           await barrier(tag, "wait_event='PgSleep'");
@@ -322,13 +322,13 @@ for (const moduleFirst of [false, true]) {
         },
       );
       await check(
-        "new helpers are private and course wrappers keep current capability/MFA",
+        "new helpers are private and course wrappers keep current capability/permission",
         async () => {
           await assert.rejects(
             actor(
               manager,
               "select private.course_document_is_dedicated(null)",
-              "aal2",
+              "aal1",
             ),
             /42501/,
           );

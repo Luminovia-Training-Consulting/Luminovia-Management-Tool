@@ -11,12 +11,12 @@ import {
   actor,
   api,
   checked,
+  assertPasswordOnly,
   login,
   adminLogin,
-  code,
 } from "./helpers/accounts-support";
 
-test("actual teaching time, MFA review, protected PDFs and scoped Control Center work in DE/EN", async ({
+test("actual teaching time, password-only role review, protected PDFs and scoped Control Center work in DE/EN", async ({
   page,
   browser,
 }, testInfo) => {
@@ -119,7 +119,7 @@ test("actual teaching time, MFA review, protected PDFs and scoped Control Center
       ends_at: next.plus({ hours: 6 }).toISO()!,
     }),
   );
-  // A separate MFA administrator creates an actual role-priced EUR offer.
+  // A password-only administrator creates an actual role-priced EUR offer.
   // Management must see its cost as unknown, never a privacy sentinel zero;
   // the unrelated fixed AUD offer above has a known contractual cost.
   const pricingActor = await actor(
@@ -135,19 +135,7 @@ test("actual teaching time, MFA review, protected PDFs and scoped Control Center
       })
     ).error,
   ).toBeNull();
-  const factor = await checked(
-    pricing.auth.mfa.enroll({
-      factorType: "totp",
-      friendlyName: "Fictional scenario policy fixture",
-    }),
-  );
-  if (!factor) throw new Error("Actual scenario MFA enrollment is required");
-  await checked(
-    pricing.auth.mfa.challengeAndVerify({
-      factorId: factor.id,
-      code: code(factor.totp.secret),
-    }),
-  );
+  await assertPasswordOnly(pricing);
   const organisation = randomUUID();
   await checked(
     service.from("organisations").insert({

@@ -3,10 +3,11 @@
  * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
-import { randomUUID, createHmac } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 import { createClient } from "@supabase/supabase-js";
+import { assertPasswordOnly } from "./testing/password-only.mjs";
 if (process.env.PORTAL_TEST_MODE !== "1")
   throw new Error("Account API mutations require isolated ./portal test.");
 process.loadEnvFile(".env.test.local");
@@ -31,25 +32,6 @@ async function checked(request, label) {
   const result = await request;
   assert.equal(result.error, null, `${label}: ${result.error?.message}`);
   return result.data;
-}
-/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
-function totp(secret) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const bits = [...secret.replace(/=+$/, "").toUpperCase()]
-    .map((c) => chars.indexOf(c).toString(2).padStart(5, "0"))
-    .join("");
-  const bytes = Buffer.from(
-    bits.match(/.{8}/g).map((v) => Number.parseInt(v, 2)),
-  );
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
-  const hash = createHmac("sha1", bytes).update(counter).digest();
-  return (
-    (hash.readUInt32BE(hash[hash.length - 1] & 15) & 0x7fffffff) %
-    1000000
-  )
-    .toString()
-    .padStart(6, "0");
 }
 /** Creates separate fictional accounts and signs them in through Auth; their IDs belong only to the fixture. */
 async function fixture(name, role) {
@@ -84,22 +66,9 @@ async function fixture(name, role) {
   );
   return { id: data.user.id, email, client };
 }
-/** Verifies a real TOTP factor so privileged test requests actually use AAL2. */
-async function mfa(actor) {
-  const factor = await checked(
-    actor.client.auth.mfa.enroll({
-      factorType: "totp",
-      friendlyName: "Account API QA",
-    }),
-    "Enroll actual TOTP",
-  );
-  await checked(
-    actor.client.auth.mfa.challengeAndVerify({
-      factorId: factor.id,
-      code: totp(factor.totp.secret),
-    }),
-    "Verify actual TOTP",
-  );
+/** Confirms privileged requests work with password-only AAL1 and no enrolled factors. */
+async function passwordOnly(actor) {
+  await assertPasswordOnly(actor.client);
 }
 /** Sends the actual test request as the selected identity; its response is asserted separately. */
 async function request(
@@ -142,7 +111,7 @@ try {
   assert.match(own.headers.get("cache-control"), /no-store/);
   assert.equal((await request(teacher, "users")).status, 403);
   assert.equal((await request(admin, "users")).status, 403);
-  await mfa(admin);
+  await passwordOnly(admin);
   const accounts = await request(admin, `users?q=${suffix}&limit=2&offset=0`);
   assert.equal(accounts.status, 200);
   assert.equal(accounts.body.total, 4);
@@ -360,7 +329,7 @@ try {
     200,
   );
   assert.equal((await request(teacher, "me")).status, 200);
-  await mfa(manager);
+  await passwordOnly(manager);
   const managerCatalog = await request(manager, "roles");
   assert.equal(managerCatalog.status, 200);
   assert.ok(
@@ -443,7 +412,7 @@ try {
   assert.equal(spec.status, 200);
   assert.equal((await spec.json()).openapi, "3.1.0");
   console.log(
-    "PASS: actual Auth/TOTP Account HTTP API, own profile, strict identity/roles/timezones, bounded directory, self protection, role assignment, scoped client links/revocation, durable one-email invitation, origin check and old-token suspension/reactivation.",
+    "PASS: actual password-only Auth Account HTTP API, own profile, strict identity/roles/timezones, bounded directory, self protection, role assignment, scoped client links/revocation, durable one-email invitation, origin check and old-token suspension/reactivation.",
   );
 } finally {
   if (users.length) {

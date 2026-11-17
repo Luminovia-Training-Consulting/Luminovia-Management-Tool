@@ -6,8 +6,7 @@ const en = {
     "Review incoming training requests, link the customer and continue with course planning.",
   connection:
     "The Website connection is configured separately. This inbox does not confirm that the public Website is connected.",
-  denied:
-    "Enquiries require current customer-management permission and verified MFA.",
+  denied: "Enquiries require current customer-management permission.",
   search: "Search company, topic or contact email",
   status: "Status",
   all: "All statuses",
@@ -94,7 +93,7 @@ const de: typeof en = {
   connection:
     "Die Website-Anbindung wird separat eingerichtet. Dieser Eingang bestätigt nicht, dass die öffentliche Website bereits verbunden ist.",
   denied:
-    "Anfragen erfordern die aktuelle Berechtigung zur Auftraggeberverwaltung und eine bestätigte MFA.",
+    "Anfragen erfordern die aktuelle Berechtigung zur Auftraggeberverwaltung.",
   search: "Unternehmen, Thema oder Kontakt-E-Mail suchen",
   status: "Status",
   all: "Alle Status",

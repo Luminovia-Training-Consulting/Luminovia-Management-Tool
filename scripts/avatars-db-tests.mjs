@@ -1,6 +1,6 @@
 /**
  * PostgreSQL regression groups for scanned avatars and current viewing permissions.
- * Real migrations define the contract; controlled role/MFA claims exercise it independently of the UI.
+ * Real migrations define the contract; controlled role/permission claims exercise it independently of the UI.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -18,7 +18,7 @@ await withTestDatabase("avatars_test", async ({ sql, actor }) => {
     run = randomUUID(),
     job = randomUUID(),
     claim = randomUUID();
-  /** Calls the business database API under the fixture's controlled identity/MFA claims. */
+  /** Calls the business database API under the fixture's controlled identity/permission claims. */
   const rpc = async (who, name, args = [], aal = "aal1") => {
     const result = await actor(
       who,
@@ -116,7 +116,7 @@ await withTestDatabase("avatars_test", async ({ sql, actor }) => {
         clean.version_id,
       );
       assert.equal(
-        (await rpc(admin, "profile_avatar", [teacher], "aal2")).version_id,
+        (await rpc(admin, "profile_avatar", [teacher], "aal1")).version_id,
         clean.version_id,
       );
       for (const who of [peer, admin]) {
@@ -124,7 +124,7 @@ await withTestDatabase("avatars_test", async ({ sql, actor }) => {
           await actor(
             who,
             `select count(*) from public.documents where id='${clean.document_id}'`,
-            "aal2",
+            "aal1",
           ),
           "0",
         );
@@ -132,7 +132,7 @@ await withTestDatabase("avatars_test", async ({ sql, actor }) => {
           await actor(
             who,
             `select count(*) from public.document_versions where id='${clean.version_id}'`,
-            "aal2",
+            "aal1",
           ),
           "0",
         );
@@ -140,7 +140,7 @@ await withTestDatabase("avatars_test", async ({ sql, actor }) => {
           await actor(
             who,
             `select count(*) from public.profile_avatars where user_id='${teacher}'`,
-            "aal2",
+            "aal1",
           ),
           "0",
         );
@@ -202,7 +202,7 @@ await withTestDatabase("avatars_test", async ({ sql, actor }) => {
     admin,
     "manage_course_enrolment",
     [run, learner, "completed"],
-    "aal2",
+    "aal1",
   );
   await check(
     "Clients and learners may read an actual assigned lecturer avatar, never unrelated profiles or people",
@@ -230,13 +230,13 @@ await withTestDatabase("avatars_test", async ({ sql, actor }) => {
         admin,
         "manage_client_organisation",
         [client, org, "true"],
-        "aal2",
+        "aal1",
       );
       await rpc(
         admin,
         "manage_course_enrolment",
         [run, learner, "removed"],
-        "aal2",
+        "aal1",
       );
       for (const who of [client, learner])
         await assert.rejects(

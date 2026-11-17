@@ -185,7 +185,7 @@ const pairs: Record<string, [string, string]> = {
   ],
   invite_permission_required: [
     "Für Einladungen sind Verwaltungsrechte und eine aktuelle Zwei-Faktor-Bestätigung erforderlich.",
-    "Invitations require administrative permission and current two factor verification.",
+    "Invitations require current administrative permission.",
   ],
   invite_disabled: [
     "Der Einladungsversand ist für diese Installation noch nicht freigeschaltet.",
@@ -214,7 +214,6 @@ const pairs: Record<string, [string, string]> = {
   profile: ["Mein Profil", "My profile"],
   admin: ["Verwaltung", "Administration"],
   settings: ["Einstellungen", "Settings"],
-  security: ["Kontosicherheit", "Account security"],
   login: ["Anmelden", "Sign in"],
   logout: ["Abmelden", "Sign out"],
   email: ["E-Mail", "Email"],
@@ -313,10 +312,6 @@ const pairs: Record<string, [string, string]> = {
   claim_unavailable: [
     "Dieser Auftrag ist derzeit nicht verfügbar.",
     "This job is currently unavailable.",
-  ],
-  claim_mfa_required: [
-    "Bitte bestätige zuerst deine Kontosicherheit.",
-    "Please verify your account security first.",
   ],
   terms: ["Konditionen", "Terms"],
   acceptTerms: ["Konditionen akzeptieren", "Accept the terms"],
@@ -428,22 +423,6 @@ const pairs: Record<string, [string, string]> = {
   noAccess: [
     "Für diesen Bereich fehlt dir die Berechtigung.",
     "You do not have permission to access this area.",
-  ],
-  mfaTitle: ["Schütze dein Konto", "Protect your account"],
-  mfaHint: [
-    "Für Verwaltungsaktionen ist eine Bestätigung mit einer Authenticator-App erforderlich.",
-    "Administrative actions require verification with an authenticator app.",
-  ],
-  mfaEnroll: ["Authenticator einrichten", "Set up authenticator"],
-  mfaCode: ["Sechsstelliger Code", "Six digit code"],
-  mfaVerify: ["Code bestätigen", "Verify code"],
-  mfaReady: [
-    "Dein Konto ist mit zwei Faktoren bestätigt.",
-    "Your account has two factor verification.",
-  ],
-  mfaScan: [
-    "Scanne diesen QR-Code mit deiner Authenticator-App.",
-    "Scan this QR code with your authenticator app.",
   ],
   newPassword: ["Neues Passwort", "New password"],
   setPassword: ["Passwort festlegen", "Set password"],

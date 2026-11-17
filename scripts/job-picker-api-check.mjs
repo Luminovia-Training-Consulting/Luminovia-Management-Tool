@@ -1,10 +1,10 @@
-/** Auth/MFA/REST proof for purpose-scoped metadata; canonical disposable stack only. */
+/** Auth/password-only authentication/REST proof for purpose-scoped metadata; canonical disposable stack only. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 await withApiFixture(
-  async ({ actor, mfa, service, checked, sql, defer, suffix }) => {
+  async ({ actor, passwordOnly, service, checked, sql, defer, suffix }) => {
     const admin = await actor("picker-admin", "admin"),
       teacher = await actor("picker-teacher", "lecturer"),
       learner = await actor("picker-learner", "participant"),
@@ -122,7 +122,7 @@ await withApiFixture(
           "42501",
         );
     }
-    await mfa(admin.client);
+    await passwordOnly(admin.client);
     const old = await checked(
       admin.client
         .from("jobs")
@@ -325,7 +325,7 @@ await withApiFixture(
       "42501",
     );
     console.log(
-      "PASS: actual Auth/MFA/REST scoped-picker roles; unchanged1000cap→1059jobs/1057distinctruns; literal/metadata privacy/cursor; real selected upload reservation and participant channel; self-role refusal without role/audit mutation; existing-token suspension.",
+      "PASS: actual Auth/password-only authentication/REST scoped-picker roles; unchanged1000cap→1059jobs/1057distinctruns; literal/metadata privacy/cursor; real selected upload reservation and participant channel; self-role refusal without role/audit mutation; existing-token suspension.",
     );
   },
 );

@@ -65,7 +65,6 @@ export function ControlCenterPage() {
       <>
         <PageHeading title={t("controlCenter")} />
         <Notice kind="error">{t("denied")}</Notice>
-        <Link to="/security">{t("security")}</Link>
       </>
     );
   const info = query.data;

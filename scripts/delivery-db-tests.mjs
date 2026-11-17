@@ -75,7 +75,7 @@ await withTestDatabase("delivery", async ({ sql, actor }) => {
     action = "confirm",
     note = "Reviewed fictional evidence",
     who = admin,
-    aal = "aal2",
+    aal = "aal1",
     key = randomUUID(),
   ) =>
     rpc(
@@ -176,7 +176,7 @@ await withTestDatabase("delivery", async ({ sql, actor }) => {
     },
   );
   await check(
-    "Review requires independent current manager and MFA; one simultaneous CAS winner",
+    "Review requires independent current manager and permission; one simultaneous CAS winner",
     async () => {
       await assert.rejects(review(a, 2, "confirm", "", peer), /42501/);
       await assert.rejects(review(a, 2, "confirm", "", admin, "aal1"), /42501/);
@@ -427,7 +427,7 @@ await withTestDatabase("delivery", async ({ sql, actor }) => {
         rpc(teacher, "delivery_history", [q(foreign.session)]),
         /42501/,
       );
-      const managed = await list(admin, "management", "aal2");
+      const managed = await list(admin, "management", "aal1");
       assert.ok(managed.items.some((r) => r.session_id === foreign.session));
       assert.ok(!JSON.stringify(managed).includes("Immutable fictional deal"));
     },

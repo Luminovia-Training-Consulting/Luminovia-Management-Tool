@@ -696,7 +696,7 @@ function TicketDetail({
     );
   if (ticket.isPending) return <Loading />;
   const row = ticket.data;
-  // A newly observed capability/MFA loss must immediately redact any retained
+  // A newly observed capability loss must immediately redact any retained
   // staff projection while the detailed query revalidates its own permission.
   if (row.can_manage && !context.can_manage)
     return <Notice kind="error">{t("denied")}</Notice>;

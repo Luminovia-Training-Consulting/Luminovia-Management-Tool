@@ -1,6 +1,6 @@
 /**
  * Bounded cursor-based reads of permitted administrative events. Interpret calendar dates in
- * their intended zone; the RPC enforces MFA, capability and the event allowlist.
+ * their intended zone; the RPC enforces capability and the event allowlist.
  */
 import { queryOptions } from "@tanstack/react-query";
 import { DateTime } from "luxon";

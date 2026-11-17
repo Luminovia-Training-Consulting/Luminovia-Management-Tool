@@ -8,7 +8,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
 import { Plus, Building2, Mail, Phone } from "lucide-react";
 import "./i18n";
 import "./styles.css";
@@ -444,9 +443,6 @@ export function ClientsPage() {
       <>
         <PageHeading title={t("clients")} />
         <Notice kind="error">{t("noAccess")}</Notice>
-        <Button asChild>
-          <Link to="/security">MFA</Link>
-        </Button>
       </>
     );
   return <ClientWorkspace actor={session!.user.id} />;

@@ -4,32 +4,13 @@
  */
 /** Real API fixtures belong only to the canonical disposable project, never dev. */
 import assert from "node:assert/strict";
-import { randomUUID, createHmac } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
 import { collectUtf8 } from "./utf8-stream.mjs";
+import { assertPasswordOnly } from "./password-only.mjs";
 
-/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
-function totp(secret) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const bits = [...secret.replace(/=+$/, "").toUpperCase()]
-    .map((character) => {
-      const value = alphabet.indexOf(character);
-      assert.ok(value >= 0, "Valid base32 MFA secret required");
-      return value.toString(2).padStart(5, "0");
-    })
-    .join("");
-  const key = Buffer.from(
-    bits.match(/.{8}/g).map((value) => Number.parseInt(value, 2)),
-  );
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
-  const digest = createHmac("sha1", key).update(counter).digest();
-  return ((digest.readUInt32BE(digest.at(-1) & 15) & 0x7fffffff) % 1000000)
-    .toString()
-    .padStart(6, "0");
-}
 /** Requires actual SDK success before returning the response data. */
 async function checked(request, label = "API operation") {
   const { data, error } = await request;
@@ -140,23 +121,8 @@ export async function withApiFixture(run) {
     );
     return { id: result.user.id, email, client };
   };
-  /** Verifies a real TOTP factor so privileged test requests actually use AAL2. */
-  const mfa = async (client) => {
-    const factor = await checked(
-      client.auth.mfa.enroll({
-        factorType: "totp",
-        friendlyName: "Isolated M4 QA",
-      }),
-      "Enroll real MFA factor",
-    );
-    await checked(
-      client.auth.mfa.challengeAndVerify({
-        factorId: factor.id,
-        code: totp(factor.totp.secret),
-      }),
-      "Verify real TOTP",
-    );
-  };
+  /** Confirms privileged role fixtures use password-only sessions and have no enrolled MFA factors. */
+  const passwordOnly = assertPasswordOnly;
   // Preserves assertion failures while deleting dependent resources before channels/accounts in reverse order.
   let failure;
   let result;
@@ -165,7 +131,7 @@ export async function withApiFixture(run) {
     result = await run({
       service,
       actor,
-      mfa,
+      passwordOnly,
       sql,
       defer: (callback) => cleanups.push(callback),
       checked,

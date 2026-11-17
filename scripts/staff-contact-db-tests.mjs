@@ -32,7 +32,7 @@ await withTestDatabase("staff_contact", async ({ sql, actor }) => {
       assert.equal(own.version, 0);
       assert.equal(own.email_address, owner + "@example.invalid");
       await assert.rejects(
-        actor(admin, "select * from private.staff_contact_visibility", "aal2"),
+        actor(admin, "select * from private.staff_contact_visibility", "aal1"),
         /permission denied/,
       );
       assert.equal(

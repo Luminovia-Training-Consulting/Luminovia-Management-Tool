@@ -11,8 +11,7 @@ const de = {
     "Nachvollziehbare Verwaltungsaktionen – lesbar, durchsuchbar und zeitlich begrenzt.",
   privacy:
     "Diese Ansicht zeigt nur freigegebene Verwaltungsereignisse. Private Profile, Kalender, Verfügbarkeiten, Chats, Dokumente, Verträge und Rechnungsinhalte sowie Detaildaten werden nicht einbezogen.",
-  denied:
-    "Das Protokoll erfordert die aktuelle Berechtigung audit.read und bestätigte Mehrfaktor-Authentifizierung.",
+  denied: "Das Protokoll erfordert die aktuelle Berechtigung audit.read.",
   from: "Von",
   to: "Bis einschließlich",
   zone: "Zeitzone",
@@ -57,8 +56,7 @@ const en = {
     "Traceable administrative actions with searchable, bounded history.",
   privacy:
     "This view includes reviewed administrative events only. Private profiles, calendars, availability, chats, documents, contracts, invoice content and event details are excluded.",
-  denied:
-    "The audit trail requires the current audit.read capability and verified multi-factor authentication.",
+  denied: "The audit trail requires the current audit.read capability.",
   from: "From",
   to: "Through",
   zone: "Time zone",

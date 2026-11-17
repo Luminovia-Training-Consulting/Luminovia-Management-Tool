@@ -28,7 +28,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
         `(${q(id)},${q(name === "stranger" ? "participant" : name)})`,
     )
     .join(",")};`);
-  /** Calls the business database API under the fixture's controlled identity/MFA claims. */
+  /** Calls the business database API under the fixture's controlled identity/permission claims. */
   const rpc = async (who, name, args = [], aal = "aal1") => {
     const invocation = `public.${name}(${args.map((v) => (v === null ? "null" : typeof v === "number" || typeof v === "boolean" ? String(v) : q(typeof v === "object" ? JSON.stringify(v) : v))).join(",")})`;
     const value = await actor(
@@ -44,7 +44,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
       return value;
     }
   };
-  await rpc("admin", "configure_compensation_policy", [31, 73, 0], "aal2");
+  await rpc("admin", "configure_compensation_policy", [31, 73, 0], "aal1");
   let count = 0;
   /** Counts and reports a case only after all of its assertions have completed successfully. */
   const check = async (name, action) => {
@@ -84,7 +84,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
           })),
         },
       ],
-      "aal2",
+      "aal1",
     );
   };
   /** Creates terms tied to the exact source revision; the database must reject stale references. */
@@ -153,7 +153,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
             topic_ids: [],
           },
         ],
-        "aal2",
+        "aal1",
       );
       await sql(renderCatalogueSql(catalogue));
       assert.equal(
@@ -217,7 +217,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
         "admin",
         "duplicate_course_template",
         [sourceTemplate, "Fictional reusable course building-block course"],
-        "aal2",
+        "aal1",
       );
       const copied = JSON.parse(
         await sql(
@@ -237,21 +237,17 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
     },
   );
   await check(
-    "Run defaults require actual management MFA and contain no financial values",
+    "Run defaults require actual management permission and contain no financial values",
     async () => {
       await assert.rejects(
-        rpc("admin", "course_run_job_defaults", [run]),
-        /MFA required/,
-      );
-      await assert.rejects(
-        rpc("lecturer", "course_run_job_defaults", [run], "aal2"),
-        /MFA required/,
+        rpc("lecturer", "course_run_job_defaults", [run], "aal1"),
+        /required/i,
       );
       const defaults = await rpc(
         "admin",
         "course_run_job_defaults",
         [run],
-        "aal2",
+        "aal1",
       );
       assert.equal(defaults.template_id, template);
       assert.equal(defaults.building_block_source_id, source.id);
@@ -261,7 +257,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
       const zoned = await actor(
         ids.admin,
         `set local timezone='Australia/Brisbane';select public.course_run_job_defaults(${q(run)})->>'source_revision'`,
-        "aal2",
+        "aal1",
       );
       assert.equal(zoned, defaults.source_revision);
     },
@@ -273,7 +269,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
         "admin",
         "course_run_job_defaults",
         [run],
-        "aal2",
+        "aal1",
       );
       await rpc(
         "admin",
@@ -288,14 +284,14 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
             topic_ids: [],
           },
         ],
-        "aal2",
+        "aal1",
       );
       await assert.rejects(
         rpc(
           "admin",
           "create_course_run_job",
           [run, financial(before.source_revision), null, randomUUID()],
-          "aal2",
+          "aal1",
         ),
         /course_run_source_changed/,
       );
@@ -315,7 +311,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
         "admin",
         "course_run_job_defaults",
         [run],
-        "aal2",
+        "aal1",
       );
       const counts = await sql(
         "select (select count(*) from public.organisations)||','||(select count(*) from public.course_templates)||','||(select count(*) from public.course_runs)",
@@ -326,7 +322,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
         "admin",
         "create_course_run_job",
         [run, payload, null, requestId],
-        "aal2",
+        "aal1",
       );
       assert.equal(
         await sql(`select course_run_id from public.jobs where id=${q(job)}`),
@@ -366,7 +362,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
           "admin",
           "create_course_run_job",
           [run, payload, null, requestId],
-          "aal2",
+          "aal1",
         ),
         job,
       );
@@ -375,7 +371,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
           "admin",
           "create_course_run_job",
           [run, { ...payload, gross_total_amount: 250 }, null, requestId],
-          "aal2",
+          "aal1",
         ),
         /idempotency conflict/,
       );
@@ -384,7 +380,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
           "admin",
           "create_course_run_job",
           [run, payload, null, randomUUID()],
-          "aal2",
+          "aal1",
         ),
         /course_run_offer_exists/,
       );
@@ -465,14 +461,14 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
         "management",
         "course_run_job_defaults",
         [netRun],
-        "aal2",
+        "aal1",
       );
       await assert.rejects(
         rpc(
           "management",
           "create_course_run_job",
           [netRun, financial(preview.source_revision), null, randomUUID()],
-          "aal2",
+          "aal1",
         ),
         /Gross finance permission/,
       );
@@ -480,9 +476,9 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
         "management",
         "create_course_run_job",
         [netRun, financial(preview.source_revision, false), null, randomUUID()],
-        "aal2",
+        "aal1",
       );
-      const report = await rpc("admin", "commission_report", [], "aal2");
+      const report = await rpc("admin", "commission_report", [], "aal1");
       const row = report.find((item) => item.job_id === netJob);
       assert.equal(row.pricing_model, "legacy_net");
       assert.equal(row.gross_total_amount, null);
@@ -497,7 +493,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
         actor(
           ids.management,
           "select * from private.course_run_job_requests",
-          "aal2",
+          "aal1",
         ),
         /permission denied/,
       );
@@ -511,14 +507,14 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
           "admin",
           "course_run_job_defaults",
           [raceRun],
-          "aal2",
+          "aal1",
         );
       const attempts = await Promise.allSettled([
         rpc(
           "admin",
           "create_course_run_job",
           [raceRun, financial(preview.source_revision), null, randomUUID()],
-          "aal2",
+          "aal1",
         ),
         rpc(
           "management",
@@ -529,7 +525,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
             null,
             randomUUID(),
           ],
-          "aal2",
+          "aal1",
         ),
       ]);
       assert.equal(
@@ -558,7 +554,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
           "admin",
           "course_run_job_defaults",
           [invalidRun],
-          "aal2",
+          "aal1",
         ),
         base = financial(preview.source_revision);
       for (const extra of [
@@ -577,7 +573,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
             "admin",
             "create_course_run_job",
             [invalidRun, { ...base, ...extra }, null, randomUUID()],
-            "aal2",
+            "aal1",
           ),
         );
       assert.equal(
@@ -585,15 +581,6 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
           `select count(*) from public.jobs where course_run_id=${q(invalidRun)}`,
         ),
         "0",
-      );
-      await assert.rejects(
-        rpc("admin", "create_course_run_job", [
-          invalidRun,
-          base,
-          null,
-          randomUUID(),
-        ]),
-        /MFA required/,
       );
     },
   );
@@ -604,7 +591,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
         "admin",
         "manage_course_enrolment",
         [run, ids.participant, "enrolled"],
-        "aal2",
+        "aal1",
       );
       assert.equal(
         await actor(
@@ -624,7 +611,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
         "admin",
         "manage_course_enrolment",
         [run, ids.participant, "removed"],
-        "aal2",
+        "aal1",
       );
       assert.equal(
         await actor(
@@ -639,7 +626,10 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
     "Actual whole-block claim fixes lecturer compensation independently of later offer values",
     async () => {
       const version = Number(
-        await actor(ids.lecturer, `select item->>'terms_version' from jsonb_array_elements(public.job_offers()) item where item->>'id'=${q(job)}`),
+        await actor(
+          ids.lecturer,
+          `select item->>'terms_version' from jsonb_array_elements(public.job_offers()) item where item->>'id'=${q(job)}`,
+        ),
       );
       const claim = await rpc("lecturer", "claim_job", [
         job,
@@ -669,7 +659,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
         "62.01",
       );
       await assert.rejects(
-        rpc("admin", "set_job_commission", [job, 900, 1800, null], "aal2"),
+        rpc("admin", "set_job_commission", [job, 900, 1800, null], "aal1"),
         /unaccepted offers/,
       );
     },

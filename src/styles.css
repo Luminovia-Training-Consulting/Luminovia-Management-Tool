@@ -1451,7 +1451,7 @@ legend {
 .admin-form legend {
   padding: 0 6px;
 }
-/* Session rows and bounded MFA QR presentation in administrative/security forms. */
+/* Session rows in administrative forms. */
 .session-form-row {
   display: grid;
   grid-template-columns: 1fr 1fr 44px;
@@ -1460,20 +1460,6 @@ legend {
 }
 .session-form-row .button {
   margin-top: 5px;
-}
-.security-panel > svg {
-  margin-bottom: 18px;
-}
-.mfa-qr {
-  width: 220px;
-  height: 220px;
-  background: white;
-  padding: 12px;
-  border-radius: 10px;
-  margin-bottom: 24px;
-}
-.security-panel form {
-  margin-top: 20px;
 }
 /* Public sign-in shell with brand narrative and a separate form panel. */
 .login-layout {

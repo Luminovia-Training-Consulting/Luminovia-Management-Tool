@@ -1,8 +1,8 @@
-/** Real native Auth/MFA/REST availability; never normal or hosted project data. */
+/** Real native Auth/password-only authentication/REST availability; never normal or hosted project data. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
-await withApiFixture(async ({ service, actor, mfa, checked, sql, defer }) => {
+await withApiFixture(async ({ service, actor, passwordOnly, checked, sql, defer }) => {
   const teacher = await actor("availability-teacher", "lecturer"),
     peer = await actor("availability-peer", "lecturer"),
     admin = await actor("availability-admin", "admin");
@@ -88,8 +88,8 @@ await withApiFixture(async ({ service, actor, mfa, checked, sql, defer }) => {
       })
     ).error,
   );
-  // MFA alone does not share calendar data; only explicit consent opens the reduced projection.
-  await mfa(admin.client);
+  // password-only authentication alone does not share calendar data; only explicit consent opens the reduced projection.
+  await passwordOnly(admin.client);
   assert.deepEqual(
     await checked(
       admin.client.rpc("shared_availability", {
@@ -227,6 +227,6 @@ await withApiFixture(async ({ service, actor, mfa, checked, sql, defer }) => {
     ).error,
   );
   console.log(
-    "PASS: actual Auth/MFA/REST private availability, explicit redacted sharing and withdrawal, version/idempotency/foreign/direct-write boundaries, unavailable claim rollback, removal then confirmed retry, accepted-assignment protection and old-token suspension.",
+    "PASS: actual Auth/password-only authentication/REST private availability, explicit redacted sharing and withdrawal, version/idempotency/foreign/direct-write boundaries, unavailable claim rollback, removal then confirmed retry, accepted-assignment protection and old-token suspension.",
   );
 });

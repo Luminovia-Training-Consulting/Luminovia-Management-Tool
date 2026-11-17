@@ -100,7 +100,7 @@ describe("public bilingual help", () => {
     expect(
       screen.getByText(/Diese Hilfe sendet keine Nachricht/),
     ).toBeVisible();
-    expect(screen.getByText(/Teile keine Passwörter, MFA-Codes/)).toBeVisible();
+    expect(screen.getByText(/Teile keine Passwörter, Schlüssel/)).toBeVisible();
     await userEvent.selectOptions(screen.getByLabelText("Sprache"), "en");
     expect(
       screen.getByRole("heading", { name: "Solve problems step by step" }),

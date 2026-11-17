@@ -920,7 +920,7 @@ export async function checkCandidate({
       SSL_CERT_FILE: join(scratch, "certs/cert.pem"),
     };
     console.log(
-      "Candidate: baseline initialized; retaining real password/MFA/private event/scanned bytes and accepted claims/invoice snapshots.",
+      "Candidate: baseline initialized; retaining password-only Auth/private event/scanned bytes and accepted claims/invoice snapshots.",
     );
     await run(process.execPath, [join(scratch, "scripts/local-seed.mjs")], {
       env: childEnvironment,
@@ -993,7 +993,7 @@ export async function checkCandidate({
     console.log(
       "PASS candidate retained-data upgrade: " +
         changedImages.length +
-        " changed images; existing password/MFA/roles/private event/scanned bytes, accepted financial/invoice snapshots and migration history survived.",
+        " changed images; existing password-only Auth/roles/private event/scanned bytes, accepted financial/invoice snapshots and migration history survived.",
     );
     const publicGet = (path, headers = {}) =>
       new Promise((done, fail) => {
@@ -1082,7 +1082,7 @@ export async function checkCandidate({
       migrations: migrations.length,
       baselineUpgradePassed: true,
       changedImages,
-      retainedPasswordMfaPrivateEventAndFile: true,
+      retainedPasswordOnlyAuthPrivateEventAndFile: true,
       retainedAcceptedClaimsAndInvoices: true,
       suites: suites.length,
       realTlsWebSockets: true,

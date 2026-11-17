@@ -1,16 +1,16 @@
-/** Actual Auth/MFA/REST/ClamAV/Storage/Edge course and completion flows. */
+/** Actual Auth/password-only authentication/REST/ClamAV/Storage/Edge course and completion flows. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 await withApiFixture(
-  async ({ actor, mfa, checked, service, sql, defer, url }) => {
+  async ({ actor, passwordOnly, checked, service, sql, defer, url }) => {
     const admin = await actor("course-workspace-admin", "admin"),
       teacher = await actor("course-workspace-teacher", "lecturer"),
       learner = await actor("course-workspace-learner", "participant"),
       peer = await actor("course-workspace-peer", "participant"),
       client = await actor("course-workspace-client", "client");
-    await mfa(admin.client);
+    await passwordOnly(admin.client);
     await checked(
       service
         .from("profiles")
@@ -283,7 +283,7 @@ await withApiFixture(
     );
     assert.equal((await download(learner, "resource", resource)).status, 403);
     console.log(
-      "PASS: actual Auth/MFA/REST/ClamAV/private Storage and exact Edge Unicode PDFs: shared client preparation/contact, immutable material version/receipt, notebook/Q&A isolation, verified attendance, eligible quiz and completion issuance, deterministic own document, authorized attendance report, explicit revocation and removed-enrolment denial.",
+      "PASS: actual Auth/password-only authentication/REST/ClamAV/private Storage and exact Edge Unicode PDFs: shared client preparation/contact, immutable material version/receipt, notebook/Q&A isolation, verified attendance, eligible quiz and completion issuance, deterministic own document, authorized attendance report, explicit revocation and removed-enrolment denial.",
     );
   },
 );

@@ -27,11 +27,7 @@ await withTestDatabase("role_job_discovery", async ({ sql, actor }) => {
     );
   const rpc = async (who, name, args = []) =>
     JSON.parse(
-      await actor(
-        who,
-        `select public.${name}(${args.join(",")})`,
-        who === manager || who === admin ? "aal2" : "aal1",
-      ),
+      await actor(who, `select public.${name}(${args.join(",")})`, "aal1"),
     );
   const discover = (who, filter = {}, cursor = null, limit = 50) =>
     rpc(who, "job_discovery", [

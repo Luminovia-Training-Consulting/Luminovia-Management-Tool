@@ -103,7 +103,7 @@ async function waitBlocked(sql, identifier, holderPid) {
 }
 /** Model the same authenticated SQL GUCs used by the common isolated fixture. */
 function authenticated(user, body) {
-  return `set local role authenticated;set local request.jwt.claims=${q(JSON.stringify({ sub: user, aal: "aal2", role: "authenticated" }))};${body}`;
+  return `set local role authenticated;set local request.jwt.claims=${q(JSON.stringify({ sub: user, aal: "aal1", role: "authenticated" }))};${body}`;
 }
 
 /** Verify exact signatures, owner-only grants, fixed search paths and actual
@@ -188,7 +188,7 @@ async function fixtureActors({ sql, actor }) {
   const attachSql = (ticketId, item, key = randomUUID()) =>
     `select public.update_support_ticket(${q(ticketId)},'attach',${q(JSON.stringify({ document_id: item.document, internal: true }))},1,${q(key)})`;
   const attach = (ticketId, item, key = randomUUID()) =>
-    actor(manager, attachSql(ticketId, item, key), "aal2");
+    actor(manager, attachSql(ticketId, item, key), "aal1");
   /** Recheck both rows used by the generic authenticated file gateway. */
   const hidden = async (item) => {
     for (const who of [learner, outsider]) {
@@ -245,7 +245,7 @@ export async function runSupportCourseAbsenceChecks(fixture) {
     await actor(
       f.manager,
       `select private.can_access_document(${q(item.document)})`,
-      "aal2",
+      "aal1",
     ),
     "t",
   );
@@ -319,13 +319,13 @@ export async function runSupportCourseRegistryChecks(
     const job = await actor(
       f.manager,
       `select public.create_job(${q(JSON.stringify(payload))})`,
-      "aal2",
+      "aal1",
     );
     run = await sql(`select course_run_id from public.jobs where id=${q(job)}`);
     await actor(
       f.manager,
       `select public.manage_course_enrolment(${q(run)},${q(f.learner)},'enrolled')`,
-      "aal2",
+      "aal1",
     );
   }
   /** Use installed public APIs when available; synthetic mode has no invented
@@ -338,7 +338,7 @@ export async function runSupportCourseRegistryChecks(
   const share = async (item, tag = "") =>
     JSON.parse(
       real
-        ? await actor(f.manager, shareSql(item, tag), "aal2")
+        ? await actor(f.manager, shareSql(item, tag), "aal1")
         : await sql(shareSql(item, tag)),
     ).id;
   const remove = async (id) =>
@@ -346,7 +346,7 @@ export async function runSupportCourseRegistryChecks(
       ? actor(
           f.manager,
           `select public.course_workspace_action(${q(run)},'resource_remove',${q(JSON.stringify({ id }))},0)`,
-          "aal2",
+          "aal1",
         )
       : sql(
           `update private.course_resources set removed_at=clock_timestamp()where id=${q(id)}`,

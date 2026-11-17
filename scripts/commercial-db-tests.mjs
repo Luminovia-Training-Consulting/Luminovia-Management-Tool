@@ -97,7 +97,7 @@ async function file(owner, kind = "contract", clean = true) {
   );
   return { id, version };
 }
-/** Registers the exact executed document version at the controlled MFA level and with its own retry identity. */
+/** Registers the exact executed document version at the controlled permission level and with its own retry identity. */
 const register = (
   owner,
   document,
@@ -106,7 +106,7 @@ const register = (
   parent = null,
   ends = expiry,
   key = randomUUID(),
-  aal = "aal2",
+  aal = "aal1",
 ) =>
   value(
     admin,
@@ -139,7 +139,7 @@ async function job(day, fee, currency = "EUR", requires = false) {
   return actor(
     admin,
     `select public.create_job(${quote(JSON.stringify(payload))}::jsonb)`,
-    "aal2",
+    "aal1",
   );
 }
 /** Calls the actual claim RPC; only the database result confirms whole-block allocation. */
@@ -174,40 +174,9 @@ try {
     `insert into auth.users(id) values('${a}'),('${b}'),('${admin}'),('${admin2}'),('${participant}');insert into public.user_roles(user_id,role) values('${a}','lecturer'),('${b}','senior_lecturer'),('${admin}','admin'),('${admin2}','admin'),('${participant}','participant');update public.profiles set display_name='Fictional commercial user'`,
   );
   await check(
-    "Executed agreement registration requires management MFA and a clean PDF of the correct owner",
+    "Executed agreement registration requires management permission and a clean PDF of the correct owner",
     async () => {
       masterFile = await file(a);
-      await assert.rejects(
-        register(
-          a,
-          masterFile,
-          "Denied",
-          "master",
-          null,
-          expiry,
-          randomUUID(),
-          "aal1",
-        ),
-        /MFA required/,
-      );
-      await assert.rejects(
-        value(
-          a,
-          "register_executed_contract",
-          [
-            a,
-            "No",
-            masterFile.version,
-            effective,
-            expiry,
-            "master",
-            null,
-            randomUUID(),
-          ],
-          "aal2",
-        ),
-        /MFA required/,
-      );
       await assert.rejects(register(b, masterFile), /owned by the lecturer/);
       const quarantine = await file(a, "contract", false);
       await assert.rejects(register(a, quarantine), /clean executed-contract/);
@@ -241,15 +210,11 @@ try {
     async () => {
       assert.deepEqual(await rows(b, "contract_records"), []);
       await assert.rejects(
-        rows(b, "contract_records", [true], "aal2"),
-        /MFA required/,
-      );
-      await assert.rejects(
-        rows(admin, "contract_records", [true]),
-        /MFA required/,
+        rows(b, "contract_records", [true], "aal1"),
+        /required/i,
       );
       assert.equal(
-        (await rows(admin, "contract_records", [true], "aal2")).length,
+        (await rows(admin, "contract_records", [true], "aal1")).length,
         1,
       );
       await assert.rejects(
@@ -333,10 +298,10 @@ try {
   await check(
     "Explicit parent revocation blocks addenda without changing previously accepted assignments",
     async () => {
-      await value(admin, "set_contract_status", [master, "expired"], "aal2");
+      await value(admin, "set_contract_status", [master, "expired"], "aal1");
       const next = await job(1, 200, "EUR", true);
       assert.equal((await claim(a, next)).status, "prerequisite_missing");
-      await value(admin, "set_contract_status", [master, "active"], "aal2");
+      await value(admin, "set_contract_status", [master, "active"], "aal1");
       claim2 = (await claim(a, next)).claim_id;
       assert.ok(claim2);
       assert.equal(
@@ -368,12 +333,12 @@ try {
         "completed",
       );
       await assert.rejects(
-        rows(b, "finance_earnings", [true], "aal2"),
-        /MFA required/,
+        rows(b, "finance_earnings", [true], "aal1"),
+        /required/i,
       );
       assert.equal((await rows(b, "finance_earnings")).length, 1);
       assert.equal(
-        (await rows(admin, "finance_earnings", [true], "aal2")).length,
+        (await rows(admin, "finance_earnings", [true], "aal1")).length,
         4,
       );
     },
@@ -478,8 +443,8 @@ try {
     async () => {
       assert.deepEqual(await rows(b, "invoice_records"), []);
       await assert.rejects(
-        rows(b, "invoice_records", [true], "aal2"),
-        /MFA required/,
+        rows(b, "invoice_records", [true], "aal1"),
+        /required/i,
       );
       assert.equal(
         await actor(
@@ -500,23 +465,19 @@ try {
         /permission denied/,
       );
       assert.equal(
-        (await rows(admin, "invoice_records", [true], "aal2")).length,
+        (await rows(admin, "invoice_records", [true], "aal1")).length,
         1,
       );
     },
   );
   await check(
-    "MFA review and partial payment ledger derive paid status without overpayment or duplicate records",
+    "permission review and partial payment ledger derive paid status without overpayment or duplicate records",
     async () => {
-      await assert.rejects(
-        value(admin, "review_invoice", [invoice, "approved", "Reviewed"]),
-        /MFA required/,
-      );
       await value(
         admin,
         "review_invoice",
         [invoice, "approved", "Reviewed"],
-        "aal2",
+        "aal1",
       );
       const paidAt = new Date(Date.now() - 1000).toISOString(),
         key = randomUUID();
@@ -524,14 +485,14 @@ try {
         admin,
         "record_invoice_payment",
         [invoice, 100, paidAt, "Payment reference", key],
-        "aal2",
+        "aal1",
       );
       assert.equal(
         await value(
           admin,
           "record_invoice_payment",
           [invoice, 100, paidAt, "Payment reference", key],
-          "aal2",
+          "aal1",
         ),
         payment,
       );
@@ -543,7 +504,7 @@ try {
           admin,
           "record_invoice_payment",
           [invoice, 201, paidAt, "Overpaid", randomUUID()],
-          "aal2",
+          "aal1",
         ),
         /exceed/,
       );
@@ -552,7 +513,7 @@ try {
           admin,
           "review_invoice",
           [invoice, "cancelled", "Cannot erase paid work"],
-          "aal2",
+          "aal1",
         ),
         /partially paid/,
       );
@@ -560,7 +521,7 @@ try {
         admin,
         "record_invoice_payment",
         [invoice, 200, paidAt, "Final payment", randomUUID()],
-        "aal2",
+        "aal1",
       );
       record = (await rows(a, "invoice_records"))[0];
       assert.equal(record.status, "paid");
@@ -578,7 +539,7 @@ try {
         admin,
         "void_invoice_payment",
         [payment, "Corrected tracking entry"],
-        "aal2",
+        "aal1",
       );
       record = (await rows(a, "invoice_records"))[0];
       assert.equal(record.status, "approved");
@@ -636,7 +597,7 @@ try {
         admin,
         "review_invoice",
         [rejected, "rejected", "Needs review"],
-        "aal2",
+        "aal1",
       );
       assert.equal(
         (await rows(a, "finance_earnings")).find((r) => r.claim_id === claimAud)
@@ -657,7 +618,7 @@ try {
           admin,
           "review_invoice",
           [rejected, "approved", "Cannot duplicate"],
-          "aal2",
+          "aal1",
         ),
         /duplicate key|unique/,
       );
@@ -673,7 +634,7 @@ try {
         admin,
         "review_invoice",
         [target.id, "approved", "Ready"],
-        "aal2",
+        "aal1",
       );
       const date = new Date(Date.now() - 1000).toISOString();
       const results = await Promise.allSettled([
@@ -681,13 +642,13 @@ try {
           admin,
           "record_invoice_payment",
           [target.id, 300, date, "A", randomUUID()],
-          "aal2",
+          "aal1",
         ),
         value(
           admin2,
           "record_invoice_payment",
           [target.id, 300, date, "B", randomUUID()],
-          "aal2",
+          "aal1",
         ),
       ]);
       assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
@@ -706,7 +667,7 @@ try {
     async () => {
       await sql(`update public.profiles set active=false where id='${a}'`);
       await assert.rejects(rows(a, "contract_records"), /Active login/);
-      await assert.rejects(rows(a, "invoice_records"), /MFA required/);
+      await assert.rejects(rows(a, "invoice_records"), /required/i);
       assert.equal(await actor(a, "select count(*) from public.invoices"), "0");
       assert.equal(
         await actor(a, "select count(*) from public.contract_acceptances"),

@@ -2,6 +2,10 @@
 
 Consolidated reference. Source and tests remain authoritative for current behavior.
 
+## Authentication policy update — 17 November 2026
+
+The product uses password-only authentication: no MFA enrollment or factors, and no MFA/AAL checks in protected actions. Existing database roles, active-account status, resource membership and RLS remain mandatory. This change is pending review and hosted acceptance; MFA-specific notes later in this long-running engineering record describe prior revisions and do not prove this change is deployed.
+
 
 <a id="section-developer-guide"></a>
 

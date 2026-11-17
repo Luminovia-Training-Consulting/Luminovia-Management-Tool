@@ -15,8 +15,8 @@ await withTestDatabase(
     await sql(
       `insert into auth.users(id,email) values ${[admin, manager, lecturer, outsider].map((id) => `('${id}','${id}@example.invalid')`).join(",")};insert into public.user_roles(user_id,role) values('${admin}','admin'),('${manager}','management'),('${lecturer}','lecturer'),('${outsider}','client');`,
     );
-    /** Calls the business database API under the fixture's controlled identity/MFA claims. */
-    const rpc = async (who, name, args = [], aal = "aal2") => {
+    /** Calls the business database API under the fixture's controlled identity/permission claims. */
+    const rpc = async (who, name, args = [], aal = "aal1") => {
       const result = await actor(
         who,
         `select public.${name}(${args.map((value) => (value === null ? "null" : typeof value === "boolean" || typeof value === "number" ? String(value) : q(typeof value === "object" ? JSON.stringify(value) : value))).join(",")})`,
@@ -38,7 +38,7 @@ await withTestDatabase(
       description_de: "Fiktive Beschreibung",
       description_en: "Fictional description",
     });
-    /** Creates a catalogue entry with an optional parent as AAL2 management, requiring initial version 0. */
+    /** Creates a catalogue entry with an optional parent as AAL1 management, requiring initial version 0. */
     const save = (label, parent = null) =>
       rpc(admin, "save_taxonomy_topic", [null, payload(label, parent), 0]);
     let checks = 0;
@@ -49,7 +49,7 @@ await withTestDatabase(
       console.log(`PASS ${name}`);
     };
     await check(
-      "Only current active management capability with AAL2 can mutate taxonomy",
+      "Only current active management capability with AAL1 can mutate taxonomy",
       async () => {
         for (const role of ["anon", "authenticated"])
           for (const signature of [
@@ -65,12 +65,12 @@ await withTestDatabase(
             );
         for (const [who, aal] of [
           [admin, "aal1"],
-          [lecturer, "aal2"],
-          [outsider, "aal2"],
+          [lecturer, "aal1"],
+          [outsider, "aal1"],
         ])
           await assert.rejects(
             rpc(who, "save_taxonomy_topic", [null, payload("Denied"), 0], aal),
-            /taxonomy.manage and MFA required/,
+            /taxonomy.manage.*required/i,
           );
         const id = await rpc(manager, "save_taxonomy_topic", [
           null,
@@ -279,7 +279,7 @@ await withTestDatabase(
         );
         await assert.rejects(
           rpc(lecturer, "taxonomy_catalogue", ["", "", true], "aal1"),
-          /taxonomy.manage and MFA required/,
+          /taxonomy.manage.*required/i,
         );
         const archived = await rpc(admin, "taxonomy_catalogue", [
           "Renamed child",
@@ -333,7 +333,7 @@ await withTestDatabase(
           actor(
             admin,
             `update public.topics set label_de='Forged' where id='${child}'`,
-            "aal2",
+            "aal1",
           ),
           /permission denied/,
         );
@@ -342,14 +342,14 @@ await withTestDatabase(
         );
         await assert.rejects(
           rpc(admin, "save_taxonomy_topic", [null, payload("Suspended"), 0]),
-          /taxonomy.manage and MFA required/,
+          /taxonomy.manage.*required/i,
         );
         await assert.rejects(
           rpc(admin, "taxonomy_catalogue"),
           /Active login required/,
         );
         assert.equal(
-          await actor(admin, "select count(*) from public.topics", "aal2"),
+          await actor(admin, "select count(*) from public.topics", "aal1"),
           "0",
         );
       },

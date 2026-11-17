@@ -141,14 +141,14 @@ try {
         "2",
       );
       await assert.rejects(
-        actor(manager, `select * from private.document_storage_limits`, "aal2"),
+        actor(manager, `select * from private.document_storage_limits`, "aal1"),
         /permission denied/,
       );
       await assert.rejects(
         actor(
           manager,
           `update private.document_storage_limits set total_quota_bytes=1`,
-          "aal2",
+          "aal1",
         ),
         /permission denied/,
       );
@@ -252,7 +252,7 @@ try {
         reserve(manager, { subject: otherOwner }),
         /Subject upload permission required/,
       );
-      const delegated = await reserve(manager, { subject: otherOwner }, "aal2");
+      const delegated = await reserve(manager, { subject: otherOwner }, "aal1");
       assert.equal(
         await sql(
           `select owner_id||':'||uploaded_by from public.documents where id='${delegated.document_id}'`,
@@ -274,11 +274,11 @@ try {
     `create function private.document_quota_race_delay() returns trigger language plpgsql set search_path='' as $$begin perform pg_catalog.pg_sleep(0.7);return new;end;$$;create trigger document_quota_race_delay before insert on public.documents for each row execute function private.document_quota_race_delay();`,
   );
   await check(
-    "Two different MFA managers serialize one owner quota: exactly one 10MiB reservation wins at 90MiB",
+    "Two different permission managers serialize one owner quota: exactly one 10MiB reservation wins at 90MiB",
     async () => {
       const results = await Promise.allSettled([
-        reserve(manager, { subject: quotaOwner, size: 10485760 }, "aal2"),
-        reserve(manager2, { subject: quotaOwner, size: 10485760 }, "aal2"),
+        reserve(manager, { subject: quotaOwner, size: 10485760 }, "aal1"),
+        reserve(manager2, { subject: quotaOwner, size: 10485760 }, "aal1"),
       ]);
       assert.equal(
         results.filter((result) => result.status === "fulfilled").length,
@@ -296,11 +296,11 @@ try {
     },
   );
   await check(
-    "Self-upload and MFA on-behalf upload share the same owner quota lock",
+    "Self-upload and permission on-behalf upload share the same owner quota lock",
     async () => {
       const results = await Promise.allSettled([
         reserve(selfQuotaOwner, { size: 10485760 }),
-        reserve(manager2, { subject: selfQuotaOwner, size: 10485760 }, "aal2"),
+        reserve(manager2, { subject: selfQuotaOwner, size: 10485760 }, "aal1"),
       ]);
       assert.equal(
         results.filter((result) => result.status === "fulfilled").length,

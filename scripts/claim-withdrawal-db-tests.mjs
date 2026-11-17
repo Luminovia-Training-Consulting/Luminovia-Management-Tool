@@ -18,7 +18,7 @@ await withTestDatabase(
     await actor(
       admin,
       "select public.configure_compensation_policy(31,73,0)",
-      "aal2",
+      "aal1",
     );
     const rpc = async (who, name, args = [], aal = "aal1") =>
       JSON.parse(
@@ -53,19 +53,19 @@ await withTestDatabase(
             })),
           }),
         )}::jsonb)`,
-        "aal2",
+        "aal1",
       );
       const version = await actor(
         who,
         `select item->>'terms_version' from jsonb_array_elements(public.job_offers()) item where item->>'id'=${q(job)}`,
-        who === managerTeacher ? "aal2" : "aal1",
+        "aal1",
       );
       assert.match(version, /^[1-9][0-9]*$/);
       const claim = await rpc(
         who,
         "claim_job",
         [q(job), q(randomUUID()), version],
-        who === managerTeacher ? "aal2" : "aal1",
+        "aal1",
       );
       assert.equal(claim.status, "confirmed");
       return { job, claim: claim.claim_id, who };
@@ -81,7 +81,7 @@ await withTestDatabase(
         fixture.who,
         "request_assignment_withdrawal",
         [q(fixture.claim), q(reason), q(key)],
-        fixture.who === managerTeacher ? "aal2" : "aal1",
+        "aal1",
       );
     const review = (
       id,
@@ -89,7 +89,7 @@ await withTestDatabase(
       who = manager,
       key = randomUUID(),
       reason = "Fictional management decision",
-      aal = "aal2",
+      aal = "aal1",
     ) =>
       rpc(
         who,
@@ -139,7 +139,7 @@ await withTestDatabase(
         assert.equal(own.claims[0].can_withdraw, true);
         assert.equal(own.can_review, false);
         assert.equal(
-          (await list(manager, fixture.job, "aal2")).can_review,
+          (await list(manager, fixture.job, "aal1")).can_review,
           true,
         );
         for (const who of [peer, participant]) {
@@ -311,7 +311,7 @@ await withTestDatabase(
         await actor(
           admin,
           `select public.manage_chat_member(${q(room)},${q(teacher)},false)`,
-          "aal2",
+          "aal1",
         );
         assert.equal((await request(fixture, "")).status, "withdrawn");
         assert.equal(await isMember(room), "t");
@@ -332,7 +332,7 @@ await withTestDatabase(
         await actor(
           admin,
           `select public.resolve_participant_chat_origin(${q(room)},${q(teacher)},false)`,
-          "aal2",
+          "aal1",
         );
         assert.equal((await request(fixture, "")).status, "withdrawn");
         assert.equal(await isMember(room), "f");
@@ -350,7 +350,7 @@ await withTestDatabase(
         await actor(
           admin,
           `select public.manage_chat_member(${q(second.room)},${q(teacher)},false)`,
-          "aal2",
+          "aal1",
         );
         assert.equal((await request(manual, "")).status, "withdrawn");
         assert.equal(await isMember(second.room), "t");
@@ -372,7 +372,7 @@ await withTestDatabase(
         await actor(
           admin,
           `select public.manage_course_enrolment(${q(run)},${q(teacher)},'removed')`,
-          "aal2",
+          "aal1",
         );
         await sql(
           `delete from public.user_roles where user_id=${q(teacher)} and role='participant'`,
@@ -421,7 +421,7 @@ await withTestDatabase(
           actor(
             admin,
             `select public.manage_course_enrolment(${q(run)},${q(participant)},'removed')`,
-            "aal2",
+            "aal1",
           ),
           /PZ002/,
         );
@@ -434,12 +434,12 @@ await withTestDatabase(
         await actor(
           admin,
           `select public.resolve_participant_chat_origin(${q(room)},${q(participant)},true)`,
-          "aal2",
+          "aal1",
         );
         await actor(
           admin,
           `select public.manage_course_enrolment(${q(run)},${q(participant)},'removed')`,
-          "aal2",
+          "aal1",
         );
         assert.equal(await isMember(room, participant), "t");
       },
@@ -486,17 +486,12 @@ await withTestDatabase(
         assert.equal(own.items[0].reason, "Fictional scheduling conflict");
         assert.equal(own.items[0].can_review, false);
         assert.equal(
-          (await list(manager, fixture.job, "aal2")).items[0].can_review,
+          (await list(manager, fixture.job, "aal1")).items[0].can_review,
           true,
         );
         assert.equal((await list(peer)).items.length, 0);
         for (const who of [admin, manager, teacher]) {
-          const inbox = await rpc(
-            who,
-            "notification_inbox",
-            [],
-            who === teacher ? "aal1" : "aal2",
-          );
+          const inbox = await rpc(who, "notification_inbox", [], "aal1");
           assert.ok(
             inbox.items.some(
               (item) =>
@@ -528,7 +523,7 @@ await withTestDatabase(
         assert.deepEqual(await snapshot(fixture), before);
         const managerFixture = await create({ who: managerTeacher });
         await assert.rejects(
-          cancel(managerFixture, managerTeacher, "aal2"),
+          cancel(managerFixture, managerTeacher, "aal1"),
           /22023|42501/,
         );
         const result = await request(managerFixture);
@@ -645,7 +640,7 @@ await withTestDatabase(
     );
 
     await check(
-      "MFA, current role and requester boundaries remain authoritative for every review",
+      "permission, current role and requester boundaries remain authoritative for every review",
       async () => {
         const fixture = await create();
         const result = await request(fixture);
@@ -710,7 +705,7 @@ await withTestDatabase(
             await actor(
               admin,
               `select public.manage_chat_member(${q(room)},${q(teacher)},false)`,
-              "aal2",
+              "aal1",
             );
           }
           assert.equal((await request(fixture, "")).status, "withdrawn");
@@ -734,7 +729,7 @@ await withTestDatabase(
             removing = actor(
               admin,
               `set local application_name=${q(removeTag)};${statement}`,
-              "aal2",
+              "aal1",
             );
             const outcomes = Promise.allSettled([claiming, removing]);
             await barrier(removeTag, "wait_event_type='Lock'");
@@ -767,7 +762,7 @@ await withTestDatabase(
       const revoker = actor(
         admin,
         `set local application_name=${q(revokeTag)};select public.set_account_roles(${q(who)},array['participant']);select pg_sleep(2)`,
-        "aal2",
+        "aal1",
       );
       let writer;
       try {
@@ -788,7 +783,7 @@ await withTestDatabase(
         await actor(
           admin,
           `select public.set_account_roles(${q(who)},array[${q(who === manager ? "management" : "lecturer")}])`,
-          "aal2",
+          "aal1",
         );
       }
     };
@@ -815,7 +810,7 @@ await withTestDatabase(
         await revokeWhileQueued(
           manager,
           `select public.review_assignment_withdrawal(${q(pending.id)},true,'Fictional queued decision',${q(randomUUID())})`,
-          "aal2",
+          "aal1",
         );
         assert.deepEqual(await snapshot(fixture), before);
         assert.equal(
@@ -831,14 +826,14 @@ await withTestDatabase(
         const fixture = await create();
         const pending = await request(fixture);
         const before = await snapshot(fixture);
-        await cancel(fixture, admin, "aal2");
+        await cancel(fixture, admin, "aal1");
         await assertReleased(fixture, before);
         assert.equal(
           (await list(teacher, fixture.job)).items[0].status,
           "superseded",
         );
         assert.equal(
-          (await list(manager, fixture.job, "aal2")).items[0].can_review,
+          (await list(manager, fixture.job, "aal1")).items[0].can_review,
           false,
         );
         await assert.rejects(review(pending.id, true), /40001/);
@@ -890,7 +885,7 @@ await withTestDatabase(
       actor(
         who,
         `select public.propose_job_substitution(${q(fixture.claim)},${q(peer)},'Fictional complete replacement request',${q(randomUUID())})`,
-        [manager, managerTeacher, admin].includes(who) ? "aal2" : "aal1",
+        "aal1",
       );
     const targetOffer = async (id) =>
       (await rpc(peer, "job_substitutions")).find((offer) => offer.id === id);
@@ -994,7 +989,7 @@ await withTestDatabase(
         await actor(
           admin,
           `select public.set_account_roles(${q(manager)},array['participant'])`,
-          "aal2",
+          "aal1",
         );
         try {
           assert.deepEqual(
@@ -1006,7 +1001,7 @@ await withTestDatabase(
           await actor(
             admin,
             `select public.set_account_roles(${q(manager)},array['management'])`,
-            "aal2",
+            "aal1",
           );
         }
       },
@@ -1021,7 +1016,7 @@ await withTestDatabase(
         await actor(
           admin,
           `select public.set_account_roles(${q(manager)},array['participant'])`,
-          "aal2",
+          "aal1",
         );
         try {
           await assert.rejects(
@@ -1033,7 +1028,7 @@ await withTestDatabase(
           await actor(
             admin,
             `select public.set_account_roles(${q(manager)},array['management'])`,
-            "aal2",
+            "aal1",
           );
         }
       },
@@ -1050,7 +1045,7 @@ await withTestDatabase(
         const revoker = actor(
           admin,
           `set local application_name=${q(revokeTag)};select public.set_account_roles(${q(manager)},array['participant']);select pg_sleep(2)`,
-          "aal2",
+          "aal1",
         );
         let writer;
         try {
@@ -1074,7 +1069,7 @@ await withTestDatabase(
           await actor(
             admin,
             `select public.set_account_roles(${q(manager)},array['management'])`,
-            "aal2",
+            "aal1",
           );
         }
       },
@@ -1084,7 +1079,7 @@ await withTestDatabase(
       actor(
         who,
         `select public.request_replacement(${q(fixture.claim)},'Fictional marketplace replacement','open','{}',false,${q(randomUUID())})`,
-        [manager, managerTeacher, admin].includes(who) ? "aal2" : "aal1",
+        "aal1",
       );
     const marketOffer = async (id) =>
       (await rpc(peer, "replacement_marketplace")).find(
@@ -1158,7 +1153,7 @@ await withTestDatabase(
         await actor(
           admin,
           `select public.set_account_roles(${q(manager)},array['participant'])`,
-          "aal2",
+          "aal1",
         );
         try {
           await assert.rejects(
@@ -1170,7 +1165,7 @@ await withTestDatabase(
           await actor(
             admin,
             `select public.set_account_roles(${q(manager)},array['management'])`,
-            "aal2",
+            "aal1",
           );
         }
         const revokeTag = `market_revoke_${randomUUID().replaceAll("-", "")}`;
@@ -1178,7 +1173,7 @@ await withTestDatabase(
         const revoker = actor(
           admin,
           `set local application_name=${q(revokeTag)};select public.set_account_roles(${q(manager)},array['participant']);select pg_sleep(2)`,
-          "aal2",
+          "aal1",
         );
         let writer;
         try {
@@ -1202,7 +1197,7 @@ await withTestDatabase(
           await actor(
             admin,
             `select public.set_account_roles(${q(manager)},array['management'])`,
-            "aal2",
+            "aal1",
           );
         }
       },

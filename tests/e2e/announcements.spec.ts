@@ -55,7 +55,7 @@ async function fillDraft(page: Page, title: string, english: string) {
     .fill(`Fictional notice ${english} <script> as text.`);
   return dialog;
 }
-test("MFA administration publishes bilingual revisions; saved drafts stay private and revision ACKs reveal a later publication", async ({
+test("password-only authentication administration publishes bilingual revisions; saved drafts stay private and revision ACKs reveal a later publication", async ({
   page,
   browser,
 }, testInfo) => {

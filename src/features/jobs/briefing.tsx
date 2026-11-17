@@ -4,7 +4,6 @@
  */
 import { useRef, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
 import { useOnline } from "../../lib/online";
@@ -120,14 +119,7 @@ function BriefingContent({
       save.reset();
     },
   });
-  const security = (
-    <p>
-      {t("mfa")}{" "}
-      <Link to="/security" className="text-link">
-        {t("security")}
-      </Link>
-    </p>
-  );
+  const deniedNotice = <Notice kind="error">{t("permissionRequired")}</Notice>;
   // React Query may retain the previous success after a failed refresh. Do not render
   // those private contacts or an open editing draft once a current read has failed.
   if (query.isError || briefingDenied(save.error))
@@ -140,7 +132,7 @@ function BriefingContent({
         <h2>{t("title")}</h2>
         {managementHint &&
         (briefingDenied(query.error) || briefingDenied(save.error)) ? (
-          security
+          deniedNotice
         ) : (
           <Notice kind="error">{t("loadError")}</Notice>
         )}
@@ -256,7 +248,7 @@ function BriefingContent({
         !current.has_contact && <p>{t("introduction")}</p>}
       {(current.can_manage || managementHint) &&
         !current.can_edit &&
-        (archived ? <p>{t("readOnly")}</p> : security)}
+        (archived ? <p>{t("readOnly")}</p> : deniedNotice)}
       {saved && <Notice>{t("saved")}</Notice>}
       {hasReference && (
         <div className="job-briefing-block">

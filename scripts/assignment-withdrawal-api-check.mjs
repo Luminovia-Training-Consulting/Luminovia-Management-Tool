@@ -1,9 +1,9 @@
-/** Real Auth/MFA/HTTP withdrawal acceptance, restricted to the canonical owned QA stack. */
+/** Real Auth/password-only authentication/HTTP withdrawal acceptance, restricted to the canonical owned QA stack. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 
-await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
+await withApiFixture(async ({ service, actor, passwordOnly, sql, defer, checked }) => {
   const teacher = await actor("withdrawal-teacher", "lecturer"),
     peer = await actor("withdrawal-peer", "lecturer"),
     admin = await actor("withdrawal-admin", "admin"),
@@ -209,7 +209,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
     },
   );
   await check(
-    "HTTP private reasons stay scoped and reviewing requires current Management MFA",
+    "HTTP private reasons stay scoped and reviewing requires current Management password-only authentication",
     async () => {
       const peerView = await checked(
         peer.client.rpc("assignment_withdrawals", { p_job_id: late.job }),
@@ -236,7 +236,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
           .error?.code,
         "42501",
       );
-      await mfa(manager.client);
+      await passwordOnly(manager.client);
       const review = await checked(
         manager.client.rpc("assignment_withdrawals", { p_job_id: late.job }),
       );
@@ -312,7 +312,7 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
         }),
       );
       assert.notEqual(second.id, application.id);
-      await mfa(admin.client);
+      await passwordOnly(admin.client);
       const approval = {
         p_withdrawal_id: second.id,
         p_approve: true,
@@ -359,5 +359,5 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
       assert.equal(job.status, "draft");
     },
   );
-  console.log(`${checks} actual Auth/MFA/HTTP withdrawal groups passed.`);
+  console.log(`${checks} actual Auth/password-only authentication/HTTP withdrawal groups passed.`);
 });
