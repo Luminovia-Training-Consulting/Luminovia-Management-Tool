@@ -344,7 +344,7 @@ try {
       assert.equal((await rows(a, "chat_room_members", [group])).length, 2);
       await assert.rejects(
         value(b, "manage_chat_member", [group, c, false]),
-        /owner/,
+        /Membership management denied/,
       );
       await assert.rejects(
         value(admin, "manage_chat_member", [group, c, false], "aal2"),
