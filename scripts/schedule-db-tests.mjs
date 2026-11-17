@@ -2,7 +2,11 @@
  * booking. Migration rejection retains prior data instead of rewriting work. */
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { quoteSql, withTestDatabase } from "./testing/database.mjs";
+import {
+  applyPasswordOnlyPermissionPolicy,
+  quoteSql,
+  withTestDatabase,
+} from "./testing/database.mjs";
 
 const admin = "b5000000-0000-4000-8000-000000000001";
 const teacher = "b5000000-0000-4000-8000-000000000002";
@@ -46,6 +50,7 @@ const check = async (name, fn) => {
 const scopedCounts = `select jsonb_build_object('organisations',(select count(*) from public.organisations),'templates',(select count(*) from public.course_templates),'runs',(select count(*) from public.course_runs),'jobs',(select count(*) from public.jobs),'sessions',(select count(*) from public.course_sessions),'offers',(select count(*) from public.job_sessions),'audit',(select count(*) from public.audit_events))::text`;
 
 await withTestDatabase("schedule_finite", async ({ sql, actor }) => {
+  await applyPasswordOnlyPermissionPolicy(sql);
   await seed(sql);
   /** Submits the controlled job as AAL1 management through create_job so real interval constraints apply. */
   const create = async (values = payload) =>
@@ -350,6 +355,7 @@ await withTestDatabase("schedule_finite", async ({ sql, actor }) => {
 await withTestDatabase(
   "schedule_legacy",
   async ({ sql, actor }) => {
+    await applyPasswordOnlyPermissionPolicy(sql);
     await seed(sql);
     const job = await actor(
       admin,
