@@ -149,7 +149,7 @@ test("profile picture is rasterised, scanned, retained across reload and visible
       ),
     ).toBe(true);
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-profile-avatar.png`,
+      path: `.local/screenshots/${testInfo.project.name}-profile-avatar.png`,
       fullPage: true,
     });
     await editor

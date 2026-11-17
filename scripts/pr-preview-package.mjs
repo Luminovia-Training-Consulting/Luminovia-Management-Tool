@@ -120,18 +120,18 @@ try {
   );
   writeFileSync(
     join(output, "README.txt"),
-    `Luminovia PR #${number}: local application preview / lokale Anwendungsvorschau
+    `Luminovia PR #${number}: local application preview
 
 This package contains committed source from tested revision ${testedSha}.
-Verification profile / Pruefumfang: ${profile}.
-PostgreSQL suites / SQL-Pruefungen: ${profile === "docs" ? "not run for documentation-only changes / bei reinen Dokumentationsaenderungen nicht ausgefuehrt" : "included / enthalten"}.
-Full Auth/Storage/browser/PWA/retained-data acceptance: ${profile === "full" ? "included / enthalten" : "not included in this Draft profile / in diesem Entwurfsprofil nicht enthalten"}.
+Verification profile: ${profile}.
+PostgreSQL suites: ${profile === "docs" ? "not run for documentation-only changes" : "included"}.
+Full Auth/Storage/browser/PWA/retained-data acceptance: ${profile === "full" ? "included" : "not included in this Draft profile"}.
 PR head: ${headSha}. It is a downloadable local preview, not a hosted website.
 It contains no live backend connection, generated account passwords or QA traces.
 Review PR source before running it: contributor code executes on your computer.
 Unpack into a fresh directory for this PR; do not overwrite a development checkout.
 
-Vollstaendige lokale Vorschau / complete local preview (Linux, Node >=22.12,
+Complete local preview (Linux, Node >=22.12,
 npm, Docker Engine and Compose >=2.20.2; ports 5473 and 573xx must be free):
 
   tar -xzf portal-source.tar.gz
@@ -143,15 +143,15 @@ The wrapper creates an owned .preview/source copy with a separate project ID,
 database volumes and ports 5473/573xx. Normal development remains separate,
 even if it is stopped. The source archive and canonical config remain unchanged.
 
-Open / oeffnen: http://127.0.0.1:5473
-Stop while keeping your fictional local data / datenerhaltend stoppen:
+Open: http://127.0.0.1:5473
+Stop while keeping your fictional local data:
 
   node preview.mjs stop
 
 The launcher installs locked dependencies, starts a separate local backend and
 captures fictional email in Mailpit. No connection to cms.luminovia.org is needed.
 Do not copy production credentials or real personal records into this preview.
-Details: portal/docs/LOCAL_DEVELOPMENT.md and portal/docs/PR_PREVIEWS.md.
+Details: portal/DEVELOPMENT.md.
 `,
   );
   return manifest;

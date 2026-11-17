@@ -49,7 +49,7 @@ test("permanent account deletion requires reviewed confirmation and removes nati
       .analyze();
     expect(lightAccessibility.violations.map((value) => value.id)).toEqual([]);
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-permanent-deletion-light-de.png`,
+      path: `.local/screenshots/${testInfo.project.name}-permanent-deletion-light-de.png`,
       fullPage: true,
     });
     await dialog
@@ -109,7 +109,7 @@ test("permanent account deletion requires reviewed confirmation and removes nati
       ),
     ).toBe(true);
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-permanent-deletion-dark-en.png`,
+      path: `.local/screenshots/${testInfo.project.name}-permanent-deletion-dark-en.png`,
       fullPage: true,
     });
     await dialog

@@ -70,7 +70,7 @@ try {
   } catch (error) {
     if (error.code !== "EEXIST") throw error;
     throw new Error(
-      "Ein isolierter Testlauf läuft bereits. Prüfe .local/test.lock; Entwicklungsdaten werden nicht angefasst.",
+      "An isolated test run is already active. Check .local/test.lock; development data is untouched.",
       { cause: error },
     );
   }
@@ -117,7 +117,7 @@ saveEvidence();
 
 /** Cancels the current stage; the outer finally path remains responsible for cleanup. */
 const cancel = () => {
-  console.log("Test wird abgebrochen; isolierte Dienste werden aufgeräumt …");
+  console.log("Cancelling test; cleaning up isolated services …");
   cancellation.abort();
 };
 process.once("SIGINT", cancel);
@@ -127,7 +127,7 @@ try {
   delete env.DOCKER_CONTEXT;
   localDockerReady = true;
   console.log(
-    `Isolierte Testumgebung ${project}. Phase: ${phase.phase}. Entwicklungsdaten bleiben unverändert.`,
+    `Isolated test environment ${project}. Phase: ${phase.phase}. Development data remains unchanged.`,
   );
   cpSync(root, scratch, {
     recursive: true,
@@ -226,7 +226,7 @@ try {
       .sort();
     const planPath = join(directory, "plan.json");
     await step(
-      `${label}: vollständige Testauswahl`,
+      `${label}: complete test selection`,
       "npx",
       [
         "--no-install",
@@ -283,7 +283,7 @@ try {
     if (!phase.externalGates.includes("quality")) {
       await step("Lint", "npm", ["run", "lint"]);
       await step("TypeScript", "npm", ["run", "typecheck"]);
-      await step("Formatierung", "npm", ["run", "format:check"]);
+      await step("Formatting", "npm", ["run", "format:check"]);
     }
     const runtimeTests = readdirSync(join(scratch, "scripts"))
       .filter(
@@ -291,16 +291,16 @@ try {
       )
       .map((name) => `scripts/${name}`);
     if (runtimeTests.length)
-      await step("Laufzeit-Sicherheitsprüfungen", process.execPath, [
+      await step("Runtime security checks", process.execPath, [
         "--test",
         ...runtimeTests,
       ]);
     if (!phase.externalGates.includes("coverage"))
-      await step("Unit-/Komponententests und Coverage", "npm", [
+      await step("Unit and component tests and coverage", "npm", [
         "run",
         "test:coverage",
       ]);
-    await step("Produktionsabhängigkeiten", "npm", [
+    await step("Production dependencies", "npm", [
       "audit",
       "--omit=dev",
       "--audit-level=low",
@@ -322,7 +322,7 @@ try {
     // Promise-shaped test doubles may be async without awaiting real I/O; keep
     // require-await active on production Edge source and relax it only in tests.
     if (entries.length)
-      await step("Edge-Quellcode-Lint", process.execPath, [
+      await step("Edge source lint", process.execPath, [
         join(scratch, "node_modules/deno/bin.cjs"),
         "lint",
         "--rules-exclude=no-import-prefix,no-control-regex",
@@ -346,7 +346,7 @@ try {
     }
     for (const entry of entries)
       await step(
-        `Edge-Typprüfung ${basename(join(entry, ".."))}`,
+        `Edge type check ${basename(join(entry, ".."))}`,
         process.execPath,
         [join(scratch, "node_modules/deno/bin.cjs"), "check", entry],
       );
@@ -369,8 +369,11 @@ try {
         // The crypto fixtures otherwise skip successfully when their tools are
         // absent. Require real age binaries before claiming complete local QA.
         for (const [label, binary] of [
-          ["age-Verschlüsselungswerkzeug", env.AGE_TEST_BINARY || "age"],
-          ["age-Schlüsselwerkzeug", env.AGE_KEYGEN_TEST_BINARY || "age-keygen"],
+          ["age encryption tool", env.AGE_TEST_BINARY || "age"],
+          [
+            "age key generation tool",
+            env.AGE_KEYGEN_TEST_BINARY || "age-keygen",
+          ],
         ]) {
           const version = await step(label, binary, ["--version"]);
           if (!/^v?1\.\d+\.\d+$/.test(version.trim()))
@@ -381,7 +384,7 @@ try {
       }
       for (const area of ["updates", "maintenance", "backups"])
         if (existsSync(join(hosting, area)))
-          await step(`Update-/Wiederherstellungsschutz ${area}`, "python3", [
+          await step(`Update and recovery safeguards ${area}`, "python3", [
             "-m",
             "unittest",
             "discover",
@@ -412,20 +415,20 @@ try {
           : []),
       ].sort();
       await step(
-        "Release-Pakete und geprüfte Migrationspläne",
+        "Release packages and reviewed migration plans",
         process.execPath,
         ["--test", ...releaseTests],
       );
-      await step("Private Selfhost-Gateway-Routen", process.execPath, [
+      await step("Private self-hosted gateway routes", process.execPath, [
         "deploy/hostinger/selfhost/validate.mjs",
         "--gateway-routing",
       ]);
-      await step("Caddy-Zugriff und private Grenzen", process.execPath, [
+      await step("Caddy access and private boundaries", process.execPath, [
         "scripts/hostinger-caddy-check.mjs",
       ]);
     }
   }
-  await step("Vollständige isolierte Dienste starten", process.execPath, [
+  await step("Start complete isolated services", process.execPath, [
     "scripts/runtime-cli.mjs",
     "start",
   ]);
@@ -445,7 +448,7 @@ try {
     PORTAL_DB_CONTAINER: `supabase_db_${project}`,
   });
   await step(
-    "Echte Stop/Start-Persistenz einschließlich Auth/MFA/Storage",
+    "Real stop/start persistence including Auth/MFA/Storage",
     process.execPath,
     ["scripts/runtime-persistence-check.mjs"],
   );
@@ -454,7 +457,7 @@ try {
   // proof, with this runner's exact owned QA identity. Normal development
   // startup and its insert-only seed keep choosing no commercial policy.
   await step(
-    "Fiktive kommerzielle Testkonfiguration",
+    "Fictional commercial test configuration",
     process.execPath,
     ["scripts/local-seed.mjs"],
     {
@@ -463,13 +466,13 @@ try {
     },
   );
   if (phase.system) {
-    await step("PostgreSQL, RLS und 50-fache Nebenläufigkeit", "npm", [
+    await step("PostgreSQL, RLS and 50 concurrent claims", "npm", [
       "run",
       "test:db",
     ]);
     env.PORTAL_TEST_DB_TEMPLATE = `portal_test_template_${run}`;
     await step(
-      "Einmaligen isolierten Migrations-Snapshot für SQL-Fixtures erstellen",
+      "Create one isolated migration snapshot for SQL fixtures",
       process.execPath,
       ["scripts/testing/prepare-database-template.mjs"],
     );
@@ -480,7 +483,7 @@ try {
     // bounded parallelism reduces repeated migration replay without sharing fixtures.
     const suiteWorkers = Math.max(1, Math.min(4, availableParallelism()));
     await runBounded(databaseSuites, suiteWorkers, (script) =>
-      step(`Weitere SQL-Sicherheitsfälle ${script}`, process.execPath, [
+      step(`Additional SQL security cases ${script}`, process.execPath, [
         `scripts/${script}`,
       ]),
     );
@@ -491,15 +494,13 @@ try {
     // deletion can fail inside GoTrue even with unique fixtures, so keep API
     // lifecycle checks sequential while SQL suites use isolated DB clones.
     for (const script of apiSuites)
-      await step(`Echte API ${script}`, process.execPath, [
-        `scripts/${script}`,
-      ]);
-    await step("Echte Edge-Einladung und Mailpit", process.execPath, [
+      await step(`Real API ${script}`, process.execPath, [`scripts/${script}`]);
+    await step("Real Edge invitation and Mailpit", process.execPath, [
       "scripts/local-invite-check.mjs",
     ]);
   }
   if (phase.browser) {
-    await step("Chromium bereitstellen", "npx", [
+    await step("Install Chromium", "npx", [
       "--no-install",
       "playwright",
       "install",
@@ -510,21 +511,21 @@ try {
     // remain bounded and strict discovery/results still reject incomplete runs.
     await browserStage(
       "application",
-      "Desktop- und Mobilbrowser",
+      "Desktop and mobile browsers",
       ["--grep-invert", "built PWA"],
       {},
       1800000,
     );
     // The required parallel Typecheck gate covers these exact source bytes.
-    await step("Produktions-Build", "npx", ["--no-install", "vite", "build"]);
+    await step("Production build", "npx", ["--no-install", "vite", "build"]);
     // The test supervisor serves the built artifact from a separate, owned preview.
-    await step("Gebautes PWA starten", process.execPath, [
+    await step("Start built PWA", process.execPath, [
       "scripts/runtime-test-preview.mjs",
       "start",
     ]);
     await browserStage(
       "pwa",
-      "PWA, Offline-Shell und keine privaten Caches",
+      "PWA, offline shell and absence of private caches",
       ["tests/e2e/pwa.spec.ts"],
       { E2E_PWA: "1", E2E_BASE_URL: "http://127.0.0.1:4273" },
     );
@@ -599,8 +600,8 @@ try {
     cpSync(join(scratch, ".local/browser"), join(artifacts, "browser"), {
       recursive: true,
     });
-  if (phase.browser && existsSync(join(scratch, "docs/screenshots")))
-    cpSync(join(scratch, "docs/screenshots"), join(artifacts, "screenshots"), {
+  if (phase.browser && existsSync(join(scratch, ".local/screenshots")))
+    cpSync(join(scratch, ".local/screenshots"), join(artifacts, "screenshots"), {
       recursive: true,
     });
   if (existsSync(join(scratch, ".local/runtime.log")))
@@ -622,9 +623,7 @@ if (failure) {
     join(artifacts, "RESULT.txt"),
     `FAIL\nPhase: ${phase.phase}\n${failure.message}\n`,
   );
-  console.error(
-    `Isolierter Test fehlgeschlagen. Bericht: .local/tests/${run}/RESULT.txt`,
-  );
+  console.error(`Isolated test failed. Report: .local/tests/${run}/RESULT.txt`);
   throw failure;
 }
 evidence.status = "passed";
@@ -636,6 +635,6 @@ privateWrite(
 );
 console.log(
   phase.phase === "all" && phase.externalGates.length === 0
-    ? `\nAlle isolierten Prüfungen und Aufräumen bestanden. Bericht: .local/tests/${run}/RESULT.txt`
+    ? `\nAll isolated checks and cleanup passed. Report: .local/tests/${run}/RESULT.txt`
     : `\nIsolated ${phase.phase} acceptance and cleanup passed${phase.externalGates.length ? `; delegated required gates: ${phase.externalGates.join(", ")}` : "; other acceptance phases are not claimed"}. Report: .local/tests/${run}/RESULT.txt`,
 );

@@ -46,7 +46,7 @@ test("blocked preference storage still permits boot, language and theme controls
     .analyze();
   expect(result.violations.map(({ id }) => id)).toEqual([]);
   await page.screenshot({
-    path: `docs/screenshots/${testInfo.project.name}-storage-resilience.png`,
+    path: `.local/screenshots/${testInfo.project.name}-storage-resilience.png`,
     fullPage: true,
   });
 });

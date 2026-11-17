@@ -152,7 +152,7 @@ async function runFixture({
       return [];
     },
     existsSync: (path) =>
-      /deploy\/hostinger|supabase\/functions|playwright-report$|test-results$|coverage$|docs\/screenshots$|\.local\/browser$|\.local\/runtime\.log$/.test(
+      /deploy\/hostinger|supabase\/functions|playwright-report$|test-results$|coverage$|\.local\/screenshots$|\.local\/browser$|\.local\/runtime\.log$/.test(
         path,
       ),
     join,
@@ -546,14 +546,10 @@ test("system and browser phases preserve the complete command partition, duplica
     /System SQL\/API\/Edge\/operational acceptance was not run/,
   );
   assert(
-    !system.messages.some((message) =>
-      /Alle isolierten Prüfungen/.test(message),
-    ),
+    !system.messages.some((message) => /All isolated checks/.test(message)),
   );
   assert(
-    !browser.messages.some((message) =>
-      /Alle isolierten Prüfungen/.test(message),
-    ),
+    !browser.messages.some((message) => /All isolated checks/.test(message)),
   );
 });
 
@@ -646,7 +642,7 @@ test("browser phase gets its own snapshot, retained real services and explicit o
   assert.equal(pwa.env.E2E_BASE_URL, "http://127.0.0.1:4273");
   assert.equal(browser.snapshots, 1);
   assert.equal(browser.released, 1);
-  assert(browser.copies.some(([path]) => path.endsWith("docs/screenshots")));
+  assert(browser.copies.some(([path]) => path.endsWith(".local/screenshots")));
   assert(!browser.copies.some(([path]) => path.endsWith("coverage")));
   const system = await runFixture({ args: ["--phase", "system"] });
   assert.notEqual(

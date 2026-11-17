@@ -98,7 +98,7 @@ test("lecturer explicitly shares saved contacts with staff and revokes them acro
       ),
     ).toBe(true);
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-staff-contact-settings.png`,
+      path: `.local/screenshots/${testInfo.project.name}-staff-contact-settings.png`,
       fullPage: true,
     });
     await settings

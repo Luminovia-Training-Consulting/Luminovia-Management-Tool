@@ -684,7 +684,7 @@ export async function signatureProbe(api = github) {
       base,
       [
         {
-          path: "docs/MAINTENANCE_SIGNATURE_PROBE.txt",
+          path: "MAINTENANCE_SIGNATURE_PROBE.txt",
           contents: Buffer.from(
             "Temporary signed maintenance PR probe; main is unchanged.\n",
           ).toString("base64"),
