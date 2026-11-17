@@ -25,15 +25,19 @@ export const chatRoomsQuery = (actor: string) =>
   queryOptions({
     queryKey: chatKeys.rooms(actor),
     queryFn: async () => {
-      const [rooms, pins] = await Promise.all([
+      const [rooms, pins, archives] = await Promise.all([
         db().rpc("chat_rooms_with_manual_unread"),
         db().rpc("chat_pinned_rooms"),
+        db().rpc("chat_personal_archives"),
       ]);
       if (rooms.error) throw rooms.error;
       if (pins.error) throw pins.error;
+      if (archives.error) throw archives.error;
       const pinned = (pins.data ?? []) as string[];
+      const archived = new Set((archives.data ?? []) as string[]);
       return ((rooms.data ?? []) as ChatRoom[]).map((room) => ({
         ...room,
+        personal_archived: archived.has(room.id),
         pinned: pinned.includes(room.id),
         pinOrder: pinned.indexOf(room.id),
       }));

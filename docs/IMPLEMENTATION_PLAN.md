@@ -6,7 +6,7 @@
 
 - [x] Merge current `main` through `cc6218e` normally; retain the consolidated root documentation and the user-required project ledgers and verbatim prompt under `docs/`.
 - [x] Place the 13 programme migrations after the accepted contract-owner migration without changing their SQL bodies.
-- [x] Pass the integrated networkless migration replay and focused SQL suites for privacy, restore, navigation, chat replies/unread, membership origin, wiki attachments, API grants and deletion; regenerate the API reference from 298 migrated functions after adding topic invitations.
+- [x] Pass the integrated networkless migration replay and focused SQL suites for privacy, restore, navigation, chat replies/unread, membership origin, wiki attachments, API grants and deletion; regenerate the API reference from 300 migrated functions after adding topic invitations and personal archiving.
 - [ ] Implement all remaining QoL prompt criteria; use the feature matrix to track each criterion and its actual evidence.
 - [ ] Pass exact-current-head unit/source checks, complete database/API integration, desktop/mobile browser and PWA acceptance, security checks and required CI. Prior source snapshots are not evidence for the final head.
 - [ ] Keep the draft PR open and user-owned. No production deployment, real mail, production data changes, or PR merge is included.
@@ -16,6 +16,13 @@
 - [x] Add server-authorized, owner-managed topic-group invites with consent before membership; recheck current owner, active staff roles and room state on each operation.
 - [x] Add German/English owner and invitee UI, and test concurrent and stale invitation decisions in isolated PostgreSQL.
 - [ ] Add exact current API reference entries and run the authored desktop/mobile E2E. Strict invitation-only groups, other group kinds and outbound notifications remain open.
+
+### Personal chat archive — 17 November 2026
+
+- [x] Add per-member archive/restore for own direct and topic conversations while preserving shared messages and access; reject course/system rooms.
+- [x] Pass focused PostgreSQL own-scope/lifecycle checks and five focused archive/pin UI tests; typecheck and targeted lint pass.
+- [x] Add an integration regression proving other members retain room/message access after personal archival; regenerate the API reference from the exact 91-migration source.
+- [ ] Run actual desktop/mobile browser coverage and integrated full acceptance. Group-level archive, course/system rooms, and distinct hide semantics remain open.
 
 
 ## PR35 private-document acceptance follow-up — 17 November 2026

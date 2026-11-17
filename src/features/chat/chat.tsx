@@ -9,6 +9,8 @@ import { useTranslation } from "react-i18next";
 import {
   ArrowDown,
   ArrowUp,
+  Archive,
+  ArchiveRestore,
   BellOff,
   MessageCirclePlus,
   Pin,
@@ -41,6 +43,7 @@ import { TopicInvitationInbox } from "./topic-invitations";
 import "./room-unread-i18n";
 import "./i18n";
 import "./pins-i18n";
+import "./room-archive-i18n";
 import "./chat.css";
 /** Select rooms and start DMs using authorized contact/room projections. */
 export function ChatPage() {
@@ -57,6 +60,8 @@ export function ChatPage() {
   const permissions = useQuery(permissionsQuery(actor));
   const roles = useQuery(userRolesQuery(actor));
   const [search, setSearch] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
+  const archiveText = useTranslation("chatRoomArchive").t;
   const [contactsOpen, setContactsOpen] = useState(false);
   const [groupOpen, setGroupOpen] = useState(false);
   const previousRooms = useRef<string[]>([]);
@@ -133,6 +138,24 @@ export function ChatPage() {
     onSuccess: () =>
       client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
   });
+  const archive = useMutation({
+    mutationFn: async ({
+      room,
+      archived,
+    }: {
+      room: string;
+      archived: boolean;
+    }) => {
+      requireOnline();
+      const { error } = await db().rpc("set_chat_personal_archive", {
+        p_room_id: room,
+        p_archived: archived,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: chatKeys.rooms(actor) }),
+  });
   const pinnedOrder = (rooms.data ?? [])
     .filter((room) => room.pinned)
     .sort((a, b) => (a.pinOrder ?? 0) - (b.pinOrder ?? 0))
@@ -158,7 +181,8 @@ export function ChatPage() {
   });
   const filtered =
     rooms.data
-      ?.filter((room) =>
+      ?.filter((room) => Boolean(room.personal_archived) === showArchived)
+      .filter((room) =>
         room.title
           .toLocaleLowerCase(i18n.language)
           .includes(search.toLocaleLowerCase(i18n.language)),
@@ -199,7 +223,11 @@ export function ChatPage() {
         <aside className="chat-directory" aria-label={t("rooms")}>
           <div className="chat-directory-heading">
             <h2>{t("rooms")}</h2>
-            <span className="badge">{rooms.data?.length ?? 0}</span>
+            <span className="badge">
+              {rooms.data?.filter(
+                (room) => Boolean(room.personal_archived) === showArchived,
+              ).length ?? 0}
+            </span>
           </div>
           <div className="chat-room-search">
             <Search size={17} />
@@ -213,6 +241,28 @@ export function ChatPage() {
               onChange={(event) => setSearch(event.target.value)}
               placeholder={t("searchRooms")}
             />
+          </div>
+          <div
+            className="form-actions"
+            role="group"
+            aria-label={archiveText("filter")}
+          >
+            <Button
+              type="button"
+              variant={!showArchived ? "default" : "secondary"}
+              aria-pressed={!showArchived}
+              onClick={() => setShowArchived(false)}
+            >
+              {archiveText("active")}
+            </Button>
+            <Button
+              type="button"
+              variant={showArchived ? "default" : "secondary"}
+              aria-pressed={showArchived}
+              onClick={() => setShowArchived(true)}
+            >
+              {archiveText("archived")}
+            </Button>
           </div>
           {lecturer && (
             <button
@@ -230,6 +280,9 @@ export function ChatPage() {
           )}
           {general.isError && <Notice kind="error">{t("actionError")}</Notice>}
           {staff && <TopicInvitationInbox actor={actor} onRoom={selectRoom} />}
+          {archive.isError && (
+            <Notice kind="error">{archiveText("failed")}</Notice>
+          )}
           {(pin.isError || movePin.isError) && (
             <Notice kind="error">{t("pinError")}</Notice>
           )}
@@ -292,6 +345,42 @@ export function ChatPage() {
                       )}
                     </span>
                   </button>
+                  {(room.kind === "dm" || room.kind === "topic") && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={archiveText(
+                        room.personal_archived ? "restore" : "archive",
+                        { title: room.title },
+                      )}
+                      title={
+                        room.id === selectedId && !room.personal_archived
+                          ? archiveText("closeFirst")
+                          : archiveText(
+                              room.personal_archived ? "restore" : "archive",
+                              { title: room.title },
+                            )
+                      }
+                      disabled={
+                        !online ||
+                        archive.isPending ||
+                        (room.id === selectedId && !room.personal_archived)
+                      }
+                      onClick={() =>
+                        archive.mutate({
+                          room: room.id,
+                          archived: !room.personal_archived,
+                        })
+                      }
+                    >
+                      {room.personal_archived ? (
+                        <ArchiveRestore size={16} />
+                      ) : (
+                        <Archive size={16} />
+                      )}
+                    </Button>
+                  )}
                   <RoomUnread
                     actor={actor}
                     room={room}
@@ -326,6 +415,14 @@ export function ChatPage() {
                             !online ||
                             pin.isPending ||
                             movePin.isPending ||
+                            !filtered.some(
+                              (item) =>
+                                item.id ===
+                                pinnedOrder[
+                                  pinnedOrder.indexOf(room.id) +
+                                    (direction === "up" ? -1 : 1)
+                                ],
+                            ) ||
                             (direction === "up"
                               ? pinnedOrder[0] === room.id
                               : pinnedOrder.at(-1) === room.id)
@@ -349,8 +446,10 @@ export function ChatPage() {
           ) : (
             <div className="chat-list-empty">
               <MessagesSquare size={28} />
-              <h3>{t("noRooms")}</h3>
-              <p>{t("noRoomsHint")}</p>
+              <h3>{showArchived ? archiveText("empty") : t("noRooms")}</h3>
+              <p>
+                {showArchived ? archiveText("emptyHint") : t("noRoomsHint")}
+              </p>
             </div>
           )}
         </aside>
