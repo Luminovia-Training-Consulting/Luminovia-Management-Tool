@@ -29,6 +29,8 @@ To inspect the generated local fixture password deliberately in your own termina
 
 The password is stored in the permission-restricted ignored `.local/ACCOUNTS.txt`; server credentials stay in ignored `.env.test.local`. Start/status output and runtime logs do not print keys or passwords. A password changed through the app remains changed; the credentials file describes the original bootstrap password, not a password-reset mechanism. If the credentials file was lost while database volumes remain, existing passwords are not overwritten: use the known password or local Mailpit recovery.
 
+For explicit recovery of the fictional local administrator, start the portal and run `./portal reset-demo-admin`, then `./portal credentials`. This changes only `admin@example.invalid`, confirms an actual Auth login, and stores the new generated password in ignored `.local/ADMIN-DEMO.txt` with mode 0600. It does not reset MFA or any other account. Later password changes do not update that file. This command is restricted to the running owned local stack and must never be used for a hosted service.
+
 ## Repeated use preserves data
 
 ```bash

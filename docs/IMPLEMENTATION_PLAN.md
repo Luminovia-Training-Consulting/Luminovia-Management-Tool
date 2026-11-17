@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## Local demo administrator recovery
+
+- [x] Provide an explicit local-only administrator password recovery command and private credentials display without changing startup or other accounts.
+- [x] Verify the actual command against the owned local stack and confirm the new password through Auth; confirm a checkout without a running owned supervisor refuses the command. Focused lint and syntax checks pass.
+- [ ] Complete fresh CI; remote-target and other refusal paths still need automated integration coverage.
+
 PR43 correction: retain the full 50-way simultaneous HTTP capacity race; the preceding ten-in-flight experiment is superseded because the native PostgreSQL crash cause is not yet established. The existing complete cleanup and current-head native CI remain required.
 
 ## Browser test runtime — 17 November 2026
@@ -11,6 +17,7 @@ PR43 correction: retain the full 50-way simultaneous HTTP capacity race; the pre
 - [x] Scale independent PR SQL shards to at most four isolated workers; keep retained selfhost API suites sequential after the same GoTrue cleanup failure. Retain real migration/restart/image, auth, browser, concurrency, and cleanup proofs.
 - [x] Replay migrations once per isolated PostgreSQL worker into an owned ephemeral template and clone a fresh database per SQL suite; keep main migration acceptance and every historical-bound migration check unchanged. Exact-head SQL/template suites passed.
 - [ ] Complete exact-head CI with serial browser/API fixtures and collect successful per-job timings before claiming the final speedup. Do not trim coverage.
+
 ## PR35 private-document acceptance follow-up — 17 November 2026
 
 - [x] Trace the native fixture cleanup failure to dependent membership-origin rows blocking deletion of its owned participant room.
@@ -22,7 +29,7 @@ PR43 correction: retain the full 50-way simultaneous HTTP capacity race; the pre
 - [x] Track new assignment-derived and explicit participant-room membership without guessing legacy provenance; fail closed and provide an authorized explicit resolution.
 - [x] Preserve independently authorized membership and active additional course claims or enrolments; re-evaluate enrolment removal and both handover paths.
 - [ ] Complete independent security review and exact-head CI, including native Auth and browser acceptance; do not infer hosted migration or production readiness.
-PR40 browser acceptance repair: single shared preferences and visible mobile sign-out are implemented; 25 focused component tests, TypeScript and ESLint pass locally. The complete exact-head GitHub/browser/native gates remain pending.
+      PR40 browser acceptance repair: single shared preferences and visible mobile sign-out are implemented; 25 focused component tests, TypeScript and ESLint pass locally. The complete exact-head GitHub/browser/native gates remain pending.
 
 ## PR31 after accepted documentation main — 17 November 2026
 
