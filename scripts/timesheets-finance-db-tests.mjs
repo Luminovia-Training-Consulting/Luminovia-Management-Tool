@@ -1,11 +1,16 @@
 /** Real PostgreSQL evidence: hours, immutable fee facts and scoped operations. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
+import {
+  applyPasswordOnlyPermissionPolicy,
+  withTestDatabase,
+  quoteSql as q,
+} from "./testing/database.mjs";
 
 await withTestDatabase(
   "timesheets_finance",
   async ({ sql, actor }) => {
+    await applyPasswordOnlyPermissionPolicy(sql);
     const [teacher, peer, manager, admin] = Array.from(
       { length: 4 },
       randomUUID,
