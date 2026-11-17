@@ -1,6 +1,10 @@
 # Luminovia Portal — development work log
 
-## 17 November 2026 — workspace focus and dashboard heading
+## 17 November 2026 — PR19 native Auth failure diagnosis
+
+The current selfhost CI run passed retained-data upgrade and 34 real API suites, then GoTrue returned HTTP 500 while creating a fictional qualification-passport actor. The prior cleanup removed the candidate containers without recording the underlying service error. The candidate checker now collects at most 20 bounded, redacted error lines from its own Auth and PostgreSQL containers before cleanup on failure; no gate or retry behavior changes. Twenty-five focused checker tests and formatting pass locally. The exact new-head full CI is pending; the root cause is not yet asserted.
+
+## 17 November 2026 — post-upload discovery race
 
 Mobile search now restores focus to the visible More summary after submitting; collapsed desktop search restores focus to its search button on submit or close. The dashboard again has a visible translated level-one heading. Controlled shell/dashboard component tests pass 24 cases, and TypeScript passes. These component results do not replace the pending complete browser acceptance.
 

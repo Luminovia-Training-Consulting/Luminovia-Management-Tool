@@ -1,0 +1,62 @@
+# Trusted-main controller for protected native PR merges after complete evidence.
+# The App has no CI/review bypass and receives no PR-controlled executable input.
+name: Verified automatic merge
+on:
+  workflow_run:
+    workflows: [Portal checks, Security analysis, Pull request metadata]
+    types: [completed]
+  workflow_dispatch:
+  schedule:
+    # Recheck delayed CodeQL findings without requiring another PR code push.
+    - cron: "7,22,37,52 * * * *"
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read
+  checks: read
+  statuses: read
+  security-events: read
+concurrency:
+  group: verified-automatic-merge
+  cancel-in-progress: false
+jobs:
+  merge:
+    environment:
+      name: maintenance-signing
+      # Reuse protected credentials without creating automatic deployments.
+      deployment: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Privileged workflow: execute only trusted default-branch code. Never
+      # restore PR artifacts/caches, install packages, or check out a PR revision.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ".node-version"
+      - name: Require the existing approved merge App
+        env:
+          APP_ID: ${{ vars.MAINTENANCE_APP_ID }}
+        run: test "$APP_ID" = "5776881"
+      - name: Create a repository-scoped native merge token
+        id: promotion
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          app-id: ${{ vars.MAINTENANCE_APP_ID }}
+          private-key: ${{ secrets.MAINTENANCE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-actions: write
+      - name: Verify the existing App identity
+        env:
+          APP_SLUG: ${{ steps.promotion.outputs.app-slug }}
+        run: test "$APP_SLUG" = "luminovia-portal-maintenance"
+      - name: Merge only completely verified current pull requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROMOTION_TOKEN: ${{ steps.promotion.outputs.token }}
+        run: node scripts/pr-auto-merge.mjs --apply

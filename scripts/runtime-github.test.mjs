@@ -5,7 +5,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { execFileSync, spawn } from "node:child_process";
+import fs from "node:fs";
 import {
+  chmodSync,
   copyFileSync,
   existsSync,
   mkdirSync,
@@ -15,6 +17,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "node:fs";
+import { syncBuiltinESMExports } from "node:module";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
@@ -137,6 +140,275 @@ function fixture() {
     },
   };
 }
+
+/** Exercise recorded-source reads without Git transport or a runtime process. */
+function recordFixture(t) {
+  const directory = mkdtempSync(join(tmpdir(), "portal-github-record-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const preview = new GitHubPreview({ checkout: directory });
+  preview.initialise();
+  const file = join(preview.base, "source.json");
+  const state = { sha: "a".repeat(40), configHash: "b".repeat(64) };
+  writeFileSync(file, JSON.stringify(state), { mode: 0o600 });
+  return { directory, preview, file, state };
+}
+
+test("a real path swap after metadata validation cannot substitute another source record", (t) => {
+  const { directory, preview, file, state } = recordFixture(t);
+  const victim = join(directory, "outside.json");
+  const retained = join(directory, "retained.json");
+  const foreign = { sha: "c".repeat(40), configHash: "d".repeat(64) };
+  writeFileSync(victim, JSON.stringify(foreign), { mode: 0o600 });
+  const originalLstat = fs.lstatSync;
+  const originalFstat = fs.fstatSync;
+  const inode = originalLstat(file).ino;
+  let swaps = 0;
+  const swap = (info) => {
+    if (info.ino === inode && swaps === 0) {
+      swaps++;
+      fs.renameSync(file, retained);
+      symlinkSync(victim, file);
+    }
+    return info;
+  };
+  // The old pathname check and the corrected descriptor check encounter the
+  // same real replacement. Only the checked inode may supply returned bytes.
+  const pathCheck = t.mock.method(fs, "lstatSync", (...args) =>
+    swap(originalLstat(...args)),
+  );
+  const descriptorCheck = t.mock.method(fs, "fstatSync", (...args) =>
+    swap(originalFstat(...args)),
+  );
+  syncBuiltinESMExports();
+  let actual;
+  try {
+    actual = preview.state();
+  } finally {
+    pathCheck.mock.restore();
+    descriptorCheck.mock.restore();
+    syncBuiltinESMExports();
+  }
+  assert.equal(swaps, 1);
+  assert.deepEqual(actual, state);
+  assert.equal(fs.lstatSync(file).isSymbolicLink(), true);
+  assert.equal(readFileSync(victim, "utf8"), JSON.stringify(foreign));
+});
+
+test("absent source state is null but removal after existence checking remains an error", (t) => {
+  const { preview, file, state } = recordFixture(t);
+  rmSync(file);
+  assert.equal(preview.state(), null);
+  writeFileSync(file, JSON.stringify(state), { mode: 0o600 });
+  const originalExists = fs.existsSync;
+  let removed = false;
+  const existence = t.mock.method(fs, "existsSync", (path) => {
+    const present = originalExists(path);
+    if (path === file && present) {
+      rmSync(file);
+      removed = true;
+    }
+    return present;
+  });
+  syncBuiltinESMExports();
+  try {
+    assert.throws(() => preview.state(), { code: "ENOENT" });
+  } finally {
+    existence.mock.restore();
+    syncBuiltinESMExports();
+  }
+  assert.equal(removed, true);
+});
+
+test("owned 0644 source records retain the existing readable-file contract", (t) => {
+  const { preview, file, state } = recordFixture(t);
+  chmodSync(file, 0o644);
+  assert.deepEqual(preview.state(), state);
+  assert.equal(fs.statSync(file).mode & 0o777, 0o644);
+});
+
+test("a FIFO source record is rejected without waiting for a writer", (t) => {
+  const { directory, file } = recordFixture(t);
+  rmSync(file);
+  execFileSync("mkfifo", ["-m", "600", file]);
+  // A child-process deadline also catches a synchronous blocking open. Paths
+  // are supplied as data, never interpolated into executable fixture source.
+  const source = `const {GitHubPreview}=await import(process.env.PREVIEW_MODULE);
+const preview=new GitHubPreview({checkout:process.env.PREVIEW_CHECKOUT});
+try { preview.state(); throw new Error("FIFO was accepted"); }
+catch(error) {
+ if(error.message!=="Unowned or symlinked GitHub preview file refused.") throw error;
+ process.stdout.write("refused\\n");
+}`;
+  assert.equal(
+    execFileSync(process.execPath, ["--input-type=module", "-e", source], {
+      encoding: "utf8",
+      timeout: 5000,
+      env: {
+        PREVIEW_MODULE: pathToFileURL(join(root, "scripts/runtime-github.mjs"))
+          .href,
+        PREVIEW_CHECKOUT: directory,
+      },
+    }),
+    "refused\n",
+  );
+});
+
+test("a Unix-socket source record retains the bounded non-regular-file refusal", (t) => {
+  const { preview, file } = recordFixture(t);
+  rmSync(file);
+  // Binding and closing an owned AF_UNIX fixture leaves only its socket inode;
+  // no listening service or shared TCP port is needed for this open boundary.
+  execFileSync(
+    "python3",
+    [
+      "-c",
+      "import socket,sys\nwith socket.socket(socket.AF_UNIX,socket.SOCK_STREAM) as fixture:\n fixture.bind(sys.argv[1])",
+      file,
+    ],
+    { stdio: "pipe" },
+  );
+  assert.equal(fs.lstatSync(file).isSocket(), true);
+  assert.throws(
+    () => preview.state(),
+    (error) => {
+      assert.equal(
+        error.message,
+        "Unowned or symlinked GitHub preview file refused.",
+      );
+      assert.equal(error.cause, undefined);
+      return true;
+    },
+  );
+});
+
+test("source descriptors close after success, malformed JSON, refused metadata and read failure", (t) => {
+  const { preview, file, state } = recordFixture(t);
+  const originalOpen = fs.openSync;
+  const originalFstat = fs.fstatSync;
+  const originalRead = fs.readFileSync;
+  let descriptor;
+  let phase;
+  const failure = Object.assign(new Error("Fictional read refusal"), {
+    code: "EIO",
+  });
+  const unavailable = Object.assign(new Error("Fictional descriptor refusal"), {
+    code: "ENXIO",
+  });
+  const opened = t.mock.method(fs, "openSync", (...args) => {
+    const fd = originalOpen(...args);
+    if (args[0] === file) descriptor = fd;
+    return fd;
+  });
+  const metadata = t.mock.method(fs, "fstatSync", (fd, ...args) => {
+    if (fd === descriptor && phase === "metadata-enxio") throw unavailable;
+    const info = originalFstat(fd, ...args);
+    if (fd === descriptor && phase === "foreign")
+      info.uid = process.getuid() + 1;
+    return info;
+  });
+  const reading = t.mock.method(fs, "readFileSync", (fd, ...args) => {
+    if (fd === descriptor && phase === "read") throw failure;
+    if (fd === descriptor && phase === "read-enxio") throw unavailable;
+    return originalRead(fd, ...args);
+  });
+  syncBuiltinESMExports();
+  try {
+    for (phase of [
+      "valid",
+      "json",
+      "foreign",
+      "read",
+      "metadata-enxio",
+      "read-enxio",
+    ]) {
+      descriptor = undefined;
+      const secret = "FICTIONAL_RECORD_MUST_NOT_APPEAR";
+      writeFileSync(
+        file,
+        phase === "json" ? `{"secret":"${secret}` : JSON.stringify(state),
+      );
+      descriptor = undefined;
+      if (phase === "valid") assert.deepEqual(preview.state(), state);
+      else if (phase === "json")
+        assert.throws(
+          () => preview.state(),
+          (error) => {
+            assert.equal(
+              error.message,
+              "Invalid private GitHub preview JSON record.",
+            );
+            assert.equal(error.message.includes(secret), false);
+            assert.equal(error.cause, undefined);
+            return true;
+          },
+        );
+      else if (phase === "foreign")
+        assert.throws(() => preview.state(), /Unowned or symlinked/);
+      else
+        assert.throws(
+          () => preview.state(),
+          (error) => error === (phase === "read" ? failure : unavailable),
+        );
+      assert.equal(typeof descriptor, "number");
+      assert.throws(() => originalFstat(descriptor), { code: "EBADF" });
+    }
+  } finally {
+    opened.mock.restore();
+    metadata.mock.restore();
+    reading.mock.restore();
+    syncBuiltinESMExports();
+  }
+});
+
+test("owned public TOML, environment text and Git worktree pointers remain readable", async () => {
+  const f = fixture();
+  try {
+    const plan = await f.preview.fetchLatest();
+    await f.preview.apply(plan);
+    const config = join(f.preview.source, "supabase/config.toml");
+    chmodSync(join(f.preview.source, "supabase"), 0o755);
+    chmodSync(config, 0o644);
+    const environment = join(f.preview.source, ".env.local");
+    writeFileSync(environment, "FICTIONAL_TEXT=not-json\n");
+    chmodSync(environment, 0o644);
+    await f.preview.validateSource();
+    await f.preview.runtime("stop");
+    const originalGit = f.preview.git.bind(f.preview);
+    const pointer = join(f.preview.base, `test-${plan.sha}/.git`);
+    f.preview.git = async (args, cwd) => {
+      const output = await originalGit(args, cwd);
+      if (args[0] === "worktree" && args[1] === "add")
+        chmodSync(pointer, 0o644);
+      return output;
+    };
+    await f.preview.testLatest(plan);
+    for (const path of [config, environment, pointer])
+      assert.equal(fs.statSync(path).mode & 0o777, 0o644);
+  } finally {
+    f.cleanup();
+  }
+});
+
+test("existing and dangling worktree-pointer symlinks are refused before Git or runtime use", async () => {
+  const f = fixture();
+  try {
+    const plan = await f.preview.fetchLatest();
+    const directory = join(f.preview.base, `test-${plan.sha}`);
+    mkdirSync(directory, { mode: 0o700 });
+    const victim = join(f.directory, "outside-git-pointer");
+    writeFileSync(victim, "fictional-outside-pointer\n");
+    for (const destination of [victim, join(f.directory, "absent-pointer")]) {
+      const pointer = join(directory, ".git");
+      symlinkSync(destination, pointer);
+      await assert.rejects(f.preview.testLatest(plan), /Unowned or symlinked/);
+      rmSync(pointer);
+    }
+    assert.equal(readFileSync(victim, "utf8"), "fictional-outside-pointer\n");
+    assert.equal(existsSync(join(f.directory, "absent-pointer")), false);
+  } finally {
+    f.cleanup();
+  }
+});
 
 test("latest checkout is pinned, updates preserve its own private bytes and never edit launcher data", async () => {
   const f = fixture();

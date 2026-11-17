@@ -90,7 +90,7 @@ export default defineConfig(({ mode }) => {
         reporter: ["text-summary", "html", "lcov", "json-summary", "json"],
         reportOnFailure: true,
         thresholds: {
-          // Whole-source regression floor, measured with uncovered UI included.
+          // Preserve the accepted whole-source floor, including uncovered UI modules.
           // End-to-end browser execution is not merged into these unit figures.
           statements: 62.5,
           branches: 56.5,
@@ -99,6 +99,10 @@ export default defineConfig(({ mode }) => {
           "**/scripts/public-config.ts": { 100: true },
           "**/src/lib/dates.ts": { 100: true },
           "**/src/features/operations/schedule.ts": { 100: true },
+          // These client boundaries now cover both success and rejected-response
+          // paths; retain all measured branches when future features extend them.
+          "**/src/features/jobs/lifecycle-api.ts": { 100: true },
+          "**/src/features/notifications/api.ts": { 100: true },
           "**/src/features/knowledge/content.ts": {
             statements: 95,
             branches: 85,
