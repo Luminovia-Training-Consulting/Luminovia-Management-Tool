@@ -193,6 +193,44 @@ try {
         ),
         "1",
       );
+      // A confirmed owner deletion must hide the candidate even from a
+      // privileged registration query that intentionally bypasses table RLS.
+      const preview = JSON.parse(
+        await actor(
+          owner,
+          `select public.deletion_preview('document','${contract.document_id}')`,
+          "aal2",
+        ),
+      );
+      await actor(
+        owner,
+        `select public.deletion_confirm('${preview.plan_id}','${randomUUID()}','DELETE')`,
+        "aal2",
+      );
+      assert.equal(
+        await actor(
+          manager,
+          `select count(*) from public.contract_registration_candidates('${owner}') where version_id='${contract.version_id}'`,
+          "aal2",
+        ),
+        "0",
+      );
+      assert.equal(
+        await actor(
+          owner,
+          `select private.can_access_document('${contract.document_id}')`,
+          "aal2",
+        ),
+        "f",
+      );
+      await assert.rejects(
+        actor(
+          manager,
+          `select private.can_access_document_before_contract_owner('${contract.document_id}')`,
+          "aal2",
+        ),
+        /permission denied/,
+      );
     },
   );
   console.log(`\n${checks} contract privacy database checks passed.`);

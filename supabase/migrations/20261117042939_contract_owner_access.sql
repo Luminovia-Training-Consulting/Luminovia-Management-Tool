@@ -1,15 +1,18 @@
 begin;
+-- Preserve the exact installed access chain, including independent deletion,
+-- support and qualification gates, instead of reconstructing an older version.
+do $$declare predecessor text;begin
+ select prosrc into predecessor from pg_catalog.pg_proc where oid='private.can_access_document(uuid)'::regprocedure;
+ execute format('create function private.can_access_document_before_contract_owner(p_id uuid) returns boolean language plpgsql stable security definer set search_path='''' as %L',predecessor);
+end;$$;
+revoke all on function private.can_access_document_before_contract_owner(uuid) from public,anon,authenticated,service_role;
+
 -- Contracts are personal evidence, including documents uploaded under older rules.
--- Preserve the support attachment restrictions and all non-contract policies.
 create or replace function private.can_access_document(p_id uuid) returns boolean language plpgsql stable security definer set search_path='' as $$
 begin
  if not private.actor_active() or not exists(select 1 from public.documents where id=p_id and deleted_at is null) then return false;end if;
  if exists(select 1 from public.documents where id=p_id and scope='personal' and kind='contract' and owner_id<>auth.uid()) then return false;end if;
- if exists(select 1 from private.support_attachments where document_id=p_id) then
-  return exists(select 1 from private.support_attachments a where a.document_id=p_id and private.can_read_support(a.ticket_id)
-   and (not a.internal or private.has_permission('support.manage')));
- end if;
- return private.can_access_document_before_support(p_id);
+ return private.can_access_document_before_contract_owner(p_id);
 end;$$;
 
 -- Only the owner may create or replace their personal contract evidence.
@@ -37,7 +40,7 @@ begin
  if not private.has_permission('contracts.manage') then raise exception 'Contract management and MFA required' using errcode='42501'; end if;
  return query select v.id,v.original_name from public.documents d
  join public.document_versions v on v.id=d.current_version_id and v.document_id=d.id
- where d.owner_id=p_user_id and d.scope='personal' and d.kind='contract' and d.deleted_at is null
+ where d.owner_id=p_user_id and d.scope='personal' and d.kind='contract' and d.deleted_at is null and not private.deletion_document_fenced(d.id)
  and d.status='clean' and v.status='clean' and v.mime_type='application/pdf' and v.sha256 is not null
  order by d.created_at desc,d.id;
 end;$$;
