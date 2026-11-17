@@ -10,6 +10,8 @@ This guide describes the current repository source, including scoped course/part
 
 Local development uses fictional accounts and records. `./portal start` prints the local address/account instructions; `./portal status` reports service state and `./portal stop` retains application data. `./portal test` creates an isolated complete test stack without using development records. `./portal github` and `./portal github test` operate the separate latest-main preview described in [GITHUB_LOCAL_PREVIEW](GITHUB_LOCAL_PREVIEW.md). A mock/demo result or captured local mail is not a real invitation, external delivery, live timer or production approval. The full master scope remains recorded in [PRODUCT_SPEC](PRODUCT_SPEC.md), [SMART_OPERATIONS_SPEC](SMART_OPERATIONS_SPEC.md) and the persistent plan.
 
+On desktop, use the navigation control to expand or collapse the workspace rail; this visual preference is stored in the current browser. Search, notifications and sign-out are available from the rail; language and theme controls remain in the top bar. On mobile, the More menu contains all currently permitted destinations and search, while preferences and sign-out remain in the top bar.
+
 Use `./portal check` for fast local source/coverage/build validation and `./portal test` for complete isolated acceptance. [PR preview packages](PR_PREVIEWS.md) are downloadable local runtimes after the required checks; they are not continuously hosted public PR instances.
 
 ## Guided demo and help
