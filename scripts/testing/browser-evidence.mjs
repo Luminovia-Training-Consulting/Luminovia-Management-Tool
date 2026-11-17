@@ -5,8 +5,13 @@ import { isAbsolute, relative } from "node:path";
 export const browserProjectNames = ["desktop-chromium", "mobile-chromium"];
 
 /** Select one independently provisioned CI browser lane, or both for local acceptance. */
-export function browserProjectSelection(value) {
+export function browserProjectSelection(value, phase = "all") {
   if (value === undefined || value === "") return [...browserProjectNames];
+  assert.equal(
+    phase,
+    "browser",
+    "A browser lane is only allowed in the explicit browser phase.",
+  );
   assert.ok(
     browserProjectNames.includes(value),
     "Unknown isolated browser project.",

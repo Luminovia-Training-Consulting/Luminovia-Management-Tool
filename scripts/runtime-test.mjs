@@ -48,6 +48,7 @@ import {
 const phase = runtimeTestPhasePlan(runtimeTestArguments(process.argv, root));
 const browserProjects = browserProjectSelection(
   process.env.PORTAL_BROWSER_PROJECT,
+  phase.phase,
 );
 const browserProjectArgs =
   browserProjects.length === 1 ? ["--project", browserProjects[0]] : [];

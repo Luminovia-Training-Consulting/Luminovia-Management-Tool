@@ -19,10 +19,14 @@ const projects = ["desktop-chromium", "mobile-chromium"];
 
 test("browser lanes select exactly one project while local acceptance keeps both", () => {
   assert.deepEqual(browserProjectSelection(undefined), browserProjectNames);
-  assert.deepEqual(browserProjectSelection("desktop-chromium"), [projects[0]]);
-  assert.deepEqual(browserProjectSelection("mobile-chromium"), [projects[1]]);
+  assert.deepEqual(browserProjectSelection("desktop-chromium", "browser"), [
+    projects[0],
+  ]);
+  assert.deepEqual(browserProjectSelection("mobile-chromium", "browser"), [
+    projects[1],
+  ]);
   assert.throws(
-    () => browserProjectSelection("webkit"),
+    () => browserProjectSelection("webkit", "browser"),
     /Unknown isolated browser project/,
   );
 });
