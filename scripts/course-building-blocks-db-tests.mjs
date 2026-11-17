@@ -585,7 +585,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
     },
   );
   await check(
-    "Enrolled learners read only their real source block and lose it on course revocation",
+    "Participant accounts cannot access source blocks even when historical enrolment remains",
     async () => {
       await rpc(
         "admin",
@@ -598,7 +598,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
           ids.participant,
           "select count(*) from public.building_blocks",
         ),
-        "1",
+        "0",
       );
       assert.equal(
         await actor(
