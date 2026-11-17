@@ -62,8 +62,9 @@ await withTestDatabase("calendar_global", async ({ sql, actor }) => {
           /42501/,
         );
       event = await mutate(null, "save", 0, body);
-      for (const who of [teacher, learner, client])
+      for (const who of [teacher, client])
         assert.equal((await list(who)).items.length, 0);
+      await assert.rejects(list(learner), /Calendar access denied/);
       assert.equal((await list(admin, true)).items[0].id, event.id);
       assert.equal(
         await actor(
