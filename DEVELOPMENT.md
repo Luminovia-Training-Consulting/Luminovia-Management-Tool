@@ -4,7 +4,7 @@ Consolidated reference. Source and tests remain authoritative for current behavi
 
 ## Authentication policy update — 17 November 2026
 
-The product uses password-only authentication: no MFA enrollment or factors, and no MFA/AAL checks in protected actions. Existing database roles, active-account status, resource membership and RLS remain mandatory. This change is pending review and hosted acceptance; MFA-specific notes later in this long-running engineering record describe prior revisions and do not prove this change is deployed.
+The current repository uses password-only authentication: no MFA enrollment or factors, and no MFA/AAL checks in protected actions. Database roles, active-account status, resource membership and RLS remain mandatory. MFA-specific passages in the dated engineering history below describe earlier revisions. Verify an installed host separately from repository source.
 
 
 <a id="section-developer-guide"></a>
@@ -35,9 +35,9 @@ for complete isolated acceptance of the working source before delivery; `./porta
 local QA checkout, and `./portal github` starts its persistent preview. The full
 runner holds a shared host-wide QA lock: coordinate concurrent agents and leave
 foreign services untouched. No self-hosted GitHub Actions runner is required.
-After exact-main push runs of both application and security checks succeed, the automatic CMS publisher may create an immutable development release. PR deployment metadata remains manual. See [development publication](DEVELOPMENT.md#section-pr-previews-hosted-previews-and-existing-releases) and [release gates](DEVELOPMENT.md#section-ci-quality).
+After exact-main application and security push checks succeed, the verified automatic workflow may create an immutable CMS development release. An explicit manual `workflow_dispatch` with `publish_release=true` and the exact `expected_commit` is also available. PR deployment metadata remains manual. See [development publication](DEVELOPMENT.md#section-pr-previews-hosted-previews-and-existing-releases) and [release gates](DEVELOPMENT.md#section-ci-quality).
 
-The normal environment contains only fictional development data unless you later add your own records. Startup does not overwrite passwords/MFA, profiles, roles, suspensions or accepted assignments. `./portal credentials` deliberately displays the original local bootstrap password in your own terminal; it does not reset passwords. Invitations and recovery messages are captured locally in Mailpit. Production publication, real email and real payment instructions are separate operations.
+The normal environment contains only fictional development data unless you later add your own records. Startup does not overwrite passwords, profiles, roles, suspensions or accepted assignments. `./portal credentials` deliberately displays the original local bootstrap password in your own terminal; it does not reset passwords. Invitations and recovery messages are captured locally in Mailpit. Production publication, real email and real payment instructions are separate operations.
 
 <a id="section-developer-guide-application-startup-and-responsibilities"></a>
 ## Application startup and responsibilities
@@ -47,7 +47,7 @@ The normal environment contains only fictional development data unless you later
 | `src/main.tsx`                               | Shared providers, global styles and router application.                                                                             |
 | `src/app/app.tsx`                            | Actual routes, protected areas, error boundary and PWA status. Feature pages are loaded lazily where appropriate.                   |
 | `src/app/shell.tsx`                          | Role-aware navigation, mobile primary navigation, search, notifications, language/theme and confirmed sign-out.                     |
-| `src/features/auth`                          | Native Supabase sign-in, invitation/recovery callback, password, MFA and session changes.                                           |
+| `src/features/auth`                          | Native Supabase sign-in, invitation/recovery callback, password and session changes.                                                |
 | `src/lib/supabase.ts`                        | One browser client with a public URL/publishable key. No service credentials.                                                       |
 | `src/lib/queries.ts` and feature API modules | TanStack Query keys, server calls and DTOs. Private data belong in the cache scoped to the current identity.                        |
 | `src/components`                             | Shared fields, states, dialogs and controls. Business permissions remain authoritative on the server.                               |
@@ -65,7 +65,7 @@ Auth events can arrive before the first `getSession()` call completes. The Auth 
 ```mermaid
 flowchart LR
   UI[React and local drafts] --> Query[Actor-scoped queries and mutations]
-  Query --> Auth[Native Supabase Auth and MFA]
+  Query --> Auth[Native Supabase Auth]
   Query --> API[Public invoker RPC or RLS REST]
   API --> Private[Reviewed private business implementation]
   Private --> PG[(PostgreSQL)]
@@ -77,7 +77,7 @@ flowchart LR
 
 Roles are read from current database rows. Editable `user_metadata`, submitted author/user IDs and visible navigation do not grant permissions. The public SQL API uses `security invoker`; necessary privileged implementations live in the unexposed private schema, check the actual caller and have restricted execution grants. Every exposed table has RLS.
 
-Admin/owner accounts can exercise business roles. Financial, role, contract, enrollment and moderation operations retain their MFA/capability checks. Private DMs require actual membership; private calendars remain owner-only data. The separate account HTTP API performs data operations with the caller's JWT. Only invitation delivery/completion uses server-side Auth administration permissions. Both invitation entry points share the same durable reservation protocol.
+Admin/owner accounts can exercise permitted business roles. Financial, role, contract and moderation operations retain current capability and resource checks. Private DMs require actual membership; private calendars remain owner-only data. The separate account HTTP API performs data operations with the caller's JWT. Only invitation delivery/completion and account creation use narrowly scoped server-side Auth administration permissions. Both invitation entry points share the same durable reservation protocol.
 
 The [generated API reference](API_REFERENCE.md) lists actual parameters, return types and execution grants from a migrated temporary PostgreSQL database. `scripts/api-surface-db-tests.mjs` connects actual frontend calls to this database through compiler symbols. A documented API or migration is not dead code merely because the browser does not call it.
 
@@ -92,14 +92,14 @@ The [generated API reference](API_REFERENCE.md) lists actual parameters, return 
 | Course building blocks | Provenance catalogue, `building_blocks`, source versions and referencing templates           | One canonical template per code, each original source with hash/pages/filename. No import of compensation, contacts or real participants. [COURSE_BUILDING_BLOCKS](GUIDE.md#section-course-building-blocks).                  |
 | Job offers             | `features/admin`, `features/jobs`, job/session/requirement tables                            | Template → run → referenced job, verified current source data and an immutable accepted snapshot.                                                                                                               |
 | Immediate allocation   | Claim RPC, lecturer/job locks, unique claims and interval exclusion                          | All sessions or none; one winner, idempotent retry, no drag/frontend shortcut.                                                                                                                                  |
-| Comments               | `features/comments`, private comment/revision data                                           | Resource-specific staff discussions; own versioned edits/withdrawal and reasoned MFA moderation; no modification of accepted terms. [RESOURCE_COMMENTS](GUIDE.md#section-resource-comments).                                  |
+| Comments               | `features/comments`, private comment/revision data                                           | Resource-specific staff discussions; own versioned edits/withdrawal and reasoned authorised moderation; no modification of accepted terms. [RESOURCE_COMMENTS](GUIDE.md#section-resource-comments).                           |
 | Calendar               | `features/calendar`, private events, confirmed session snapshots and published global events | No global derivation from private appointments; actual instants plus the intended IANA zone.                                                                                                                    |
 | Chat                   | `features/chat`, rooms/memberships/messages and Realtime                                     | Separate staff/participant rooms; future delivery and file access follow current membership. CHAT_SECURITY.                                                                                 |
 | Files                  | `features/files`, Edge gateway, documents/versions, quarantine/clean buckets                 | MIME/magic/size, scanning, hashes/versions and current permission; no permanent public URLs.                                                                                                                    |
 | Knowledge and search   | `features/knowledge`, `features/search`, wiki versions/forum and safe search projections     | A new draft does not replace a published wiki version; content is rendered as an allowed editor tree/text. KNOWLEDGE_SECURITY.                                                         |
 | Contracts and invoices | `features/commercial`, exact clean PDF versions, accepted claims, invoice items/payments     | Receipt acknowledgement is not an electronic signature; amounts come from accepted agreements. COMMERCIAL_SECURITY.                                                                   |
 | Clients and commission | Client portal, current organization membership, private gross/commission snapshots           | Private versioned role policy; lecturers see their own compensation, admin/owner sees full prices; unknown historical gross prices remain unknown. CLIENT_COMMISSION_SECURITY. |
-| Account management     | `features/accounts`, accounts Edge, role/activation/invitation RPCs                          | MFA and current permissions; the last active administrator is preserved under a shared lock.                                                                                                                    |
+| Account management     | `features/accounts`, accounts Edge, role/activation/invitation RPCs                          | Current permissions and action-specific rank rules; the last active administrator is preserved under a shared lock.                                                                                           |
 
 <a id="section-developer-guide-maintaining-course-provenance-and-offers"></a>
 ## Maintaining course provenance and offers

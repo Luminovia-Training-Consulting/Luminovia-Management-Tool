@@ -5,7 +5,31 @@
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { format } from "prettier";
+import ts from "typescript";
 import { withTestDatabase } from "./testing/database.mjs";
+/** Load the actual published account contract without maintaining a second route list. */
+async function accountOperations() {
+  const source = await readFile(
+    new URL("../supabase/functions/accounts/openapi.ts", import.meta.url),
+    "utf8",
+  );
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.ESNext,
+      target: ts.ScriptTarget.ES2022,
+    },
+  }).outputText;
+  const { accountOpenApi } = await import(
+    `data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`
+  );
+  return Object.entries(accountOpenApi.paths).flatMap(([path, methods]) =>
+    Object.entries(methods).map(([method, operation]) => ({
+      method: method.toUpperCase(),
+      path: path.replace(/^\/v1/, "") || "/",
+      purpose: operation.summary,
+    })),
+  );
+}
 await withTestDatabase("api_reference", async ({ sql }) => {
   const rows = JSON.parse(
     await sql(
@@ -33,6 +57,7 @@ await withTestDatabase("api_reference", async ({ sql }) => {
   const fingerprint = createHash("sha256")
     .update(JSON.stringify(sources))
     .digest("hex");
+  const accountRoutes = await accountOperations();
   // Defaults are PostgreSQL expressions; escape table delimiters rather than changing signatures.
   const cell = (value) =>
     String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
@@ -62,19 +87,9 @@ Base: \`/functions/v1/accounts/v1\`. Machine-readable OpenAPI: \`/functions/v1/a
 
 | Method | Path relative to facade base | Purpose |
 | --- | --- | --- |
-| GET, PATCH | /me | Own identity, roles, capabilities and safe profile edits |
-| GET | /users?q=&limit=&offset= | Capability-authorised bounded account directory |
-| GET | /roles | Current role catalogue and assignability |
-| PUT | /users/{id}/roles | Audited subordinate-role assignment |
-| PATCH | /users/{id}/status | Reversible suspension/reactivation |
-| PUT, DELETE | /users/{id}/organisations/{organisationId} | Administration-only scoped client membership |
-| POST | /invitations | Durable, role-bound idempotent invitation |
-| GET | /deletions/access, /deletions/resources, /deletions/operations | Current permitted targets and incomplete operation recovery |
-| POST | /deletions/preview | Reviewed target, scope counts and dependency blockers |
-| POST | /deletions/confirm | Explicit irreversible DELETE confirmation with actor-bound plan/request IDs |
-| POST | /deletions/operations/{id} | Resume native cleanup; 202 means pending, 200 means completed |
+${accountRoutes.map(({ method, path, purpose }) => `| ${cell(method)} | ${cell(path)} | ${cell(purpose)} |`).join("\n")}
 
-The facade permits allowlisted browser Origins; authenticated non-browser clients may omit Origin. This exception does **not** apply to all Edge Functions: files and course-documents require an exact approved Origin. The account handler returns safe errors and checks request bodies before forwarding caller-scoped RPCs. Self/equal/higher/last-admin protections apply where relevant. A send timeout retains its invitation reservation for reconciliation; it does not imply delivery or authorise an automatic resend.
+The facade permits allowlisted browser Origins; authenticated non-browser clients may omit Origin. This exception does **not** apply to all Edge Functions: files and course-documents require an exact approved Origin. The account handler returns safe errors and checks request bodies before forwarding caller-scoped RPCs. Role editing, activation, deletion and own-account changes have distinct current-authority guards; consult the operation schema and owning handler. A send timeout retains its invitation reservation for reconciliation; it does not imply delivery or authorise an automatic resend.
 
 ## Permanent deletion
 
@@ -106,6 +121,34 @@ if (error) throw error;
 
 Keep a retry's operation UUID and reviewed payload stable. Version/cursor conflicts require a fresh authorised read and renewed consent where applicable. Accepted rates, currencies, contract versions and session snapshots are immutable. Monetary values remain in their original currency. See [job lifecycle](GUIDE.md#section-job-lifecycle), [role-specific pricing](GUIDE.md#section-delegated-roles-pricing) and [discovery](GUIDE.md#section-job-discovery).
 
+## Implemented feature and configuration entry points
+
+The same account JWT can call the listed public RPCs, the account facade, and RLS-protected REST tables where the owning feature uses them. These are representative entry points, not an assertion that every target requirement is implemented. Function signatures and effective grants appear below; the current actor's permission, membership, version and business result must still be checked. The [roadmap](ROADMAP.md) records missing product capabilities.
+
+| Product area | Read / action API | Configuration API or current limit |
+| --- | --- | --- |
+| Dashboard and discovery | \`job_dashboard\`, \`teaching_day\`, \`unified_search\` | \`dashboard_preferences\`, \`save_dashboard_preferences\` |
+| Accounts and profiles | Account HTTP facade, \`person_profile\`, \`own_profile_details\` | \`save_profile_details\`, \`save_managed_profile\`, \`save_contact_visibility_preferences\`; no public self-registration |
+| Taxonomy | \`taxonomy_catalogue\` | \`save_taxonomy_topic\`, \`set_taxonomy_topic_archived\` under current management authority |
+| Organisations and contacts | \`client_organisations\`, \`save_organisation\`, \`save_organisation_contact\` | Account organisation membership uses the facade; private contact visibility remains scoped |
+| Courses and requests | \`course_workspace\`, \`save_course_template\`, \`save_course_run\`, \`create_course_run_job\`, \`client_requests\` | \`set_course_visibility\` and current resource permissions govern publication and access |
+| Jobs and allocation | \`job_discovery\`, \`job_detail\`, \`claim_job\`, \`manual_assignment_candidates\`, \`manual_assign_job\` | \`manage_job_offer\`, \`save_job_view\`, \`set_job_capacity\`; only a confirmed complete-block transaction allocates |
+| Calendar and availability | \`global_calendar_events\`, \`my_availability\`, \`import_my_calendar\`, \`export_my_calendar\` | \`manage_global_event\`, \`save_lecturer_availability\`; import creates private appointments, not a continuing feed |
+| Chat and collaboration | \`chat_rooms_list\`, \`chat_messages\`, \`send_message\`, \`chat_mention_candidates\` | \`update_chat_group_settings\`, \`set_chat_pin\`, \`set_topic_invitation_only\`; membership is authoritative |
+| Files and documents | \`document_discovery\`, \`reserve_document\`, files and course-documents gateways | \`save_document_organisation\`; private bytes require current version access and scanning |
+| Contracts | \`contract_records\`, \`acknowledge_contract\`, \`assignment_confirmation\` | \`register_executed_contract\`, \`set_contract_status\`; receipt is not an electronic signature |
+| Wiki and forum | \`wiki_pages_list\`, \`wiki_page\`, \`forum_threads_list\` | \`save_wiki_page\`, \`save_knowledge_category\`, \`moderate_forum_thread\` |
+| Finance | \`finance_earnings\`, \`invoice_records\`, \`invoice_payments\`, \`finance_statement\` | \`lecturer_compensation\`, \`save_lecturer_compensation\`, \`record_invoice_payment\`; no bank transfer or tax engine |
+| Notifications | \`notification_inbox\`, \`attention_preferences\`, \`announcements\` | \`save_notification_preferences\`, \`save_attention_preferences\`, \`manage_announcement\`; external delivery needs separately operated workers |
+| Administration | \`admin_audit_events\`, \`control_center\`, deletion facade | Current role, audit and deletion capabilities; brand/permission-matrix/retention configuration is still pending |
+
+### Recent settings and action contracts
+
+- \`lecturer_compensation(p_user_id)\` returns the current private mode, percent, daily rate, currency and version only to an authorised gross-finance administrator. \`save_lecturer_compensation\` requires \`p_mode\` \`percent\` or \`daily\`, percent 0–100 with two decimals, nonnegative daily rate with two decimals, \`EUR\` or \`AUD\`, and the observed \`p_expected_version\`. The unset default is 50 percent or EUR 200 per day. A version conflict requires reload; saved settings apply to future quotes and do not edit accepted deals. A daily-rate currency/budget mismatch makes a quote unavailable.
+- \`manual_assignment_candidates(p_job_id,p_search)\` returns at most 50 active lecturer candidates with eligibility, quote where permitted and the current terms version. \`manual_assign_job\` requires the selected lecturer, reviewed terms version, observed job lifecycle version and stable request UUID. Inspect \`status\`: \`confirmed\` with \`claim_id\`, or a refusal such as \`filled\`, \`conflict\`, \`not_eligible\`, \`terms_changed\`, \`quote_unavailable\` or \`unavailable\`. A 2xx transport response alone is not allocation.
+- \`import_my_calendar(p_events)\` accepts an array of 1–500 reviewed appointments. Each object supplies UID, title, start/end instants and IANA time zone; optional description is bounded. It returns \`created\` and \`skipped\` counts. The server derives the owner from the JWT, ignores duplicate import identities and rolls back the entire batch on invalid input or confirmed-assignment overlap. Recurrence expansion and preview are client-side; no subscription is created.
+- \`POST /functions/v1/accounts/v1/users\` creates one account with email, display name, transient password, role and idempotency UUID; company accounts additionally need an organisation. Its \`201\`/\`200\` response confirms the current request, while \`409\` indicates unresolved/conflicting creation and \`502\` means creation was not confirmed. It sends no invitation. Refer to the machine-readable schema for exact fields and role values.
+
 ## Replayed public function inventory
 
 The grants column reports effective PostgreSQL EXECUTE privileges for the three listed API roles, including inherited PUBLIC grants. It is **not** a permission grant to the current person and does not describe gateway routing. Private implementations are intentionally excluded. Application wrappers remain security-invoker; trusted server-only routines still require reviewed callers. SQL return types describe database shape; resource-specific JSON fields and error codes belong to the owning feature/migration.
@@ -124,6 +167,10 @@ All private responses use no-store semantics and current resource checks. IDs ar
 - Qualification evidence: \`{ "action": "qualification_evidence_download", "evidence_id": "<evidence-id>" }\` uses its separate exact-version grant.
 
 \`POST /functions/v1/course-documents\` serves authorised course/client resources and renders attendance/completion documents, assignment confirmations, earnings statements and own qualification passports. Its closed, kind-specific JSON inputs and permission recheck are defined in [the handler](supabase/functions/course-documents/handler.ts), with workflows in [course workspace](GUIDE.md#section-course-learning-workspace), [finance](GUIDE.md#section-timesheets-finance-control-center) and [qualification passport](GUIDE.md#section-qualification-passport). These PDFs do not assert a legal signature or professional certification.
+
+The exact \`course-documents\` JSON request shapes are: \`{kind:"qualification_passport",locale:"de"|"en"}\`; \`{kind:"resource"|"completion"|"attendance"|"wiki_resource"|"assignment_confirmation",id:"<uuid>"}\`; \`{kind:"request_resource",id:"<version-uuid>",request_id:"<uuid>"}\`; or \`{kind:"earnings_statement",from:"YYYY-MM-DD",until:"YYYY-MM-DD",all?:boolean}\`. Unknown keys and kinds are rejected. The gateway checks the actor and resource before and after reading or rendering; a valid ID alone grants nothing.
+
+The current lecturer invitation screen also calls the compatibility \`POST /functions/v1/invite-lecturer\` endpoint. It requires an approved browser Origin, bearer JWT, enabled invitation configuration and a JSON body with \`email\`, optional \`display_name\` and stable \`idempotency_key\` UUID (maximum 2,048 request bytes). Only \`status:"sent"\` confirms delivery; reservation conflicts, throttling, unavailable delivery and uncertain sends must be handled without an automatic second email. New account administration can instead use the account facade's invitation route, which has its own schema and permission checks.
 
 ## Calendar feeds, source revisions and privacy
 

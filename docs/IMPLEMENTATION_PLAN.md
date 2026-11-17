@@ -10,6 +10,18 @@
 - [ ] Complete canonical isolated SQL/API/desktop/mobile/PWA acceptance; the most recent full run passed through persistence and all 25 SQL groups before the now-fixed advisor warning, while the next retry stopped before startup because another checkout owns the shared lock.
 - [ ] Push the current signed branch through the repository PR workflow, monitor exact-head checks and merge when required checks pass.
 
+## Documentation and API parity — 17 November 2026
+
+- [x] Audit the current consolidated root guides and public API against the actual 114-migration source, account OpenAPI and current application calls. Keep the original specification and dated evidence intact.
+- [x] Generate account facade documentation from its published OpenAPI methods and guard complete method/path parity in the documentation test. Include direct account creation and the still-used lecturer invitation endpoint.
+- [x] Move the privileged calendar-import implementation into the private schema through a forward migration, preserving the public invoker RPC signature. Recheck grants, RLS and the current-actor import behavior in an owned disposable database.
+- [x] Add A–N feature/API/settings entry points and concrete recent operation contracts to the generated reference. Correct current authentication, participant, account, calendar and publication guidance in the leading product, user, development and roadmap sections.
+- [x] Fast source check passed (`./portal check`), the generated 329-function reference replay passed, API-surface PostgreSQL checks passed 6/6, calendar-import/inbox PostgreSQL groups passed 4/4, and documentation tests passed 5/5 in an owned disposable container.
+- [x] Fix two stale full-SQL claim fixture expectations discovered by PR #58: missing declared expertise still fails; expired/withdrawn attestation no longer blocks a declared topic. All 25 PostgreSQL claim/RLS/concurrency groups pass against the full migrated schema, including 50 parallel claims. No business authorization was relaxed.
+- [x] Align forecast fixture with the actual accepted individual lecturer quote and explicit zero-percent setting; current-source forecast groups pass 5/5. Main's guarded forward migration types the owned-deletion scope's empty `oid[]`; strict `plpgsql_check` reports no issues, owned-cascade groups pass 2/2. Replace retired participant-role lock fixture with restricted guest; global-calendar groups pass 9/9. Regenerate the API reference from the merged 117 migrations and validate all A–N matrix RPC names against the inventory.
+- [ ] Run complete isolated Auth/HTTP/browser/PWA acceptance on this exact revision and observe the PR's required CI before merging. The first `./portal test` attempt exited before startup because another checkout holds the shared QA lock; no foreign service was stopped. The focused tests do not prove an installed host or production readiness.
+- [ ] Complete the still-missing product/API configuration in the roadmap, including brand and permission-matrix settings, retention controls and other unfinished module paths; an API inventory cannot make unimplemented features available.
+
 ## Workspace clarity, account creation and manual planning — 17 November 2026
 
 The latest user revision explicitly restores restricted guest accounts; participants remain retired. Individual lecturer defaults replace role-based price defaults for new commissioned offers without rewriting accepted snapshots.
