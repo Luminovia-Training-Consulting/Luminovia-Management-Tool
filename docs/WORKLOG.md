@@ -12,6 +12,12 @@ Recovered the owned local Portal runtime without resetting its volumes. The loca
 
 # Luminovia Portal — development work log
 
+## 17 November 2026 — exact-main CI repair continuation
+
+Inspected GitHub `Portal checks` run 44072628974 for `d0186cdf`. Unit/coverage, formatting, build, code quality, change scope, typecheck and lint all passed. The isolated full verification failed on obsolete test expectations: delegated pricing replay stopped before the password-only migration and still expected AAL2; account-role revocation returned the current API's `401` while the fixture expected `403`; the delivery suite expected a permission-bearing admin to be denied its management projection at AAL1. Selfhost retained-data/image and migration proofs passed, then the actual account API check found the same stale `401`/`403` expectation.
+
+Corrected those fixtures without changing authorization: the historical delegated-pricing replay now applies the checked-in password-only permission policy; its AAL1 admin/management quote and catalogue checks assert current access; account revocation expects `401`; the delivery test confirms an admin's authorized management projection while retaining foreign, anonymous and private-table denial assertions. The delegated-pricing SQL suite passes 18/18 groups and delivery SQL passes 12/12 against the local PostgreSQL stack. The first full local system run exposed the same delivery assertion and exited; a fresh full system/browser run on the corrected tree is pending. The older failed CI run remains evidence for its tested `d0186cdf` only; require a fresh exact-head run before claiming the pipeline is green.
+
 ## 17 November 2026 — forum metadata and API fixture repair
 
 Added `20261117130017_forum_thread_metadata.sql` and bilingual owner controls for editing a discussion title/category. MFA-qualified moderators can also edit locked topics. Version checks reject stale writes while preserving the user's draft; accepted answers, posts and subscriptions remain unchanged. Two component tests and the isolated PostgreSQL authorization, validation, locked-topic, concurrent-update, suspension and preservation checks passed. The desktop/mobile Playwright case is authored/discovered but not executed.

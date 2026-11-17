@@ -88,7 +88,7 @@ await withTestDatabase("delivery", async ({ sql, actor }) => {
     rpc(who, "delivery_sessions", [q(scope)], aal);
 
   await check(
-    "Private tables, anonymous API and foreign session reads are denied",
+    "Private tables and anonymous/foreign session reads are denied; admin sees authorized scope",
     async () => {
       for (const table of [
         "delivery_records",
@@ -118,7 +118,7 @@ await withTestDatabase("delivery", async ({ sql, actor }) => {
         /42501/,
       );
       await assert.rejects(list(peer, "management"), /42501/);
-      await assert.rejects(list(admin, "management"), /42501/);
+      assert.equal((await list(admin, "management", "aal1")).items.length, 4);
       assert.equal((await list()).items.length, 3);
       assert.equal((await list(client, "customer")).items.length, 0);
     },

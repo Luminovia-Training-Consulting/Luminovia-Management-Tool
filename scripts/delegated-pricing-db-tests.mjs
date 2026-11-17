@@ -2,7 +2,11 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
+import {
+  applyPasswordOnlyPermissionPolicy,
+  withTestDatabase,
+  quoteSql as q,
+} from "./testing/database.mjs";
 let checks = 0;
 const check = async (name, run) => {
   await run();
@@ -24,6 +28,7 @@ await withTestDatabase(
     await sql(
       `insert into auth.users(id,email) values${ids.map((id) => `('${id}','${id}@example.invalid')`).join(",")};insert into public.user_roles(user_id,role) values('${owner}','owner'),('${admin}','admin'),('${manager}','management'),('${teacher}','lecturer'),('${senior}','senior_lecturer'),('${company}','client'),('${guest}','participant');insert into public.organisations(id,name) values('${org}','Fictional private pricing customer');`,
     );
+    await applyPasswordOnlyPermissionPolicy(sql);
     const rpc = (who, name, args = [], aal = "aal1") =>
       actor(
         who,
@@ -209,7 +214,10 @@ await withTestDatabase(
           ).can_assign_roles,
           false,
         );
-        await assert.rejects(rpc(manager, "account_role_catalog"), /required/i);
+        assert.deepEqual(
+          await rpc(manager, "account_role_catalog", [], "aal1"),
+          managerRoles,
+        );
       },
     );
     await check(
@@ -437,10 +445,14 @@ await withTestDatabase(
         const access = await rpc(admin, "commission_access", [], "aal1");
         assert.equal(access.regular_lecturer_percent, 31);
         assert.equal(access.senior_lecturer_percent, 73);
-        assert.equal(
-          "regular_lecturer_percent" in (await rpc(admin, "commission_access")),
-          false,
+        const passwordOnlyAccess = await rpc(
+          admin,
+          "commission_access",
+          [],
+          "aal1",
         );
+        assert.equal(passwordOnlyAccess.regular_lecturer_percent, 31);
+        assert.equal(passwordOnlyAccess.senior_lecturer_percent, 73);
       },
     );
     await check(
@@ -472,8 +484,9 @@ await withTestDatabase(
             null,
           );
         assert.equal(
-          (await rpc(admin, "job_lifecycle", [budgetJob])).max_net_budget,
-          null,
+          (await rpc(admin, "job_lifecycle", [budgetJob], "aal1"))
+            .max_net_budget,
+          219.03,
         );
         const receipt = await claim(teacher, budgetJob);
         assert.equal(receipt.status, "confirmed");

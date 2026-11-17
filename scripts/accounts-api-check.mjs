@@ -378,7 +378,7 @@ try {
     ).status,
     200,
   );
-  assert.equal((await request(teacher, "me")).status, 403);
+  assert.equal((await request(teacher, "me")).status, 401);
   assert.equal(
     (
       await request(manager, `users/${teacher.id}/roles`, "PUT", {

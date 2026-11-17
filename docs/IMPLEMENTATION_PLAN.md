@@ -1,5 +1,12 @@
 # Persistent implementation plan
 
+## Current exact-main CI repair — 17 November 2026
+
+- [x] Inspect current `origin/main` and failed `Portal checks` run 44072628974; fast CI gates passed, full isolated verification exposed stale password-only/MFA fixture expectations.
+- [x] Correct delegated-pricing historical policy setup and AAL1 expectations, current account revocation status, and delivery management projection expectations without weakening authorization.
+- [x] Focused local SQL verification: delegated pricing 18/18 groups; delivery 12/12 groups; `git diff --check` clean.
+- [ ] Run fresh full isolated system and browser acceptance on the corrected exact head, fix every failure, and inspect fresh GitHub `Portal checks` through completion.
+- [ ] Claim CI green only after every required current-head job succeeds; retain complete test scope.
 
 ## User revision: simpler portal and supplied design — 17 November 2026
 
