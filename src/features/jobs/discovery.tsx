@@ -262,16 +262,14 @@ function SavedViews({
   // names/filters even while the separate role query still has cached data.
   if (denied || accessDenied)
     return (
-      <section className="panel discovery-views" aria-label={t("saved")}>
-        <h2>{t("saved")}</h2>
+      <section className="discovery-views" aria-label={t("saved")}>
         <Notice kind="error">{t("noAccess")}</Notice>
         <ErrorState retry={() => void refresh()} />
       </section>
     );
   if (!views.data)
     return (
-      <section className="panel discovery-views" aria-label={t("saved")}>
-        <h2>{t("saved")}</h2>
+      <section className="discovery-views" aria-label={t("saved")}>
         {views.isPending ? (
           <Loading />
         ) : (
@@ -354,8 +352,7 @@ function SavedViewEditor({
     setEditing({ mode, view: mode === "create" ? undefined : selectedView });
   };
   return (
-    <section className="panel discovery-views" aria-label={t("saved")}>
-      <h2>{t("saved")}</h2>
+    <section className="discovery-views" aria-label={t("saved")}>
       {refreshError && <ErrorState retry={() => void refresh()} />}
       <div className="discovery-actions">
         <Field id="discovery-view" label={t("choose")}>
@@ -508,21 +505,28 @@ export function JobDiscovery() {
       <PageHeading title={t("title")} description={t("help")} />
       <SubstitutionOffers />
       <MyJobWaitlist />
-      <p className="muted">{t("feeHelp")}</p>
-      <SavedViews
-        key={actor}
-        actor={actor}
-        filters={filters}
-        select={(f) => setParams(filterParams(f))}
-      />
-      <FilterForm
-        key={params.toString()}
-        initial={filters ?? filterDraftFromParams(params)}
-        apply={(f) => setParams(filterParams(f), { replace: true })}
-      />
-      <Button variant="ghost" onClick={() => setParams({})}>
-        {t("reset")}
-      </Button>
+      <details className="panel discovery-filter-disclosure" open={!filters}>
+        <summary>{t("filterOptions")}</summary>
+        <div className="discovery-filter-content">
+          <FilterForm
+            key={params.toString()}
+            initial={filters ?? filterDraftFromParams(params)}
+            apply={(f) => setParams(filterParams(f), { replace: true })}
+          />
+          <SavedViews
+            key={actor}
+            actor={actor}
+            filters={filters}
+            select={(f) => setParams(filterParams(f))}
+          />
+          <div className="discovery-actions">
+            <Button variant="ghost" onClick={() => setParams({})}>
+              {t("reset")}
+            </Button>
+          </div>
+          <p className="muted">{t("feeHelp")}</p>
+        </div>
+      </details>
       {!filters ? (
         <Notice kind="error">
           {t(

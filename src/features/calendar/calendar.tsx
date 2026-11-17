@@ -4,8 +4,8 @@
  * its own ACL. Private form times become instants before server-confirmed writes.
  */
 import { useBlocker, useSearchParams } from "react-router-dom";
-import { assignmentJobTitlesQuery } from "../jobs/discovery-api";
-import { runsQuery, templatesQuery } from "../operations/data";
+import { assignmentCalendarMetadataQuery } from "../jobs/discovery-api";
+import { orgQuery, runsQuery, templatesQuery } from "../operations/data";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DatesSetArg } from "@fullcalendar/core";
 import { useForm } from "react-hook-form";
@@ -18,9 +18,8 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { CalendarExport } from "./export";
-import { CalendarSubscriptions } from "./subscriptions";
 import { OfflineSchedule } from "./offline";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -37,6 +36,7 @@ import {
   eventsQuery,
   profileQuery,
   permissionsQuery,
+  topicsQuery,
 } from "../../lib/queries";
 import { db } from "../../lib/supabase";
 import type { PersonalEvent } from "../../lib/types";
@@ -57,6 +57,9 @@ import "./publications-i18n";
 import "./confirmation-i18n";
 import "./personal-details-i18n";
 import "./filter-i18n";
+import { CalendarToolbar } from "./toolbar";
+import { calendarViews, type CalendarView } from "./views";
+import "./calendar-toolbar.css";
 import { privateMeetingHref } from "./personal-details";
 /** Validate private-event form input; current server permissions and constraints remain authoritative. */
 const schema = z.object({
@@ -318,13 +321,20 @@ export function CalendarPage() {
   const filterText = useTranslation("calendarFilter").t;
   const [search, setSearch] = useState("");
   const [eventType, setEventType] = useState("all");
+  const [customer, setCustomer] = useState("");
+  const [topicIds, setTopicIds] = useState<string[]>([]);
+  const calendarRef = useRef<FullCalendar>(null);
+  const [calendarTitle, setCalendarTitle] = useState("");
+  const [calendarView, setCalendarView] = useState<CalendarView>(() =>
+    window.innerWidth < 700 ? "listMonth" : "dayGridMonth",
+  );
   const [calendarParams] = useSearchParams();
   const { session } = useAuth();
   const profile = useQuery(profileQuery(session!.user.id));
   const claims = useQuery(claimsQuery(session!.user.id));
   const personal = useQuery(eventsQuery(session!.user.id));
   const jobs = useQuery(
-    assignmentJobTitlesQuery(
+    assignmentCalendarMetadataQuery(
       session!.user.id,
       (claims.data ?? []).map((claim) => claim.job_id),
     ),
@@ -338,6 +348,11 @@ export function CalendarPage() {
     ...templatesQuery(session!.user.id),
     enabled: global,
   });
+  const organisations = useQuery({
+    ...orgQuery(session!.user.id),
+    enabled: global,
+  });
+  const topics = useQuery({ ...topicsQuery, enabled: global });
   const publicationText = useTranslation("calendarPublications").t;
   const permissions = useQuery(permissionsQuery(session!.user.id));
   const [range, setRange] = useState(() => {
@@ -360,6 +375,9 @@ export function CalendarPage() {
       ];
   const visibleRange = useRef(range);
   const handleDatesSet = useCallback((info: DatesSetArg) => {
+    if (info.view?.title) setCalendarTitle(info.view.title);
+    if (calendarViews.includes(info.view?.type as CalendarView))
+      setCalendarView(info.view.type as CalendarView);
     const next = { from: info.start.toISOString(), to: info.end.toISOString() };
     // Locale/view options can rebuild FullCalendar's DateProfile without moving
     // its instants. Preserve the captured detail and query key for those signals.
@@ -444,11 +462,6 @@ export function CalendarPage() {
     return (
       <>
         <PageHeading title={t("calendar")} description={t("privateNote")} />
-        <CalendarSubscriptions
-          key={`subscriptions-${session!.user.id}`}
-          actor={session!.user.id}
-          zone={zone}
-        />
         <OfflineSchedule
           key={`offline-${session!.user.id}`}
           actor={session!.user.id}
@@ -465,11 +478,6 @@ export function CalendarPage() {
     return (
       <>
         <PageHeading title={t("calendar")} description={t("privateNote")} />
-        <CalendarSubscriptions
-          key={`subscriptions-${session!.user.id}`}
-          actor={session!.user.id}
-          zone={zone}
-        />
         <OfflineSchedule
           key={`offline-${session!.user.id}`}
           actor={session!.user.id}
@@ -489,6 +497,21 @@ export function CalendarPage() {
         />
       </>
     );
+  const emptyMetadata = {
+    customerKey: "",
+    customerName: "",
+    topics: [] as { id: string; label_de: string; label_en: string }[],
+  };
+  const assignmentMetadata = (id: string) => {
+    const job = jobs.data?.find((value) => value.id === id);
+    return {
+      customerKey:
+        job?.organisation_id ??
+        (job?.organisation_name ? `name:${job.organisation_name}` : ""),
+      customerName: job?.organisation_name ?? "",
+      topics: job?.topics ?? [],
+    };
+  };
   const events = global
     ? [
         ...globalRows.map((e) => ({
@@ -497,7 +520,7 @@ export function CalendarPage() {
           start: e.starts_at,
           end: e.ends_at,
           color: "#1749b5",
-          extendedProps: { kind: "global" },
+          extendedProps: { kind: "global", ...emptyMetadata },
         })),
         ...(publicRuns.isError || templates.isError
           ? []
@@ -514,7 +537,35 @@ export function CalendarPage() {
               end: s.ends_at,
               color: "#326c58",
               url: `/courses?run=${run.id}`,
-              extendedProps: { kind: "course" },
+              extendedProps: {
+                kind: "course",
+                customerKey: run.organisation_id ?? "",
+                customerName: organisations.isError
+                  ? ""
+                  : (organisations.data?.find(
+                      (org) => org.id === run.organisation_id,
+                    )?.name ?? ""),
+                topics: topics.isError
+                  ? []
+                  : (
+                      templates.data?.find(
+                        (template) => template.id === run.template_id,
+                      )?.course_template_topics ?? []
+                    ).flatMap(({ topic_id }) => {
+                      const topic = topics.data?.find(
+                        (value) => value.id === topic_id,
+                      );
+                      return topic
+                        ? [
+                            {
+                              id: topic.id,
+                              label_de: topic.label_de,
+                              label_en: topic.label_en,
+                            },
+                          ]
+                        : [];
+                    }),
+              },
             })),
           ),
       ]
@@ -525,7 +576,7 @@ export function CalendarPage() {
           start: e.starts_at,
           end: e.ends_at,
           color: "#326c58",
-          extendedProps: { kind: "private" },
+          extendedProps: { kind: "private", ...emptyMetadata },
         })),
         ...claims.data.flatMap((c) =>
           c.assignment_sessions.map((s) => ({
@@ -537,10 +588,35 @@ export function CalendarPage() {
             end: s.ends_at,
             color: "#1749b5",
             url: `/jobs/${c.job_id}`,
-            extendedProps: { kind: "assignment" },
+            extendedProps: {
+              kind: "assignment",
+              ...assignmentMetadata(c.job_id),
+            },
           })),
         ),
       ];
+  const customerOptions = [
+    ...new Map(
+      events
+        .filter((event) => event.extendedProps.customerName)
+        .map((event) => [
+          event.extendedProps.customerKey,
+          event.extendedProps.customerName,
+        ]),
+    ).entries(),
+  ].sort((a, b) => a[1].localeCompare(b[1], i18n.language));
+  const topicOptions = [
+    ...new Map(
+      events
+        .flatMap((event) => event.extendedProps.topics)
+        .map((topic) => [topic.id, topic]),
+    ).values(),
+  ].sort((a, b) =>
+    (i18n.language.startsWith("de") ? a.label_de : a.label_en).localeCompare(
+      i18n.language.startsWith("de") ? b.label_de : b.label_en,
+      i18n.language,
+    ),
+  );
   return (
     <>
       <PageHeading
@@ -564,7 +640,6 @@ export function CalendarPage() {
           </Button>
         }
       />
-      <Button asChild variant="secondary"></Button>
       <div className="calendar-controls">
         <div className="segmented">
           <Button
@@ -572,6 +647,8 @@ export function CalendarPage() {
             onClick={() => {
               setGlobal(false);
               setEventType("all");
+              setCustomer("");
+              setTopicIds([]);
             }}
           >
             {t("privateCalendar")}
@@ -581,6 +658,8 @@ export function CalendarPage() {
             onClick={() => {
               setGlobal(true);
               setEventType("all");
+              setCustomer("");
+              setTopicIds([]);
             }}
           >
             {publicationText("global")}
@@ -588,7 +667,44 @@ export function CalendarPage() {
         </div>
         <span className="badge">{zone}</span>
       </div>
-      <div className="form-row">
+      <div className="calendar-filters">
+        <Field id="calendar-customer" label={filterText("customer")}>
+          <select
+            id="calendar-customer"
+            value={customer}
+            onChange={(event) => setCustomer(event.target.value)}
+          >
+            <option value="">{filterText("allCustomers")}</option>
+            {customerOptions.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field id="calendar-topic" label={filterText("topics")}>
+          <select
+            id="calendar-topic"
+            value=""
+            onChange={(event) => {
+              if (event.target.value)
+                setTopicIds((current) => [
+                  ...new Set([...current, event.target.value]),
+                ]);
+            }}
+          >
+            <option value="">{filterText("addTopic")}</option>
+            {topicOptions
+              .filter((topic) => !topicIds.includes(topic.id))
+              .map((topic) => (
+                <option key={topic.id} value={topic.id}>
+                  {i18n.language.startsWith("de")
+                    ? topic.label_de
+                    : topic.label_en}
+                </option>
+              ))}
+          </select>
+        </Field>
         <Field id="calendar-search" label={filterText("search")}>
           <input
             id="calendar-search"
@@ -614,15 +730,58 @@ export function CalendarPage() {
           </select>
         </Field>
       </div>
-      <p>{filterText("scope")}</p>
+      {topicIds.length > 0 && (
+        <div
+          className="calendar-topic-tags"
+          aria-label={filterText("selectedTopics")}
+        >
+          {topicIds.map((id) => {
+            const topic = topicOptions.find((value) => value.id === id);
+            const label = topic
+              ? i18n.language.startsWith("de")
+                ? topic.label_de
+                : topic.label_en
+              : filterText("unavailableTopic");
+            return (
+              <Button
+                key={id}
+                type="button"
+                variant="secondary"
+                size="sm"
+                aria-label={filterText("removeTopic", { topic: label })}
+                onClick={() =>
+                  setTopicIds((current) =>
+                    current.filter((value) => value !== id),
+                  )
+                }
+              >
+                {label}
+                <X size={14} aria-hidden="true" />
+              </Button>
+            );
+          })}
+        </div>
+      )}
+      <div className="calendar-filter-summary">
+        <p>{filterText("scope")}</p>
+        {(customer || topicIds.length > 0 || search || eventType !== "all") && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setCustomer("");
+              setTopicIds([]);
+              setSearch("");
+              setEventType("all");
+            }}
+          >
+            {filterText("clear")}
+          </Button>
+        )}
+      </div>
       {message && <Notice>{message}</Notice>}
       <CalendarExport
         key={session!.user.id}
-        actor={session!.user.id}
-        zone={zone}
-      />
-      <CalendarSubscriptions
-        key={`subscriptions-${session!.user.id}`}
         actor={session!.user.id}
         zone={zone}
       />
@@ -632,6 +791,25 @@ export function CalendarPage() {
         zone={zone}
       />
       <div className="panel calendar-panel">
+        <CalendarToolbar
+          title={
+            calendarTitle ||
+            DateTime.now()
+              .setZone(zone)
+              .setLocale(i18n.language)
+              .toFormat("LLLL yyyy")
+          }
+          view={calendarView}
+          onNavigate={(direction) => {
+            const api = calendarRef.current?.getApi();
+            if (direction === "prev") api?.prev();
+            else if (direction === "next") api?.next();
+            else api?.today();
+          }}
+          onView={(view) => {
+            calendarRef.current?.getApi().changeView(view);
+          }}
+        />
         <FullCalendar
           plugins={[
             dayGridPlugin,
@@ -642,23 +820,24 @@ export function CalendarPage() {
           ]}
           locale={i18n.language === "de" ? deLocale : enLocale}
           timeZone={zone}
-          initialView={window.innerWidth < 700 ? "listMonth" : "dayGridMonth"}
+          ref={calendarRef}
+          initialView={calendarView}
           initialDate={assignmentStart}
-          headerToolbar={{
-            left: "prev,next today",
-            center: "title",
-            right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth",
-          }}
+          headerToolbar={false}
           datesSet={handleDatesSet}
           events={events.filter(
             (event) =>
               (eventType === "all" || event.extendedProps.kind === eventType) &&
+              (!customer || event.extendedProps.customerKey === customer) &&
+              (!topicIds.length ||
+                event.extendedProps.topics.some((topic) =>
+                  topicIds.includes(topic.id),
+                )) &&
               event.title
                 .toLocaleLowerCase()
                 .includes(search.trim().toLocaleLowerCase()),
           )}
           height="auto"
-          buttonIcons={false}
           dayCellDidMount={(arg) => arg.el.removeAttribute("aria-labelledby")}
           eventInteractive
           nowIndicator

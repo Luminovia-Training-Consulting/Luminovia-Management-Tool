@@ -236,8 +236,8 @@ const pairs: Record<string, [string, string]> = {
   loading: ["Wird geladen …", "Loading…"],
   matches: ["Passend zu deiner Expertise", "Matched to your expertise"],
   matchingHint: [
-    "Vorschläge anhand deiner bestätigten Fachgebiete. Die verbindliche Prüfung erfolgt bei der Übernahme.",
-    "Suggestions based on your verified expertise. Eligibility is confirmed when you claim.",
+    "Vorschläge anhand deiner angegebenen Fachgebiete. Die verbindliche Prüfung erfolgt bei der Übernahme.",
+    "Suggestions based on your declared expertise. Eligibility is confirmed when you claim.",
   ],
 };
 

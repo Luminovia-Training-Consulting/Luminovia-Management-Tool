@@ -342,7 +342,8 @@ try {
     [],
   );
   assert.equal((await download(b, contractDoc.id, version.id)).status, 403);
-  // Follow qualification expiry, revocation and contract expiry through actual claim outcomes.
+  // Missing self-declared topics and contract expiry still prevent new claims.
+  // Optional attestation/expiry remains historical evidence, not an allocation gate.
   // Accepted history must retain its exact contract and fee while later eligibility changes.
   const claims = [];
   for (const [day, fee] of [
@@ -356,10 +357,24 @@ try {
         p_idempotency_key: randomUUID(),
         p_terms_version: 1,
       });
+    await checked(
+      a.client
+        .from("lecturer_topics")
+        .delete()
+        .eq("user_id", a.id)
+        .eq("topic_id", topic),
+      "Remove own declaration for negative eligibility case",
+    );
     assert.equal(
-      (await checked(attempt(), "Unverified or revoked expertise cannot claim"))
+      (await checked(attempt(), "Missing declared expertise cannot claim"))
         .status,
       "not_eligible",
+    );
+    await checked(
+      a.client
+        .from("lecturer_topics")
+        .insert({ user_id: a.id, topic_id: topic }),
+      "Restore own declared expertise without verification",
     );
     if (day === 1) {
       await checked(
@@ -369,15 +384,7 @@ try {
         }),
         "Attest qualification that expires before assignment",
       );
-      assert.equal(
-        (
-          await checked(
-            attempt(),
-            "Qualification must cover the entire future teaching block",
-          )
-        ).status,
-        "not_eligible",
-      );
+      // The attestation's expiry is recorded but does not remove the lecturer's declared expertise.
     }
     await checked(
       admin.client.rpc("verify_lecturer_topic", verification),
@@ -454,7 +461,7 @@ try {
           ...verification,
           p_verified: false,
         }),
-        "password-only authentication manager revokes future qualification eligibility",
+        "Manager clears optional attestation without removing declared expertise",
       );
       const revoked = await checked(
         a.client
@@ -614,7 +621,7 @@ try {
     "Linked executed evidence cannot be hidden by ordinary file deletion",
   );
   console.log(
-    "PASS: actual Auth, real password-only authentication, Storage/ClamAV-scanned PDF versions: externally executed contract registration, exact-hash receipt-not-signature, names-only commercial directory/password-only authentication isolation, qualification verification/expiry/revocation and contract status-gated claims, original-fee invoice derivation/idempotency/privacy, password-only authentication partial/full payment+audited correction and immutable old-version download after replacement.",
+    "PASS: actual Auth, real password-only authentication, Storage/ClamAV-scanned PDF versions: externally executed contract registration, exact-hash receipt-not-signature, names-only commercial directory/password-only authentication isolation, optional qualification provenance, self-declared topic and contract status-gated claims, original-fee invoice derivation/idempotency/privacy, password-only authentication partial/full payment+audited correction and immutable old-version download after replacement.",
   );
 } finally {
   for (const client of clients) await client.removeAllChannels();

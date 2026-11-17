@@ -200,6 +200,7 @@ function resourceLabel(
   const aliases: Record<string, string> = {
     protected_payment_history: "protectedPaymentHistory",
     audit_attributions: "auditAttributions",
+    released_chat_ownership: "releasedChatOwnership",
     pending_personal_deletions: "pendingPersonalDeletions",
     user_roles: "roleAssignments",
     lecturer_topics: "expertiseEntries",

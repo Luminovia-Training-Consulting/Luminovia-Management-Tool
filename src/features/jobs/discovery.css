@@ -34,3 +34,42 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Search options remain available on demand rather than displacing the offer list. */
+.discovery-filter-disclosure {
+  margin-bottom: 20px;
+  padding: 16px 20px;
+}
+.discovery-filter-disclosure > summary {
+  font-weight: 650;
+  min-height: 28px;
+  line-height: 1.5;
+  color: var(--ink);
+  cursor: pointer;
+}
+.discovery-filter-disclosure > summary:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+.discovery-filter-content {
+  padding-top: 18px;
+}
+.discovery-filter-content .discovery-filters {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.discovery-filter-content .discovery-views {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.discovery-filter-content .discovery-views .discovery-actions {
+  margin-top: 0;
+}
+.discovery-filter-content > .muted {
+  margin-bottom: 0;
+  font-size: 12px;
+}

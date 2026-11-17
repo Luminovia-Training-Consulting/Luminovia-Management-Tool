@@ -20,7 +20,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { CheckCircle2 } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
 import { db } from "../../lib/supabase";
 import {
@@ -195,10 +194,6 @@ export function ProfilePage() {
               const selected = expertise.data.find(
                 (e) => e.topic_id === topic.id,
               );
-              const verified =
-                selected?.verified &&
-                (!selected.valid_until ||
-                  new Date(selected.valid_until) > new Date());
               return (
                 <label className="expertise-option" key={topic.id}>
                   <input
@@ -214,18 +209,7 @@ export function ProfilePage() {
                       {i18n.language === "de" ? topic.label_de : topic.label_en}
                       {topic.archived_at && <> ({t("taxonomy:archived")})</>}
                     </strong>
-                    {selected && (
-                      <small>
-                        {verified ? (
-                          <>
-                            <CheckCircle2 size={13} />
-                            {t("verified")}
-                          </>
-                        ) : (
-                          t("unverified")
-                        )}
-                      </small>
-                    )}
+                    {selected && <small>{t("selfDeclaredExpertise")}</small>}
                   </span>
                 </label>
               );

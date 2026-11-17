@@ -1,0 +1,19 @@
+/** One native title link covers the complete card; decorative arrows add no duplicate tab stops. */
+.job-card h2 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: 1;
+}
+.job-card:focus-within {
+  outline: 3px solid var(--brand);
+  outline-offset: 3px;
+}
+.job-card:has(h2 a:hover) {
+  border-color: var(--brand);
+  box-shadow: 0 5px 16px #172b4b15;
+}
+.job-card .round-link {
+  flex-shrink: 0;
+}

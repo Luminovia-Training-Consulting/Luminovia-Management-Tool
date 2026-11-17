@@ -12,6 +12,24 @@
 - [x] Correct stale lifecycle authorization assertion; focused local PostgreSQL lifecycle suite passes 12/12 groups.
 - [ ] Run fresh full isolated system and browser acceptance on the corrected exact head, fix every failure, and inspect fresh GitHub `Portal checks` through completion.
 - [ ] Claim CI green only after every required current-head job succeeds; retain complete test scope.
+## Calendar, marketplace and owned deletion revision — 17 November 2026
+
+The later user instructions supersede earlier admin-verified expertise and blanket commercial-history deletion blockers.
+
+- [x] Remove calendar subscription UI; retain search/type, add actor-scoped customer and topic/tag filtering, and accessible chevron/Today/Month/Week/Day/Agenda controls.
+- [x] Collapse marketplace filters and saved-view controls into one optional section, remove the separate saved-views block, make the entire job card a native link, and separate assignment management actions with clear spacing.
+- [x] Matching self-declared expertise is sufficient for claims, replacements, notifications and readiness; retain current authorization, contracts, capacity, complete-job and conflict checks.
+- [x] Add organisation deletion to its Edit dialog; extend confirmed deletion to owned lecturer contracts/documents/calendar/claims and directly linked organisation jobs/history/documents. Reopen shared job capacity and preserve unrelated/shared roots. Freeze impact identities so parent deletion cannot strand child documents.
+- [x] Source verification: 832 frontend tests, 331 Node tests, typecheck, ESLint, formatting, export integrity and production/PWA build pass. Build uses synthetic public-only local configuration.
+- [x] Real isolated PostgreSQL coverage: 64 calendar/expertise/replacement/notification/commission/readiness groups, 27 existing permanent-deletion groups and the owned-cascade regression pass.
+- [x] Native calendar at 1440/390/320px: actual customer/topic filtering, navigation and view changes; no overflow, JS errors or automatic WCAG findings.
+- [x] Native self-declared claim: actual login, unverified own-topic insertion, HTTP200 confirmed full claim and both sessions allocated; missing topic denied, no JS errors/mobile overflow.
+- [x] Native marketplace at 1440/390px: blank card area opens detail, one native link, filters collapsed, no standalone saved-view heading, management gap20px, no overflow/page errors.
+- [x] Native confirmed lecturer and organisation deletion: Auth, exact scanned files/Storage, reservations, personal calendar and linked historical/current records removed; shared job reopened and unrelated template/peer data retained.
+- [ ] Update the persistent local preview without resetting its data.
+- [ ] Full canonical historical API/E2E/PWA suite and hosted exact-head CI remain separate from focused native acceptance; do not claim those passed from this slice.
+
+
 
 ## User revision: simpler portal and supplied design — 17 November 2026
 

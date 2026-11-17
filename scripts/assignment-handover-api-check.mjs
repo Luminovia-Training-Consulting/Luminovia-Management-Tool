@@ -248,7 +248,7 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, passwordOnly 
   await checked(
     service
       .from("lecturer_topics")
-      .update({ verified: false })
+      .delete()
       .eq("user_id", replacement.id)
       .eq("topic_id", topic),
   );
@@ -269,9 +269,7 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, passwordOnly 
   await checked(
     service
       .from("lecturer_topics")
-      .update({ verified: true })
-      .eq("user_id", replacement.id)
-      .eq("topic_id", topic),
+      .insert({ user_id: replacement.id, topic_id: topic }),
   );
   const replies = await Promise.all(
     Array.from({ length: 10 }, () =>

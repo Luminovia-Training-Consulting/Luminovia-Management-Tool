@@ -7,12 +7,28 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { ClientsPage } from "./clients";
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "actor" } } }),
 }));
 const { from } = vi.hoisted(() => ({ from: vi.fn() }));
 vi.mock("../../lib/supabase", () => ({ db: () => ({ from }) }));
+vi.mock("../deletions/deletions", () => ({
+  PermanentDeleteAction: ({
+    kind,
+    id,
+    label,
+  }: {
+    kind: string;
+    id: string;
+    label: string;
+  }) => (
+    <button data-kind={kind} data-id={id}>
+      Delete {label}
+    </button>
+  ),
+}));
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -37,5 +53,49 @@ describe("private client directory capability boundary", () => {
     expect(
       screen.queryByRole("button", { name: "Organisation anlegen" }),
     ).not.toBeInTheDocument();
+  });
+  it("offers exact organisation deletion from that organisation's actual edit dialog", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    client.setQueryData(["permissions", "actor"], ["organisations.manage"]);
+    client.setQueryData(
+      ["operations", "organisations", "actor"],
+      [
+        {
+          id: "organisation-a",
+          name: "Fictional organisation",
+          country: "Germany",
+          time_zone: "Europe/Berlin",
+          industry: "Training",
+          city: "Hamburg",
+          tags: [],
+          archived_at: null,
+        },
+      ],
+    );
+    client.setQueryData(["operations", "contacts", "actor"], []);
+    client.setQueryData(["operations", "notes", "actor"], []);
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <ClientsPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Delete Fictional organisation" }),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "Organisation bearbeiten",
+      }),
+    );
+    const action = screen.getByRole("button", {
+      name: "Delete Fictional organisation",
+    });
+    expect(action).toHaveAttribute("data-kind", "organisation");
+    expect(action).toHaveAttribute("data-id", "organisation-a");
+    client.clear();
   });
 });

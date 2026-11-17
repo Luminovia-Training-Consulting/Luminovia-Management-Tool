@@ -3,6 +3,7 @@ import { afterEach, it, expect, vi } from "vitest";
 import {
   act,
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -88,6 +89,7 @@ function setup({
   views = [] as unknown[],
   readViews,
   queryRetry = false,
+  expandFilters = true,
 }: {
   role?: string;
   write?: (
@@ -96,6 +98,7 @@ function setup({
   views?: unknown[];
   readViews?: () => Promise<{ data: unknown; error: unknown }>;
   queryRetry?: boolean | number;
+  expandFilters?: boolean;
 } = {}) {
   state.roles = [role];
   state.rpc.mockImplementation(
@@ -147,6 +150,11 @@ function setup({
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  // These mutation/filter fixtures explicitly open the optional controls they exercise.
+  const summary = document.querySelector(
+    ".discovery-filter-disclosure > summary",
+  );
+  if (expandFilters && summary) fireEvent.click(summary);
   return client;
 }
 afterEach(async () => {
@@ -705,3 +713,13 @@ it.each([
     );
   },
 );
+
+it("starts with optional filters and saved views collapsed while offers remain visible", async () => {
+  setup({ expandFilters: false });
+  expect(await screen.findByText("Fictional discovery 1")).toBeVisible();
+  const disclosure = document.querySelector(".discovery-filter-disclosure")!;
+  expect(disclosure).not.toHaveAttribute("open");
+  expect(screen.getByLabelText("Ansicht auswählen")).not.toBeVisible();
+  await userEvent.click(screen.getByText("Filter & Ansichten"));
+  expect(screen.getByLabelText("Ansicht auswählen")).toBeVisible();
+});

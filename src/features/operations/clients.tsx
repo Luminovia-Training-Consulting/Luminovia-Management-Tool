@@ -1,3 +1,4 @@
+import { PermanentDeleteAction } from "../deletions/deletions";
 /**
  * Customer directory with authorized contacts, internal notes and organization settings. Shared
  * metadata and private business fields keep their separate table permissions.
@@ -406,6 +407,13 @@ function ClientWorkspace({ actor }: { actor: string }) {
             setSaved(true);
           }}
         />
+        {orgEdit && (
+          <PermanentDeleteAction
+            kind="organisation"
+            id={orgEdit.id}
+            label={orgEdit.name}
+          />
+        )}
       </Dialog>
       <Dialog
         open={contactEdit !== undefined}

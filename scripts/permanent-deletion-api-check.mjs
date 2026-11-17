@@ -119,8 +119,8 @@ try {
   assert.equal(
     (await request(admin, "preview", { kind: "account", id: unused.id }))
       .status,
-    403,
-    "Unverified administrator cannot delete",
+    200,
+    "An active password-only administrator can preview a subordinate account deletion",
   );
   await passwordOnly(admin);
   await passwordOnly(peer);

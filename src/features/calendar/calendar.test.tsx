@@ -51,10 +51,7 @@ const state = vi.hoisted(() => ({
   callbacks: [] as unknown[],
   initialDate: undefined as string | undefined,
 }));
-// The real subscription panel remains mounted. Its independent metadata read
-// must not be mistaken for a global-range crawl or marketplace-title request.
-const calendarCalls = () =>
-  state.rpc.mock.calls.filter(([name]) => name !== "my_calendar_subscriptions");
+const calendarCalls = () => state.rpc.mock.calls;
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "actor" } } }),
 }));
@@ -91,12 +88,14 @@ vi.mock("../../lib/queries", () => ({
     queryKey: ["claims"],
     queryFn: async () => state.claims,
   }),
+  topicsQuery: { queryKey: ["topics"], queryFn: async () => [] },
   eventsQuery: () => ({
     queryKey: ["events"],
     queryFn: async () => state.events,
   }),
 }));
 vi.mock("../operations/data", () => ({
+  orgQuery: () => ({ queryKey: ["organisations"], queryFn: async () => [] }),
   runsQuery: () => ({
     queryKey: ["runs"],
     queryFn: async () => [
@@ -245,7 +244,15 @@ it("filters loaded private, assignment, global and course titles without extra q
               has_more: false,
               next_cursor: null,
             }
-          : [{ id: jobID, title: "Teaching assignment" }];
+          : [
+              {
+                id: jobID,
+                title: "Teaching assignment",
+                organisation_id: null,
+                organisation_name: "Fictional Academy",
+                topics: [],
+              },
+            ];
     const result = Promise.resolve({ data, error: null });
     return Object.assign(result, { abortSignal: () => result });
   });
@@ -314,7 +321,7 @@ it("global published session links open the precise authorised course detail rat
     await screen.findByRole("link", { name: "Published course" }),
   ).toHaveAttribute("href", "/courses?run=specific-course");
   expect(calendarCalls()).toHaveLength(1);
-  expect(state.rpc).toHaveBeenCalledWith("my_calendar_subscriptions");
+  expect(state.rpc).not.toHaveBeenCalledWith("my_calendar_subscriptions");
   expect(state.rpc).toHaveBeenCalledWith(
     "global_calendar_events",
     expect.objectContaining({ p_manage: false, p_limit: 50 }),
@@ -340,7 +347,15 @@ it("loads titles only for own confirmed assignment IDs rather than the entire ma
       data:
         name === "my_calendar_subscriptions"
           ? []
-          : [{ id: jobID, title: "Own old teaching block" }],
+          : [
+              {
+                id: jobID,
+                title: "Own old teaching block",
+                organisation_id: null,
+                organisation_name: "Fictional Academy",
+                topics: [],
+              },
+            ],
       error: null,
     });
     return Object.assign(response, { abortSignal: () => response });
@@ -359,7 +374,7 @@ it("loads titles only for own confirmed assignment IDs rather than the entire ma
     await screen.findByRole("link", { name: "Own old teaching block" }),
   ).toHaveAttribute("href", `/jobs/${jobID}`);
   expect(calendarCalls()).toHaveLength(1);
-  expect(state.rpc).toHaveBeenCalledWith("assignment_job_titles", {
+  expect(state.rpc).toHaveBeenCalledWith("assignment_calendar_metadata", {
     p_job_ids: [jobID],
   });
 });
@@ -894,7 +909,15 @@ it("centres a job deep link only on an own confirmed assignment session", async 
       data:
         name === "my_calendar_subscriptions"
           ? []
-          : [{ id: jobID, title: "Fictional own job" }],
+          : [
+              {
+                id: jobID,
+                title: "Fictional own job",
+                organisation_id: null,
+                organisation_name: "Fictional Academy",
+                topics: [],
+              },
+            ],
       error: null,
     });
     return Object.assign(result, { abortSignal: () => result });
@@ -922,5 +945,95 @@ it("centres a job deep link only on an own confirmed assignment session", async 
   );
   await screen.findByRole("link", { name: "Fictional own job" });
   expect(state.initialDate).toBeUndefined();
+  client.clear();
+});
+
+it("filters confirmed course sessions by customer and any selected topic while retaining title/type search", async () => {
+  const jobA = "d7000000-0000-4000-8000-000000000011",
+    jobB = "d7000000-0000-4000-8000-000000000012";
+  const customerA = "c7000000-0000-4000-8000-000000000011",
+    customerB = "c7000000-0000-4000-8000-000000000012";
+  const topicA = "a7000000-0000-4000-8000-000000000011",
+    topicB = "a7000000-0000-4000-8000-000000000012";
+  state.claims = [jobA, jobB].map((job_id, index) => ({
+    id: `claim-${index}`,
+    job_id,
+    assignment_sessions: [
+      {
+        id: `session-${index}`,
+        starts_at: "2060-01-01T08:00:00Z",
+        ends_at: "2060-01-01T10:00:00Z",
+      },
+    ],
+  }));
+  state.events = [
+    {
+      id: "personal",
+      title: "Private planning",
+      starts_at: "2060-01-01T08:00:00Z",
+      ends_at: "2060-01-01T09:00:00Z",
+    },
+  ];
+  state.rpc.mockImplementation(() => {
+    const result = Promise.resolve({
+      data: [
+        {
+          id: jobA,
+          title: "Python course",
+          organisation_id: customerA,
+          organisation_name: "Fictional Alpha",
+          topics: [{ id: topicA, label_de: "Python", label_en: "Python" }],
+        },
+        {
+          id: jobB,
+          title: "Linux course",
+          organisation_id: customerB,
+          organisation_name: "Fictional Beta",
+          topics: [{ id: topicB, label_de: "Linux", label_en: "Linux" }],
+        },
+      ],
+      error: null,
+    });
+    return Object.assign(result, { abortSignal: () => result });
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  await screen.findByRole("link", { name: "Python course" });
+  await user.selectOptions(screen.getByLabelText("Kunde"), customerA);
+  expect(screen.getByRole("link", { name: "Python course" })).toBeVisible();
+  expect(
+    screen.queryByRole("link", { name: "Linux course" }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText("Private planning")).not.toBeInTheDocument();
+  await user.selectOptions(screen.getByLabelText("Kunde"), "");
+  await user.selectOptions(screen.getByLabelText("Themen & Tags"), topicB);
+  expect(screen.getByRole("link", { name: "Linux course" })).toBeVisible();
+  expect(
+    screen.queryByRole("link", { name: "Python course" }),
+  ).not.toBeInTheDocument();
+  await user.selectOptions(screen.getByLabelText("Themen & Tags"), topicA);
+  expect(screen.getByRole("link", { name: "Python course" })).toBeVisible();
+  expect(screen.getByRole("link", { name: "Linux course" })).toBeVisible();
+  await user.click(
+    screen.getByRole("button", { name: "Thema Linux entfernen" }),
+  );
+  expect(
+    screen.queryByRole("link", { name: "Linux course" }),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Filter zurücksetzen" }));
+  expect(screen.getByText("Private planning")).toBeVisible();
+  expect(screen.queryByText(/Kalender-Abonnements/)).not.toBeInTheDocument();
+  expect(
+    state.rpc.mock.calls.some(([name]) => name === "my_calendar_subscriptions"),
+  ).toBe(false);
   client.clear();
 });

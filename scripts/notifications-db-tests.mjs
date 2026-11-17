@@ -357,7 +357,7 @@ await withTestDatabase("notification_test", async ({ sql, actor }) => {
     matchingAdmin = randomUUID(),
     expiringLecturer = randomUUID();
   await check(
-    "Deferred publication observes final requirements, course-end expiry and committed lecturer-capable roles",
+    "Deferred publication observes final declared requirements and committed lecturer-capable roles",
     async () => {
       await sql(
         `insert into public.topics(id,label_de,label_en,kind) values(${q(matchingTopicA)},'Fictional matching A','Fictional matching A','topic'),(${q(matchingTopicB)},'Fictional matching B','Fictional matching B','topic');insert into public.lecturer_topics(user_id,topic_id,verified,valid_until) values(${q(teacher)},${q(matchingTopicA)},true,null),(${q(teacher)},${q(matchingTopicB)},true,now()+interval '1 year'),(${q(peer)},${q(matchingTopicA)},true,null),(${q(peer)},${q(matchingTopicB)},false,null)`,
@@ -375,7 +375,7 @@ await withTestDatabase("notification_test", async ({ sql, actor }) => {
             `select jsonb_agg(user_id order by user_id) from public.notifications where kind='job_matching' and resource_id=${q(job)}`,
           ),
         ),
-        [teacher, matchingOwner, matchingAdmin].sort(),
+        [teacher, peer, matchingOwner, matchingAdmin, expiringLecturer].sort(),
       );
       await sql(
         `update public.jobs set status='draft' where id=${q(job)};update public.jobs set status='published' where id=${q(job)}`,
@@ -384,7 +384,7 @@ await withTestDatabase("notification_test", async ({ sql, actor }) => {
         await sql(
           `select count(*) from public.notifications where kind='job_matching' and resource_id=${q(job)}`,
         ),
-        "3",
+        "5",
       );
     },
   );

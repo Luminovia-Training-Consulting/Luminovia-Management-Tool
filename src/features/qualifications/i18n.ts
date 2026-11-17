@@ -5,7 +5,7 @@ i18n.addResourceBundle(
   {
     title: "Qualifikationsbelege",
     intro:
-      "Gib eine konkrete Zertifikatsversion ausdrücklich für die Prüfung eines ausgewählten Themas frei. Andere Dateien und spätere Versionen werden nicht freigegeben.",
+      "Zertifikatsbelege sind optional; für die Auftragsübernahme genügt deine angegebene Expertise. Gib bei Bedarf eine konkrete Zertifikatsversion ausdrücklich für die Prüfung eines ausgewählten Themas frei. Andere Dateien und spätere Versionen werden nicht freigegeben.",
     topic: "Ausgewähltes Thema",
     chooseTopic: "Thema wählen",
     noTopics: "Wähle zuerst im Profil ein Expertise-Thema aus.",
@@ -65,7 +65,7 @@ i18n.addResourceBundle(
   {
     title: "Qualification evidence",
     intro:
-      "Explicitly share one certificate version for review of a selected topic. Other files and later versions are not shared.",
+      "Certificate evidence is optional; your declared expertise is sufficient to claim jobs. If needed, explicitly share one certificate version for review of a selected topic. Other files and later versions are not shared.",
     topic: "Selected topic",
     chooseTopic: "Choose topic",
     noTopics: "First select an expertise topic on your profile.",

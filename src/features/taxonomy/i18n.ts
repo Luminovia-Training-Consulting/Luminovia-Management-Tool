@@ -7,7 +7,7 @@ import i18n from "../../lib/i18n";
 // Authored content is separate from these i18next interface strings.
 const de = {
   title: "Themen, Tools & Programmiersprachen",
-  help: "Ein gemeinsamer Katalog für Profile, Kursvorlagen und Aufträge. Aliasse helfen bei der Suche; geprüfte Kenntnisse bleiben an dieselbe Kennung gebunden.",
+  help: "Ein gemeinsamer Katalog für Profile, Kursvorlagen und Aufträge. Aliasse helfen bei der Suche; angegebene Kenntnisse bleiben an dieselbe Kennung gebunden.",
   loading: "Katalog wird aktualisiert …",
   search: "Katalog durchsuchen",
   kind: "Art",
@@ -58,7 +58,7 @@ const de = {
 };
 const en: Record<keyof typeof de, string> = {
   title: "Topics, tools & programming languages",
-  help: "One shared catalogue for profiles, course templates and jobs. Aliases help with discovery; verified expertise stays attached to the same identity.",
+  help: "One shared catalogue for profiles, course templates and jobs. Aliases help with discovery; declared expertise stays attached to the same identity.",
   loading: "Updating catalogue …",
   search: "Search catalogue",
   kind: "Kind",

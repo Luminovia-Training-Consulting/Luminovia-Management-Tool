@@ -299,8 +299,8 @@ const pairs: Record<string, [string, string]> = {
     "At least one session overlaps with your calendar.",
   ],
   claim_not_eligible: [
-    "Die erforderliche verifizierte Expertise fehlt.",
-    "The required verified expertise is missing.",
+    "Trage die benötigten Themen in deiner Expertise ein. Eine zusätzliche Verifizierung ist nicht erforderlich.",
+    "Add the required topics to your expertise. No additional verification is required.",
   ],
   claim_prerequisite_missing: [
     "Ein gültiger Rahmenvertrag wird benötigt.",
@@ -331,10 +331,7 @@ const pairs: Record<string, [string, string]> = {
   timezone: ["Zeitzone", "Time zone"],
   delivery: ["Durchführung", "Delivery"],
   expertise: ["Expertise", "Expertise"],
-  requirements: [
-    "Erforderliche verifizierte Expertise",
-    "Required verified expertise",
-  ],
+  requirements: ["Benötigte Themen", "Required topics"],
   noRequirements: [
     "Keine besonderen Qualifikationsvorgaben.",
     "No specific qualification requirements.",
@@ -381,9 +378,10 @@ const pairs: Record<string, [string, string]> = {
   phone: ["Telefon", "Phone"],
   saveProfile: ["Profil speichern", "Save profile"],
   expertiseHelp: [
-    "Wähle deine Themen, Tools und Programmiersprachen. Eine Verifizierung erfolgt durch die Verwaltung.",
-    "Select topics, tools and programming languages. Management verifies your expertise.",
+    "Wähle die Themen, die du unterrichten kannst. Deine Angaben gelten direkt für passende Aufträge; eine Bestätigung durch die Verwaltung ist nicht erforderlich.",
+    "Select the topics you can teach. Your declarations count immediately for matching jobs; no confirmation from management is required.",
   ],
+  selfDeclaredExpertise: ["Als Expertise angegeben", "Declared expertise"],
   verified: ["Verifiziert", "Verified"],
   unverified: ["Noch nicht verifiziert", "Not verified yet"],
   profileMissing: [

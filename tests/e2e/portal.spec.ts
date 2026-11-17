@@ -103,6 +103,7 @@ test('combined filters find a real job, claim confirms all five sessions and imm
   expect(sessionError).toBeNull();
   await login(page);
   await page.goto('/jobs');
+  await page.getByText('Filter & Ansichten', { exact: true }).click();
   await page.getByRole('searchbox', { name: 'Suchtext', exact: true }).fill(title);
   await page.getByLabel('Durchführung', { exact: true }).selectOption('online');
   await page.getByLabel('Währung', { exact: true }).selectOption('EUR');

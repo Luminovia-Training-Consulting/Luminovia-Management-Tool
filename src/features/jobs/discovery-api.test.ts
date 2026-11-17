@@ -9,8 +9,46 @@ import {
   discoveryPageSchema,
   jobDiscoveryQuery,
   jobDetailQuery,
+  assignmentCalendarMetadataQuery,
+  assignmentCalendarMetadataSchema,
 } from "./discovery-api";
 describe("discovery data contracts", () => {
+  it("keeps accepted calendar metadata actor scoped and separate from legacy title reads", () => {
+    const first = "d7000000-0000-4000-8000-000000000001",
+      second = "d7000000-0000-4000-8000-000000000002";
+    expect(
+      assignmentCalendarMetadataQuery("actor-a", [first, second, first])
+        .queryKey,
+    ).toEqual(
+      assignmentCalendarMetadataQuery("actor-a", [second, first]).queryKey,
+    );
+    expect(
+      assignmentCalendarMetadataQuery("actor-a", [first]).queryKey,
+    ).not.toEqual(assignmentCalendarMetadataQuery("actor-b", [first]).queryKey);
+    expect(assignmentCalendarMetadataQuery("actor-a", []).enabled).toBe(false);
+    const metadata = {
+      id: first,
+      title: "Accepted course",
+      organisation_id: null,
+      organisation_name: "Manual customer",
+      topics: [{ id: second, label_de: "Thema", label_en: "Topic" }],
+      amount: 999,
+    };
+    expect(
+      assignmentCalendarMetadataSchema.parse([metadata])[0],
+    ).not.toHaveProperty("amount");
+    expect(
+      assignmentCalendarMetadataSchema.safeParse([
+        { ...metadata, organisation_id: "browser-role" },
+      ]).success,
+    ).toBe(false);
+    expect(
+      assignmentCalendarMetadataSchema.safeParse([
+        { ...metadata, topics: [{ id: second, label_de: "Thema" }] },
+      ]).success,
+    ).toBe(false);
+  });
+
   it("preserves a restricted null quote while rejecting coerced strings and resetting known role pages", () => {
     const item = {
       id: "d7000000-0000-4000-8000-000000000001",

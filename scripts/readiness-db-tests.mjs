@@ -278,7 +278,7 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
     },
   );
   await check(
-    "Revoked and expired qualifications change readiness without altering accepted history",
+    "Declared expertise determines readiness while optional attestation flags do not alter accepted history",
     async () => {
       const { run } = await create();
       await actor(
@@ -286,17 +286,27 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
         `select public.verify_lecturer_topic('${teacher}','${topic}',false,null)`,
         "aal1",
       );
-      assert.equal(testCheck(await snap(run), "qualification").complete, false);
+      assert.equal(testCheck(await snap(run), "qualification").complete, true);
       await actor(
         admin,
         `select public.verify_lecturer_topic('${teacher}','${topic}',true,'2038-01-01')`,
         "aal1",
       );
-      assert.equal(testCheck(await snap(run), "qualification").complete, false);
+      assert.equal(testCheck(await snap(run), "qualification").complete, true);
       await actor(
         admin,
         `select public.verify_lecturer_topic('${teacher}','${topic}',true,null)`,
         "aal1",
+      );
+      assert.equal(testCheck(await snap(run), "qualification").complete, true);
+      await actor(
+        teacher,
+        `delete from public.lecturer_topics where user_id='${teacher}' and topic_id='${topic}'`,
+      );
+      assert.equal(testCheck(await snap(run), "qualification").complete, false);
+      await actor(
+        teacher,
+        `insert into public.lecturer_topics(user_id,topic_id) values('${teacher}','${topic}')`,
       );
       assert.equal(testCheck(await snap(run), "qualification").complete, true);
     },
@@ -665,9 +675,9 @@ await withTestDatabase("course_readiness", async ({ sql, actor }) => {
         ),
         /42501/,
       );
-      await assert.rejects(
-        save(run, settings(), undefined, randomUUID(), admin, "aal1"),
-        /42501/,
+      assert.match(
+        await save(run, settings(), undefined, randomUUID(), admin, "aal1"),
+        /^[a-f0-9-]{36}$/,
       );
       await assert.rejects(
         save(run, settings(), undefined, randomUUID(), peer, "aal1"),

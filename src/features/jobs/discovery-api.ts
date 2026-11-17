@@ -328,18 +328,38 @@ export const jobDashboardQuery = (actor: string) =>
         .parse(data);
     },
   });
-export const assignmentJobTitlesQuery = (actor: string, ids: string[]) =>
-  queryOptions({
-    queryKey: ["jobs", "assignment-titles", actor, [...new Set(ids)].sort()],
+/** Customer/topic descriptions for filtering only the actor's own confirmed calendar assignments. */
+export const assignmentCalendarMetadataSchema = z
+  .array(
+    z.object({
+      id: z.uuid(),
+      title: z.string(),
+      organisation_id: z.uuid().nullable(),
+      organisation_name: z.string(),
+      topics: z.array(
+        z.object({ id: z.uuid(), label_de: z.string(), label_en: z.string() }),
+      ),
+    }),
+  )
+  .max(1000);
+export type AssignmentCalendarMetadata = z.infer<
+  typeof assignmentCalendarMetadataSchema
+>[number];
+export const assignmentCalendarMetadataQuery = (
+  actor: string,
+  ids: string[],
+) => {
+  const identities = [...new Set(ids)].sort();
+  return queryOptions({
+    queryKey: ["jobs", "assignment-calendar-metadata", actor, identities],
     queryFn: async ({ signal }) => {
       const { data, error } = await db()
-        .rpc("assignment_job_titles", { p_job_ids: [...new Set(ids)] })
+        .rpc("assignment_calendar_metadata", { p_job_ids: identities })
         .abortSignal(signal);
       if (error) throw error;
-      return z
-        .array(z.object({ id: z.uuid(), title: z.string() }))
-        .max(1000)
-        .parse(data);
+      return assignmentCalendarMetadataSchema.parse(data);
     },
-    enabled: ids.length > 0,
+    enabled: identities.length > 0,
+    retry: false,
   });
+};

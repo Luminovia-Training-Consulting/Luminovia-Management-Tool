@@ -128,9 +128,13 @@ export function JobLifecyclePanel({ job }: { job: Job }) {
   };
   return (
     <section className="panel job-lifecycle" aria-label={t("heading")}>
-      <h2>{t("heading")}</h2>
-      <p className="muted">{t("help")}</p>
-      <PermanentDeleteAction kind="job" id={job.id} label={job.title} />
+      <div className="job-life-heading">
+        <div>
+          <h2>{t("heading")}</h2>
+          <p className="muted">{t("help")}</p>
+        </div>
+        <PermanentDeleteAction kind="job" id={job.id} label={job.title} />
+      </div>
       <div className="job-life-capacity">
         <strong>
           {capacity} {t("positions")}

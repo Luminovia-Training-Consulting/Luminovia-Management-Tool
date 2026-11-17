@@ -5,6 +5,7 @@ import { ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
 import type { Job } from "../../lib/types";
 import { dateTime, money } from "../../lib/dates";
 import "./lifecycle-i18n";
+import "./card.css";
 import "../commercial/platform-i18n";
 /** Render the server's current quote and earliest session without inferring protected prices. */
 export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
@@ -24,7 +25,7 @@ export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
       <h2>
         <Link to={`/jobs/${job.id}`}>
           {job.title}
-          <ArrowUpRight size={21} />
+          <ArrowUpRight size={21} aria-hidden="true" />
         </Link>
       </h2>
       <p className="job-excerpt">{job.description}</p>
@@ -54,13 +55,9 @@ export function JobCard({ job, index = 0 }: { job: Job; index?: number }) {
               ` · ${job.capacity} ${lifeText("positions")}`}
           </small>
         </div>
-        <Link
-          className="round-link"
-          to={`/jobs/${job.id}`}
-          aria-label={`${t("details")}: ${job.title}`}
-        >
+        <span className="round-link" aria-hidden="true">
           <ArrowUpRight size={21} />
-        </Link>
+        </span>
       </div>
     </article>
   );

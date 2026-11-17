@@ -90,12 +90,12 @@ await withTestDatabase("replacement_test", async ({ sql, actor }) => {
       const c = await create();
       for (const who of [first, outsider, inactive])
         await assert.rejects(request(c.claim, who), /42501/);
-      await assert.rejects(
-        actor(
+      assert.match(
+        await actor(
           manager,
           `select public.request_replacement('${c.claim}','Fictional request','open','{}',false,'${randomUUID()}')`,
         ),
-        /42501/,
+        /^[a-f0-9-]{36}$/,
       );
       for (const who of [manager, first])
         await assert.rejects(
@@ -107,7 +107,7 @@ await withTestDatabase("replacement_test", async ({ sql, actor }) => {
         /permission denied/,
       );
       await assert.rejects(list(inactive), /42501/);
-      assert.equal((await list(outsider)).length, 0);
+      await assert.rejects(list(outsider), /42501/);
     },
   );
   await check(
@@ -214,7 +214,7 @@ await withTestDatabase("replacement_test", async ({ sql, actor }) => {
     },
   );
   await check(
-    "Current schedule conflicts, expired/revoked qualifications and contract prerequisites are rechecked",
+    "Current schedule conflicts, declared topic membership and contract prerequisites are rechecked",
     async () => {
       const c = await create(),
         offer = await request(c.claim);
@@ -236,13 +236,23 @@ await withTestDatabase("replacement_test", async ({ sql, actor }) => {
       await sql(
         `insert into public.job_requirements(job_id,topic_id) values('${c.job}','${topic}');insert into public.lecturer_topics(user_id,topic_id,verified,valid_until) values('${first}','${topic}',true,now()-interval '1 day')`,
       );
-      assert.equal((await take(offer, c.terms)).status, "not_eligible");
+      assert.equal(
+        (await list(first)).find((row) => row.id === offer)?.can_claim,
+        true,
+      );
       await sql(
         `update public.lecturer_topics set valid_until=null,verified=false where user_id='${first}'`,
       );
+      assert.equal(
+        (await list(first)).find((row) => row.id === offer)?.can_claim,
+        true,
+      );
+      await sql(
+        `delete from public.lecturer_topics where user_id='${first}' and topic_id='${topic}'`,
+      );
       assert.equal((await take(offer, c.terms)).status, "not_eligible");
       await sql(
-        `update public.lecturer_topics set verified=true where user_id='${first}';update public.jobs set requires_contract=true where id='${c.job}'`,
+        `insert into public.lecturer_topics(user_id,topic_id) values('${first}','${topic}');update public.jobs set requires_contract=true where id='${c.job}'`,
       );
       assert.equal((await take(offer, c.terms)).status, "not_eligible");
       assert.equal(
@@ -533,20 +543,18 @@ await withTestDatabase("replacement_test", async ({ sql, actor }) => {
         "cancelled",
       );
       await sql(`delete from public.user_roles where user_id='${first}'`);
-      assert.equal(
-        (await take(offer, c.terms, first, key)).status,
-        "not_eligible",
-      );
+      await assert.rejects(take(offer, c.terms, first, key), /42501/);
       const other = await create(),
         managerKey = randomUUID();
       await request(other.claim, manager, managerKey);
       await sql(`delete from public.user_roles where user_id='${manager}'`);
       await assert.rejects(request(other.claim, manager, managerKey), /42501/);
-      await sql(`delete from public.user_roles where user_id='${original}'`);
       const ownOffer = (await list(original)).find(
         (item) => item.job_id === other.job,
       );
-      assert.equal(ownOffer.can_cancel, false);
+      assert.ok(ownOffer);
+      await sql(`delete from public.user_roles where user_id='${original}'`);
+      await assert.rejects(list(original), /42501/);
       await assert.rejects(
         actor(
           original,

@@ -57,3 +57,49 @@
 .job-life-history p {
   overflow-wrap: anywhere;
 }
+
+/* Keep destructive administration apart from capacity facts and lifecycle actions. */
+.job-life-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px 24px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.job-life-heading > div:first-child {
+  min-width: 0;
+  flex: 1 1 260px;
+}
+.job-life-heading h2 {
+  margin: 0 0 8px;
+}
+.job-life-heading p {
+  margin: 0;
+  line-height: 1.6;
+}
+.job-life-heading > button {
+  flex-shrink: 0;
+}
+.job-lifecycle .job-life-capacity {
+  margin-bottom: 18px;
+}
+.job-lifecycle > .job-life-actions {
+  gap: 12px;
+  padding-block: 8px;
+}
+.job-life-actions .field {
+  min-width: 160px;
+  margin-bottom: 0;
+}
+@media (max-width: 600px) {
+  .job-life-heading {
+    gap: 12px;
+  }
+  .job-life-heading > div:first-child {
+    flex-basis: 100%;
+  }
+  .job-life-actions .field {
+    width: 100%;
+  }
+}

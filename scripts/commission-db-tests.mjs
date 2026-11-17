@@ -667,7 +667,7 @@ try {
     },
   );
   await check(
-    "Functional owner still needs qualification and executed contract prerequisites; private DM/calendar remain private",
+    "Functional owner still needs declared expertise and executed contract prerequisites; private DM/calendar remain private",
     async () => {
       const topic = randomUUID();
       await sql(
@@ -677,7 +677,7 @@ try {
         topic_ids: [topic],
         requires_contract: true,
       });
-      assert.equal((await claim(owner, job)).status, "not_eligible");
+      assert.equal((await claim(owner, job)).status, "prerequisite_missing");
       await value(
         admin,
         "verify_lecturer_topic",

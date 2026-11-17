@@ -1,5 +1,18 @@
 # Guide
 
+
+## Current calendar, job discovery and deletion behaviour
+
+The latest user direction supersedes older verification/subscription instructions retained later in this consolidated guide.
+
+- Calendar subscriptions are no longer offered in the Portal UI. The header has previous/next chevrons, Today and Month/Week/Day/Agenda view buttons. Customer and topic filters use only currently authorised course/confirmed-assignment metadata. Multiple selected topic tags match any selected topic; customer, title and event-type filters combine. Existing date instants and IANA display zones are preserved.
+- Job discovery keeps optional filters and saved-view controls in one collapsed disclosure instead of a separate saved-views block. Open a job by clicking anywhere on its card; the arrow is decorative. Filter validation errors reveal their controls. Assignment-management actions are separated from capacity/status information.
+- A lecturer's self-declared required topics are sufficient for matching and job acceptance. Additional management verification or attestation expiry is not an eligibility gate. Current access, declared-topic matching, contract prerequisites, capacity, full-block allocation and overlap checks still apply.
+- An organisation's Edit dialog offers the existing confirmed permanent-deletion action. Its preview expands directly owned course/job/session/commercial/document dependencies; reusable templates, unrelated organisations and other people's shared roots are not silently deleted.
+- Lecturer deletion removes owned personal records, contracts/documents and assignment reservations in the reviewed scope. Shared jobs survive, their capacity/status is recalculated and available places reopen. Remaining members retain their shared course room; ownership transfers where appropriate. The same current-authority, fingerprinted scope, explicit impact acknowledgement and resumable exact-file cleanup protect these cascades.
+- If a dependency also belongs to an unrelated root outside the reviewed scope, the dialog continues to identify that shared dependency explicitly. A stale impact plan must be refreshed before confirmation. Merely applying the software migration deletes no business records.
+
+
 Consolidated reference. Source and tests remain authoritative for current behavior.
 
 **Current authentication change:** the pending branch removes MFA from the product. Accounts use passwords; protected actions use active-account, current database-role, resource-scope and RLS checks. MFA-specific references in older workflow notes below describe previous revisions. The change is not yet installed on KVM1.

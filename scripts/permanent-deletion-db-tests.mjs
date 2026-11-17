@@ -96,13 +96,23 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
         "An active password session with the owning role sees its authorized deletion kinds",
       );
       await expectCode(plan("document", document.document_id, other), "42501");
+      assert.equal(
+        (
+          await call(
+            owner,
+            "deletion_preview",
+            `'document',${q(document.document_id)}`,
+            "aal1",
+          )
+        ).can_confirm,
+        true,
+      );
+      const retired = randomUUID();
+      await sql(
+        `insert into auth.users(id,email) values(${q(retired)},'retired-deletion@example.invalid');insert into public.user_roles(user_id,role) values(${q(retired)},'participant')`,
+      );
       await expectCode(
-        call(
-          owner,
-          "deletion_preview",
-          `'document',${q(document.document_id)}`,
-          "aal1",
-        ),
+        plan("document", document.document_id, retired),
         "42501",
       );
       await expectCode(
@@ -475,7 +485,7 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
     },
   );
   await check(
-    "Referenced used accounts remain active and intact after dependency refusal",
+    "Own dependencies are planned while a shared externally owned job remains a protected blocker",
     async () => {
       // Planner scan choices must not reorder a reviewed graph or its blockers.
       // Otherwise identical data can intermittently produce a stale-plan error
@@ -492,6 +502,13 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
         await snapshotFor("force_custom_plan", "index"),
         await snapshotFor("force_generic_plan", "sequential"),
       );
+      const ownPlan = await plan("account", owner);
+      assert.equal(ownPlan.can_confirm, true);
+      assert(ownPlan.counts["public.contracts"] > 0);
+      const sharedJob = randomUUID();
+      await sql(
+        `insert into public.jobs(id,created_by,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms) values(${q(sharedJob)},${q(owner)},'Shared external ownership','Fictional organisation','online','draft',10,10,'EUR','fixed_total','Fictional terms')`,
+      );
       const p = await plan("account", owner);
       assert.equal(p.can_confirm, false);
       assert.equal(p.blockers.length > 0, true);
@@ -500,6 +517,8 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
         await sql(`select active from public.profiles where id=${q(owner)}`),
         "t",
       );
+      await sql(`delete from public.jobs where id=${q(sharedJob)}`);
+      assert.equal((await plan("account", owner)).can_confirm, true);
     },
   );
   await check(

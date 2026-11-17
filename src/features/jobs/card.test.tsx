@@ -61,3 +61,17 @@ it("retains an explicitly supplied real zero quote and the current tier's positi
   expect(screen.getByText(/500,00/)).toBeVisible();
   expect(screen.queryByText("Honorar geschützt")).not.toBeInTheDocument();
 });
+
+it("provides one native focusable link for the full card without duplicate arrow controls", async () => {
+  await i18n.changeLanguage("de");
+  render(
+    <MemoryRouter>
+      <JobCard job={job} />
+    </MemoryRouter>,
+  );
+  const links = screen.getAllByRole("link");
+  expect(links).toHaveLength(1);
+  expect(links[0]).toHaveAccessibleName(job.title);
+  expect(links[0]).toHaveAttribute("href", `/jobs/${job.id}`);
+  expect(screen.queryByRole("button")).not.toBeInTheDocument();
+});

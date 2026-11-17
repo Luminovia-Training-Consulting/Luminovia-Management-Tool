@@ -142,8 +142,8 @@ const pairs = {
     "Simulation: A session overlaps. Check your confirmed assignments and blocked times, then choose another block.",
   ],
   qualificationBody: [
-    "Simulation: Eine geprüfte Qualifikation oder gültige Vertragsvoraussetzung fehlt. Profil und Vertragsstatus prüfen und die zuständige Verwaltung kontaktieren.",
-    "Simulation: A verified qualification or valid contract prerequisite is missing. Check your profile and contract status, then contact the responsible manager.",
+    "Simulation: Ein erforderliches Thema im Profil oder ein gültiger Vertrag fehlt. Eigene Fachgebiete und Vertragsstatus prüfen.",
+    "Simulation: A required declared topic or valid contract is missing. Check your profile topics and contract status.",
   ],
   offlineBody: [
     "Simulation: Ohne Verbindung wird keine Übernahme bestätigt. Verbindung herstellen, aktuellen Auftragsstatus laden und erst dann erneut versuchen.",

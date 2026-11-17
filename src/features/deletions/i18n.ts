@@ -1,6 +1,10 @@
 /** Register bilingual irreversible-deletion guidance without translating authored target labels. */
 import i18n from "../../lib/i18n";
 const pairs: Record<string, [string, string]> = {
+  releasedChatOwnership: [
+    "Verwaltung gemeinsamer Chats übertragen",
+    "Transfer management of shared chats",
+  ],
   roleAssignments: ["Rollenzuordnungen", "Role assignments"],
   expertiseEntries: ["Fachkenntnisse", "Expertise entries"],
   profileDetails: ["Erweiterte Profilangaben", "Additional profile details"],
