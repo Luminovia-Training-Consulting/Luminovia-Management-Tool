@@ -273,9 +273,33 @@ test("no arguments remain complete; explicit phase arguments reject every unknow
   assert.deepEqual(runtimeTestPhasePlan().stages, expected);
   assert.deepEqual(runtimeTestPhasePlan(["--phase", "all"]).stages, expected);
   const system = runtimeTestPhasePlan(["--phase", "system"]);
+  const delegated = runtimeTestPhasePlan([
+    "--phase",
+    "system",
+    "--external-gates",
+    "quality,coverage",
+  ]);
+  const completeDelegated = runtimeTestPhasePlan([
+    "--phase",
+    "all",
+    "--external-gates",
+    "quality,coverage",
+  ]);
   const browser = runtimeTestPhasePlan(["--phase", "browser"]);
   assert.equal(system.system, true);
   assert.equal(system.browser, false);
+  assert.deepEqual(system.externalGates, []);
+  assert.deepEqual(delegated.externalGates, ["quality", "coverage"]);
+  assert.equal(delegated.stages.includes("quality"), false);
+  assert.equal(delegated.stages.includes("coverage"), false);
+  assert(delegated.stages.includes("runtime"));
+  assert(delegated.stages.includes("sql"));
+  assert(delegated.stages.includes("api"));
+  assert.deepEqual(completeDelegated.externalGates, ["quality", "coverage"]);
+  assert(completeDelegated.stages.includes("browser"));
+  assert(completeDelegated.stages.includes("pwa"));
+  assert(!completeDelegated.stages.includes("quality"));
+  assert(!completeDelegated.stages.includes("coverage"));
   assert.equal(browser.system, false);
   assert.equal(browser.browser, true);
   assert.deepEqual(
@@ -295,6 +319,8 @@ test("no arguments remain complete; explicit phase arguments reject every unknow
     ["browser"],
     ["--phase", "browser", "extra"],
     ["--phase", "system", "--phase", "browser"],
+    ["--phase", "browser", "--external-gates", "quality,coverage"],
+    ["--phase", "system", "--external-gates", "coverage"],
   ])
     assert.throws(() => runtimeTestPhasePlan(args), /Use no arguments/);
 });
@@ -341,6 +367,54 @@ test("actual default runner retains all quality, Edge, operational, SQL/API and 
   assert.match(all.reports.at(-1).value, /Complete local acceptance/);
   assert.equal(all.locks, 1);
   assert.equal(all.released, 1);
+  assert(contains(all, "vite"));
+  assert(
+    !all.calls.some(
+      ({ file, args }) => file === "npm" && args.join(" ") === "run build",
+    ),
+    "The browser production build must not repeat the required TypeScript check.",
+  );
+});
+
+test("system PR phase delegates only independently required quality and coverage gates", async () => {
+  const result = await runFixture({
+    args: ["--phase", "system", "--external-gates", "quality,coverage"],
+  });
+  assert.ifError(result.error);
+  const evidence = acceptance(result);
+  assert.deepEqual(evidence.externalGates, ["quality", "coverage"]);
+  const npmCommands = result.calls
+    .filter(({ file }) => file === "npm")
+    .map(({ args }) => args.join(" "));
+  assert(!npmCommands.includes("run lint"));
+  assert(!npmCommands.includes("run typecheck"));
+  assert(!npmCommands.includes("run format:check"));
+  assert(!npmCommands.includes("run test:coverage"));
+  assert(contains(result, "scripts/runtime-safety.test.mjs"));
+  assert(contains(result, "--audit-level=low"));
+  assert(contains(result, "test:db"));
+  assert(contains(result, "scripts/alpha-api-check.mjs"));
+  assert.match(
+    result.reports.at(-1).value,
+    /Delegated required gates: quality, coverage/,
+  );
+  assert.equal(result.released, 1);
+});
+
+test("complete main CI phase keeps browser/PWA acceptance while delegating parallel quality and coverage", async () => {
+  const result = await runFixture({
+    args: ["--phase", "all", "--external-gates", "quality,coverage"],
+  });
+  assert.ifError(result.error);
+  const evidence = acceptance(result);
+  assert.deepEqual(evidence.externalGates, ["quality", "coverage"]);
+  assert(contains(result, "test:db"));
+  assert(contains(result, "scripts/alpha-api-check.mjs"));
+  assert(browserCommand(result, "application"));
+  assert(browserCommand(result, "pwa"));
+  assert.match(result.reports.at(-1).value, /Selected phase acceptance passed/);
+  assert.doesNotMatch(result.reports.at(-1).value, /Complete local acceptance/);
+  assert.equal(result.released, 1);
 });
 
 test("the actual public portal test import keeps complete acceptance, including explicit all", async () => {
