@@ -17,7 +17,7 @@ import {
   Search,
 } from "lucide-react";
 import { useAuth } from "../auth/auth-context";
-import { saveDownload, type PortalDocument } from "../files/api";
+import { saveDownload } from "../files/api";
 import { db } from "../../lib/supabase";
 import { profileQuery } from "../../lib/queries";
 import { dateTime, zonedInstant } from "../../lib/dates";
@@ -66,7 +66,7 @@ function RegisterContract({
   const online = useOnline();
   const client = useQueryClient();
   const people = useQuery(commercialPeopleQuery(actor));
-  const [document, setDocument] = useState<PortalDocument | null>(null);
+  const [document, setDocument] = useState("");
   const [invalidDates, setInvalidDates] = useState(false);
   const [initialDate] = useState(() =>
     DateTime.now().setZone(zone).startOf("day").toFormat("yyyy-MM-dd'T'HH:mm"),
@@ -85,6 +85,18 @@ function RegisterContract({
   });
   const person = useWatch({ control: form.control, name: "user" });
   const kind = useWatch({ control: form.control, name: "kind" });
+  const candidates = useQuery({
+    queryKey: ["contract-registration-candidates", actor, person],
+    enabled: Boolean(person),
+    queryFn: async () => {
+      const { data, error } = await db().rpc(
+        "contract_registration_candidates",
+        { p_user_id: person },
+      );
+      if (error) throw error;
+      return (data ?? []) as { version_id: string; file_name: string }[];
+    },
+  });
   const save = useMutation({
     mutationFn: async (values: z.infer<typeof schema>) => {
       requireOnline();
@@ -100,16 +112,12 @@ function RegisterContract({
         setInvalidDates(true);
         throw new Error("invalid_date");
       }
-      if (
-        !document ||
-        document.owner_id !== values.user ||
-        (values.kind === "addendum" && !values.parent)
-      )
+      if (!document || (values.kind === "addendum" && !values.parent))
         throw new Error("document_required");
       const payload = {
         p_user_id: values.user,
         p_title: values.title,
-        p_document_version_id: document.current_version_id,
+        p_document_version_id: document,
         p_effective_from: effective,
         p_expires_at: expires,
         p_kind: values.kind,
@@ -147,7 +155,7 @@ function RegisterContract({
           id="contract-person"
           {...form.register("user", {
             onChange: () => {
-              setDocument(null);
+              setDocument("");
               form.setValue("parent", "");
             },
           })}
@@ -231,14 +239,31 @@ function RegisterContract({
           />
         </Field>
       </div>
-      <CommercialPdfUpload
-        key={person || "no-person"}
-        kind="contract"
-        ownerId={person || ""}
-        label={t("contractPdf")}
-        onDocument={setDocument}
-        disabled={save.isPending}
-      />
+      <Field
+        id="contract-candidate"
+        label={t("contractCandidate")}
+        hint={t("contractCandidateHint")}
+      >
+        <select
+          id="contract-candidate"
+          value={document}
+          onChange={(event) => setDocument(event.target.value)}
+          disabled={
+            !person ||
+            candidates.isPending ||
+            candidates.isError ||
+            save.isPending
+          }
+        >
+          <option value="">{t("selectContractCandidate")}</option>
+          {candidates.data?.map((candidate) => (
+            <option key={candidate.version_id} value={candidate.version_id}>
+              {candidate.file_name}
+            </option>
+          ))}
+        </select>
+      </Field>
+      {candidates.isError && <Notice kind="error">{t("failed")}</Notice>}
       <div className="form-actions">
         <Button disabled={!online || save.isPending || !document}>
           {t("registerSave")}
@@ -341,6 +366,7 @@ function ContractCard({
         <Button
           variant="secondary"
           disabled={
+            contract.user_id !== actor ||
             !online ||
             busy ||
             !contract.document_id ||
@@ -494,6 +520,15 @@ export function ContractsPage() {
           {t("allPeople")}
         </label>
       )}
+      <section className="panel">
+        <p>{t("ownContractUploadHint")}</p>
+        <CommercialPdfUpload
+          kind="contract"
+          ownerId={actor}
+          label={t("contractPdf")}
+          onDocument={() => undefined}
+        />
+      </section>
       <div className="commercial-search panel">
         <Search size={18} />
         <Field id="contract-search" label={t("contracts")}>

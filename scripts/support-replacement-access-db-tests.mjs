@@ -259,7 +259,7 @@ update public.documents set current_version_id=${q(version)}where id=${q(documen
           await fileAccess(outsider, contract, false);
           // Prove an independently stricter installed predecessor survives,
           // rather than merely asserting the already-strict certificate rule.
-          await fileAccess(manager, contract, mode !== "strict", "aal2");
+          await fileAccess(manager, contract, false, "aal2");
         },
       );
       await check(
