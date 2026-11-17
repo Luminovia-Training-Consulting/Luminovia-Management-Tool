@@ -54,7 +54,7 @@ await withTestDatabase(
       console.log(`PASS ${name}`);
     };
     await check(
-      "Only current active management capability with AAL1 can mutate taxonomy",
+      "Current management permission grants password-only taxonomy access",
       async () => {
         for (const role of ["anon", "authenticated"])
           for (const signature of [
@@ -69,7 +69,6 @@ await withTestDatabase(
               `${role} must not execute internal taxonomy helpers`,
             );
         for (const [who, aal] of [
-          [admin, "aal1"],
           [lecturer, "aal1"],
           [outsider, "aal1"],
         ])
@@ -77,6 +76,12 @@ await withTestDatabase(
             rpc(who, "save_taxonomy_topic", [null, payload("Denied"), 0], aal),
             /taxonomy.manage.*required/i,
           );
+        const adminId = await rpc(admin, "save_taxonomy_topic", [
+          null,
+          payload("Administrator"),
+          0,
+        ]);
+        assert.match(adminId, /^[a-f0-9-]{36}$/);
         const id = await rpc(manager, "save_taxonomy_topic", [
           null,
           payload("Manager"),
