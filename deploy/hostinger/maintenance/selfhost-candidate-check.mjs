@@ -529,7 +529,10 @@ export async function checkCandidate({
       child.once("close", (code) => {
         clearTimeout(timeout);
         if (activeChild === child) activeChild = null;
-        if (code === 0) done(output.trim());
+        if (code === 0)
+          done(
+            (options.includeStderr ? errors + "\n" + output : output).trim(),
+          );
         else
           fail(
             new Error(
@@ -1071,6 +1074,29 @@ export async function checkCandidate({
     }
   } catch (error) {
     failure = error;
+    // Preserve bounded, redacted service errors before owned cleanup destroys
+    // the only evidence for intermittent Auth/PostgreSQL failures.
+    for (const service of ["auth", "db"]) {
+      try {
+        const id = await compose(["ps", "-q", service]);
+        if (!id) continue;
+        await owned(id);
+        const logs = await docker(["logs", "--tail", "200", id], {
+          includeStderr: true,
+          timeout: 10000,
+        });
+        const errors = redact(logs)
+          .split("\n")
+          .filter((line) => /\b(error|fatal|panic)\b/i.test(line))
+          .slice(-20)
+          .map((line) => line.slice(0, 500));
+        console.error(
+          `Candidate ${service} diagnostic: ${JSON.stringify(errors)}`,
+        );
+      } catch {
+        console.error(`Candidate ${service} diagnostic unavailable.`);
+      }
+    }
   } finally {
     cleanupMode = true;
     try {
