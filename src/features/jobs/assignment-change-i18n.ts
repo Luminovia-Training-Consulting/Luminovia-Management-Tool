@@ -14,8 +14,10 @@ const en = {
     "Request submitted. The confirmed assignment remains unchanged until approval and application.",
   offline: "Reconnect to review or change an assignment.",
   failed: "The change was not confirmed. Reload the current state and retry.",
-  proposalRefused: "The server did not accept this proposal. Only a future standalone assignment with one confirmed lecturer and no started or invoiced session is eligible; refresh to review the current assignment.",
-  eligibilityHelp: "For a future standalone assignment with one confirmed lecturer. Started or invoiced work is not eligible. The server rechecks eligibility when you submit.",
+  proposalRefused:
+    "The server did not accept this proposal. Only a future standalone assignment with one confirmed lecturer and no started or invoiced session is eligible; refresh to review the current assignment.",
+  eligibilityHelp:
+    "For a future standalone assignment with one confirmed lecturer. Started or invoiced work is not eligible. The server rechecks eligibility when you submit.",
   invalidTime:
     "Choose a valid local time. Times skipped or repeated during daylight saving changes cannot be submitted.",
   accept: "Accept proposed change",
@@ -45,8 +47,10 @@ const de = {
     "Stelle eine Verbindung her, um einen Auftrag zu prüfen oder zu ändern.",
   failed:
     "Die Änderung wurde nicht bestätigt. Lade den aktuellen Stand und versuche es erneut.",
-  proposalRefused: "Der Server hat den Antrag nicht angenommen. Änderbar ist nur ein zukünftiger eigenständiger Auftrag mit einer bestätigten Lehrkraft und ohne begonnene oder abgerechnete Einheit. Lade den aktuellen Auftragsstand.",
-  eligibilityHelp: "Für einen zukünftigen eigenständigen Auftrag mit einer bestätigten Lehrkraft. Begonnene oder abgerechnete Arbeit ist ausgeschlossen. Der Server prüft die Voraussetzungen beim Senden erneut.",
+  proposalRefused:
+    "Der Server hat den Antrag nicht angenommen. Änderbar ist nur ein zukünftiger eigenständiger Auftrag mit einer bestätigten Lehrkraft und ohne begonnene oder abgerechnete Einheit. Lade den aktuellen Auftragsstand.",
+  eligibilityHelp:
+    "Für einen zukünftigen eigenständigen Auftrag mit einer bestätigten Lehrkraft. Begonnene oder abgerechnete Arbeit ist ausgeschlossen. Der Server prüft die Voraussetzungen beim Senden erneut.",
   invalidTime:
     "Wähle eine gültige Ortszeit. Zeiten, die bei der Zeitumstellung entfallen oder doppelt vorkommen, können nicht gesendet werden.",
   accept: "Vorgeschlagene Änderung annehmen",
