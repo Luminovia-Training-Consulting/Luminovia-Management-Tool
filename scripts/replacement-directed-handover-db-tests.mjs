@@ -64,6 +64,20 @@ await withTestDatabase(
       ["29.17", "76.43", "0"],
       "aal1",
     );
+    // Current quotes use private per-lecturer settings, so make the two
+    // competing recipients deliberately distinct in the actual fixture.
+    await rpc(
+      admin,
+      "save_lecturer_compensation",
+      [q(marketLecturer), q("daily"), "50", "400", q("AUD"), "1"],
+      "aal1",
+    );
+    await rpc(
+      admin,
+      "save_lecturer_compensation",
+      [q(directedLecturer), q("daily"), "50", "500", q("AUD"), "1"],
+      "aal1",
+    );
 
     /** Polls an observable lock fact with a bounded deadline, not a timing guess. */
     const observe = async (query, message) => {
@@ -231,8 +245,8 @@ await withTestDatabase(
       );
       assert.ok(market?.can_claim && market.quote);
       assert.ok(directed?.can_accept && directed.quote_hash && directed.quote);
-      // Deliberately different tiers prove that preserving history does not force
-      // the old lecturer's net onto a legitimately different recipient quote.
+      // Deliberately different individual rates prove preserving history does
+      // not force the old lecturer's net onto a different recipient quote.
       assert.notEqual(
         Number(market.quote.total_amount),
         Number(directed.quote.total_amount),
