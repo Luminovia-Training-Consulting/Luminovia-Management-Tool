@@ -1247,3 +1247,12 @@ The corrected migration passed through candidate setup, retained-data upgrade an
 ### PR #37 merge gate — 2026-11-17
 
 The migration-order regression now accepts later independent migrations while preserving the ordered deletion-upgrade composition test. Push the signed repair, then require exact-head application, SQL, browser, selfhost and governance checks before merging PR #37.
+
+### CI acceptance findings — 17 November 2026
+
+- [x] Inspect failing exact-main runs 44079667738 and 44086512022; preserve full CI scope.
+- [x] Align password-only role/API fixtures, administrator wiki draft review, and declared-expertise claim expectations with current migrations.
+- [x] Fix runtime schema-lint warnings with forward-only migrations; released SQL bytes remain unchanged.
+- [x] Make the amendment forecast fixture explicitly select the individual rate being tested.
+- [ ] Rerun complete local system and browser acceptance after the last fixture correction.
+- [ ] Push all corrections directly to `main`, then inspect every fresh exact-head required CI job through completion.

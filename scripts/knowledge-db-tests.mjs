@@ -189,12 +189,14 @@ try {
     },
   );
   await check(
-    "Staff authors save private wiki drafts; staff peers and password-only admins cannot read them",
+    "Staff authors save private wiki drafts; staff peers are denied while permitted admins can review them",
     async () => {
       page = (await save(a, null, "Draft wiki", rich, "draft")).page_id;
       assert.deepEqual(await rows(b, "wiki_pages_list"), []);
       await assert.rejects(value(b, "wiki_page", [page]), /access denied/);
-      await assert.rejects(value(admin, "wiki_page", [page]), /access denied/);
+      const adminReview = JSON.parse(await value(admin, "wiki_page", [page]));
+      assert.equal(adminReview.title, "Draft wiki");
+      assert.equal(adminReview.status, "draft");
       assert.equal((await rows(a, "wiki_pages_list"))[0].has_draft, true);
       assert.equal(
         await actor(

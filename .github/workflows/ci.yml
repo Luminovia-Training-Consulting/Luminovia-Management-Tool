@@ -183,7 +183,9 @@ jobs:
             .local/tests/*/screenshots/*-withdrawal-*.png
           # The parent .local directory is hidden; the PNG allowlist remains exact.
           include-hidden-files: true
-          if-no-files-found: error
+          # An earlier integration failure can stop before screenshot capture.
+          # Preserve that original failure without adding a secondary artifact error.
+          if-no-files-found: ignore
           retention-days: 14
   verify-browser:
     name: Isolated browser acceptance (${{ matrix.browser-project }})
