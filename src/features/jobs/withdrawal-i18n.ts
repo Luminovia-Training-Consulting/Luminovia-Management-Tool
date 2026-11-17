@@ -29,6 +29,8 @@ const en = {
   superseded: "Request closed — assignment has changed",
   failed:
     "The action was not confirmed. Reload the current state or retry; your assignment has not been released by this message.",
+  chatOriginBlocked:
+    "This assignment remains confirmed. A course chat manager must use “Resolve access basis” to confirm whether the existing membership is independent or depends on an assignment or enrolment before the withdrawal can be completed.",
   refresh: "Reload withdrawal status",
   empty: "No withdrawal requests for this assignment.",
   offline: "Reconnect to request or review a withdrawal.",
@@ -62,6 +64,8 @@ const de: Record<keyof typeof en, string> = {
   superseded: "Antrag geschlossen — Zuweisung wurde geändert",
   failed:
     "Die Aktion wurde nicht bestätigt. Lade den aktuellen Stand oder versuche es erneut; diese Meldung bestätigt keine Freigabe deiner Zuweisung.",
+  chatOriginBlocked:
+    "Die Zuweisung bleibt bestätigt. Eine für den Kurs-Chat verantwortliche Person muss unter „Zugangsgrund klären“ bestätigen, ob die bestehende Mitgliedschaft unabhängig ist oder von einem Auftrag beziehungsweise einer Einschreibung abhängt.",
   refresh: "Rücktrittsstatus neu laden",
   empty: "Keine Rücktrittsanträge für diesen Auftrag.",
   offline:

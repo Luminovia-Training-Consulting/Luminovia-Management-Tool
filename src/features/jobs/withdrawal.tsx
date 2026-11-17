@@ -218,7 +218,15 @@ export function JobWithdrawalPanel({
                     : "confirm",
             )}
           </Button>
-          {change.isError && <Notice kind="error">{t("failed")}</Notice>}
+          {change.isError && (
+            <Notice kind="error">
+              {t(
+                "code" in change.error && change.error.code === "PZ002"
+                  ? "chatOriginBlocked"
+                  : "failed",
+              )}
+            </Notice>
+          )}
         </form>
       </Dialog>
     </section>

@@ -1,5 +1,11 @@
 # Persistent implementation plan
 
+## Participant chat membership origins
+
+- [x] Track new assignment-derived and explicit participant-room membership without guessing legacy provenance; fail closed and provide an authorized explicit resolution.
+- [x] Preserve independently authorized membership and active additional course claims or enrolments; re-evaluate enrolment removal and both handover paths.
+- [ ] Complete independent security review and exact-head CI, including native Auth and browser acceptance; do not infer hosted migration or production readiness.
+
 ## PR31 after accepted documentation main — 17 November 2026
 
 - [x] Integrate accepted PR38/main `bcba673`, preserve the briefing contract, and regenerate the API reference from the actual 70-migration replay (254 application functions).

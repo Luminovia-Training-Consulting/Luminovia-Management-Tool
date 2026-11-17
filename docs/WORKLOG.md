@@ -1,5 +1,9 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — participant chat provenance on withdrawal
+
+A private membership-origin ledger now distinguishes explicit room membership from assignment-derived access. Unknown legacy memberships require a current room manager's explicit decision before an otherwise unprotected withdrawal; existing independent access, other assignments and enrolments are retained. Handover, withdrawal and later enrolment removal re-evaluate access atomically. Room management offers an explicit decision and DE/EN withdrawal errors explain the block. The change requires both withdrawal and origin migrations in the reviewed sequence; no hosted database was changed. SQL-only isolated checks do not establish native Auth, hosted operation or browser acceptance. An isolated no-network PostgreSQL 17 container replayed the migrations: 33 withdrawal SQL groups passed, including real overlapping claim/enrolment and claim/member-removal waits, and the two directed/marketplace handover races passed with recipient access revoked after its later cancellation. Focused withdrawal and chat component tests and TypeScript/ESLint were run locally; independent review and exact-head CI remain pending.
+
 ## 17 November 2026 — PR31 reconciled with accepted documentation main
 
 Accepted PR38/main `bcba673` updates documentation and the generated API format. Resolved the integration conflicts while preserving the briefing contract and the user-required work log and plan. Regenerated the API reference from an isolated actual 70-migration replay: 254 public application functions, excluding extension-owned functions. The owned database/container were verified removed. The existing 69→70 upgrade, briefing12 and lifecycle12 database proof remains source-bound; SQL bodies did not change.

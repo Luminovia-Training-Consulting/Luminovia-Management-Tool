@@ -207,6 +207,13 @@ await withTestDatabase(
           "private.request_replacement(uuid,text,text,uuid[],boolean,uuid)",
           "private.claim_replacement(uuid,integer,integer,uuid)",
           "private.replacement_assignments()",
+          "private.participant_chat_assignment_grant(uuid,uuid)",
+          "private.participant_chat_assignment_release(uuid,uuid,uuid)",
+          "private.resolve_participant_chat_origin(uuid,uuid,boolean)",
+          "private.manage_chat_member(uuid,uuid,boolean)",
+          "private.create_chat_group(text,uuid[],text,uuid)",
+          "private.manage_course_enrolment(uuid,uuid,text)",
+          "private.cancel_job_assignment_immediate(uuid,text,uuid)",
         ])
           assert.deepEqual(
             JSON.parse(
@@ -258,6 +265,183 @@ await withTestDatabase(
           ),
           "1",
         );
+      },
+    );
+
+    // Legacy rows are intentionally constructed without provenance to exercise
+    // migration behaviour; the withdrawal and management calls are real RPCs.
+    const participantRoom = async (fixture, mode) => {
+      const room = randomUUID();
+      const run = await sql(
+        `select course_run_id from public.jobs where id=${q(fixture.job)}`,
+      );
+      assert.match(run, /^[0-9a-f-]{36}$/);
+      await sql(`insert into public.chat_rooms(id,kind,title,owner_id,course_run_id) values(${q(room)},'participant_course','Fictional participant room',${q(admin)},${q(run)});
+       insert into public.chat_members(room_id,user_id) values(${q(room)},${q(admin)});`);
+      if (mode === "assignment")
+        await sql(
+          `select private.participant_chat_assignment_grant(${q(room)},${q(fixture.who)});`,
+        );
+      await sql(
+        `insert into public.chat_members(room_id,user_id) values(${q(room)},${q(fixture.who)});`,
+      );
+      return { run, room };
+    };
+    const isMember = (room, who = teacher) =>
+      sql(
+        `select exists(select 1 from public.chat_members where room_id=${q(room)} and user_id=${q(who)} and removed_at is null)`,
+      );
+
+    await check(
+      "Unknown legacy participant access blocks withdrawal atomically until an authorised room manager explicitly resolves it",
+      async () => {
+        const fixture = await create({ days: 10 });
+        const { room } = await participantRoom(fixture, "legacy");
+        const before = await snapshot(fixture);
+        await assert.rejects(request(fixture, ""), /PZ002/);
+        assert.deepEqual(await snapshot(fixture), before);
+        assert.equal(await isMember(room), "t");
+        await assert.rejects(
+          actor(
+            peer,
+            `select public.manage_chat_member(${q(room)},${q(teacher)},false)`,
+          ),
+          /42501/,
+        );
+        await actor(
+          admin,
+          `select public.manage_chat_member(${q(room)},${q(teacher)},false)`,
+          "aal2",
+        );
+        assert.equal((await request(fixture, "")).status, "withdrawn");
+        assert.equal(await isMember(room), "t");
+      },
+    );
+    await check(
+      "A manager can resolve unknown access as assignment-only without granting independent membership",
+      async () => {
+        const fixture = await create({ days: 10 });
+        const { room } = await participantRoom(fixture, "legacy");
+        await assert.rejects(
+          actor(
+            peer,
+            `select public.resolve_participant_chat_origin(${q(room)},${q(teacher)},false)`,
+          ),
+          /42501/,
+        );
+        await actor(
+          admin,
+          `select public.resolve_participant_chat_origin(${q(room)},${q(teacher)},false)`,
+          "aal2",
+        );
+        assert.equal((await request(fixture, "")).status, "withdrawn");
+        assert.equal(await isMember(room), "f");
+      },
+    );
+    await check(
+      "Assignment-only participant access is removed atomically while explicit grants remain",
+      async () => {
+        const fixture = await create({ days: 10 });
+        const { room } = await participantRoom(fixture, "assignment");
+        assert.equal((await request(fixture, "")).status, "withdrawn");
+        assert.equal(await isMember(room), "f");
+        const manual = await create({ days: 10 });
+        const second = await participantRoom(manual, "assignment");
+        await actor(
+          admin,
+          `select public.manage_chat_member(${q(second.room)},${q(teacher)},false)`,
+          "aal2",
+        );
+        assert.equal((await request(manual, "")).status, "withdrawn");
+        assert.equal(await isMember(second.room), "t");
+      },
+    );
+    await check(
+      "An independent course enrolment preserves access during an assignment withdrawal",
+      async () => {
+        const fixture = await create({ days: 10 });
+        const { room, run } = await participantRoom(fixture, "assignment");
+        await sql(
+          `insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by) values(${q(run)},${q(teacher)},'enrolled',${q(admin)})`,
+        );
+        assert.equal((await request(fixture, "")).status, "withdrawn");
+        assert.equal(await isMember(room), "t");
+        await sql(
+          `insert into public.user_roles(user_id,role) values(${q(teacher)},'participant')`,
+        );
+        await actor(
+          admin,
+          `select public.manage_course_enrolment(${q(run)},${q(teacher)},'removed')`,
+          "aal2",
+        );
+        await sql(
+          `delete from public.user_roles where user_id=${q(teacher)} and role='participant'`,
+        );
+        assert.equal(await isMember(room), "f");
+      },
+    );
+
+    await check(
+      "A second confirmed course assignment preserves participant access until its own release",
+      async () => {
+        const fixture = await create({ days: 10 });
+        const { room, run } = await participantRoom(fixture, "assignment");
+        const [otherJob, otherClaim] = Array.from({ length: 2 }, randomUUID);
+        // The second real confirmed claim shares this run; its future allocation
+        // is separate, so both withdrawals still use the public release path.
+        await sql(`insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms)
+       values(${q(otherJob)},${q(run)},'Fictional second assignment','Fictional academy','online','published',100,'EUR','per_day',100,'Fictional terms');
+       insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,currency,rate_unit,total_amount,terms,terms_version)
+       values(${q(otherClaim)},${q(otherJob)},${q(teacher)},${q(randomUUID())},100,'EUR','per_day',100,'Fictional terms',1);
+       insert into public.assignment_sessions(claim_id,lecturer_id,starts_at,ends_at)
+       values(${q(otherClaim)},${q(teacher)},now()+interval '40 days',now()+interval '40 days 1 hour');`);
+        assert.equal((await request(fixture, "")).status, "withdrawn");
+        assert.equal(await isMember(room), "t");
+        assert.equal(
+          (
+            await request(
+              { job: otherJob, claim: otherClaim, who: teacher },
+              "",
+            )
+          ).status,
+          "withdrawn",
+        );
+        assert.equal(await isMember(room), "f");
+      },
+    );
+
+    await check(
+      "Legacy enrolment removal requires an explicit membership decision and never guesses access provenance",
+      async () => {
+        const fixture = await create({ days: 10 });
+        const { room, run } = await participantRoom(fixture, "legacy");
+        await sql(`insert into public.chat_members(room_id,user_id) values(${q(room)},${q(participant)});
+       insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by) values(${q(run)},${q(participant)},'enrolled',${q(admin)});`);
+        await assert.rejects(
+          actor(
+            admin,
+            `select public.manage_course_enrolment(${q(run)},${q(participant)},'removed')`,
+            "aal2",
+          ),
+          /PZ002/,
+        );
+        assert.equal(
+          await sql(
+            `select status from public.course_enrolments where course_run_id=${q(run)} and user_id=${q(participant)}`,
+          ),
+          "enrolled",
+        );
+        await actor(
+          admin,
+          `select public.resolve_participant_chat_origin(${q(room)},${q(participant)},true)`,
+          "aal2",
+        );
+        await actor(
+          admin,
+          `select public.manage_course_enrolment(${q(run)},${q(participant)},'removed')`,
+          "aal2",
+        );
+        assert.equal(await isMember(room, participant), "t");
       },
     );
 
@@ -513,6 +697,70 @@ await withTestDatabase(
         "The actual withdrawal profile-lock barrier was not observed",
       );
     };
+    await check(
+      "A real concurrent claim serializes enrolment and manual membership removal",
+      async () => {
+        for (const mode of ["enrolment", "manual"]) {
+          const fixture = await create({ days: 10 });
+          const { room, run } = await participantRoom(fixture, "assignment");
+          if (mode === "enrolment") {
+            await sql(`insert into public.user_roles(user_id,role) values(${q(teacher)},'participant');
+           insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by) values(${q(run)},${q(teacher)},'enrolled',${q(admin)});`);
+          } else {
+            await actor(
+              admin,
+              `select public.manage_chat_member(${q(room)},${q(teacher)},false)`,
+              "aal2",
+            );
+          }
+          assert.equal((await request(fixture, "")).status, "withdrawn");
+          const nextJob = randomUUID();
+          await sql(`insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms)
+         values(${q(nextJob)},${q(run)},'Fictional simultaneous claim','Fictional academy','online','published',100,'EUR','per_day',100,'Fictional terms');
+         insert into public.job_sessions(job_id,starts_at,ends_at) values(${q(nextJob)},now()+${mode === "enrolment" ? "interval '80 days'" : "interval '100 days'"},now()+${mode === "enrolment" ? "interval '80 days 1 hour'" : "interval '100 days 1 hour'"});`);
+          const claimTag = `origin_claim_${randomUUID().replaceAll("-", "")}`;
+          const removeTag = `origin_remove_${randomUUID().replaceAll("-", "")}`;
+          const claiming = actor(
+            teacher,
+            `set local application_name=${q(claimTag)};select public.claim_job(${q(nextJob)},${q(randomUUID())},1);select pg_sleep(2)`,
+          );
+          let removing;
+          try {
+            await barrier(claimTag, "wait_event='PgSleep'");
+            const statement =
+              mode === "enrolment"
+                ? `select public.manage_course_enrolment(${q(run)},${q(teacher)},'removed')`
+                : `select public.manage_chat_member(${q(room)},${q(teacher)},true)`;
+            removing = actor(
+              admin,
+              `set local application_name=${q(removeTag)};${statement}`,
+              "aal2",
+            );
+            const outcomes = Promise.allSettled([claiming, removing]);
+            await barrier(removeTag, "wait_event_type='Lock'");
+            const [claimed, removed] = await outcomes;
+            assert.equal(claimed.status, "fulfilled");
+            assert.match(claimed.value, /"status": "confirmed"/);
+            assert.equal(
+              removed.status,
+              mode === "enrolment" ? "fulfilled" : "rejected",
+            );
+            if (removed.status === "rejected")
+              assert.match(removed.reason.message, /22023/);
+            assert.equal(await isMember(room), "t");
+          } finally {
+            await Promise.allSettled([
+              claiming,
+              ...(removing ? [removing] : []),
+            ]);
+            if (mode === "enrolment")
+              await sql(
+                `delete from public.user_roles where user_id=${q(teacher)} and role='participant'`,
+              );
+          }
+        }
+      },
+    );
     const revokeWhileQueued = async (who, statement, aal) => {
       const revokeTag = `withdrawal_revoke_${randomUUID().replaceAll("-", "")}`;
       const writeTag = `withdrawal_write_${randomUUID().replaceAll("-", "")}`;

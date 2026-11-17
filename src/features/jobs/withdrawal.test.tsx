@@ -261,3 +261,26 @@ it("does not offer peer review when the server denies that capability", async ()
     screen.queryByRole("button", { name: "Antrag ablehnen" }),
   ).not.toBeInTheDocument();
 });
+
+it("explains an unresolved legacy course-chat membership without confirming withdrawal", async () => {
+  const snapshot = baseline();
+  snapshot.claims[0].requires_approval = false;
+  setup(snapshot, () => ({ error: { code: "PZ002" }, data: null }));
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Von diesem Auftrag zurücktreten",
+    }),
+  );
+  await user.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Rücktritt bestätigen",
+    }),
+  );
+  expect(
+    await screen.findByText(
+      /Die Zuweisung bleibt bestätigt\. Eine für den Kurs-Chat/,
+    ),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+});

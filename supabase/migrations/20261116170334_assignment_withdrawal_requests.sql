@@ -396,14 +396,17 @@ begin
  insert into public.chat_rooms(job_id) values(j.id) on conflict(job_id) do update set job_id=excluded.job_id;
  -- Revoke the old lecturer's assignment-derived course memberships. A genuine
  -- independent enrolment/other accepted course assignment keeps its own rights.
+ if j.course_run_id is not null then perform 1 from public.course_runs where id=j.course_run_id for update;end if;
  for room in select r.id,r.kind,r.owner_id from public.chat_rooms r where
   (r.job_id=j.id and r.kind='lecturer_course') or (j.course_run_id is not null and r.course_run_id=j.course_run_id and r.kind='participant_course') order by r.id for update loop
-  if room.kind='lecturer_course' or (not exists(select 1 from public.jobs other join public.job_claims c on c.job_id=other.id where other.course_run_id=j.course_run_id and c.lecturer_id=original.lecturer_id and c.status='confirmed')
-   and not exists(select 1 from public.course_enrolments e where e.course_run_id=j.course_run_id and e.user_id=original.lecturer_id and e.status in('enrolled','completed'))) then
+  if room.kind='lecturer_course' then
    update public.chat_members set removed_at=clock_timestamp() where room_id=room.id and user_id=original.lecturer_id and removed_at is null;
+  else
+   perform private.participant_chat_assignment_release(room.id,original.lecturer_id,j.course_run_id);
+   perform private.participant_chat_assignment_grant(room.id,actor);
   end if;
   insert into public.chat_members(room_id,user_id) values(room.id,actor) on conflict(room_id,user_id) do update set removed_at=null,joined_at=clock_timestamp();
-  if room.owner_id=original.lecturer_id then update public.chat_rooms set owner_id=actor where id=room.id;end if;
+  if room.kind='lecturer_course' and room.owner_id=original.lecturer_id then update public.chat_rooms set owner_id=actor where id=room.id;end if;
  end loop;
  delete from private.job_waitlist where job_id=j.id and user_id=actor;
  update private.job_substitutions set status='accepted',accepted_claim_id=new_claim,accept_request_id=p_request_id,resolved_at=clock_timestamp() where id=offer.id;
@@ -530,21 +533,20 @@ begin
   -- kinds in the room-before-member order used by membership management.
   -- Another accepted assignment or genuine enrolment retains its own rights;
   -- the cancelled source claim itself never keeps participant-room access.
+  if j.course_run_id is not null then perform 1 from public.course_runs where id=j.course_run_id for update;end if;
   for room in select r.id,r.kind,r.owner_id from public.chat_rooms r where
    (r.job_id=j.id and r.kind='lecturer_course')
    or (j.course_run_id is not null and r.course_run_id=j.course_run_id and r.kind='participant_course')
    order by r.id for update loop
-   if room.kind='lecturer_course' or (
-    not exists(select 1 from public.jobs other join public.job_claims retained on retained.job_id=other.id
-     where other.course_run_id=j.course_run_id and retained.lecturer_id=c.lecturer_id and retained.status='confirmed')
-    and not exists(select 1 from public.course_enrolments e where e.course_run_id=j.course_run_id
-     and e.user_id=c.lecturer_id and e.status in('enrolled','completed'))) then
-    update public.chat_members set removed_at=clock_timestamp()
-     where room_id=room.id and user_id=c.lecturer_id and removed_at is null;
+   if room.kind='lecturer_course' then
+    update public.chat_members set removed_at=clock_timestamp() where room_id=room.id and user_id=c.lecturer_id and removed_at is null;
+   else
+    perform private.participant_chat_assignment_release(room.id,c.lecturer_id,j.course_run_id);
+    perform private.participant_chat_assignment_grant(room.id,auth.uid());
    end if;
    insert into public.chat_members(room_id,user_id) values(room.id,auth.uid())
     on conflict(room_id,user_id) do update set removed_at=null,joined_at=clock_timestamp();
-   if room.owner_id=c.lecturer_id then update public.chat_rooms set owner_id=auth.uid() where id=room.id;end if;
+   if room.kind='lecturer_course' and room.owner_id=c.lecturer_id then update public.chat_rooms set owner_id=auth.uid() where id=room.id;end if;
   end loop;
   insert into public.claim_events(claim_id,actor_id,event_type) values(c.id,auth.uid(),'cancelled');
   insert into public.audit_events(actor_id,action,resource_id,details) values(auth.uid(),'replacement.completed',o.id,jsonb_build_object('original_claim_id',c.id,'replacement_claim_id',result->>'claim_id'));
