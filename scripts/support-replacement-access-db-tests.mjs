@@ -344,7 +344,7 @@ update public.documents set current_version_id=${q(version)}where id=${q(documen
         );
         const participantRoom = await call(
           manager,
-          `public.create_chat_group('Fictional participant room',array[${q(source)}]::uuid[],'participant_course',${q(job)})`,
+          `public.create_chat_group('Fictional participant room',array[]::uuid[],'participant_course',${q(job)})`,
           "aal2",
         );
         assert.equal(
@@ -353,6 +353,10 @@ update public.documents set current_version_id=${q(version)}where id=${q(documen
           ),
           "t",
         );
+        // The room was created after the claim. Reconstruct its assignment-
+        // derived membership without inventing an independent manual grant.
+        await sql(`select private.participant_chat_assignment_grant(${q(participantRoom)},${q(source)});
+insert into public.chat_members(room_id,user_id)values(${q(participantRoom)},${q(source)})`);
         return {
           job,
           terms,

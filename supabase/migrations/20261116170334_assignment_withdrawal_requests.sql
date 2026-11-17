@@ -541,6 +541,7 @@ begin
    if room.kind='lecturer_course' then
     update public.chat_members set removed_at=clock_timestamp() where room_id=room.id and user_id=c.lecturer_id and removed_at is null;
    else
+    if room.owner_id=c.lecturer_id then update public.chat_rooms set owner_id=auth.uid() where id=room.id;end if;
     perform private.participant_chat_assignment_release(room.id,c.lecturer_id,j.course_run_id);
     perform private.participant_chat_assignment_grant(room.id,auth.uid());
    end if;
