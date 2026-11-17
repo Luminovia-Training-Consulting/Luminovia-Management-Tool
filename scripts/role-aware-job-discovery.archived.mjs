@@ -1,4 +1,8 @@
-/** Disposable PostgreSQL replay with fictional captured policies; no private production rates are used. */
+/** Historical role-percentage fixture retained for reference only. The portal
+ * now uses individually configured lecturer compensation; current behavior is
+ * covered by delegated-pricing-db-tests.mjs and replacement-directed-handover-db-tests.mjs.
+ * This archived probe is excluded from current acceptance discovery.
+ */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";

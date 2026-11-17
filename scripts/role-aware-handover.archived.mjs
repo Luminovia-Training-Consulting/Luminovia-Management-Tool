@@ -1,6 +1,7 @@
-/** Recipient-specific compensation/consent and unknown forecast evidence.
- * Policy percentages here are fictional and exist only in an owned disposable
- * database. No operational configuration, real customer or SMTP is accessed.
+/** Historical role-percentage fixture retained for reference only. The portal
+ * now uses individually configured lecturer compensation; current behavior is
+ * covered by delegated-pricing-db-tests.mjs and replacement-directed-handover-db-tests.mjs.
+ * This archived probe is excluded from current acceptance discovery.
  */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
