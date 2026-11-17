@@ -6,6 +6,7 @@
 - [x] Use Playwright's virtual clock for the 15-second stale-query behavior and shorten the idle observation only to 10.1 seconds, beyond the prior 10-second polling boundary.
 - [x] Baseline exact-head timings from the last green main-based CI: browser cases 20m34s; system verify 35m32s. About 17 minutes came from separate SQL/API suites run serially.
 - [ ] Validate bounded concurrency four for independent SQL/API suites with distinct fixtures, including stop-on-failure and wait-for-in-flight cleanup semantics; measure actual full CI before retaining it.
+- [ ] Scale independent PR SQL shards and retained selfhost candidate API checks to the actual runner CPU count (maximum four isolated workers); retain real migration/restart/image, auth, browser, concurrency, and cleanup proofs.
 - [ ] Complete focused formatting/type/browser inventory and full CI, then adjust browser workers based on actual runtime and runner contention. Do not trim coverage.
 
 ## PR31 after accepted documentation main — 17 November 2026

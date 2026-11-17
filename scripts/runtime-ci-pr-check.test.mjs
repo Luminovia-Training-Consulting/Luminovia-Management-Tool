@@ -3,7 +3,12 @@ import assert from "node:assert/strict";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
-import { prCheckPlan, runPrCheck, runPrSqlChecks } from "./ci-pr-check.mjs";
+import {
+  prCheckPlan,
+  prSqlShardCount,
+  runPrCheck,
+  runPrSqlChecks,
+} from "./ci-pr-check.mjs";
 import { root } from "./runtime-lib.mjs";
 
 test("PR plans include every SQL/runtime suite and Edge entry without repeating frontend quality or coverage", () => {
@@ -234,12 +239,12 @@ test("SQL startup failures stop assertions and retain bounded owned cleanup", as
   }
 });
 
-// All original suites must run exactly once across the two clusters.
+// All original suites must run exactly once across owned clusters.
 test("SQL shards partition every suite exactly once with distinct owned clusters", async () => {
-  const fixtures = [sqlFixture(), sqlFixture()];
+  const fixtures = Array.from({ length: 4 }, sqlFixture);
   await Promise.all(
     fixtures.map((fixture, sqlShard) =>
-      runPrCheck("sql", { ...fixture, sqlShard, sqlShards: 2 }),
+      runPrCheck("sql", { ...fixture, sqlShard, sqlShards: 4 }),
     ),
   );
   const suites = fixtures.map((fixture) =>
@@ -248,7 +253,9 @@ test("SQL shards partition every suite exactly once with distinct owned clusters
       .map(({ args }) => args[0]),
   );
   assert.deepEqual(suites.flat().sort(), [...prCheckPlan().sql].sort());
-  assert(!suites[0].some((suite) => suites[1].includes(suite)));
+  for (let left = 0; left < suites.length; left++)
+    for (let right = left + 1; right < suites.length; right++)
+      assert(!suites[left].some((suite) => suites[right].includes(suite)));
   const names = fixtures.map(
     (fixture) => fixture.calls.find(({ args }) => args[0] === "run").args,
   );
@@ -261,12 +268,12 @@ test("SQL shards partition every suite exactly once with distinct owned clusters
     assert(!/fsync|synchronous_commit|max_connections/.test(args.at(-1)));
   }
   await assert.rejects(
-    runPrCheck("sql", { sqlShard: 2, sqlShards: 2 }),
+    runPrCheck("sql", { sqlShard: 4, sqlShards: 4 }),
     /valid SQL shards/,
   );
 });
 
-test("SQL workers overlap, abort the peer on failure and await both cleanup paths", async () => {
+test("SQL workers overlap, abort peers on failure and await every cleanup path", async () => {
   const active = [];
   let peerCleaned = false;
   let releaseFirst;
@@ -275,6 +282,7 @@ test("SQL workers overlap, abort the peer on failure and await both cleanup path
   });
   await assert.rejects(
     runPrSqlChecks({
+      sqlShards: 2,
       worker: async (_mode, { sqlShard, signal, sqlShards }) => {
         assert.equal(sqlShards, 2);
         active.push(sqlShard);
@@ -305,6 +313,7 @@ test("SQL worker orchestration rejects pre-existing and mid-run cancellation", a
     let completed = 0;
     await assert.rejects(
       runPrSqlChecks({
+        sqlShards: 2,
         signal: cancellation.signal,
         worker: async (_mode, { signal }) => {
           if (alreadyAborted) assert(signal.aborted);
@@ -317,4 +326,12 @@ test("SQL worker orchestration rejects pre-existing and mid-run cancellation", a
     );
     assert.equal(completed, 2);
   }
+});
+
+test("SQL shard count scales with granted CPU but never exceeds four isolated clusters", () => {
+  assert.equal(prSqlShardCount(1), 1);
+  assert.equal(prSqlShardCount(2), 2);
+  assert.equal(prSqlShardCount(4), 4);
+  assert.equal(prSqlShardCount(16), 4);
+  assert.throws(() => prSqlShardCount(0), /positive integer/);
 });

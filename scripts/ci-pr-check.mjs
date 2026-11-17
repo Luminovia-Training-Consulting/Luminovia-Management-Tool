@@ -4,6 +4,7 @@
  * pinned PostgreSQL image and real suites, with Auth helpers emulated by them.
  */
 import { randomBytes } from "node:crypto";
+import { availableParallelism } from "node:os";
 import { appendFileSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -84,6 +85,13 @@ export function prCheckPlan(cwd = root) {
   };
 }
 
+/** Keep separate PostgreSQL workers within the resources actually granted to this runner. */
+export function prSqlShardCount(cpuCount = availableParallelism()) {
+  if (!Number.isInteger(cpuCount) || cpuCount < 1)
+    throw new Error("A positive integer CPU count is required.");
+  return Math.min(4, cpuCount);
+}
+
 /** Run one explicit PR mode. Dependency injection exercises failure/cleanup
  * without Docker; normal execution refuses remote engines and uses no host port.
  */
@@ -104,11 +112,13 @@ export async function runPrCheck(
     throw new Error("Choose guards or sql.");
   if (
     !Number.isInteger(sqlShard) ||
-    ![1, 2].includes(sqlShards) ||
+    !Number.isInteger(sqlShards) ||
+    sqlShards < 1 ||
+    sqlShards > 4 ||
     sqlShard < 0 ||
     sqlShard >= sqlShards
   )
-    throw new Error("Use one or two valid SQL shards.");
+    throw new Error("Use one to four valid SQL shards.");
   const plan = prCheckPlan(cwd);
   let env = cleanEnvironment();
   // Neither mode needs a GitHub write/read token, hosted credentials or secrets.
@@ -252,28 +262,31 @@ export async function runPrCheck(
   );
 }
 
-/** Run both exhaustive SQL shards in separate owned clusters. Failure stops the
+/** Run exhaustive SQL shards in separate owned clusters. Failure stops the
  * peer's commands, and all cleanup settles before a combined failure is reported.
  * Injectable workers let tests prove concurrency and membership without Docker.
  */
 export async function runPrSqlChecks({
   worker = runPrCheck,
   signal,
+  sqlShards = prSqlShardCount(),
   ...options
 } = {}) {
+  if (!Number.isInteger(sqlShards) || sqlShards < 1 || sqlShards > 4)
+    throw new Error("Use one to four valid SQL shards.");
   const cancellation = new AbortController();
   const cancel = () => cancellation.abort();
   if (signal?.aborted) cancel();
   signal?.addEventListener("abort", cancel, { once: true });
   try {
     const results = await Promise.allSettled(
-      [0, 1].map(async (sqlShard) => {
+      Array.from({ length: sqlShards }, async (_, sqlShard) => {
         try {
           await worker("sql", {
             ...options,
             signal: cancellation.signal,
             sqlShard,
-            sqlShards: 2,
+            sqlShards,
           });
         } catch (error) {
           cancellation.abort();
