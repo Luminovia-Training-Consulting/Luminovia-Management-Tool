@@ -303,6 +303,7 @@ await withApiFixture(
       ) > 0,
       "The created participant room records its membership origins",
     );
+    await sql(`delete from public.chat_members where room_id=${q(room)}`);
     await sql(`delete from public.chat_rooms where id=${q(room)}`);
     assert.equal(
       await sql(

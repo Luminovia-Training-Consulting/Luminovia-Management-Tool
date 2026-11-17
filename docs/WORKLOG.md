@@ -2180,6 +2180,10 @@ The first independently reviewable runtime slice adds `./portal github` and `sta
 
 The first preview CI43761274867 correctly failed its runtime fixtures before starting services: they copied the canonical runner's already-rewritten553xx/5273 config instead of normal upstream543xx/5173 config. Replaced only the fictional upstream input with self-contained normal TOML and added an explicit rejection of nested QA/preview overlays; production guards remain unchanged. The native rehearsal from signed278ce9b separately passed18 migrations, actual Auth/MFA/profile/private event/Storage bytes across stop/start, then removed only its own project and confirmed original5173/scratchDB remained running. Logs are private .local/m6-preview-native. The corrected exact-source CI remains the release gate.
 
+### PR #37 native cleanup follow-up — 2026-11-17
+
+The current selfhost CI run passed the API suites through `job-discovery-api-check.mjs`, then the new room-origin cascade regression failed because the test room still had rows in the existing `chat_members` table. The old `chat_members.room_id` FK correctly prevented deleting a referenced room. The fixture now deletes its own membership rows before deleting the test room, then keeps the assertion that the new `participant_chat_origins` rows cascade with that room. This changes test cleanup only; the feature migration and access rules are unchanged. Fresh exact-head selfhost CI remains required.
+
 ## Imported PR15 and PR20 delivery history
 
 The following isolated branch checkpoints are historical evidence. Current fourteen-check, signature and review-only policy is recorded above and in GITHUB_WORKFLOW; older always/disabled descriptions do not change it. These branch-only checks do not establish combined32 acceptance.
