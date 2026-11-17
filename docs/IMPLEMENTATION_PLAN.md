@@ -1331,3 +1331,6 @@ The migration-order regression now accepts later independent migrations while pr
 
 - [x] Align all-contract API acceptance with current `contracts.read` authorization rather than the removed MFA gate.
 - [ ] Complete current-head isolated system and selfhost CI after this correction.
+
+- [x] Make the all-contract permission acceptance independent of pre-seeded fictional contract rows while retaining the successful authorized response assertion.
+- [ ] Re-run complete isolated system and selfhost checks on the current main head.

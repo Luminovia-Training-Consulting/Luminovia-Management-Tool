@@ -2583,3 +2583,5 @@ Exact-head CI follow-up: the selfhost API run found a suspended-account chat ass
 Exact-head CI follow-up: the comments API check still expected a password-only administrator to be denied moderation for retired MFA/AAL reasons. The installed moderation policy uses current `jobs.manage` permission, so the stale denial and redundant later MFA step were replaced by one successful authorized moderation assertion; author visibility, revision conflict, withdrawal and audit checks remain.
 
 Exact-head CI follow-up: the commercial API suite still denied an administrator's `contract_records(p_all: true)` despite the installed `contracts.read` permission. The stale MFA-era error expectation now verifies the authorized empty projection before any contracts are created; lecturer-scoped and management commercial checks remain intact.
+
+Exact-head CI follow-up: the newly permissioned all-contract read succeeds and includes the isolated database's pre-existing fictional contract fixtures. The API test now verifies a successful array response without incorrectly assuming an empty database; source authorization remains `contracts.manage`/`contracts.read`.
