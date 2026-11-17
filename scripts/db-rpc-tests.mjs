@@ -181,7 +181,7 @@ try {
     const r = await Promise.all([rpc(users[50], a), rpc(users[50], b)]);
     assert.deepEqual(r.map((x) => x.status).sort(), ["confirmed", "conflict"]);
   });
-  await test("Unverified expertise rejected", async () =>
+  await test("Missing declared expertise rejected", async () =>
     assert.equal(
       (await rpc(users[51], await job({ topic_ids: [topic] }))).status,
       "not_eligible",
@@ -194,13 +194,17 @@ try {
     );
     assert.equal((await rpc(users[52], j)).status, "prerequisite_missing");
   });
-  await test("Qualification validity must cover all five days; valid contract version linked", async () => {
+  await test("Expired attestation does not revoke declared expertise; valid contract version linked", async () => {
     await sql(
       `insert into public.lecturer_topics(user_id,topic_id,verified,valid_until) values('${users[53]}','${topic}',true,now()+interval '1 day')`,
     );
+    const declared = await rpc(users[53], await job({ topic_ids: [topic] }));
+    assert.equal(declared.status, "confirmed");
     assert.equal(
-      (await rpc(users[53], await job({ topic_ids: [topic] }))).status,
-      "not_eligible",
+      await sql(
+        `select count(*) from public.assignment_sessions where claim_id='${declared.claim_id}'`,
+      ),
+      "5",
     );
     await sql(
       `insert into public.contracts(user_id,status,effective_from,expires_at,version) values('${users[52]}','active',now()-interval '1 day',now()+interval '1 year',2)`,
@@ -511,7 +515,7 @@ try {
       "throttled",
     );
   });
-  await test("Management attests only self-selected expertise and future expiry", async () => {
+  await test("Management attests only self-selected expertise; withdrawn attestation preserves declared matching", async () => {
     await assert.rejects(
       as(
         users[54],
@@ -579,10 +583,18 @@ try {
       ),
       "false|true",
     );
+    const afterWithdrawal = later.map((x) => ({
+      starts_at: new Date(+new Date(x.starts_at) + 10 * 86400000).toISOString(),
+      ends_at: new Date(+new Date(x.ends_at) + 10 * 86400000).toISOString(),
+    }));
     assert.equal(
-      (await rpc(users[54], await job({ topic_ids: [topic], sessions: later })))
-        .status,
-      "not_eligible",
+      (
+        await rpc(
+          users[54],
+          await job({ topic_ids: [topic], sessions: afterWithdrawal }),
+        )
+      ).status,
+      "confirmed",
     );
     await assert.rejects(
       as(
