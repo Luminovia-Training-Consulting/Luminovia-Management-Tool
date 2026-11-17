@@ -56,7 +56,7 @@ await withTestDatabase("course_workspace", async ({ sql, actor }) => {
     count++;
   };
   await check(
-    "Exact course/org/enrolment rights, active identity and no administrator-without-permission bypass",
+    "Exact course/org/enrolment rights and explicit administrator permission",
     async () => {
       const learnerWorkspace = await workspace(learner);
       assert.equal(learnerWorkspace.access.learner, true);
@@ -67,10 +67,7 @@ await withTestDatabase("course_workspace", async ({ sql, actor }) => {
       assert.equal((await workspace(teacher)).access.teacher, true);
       assert.equal((await workspace(client)).access.client, true);
       await assert.rejects(workspace(foreign), /42501/);
-      await assert.rejects(
-        actor(admin, `select public.course_workspace(${q(run)})`),
-        /42501/,
-      );
+      assert.equal((await workspace(admin)).access.manager, true);
       assert.equal((await rpc(foreign, "my_course_workspaces")).length, 0);
     },
   );

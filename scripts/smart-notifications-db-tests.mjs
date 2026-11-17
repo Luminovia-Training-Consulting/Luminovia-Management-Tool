@@ -8,7 +8,7 @@ await withTestDatabase("smart_notifications", async ({ sql, actor }) => {
     randomUUID,
   );
   await sql(
-    `insert into auth.users(id,email)values${[owner, peer, learner, client, admin].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};insert into public.user_roles(user_id,role)values(${q(owner)},'lecturer'),(${q(peer)},'lecturer'),(${q(learner)},'participant'),(${q(client)},'client'),(${q(admin)},'admin');`,
+    `insert into auth.users(id,email)values${[owner, peer, learner, client, admin].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};insert into public.user_roles(user_id,role)values(${q(owner)},'lecturer'),(${q(peer)},'lecturer'),(${q(learner)},'participant'),(${q(client)},'client'),(${q(admin)},'admin');insert into public.user_roles(user_id,role)values(${q(learner)},'client');`,
   );
   const [
     task,
