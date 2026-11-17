@@ -92,10 +92,10 @@ export function Shell() {
     if (focusInside) menu.querySelector("summary")?.focus();
   }, [location]);
   const client = useQueryClient();
-  // Match the Royal workspace rail default and remember only this visual choice.
+  // Start with the labelled workspace navigation; remember the user's own choice.
   const [collapsed, setCollapsed] = useState(() => {
     try {
-      return localStorage.getItem("luminovia.sidebar-collapsed") !== "false";
+      return localStorage.getItem("luminovia.sidebar-collapsed") === "true";
     } catch {
       return true;
     }
@@ -264,6 +264,13 @@ export function Shell() {
         {t("skip")}
       </a>
       <aside className="sidebar" aria-label={t("menu")}>
+        <NavLink className="sidebar-brand" to="/" aria-label="Luminovia Portal">
+          <img src="/brand/luminovia-logo-mark-160.webp" alt="" />
+          <span>
+            Luminovia
+            <small>Portal</small>
+          </span>
+        </NavLink>
         <Button
           variant="ghost"
           className="collapse-button"

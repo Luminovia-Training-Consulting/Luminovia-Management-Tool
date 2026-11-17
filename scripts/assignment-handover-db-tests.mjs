@@ -1,7 +1,11 @@
 /** Real isolated PostgreSQL waitlist/substitution races and immutable work. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
+import {
+  applyPasswordOnlyPermissionPolicy,
+  withTestDatabase,
+  quoteSql as q,
+} from "./testing/database.mjs";
 
 await withTestDatabase(
   "assignment_handover",
@@ -14,6 +18,7 @@ await withTestDatabase(
     insert into public.topics(id,kind,label_de,label_en) values(${q(topic)},'topic','Fiktives qualifiziertes Thema','Fictional qualified topic');
     insert into public.lecturer_topics(user_id,topic_id,verified) values${[teacher, replacement, peer, admin].map((id) => `(${q(id)},${q(topic)},true)`).join(",")};
     update public.profiles set display_name=case id when ${q(replacement)} then 'Fictional Replacement' when ${q(peer)} then 'Fictional Peer' else 'Fictional Actor' end;`);
+    await applyPasswordOnlyPermissionPolicy(sql);
     const rpc = async (who, name, args = [], aal = "aal1") =>
       JSON.parse(
         await actor(who, `select public.${name}(${args.join(",")})`, aal),
@@ -214,7 +219,7 @@ await withTestDatabase(
             (x) => Object.keys(x).sort().join(",") === "display_name,id",
           ),
         );
-        for (const who of [peer, admin, participant])
+        for (const who of [peer, participant])
           await assert.rejects(propose(f, replacement, who), /42501/);
         const id = await propose(f, replacement, admin, randomUUID(), "aal1");
         assert.equal(

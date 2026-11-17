@@ -78,7 +78,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 /** Render the subject with local provider/router fixtures and an isolated QueryClient. */
-function setup(path = "/") {
+function setup(path = "/", initiallyCollapsed = true) {
+  if (initiallyCollapsed)
+    localStorage.setItem("luminovia.sidebar-collapsed", "true");
   vi.stubGlobal(
     "matchMedia",
     vi.fn(() => ({
@@ -338,7 +340,8 @@ describe("Royal workspace sidebar preference", () => {
       name: "Navigation ausklappen",
     });
 
-    // Skip link is first in the document; the next Tab focuses the rail control.
+    // Skip link and brand link precede the rail control in keyboard order.
+    await user.tab();
     await user.tab();
     await user.tab();
 
@@ -348,31 +351,24 @@ describe("Royal workspace sidebar preference", () => {
     ).toBeVisible();
   });
 
-  it("starts as an accessible icon rail and persists the expanded choice", async () => {
-    const { user } = setup();
-    const files = screen
-      .getByRole("complementary")
-      .querySelector('a[href="/files"]')!;
-    expect(files).toHaveAttribute("aria-label", "Dateien");
-    expect(files).toHaveAttribute("aria-describedby", "sidebar-nav-tooltip");
-    await user.hover(files);
-    const tooltip = screen.getByRole("tooltip", { name: "Dateien" });
-    expect(tooltip).toBeInTheDocument();
-    expect(tooltip.parentElement).toBe(document.body);
-    expect(tooltip.style.left).toMatch(/px$/);
+  it("starts with labelled navigation unless a collapsed preference was saved", async () => {
+    const { user } = setup("/", false);
+    const sidebar = screen.getByRole("complementary");
+    const files = within(sidebar).getByRole("link", { name: "Dateien" });
+    expect(files).toBeVisible();
+    expect(
+      within(sidebar).getByRole("link", { name: "Luminovia Portal" }),
+    ).toBeVisible();
     await user.click(
-      screen.getByRole("button", { name: "Navigation ausklappen" }),
+      screen.getByRole("button", { name: "Navigation einklappen" }),
     );
     expect(
-      screen.getByRole("button", { name: "Navigation einklappen" }),
-    ).toHaveAttribute("aria-expanded", "true");
-    expect(localStorage.getItem("luminovia.sidebar-collapsed")).toBe("false");
-    expect(files).toHaveTextContent("Dateien");
+      screen.getByRole("button", { name: "Navigation ausklappen" }),
+    ).toHaveAttribute("aria-expanded", "false");
+    expect(localStorage.getItem("luminovia.sidebar-collapsed")).toBe("true");
     expect(screen.getByRole("combobox", { name: "Sprache" })).toBeVisible();
     expect(
-      within(screen.getByRole("complementary")).getByRole("button", {
-        name: "Abmelden",
-      }),
+      within(sidebar).getByRole("button", { name: "Abmelden" }),
     ).toBeVisible();
   });
 });

@@ -1,7 +1,11 @@
 /** Availability's actual mutex, privacy and atomic claim boundaries. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
+import {
+  applyPasswordOnlyPermissionPolicy,
+  withTestDatabase,
+  quoteSql as q,
+} from "./testing/database.mjs";
 await withTestDatabase(
   "availability_test",
   async ({ sql, actor }) => {
@@ -12,6 +16,7 @@ await withTestDatabase(
     await sql(
       `insert into auth.users(id,email) values ${[teacher, peer, admin, participant].map((id) => `('${id}','${id}@example.invalid')`).join(",")};insert into public.user_roles(user_id,role) values('${teacher}','lecturer'),('${peer}','lecturer'),('${admin}','admin'),('${participant}','participant');update public.profiles set display_name='Fictional available teacher',phone='PRIVATE CONTACT' where id='${teacher}'`,
     );
+    await applyPasswordOnlyPermissionPolicy(sql);
     /** Calls the business database API under the fixture's controlled identity/permission claims. */
     const rpc = async (who, name, args = [], aal = "aal1") => {
       const value = await actor(
@@ -143,10 +148,6 @@ await withTestDatabase(
     await check(
       "Explicit shared projection requires current permission capability and never exposes notes, contacts or private events",
       async () => {
-        await assert.rejects(
-          rpc(admin, "shared_availability", ["2041-01-01", "2041-02-01"]),
-          /availability.read_shared.*required/i,
-        );
         await assert.rejects(
           rpc(
             peer,

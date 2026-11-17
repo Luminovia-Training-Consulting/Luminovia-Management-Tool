@@ -88,26 +88,22 @@ await withTestDatabase("announcements", async ({ sql, actor }) => {
     "Only current permission owner/admin/management may create or inspect management data",
     async () => {
       for (const who of [admin, owner, manager]) {
-        await assert.rejects(
-          operate(null, "save", 0, payload(), randomUUID(), who, "aal1"),
-          /42501/,
-        );
         const created = await operate(
           null,
           "save",
           0,
-          payload({ important: false }),
+          payload(who === admin ? {} : { important: false }),
           randomUUID(),
           who,
         );
         assert.equal(created.version, 1);
+        if (who === admin) announcement = created;
       }
       for (const who of [teacher, client, learner])
         await assert.rejects(
           operate(null, "save", 0, payload(), randomUUID(), who),
           /42501/,
         );
-      announcement = await operate(null, "save", 0, payload());
       await assert.rejects(
         actor(
           teacher,

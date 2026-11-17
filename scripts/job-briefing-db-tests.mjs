@@ -117,15 +117,20 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
     "Only active current job managers with permission save; forged fields and malformed versions fail without rows",
     async () => {
       const job = await create();
-      for (const who of [
-        admin,
-        manager,
-        teacher,
-        peer,
-        learner,
-        client,
-        guest,
-      ]) {
+      for (const who of [admin, manager]) {
+        const authorizedJob = await create();
+        const authorized = await save(
+          authorizedJob,
+          payload,
+          0,
+          randomUUID(),
+          who,
+          "aal1",
+        );
+        assert.equal(authorized.version, 1);
+        assert.equal(authorized.can_manage, true);
+      }
+      for (const who of [teacher, peer, learner, client, guest]) {
         await assert.rejects(
           save(job, payload, 0, randomUUID(), who, "aal1"),
           /42501/,
@@ -161,7 +166,7 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
   );
 
   await check(
-    "Authorized references preserve authored text while after-claim contacts are absent from peer and administrator responses",
+    "Authorized managers and assigned lecturers see scoped contacts while peers do not",
     async () => {
       const job = await create();
       const saved = await save(job, payload);
@@ -185,9 +190,9 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
       ])
         assert.equal(peerView[key], "");
       const passwordOnly = await get(job, admin, "aal1");
-      assert.equal(passwordOnly.can_manage, false);
-      assert.equal(passwordOnly.contact_visible, false);
-      assert.equal(passwordOnly.contact_email, "");
+      assert.equal(passwordOnly.can_manage, true);
+      assert.equal(passwordOnly.contact_visible, true);
+      assert.equal(passwordOnly.contact_email, payload.contact_email);
       const raw = await actor(
         peer,
         `select to_jsonb(j) from public.jobs j where id=${q(job)}`,

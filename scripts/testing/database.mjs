@@ -9,6 +9,29 @@ import { randomUUID } from "node:crypto";
 import { collectUtf8 } from "./utf8-stream.mjs";
 /** Quotes one SQL literal; database names and other identifiers have separate validation. */
 export const quoteSql = (value) => `'${String(value).replaceAll("'", "''")}'`;
+/** Applies the permission helper from the current password-only migration to
+ * historical schema snapshots that intentionally stop before the auth-policy
+ * migration. Keeps those module tests representative of the current runtime. */
+export async function applyPasswordOnlyPermissionPolicy(sql) {
+  const migrations = await readdir(
+    new URL("../../supabase/migrations/", import.meta.url),
+  );
+  const migration = migrations.find((name) =>
+    /^\d{14}_remove_mfa_and_assurance_gates\.sql$/.test(name),
+  );
+  if (!migration)
+    throw new Error("Current password-only permission migration is missing.");
+  const source = await readFile(
+    new URL(`../../supabase/migrations/${migration}`, import.meta.url),
+    "utf8",
+  );
+  const definition = source.match(
+    /create or replace function private\.has_permission\(p_permission text\)[\s\S]*?\$\$;/i,
+  )?.[0];
+  if (!definition)
+    throw new Error("Current password-only permission policy is missing.");
+  await sql(definition);
+}
 const ownedTemplate = (value) => {
   if (!/^portal_test_template_[a-f0-9]{8}$/.test(value ?? ""))
     throw new Error(

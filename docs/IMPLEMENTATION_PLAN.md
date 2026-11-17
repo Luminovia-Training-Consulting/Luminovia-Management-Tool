@@ -1,5 +1,14 @@
 # Persistent implementation plan
 
+## Internal UI redesign — 17 November 2026
+
+- [x] Refresh the shared authenticated shell, official sidebar branding, readable navigation, page headings, panels, inputs, buttons, tables and dashboard metrics in line with the supplied clean navy/blue/pastel reference direction.
+- [x] Keep UI data and actions bound to existing authenticated actor/customer scopes; do not seed or copy the illustrative screenshot records.
+- [x] Pass focused shell regression (12/12), lint, typecheck, formatting and frontend build with synthetic public-only Supabase build values.
+- [ ] Visually inspect authenticated desktop and mobile dashboard, course workspace, jobs and operations screens against the supplied reference states. The current local Supabase start failure and missing in-app browser controller block screenshot capture; see `design-qa.md`.
+- [ ] Continue the full exact-head local system, API and browser acceptance after repairing the isolated runtime startup/cleanup issue. CI is outside the requested local audit.
+- [ ] Re-run the four availability, assignment-handover, job-briefing and announcement PostgreSQL suites after restoring this checkout's `supabase_db_luminovia-portal` container; their current attempt exited before assertions because that container is absent. An unrelated isolated QA container was not reused.
+
 **17 November QoL programme:** The user requests one integrated PR covering the supplied QoL prompt. Scope/status and gaps are tracked in [QOL_PROGRAMME_STATUS](QOL_PROGRAMME_STATUS.md), and every prompt criterion is enumerated in [QOL_FEATURE_MATRIX](QOL_FEATURE_MATRIX.md). The programme remains incomplete. The current branch has chat, calendar, contacts, wiki, restore and job-navigation slices; an integrated SQL replay passed, while exact-head full CI, browser/PWA/native acceptance and substantial feature inventory remain open. Preserve the full requested scope and report incomplete criteria honestly.
 
 ## Main migration-version collision — 17 November 2026

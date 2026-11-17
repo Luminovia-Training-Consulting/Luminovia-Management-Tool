@@ -32,28 +32,6 @@ async function checked(promise) {
 export function assertRetainedPrivateEvent(before, after) {
   assert.deepEqual(after, { description: "", meeting_url: "", ...before });
 }
-// Calculate a time-based code for the MFA factor created only for this probe.
-function totp(secret) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const bits = [...secret.replace(/=+$/, "")]
-    .map((character) =>
-      alphabet.indexOf(character).toString(2).padStart(5, "0"),
-    )
-    .join("");
-  const key = Buffer.from(
-    bits.match(/.{8}/g).map((byte) => Number.parseInt(byte, 2)),
-  );
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
-  const digest = createHmac("sha1", key).update(counter).digest();
-  return (
-    (digest.readUInt32BE(digest[digest.length - 1] & 15) & 0x7fffffff) %
-    1000000
-  )
-    .toString()
-    .padStart(6, "0");
-}
-
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const ledgerName = ".candidate-upgrade-probe.json";
 const maxLedgerBytes = 64 * 1024;
