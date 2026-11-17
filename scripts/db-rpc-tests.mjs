@@ -67,7 +67,7 @@ const test = async (name, fn) => {
   checks++;
   console.log(`PASS ${name}`);
 };
-const users = Array.from({ length: 55 }, () => randomUUID());
+const users = Array.from({ length: 56 }, () => randomUUID());
 const admin = randomUUID(),
   participant = randomUUID(),
   topic = randomUUID();
@@ -77,6 +77,15 @@ const sessions = Array.from({ length: 5 }, (_, i) => ({
   starts_at: new Date(+start + i * 86400000).toISOString(),
   ends_at: new Date(+start + i * 86400000 + 6 * 3600000).toISOString(),
 }));
+const laterSessions = (days) =>
+  sessions.map((session) => ({
+    starts_at: new Date(
+      +new Date(session.starts_at) + days * 86400000,
+    ).toISOString(),
+    ends_at: new Date(
+      +new Date(session.ends_at) + days * 86400000,
+    ).toISOString(),
+  }));
 /** Creates a complete fictional multi-day job for targeted positive and negative variants. */
 const jobPayload = (overrides = {}) => ({
   title: "Fictional five-day test course",
@@ -181,7 +190,7 @@ try {
     const r = await Promise.all([rpc(users[50], a), rpc(users[50], b)]);
     assert.deepEqual(r.map((x) => x.status).sort(), ["confirmed", "conflict"]);
   });
-  await test("Missing self-declared expertise is rejected", async () =>
+  await test("Unverified expertise rejected", async () =>
     assert.equal(
       (await rpc(users[51], await job({ topic_ids: [topic] }))).status,
       "not_eligible",
@@ -194,18 +203,22 @@ try {
     );
     assert.equal((await rpc(users[52], j)).status, "prerequisite_missing");
   });
-  await test("Self-declared expertise is sufficient despite verification expiry; valid contract version linked", async () => {
+  await test("Self-declared expertise remains eligible despite expired verification metadata", async () => {
     await sql(
-      `insert into public.lecturer_topics(user_id,topic_id,verified,valid_until) values('${users[53]}','${topic}',false,now()-interval '1 day')`,
+      `insert into public.lecturer_topics(user_id,topic_id,verified,valid_until) values('${users[55]}','${topic}',false,now()-interval '1 day')`,
     );
-    const selfDeclared = await rpc(
-      users[53],
-      await job({ topic_ids: [topic] }),
+    assert.equal(
+      (
+        await rpc(
+          users[55],
+          await job({ topic_ids: [topic], sessions: laterSessions(10) }),
+        )
+      ).status,
+      "confirmed",
     );
-    assert.equal(selfDeclared.status, "confirmed");
     assert.equal(
       await sql(
-        `select count(*) from public.assignment_sessions where claim_id='${selfDeclared.claim_id}'`,
+        `select count(*) from public.assignment_sessions where claim_id=(select id from public.job_claims where user_id='${users[55]}' order by created_at desc limit 1)`,
       ),
       "5",
     );
@@ -243,7 +256,7 @@ try {
     await sql(
       `update public.jobs set amount=999,total_amount=4995,terms='Changed terms' where id in ('${j}','${target}')`,
     );
-    assert.equal((await rpc(users[53], j)).status, "terms_changed");
+    assert.equal((await rpc(users[55], j)).status, "terms_changed");
     assert.equal(
       await sql(
         `select amount::text || '|' || terms from public.job_claims where id='${claim}'`,
@@ -565,14 +578,7 @@ try {
       ),
       "management_attestation",
     );
-    const later = sessions.map((x) => ({
-      starts_at: new Date(+new Date(x.starts_at) + 20 * 86400000).toISOString(),
-      ends_at: new Date(+new Date(x.ends_at) + 20 * 86400000).toISOString(),
-    }));
-    const laterAgain = later.map((x) => ({
-      starts_at: new Date(+new Date(x.starts_at) + 20 * 86400000).toISOString(),
-      ends_at: new Date(+new Date(x.ends_at) + 20 * 86400000).toISOString(),
-    }));
+    const later = laterSessions(20);
     assert.equal(
       (await rpc(users[54], await job({ topic_ids: [topic], sessions: later })))
         .status,
@@ -594,7 +600,7 @@ try {
       (
         await rpc(
           users[54],
-          await job({ topic_ids: [topic], sessions: laterAgain }),
+          await job({ topic_ids: [topic], sessions: laterSessions(40) }),
         )
       ).status,
       "confirmed",

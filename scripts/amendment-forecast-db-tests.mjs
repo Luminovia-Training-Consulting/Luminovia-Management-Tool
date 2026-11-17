@@ -98,6 +98,13 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
         "public.configure_compensation_policy(37,61,0)",
         "aal1",
       );
+      // Keep this historical accepted-charge scenario stable under the newer
+      // per-lecturer defaults by explicitly assigning its original 37% rate.
+      await call(
+        admin,
+        `public.save_lecturer_compensation(${q(teacher)},'percent',37,200,'AUD',1)`,
+        "aal1",
+      );
       /** Normal online publication/claim captures the original immutable charge. */
       const make = async ({
         currency = "AUD",
@@ -380,6 +387,11 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
           await call(
             admin,
             "public.configure_compensation_policy(0,61,1)",
+            "aal1",
+          );
+          await call(
+            admin,
+            `public.save_lecturer_compensation(${q(teacher)},'percent',0,200,'AUD',2)`,
             "aal1",
           );
           const zero = await make({ day: 25 });

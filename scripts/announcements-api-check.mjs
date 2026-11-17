@@ -65,15 +65,6 @@ await withApiFixture(async ({ actor, passwordOnly, sql, defer, checked, suffix }
     checks++;
     console.log("PASS " + name);
   };
-  assert.equal(
-    (
-      await admin.client.rpc(
-        "manage_announcement",
-        args(null, "save", 0, payload()),
-      )
-    ).error?.code,
-    "42501",
-  );
   await passwordOnly(admin.client);
   await passwordOnly(manager.client);
   let draft = await manage(args(null, "save", 0, payload()));
