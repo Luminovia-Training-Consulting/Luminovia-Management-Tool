@@ -142,12 +142,14 @@ await withTestDatabase(
           (await list(manager, fixture.job, "aal1")).can_review,
           true,
         );
-        for (const who of [peer, participant]) {
-          const hidden = await list(who, fixture.job);
-          assert.deepEqual(hidden.items, []);
-          assert.deepEqual(hidden.claims, []);
-          assert.equal(hidden.can_review, false);
-        }
+        const hidden = await list(peer, fixture.job);
+        assert.deepEqual(hidden.items, []);
+        assert.deepEqual(hidden.claims, []);
+        assert.equal(hidden.can_review, false);
+        await assert.rejects(
+          list(participant, fixture.job),
+          /Authentication required/,
+        );
         for (const table of [
           "assignment_withdrawals",
           "assignment_withdrawal_commands",
