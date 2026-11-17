@@ -95,6 +95,41 @@ export function parseCalendarImport(
     };
     if (!event.isRecurring()) append(event.startDate, event.endDate, event);
     else {
+      // An exception can move a later recurrence into the review window. Extend
+      // the original-time horizon before stopping the ordered iterator. A range
+      // exception may shift subsequent occurrences as well; keep the existing
+      // iteration cap so a distant exception fails explicitly instead of hanging.
+      let horizon = windowEnd;
+      for (const exception of Object.values(event.exceptions)) {
+        if (!exception.component.hasProperty("dtstart")) continue;
+        const original = instant(
+          exception.recurrenceId,
+          exception.component,
+          "recurrence-id",
+          zone,
+        ).value;
+        const adjusted = instant(
+          exception.startDate,
+          exception.component,
+          "dtstart",
+          zone,
+        ).value;
+        if (
+          adjusted >= windowStart &&
+          adjusted < windowEnd &&
+          original > horizon
+        )
+          horizon = original;
+        if (exception.modifiesFuture() && adjusted < windowEnd) {
+          const shiftedEnd = windowEnd.plus({
+            milliseconds: Math.max(
+              0,
+              original.toMillis() - adjusted.toMillis(),
+            ),
+          });
+          if (shiftedEnd > horizon) horizon = shiftedEnd;
+        }
+      }
       const iterator = event.iterator();
       let exhausted = false;
       for (let count = 0; count < 10000; count++) {
@@ -110,11 +145,15 @@ export function parseCalendarImport(
           "dtstart",
           zone,
         ).value;
-        if (start >= windowEnd) {
+        // Exceptions can move an occurrence forward past the window while
+        // subsequent original occurrences still fall inside it. The iterator
+        // is ordered by the original recurrence, not by the adjusted start.
+        const scheduled = instant(next, event.component, "dtstart", zone).value;
+        if (scheduled > horizon && start >= windowEnd) {
           exhausted = true;
           break;
         }
-        if (start >= windowStart)
+        if (start >= windowStart && start < windowEnd)
           append(occurrence.startDate, occurrence.endDate, occurrence.item);
       }
       if (!exhausted) throw new Error("too_many");

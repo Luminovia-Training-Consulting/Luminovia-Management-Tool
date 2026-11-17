@@ -10,6 +10,61 @@ const file = (...events: string[]) =>
 const parse = (source: string, from = "2026-03-01", until = "2026-03-31") =>
   parseCalendarImport(source, "Europe/Berlin", from, until, "Termin");
 describe("reviewed ICS import", () => {
+  it("includes an exception moved into the window from a later occurrence", () => {
+    const events = parse(
+      file(
+        "UID:series-back\r\nDTSTART;TZID=Europe/Berlin:20260330T090000\r\nDTEND;TZID=Europe/Berlin:20260330T100000\r\nRRULE:FREQ=DAILY;COUNT=6\r\nSUMMARY:Serie",
+        "UID:series-back\r\nRECURRENCE-ID;TZID=Europe/Berlin:20260403T090000\r\nDTSTART;TZID=Europe/Berlin:20260331T120000\r\nDTEND;TZID=Europe/Berlin:20260331T130000\r\nSUMMARY:Vorgezogen",
+      ),
+    );
+    expect(events.map((event) => event.title)).toEqual([
+      "Serie",
+      "Serie",
+      "Vorgezogen",
+    ]);
+  });
+  it("includes later occurrences shifted into the window by a range exception", () => {
+    const events = parse(
+      file(
+        "UID:range-back\r\nDTSTART:20260328T090000Z\r\nDTEND:20260328T100000Z\r\nRRULE:FREQ=DAILY;COUNT=7\r\nSUMMARY:Serie",
+        "UID:range-back\r\nRECURRENCE-ID;RANGE=THISANDFUTURE:20260330T090000Z\r\nDTSTART:20260328T120000Z\r\nDTEND:20260328T130000Z\r\nSUMMARY:Vorgezogen",
+      ),
+    );
+    expect(events.map((event) => event.starts_at)).toEqual([
+      "2026-03-28T09:00:00.000Z",
+      "2026-03-28T12:00:00.000Z",
+      "2026-03-29T09:00:00.000Z",
+      "2026-03-29T12:00:00.000Z",
+      "2026-03-30T12:00:00.000Z",
+      "2026-03-31T12:00:00.000Z",
+    ]);
+  });
+  it("reports an excessively distant exception instead of silently skipping it", () => {
+    expect(() =>
+      parse(
+        file(
+          "UID:far\r\nDTSTART:20260301T090000Z\r\nDTEND:20260301T100000Z\r\nRRULE:FREQ=DAILY\r\nSUMMARY:Serie",
+          "UID:far\r\nRECURRENCE-ID:20560101T090000Z\r\nDTSTART:20260302T120000Z\r\nDTEND:20260302T130000Z\r\nSUMMARY:Vorgezogen",
+        ),
+        "2026-03-01",
+        "2026-03-03",
+      ),
+    ).toThrow("too_many");
+  });
+  it("retains later occurrences when an earlier exception moves beyond the window", () => {
+    const events = parse(
+      file(
+        "UID:series\r\nDTSTART;TZID=Europe/Berlin:20260327T090000\r\nDTEND;TZID=Europe/Berlin:20260327T100000\r\nRRULE:FREQ=DAILY;COUNT=5\r\nSUMMARY:Serie",
+        "UID:series\r\nRECURRENCE-ID;TZID=Europe/Berlin:20260328T090000\r\nDTSTART;TZID=Europe/Berlin:20260415T090000\r\nDTEND;TZID=Europe/Berlin:20260415T100000\r\nSUMMARY:Verschoben",
+      ),
+    );
+    expect(events.map((event) => event.starts_at)).toEqual([
+      "2026-03-27T08:00:00.000Z",
+      "2026-03-29T07:00:00.000Z",
+      "2026-03-30T07:00:00.000Z",
+      "2026-03-31T07:00:00.000Z",
+    ]);
+  });
   it("unfolds escaped text and preserves explicit instants and private description", () => {
     const [event] = parse(
       file(
