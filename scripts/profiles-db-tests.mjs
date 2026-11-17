@@ -226,12 +226,15 @@ try {
   await check(
     "Client visibility is limited to their organisation assigned lecturers and course history",
     async () => {
-      assert.deepEqual(await rpc(client, "people_directory"), []);
+      assert.deepEqual(
+        await rpc(client, "people_directory", ["", "", null]),
+        [],
+      );
       await sql(
         `insert into public.client_organisation_memberships(user_id,organisation_id) values('${client}','${org}');`,
       );
       assert.equal(await actor(client, "select private.actor_active()"), "t");
-      const people = await rpc(client, "people_directory");
+      const people = await rpc(client, "people_directory", ["", "", null]);
       assert.deepEqual(
         people.map((x) => x.id),
         [lecturer],
@@ -245,7 +248,10 @@ try {
         `update public.client_organisation_memberships set removed_at=now() where user_id='${client}'`,
       );
       assert.equal(await actor(client, "select private.actor_active()"), "t");
-      assert.deepEqual(await rpc(client, "people_directory"), []);
+      assert.deepEqual(
+        await rpc(client, "people_directory", ["", "", null]),
+        [],
+      );
     },
   );
   await check(
