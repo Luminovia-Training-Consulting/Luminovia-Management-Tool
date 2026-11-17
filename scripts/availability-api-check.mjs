@@ -80,13 +80,15 @@ await withApiFixture(async ({ service, actor, passwordOnly, checked, sql, defer 
     [],
   );
   assert.ok((await save(admin, id, body, 1)).error);
-  assert.ok(
-    (
-      await admin.client.rpc("shared_availability", {
+  assert.deepEqual(
+    await checked(
+      admin.client.rpc("shared_availability", {
         p_from: "2061-05-01",
         p_to: "2061-06-01",
-      })
-    ).error,
+      }),
+    ),
+    [],
+    "Password-only management has no calendar visibility without explicit consent",
   );
   // password-only authentication alone does not share calendar data; only explicit consent opens the reduced projection.
   await passwordOnly(admin.client);
