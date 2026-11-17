@@ -227,7 +227,7 @@ test("wiki draft, MFA publishing, code preservation and unpublished revision pri
       .click();
     await a11y(page);
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-wiki.png`,
+      path: `.local/screenshots/${testInfo.project.name}-wiki.png`,
       fullPage: true,
     });
   } finally {
@@ -368,7 +368,7 @@ test("forum supports real rich-text discussion, accepted answers, reports and MF
       .click();
     await a11y(responder);
     await responder.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-forum.png`,
+      path: `.local/screenshots/${testInfo.project.name}-forum.png`,
       fullPage: true,
     });
   } finally {

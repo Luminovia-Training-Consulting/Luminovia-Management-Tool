@@ -40,7 +40,7 @@ import {
 const action = process.argv[2] ?? "start";
 if (process.platform !== "linux" && !["help", "--help", "-h"].includes(action))
   throw new Error(
-    "Der lokale Launcher ist derzeit für Linux geprüft. Siehe docs/LOCAL_DEVELOPMENT.md.",
+    "Der lokale Launcher ist derzeit für Linux geprüft. Siehe DEVELOPMENT.md.",
   );
 /** Serialises this checkout's runtime mutations and releases its own lock on failure as well. */
 async function locked(operation) {

@@ -350,7 +350,7 @@ test("executed PDF receipt, original-currency earnings, invoice review and recor
   );
   await a11y(page);
   await page.screenshot({
-    path: `docs/screenshots/${testInfo.project.name}-finance.png`,
+    path: `.local/screenshots/${testInfo.project.name}-finance.png`,
     fullPage: true,
   });
   await adminPage.goto("/finance");

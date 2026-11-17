@@ -286,7 +286,7 @@ test("personal cards and teaching preparation persist in the real account across
     })),
   ).toEqual([]);
   await page.screenshot({
-    path: `docs/screenshots/${testInfo.project.name}-dashboard-personal.png`,
+    path: `.local/screenshots/${testInfo.project.name}-dashboard-personal.png`,
     fullPage: true,
   });
 });

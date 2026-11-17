@@ -80,7 +80,7 @@ test("readonly operations catalogue is accessible and private client directory i
     ),
   ).toBe(true);
   await page.screenshot({
-    path: `docs/screenshots/${testInfo.project.name}-courses.png`,
+    path: `.local/screenshots/${testInfo.project.name}-courses.png`,
     fullPage: true,
   });
   await page.goto("/clients");
@@ -176,7 +176,7 @@ test("admin persists private customer/contact, course template/run and safe unpu
   ).toBeVisible();
   await a11y(page);
   await page.screenshot({
-    path: `docs/screenshots/${testInfo.project.name}-clients.png`,
+    path: `.local/screenshots/${testInfo.project.name}-clients.png`,
     fullPage: true,
   });
   await page.goto("/courses");

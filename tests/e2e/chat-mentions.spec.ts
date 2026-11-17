@@ -133,7 +133,7 @@ test("profile opens an actual DM, current member mentions and a dropped scanned 
   ).toContainText(target.name);
   await a11y(page);
   await page.screenshot({
-    path: `docs/screenshots/${testInfo.project.name}-chat-mentions.png`,
+    path: `.local/screenshots/${testInfo.project.name}-chat-mentions.png`,
     fullPage: true,
   });
 });

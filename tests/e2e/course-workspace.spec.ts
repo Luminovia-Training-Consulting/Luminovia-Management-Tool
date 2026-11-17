@@ -254,7 +254,7 @@ test("real shared preparation, explicitly agreed contact and scanned file versio
     ).toBeVisible();
     await a11y(customer);
     await customer.screenshot({
-      path: `docs/screenshots/${info.project.name}-course-client-workspace.png`,
+      path: `.local/screenshots/${info.project.name}-course-client-workspace.png`,
       fullPage: true,
     });
   } finally {
@@ -391,7 +391,7 @@ test("enrolled learner persists private notes, posts course questions, passes el
   await page.getByLabel("Theme", { exact: true }).selectOption("dark");
   await a11y(page);
   await page.screenshot({
-    path: `docs/screenshots/${info.project.name}-course-participant-workspace.png`,
+    path: `.local/screenshots/${info.project.name}-course-participant-workspace.png`,
     fullPage: true,
   });
 });

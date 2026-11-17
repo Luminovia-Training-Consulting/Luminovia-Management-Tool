@@ -1,0 +1,3026 @@
+# Guide
+
+Consolidated reference. Source and tests remain authoritative for current behavior.
+
+
+<a id="section-user-guide"></a>
+
+<a id="section-user-guide-luminovia-portal--user-guide"></a>
+# Luminovia Portal — user guide
+
+<a id="section-user-guide-new-operational-workflows"></a>
+## New operational workflows
+
+At `/enquiries`, current organisation management with MFA can review private training requests, assign responsibility, link or create the fictional/configured customer and convert reviewed dates into a course run. Requests are preferences until management confirms a plan; no commercial quote is invented. The trusted-server endpoint is disabled by default and the public marketing site is unchanged. See [website enquiries](GUIDE.md#section-website-enquiries) for configuration and remaining activation requirements.
+
+Course readiness at `/readiness` shows the server-calculated preparation checklist for management or your current assignments; follow incomplete requirements, acknowledge current instructions and complete your tasks. Teaching delivery at `/delivery` saves actual session evidence, explicitly submits the reviewed draft and preserves corrections/review history. The replacement marketplace at `/replacements` keeps your original commitment while a complete future block is offered; a replacement must accept its exact terms online. Started/invoiced replacements require separate management amendment. Support at `/support` provides your own ticket history, replies and scanned attachments; internal support notes remain restricted. German/English and existing themes are supported. [Readiness guide](GUIDE.md#section-course-readiness), [delivery guide](GUIDE.md#section-teaching-delivery), [replacement guide](GUIDE.md#section-replacement-marketplace), [support guide](GUIDE.md#section-support-desk) explain the workflows. Their actual test/release status is in the extension ledger; source availability does not claim a deployed or fully accepted product.
+
+This guide describes the current repository source, including scoped course/participant workspaces, request briefs, personal teaching context, workbench, timesheets/financial facts, waitlists/substitution, private calendar connections, Push settings and own qualification-passport export. Your current role and resource access determine which controls appear. Source availability does not prove that the installed hosted release includes each feature or that the current full native/device/hosting acceptance has passed; consult the relevant pull request checks and the feature/operations guides.
+
+Local development uses fictional accounts and records. `./portal start` prints the local address/account instructions; `./portal status` reports service state and `./portal stop` retains application data. `./portal test` creates an isolated complete test stack without using development records. `./portal github` and `./portal github test` operate the separate latest-main preview described in [GITHUB_LOCAL_PREVIEW](DEVELOPMENT.md#section-github-local-preview). A mock/demo result or captured local mail is not a real invitation, external delivery, live timer or production approval. The full master scope remains recorded in [PRODUCT_SPEC](PRODUCT.md#section-product-spec), [SMART_OPERATIONS_SPEC](PRODUCT.md#section-smart-operations-spec) and the persistent plan.
+
+On desktop, use the navigation control to expand or collapse the workspace rail; this visual preference is stored in the current browser. Search, notifications and sign-out are available from the rail; language and theme controls remain in the top bar. On mobile, the More menu contains all currently permitted destinations and search, while preferences and sign-out remain in the top bar.
+
+Use `./portal check` for fast local source/coverage/build validation and `./portal test` for complete isolated acceptance. [PR preview packages](DEVELOPMENT.md#section-pr-previews) are downloadable local runtimes after the required checks; they are not continuously hosted public PR instances.
+
+<a id="section-user-guide-guided-demo-and-help"></a>
+## Guided demo and help
+
+At sign-in choose **Demo mit Beispieldaten ausprobieren / Try the sample-data demo** for the public fictional sandbox, or **Hilfe & Anleitungen / Help & guides** for searchable bilingual instructions and troubleshooting. Signed-in users can launch **Portal-Rundgang / Portal tour** above the workspace. The live tour only explains/navigates; use the demo to practise without real business actions. [Usage, privacy boundaries and verification](GUIDE.md#section-guided-demo-and-help).
+
+<a id="section-user-guide-sign-in-and-account-security"></a>
+## Sign in and account security
+
+Open the local URL printed by the development server. Use an account created for that local Supabase environment. Public self-registration is disabled. Sign in at `/login` with the invited account's email/password. Invitation/recovery links target `/auth/callback` (with `/auth/password` also available for password setup). The invitation asks for explicit acceptance, then password setup. This full journey and recovery have been verified with fictional local accounts; production uses separately approved email configuration. Production email delivery is a separate configuration and acceptance gate.
+
+Account invitations and recovery rely on Supabase Auth. A local captured test email is not a message sent to a real lecturer. If sign-in or account setup fails, use the visible error and contact the responsible administrator; do not reuse test credentials outside local development.
+
+At `/security`, set up/challenge the supported authenticator MFA flow. Management operations require a database-verified second factor. A role label alone does not grant access and a screen cannot override backend denial. Sign out after using a shared device.
+
+<a id="section-user-guide-language-theme-and-profile"></a>
+## Language, theme and profile
+
+Use the language control to switch German/English without translating authored course/profile text. Choose light/dark/system appearance. These non-sensitive preferences may be stored locally.
+
+At `/profile`, edit your permitted self-service fields, bilingual biography, display zone and declared expertise, then save and wait for confirmation. The separate **Öffentliche Profilangaben / Public profile details** form records country, spoken languages, teaching experience and your own comma-separated labels. These details are visible only to authorised portal members. A save error means the server has not confirmed the change. Labels describe you; they do not grant roles, verify qualifications or set commercial prices. Expertise verification, account roles and contract status are controlled separately by authorised management.
+
+An active lecturer can explicitly choose **Qualifikationspass als PDF herunterladen / Download qualification passport as PDF** on their own profile and select German or English. The protected PDF separates selected expertise, recorded verification/expiry, current shared-certificate availability and known attestation history. Self-declared profile fields stay labelled as such. Unknown historical provenance is not invented. The PDF contains no certificate files, contacts, CV, contracts or fees and is not a new verification, public profile link or legal signature. You decide whether to share the downloaded copy. Offline/unavailable access or unsupported font characters produce an error; no silent character substitution or background export is performed. See [Qualification passport](GUIDE.md#section-qualification-passport).
+
+<a id="section-user-guide-individual-accounts-roles-and-organisation-access"></a>
+## Individual accounts, roles and organisation access
+
+Each person has an individual invited account and chooses their own password. The supported roles are **Inhaberin / Plattformleitung / Owner**, **Administration**, **Management**, **Senior-Dozent:in / Senior lecturer**, **Dozent:in / Lecturer**, **Unternehmen / Company**, **Kursteilnehmer:in / Course participant** and **Gast / Guest**. Guest grants no business access. Compatible roles may be combined; company and teaching/management functions require separate non-administrative accounts. Owner and Administration can perform the business functions, including eligible teaching claims and their own invoice workflow. Privileged account, publishing and financial operations still require the corresponding server permission and MFA. This does not make them members of other people's private chats or reveal private calendar entries.
+
+On your first dashboard visit, **Willkommen bei Luminovia / Welcome to Luminovia** introduces the permitted areas step by step. Use Next/Back, open an area, pause and resume, or skip. Progress is private to your account and saved only after online server confirmation. Open **Einführung / Welcome guide** at `/welcome` to restart or continue later. This guide introduces functions; it does not assign roles, upload files or complete MFA on your behalf. Its private, server-confirmed progress is separate from the Portal tour's tab-session progress. See the [welcome guide](GUIDE.md#section-welcome-guide).
+
+Authorised administrators open `/admin/accounts` (**Konten & Zugänge / Accounts & access**) to search accounts, invite a new person with the intended role, and edit roles through a named confirmation. An invitation is reported as sent only after server confirmation; retries do not send another invitation. An administrator with the required gross-finance permission and MFA can choose a client account's existing organisation and save **Organisation zuordnen / Assign organisation**. **Organisationszugriff entziehen / Revoke organisation access** removes that association. A client role without an active association does not grant company-wide access. One organisation can have several individually invited contacts, and an authorised administrator can associate a client with more than one organisation.
+
+Management can assign the permitted subordinate roles; Administration can additionally assign Management. Management may invite a company account without granting organisation access. Associating or revoking an organisation, or including an organisation in an invitation, requires the separate administrative gross-finance permission and MFA. Only server-approved roles and editable target accounts appear in the controls. Self changes and changes to equal/higher authority accounts are rejected even through direct API calls. Role changes apply to subsequent authorised API requests and preserve accepted assignments and fees. The last active administrator remains protected. Follow the linked management profile for evidence review and account suspension. Existing development volumes retain their accounts and records; first-boot fictional fixture changes do not silently rewrite them. Use the private local credentials command rather than putting passwords in project files or support messages. The approved integration surface is documented in [API_REFERENCE.md](API_REFERENCE.md).
+
+<a id="section-user-guide-permanent-deletion"></a>
+## Permanent deletion
+
+Open **Endgültig löschen / Delete permanently** at `/admin/deletions` with the current required permissions and verified two-factor sign-in. Context actions also appear on permitted accounts, jobs/assignments and the existing file menu. Archiving remains a separate action. A company account's **Eigene Aufträge endgültig löschen / Permanently delete your own jobs** list contains only jobs linked consistently to its current organisations; names, old lecturer assignments or a former membership do not grant access.
+
+Review the server-provided target, affected record counts and protected dependencies. If deletion is permitted, acknowledge the irreversible impact, enter `DELETE`, and confirm. There is no trash, restore or undo. A blocked preview removes nothing. Accepted/invoiced/shared dependencies can require separate resolution; administrator status does not reveal private message bodies, calendars or personal contracts.
+
+Wait for **Die endgültige Löschung wurde vollständig bestätigt / Permanent deletion has been fully confirmed**. Pending cleanup is not success: it can be waiting for a running upload or unavailable Auth/Storage. Use **Vorgang erneut prüfen / fortsetzen / Check / resume operation**. Incomplete operations remain reachable after navigation/reload under current server permissions. A changed or expired preview requires a new unchecked review. Do not confuse suspension/archive with physical account/file deletion. Previously downloaded copies and backup retention are outside this live application action.
+
+<a id="section-user-guide-people-course-history-and-participant-reviews"></a>
+## People, course history and participant reviews
+
+At `/people`, search the permitted directory by name/text, declared label or topic. Open `/people/<id>` for the member's allowed biography, experience, languages, topics and upcoming/current/past teaching history. A verified topic is distinguished from a self-declared one. Private phone/email, contracts and financial terms are not part of these directory cards. **Nachricht schreiben / Message** opens the permitted direct-message workflow. Course links open `/courses?run=<id>` only when the current person may view that run.
+
+Authorised management opens a course run at `/courses` and uses **Kursteilnehmende verwalten / Manage course participants** to choose an eligible person and save an enrolled, completed or removed status. Mark participation completed only after actual attendance and after all the course sessions have ended. This is a separate attestation, not a result inferred from a self-selected role. Commercial lecturer channels remain separate from participant-facing access.
+
+At `/my-reviews` (**Meine Kursbewertungen / My course reviews**), eligible participants see genuinely completed courses for which participation has been confirmed. Select a rating from 1 to 5, add feedback and save online. Reviews may be edited or withdrawn through the supported controls; a concurrent-edit conflict requires reloading and checking the latest version. Other members do not see the reviewer's name. A lecturer profile shows the aggregate and up to the 100 latest visible reviews. Authorised moderators can hide or restore a review with a recorded reason; moderation preserves a protected history. Directory visibility and review eligibility remain scoped by actual roles, participation and current account access.
+
+<a id="section-user-guide-personal-dashboard"></a>
+## Personal dashboard
+
+Use **Dashboard anpassen / Customize dashboard** to show/hide and reorder preview cards, then save online. Choices belong to your current account and persist across devices. A concurrent change requires loading the latest saved layout. Hiding a card changes presentation, not resource permissions.
+
+**Mein Unterrichtstag / My teaching day** lists your own current confirmed, unreleased sessions overlapping today in your saved profile zone. It offers the safe teaching link or venue, the deliberately selected course customer contact and safe email/phone actions. No first directory contact or private profile data is substituted when no contact has been selected.
+
+For a linked active course, the same card shows shared preparation done/total, up to ten permitted exact agreed file versions and a link to the full course workspace. Additional resources are counted explicitly. Original assignment-file previews remain separate and link to the job when more files are available. Course links/downloads check current access again; a later private replacement file does not silently replace an agreed version. Cancellation, transfer, lecturer-role withdrawal or archival removes unavailable shared context on refresh.
+
+The materials/link/contact checkbox list below is **your private preparation**, saved against the accepted assignment only after server confirmation. It does not complete a shared customer checklist or certify operational readiness. A zero-item shared checklist is shown as absent, not as 100% ready. Refresh after a date/zone or assignment change. See [Personal dashboard](GUIDE.md#section-personal-dashboard).
+
+The dashboard also offers permitted job suggestions, up to five upcoming own calendar entries, unread chat/notification summaries, up to five recent clean files and own outstanding contract receipts. Management follow-ups identify draft offers, expired deadlines and soon-starting unfilled blocks. Job totals come from authorised server counts, not the two-card suggestion preview. Client-only and participant-only accounts receive suitable client/course links rather than lecturer contract/job lists.
+
+Open a card's link for the full workflow. Use the calendar preview's refresh control to check current dates. These bounded previews do not reserve a job, download files in the background or grant access to another person's private calendar, contract or messages. A failed optional preview offers its own retry. Financial cards keep their separate role boundaries. See [Dashboard](GUIDE.md#section-dashboard).
+
+<a id="section-user-guide-find-and-claim-teaching-jobs"></a>
+## Find and claim teaching jobs
+
+Use `/jobs` for authorized teaching opportunities. Combine literal search/customer text, all selected topics/tools/languages, delivery/status, session date range with an explicit IANA zone, total/rate/duration bounds and sorting. Choose **Filter anwenden / Apply filters**; typing alone starts no search. Money bounds/sorting require one original currency; rate comparisons also require one fee unit. Calendar-fit filtering checks your own appointments/assignments/unavailable windows and reserves nothing. **Weitere Aufträge laden / Load more offers** loads one more server page; the displayed count is the loaded result count, not an assumed whole catalogue.
+
+**Angewendete Filter speichern / Save applied filters** stores the current applied search under your own name, at most 20 per account. Choose, rename or remove your private views across sessions; another account or ordinary administrator cannot open them. A version conflict requires loading/reviewing the current view. Copy the search URL for a deep link. Network failure preserves a draft; an authoritative permission denial hides private view content. Open `/jobs/<id>` for exact sessions, zone, original currency, rate unit, compensation per position, requirements and current terms, independently of list paging. See [Job discovery](GUIDE.md#section-job-discovery).
+
+Choose **Auftrag übernehmen / Claim assignment** while online after reviewing every session and accepting the displayed terms. The first eligible committed transaction for each available position wins; there is no routine administrator approval queue. Success appears only after the database confirms every session together. Filled/conflict/eligibility/prerequisite/stale-terms errors mean no new allocation was confirmed. A card movement or an availability hint does not establish acceptance. Retry-safe requests prevent duplicate assignments.
+
+After confirmation, the full block appears in your assigned calendar. Your accepted compensation, currency, terms, applicable contract reference and session instants remain preserved. One person can hold one active position in a job. New explicitly priced standalone administrative offers may contain up to 20 lecturer positions; existing offers, client-originated offers and course-linked offers keep one position and their original price meaning.
+
+To cancel your own future, uninvoiced complete assignment, open **Zuweisung stornieren / Cancel assignment**, enter a reason of 5–1000 characters and confirm. Wait for the server result. Started work or any invoice history requires separate management/financial review. A cancellation releases future calendar intervals and course-chat membership, retains accepted history, and moves the remaining vacancy to draft. Other confirmed lecturers remain confirmed. This records no payment or refund.
+
+Management can explicitly reopen remaining future positions with a reason and an open deadline. An eligible replacement must then claim the complete block online. The same lecturer may submit a new claim after reopening; an old retry key still refers to its original cancelled history. Replacement is this audited workflow, not automatic substitute selection. See [Job lifecycle and capacity](GUIDE.md#section-job-lifecycle).
+
+<a id="section-user-guide-waitlists-and-explicit-substitutes"></a>
+## Waitlists and explicit substitutes
+
+On an eligible full or closed offer, join or leave your own waitlist and review your entries from `/jobs`. A reopening/availability notice expresses an opportunity to make the normal current online claim; joining never reserves a place or gives priority over another valid complete claim.
+
+For your already accepted assignment, the replacement panel lets you choose a currently qualified/available target and explain the proposal. The target reviews their own quoted full-block compensation and terms and explicitly accepts or declines. A changed quote, role, agreement, interval conflict or expired proposal requires a current review rather than bypassing consent. Only a confirmed atomic response transfers the entire block and updates access; the original accepted deal remains historical. Until then, the original assignment remains yours. Management has only its separately authorised actions. This targeted workflow is not an automatic open/emergency marketplace. See [Assignment handover](GUIDE.md#section-assignment-handover).
+
+<a id="section-user-guide-calendar-and-availability"></a>
+## Calendar and availability
+
+Open **Kalenderdatei exportieren / Export calendar file**, select a month and download an ICS snapshot of your current confirmed teaching sessions. Private appointments are excluded until you explicitly choose to include them. Importing the file shares its titles/times with your selected calendar provider. Later changes/cancellations do not update an imported snapshot. Export reads the current server, requires a connection and fails explicitly above500events. See [Calendar export](GUIDE.md#section-calendar-export).
+
+At `/calendar`, choose month, week, day or agenda, navigate dates, and check the profile display time zone. Your private view contains your own editable events and confirmed assignments. Open a private event to edit/remove it, or use **Termin hinzufügen / Add event** to record precise start/end instants. Private appointments stay private and block overlapping new claims. A global calendar view contains explicitly published course sessions and global events, never other people's private appointments. Published courses link to their authorised course details. Open a published global event for its plain text description, original event zone and optional HTTPS link. **Weitere Termine laden / Load more events** adds another server page for the visible calendar window (maximum 93 days). Loaded event counts exclude the separately displayed published course sessions. Private-event/assignment and course queries retain their own existing limits.
+
+With current `courses.manage` and MFA, **Globale Termine verwalten / Manage global events** opens the visible-window management list. **Globalen Termin erstellen / Create global event** records title, description, start/end, IANA zone and optional HTTPS link. **Als Entwurf speichern / Save as draft** does not publish; editing a published event withdraws its publication. Review the saved draft and explicitly **Veröffentlichen / Publish**. You can unpublish, archive or **Als Entwurf wiederherstellen / Recover as draft**; recovery never publishes automatically. If an event is moved outside the displayed period, navigate to its new period. Search is literal and pages load explicitly. Concurrent edits preserve your draft; review/reload before another attempt. A lost-response retry uses the same operation identity. Private calendars remain private; this management screen grants no appointment access. Global-event file attachments/invitations, automatic publication and private-event drag editing remain pending; personal ICS exports and subscriptions are described below. See [Calendar](GUIDE.md#section-calendar).
+
+At `/availability`, add **Verfügbar / Available** or **Nicht verfügbar / Unavailable** windows with explicit IANA time zone. An available window is a planning hint. An unavailable window blocks new overlapping assignment sessions; it cannot overwrite an existing confirmed assignment. If the periods conflict, the window is refused. A private note is visible only to you. **Zeitraum und Status ausdrücklich mit dem Management teilen / Explicitly share interval and status with management** is off by default. Choosing it shares only the interval, status, zone and display name with currently authorised MFA management, never your note or private calendar events. Removing that choice revokes subsequent shared reads. Use the refresh control for current data.
+
+Choose a display period of at most 93 inclusive local calendar days. Edit/remove your own windows through the version-checked controls; review a stale/conflict response before trying again. Removal of a planning window does not cancel a job. Availability is a separate schedule input, not a duplicated private appointment or a booking confirmation. See [Availability](GUIDE.md#section-availability).
+
+Berlin and Brisbane have different date/offset boundaries. Check the displayed zone when booking. An ambiguous or nonexistent Berlin daylight-saving local time must be resolved explicitly rather than guessed. Calendar display does not change the offer's intended zone or accepted instants.
+
+The calendar also offers an explicit fresh personal ICS download and revocable read-only subscriptions. Choose whether to include your own private appointments; that option does not grant access to anyone else's calendar. A subscription URL is a private capability: give it only to your chosen calendar application, and revoke/rotate it if shared accidentally. Its expiry and current account access still apply. Google/Outlook/installed-device subscription behaviour requires actual platform acceptance; creating a URL alone does not prove synchronisation. The separate offline snapshot option is described below. See [Calendar connections](GUIDE.md#section-calendar-connections).
+
+<a id="section-user-guide-management-job-creation-and-board"></a>
+## Management job creation and board
+
+Authorised management uses `/admin` after MFA verification. Specify all sessions and their IANA zone, currency/rate unit, terms, requirements, optional claim deadline and draft/publication choice. The deadline must be finite, future and no later than the first session; blank means no deadline. Scheduled publication is not yet available. Administration first saves the confidential **Vergütungsregeln / Compensation policy** there; installations intentionally start without business percentages in public source. Then choose an existing client organisation or a new client name and enter the **full client fee per unit and in total**. The server derives role-specific compensation. Management without gross-finance access uses the permitted direct lecturer-compensation workflow and cannot inspect the policy. A fixed-total rate and total stay synchronized. Later policy changes affect future offers; accepted compensation remains unchanged.
+
+For a new standalone offer, enter **Dozierendenplätze / Lecturer positions** (1–20). Each quoted fee covers the complete teaching block for one lecturer position; the maximum customer budget is positions × full fee. Three positions at EUR 100.01 each mean at most EUR 300.03. Administration's creation preview shows the configured role fees and maximum budget. Existing prices for client-originated and course-linked offers are never multiplied retroactively; those offers retain one position. Save and wait for the complete confirmed transaction.
+
+The **Auftragsboard / Offer board** lists the latest 500 offers in draft, published, filled and archived columns. For never-accepted offers, use the status selector or the separate drag handle (pointer, or Space/arrow keys/Space; Escape cancels). A drop requests a server-checked publication change. It never assigns a lecturer. Filled and accepted-history cards have no drag/status shortcut. Open the detail view for history, safe duplication, metadata/deadline editing, allowed capacity changes, cancellation and reasoned reopening. New copies are unpublished and do not copy people, contracts, invoices, documents or chat membership. Dates of past work require a new course plan. Accepted fees/terms/dates cannot be silently edited.
+
+Use fictional customers and documents locally. [Job lifecycle](GUIDE.md#section-job-lifecycle) details the safety boundaries; [course-building-block templates](GUIDE.md#section-course-building-blocks) explains source-linked course offers. The complete target remains in the persistent plan.
+
+<a id="section-user-guide-client-portal-and-full-fee-visibility"></a>
+## Client portal and full-fee visibility
+
+`/client` is the **Kundenportal / Client portal** for an associated client account and authorised platform management. It differs from `/clients`, the internal customer/contact directory. A client sees only its active associated organisations, their course requests and full client fees, confirmed assignment sums and assigned teachers. EUR and AUD remain separate. The request volume and confirmed assignment sum are agreement values, not proof of a bank payment.
+
+Choose **Kurs anfragen / Request a course**, select the organisation and enter title/topics, delivery, every intended-zone session and the original-currency full fee. Add whole required teaching units, explicitly choose 45 or 60 minutes per unit, list required documents one per line and enter preparation instructions. Required teaching minutes must fit the actual session time; remaining time may cover breaks. Teaching units do not calculate or change the commercial price. Save and wait for confirmation; a request does not reserve a lecturer.
+
+Open **Unterrichtsbedarf und Unterlagen / Teaching brief and documents** on the request card to review or revise this brief. Before publication, changes use the original observed revision; a conflict retains your draft until you explicitly reload/review current state. Upload/share only your own scanned materials or reports for this organisation. Contracts, CVs, qualification evidence and invoices are excluded. The share fixes a specific clean version and can be removed before publication; later private replacements are not automatically shared. The paged request history retains earlier briefs and publication/cancellation events. Published/cancelled requests are read-only. Cancellation of converted work follows the job lifecycle, not a request shortcut. See [Request briefs](GUIDE.md#section-client-request-briefs).
+
+No public default percentage or freely editable per-request percentage is supplied.
+
+Owner/Administration reviews the request and chooses **Als Lehrauftrag veröffentlichen / Publish teaching assignment**, reviews the configured confidential compensation policy and lecturer terms/contract requirement, then publishes. The eligible lecturer marketplace uses the existing first-committed whole-job claim; there is no routine lecturer approval queue. Once claimed, the client sees the assigned teacher(s) and the agreed full assignment sum. For explicit multi-position administrative offers, the portal lists all current lecturers, counts the course once, and sums current accepted full-fee positions. Cancelled historical positions remain preserved without doubling current spend. Client-originated course requests themselves keep their original single-position total. The client view does not disclose the lecturer's compensation or the platform's share.
+
+A lecturer sees only their currently authorised **Dozierendenhonorar / Lecturer compensation** in offer cards/detail, accepted terms, earnings and invoice preparation. Prospective role-priced compensation uses the offer's captured confidential policy and the current eligible role. Search bounds/order and dashboard suggestions use that same quote. A restricted/unavailable amount is labelled **Honorar geschützt / Compensation restricted**, rather than zero, and cannot be claimed as a fabricated zero-price offer. Actual zero compensation, when explicitly returned by the server, remains a distinct value. Role/policy changes can invalidate an old result page; refresh and review the current quote. Consent binds the displayed amount/currency/unit/terms as well as its version.
+
+Accepted full/net/platform snapshots cannot be repriced by a later policy/role change. Legacy deals retain their original compensation; missing historical full-price/platform data remain unknown. No public default split, tax, payroll or currency conversion is assumed.
+
+<a id="section-user-guide-course-workspaces-customers-and-participants"></a>
+## Course workspaces, customers and participants
+
+Open `/learning` and choose a currently permitted course. `/courses/:id/workspace` assembles different authorised views for current course management, confirmed assigned lecturers, enrolled/completed learners and linked customer organisations. A link is not an access grant; cancellation/removal/suspension can make a previously available page or download unavailable.
+
+Staff can maintain shared preparation items and decide which customers may see them. Management explicitly selects a same-organisation course contact and clean exact material/report versions with the intended audience. Customers see their agreed preparation/resources/contact area and their authorised roster/report deliverables; private organisation notes, lecturer contracts and notebooks remain excluded. Acknowledge the exact resource you reviewed. New private file versions do not silently replace it. The Teaching Day card links to the same course facts. These shared items remain distinct from each lecturer's private preparation checklist.
+
+Enrolled learners see their course/session agenda and allowed resources. Self check-in is available only during its server-calculated session window and records reported presence; it is not verified attendance. Assigned staff verify or correct attendance/minutes with an explicit reason and current revision. Corrections retain an audit record. A currently issued completion document locks correction until an authorised explicit revocation.
+
+Use course Q&A for enrolled-learner/staff questions and replies. The versioned notebook is yours alone. Ended-course feedback is available to eligible learners and customers; ordinary summaries omit authors and remain withheld until three responses. The server retains a private author for integrity, so this is not truly anonymous collection.
+
+A published mini quiz shows current questions and your attempt allowance. Correct answers stay server-private. Submission and pass state require online confirmation; retries cannot create a duplicate accepted attempt. Completion additionally requires completed enrolment, ended sessions, verified attendance of at least 80% per session and a passed current required published quiz. Only then can the server issue a protected completion PDF of frozen facts. Revocation retains history and constrains reissue; the PDF is not a new official qualification or legal signature.
+
+After a delivered course, an authorised customer can request it again with new future dates. The new request copies teaching time and requirements, with no automatic allocation. Files need new explicit sharing; learner attendance, feedback, notebooks, contracts and quiz attempts are not copied. See [Course workspace](GUIDE.md#section-course-learning-workspace).
+
+<a id="section-user-guide-management-people-expertise-and-access"></a>
+## Management: people, expertise and access
+
+At `/admin/people`, current `qualifications.verify` with MFA can open a person's declared expertise and **Beleg und Prüfverlauf anzeigen / Show evidence and review history**. A reviewer sees only the exact certificate version the person explicitly shared for that topic. Download that version and assess it before **Mit diesem Beleg verifizieren / Verify using this evidence**. An optional expiry uses **UTC**; leave it empty for no expiry. Unchanged fields retain the original exact instant. A concurrent review/edit conflict keeps the reviewed evidence/version rather than silently applying a newer background state; explicitly reload before reviewing the new version.
+
+The existing **Expertise verifizieren / Verify expertise** manual management decision remains available and records its manual basis in the same protected history. An expired verification does not meet restricted-job eligibility through the complete course. You can explicitly change its expiry or revoke verification. Existing `users.manage`/MFA access to CVs remains separate; qualification permission alone does not open CVs, contracts, invoices or every certificate/version. A history entry is not a download grant. See [Qualifications](GUIDE.md#section-qualifications).
+
+Choose **Zugang sperren / Suspend access** or **Zugang aktivieren / Activate access** for another person, review the named confirmation and submit it. Wait for server confirmation. Cancellation leaves the current account status unchanged. Your own account cannot be suspended here; the server also protects the last active administrator. Suspension denies protected data and claims, preserving assignments/history and existing roles for authorised follow-up. Full session revocation is an additional administrative operation.
+
+<a id="section-user-guide-shared-topics-tools-and-programming-languages"></a>
+## Shared topics, tools and programming languages
+
+Open `/topics` to search German/English catalogue labels and aliases or filter by kind. Related course-template links appear only when your account may read them. Profiles, templates and job requirements reference the same catalogue identities; a self-selected label still does not verify expertise.
+
+With `taxonomy.manage` and MFA, use **Eintrag erstellen / Create entry** or **Bearbeiten / Edit** to enter both labels/descriptions, kind, up to 20 aliases and an optional parent. Save online and wait for confirmation. Cycles and archived parents are refused. A concurrent-edit conflict preserves your draft; **Aktuellen Stand laden / Load current state** reloads the current version for review.
+
+Archive rather than deleting a used identity. Active children must be archived first. Existing references and verified expertise remain intact, but archived entries cannot be newly selected for profiles/templates/jobs. Authorised management can include archived results and restore them under an active parent. See [Taxonomy](GUIDE.md#section-taxonomy).
+
+<a id="section-user-guide-chats-and-course-channels"></a>
+## Chats and course channels
+
+At `/chats`, choose a person from **Kontakte / Contacts** to start a direct conversation, or open one of your existing rooms. An eligible lecturer can join the general lecturer room. Staff can create topic groups; authorised management can create a separate participant-facing course channel for an actual linked course. Commercial lecturer discussions and participant channels have separate membership.
+
+Write the message and choose **Nachricht senden / Send message** while connected. A failed request leaves the draft available to retry. A message is shown as sent only after server confirmation. Search the room’s text, load earlier messages, mark it read or mute it through the available controls. Reactions use the displayed emoji choices. Your own messages can be edited within the server’s 15-minute window; deletion asks for confirmation and leaves a tombstone. Safe web links open as links; pasted HTML remains text.
+
+Attach or drop one supported file onto the composer and wait for its clean scan before sending; progress is not scan approval. **Personen erwähnen / Mention people** loads current eligible room members on demand. Select up to 20 explicitly; typed `@names` alone are text. The first committed structured mention can renew that message's one notice for a recipient. Exact retries, ordinary edits and remove/re-add cycles do not repeatedly renew it. A mention can override room mute while the global chat-category preference still applies. Quiet hours affect attention counts, not message delivery.
+
+The group owner or authorized course manager can add/remove permitted members; room-scoped moderators use the disclosed group deletion control. Removal closes the member's active room view and later protected access. Administrator status gives no private DM or group membership. Topic-group creation loads no course catalogue. For a participant channel, current `courses.manage`/MFA opens a purpose-scoped course search: **Auswahl durchsuchen / Search choices**, **Weitere Auswahlmöglichkeiten laden / Load more choices**, then choose the real run by title, organization, first date/zone and short reference. Several offers for one run produce one course choice. Internal job text and fees are absent; the final create action still checks membership and one-channel-per-run rules. Typing/presence remain pending. See [Chat](GUIDE.md#section-chat) and [Scoped choices](GUIDE.md#section-job-pickers).
+
+<a id="section-user-guide-files-and-qualification-evidence"></a>
+## Files and qualification evidence
+
+At `/files`, search authorized documents with literal filename, owner/kind/job and own tag/folder filters. The server returns 40 per page; load further matches explicitly. **Persönlich organisieren / Organise for me** stores your own tags/virtual folder for that currently accessible file. Another account can organize a shared file differently; these fields do not move bytes, rename the shared file or grant access. A stale-edit conflict preserves your draft until you explicitly reload. See [Files](GUIDE.md#section-files). Choose **Datei hochladen / Upload file**, select or drop one file, and wait until upload and scanning finish. The current allowlist is PDF, PNG/JPEG/WebP, plain text and modern Office documents (`.docx`, `.xlsx`, `.pptx`), up to 100 MiB per file, subject to the environment's configured owner/global quotas. Archives and large video uploads are not available. This file limit does not establish production capacity acceptance. Unsupported, infected or unscanned files are unavailable for download; a scanner outage leaves the upload unapproved.
+
+Use a document’s actions to download it, inspect its versions, rename it, add a new version or archive it where permitted. Image/PDF preview requires a fresh authorised download. Previous clean versions retain their own bytes and hash. Archive confirmation removes normal availability while retaining history; documents linked to retained contract/invoice snapshots have extra server retention protection. Shared storage paths do not confer access, and private files are not deliberately cached offline.
+
+Management with current `jobs.manage`/MFA can attach **Vor der Übernahme sichtbar / Visible before claiming** or **Nach der Übernahme sichtbar / Visible after claiming** material. Opening a nonpersonal upload scope starts the bounded offer picker; ordinary browsing/personal uploads do not. Apply a literal search, load another page if needed and choose the offer. The uploader appears after the server confirms that exact selection. This does not claim a job, expose financial fields or authorize a different task. After-claim resources require a current confirmed allocation or explicit management permission; room files inherit current membership. See [Scoped choices](GUIDE.md#section-job-pickers).
+
+At `/profile`, upload a personal certificate and wait for its scan. In **Qualifikationsbelege / Qualification evidence**, choose an already selected expertise topic, then **Zertifikatsversion auswählen / Choose certificate version**. Review the filename, version and hash, tick the explicit sharing consent and choose **Version freigeben / Share version**. Only that exact clean own version is shared for that topic; uploading/replacing a file does not automatically share its newer version or verify the qualification.
+
+**Freigabe zurückziehen / Withdraw access**, sharing a replacement, archiving the document or deselecting the expertise topic ends the old download grant. Re-adding the topic does not restore it. Withdrawal/replacement does not revoke an existing verification or cancel accepted assignments; a necessary eligibility change is a separate management decision. Protected history records sharing and review events without granting access to withdrawn bytes. Errors, role withdrawal or suspension hide unavailable evidence; reconnect/reload through the permitted workflow. See [Qualifications](GUIDE.md#section-qualifications).
+
+<a id="section-user-guide-wiki-and-forum"></a>
+## Wiki and forum
+
+At `/wiki`, search by text, category and authored language. **Artikel schreiben / Write article** opens the rich text editor for eligible staff. Use paragraphs/headings/lists, safe links and labelled code blocks. Selecting a code language adds syntax highlighting without executing the code. In desktop code blocks, **Enter** inserts a new code line; **Shift+Enter** exits the code block. Automated Android-emulated Chromium checks use a profile-specific Shift+Enter input path to create their code newline because no native virtual keyboard runs in emulation. Native Android virtual-keyboard Enter behavior still requires manual acceptance on a physical device; browser emulation does not establish that behavior. A page’s German or English authored text is retained when you change interface language.
+
+Save your draft to preserve it. Publishing and archiving require the corresponding management permission and MFA. An author’s changes to an already published page are saved as a newer draft until an authorised publisher publishes them; other readers continue seeing the previous published snapshot. The history shows permitted revisions and their editors. If another editor has saved since you opened the form, a version conflict requires reviewing the latest record rather than overwriting it silently.
+
+At `/forum`, open a category and create a discussion or reply. The thread owner or moderator can choose an accepted answer. Subscribe to receive the supported in-app reply notification; unsubscribe to stop it. Report a post with a reason for moderator review. Authorised management can pin, lock/archive and resolve reports. A locked or archived thread blocks ordinary replies/edits; permitted moderation retains an auditable history. Deleted posts become tombstones. Knowledge access is staff-only in this slice; course participants do not automatically receive it. Wiki/forum file attachments and course-template links remain pending dedicated permission-aware integration.
+
+<a id="section-user-guide-contracts-and-receipt-acknowledgements"></a>
+## Contracts and receipt acknowledgements
+
+At `/contracts`, lecturers see their own registered executed agreements and addenda. Each real PDF record identifies its version, effective/expiry instants and SHA-256. Download the precise registered version before acknowledging receipt. An older metadata-only record has no download or acknowledgement action until a genuine checked PDF version is registered.
+
+Tick **Ich habe diese Vertragsfassung erhalten und zur Kenntnis genommen / I have received and read this contract version**, then choose **Empfang bestätigen / Acknowledge receipt**. The server stores receipt against the exact version/hash and timestamp. This action is **not an electronic signature** or a claim of legal signature sufficiency. Use an already executed agreement and the approved external signing/legal process when required.
+
+Authorised management with MFA can **Ausgeführten Vertrag hinterlegen / Register executed contract**: choose the lecturer, master/addendum type, parent agreement for an addendum, title and explicit-zone effective/expiry times. Upload the fictional executed PDF in local development, wait for clean scan confirmation, then save. Each registration creates an immutable version; changing the displayed status does not rewrite accepted assignment terms. New claims use the applicable valid contract version; a revoked/expired replacement cannot silently fall back to an older agreement. An available-contract notification links to your own contract. The inbox can explicitly check due expiry reminders; external scheduled delivery depends on its separately activated worker. Protected assignment-confirmation PDFs are available from the permitted time/finance workflow and retain accepted terms. External signing-provider integration remains separate work.
+
+<a id="section-user-guide-earnings-invoices-and-recorded-payments"></a>
+## Earnings, invoices and recorded payments
+
+At `/finance`, lecturers review only their own accepted compensation by **Erwartet / Expected**, **Abgeschlossen / Completed**, **In Rechnung gestellt / Invoiced** and **Bezahlt / Paid**. EUR and AUD remain separate original-currency totals. Amounts represent the accepted assignment compensation; the portal does not calculate tax or convert currencies.
+
+To submit an invoice, choose **Rechnung einreichen / Submit invoice**, enter its number, issue date and due date, select up to 50 own eligible assignments in one currency, then upload its PDF. Selecting a currency disables assignments in the other currency. The due date cannot precede the issue date. Wait for the PDF scan, then submit and wait for server confirmation. The server derives the total from the accepted assignments and prevents active double invoicing; it does not parse the PDF’s tax/grand total. A rejected/cancelled invoice releases its claims for another permitted submission.
+
+Owner/Administration with MFA additionally sees the protected full-fee/net/platform report. It separates offered volume from accepted agreement values, keeps EUR/AUD separate and identifies legacy records whose historical full price is unknown. Lecturer costs from those legacy accepted deals are still included; known full-fee subtotals do not fabricate missing amounts. Financial dashboard cards follow the same role boundaries.
+
+Finance management with MFA can show all authorised lecturer records, download the exact invoice version, review it and record an approval/rejection/cancellation note. **Zahlung eintragen / Record payment** documents a payment already made; it does not initiate a bank transfer. Enter the original-currency amount, explicit-zone timestamp and reference. A partial payment leaves the invoice approved; the final payment marks it paid. Overpayment is rejected. **Zahlungsverlauf / Payment history** retains each entry; an authorised **Zahlungseintrag stornieren / Void payment record** corrects an erroneous entry with a reason and recalculates the outstanding balance without deleting its history or moving money.
+
+Use **Rechnungslabels bearbeiten / Edit invoice labels** to classify an authorised invoice with up to 10 comma-separated labels of 50 characters each. The owner or authorised finance manager can save these metadata labels without changing its accepted amounts, document or payment history. Profile labels and invoice labels are separate. Search invoices by number/person/note and combine status, currency and label filters. The invoice CSV exports the current authorised filtered result. Earnings and protected platform reports have their own exports. All exports preserve original currency and neutralize spreadsheet formula prefixes in authored text. Protected period statements and scenario projections are available through the time/finance workflow below; further report formats remain separate scope. Tax/payroll/banking integration is outside this invoice-tracking scope.
+
+<a id="section-user-guide-workbench-favourites-and-reusable-workflows"></a>
+## Workbench, favourites and reusable workflows
+
+At `/workbench`, create an own task with title, due instant/zone and state. Save online; conflicts keep the draft and require current-version review. Private tasks remain creator-only even for administrators. Authorised operations delegation/shared templates follow separate management/MFA rights; assignees can update state within their allowed actions.
+
+The chat task action links a new private task to a currently accessible message without automatically copying its body. Losing the source message/room access also removes access to that task/history. A generic task is not a support ticket or permission to read a private DM. Use the task's history action for permitted before/after state.
+
+Select up to 50 current task revisions for a bulk state change. One denied/stale item rolls back the complete batch; do not assume partial success. Save a reusable template with explicit rows and day offsets, then apply a selected revision to create new private tasks. Retries reuse their operation identity and later template edits do not rewrite existing tasks.
+
+Add currently permitted customer/topic favourites and review explainable recommendations. Favourites are private references and disappear from usable projections when destination access ends. Saved job filter views remain in `/jobs`; they do not automatically become saved filters for every module. See [Workbench](GUIDE.md#section-workbench).
+
+<a id="section-user-guide-timesheets-protected-statements-and-control-center"></a>
+## Timesheets, protected statements and Control Center
+
+At `/timesheets`, record actual time and breaks against your own accepted assignment session, save the draft and explicitly submit it. Time intervals must be valid and nonoverlapping. Submitted/approved records cannot be silently rewritten; current finance/MFA review approves or rejects with history. A correction follows the allowed current-version workflow, and invoiced evidence has additional restrictions. Actual time does not reprice accepted compensation.
+
+Choose a finite period using its displayed zone and exclusive end date, at most 93 days. Your protected period statement contains own accepted compensation, invoice state and approved minutes in original currencies; an assignment confirmation preserves its accepted terms. Export errors or changed/revoked facts do not produce a successful PDF. These are printable facts, not bank transfers, tax calculations or legal signatures.
+
+Current finance management can use probability-labelled forecast scenarios. Accepted figures, known and unknown customer gross, pipeline positions and recorded lecturer invoice payments remain separate. Role-priced pipeline cost without a known role mix is reported as unknown positions rather than a guessed rate or zero. Authorised gross/margin columns require their extra capability. Never treat scenario totals as confirmed bookings or customer bank receipts.
+
+`/control-center` requires current `jobs.manage` and MFA. Use its date-filtered exception links for unstaffed offers, missing teaching files, cancellations/handovers, readable overdue tasks, customer requests and separately permitted contract/qualification expiry or course preparation/quality. Each list is bounded; narrow the period when needed. It does not open private tasks, notebooks, DMs or contracts through a general administration bypass. See [Finance operations](GUIDE.md#section-timesheets-finance-control-center).
+
+<a id="section-user-guide-notifications-and-preferences"></a>
+## Notifications and preferences
+
+Use the shell bell for the latest eight personal notices and the total unread count, or open `/notifications` for the full inbox. **Weitere Meldungen laden / Load more notifications** retrieves another page. Mark individual notices read/unread, or choose **Alle bisher eingegangenen Meldungen lesen / Read all notifications received so far** for the previously fetched time boundary. Newer arrivals remain unread. Read state changes only after server confirmation. Resource titles/links are checked against current access; a removed chat or inaccessible record is not opened by an old notice.
+
+At `/settings`, choose future optional chat, forum, job-update and reminder notifications. Save online. Concurrent changes require reloading and reviewing the current version; switching language preserves the form. Existing messages are not deleted. Confirmations/cancellations and available-contract receipts remain delivered independently of optional switches. Administrator status does not open another person's inbox.
+
+**Fällige Erinnerungen prüfen / Check due reminders** checks your confirmed, unreleased assignment sessions within24hours and own active contracts expiring within30days, at most once a minute unless preferences change. New notices appear in-app. At `/settings`, the separate email form lets you opt into additional email alerts and choose quiet hours in your intended IANA zone. Quiet hours delay email; they do not hide in-app notices. Changes are server-confirmed and version protected. The server's separately activated finite mail worker also refreshes due reminders for email-opted-in accounts. Email is not active merely because the form exists: private server configuration, timer activation and provider acceptance remain required. Web Push has a separate explicit device opt-in at `/settings`. If browser/provider support is available, grant permission, register your own labelled device and wait for server confirmation. Review/remove your own devices; another account cannot take over the same subscription. Refusal/unavailability is shown honestly. A registered device, headless test or provider fixture does not prove a visible desktop/mobile notification. Real browser/installed-PWA permission and delivery plus worker/VAPID activation require separate evidence. Digests remain separate work. See [Web Push](GUIDE.md#section-web-push), [Notifications](GUIDE.md#section-notifications) and [Mail operations](OPERATIONS.md#section-notification-mail-operations).
+
+<a id="section-user-guide-voluntary-staff-contact-sharing"></a>
+## Voluntary staff contact sharing
+
+Under `/profile`, the separate contact-sharing form previews your saved account email/profile phone. Both sharing choices start off. Active staff can explicitly share either value with other active staff, then save online. Other members open the person's profile to use the permitted email/phone action. Pure client/participant accounts receive no staff contact details through this feature, and administrator status does not override a person's choice. Revoke sharing in the same form. This does not change the existing private management profile or general directory projection. See [Staff contact visibility](GUIDE.md#section-staff-contact-visibility).
+
+**Fällige Erinnerungen prüfen / Check due reminders** checks your confirmed, unreleased assignment sessions within 24 hours and own active contracts expiring within 30 days, at most once a minute unless preferences change. This is an explicitly requested in-app check, not a background email or scheduler. Email digests, scheduled reminder delivery and web push remain pending.
+
+The separate **Ruhezeiten / Quiet hours** form at `/settings` stores a daily start/end and IANA zone, including overnight windows. During quiet hours the bell emphasizes committed booking/cancellation/available-contract receipts and currently authorized important announcements. The full unread count and inbox records remain; nothing is deleted, deferred or marked read automatically. The four category switches have their independent version/settings contract. Save online and review conflicts; an unsaved DE/EN form survives a language change. Quiet attention uses the existing periodic inbox refresh, so a boundary is not claimed to update instantly. See [Notifications](GUIDE.md#section-notifications).
+
+<a id="section-user-guide-portal-announcements"></a>
+## Portal announcements
+
+At `/announcements`, read current, unarchived publications for your actual account roles and display window. The shell shows up to three unacknowledged revisions without moving focus. **Gelesen, ausblenden / Read and dismiss** records only your receipt of that published revision and marks its corresponding own notice read. A new published revision requires its own acknowledgement; this is not a signature. An inaccessible/expired old link does not reveal a draft or history.
+
+Current `announcements.manage`/MFA opens `/admin/announcements`. Save DE/EN title/body, audience roles and a finite display window as a new draft; ordinary readers keep seeing the previous publication. Explicit publication must be due now; future starts require later manual publication. Important publication creates a committed deduplicated inbox notice. Archive closes reads/ACKs; recovery preserves the old publication/ACK identity and original audience/window without rebroadcast or automatic extension. No scheduler, real email or push is implied. See [Announcements](GUIDE.md#section-announcements).
+
+<a id="section-user-guide-administrative-audit-reader"></a>
+## Administrative audit reader
+
+At `/admin/audit`, Owner/Administration with current `audit.read` and MFA can inspect the reduced administrative log. Choose an inclusive local date range (at most 93 days), IANA time zone, an allowed action and/or literal text search, then **Filter anwenden / Apply filters**. Search covers actor display name, action identifier and resource UUID. Pages contain at most 40 events; use **Ältere Seite / Older page**, **Neuere Seite / Newer page** and **Aktualisieren / Refresh**.
+
+The view includes reviewed account, qualification, organisation, course, job, taxonomy, announcement and global-event administration. It excludes event details and private calendars, availability notes, chats, files, contracts, invoices and personal reviews. A resource UUID is not a link or permission grant. This reader does not edit/delete records, offer a full CSV dump, or establish tamper-proof archival/retention. See [Administration audit](GUIDE.md#section-admin-audit).
+
+<a id="section-user-guide-search-and-remaining-scope"></a>
+## Search and remaining scope
+
+The shell's **Im Portal suchen / Search the portal** uses server-authorised cursor search across jobs, clean files, permitted wiki/forum/chat, people, courses, client/task and authorised commercial metadata. Enter at least two characters; load another page when available. Private drafts, message/task source access and commercial capabilities remain enforced, and the destination checks access again. A copied UUID, favourite or old notification never becomes a grant.
+
+The full target remains larger than this source. Remaining work includes broader module-specific bulk/recovery and saved filters, partial/started/invoiced replacement amendments, richer quality follow-up, global-event files/invitations, knowledge attachments, and general contract-renewal/retention administration. Computed readiness, open/emergency whole-block replacement, personal calendar subscriptions and teaching delivery already have connected workflows; consult their guides for limits. Existing management/course/resource lists retain their documented bounds. Already implemented time/statement/PDF/Push/calendar-source workflows are not relabelled as missing merely because their current full native/device/hosted gate is pending. The [complete feature map](PRODUCT.md#section-smart-operations-spec), [roadmap](ROADMAP.md) and QA results separate source, tested, untested and external acceptance.
+
+<a id="section-user-guide-offline-and-support"></a>
+## Offline and support
+
+The installed shell can show an offline page. At `/calendar`, you may additionally opt into saving a minimal own next-30-day teaching schedule on that device. The snapshot stores only titles, instants and zones, displays saved/expiry time, expires after seven days and is cleared on sign-out/account change. It excludes private events, contacts, contracts, messages, files and quiz data. A dated offline snapshot can be stale after a remote change; reconnect and refresh before acting. Offline mutation is neither queued nor confirmed.
+
+Installing on a shared device means consciously choosing whether this minimal snapshot should be stored there; remove it when no longer needed. Real installed desktop/mobile/browser behavior requires its own acceptance. Other authenticated API responses and private file bytes are not broadly cached by the service worker. See [Calendar connections](GUIDE.md#section-calendar-connections).
+
+Use `/help` and the responsible administrator for account or access problems, supplying the visible error and non-sensitive record reference. Do not send passwords, tokens, private calendar URLs, contracts or unrelated people's data as troubleshooting material. For operational tickets use `/support`; course preparation and attendance workflows are available through `/readiness` and `/delivery` under their current permissions. See [Support](GUIDE.md#section-support-desk), [readiness](GUIDE.md#section-course-readiness) and [delivery](GUIDE.md#section-teaching-delivery).
+
+<a id="section-user-guide-course-building-blocks-profile-pictures-and-comments"></a>
+## Course building blocks, profile pictures and comments
+
+Under **Courses → Course building blocks**, find the 22 subject templates derived from the 24 supplied PDF versions. Search by short code or content and open the description. Source references show the exact version with filename, revision, pages and an expandable checksum; original files are not publicly hosted. Both versions remain visible for LPC3/LPC4.
+
+As authorised management, choose **Plan course run**, assign the client and adjust delivery mode, location/link, time zone and sessions. The scheduling template can distribute the ten teaching days over weekdays; review holidays, breaks and actual teaching times yourself. A new run does not copy other people's personal data, contracts or allocations.
+
+Choose **Create teaching offer** to use the existing course as the basis for an offer. Its content and sessions are visible for review; adjust them in course planning beforehand if needed. Enter the fee, currency, unit and terms, then decide whether to publish. Admin/owner accounts see the full client price and platform share; management without that permission works with its own net offer contract. The server detects changed source revisions and existing active offers. Open the confirmed offer through the result link. A course-linked offer retains one lecturer position and its original total budget; the editor does not yet support several independently claimable sub-jobs for the same run.
+
+Under **My profile**, choose a PNG, JPEG or WebP profile picture. The editor explains the square centre crop. The new picture becomes selected only after confirmed processing and storage; a rejected image does not replace the existing one. **Remove profile picture** clears the current selection. Authorised team/course contacts can see the selected image; it is not published as a public Internet file. Initials appear offline and editing is disabled.
+
+Templates and individual jobs have **Comments & teaching notes** for the authorised teaching team. Write a question or teaching note, edit your own posts or withdraw them with confirmation. Management can hide/restore posts with MFA and a reason. A version conflict signals an intervening change; review the current post before continuing. Comments do not change accepted fees or assignment terms and remain separate from client/participant accounts.
+
+<a id="section-user-guide-withdrawing-from-a-claimed-teaching-block"></a>
+## Withdrawing from a claimed teaching block
+
+Open the assigned job and choose **Withdraw from this assignment**. At least
+seven days before its first session, confirm a direct withdrawal. With less than
+seven days, explain the reason and submit the application. The assignment remains
+binding while pending or after rejection. Administration or Management reviews
+the request from its inbox link and supplies a decision note. The lecturer sees
+the outcome in the personal inbox and job detail. Approval releases the complete
+block, and Management explicitly reopens the vacancy. Started/invoiced work needs
+separate review. [Detailed workflow](GUIDE.md#section-assignment-withdrawals).
+
+<a id="section-user-guide-optional-contacts-and-job-references"></a>
+## Optional contacts and job references
+
+Open a job and use **Contact and job reference** to add an optional external brief/link and contact details. The creation confirmation also links directly to this section. Contact details default to confirmed assignees; management can deliberately release the entered details to authorised offer viewers. Private customer-directory entries are not shared automatically. Editing requires current management MFA; an explicit reload resolves a version conflict. [Details](GUIDE.md#section-job-briefing).
+
+
+<a id="section-guided-demo-and-help"></a>
+
+<a id="section-guided-demo-and-help-guided-exploration-and-help"></a>
+# Guided exploration and help
+
+The demo and help are public application routes, available from sign-in without an account. They complement the real portal; they do not replace authentication, server permissions or the account-specific welcome checklist.
+
+<a id="section-guided-demo-and-help-try-the-sample-data-demo"></a>
+## Try the sample-data demo
+
+Choose **Try the sample-data demo** (**Demo mit Beispieldaten ausprobieren**) at sign-in to open `/demo`. All 25 module areas are available through demo navigation and a guided sequence. For example, `/demo/jobs` opens the job exercise; `/demo?module=jobs` also selects it. The demo continuously identifies its content as fictional.
+
+Try full multi-day claims, rejection scenarios, calendar, chat, profile, document scanning and invoice steps using fictional data. Every result is simulated. No action books real work, uploads files, sends messages, invitations or emails, or signs an agreement. The demo role changes the educational perspective only and grants no portal permissions.
+
+The **Guided tour** (**Geführter Rundgang**) explains the areas in sequence. Use previous/next, pause and restart at your own pace. Switching between German/English or changing the theme keeps the current exercise. **Reset demo** (**Demo zurücksetzen**), reloading or leaving the demo discards exercise input. Never enter real names, personal/customer data, secrets or document contents. Ordinary language/theme preferences remain separate and are retained.
+
+<a id="section-guided-demo-and-help-use-the-authenticated-portal-tour"></a>
+## Use the authenticated portal tour
+
+The authenticated **Portal tour** (**Portal-Rundgang**) navigates only after your explicit choice and uses current account roles/permissions to select relevant destinations. It explains real workflows and their next steps without executing business actions. Real controls still require their normal checks and online server confirmation. Use the fictional demo to practise without performing real business actions.
+
+Only the tour step/status is kept in this browser's session storage, separately for each account. Pause/resume works across page navigation and reloads within the same browser session. This is not a server-synchronised or cross-account completion record. Storage denial falls back to in-memory operation.
+
+<a id="section-guided-demo-and-help-open-help-and-guides"></a>
+## Open help and guides
+
+Open **Help & guides** (**Hilfe & Anleitungen**) at `/help` for searchable step-by-step instructions, common problems and practical recovery steps in both languages. Deep links such as `/help?topic=jobs` select a module, and `/help?topic=files` opens file guidance. `/help?topic=troubleshooting` explains connection problems, missing permissions, unconfirmed actions and safe issue reporting. General error displays link there.
+
+Interface instructions are authored in German and English; real authored customer/course content is never translated by this feature.
+
+<a id="section-guided-demo-and-help-implementation-and-operating-boundary"></a>
+## Implementation and operating boundary
+
+- `src/features/help/catalog.ts` owns bilingual instructions for actual portal modules. Changes to live workflows should update that catalogue and tests together.
+- Demo components import no Supabase/API client and hold exercise inputs only in React memory. Public help contains authored documentation only. An existing signed-in session may still undergo the application's ordinary global Auth refresh; this is independent of demo actions.
+- The live tour is presentation/navigation only. It never grants permissions, imitates a real session, invokes mutation APIs or confirms a real claim. Administrative and commercial stops follow the current shell's role/permission predicates; both permissions remain necessary for qualification administration.
+- Public routes expose no private records. Existing PostgreSQL, Storage, Auth, MFA and API policies are unchanged. No database migration, new dependency, service registration or hosting configuration is required.
+- Public help and fictional demo application code can be included in the existing PWA shell cache. Exercise input and private records are not added to a cache or browser storage.
+- This PR does not certify every remaining master-specification feature or deploy to production. The usual successful CI release gates still apply to authorised development updates.
+
+<a id="section-guided-demo-and-help-verification"></a>
+## Verification
+
+`npm test`, `npm run test:coverage`, `npm run typecheck`, `npm run lint`, `npm run format:check` and `node scripts/code-integrity.mjs --exports` cover source quality and regression checks. `npx playwright test --config scripts/guided-demo-playwright.config.ts` runs public desktop/mobile browser checks against a separate frontend with synthetic configuration, without a database. It aborts and fails attempted backend calls in fresh public sessions. The same browser specification also runs inside the ordinary complete `./portal test` CI workflow, which separately verifies real authenticated business behavior and retained data. Actual outcomes are recorded in the relevant pull request checks; this command list is not itself a pass record.
+
+Follow-up functional/dead-code review and concrete regression evidence: GUIDED_EXPERIENCE_AUDIT.
+
+The separate account-specific `/welcome` checklist persists its own progress through server-confirmed writes. Automatic welcome content is shown only while the live Portal tour is inactive. On `/welcome` and `/welcome/`, the live tour keeps its stored step but hides its controls so the two walkthroughs do not compete. Neither walkthrough advances or completes the other's state; the manual welcome route is deliberately not a live-tour stop.
+
+
+<a id="section-welcome-guide"></a>
+
+<a id="section-welcome-guide-personal-welcome-guide"></a>
+# Personal welcome guide
+
+The dashboard presents a sequential DE/EN introduction for each active account. Next and Back navigate the explanation; Open this area opens the feature currently explained. The dedicated `/welcome` route and navigation entry remain available for review. Invited accounts first complete their existing password flow; the guide never replaces password setup, MFA, contract prerequisites or other authorisation checks.
+
+Steps describe the profile, security, relevant jobs/availability and company area, calendar, collaboration, files, applicable contracts, notifications and permitted account administration. Current server-returned roles and permissions select the steps. Revoking a role removes its explanation; a saved step that no longer applies falls back to the starting explanation. No commercial percentages or other accounts' rates occur in the guide.
+
+Progress belongs to the authenticated account in `private.welcome_progress`. The table has RLS, no direct client grants, and no administrator-wide access policy. Public invoker RPCs call narrow private implementations with an empty search path. Neither RPC accepts a target account ID. Active-account checks occur on every read/write. A missing record yields the first step without a write. Next, Back, pause, resume, skip, completion and restart all require confirmed online writes. The version condition refuses stale-tab overwrites, including concurrent first writes. This is presentation state and cannot grant a role, accept a contract or make a booking.
+
+Paused progress is offered on the dashboard. Completed/skipped introductions stop appearing there but remain available at `/welcome`; Restart explicitly begins again. Steps and status are stored independently of interface language. A failed save keeps the prior step and offers an explicit server reload. Progress is not stored in local storage, a service worker or user-editable Auth metadata.
+
+Focused verification: `npx vitest run src/features/onboarding/welcome.test.tsx src/app/shell.test.tsx` passed 10 cases. `PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-m7 node scripts/welcome-db-tests.mjs` passed six real PostgreSQL groups on a disposable database. `scripts/welcome-api-check.mjs` and `tests/e2e/welcome-guide.spec.ts` are wired into full isolated acceptance; their actual combined execution is recorded by the QA results after the run. Browser checks cover a new real Auth account, both languages, feature navigation, reload/pause/resume, offline controls, completion, restart, skip and axe on desktop/mobile.
+
+Database access follows the current [Supabase RLS documentation](https://supabase.com/docs/guides/database/postgres/row-level-security). The [changelog](https://supabase.com/changelog) and installed CLI help were checked before generating the migration; no hosted project is used by this implementation or its focused tests.
+
+
+<a id="section-dashboard"></a>
+
+<a id="section-dashboard-personal-dashboard-overview"></a>
+# Personal dashboard overview
+
+The dashboard connects the existing job, calendar and earnings cards with personal previews. The large brand area remains at the entry point. Data comes from existing authorised APIs; no new database permissions or additional server-side data copy are introduced.
+
+<a id="section-dashboard-content-by-account-and-permission"></a>
+## Content by account and permission
+
+| Area                               | Content and boundary                                                                                                                                                                                                                                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Suggested jobs                     | Published jobs with a claim deadline that remains valid. Verified, unexpired expertise prioritises matching requirements. Authoritative eligibility, contract and conflict checks still occur on the server during the actual claim.                                                                   |
+| Calendar                           | The actor's own private events in the next 30 days and own confirmed assignment sessions, sorted together by start. The preview shows at most five entries. Administrative permissions do not extend this query to other people's private appointments.                                                |
+| Messages and notifications         | Unread messages from the actor's own permitted chat rooms, the unread notification count and at most three recent notices. Full contents and currently checked links remain in chat or the inbox.                                                                                                      |
+| Personal contract acknowledgements | Only the actor's own currently effective active contracts with a document version/hash and an outstanding receipt acknowledgement. Acknowledged, expired or future-effective contracts do not appear as outstanding tasks. This remains receipt acknowledgement, with no claimed electronic signature. |
+| Recent files                       | At most five recently added, clean, unarchived file metadata records that the current actor may read. The filename opens the filtered file centre; file contents are not downloaded in the background.                                                                                                 |
+| Management follow-ups              | Only with a currently returned `jobs.manage` capability: drafts, open jobs past their claim deadline and unfilled jobs with at least one session beginning in the next 14 days. The source is already authorised job rows, with no additional access to other people's calendars or gross fees.        |
+
+Client-only and participant-only accounts do not load lecturer job, allocation, expertise or contract lists for the dashboard. Their entry point leads to the client portal or course overview. Personal appointments, accessible files and permitted messages remain available. Multiple-role behaviour follows actual roles and capabilities; a display label alone cannot expand database permissions.
+
+Existing finance cards retain their own permission checks: platform revenue, client spend or personal net compensation is returned according to role as before. Role-priced job projections expose only the current lecturer's applicable quote; management without gross-finance permission receives no monetary values for those offers. The preview cards request no additional gross-revenue or other-person contract list. Private policy percentages are not dashboard defaults. See [delegated roles and private compensation](GUIDE.md#section-delegated-roles-pricing).
+
+The dashboard can also show the permission-aware [welcome guide](GUIDE.md#section-welcome-guide). Its progress is private to the account and changes only after online server confirmation. It remains distinct from the explicit Portal tour's per-account tab-session progress and the public fictional demo. Opening guidance grants no role, completes no business action and exposes no other account's data.
+
+<a id="section-dashboard-freshness-without-extra-history-queries"></a>
+## Freshness without extra history queries
+
+The notification preview uses exactly the same actor key and API as the shell. Only the shell runs the 30-second interval; the dashboard observer creates no second polling timer. The room preview also loads neither message history nor an additional three-second interval. Focus and reconnect use normal stale-data revalidation.
+
+File and private-calendar queries are limited to five metadata records and have no polling interval. Their keys use the existing `documents` and `events` invalidation prefixes, so own file mutations and calendar changes continue to update the preview. The calendar preview also has a labelled refresh button. Published content or additional notices may appear at the next normal revalidation; the preview does not claim immediate synchronisation of all data.
+
+All previews remain in the existing in-memory cache. A failed optional area offers its own retry without hiding other dashboard sections. Retained old preview values are not displayed after an error. Switching accounts uses different actor keys; the existing Auth boundary also clears the cache and resets private local state.
+
+<a id="section-dashboard-presentation-and-verification"></a>
+## Presentation and verification
+
+The new cards use existing brand colours, responsive grids, semantic lists and named regions. Dates and times follow the profile time zone; `Europe/Berlin` is used if the profile zone is invalid. The interface supports DE/EN throughout; personal titles and filenames retain their authored language.
+
+The ten component tests verify actual query calls and DOM behaviour: account/role boundaries, personal contract filters, bounded clean file metadata, calendar-error isolation, hiding old metadata after access errors or actor changes, management capability, expertise/deadline suggestions, one shared notification interval and language changes without additional requests.
+
+```bash
+npx vitest run src/features/dashboard/dashboard.test.tsx
+```
+
+Two additional browser journeys in `tests/e2e/dashboard.spec.ts` use only the canonical disposable test data. They cover actual own/other calendars, a real DM with unread counters, an actually scanned upload and its file-centre link, DE/EN/dark mode, mobile width/axe and MFA management access. Authored scenarios and actually passed browser runs are documented separately in the relevant pull request checks.
+
+
+<a id="section-personal-dashboard"></a>
+
+<a id="section-personal-dashboard-personal-dashboard-and-teaching-day"></a>
+# Personal dashboard and teaching day
+
+The existing preview cards can be hidden, shown and ordered for the current account using labelled up/down controls. The five saved areas are teaching day, activity, own contract receipts, recent files and follow-ups. Current role/resource permissions still determine which areas may load data; presentation preferences never grant access. The greeting, navigation, financial overview, offer suggestions and calendar remain separate areas.
+
+The dashboard now presents the existing metrics, financial cards, offer suggestions, calendar preview and readiness widget in a compact workspace layout. It removes the oversized introductory hero from the authenticated dashboard; the sign-in/onboarding experience remains the branded welcome surface. This is presentation-only and does not change the dashboard query or its permission boundaries.
+
+`private.dashboard_preferences` is accessed through current-identity `dashboard_preferences` and `save_dashboard_preferences` RPCs. No administrator can edit another account's layout. CAS versions prevent silent overwrites; failed saves retain the draft and explicit reload lets the user review current state. The UI confirms the layout only after the server response.
+
+<a id="mein-unterrichtstag"></a>
+
+<a id="section-personal-dashboard-my-teaching-day"></a>
+## My teaching day
+
+`teaching_day` returns only the active current lecturer's own confirmed, unreleased assignment sessions overlapping today in the profile's IANA time zone. Both day boundaries are calculated independently, preserving DST transitions. The preview is bounded to 100 sessions; the day/zone and a refresh control are visible. Role withdrawal, cancellation and transferred/released intervals remove the session and its shared context on the next read. A safe HTTPS teaching link or venue and the original assignment details remain available.
+
+The additive `20261116091027_teaching_day_course_workspace.sql` extends this existing RPC without changing the released `20261116091009` source or its public wrapper/grants. For a linked nonarchived course, each session additionally includes:
+
+- The actual course-run ID and link to `/courses/:id/workspace`.
+- Only the deliberately selected `course_workspace_settings.contact_id`, from the exact course organisation, with name/email/phone. Archived contacts/organisations are excluded. No first-contact fallback, internal notes, personal-profile contact or general customer-directory grant is introduced. The UI uses the existing safe mailto/tel helpers.
+- Current shared preparation done/total counts from `course_preparation_items`. Zero items is labelled as no shared checklist, not as readiness or 100% complete.
+- Up to ten currently permitted, clean, hash-bearing exact `course_resources` versions and an accurate permitted total. A later private current-version replacement never silently replaces the agreed shared version. Removed shares stop appearing. Each preview links to the existing protected workspace, where download still requires its own current authorization/hash check. No Storage path or reusable download token is returned.
+
+The original job-material preview remains separately labelled and bounded to 20 rows, with a link to remaining assignment files when needed. Its existing file permissions remain authoritative. Course-resource preview access uses the existing `course_resource_allowed` helper; this change creates no new table or file grant.
+
+The three versioned `teaching_preparation` checkboxes remain the current claimant's private notes: materials prepared, link/room checked and contact checked. They do not change the shared checklist, client progress or computed operational readiness. Shared status is read-only in this preview; editing follows the owning workspace's permissions. The separate PR24 Readiness Centre, when integrated, is a staff operational calculation and does not supply the explicitly selected contact or replace this private checklist.
+
+<a id="section-personal-dashboard-payload-and-compatibility"></a>
+## Payload and compatibility
+
+The DTO validates UUIDs, instants, the IANA zone, hashes and preview bounds. Missing shared fields in an older payload become null/empty unavailable context. They do not manufacture a course, contact or completed shared checklist. Original fixture/checklist behavior remains supported. The query is account-keyed, and no offline mutation is treated as confirmed.
+
+<a id="section-personal-dashboard-evidence-and-acceptance-boundary"></a>
+## Evidence and acceptance boundary
+
+Actual focused checks for this extension: five disposable PostgreSQL groups passed, covering explicit same-organisation contact selection, foreign/archived contact denial, exact old reviewed versions versus private replacements, bounded resource totals, unchanged personal-file RLS, course archival and role/cancellation/transfer revocation. Six dashboard component cases and five existing contact cases passed, including DE/EN links, real shared counts versus private checkbox state and honest legacy-payload defaults. The existing nine personal-dashboard SQL groups are an additional regression entry point.
+
+`scripts/dashboard-personal-api-check.mjs` now asserts the real Auth/RPC shared contact/resource/count projection and exact scoped cleanup. `tests/e2e/dashboard-personal.spec.ts` now asserts the actual course contact, safe actions, shared progress, resource workspace link and absence of internal notes, alongside persisted private checklist/layout, reload, DE/EN, mobile/desktop and axe checks. These native cases are authored; their combined execution is owned by the current complete `./portal test` run. Reviewed-version metadata fixtures do not claim a new object transfer; the existing course workspace suite separately exercises real quarantine/ClamAV/Storage/exact-byte downloads.
+
+No hosted service, production record, private mailbox or external recipient is changed by this source extension. Current combined/retained-data/platform and activation outcomes belong in the relevant pull request checks.
+
+
+<a id="section-job-discovery"></a>
+
+<a id="section-job-discovery-find-jobs-and-save-private-views"></a>
+# Find jobs and save private views
+
+The `/jobs` marketplace searches on the server and loads 50 results at a time. **Load more jobs** fetches the next page. It does not collect a complete catalogue in the background or raise the global 1,000-row Data API limit. The interface shows the number actually loaded; it calls the current search complete only when no next page remains.
+
+The former `jobsQuery` loaded an unpaginated table and then filtered in the browser. `supabase/config.toml` limits those responses to 1,000 rows. The native API check reproduces that limit with 1,057 owned offers before reading the same authorised inventory completely through the new API. Authored checks and actual native acceptance are documented separately in the relevant pull request checks.
+
+<a id="section-job-discovery-using-and-understanding-filters"></a>
+## Using and understanding filters
+
+Enter the desired values and choose **Apply filters**. Typing alone does not trigger another job query. Filters remain copyable as URL parameters and can be reopened through normal browser navigation.
+
+- Search and customer text are compared literally and case-insensitively. `%`, `_` and brackets are text, not search operators. Search also covers labels/aliases of linked expertise topics.
+- Multiple topics, tools or programming languages mean that an offer must require all selected identifiers. Existing archived selections remain recognisable; new selections use active catalogue entries.
+- Calendar dates use the explicitly chosen IANA zone. At least one actual session must overlap a selected local calendar day. An unscheduled gap between day 1 and day 10 does not match. A session crossing midnight can match both actually occupied days. Day boundaries are calculated by zone rather than as fixed 24-hour intervals.
+- Teaching duration is the sum of actual session intervals, including fractional minutes. It is not the elapsed period from the first to the last course day.
+- Money bounds and sorting require an original currency. Unit prices also require a fee unit. EUR/AUD or hourly/daily rates are not silently compared or converted. Returned amounts describe the current actor's authorised prospective compensation per position, not raw public-table sentinels or a gross/platform projection.
+- **No conflicts in my calendar** checks only the actor's own private events, active allocations and blocked periods. Free published future positions with an open claim deadline must also exist. A positive result reserves nothing. Qualification, contract, terms and all current conflicts are still checked only by the atomic claim.
+
+Sorting supports newest/oldest creation in the inventory, next start, title, teaching duration and explicitly comparable total/unit fees. Every sort uses the job UUID as its unique second key. Equal timestamps or amounts therefore do not produce an indeterminate page order.
+
+<a id="section-job-discovery-current-role-priced-quotes-and-consent"></a>
+## Current role-priced quotes and consent
+
+Role-priced offers use each offer's captured private compensation policy and the current actor's eligible tier. Discovery, exact detail and dashboard suggestions share the same authorised amount, total and quoted terms version. Legacy offers retain their existing net amounts. A later global policy update does not silently reprice an existing captured offer, and none of these reads rewrites an accepted assignment. [Private role-pricing rules](GUIDE.md#section-delegated-roles-pricing) explain the underlying policy and claim contract.
+
+Raw `jobs.amount` and `jobs.total_amount` zero sentinels are not authoritative prospective quotes for role-priced offers. The authorised projection can return `null` for nonlecturer management or an unconfigured policy. The strict [discovery DTO](src/features/jobs/discovery-api.ts) preserves that absence without numeric coercion. Cards and detail display restricted compensation, and an unpriced claim is disabled. An explicitly returned numeric zero remains a real quote rather than a missing value. The projection exposes neither gross amounts, policy percentages nor another tier's quote.
+
+Price filters and monetary sorting use the same actor-specific quote shown in the result. Unknown amounts do not match price bounds, including a minimum of zero. Monetary sorts place unknowns last in either direction; their internal cursor-order sentinel is never returned as compensation. Original-currency and fee-unit requirements still apply.
+
+The detail checkbox binds consent to the exact displayed job identifier, quoted version, amount, total, currency, fee unit and terms. A refreshed quote cannot reuse consent for different displayed values. The claim sends the quoted terms version and idempotency key to the existing server transaction; the browser supplies no recipient role or accepted price authority. Existing own claims continue displaying their immutable accepted snapshots. A retry remains subject to current access checks and refers to its original claim identity and current status, not a newly confirmed allocation.
+
+Observed role changes reset the infinite-page query key. Independently, the server binds cursor fingerprints to the current actor/tier and global policy version as well as the canonical filters. A cursor captured under a different quote context is rejected and requires a fresh search. A policy-context change invalidates the old cursor without rewriting an existing offer's captured quote. These checks do not make several HTTP pages a frozen snapshot.
+
+<a id="section-job-discovery-private-saved-views"></a>
+## Private saved views
+
+**Save applied filters** stores the currently applied URL search under a chosen name. Unapplied form inputs are not silently included. Select a saved view to load its filters and sorting into the URL and form. **Rename view** changes its name; **Remove view** removes only that personal filter selection.
+
+Views persist in PostgreSQL, at most 20 per account. Reloading or signing in again does not remove them. Other accounts and ordinary administrative permissions do not open another person's views. A version conflict remains visible and cannot overwrite a newer state. Reload the current view list and review the selection again. An identical creation retry after a lost response uses the same UUID and creates no second view. These writes are disabled offline.
+
+Filters are stored as closed, type-checked JSON. Browser roles, user identifiers, unknown fields or alternative gross amounts provide no additional filtering permissions. A saved filter expands neither job nor calendar access. Current roles/account suspension are checked on every API request; client-only/participant-only accounts do not load lecturer jobs or saved lecturer views here.
+
+<a id="section-job-discovery-connections-and-preserved-interfaces"></a>
+## Connections and preserved interfaces
+
+The detail view queries exactly the requested permitted UUID through [jobDetailQuery](src/features/jobs/discovery-api.ts) and the `/jobs/:id` route. An older job therefore remains accessible through its link even if absent from the former unpaginated 1,000-row response. Atomic claiming, idempotency, capacity and cancellation/reopening history remain authoritative, with current role-priced consent as described above. The quote replacement is additive; it does not rewrite earlier migration bodies or accepted records.
+
+The dashboard receives complete authorised counts and at most two job suggestions through [jobDashboardQuery](src/features/jobs/discovery-api.ts) and its own aggregate RPC. It does not confuse a small preview with the total count. Own allocation counts and at most five upcoming-session metadata records also come from that query. Management counts are returned only with current management permission. The dashboard does not request a lecturer overview for client-only/participant-only accounts. Suggestions use the same private item helper and nullable quote schema as discovery and detail; they do not calculate a price from the raw job table.
+
+The calendar fetches only permitted titles for the actor's own confirmed allocations. Without own allocations, it starts no job-title query. It does not load the marketplace to label old sessions. This grants neither foreign titles nor private calendar entries, including to administrators. Global courses and private-event editing remain separate existing workflows.
+
+The file/chat job selectors use a [dedicated purpose-bound paginated search](GUIDE.md#section-job-pickers). It uses actual upload or course-chat permission and loads no full marketplace records. Revision-specific native acceptance belongs in the relevant pull request checks; this documentation change does not rerun it. The administrative M6 Kanban remains explicitly limited to the newest 500 offers and discloses that limit; older permitted offers can be edited through search and details.
+
+<a id="section-job-discovery-api-and-database"></a>
+## API and database
+
+The original API, public invoker wrappers, saved-view table and discovery indexes come from [20261116080735_job_discovery_and_saved_views.sql](supabase/migrations/20261116080735_job_discovery_and_saved_views.sql). The later [20261116080748_role_aware_job_discovery.sql](supabase/migrations/20261116080748_role_aware_job_discovery.sql) owns the current private quote/context helpers and replaces `job_discovery_candidates`, `job_discovery_item` and `job_discovery`. It preserves the public signatures and saved-view operations. Existing `job_detail` and `job_dashboard` implementations call the replaced item helper, so their prices and consent versions follow the same projection.
+
+| Public RPC                                                | Purpose                                                                                                     |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `job_discovery(p_filters,p_cursor,p_limit)`               | Up to 100 authorised offers, `has_more`, next-page cursor and canonical filters in a bounded JSON response. |
+| `job_detail(p_job_id)`                                    | One permitted job with sessions, requirements and aggregate position counts.                                |
+| `job_dashboard()`                                         | Authorised counts, two suggestions and bounded own upcoming allocations.                                    |
+| `assignment_job_titles(p_job_ids)`                        | Only titles of own confirmed allocations, at most 1,000 requested identifiers.                              |
+| `saved_job_views()`                                       | At most 20 own versioned views.                                                                             |
+| `save_job_view(p_id,p_name,p_filters,p_expected_version)` | Creation with a stable UUID/version 0 or update of an observed own version.                                 |
+| `remove_job_view(p_id,p_expected_version)`                | Removal of an observed own version.                                                                         |
+
+Public invoker entry points call restricted private implementations with an empty search path. Internal filter/projection helpers have no execution grants for PUBLIC/anon/authenticated. The private views table has RLS and no direct browser grants. Job access uses the existing `can_read_job` boundary; discovery neither resets accepted compensation nor introduces administrator access to other people's private calendars.
+
+Cursors contain sort value, UUID and a fingerprint of the canonical filters plus current server-derived quote context. Cursors from a different search, actor/eligibility-tier context or global policy revision, nonfinite values and invalid page sizes are rejected. A page is a currently authorised query, not a database snapshot frozen across multiple HTTP requests. New or reordered offers may require reloading the search. The new quote/context helpers have no direct execution grants for PUBLIC, anon, authenticated or service-role callers; discovery grants no additional access to private policies.
+
+<a id="section-job-discovery-verification"></a>
+## Verification
+
+Focused commands:
+
+```bash
+npx vitest run src/features/jobs src/features/dashboard/dashboard.test.tsx src/features/calendar/calendar.test.tsx
+PORTAL_DB_CONTAINER=<owned-test-container> node scripts/job-discovery-db-tests.mjs
+PORTAL_DB_CONTAINER=<owned-test-container> node scripts/role-aware-job-discovery-db-tests.mjs
+PORTAL_DB_CONTAINER=<owned-test-container> node scripts/api-surface-db-tests.mjs
+./portal test
+```
+
+The SQL suite uses only owned temporary UUID databases. It checks more than 1,000 records sharing timestamps, complete stable pages, exact older detail identifiers, original currencies/units, actual session gaps/zones, own calendar conflicts, private views/quotas, concurrent CAS changes and role/account revocation. The generic API check continues validating all actual public references, RLS, invoker boundaries, absence of anonymous grants and empty definer search paths.
+
+`job-discovery-api-check.mjs` adds actual Auth/REST acceptance, including the old 1,000-row limit and signing in through a new session. `job-discovery.spec.ts` covers desktop/mobile, actual subsequent pages, saved views surviving reload, private account boundaries, DE/EN, dark mode and axe. Existing claim/lifecycle browser tests retain actual booking and snapshot checks; their detail refresh now waits for the precise new detail API. Authored tests alone do not constitute passed native acceptance.
+
+The [role-aware database suite](scripts/role-aware-job-discovery-db-tests.mjs) covers captured regular/senior quotes, original-currency monetary ordering and paging, restricted manager prices, consistent detail/dashboard versions, stale tier/policy cursors and helper access boundaries. [role-aware-job-discovery-api-check.mjs](scripts/role-aware-job-discovery-api-check.mjs) supplies the corresponding native Auth/REST entry point. The [DTO](src/features/jobs/discovery-api.test.ts), [card](src/features/jobs/card.test.tsx), [detail](src/features/jobs/jobs.test.tsx) and [discovery](src/features/jobs/discovery.test.tsx) component regressions cover nullable values without coercion, genuine numeric zero, restricted rendering, changed-quote consent and resetting observed-role pages. These links identify existing tests; they do not claim that this documentation update reran SQL, API, browser or retained-data acceptance. Use the exact-source results in the relevant pull request checks.
+
+
+<a id="section-job-lifecycle"></a>
+
+<a id="section-job-lifecycle-jobs-lifecycle-lecturer-positions-and-board"></a>
+# Jobs: lifecycle, lecturer positions and board
+
+This module connects publication, whole-block acceptance, cancellation, reopening,
+commercial reporting and course-chat membership. PostgreSQL authorizes every
+change. A browser drag, selection or pending HTTP request never confirms a teaching
+assignment.
+
+<a id="section-job-lifecycle-offer-and-assignment-states"></a>
+## Offer and assignment states
+
+An offer has `draft`, `published`, `filled` or `archived` status. Each accepted
+lecturer position has a separate immutable `job_claims` snapshot and one
+`assignment_sessions` row per session. The offer status describes remaining
+vacancies; it does not revoke the other confirmed lecturers.
+
+- Management with `jobs.manage` and verified MFA can create/publish/unpublish,
+  edit and archive offers before any acceptance. Edits use the reviewed lifecycle
+  version; a concurrent update rejects the stale request with `40001`.
+- Metadata editing covers title, description, location, terms and claim deadline.
+  Term changes use the existing terms-version trigger and require fresh consent.
+  Session/date restructuring belongs to course planning or a new offer. No API
+  silently rewrites accepted dates, currency, fees or contract/terms snapshots.
+- A safe duplicate creates a new unpublished course run and fresh sessions,
+  copying the source building-block reference and required qualifications.
+  It copies no claims, documents, invoices, contracts or chat members. Copying
+  course-backed jobs requires `courses.manage`; copying a gross-priced offer
+  additionally requires gross-finance access. Past dates require a new plan.
+- Offer creation/edit/reopening has an optional finite future claim deadline,
+  no later than the first session, interpreted in the displayed IANA time zone.
+  Empty means no claim deadline. There is no scheduled-publication worker.
+
+<a id="section-job-lifecycle-explicit-per-position-pricing"></a>
+## Explicit per-position pricing
+
+New standalone administrator offers support **1–20 lecturer positions**. Each
+quoted rate and total applies to one lecturer for the entire offered block. For
+example, gross EUR 100.01 with three positions has maximum customer budget
+EUR 300.03. At the default 50% platform share, the existing platform-first cent
+rounding produces EUR 50.01 platform / EUR 50.00 lecturer for each accepted
+position. Accepted rows retain their own exact rounded amounts.
+
+`capacity_basis='per_position'` records this explicit meaning. All existing offers,
+customer requests and course-originated offers retain
+`capacity_basis='single_position'`, capacity one, and their original budget.
+Existing customer totals are never multiplied retroactively. A new standalone
+one-position offer also uses the explicit per-position basis.
+
+Capacity can be changed with a version check only on explicit per-position offers
+that have never been accepted. Fees remain per position; the maximum budget
+preview changes. Financial reporting counts each course once, sums the active
+accepted ledger rows, and lists all currently assigned lecturers. Historic
+cancelled ledger rows remain immutable and are excluded from current assignment
+spend. Original currencies are kept separate.
+
+<a id="section-job-lifecycle-atomic-acceptance"></a>
+## Atomic acceptance
+
+`claim_job` keeps its existing arguments and default single-position behavior.
+Under an active profile shared lock and per-lecturer advisory lock, it locks the
+job, checks remaining capacity, expertise/verification validity, required personal
+contract, accepted terms version and every session. Existing personal appointments,
+unavailable windows and active assignments block overlaps; management has no
+private-calendar bypass.
+
+A lecturer can hold at most one active position in a job. Every session is
+reserved in one transaction or none is. A unique partial index protects the
+job/lecturer pair, a capacity guard serializes accepted rows, and a partial
+PostgreSQL exclusion constraint protects active calendar intervals. The offer
+stays published until the last position is accepted. New attempts after it fills
+return `filled`; attempts by an already assigned lecturer while positions remain
+return `already_assigned`.
+
+Idempotency keys belong to an operation. Retrying a previously confirmed key after
+cancellation returns that cancelled historical claim, never a new confirmation.
+The UI retires a successful claim key and derives confirmation from actual current
+claims, allowing a new claim after an explicit reopening without a page reload.
+A lost-response retry retains its original key.
+
+<a id="section-job-lifecycle-cancellation-and-replacement"></a>
+## Cancellation and replacement
+
+A lecturer uses **Withdraw from this assignment** in the job detail. At least
+seven days (168 elapsed hours) before the first session, the server confirms a
+direct whole-block withdrawal; a reason is optional. With less than 168 hours
+remaining, a 5–1000-character reason is mandatory and creates a pending application.
+Exactly seven days belongs to the direct path. The server checks the actual first
+start instant again when submitting, independent of browser time or display zone.
+
+Administration or Management with current `jobs.manage` and verified MFA reviews
+the application from its inbox link to the job. Both approval and rejection require
+a 5–1000-character decision note. The author cannot review their own request, even
+with a management role. A pending or rejected request retains every confirmed
+session and course-chat membership. Approval releases the complete assignment;
+rejection keeps it binding and the lecturer may submit a new reasoned application.
+The lecturer receives the decision in their personal inbox and sees the reason in
+the job detail. Request reasons stay in private storage, accessible only to the
+author and current authorized job managers, and are absent from notice payloads.
+
+A manager can still perform reasoned administrative cancellation of another
+lecturer's assignment. The legacy cancellation RPC also enforces the short-notice
+rule for an actor's own assignment, so a direct API call cannot bypass review.
+Started blocks and **any** invoice-item history are refused and require separate
+financial review. These workflows record no bank payment, refund or credit note.
+Directed and marketplace replacement paths likewise refuse short-notice
+self-initiated transfers; a distinct current authorized manager can explicitly
+initiate a replacement. Offers created earlier do not bypass the policy by aging
+into the protected window. See [withdrawal operations](GUIDE.md#section-assignment-withdrawals) for the RPC, retry and
+migration boundaries.
+
+Cancellation:
+
+1. Marks the claim cancelled without changing its accepted money/terms snapshot.
+2. Retains session rows and sets `released_at`, removing those intervals from
+   future conflict checks and calendar allocations.
+3. Moves the vacancy to draft. Other confirmed positions remain confirmed.
+4. Removes the cancelled lecturer's course-chat membership. If they owned the
+   room, another active, non-revoked confirmed member becomes owner; otherwise ownership is empty. A separately assigned management owner remains unchanged.
+5. Records the cancellation reason in the audit log, a claim event and an in-app
+   notification. The actor/request ledger makes exact retries idempotent.
+
+Management explicitly reopens the remaining future position(s) with a reason and,
+if needed, a refreshed/cleared deadline. A qualified replacement must claim online
+under the same all-or-none checks. Each genuine audited reopening renews the single
+optional in-app notice for previously cancelled lecturers: it becomes unread with a
+fresh timestamp. Retrying that same completed request does not renew it again;
+disabling optional job updates suppresses renewal. There is no automatic substitute selection or
+administrator drag-to-confirm shortcut. Accepted resource/history read access
+remains according to existing job policies; cancellation is not a general erasure
+of legitimately accepted records. Private contracts/messages/calendar entries do
+not gain broader administrator access.
+
+Invoice submission now takes the same lecturer advisory lock before checking
+confirmed claims and inserting invoice items. This closes the demonstrated race
+where an invoice and cancellation could both commit against the same assignment.
+
+<a id="section-job-lifecycle-board-and-api-integration"></a>
+## Board and API integration
+
+The administrator board uses pinned `@dnd-kit/react` and `@dnd-kit/dom` 0.5.3,
+localized announcements/instructions, pointer and keyboard controls, and a normal
+status selector. Only never-accepted offers register as draggable. `filled` is a
+read-only column. All changes call the versioned publication RPC; accepted and
+cancelled history must be managed in the detail view.
+
+`job_board()` fetches one bounded batch (latest 500), including title, status,
+version and authorized aggregate position counts. Cards make no independent
+requests and add no polling. Job mutations invalidate affected query families,
+not every profile/document/wiki query in the application.
+
+Public RPCs use authenticated invoker wrappers; the scoped private implementations
+have an empty search path and explicit execution grants. Authentication comes from
+`auth.uid()` and database permissions, never a caller-supplied role/user ID.
+
+| RPC                                                                                           | Purpose                                                                                                                                           |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `job_lifecycle(p_job_id)`                                                                     | Authorized version, actions, position counts and own/managed claim history. Other lecturers' identities are not exposed through aggregate counts. |
+| `manage_job_offer(p_job_id,p_action,p_expected_version,p_request_id,p_payload)`               | Versioned `draft`, `published`, `archived`, `edit`, `duplicate`, `reopen`; reopening requires `reason`.                                           |
+| `cancel_job_assignment(p_claim_id,p_reason,p_request_id)`                                     | Audited own/authorized whole-block cancellation.                                                                                                  |
+| `create_capacity_job(p_payload,p_capacity,p_request_id,p_organisation_id,p_platform_percent)` | Explicit new per-position standalone offer; the UI defaults to one position and the API platform share defaults to 50%.                           |
+| `set_job_capacity(p_job_id,p_capacity,p_expected_version,p_request_id)`                       | Change explicit new offer capacity before acceptance.                                                                                             |
+| `job_board()`                                                                                 | MFA-protected management board batch.                                                                                                             |
+
+The legacy `set_job_status` remains for compatible never-accepted publication
+changes. It cannot reopen cancelled work or bypass immutable history.
+`commission_report` appends capacity; `client_requests` appends the
+`assigned_lecturers` array while preserving the original first-lecturer scalar
+fields for old API consumers.
+
+<a id="section-job-lifecycle-migration-and-verification"></a>
+## Migration and verification
+
+The additive migrations are `20261115203956_job_lifecycle_audit.sql` and
+`20261115210814_job_capacity_and_board.sql`. Delivered earlier migrations are
+unchanged. They replace the active assignment exclusion constraint, single-slot
+claim index and scoped RPC projections. An operator must review migration effects
+and backups before any separately authorized hosted rollout. No production data
+or hosted configuration was changed by this implementation.
+
+Focused checks actually passed in a disposable PostgreSQL 17 database:
+
+- `PORTAL_DB_CONTAINER=<owned-test-container> node scripts/jobs-lifecycle-db-tests.mjs`:
+  12 groups, including repeated-reopening notification renewal/retry/preferences,
+  a 50-way reopened single-position race, immutable accepted
+  snapshots, exact idempotency, resource release, deadline/CAS and controlled
+  invoice-vs-cancellation interleavings in both orders.
+- `PORTAL_DB_CONTAINER=<owned-test-container> node scripts/jobs-capacity-db-tests.mjs`:
+  8 groups, including usable owner re-election/management-owner retention and 50 concurrent requests for three positions (three distinct
+  lecturers / six session allocations), duplicate-actor protection, private
+  conflicts, budget/course counting and retained replacement ledgers.
+- `npx vitest run src/features/jobs/lifecycle.test.tsx src/features/jobs/board.test.tsx src/features/commercial/commission-api.test.ts`:
+  14 unit/component tests for server confirmation, failed-response keys,
+  reviewed versions, translations, offline controls and per-position totals.
+
+The SQL invoice fixture verifies transaction behavior using fictional clean PDF
+metadata; it does not claim to scan actual bytes. The canonical commercial API
+suite owns real upload/scanner acceptance.
+
+`jobs-lifecycle-api-check.mjs`, `jobs-capacity-api-check.mjs` and Playwright
+`job-lifecycle.spec.ts` / `job-capacity.spec.ts` are wired into the canonical
+isolated suite. Their actual native/browser result is recorded by the combined
+acceptance run in QA results; authored tests alone are not acceptance evidence.
+The browser cases cover a lecturer page staying mounted through cancellation and
+reopening, actual board input controls, partial capacity, DE/EN, dark mode and
+mobile/desktop accessibility. Run the supported `./portal test` entry point for
+complete native Auth/API/browser validation; do not point fixtures at development
+or production data.
+
+The complete product checklist remains in `ROADMAP.md`. This module
+does not declare saved marketplace filters, automatic substitute selection,
+scheduled publication, complete advanced marketplace filtering or all platform
+production acceptance complete.
+
+
+<a id="section-job-pickers"></a>
+
+<a id="section-job-pickers-purpose-scoped-offer-and-course-choices"></a>
+# Purpose-scoped offer and course choices
+
+The file upload and participant-channel dialogs use one bounded, server-side
+picker. They no longer load the first 1,000 complete jobs, sessions and
+requirements. The marketplace has its own separate discovery contract; its
+lecturer eligibility is not the authority for an administrative file/course task.
+
+<a id="section-job-pickers-connected-ui-behavior"></a>
+## Connected UI behavior
+
+- Ordinary file browsing and personal uploads start no privileged picker query.
+  With current `jobs.manage`/MFA, choosing before-/after-claim material opens the
+  offer picker. Search applies explicitly; **Load more choices** requests one more
+  page. The existing file uploader appears only after the server resolves the
+  exact selected job in the authorized response. MIME checks, quarantine, actual
+  scanning, clean bytes, quotas, retry identity and download policy remain in the
+  existing [file pipeline](GUIDE.md#section-files).
+- Creating a topic chat starts no offer query. Switching to a participant channel
+  with current `courses.manage`/MFA opens the course picker. Each linked course run
+  appears once even if it has several historical offers. Labels use authorized
+  course-template title, run organization, first course session and explicit
+  IANA zone, with a short run reference. An unscheduled run is labeled honestly.
+  Hidden job descriptions, customer quote fields and fees are not projected or
+  searched by this purpose. The representative value remains a real job UUID for
+  the existing `create_chat_group(p_job_id)` API; the resulting participant room
+  has the real `course_run_id` and no commercial `job_id` link.
+- A search preserves an already selected permitted value explicitly outside its
+  result page. It does not silently select the first match. Exact selection is
+  resolved in the same request, without a separate RPC per option. An older job
+  binding for a run does not produce a second course choice.
+- A `42501` response hides the options and connected operation immediately and
+  stays hidden through later network failures until an authorized refresh succeeds.
+  Ordinary transport errors preserve an existing operation draft. No private
+  picker data are persisted in browser storage. Upload/group mutations still
+  revalidate their own current permissions and report success only after commit.
+
+Pure client/learner accounts have no privileged picker query. A separate explicit
+capability can authorize a purpose without granting lecturer-marketplace access;
+this does not grant job detail, fee or private-room access. Existing actual action
+constraints, including eligible group members and one participant channel per run,
+remain authoritative. Selection does not reserve an offer or alter a claim.
+
+<a id="section-job-pickers-api-and-database"></a>
+## API and database
+
+The additive CLI-created migration is
+`20261116080741_scoped_administrative_job_pickers.sql`. All previous 29 migration
+sources are preserved. Other M8 feature migrations remain separate.
+
+`job_picker(p_purpose,p_search,p_cursor,p_limit,p_selected_id)` returns:
+
+```json
+{
+  "items": [
+    {
+      "id": "real-job-uuid",
+      "title": "Authorized offer or course title",
+      "customer_name": "Authorized customer or run organization",
+      "course_run_id": "course-run-uuid-or-null",
+      "starts_at": "first-session-instant-or-null",
+      "time_zone": "Europe/Berlin"
+    }
+  ],
+  "has_more": true,
+  "next_cursor": {
+    "at": "timestamp",
+    "id": "sort-uuid",
+    "fingerprint": "hash"
+  },
+  "selected": null
+}
+```
+
+This is an illustrative shape; actual UUIDs/instants are validated. Closed purpose
+`job_attachment` requires `jobs.manage`/MFA and includes existing jobs independently
+of lecturer claim eligibility or publication state, matching upload registration.
+`participant_course` requires `courses.manage`/MFA and includes only runs with a
+real job binding. It returns course metadata, not a commercial job DTO. It adds
+no silent published/nonarchived filter that the existing channel action lacks.
+
+Search is literal, case-insensitive and at most 160 characters. `%`/`_` are text.
+The UI requests 40 rows; the API permits 1–100. Cursor fingerprints bind purpose
+and search. Stable order is job `(created_at,id)` descending for file choices,
+course-run `(created_at,id)` descending for course choices. The earliest existing
+job provides the latter's compatibility binding; later duplicate offers do not
+create more course rows. Each page rechecks current rights and is not a frozen
+multi-request database snapshot.
+
+Indexes support job/run cursors, representative job lookup and first course
+session lookup. Schedule projection is limited to returned choices and one
+selected item; whole session lists are not returned. Public invoker RPC calls a
+scoped private implementation with empty search path and explicit authenticated
+execution grants. The internal candidate helper revokes PUBLIC/anon/authenticated
+execution. Browser actor IDs and editable metadata confer no authority. Existing
+`reserve_document`, `create_chat_group`, marketplace discovery and online whole-
+block claim interfaces are unchanged. The unused legacy `jobsQuery` export was
+removed after its final two production callers were replaced.
+
+The administrative Kanban remains independently limited to its newest 500 offers,
+with its existing DE/EN notice. It still needs its own paging/status-transition
+model; this picker does not add per-card queries or claim through drag-and-drop.
+
+<a id="section-job-pickers-verification-and-remaining-acceptance"></a>
+## Verification and remaining acceptance
+
+Focused executed checks use separate UUID databases in the explicitly owned,
+network-disabled scratch container. Six PostgreSQL groups passed, including
+1,062 equal-timestamp jobs, 1,057 distinct course runs, representative selection,
+literal/cursor bounds, strict purpose permissions/MFA, no commercial projection,
+first-session/IANA metadata, existing upload/channel API binding, duplicate-channel
+refusal, current suspension/role withdrawal and private helper/anonymous ACLs.
+Nine picker component/API-contract cases and the combined 55-case picker/file/chat
+focused run passed. The generic API-surface suite also passed all six checks,
+including actual frontend RPC binding, RLS, anonymous grants and empty definer
+search paths. Final native combined acceptance belongs to the root QA record.
+
+`scripts/job-picker-api-check.mjs` authors actual Auth/MFA/REST cap and purpose
+checks, selected upload reservation and participant channel creation. A reservation
+is quarantined metadata, not a claim that bytes were scanned. The two discovered
+desktop/mobile cases in `tests/e2e/job-pickers.spec.ts` additionally author a real
+scanned upload, paging, course deduplication, DE/EN, dark mode, axe, viewport fit
+and ordinary-account query exclusion. These native API/browser cases have not yet
+run for M8. Existing M7 acceptance does not cover this migration. Record the final
+canonical and retained-data results in the relevant pull request checks and
+QA results; no production or external delivery is claimed here.
+
+
+<a id="section-assignment-handover"></a>
+
+<a id="section-assignment-handover-assignment-waitlists-and-consented-substitution"></a>
+# Assignment waitlists and consented substitution
+
+Migration `20261116091012_assignment_waitlist_and_substitution.sql` adds private, permissioned workflow data without rewriting existing migration history or accepted deals.
+
+Lecturers can join or leave a full future offer's waitlist. Duplicate joins create one row and allocate no teaching time. A lecturer who loses the first-come claim race can still open the known job URL and join its waitlist; their own waitlisted jobs also appear on the jobs page. Explicit audited reopening notifies currently eligible, opted-in waiters after the final transaction state is known. A notification reserves no place: the existing online atomic claim still decides the successful booking. Leaving removes the corresponding availability notice.
+
+Waitlist interest grants no enduring read access to private job metadata. If an interested offer later becomes an unreadable draft or archived job, its own-interest entry uses a generic unavailable label and no job-detail link; the current private title is not returned. The owner can still remove that interest. Published/filled offers retain their existing reduced marketplace projection, and an ordinary current job-read permission remains authoritative.
+
+Withdrawal rechecks current account activation after the profile lock. A suspended request cannot mutate a waitlist using an earlier pre-lock permission result. Joining additionally requires current lecturer authority; an active former lecturer may still withdraw their own prior interest. Every successful leave receipt has an empty title. A caller without own interest receives the same idempotent, metadata-free receipt for a private or missing non-null UUID before any foreign job lookup or row lock; withdrawal is not an existence or title oracle. Null IDs are denied. The additive corrections are [current post-lock authority](supabase/migrations/20261116091534_waitlist_current_authority_after_profile_lock.sql) and [private withdrawal receipts](supabase/migrations/20261116100136_waitlist_private_withdrawal_receipts.sql); earlier SQL files and public API/grant identities remain unchanged.
+
+The current assignee or management with current `jobs.manage` and MFA can request a qualified, available replacement. Candidate results contain names and IDs only, never private calendar rows, contact data or blocked-out reasons. The server freezes the complete source teaching block, currency, unit and terms, and captures the recipient's own net compensation from the job's private role-pricing policy. It does not copy another lecturer's protected fee. See role-aware integration for the current quote/hash and ledger rules. The recipient reviews that concrete offer in their jobs-page inbox and explicitly accepts every session and the quoted terms online. Their hash/consent, active lecturer status, qualification validity through the last session, own applicable contract, personal calendar, unavailable windows and current source assignment are all rechecked at acceptance.
+
+An offer itself does not cancel or reserve anything. The atomic acceptance releases every old allocation and creates every new allocation in one transaction. It retains the original cancelled claim, original immutable commercial snapshot and original released intervals, creates a new immutable accepted claim and preserves the original customer gross/currency while recording the successor's accepted net/platform split. A private pricing-ledger mismatch requires financial review. The source course-chat membership and assignment-derived participant-channel access are revoked; independent enrolment or another accepted course assignment keeps its own rights. Current document and realtime authorisation then determine access. The replacement does not receive the former lecturer's private contract, messages or personal preparation notes.
+
+Started work, any invoice-item history (including inactive/cancelled invoices), partial release history, unavailable candidates, altered quotes and expired offers prevent transfer. Decline, withdrawal and cancellation are explicit. An ordinary cancellation supersedes pending replacement offers. Repeated successful acceptance returns the same replacement claim. A failed final exclusion check rolls back all intermediate changes, including source releases. The RPCs follow the existing lecturer → job → claim → offer lock order; two lecturer locks use a stable UUID order.
+
+The public APIs are `job_waitlist`, `my_job_waitlist`, `set_job_waitlist`, `substitution_candidates`, `propose_job_substitution`, `job_substitutions` and `respond_job_substitution`. Invoker wrappers delegate to reviewed private implementations with fixed empty search paths. Private tables have RLS and no direct browser or service-role table grants. There is no editable actor ID, approval queue, partial allocation or administrative acceptance on another recipient's behalf.
+
+Notification kinds are `job_waitlist_available` (optional job updates), `substitution_proposed` and `substitution_closed`. External mail/push contains generic portal notices; exact offer details stay behind login. The notification target resolver checks current ownership and availability before returning a link or title. A withdrawn or expired proposal no longer exposes a live proposal target.
+
+<a id="section-assignment-handover-evidence"></a>
+## Evidence
+
+`scripts/assignment-handover-db-tests.mjs` passed 15 native PostgreSQL groups, including 20 parallel waitlist joins, 50 simultaneous acceptance retries, whole-block immutable transfer, current qualifications/calendar/availability, source cancellation and recipient decline races, invoice-submission serialization, retained revenue snapshots, cancelled invoice history and former chat/file access revocation. Existing jobs/lifecycle component tests and three new workflow component cases passed. REST/MFA acceptance and desktop/mobile DE/EN workflows are defined in `scripts/assignment-handover-api-check.mjs` and `tests/e2e/assignment-handover.spec.ts`; actual combined-run acceptance must be recorded separately.
+
+The focused [waitlist authority/privacy suite](scripts/waitlist-authority-db-tests.mjs) covers profile-lock races, current lecturer join authority, permitted former-lecturer withdrawal, private-title redaction and guessed-ID cleanup without foreign row locking. Current observed suite results are recorded in the relevant pull request checks; authored checks and historical passes do not establish combined native/UI acceptance.
+
+
+<a id="section-assignment-withdrawals"></a>
+
+<a id="section-assignment-withdrawals-assignment-withdrawal-requests"></a>
+# Assignment withdrawal requests
+
+This implements the later product instruction that lecturer withdrawals with less
+than seven days' notice need review. Ordinary job claims remain immediately
+confirmed, first-come, first-served; this adds no claim approval queue.
+
+<a id="section-assignment-withdrawals-lecturer-and-management-flow"></a>
+## Lecturer and management flow
+
+Open the confirmed job and choose **Withdraw from this assignment**. The displayed
+window comes from PostgreSQL. At least seven days (168 elapsed hours) before the
+first session, a direct withdrawal can be confirmed; its reason is optional. At
+less than seven days, the dialog requires a 5–1000-character reason and submits a
+pending application. It never removes calendar sessions or chat access while the
+application is waiting. The submission transaction checks the time again, so an
+old browser dialog cannot bypass the boundary.
+
+Administration or Management opens the inbox notice, follows the job link, reads
+the application and chooses approval or rejection with a decision note. Current
+`jobs.manage` and AAL2 are required. A requester cannot approve their own work.
+Approval cancels the entire claimed block atomically. Rejection leaves the
+assignment confirmed. The lecturer receives the outcome in the inbox and sees the
+note in the job. A rejection can be followed by a new application. If administrative
+cancellation or substitution overtakes the application, it is closed as superseded.
+
+Direct withdrawal or approval retains accepted fees, currency, terms, source and
+contract snapshots, releases every session, removes assignment-only course-chat
+membership and returns the vacancy to draft. Explicit participant-room membership,
+other confirmed assignments and current enrolments retain access. Management explicitly reopens it.
+Started or invoiced assignments require separate operational/financial review;
+this feature does not create refunds, payments or accounting records.
+
+Participant-room memberships created before source tracking are deliberately
+unknown. If no other confirmed assignment or enrolment proves access, release
+stops atomically until an authorized room manager uses **Resolve access basis**
+to record independent access or a current assignment/enrolment basis. The former
+survives release; the latter is removed once its last supporting source ends.
+The same explicit decision is required before removing an enrolment when its remaining legacy chat membership has no recorded origin. A room owner is not silently removed. An authorized manager may explicitly remove
+an unneeded member once no assignment or enrolment retains access. These decisions
+are recorded in the audit trail. Existing ambiguous rows are never auto-classified.
+
+<a id="section-assignment-withdrawals-api-and-privacy"></a>
+## API and privacy
+
+| RPC                                                                             | Result and scope                                                                                                                                     |
+| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resolve_participant_chat_origin(p_room,p_user,p_independent)` | A current authorized room manager explicitly records the basis of a participant-room membership. |
+| `assignment_withdrawals(p_job_id)`                                              | Current actor's confirmed claims and own applications, or current authorized management applications. Null job selects a bounded cross-job snapshot. |
+| `request_assignment_withdrawal(p_claim_id,p_reason,p_request_id)`               | Own confirmed future assignment only; returns application ID and current status.                                                                     |
+| `review_assignment_withdrawal(p_withdrawal_id,p_approve,p_reason,p_request_id)` | Current management capability, MFA and non-author check; approves or rejects a pending application once.                                             |
+
+Public wrappers are security invoker, private implementations have an empty
+search path and explicit authenticated grants. Private application/command tables
+have RLS and no client table grants. Reasons are plain authored text in private
+application storage. Inbox rows contain only a kind and resource ID; link targets
+are reauthorized when read. No private calendar, contract or DM administrator
+bypass is added. No real email delivery is activated by implementing these notices.
+
+Mutations require online confirmation. Actor-scoped UI caches refresh after a
+confirmed response; uncertain responses retain the same request UUID for retry.
+The command ledger binds actor, operation and payload; a changed payload cannot
+reuse an old command. A rejected application needs a fresh explicit operation.
+The existing lecturer/job/claim locks also serialize invoices, substitutions and
+competing decisions. The old cancellation RPC refuses own short-notice attempts,
+including actors who also have a management role. Directed substitutions and the
+replacement marketplace enforce the same rule: an own proposal cannot be created
+inside the window, and an older own proposal cannot release its source after aging
+into it. Short-notice transfers remain possible when a different current authorized
+manager explicitly initiated them. Their immutable server-written proposer ID and
+current management role are checked under profile locks before release; a revoked
+or suspended proposer no longer authorizes the transfer.
+
+<a id="section-assignment-withdrawals-migration-and-operations"></a>
+## Migration and operations
+
+Apply `20261116170334_assignment_withdrawal_requests.sql` and the following
+`20261117120000_participant_chat_membership_origins.sql` only through the existing
+reviewed migration/update procedure. It adds private workflow tables, a cancellation
+trigger and scoped RPCs; published prior migrations stay unchanged. Existing claims
+and commercial rows are preserved, with no invented historical applications.
+This code change does not install the migration in any hosted or ordinary database.
+
+Revert application code through the existing recovery procedure if necessary;
+do not drop application records or rewrite accepted history to roll back. Pending
+applications require an authorized operational decision. Preserve workflow tables
+in backups with the rest of the database. PR and QA records describe checks actually
+executed; source/component tests alone do not prove native Auth, HTTP, retained data
+or production readiness.
+
+
+<a id="section-replacement-marketplace"></a>
+
+<a id="section-replacement-marketplace-transactional-replacement-marketplace"></a>
+# Transactional replacement marketplace
+
+This extension preserves the existing job/claim/calendar/chat/finance architecture. A lecturer or current MFA job manager may publish a reasoned replacement search for an existing confirmed, future, uninvoiced assignment. The original claim and every calendar allocation stay confirmed while the search is open. The private reason is visible only to that original lecturer and authorised management.
+
+At `/replacements`, eligible lecturers see the entire block, original IANA time zone, their own current compensation quote and exact terms. Explicit consent binds all quote fields and session instants. Changing any of them clears consent. Open and selected-invitation modes and emergency marking are implemented. Selected invitations reject currently ineligible lecturers; eligibility is recomputed on every read and claim. No private appointment details, other lecturer's prices or contract records are returned.
+
+Replacement requests and claims recheck active status after profile-lock waits. A retained successful claim receipt is returned only after the current caller profile is locked and lecturer authority is checked again after the request-gate wait. Winning role withdrawal or suspension refuses the retry without changing the historical receipt, accepted compensation or confirmed successor.
+
+<a id="section-replacement-marketplace-short-notice-withdrawal-policy"></a>
+## Short-notice withdrawal policy
+
+With less than 168 hours before the first session, a lecturer uses the reasoned
+withdrawal application in the assigned job. Own replacement searches are no longer
+available in that window, including direct API calls. An own offer created earlier
+cannot release the assignment after it ages into this window. A different current
+MFA-authorized job manager may explicitly initiate the replacement; current
+management authority and active status of that server-recorded requester are
+rechecked before a short-notice handover. Losing that role before acceptance blocks
+the transfer. The original assignment remains confirmed after any refusal. The
+same rule applies to directed substitute invitations. See
+[assignment withdrawals](GUIDE.md#section-assignment-withdrawals).
+
+<a id="section-replacement-marketplace-atomic-handover"></a>
+## Atomic handover
+
+`claim_replacement` locks both involved profiles/lecturers in a deterministic order, then the job, original claim and replacement. It checks current active roles, original allocation/version, complete future block, qualifications through the last session, applicable contract, calendar/private-event/unavailable-window conflicts and invoice history. The existing `private.claim_job` is the authoritative new-claim operation, preserving current quote/contract/revenue rules rather than duplicating those rules.
+
+Within a database subtransaction, the original claim is cancelled and its allocation rows marked released, and the existing claim routine reserves every session for the replacement. Any unsuccessful result or exception rolls back that entire subtransaction. Successful handover also transfers lecturer-course and run-associated participant-course chat membership, which controls room materials, and changes current `job_after` document access through the existing confirmed-claim predicate. Accepted original prices, currencies, terms, revenue history, allocation rows and audit history remain intact. A replacement accepts a new immutable compensation snapshot.
+
+Participant rooms have no job association; their `course_run_id` determines the
+matching course. The transaction locks both relevant room kinds in room-ID order
+before changing members. It revokes the old lecturer's participant membership
+only when no other confirmed assignment in that run and no genuine enrolled or
+completed enrolment remains. Removed enrolments and the cancelled source claim
+retain no rights. The replacement receives membership, and room ownership moves
+only when the previous owner was the old lecturer; another owner's role is
+preserved. The same current-membership policy controls messages and room files,
+including files originally uploaded by the removed lecturer.
+
+The original vacancy deadline is temporarily removed inside the handover transaction and restored before commit. That historical recruitment deadline cannot make a new authorised replacement impossible; the entire block must still be in the future. The ordinary publication notifier is deferred and evaluates final committed job state. An unchanged filled job is never exposed as an available vacancy outside this transaction.
+
+Exactly repeated actor/request inputs return the same successful result. Reusing a key for other inputs rejects. The whole-block database claim, constraints and actor locks remain the final guards against concurrent winners, duplicate calendars and booking conflicts. The public wrappers use SECURITY INVOKER; private RLS-enabled tables have no browser table grants. Minimal inbox targets recheck current authority; no real email is sent by this module.
+
+<a id="section-replacement-marketplace-boundaries-still-required"></a>
+## Boundaries still required
+
+Already started, partly completed or invoiced work is explicitly refused and sent to contractual/financial review. This is a deliberate incomplete part of the full requested marketplace: partial delivery needs an approved amendment allocating remaining sessions and compensation, not guessed prorating or overwritten accepted fees. Waitlists, directed substitute invitations and external notification channels belong to the independently owned smart-operations source; they must be preserved and jointly verified when integrated. The UI states this module's limits. Management cannot use the marketplace to bypass eligibility or assign a lecturer without that lecturer accepting the current offer.
+
+The role-pricing compatibility path calls the inspected private `role_net` / `role_quote_version` helpers only when a captured `role_split` offer exists. Legacy net-only jobs keep their existing quote. The independently owned pricing PR must pass integrated exact-source tests before this compatibility is claimed accepted. No business percentages are added to public source or defaults.
+
+<a id="section-replacement-marketplace-evidence"></a>
+## Evidence
+
+`PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-extensions-20261116 node scripts/replacements-db-tests.mjs` passed **13 real PostgreSQL groups** in randomly named disposable databases with no published network ports. Tests cover ownership/MFA/suspension, no release at publication, private reasons, exact retries, two concurrent claimants, immutable original agreement, complete calendars/chat, current conflicts/expired or revoked qualifications/contracts, selected invitations, cancellation CAS, injected handover failure rollback, stale terms, started work, old recruitment deadlines and concurrent original cancellation.
+
+`npm test -- src/features/replacements` passed **4 component/business tests** for bound consent, real server-result handling, stable retries and offline/English rendering. The whole-source checkpoint passed 257 tests and the unchanged coverage gates (52.04% statements, 47.09% branches, 42.28% functions, 53.86% lines). These are focused source results, not browser/backend acceptance.
+
+The actual Auth/HTTP test is `scripts/replacements-api-check.mjs`; browser DE/EN/dark/axe/mobile and real online handover are in `tests/e2e/replacements.spec.ts`. They are authored and remain pending until the canonical `./portal test` and exact PR CI are observed passing. Shared local QA ownership must be respected. No merge, development VPS installation, production approval or physical PWA acceptance follows from the source checkpoint alone.
+
+The access-composition correction passed all 13 existing replacement SQL groups
+and zero-warning/error body diagnostics for 30 operational implementations.
+`scripts/support-replacement-access-db-tests.mjs` passed 24 actual SQL groups:
+eight each for current main plus operations, a stricter predecessor fixture, and
+the chronological union with exact PR17 source
+`00eaa5249a163618887f72683da362e785a5957f`. Each mode verifies raw message RLS,
+protected chat history, document metadata and clean-version reads before and
+after handover; sole assignment, another same-run assignment, enrolled/completed
+enrolment and removed enrolment; source/recipient/outsider separation; owner
+transfer; retained immutable original terms; complete calendars and exact retry.
+Only disposable databases in the explicitly owned networkless fixture are used.
+These SQL checks do not replace native Auth, HTTP/Storage-byte, browser or full
+combined acceptance.
+
+
+<a id="section-course-building-blocks"></a>
+
+<a id="section-course-building-blocks-course-building-blocks-source-references-and-teaching-offers"></a>
+# Course building blocks, source references and teaching offers
+
+The approved curriculum catalogue contains **22 distinct building blocks from 24 supplied PDF versions**. Every block already has one reusable course template after the additive migration runs. Startup does not need OneDrive, Poppler or the original PDFs, and does not reset edited templates.
+
+<a id="section-course-building-blocks-customer-independent-operation"></a>
+## Customer-independent operation
+
+A building block describes reusable teaching content, not a customer account. Source provenance does not assign an organisation, user membership, contract or commercial agreement. Create the actual customer under **Customers**, select that organisation when planning each course run, and reuse the same teaching template for other customers as needed.
+
+Administration may invite client users and grant explicit organisation memberships. The server checks current membership and permissions for organisation requests and financial projections; client access is not a general catalogue, private-contact or teaching-discussion entitlement. This describes the existing organisation-scoped model, not a claim that every product module has a separate tenant workspace. See [customer/course operations](OPERATIONS.md#section-operations) and client access.
+
+Public documentation, examples and screenshots must use neutral descriptions or fictional organisations. Actual customer names, contacts and other business records are configured privately in the application and are not included as public provenance or product branding. Historical migration versions remain immutable; review the source hashes in the M4 review rather than rewriting installed history.
+
+<a id="section-course-building-blocks-daily-workflow"></a>
+## Daily workflow
+
+1. Open **Courses → Course building blocks**, search by code, title or curriculum and inspect the source. The detail shows the source filename, document revision/creation dates, content pages and complete SHA-256 fingerprint. Original PDFs are not publicly hosted and filenames are not broken download links.
+2. Authorised management with MFA chooses **Plan course run**. The source template is preselected. Select the actual customer, display time zone, delivery/venue and dates. The explicit weekday planner suggests the source's ten teaching days with editable daily times. It skips weekends; holidays, breaks and exceptions remain a planning decision. Save validates each actual time instant and DST ambiguity rather than silently shifting it.
+3. Open the saved course and choose **Create teaching offer**. The administrator form shows trusted content, customer and exact source sessions as a stable read-only preview. Enter the financial terms and publish/draft choice. Changing content or scheduling belongs in course planning.
+4. Administration enters the full customer fee under the privately configured compensation policy. Management without gross permission enters only the permitted lecturer compensation. The database derives the resulting job from the locked course; it never trusts browser-submitted titles, customers or session IDs.
+5. A lecturer sees only their compensation and the source reference. Claiming reserves every actual session immediately through the existing atomic claim transaction. Gross offers appear in the appropriate client's request/spend list; net-only offers retain unknown gross and do not fabricate customer quotes.
+
+Building-block/template discussions are attached to the actual reusable template, so teaching notes persist across runs of that template. Job discussions remain attached to the individual job. These are teaching-team discussions; clients/learners do not receive their bodies. Course enrolment, invoices and private commercial/DM/calendar boundaries remain independent and enforced.
+
+<a id="section-course-building-blocks-source-identity-and-editorial-decisions"></a>
+## Source identity and editorial decisions
+
+The record's **Kurzzeichen** determines identity. The supplied `Bausteinbeschreibung-LPIC3.pdf` and `Bausteinbeschreibung_LPC3.pdf` both identify **LPC3** and contain the same curriculum after layout whitespace is normalised. The equivalent LPIC4/LPC4 pair identifies **LPC4**. Their PDF bytes differ and both versions are retained, rather than creating duplicate courses or pretending the files are identical. The LPIC-named variants have document revision 09 September 2026; the underscore LPC variants have 05 September 2025. The newer version is the primary catalogue reference.
+
+The maintained course naming is authoritative: LPC3 and LPC4 are module codes which together prepare for LPIC-1 102-500 after already completed 101-500 content, with LPC4 following LPC3. That project instruction is recorded in prerequisites/notes. Historical source titles and curriculum, including old certification identifiers, are preserved visibly; this import does not certify that those documents match current external exam requirements.
+
+All other supplied codes remain separate: BVMM1, CIS2–CIS5, COS1–COS2, DLO2, EAA1–EAA2, GLCC, GRDB, ITE1, KIE1, LPC1–LPC4, MASL1–MASL2 and PTE1–PTE2. No CIS1 file was supplied and no missing course is invented. Source authors, book prices, ISBNs and room-preparation sections are not imported as curriculum. Wrapped lines and the repeated adjacent DLO2 bullet are normalised for reading; course content is otherwise left in its authored language.
+
+<a id="section-course-building-blocks-data-and-authority"></a>
+## Data and authority
+
+| Owning entity                                                | Purpose                                                                                                                                      |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data/course-building-blocks.json`                           | Reviewed import artifact with 22 source-derived curriculum definitions and 24 exact-byte source versions; no PDFs or absolute personal paths |
+| `building_blocks`                                            | Curated source curriculum, identity, stated duration, notes and default reusable template                                                    |
+| `building_block_sources`                                     | Immutable filename/hash/page/date versions; only the primary-selector flag can change                                                        |
+| `course_templates`                                           | Editable teaching content derived from the source, with a matching building-block/source foreign-key pair                                    |
+| `course_runs` / `course_sessions`                            | Actual customer/delivery/time-zone and precise dates; reused directly by a job                                                               |
+| `private.course_run_job_requests`                            | Actor/request UUID binding for durable retries of both financial modes; never exposed in lecturer APIs                                       |
+| Existing private commission/request/accepted-revenue records | Real gross agreement and client linkage when known; accepted snapshots and old net semantics remain unchanged                                |
+
+Source curriculum and editable teaching templates intentionally have different responsibilities. Editing a template does not rewrite the original catalogue definition. A template copy retains its exact source link, while run duplication continues to omit jobs, contracts, learners and chat members. Once an offer exists, source lineage cannot be rewritten through template/source/run/job relinking. New source editions require an additive reviewed source and template version; accepted work does not follow a mutable “latest document” pointer.
+
+Staff may browse the approved source catalogue. Management writes require `courses.manage` and verified MFA; the new offer API also requires `jobs.manage`. Clients do not gain a general curriculum browse permission. Learners can read the source associated with their actual enrolled/completed course, and lose it upon revocation. No content import grants verified expertise, eligibility, a contract, attendance or a review automatically.
+
+<a id="section-course-building-blocks-developer-apis-and-invariants"></a>
+## Developer APIs and invariants
+
+- `course_run_job_defaults(p_course_run_id uuid)` returns the trusted run/template/source/customer/delivery/topic/session DTO with a `source_revision`. Exact source session IDs are named `source_course_session_id` in this preview and stored as `job_sessions.course_session_id`.
+- `create_course_run_job(p_course_run_id uuid, p_payload jsonb, p_platform_percent numeric default null, p_client_id uuid)` returns one job UUID. `p_client_id` is a required fresh request/idempotency UUID, retained unchanged for retries; it is not an organisation or client-account ID. The closed payload contains `source_revision`, currency, fee unit, terms, contract requirement, draft/published status and optional explicit deadline; amounts are either gross amounts for authorised admin/owner or net amounts for management. Source identity, customer, title, location and dates cannot be injected.
+- The source fingerprint covers trusted curriculum/context/topic values and exact session IDs/epoch instants. It is independent of the SQL display time zone and excludes financial values. It is checked after course/template/organisation locks. A source changed after preview yields `course_run_source_changed`; the app preserves the entered financial draft and asks the user to inspect/reopen the latest course.
+- The actor/request lock is acquired before the run lock. A matching retry returns the original UUID, changed request parameters conflict, and different actors racing the same run produce one complete offer. A current draft/published/filled offer yields `course_run_offer_exists`. This initial slice offers the whole run at capacity one; split-job/cancellation/capacity expansion remains in the product plan.
+- The run needs an active actual customer (`course_run_customer_required`). Missing, past, nonfinite or overlapping sessions and deadlines after the first session are rejected without partial writes. Creating the job copies existing source session IDs and requirements without creating another organisation, template or run.
+- Gross calculation delegates to the existing authoritative commission function inside the transaction; the lecturer job/claim/invoice remains net-only. The immutable claim/revenue transaction, qualifications, contract prerequisites and overlap protections are reused unchanged.
+- `job_building_block_reference(p_job_id uuid)` returns only authorised source identifiers. It uses the same current job-access predicate as the marketplace/comments. `JobBuildingBlockReference` and `BuildingBlockReference` share the source display component; no second source-of-truth UI is maintained.
+
+The typed frontend contract is `src/features/operations/building-blocks-api.ts`. Native catalogue queries live beside the existing operations queries; server wrappers are security invokers and privileged implementations stay unexposed. Every new exposed table has RLS, direct authenticated writes are denied, and source/schema/provenance guards also protect against accidental privileged edits.
+
+<a id="section-course-building-blocks-reproduce-and-maintain-the-import"></a>
+## Reproduce and maintain the import
+
+```bash
+node scripts/course-catalogue.mjs
+node scripts/course-catalogue.mjs --source-dir "/path/to/the/provided/Building Blocks"
+```
+
+The second command reads originals with system Poppler `pdftotext`, checks every PDF hash and curriculum mapping and compares the reviewed artifact. It does not change a PDF or database. `--write` explicitly rewrites the catalogue artifact only after a human-readable diff review. `--sql` emits the deterministic current insert-only DML; a regression checks it against the forward migration's generated section. After an applied release, preserve old migration files and introduce a new migration for additional/changed sources. Updating an existing code to a different curriculum deliberately requires manual version review, not silent alias dedupe. Changing the primary source for a used template requires a new template version.
+
+The current sources are `scripts/course-catalogue.mjs`, `data/course-building-blocks.json` and the [customer-neutral forward migration](supabase/migrations/20261116032005_customer_neutral_course_catalogue.sql). Historical migration `20261115155208` in [the migration directory](supabase/migrations) remains byte-identical. The catalogue has no dependency on the user's absolute filesystem path at runtime. Its deterministic insert-only import is safe to reapply to missing initial rows and never replaces user-authored template text. Original files remain in the user's existing folder.
+
+<a id="section-course-building-blocks-customer-neutral-correction-and-installation-boundary"></a>
+## Customer-neutral correction and installation boundary
+
+The forward migration removes the original single-provider restriction and uses a bounded catalogue namespace independent of customer organisations. It neutralises only exact original catalogue labels and pristine default templates with no course runs, authored edits, topic changes, archive state or save-audit record. Historical used/edited templates, all source revision identifiers and accepted job/financial records remain unchanged. The same reviewed source can be reused for different customer organisations without creating another course identity.
+
+The five actual PostgreSQL upgrade groups verify two independent customer organisations sharing one template, scoped offers and an accepted claim before the change, exact retained records, edited templates and another neutral catalogue namespace. The existing 16 catalogue SQL groups and six catalogue unit checks also pass. Eight historical branded screenshots have been removed from public documentation. Exact PR23 CI passed the HTTP/SQL and persistence stages but failed two mobile pointer actions (82/84 browsers). Strict pointer readiness and safe geometry diagnostics were added; the next complete outcome is recorded on PR23. The initial local canonical command had refused another checkout's shared QA lock. The historical results below describe their recorded source revisions only.
+
+This migration replaces a constraint and includes bounded data changes, so it retains the existing operator-review gate. A source change or these local checks do not install it on any hosted instance. Do not rewrite historical migration files or bypass that gate.
+
+<a id="section-course-building-blocks-verification-status"></a>
+## Verification status
+
+The complete canonical application run 03 passed in `.local/tests/0260b044/RESULT.txt`, completed **2026-11-15T16:43:20.241Z** (16 November Australia/Brisbane). It included all 16 course-building-block PostgreSQL cases and the actual `course-building-blocks-api-check.mjs` Auth/TOTP/REST journey, followed by both complete course-building-block browser journeys (desktop 7.8s, mobile 7.8s). The entire integrated run passed 52/52 browser cases, production build, 2/2 built-PWA cases and checked isolated cleanup. Root the relevant pull request checks own the full aggregate source/runtime/Edge/SQL/API counts and exact submitted-revision CI status.
+
+The course-building-block browser flow exercised catalogue search, DE/EN switching without losing the filter, dark/light rendering, exact source versions/checksum, literal template comments, generated ten-session run, authoritative financial-only offer, reused customer/template/run/source-session IDs, hidden customer gross and a real ten-session lecturer claim. Automated axe and document overflow assertions passed. Final desktop/mobile fictional screenshots were visually inspected: source metadata is styled/readable, the intended palette accent is visible and desktop compensation stays beside the first content. No original PDF, real person, credential or MFA QR was captured.
+
+Visual review of run 02 found that a direct lecturer job route did not load source-card CSS from the lazy course page. Shared `building-blocks.css` now loads from its actual shared component; source/planner rules were moved rather than duplicated. An undefined brand variable was corrected to the real palette token. Run 03's direct-navigation source-border and catalogue-accent assertions passed on desktop/mobile. The prior 02 screenshots are not final style evidence.
+
+Five Node catalogue/provenance/reproducibility checks and three schedule tests passed incrementally. The catalogue SQL-generator guard was strengthened during run 03's already frozen application snapshot to reject both nested SQL dollar delimiters in future supplied source content. The new synthetic case first reproduced the missing exception, then all 5 Node checks passed; read-only original-source verification again matched 24 PDFs/22 blocks and the generated migration/data reproducibility case passed. Only the import utility/test changed after that snapshot: no application, schema, reviewed JSON or embedded migration changed. Root records this narrow targeted correction separately, and exact submitted-revision CI runs the full current command.
+
+All mutating API/browser checks use the random disposable stack and checked scoped cleanup. Normal/hosted data and original PDFs are untouched. Local Chromium/axe/source metadata acceptance does not assert current external exam requirements, hosted release readiness or a complete manual accessibility assessment.
+
+Combined hosting/application acceptance also passed in canonical04 (`4c7c897`,17:31 UTC, exit 0): all new feature SQL/API/desktop/mobile journeys plus the full regression suite. See the relevant pull request checks. This is local acceptance; the M4 hosted migration review remains a separate gate.
+
+
+<a id="section-course-learning-workspace"></a>
+
+<a id="section-course-learning-workspace-course-workspaces-preparation-and-learning-evidence"></a>
+# Course workspaces, preparation and learning evidence
+
+The `/learning` hub and `/courses/:id/workspace` connect an actual course run to its assigned lecturers, current client-organisation members and explicitly enrolled participants. The course catalogue detail and client portal link to these workspaces. An unrelated lecturer, another client organisation, removed enrolment or inactive account does not gain access by guessing the URL. Course-management capabilities retain their current MFA requirement. A published catalogue entry alone does not grant access to the operational workspace.
+
+<a id="section-course-learning-workspace-delivered-workflows"></a>
+## Delivered workflows
+
+- Management creates shared preparation items. Assigned teaching staff record progress with optimistic version checks; clients see only explicitly client-visible items. These are shared course tasks, separate from the existing lecturer's personal preparation list.
+- Management explicitly selects one current contact from the course's own organisation. Course members see only the selected name/business email/phone, never internal contact notes or an unrestricted customer directory.
+- Management shares a particular clean, scanned material version with staff, clients, participants or all authorised members and classifies it as material/report. Receipts reference that exact shared version. Replacing the underlying document does not silently replace the agreed file. Withdrawal and membership removal prevent subsequent downloads. The existing document/contract RLS is unchanged: course sharing does not grant general file-centre access.
+- Enrolled participants can self-report attendance only around the actual session window. A self-report is labelled unverified. Assigned staff verify an ended session's state and actual minutes, with a required reason. Every correction retains before/after evidence, actor and time in a private audit ledger and rejects stale versions. Clients receive the authorised course attendance report; staff alone see correction reasons/history.
+- Course Q&A is shared only among enrolled participants and assigned teaching staff. Personal course notebooks remain owner-only, including against general management access. Notebook conflicts retain the draft and provide explicit reload.
+- After the course ends, enrolled participants and the linked client can submit versioned course feedback. The server retains the author privately for eligibility and duplicate prevention. Ordinary summaries disclose no names/IDs/timestamps and release average/comments only after three responses. The UI explains this policy and warns that free text can identify its author; it does not claim true anonymous collection.
+- Teaching staff author/publish a mini quiz with immutable revisions, 2–6 options per question, pass threshold and maximum attempts. Learners never receive correct-answer fields. Attempts require current enrolment and a started course, serialize per learner, enforce the current revision/attempt cap and preserve accepted retry IDs. A new published revision has its own evidence and limit.
+- A participant can issue a completion record only after the course ends, management has marked their enrolment completed, at least 80% attendance has been verified in every session, and any published quiz is passed. The record preserves issued name/course/timezone/session/attendance/quiz facts. Its PDF is generated on the server from these stored facts, with a stable record ID; it makes no legal-signature or external-certification claim. Assigned staff must explicitly revoke an active record before correcting its attendance evidence. Reissue requires a new staff attendance verification after revocation and all eligibility checks; the old record remains historical and its PDF is unavailable.
+- A linked client can repeat a previously delivered request with new future dates. Topic, scope and quoted original-currency budget become a **new submitted request** through the existing validated/idempotent request workflow. No accepted assignment, rate snapshot or calendar allocation is copied or confirmed by this action.
+
+All UI labels and explanatory notices are DE/EN; authored syllabus, questions, answers and notes stay in their authored language. Online writes wait for database confirmation. The workspace has explicit refresh and standard stale focus/reconnect revalidation; it does not promise continuous background polling or offline writes.
+
+<a id="section-course-learning-workspace-database-and-protected-documents"></a>
+## Database and protected documents
+
+Migration `20261116091015_course_learning_workspace.sql` adds private RLS tables for course settings, preparation, exact resource shares/receipts, attendance/corrections, Q&A, owner notebooks, protected feedback, quiz versions/attempts and immutable completion facts with auditable revocation. Direct browser table access is revoked. Public functions remain invoker wrappers around checked private implementations:
+
+| RPC                                                                       | Purpose                                                                                                |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `my_course_workspaces()`                                                  | Bounded list of current authorised course runs                                                         |
+| `course_workspace(p_run_id)`                                              | Permission-scoped course projection, exact file versions and current action flags                      |
+| `course_workspace_action(p_run_id,p_action,p_payload,p_expected_version)` | Explicit checked preparation/contact/resource/notebook/Q&A/feedback/attendance/quiz/completion actions |
+| `repeat_client_request(p_request_id,p_sessions,p_client_id)`              | New idempotent client request from a delivered original                                                |
+| `course_document_access(p_kind,p_id)`                                     | Current authorised exact resource-version or stored completion/report facts                            |
+
+The `course-documents` Edge endpoint supports exact shared resource bytes, course completion/attendance PDFs, and the separately owned reviewed financial statement/assignment-confirmation RPCs. It checks actual Auth plus current active database permissions before and after storage/rendering; changed or revoked facts fail closed. Reviewed resource bytes must match their stored SHA-256. Responses are attachments with private/no-store headers and no public signed-link bypass. Browser downloads recheck the current actor before releasing a blob.
+
+The PDF/font libraries are pinned and bundled locally with integrity lock and license notices; the licensed DejaVu font is explicitly included through CLI `static_files` and selfhost `staticPatterns`. The exact selfhost worker has a read-only source mount, writable temporary cache and 512 MiB ceiling. Fonts support German accents and Greek/Cyrillic; unsupported characters return an explicit error rather than silently changing names. [Asset provenance and reproduction](supabase/functions/course-documents/assets/README.md).
+
+Selfhost routing allows only the exact `course-documents` endpoint. The separately implemented `calendar-feed` capability endpoint is also explicitly registered: only its exact GET skips the router's ordinary JWT check; its own handler verifies owner-issued revocable capabilities. Other methods, suffixes and workers retain normal authentication. Caddy/Envoy access logging remains disabled. An actual upstream transport-error probe demonstrated that Caddy error logging still retained query capabilities: its default runtime logger now strips every query from URI/URL fields and removes Referer. The new real 502 regression verifies calendar tokens, recovery token hashes and arbitrary private query values are absent while status/error diagnostics remain available. Runtime unexpected-error logging also records only fixed event, allowlisted error class and optional UUID reference; error messages/objects/stacks containing request URLs are not serialized.
+
+<a id="section-course-learning-workspace-actual-evidence-and-remaining-acceptance"></a>
+## Actual evidence and remaining acceptance
+
+Executed on 16 November 2026 against disposable local resources:
+
+- Eleven real PostgreSQL groups passed, including foreign/member/MFA denial, shared CAS updates, scoped contact, exact reviewed material without widened RLS, notebook/Q&A isolation, check-in versus verified audited correction, three-response feedback threshold, revisioned capped/idempotent quiz, eligibility/immutable completion/revocation/reverification, repeat-request idempotency and current revocation.
+- Five meaningful React tests passed for permission-adapted UI, confirmed notebook/preparation persistence, stale-private-data removal and answer-only quiz submission/DE–EN state.
+- Eleven Edge tests passed: six HTTP/Auth/hash/revocation cases, three real PDF/font/determinism/pagination cases and two capability-log privacy regressions. German/Greek/Cyrillic completion output was rendered with Poppler and visually inspected; no clipping or missing glyphs remained after word wrapping was corrected.
+- An actual container using the configured **Edge Runtime 1.79.1 digest** passed a read-only, no-network, 512 MiB **user worker** PDF rehearsal. Its first run correctly exposed the missing static-font packaging; the owning CLI/selfhost configurations were fixed and the fresh rehearsal passed. Temporary labelled containers and files were cleaned.
+- Sixteen actual isolated Envoy route cases and the full selfhost configuration validator passed. The central six-group database/API surface guard passed with 157 literal frontend RPC references. TypeScript/ESLint and source formatting passed at the integrated checkpoint.
+- All eleven actual Caddy HTTP groups passed after the transport-error privacy correction, preserving public/API routing, headers, private path denial, maintenance fencing and atomic release behaviour. Owned fixture containers/network were removed.
+- A real release-archive regression preserved all fourteen selected PDF runtime/font/lock/license assets with exact manifest hashes and extracted tar bytes. This verifies packaging completeness in a synthetic release fixture; it does not create or approve a production release.
+
+`scripts/course-workspace-api-check.mjs` is authored for the canonical actual Auth/MFA/REST/ClamAV/Storage/Edge flow, including changed underlying file versions and deterministic protected completion bytes. `tests/e2e/course-workspace.spec.ts` supplies two workflows per desktop/mobile target, including client shared preparation/material download and learner notes/Q&A/quiz/feedback/completion PDF, DE/EN/dark/axe and screenshots. Those native suites count as passed only when the root's complete command actually executes them; QA results owns final combined/CI evidence.
+
+No real learner records, production course data, real email recipients, hosting or service settings were changed by this work. Existing fictional course-building-block catalogue references can be used with these workflows; the module does not fabricate attendance, quiz passes, signed certificates or legal acceptance.
+
+
+<a id="section-course-readiness"></a>
+
+<a id="section-course-readiness-course-readiness-centre"></a>
+# Course Readiness Centre
+
+The preparation centre extends existing course runs, confirmed assignments, contract versions, qualification attestations, scanned files and customer records. `/readiness` lists accessible preparations; `/readiness/:id` shows the checklist, authorised documents, meeting or venue, instructions and tasks. The dashboard widget reads the same server projection. It complements personal teaching preparation and does not replace that separate private workflow.
+
+Readiness writes lock the current caller profile before waiting for the course gate. Management permissions, active status and assigned-lecturer/task authority are read after any profile wait and remain protected through the mutation or retained request reply. A role/status change that commits first prevents a stale browser request from confirming preparation.
+
+<a id="section-course-readiness-authoritative-calculation"></a>
+## Authoritative calculation
+
+No percentage or readiness state can be edited. PostgreSQL recalculates applicable checks from current records for every response. The percentage is the number of complete applicable checks divided by applicable checks, rounded to a whole percentage. Customer organisation and contact are distinct checks so missing contact information is visible.
+
+The checks cover every course session and every required lecturer position, an applicable documented agreement, verified qualifications covering the assignment, clean current teaching materials available to each assigned lecturer, HTTPS meeting or physical venue, active customer/contact records, explicit confirmation of the current schedule, acknowledgements of the current instruction version and required preparation tasks. Mandatory job contract prerequisites cannot be waived in preparation settings. An incomplete course never reaches 100% or Ready.
+
+Management selects requirements for internal/external courses, materials and instructions. Unconfigured courses default to requiring materials, a customer/contact and a documented agreement. Online courses always require a meeting URL; physical courses always require a venue. Agreement and qualification coverage use each assignment's interval, preserving independently allocated portions of a course. Schedule confirmation stores a source fingerprint; changing source session identifiers or intervals invalidates that confirmation automatically. Missing lecturer, agreement, qualification, venue or schedule confirmation blocks readiness; other missing requirements require attention and become blocking when their deadline passes.
+
+Preparation completed means every applicable check passes and the scheduled course end lies in the past. This is explicitly labelled as preparation, **not teaching delivery**. Attendance and proof-of-delivery use a separate auditable workflow.
+
+<a id="section-course-readiness-responsibility-instructions-and-history"></a>
+## Responsibility, instructions and history
+
+Management with current `courses.manage` and MFA configures preparation, confirms schedules and creates/edits/archives tasks. A task can be assigned to the acting manager or a currently assigned active lecturer. Assigned lecturers can acknowledge only their own current instructions and complete or revoke completion of their own tasks. Management can document completion too. Changing task title or responsible person clears the current completion and preserves its previous value in private history. Archiving retains the row and history.
+
+Instruction receipts bind the exact numbered version. Editing instructions or changing their acknowledgement requirement advances that version, retaining older receipts. A new assigned lecturer does not inherit another lecturer's receipt. All writes use optimistic versions and request UUIDs. Matching uncertain retries return the original result; changed payloads cannot reuse the same request. The UI retains a request UUID while retrying an unchanged form. No mutation reports success before the online server response.
+
+<a id="section-course-readiness-privacy-and-integration"></a>
+## Privacy and integration
+
+Preparation is accessible only to current course managers with MFA or currently confirmed assigned lecturers. The existing broad visibility of published courses is deliberately insufficient. Participants, unrelated lecturers and customer memberships do not grant preparation access. Suspension/cancellation is checked on every read and write. Private tables have RLS enabled and no browser table grants; public RPC wrappers use invoker security and narrowly granted private implementations fix an empty search path.
+
+The lecturer projection exposes agreement/qualification validity rather than other people's contract identifiers, documents or prices. Customer contact existence is evaluated without returning private email, telephone or notes. Teaching documents must have a clean current version and be available through job scope or a current lecturer-course room membership. Personal CVs, contracts and manager-only files cannot satisfy teaching-material readiness. Rendering reuses the authenticated file attachment/download boundary; no reusable signed Storage URL or offline cache is introduced. Existing authorisation still governs the linked course, calendar, profile, job and file screens.
+
+Queries refresh on focus/reconnect and every 30 seconds while the centre is open. The dashboard shares the same cache without another timer. A denied refresh removes retained preparation content. Mutation handlers invalidate readiness only after server success; database recomputation remains authoritative regardless of browser invalidation. The implementation preserves DE/EN interface strings, authored content, intended IANA time zones, system/light/dark tokens and responsive layouts.
+
+<a id="section-course-readiness-api-and-schema"></a>
+## API and schema
+
+The additive `20261116121554_course_readiness.sql` migration creates five private RLS-enabled ledgers: settings, tasks, instruction receipts, request idempotency and preparation events. Historical migrations are unchanged. These public authenticated functions form the API:
+
+| RPC                                                                         | Purpose                                                                                                                                                                      |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `course_readiness(p_course_run_id?)`                                        | Authorised current snapshots; an explicit inaccessible ID fails closed. The overview bounds results to 250 nonarchived courses, excluding those ended more than 30 days ago. |
+| `save_readiness_settings(run, payload, expected_version, request_id)`       | Versioned applicability, instructions, meeting and deadline.                                                                                                                 |
+| `confirm_course_sessions(run, expected_version, request_id)`                | Confirm the current source schedule fingerprint.                                                                                                                             |
+| `save_readiness_task(run, task_id?, payload, expected_version, request_id)` | Create/edit/archive a responsible task.                                                                                                                                      |
+| `complete_readiness_task(task, completed, expected_version, request_id)`    | Record or revoke completion with history.                                                                                                                                    |
+| `acknowledge_course_instructions(run, instruction_version, request_id)`     | Own exact-version instruction receipt.                                                                                                                                       |
+
+Preparation events keep detailed before/after records privately. Company-wide audit rows contain only safe action and course identifiers, without authored instructions or private contract content. The general audit viewer's reviewed action allowlist is a separate integration boundary.
+
+<a id="section-course-readiness-verification-status"></a>
+## Verification status
+
+Executed focused evidence at the initial source checkpoint: 16 actual PostgreSQL groups in an owned networkless disposable fixture; 13 unit/component/API-adapter cases; whole-project TypeScript; focused ESLint. These cover incomplete courses, applicability, agreement/qualification revocation, clean/current material and membership rules, exact scheduling, stale/concurrent settings, idempotent retries, instruction versioning, task permissions/corrections, customer contact privacy, suspension/cancellation, private-ledger/anonymous denial, literal authored content, offline mutations, server failures, DE/EN draft preservation and untrusted links.
+
+`scripts/readiness-api-check.mjs` additionally exercises actual native Auth/MFA/REST, a real Edge/ClamAV/Storage material upload, instruction/task flows and immediate suspension. `tests/e2e/readiness.spec.ts` exercises actual management and lecturer UI, outsider denial, DE/EN, light/dark, responsive overflow, axe checks and offline refusal on desktop/mobile. These are canonical native/browser acceptance entry points; consult the source-bound QA results for their actual execution rather than inferring a pass from their presence. The whole regression, native upgrade/retention, PWA and deployment status is recorded separately in the PR and QA results, not inferred from these focused checks.
+
+No hosted database, real customer, production service, SMTP recipient or public marketing website was changed for this feature. X-platform installation and legal acceptance are not claimed.
+
+
+<a id="section-teaching-delivery"></a>
+
+<a id="section-teaching-delivery-attendance-and-proof-of-teaching-delivery"></a>
+# Attendance and proof of teaching delivery
+
+The workflow is present in accepted main's published migration `20261116121600_attendance_delivery.sql`, with its frontend, actual API fixtures and desktop/mobile journeys. Focused evidence below describes its original source checkpoint; current complete execution is recorded in the relevant pull request checks under the [functional acceptance contract](DEVELOPMENT.md#section-functional-acceptance). Main38 retains this application and its SQL unchanged within the 69-file released history; the current quality integration still needs its own complete gates. Source merge does not establish hosted installation or production acceptance.
+
+<a id="section-teaching-delivery-daily-workflow"></a>
+## Daily workflow
+
+At `/delivery`, a lecturer opens an assigned session, records actual start/finish instants in its intended IANA time zone, selects complete, partial, cancelled or interrupted delivery and saves a draft. Partial delivery, cancellation and interruption require explanatory notes. A cancelled session has no delivered interval. Actual intervals must be finite, ordered and no longer than 24 hours. The frontend rejects ambiguous/nonexistent DST wall times; the database requires explicit offsets and retains the intended zone.
+
+The lecturer reviews the saved draft and explicitly submits it. Unsaved form edits disable submission so the screen cannot submit a different previously saved value without notice. Completed/partial/interrupted evidence cannot be submitted before its scheduled session begins or with an actual finish in the future. A cancellation may be reported before the scheduled date. No offline mutation is queued or displayed as successful.
+
+Management selects its management overview to see missing and submitted evidence across assignments and compare scheduled with delivered minutes. A current course/finance manager with MFA can confirm, dispute or request correction. The reviewer cannot approve their own teaching evidence. Disputes/correction requests require explanations. Lecturer corrections carry a new reason and create a new immutable revision on submission. Prior submissions, review events and customer acknowledgements remain available in history.
+
+An explicitly assigned customer representative may choose the customer confirmation view and confirm the latest management-confirmed revision for their organisation. Their projection omits draft fields, lecturer notes, correction explanations, internal review notes and invoice identifiers. A removed organisation membership or an unconfirmed newer correction removes that customer access immediately on the next server read. Confirmation of an old revision never automatically confirms the replacement revision.
+
+<a id="section-teaching-delivery-data-and-permissions"></a>
+## Data and permissions
+
+The additive `attendance_delivery` migration creates four RLS-enabled private tables with no browser table grants:
+
+| Record                         | Purpose                                                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `private.delivery_records`     | Session identity, current workflow state, CAS version and editable unsubmitted draft                         |
+| `private.delivery_submissions` | Immutable lecturer-authored numbered evidence, actual interval/zone and original scheduled interval snapshot |
+| `private.delivery_events`      | Immutable submission/review/customer events, actor and timestamp with appropriate explanations               |
+| `private.delivery_operations`  | Immutable actor/request receipts for exact idempotent retries                                                |
+
+The existing `assignment_sessions → job_claims → jobs → course_runs` relationships determine ownership and customer scope. Browser-supplied user or role IDs never establish authority. Submitted evidence can be read by its lecturer even if the old assignment is subsequently cancelled/released; only their current confirmed unreleased assignment can receive a new draft/submission. Revoked or suspended actors cannot read or mutate delivery records. Current `courses.manage` or `finance.manage` and AAL2 determine management access; support permissions confer no such access.
+
+All writes lock the claim and session and compare the expected record version. Concurrent first drafts/reviews have one winner. Idempotent response-loss retries return their original result, while a request key reused for different values is refused. Current authority is checked before returning a stored receipt. Immutable-evidence triggers prevent replacement or deletion of prior submissions/events/receipts even by ordinary direct SQL writes. New business operations never disable those triggers.
+
+<a id="section-teaching-delivery-sql-api"></a>
+## SQL API
+
+| RPC                                                                                 | Behavior                                                                                                 |
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `delivery_sessions(p_scope, p_before_at, p_before_id, p_limit)`                     | Cursor-paged own, MFA management or organisation-scoped customer projection; explicit `has_more`         |
+| `delivery_session(p_session_id)`                                                    | Exact currently authorized detail, including older notification deep links                               |
+| `delivery_history(p_session_id)`                                                    | Revision and event history, redacted for customer representatives                                        |
+| `save_delivery_draft(p_session_id, p_expected_version, p_payload, p_request_id)`    | Validated draft; payload contains outcome, actual_start, actual_end, time_zone, notes, correction_reason |
+| `submit_delivery(p_session_id, p_expected_version, p_request_id)`                   | Freeze current saved draft in a new numbered submission                                                  |
+| `review_delivery(p_session_id, p_expected_version, p_action, p_note, p_request_id)` | Independent confirm, dispute or request_correction decision                                              |
+| `confirm_customer_delivery(p_session_id, p_expected_version, p_request_id)`         | Explicit confirmation of current management-confirmed submission                                         |
+
+Public RPCs are invokers around isolated, empty-search-path private authority functions; anonymous execution is revoked. Protected tables are not exposed as an alternative write path. Invalid inputs/transition/idempotency conflicts use `22023`, denied access `42501` and stale versions `40001`. UI validation/errors, status/actions, screen-reader names and export headers are authored in German and English.
+
+<a id="section-teaching-delivery-cross-module-integration"></a>
+## Cross-module integration
+
+The UI links the existing assignment and, when already present and authorized, its active invoice. The delivery feature does not generate invoices or modify accepted fees, original currency, tax, claim terms, invoice PDFs or payment history. An invoiced claim can retain additional corrected delivery evidence while its accepted invoice stays byte-identical. Any financial amendment remains the explicit commercial workflow's responsibility.
+
+Submitted and reviewed evidence creates minimal committed inbox notifications and audit entries without copying private notes. `private.delivery_notification_target()` resolves event destinations under current permissions; the shared notification resolver must include it. SMTP delivery remains subject to the separately owned notification-outbox/provider setup, never inferred from insertion of an inbox row.
+
+The CSV export reuses existing formula-safe serialization and includes the visibly loaded authorized session records, original canonical timestamps/zone, minutes and status/revision codes. Its text explains pagination; it does not falsely call a partially loaded list a full-period export. API responses, history and CSV contain no compensation amounts. No private delivery response is added to the PWA's public app-shell cache.
+
+<a id="section-teaching-delivery-acceptance-and-continuation"></a>
+## Acceptance and continuation
+
+Executed focused checks: `npx vitest run src/features/delivery` passes **7 tests across 2 files**; TypeScript and scoped ESLint pass. The owned networkless/no-published-port PostgreSQL container and UUID database pass **12 real groups** after the invoice linkage check, covering direct/anonymous/foreign denial, malformed fields, exact retry, immutable submissions, independent MFA review, concurrent CAS, customer isolation/revocation, explicit corrections, cancelled/interrupted delivery, stale versions, pagination, future evidence, suspension, historical access and preserved invoice/accepted AUD terms.
+
+Commands:
+
+```bash
+PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-extensions-20261116 node scripts/delivery-db-tests.mjs
+npx vitest run src/features/delivery
+npx tsc -b
+npx eslint src/features/delivery scripts/delivery*.mjs tests/e2e/delivery.spec.ts --max-warnings 0
+```
+
+`scripts/delivery-api-check.mjs` exercises actual fictional Auth/MFA/REST submission, concurrent review, customer redaction, correction history and inactive-token denial. `tests/e2e/delivery.spec.ts` exercises saved-draft submission, independent correction/review, original revision history, DE/EN, dark mode, keyboard CSV export, axe and horizontal-overflow checks on both configured browser projects. Those scripts are authored, not reported as executed by the focused SQL/unit results. The canonical runner's shared lock must be respected; no foreign stack may be stopped to acquire it.
+
+Remaining gates: exact combined `./portal test`, actual native retained-data/security CI, independent review, eligible merge and merged-source verification. Physical PWA platforms, other browsers and manual accessibility acceptance remain separate product-wide checks. Evidence identifies freelance teaching delivery; it does not assert employment, tax treatment or legal signature sufficiency.
+
+
+<a id="section-client-request-briefs"></a>
+
+<a id="section-client-request-briefs-customer-request-teaching-briefs"></a>
+# Customer request teaching briefs
+
+Customer requests now contain explicitly required whole teaching units, a 45- or 60-minute unit length, preparation instructions and a list of required documents. Teaching minutes must fit within the actual planned session duration. Breaks may occupy the remaining session time; none of these fields derives or changes an agreed commercial price.
+
+The additive CLI migration `20261116091023_client_request_brief_and_history.sql` stores private versioned briefs and append-only request snapshots. Initial creation is atomic with the existing validated request creation. A repeated client key must match the same normalized initial brief. Edits use an expected version and the exact request row lock used by publication and cancellation. Only submitted requests with no linked published job may change. Existing older requests are explicitly recorded as a baseline, not invented prior history. The UI pages through all retained revisions in groups of 25.
+
+`create_client_request_with_brief`, `save_client_request_brief`, `client_request_brief`, `client_request_history` and `client_request_document_access` check the active database identity and exact current organisation membership. Existing gross-finance capability requires current MFA. Participants, unrelated customers and lecturers gain no new request access. Private tables have RLS and no direct authenticated write grants; history has no update/delete API. Database-owner maintenance and exact fictional fixture cleanup remain possible.
+
+The request card offers an explicit upload/share action through the existing file quarantine and malware scanner. It accepts only the uploader’s own clean personal `material` document versions, categorized as material or report. Contracts, CVs, qualifications/evidence and invoices cannot be attached, even by an administrator. An already shared version may be retained by another current member of the same organisation. Ordinary document/Storage RLS is unchanged. The `request_resource` kind in the existing course-documents Edge function authorizes the exact request/version, verifies downloaded SHA-256 and rechecks both actual Auth and current request rights before returning bytes. Later private replacement versions do not silently replace agreed bytes; removed shares or memberships stop subsequent downloads.
+
+Repeat booking copies teaching units, unit length, instructions and document requirements, then validates them against the newly chosen sessions. Attachments must be explicitly shared again. No enrolments, attendance, notebook, feedback, quiz attempt or completion record is copied.
+
+<a id="section-client-request-briefs-verification"></a>
+## Verification
+
+Focused actual checks: nine PostgreSQL groups passed using disposable migration replay, including invalid-creation rollback, organisation/MFA isolation, real concurrent CAS, exact clean-version restrictions, unchanged private-file RLS, replacement/removal, immutable paged history, publication lock, repeat booking and membership/account revocation. Four component tests passed for retained conflict drafts, pending confirmation, teaching-time validation and read-only protected downloads in DE/EN. The protected Edge suite includes request/version dispatch and authorization rechecks.
+
+`scripts/client-request-brief-api-check.mjs` exercises actual Auth/REST, the existing scanner, exact uploaded/downloaded bytes, replacement, CAS, history and revocation. `tests/e2e/client-request-brief.spec.ts` exercises real initial UI submission, revision, scanned upload, exact byte download, reload/history and DE/EN accessibility on both configured browser sizes. These are authored canonical acceptance cases; their actual combined execution belongs to the root-owned complete QA run. They are not presented as already passed here.
+
+
+<a id="section-support-desk"></a>
+
+<a id="section-support-desk-internal-support-desk"></a>
+# Internal support desk
+
+The support desk adds a persisted request, reply and resolution workflow. It is
+separate from private chats and commercial documents. User-authored subjects,
+descriptions and replies retain their authored language; interface text is
+available in German and English and uses the existing theme and responsive shell.
+
+Ticket creation and updates hold the current caller profile while waiting for request/ticket locks. Updates recompute support authority after a profile wait, including the manager flag used for internal notes. Suspension or staff-role withdrawal that commits first prevents both a new restricted write and an otherwise successful stored-response retry.
+
+<a id="section-support-desk-access-and-lifecycle"></a>
+## Access and lifecycle
+
+Every active signed-in account can open and search its own tickets at `/support`.
+Only the explicit `support.manage` capability with current MFA permits reading
+other people's tickets, assigning support staff, choosing priority, adding
+restricted notes or changing workflow status. The migration initially assigns
+that capability to the existing Administration, Owner and Management roles.
+It does not grant support-only accounts financial, contract, calendar or chat
+permissions. Assignees must currently be active and have the support capability.
+
+The normal lifecycle is Open → In Progress → Waiting for User → Resolved →
+Closed. In Progress can resolve directly and Waiting for User can return to
+In Progress. Each status change requires a reason. Requesters can reopen resolved
+tickets and tickets closed within the preceding 30 days, with a reason; support
+staff can also reopen older tickets. Replying or adding an attachment requires an
+open workflow rather than silently reopening closed history. Version checks
+reject stale changes and actor-scoped request keys make identical uncertain
+retries safe. Replies, internal notes and events append to history.
+
+Management can link records only when its separate resource permissions permit
+the link. Requesters can initially select currently readable courses, their own
+assignments and their customer organisation memberships. These references never
+grant access to the underlying record; later projections recheck access.
+
+<a id="section-support-desk-confidentiality-and-files"></a>
+## Confidentiality and files
+
+Tickets, messages, events and request ledgers live in RLS-enabled private tables
+without browser table privileges. Public functions are invoker wrappers around
+reviewed private routines with an empty search path and current actor checks.
+Internal notes and their history are removed on the server from requester
+projections. They do not notify the requester. Staff-capability loss immediately
+redacts retained staff UI projections while detailed permission checks refresh.
+
+Attachments use the existing authenticated upload gateway and malware scan.
+The attachment must be a new dedicated personal material upload with exactly
+one clean, hash-bearing version. Existing CVs, contracts, invoices, course files,
+room files and replacement histories cannot be attached as a shortcut. Linking
+freezes the dedicated document and its version as evidence. The existing file
+gateway rechecks ticket access and restricted-note visibility, so a guessed
+document ID does not bypass ticket ownership. Internal attachments remain
+restricted to support staff with MFA. Ordinary document rename, replacement or
+deletion is refused for this linked evidence; no new anonymous Storage access or
+reusable signed URL is introduced.
+The attachment's ticket permission is authoritative even for its original
+uploader: losing support authority or MFA removes restricted-evidence access.
+
+The document gate captures the exact previously installed private permission
+function in a definer-only helper and replaces the original function in place.
+Existing RLS policies retain their function OID. Non-support documents delegate
+to that captured policy, including a stricter qualification-evidence policy when
+installed; the support module does not recreate generic certificate privileges.
+The clone is not executable by anonymous, authenticated or service-role callers.
+Support attachment checks remain final: a denied internal attachment never falls
+back to its uploader's ordinary personal-document access.
+
+The focused `scripts/support-replacement-access-db-tests.mjs` regression runs
+eight actual SQL groups against current main plus the operational migrations and
+eight against an independently tightened predecessor in separate disposable UUID
+databases. It verifies predecessor body/OID preservation, effective clone grants,
+certificate metadata/version isolation, and internal attachment denial after MFA
+or staff-capability loss, including the original uploader. An additional exact
+local commit can be replayed without editing its history:
+
+```sh
+PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-extensions-20261116 \
+PORTAL_REVIEW_PR17_COMMIT=00eaa5249a163618887f72683da362e785a5957f \
+node scripts/support-replacement-access-db-tests.mjs
+```
+
+All 24 SQL groups passed with that pinned PR17 source, including its actual
+stricter qualification migration. The tests exercise the document/version RLS
+projections used by the authenticated file gateway; they do not assert a native
+HTTP download or actual Storage-byte transfer. Existing 12 support SQL groups
+and strict diagnostics for 30 operational PL/pgSQL implementations also passed.
+
+<a id="section-support-desk-notifications-and-reporting"></a>
+## Notifications and reporting
+
+Committed public activity creates or refreshes one `support_update` notification
+per recipient/ticket. New tickets notify currently eligible support staff; later
+updates notify the requester and assignee, or the support team while unassigned.
+Note contents and attachment contents never enter notification bodies.
+`private.support_notification_target` resolves a current authorised ticket title
+and destination for integration with the existing inbox target resolver.
+
+The support overview groups current counts by category and shows outstanding
+tickets and elapsed hours to the current resolution. This is operational support
+reporting, not an employment or payroll clock. Reopening clears the current
+resolution timestamp while preserving earlier reasons and transitions in history.
+
+<a id="section-support-desk-api-and-verification"></a>
+## API and verification
+
+- `support_context()` returns current support capability, eligible assignees,
+  authorised resource choices and manager-only category summaries.
+- `support_tickets(search, status, before_at, before_id, limit)` searches only
+  permitted ticket subjects/descriptions with bounded tuple pagination.
+- `support_ticket(ticket_id)` returns the currently authorised detail and history.
+- `create_support_ticket(payload, request_id)` creates an owned request.
+- `update_support_ticket(ticket_id, action, payload, expected_version, request_id)`
+  appends a reply/note/attachment or applies a reasoned workflow, assignment,
+  priority or resource-link change.
+
+Focused PostgreSQL evidence: `PORTAL_DB_CONTAINER=<owned-disposable-container>
+node scripts/support-db-tests.mjs` passes 12 real groups including simultaneous
+retry and stale-version races, internal-note/file secrecy, ownership, MFA,
+resource forgery, immutability and revocation. Seven unit/component tests pass
+for literal rendering, reviewed-version preservation, pending/denied responses,
+DE/EN drafts, offline controls and retained staff-projection redaction.
+
+`scripts/support-api-check.mjs` and `tests/e2e/support.spec.ts` are guarded real
+Auth/MFA/REST/scanner/browser journeys discovered by `./portal test`. Their
+execution and exact-source combined acceptance must be recorded by the integrating
+session; authoring these tests is not a claim that they have passed. This source
+does not enable real email, change hosted data or establish production acceptance.
+
+
+<a id="section-workbench"></a>
+
+<a id="section-workbench-private-workbench-and-reusable-workflows"></a>
+# Private workbench and reusable workflows
+
+`/workbench` provides own tasks, authorised shared operations tasks, workflow templates, private topic/customer favourites and explainable job recommendations. All UI is German/English; authored task/template text remains unchanged. The chat action creates a task linked to the selected message without copying its body. Such tasks are always private and disappear, including history, after current message/room access is revoked.
+
+Creation retains one request identity across unconfirmed retries. Edits require an exact server revision. Bulk completion/reopening submits at most50 exact ID/revision pairs; one denied/stale entry rolls back the complete transaction. No success or new state is shown before the server confirms. Foreign private tasks remain unavailable even to administrators. Operations delegation and shared-template editing require current management permission/MFA; assignees can update state without rewriting another creator's task details. Private tasks cannot be silently promoted into shared ones. Reassignment renews its committed task-assigned notice only for a new real reassignment.
+
+Workflow templates use explicit add/remove task rows with0–365-day offsets, not delimiter parsing. Applying a specific revision produces new private tasks and preserves existing tasks when the template later changes. Retrying an unconfirmed application uses the same request identity. Templates can be archived; their creator must retain the required sharing capability before the UI offers shared editing.
+
+Task pages use bounded stable creation-time/UUID cursors and state filters. History records before/after versions and is current-permission checked. The page shows authorised before/after title/state; the underlying authorised snapshots retain the complete saved fields. The server supplies operation capabilities and eligible assignees. Favourite customer choices remain limited to currently visible directory/course relationships; inaccessible/archived resources are omitted. Recommendations show verified requirement counts and favourite reasons, exclude current qualification expiry and known schedule conflicts, and never substitute for a fresh atomic assignment claim.
+
+Executed focused checks:11real PostgreSQL groups cover private/admin isolation, stable creation retries, concurrent revision conflicts/history, atomic bulk rollback, current-MFA delegation, immutable/private chat source with revocation, workflow application retries, favourite visibility and recommendation expiry/conflicts/cursors. Ten workbench component tests cover non-optimistic conflicts, exact bulk revisions, private message drafts, invalid DST rejection, structured rows, stable application retries and offline blocking; six existing chat presentation/edit tests still pass. Whole TypeScript and focused ESLint passed at this checkpoint. Guarded Auth/REST and desktop/mobile DE/EN/axe/reload/offline fixtures are authored; their actual execution belongs to the combined QA report, not these focused passes.
+
+Private task/template/history references deliberately restrict account deletion. Test-only cleanup removes exact fictional owners' dependent private rows in the canonical disposable project before deleting Auth identities; production deletion/retention is not implemented by that fixture. This source does not itself activate mail/push, create tasks for real people or certify a production release.
+
+Notification/search deep links use `?task=UUID` and the exact current-permission-checked `work_task_detail` lookup, so a target beyond the first50rows opens without scanning every page. A dedicated regression places55newer rows ahead of an existing task and checks peer/admin/source-revocation refusal. The editor retains its original version even if a background detail refetch arrives, preserving draft/CAS behavior. Direct links also expose the authorised history action. Migration20261116091022 is an additive forward change; previous migrations are unchanged by this lookup.
+
+
+<a id="section-timesheets-finance-control-center"></a>
+
+<a id="section-timesheets-finance-control-center-actual-teaching-time-financial-facts-and-control-center"></a>
+# Actual teaching time, financial facts and Control Center
+
+Migration `20261116091017_timesheets_finance_and_control_center.sql` adds a private teaching-time ledger, printable financial facts and capability-scoped operational projections. The frontend routes are `/timesheets` and `/control-center`; every string supports German and English. Author-written notes and agreement text retain their authored language.
+
+<a id="section-timesheets-finance-control-center-teaching-time-workflow"></a>
+## Teaching-time workflow
+
+Lecturers record completed actual teaching intervals inside their own confirmed, unreleased assignment sessions. Times are explicit instants, interpreted in the displayed account IANA zone; nonexistent or ambiguous local DST times are rejected in the form. Break minutes are integral and leave positive net teaching time. A session has one timesheet and active time intervals cannot overlap, including across assignments. Actual time never reprices an accepted compensation snapshot.
+
+Saving uses a client-generated UUID and expected version, with identical lost-response creation retries handled idempotently. The lecturer submits a draft. Financial review requires current `finance.manage` plus MFA and may approve or reject a submitted version. Submitted and approved versions cannot be directly edited. An approved correction requires an explicit financial-review action and reason; the earlier approval remains in append-only history before the owner creates a corrected draft. Any invoice-item history freezes further time changes, including cancelled/inactive invoice history. The existing lecturer mutex serializes this with invoice creation.
+
+The UI preserves conflicting input, offers an explicit refresh, waits for server confirmation and disables writes/downloads offline. The history view shows recorded before/after states and review notes. Fresh authorised CSV downloads use the existing formula-safe exporter. Assignment-confirmation and earnings-statement PDFs use the protected document Edge function, with a current-identity check before download; they are not browser print placeholders. Approved time is supporting invoice evidence. Invoice preparation continues to use the unchanged accepted compensation.
+
+The public APIs are:
+
+- `timesheets(p_from date, p_until date, p_all boolean default false)` → `{time_zone, can_review, items, sessions}`. Own scope is the default; all-lecturer scope requires current financial permission and MFA.
+- `save_timesheet(p_id uuid, p_payload jsonb, p_expected_version integer default 0)` → the confirmed row. Exact payload: `{session_id, starts_at, ends_at, break_minutes, note}`; actor and state fields are rejected.
+- `manage_timesheet(p_id uuid, p_action text, p_expected_version integer, p_request_id uuid, p_reason text default '')` → the confirmed row. Actions: `submit`, `approve`, `reject`, `request_correction`.
+- `timesheet_history(p_id uuid)` → owned or currently authorised financial history.
+
+All periods use `[from, until)` in the current account zone and are finite, with a maximum of 93 calendar days. Oversized time/statement results fail explicitly and require a shorter period; financial totals are not silently truncated. Direct private-table access is revoked and RLS is enabled as defence in depth. No user-editable metadata confers financial permission.
+
+<a id="section-timesheets-finance-control-center-printable-facts-and-financial-scenarios"></a>
+## Printable facts and financial scenarios
+
+`assignment_confirmation(p_claim_id uuid)` and `finance_statement(p_from date, p_until date, p_all boolean default false)` return `{data, hash}`. The SHA-256 hash covers deterministic canonical JSON facts, excluding changing generation timestamps. Assignment facts include the exact accepted original-currency compensation/terms and retained sessions/status. Own financial statements contain only the caller's accepted net deals, current invoice status, approved minutes and currency-separated totals. The statement period selects assignments by their first session; payments are the current recorded amounts associated with those assignments, not a fabricated period cashbook.
+
+Recorded invoice payments are allocated across their claim items in exact original-currency cents using a deterministic largest-remainder allocation. The allocation totals match the actual payment ledger without independent-rounding drift. They do not represent customer receipts into Luminovia's bank account.
+
+`finance_forecast(p_from date, p_until date, p_pipeline_probability numeric default 0)` requires current financial permission and MFA. Its monthly buckets separate accepted lecturer costs, known accepted gross/margin, unknown gross claims, probability-weighted open offer costs/gross and recorded lecturer invoice payments. Gross values, margins and unconverted customer-request amounts require the additional current `finance.gross.read` capability. The probability is an explicit scenario assumption from zero to one, not a company commission rule or a booking commitment. Original currencies are never silently converted; legacy gross values are not invented.
+
+<a id="section-timesheets-finance-control-center-operational-projection"></a>
+## Operational projection
+
+`control_center(p_from date, p_until date)` requires current `jobs.manage` plus MFA. It returns bounded, date-filtered lists of unstaffed offers, missing clean teaching materials, recent cancellations/handovers, currently readable overdue tasks and customer-request metadata. Contract and qualification expiry data require their separate explicit capabilities. Course preparation and aggregate quality require course management; averages stay hidden below three feedback responses. Private tasks and revoked/private message-derived tasks remain protected by the task's current owning authorisation helper.
+
+The UI includes actionable links to jobs, tasks/history, contracts, qualification profiles, course workspaces and the administrative audit. Each operational list displays at most 200 records and asks users to narrow the period when necessary. Financial scenarios use an accessible table and explicit probability control; privileged gross columns are omitted when not authorised.
+
+The review notification kind is `timesheet_reviewed`, under reminder preferences. `private.timesheet_notification_target(uuid)` resolves only an owned or explicitly financial-authorised row and creates a date-scoped internal `/timesheets` link in the recipient's current IANA zone. External delivery stays generic.
+
+<a id="section-timesheets-finance-control-center-evidence"></a>
+## Evidence
+
+Fourteen native PostgreSQL groups passed for exact own-session fields, real concurrent CAS, idempotent submission, MFA review, protected approval/correction history, invoice-history freeze, unchanged compensation, stable owned facts/hashes, exact-cent payment allocation, independent no-overlap enforcement, probability-weighted future costs, three-response quality thresholds, gross/currency separation and Control Center private-task isolation. Seven meaningful frontend cases passed for real confirmation timing, protected submitted state, conflicting review input, owned PDF requests, scenario controls, permission gating and period validation. The actual REST/MFA suite and desktop/mobile DE/EN/axe/PDF workflow are defined in `scripts/timesheets-finance-api-check.mjs` and `tests/e2e/timesheets-finance.spec.ts`; their full isolated execution is a separate acceptance gate. No production installation, real mail, accounting/tax certification or bank integration is implied by source checks.
+
+
+<a id="section-calendar"></a>
+
+<a id="section-calendar-calendar-private-events-assignments-and-published-global-events"></a>
+# Calendar: private events, assignments and published global events
+
+`/calendar` offers month, week, day and list views in the personal IANA time zone. Own private events remain editable; confirmed allocations link to the specific job. The title query loads only the actor's own confirmed job identifiers. Availability and blocked periods remain a separate connected workflow at `/availability`.
+
+<a id="section-calendar-shared-calendar"></a>
+## Shared calendar
+
+**Global events** shows explicitly published, unarchived global events and the still-authorised published course runs. Private appointments are not copied into this calendar. The display uses the profile time zone; event details additionally show the stored event zone, description and, where present, an explicitly clickable HTTPS link. Descriptions are plain text, not HTML.
+
+Global events are queried only for the actually visible FullCalendar range. The start is inclusive and the end exclusive; an event must actually overlap the range. Switching month/week/day or navigating backwards/forwards changes the query through `datesSet` without remounting the calendar. A window is limited to 93 days. Pages of 50 results, an explicit **Load more events** action and `(updated_at,id)` as a unique descending cursor prevent a silent full-catalogue fetch or the former confusion of the global 1,000-row REST limit with a complete inventory. The displayed number counts loaded global events, excluding separately displayed course sessions.
+
+The existing course-run/template query retains its own resource authorisation and integration. It has not also been converted into a new paginated course API here. Own private events and confirmed allocations keep their existing queries. There is no automatic background loop over other calendar ranges.
+
+<a id="section-calendar-manage-global-events"></a>
+## Manage global events
+
+Accounts with **current `courses.manage` permission and MFA/AAL2** see management controls for the visible global-calendar range. They can:
+
+- Create a draft with title, description, start/end, IANA zone and optional HTTPS link.
+- Edit an observed draft and explicitly publish it.
+- Withdraw publication.
+- Archive an event and recover it as an unpublished draft.
+- Search literally by title/description within the time window and load subsequent pages.
+
+**Saving explicitly creates a draft.** Editing a published event withdraws its publication. Only another click on **Publish** makes the saved version visible. Archiving preserves the UUID and its version/request history. Recovery publishes nothing automatically. This intentionally differs from the separate unpublished-revision model for announcements. The interface explains this workflow before saving. An event saved outside the visible time window appears after navigating to its window.
+
+Every change uses an observed version and a stable request UUID. An unchanged retry after a lost response returns the same confirmed server state. Different content with the same request UUID is rejected; concurrent versions do not overwrite one another. A version conflict preserves the draft for review. Authoritative access revocation immediately hides the private list and dialog, including during subsequent network failures. Only a successful authorised refresh opens a clean view again. Writes are not confirmed offline.
+
+<a id="section-calendar-time-and-links"></a>
+## Time and links
+
+Database values are finite absolute instants with a stored IANA zone. New API payloads contain an explicit UTC/offset component and four-digit years. Form input is converted according to its zone. Nonexistent local times during the DST jump and ambiguous new local times during the fallback are rejected. Unchanged existing time fields retain their exact seconds and already unambiguously stored DST offsets during text-only edits.
+
+Optional links accept only `https://` with ASCII DNS names or a complete IPv4 address and a valid optional port. Credentials, whitespace/control characters, backslashes, invalid hosts/ports and other protocols are rejected server-side and client-side. The browser opens links with `noopener noreferrer`. The platform does not fetch the destination server-side or claim to check its availability or external content.
+
+<a id="section-calendar-api-and-permissions"></a>
+## API and permissions
+
+Additive migration created with the actually pinned Supabase CLI: `20261116080743_global_calendar_publications.sql`. Existing `global_events` rows and IDs remain; description, link, archive state and version/update metadata are added.
+
+| RPC                                                                                     | Purpose                                                                                                                                                    |
+| --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `global_calendar_events(p_from,p_to,p_manage,p_search,p_before_at,p_before_id,p_limit)` | Authorised overlap within a bounded range; at most 100 records, `has_more` and a tuple cursor. `p_manage=true` requires current management permission/MFA. |
+| `manage_global_event(p_id,p_action,p_expected_version,p_request_id,p_payload)`          | Versioned/idempotent `save`, `publish`, `unpublish`, `archive`, `recover` actions. New drafts use `p_id=null`, version 0.                                  |
+
+Public functions are invoker entry points into private implementations with an empty search path. Internal helpers are not executable by PUBLIC/anon/authenticated. Private request history has RLS and no browser table grants. Ordinary active client/participant/lecturer accounts may read only current publications. Direct table queries remain RLS-bound. A `p_manage` flag, foreign UUIDs or editable JWT user metadata grant no permissions.
+
+Writes first lock the actor's profile `FOR SHARE`. The explicitly VOLATILE implementation then checks current roles, activation and MFA in a separate statement before acquiring request/event locks. Existing role management locks the same profile `FOR UPDATE`; an already-running role revocation therefore wins before a waiting write. There is no administrative bypass into other people's private calendars.
+
+The audit projection adds exactly `calendar.global_save`, `calendar.global_publish`, `calendar.global_unpublish`, `calendar.global_archive`, `calendar.global_recover` and preserves the existing allowlist, including announcements. The viewer still returns only actor name, action, resource UUID and timestamp; descriptions, URLs and JSON details are not disclosed.
+
+<a id="section-calendar-checks-and-boundaries"></a>
+## Checks and boundaries
+
+Actually executed focused checks: **11 RTL/unit cases**, **9 PostgreSQL groups** in owned temporary UUID databases and **6 generic API-surface groups**. Coverage includes more than 1,000 equal sort values, complete pages, permissions/MFA, actual concurrent CAS updates, controlled public role revocation against a waiting write, safe links, finite bounds, archive/publication workflow, private-calendar boundaries and safe audit filters. Frontend cases check preserved DE/EN/CAS drafts, lost responses, revocation, DST and range changes without remounting the calendar.
+
+```bash
+npx vitest run src/features/calendar
+PORTAL_DB_CONTAINER=<owned-test-container> node scripts/calendar-global-db-tests.mjs
+PORTAL_DB_CONTAINER=<owned-test-container> node scripts/api-surface-db-tests.mjs
+./portal test
+```
+
+`calendar-global-api-check.mjs` is authored for actual Auth/MFA/REST checks; `calendar-global.spec.ts` adds desktop/mobile, publication/draft, description/link, DE/EN, offline write prevention, dark mode and axe. These native scenarios were **not executed** during focused implementation. Their acceptance and combined PWA/persistence/CI results are documented separately by the later complete run in `the relevant pull request checks.md`.
+
+This does not mark global-event attachments, invitations, background reminders, SMTP/push delivery, automatic publication, ICS subscriptions or private-event drag editing complete. They remain in the full master-prompt plan. Production services, real people and the public website were not changed.
+
+
+<a id="section-calendar-export"></a>
+
+<a id="section-calendar-export-personal-calendar-files"></a>
+# Personal calendar files
+
+The calendar page provides a deliberate monthly ICS download, suitable for import into calendar applications. Each click reads current authorised database records through `export_my_calendar`; it does not export stale calendar UI/query-cache data. The invoker RPC retains RLS and additionally fixes all ownership to the current active identity. No actor ID can be passed. Only confirmed, unreleased teaching sessions are included by default. Own private events require an explicit checkbox. Administrators do not receive another person's private calendar through this endpoint.
+
+The request has exact overlapping instant boundaries, a finite maximum of 93 days and a ceiling of 500 events. Overflow raises SQLSTATE 54000 rather than silently omitting events. The current UI selects one month in the profile's IANA zone. The file includes event identity, title, start/end and intended zone metadata; no fees, terms, participant lists, contacts, documents or signed URLs. UTC DTSTART/DTEND preserve repeated Berlin DST instants and Brisbane times without floating-time ambiguity. RFC 5545 text escaping and75 octet Unicode-aware folding prevent authored titles becoming additional calendar properties.
+
+The file is a snapshot. Later cancellations/changes do not update an already imported calendar. It is not an active subscription or proof of Google/Outlook/Apple import acceptance. Files leave the portal's controls when saved/imported; the UI explains the selected calendar provider will receive their contents. No private schedule cache or service-worker rule is added. Offline export is disabled.
+
+Verification source: `src/features/calendar/ical.test.ts`, `scripts/calendar-export-db-tests.mjs`, `scripts/calendar-export-api-check.mjs`, `tests/e2e/calendar-export.spec.ts`. The first native run passed four SQL groups and three serializer tests. Current complete-command outcomes belong in the relevant pull request checks; authored API/browser cases alone are not a passed result.
+
+
+<a id="section-calendar-connections"></a>
+
+<a id="section-calendar-connections-calendar-subscriptions-and-explicit-offline-teaching-preview"></a>
+# Calendar subscriptions and explicit offline teaching preview
+
+The personal calendar now includes a read-only subscription section and an explicitly saved offline teaching preview. Both are available on desktop/mobile; the offline card remains reachable even when ordinary calendar queries are pending or failed. There is no automatic private-data caching or subscription creation.
+
+<a id="section-calendar-connections-read-only-capability-feed"></a>
+## Read-only capability feed
+
+Each account can create up to20 calendar subscriptions. A browser generates32random bytes/64hex characters; the database retains only their SHA-256 hash. The complete provider URL exists only in the current browser session and is masked in the UI. Private personal events are excluded by default and require their own explicit checkbox. A subscription expires after90days; the user can renew/rotate or revoke it with an exact current revision. The old URL stops resolving after rotation. Creation and immediate rotation retries use stable request identities, with changed payload/stale/revoked retries refused.
+
+Anyone holding a feed URL has read capability for that chosen calendar scope; the UI explains this before creation. Copy it only to the intended calendar provider. The database list never returns a token/hash, and admin roles do not provide another account's subscription list or personal events. Calendar clients control refresh timing, so a provider may display an older snapshot after a cancellation until its next refresh. Revocation cannot erase calendar copies already made by a provider.
+
+The exact public GET `/functions/v1/calendar-feed?token=…` hashes the capability, checks current active ownership/expiry/revocation, renders a bounded private UTC ICS and rechecks immediately before responding. It exports confirmed unreleased assignments, plus private events only for an opted-in feed, in a finite window and maximum2000events. It includes no fees, customer contacts, private file URLs or messages. Invalid, unknown, revoked or unavailable capabilities get the same generic404. Responses use private/no-store, no-referrer and nosniff; the handler emits no cookie or redirect. Secret query values also need the owning proxy/runtime's access-log redaction before hosted activation.
+
+<a id="section-calendar-connections-explicit-offline-preview"></a>
+## Explicit offline preview
+
+Saving offline fetches a fresh current-account calendar snapshot online after verifying the actual Auth user. It explicitly requests no private events and whitelists only confirmed teaching titles, start/end instants and intended IANA zones. Links, contacts, private events, IDs for jobs/assignments, files, commercial figures and messages are omitted. The selected horizon is the next30days; expiry is seven days after saving. The UI shows saved time/expiry and explains that later changes/cancellations may be missing and that this is not a current assignment confirmation. Claims and business changes still require online server confirmation.
+
+The opt-in snapshot is stored in a separate IndexedDB record scoped to the current account. No record means no opt-in/cache; opening the page alone performs no snapshot save. Same-account reload can retain a valid snapshot. Logout/account transitions synchronously change the cache identity/generation **before Auth state is exposed**, abort requests and transactions, and queue deletion. Read/write/open callbacks check account/generation, preventing late old-account responses or pending database opens from repopulating the next account. The delete button is available offline and can cancel a pending save. Expired/invalid/foreign snapshots are unreadable and are cleared when checked; foreground expiry also clears the displayed snapshot. Closed browsers do not promise physical background deletion at an exact wall-clock instant.
+
+The app shell remains the existing Workbox PWA. No API/private-file runtime cache is added. A cold offline page with a retained native SDK session can display only the explicitly saved own teaching snapshot when the current profile query is pending/paused or fails; the protected route outlet, announcements and tour remain unmounted. The fallback opens the snapshot directly, labels freshness timestamps with their display zone (UTC if the profile zone is unavailable), preserves each event's recorded IANA zone and allows local deletion. It exposes no online-save or assignment action. A profile already known to be inactive or missing suppresses and clears the snapshot. Cold offline use still requires the previously installed/cached shell and a retained local authenticated session: existing SDK expiry/sign-out behavior is preserved. Seven days is the maximum snapshot age, not a promise that access survives logout or an expired session. Browser storage/device protections and operating-system clock remain local-device boundaries.
+
+<a id="section-calendar-connections-actual-validation"></a>
+## Actual validation
+
+Executed native PostgreSQL suite covers hash-only storage, owner/admin/peer isolation, exact create retries, private opt-in and foreign exclusion, service-only snapshots, rotation/old-token refusal, stale revision, explicit revocation, suspension and expiry. Its first run reproduced the rotation retry40001 problem; the owning unmerged migration was corrected and the same regression now passes. Nine tests with actual fake-indexeddb transactions exercise minimal whitelisting, private-event rejection, server-verified identity, HTTP/account-switch cancellation, logout, expiry, explicit deletion, and an IDB open delayed until after account transition. Four component tests check private-default-off, confirmation-before-URL/masking, stable retries, unmount abort and offline controls. Whole TypeScript/focused ESLint and the existing three actor-boundary/six chat regressions pass at this checkpoint.
+
+`calendar-subscriptions-api-check.mjs` is a guarded actual Auth/REST/native-HTTP fixture for unauthenticated feed GET, private/no-store/no-referrer/no-cookie headers, generic refusal, explicit private opt-in, rotation and revocation. `calendar-connected.spec.ts` exercises real desktop/mobile subscription UI, RAM-only secret display, current confirmed teaching export/minimal IndexedDB contents, offline warning/control state and logout deletion. Those authored fixtures await combined-run execution; their existence is not a passing acceptance claim. The Edge handler's separate five Deno tests were already executed by the owning root task. No hosted token/provider subscription or production data was created by this source checkpoint.
+
+The cold-start regression in `tests/e2e/pwa.spec.ts` belongs to the built-preview phase, separately from same-page offline checks. It saves a real fictional confirmed assignment online, closes the page (discarding all React/query memory), boots a fresh page offline through the registered service worker, checks only the whitelisted snapshot, verifies unchanged same-origin public caches, then confirms logout deletion and another signed-in account's empty cold-offline view. Five component regressions use actual paused/error queries and IndexedDB for the fallback, known inactive/missing-profile purge, and normal online loading. Their focused checks do not replace the required canonical built-preview browser execution.
+
+
+<a id="section-availability"></a>
+
+<a id="section-availability-availability-and-blocked-periods"></a>
+# Availability and blocked periods
+
+At `/availability`, lecturers, management and administration accounts manage their own time windows. The private calendar links to this view. **Available** is a planning hint; **Unavailable** prevents new overlapping job allocations. A blocked period does not alter existing confirmed assignments: a conflicting new blocked period is rejected instead.
+
+Windows have precise instants, an IANA time zone, a private note and an explicit management-sharing choice. Sharing is off by default. Language changes preserve the form draft. Nonexistent or ambiguous local DST times are not silently normalised; when time fields remain unchanged during an edit, the original seconds and already determined offsets are preserved.
+
+<a id="section-availability-privacy-and-management"></a>
+## Privacy and management
+
+Even administrators cannot read other people's windows or notes directly from the table. The own-record RLS policy uses the current active account. The separate management view requires `availability.read_shared` and verified MFA. It returns only explicitly shared periods, status, time zone and the display name of a still-active lecturer account. It reads neither private appointments nor private notes. Withdrawing sharing affects subsequent server requests; the view offers an explicit refresh action.
+
+The interface limits a view to 93 local calendar days and returns at most 500 own or 1,000 shared windows. Server-side time bounds are also finite and limited; a small UTC allowance accommodates the DST fallback. The own-record API additionally allows up to 366 days per request. Availability is not a binding course commitment; only the existing atomic job claim confirms an assignment.
+
+<a id="section-availability-transactions-and-preserved-history"></a>
+## Transactions and preserved history
+
+The additive migration `20261115210134_lecturer_availability.sql` follows the introduction of released historical allocations. Availability changes and active allocations use exactly the same lock order as job claims: the profile row with `FOR SHARE`, followed by the existing user-specific transaction advisory lock. Upgrading to `FOR UPDATE` within allocation would risk a deadlock and is avoided.
+
+A new allocation trigger rejects overlapping **Unavailable** windows with `23P01`. The existing claim error path therefore rolls back the entire multi-day block, including earlier partial allocations. Conversely, the window trigger rejects blocked periods over confirmed, unreleased allocations. Cancelled and released intervals remain in history and do not block a new period. A release exits the trigger before new profile locks and adds no occupied time. Private calendar appointments are neither duplicated nor converted.
+
+Creation uses a UUID retained in the form. An identical retry after a lost response does not create a second record. Editing and removal check a version number; foreign identifiers, stale changes and existing sessions of suspended accounts remain rejected. There is no optimistic booking confirmation.
+
+<a id="section-availability-api-and-tests"></a>
+## API and tests
+
+- `my_availability(p_from, p_to)` reads only the actor's own windows.
+- `shared_availability(p_from, p_to)` returns the reduced opt-in management projection.
+- `save_lecturer_availability(p_id, p_payload, p_version)` creates with version `0` or edits an observed version. The payload contains only `kind`, explicitly offset `starts_at`/`ends_at`, `time_zone`, `notes` and `share_with_management`.
+- `remove_lecturer_availability(p_id, p_version)` removes the actor's own observed version.
+
+Public RPCs are invoker functions; privileged operations are in the private schema with an empty search path and explicit execution grants. Direct client write grants are not provided.
+
+Eight actual temporary PostgreSQL test groups include concurrent job claiming against blocked-period creation, rollback of a multi-day block that fails only at its final session, adjacent intervals, cancellation history, MFA/foreign-access/note protection, versions, retries and suspension with existing tokens. Component and date tests add DST, exact unchanged instants, draft preservation and actual pending save responses. `scripts/availability-api-check.mjs` and `tests/e2e/availability.spec.ts` are intended for the isolated complete command; claim actual native/API/browser acceptance only from the relevant pull request checks.
+
+
+<a id="section-taxonomy"></a>
+
+<a id="section-taxonomy-shared-topic-and-tool-catalogue"></a>
+# Shared topic and tool catalogue
+
+The catalogue at `/topics` connects the same topic identifiers to profile expertise, course templates and job requirements. The three kinds are topic, tool and programming language; spoken profile languages remain a separate field. Entries have German and English labels and descriptions, up to 20 search aliases and an optional parent. Related course templates appear only when the current account may actually read them; links open the existing template details.
+
+Active authenticated accounts can search and read. Search covers both labels and aliases, treats search characters literally and returns at most 500 entries. The interface waits 200 ms after text input and aborts superseded requests. Actor-bound query keys prevent reuse of another account's catalogue cache. The unfiltered list and parent selector share the same request.
+
+<a id="section-taxonomy-management-and-history"></a>
+## Management and history
+
+`taxonomy.manage` is assigned to the existing `owner`, `admin` and `management` roles. Changes require this current database permission and verified MFA (`aal2`). Browser roles and editable Auth metadata do not authorise access. Even an MFA administrator receives no direct write grants on `topics`.
+
+Creation and editing use the complete form data. Changes and archive transitions check the observed version number; stale edits cannot overwrite newer information. The form draft remains visible on conflict. The explicit **Reload current version** action reloads data and closes the draft; the current version can then be opened. An error or pending request is never displayed as a successful save.
+
+A short global write lock on the small catalogue prevents two apparently valid concurrent parent moves from jointly creating a cycle. Self-references and descendants as parents are rejected. The migration validates existing hierarchies and aborts atomically for legacy cycles; it does not rewrite historical relationships.
+
+Archiving preserves the identifier, existing course/job links and existing expertise with verification status and expiry. Active children must be archived first. New associations of an archived entry are blocked at the database boundary for profile expertise, course templates and jobs. Restoration requires an active parent. Archiving is not a confidentiality level: existing references may continue displaying their label.
+
+<a id="section-taxonomy-api-and-checks"></a>
+## API and checks
+
+Public functions are invoker-only entry points into restricted private functions with an empty search path and explicit execution grants:
+
+- `taxonomy_catalogue(p_search, p_kind, p_include_archived)` returns catalogue entries and permitted course templates. Archived search results require management permission.
+- `save_taxonomy_topic(p_id, p_payload, p_version)` creates with `p_id = null` and version `0`, or updates an observed active version.
+- `set_taxonomy_topic_archived(p_id, p_archived, p_version)` archives or restores an observed version.
+
+Sources are in `src/features/taxonomy/` and the additive migration `20261115203718_taxonomy_catalogue_management.sql`. Existing migrations are not replaced. The meaning and scope of database permissions are documented in [ARCHITECTURE](DEVELOPMENT.md#section-architecture).
+
+Focused checks:
+
+```bash
+npx vitest run src/features/taxonomy
+PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-m6 node scripts/taxonomy-db-tests.mjs
+```
+
+The SQL check creates and removes only its own temporary databases inside the local test container. Ten actual PostgreSQL groups cover MFA/roles, structured validation, literal search, opposing concurrent parent changes, course/participant access and revocation, legacy qualifications, stale versions, all three archived-association boundaries and atomic refusal of an invalid legacy hierarchy. An actually failing test found the original UPDATE name-resolution defect; acceptance checks passed only after its correction.
+
+`scripts/taxonomy-api-check.mjs` adds actual Auth, TOTP and REST checks in the explicitly isolated combined project. `tests/e2e/taxonomy.spec.ts` contains real desktop/mobile journeys covering DE/EN draft preservation, archive/restore, a read-only account, offline operation and axe. These checks must run only through the isolated complete command. An authored browser/API test alone is not a passed run; actual acceptance status is in the relevant pull request checks.
+
+
+<a id="section-profiles-reviews"></a>
+
+<a id="section-profiles-reviews-profiles-personal-labels-course-history-and-reviews"></a>
+# Profiles, personal labels, course history and reviews
+
+This module is an intentional internal staff directory with resource-scoped client/participant visibility, not an anonymous public directory. It supplies actual JSON RPC APIs and connected React routes. All actors need an active account; role information is read from trusted database rows.
+
+<a id="section-profiles-reviews-api-contract"></a>
+## API contract
+
+| RPC                       | Parameters and result                                                                                                                                                                                                                                                    |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `people_directory`        | Optional `p_search` (100 chars), `p_label` (40 chars), `p_topic_id` UUID. Returns up to 200 safe profile summaries with authored biography, country/languages/labels/topics and permission-scoped average/count.                                                         |
+| `person_profile`          | `p_user_id`. Returns the intentional profile projection plus teaching experience and `can_moderate`. No email, phone, CV, rates or financial fields.                                                                                                                     |
+| `profile_courses`         | `p_user_id`. Returns confirmed taught course blocks grouped by actual assignment instants: `current`, `upcoming`, `past`, with course ID/title/timezone/topic IDs and `can_open` matching full-course read permission. No rates, terms or private customer contact data. |
+| `own_profile_details`     | No parameters. Returns own country/languages/teaching experience/labels.                                                                                                                                                                                                 |
+| `save_profile_details`    | `p_payload` containing the complete replacement of country/languages/teaching_experience/labels. Labels: at most 20 × 40 chars; languages: 15 × 50. Caller identity always comes from Auth; unknown fields reject.                                                       |
+| `enrolment_candidates`    | Management capability + MFA; up to 500 active eligible participant/admin/owner names/IDs.                                                                                                                                                                                |
+| `course_enrolments`       | `p_course_run_id`; management + MFA. Safe names/statuses for that run.                                                                                                                                                                                                   |
+| `manage_course_enrolment` | `p_course_run_id`, `p_user_id`, `p_status` (`enrolled`, `completed`, `removed`). Management + MFA; completed requires an actually ended course. Audits every change.                                                                                                     |
+| `reviewable_courses`      | Own completed attendance only, actual assigned lecturers, no self-review. Includes own existing versioned review for editing.                                                                                                                                            |
+| `submit_course_review`    | `p_course_run_id`, `p_lecturer_id`, `p_rating` (integer 1–5), `p_comment` (2000 chars), `p_version` (0 for new). Returns review UUID; stale/concurrent versions reject.                                                                                                  |
+| `delete_course_review`    | `p_review_id`, `p_version`. Author-owned versioned tombstone clears authored comment and removes it from profile views.                                                                                                                                                  |
+| `lecturer_reviews`        | `p_user_id`; up to 100 recent review projections under resource authorisation. Other lecturers/clients do not receive reviewer IDs or names. Author/moderator can see own/relevant moderation status.                                                                    |
+| `moderate_course_review`  | `p_review_id`, `p_hidden`, `p_reason` (mandatory, max 1000). `reviews.manage` + MFA; audited hide/restore. Authors cannot unhide by editing or withdrawing/re-submitting.                                                                                                |
+
+These public functions are SECURITY INVOKER wrappers around narrowly permissioned private implementations with an empty search path. Direct writes to profile detail, attendance and review tables are denied. Every exposed new table has RLS. Details table is owner-only; the directory is the deliberate minimal sharing boundary. Detailed reviewer table rows are restricted to the author or an authorised MFA moderator.
+
+<a id="section-profiles-reviews-visibility-and-data-integrity"></a>
+## Visibility and data integrity
+
+Staff can read staff profiles. A client sees only lecturers actually assigned to their currently linked organisation and only the corresponding course/review history. A participant sees only lecturers and history for their active/completed enrolments. Revocation removes those reads immediately; a revoked enrolment cannot submit another review. Administrators do not bypass real enrolment, actual completion, assigned lecturer or no-self-review rules.
+
+Profile labels are authored descriptions, never verified qualifications, permissions or role grants. Actual topic verification remains separately managed. Ratings are one per course/lecturer/reviewer, serialize concurrent creation, and use optimistic versions. Public average/count calculations use the same authorisation and exclude withdrawn, moderated or non-completed-enrolment records. Reviewer identity remains omitted from ordinary projections. Comments render as text, including literal code/HTML characters.
+
+Course detail URLs `/courses?run=<id>` open the real authorised course dialog and management enrolment controls. Profile course links use this actual route only when the actor may open full course details; otherwise the permitted minimal history remains text. Closing the dialog clears its URL selection. `/people`, `/people/:id`, `/my-reviews` and the own-profile details widget are central integration points. The profile direct-message action appears only for a contact returned by the actual chat contact API.
+
+<a id="section-profiles-reviews-executed-evidence"></a>
+## Executed evidence
+
+- `node scripts/profiles-db-tests.mjs`: **14 real disposable PostgreSQL checks passed**, replaying the complete migration set. Covers labels/limits, profile privacy, real current/upcoming/past blocks, client scope, mandatory MFA, explicit completed attendance, no self/fake/cross-course review, concurrent creation, anonymisation, stale versions, moderation, revocation, withdrawal/recovery and suspension/anonymous denial.
+- Two label-boundary unit checks passed; feature formatting, ESLint and current integrated TypeScript passed.
+- `scripts/profiles-api-check.mjs`: **passed in the isolated canonical run `m3-test-04`**, using actual Auth/TOTP/REST. Covers persisted labels and safe directory, completed-course enrolment, restricted history, author-versioned anonymous reviews, MFA moderation, cross-participant denial and immediate revocation/suspension with existing sessions.
+- `tests/e2e/people.spec.ts`: **passed on desktop Chromium (11.6 s) and mobile Chromium (10.7 s) in `m3-test-04`**. The actual browser journey saved/reloaded own details, searched and filtered the directory, opened and closed the authorised course deep link, enrolled a completed participant through an MFA management session, submitted a real review, verified anonymous escaped output, moderated the review, and verified its removal from the lecturer view and moderation notice for its author. Each actor uses an independent browser context.
+- Profile and participant-review pages passed the configured axe WCAG 2 A/AA, 2.1 AA and 2.2 AA checks and horizontal-overflow assertions on both browser targets. Desktop/mobile profile screenshots were visually inspected: readable stacked/mobile and two-column/desktop layouts, visible labels/course periods, anonymous rating and literal escaped HTML. These automated checks do not establish every accessibility requirement or real-device acceptance.
+- The complete canonical command passed all 46 application browser scenarios and two built-PWA scenarios, then cleaned up the isolated services. Local report and screenshots: `.local/tests/b1c83645/RESULT.txt` and `.local/tests/b1c83645/screenshots/*-person-profile.png`.
+
+No production records, real attendance or real learner evaluations were used. QA results owns the final integrated outcome and remaining acceptance. Course participants remain optional: no enrolment is created merely because someone has a participant role.
+
+
+<a id="section-qualifications"></a>
+
+<a id="section-qualifications-qualification-evidence-and-verification"></a>
+# Qualification evidence and verification
+
+The M8 source adds explicit sharing of a **specific own certificate version for a selected topic** to the existing manual management attestation. The evidence picker searches server-side with actual page cursors (20 entries, at most 50). Upload and quarantine remain in the existing Files/ClamAV pipeline. A file, upload or sharing grant alone does not verify a qualification.
+
+In your own profile, select a topic, choose a clean certificate version, confirm the sharing text and save. Management opens the evidence/review-history view for that topic, downloads exactly that version if needed and confirms verification with an optional future UTC expiry. The existing manual review path remains available. A new upload/file replacement does not change an existing sharing grant. Replacing or withdrawing evidence changes neither an existing verification nor accepted assignments. A professionally required revocation is an explicit management decision; its validity continues to affect future claims through the final course end.
+
+<a id="section-qualifications-permissions-and-file-versions"></a>
+## Permissions and file versions
+
+`qualifications.verify` with current MFA authorises the targeted evidence workflow, no longer blanket reading of other people's certificates. The new Files action `qualification_evidence_download` requires the current binding ID. It checks permission, owner, personal certificate type, clean exact version, size and SHA-256 before downloading and rechecks the sharing grant after Storage retrieval. It creates neither general document/version rights nor a reusable Storage URL. Revocation or an error hides cached evidence details in the interface; private files are not retained offline.
+
+Existing separate permissions remain: `users.manage` with MFA can still read other people's CVs; contract/finance permissions retain their previous scope. The qualification feature adds no CV, contract or invoice access. Uploads of another person's certificates are now rejected before reservation. The supported path is own upload and explicit sharing for a topic.
+
+Withdrawal, replacement, document archiving or removal of a topic ends the former evidence download grant. Adding a topic again does not restore an old grant. Review history contains decision/basis and events; a historical entry grants no historical download access. Existing verifications are not assigned invented retrospective history.
+
+<a id="section-qualifications-database-and-apis"></a>
+## Database and APIs
+
+New CLI migration: `20261116080746_qualification_evidence_and_attestation_history.sql`. Existing migrations remain unchanged. Private tables `qualification_states`, `qualification_evidence`, `qualification_events` and `qualification_requests` have RLS and no browser table grants. Current topic selections remain in `lecturer_topics`; the new core does not alter underlying job claims, accepted terms or calendar allocations.
+
+| RPC                              | Contract                                                                                             |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `own_qualification_certificates` | Only own clean personal certificate versions, literal search and a bounded cursor.                   |
+| `qualification_review`           | Current topic state, CAS version and only currently shared version metadata.                         |
+| `save_qualification_evidence`    | Own explicit binding; `p_version_id=null` withdraws access; CAS and request ID required.             |
+| `attest_qualification`           | Current management permission/MFA, CAS/request ID, optional exact current binding.                   |
+| `verify_lecturer_topic`          | Unchanged legacy signature; delegates manual attestation to the same internal decision/history core. |
+| `qualification_history`          | Bounded history with a cursor for the owner or a currently authorised reviewer.                      |
+| `qualification_evidence_access`  | Current narrowly scoped version for the authenticated download adapter, never a storage path.        |
+
+Mutations first lock the active acting profile, then check its current role/permission. Role management and suspension use the same profile lock. Waiting calls cannot bypass an already committed role revocation with an old JWT. Topic/CAS state and evidence are then locked consistently. Reusing a request ID with a changed payload is rejected; confirmed retries write no additional decision and return the **currently sanitised state**, excluding revoked private metadata. At most 30 new changes per actor/minute; retries consume no second change.
+
+History is immutable to browsers. Only privileged server-side cleanup can delete it: owner/account deletion cascades own private data, deleting a reviewer account removes its personal reference, and server-side version purge removes affected evidence references and their events. Normal startup, profile changes, soft archiving and the UI perform no such purge. This controlled boundary also supports existing UUID-scoped test-fixture cleanup; it is not a delivered retention interface.
+
+<a id="section-qualifications-verification-and-boundaries"></a>
+## Verification and boundaries
+
+Focused executable checks:
+
+```bash
+PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-m7 node scripts/qualifications-db-tests.mjs
+node_modules/.bin/deno test --allow-env supabase/functions/files/qualification-download_test.ts
+npx vitest run src/features/qualifications/evidence.test.tsx src/features/admin/people.test.tsx
+```
+
+Executed in the M8 working source: **16 actual PostgreSQL groups**, **22 component cases** (16 new and six People cases), **four Edge download tests**, Edge typecheck/lint, TypeScript and scoped ESLint passed. All six API-surface groups also passed after actual replay of the current migrations.
+
+SQL cases use an owned random temporary database in the authorised local scratch container. They check actual lock barriers for role revocation through both old and new decision paths, CAS/retry/rollback, only explicitly shared versions, topic removal, MFA and controlled cleanup. Edge tests exercise the actual download logic, including version/hash/owner mismatches and withdrawal during object retrieval. Component cases check explicit consent, lost responses, expiry, cache disposal and targeted queries.
+
+`qualifications-api-check.mjs` and `tests/e2e/qualifications.spec.ts` are intended for the canonical isolated `./portal test` environment. Their existence is not yet executed Auth/scanner/browser evidence. Root documents complete native acceptance after the actual run. No external issuer authenticity check, signature validation, automatic email or legal-compliance certification is claimed.
+
+
+<a id="section-qualification-passport"></a>
+
+<a id="section-qualification-passport-personal-qualification-passport"></a>
+# Personal qualification passport
+
+The own profile offers an explicit German/English PDF download for an active lecturer account (including the existing functional admin/owner lecturer role). The export reads only the current authenticated subject. It has no subject-ID parameter, management export mode, public link, automatic sharing or certificate-byte attachment.
+
+The structured projection lists selected expertise with separate verified, unverified and expired states. Current certificate availability is independent of the last recorded attestation basis/date and exact historical evidence hash. A withdrawn binding does not silently revoke an existing qualification decision. Legacy verified rows without recorded attestation history state that the date/basis is unknown. No education history, certificate status or new verification is invented. Optional country, language and teaching-experience fields remain explicitly labelled unverified self-declarations; contact details, CV contents, private storage paths, contracts and fees are excluded.
+
+`own_qualification_passport(p_locale,p_as_of)` uses the actual current active lecturer identity, an empty private search path and restricted execution grants. The new additive migration leaves all earlier source bytes unchanged. Its bounded timestamp labels the snapshot; current expiry is evaluated against server time. The protected document gateway creates one server timestamp for both reads, renders reviewed fields using the existing pinned Unicode PDF/font runtime, then checks actual Auth and exact facts again. Changed qualifications, evidence availability, exported profile facts or access prevent byte release. The SHA-256 fact hash is a reproducibility/integrity reference, not a signature or external certification. Download responses are private/no-store; browser unmount/account change aborts late downloads and Blob URLs are revoked by the existing shared downloader.
+
+The export supports at most 250 selected expertise records and returns an explicit error instead of silently truncating them. Unsupported font characters are reported to the user. It does not cache private PDF responses for offline use.
+
+Focused evidence: five actual isolated PostgreSQL groups cover states, hashes, legacy provenance, owner/admin/participant boundaries, withdrawal, rejected proof and suspension; four component checks cover explicit consent, DE/EN, offline refusal and abort. Thirteen Edge checks include the actual deterministic Unicode PDF renderer and long-report pagination. Fictional German/English PDFs were rendered and both languages' pages visually inspected for clipping, margins and legibility; English text was also extracted and checked. The guarded Auth/REST/Edge API and browser download scenarios are authored separately and require execution in the canonical combined acceptance before claiming a native end-to-end pass.
+
+
+<a id="section-profile-avatars"></a>
+
+<a id="section-profile-avatars-profile-pictures-and-their-permission-boundary"></a>
+# Profile pictures and their permission boundary
+
+This feature extends the existing real private document/ClamAV pipeline. It does not publish pictures on the internet or make a personal-document bucket readable to peers. Original teaching materials and unrelated local pictures are not imported.
+
+<a id="section-profile-avatars-data-and-api"></a>
+## Data and API
+
+- `profile_avatars` stores one selected immutable `document_versions.id` for each user. Its direct RLS grants only the active owner a read; clients do not directly write selections. The version foreign key is indexed.
+- `set_profile_avatar(p_version_id uuid default null)` selects an owned, clean, nonarchived personal document of kind `avatar`, or removes the current selection when passed null. Metadata, bytes and ownership remain separate. Repeating the same selection does not create another audit event. A failed new upload leaves the previous selection unchanged.
+- `profile_avatar(p_user_id uuid)` returns only `{version_id, updated_at}` or null for a permitted profile with no available image. It reuses `private.can_read_person`: current staff peers see intentional staff profiles; clients and enrolled learners see only their actual assigned teacher. Existing private contact/evidence/contract/calendar/DM boundaries remain intact. Suspended actors or inaccessible people receive a permission error.
+- `POST /functions/v1/files` with JSON `{ "action": "avatar", "user_id": "…" }` uses the caller's actual Auth identity, active account and selected-profile RPC. It retrieves the exact clean version server-side and rechecks current visibility and selection after Storage before returning PNG bytes. Headers include `no-store, private`, `nosniff`, no-referrer and a restrictive content policy. No public/signed URL is produced. Generic `action: download` retains its existing personal-document rules, including for administrators.
+
+<a id="section-profile-avatars-image-safety-and-privacy"></a>
+## Image safety and privacy
+
+The profile editor accepts PNG/JPEG/WebP input up to 10 MiB, checks encoded dimensions before browser decoding (edge ≤8192 and ≤16 million pixels), centre-crops a square, resizes to at most 512 px and creates a new PNG. Original filenames, EXIF/GPS data, comments and compressed colour-profile metadata are not copied. This is a normal rasterisation step; it is not a promise to remove information visibly present in the image itself.
+
+API callers upload this **canonical PNG** through the normal multipart document endpoint with `scope=personal`, `kind=avatar`, a fresh `client_id` and file field. The stored output is ≤2 MiB, ≤512 px per edge, 8-bit RGB/RGBA, noninterlaced PNG. The server validates PNG signature, CRCs, chunk order, complete bounded zlib scanlines/filter bytes and permits only image data, colour intent and pixel-density chunks. It rejects textual/EXIF/ICC chunks, oversized images, malformed/truncated/trailing data and inflation bombs. Database guards independently enforce personal ownership, canonical MIME and byte-size limits; actual bytes additionally require normal quarantine and a real clean ClamAV result. Original general-file formats and access rules are unchanged.
+
+Replacement selects a new exact clean version. Selecting another image or removing it does not silently delete retained old private document objects; retention/purge remains the documented platform follow-up. Archiving a selected underlying image makes the picture unavailable. Ordinary readers cannot request old avatar versions through the picture action.
+
+<a id="section-profile-avatars-browser-lifecycle-and-design"></a>
+## Browser lifecycle and design
+
+The same `Avatar` component appears in the navigation, lecturer directory, lecturer profile and own profile editor. Initials provide a readable branded fallback when no image is selected, retrieval is denied/unavailable, or the browser is offline. Queries include both actor and target identity and are memory-only with zero idle retention. Picture responses are not service-worker cached. Every object URL is revoked on version/identity changes, offline transition or unmount; a late previous-actor response cannot replace the current image. Current metadata is periodically/refocus revalidated, while the gateway authorises every new byte request. Previously viewed pixels cannot be retrospectively erased from another device.
+
+The editor explains centre crop/visibility, offers accessible file-picker/removal controls, reports actual scan/save status and handles invalid images without false success. German/English and light/dark use existing brand tokens. The shell additionally now catches rejected sign-out SDK promises; failures preserve the current workspace/query cache and allow retry, while pending state prevents duplicate submission and success waits for server acknowledgement.
+
+<a id="section-profile-avatars-executed-evidence-and-acceptance"></a>
+## Executed evidence and acceptance
+
+Incremental checks passed: 10 real disposable PostgreSQL cases; 6 Deno PNG/gateway-boundary tests and the actual files entry-point typecheck; 8 Vitest cases (3 shell logout, 2 source-dimension and 3 Blob-lifecycle/offline cases); targeted ESLint and the complete current TypeScript check. Gateway units explicitly verify replacement/removal or membership revocation during Storage retrieval denies the old response. The PostgreSQL fixtures explicitly do not claim real bytes or Auth; separate actual API and browser suites cover those boundaries.
+
+The following integration suites passed in the canonical guarded `./portal test` project and cannot mutate normal development:
+
+- `scripts/avatars-api-check.mjs` uses the shared actual Auth/MFA fixture/cleanup helper, real PNG/ClamAV/private Storage/hash bytes, invalid-format/metadata/dimensions, generic download/Storage/signed-URL denial, separate client/enrolment visibility/revocation, replacement/removal and suspension.
+- `tests/e2e/avatars.spec.ts` uses actual distinct browser identities, real JPEG input containing fictional source metadata, browser crop/resize, scan/save/reload, exact clean PNG/no EXIF, safe invalid-source retention, permitted peer display, removal, English/dark axe/overflow checks and fictional screenshots.
+
+Complete local acceptance is recorded below. Physical-device image picking, browser implementations beyond the tested engine and deployed hosting/security remain separate acceptance gates. See `the relevant pull request checks.md` for the exact submitted-revision CI and broader product evidence.
+
+<a id="section-profile-avatars-m4-02-integration-checkpoint"></a>
+### M4-02 integration checkpoint
+
+The canonical `./portal test` run `6bb8adbe` passed the actual avatar API suite with real Auth/MFA, ClamAV, private Storage/hash/bytes and scoped revocation/cleanup. Both full avatar browser journeys passed: desktop 4.9 seconds and mobile 5.2 seconds, including actual source EXIF, 512 px crop/rasterisation, scan/save/reload, peer visibility, metadata stripping, malformed-source retention, removal and English/dark axe/overflow assertions. Their retained fictional screenshots were visually inspected for readable controls, helper/error text and layout. The blue circle is an intentionally flat-colour image fixture, not an absent picture.
+
+That whole invocation failed two pre-existing global-offline browser cases because the avatar editor unnecessarily repeated the application-wide offline status. The duplicate local notice and unused translation were removed; controls still disable offline and the global connection banner remains the single source for connectivity feedback. A new focused regression and the other avatar/shell source checks passed 8/8. The unchanged actual global-offline browser regression and the complete build/PWA/cleanup gates await the next canonical invocation; no complete passing command is inferred from this partial checkpoint.
+
+<a id="section-profile-avatars-m4-03-final-local-acceptance"></a>
+### M4-03 final local acceptance
+
+The complete canonical command passed in `.local/tests/0260b044/RESULT.txt`, completed at 2026-11-15T16:43:20.241Z (16 November Australia/Brisbane). It repeated the actual avatar API/SQL/Edge checks and passed both avatar browser journeys: desktop 5.0 seconds and mobile 5.1 seconds. The unchanged global-profile offline regression passed on both layouts at 2.4 seconds each after removing the redundant notice. All 52 application browser workflows, the production build and both built-PWA checks passed, followed by owned-project cleanup. The final desktop profile screenshot was visually reviewed again; the prior mobile review and unchanged avatar layout remain consistent with the passing final mobile assertions.
+
+This establishes the tested local workflow and permission boundaries, not a claim that every production platform or every possible failure has been certified. No further avatar application/test source changed after this accepted snapshot. GitHub integration and release status belong to the root delivery record.
+
+Combined hosting/application acceptance also passed in canonical04 (`4c7c897`,17:31 UTC, exit 0): all new feature SQL/API/desktop/mobile journeys plus the full regression suite. See the relevant pull request checks. This is local acceptance; the M4 hosted migration review remains a separate gate.
+
+
+<a id="section-staff-contact-visibility"></a>
+
+<a id="section-staff-contact-visibility-freiwillige-kontaktfreigabe-im-dozierendenteam"></a>
+# Freiwillige Kontaktfreigabe im Dozierendenteam
+
+Auf `/profile` kann jedes aktive Teamkonto seine gespeicherte E-Mail-Adresse und Telefonnummer unabhängig für das interne Teamprofil freigeben. Beide Freigaben sind zunächst ausgeschaltet. Die Vorschau zeigt die tatsächlich gespeicherten Werte aus Auth beziehungsweise dem persönlichen Profil; ein noch nicht gespeicherter Telefonentwurf wird nicht als freigegebener Wert bestätigt. Die Einstellung bleibt nach einem Neuladen erhalten. Das Kontaktprofil bietet sichere E-Mail- und Telefonaktionen, sofern die gespeicherte Angabe dafür geeignet ist.
+
+Die bestehenden `people_directory`- und `person_profile`-Projektionen behalten ihren bisherigen Umfang ohne E-Mail-Adresse oder Telefonnummer. Eine separate, eng begrenzte Funktion `person_contact(p_user_id)` prüft bei jedem Abruf die aktive Kontoidentität, die aktuellen vertrauenswürdigen Teamrollen beider Personen, das Profilzugriffsrecht und die expliziten Freigaben der Zielperson. Reine Auftraggeber- und Teilnahmekonten erhalten auch bei erlaubtem Kursprofilzugriff keine Teamkontaktangaben. Ein administrativer Rang umgeht diese Freigabe nicht. Bestehende eigenständige Berechtigungen der Kontoverwaltung bleiben erhalten; die Profiloberfläche erklärt diese Grenze ausdrücklich.
+
+Die Freigabe liegt in `private.staff_contact_visibility`, geschützt durch RLS und ohne direkte Browserrechte. `contact_visibility_preferences()` liest nur den eigenen Stand. `save_contact_visibility_preferences(p_payload,p_expected_version)` akzeptiert ausschließlich zwei boolesche Freigaben und die passende Versionsnummer; eigene Identität und Kontaktdaten stammen aus dem Server. Ein veralteter oder konkurrierender Speichervorgang überschreibt keinen neueren Stand. Ein Konflikt erhält den Entwurf und bietet ausdrückliches Neuladen an. Nicht-Teamkonten dürfen keine Freigabe aktivieren.
+
+Die freigegebenen Kontaktdaten werden bei jedem Abruf aus den aktuellen gespeicherten Quellen gelesen, nicht als Kopie im Verzeichnis gepflegt. Abschalten, Rollenverlust oder Kontosperrung unterbindet die nächste Ausgabe. Bereits von einer anderen Person gelesene Informationen lassen sich dadurch nicht zurückholen. Die Oberfläche prüft normale veraltete Daten bei Fokus/Reconnect erneut; ein dauerhaft offenes Profil benötigt für sofortigen Sichtwechsel ein Neuladen. Ein fehlgeschlagener erneuter Zugriff zeigt keine zurückbehaltenen Kontaktdaten. Neue Query-Schlüssel enthalten beide Kontoidentitäten, und die bestehende Auth-Grenze leert den privaten Cache bei Kontowechsel.
+
+Kontaktwerte werden als Text dargestellt. E-Mail-Verweise kodieren die vollständige Adresse, damit darin enthaltene Zeichen keine zusätzlichen Mailheader einschleusen. Telefonlinks akzeptieren nur einfache Telefonnummern und typische Trennzeichen; ausführbare oder parameterisierte Inhalte werden nicht verlinkt. Keine Nachricht wird automatisch gesendet und kein Anruf automatisch ausgelöst.
+
+<a id="section-staff-contact-visibility-tatsächliche-fokussierte-prüfung-am-16-november-2026"></a>
+## Tatsächliche fokussierte Prüfung am 16. November 2026
+
+- Acht isolierte PostgreSQL-Prüfgruppen bestanden: private Voreinstellung, aktive Teamrollen, exakt ausgewählte Felder, Client-/Teilnehmer-/Administratorgrenzen, echte gleichzeitige Versionskonflikte, manipulierte Eingaben, aktuelle gespeicherte Werte, unveränderte Minimalprofile, Widerruf, Rollenverlust und Sperrung.
+- Fünf Komponententests bestanden: sichere Kontaktaktionen, bestätigtes Speichern ohne fremde Browser-ID, Konflikt mit explizitem Neuladen, Ausblenden zurückbehaltener Werte nach verweigertem Zugriff, feindliche Werte und DE/EN-Wechsel.
+- `scripts/staff-contact-api-check.mjs` und `tests/e2e/staff-contact.spec.ts` sind für den kanonischen disponiblen Gesamtprüflauf erstellt. Sie gelten erst nach tatsächlicher Ausführung als bestanden; das zentrale Arbeitsprotokoll hält den integrierten Stand fest.
+
+```bash
+node scripts/staff-contact-db-tests.mjs
+npx vitest run src/features/profile/contact.test.tsx
+```
+
+Es wurden keine realen Kontaktdaten, Produktivdatensätze oder E-Mail-Zugangsdaten eingesetzt.
+
+
+<a id="section-chat"></a>
+
+<a id="section-chat-chat-structured-mentions-and-group-moderation"></a>
+# Chat, structured mentions and group moderation
+
+This extends the existing member-only chat described in CHAT_SECURITY.md.
+It uses the same PostgreSQL, Auth, Realtime, scanned file gateway and in-app inbox.
+No separate application server or external notification service is introduced.
+
+<a id="section-chat-connected-user-flow"></a>
+## Connected user flow
+
+- Open an authorized person's profile and select **Nachricht / Message**. The
+  existing `/chats?contact=<user-id>` route calls `create_dm` and replaces the
+  destination only after the server confirms the room. This path is retained.
+- In a conversation, **Personen erwähnen / Mention people** loads that room's
+  current eligible members on demand. Select up to 20 people. Typed `@names`
+  remain ordinary text and do not notify guessed recipients. Names render as
+  escaped text in the selection and the committed message.
+- Drafts retain text, selected recipients and retry identity after an uncertain
+  response. A changed body, attachment or recipient list creates a new operation.
+- Drop one file onto the composer or use the keyboard-accessible file picker.
+  Both use the existing room-scoped scanner/upload/progress pipeline. Sending is
+  disabled until a clean upload is confirmed. Rejected uploads are not attached;
+  multiple-file drops are rejected without starting an upload.
+- Group message deletion controls appear only when the authorized history API
+  reports the actor may moderate that room. A confirmation explains the retained
+  deletion notice and audit history. The existing `delete_message` API remains
+  authoritative. Group membership does not grant access to another private DM.
+
+<a id="section-chat-persistence-and-public-apis"></a>
+## Persistence and public APIs
+
+Migration `20261116080730_chat_structured_mentions.sql` is additive. All earlier
+delivered migrations stay unchanged.
+
+| API                                                                                            | Contract                                                                                                                                            |
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `chat_mention_candidates(p_room_id)`                                                           | Current active, role-eligible room members, excluding the caller; unauthorized rooms are denied.                                                    |
+| `send_message_with_mentions(p_room_id,p_body,p_client_id,p_document_id,p_mention_ids)`         | Atomic message, whole selected recipient list, first-mention notices and idempotency record; returns confirmed message UUID.                        |
+| `edit_message_with_mentions(p_message_id,p_body,p_expected_version,p_client_id,p_mention_ids)` | Sender-only, current membership, existing 15 minute window, bounded rate, expected content version and exact retry binding; returns `{id,version}`. |
+| `chat_messages_with_mentions(...)`                                                             | Same bounded cursor/search parameters as `chat_messages`, with `content_version`, current authorized `mentions` and `can_moderate`.                 |
+
+Existing `send_message`, `edit_message`, `chat_messages`, reactions, reads, mute,
+membership and deletion APIs remain supported for existing headless consumers.
+The UI uses the additive structured APIs; it does not implement authorization in
+browser metadata. Existing send limits, clean-attachment checks and membership
+locks also apply to structured sends. Structured operations allow at most 20 unique,
+non-null recipients and reject self, foreign, removed or role-ineligible targets.
+
+`messages.content_version` increases on text/edit/deletion changes, including old
+API edits. Private content-version records own immutable mention-version rows.
+An old API edit creates a new current version with no structured mentions rather
+than silently retaining recipient data from an earlier body. New edits preserve
+exact operation results for retries and reject stale revisions with40001.
+
+The private operation ledger binds caller, request key and exact normalized
+parameters. Reusing an old plain-send key for a structured send is rejected.
+These private records contain retry parameters and are not exposed through REST,
+administrative audit projections, chat history or an administrator-wide bypass.
+They follow the existing retained message-revision policy; tombstones are not a
+claim that every historical private byte has been purged.
+
+<a id="section-chat-notification-semantics"></a>
+## Notification semantics
+
+Mentions reuse **one** existing `chat_message` notification per recipient and
+message UUID. No new notification kind or separate duplicate counter exists.
+
+The first ever committed structured mention of a recipient for a given message
+inserts the notice or renews the same row to unread with a fresh timestamp. This
+also works when an ordinary notice for that message was already read. Explicit
+mentions can override that room's mute, while the recipient's global chat
+category preference and optional notification filters still apply. PostgreSQL's
+BEFORE INSERT filter runs before the conflict update, including renewal.
+
+Private version history proves whether the recipient has ever been mentioned.
+The same request retry, subsequent text edits with the same recipient and
+remove/re-add cycles do not renew the notice again. Mentioning while chat notices
+are disabled still records the mention; enabling notices later does not turn a
+remove/re-add into retroactive delivery.
+
+After member removal, suspension, role loss or deletion, current API permission
+checks and the existing inbox target resolver redact destinations/content as
+appropriate. The history projection does not expose removed members through a
+stale mention list. A standard administrator cannot inspect private mention
+history or read another person's DM. No real email, push, typing or presence
+delivery is claimed by this module.
+
+<a id="section-chat-actual-verification-and-remaining-acceptance"></a>
+## Actual verification and remaining acceptance
+
+Focused local evidence during implementation:
+
+- 11 real PostgreSQL groups passed on the explicitly owned, network-disabled M7
+  scratch container, using a separate UUID database and full migration replay.
+  They cover identity/version/idempotency, first-notice renewal, room mute/global
+  opt-out, removal/role loss, legacy edits, tombstones, moderator/DM boundaries and
+  private helper/table ACLs and a genuine competing-edit transaction race.
+- 28 Vitest cases across six chat files passed after the initial UI integration,
+  including eight new mention/drag/moderation scenarios and an editor revision
+  retained across background refreshes. Later final source and
+  full application acceptance must be recorded by the combined QA run.
+- Actual Auth/MFA/REST checks and desktop/mobile browser scenarios are authored for
+  canonical `./portal test`; they have not been executed for M7 at this checkpoint.
+
+Native/browser acceptance must include a scanned dropped attachment, profile-to-DM
+navigation, current-member mentions, exact read/renew behavior, permission loss,
+group moderation, DE/EN, dark mode, mobile overflow and axe checks. Do not treat a
+mocked component pass or the earlier M6 acceptance as these M7 results.
+
+
+<a id="section-files"></a>
+
+<a id="section-files-file-centre-search-personal-tags-and-virtual-folders"></a>
+# File centre: search, personal tags and virtual folders
+
+The file centre at `/files` searches server-side across all documents the current account may actually read. The previous workflow first loaded a list and then searched only in the browser. Because local and self-hosted REST queries are intentionally limited to 1,000 rows, older files remained invisible. A component probe that failed before the correction reproduced exactly this empty state with 1,001 metadata rows. The limit remains; the new search filters before the page boundary.
+
+<a id="section-files-search-and-loading"></a>
+## Search and loading
+
+`document_discovery` uses literal filename search, optional owner/category/job filters and personal tag/folder filters. `%` and `_` are ordinary search characters. The interface waits 250 ms after input, aborts superseded transports and preserves input focus. The existing `/files?q=…` entry point, for example from the dashboard, remains available.
+
+A page contains 40 rows; the API permits at most 100. The cursor contains `created_at` **and** the document UUID. Equal timestamps therefore do not lose or duplicate entries. **Load more files** actually loads the next server page and merges IDs without duplicates. There is no invented global result total; the display counts loaded files. Every fetch rechecks `private.can_access_document` and the current active account. An empty job/owner filter grants no additional access.
+
+The discovery query loads no file contents and does not periodically poll every loaded page. Focus, reconnect, explicit refresh and existing document mutations revalidate results. The attachment job catalogue is requested only when upload is open in an authorised job context. Existing subject/job views and attachments retain their metadata/scan/version queries; this document does not claim new pagination for every embedded legacy view.
+
+<a id="section-files-my-organisation-only"></a>
+## My organisation only
+
+Each account can give a **currently accessible** document up to 20 personal tags of 60 characters each and a personal virtual-folder label of up to 80 characters, independently of other readers. Tags are normalised with the existing label validator and stored without case-insensitive duplicates. One tag per input line preserves commas within a label. An empty folder means unfiled; the special filter option finds exactly those files.
+
+The association is a private account/document pair in `private.document_organisation`. Another lecturer or administrator receives neither these tags nor the folder. Two accounts can organise the same shared file differently. Filters apply across all currently accessible files, not only pages already loaded. Tag/folder filters compare complete labels case-insensitively.
+
+A virtual folder is a personal label, not a Storage directory or hierarchical folder manager. It moves no bytes, changes neither ownership nor sharing and claims neither security classification nor DLP. Private contract/invoice/chat/profile files receive no new administrative grant.
+
+`save_document_organisation` derives the account only from `auth.uid()`. The API accepts only document identifier, `tags`, `folder` and expected version. Version `0` represents an absent own association. Concurrent changes have exactly one winner; a stale version is rejected with `40001`. The draft remains visible. **Reload current organisation and close draft** explicitly discards it and reloads current metadata before another edit.
+
+Archiving, revoked room/job permissions or account suspension prevent the association from acting as substitute permission. Hidden documents also disappear from searches through personal tags and cannot be organised further. A current server error stops displaying retained discovery data. The existing Auth account switch additionally clears the in-memory cache; query keys include the account. There is no persistent offline cache.
+
+<a id="section-files-stable-dialogs-and-current-resource-access"></a>
+## Stable dialogs and current resource access
+
+A pending filter fetch replaces result rows but preserves an already open archive/version/edit dialog and personal organisation drafts. New results use their own rows; data from other filters or accounts is not adopted. A legitimate empty filter result does not end a started operation.
+
+Only actually opened targets receive a bounded exact-metadata check through the existing `documentQuery`. Account, document identifier, successful list observation and focus generation separate this check from old responses. Writes remain disabled while a check is unresolved. `null`, deleted/wrong target identifiers and permission errors discard the affected modal and its protected drafts. This also covers individual room-access revocation where the list response succeeds but is empty. Subject/job file lists use the same protection.
+
+A previously blocked filename must not reappear from an old search cache or a merely appended page. Only an actually new complete response from the current observer can renew this quarantine. Network and version conflicts preserve permitted drafts; `42501` discards the original target. Late successes or failures from an old operation do not close a different draft opened in the meantime. There are neither per-result-row queries nor an additional polling loop.
+
+After an acknowledged rename/archive write, the file lists explicitly cancel reads started before that acknowledgement and then fetch current results. Invalidation alone can reuse an initial filter request with no cached data, allowing an older pre-archive snapshot to restore a deleted row. A deterministic held-response regression reproduced this and now proves the old request is aborted, exactly one write occurs and a new post-commit read determines the empty result. The independent exact-resource ACL query is not cancelled. All 51 focused discovery/version/polling cases pass on this correction; its complete current-head native results are recorded separately.
+
+This correction was reproduced first and checked by **47 passing file-component cases** with controlled transport barriers, cache/paging/focus transitions and exact write counts. Native complete acceptance remains separately recorded in the relevant pull request checks.
+
+<a id="section-files-preserved-file-pipeline"></a>
+## Preserved file pipeline
+
+Upload, byte/MIME/size validation, quarantine and actual ClamAV scanning, private Storage, version history, preview Blob lifetime, rename and archive remain connected. Downloads continue using the existing authenticated file gateway with current resource checks and the selected version; tags or folders provide neither a public URL nor a Storage bypass. A metadata row is not evidence of an existing scanned file.
+
+The additive CLI-generated migration is `20261116080732_file_discovery_personal_organisation.sql`. The previous 24 migrations are not replaced. The new table has RLS, no client write grants and no admin exception. Public RPCs remain invoker entry points into restricted private implementations with an empty search path and explicit execution grants. A timestamp/UUID index supports discovery pages and an account-bound folder index supports private filters.
+
+<a id="section-files-verification-and-continuation"></a>
+## Verification and continuation
+
+```bash
+npx vitest run src/features/files
+PORTAL_DB_CONTAINER=<owned-test-container> node scripts/files-discovery-db-tests.mjs
+```
+
+Before combined M7 acceptance, focused checks passed 18 file component/unit cases, six actual discovery PostgreSQL groups and six generic API-surface groups. The API-surface run found no anonymously executable application functions; this does not claim actual native Auth/REST/browser acceptance. TypeScript, scoped ESLint/format checks and script syntax also passed.
+
+Focused SQL checks use owned temporary UUID databases. They show the old 1,000-row problem and check more than 1,000 accessible metadata records, literal search, complete pagination with equal timestamps and concurrent records, foreign/admin access, private shared-file associations, CAS races, invalid payloads, archiving, revoked permissions and existing suspended token identities. Component checks cover deep links, focus during a pending response, actual cursor forwarding, DE/EN drafts, pending saves, conflicts, offline operation and hiding old data. Existing scan-polling, version and exact-download checks remain.
+
+`scripts/files-discovery-api-check.mjs` reproduces the actual REST row cap with more than 1,000 fictional metadata records and checks the new API with actual Auth accounts. `tests/e2e/file-discovery.spec.ts` adds desktop/mobile, actual pages, a real scanned upload and byte-identical download after organisation, role boundaries, DE/EN, dark mode, offline operation, archive and axe. Authored native API/browser cases are **not** passed runs. The combined checks actually executed are documented in QA results.
+
+Independent course/organisation file contexts, hierarchical shared folders, expiring sharing links, restricted archive formats and retention/purge tools remain further master-prompt work. This change creates no external storage, public sharing or new infrastructure.
+
+
+<a id="section-resource-comments"></a>
+
+<a id="section-resource-comments-comments-on-templates-and-jobs"></a>
+# Comments on templates and jobs
+
+`ResourceComments({kind: "template" | "job", resourceId})` provides a resource-specific teaching-team discussion. Jobs use the same `private.can_read_job` check as job RLS; templates require their actual read permission and a teaching-team/management role. Course or invoice access does not give clients and course participants access to teaching-team discussions. Admin/owner accounts remain subject to the usual role, MFA and resource rules.
+
+Records and earlier text versions are stored in unexposed private tables with RLS and no direct user grants. The server supplies the author and timestamps. The UI renders plain text, including line breaks and escaped HTML. Comments do not automatically include gross prices and do not change accepted assignment terms.
+
+<a id="section-resource-comments-api"></a>
+## API
+
+| RPC                                                                   | Behaviour                                                                                                                                     |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `comment_context(p_kind,p_id)`                                        | Current writing/moderation capabilities; no rows when access is denied.                                                                       |
+| `resource_comments(p_kind,p_id,p_before_at,p_before_id,p_limit)`      | Newest first, complete timestamp/UUID cursor, at most 100 rows. Hidden posts are visible only to their author and authorised moderators.      |
+| `add_resource_comment(p_kind,p_id,p_body,p_request_id)`               | 1–5000 characters, actual actor identity, durable resource-bound retry with the same UUID; at most 10 new posts/minute and 100/day per actor. |
+| `edit_resource_comment(p_comment_id,p_body,p_version)`                | Only the actor's own accessible posts, with a checked version; no silent overwrite, author change or removal of moderation.                   |
+| `withdraw_resource_comment(p_comment_id,p_version)`                   | Author withdrawal removes the text from ordinary read projections; the withdrawal notice and protected history remain.                        |
+| `moderate_resource_comment(p_comment_id,p_hidden,p_reason,p_version)` | Current management capability for the resource type and MFA; reason and current version required; audited.                                    |
+
+Archived entries remain readable to authorised people, prevent new posts/edits and still allow authors to withdraw their own posts. Hidden drafts, revoked roles and suspension are checked again on every server call. Text already read cannot be removed retrospectively from a recipient's memory; subsequent requests remain protected.
+
+Error codes: `42501` for missing permissions, `22023` for invalid text/cursor or a changed retry, `40001` for a version conflict, and `54000` for the posting limit. An uncertain network attempt keeps the same request ID while the draft remains unchanged. Offline operation or a pending mutation never produces a false publication confirmation.
+
+<a id="section-resource-comments-implementation-and-verification"></a>
+## Implementation and verification
+
+Migration `20261115155038_resource_comments.sql`; frontend `src/features/comments`; actual SQL/API scripts `comments-db-tests.mjs` / `comments-api-check.mjs`; Playwright `comments.spec.ts`. The shared API fixture helper and `defer` cleanup contract are explained in the [developer guide](DEVELOPMENT.md#section-developer-guide).
+
+The complete local M4-03 run passed eleven actual temporary PostgreSQL checks covering boundaries, ten concurrent identical writes producing one record, cursors, author/moderator versions, withdrawal, role revocation and suspension; three component checks covering the access gate, separate drafts and uncertain retry/server confirmation; actual Auth/TOTP/RPC calls and separate desktop/mobile browser journeys for writing, reloading, editing, moderating and withdrawing. Additional acceptance after integration with hosting code is documented separately in the relevant pull request checks. The private history is not a completed statutory retention/deletion policy.
+
+Combined hosting/application acceptance also passed in canonical04 (`4c7c897`,17:31 UTC, exit 0): all new feature SQL/API/desktop/mobile journeys plus the full regression suite. See the relevant pull request checks. This is local acceptance; the M4 hosted migration review remains a separate gate.
+
+
+<a id="section-announcements"></a>
+
+<a id="section-announcements-portal-announcements"></a>
+# Portal announcements
+
+Announcements are authenticated, bilingual portal notices. A shell banner shows
+at most three currently visible, unacknowledged revisions. The complete
+`/announcements` page uses explicit server cursor pages and can open one exact
+published revision from an inbox link. Neither view opens a modal or moves focus
+when new content arrives.
+
+<a id="section-announcements-administration-and-publication"></a>
+## Administration and publication
+
+`/admin/announcements` requires the current `announcements.manage` capability and
+verified MFA. The migration grants this capability to the existing owner, admin
+and management roles. Browser metadata and submitted actor IDs cannot grant it.
+
+1. Create a German and English title and plain text body, a finite display window
+   and a valid IANA time zone. Select current account roles as an optional audience;
+   an empty selection means all active accounts. Marking a notice important is an
+   explicit choice with a separate inbox effect.
+2. **Save draft** persists a new immutable revision. It does not change the
+   currently published text, audience, display window or notification target.
+3. **Publish now** explicitly releases that draft. Its start must already have
+   been reached, and its end must still be in the future. A future start is
+   rejected with a manual-publication explanation. There is no publication
+   scheduler, scheduled email worker or automatic future publication.
+4. **Archive** immediately closes the current publication to new reads and ACKs.
+   **Recover** restores the retained publication subject to its original audience
+   and display window. It preserves revision identity, acknowledgements and notice
+   identity; it does not rebroadcast or extend an expired publication.
+
+Management search checks the latest draft and current publication's bilingual
+text. Status filters distinguish draft, published and archived parents. Reads
+return at most 50 records per request; the UI requests 20 and navigates through
+the server's stable timestamp-plus-UUID cursor. Administrative list responses
+contain summary metadata rather than all bodies or all historical revisions.
+
+Dates are canonical instants with an IANA display zone. Unchanged time inputs
+preserve original seconds and resolved offsets when another draft is saved. The
+shared date utilities reject invalid or ambiguous changed local instants. Expiry
+is enforced on every server read and ACK; visible cards also use one local expiry
+timer, rather than a recurring timer or per-second network request.
+
+<a id="section-announcements-revision-acknowledgement-and-inbox"></a>
+## Revision acknowledgement and inbox
+
+Acknowledgements bind the authenticated account to one published revision UUID.
+They are persisted only after current active-account, audience and display-window
+checks succeed. Exact retries return the original timestamp. An acknowledgement
+hides that revision from the user's banner and marks its corresponding own inbox
+notice read. It cannot acknowledge another account's copy.
+
+A later published revision has a new UUID and is visible again. Saving a draft
+alone does not reset an earlier acknowledgement or expose the draft. The ordinary
+full page includes currently authorized acknowledged revisions with their read
+state. Superseded, archived, expired or no-longer-authorized IDs cannot be fetched
+through the exact-revision endpoint.
+
+Only important publications insert a committed, deduplicated
+`portal_announcement` inbox record, keyed by published revision UUID and recipient.
+Recipients are active accounts matching actual current database roles at
+publication. Information-only publications have banners and a page without an
+inbox event. Accounts created or joining an audience afterward can read current
+publications; no retrospective notification fanout is claimed.
+
+Important notices count as attention during quiet hours only while that exact
+publication remains currently readable. The three existing mandatory receipt
+kinds retain their original attention behavior. The accepted four-category
+notification preference API and public `notification_inbox` wrapper are unchanged.
+The ordinary inbox retains historical records; its existing current-permission
+resolver returns an empty title and destination for unavailable revisions.
+
+<a id="section-announcements-storage-permissions-and-api"></a>
+## Storage, permissions and API
+
+The additive CLI migration is
+`20261116080739_portal_announcements.sql`. Earlier delivered migrations and the
+separate quiet-preference migration remain unchanged.
+
+Private RLS-enabled tables store announcement state, immutable draft revisions,
+immutable publication receipts, own acknowledgements and exact operation retry
+records. State points separately to the latest draft and current publication.
+An index resolves current publication IDs without scanning every parent; ordinary
+list queries start from current publication pointers rather than loading revision
+history. No public table grants expose drafts, audiences or operation parameters.
+
+| Public RPC                                                                     | Contract                                                                                                                                                                   |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `manage_announcement(p_id,p_action,p_expected_version,p_request_id,p_payload)` | Current MFA management; `save`, `publish`, `archive`, `recover`; exact request binding and atomic side effects. New draft creation uses null ID and expected version zero. |
+| `admin_announcements(p_search,p_state,p_before_at,p_before_id,p_limit)`        | Bounded metadata pages; finite, complete tuple cursors and literal search.                                                                                                 |
+| `admin_announcement(p_id)`                                                     | Current authorized draft and published snapshots for the editor.                                                                                                           |
+| `announcements(p_search,p_unacknowledged,p_before_at,p_before_id,p_limit)`     | Current published, unarchived, in-window, actual-role-authorized revisions only.                                                                                           |
+| `announcement(p_revision_id)`                                                  | One exact currently authorized publication; draft and historical guesses fail.                                                                                             |
+| `acknowledge_announcement(p_revision_id)`                                      | Idempotent own acknowledgement and own corresponding inbox read state.                                                                                                     |
+
+Every management mutation locks the caller's active profile before evaluating
+current role/MFA permission, then locks the announcement. Account role changes
+and suspension use the existing exclusive profile lock. ACKs follow the same
+profile-first boundary before current audience checks and the publication lock.
+This prevents a write that waited behind a completed role withdrawal from using
+its earlier authorization result.
+
+Version checks reject competing edits with exact `40001`; no accepted snapshot is
+edited in place. Operation keys bind actor, action, expected version and exact
+payload. Reusing a key for different parameters fails. The editor keeps the
+version captured when it opened even if a background detail read refreshes, and
+retains an uncertain draft and retry key until confirmation. Permission errors
+hide cached private metadata and open editor content.
+
+Publication state, immutable publication receipt, important-notice fanout, audit
+and operation record commit together. A failed side effect rolls the whole
+operation back. Reviewed administrative audit actions expose actor, action,
+resource and time only; bodies and retry payloads are not included in the audit
+viewer. Historical snapshots and retry records are retained: this module does
+not claim a purge or legal retention policy.
+
+<a id="section-announcements-actual-validation-and-remaining-acceptance"></a>
+## Actual validation and remaining acceptance
+
+Implemented focused checks, using the explicitly owned network-disabled M7
+scratch container and a separate UUID database:
+
+- 16 real PostgreSQL groups passed, including current MFA/roles, immutable drafts,
+  first publication and exact retries, private newer drafts, per-revision ACK and
+  resurfacing, competing CAS transactions, archive/recover, explicit future-start
+  denial, display expiry, bounded cursor pages, literal search, quiet behavior,
+  private ACLs, and rollback after an intentionally failing notification trigger.
+- Two of those groups observe real profile barriers through `pg_stat_activity`:
+  management write and ACK wait behind role withdrawal, then fail with `42501`
+  without the denied mutation or an unintended inbox read.
+- 18 feature component tests and the three existing shell logout tests passed
+  during integration. They cover delayed ACK, uncertainty, cache revocation,
+  bilingual state, local expiry, actor change, exact-revision navigation, bounded
+  pagination, draft/CAS/retry preservation and administrative permission loss.
+
+`announcements-api-check.mjs` contains five actual Auth/MFA/REST scenarios for the
+canonical disposable stack. `announcements.spec.ts` contains two workflows on
+desktop and mobile, including real draft/publication separation, MFA, revision
+ACK, archive/recover, manual future publication, information-only notices,
+English/dark mode, overflow and axe. These native API/browser cases are authored
+and listed, not yet executed for M7 at this checkpoint. The root's combined
+canonical and retained-data acceptance must record the final frozen source and
+actual results. No production, real email or push delivery is claimed here.
+
+
+<a id="section-notifications"></a>
+
+<a id="section-notifications-notifications-and-preferences"></a>
+# Notifications and preferences
+
+The bell, dashboard and `/notifications` use the same account-bound source. The preview shows eight entries and the actual count of all unread notifications. On request, the inbox loads another 40 notifications using a stable timestamp/UUID cursor. Read/unread changes and bulk acknowledgement appear only after a successful server response. Bulk acknowledgement applies only through the previously fetched timestamp; newly arriving notifications remain unread.
+
+`/settings` offers German/English language, light/dark colour scheme and four notification preferences: chat, forum, matching/reopened jobs and reminders. These four switches are stored server-side per account with a version number. A concurrent save does not overwrite a newer version; the draft remains available and can be explicitly reloaded. Language changes preserve the draft. Writes are disabled offline.
+
+<a id="section-notifications-security-and-data-flow"></a>
+## Security and data flow
+
+The additive migration `20261115204354_notification_inbox_and_preferences.sql` extends the existing notification table. Public invoker RPCs delegate to private definer functions with an empty search path, explicit execution grants and checks of the current active account identity. Administrative permissions do not open another person's inbox. Mixed own/foreign ID batches are rejected in full. The preferences table is private and permits no direct browser writes.
+
+The API resolves resource links and titles against current resource permissions. After chat membership is revoked or a resource is removed, neither its old title nor a still-usable link is returned. The frontend validates the response structure; links must be internal paths. Authored text is rendered as text. A failed fetch does not continue displaying a previously cached private preview. Query keys contain account identity; requests support abort signals. Only the small preview polls every 30 seconds; dashboard and inbox create no further background polling cycle.
+
+Optional new notifications respect preferences at insertion time. Turning a preference off does not delete existing notifications. Confirmation and cancellation of a binding allocation continue to be recorded independently of these switches.
+
+Matching jobs are determined after the publication transaction completes, using the final topic/qualification set. Archived/expired offers, past sessions and inactive accounts are excluded; qualifications must remain valid through the final session. A notification is a hint and does not replace renewed contract, calendar, qualification and capacity checks during a binding claim.
+
+<a id="section-notifications-reminders-and-boundaries"></a>
+## Reminders and boundaries
+
+The explicit reminder-refresh action creates idempotent notices for the actor's own confirmed, unreleased sessions within 24 hours and own active contracts expiring within 30 days. A server-side limit prevents repeated calculation within one minute. A changed preference permits immediate recalculation. Released historical allocations and revoked contracts do not produce current reminders.
+
+The [email extension](OPERATIONS.md#section-notification-delivery-database) adds explicit per-account consent, IANA-zone quiet hours and a transactional outbox. The versioned settings are stored server-side. The [finite Hostinger mail worker](OPERATIONS.md#section-notification-mail-operations) generates due reminders for opted-in active accounts and processes newly queued events; manual reminder refresh can also queue a new email. Existing inbox history is never replayed.
+
+[Web Push](GUIDE.md#section-web-push) adds explicit per-device consent, private subscriptions and a finite encrypted delivery worker. The in-app attention settings below remain independent of external delivery quiet hours. Committed task, assignment, course, finance and qualification events resolve their current resource permissions again before dispatch. Generic external payloads contain no private message bodies or document links.
+
+Worker templates and timers ship disabled; source changes do not install or activate them. Real SMTP authentication, external delivery and physical desktop/mobile push acceptance require their separate operational evidence. Digests remain pending. In-app notices and mandatory receipts remain available independently of external channels. Combined verification of the integrated M7 and connected operations source is recorded only when actually executed in the relevant pull request checks.
+
+<a id="section-notifications-personal-in-app-quiet-hours"></a>
+## Personal in-app quiet hours
+
+The second form at `/settings` stores an own daily quiet period with an enable switch, start, end and IANA zone. Language changes preserve its draft. Its separate save button is **Save quiet hours**; the four existing category switches and their original API/version contract remain independent.
+
+Quiet hours affect only the attention shown by the **bell counter**. During the active window, it continues counting unread binding booking, cancellation and new-contract notices. The connected announcements module additionally includes explicitly important, currently authorised portal announcements; archived, expired or no-longer-authorised revisions do not count. The inbox and its preview still contain every authorised notification; nothing is deleted, discarded, moved or automatically marked read. For example, 17 optional notifications plus three important receipts remain 20 unread notifications, while the bell counts three important notices. Its accessible label also states the active quiet period and complete unread count. Disabling quiet hours returns the bell to the full count. Only an explicit read/unread action changes read state.
+
+The start is inclusive and the end exclusive. Different endpoints may span midnight. Actual local clock minutes in the selected IANA zone govern the rule: skipped DST minutes do not occur; both occurrences of a repeated minute use the same quiet-hours rule. No server or browser clock is changed. A saved quiet period retains its explicitly selected zone. Before anything is saved, the default uses the current own profile zone with a disabled 22:00–07:00 window.
+
+The server calculates `quiet_active` from its current time when the inbox is fetched. `attention_count` is added only during an active window. The complete `unread_count` remains unchanged. The shell uses its existing 30-second interval and normal revalidation; the interface claims neither millisecond-precise transitions nor additional delivery technology. This feature is **not** SMTP, email, push or background-delivery scheduling.
+
+The additive migration `20261116080737_notification_attention_preferences.sql` creates a separate private preferences table. `attention_preferences()` reads only the current active account. Before the first save, the own version is 0 without creating a row. `save_attention_preferences(p_payload, p_expected_version)` accepts exactly `enabled`, `start_time`, `end_time` and `time_zone`; the account comes from `auth.uid()`. An account-bound transaction lock also serialises concurrent first saves. Stale versions are rejected with `40001`; the draft remains until explicitly reloaded. Unknown fields, invalid times/zones and equal endpoints are rejected. Ordinary accounts, administrators and existing suspended sessions receive no other person's quiet hours. Direct table access and anonymous function execution are not granted.
+
+`scripts/attention-db-tests.mjs` checks SQL boundaries, including actual IANA/DST cases. The additional **authored** scenarios `scripts/attention-api-check.mjs` and `tests/e2e/attention.spec.ts` cover actual Auth/REST accounts, initial and subsequent version conflicts, unchanged category preferences, 17 optional plus three important notices, account/admin/suspension boundaries and explicit read state. Browser cases include UI save/reload, DE/EN drafts, offline operation, dark mode, mobile width and axe. Actual native execution and results still belong in the relevant pull request checks; the existence of these files does not claim a passed run.
+
+<a id="section-notifications-api-and-verification"></a>
+## API and verification
+
+The existing inbox/category contract comprises the five public functions `notification_inbox`, `mark_notifications`, `notification_preferences`, `save_notification_preferences` and `refresh_my_notifications`. The two attention RPCs described above extend this contract. Complete parameters are in [API_REFERENCE](API_REFERENCE.md). Focused checks:
+
+```bash
+npx vitest run src/features/notifications
+PORTAL_DB_CONTAINER=<owned-test-container> node scripts/notifications-db-tests.mjs
+./portal test
+```
+
+The SQL groups cover ownership, atomic batches, version conflicts, cursor limits, current resource permissions, mandatory notices, reminder windows, released allocations and qualification expiry. `scripts/notifications-api-check.mjs` verifies actual Auth/MFA/REST calls. `tests/e2e/notifications.spec.ts` covers desktop/mobile, a paginated inbox, settings surviving reload, language, dark mode, offline operation and axe. Authored tests do not constitute passed acceptance; combined checks actually executed are recorded in the relevant pull request checks.
+
+
+<a id="section-web-push"></a>
+
+<a id="section-web-push-web-push-on-desktop-and-mobile"></a>
+# Web Push on desktop and mobile
+
+This vertical adds opt-in push for supported desktop browsers and mobile installed web apps. Both platforms remain in scope. Unsupported/blocked browsers keep the in-app inbox and optional email channel. There is no automatic permission prompt when opening the portal. The settings page explains installation, denied browser/OS permission and per-device removal in German and English. On iPhone/iPad, the UI explains the supported Home Screen web-app route (iOS/iPadOS16.4+); on desktop/Android it explains installation through the browser. Browser/OS permission and actual platform support still control delivery.
+
+Primary references checked16November2026: [MDN Push API](https://developer.mozilla.org/en-US/docs/Web/API/Push_API), [WebKit mobile Web Push](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/), [Apple Web Push](https://developer.apple.com/documentation/usernotifications/sending-web-push-notifications-in-web-apps-and-browsers), [web-push library](https://github.com/web-push-libs/web-push), [Supabase functions](https://supabase.com/docs/guides/database/functions) and [Workbox generateSW](https://developer.chrome.com/docs/workbox/modules/workbox-build). The existing Supabase3.1CLI is used with its current local-default semantics; unrelated changelog breaking changes do not require an application rewrite.
+
+<a id="section-web-push-data-and-consent"></a>
+## Data and consent
+
+Migration20261116091013 adds private RLS-protected configuration, device subscriptions and committed-event outbox. Authenticated browser RPCs derive the owner from current `auth.uid()` and an active profile: `my_push_devices`, `register_push_device`, `remove_push_device`. A browser supplies no authorising role/user ID. Admin rights do not expose foreign devices, provider endpoints or encryption keys. Each owner has at most five active devices, with a90-day consent lease. Removing a device prevents new delivery; a provider may already hold a generic message with a300-second TTL.
+
+Subscription URLs are restricted to exact HTTPS origins `fcm.googleapis.com`, `updates.push.services.mozilla.com` and `web.push.apple.com`, with no credentials/custom port/query/fragment. Other provider endpoints are refused, rather than treated as arbitrary server fetch destinations. Native P-256/auth keys are validated; ownership of an existing endpoint cannot be reassigned to another account. Configuration/key changes are service-only; rotating the public application key revokes existing registrations, requiring renewed device registration.
+
+In the service worker, a push is shown only if its opaque per-device token matches the current browser binding. The binding database contains only the account identifier and an opaque random token; it stores no authentication token, message/file content or private schedule. Logout/actor transitions clear the binding, unsubscribe the browser and close displayed notifications. Reloading the same account preserves consent. The most recent account transition in this browser origin controls its one push binding; private cross-account notifications are never retained as a fallback.
+
+`public/push-sw.js` is imported by the existing Workbox `generateSW`, preserving the existing precache/offline/update behavior. It accepts only a bounded generic payload identity/locale/token and shows a fixed German/English portal update. It ignores payload-supplied text or destinations. Clicking always opens same-origin `/notifications`, where normal authentication and current-resource authorisation apply. No signed/private link is delivered, and no API/private-file runtime cache is introduced.
+
+<a id="section-web-push-server-delivery"></a>
+## Server delivery
+
+The Node worker `scripts/notification-push-worker.mjs` is finite and disabled by default. Exact-pinned `web-push4.0.0` produces standard AES128GCM encrypted requests and ES256 VAPID authentication. VAPID private keys and service-role keys remain only in server-private configuration, never `VITE_` variables, bundles, database rows or repository files. The public application key is not a secret.
+
+New notifications enqueue only after their transaction commits and only to active current devices. Category selection delegates to the same `private.email_category_enabled` hook as email, including forward-added task/waitlist/substitution kinds. There is no replay of historical inbox records. Push inherits the account's IANA quiet-hour pair from delivery preferences, independently of email opt-in. `refresh_push_reminders` creates bounded15-minute session/contract reminders for active push-only accounts; a final shared task producer can extend this same hook.
+
+Service-only APIs are `configure_web_push`, `refresh_push_reminders`, `lease_notification_push`, `prepare_notification_push`, `finish_notification_push`. Leases use `SKIP LOCKED`, fresh tokens, attempt limits and300-second fences. Preparation rechecks active account/device, expiry, configured channel and category/quiet hours. The worker sends no resource title, course/contract terms or chat body.
+
+Before HTTPS, the worker checks the exact provider host, rejects private/reserved DNS results and pins the validated resolution to that request. TLS hostname/certificate verification stays enabled; redirects are never followed. Provider response bodies are discarded and never logged. HTTP2xx means provider acceptance, not device display/read.404/410 deactivates the subscription;429/5xx uses bounded backoff with bounded Retry-After. Ambiguous post-request network failure is `uncertain`, never a blind resend. Expired sending leases are also terminal uncertain. Logs contain only fixed aggregate status counts. The finite run has a240-second cancellation signal with15-second API/provider operations and an outer300-second systemd bound. Shared maintenance locking prevents crossing the existing backup/update exclusive boundary.
+
+<a id="section-web-push-activation"></a>
+## Activation
+
+Templates under `deploy/hostinger/notification-push/` are disabled and are not installed by a source build. Root-owned0600 server configuration outside `www` supplies:
+
+- `PORTAL_PUSH_ENABLED=true` only for reviewed activation.
+- `PORTAL_PUSH_API_URL` with the actual private Supabase gateway.
+- `PORTAL_PUSH_SERVICE_KEY`, server-only.
+- `PORTAL_PUSH_VAPID_SUBJECT=mailto:info@luminovia.org`.
+- Matching generated `PORTAL_PUSH_VAPID_PUBLIC_KEY` and `PORTAL_PUSH_VAPID_PRIVATE_KEY`.
+
+Generate a keypair privately with the pinned library and retain it in the approved recovery secret store; never print or commit the private key. Apply reviewed source migrations, set the same public key through `configure_web_push`, verify private environment and actual Node path, then install/start the finite service/timer under the reviewed target's operational procedure. No-flags execution performs zero network calls; `--run` and literal enabled=true are both required. An activated server does not grant browser permission or register devices automatically. A desktop and a mobile user must each explicitly consent in their supported browser/PWA.
+
+<a id="section-web-push-actual-checks-and-remaining-platform-evidence"></a>
+## Actual checks and remaining platform evidence
+
+Executed focused source checks: real disposable PostgreSQL consent/ownership/defaults/endpoint rejection/rollback/50-worker race/fencing/idempotency/410/queued-removal checks; eight Node crypto/provider/worker/service-worker checks, including actual AES128GCM decrypt and ES256 signature verification; fourteen component/platform checks, including desktop, Android, iPhone install flow, installed iPadOS PWA and permission denial. Relevant ESLint and TypeScript passed before another agent's in-progress course source was added. Synthetic production build passed with58 public precache entries/2638.50KiB and the actual imported push worker. The uninstalled systemd templates pass `systemd-analyze verify`.
+
+A real isolated built-PWA native probe used secure loopback6391, a synthetic backend, a fresh browser context and an ephemeral public VAPID key. The actual worker was active and PushManager existed, but this headless Chromium returned Notification.permission=denied and subscribe aborted with AbortError. No subscription or external push was created. This is a recorded platform limitation, not proof of desktop/mobile provider delivery. The owned preview was stopped.
+
+`web-push-api-check.mjs` connects actual disposable Auth/PostgREST to the real worker and standard encryption without contacting an external provider. `tests/e2e/push.spec.ts` checks real own/foreign device separation, server-confirmed removal, DE/EN, reload and offline behavior on desktop/mobile. Their authored source is not a passed full run; exact execution belongs to the combined QA results. Real visible notifications on both a supported desktop and installed mobile PWA remain a separate native acceptance step when a permission-capable device is available. No claim of such delivery, live VAPID activation, installed timer or physical mobile acceptance is made by this source checkpoint.
+
+<a id="section-web-push-immutable-worker-distribution"></a>
+## Immutable worker distribution
+
+The release packager now builds `deploy/hostinger/notification-push/worker.mjs` from the exact tracked source/lock using locked Rolldown1.2.19. Its only external imports are Node builtins and it has no dynamic/runtime npm imports. The unused `https-proxy-agent` branch is replaced only in this constrained build by a fail-closed proxy-disabled shim; the worker has no proxy option and standard web-push crypto/VAPID/request generation stays unchanged. Actual used package versions, npm integrity strings, module/source hashes, build-tool identity and bundle hash are retained in `provenance.json`, alongside complete dependency license notices. The absent http_ece npm license is supplied from its exact upstream v1.2.1 MIT license, pinned by SHA-256.
+
+The archive also carries disabled service/timer/environment templates and maps the original stdlib Python worker to `deploy/hostinger/notification-mail/worker.py`. Both service ExecStart paths point to those delivered artifacts. No node_modules, server package install or worker source is placed in the public site. Host activation still needs a supported Node executable (the inspected VPS initially had none), private environment, actual systemd installation and browser consent.
+
+Fourteen package checks pass, including actual extracted Python/Node dry runs outside node_modules, all eight existing crypto/provider/service-worker contracts repeated against the extracted standalone bundle, exact source/lock/hash/license provenance, and negative wrong-lock/license/local-import/known-short-secret cases. Source/bundle provider checks now verify both Node DNS lookup callback forms (`all=true` and single address), temporary pre-write DNS/connect retry, and post-write uncertain acceptance. This is standards/transport-contract evidence, not a successful external desktop/mobile delivery claim.
+
+
+<a id="section-admin-audit"></a>
+
+<a id="section-admin-audit-administrative-audit-log"></a>
+# Administrative audit log
+
+`/admin/audit` adds a readable, searchable interface to the existing server-side audit events. The new `audit.read` permission is assigned only to `owner` and `admin`. Every API request checks current database roles, account activation and verified MFA. Ordinary management, senior, lecturer, client, participant and guest roles have no access. An explicitly assigned additional permission is recognised; an assumed role hierarchy or editable Auth metadata cannot replace it.
+
+<a id="section-admin-audit-deliberately-reduced-projection"></a>
+## Deliberately reduced projection
+
+The source remains `public.audit_events`; no second event copy or new write API is created. The interface is read-only. It returns the event identifier, the acting account's current display name, action identifier, optional resource UUID and timestamp. Display names are current profile names, not purported historical name snapshots. They are displayed as text even when the content resembles HTML.
+
+The exact allowlist `private.admin_audit_actions()` contains the existing actions for account roles/status, invitations, qualification verification, client associations/requests, organisations, course templates/runs/enrolment, job publication/lifecycle/capacity, cancellation and taxonomy management. New or similarly named actions remain invisible until their inclusion is explicitly reviewed. Event details are neither selected nor searched. In particular, private profile changes, calendars and availability, chats, documents, contracts, invoice events and personal reviews are excluded. Resource identifiers are not automatically resolved into links and cannot bypass resource permissions.
+
+This migration does not change existing table RLS or administrative table permissions. The reduced view does not replace an independent retention, compliant archival or tamper-protection solution for privileged database operators. Browser accounts cannot append, alter or delete history. Existing server-side writes and operational/test cleanup remain available.
+
+<a id="section-admin-audit-queries-and-interface"></a>
+## Queries and interface
+
+`admin_audit_events(p_from, p_to, p_action, p_search, p_before_at, p_before_id, p_limit)` is a public invoker entry point into a restricted private definer function with an empty search path and explicit execution grants. Without time parameters, the API uses the last 30 days. Each request is limited to a finite window of at most 93 days plus two hours of DST allowance and 1–100 results. There is no unbounded total count or automatic historical fetch.
+
+The interface uses 40 results per page, an explicit IANA time-zone field and inclusive local calendar days. Date inputs and the zone are validated before conversion to UTC; skipped local calendar days are rejected. Language changes preserve filter drafts. Search treats characters such as `%` and `_` literally and covers only display name, action identifier and resource identifier. The action filter receives the reviewed choices from the API.
+
+A composite index on `created_at DESC, id DESC` supports bounded time queries and stable keyset navigation. The cursor contains both values, so equal timestamps cause neither omissions nor duplicates. Subsequent pages retain the time bounds. Newer events may appear after returning to the first page or refreshing; no immutable database-wide snapshot across multiple HTTP requests is claimed. Failed current-access checks hide previously loaded rows. There is no persistent offline cache, background fetch of every page or complete CSV export.
+
+<a id="section-admin-audit-verification"></a>
+## Verification
+
+The additive migration, generated by the actually pinned Supabase CLI, is `20261115213550_admin_audit_viewer.sql`. Focused commands:
+
+```bash
+npx vitest run src/features/audit
+PORTAL_DB_CONTAINER=supabase_db_luminovia-portal-test-m6 node scripts/admin-audit-db-tests.mjs
+```
+
+The PostgreSQL check creates and removes only its own temporary database. It covers roles/MFA, the allowlist and detail protection, literal search, time/cursor bounds, actual concurrent events sharing a timestamp, write prohibitions, role revocation and account suspension with existing token identities. Native Auth/TOTP/REST checks are in `scripts/admin-audit-api-check.mjs`; desktop/mobile journeys, DE/EN, dark mode, offline operation, role revocation and axe checks are in `tests/e2e/admin-audit.spec.ts`.
+
+Authored API/browser checks do not constitute passed acceptance. The combined checks actually executed are documented in the relevant pull request checks. Operational monitoring, deletion/retention actions, email delivery and production deployment are not claimed here.
+
+
+<a id="section-website-enquiries"></a>
+
+<a id="section-website-enquiries-website-enquiry-intake-and-management"></a>
+# Website enquiry intake and management
+
+<a id="section-website-enquiries-published-source-boundary"></a>
+## Published source boundary
+
+PR25 merged as main `4f7f6c0`, publishing `20261116143242_website_enquiry_intake.sql` after the unchanged 68-file history. The repository now contains 69 published migration sources, all immutable. Source integration does not establish hosted installation or public Website activation.
+
+The enquiry helper is discovered by main's existing owner-only notification resolver. The obsolete resolver rename/wrapper and authenticated EXECUTE grant are removed before publication, preserving the accepted resolver's identity, fallback branches and restricted ACL. Current SQL tests exercise the actual inbox projection and denied direct helper calls. HTTP fixtures must validate either the canonical disposable backend or the exact ownership-checked native candidate, including its private TLS trust; ordinary services remain excluded. The native fixture issues an explicit CA:FALSE server leaf so Deno/rustls and Node/OpenSSL both validate it. Tests retain certificate and hostname checks.
+
+The Portal can receive an authenticated integration submission, retain the
+validated original enquiry and consent record privately, and let management
+review it, identify or create a customer, record responsibility and clarification,
+and convert it transactionally into an existing course-planning run. It does not
+invent a customer account, accepted financial agreement, tax treatment or quote.
+The public Website has not been changed or connected by this source change.
+
+<a id="section-website-enquiries-current-website-boundary"></a>
+## Current Website boundary
+
+The read-only investigation examined Website main
+`2778a9be96b7d6c29ec0f11a1677c7530c602ccc`: a static Vite/React JSX site with
+production Preact compatibility and React Router. Its contact page prepares a
+localised `mailto` draft, including recognised training intent/course links.
+GitHub Pages publishes the marketing repository's main branch. There is no
+existing server-side contact-form transport in that source.
+The [read-only Website source](https://github.com/Luminovia-Training-Consulting/Website/tree/2778a9be96b7d6c29ec0f11a1677c7530c602ccc)
+is a separate repository and deployment boundary.
+
+Never embed the Portal integration token, service key or another server secret
+in that static site or a `VITE_` variable. Public activation is **pending** a
+reviewed trusted sender/transport and a separately authorised Website change.
+No new service registration, DNS change, paid component or public deployment is
+introduced here. A static browser cannot safely use this server credential.
+
+<a id="section-website-enquiries-intake-contract"></a>
+## Intake contract
+
+The existing Supabase Edge architecture provides
+`POST /functions/v1/website-enquiries`. The normal gateway's public API key/JWT
+boundary remains enabled. The function additionally requires the separate
+`X-Luminovia-Integration-Token` server credential. Public Supabase keys, matching
+Origin, user-supplied role fields and claimed client-IP headers never authenticate
+the integration. No CORS permission is issued. If Origin is present it must
+exactly match the configured Website origin; server-to-server calls may omit it.
+
+Private server configuration:
+
+- `PORTAL_WEBSITE_ENQUIRIES_ENABLED=false` by default.
+- `PORTAL_WEBSITE_ORIGIN` is an exact HTTPS origin (loopback HTTP is accepted only
+  for local tests).
+- `PORTAL_WEBSITE_PRIVACY_NOTICE_VERSION` must identify the reviewed current
+  notice; submissions for another version reject instead of inventing consent.
+- `PORTAL_WEBSITE_INTEGRATION_TOKEN` is a private 32–256-character token provisioned
+  outside source control, shared only with the approved trusted sender. Generate
+  it from at least 32 cryptographically random bytes rather than choosing a phrase.
+
+The generated self-host configuration leaves the token and origin empty and the
+feature disabled. Missing/weak configuration fails closed with 503. The token is
+compared using fixed-size SHA-256 digests and timing-safe comparison. Its digest
+identifies a sender for persisted rate limits; neither token nor digest is returned
+to public callers. Credential rotation must be coordinated with the trusted sender;
+rotating the token also changes its sender-scoped retry/rate namespace.
+
+The JSON body contains:
+
+| Field                                            | Contract                                                                                     |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| `submission_id`                                  | Stable UUID reused for an uncertain retry.                                                   |
+| `company_name`, `contact_name`, `email`, `phone` | Bounded, validated contact input; optional phone is an empty string.                         |
+| `topic`, `message`                               | Authored training topic and requirements; literal text, no authored HTML execution.          |
+| `preferred_dates`, `duration`                    | Bounded requested preferences; no implied confirmed booking.                                 |
+| `delivery_type`                                  | `online`, `onsite` or `flexible`.                                                            |
+| `time_zone`                                      | Intended recognised IANA time zone.                                                          |
+| `locale`                                         | `de` or `en`; authored text is not translated.                                               |
+| `privacy_notice_version`, `consent`              | Notice identifier and the literal boolean `true`. This is evidence, not legal certification. |
+| `website`                                        | Optional empty honeypot field; non-empty values reject.                                      |
+
+Unknown fields, malformed JSON, oversize streamed bodies, missing consent and
+invalid values reject before database delivery. Bodies are bounded to 24,000
+bytes. A service-only RPC independently validates the payload and serialises each
+sender using a transaction advisory lock. At most 10 new submissions per minute
+and 100 per rolling 24 hours are accepted for one integration sender. Retrying the
+same UUID and identical validated payload returns the original record, including
+after management conversion; a changed retry returns 409. A retry consumes no
+additional quota and creates no duplicate history or notifications.
+HTTP and SQL accept the same conventional email-address subset as the detail
+consumer. Quoted local parts, leading/consecutive dots and control characters
+reject before acknowledgement; an accepted address must remain readable in the
+management detail projection.
+
+The successful response is `202 {"received":true,"receipt":"<your UUID>"}` only
+after a confirmed database response. It exposes no internal enquiry/customer ID,
+matching directory record, private message, contact record or management state.
+Safe generic failures use 400/401/403/409/413/415/429/503 without database details.
+This boundary protects the authorised integration; a public browser form still
+needs its own approved spam/abuse controls before activation.
+
+<a id="section-website-enquiries-management-workflow"></a>
+## Management workflow
+
+`/enquiries` and its detail routes require current `organisations.manage` and MFA
+on every server request. Ordinary lecturers and customer accounts cannot search
+or retrieve the intake, even using a guessed identifier. All intake/history/retry
+tables are private and RLS-enabled; browser table writes are unavailable. The
+original validated payload, including submitted identity and consent, remains
+unchanged by triage. Interface text supports DE/EN and existing light/dark/system
+themes. Data stays in actor-scoped memory, outside service-worker caches.
+Mutations first hold the active caller's profile for share, then acquire the actor
+request lock and enquiry row. Supported account changes take that profile for
+update, so a decision and role/activity revocation serialize. Permissions are
+checked again after the business-lock wait and before a historical receipt or
+new write; a conversion retry also requires its current course capability.
+
+Management can search the queue, assign an eligible active colleague, add an
+append-only note and move Received → Under Review → Awaiting Customer or Closed.
+Closed enquiries can return to review with a reason. A management email action
+opens a manual local email draft; it does not send or claim delivery.
+
+Link an existing active organisation first when appropriate. Explicitly confirming
+“Create customer and contact” instead reuses the existing directory routines with
+the supplied company/contact details. Its request identity and version check
+ensure uncertain retries cannot create a second organisation or contact. Company
+identity matching remains a human decision; the Portal does not guess membership
+from an email domain or grant access based on a submitted company name.
+
+Conversion additionally requires `courses.manage` and MFA. Management chooses an
+existing course template or explicitly creates one from the enquiry, reviews exact
+sessions/time zone and teaching mode, and confirms. The same transaction calls
+the existing `save_course_run`, creates all sessions and marks the enquiry
+Converted. Any invalid/overlapping session rolls back the template/run and enquiry
+change together. Concurrent decisions use reviewed versions and row locks, yielding
+one conversion. The result remains unpublished and has no job or commercial quote;
+normal course/offer planning continues from there. An already converted customer
+link is preserved. The separate priced client-request workflow is not silently
+populated with fabricated fees.
+
+Requirements are currently captured as text. Public file uploads are not enabled
+by this endpoint; any later public attachment workflow must reuse bounded scanning
+and explicit private resource permissions rather than accepting arbitrary links.
+
+<a id="section-website-enquiries-deployment-and-test-evidence"></a>
+## Deployment and test evidence
+
+The self-host router allowlist, exact Envoy route and explicit read-only worker
+mount include only the reviewed `website-enquiries` endpoint. Lookalike/subpaths
+remain denied. No backend ports or new services are published. Existing JWT,
+production and release gates remain intact; this source does not activate the
+normal or hosted endpoint.
+
+Executed focused evidence:
+
+- `PORTAL_DB_CONTAINER=<owned-disposable-container> node scripts/enquiries-db-tests.mjs`:
+  16 real PostgreSQL groups pass, including simultaneous retries/conversions,
+  sender limits, denial/MFA/revocation, customer/contact idempotency, rollback and
+  preserved original records. Actual `plpgsql_check` reports zero body warnings
+  or errors for all five new PL/pgSQL implementations.
+  The concurrency cases use explicitly held SQL transactions and observed
+  `pg_blocking_pids`, covering both revocation orderings and a capability change
+  committed during an enquiry-row wait. No fixed sleep substitutes for a lock assertion.
+- `npx --no-install deno test supabase/functions/website-enquiries/handler_test.ts`:
+  eight request/authentication/validation/acknowledgement cases pass, including
+  acknowledged addresses checked by the actual frontend Zod email validator.
+- `npx --no-install deno check supabase/functions/website-enquiries/index.ts scripts/testing/enquiries-edge-http.ts`:
+  both deployed and isolated HTTP adapters typecheck.
+- Seven frontend unit/component tests pass for authority gating, literal original
+  data, safe manual email draft, explicit pending customer creation, stale-version
+  protection, DE/EN filters, denial/offline handling and DST/session conversion.
+- `npm test`: all 233 tests in 50 files pass on this branch baseline. Shared
+  routing/inbox integration and the combined source still require their own gates.
+- `node deploy/hostinger/selfhost/validate.mjs --gateway-routing`: 14 actual
+  isolated networkless Envoy route cases and configuration/security checks pass.
+
+The canonical runner discovers `scripts/enquiries-api-check.mjs`, which starts its
+own loopback Deno listener with the exact deployed environment adapter against
+the owned actual Auth/REST database, and `tests/e2e/enquiries.spec.ts` for real
+management/customer/course planning, foreign-account denial and desktop/mobile
+DE/EN/theme/accessibility checks. Their actual outcomes must be recorded after
+`./portal test` runs; authored tests do not constitute passed acceptance.
+Production, real contact delivery and public Website activation remain separate.
+
+
+<a id="section-delegated-roles-pricing"></a>
+
+<a id="section-delegated-roles-pricing-delegated-roles-and-private-compensation"></a>
+# Delegated roles and private compensation
+
+The current user requirement supersedes the earlier freely editable per-offer commission default. Real commercial percentages are private operational configuration. This public repository contains no initial production policy and never guesses one. A fresh install requires an administrator with verified MFA to set the intended policy in the administration interface before publishing a commissioned offer. The acceptance-only fixtures use clearly fictional settings, gated to the owned disposable test stack.
+
+<a id="section-delegated-roles-pricing-delegation-boundary"></a>
+## Delegation boundary
+
+The server reads current database roles and MFA. Owner may assign administration and lower roles; administration may assign management and lower roles; management may assign senior lecturer, lecturer, company, participant and guest. Actors cannot change their own roles or activation state, or change an equal/higher account, including a target with several roles. Guest grants no additional permissions. Existing owner and participant semantics are retained.
+
+`account_role_catalog` returns an `assignable` flag for each role. Account-directory entries return `can_assign_roles` and `can_change_active`. These flags guide the UI; the same rules are enforced independently in role, suspension, invitation and membership routines.
+
+Management can invite a company account without an organisation grant. Linking/removing an organisation, or inviting an account with an organisation attached, requires administrative gross-finance permission and MFA. Completion checks the inviter's current authority again. Removing a company role revokes active organisation memberships; restoring that role cannot restore those grants. The membership and role mutation routines share the account lifecycle lock.
+
+A company role cannot be combined with lecturer, senior lecturer or management roles on a non-administrative account. Defensive organisation checks also reject pre-existing conflicting combinations. This prevents one login from composing the private customer gross projection with a personal lecturer quote. Private messages, calendar entries and unrelated personal contracts retain their existing ownership rules.
+
+<a id="section-delegated-roles-pricing-private-policy-and-offer-snapshots"></a>
+## Private policy and offer snapshots
+
+`private.compensation_policy` is an RLS-enabled, unexposed singleton with no seed row. `configure_compensation_policy` requires administrative gross-finance permission, MFA and the expected current version. Concurrent edits use a shared policy lock and reject stale versions. Audit records contain the new version, without rates.
+
+`commission_access` exposes policy percentages and version only to a current administrative MFA session. Other roles receive capability flags and whether setup is complete. `commission_offer_policy` gives that administrator the captured policy for one offer, so a newer global policy cannot mislabel an existing quote.
+
+Every new commissioned offer captures its own policy version and both percentages in the private offer ledger. Later global changes affect future offers. An explicit administrative reprice is allowed only before any claim history and advances the offer consent version. Original gross currency/unit, residual-conserving cents and the accepted private revenue ledger remain intact.
+
+On upgrade, offers with no claim history move to the role-dependent model and their consent version advances. Their old public rate columns become zero sentinels. Initial policy setup enables their still-empty private policy snapshots. Offers with accepted or cancelled claim history retain their historical pricing model, and every accepted claim/revenue row remains unchanged. No database migration writes a real production policy.
+
+<a id="section-delegated-roles-pricing-quote-and-claim-confidentiality"></a>
+## Quote and claim confidentiality
+
+The paginated marketplace (`job_discovery`), exact detail (`job_detail`) and dashboard suggestions (`job_dashboard`) share the current actor's authorised prospective quote. The earlier `job_offers()` interface remains supported with the same pricing boundary. An eligible lecturer sees only their current applicable net amount, derived from the private offer snapshot and actual server role. The current lecturer-actor predicate also includes administrator and owner roles; management alone does not qualify and receives `null` monetary values for role-dependent offers. An account with additional eligible roles follows the current server predicate, not its visible navigation label. The directly queryable `jobs` table stores no default or alternate lecturer rate for those offers. Company projections expose only their authorised organisations' gross amounts. Revenue and captured-policy RPCs remain administrative.
+
+The displayed `terms_version` of a role-dependent quote is a composite of the base consent version and a role discriminator. The discriminator carries no percentage. Claiming locks the actor profile, validates the current quote token, then delegates to the existing atomic capacity/conflict/contract transaction. Role mutations take the matching profile lock. A stale quote after a role change or reprice returns `terms_changed`; claiming cannot silently accept a different amount. Claim and revenue triggers independently calculate and validate the accepted net and conserved private revenue. Accepted claims retain the base document/terms version and an immutable compensation snapshot.
+
+Same-request retries first pass the current active-actor and lecturer-eligibility checks. An allowed retry for the same job returns the existing claim identity and its current status, preserving the original accepted terms and amounts. It does not create a fresh confirmed allocation after cancellation, and an old request key grants no retry access after suspension or loss of eligibility. A later senior promotion, global policy edit, cancellation or new quote never rewrites an accepted deal. Offline/optimistic confirmation remains prohibited.
+
+<a id="section-delegated-roles-pricing-reading-monetary-values-correctly"></a>
+## Reading monetary values correctly
+
+Three different states must remain distinct:
+
+| Value and source                                                                     | Meaning                                                                                                                                           | Required handling                                                                                                                  |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Numeric `0` in the directly readable job columns for a role-dependent offer          | A storage sentinel; it is not the current actor's quote.                                                                                          | Read the authorised discovery/detail projection or supported `job_offers()` interface instead of calculating a fee from the table. |
+| `null` in an authorised prospective quote                                            | No applicable monetary quote is available to that actor, including nonlecturer management or an offer whose private policy is not yet configured. | Preserve `null`, show restricted compensation and disable an unpriced claim. Never coerce absence to zero.                         |
+| A numeric amount, including a genuine numeric zero, returned by the authorised quote | The actor's applicable prospective compensation under that offer's captured policy.                                                               | Display the returned value without treating all numeric zeros as missing. The server still decides whether a claim is eligible.    |
+
+The nullable monetary fields belong to the prospective `Job` DTO. Accepted `Claim` amounts are separate immutable snapshots, not placeholders to recompute from a later role or policy. The detail page uses an existing own claim for its accepted terms display.
+
+Consent is more than a checked boolean or the base job version. The current detail page records the displayed job ID, quoted terms version, amount, total, currency, rate unit and terms as one consent fingerprint. A refreshed display cannot reuse consent for different values. The request sends the quoted version and idempotency key to `claim_job`; it sends neither an asserted lecturer role nor a client-calculated accepted price. The server locks and rechecks the actor before accepting the current quote, and stores the accepted base terms version with the actual immutable compensation snapshot.
+
+Management budgets are another projection. For role-priced offers, `job_lifecycle` returns `max_net_budget` only with current `finance.gross.read` and MFA: it uses the rounded captured senior-tier total per position multiplied by capacity. A legacy offer retains its stored net total multiplied by capacity. This is not the requesting manager's personal quote multiplied by capacity. An explicit `null` budget remains protected and must not fall back to a cached personal price. The UI separately handles an absent field for compatibility with an older backend. None of these values gives access to a different lecturer's accepted contracts, invoices or private calendar.
+
+<a id="section-delegated-roles-pricing-current-source-ownership"></a>
+## Current source ownership
+
+This guide describes the current 36-migration main source, including the merged discovery and role-quote bridge. The relevant reading path is:
+
+| Source                                                                                                                                | Owning contract                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Private role-pricing migration](supabase/migrations/20261116020953_delegated_roles_and_private_role_pricing.sql)                  | Current policy/offer snapshots, `job_offers`, role-specific quote versions, claim checks/triggers and the role-aware lifecycle budget. Read its later definitions after the earlier migrations. |
+| [Discovery and saved-view migration](supabase/migrations/20261116080735_job_discovery_and_saved_views.sql)                         | Introduces the public discovery/detail/dashboard and own saved-view interfaces. Later private definitions below govern their current quote projection.                                          |
+| [Role-aware discovery bridge](supabase/migrations/20261116080748_role_aware_job_discovery.sql)                                     | Owns the current private quote/context helpers and replacement candidate/item/page implementations, including price filters, sorting and cursor context.                                        |
+| [Discovery API and DTOs](src/features/jobs/discovery-api.ts)                                                                       | Calls the bounded discovery, exact-detail and dashboard RPCs; validates nullable numeric quotes without coercion and includes observed role context in page keys.                               |
+| [Shared DTOs](src/lib/types.ts)                                                                                                    | Prospective `Job.amount` and `Job.total_amount` are nullable; accepted `Claim` amounts remain separate numeric snapshots.                                                                       |
+| [Marketplace](src/features/jobs/discovery.tsx), [cards](src/features/jobs/card.tsx) and [detail](src/features/jobs/jobs.tsx) | Server filters, private saved views and explicit next pages; restricted-price rendering, the full displayed-consent fingerprint and the online claim request.                                   |
+| [Lifecycle API](src/features/jobs/lifecycle-api.ts) and [lifecycle UI](src/features/jobs/lifecycle.tsx)                         | Read the server budget, preserve an explicitly protected `null` and perform versioned lifecycle actions.                                                                                        |
+| [Commercial pricing UI](src/features/commercial/pricing.tsx)                                                                       | Uses the permission-scoped financial APIs for the captured offer policy; the ordinary job projection does not disclose policy percentages.                                                      |
+
+The former unpaginated `jobsQuery` browser-list path is no longer the marketplace owner. The current server filters before its page boundary; the UI requests 50 results and the API permits 1–100 per page. Loading a page or selecting an own saved view is not an allocation or a replacement for final server checks. [Job discovery](GUIDE.md#section-job-discovery) describes the complete filter, saved-view and paging workflow.
+
+<a id="section-delegated-roles-pricing-current-paginated-quotes-and-cursor-context"></a>
+## Current paginated quotes and cursor context
+
+Discovery filters and monetary ordering use the same actor-specific quote returned in each item, exact detail and dashboard suggestion. They do not use public zero sentinels, another tier or the latest global percentages to reprice an existing captured offer. Restricted values remain nullable through SQL, JSON, DTOs and rendering. Unknown amounts fail money bounds, including a minimum of zero, and sort after known amounts in either monetary direction. Their internal ordering sentinel is never returned as compensation. Original-currency comparisons remain explicit; rate comparisons also require one fee unit.
+
+The server cursor fingerprint binds normalized filters to the current actor, lecturer eligibility/tier marker and current global policy version. A mismatch in that context rejects the old cursor instead of silently continuing a different price order. Other role-list changes need not alter the server fingerprint; current authorization checks still apply. Updating the global policy version therefore invalidates the cursor without rewriting an existing offer's captured quote. The browser also resets infinite-page state when its observed roles change; that convenience does not replace the server check for changes it has not observed.
+
+Each page rechecks current access. Multiple HTTP pages are not one frozen database snapshot, so new or reordered offers can require a fresh search. The bridge adds private quote/context helpers, not a browser-readable policy table or an alternative claim API. Their explicit execution revokes retain the public invoker wrappers as the entry boundary. Final claims keep the full displayed-consent fingerprint, fresh quote-version validation and immutable accepted snapshots described above; management budgets remain a separate authorised projection.
+
+<a id="section-delegated-roles-pricing-verification"></a>
+## Verification
+
+`scripts/delegated-pricing-db-tests.mjs` replays the previous schema, creates a historical accepted commission, applies the migration, and verifies exact historical claim/revenue preservation. Its disposable PostgreSQL cases cover subordinate delegation, guest permissions, equal/higher/self protection, invitation rechecks, financial-grant composition, policy setup/CAS/privacy, direct-table sentinels, role-bound consent, mixed-role capacity claims, exact rounding, idempotent accepted receipts and future-only policy changes. Existing accounts, commission, course-building-block and capacity suites retain independent checks. Native API/browser evidence is reported separately in QA results.
+
+The current [job component regressions](src/features/jobs/jobs.test.tsx) check restricted compensation and renewed consent after either a version change or a displayed quote change. [Lifecycle regressions](src/features/jobs/lifecycle.test.tsx) check the server's maximum budget and refusal to replace an explicitly protected budget with a cached personal quote. These targeted commands use existing component fixtures:
+
+```bash
+npx --no-install vitest run src/features/jobs/jobs.test.tsx src/features/jobs/lifecycle.test.tsx
+npx --no-install vitest run src/features/jobs/discovery-api.test.ts src/features/jobs/card.test.tsx
+node --test scripts/runtime-documentation.test.mjs
+```
+
+Run mutating [delegated-pricing SQL checks](scripts/delegated-pricing-db-tests.mjs), [commission API checks](scripts/commission-api-check.mjs) and [role/pricing browser journeys](tests/e2e/roles-pricing.spec.ts) only through the owned isolated acceptance environment described in [LOCAL_DEVELOPMENT](DEVELOPMENT.md#section-local-development), normally `./portal test`. The SQL, actual Auth/REST/browser and native retained-data stages are distinct evidence. This documentation lists their entry points without asserting a new execution, operational policy setup, deployment or complete security/legal certification.
+
+The [role-aware discovery SQL suite](scripts/role-aware-job-discovery-db-tests.mjs) and [native API suite](scripts/role-aware-job-discovery-api-check.mjs) cover current regular/senior quotes, monetary filters and keyset order, unknown management prices, matching detail/dashboard versions, stale role/policy cursors and current-access/helper ACLs. [Discovery DTO regressions](src/features/jobs/discovery-api.test.ts) and [card regressions](src/features/jobs/card.test.tsx) cover strict nullable values and restricted rendering. These delivered entry points complement the original pricing checks; exact executed outcomes belong in the relevant pull request checks, rather than being inferred from a merge or a test inventory.
+
+
+<a id="section-permanent-deletion"></a>
+
+<a id="section-permanent-deletion-permanent-deletion--working-implementation-contract"></a>
+# Permanent deletion — working implementation contract
+
+User decision on 16 November 2026: confirmed deletion is permanent; no trash or restore. Scope is deletion only. Existing create/edit/role assignment remains in place; no other PR is merged by this task (the only stated exception is already merged PR13). Companies may delete only their own jobs under current database membership. Normal or production data is never touched by tests.
+
+The subsequent direct instruction authorises completing verification and merging PR35 once the current required checks and local acceptance pass. It does not authorise merging other PRs or deploying production.
+
+<a id="section-permanent-deletion-http-boundary"></a>
+## HTTP boundary
+
+Extend the existing `accounts/v1` Edge facade, keeping credentials server-only:
+
+- `GET /deletions/access` → `{ can_admin, kinds }`.
+- `GET /deletions/operations` → `{ items: [operation] }` for currently authorised incomplete operations; recovery does not depend on browser storage.
+- `GET /deletions/resources?kind=&q=&cursor=&limit=` → `{ items: [{id,kind,label,owner_label,can_delete}], next_cursor }`. Administrative metadata only; never private contract/message/calendar contents.
+- `POST /deletions/preview` body `{kind,id}` → `{plan_id,kind,id,label,counts,blockers,can_confirm,expires_at}`.
+- `POST /deletions/confirm` body `{plan_id,request_id,confirmation:"DELETE"}` → `{operation_id,status,kind,id}`. Recompute scope under current authority/locks; a changed preview is a conflict. This starts an irreversible operation, not an archive.
+- `POST /deletions/operations/:id` with an empty object resumes/reads that confirmed operation using current authority. `status` is `pending`, `failed` or `completed`; only completed receives a deletion success message. Return202 while uploads or external cleanup are pending.
+
+<a id="section-permanent-deletion-caller-rpcs"></a>
+## Caller RPCs
+
+`deletion_access()`, `deletion_operations()`, `deletion_resources(p_kind,p_query,p_cursor,p_limit)`, `deletion_preview(p_kind,p_id)`, `deletion_confirm(p_plan_id,p_request_id,p_confirmation)`, `deletion_status(p_operation_id)` and `deletion_execution(p_operation_id)` are invoker wrappers. Execution yields a short-lived permit bound internally to current actor/assurance/operation; browser-supplied actor/role values never grant authority. All plans/permits/operations are private with RLS and no direct browser grants.
+
+Worker service-only RPCs consume the permit: `_deletion_work(p_operation_id,p_permit_id)` returns the operation projection, exact internal object manifest, `auth_user_id` if applicable, and active-upload count; `_deletion_apply(p_operation_id,p_permit_id)` removes the permitted relational scope after Storage acknowledgements; `_deletion_complete(p_operation_id,p_permit_id,p_storage_removed,p_auth_removed)` verifies target/Auth/Storage absence before reporting completed. Edge sets acknowledgement flags only after actual native API absence checks and reacquires current caller authority before privileged steps. No worker accepts arbitrary table names, object paths or user identities from the request.
+
+Permits bind the actual executor independently of the original issuer. A currently qualified Owner/Administration can recover incomplete administrative/company business operations after issuer revocation or removal; account hierarchy and self protection still apply. Private owner/scoped operations remain with the original authorised person. An account with unfinished private operations cannot be purged into an orphaned cleanup barrier. Recovery lists contain only reduced operation IDs, kinds, target IDs and status.
+
+<a id="section-permanent-deletion-roots-and-dependencies"></a>
+## Roots and dependencies
+
+Use a closed typed registry for managed business roots, covering accounts, documents, jobs, assignments, organisations/contacts, course templates/runs/sessions, taxonomy, wiki/forum/chat/comment/review/enrolment records, announcements/global events, contracts/invoices/payment tracking and personal saved resources. Protect current self/last administrator and existing hierarchy. Dependency conflicts must be explicit; ordinary accepted-snapshot, finance and privacy protections are never disabled. Do not treat all foreign-key attribution as ownership or blindly cascade into another organisation/shared resource.
+
+The implemented registry addresses UUID roots. Composite-key enrolment/settings rows are dependent records, not arbitrary table or string-key deletion endpoints. Direct private-calendar/availability/saved-view deletion remains owner-only, and another account’s personal or room documents cannot be deleted through administrator authority. Administrators can manage authorised job-scoped material; and private room/message/financial actions retain their existing resource/capability boundaries. Full administrative business deletion is limited to current Owner/Administration, not the account-directory capability of Management alone. Every new permanent-delete action requires current AAL2. An account with protected business references can be blocked explicitly; the confirmation is unavailable until those dependencies are resolved. This feature does not override financial retention or erase another person's shared records by attributing ownership to an editor.
+
+An account's native Auth and profile records must actually disappear. Protected business references block deletion explicitly; no inactive profile marker or restorable account substitutes for removal. Historical audit events retain a nullable cleared actor attribution, counted and fingerprinted in the preview; accepted business records remain protected. Confirming an account operation fences/deactivates the target before external cleanup so an old JWT cannot regain application access. Completion requires native identity absence, not suspension alone.
+
+Posted and voided payment records are retained financial history: previews explicitly block their physical purge and preserve the existing reasoned void/correction workflow. Assignment removal revokes the affected lecturer's course-room/file membership only when no current allocation still grants it; remaining lecturers and unrelated manual room ownership remain intact. Curated business audit entries survive account deletion with a reduced blank actor label, while private deletion activity and arbitrary details remain excluded from the global audit projection.
+
+For company job roots derive one consistent organisation from stored request/commission/run relationships. Never use display names or grant global jobs.manage. Accepted/invoiced/shared dependencies outside company deletion authority produce a typed blocker; no partial success. A company-specific projection supplies own-job targets without granting staff discussion/net-fee/private-contract access. Close the former-lecturer→client historical-claim bypass in general job read channels.
+
+<a id="section-permanent-deletion-storage-and-uploads"></a>
+## Storage and uploads
+
+Exact all-version manifests cover portal-clean and portal-quarantine, including rejected/error/archive versions. Never purge by Storage owner or uploader prefix. Fence new reservations, promotions, database writes and metadata resurrection for confirmed targets; remove bytes only through Storage API. Use service-released upload leases. Do not report completed while any upload can still promote bytes; crashed/stalled work must remain a visible safe pending/failure state, never silently expire into success.
+
+One immutable version has at most one active writer lease. Existing objects are verified/read on retry instead of issuing conflicting uploads. Every new Storage byte write needs a definite acknowledgement before the lease is released; an unknown transport outcome retains its barrier even when the client promise has rejected. Storage metadata absence alone cannot establish that an accepted remote write or provider cleanup has finished.
+
+Shared SQL upload contract: `deletion_upload_begin(p_document_id,p_version_id)` service-only returns lease UUID after checking the document is not fenced; `deletion_upload_end(p_lease_id)` releases only server-owned lease after all awaited writes/cleanup. `_deletion_work` reports pending leases. Private document/Storage fence helpers must cover exact reserved paths; tests include a delayed promotion racing deletion and post-completion download404.
+
+<a id="section-permanent-deletion-ui-and-verification"></a>
+## UI and verification
+
+An interrupted writer leaves an explicit lease and pending operation. Do not clear that lease while its request or scan can still write. An operator must first prove that the exact owned writer has stopped, review the operation's exact paths and then release only that server lease before retrying cleanup. There is no timer that converts uncertain external work into completed deletion. No production operation is authorised by this implementation document.
+
+Reusable bilingual confirmation dialog binds current actor, target and preview. Show impact/blockers and require explicit irreversible confirmation. No optimistic removal; cancel old queries before post-acknowledgement refresh. Admin console supports typed targets; account/file/job and company-own-job contexts use the same deletion action. Existing archive/moderation actions must not be described as permanent deletion.
+
+
+<a id="section-permanent-deletion-accepted-smart-operation-dependencies"></a>
+## Accepted smart-operation dependencies
+
+The additive PR35 repair includes initialized delivery/dashboard/contact preferences,
+private subscriptions/favourites/notebooks, own acknowledgements and waitlists in
+account scopes. A job owns its request briefs/revisions and exact matching/waitlist
+notifications; an assignment owns its preparation and exact reminder notifications.
+Other users' records, shared tasks, timesheet evidence and protected business
+relationships remain blockers. The complete counts and row fingerprints are still
+reviewed before confirmation. Notification deliveries in leased, sending or uncertain
+states block purge even after lease expiry; application rechecks their rows before
+removal. No worker is started by a deletion preview or this migration.
+
+PR-only migration versions follow the complete accepted main prefix so retained-data
+upgrades remain append-only. The current document helper keeps its OID/ACL and
+delegates to the exact accepted support/qualification predecessor through a revoked
+private clone. Dependency and blocker catalogue walks use explicit ordering: a
+different PostgreSQL execution plan cannot invalidate unchanged reviewed records.
+
+
+<a id="section-job-briefing"></a>
+
+<a id="section-job-briefing-optional-job-contacts-and-external-references"></a>
+# Optional job contacts and external references
+
+Managers can add optional information in a job's detail page under **Contact and job reference**. The successful creation form also links directly to that section. Both standalone offers and course-backed offers use this same job-scoped editor. Existing offers have empty defaults; no customer contacts or external content are imported automatically.
+
+<a id="section-job-briefing-fields-and-audience"></a>
+## Fields and audience
+
+The reference has an optional HTTP/HTTPS URL, an authored link label and an authored description. It may explain that a job follows an external brief or advertisement. A description can also stand alone without a URL. The application renders literal text and opens validated external links with `noopener noreferrer`; it never fetches the destination on the server.
+
+The contact has optional name, email, telephone and notes. The manager chooses **Only after a confirmed claim** (default) or explicitly shares these entered details with **authorised offer viewers**. The internal customer/contact directory stays private and unchanged. This is not a public or anonymous publication.
+
+Only current authorised staff can read this job projection. By default a currently confirmed lecturer sees contact fields; an unassigned viewer receives only a contact-availability hint. Cancellation removes after-claim contact visibility immediately through the refreshed server projection. Role revocation, suspension and loss of job access apply even with an existing token or historical claim. Management reads/writes retain the existing current MFA/capability requirements. Archived jobs remain readable under their existing ACL and cannot be edited.
+
+<a id="section-job-briefing-saving-and-safety"></a>
+## Saving and safety
+
+Text limits count Unicode code points like PostgreSQL, so supplementary characters remain readable and editable at the allowed boundary. All fields are optional. Saving empty values removes the visible optional information. The editor freezes its reviewed version and retains the same operation key for an unchanged retry. A concurrent edit produces a conflict; only an explicit reload replaces the draft with fresh server state. Network uncertainty never becomes optimistic success. A current access-denied response hides retained contact data and any open private draft.
+
+The server rejects unknown payload fields, invalid types, oversized values, invalid email/control characters and URLs with unsafe schemes, missing authority, embedded credentials or impossible ports. The browser canonicalizes valid international domain names and IPv4 spellings before submitting the retry-bound request; the server independently validates ASCII DNS/IPv4 or bracketed IPv6 authority and rejects malformed hosts, backslashes and whitespace. Stored links are parsed again before rendering; a browser-parser discrepancy retains readable text and an editable repair path without producing an unsafe link. Email/telephone actions open the user's chosen client; the application sends no message.
+
+The information is separate from the accepted financial/contractual snapshot. Updating contact logistics never changes accepted fees, currency, terms, dates or invoice history. Safe job duplication deliberately does not copy these contact/reference fields: the new job's manager reviews and adds them explicitly.
+
+<a id="section-job-briefing-owning-data-and-api"></a>
+## Owning data and API
+
+The additive migration `20261116163013_job_briefing_contacts_references.sql` creates `private.job_briefings` and `private.job_briefing_requests`, both with RLS and no direct browser grants. Public wrappers remain security invoker. Their unexposed implementations check current actor/resource authority, lock actor/request/job in a consistent order and use comparison-and-swap versions. Request identity binds actor, job, expected version and the exact original JSON payload. Only safe flags and version enter the ordinary audit event; personal contact values remain in the private rows.
+
+- `job_briefing(p_job_id)` returns the current authorised projection and write capabilities.
+- `save_job_briefing(p_job_id, p_expected_version, p_request_id, p_payload)` stores an explicit complete set and returns confirmed current state.
+
+The actor/job-scoped `job-briefing` query is refreshed after real claims and cancellations, on current capability changes and through bounded polling. No new list/card queries, service, email delivery or production deployment is introduced.
+
+<a id="section-job-briefing-validation-entry-points"></a>
+## Validation entry points
+
+- `src/features/jobs/briefing.test.tsx`: successful/failed saving, stable retries, conflict/reload, access denial, offline state, safe links and visibility.
+- `scripts/job-briefing-db-tests.mjs`: actual PostgreSQL permissions, defaults, strict payloads, races, current role/claim visibility, immutable accepted history, safe duplication and cleanup.
+- `scripts/job-briefing-api-check.mjs`: real Auth/MFA/REST and existing-token revocation in the canonical disposable stack.
+- `tests/e2e/job-briefing.spec.ts`: actual management editing, lecturer claim/cancellation, DE/EN, dark theme, responsive layout and axe on desktop/mobile.
+
+
+<a id="section-job-briefing-observed-browser-examples"></a>
+## Observed browser examples
+
+Both new browser journeys passed on96c3c5c with fictional data. The complete run still requires correction/repetition for its separate existing mobile-board failure; see the relevant pull request checks.
+
+| Layout  | Management, German/light                                                                    | Revoked contact, English/dark                                                      |
+| ------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Desktop | Saved optional details | Contact hidden after cancellation |
+| Mobile  | Saved optional details  | Contact hidden after cancellation  |

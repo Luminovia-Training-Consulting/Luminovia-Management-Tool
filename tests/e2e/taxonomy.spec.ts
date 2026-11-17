@@ -121,7 +121,7 @@ test("management edits a real shared hierarchy while lecturers only discover per
     ).toHaveValue(alias);
     await accessibility(page);
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-taxonomy.png`,
+      path: `.local/screenshots/${testInfo.project.name}-taxonomy.png`,
       fullPage: true,
     });
     const englishCard = page.getByRole("article").filter({
