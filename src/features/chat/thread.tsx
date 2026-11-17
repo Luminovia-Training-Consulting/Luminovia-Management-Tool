@@ -35,6 +35,8 @@ import { MessageComposer } from "./composer";
 import { GroupSettings } from "./group-settings";
 import { MembersPanel, RoomIcon } from "./manage";
 import { MessageBubble } from "./message";
+import { TopicMessagePins } from "./topic-message-pins";
+import { useTopicMessagePins } from "./topic-message-pins-api";
 import { messageDay, messageDayLabel } from "./message-days";
 import "./message-days.css";
 import { useChatRealtime } from "./realtime";
@@ -67,12 +69,60 @@ export function ChatThread({
   const [membersOpen, setMembersOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { status, revoked } = useChatRealtime(actor, room.id);
+  const pinText = useTranslation("topicMessagePins").t;
+  const topicPins = useTopicMessagePins(
+    actor,
+    room.id,
+    room.kind === "topic" && !revoked && online,
+  );
+  const [jumping, setJumping] = useState(false);
+  const [jumpFailed, setJumpFailed] = useState(false);
+  const [jumpId, setJumpId] = useState<string | null>(null);
+  const threadElement = useRef<HTMLElement>(null);
   const messages = useInfiniteQuery({
     ...chatMessagesQuery(actor, room.id, search),
     enabled: !revoked,
   });
   const ordered = orderedMessages(messages.data?.pages);
+  const pinnedIds = new Set((topicPins.query.data ?? []).map((pin) => pin.id));
   const latest = ordered[ordered.length - 1];
+  // Jump only to history that has just been fetched through the existing ACL-checked RPC.
+  // Bound one action to 20 pages; another click may continue where it stopped.
+  const jumpToPinned = async (id: string) => {
+    setJumping(true);
+    setJumpFailed(false);
+    try {
+      let found = ordered.some((message) => message.id === id);
+      let hasNext = messages.hasNextPage;
+      for (let count = 0; !found && hasNext && count < 20; count++) {
+        const next = await messages.fetchNextPage();
+        if (next.isError) throw next.error;
+        found = (next.data?.pages ?? []).some((page) =>
+          page.some((message) => message.id === id),
+        );
+        hasNext = next.hasNextPage;
+      }
+      if (found) setJumpId(id);
+      else setJumpFailed(true);
+    } catch {
+      setJumpFailed(true);
+    } finally {
+      setJumping(false);
+    }
+  };
+  useEffect(() => {
+    if (!jumpId) return;
+    const item = [
+      ...(threadElement.current?.querySelectorAll<HTMLElement>(
+        "[data-message-id]",
+      ) ?? []),
+    ].find((element) => element.dataset.messageId === jumpId);
+    if (item) {
+      item.scrollIntoView({ block: "center" });
+      item.focus();
+      setJumpId(null);
+    }
+  }, [jumpId, ordered]);
   const zone = profile.data?.time_zone ?? "Europe/Berlin";
   const marked = useRef("");
   const end = useRef<HTMLDivElement>(null);
@@ -157,7 +207,10 @@ export function ChatThread({
   });
   // Revocation outranks a previously successful history response.
   // Retained query data must not conceal the revoked state.
-  const lost = revoked || chatAccessDenied(messages.error);
+  const lost =
+    revoked ||
+    chatAccessDenied(messages.error) ||
+    (room.kind === "topic" && chatAccessDenied(topicPins.query.error));
   if (lost)
     return (
       <section className="chat-room-denied">
@@ -171,6 +224,7 @@ export function ChatThread({
   return (
     <section
       className="chat-thread"
+      ref={threadElement}
       data-realtime-status={status}
       aria-label={
         room.kind === "general"
@@ -246,6 +300,25 @@ export function ChatThread({
       )}
       {room.kind !== "dm" && (
         <div className="chat-channel-note">{t("groupModerationPolicy")}</div>
+      )}
+      {room.kind === "topic" && online && status === "connected" && (
+        <TopicMessagePins
+          pins={
+            topicPins.query.isSuccess && !topicPins.query.isFetching
+              ? topicPins.query.data
+              : []
+          }
+          loading={topicPins.query.isPending || topicPins.query.isFetching}
+          error={topicPins.query.isError}
+          onRetry={() => void topicPins.query.refetch()}
+          onJump={(id) => void jumpToPinned(id)}
+          jumping={jumping || messages.isFetchingNextPage || messages.isError}
+          searchActive={Boolean(search)}
+          jumpFailed={jumpFailed}
+        />
+      )}
+      {topicPins.toggle.isError && (
+        <Notice kind="error">{pinText("failed")}</Notice>
       )}
       <form
         className="chat-message-search"
@@ -333,6 +406,24 @@ export function ChatThread({
                       <MessageBubble
                         message={message}
                         onReply={(target) => setReplyId(target.id)}
+                        topicPin={
+                          room.kind === "topic" &&
+                          message.can_moderate &&
+                          topicPins.query.isSuccess &&
+                          !topicPins.query.isFetching &&
+                          online &&
+                          status === "connected"
+                            ? {
+                                pinned: pinnedIds.has(message.id),
+                                disabled: topicPins.toggle.isPending,
+                                toggle: () =>
+                                  topicPins.toggle.mutate({
+                                    id: message.id,
+                                    pinned: !pinnedIds.has(message.id),
+                                  }),
+                              }
+                            : undefined
+                        }
                         actor={actor}
                         now={now}
                         zone={zone}

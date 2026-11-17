@@ -6,7 +6,7 @@
 
 - [x] Merge current `main` through `cc6218e` normally; retain the consolidated root documentation and the user-required project ledgers and verbatim prompt under `docs/`.
 - [x] Place the 13 programme migrations after the accepted contract-owner migration without changing their SQL bodies.
-- [x] Pass the integrated networkless migration replay and focused SQL suites for privacy, restore, navigation, chat replies/unread, membership origin, wiki attachments, API grants and deletion; regenerate the API reference from 300 migrated functions after adding topic invitations and personal archiving.
+- [x] Pass the integrated networkless migration replay and focused SQL suites for privacy, restore, navigation, chat replies/unread, membership origin, wiki attachments, API grants and deletion; regenerate the API reference from 302 migrated functions after adding topic invitations, personal archiving and message pins.
 - [ ] Implement all remaining QoL prompt criteria; use the feature matrix to track each criterion and its actual evidence.
 - [ ] Pass exact-current-head unit/source checks, complete database/API integration, desktop/mobile browser and PWA acceptance, security checks and required CI. Prior source snapshots are not evidence for the final head.
 - [ ] Keep the draft PR open and user-owned. No production deployment, real mail, production data changes, or PR merge is included.
@@ -23,6 +23,12 @@
 - [x] Pass focused PostgreSQL own-scope/lifecycle checks and five focused archive/pin UI tests; typecheck and targeted lint pass.
 - [x] Add an integration regression proving other members retain room/message access after personal archival; regenerate the API reference from the exact 91-migration source.
 - [ ] Run actual desktop/mobile browser coverage and integrated full acceptance. Group-level archive, course/system rooms, and distinct hide semantics remain open.
+
+### Group-wide topic message pins — 17 November 2026
+
+- [x] Add role/MFA-gated pin/unpin, current-member pin list, safe navigation to the original message, stale-content filtering and deletion-scope handling for topic groups.
+- [x] Pass 3 isolated PostgreSQL groups, 16 focused component/thread/Realtime tests, and full `./portal check` (823 unit tests, source checks, build and PWA); regenerate the API reference from 92 migrations/302 public functions.
+- [ ] Run the new desktop/mobile E2E and full current-head API/browser/selfhost acceptance. Other room kinds remain outside this slice.
 
 
 ## PR35 private-document acceptance follow-up — 17 November 2026

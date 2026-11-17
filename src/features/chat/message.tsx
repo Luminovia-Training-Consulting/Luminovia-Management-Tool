@@ -9,7 +9,16 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Copy, EyeOff, Pencil, Reply, SmilePlus, Trash2 } from "lucide-react";
+import {
+  Copy,
+  EyeOff,
+  Pencil,
+  Pin,
+  PinOff,
+  Reply,
+  SmilePlus,
+  Trash2,
+} from "lucide-react";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Field, Notice } from "../../components/common";
@@ -61,6 +70,7 @@ export function MessageBubble({
   attachment,
   now,
   onReply,
+  topicPin,
 }: {
   message: ChatMessage;
   actor: string;
@@ -68,9 +78,11 @@ export function MessageBubble({
   attachment?: ReactNode;
   now: number;
   onReply?: (message: ChatMessage) => void;
+  topicPin?: { pinned: boolean; disabled: boolean; toggle: () => void };
 }) {
   const { t, i18n } = useTranslation("chat");
   const common = useTranslation().t;
+  const pinText = useTranslation("topicMessagePins").t;
   const client = useQueryClient();
   const online = useOnline();
   const [editing, setEditing] = useState(false);
@@ -184,6 +196,7 @@ export function MessageBubble({
     <li
       className={`chat-message ${own ? "chat-message-own" : ""}`}
       data-message-id={message.id}
+      tabIndex={-1}
     >
       <div className="chat-message-avatar" aria-hidden="true">
         {(message.sender_name || "?").slice(0, 1).toUpperCase()}
@@ -319,6 +332,19 @@ export function MessageBubble({
                     })}
                   </div>
                 </details>
+                {topicPin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    type="button"
+                    aria-label={pinText(topicPin.pinned ? "unpin" : "pin")}
+                    aria-pressed={topicPin.pinned}
+                    disabled={topicPin.disabled}
+                    onClick={topicPin.toggle}
+                  >
+                    {topicPin.pinned ? <PinOff size={15} /> : <Pin size={15} />}
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"

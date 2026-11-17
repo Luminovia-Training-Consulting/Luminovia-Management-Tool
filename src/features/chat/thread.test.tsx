@@ -207,9 +207,19 @@ it("marks a message received in a hidden tab only after the tab becomes visible"
 
 it("clears only the manual flag for an empty visible room and retries an unconfirmed clear", async () => {
   vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
-  rpc
-    .mockResolvedValueOnce({ data: null, error: { message: "Network error" } })
-    .mockResolvedValue({ data: null, error: null });
+  let readAttempts = 0;
+  rpc.mockImplementation(async (name: string) => {
+    if (name === "clear_chat_manual_unread") {
+      readAttempts++;
+      return readAttempts === 1
+        ? { data: null, error: { message: "Network error" } }
+        : { data: null, error: null };
+    }
+    return {
+      data: name === "chat_topic_pinned_messages" ? [] : null,
+      error: null,
+    };
+  });
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false, staleTime: Infinity },
@@ -245,17 +255,20 @@ it("clears only the manual flag for an empty visible room and retries an unconfi
     </QueryClientProvider>,
   );
   await screen.findByRole("alert");
-  expect(rpc).toHaveBeenCalledTimes(1);
-  expect(rpc).toHaveBeenLastCalledWith("clear_chat_manual_unread", {
-    p_room_id: "empty-room",
-  });
+  expect(
+    rpc.mock.calls.filter(([name]) => name === "clear_chat_manual_unread"),
+  ).toEqual([["clear_chat_manual_unread", { p_room_id: "empty-room" }]]);
   await userEvent
     .setup()
     .click(screen.getByRole("button", { name: "Erneut versuchen" }));
-  await waitFor(() => expect(rpc).toHaveBeenCalledTimes(2));
-  expect(rpc).toHaveBeenLastCalledWith("clear_chat_manual_unread", {
-    p_room_id: "empty-room",
-  });
+  await waitFor(() =>
+    expect(
+      rpc.mock.calls.filter(([name]) => name === "clear_chat_manual_unread"),
+    ).toEqual([
+      ["clear_chat_manual_unread", { p_room_id: "empty-room" }],
+      ["clear_chat_manual_unread", { p_room_id: "empty-room" }],
+    ]),
+  );
   view.unmount();
   client.clear();
 });
@@ -296,7 +309,9 @@ it("does not clear an empty unread room in a hidden tab", async () => {
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  expect(rpc).not.toHaveBeenCalled();
+  expect(
+    rpc.mock.calls.filter(([name]) => name === "clear_chat_manual_unread"),
+  ).toEqual([]);
   view.unmount();
   client.clear();
 });
