@@ -184,10 +184,11 @@ try {
     other = await fixture("clientB", "client"),
     lecturer = await fixture("lecturer", "lecturer"),
     senior = await fixture("senior", "senior_lecturer");
-  assert.ok(
-    (await admin.client.rpc("commission_report")).error,
-    "password-only AAL1 cannot read gross",
+  const administratorCommissionReport = await checked(
+    admin.client.rpc("commission_report"),
+    "Finance-permission administrator reads gross with current password-only policy",
   );
+  assert.ok(Array.isArray(administratorCommissionReport));
   await passwordOnly(admin);
   await passwordOnly(owner);
   await passwordOnly(management);

@@ -2585,3 +2585,5 @@ Exact-head CI follow-up: the comments API check still expected a password-only a
 Exact-head CI follow-up: the commercial API suite still denied an administrator's `contract_records(p_all: true)` despite the installed `contracts.read` permission. The stale MFA-era error expectation now verifies the authorized empty projection before any contracts are created; lecturer-scoped and management commercial checks remain intact.
 
 Exact-head CI follow-up: the newly permissioned all-contract read succeeds and includes the isolated database's pre-existing fictional contract fixtures. The API test now verifies a successful array response without incorrectly assuming an empty database; source authorization remains `contracts.manage`/`contracts.read`.
+
+Exact-head CI follow-up: an admin with `finance.gross.read` was still expected to be blocked by the retired MFA/AAL gate. The commission API test now requires that privileged role to receive a typed report under password-only Auth, while management, lecturers and senior lecturers remain denied; editable metadata is still explicitly ignored.

@@ -1334,3 +1334,6 @@ The migration-order regression now accepts later independent migrations while pr
 
 - [x] Make the all-contract permission acceptance independent of pre-seeded fictional contract rows while retaining the successful authorized response assertion.
 - [ ] Re-run complete isolated system and selfhost checks on the current main head.
+
+- [x] Align commission gross-report API acceptance with explicit `finance.gross.read` permission after the AAL gate removal; preserve denial for roles without that permission.
+- [ ] Finish exact-head system and selfhost CI after this role-policy assertion update.
