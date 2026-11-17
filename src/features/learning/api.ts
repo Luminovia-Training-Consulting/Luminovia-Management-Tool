@@ -187,7 +187,11 @@ export async function repeatCourse(
 export type PortalDocumentRequest =
   | {
       kind:
-        "resource" | "attendance" | "completion" | "assignment_confirmation";
+        | "resource"
+        | "wiki_resource"
+        | "attendance"
+        | "completion"
+        | "assignment_confirmation";
       id: string;
     }
   | { kind: "request_resource"; id: string; request_id: string }

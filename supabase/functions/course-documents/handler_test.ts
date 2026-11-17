@@ -1,46 +1,55 @@
 import { createCourseDocumentHandler } from "./handler.ts";
 
-Deno.test("own passport binds one server timestamp across reauthorization and rejects a browser subject", async () => {
-  const args: Record<string, unknown>[] = [];
-  let storageCalls = 0;
-  const handler = createCourseDocumentHandler({
-    origins: ["https://portal.example.invalid"],
-    authenticate: async () => true,
-    rpc: async (_token, name, value) => {
-      assert(name === "own_qualification_passport");
-      args.push(value);
-      return {
-        data: { data: { locale: value.p_locale }, hash: "a".repeat(64) },
-        error: null,
-      };
-    },
-    download: async () => {
-      storageCalls++;
-      return new Uint8Array();
-    },
-    render: async () => new TextEncoder().encode("%PDF-fictional"),
-  });
-  const response = await handler(
-    request({ kind: "qualification_passport", locale: "en" }),
-  );
-  assert(response.status === 200);
-  assert(response.headers.get("cache-control")?.includes("no-store"));
-  assert(
-    args.length === 2 && JSON.stringify(args[0]) === JSON.stringify(args[1]),
-  );
-  assert(Object.keys(args[0]).sort().join(",") === "p_as_of,p_locale");
-  assert(Math.abs(Date.now() - Date.parse(String(args[0].p_as_of))) < 10000);
-  assert(storageCalls === 0);
-  assert(
-    (await handler(
-      request({ kind: "qualification_passport", locale: "de", user_id: id }),
-    )).status === 400,
-  );
-  assert(
-    (await handler(request({ kind: "qualification_passport", locale: "fr" })))
-      .status === 400,
-  );
-});
+Deno.test(
+  "own passport binds one server timestamp across reauthorization and rejects a browser subject",
+  async () => {
+    const args: Record<string, unknown>[] = [];
+    let storageCalls = 0;
+    const handler = createCourseDocumentHandler({
+      origins: ["https://portal.example.invalid"],
+      authenticate: async () => true,
+      rpc: async (_token, name, value) => {
+        assert(name === "own_qualification_passport");
+        args.push(value);
+        return {
+          data: { data: { locale: value.p_locale }, hash: "a".repeat(64) },
+          error: null,
+        };
+      },
+      download: async () => {
+        storageCalls++;
+        return new Uint8Array();
+      },
+      render: async () => new TextEncoder().encode("%PDF-fictional"),
+    });
+    const response = await handler(
+      request({ kind: "qualification_passport", locale: "en" }),
+    );
+    assert(response.status === 200);
+    assert(response.headers.get("cache-control")?.includes("no-store"));
+    assert(
+      args.length === 2 && JSON.stringify(args[0]) === JSON.stringify(args[1]),
+    );
+    assert(Object.keys(args[0]).sort().join(",") === "p_as_of,p_locale");
+    assert(Math.abs(Date.now() - Date.parse(String(args[0].p_as_of))) < 10000);
+    assert(storageCalls === 0);
+    assert(
+      (
+        await handler(
+          request({
+            kind: "qualification_passport",
+            locale: "de",
+            user_id: id,
+          }),
+        )
+      ).status === 400,
+    );
+    assert(
+      (await handler(request({ kind: "qualification_passport", locale: "fr" })))
+        .status === 400,
+    );
+  },
+);
 const id = "52b7ddee-2166-485a-bcee-04d0eea958d1",
   origin = "https://portal.example.invalid";
 function assert(value: unknown, message = "Assertion failed"): asserts value {
@@ -78,10 +87,12 @@ function fixture() {
       rpcCalls++;
       state.calls.push(name);
       return {
-        data: state.revoked ? null : {
-          id: args.p_id ?? args.p_claim_id ?? id,
-          version: state.changed && rpcCalls > 1 ? 2 : 1,
-        },
+        data: state.revoked
+          ? null
+          : {
+              id: args.p_id ?? args.p_claim_id ?? id,
+              version: state.changed && rpcCalls > 1 ? 2 : 1,
+            },
         error: null,
       };
     },
@@ -237,12 +248,14 @@ Deno.test(
         assert(args.p_request_id === id && args.p_version_id === id);
         calls++;
         return {
-          data: revoked ? null : {
-            object_path: "fictional/request.txt",
-            sha256,
-            name: "Request.txt",
-            mime_type: "text/plain",
-          },
+          data: revoked
+            ? null
+            : {
+                object_path: "fictional/request.txt",
+                sha256,
+                name: "Request.txt",
+                mime_type: "text/plain",
+              },
           error: null,
         };
       },
@@ -268,5 +281,111 @@ Deno.test(
     assert(
       (await handler(request({ kind: "request_resource", id }))).status === 400,
     );
+  },
+);
+
+Deno.test(
+  "wiki attachment exact bytes recheck revision access after Storage read",
+  async () => {
+    const bytes = new TextEncoder().encode("fictional wiki attachment");
+    const digest = [
+      ...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
+    ]
+      .map((v) => v.toString(16).padStart(2, "0"))
+      .join("");
+    let revoked = false,
+      calls = 0;
+    const handler = createCourseDocumentHandler({
+      origins: [origin],
+      authenticate: async () => true,
+      rpc: async (_token, name, args) => {
+        assert(name === "wiki_attachment_access");
+        assert(args.p_id === id);
+        calls++;
+        return {
+          data: revoked
+            ? null
+            : {
+                version_id: id,
+                sha256: digest,
+                name: "wiki.txt",
+                mime_type: "text/plain",
+              },
+          error: null,
+        };
+      },
+      wikiPath: async (attachmentId, versionId) => {
+        assert(attachmentId === id && versionId === id);
+        return "fictional/wiki.txt";
+      },
+      download: async (path) => {
+        assert(path === "fictional/wiki.txt");
+        revoked = true;
+        return bytes;
+      },
+      render: async () => {
+        throw new Error("not a pdf");
+      },
+    });
+    const result = await handler(request({ kind: "wiki_resource", id }));
+    assert(result.status === 403 && calls === 2);
+    assert(
+      (await handler(request({ kind: "wiki_resource", id, user_id: id })))
+        .status === 400,
+    );
+  },
+);
+
+Deno.test(
+  "wiki private path resolves only after caller authorization and never appears in output",
+  async () => {
+    const bytes = new TextEncoder().encode("verified fictional wiki bytes");
+    const sha256 = [
+      ...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
+    ]
+      .map((x) => x.toString(16).padStart(2, "0"))
+      .join("");
+    let permitted = false,
+      resolutions = 0,
+      reads = 0;
+    const handler = createCourseDocumentHandler({
+      origins: [origin],
+      authenticate: async () => true,
+      rpc: async () => {
+        reads++;
+        return {
+          data: permitted
+            ? {
+                version_id: id,
+                sha256,
+                name: "lesson.txt",
+                mime_type: "text/plain",
+              }
+            : null,
+          error: null,
+        };
+      },
+      wikiPath: async () => {
+        resolutions++;
+        return "private-owner-uuid/never-disclose";
+      },
+      download: async (path) => {
+        assert(path === "private-owner-uuid/never-disclose");
+        return bytes;
+      },
+      render: async () => {
+        throw new Error("unexpected");
+      },
+    });
+    assert(
+      (await handler(request({ kind: "wiki_resource", id }))).status === 403,
+    );
+    assert(resolutions === 0);
+    permitted = true;
+    const result = await handler(request({ kind: "wiki_resource", id }));
+    assert(result.status === 200);
+    assert((await result.text()) === "verified fictional wiki bytes");
+    assert(!JSON.stringify([...result.headers]).includes("private-owner-uuid"));
+    assert(Number(resolutions) === 1 && reads === 3);
   },
 );
