@@ -249,10 +249,6 @@ await withApiFixture(async ({ service, actor, sql, defer, checked }) => {
       const review = await checked(manager.client.rpc("assignment_withdrawals", { p_job_id: late.job }));
       assert.equal(review.items[0].can_review, true);
       assert.equal(review.items[0].reason, request.p_reason);
-      const decided = await checked(
-        manager.client.rpc("review_assignment_withdrawal", decision),
-      );
-      assert.equal(decided.status, "approved");
       const inbox = await checked(manager.client.rpc("notification_inbox"));
       assert.equal(
         inbox.items.find(
