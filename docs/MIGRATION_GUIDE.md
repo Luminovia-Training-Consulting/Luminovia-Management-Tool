@@ -1,6 +1,6 @@
 # Reading and safely extending SQL migrations
 
-This guide covers the **69 published SQL source files** present in accepted main `4f7f6c0` on 17 November 2026. PR17's operational cohort, PR24's six additional files and PR25's enquiry intake are merged; earlier candidate/pending descriptions apply only to their historical checkpoints. The ordered source versions and byte hashes are bound into the generated [API reference](API_REFERENCE.md).
+This guide covers **71 SQL source files**, including the proposed withdrawal migration on top of the 70 present in accepted main `85b02b8` on 17 November 2026. PR17's operational cohort, PR24's six additional files and PR25's enquiry intake are merged; earlier candidate/pending descriptions apply only to their historical checkpoints. The ordered source versions and byte hashes are bound into the generated [API reference](API_REFERENCE.md).
 
 Published SQL participates in preview, update and recovery fingerprints and must remain byte-identical. New business changes require additive migrations. Repository history does not establish what an installed or hosted database has applied. Read [QA_RESULTS](QA_RESULTS.md) for source-specific executed checks and [FUNCTIONAL_ACCEPTANCE](FUNCTIONAL_ACCEPTANCE.md) for the current acceptance contract. A split CI phase alone is not complete application acceptance; publication remains a separate authorised manual operation.
 
@@ -678,3 +678,22 @@ A private experimental database that applied earlier unmerged identifiers needs 
 ## Job briefing migration
 
 [Job briefing contacts and references](../supabase/migrations/20261116163013_job_briefing_contacts_references.sql) adds private briefing and request records after the accepted migration prefix. Current actor and job access determine the disclosed projection; see [JOB_BRIEFING](JOB_BRIEFING.md).
+
+### 71. Reasoned short-notice assignment withdrawals
+
+Source: [20261116170334_assignment_withdrawal_requests.sql](../supabase/migrations/20261116170334_assignment_withdrawal_requests.sql).
+
+Adds private application and actor-command tables with RLS and no client table
+grants. Own withdrawal at least 168 hours before the first session releases the
+whole block directly. Shorter notice requires a reason and a non-author
+Administration/Management decision with current MFA. Pending/rejected applications
+retain all sessions. Accepted commercial snapshots remain unchanged. Existing
+private cancellation/lifecycle/notification helpers are retained behind restricted
+wrappers; the old self-cancellation endpoint cannot bypass review. A claim-status
+trigger closes requests overtaken by administrative cancellation or substitution.
+
+Test entry points: [claim-withdrawal-db-tests.mjs](../scripts/claim-withdrawal-db-tests.mjs),
+[assignment-withdrawal-api-check.mjs](../scripts/assignment-withdrawal-api-check.mjs)
+and [assignment-withdrawal.spec.ts](../tests/e2e/assignment-withdrawal.spec.ts).
+See [workflow and operations](ASSIGNMENT_WITHDRAWALS.md) and the pull request for actual
+executed results; this inventory does not certify a hosted installation.

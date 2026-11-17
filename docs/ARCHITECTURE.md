@@ -428,6 +428,18 @@ An active lecturer can explicitly export their own selected expertise. The API h
 
 Unattended updates retain the existing strict classifier. An explicit root-private, expiring one-shot plan binds the exact immutable green current-main release, full installed history and pending source hashes. The reviewed path shares the host lock, requires a fresh encrypted backup and uses existing stopped-writer backup/physical-checkpoint/install/private-health/rollback. It repeats identity/history checks and expiry before durable consumption; failure requires a fresh review. No automatic plan discovery, history rewrite or rewind after admitting public writes is added. See [REVIEWED_MIGRATION_PLANS](REVIEWED_MIGRATION_PLANS.md).
 
+## Reasoned short-notice withdrawal decisions
+
+The withdrawal extension separates application review from ordinary first-come
+claims. The first session's canonical instant determines the 168-hour boundary;
+only a completed database action releases any allocation. Private application and
+command tables retain actor-bound retries and authored decision history. Current
+MFA job-management authority is required to decide someone else's short-notice
+application. The original cancellation transaction remains the release owner and
+retains invoice/snapshot/chat guards. Private inbox targets reauthorize the current
+actor without copying reason text into notices. See
+[workflow and operating contract](ASSIGNMENT_WITHDRAWALS.md).
+
 ### Job-specific references and consented contacts
 
 `private.job_briefings` and its actor-bound retry ledger are unexposed RLS data. Public invoker RPCs project only the current staff/job audience; after-claim contacts require a currently confirmed assignment unless management explicitly releases them to authorised offer viewers. Current role loss and cancellation revoke that access. Versioned writes require existing management MFA and actor/request/job locks, while accepted commercial snapshots and internal customer contacts remain separate. The job-detail query is actor-scoped and refreshed by claim/cancellation actions. [Contract and evidence](JOB_BRIEFING.md).

@@ -6,6 +6,19 @@ At `/replacements`, eligible lecturers see the entire block, original IANA time 
 
 Replacement requests and claims recheck active status after profile-lock waits. A retained successful claim receipt is returned only after the current caller profile is locked and lecturer authority is checked again after the request-gate wait. Winning role withdrawal or suspension refuses the retry without changing the historical receipt, accepted compensation or confirmed successor.
 
+## Short-notice withdrawal policy
+
+With less than 168 hours before the first session, a lecturer uses the reasoned
+withdrawal application in the assigned job. Own replacement searches are no longer
+available in that window, including direct API calls. An own offer created earlier
+cannot release the assignment after it ages into this window. A different current
+MFA-authorized job manager may explicitly initiate the replacement; current
+management authority and active status of that server-recorded requester are
+rechecked before a short-notice handover. Losing that role before acceptance blocks
+the transfer. The original assignment remains confirmed after any refusal. The
+same rule applies to directed substitute invitations. See
+[assignment withdrawals](ASSIGNMENT_WITHDRAWALS.md).
+
 ## Atomic handover
 
 `claim_replacement` locks both involved profiles/lecturers in a deterministic order, then the job, original claim and replacement. It checks current active roles, original allocation/version, complete future block, qualifications through the last session, applicable contract, calendar/private-event/unavailable-window conflicts and invoice history. The existing `private.claim_job` is the authoritative new-claim operation, preserving current quote/contract/revenue rules rather than duplicating those rules.
