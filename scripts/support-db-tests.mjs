@@ -9,7 +9,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
     support = randomUUID(),
     inactive = randomUUID();
   await sql(`insert into auth.users(id,email) values ${[owner, peer, admin, support, inactive].map((id) => `('${id}','${id}@example.invalid')`).join(",")};
-    insert into public.user_roles values('${owner}','lecturer'),('${peer}','senior_lecturer'),('${admin}','admin'),('${support}','lecturer');
+    insert into public.user_roles values('${owner}','senior_lecturer'),('${peer}','senior_lecturer'),('${admin}','admin'),('${support}','lecturer');
     insert into public.role_permissions values('lecturer','support.manage');update public.profiles set active=false where id='${inactive}'`);
   const payload = {
     title: "Fictional support question %_",
