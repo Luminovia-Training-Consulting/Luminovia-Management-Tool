@@ -321,11 +321,16 @@ await withApiFixture(async ({ service, actor, passwordOnly, defer, checked, url 
     }),
     "Explicit client org",
   );
-  for (const who of [learner, customer])
-    assert.equal(
-      (await request(who, { action: "avatar", user_id: teacher.id })).status,
-      200,
-    );
+  assert.equal(
+    (await request(learner, { action: "avatar", user_id: teacher.id })).status,
+    403,
+    "Historical enrolment does not grant operational access to retired participant accounts",
+  );
+  assert.equal(
+    (await request(customer, { action: "avatar", user_id: teacher.id })).status,
+    200,
+    "Current organisation membership grants only the scoped avatar projection",
+  );
   await checked(
     admin.client.rpc("manage_course_enrolment", {
       p_course_run_id: run,
