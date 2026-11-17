@@ -197,13 +197,14 @@ export async function runOperationalForwardChecks({
                   `insert into private.assignment_change_requests(id,claim_id,requester_id,lecturer_id,reason,original,proposed,source_hash) values(${q(id)},${q(claim)},${q(admin)},${q(owner)},'Fictional formal request',${q(JSON.stringify({ title: "Fictional formal request" }))}::jsonb,'{}'::jsonb,'fictional')`,
                 );
               assert.equal(
-                (await resolve(admin, kind, id, "aal1")).href,
+                (await resolve(admin, kind, id, "aal2")).href,
                 (kind === "website_enquiry" ? "/enquiries/" : "/changes/") + id,
               );
-              assert.deepEqual(await resolve(admin, kind, id), {
-                href: null,
-                title: "",
-              });
+              assert.equal(
+                (await resolve(admin, kind, id, "aal1")).href,
+                (kind === "website_enquiry" ? "/enquiries/" : "/changes/") + id,
+                "Current permission grants the scoped link without an MFA assurance level",
+              );
               assert.deepEqual(await resolve(outsider, kind, id), {
                 href: null,
                 title: "",
