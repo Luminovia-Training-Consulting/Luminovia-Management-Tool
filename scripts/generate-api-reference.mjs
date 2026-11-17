@@ -69,8 +69,16 @@ Base: \`/functions/v1/accounts/v1\`. Machine-readable OpenAPI: \`/functions/v1/a
 | PATCH | /users/{id}/status | Reversible suspension/reactivation |
 | PUT, DELETE | /users/{id}/organisations/{organisationId} | Administration-only scoped client membership |
 | POST | /invitations | Durable, role-bound idempotent invitation |
+| GET | /deletions/access, /deletions/resources, /deletions/operations | Current permitted targets and incomplete operation recovery |
+| POST | /deletions/preview | Reviewed target, scope counts and dependency blockers |
+| POST | /deletions/confirm | Explicit irreversible DELETE confirmation with actor-bound plan/request IDs |
+| POST | /deletions/operations/{id} | Resume native cleanup; 202 means pending, 200 means completed |
 
 The facade permits allowlisted browser Origins; authenticated non-browser clients may omit Origin. This exception does **not** apply to all Edge Functions: files and course-documents require an exact approved Origin. The account handler returns safe errors and checks request bodies before forwarding caller-scoped RPCs. Self/equal/higher/last-admin protections apply where relevant. A send timeout retains its invitation reservation for reconciliation; it does not imply delivery or authorise an automatic resend.
+
+## Permanent deletion
+
+Permanent deletion requires current AAL2 and live resource authority. Preview and confirmation recheck actor-bound dependencies; accepted financial references and private-resource ACLs remain authoritative. The account Edge facade uses a database-issued execution permit for exact all-version native Storage cleanup and Auth hard deletion, drains active writer leases and returns completed only after verified absence. Pending receipts survive reload through the own permitted operations projection. Company jobs require consistent current organisation links; former lecturer claims do not grant staff job/file access. No trash or restore is provided. Read [the deletion contract](PERMANENT_DELETION.md).
 
 ## Integration-only website enquiries
 

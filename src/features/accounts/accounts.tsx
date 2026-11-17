@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../auth/auth-context";
+import { PermanentDeleteAction } from "../deletions/deletions";
 import { InviteForm } from "../admin/invite";
 import { commissionAccessQuery } from "../commercial/commission-api";
 import { permissionsQuery } from "../../lib/queries";
@@ -151,6 +152,11 @@ function AccountsDirectory({
                   {t("manageProfile")}
                 </Link>
               </div>
+              <PermanentDeleteAction
+                kind="account"
+                id={person.id}
+                label={person.display_name || person.email}
+              />
               {canAssign && person.can_assign_roles && (
                 <Button
                   variant="secondary"

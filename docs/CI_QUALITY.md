@@ -159,3 +159,7 @@ The earlier English-guide branch CI covered its 24-migration baseline. It does n
 ## Current governance boundary
 
 The source policies retain all fifteen mandatory checks without a CI or history/signature exception. The accepted maintenance publisher creates a signed PR and must satisfy its required checks and review; it has no technical rule exception. Live server rules may change independently and must be read back before merging. [Current rules and evidence](GITHUB_WORKFLOW.md).
+
+## Native failure diagnostics
+
+The isolated native candidate reports a bounded excerpt of failed child output after removing its registered secrets, JWTs and API-key patterns. It preserves the primary failure and final cleanup context; long cleanup aggregates cannot replace the original error with a secondary Auth or REST failure. The executable regression uses a real failing child with fictional secrets and verifies both context and redaction. This diagnostic behavior changes no assertion, retry, timeout or acceptance gate.
