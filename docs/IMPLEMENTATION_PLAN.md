@@ -16,6 +16,13 @@
 - [x] Give `remove_mfa_and_assurance_gates` a unique migration version (`20261117130021`) and update its SQL-test path. The previous version duplicated `company_lecturer_decisions` and prevented clean Supabase migration replay.
 - [x] Verify all migration versions are unique, apply the complete migration set in a fresh isolated local stack, confirm the renamed version is recorded, and receive HTTP 200 from `/login`.
 
+## Local admin bootstrap and default password — 17 November 2026
+
+- [x] Check the active local Auth project on every startup; a stale bootstrap marker can no longer suppress creation of missing fictional accounts, while existing accounts and passwords are preserved.
+- [x] Set a stable admin/test-account password only for an empty loopback Auth instance and expose it through `./portal credentials`; keep changed passwords intact when accounts already exist.
+- [x] Cover stale markers, account preservation and password selection with focused regression tests.
+- [ ] Complete a clean full `./portal start` rehearsal on the updated launcher; a local attempt stopped with Supabase CLI reporting `Expected local service db is not running` after the DB endpoint had become available.
+
 ## QoL continuation after current main integration — 17 November 2026
 
 - [x] Merge current `main` through `cc6218e` normally; retain the consolidated root documentation and the user-required project ledgers and verbatim prompt under `docs/`.

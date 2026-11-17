@@ -4,7 +4,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
-import { randomBytes } from "node:crypto";
+import { localBootstrapPassword } from "./local-bootstrap.mjs";
 import {
   privateDirectory,
   privateWrite,
@@ -43,19 +43,18 @@ if (old.SUPABASE_URL && old.SUPABASE_URL !== apiUrl)
   throw new Error(
     "Existing environment belongs to another local stack; resolve it explicitly before restarting.",
   );
-let password = old.E2E_PASSWORD;
-if (!password) {
-  const response = await fetch(
-    `${apiUrl}/auth/v1/admin/users?page=1&per_page=1`,
-    { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } },
-  );
-  if (!response.ok)
-    throw new Error("Could not inspect local Auth initialization.");
-  const existing = await response.json();
-  // Losing a credentials file must never reset existing account passwords.
-  if (existing.users?.length === 0)
-    password = `Local!${randomBytes(20).toString("hex")}Aa9`;
-}
+const response = await fetch(
+  `${apiUrl}/auth/v1/admin/users?page=1&per_page=1`,
+  { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } },
+);
+if (!response.ok)
+  throw new Error("Could not inspect local Auth initialization.");
+const accounts = await response.json();
+// Keep a user's existing password for populated local accounts; an empty Auth database gets the stable local default.
+const password = localBootstrapPassword(
+  old.E2E_PASSWORD,
+  accounts.users?.length ?? 0,
+);
 privateWrite(
   ".env.local",
   `VITE_SUPABASE_URL=${apiUrl}\nVITE_SUPABASE_PUBLISHABLE_KEY=${publishableKey}\n`,
@@ -77,7 +76,7 @@ privateWrite(
 );
 privateWrite(
   ".local/ACCOUNTS.txt",
-  `Local Luminovia test accounts – confidential; do not share or commit to Git.\n\nAdmin: admin@example.invalid\nPlatform lead (demo): carina@example.invalid\nClient demo: client@example.invalid\nLecturers: lecturer01@example.invalid through lecturer11@example.invalid\nParticipant: participant@example.invalid\n\n${password ? `Original local test password: ${password}\nPasswords changed later remain intact across restarts. No MFA factors are enabled.\n` : "The previous password file is missing. Existing passwords were NOT changed. Use your known password or local Mailpit recovery.\n"}\nMailpit: http://127.0.0.1:${config.mail}\n`,
+  `Local Luminovia test accounts – fictional and local only; do not reuse this password elsewhere.\n\nAdmin: admin@example.invalid\nPlatform lead (demo): carina@example.invalid\nClient demo: client@example.invalid\nLecturers: lecturer01@example.invalid through lecturer11@example.invalid\nParticipant: participant@example.invalid\n\n${password ? `Default local test password: ${password}\nExisting password changes remain intact across restarts. No MFA factors are enabled.\n` : "The previous password file is missing. Existing passwords were NOT changed. Use your known password or local Mailpit recovery.\n"}\nMailpit: http://127.0.0.1:${config.mail}\n`,
 );
 console.log(
   "Local configuration updated; existing passwords are preserved. Credentials: .local/ACCOUNTS.txt",

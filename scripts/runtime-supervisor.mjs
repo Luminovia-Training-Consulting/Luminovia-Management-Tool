@@ -28,6 +28,7 @@ import {
   stackNeedsNetworkMigration,
   verifyLoopbackBindings,
 } from "./runtime-network.mjs";
+import { ensureLocalAccounts } from "./local-bootstrap.mjs";
 
 const session = process.argv[2];
 if (!/^[a-f0-9-]{36}$/.test(session ?? ""))
@@ -193,34 +194,18 @@ try {
     log,
   });
   const local = readEnvFile(join(root, ".env.test.local"));
-  if (!existsSync(join(runtimeDir, "bootstrap.json"))) {
-    const response = await fetch(
-      `${local.SUPABASE_URL}/auth/v1/admin/users?page=1&per_page=1`,
-      {
-        headers: {
-          apikey: local.SUPABASE_SERVICE_ROLE_KEY,
-          Authorization: `Bearer ${local.SUPABASE_SERVICE_ROLE_KEY}`,
-        },
-      },
-    );
-    if (!response.ok) throw new Error("Could not check local accounts.");
-    const accounts = await response.json();
-    if (!accounts.users?.length) {
-      stage("Initialising eleven fictional lecturers and local sample data …");
-      await command(process.execPath, ["scripts/local-seed.mjs"], {
+  await ensureLocalAccounts({
+    apiUrl: local.SUPABASE_URL,
+    serviceRoleKey: local.SUPABASE_SERVICE_ROLE_KEY,
+    projectId: config.id,
+    markerPath: join(runtimeDir, "bootstrap.json"),
+    seed: () =>
+      command(process.execPath, ["scripts/local-seed.mjs"], {
         quiet: true,
         log,
-      });
-    }
-    privateWrite(
-      join(runtimeDir, "bootstrap.json"),
-      JSON.stringify({
-        projectId: config.id,
-        createdAt: new Date().toISOString(),
-        existingDataPreserved: Boolean(accounts.users?.length),
-      }) + "\n",
-    );
-  }
+      }),
+    log: stage,
+  });
   if (/^luminovia-portal-github-[a-f0-9]{12}$/.test(config.id ?? "")) {
     const { ensurePreviewAdmin } = await import("./local-preview-admin.mjs");
     await ensurePreviewAdmin(root);
