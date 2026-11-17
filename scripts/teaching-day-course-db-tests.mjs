@@ -136,7 +136,7 @@ await withTestDatabase("teaching_day_course", async ({ sql, actor }) => {
     "Role withdrawal and transferred/cancelled intervals cannot retain shared teaching-day context",
     async () => {
       await sql(`delete from public.user_roles where user_id=${q(teacher)}`);
-      assert.equal((await day()).sessions.length, 0);
+      await assert.rejects(day(), /Active account required/);
       await sql(
         `insert into public.user_roles(user_id,role)values(${q(teacher)},'lecturer');update public.assignment_sessions set released_at=now() where id=${q(session)};update public.job_claims set status='cancelled' where id=${q(claim)}`,
       );
