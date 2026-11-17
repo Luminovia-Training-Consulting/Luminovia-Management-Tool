@@ -238,14 +238,17 @@ jobs:
           case "$PROFILE" in docs|standard|full) ;; *) exit 1 ;; esac
           if test "$EVENT_NAME" != pull_request; then test "$PROFILE" = full; fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        if: needs.scope.outputs.profile != 'docs'
         with:
           persist-credentials: false
           fetch-depth: 2
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        if: needs.scope.outputs.profile != 'docs'
         with:
           node-version-file: ".node-version"
           cache: npm
-      - run: npm ci
+      - if: needs.scope.outputs.profile != 'docs'
+        run: npm ci
       - name: PR isolated PostgreSQL migration, permissions and concurrency checks
         if: github.event_name == 'pull_request' && needs.scope.outputs.profile != 'docs'
         run: node scripts/ci-pr-check.mjs sql
