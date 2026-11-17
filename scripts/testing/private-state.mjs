@@ -1,5 +1,5 @@
 /**
- * Private JSON state for local Linux test fixtures, including reused MFA factors.
+ * Private JSON state for local Linux test fixtures, including reused local authentication fixtures.
  * Directory/file descriptors bind checks to the objects actually used; state contents and secrets are never logged.
  */
 import {

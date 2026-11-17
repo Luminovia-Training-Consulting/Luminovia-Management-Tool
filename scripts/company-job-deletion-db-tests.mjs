@@ -51,7 +51,7 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
     return id;
   };
   /** Reads the real public invoker wrapper as the chosen identity and assurance. */
-  const list = (who = company, aal = "aal2") =>
+  const list = (who = company, aal = "aal1") =>
     actor(
       who,
       "select coalesce(jsonb_agg(row),'[]') from public.company_jobs_for_deletion() row",
@@ -185,7 +185,7 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
       assert(!JSON.stringify(rows).includes("Private"));
       assert(
         !(
-          await actor(company, "select public.get_my_permissions()", "aal2")
+          await actor(company, "select public.get_my_permissions()", "aal1")
         ).includes("jobs.manage"),
       );
     },
@@ -199,7 +199,7 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
           actor(
             company,
             `select public.deletion_preview('job',${q(id)})`,
-            "aal2",
+            "aal1",
           ),
           /42501|denied|authori[sz]|unavailable/i,
         );
@@ -212,7 +212,7 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
           `select public.deletion_preview('job',${q(runOnly)})`,
           "aal1",
         ),
-        /42501|MFA|authori[sz]|denied/i,
+        /42501|authori[sz]|denied|permission/i,
       );
     },
   );
@@ -224,7 +224,7 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
         await actor(
           company,
           `select public.deletion_preview('job',${q(consistent)})`,
-          "aal2",
+          "aal1",
         ),
       );
       assert.equal(allowed.can_confirm, true);
@@ -236,7 +236,7 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
         await actor(
           company,
           `select public.deletion_preview('job',${q(ownAccepted)})`,
-          "aal2",
+          "aal1",
         ),
       );
       assert.equal(blocked.can_confirm, false);
@@ -245,7 +245,7 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
         actor(
           company,
           `select public.deletion_confirm(${q(blocked.plan_id)},${q(randomUUID())},'DELETE')`,
-          "aal2",
+          "aal1",
         ),
         /23503|protected dependencies/i,
       );
@@ -275,7 +275,7 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
         actor(
           company,
           `select public.deletion_preview('job',${q(runOnly)})`,
-          "aal2",
+          "aal1",
         ),
         /42501|denied|authori[sz]|unavailable/i,
       );
@@ -489,7 +489,7 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
         await actor(
           company,
           `select public.deletion_preview('job',${q(consistent)})`,
-          "aal2",
+          "aal1",
         ),
       );
       assert.equal(preview.can_confirm, true);
@@ -497,14 +497,14 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
         await actor(
           company,
           `select public.deletion_confirm(${q(preview.plan_id)},${q(randomUUID())},'DELETE')`,
-          "aal2",
+          "aal1",
         ),
       );
       const permit = JSON.parse(
         await actor(
           company,
           `select public.deletion_execution(${q(operation.operation_id)})`,
-          "aal2",
+          "aal1",
         ),
       );
       // Only the service-granted worker can perform the already caller-authorized
@@ -593,13 +593,11 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
         "claims",
       ].sort();
       for (const [who, aal, privileged] of [
-        [admin, "aal2", true],
-        [owner, "aal2", true],
-        [manager, "aal2", false],
+        [admin, "aal1", true],
+        [owner, "aal1", true],
+        [manager, "aal1", false],
         [teacher, "aal1", false],
         [senior, "aal1", false],
-        [admin, "aal1", false],
-        [owner, "aal1", false],
       ]) {
         const current = await read(who, rolePriced, aal);
         assert.deepEqual(Object.keys(current).sort(), fields);
@@ -621,7 +619,7 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
         await actor(
           manager,
           `select count(*) from public.job_claims where id=${q(acceptedClaim)}`,
-          "aal2",
+          "aal1",
         ),
         "1",
       );
@@ -629,19 +627,19 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
         await actor(
           manager,
           `select count(*) from public.assignment_sessions where id=${q(allocation)}`,
-          "aal2",
+          "aal1",
         ),
         "0",
       );
       assert.equal(
-        (await earnings(manager, "true", "aal2")).some(
+        (await earnings(manager, "true", "aal1")).some(
           (row) => row.claim_id === acceptedClaim,
         ),
         true,
       );
-      assert.deepEqual(await earnings(manager, "false", "aal2"), []);
+      assert.deepEqual(await earnings(manager, "false", "aal1"), []);
 
-      await assert.rejects(read(company, rolePriced, "aal2"), /42501|denied/i);
+      await assert.rejects(read(company, rolePriced, "aal1"), /42501|denied/i);
       const publicRate = JSON.parse(
         await sql(
           `select jsonb_build_object('amount',amount,'total_amount',total_amount) from public.jobs where id=${q(rolePriced)}`,

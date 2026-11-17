@@ -67,7 +67,7 @@ function resultFrom(value: unknown): Result {
   )
     return { status: data.status as ResultStatus };
   if (
-    data.error === "permission_or_mfa_required" ||
+    data.error === "permission_required" ||
     data.error === "authentication_required"
   )
     return { status: "permission_required" };
@@ -78,7 +78,7 @@ function resultFrom(value: unknown): Result {
 
 /**
  * Validate invitation/role input, retain retry identity and show only confirmed delivery state.
- * The parent requires users.manage/users.invite; Edge and PostgreSQL repeat permission/MFA checks.
+ * The parent requires users.manage/users.invite; Edge and PostgreSQL repeat permission checks.
  */
 export function InviteForm({
   allRoles = false,

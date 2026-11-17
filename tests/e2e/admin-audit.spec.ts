@@ -1,5 +1,5 @@
 /**
- * Browser workflows for MFA-restricted audit filters and revoked access.
+ * Browser workflows for password-only authentication-restricted audit filters and revoked access.
  * Rendered workflows are checked in isolation; this does not replace manual device/platform acceptance.
  */
 import { expect, test, type Page } from "@playwright/test";
@@ -35,7 +35,7 @@ async function accessible(page: Page) {
     ),
   ).toBe(true);
 }
-test("MFA administrator filters and pages a redacted real audit trail; other roles and revoked access remain denied", async ({
+test("password-only authentication administrator filters and pages a redacted real audit trail; other roles and revoked access remain denied", async ({
   page,
   browser,
   context,

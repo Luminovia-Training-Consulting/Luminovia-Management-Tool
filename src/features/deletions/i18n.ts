@@ -184,8 +184,8 @@ const pairs: Record<string, [string, string]> = {
     "The request could not be confirmed. Check your connection and current permissions, then retry.",
   ],
   denied: [
-    "Keine aktuelle Berechtigung für diesen Löschbereich. Prüfe gegebenenfalls deine Zwei-Faktor-Anmeldung.",
-    "You currently have no access to this deletion area. Check your two-factor sign-in if needed.",
+    "Du hast aktuell keine Berechtigung für diesen Löschbereich.",
+    "You currently have no permission to access this deletion area.",
   ],
   expires: [
     "Die Vorschau ist abgelaufen. Lade eine neue Vorschau und prüfe sie erneut.",

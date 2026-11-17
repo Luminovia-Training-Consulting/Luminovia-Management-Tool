@@ -94,21 +94,21 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
       );
       for (const who of [owner, admin, support])
         await assert.rejects(
-          actor(who, "select * from private.support_tickets", "aal2"),
+          actor(who, "select * from private.support_tickets", "aal1"),
           /permission denied/,
         );
     },
   );
   await check(
-    "Support requires its explicit capability and MFA, with no commercial or private-message bypass",
+    "Support requires its explicit capability and permission, with no commercial or private-message bypass",
     async () => {
       await assert.rejects(get(support, ticket), /Support access denied/);
-      assert.equal((await get(support, ticket, "aal2")).can_manage, true);
+      assert.equal((await get(support, ticket, "aal1")).can_manage, true);
       assert.equal(
         await actor(
           support,
           "select private.has_permission('contracts.read') or private.has_permission('finance.manage')",
-          "aal2",
+          "aal1",
         ),
         "f",
       );
@@ -117,7 +117,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
           .length,
         0,
       );
-      assert.equal((await list(admin, "", "aal2")).items.length, 1);
+      assert.equal((await list(admin, "", "aal1")).items.length, 1);
     },
   );
   await check(
@@ -202,10 +202,10 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
         { body: "Restricted fictional internal note" },
         2,
         randomUUID(),
-        "aal2",
+        "aal1",
       );
       const own = await get(owner, ticket),
-        staff = await get(support, ticket, "aal2");
+        staff = await get(support, ticket, "aal1");
       assert.equal(own.messages.length, 1);
       assert.equal(staff.messages.length, 2);
       assert.equal(JSON.stringify(own).includes("Restricted fictional"), false);
@@ -252,7 +252,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
           { status: "closed", reason: "Skip" },
           3,
           randomUUID(),
-          "aal2",
+          "aal1",
         ),
         /Invalid support status transition/,
       );
@@ -263,7 +263,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
         { status: "in_progress", reason: "Investigating fictional problem" },
         3,
         randomUUID(),
-        "aal2",
+        "aal1",
       );
       await change(
         support,
@@ -272,7 +272,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
         { status: "waiting_for_user", reason: "Need a reproduction" },
         4,
         randomUUID(),
-        "aal2",
+        "aal1",
       );
       await change(
         owner,
@@ -288,7 +288,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
         { status: "resolved", reason: "Fictional fix verified" },
         6,
         randomUUID(),
-        "aal2",
+        "aal1",
       );
       await assert.rejects(
         change(
@@ -307,7 +307,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
         { status: "closed", reason: "Resolution accepted" },
         7,
         randomUUID(),
-        "aal2",
+        "aal1",
       );
       assert.equal((await get(owner, ticket)).status, "closed");
       await change(
@@ -336,7 +336,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
           { priority: "high" },
           9,
           randomUUID(),
-          "aal2",
+          "aal1",
         ),
         change(
           admin,
@@ -345,7 +345,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
           { priority: "urgent" },
           9,
           randomUUID(),
-          "aal2",
+          "aal1",
         ),
       ]);
       assert.equal(outcomes.filter((o) => o.status === "fulfilled").length, 1);
@@ -371,7 +371,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
           { user_id: peer },
           10,
           randomUUID(),
-          "aal2",
+          "aal1",
         ),
         /assignee unavailable/,
       );
@@ -382,7 +382,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
         { user_id: support },
         10,
         randomUUID(),
-        "aal2",
+        "aal1",
       );
       assert.equal((await get(owner, ticket)).assigned_to, support);
       await assert.rejects(
@@ -430,7 +430,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
         await actor(
           support,
           `select private.can_access_document('${attachment.document}')`,
-          "aal2",
+          "aal1",
         ),
         "t",
       );
@@ -482,10 +482,10 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
         { document_id: file.document, internal: true },
         12,
         randomUUID(),
-        "aal2",
+        "aal1",
       );
       assert.equal((await get(owner, ticket)).attachments.length, 1);
-      assert.equal((await get(support, ticket, "aal2")).attachments.length, 2);
+      assert.equal((await get(support, ticket, "aal1")).attachments.length, 2);
       assert.equal(
         await actor(
           owner,
@@ -497,7 +497,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
         await actor(
           admin,
           `select private.can_access_document('${file.document}')`,
-          "aal2",
+          "aal1",
         ),
         "t",
       );
@@ -507,7 +507,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
           `select private.can_access_document('${file.document}')`,
         ),
         "f",
-        "Uploader ownership does not bypass restricted-ticket MFA",
+        "Uploader ownership does not bypass restricted-ticket permission",
       );
     },
   );
@@ -518,14 +518,14 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
         `delete from public.role_permissions where role='participant' and permission='support.manage'`,
       );
       await assert.rejects(
-        get(support, ticket, "aal2"),
+        get(support, ticket, "aal1"),
         /Support access denied/,
       );
       assert.equal(
         await actor(
           support,
           `select private.can_access_document('${attachment.document}')`,
-          "aal2",
+          "aal1",
         ),
         "f",
       );
@@ -533,7 +533,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
         await actor(
           support,
           `select private.can_access_document('${internalAttachment.document}')`,
-          "aal2",
+          "aal1",
         ),
         "f",
         "Former support uploader loses its own attached restricted evidence too",

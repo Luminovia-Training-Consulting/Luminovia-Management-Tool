@@ -7,7 +7,7 @@ import { randomUUID, createHash } from "node:crypto";
 import sharp from "sharp";
 import { withApiFixture } from "./testing/api.mjs";
 
-await withApiFixture(async ({ service, actor, mfa, defer, checked, url }) => {
+await withApiFixture(async ({ service, actor, passwordOnly, defer, checked, url }) => {
   const origin = new URL(process.env.E2E_BASE_URL).origin;
   const users = [];
   const org = randomUUID(),
@@ -142,7 +142,7 @@ await withApiFixture(async ({ service, actor, mfa, defer, checked, url }) => {
     learner = await identity("participant"),
     outsider = await identity("participant"),
     customer = await identity("client");
-  await mfa(admin.client);
+  await passwordOnly(admin.client);
   const png = await sharp({
     create: {
       width: 40,
@@ -390,6 +390,6 @@ await withApiFixture(async ({ service, actor, mfa, defer, checked, url }) => {
     403,
   );
   console.log(
-    "PASS: actual Auth/MFA/Edge/Storage/ClamAV avatars: bounded metadata-free PNG, exact clean bytes/hash, peer profile projection without personal document/storage bypass, own replacement/removal, scoped learner/client access and immediate revocation/suspension.",
+    "PASS: actual Auth/password-only authentication/Edge/Storage/ClamAV avatars: bounded metadata-free PNG, exact clean bytes/hash, peer profile projection without personal document/storage bypass, own replacement/removal, scoped learner/client access and immediate revocation/suspension.",
   );
 });

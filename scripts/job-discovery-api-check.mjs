@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 await withApiFixture(
-  async ({ actor, service, mfa, checked, sql, defer, suffix }) => {
+  async ({ actor, service, passwordOnly, checked, sql, defer, suffix }) => {
     const admin = await actor("discovery-admin", "admin"),
       teacher = await actor("discovery-teacher", "lecturer"),
       peer = await actor("discovery-peer", "lecturer"),
@@ -235,7 +235,7 @@ await withApiFixture(
       (await learner.client.rpc("saved_job_views")).error?.code,
       "42501",
     );
-    await mfa(admin.client);
+    await passwordOnly(admin.client);
     await checked(
       service.from("user_roles").delete().eq("user_id", teacher.id),
       "Revoke own fixture lecturer role",

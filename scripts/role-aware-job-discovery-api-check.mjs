@@ -1,14 +1,14 @@
-/** Actual Auth/MFA/REST quote projection in the canonical disposable stack; policies are fictional and per-offer. */
+/** Actual Auth/password-only authentication/REST quote projection in the canonical disposable stack; policies are fictional and per-offer. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 await withApiFixture(
-  async ({ actor, mfa, checked, sql, defer, service, suffix }) => {
+  async ({ actor, passwordOnly, checked, sql, defer, service, suffix }) => {
     const regular = await actor("discovery-role-regular", "lecturer"),
       senior = await actor("discovery-role-senior", "senior_lecturer"),
       manager = await actor("discovery-role-manager", "management");
-    await mfa(manager.client);
+    await passwordOnly(manager.client);
     const org = randomUUID(),
       a = randomUUID(),
       b = randomUUID(),
@@ -88,7 +88,7 @@ await withApiFixture(
     );
     assert.equal(stale.status, "terms_changed");
     console.log(
-      "Actual role-aware discovery Auth/MFA/REST captured quotes, null protection, sorting/filtering and stale consent passed.",
+      "Actual role-aware discovery Auth/password-only authentication/REST captured quotes, null protection, sorting/filtering and stale consent passed.",
     );
   },
 );

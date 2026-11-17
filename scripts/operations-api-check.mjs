@@ -3,8 +3,9 @@
  * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
-import { randomUUID, createHmac } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { assertPasswordOnly } from "./testing/password-only.mjs";
 if (process.env.PORTAL_TEST_MODE !== "1")
   throw new Error(
     "Operations mutations require the explicit isolated test mode. Use ./portal test.",
@@ -62,22 +63,6 @@ async function fixture(role) {
   );
   return { client, id: result.user.id };
 }
-/** Computes the fixture's current TOTP for the real MFA challenge. */
-function code(secret) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const bits = [...secret.replace(/=+$/, "")]
-    .map((char) => alphabet.indexOf(char).toString(2).padStart(5, "0"))
-    .join("");
-  const key = Buffer.from(
-    bits.match(/.{8}/g).map((byte) => Number.parseInt(byte, 2)),
-  );
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
-  const digest = createHmac("sha1", key).update(counter).digest();
-  return ((digest.readUInt32BE(digest.at(-1) & 15) & 0x7fffffff) % 1000000)
-    .toString()
-    .padStart(6, "0");
-}
 /** Runs a named assertion group; any failed assertion must stop the run. */
 async function test(name, fn) {
   await fn();
@@ -88,6 +73,7 @@ try {
   const admin = await fixture("admin"),
     lecturer = await fixture("lecturer"),
     participant = await fixture("participant");
+  await assertPasswordOnly(admin.client);
   const base = {
     name: `Fictional operations ${tag}`,
     country: "DE",
@@ -98,15 +84,7 @@ try {
     private_notes: `Private customer note ${tag}`,
     archived: false,
   };
-  await test("AAL1 admin and lecturers cannot mutate customers/courses", async () => {
-    assert.ok(
-      (
-        await admin.client.rpc("save_organisation", {
-          p_id: null,
-          p_payload: base,
-        })
-      ).error,
-    );
+  await test("Password-only lecturers cannot mutate customers/courses", async () => {
     assert.ok(
       (
         await lecturer.client.rpc("save_course_template", {
@@ -124,22 +102,8 @@ try {
       ).error,
     );
   });
-  const factor = await checked(
-    admin.client.auth.mfa.enroll({
-      factorType: "totp",
-      friendlyName: "Operations QA",
-    }),
-    "Enroll actual admin MFA",
-  );
-  await checked(
-    admin.client.auth.mfa.challengeAndVerify({
-      factorId: factor.id,
-      code: code(factor.totp.secret),
-    }),
-    "Verify actual admin MFA",
-  );
   let org, contact, template, run, copyRun, job, participantRoom;
-  await test("MFA manager creates organisation, private notes and business contact", async () => {
+  await test("Password-only admin creates organisation, private notes and business contact", async () => {
     org = await checked(
       admin.client.rpc("save_organisation", { p_id: null, p_payload: base }),
       "Create organisation",
@@ -655,7 +619,7 @@ try {
     );
   });
   console.log(
-    `PASS: ${count} real operations API cases; actual MFA, private customer/contact boundaries, reusable content, safe copies, publication/enrolment/revocation and immutable accepted course blocks.`,
+    `PASS: ${count} real password-only operations API cases; private customer/contact boundaries, reusable content, safe copies, publication/enrolment/revocation and immutable accepted course blocks.`,
   );
 } finally {
   if (jobs.length) {

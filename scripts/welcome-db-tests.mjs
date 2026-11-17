@@ -1,6 +1,7 @@
 /** Real PostgreSQL own-only, versioned onboarding progress and denial checks. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { withTestDatabase, quoteSql as q } from "./testing/database.mjs";
 await withTestDatabase("welcome_test", async ({ sql, actor }) => {
   const first = randomUUID(),
@@ -52,20 +53,17 @@ await withTestDatabase("welcome_test", async ({ sql, actor }) => {
         status: "active",
         version: 1,
       });
-      assert.deepEqual(await save(first, "security", "paused", 1), {
-        step: "security",
+      assert.deepEqual(await save(first, "jobs", "paused", 1), {
+        step: "jobs",
         status: "paused",
         version: 2,
       });
-      assert.deepEqual(await save(first, "security", "active", 2), {
-        step: "security",
+      assert.deepEqual(await save(first, "jobs", "active", 2), {
+        step: "jobs",
         status: "active",
         version: 3,
       });
-      assert.equal(
-        (await save(first, "security", "skipped", 3)).status,
-        "skipped",
-      );
+      assert.equal((await save(first, "jobs", "skipped", 3)).status, "skipped");
       assert.equal((await save(first, "welcome", "active", 4)).step, "welcome");
       assert.equal(
         (await save(first, "finish", "completed", 5)).status,
@@ -138,6 +136,7 @@ await withTestDatabase("welcome_test", async ({ sql, actor }) => {
     async () => {
       for (const [step, status, version] of [
         ["../../admin", "active", 7],
+        ["security", "active", 7],
         ["profile", "unknown", 7],
         ["files", "active", -1],
         ["files", "active", 2147483647],
@@ -197,3 +196,38 @@ await withTestDatabase("welcome_test", async ({ sql, actor }) => {
   );
   console.log(`\n${checks} welcome-guide PostgreSQL groups passed.`);
 });
+
+// Exercise the real forward upgrade with retained legacy progress, not only a
+// database created after the no-MFA contract was introduced.
+await withTestDatabase(
+  "welcome_upgrade",
+  async ({ sql, actor }) => {
+    const user = randomUUID();
+    await sql(
+      `insert into auth.users(id,email) values('${user}','upgrade@example.invalid');insert into private.welcome_progress(user_id,step,status,version) values('${user}','security','paused',9)`,
+    );
+    const migration = await readFile(
+      new URL(
+        "../supabase/migrations/20261117130000_remove_mfa_and_assurance_gates.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    await sql(migration);
+    assert.deepEqual(
+      JSON.parse(await actor(user, "select public.get_welcome_progress()")),
+      { step: "profile", status: "paused", version: 10 },
+    );
+    await assert.rejects(
+      actor(
+        user,
+        `select public.save_welcome_progress('security','active',10)`,
+      ),
+      /Invalid welcome progress/,
+    );
+    console.log(
+      "PASS Legacy security progress upgrades to profile; the removed step is rejected",
+    );
+  },
+  { migrationsThrough: "20261117120001" },
+);

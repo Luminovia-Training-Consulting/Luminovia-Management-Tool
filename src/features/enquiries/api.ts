@@ -78,7 +78,7 @@ export type EnquiryAction =
   | "create_customer"
   | "convert"
   | "note";
-/** Directory choices are returned only under the caller's live management/MFA authority. */
+/** Directory choices are returned only under the caller's live management authority. */
 export const enquiryContextQuery = (actor: string) =>
   queryOptions({
     queryKey: ["enquiry-context", actor],

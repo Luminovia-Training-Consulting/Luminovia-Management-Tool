@@ -440,7 +440,7 @@ describe("permanent deletion confirmation", () => {
     const initial = state.request.getMockImplementation()!;
     state.request.mockImplementation((...args) =>
       args[0] === "deletions/operations"
-        ? Promise.reject(new Error("permission_or_mfa_required"))
+        ? Promise.reject(new Error("permission_required"))
         : initial(...args),
     );
     await act(async () => {

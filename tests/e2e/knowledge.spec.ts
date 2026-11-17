@@ -5,7 +5,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { createClient } from "@supabase/supabase-js";
-import { createHmac, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
 test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
@@ -65,50 +65,6 @@ async function login(page: Page, user: Account) {
   await page.getByRole("button", { name: "Anmelden", exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
 }
-/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
-function totp(secret: string) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const bits = [...secret.replace(/=+$/, "").toUpperCase()]
-    .map((char) => alphabet.indexOf(char).toString(2).padStart(5, "0"))
-    .join("");
-  const key = Buffer.from(
-    bits.match(/.{8}/g)!.map((byte) => Number.parseInt(byte, 2)),
-  );
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000)));
-  const digest = createHmac("sha1", key).update(counter).digest();
-  return (
-    (digest.readUInt32BE(digest[digest.length - 1] & 15) & 0x7fffffff) %
-    1_000_000
-  )
-    .toString()
-    .padStart(6, "0");
-}
-/** Raises the actual test session to AAL2 through Auth/TOTP rather than simulating browser privileges. */
-async function adminMfa(page: Page, user: Account) {
-  await login(page, user);
-  await page.goto("/security");
-  const response = page.waitForResponse(
-    (item) =>
-      item.request().method() === "POST" &&
-      new URL(item.url()).pathname.endsWith("/auth/v1/factors"),
-  );
-  await page
-    .getByRole("button", { name: "Authenticator einrichten", exact: true })
-    .click();
-  const data = await (await response).json();
-  await page
-    .getByLabel("Sechsstelliger Code", { exact: true })
-    .fill(totp(data.totp.secret));
-  await page
-    .getByRole("button", { name: "Code bestätigen", exact: true })
-    .click();
-  await expect(
-    page.getByText("Dein Konto ist mit zwei Faktoren bestätigt.", {
-      exact: true,
-    }),
-  ).toBeVisible();
-}
 /** Checks the rendered state with axe; this does not replace manual accessibility acceptance. */
 async function a11y(page: Page) {
   await page.evaluate(() => document.fonts.ready);
@@ -126,7 +82,7 @@ async function a11y(page: Page) {
   ).toEqual([]);
 }
 
-test("wiki draft, MFA publishing, code preservation and unpublished revision privacy work through the UI", async ({
+test("wiki draft, password-only publishing, code preservation and unpublished revision privacy work through the UI", async ({
   page,
   browser,
 }, testInfo) => {
@@ -188,7 +144,7 @@ test("wiki draft, MFA publishing, code preservation and unpublished revision pri
   });
   try {
     const moderator = await context.newPage();
-    await adminMfa(moderator, admin);
+    await login(moderator, admin);
     await moderator.goto(`/wiki?page=${id}`);
     await moderator
       .getByRole("button", { name: "Bearbeiten", exact: true })
@@ -235,7 +191,7 @@ test("wiki draft, MFA publishing, code preservation and unpublished revision pri
   }
 });
 
-test("forum supports real rich-text discussion, accepted answers, reports and MFA moderation", async ({
+test("forum supports real rich-text discussion, accepted answers, reports and role-authorized moderation", async ({
   page,
   browser,
 }, testInfo) => {
@@ -326,7 +282,7 @@ test("forum supports real rich-text discussion, accepted answers, reports and MF
       responder.getByRole("button", { name: "Thema abonnieren", exact: true }),
     ).toBeVisible();
     const moderator = await moderatorContext.newPage();
-    await adminMfa(moderator, admin);
+    await login(moderator, admin);
     await moderator.goto(`/forum?thread=${id}`);
     await moderator
       .getByRole("button", { name: "Thema moderieren", exact: true })

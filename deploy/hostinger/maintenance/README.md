@@ -6,7 +6,7 @@ The authorised KVM1 development instance checks official stable application and 
 
 `.github/workflows/daily-maintenance.yml` runs at 02:41 UTC and supports manual dispatch. Each npm ecosystem group, lockfile refresh, Node compiler, runtime image and Edge JSR pin has an independent candidate. Coordinated peers stay together. Prereleases and downgrades are excluded. A rebuilt multi-platform index matching the installed amd64 image is a no-op. The vendor Supabase bundle remains a preserved reference; the active composition is maintained separately.
 
-Every changed candidate must pass `./portal test` and the actual ten-container self-hosted baseline-to-candidate check using retained fictional accounts, MFA, permissions and file bytes. Passing components are combined and tested again. Failed candidates remain on the working version and are retried on later daily scans. Failed combined verification uses a separately re-tested single passing candidate as a bounded fallback; it does not force conflicting packages together.
+Every changed candidate must pass `./portal test` and the actual ten-container self-hosted baseline-to-candidate check using retained fictional password-only accounts, current database permissions and file bytes. The check also confirms that no Auth factors are enrolled. Passing components are combined and tested again. Failed candidates remain on the working version and are retried on later daily scans. Failed combined verification uses a separately re-tested single passing candidate as a bounded fallback; it does not force conflicting packages together.
 
 The PR publisher accepts only fixed dependency/version/image files with exact tested base hashes and an unchanged main parent. It cannot change scripts, workflows, authorisation code or runtime secrets. It creates or reuses a deterministic separate maintenance branch, verifies GitHub's signed commit and exact parent, and opens or reuses the matching PR with `type:dependencies`, `area:devops` and `risk:high`. Retries must not create duplicate update PRs or overwrite changed branch content.
 
@@ -23,6 +23,9 @@ The manual `signature_probe_only` input checks the existing App credentials thro
 ## Retained accepted compensation and invoices
 
 The candidate-owned `candidate-upgrade-probe.mjs` runs against both source phases.
+Before upgrading, real fictional password-only Auth sessions create a
+scanned executed-contract PDF and lecturer receipt, accept a two-session legacy
+net-only job, and submit an own scanned invoice through the business APIs. A
 Before upgrading, the lecturer uploads their own scanned executed-contract PDF;
 an MFA administrator registers it and records the lecturer's receipt. The same
 real Auth sessions accept a two-session legacy net-only job and submit an own
@@ -31,12 +34,12 @@ commission-capable baseline additionally creates and accepts a second complete
 job using that baseline's existing policy. The probe never chooses percentages,
 changes policy or runs the candidate-only bootstrap before retention is checked.
 
-After upgrading, fresh password/MFA sessions must reproduce the same accepted
+After upgrading, fresh password-only sessions must reproduce the same accepted
 amounts, original AUD currency, conditions/version, exact session digests,
 gross/platform/net ledger, contract receipt, invoice/item/status/payment rows and
 exact PDF hashes/bytes. Own RLS and business projections are compared with a
 read-only physical snapshot. A separate lecturer must still receive no guessed
-claim/invoice rows or contract/invoice metadata/bytes. Existing password, MFA,
+claim/invoice rows or contract/invoice metadata/bytes. Existing password,
 roles, private-event and scanned-file checks also remain required. Credentials
 and captured records stay in the owned scratch directory's private ledger;
 published summaries contain only anonymous counts, completed-check flags and the

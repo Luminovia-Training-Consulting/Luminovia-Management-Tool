@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { withApiFixture } from "./testing/api.mjs";
 
 await withApiFixture(
-  async ({ service, actor, mfa, checked, sql, defer, suffix, url }) => {
+  async ({ service, actor, passwordOnly, checked, sql, defer, suffix, url }) => {
     const manager = await actor("enquiry-manager", "management"),
       peer = await actor("enquiry-peer", "lecturer"),
       client = await actor("enquiry-client", "client");
@@ -182,7 +182,7 @@ await withApiFixture(
       400,
     );
     assert.ok((await manager.client.rpc("enquiry_inbox")).error);
-    await mfa(manager.client);
+    await passwordOnly(manager.client);
     const inbox = await checked(
       manager.client.rpc("enquiry_inbox", { p_search: suffix }),
     );
@@ -275,7 +275,7 @@ await withApiFixture(
       "Unconfigured deployed worker fails closed",
     );
     console.log(
-      "PASS exact enquiry worker adapter over real loopback HTTP/REST: validated/idempotent receipt, invalid/auth denial, real MFA triage/customer/conversion, private reads and current revocation; normal worker disabled",
+      "PASS exact enquiry worker adapter over real loopback HTTP/REST: validated/idempotent receipt, invalid/auth denial, real password-only authentication triage/customer/conversion, private reads and current revocation; normal worker disabled",
     );
   },
 );

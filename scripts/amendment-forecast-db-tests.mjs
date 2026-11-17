@@ -80,7 +80,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
       const call = (who, expression, aal = "aal1") =>
         actor(who, `select ${expression}`, aal);
       const json = async (...args) => JSON.parse(await call(...args));
-      const forecast = (who = admin, aal = "aal2") =>
+      const forecast = (who = admin, aal = "aal1") =>
         json(
           who,
           "public.finance_forecast('2058-01-01','2058-04-01',0.5)",
@@ -96,7 +96,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
       await call(
         admin,
         "public.configure_compensation_policy(37,61,0)",
-        "aal2",
+        "aal1",
       );
       /** Normal online publication/claim captures the original immutable charge. */
       const make = async ({
@@ -135,7 +135,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
           commissioned
             ? `public.create_capacity_job(${q(JSON.stringify(payload))},1,${q(randomUUID())},${q(org)},null)`
             : `public.create_job(${q(JSON.stringify(payload))})`,
-          "aal2",
+          "aal1",
         );
         const quote = (await json(teacher, "public.job_offers()")).find(
           (row) => row.id === job,
@@ -177,12 +177,19 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
         },
       );
       await check(
-        "current MFA finance boundary and internal helper grants prevent a net oracle",
+        "current permission finance boundary and internal helper grants prevent a net oracle",
         async () => {
           await assert.rejects(forecast(teacher), /42501/);
-          await assert.rejects(forecast(admin, "aal1"), /42501/);
+          const adminResult = await forecast(admin, "aal1"),
+            adminRow = adminResult.months.find(
+              (item) => item.currency === "AUD",
+            );
+          assert.equal(adminResult.gross_authorized, true);
+          assert.equal(adminRow.accepted_gross_known, 200);
+          assert.equal(adminRow.accepted_margin_known, 126);
           const result = await forecast(manager),
             row = result.months.find((item) => item.currency === "AUD");
+          assert.equal(result.gross_authorized, false);
           assert.equal(row.accepted_lecturer_cost, 74);
           assert.equal(row.accepted_gross_known, null);
           assert.equal(row.accepted_margin_known, null);
@@ -245,15 +252,15 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
       }
       if (hasAmendments) {
         const view = async (id) =>
-          (await json(admin, `public.assignment_changes(${q(id)})`, "aal2"))[0];
+          (await json(admin, `public.assignment_changes(${q(id)})`, "aal1"))[0];
         /** Apply real independent manager/lecturer consent with server CAS versions. */
         const amend = async (target, changes) => {
           const id = await call(
             admin,
             `public.save_assignment_change(null,${q(target.claim)},${q(JSON.stringify({ reason: "Fictional explicitly agreed forecast change", changes }))},0,${q(randomUUID())})`,
-            "aal2",
+            "aal1",
           );
-          const action = async (kind, who = admin, aal = "aal2") =>
+          const action = async (kind, who = admin, aal = "aal1") =>
             call(
               who,
               `public.assignment_change_action(${q(id)},${q(kind)},${(await view(id)).version},'',${q(randomUUID())})`,
@@ -373,7 +380,7 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
           await call(
             admin,
             "public.configure_compensation_policy(0,61,1)",
-            "aal2",
+            "aal1",
           );
           const zero = await make({ day: 25 });
           assert.equal(zero.total, 0);

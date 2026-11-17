@@ -10,7 +10,6 @@ import { useAuth } from "../features/auth/auth-context";
 import { AuthCallback } from "../features/auth/callback";
 import { Login } from "../features/auth/login";
 import { Password } from "../features/auth/password";
-import { Security } from "../features/auth/security";
 import { AdminNavigation } from "../features/admin/navigation";
 import { Shell, Preferences } from "./shell";
 import { Loading, ErrorState, Notice } from "../components/common";
@@ -317,7 +316,10 @@ export function App() {
               <Route path="settings" element={<SettingsPage />} />
               <Route path="topics" element={<TaxonomyPage />} />
               <Route path="availability" element={<AvailabilityPage />} />
-              <Route path="security" element={<Security />} />
+              <Route
+                path="security"
+                element={<Navigate to="/settings" replace />}
+              />
               <Route path="auth/password" element={<Password />} />
               <Route path="admin" element={<AdminNavigation />}>
                 <Route index element={<AdminPage />} />

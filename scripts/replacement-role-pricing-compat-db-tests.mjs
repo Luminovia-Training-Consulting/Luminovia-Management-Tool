@@ -2,7 +2,7 @@
  * private role-pricing migrations plus the NEW operational migrations, never by
  * rewriting either history. Every account, price and policy below is fictional;
  * a random owned UUID database is removed by the standard fixture afterwards.
- * SQL AAL assertions exercise the current MFA gate, not native Auth/TOTP.
+ * SQL authorization assertions exercise the current permission gate, not native Auth/TOTP.
  * This remains a manual test until the real pricing prerequisite is accepted on
  * main; it intentionally has no auto-discovered -db-tests suffix.
  * Run: PORTAL_DB_CONTAINER=<owned-test-container> node scripts/replacement-role-pricing-compat.mjs */
@@ -105,7 +105,7 @@ await withTestDatabase("replacement_role_compat", async ({ sql, actor }) => {
     ]);
 
   await check(
-    "Fictional policy setup requires current MFA and preserves an empty-policy start",
+    "Fictional policy setup requires current permission and preserves an empty-policy start",
     async () => {
       assert.equal(
         await sql("select count(*) from private.compensation_policy"),
@@ -119,7 +119,7 @@ await withTestDatabase("replacement_role_compat", async ({ sql, actor }) => {
         admin,
         "configure_compensation_policy",
         ["29.17", "76.43", "0"],
-        "aal2",
+        "aal1",
       );
       assert.equal(configured.policy_version, 1);
     },
@@ -162,7 +162,7 @@ await withTestDatabase("replacement_role_compat", async ({ sql, actor }) => {
           q(organisation),
           "null",
         ],
-        "aal2",
+        "aal1",
       );
       const quote = (await rpc(original, "job_offers")).find(
         (row) => row.id === job,
@@ -211,7 +211,7 @@ await withTestDatabase("replacement_role_compat", async ({ sql, actor }) => {
     async () => {
       const regularOffer = await offered(regular),
         seniorOffer = await offered(senior),
-        managementOffer = await offered(manager, "aal2");
+        managementOffer = await offered(manager, "aal1");
       assert.ok(regularOffer?.can_claim);
       assert.ok(seniorOffer?.can_claim);
       for (const offer of [regularOffer, seniorOffer, managementOffer])
@@ -244,7 +244,7 @@ await withTestDatabase("replacement_role_compat", async ({ sql, actor }) => {
         admin,
         "set_account_roles",
         [q(promoted), "'{senior_lecturer}'::text[]"],
-        "aal2",
+        "aal1",
       );
       const current = await offered(promoted);
       assert.notEqual(before.quote.terms_version, current.quote.terms_version);
@@ -279,7 +279,7 @@ await withTestDatabase("replacement_role_compat", async ({ sql, actor }) => {
         admin,
         "configure_compensation_policy",
         ["37.19", "81.23", "1"],
-        "aal2",
+        "aal1",
       );
       assert.equal(
         Number((await offered(regular)).quote.total_amount),
@@ -388,7 +388,7 @@ await withTestDatabase("replacement_role_compat", async ({ sql, actor }) => {
         admin,
         "set_account_roles",
         [q(senior), "'{lecturer}'::text[]"],
-        "aal2",
+        "aal1",
       );
       assert.equal(
         await sql(
@@ -404,19 +404,11 @@ await withTestDatabase("replacement_role_compat", async ({ sql, actor }) => {
       );
       for (const who of [regular, senior, promoted, manager]) {
         await assert.rejects(
-          actor(
-            who,
-            "select * from private.compensation_policy",
-            who === manager ? "aal2" : "aal1",
-          ),
+          actor(who, "select * from private.compensation_policy", "aal1"),
           /42501/,
         );
         await assert.rejects(
-          actor(
-            who,
-            "select * from private.claim_revenue_ledger",
-            who === manager ? "aal2" : "aal1",
-          ),
+          actor(who, "select * from private.claim_revenue_ledger", "aal1"),
           /42501/,
         );
       }

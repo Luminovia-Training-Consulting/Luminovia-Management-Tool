@@ -357,7 +357,6 @@ test("the guided demo visits every actual portal area, pauses and restarts in ei
       "/topics",
       "/settings",
       "/profile",
-      "/security",
       "/admin",
       "/admin/accounts",
       "/admin/people",

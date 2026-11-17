@@ -176,7 +176,7 @@ test("dashboard previews show actual own activity, scanned files and private app
   });
 });
 
-test("MFA management follow-ups never include another lecturer's private calendar", async ({
+test("password-only authentication management follow-ups never include another lecturer's private calendar", async ({
   page,
 }) => {
   const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);

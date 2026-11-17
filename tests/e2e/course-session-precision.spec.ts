@@ -1,13 +1,19 @@
 /**
  * Real Course edit regression for known Berlin DST-fold instants and six-digit
- * PostgreSQL precision. Ordinary MFA-authorised RPCs seed the course; only its
+ * PostgreSQL precision. Password-only authorised RPCs seed the course; only its
  * venue is edited in the browser. Exact timestamp strings are read through the
  * same authorised server API, never rounded through JavaScript Date/Luxon.
  * The canonical runner owns the disposable stack and both browser projects.
  */
 import { expect, test } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { actor, api, checked, code, login } from "./helpers/accounts-support";
+import {
+  actor,
+  api,
+  checked,
+  login,
+  assertPasswordOnly,
+} from "./helpers/accounts-support";
 
 test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
@@ -25,7 +31,7 @@ test("metadata-only course editing preserves a known DST fold and all six Postgr
   );
   // The shared actor() helper provisions only this fictional Auth identity/role
   // in Node. This separate service client is cleanup-only; course creation,
-  // readback and browser mutation use the regular MFA actor. api() restricts
+  // readback and browser mutation use the regular password-only actor. api() restricts
   // both clients to the random canonical loopback QA project.
   const cleanup = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const client = api(process.env.SUPABASE_ANON_KEY!);
@@ -48,22 +54,7 @@ test("metadata-only course editing preserves a known DST fold and all six Postgr
     });
     expect(signedIn.error).toBeNull();
     expect(signedIn.data.session).not.toBeNull();
-    const enrolled = await client.auth.mfa.enroll({
-      factorType: "totp",
-      friendlyName: "Course precision QA",
-    });
-    expect(enrolled.error).toBeNull();
-    if (!enrolled.data)
-      throw new Error("Fictional MFA enrollment was not confirmed");
-    const factor = enrolled.data;
-    const verified = await client.auth.mfa.challengeAndVerify({
-      factorId: factor.id,
-      code: code(factor.totp.secret),
-    });
-    expect(verified.error).toBeNull();
-    const assurance = await client.auth.mfa.getAuthenticatorAssuranceLevel();
-    expect(assurance.error).toBeNull();
-    expect(assurance.data?.currentLevel).toBe("aal2");
+    await assertPasswordOnly(client);
     templateId = await checked(
       client.rpc("save_course_template", {
         p_id: null,
@@ -107,14 +98,6 @@ test("metadata-only course editing preserves a known DST fold and all six Postgr
     expect(before).toEqual(sessions);
 
     await login(page, administrator.email);
-    await page.goto("/security");
-    await page
-      .getByLabel("Sechsstelliger Code", { exact: true })
-      .fill(code(factor.totp.secret));
-    await page
-      .getByRole("button", { name: "Code bestätigen", exact: true })
-      .click();
-    await expect(page.getByRole("status")).toContainText("zwei Faktoren");
     await page.goto("/courses");
     await page.getByLabel("Suchen", { exact: true }).fill(title);
     const card = page.locator(".operations-course").filter({

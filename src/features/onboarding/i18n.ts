@@ -34,9 +34,6 @@ const de = {
   profileTitle: "Profil und Zeitzone",
   profileBody:
     "Prüfe deinen Namen, deine Sprache und deine IANA-Zeitzone im Profil. Ergänze bei Bedarf deine Biografie und Expertise. Nachweise und Qualifikationen werden nach den geltenden Berechtigungen geprüft.",
-  securityTitle: "Dein Konto absichern",
-  securityBody:
-    "Richte unter Sicherheit die Zwei-Faktor-Anmeldung ein. Verwaltungsfunktionen benötigen die vorgeschriebene aktuelle MFA-Bestätigung; diese Einführung ersetzt sie nicht. Dein Passwort änderst du über den dafür vorgesehenen Kontoweg.",
   jobsTitle: "Aufträge entdecken und planen",
   jobsBody:
     "Aufträge enthalten Termine, Anforderungen und die für dich sichtbaren Konditionen. Prüfe vor einer Übernahme den gesamten Zeitraum. Erst die erfolgreiche Datenbankbestätigung reserviert alle Termine; bei Konflikten wird kein Teilblock gebucht. Verwaltungsfunktionen erscheinen nur mit entsprechender Berechtigung.",
@@ -99,9 +96,6 @@ const en: Record<keyof typeof de, string> = {
   profileTitle: "Profile and time zone",
   profileBody:
     "Check your name, language and IANA time zone in your profile. Add your biography and expertise where relevant. Evidence and qualifications are reviewed according to the applicable permissions.",
-  securityTitle: "Secure your account",
-  securityBody:
-    "Set up two-factor authentication under Security. Administrative functions still require their current MFA confirmation; this introduction does not replace it. Use the dedicated account flow to change your password.",
   jobsTitle: "Explore and plan assignments",
   jobsBody:
     "Assignments include dates, requirements and the terms available to you. Review the entire period before claiming. Only a successful database confirmation reserves all dates; a conflict never creates a partial allocation. Management actions appear only with the relevant permission.",

@@ -25,16 +25,15 @@ await withTestDatabase("admin_audit", async ({ sql, actor }) => {
     console.log(`PASS ${name}`);
   };
   /** Reads the business projection as a specific fixture identity to verify visibility and privacy. */
-  const read = async (who = users.admin, args = "", aal = "aal2") =>
+  const read = async (who = users.admin, args = "", aal = "aal1") =>
     JSON.parse(
       await actor(who, `select public.admin_audit_events(${args})`, aal),
     );
   await check(
-    "Current admin/owner MFA capability allows reads; every ordinary role and anonymous access is denied",
+    "Current admin/owner permissions allow reads in password-only AAL1; every ordinary role and anonymous access is denied",
     async () => {
       for (const role of ["admin", "owner"])
         assert.deepEqual((await read(users[role])).items, []);
-      await assert.rejects(read(users.admin, "", "aal1"), /42501/);
       for (const role of roles.slice(2))
         await assert.rejects(read(users[role]), /42501/);
       assert.equal(
@@ -206,7 +205,7 @@ await withTestDatabase("admin_audit", async ({ sql, actor }) => {
         `delete from public.audit_events where id=${q(safe)}`,
       ])
         await assert.rejects(
-          actor(users.admin, statement, "aal2"),
+          actor(users.admin, statement, "aal1"),
           /permission denied/,
         );
       assert.equal(

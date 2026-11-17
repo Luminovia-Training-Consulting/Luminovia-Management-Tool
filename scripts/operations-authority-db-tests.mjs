@@ -109,7 +109,7 @@ await withTestDatabase("operations_authority", async (fixture) => {
   const call = (who, expression, aal = "aal1") =>
     actor(who, "select " + expression, aal);
   const json = async (...args) => JSON.parse(await call(...args));
-  const adminCall = (expression) => call(admin, expression, "aal2");
+  const adminCall = (expression) => call(admin, expression, "aal1");
   let checks = 0;
   const check = async (name, run) => {
     await run();
@@ -131,7 +131,7 @@ await withTestDatabase("operations_authority", async (fixture) => {
   }) => {
     const holder = await hold(
       fixture,
-      `select 1 from public.profiles where id=${q(who)} for update;select pg_advisory_xact_lock(pg_catalog.hashtextextended(${q(gate)},0));set local role authenticated;set local request.jwt.claims=${q(JSON.stringify({ sub: admin, aal: "aal2", role: "authenticated" }))};select ${revoke};reset role`,
+      `select 1 from public.profiles where id=${q(who)} for update;select pg_advisory_xact_lock(pg_catalog.hashtextextended(${q(gate)},0));set local role authenticated;set local request.jwt.claims=${q(JSON.stringify({ sub: admin, aal: "aal1", role: "authenticated" }))};select ${revoke};reset role`,
     );
     const pending = operation().then(
       (value) => ({ value }),
@@ -251,7 +251,7 @@ await withTestDatabase("operations_authority", async (fixture) => {
           call(
             manager,
             `public.confirm_course_sessions(${q(run)},0,${q(request)})`,
-            "aal2",
+            "aal1",
           ),
       });
       denied(result);
@@ -289,7 +289,7 @@ await withTestDatabase("operations_authority", async (fixture) => {
           call(
             manager,
             `public.update_support_ticket(${q(ticket)},'internal_note',${q(JSON.stringify({ body: "Fictional confidential internal note" }))},1,${q(request)})`,
-            "aal2",
+            "aal1",
           ),
       });
       denied(result);

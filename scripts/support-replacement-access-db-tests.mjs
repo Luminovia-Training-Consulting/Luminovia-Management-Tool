@@ -253,17 +253,17 @@ update public.documents set current_version_id=${q(version)}where id=${q(documen
           await fileAccess(outsider, certificate, false);
           // Current main requires exact contextual qualification grants; the
           // support wrapper must never restore a generic manager certificate read.
-          await fileAccess(manager, certificate, false, "aal2");
+          await fileAccess(manager, certificate, false, "aal1");
           const contract = await file(source, { kind: "contract" });
           await fileAccess(source, contract, true);
           await fileAccess(outsider, contract, false);
           // Prove an independently stricter installed predecessor survives,
           // rather than merely asserting the already-strict certificate rule.
-          await fileAccess(manager, contract, false, "aal2");
+          await fileAccess(manager, contract, false, "aal1");
         },
       );
       await check(
-        "support interception denies internal evidence after staff/MFA loss even to its uploader",
+        "support interception denies internal evidence after staff/permission loss even to its uploader",
         async () => {
           const ticket = await call(
             source,
@@ -278,18 +278,18 @@ update public.documents set current_version_id=${q(version)}where id=${q(documen
           await call(
             support,
             `public.update_support_ticket(${q(ticket)},'attach',${q(JSON.stringify({ document_id: internal.document, internal: true }))},2,${q(randomUUID())})`,
-            "aal2",
+            "aal1",
           );
           await fileAccess(source, ordinary, true);
-          await fileAccess(support, ordinary, true, "aal2");
+          await fileAccess(support, ordinary, true, "aal1");
           await fileAccess(outsider, ordinary, false);
           await fileAccess(source, internal, false);
-          await fileAccess(support, internal, true, "aal2");
+          await fileAccess(support, internal, true, "aal1");
           await fileAccess(support, internal, false);
           await sql(
             "delete from public.role_permissions where role='participant'and permission='support.manage'",
           );
-          await fileAccess(support, internal, false, "aal2");
+          await fileAccess(support, internal, false, "aal1");
           assert.equal(
             await sql(
               `select count(*)from public.document_versions where id=${q(internal.version)}`,
@@ -326,7 +326,7 @@ update public.documents set current_version_id=${q(version)}where id=${q(documen
         const job = await call(
           manager,
           `public.create_job(${q(JSON.stringify(payload))})`,
-          "aal2",
+          "aal1",
         );
         const terms = Number(
           await sql(`select terms_version from public.jobs where id=${q(job)}`),
@@ -345,7 +345,7 @@ update public.documents set current_version_id=${q(version)}where id=${q(documen
         const participantRoom = await call(
           manager,
           `public.create_chat_group('Fictional participant room',array[]::uuid[],'participant_course',${q(job)})`,
-          "aal2",
+          "aal1",
         );
         assert.equal(
           await sql(

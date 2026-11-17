@@ -3,10 +3,11 @@
  * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
-import { createHmac, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
+import { assertPasswordOnly } from "./testing/password-only.mjs";
 if (process.env.PORTAL_TEST_MODE !== "1")
   throw new Error("Commission API mutations require isolated ./portal test.");
 process.loadEnvFile(".env.test.local");
@@ -84,22 +85,9 @@ async function fixture(name, role) {
   );
   return { client, id: auth.user.id };
 }
-/** Verifies a real TOTP factor so privileged test requests actually use AAL2. */
-async function mfa(actor) {
-  const factor = await checked(
-    actor.client.auth.mfa.enroll({
-      factorType: "totp",
-      friendlyName: "Commission QA",
-    }),
-    "Enroll real TOTP",
-  );
-  await checked(
-    actor.client.auth.mfa.challengeAndVerify({
-      factorId: factor.id,
-      code: totp(factor.totp.secret),
-    }),
-    "Verify real TOTP",
-  );
+/** Confirms privileged requests work with password-only AAL1 and no enrolled factors. */
+async function passwordOnly(actor) {
+  await assertPasswordOnly(actor.client);
 }
 /** Creates this module's fictional inputs; authoritative validation remains on the server. */
 const payload = (day = 0, gross = 100.01, currency = "EUR") => ({
@@ -122,25 +110,6 @@ const payload = (day = 0, gross = 100.01, currency = "EUR") => ({
   ],
   topic_ids: [],
 });
-/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
-function totp(secret) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const bits = [...secret.replace(/=+$/, "").toUpperCase()]
-    .map((char) => alphabet.indexOf(char).toString(2).padStart(5, "0"))
-    .join("");
-  const key = Buffer.from(
-    bits.match(/.{8}/g).map((byte) => Number.parseInt(byte, 2)),
-  );
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000)));
-  const digest = createHmac("sha1", key).update(counter).digest();
-  return (
-    (digest.readUInt32BE(digest[digest.length - 1] & 15) & 0x7fffffff) %
-    1_000_000
-  )
-    .toString()
-    .padStart(6, "0");
-}
 /** Creates synthetic PDF bytes for the real file-validation path without personal source documents. */
 function pdf(label) {
   const objects = [
@@ -217,15 +186,15 @@ try {
     senior = await fixture("senior", "senior_lecturer");
   assert.ok(
     (await admin.client.rpc("commission_report")).error,
-    "AAL1 cannot read gross",
+    "password-only AAL1 cannot read gross",
   );
-  await mfa(admin);
-  await mfa(owner);
-  await mfa(management);
+  await passwordOnly(admin);
+  await passwordOnly(owner);
+  await passwordOnly(management);
   for (const who of [management, lecturer, senior])
     assert.ok(
       (await who.client.rpc("commission_report")).error,
-      "Management/lecturer cannot read gross even with MFA",
+      "Management/lecturer cannot read gross even with password-only authentication",
     );
   const org = await checked(
     admin.client.rpc("save_organisation", {
@@ -640,7 +609,7 @@ try {
       p_invoice_id: invoice,
       p_labels: ["Finance QA"],
     }),
-    "MFA finance operations can organize net invoice",
+    "password-only authentication finance operations can organize net invoice",
   );
   assert.ok(
     (await management.client.rpc("commission_report")).error,
@@ -739,7 +708,7 @@ try {
     [],
   );
   console.log(
-    "PASS: actual Auth/MFA/REST/ClamAV commission: client request cancellation/idempotent audit and published-offer safeguards, cross-org isolation and revocation, private fictional role-policy rounding, hidden gross, atomic claims/revenue, exact accepted-history repricing refusal with unchanged deal/revenue, immutable net invoice+labels, separate EUR/AUD, owner lecturer functionality and private-calendar boundary.",
+    "PASS: actual Auth/password-only authentication/REST/ClamAV commission: client request cancellation/idempotent audit and published-offer safeguards, cross-org isolation and revocation, private fictional role-policy rounding, hidden gross, atomic claims/revenue, exact accepted-history repricing refusal with unchanged deal/revenue, immutable net invoice+labels, separate EUR/AUD, owner lecturer functionality and private-calendar boundary.",
   );
 } finally {
   for (const client of clients) await client.removeAllChannels();

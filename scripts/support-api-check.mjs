@@ -1,10 +1,10 @@
-/** Real Auth/MFA/REST/scanner/gateway support journey in canonical QA only. */
+/** Real Auth/password-only authentication/REST/scanner/gateway support journey in canonical QA only. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 
 await withApiFixture(
-  async ({ service, actor, mfa, checked, sql, defer, url, suffix }) => {
+  async ({ service, actor, passwordOnly, checked, sql, defer, url, suffix }) => {
     const origin = new URL(
       process.env.PORTAL_APP_ORIGIN ??
         process.env.E2E_BASE_URL ??
@@ -88,9 +88,9 @@ await withApiFixture(
     );
     assert.ok(
       (await manager.client.rpc("support_ticket", { p_ticket_id: id })).error,
-      "AAL1 management denied",
+      "password-only AAL1 management denied",
     );
-    await mfa(manager.client);
+    await passwordOnly(manager.client);
     assert.equal((await get(manager.client)).can_manage, true);
     await checked(
       update(
@@ -246,7 +246,7 @@ await withApiFixture(
       "Former support upload ownership cannot bypass internal ticket access",
     );
     console.log(
-      "PASS actual support Auth/MFA/REST idempotency, immutable replies/lifecycle/reopen, two-change conflict, scanner/gateway attachment privacy and current revocation",
+      "PASS actual support Auth/password-only authentication/REST idempotency, immutable replies/lifecycle/reopen, two-change conflict, scanner/gateway attachment privacy and current revocation",
     );
   },
 );

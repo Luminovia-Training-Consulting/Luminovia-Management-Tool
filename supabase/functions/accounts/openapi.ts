@@ -1,5 +1,5 @@
 /**
- * Published OpenAPI contract for the account HTTP API. Schemas describe input/output; handlers and current database functions still enforce permissions/MFA.
+ * Published OpenAPI contract for the account HTTP API. Schemas describe input/output; handlers and current database functions still enforce permissions.
  */
 // Define a JSON response for the published HTTP contract.
 const jsonResponse = (schema: unknown = { type: "object" }) => ({
@@ -9,7 +9,9 @@ const jsonResponse = (schema: unknown = { type: "object" }) => ({
 const errors = {
   "400": { description: "Invalid request" },
   "401": { description: "Valid active account required" },
-  "403": { description: "Capability and verified MFA required" },
+  "403": {
+    description: "Current database capability or resource scope required",
+  },
   "503": { description: "Unavailable; no success is implied" },
 };
 // Describe a required JSON request body without implying runtime authorization.
@@ -46,7 +48,7 @@ export const accountOpenApi = {
     title: "Luminovia Account API",
     version: "1.0.0",
     description:
-      "Bearer-authenticated account API. Admin operations require current database capabilities and AAL2. Course/job/chat/wiki/files/reviews/finance use the same JWT through Supabase /rest/v1/rpc and the authenticated files function; see API_REFERENCE.md. Payments are tracking records and do not transfer money.",
+      "Bearer-authenticated account API. Admin operations require current database capabilities and active-account status. Course/job/chat/wiki/files/reviews/finance use the same JWT through Supabase /rest/v1/rpc and the authenticated files function; see API_REFERENCE.md. Payments are tracking records and do not transfer money.",
   },
   servers: [{ url: "/functions/v1/accounts" }],
   security: [{ bearerAuth: [], publicApiKey: [] }],
@@ -178,7 +180,7 @@ export const accountOpenApi = {
     "/v1/me": {
       get: {
         operationId: "accountMe",
-        summary: "Own profile, roles, permissions and MFA assurance",
+        summary: "Own profile, roles and permissions",
         responses: { "200": jsonResponse(), ...errors },
       },
       patch: {
@@ -202,7 +204,7 @@ export const accountOpenApi = {
     "/v1/users": {
       get: {
         operationId: "listAccounts",
-        summary: "MFA-authorised account directory",
+        summary: "Capability-authorised account directory",
         parameters: [
           {
             name: "q",
@@ -231,7 +233,7 @@ export const accountOpenApi = {
     "/v1/roles": {
       get: {
         operationId: "accountRoleCatalog",
-        summary: "Read available roles and capabilities with management MFA",
+        summary: "Read available roles and current database capabilities",
         responses: {
           "200": jsonResponse({ type: "array", items: { type: "object" } }),
           ...errors,
@@ -272,7 +274,7 @@ export const accountOpenApi = {
       put: {
         operationId: "assignClientOrganisation",
         summary:
-          "Grant an existing client scoped organisation access; admin/owner MFA",
+          "Grant an existing client scoped organisation access; admin/owner capability required",
         parameters: [
           ...userId,
           {

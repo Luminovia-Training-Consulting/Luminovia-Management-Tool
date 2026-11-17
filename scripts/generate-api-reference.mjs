@@ -54,7 +54,7 @@ Regenerate with \`PORTAL_DB_CONTAINER=<owned-test-container> node scripts/genera
 
 Paths below are relative to the configured Supabase API URL, not necessarily the website origin. Local development normally uses \`http://127.0.0.1:54321\`; a selfhost gateway can expose the API beneath \`/backend\`. Read \`VITE_SUPABASE_URL\` from the approved environment rather than hard-coding a deployment hostname.
 
-Use Supabase Auth for invitation-only login, recovery, sessions, password/email changes and TOTP. Public signup is disabled. Authenticated API requests carry the public \`apikey\` and \`Authorization: Bearer <user-access-token>\`. Service-role keys are server-only. Database roles, active status, current resource membership and required MFA remain authoritative on every operation; neither user metadata nor a submitted user ID grants access.
+Use Supabase Auth for invitation-only password login, recovery, sessions and password/email changes. MFA is disabled. Authenticated API requests carry the public \`apikey\` and \`Authorization: Bearer <user-access-token>\`. Service-role keys are server-only. Database roles, active status and current resource membership remain authoritative on every operation; neither user metadata nor a submitted user ID grants access.
 
 ## Account HTTP facade
 
@@ -63,7 +63,7 @@ Base: \`/functions/v1/accounts/v1\`. Machine-readable OpenAPI: \`/functions/v1/a
 | Method | Path relative to facade base | Purpose |
 | --- | --- | --- |
 | GET, PATCH | /me | Own identity, roles, capabilities and safe profile edits |
-| GET | /users?q=&limit=&offset= | MFA-authorised bounded account directory |
+| GET | /users?q=&limit=&offset= | Capability-authorised bounded account directory |
 | GET | /roles | Current role catalogue and assignability |
 | PUT | /users/{id}/roles | Audited subordinate-role assignment |
 | PATCH | /users/{id}/status | Reversible suspension/reactivation |
@@ -78,7 +78,7 @@ The facade permits allowlisted browser Origins; authenticated non-browser client
 
 ## Permanent deletion
 
-Permanent deletion requires current AAL2 and live resource authority. Preview and confirmation recheck actor-bound dependencies; accepted financial references and private-resource ACLs remain authoritative. The account Edge facade uses a database-issued execution permit for exact all-version native Storage cleanup and Auth hard deletion, drains active writer leases and returns completed only after verified absence. Pending receipts survive reload through the own permitted operations projection. Company jobs require consistent current organisation links; former lecturer claims do not grant staff job/file access. No trash or restore is provided. Read [the deletion contract](GUIDE.md#section-permanent-deletion).
+Permanent deletion requires current database capability and live resource authority. Preview and confirmation recheck actor-bound dependencies; accepted financial references and private-resource ACLs remain authoritative. The account Edge facade uses a database-issued execution permit for exact all-version native Storage cleanup and Auth hard deletion, drains active writer leases and returns completed only after verified absence. Pending receipts survive reload through the own permitted operations projection. Company jobs require consistent current organisation links; former lecturer claims do not grant staff job/file access. No trash or restore is provided. Read [the deletion contract](GUIDE.md#section-permanent-deletion).
 
 ## Integration-only website enquiries
 
@@ -86,7 +86,7 @@ Permanent deletion requires current AAL2 and live resource authority. Preview an
 
 The closed JSON payload contains a stable \`submission_id\` UUID, bounded company/contact/email/topic/message/preferences fields, recognised IANA time zone, \`de\`/\`en\` locale, the configured \`privacy_notice_version\` and literal \`consent: true\`. Actual streamed bodies are limited to 24,000 bytes. Only a confirmed durable database result returns \`202 {"received":true,"receipt":"<submission-id>"}\`; no internal enquiry or customer ID is exposed. Identical retries return the original receipt; changed retries return 409. Persistent sender limits reject new submissions over 10 per minute or 100 per rolling day.
 
-Management uses current MFA-protected \`enquiry_context\`, \`enquiry_inbox\`, \`enquiry_detail\` and versioned decision/conversion RPCs from the inventory below. Read [WEBSITE_ENQUIRIES](GUIDE.md#section-website-enquiries) and the [deployed handler](supabase/functions/website-enquiries/handler.ts) for exact fields, error envelopes, permissions and public-activation prerequisites. Source presence does not connect or publish the public Website.
+Management uses current capability-protected \`enquiry_context\`, \`enquiry_inbox\`, \`enquiry_detail\` and versioned decision/conversion RPCs from the inventory below. Read [WEBSITE_ENQUIRIES](GUIDE.md#section-website-enquiries) and the [deployed handler](supabase/functions/website-enquiries/handler.ts) for exact fields, error envelopes, permissions and public-activation prerequisites. Source presence does not connect or publish the public Website.
 
 ## Native RPC use
 

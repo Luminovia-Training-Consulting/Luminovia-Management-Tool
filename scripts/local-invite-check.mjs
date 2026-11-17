@@ -1,11 +1,12 @@
 /**
- * Checks local invitations through real Auth/MFA and a captured Mailpit message.
+ * Checks local password-authenticated invitations and a captured Mailpit message.
  * Delivery stays inside the local test system; real recipients are outside these fixtures.
  */
 import assert from "node:assert/strict";
-import { createHmac, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { mkdirSync, writeFileSync } from "node:fs";
+import { assertPasswordOnly } from "./testing/password-only.mjs";
 
 process.loadEnvFile(".env.test.local");
 const url = process.env.SUPABASE_URL;
@@ -25,25 +26,6 @@ async function checked(request, label) {
   const { data, error } = await request;
   assert.equal(error, null, `${label}: ${error?.message}`);
   return data;
-}
-/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
-function totp(secret) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const bits = [...secret.replace(/=+$/, "").toUpperCase()]
-    .map((char) => alphabet.indexOf(char).toString(2).padStart(5, "0"))
-    .join("");
-  const key = Buffer.from(
-    bits.match(/.{8}/g).map((byte) => Number.parseInt(byte, 2)),
-  );
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000)));
-  const digest = createHmac("sha1", key).update(counter).digest();
-  return (
-    (digest.readUInt32BE(digest[digest.length - 1] & 15) & 0x7fffffff) %
-    1_000_000
-  )
-    .toString()
-    .padStart(6, "0");
 }
 const users = await checked(
   service.auth.admin.listUsers({ perPage: 1000 }),
@@ -86,45 +68,15 @@ await checked(
     ),
   "Assign dedicated local admin",
 );
-const factors = await checked(
-  service.auth.admin.mfa.listFactors({ userId: actor.id }),
-  "List dedicated QA factors",
-);
-for (const factor of factors.factors)
-  await checked(
-    service.auth.admin.mfa.deleteFactor({ userId: actor.id, id: factor.id }),
-    "Remove old dedicated QA factor",
-  );
-await checked(
+const signedIn = await checked(
   admin.auth.signInWithPassword({
     email: actor.email,
     password: process.env.E2E_PASSWORD,
   }),
   "Sign in actual test admin",
 );
-const enrollment = await checked(
-  admin.auth.mfa.enroll({
-    factorType: "totp",
-    friendlyName: "Disposable Edge QA",
-  }),
-  "Enroll real TOTP",
-);
-await checked(
-  admin.auth.mfa.challengeAndVerify({
-    factorId: enrollment.id,
-    code: totp(enrollment.totp.secret),
-  }),
-  "Verify real TOTP",
-);
-const assurance = await checked(
-  admin.auth.mfa.getAuthenticatorAssuranceLevel(),
-  "Read verified AAL",
-);
-assert.equal(assurance.currentLevel, "aal2");
-const session = await checked(
-  admin.auth.getSession(),
-  "Read actual verified session",
-);
+await assertPasswordOnly(admin);
+const session = signedIn.session;
 const email = `invite-${randomUUID()}@example.invalid`;
 const body = {
   email,
@@ -239,5 +191,5 @@ const denied = await fetch(inviteUrl, {
 });
 assert.equal(denied.status, 403);
 console.log(
-  "PASS: actual local Edge runtime, actual admin AAL2 TOTP, CORS preflight, durable invitation+lecturer role+profile, idempotent retry and exactly one Mailpit email with custom token-hash callback, denied untrusted origin. No real email sent.",
+  "PASS: actual local Edge runtime, password-only admin session, CORS preflight, durable invitation+lecturer role+profile, idempotent retry and exactly one Mailpit email with custom token-hash callback, denied untrusted origin. No real email sent.",
 );

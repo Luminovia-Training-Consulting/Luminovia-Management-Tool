@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { withApiFixture } from "./testing/api.mjs";
 await withApiFixture(
-  async ({ actor, mfa, service, checked, defer, url, suffix }) => {
+  async ({ actor, passwordOnly, service, checked, defer, url, suffix }) => {
     const owner = await actor("file-discovery-owner", "lecturer"),
       peer = await actor("file-discovery-peer", "lecturer"),
       admin = await actor("file-discovery-admin", "admin"),
@@ -95,7 +95,7 @@ await withApiFixture(
       (await search(peer, { p_search: "", p_tag: "private-tag" })).items,
       [],
     );
-    await mfa(admin.client);
+    await passwordOnly(admin.client);
     assert.deepEqual(
       (await search(admin, { p_search: "", p_folder: "Private folder" })).items,
       [],

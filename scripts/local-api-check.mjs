@@ -292,7 +292,7 @@ assert.ok(
 const adminCreate = await admin.client.rpc("create_job", { p_payload: {} });
 assert.ok(
   adminCreate.error,
-  "Admin mutation with password-only AAL1 session is rejected",
+  "Admin mutation with password-only password-only AAL1 session is rejected",
 );
 const allRoles = await checked(
   users[0].client.from("user_roles").select("*"),
@@ -350,5 +350,5 @@ await checked(
   "Clear own forged test metadata",
 );
 console.log(
-  "PASS: real Supabase Auth/REST, 50 parallel claims/one winner, 5 atomic allocations, one notification, idempotent retry, immutable fees/terms, private calendar incl admin, anonymous/participant boundaries, forged-owner/user-metadata/role escalation, admin MFA gate.",
+  "PASS: real Supabase Auth/REST, 50 parallel claims/one winner, 5 atomic allocations, one notification, idempotent retry, immutable fees/terms, private calendar incl admin, anonymous/participant boundaries, forged-owner/user-metadata/role escalation, admin password-only authentication gate.",
 );

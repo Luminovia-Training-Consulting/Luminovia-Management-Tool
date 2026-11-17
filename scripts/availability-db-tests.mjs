@@ -12,7 +12,7 @@ await withTestDatabase(
     await sql(
       `insert into auth.users(id,email) values ${[teacher, peer, admin, participant].map((id) => `('${id}','${id}@example.invalid')`).join(",")};insert into public.user_roles(user_id,role) values('${teacher}','lecturer'),('${peer}','lecturer'),('${admin}','admin'),('${participant}','participant');update public.profiles set display_name='Fictional available teacher',phone='PRIVATE CONTACT' where id='${teacher}'`,
     );
-    /** Calls the business database API under the fixture's controlled identity/MFA claims. */
+    /** Calls the business database API under the fixture's controlled identity/permission claims. */
     const rpc = async (who, name, args = [], aal = "aal1") => {
       const value = await actor(
         who,
@@ -57,7 +57,7 @@ await withTestDatabase(
             sessions,
           },
         ],
-        "aal2",
+        "aal1",
       );
     /** Calls the actual claim RPC; only the database result confirms whole-block allocation. */
     const claim = async (job) =>
@@ -119,7 +119,7 @@ await withTestDatabase(
           await actor(
             admin,
             "select count(*) from public.lecturer_availability",
-            "aal2",
+            "aal1",
           ),
           "0",
         );
@@ -141,27 +141,27 @@ await withTestDatabase(
       },
     );
     await check(
-      "Explicit shared projection requires current MFA capability and never exposes notes, contacts or private events",
+      "Explicit shared projection requires current permission capability and never exposes notes, contacts or private events",
       async () => {
         await assert.rejects(
           rpc(admin, "shared_availability", ["2041-01-01", "2041-02-01"]),
-          /availability.read_shared and MFA required/,
+          /availability.read_shared.*required/i,
         );
         await assert.rejects(
           rpc(
             peer,
             "shared_availability",
             ["2041-01-01", "2041-02-01"],
-            "aal2",
+            "aal1",
           ),
-          /availability.read_shared and MFA required/,
+          /availability.read_shared.*required/i,
         );
         assert.deepEqual(
           await rpc(
             admin,
             "shared_availability",
             ["2041-01-01", "2041-02-01"],
-            "aal2",
+            "aal1",
           ),
           [],
         );
@@ -170,7 +170,7 @@ await withTestDatabase(
           admin,
           "shared_availability",
           ["2041-01-01", "2041-02-01"],
-          "aal2",
+          "aal1",
         );
         assert.equal(shared.length, 1);
         assert.equal(shared[0].user_id, teacher);
@@ -183,7 +183,7 @@ await withTestDatabase(
             admin,
             "shared_availability",
             ["2041-01-01", "2041-02-01"],
-            "aal2",
+            "aal1",
           ),
           [],
         );
@@ -222,7 +222,7 @@ await withTestDatabase(
             admin,
             "shared_availability",
             ["2041-01-01", "2041-07-01"],
-            "aal2",
+            "aal1",
           ),
           /Invalid bounded availability range/,
         );
@@ -231,7 +231,7 @@ await withTestDatabase(
             admin,
             "shared_availability",
             ["-infinity", "2041-02-01"],
-            "aal2",
+            "aal1",
           ),
           /Invalid bounded availability range/,
         );

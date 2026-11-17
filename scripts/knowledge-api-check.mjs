@@ -3,8 +3,9 @@
  * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
-import { createHmac, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { assertPasswordOnly } from "./testing/password-only.mjs";
 process.loadEnvFile(".env.test.local");
 const url = process.env.SUPABASE_URL;
 assert.ok(
@@ -64,25 +65,6 @@ async function fixture(name, role) {
   );
   return { client, id: auth.user.id };
 }
-/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
-function totp(secret) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const bits = [...secret.replace(/=+$/, "").toUpperCase()]
-    .map((char) => alphabet.indexOf(char).toString(2).padStart(5, "0"))
-    .join("");
-  const key = Buffer.from(
-    bits.match(/.{8}/g).map((byte) => Number.parseInt(byte, 2)),
-  );
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000)));
-  const digest = createHmac("sha1", key).update(counter).digest();
-  return (
-    (digest.readUInt32BE(digest[digest.length - 1] & 15) & 0x7fffffff) %
-    1_000_000
-  )
-    .toString()
-    .padStart(6, "0");
-}
 /** Creates a minimal allowed editor tree containing literal fixture text rather than executable HTML. */
 const doc = (text) => ({
   type: "doc",
@@ -110,7 +92,8 @@ try {
     b = await fixture("reader", "senior_lecturer"),
     manager = await fixture("manager", "admin"),
     participant = await fixture("participant", "participant");
-  // Capabilities reflect the actual current actor and MFA level, never an editable role hint.
+  await assertPasswordOnly(manager.client);
+  // Capabilities reflect current database authorization, never an editable role hint.
   assert.deepEqual(
     await checked(
       a.client.rpc("knowledge_access"),
@@ -128,9 +111,9 @@ try {
   assert.deepEqual(
     await checked(
       manager.client.rpc("knowledge_access"),
-      "Password-only manager has no publishing or moderation capabilities",
+      "Password-only manager retains database-authorized capabilities",
     ),
-    { can_author: true, can_publish_wiki: false, can_moderate_forum: false },
+    { can_author: true, can_publish_wiki: true, can_moderate_forum: true },
   );
   const wiki = (
     await checked(
@@ -168,63 +151,7 @@ try {
     ).length,
     0,
   );
-  assert.ok(
-    (
-      await manager.client.rpc("save_wiki_page", {
-        ...base,
-        p_id: page,
-        p_status: "published",
-        p_expected_version: 1,
-      })
-    ).error,
-    "Password-only manager cannot publish",
-  );
-  assert.equal(
-    (
-      await manager.client.rpc("save_knowledge_category", {
-        p_id: null,
-        p_kind: "wiki",
-        p_slug: `qa-denied-${suffix}`,
-        p_label_de: "Fiktiv",
-        p_label_en: "Fictional",
-        p_archived: false,
-      })
-    ).error?.code,
-    "42501",
-    "Password-only manager cannot create a category",
-  );
-  const enrollment = await checked(
-    manager.client.auth.mfa.enroll({
-      factorType: "totp",
-      friendlyName: "Disposable knowledge QA",
-    }),
-    "Enroll actual manager TOTP",
-  );
-  await checked(
-    manager.client.auth.mfa.challengeAndVerify({
-      factorId: enrollment.id,
-      code: totp(enrollment.totp.secret),
-    }),
-    "Verify actual manager TOTP",
-  );
-  assert.equal(
-    (
-      await checked(
-        manager.client.auth.mfa.getAuthenticatorAssuranceLevel(),
-        "Actual manager assurance",
-      )
-    ).currentLevel,
-    "aal2",
-  );
-  assert.deepEqual(
-    await checked(
-      manager.client.rpc("knowledge_access"),
-      "Current MFA enables only authorised publishing and moderation",
-    ),
-    { can_author: true, can_publish_wiki: true, can_moderate_forum: true },
-  );
-  // Exercise the same category mutation used by management, including current MFA
-  // and staff visibility, rather than seeding this state through service-role SQL.
+  // Category creation and moderation use current database roles without password-only authentication.
   const categoryPayload = {
     p_id: null,
     p_kind: "wiki",
@@ -241,7 +168,7 @@ try {
   );
   const category = await checked(
     manager.client.rpc("save_knowledge_category", categoryPayload),
-    "MFA manager creates bilingual wiki category",
+    "Password-only manager creates bilingual wiki category",
   );
   categories.push(category);
   resources.push(category);
@@ -259,7 +186,7 @@ try {
       p_id: category,
       p_archived: true,
     }),
-    "MFA manager archives category",
+    "Password-only manager archives category",
   );
   assert.ok(
     !(
@@ -283,7 +210,7 @@ try {
       ...categoryPayload,
       p_id: category,
     }),
-    "MFA manager restores category",
+    "Password-only manager restores category",
   );
   base.p_category_id = category;
 
@@ -294,7 +221,7 @@ try {
       p_status: "published",
       p_expected_version: 1,
     }),
-    "Publish with actual AAL2",
+    "Publish with password-only role authorization",
   );
   assert.equal(published.published_version, 2);
   const visible = await checked(
@@ -726,7 +653,7 @@ try {
       p_locked: true,
       p_pinned: true,
     }),
-    "Actual MFA moderator locks/pins",
+    "Password-only moderator locks/pins",
   );
   assert.ok(
     (
@@ -766,7 +693,7 @@ try {
       p_report_id: report,
       p_resolved: true,
     }),
-    "Resolve report with actual MFA",
+    "Password-only moderator resolves report",
   );
   // Archiving revokes both current reads and old notification links; explicit recovery restores access.
   await checked(
@@ -869,7 +796,7 @@ try {
     { can_author: false, can_publish_wiki: false, can_moderate_forum: false },
   );
   console.log(
-    "PASS: actual Auth/REST plus real manager TOTP: private drafts, bilingual category archive/recovery, combined permission-aware wiki filters, published code preservation, independent unpublished corrections/history RLS, version conflicts and unsafe-content rejection, durable/idempotent forum replies and notices, subscription/unsubscription and current links, own versioned edits/restricted revisions/current-body search, accepted answers, MFA pin/lock/report moderation and archive recovery, tombstones, participant and suspended-token denial.",
+    "PASS: actual password-only Auth/REST: private drafts, bilingual category archive/recovery, combined permission-aware wiki filters, published code preservation, independent unpublished corrections/history RLS, version conflicts and unsafe-content rejection, durable/idempotent forum replies and notices, subscription/unsubscription and current links, own versioned edits/restricted revisions/current-body search, accepted answers, role-scoped pin/lock/report moderation and archive recovery, tombstones, participant and suspended-token denial.",
   );
 } finally {
   for (const client of clients) await client.removeAllChannels();

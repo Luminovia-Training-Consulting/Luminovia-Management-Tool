@@ -26,7 +26,7 @@ const en = {
   restore: "Restore comment",
   moderation: "Moderate comment",
   moderationHelp:
-    "A reason and verified management MFA are required. Moderation remains in the audit history.",
+    "A moderation permission and a reason are required. The moderation remains in the audit history.",
   reason: "Moderation reason",
   moderated: "Moderation saved.",
   edited: "Edited",
@@ -64,7 +64,7 @@ const de: typeof en = {
   restore: "Kommentar wiederherstellen",
   moderation: "Kommentar moderieren",
   moderationHelp:
-    "Ein Grund und eine bestätigte Verwaltungs-MFA sind erforderlich. Die Moderation bleibt im Prüfprotokoll erhalten.",
+    "Eine Moderationsberechtigung und ein Grund sind erforderlich. Die Moderation bleibt im Prüfprotokoll erhalten.",
   reason: "Moderationsgrund",
   moderated: "Moderation gespeichert.",
   edited: "Bearbeitet",

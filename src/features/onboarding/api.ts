@@ -6,7 +6,6 @@ import { requireOnline } from "../../lib/online";
 export const welcomeStepSchema = z.enum([
   "welcome",
   "profile",
-  "security",
   "jobs",
   "availability",
   "client",

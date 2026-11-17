@@ -1,5 +1,5 @@
 /** Disposable 14→17 review rehearsal. Auth is a four-row id/email stub; this is
- * not a live backup, native password/MFA or Storage-binary preservation claim. */
+ * not a live backup, native password/permission or Storage-binary preservation claim. */
 import assert from "node:assert/strict";
 import { quoteSql, withTestDatabase } from "./testing/database.mjs";
 import {
@@ -157,7 +157,7 @@ await withTestDatabase(
     );
     assert.equal(validateM4History(after, context), true);
     console.log(
-      "PASS Completed 17 history validates without offering another application; native Auth passwords/MFA and Storage bytes are outside this stub rehearsal",
+      "PASS Completed 17 history validates without offering another application; native Auth passwords/permission and Storage bytes are outside this stub rehearsal",
     );
     console.log(
       "\n4 M4 preservation PostgreSQL checks passed (temporary database only).",

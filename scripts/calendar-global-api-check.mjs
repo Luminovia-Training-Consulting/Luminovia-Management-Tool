@@ -1,11 +1,11 @@
-/** Native Auth/MFA/REST contract. Discovered only by the canonical disposable gate. */
+/** Native Auth/password-only authentication/REST contract. Discovered only by the canonical disposable gate. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 await withApiFixture(
-  async ({ actor, mfa, service, checked, sql, defer, url, suffix }) => {
+  async ({ actor, passwordOnly, service, checked, sql, defer, url, suffix }) => {
     const admin = await actor("calendar-global-admin", "admin"),
       manager = await actor("calendar-global-manager", "management"),
       teacher = await actor("calendar-global-teacher", "lecturer"),
@@ -69,8 +69,8 @@ await withApiFixture(
       ).error?.code,
       "42501",
     );
-    await mfa(admin.client);
-    await mfa(manager.client);
+    await passwordOnly(admin.client);
+    await passwordOnly(manager.client);
     const create = args(null, "save", 0, body);
     let event = await mutate(create);
     ids.add(event.id);
@@ -222,7 +222,7 @@ await withApiFixture(
           .from("personal_events")
           .select("id")
           .eq("user_id", teacher.id),
-        "MFA admin cannot read foreign personal event",
+        "password-only authentication admin cannot read foreign personal event",
       ),
       [],
     );
@@ -296,7 +296,7 @@ await withApiFixture(
       ).error,
     );
     console.log(
-      "PASS actual Auth/MFA/REST global calendar: private drafts/current publication, idempotent operations, CAS,105same-time paged rows, HTTPS/range validation, explicit edit withdrawal, archive/recover, old-token role/suspension/metadata/anonymous guards and no foreign private calendar bypass.",
+      "PASS actual Auth/password-only authentication/REST global calendar: private drafts/current publication, idempotent operations, CAS,105same-time paged rows, HTTPS/range validation, explicit edit withdrawal, archive/recover, old-token role/suspension/metadata/anonymous guards and no foreign private calendar bypass.",
     );
   },
 );

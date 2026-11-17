@@ -29,7 +29,7 @@ Agent assistance does not transfer that responsibility.
 | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `src/main.tsx`                                                                  | React entry point and shared providers.                                                                                  |
 | `src/app/app.tsx`, `src/app/shell.tsx`                                          | Router, protected identity boundary, navigation, search, language, theme and sign-out.                                   |
-| `src/features/auth/`                                                            | Supabase session, invitation/recovery, password and MFA.                                                                 |
+| `src/features/auth/`                                                            | Supabase session, invitation/recovery and password; MFA is not part of this product.                                    |
 | `src/features/jobs/`, `src/features/admin/`                                     | Offers, claim UI, lifecycle/Kanban, publication and invitations.                                                         |
 | `src/features/operations/`, `src/features/taxonomy/`                            | Organisations, templates, runs/sessions and the topic catalogue.                                                         |
 | `src/features/profile/`, `src/features/people/`, `src/features/accounts/`       | Profiles/evidence, people directory, roles and account administration.                                                   |
@@ -72,7 +72,7 @@ source versions and preservation contract.
   React Hook Form/Zod and Supabase. Do not add another application server without
   a demonstrated requirement. The existing internal scanner and local controllers
   are not an alternative business API.
-- PostgreSQL is authoritative. Current database roles, resource membership, MFA,
+- PostgreSQL is authoritative. Current database roles and resource membership,
   precise grants and RLS decide access. Editable `user_metadata`, browser-submitted
   roles/user IDs and hidden navigation items never grant authority.
 - Public RPC wrappers remain `security invoker`. Necessary privileged implementations

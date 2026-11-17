@@ -37,8 +37,8 @@ const entries = {
     "Check times, time zone and HTTPS link. Nonexistent or ambiguous local times need an unambiguous input.",
   ],
   denied: [
-    "Die aktuelle Verwaltungsberechtigung mit MFA fehlt. Private Entwürfe werden ausgeblendet.",
-    "Current management permission with MFA is missing. Private drafts are hidden.",
+    "Die aktuelle Verwaltungsberechtigung fehlt. Private Entwürfe werden ausgeblendet.",
+    "Current management permission is missing. Private drafts are hidden.",
   ],
   saved: ["Änderung vom Server bestätigt.", "Change confirmed by the server."],
   cancel: ["Abbrechen", "Cancel"],

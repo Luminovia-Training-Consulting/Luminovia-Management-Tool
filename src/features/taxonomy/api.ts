@@ -1,6 +1,6 @@
 /**
  * Shared topic/tool/language catalogue with validated aliases and versions. Save/archive
- * preserves IDs; the server enforces hierarchy, MFA and current management capabilities.
+ * preserves IDs; the server enforces hierarchy and current management capabilities.
  */
 import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
@@ -90,7 +90,7 @@ export const taxonomyQuery = (
     staleTime: 15000,
   });
 
-/** Submit a new or versioned existing entry to the MFA-protected RPC. */
+/** Submit a new or versioned existing entry to the permission-checked RPC. */
 export async function saveTaxonomyTopic(
   topic: TaxonomyTopic | null,
   values: TaxonomyFormValues,

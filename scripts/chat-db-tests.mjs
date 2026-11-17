@@ -152,7 +152,7 @@ try {
         await actor(
           admin,
           `select count(*) from public.chat_rooms where id='${dm}'`,
-          "aal2",
+          "aal1",
         ),
         "0",
       );
@@ -390,7 +390,7 @@ try {
         await actor(
           admin,
           `select count(*) from public.chat_message_revisions where message_id='${first}'`,
-          "aal2",
+          "aal1",
         ),
         "0",
       );
@@ -429,7 +429,7 @@ try {
     "Deletes are text-free tombstones and administrator moderation cannot bypass DM privacy",
     async () => {
       await assert.rejects(
-        value(admin, "delete_message", [first], "aal2"),
+        value(admin, "delete_message", [first], "aal1"),
         /denied/,
       );
       await value(a, "delete_message", [first]);
@@ -454,7 +454,7 @@ try {
       ]);
       assert.equal(ids[0], ids[1]);
       assert.equal(
-        await value(admin, "ensure_general_chat", [], "aal2"),
+        await value(admin, "ensure_general_chat", [], "aal1"),
         ids[0],
       );
       await assert.rejects(
@@ -484,7 +484,7 @@ try {
         /Membership management denied/,
       );
       await assert.rejects(
-        value(admin, "manage_chat_member", [group, c, false], "aal2"),
+        value(admin, "manage_chat_member", [group, c, false], "aal1"),
         /denied/,
       );
       await assert.rejects(
@@ -584,7 +584,7 @@ try {
     },
   );
   await check(
-    "Participant course channel needs manager MFA+real course and separates commercial channels",
+    "Participant course channel needs manager permission+real course and separates commercial channels",
     async () => {
       const start = new Date(Date.now() + 90 * 86400000).toISOString(),
         end = new Date(Date.now() + 90 * 86400000 + 3600000).toISOString();
@@ -607,7 +607,7 @@ try {
       const job = await actor(
         admin,
         `select public.create_job(${quote(JSON.stringify(payload))}::jsonb)`,
-        "aal2",
+        "aal1",
       );
       await assert.rejects(
         value(admin, "create_chat_group", [
@@ -616,13 +616,13 @@ try {
           "participant_course",
           job,
         ]),
-        /MFA required/,
+        /required/i,
       );
       const room = await value(
         admin,
         "create_chat_group",
         ["Participants", `{${participant},${a}}`, "participant_course", job],
-        "aal2",
+        "aal1",
       );
       const pmsg = await msg(participant, room, "Participant question");
       assert.ok(pmsg);

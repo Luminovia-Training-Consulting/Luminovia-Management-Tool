@@ -49,16 +49,16 @@ These earlier managed-backend steps are reference only; do not apply them as set
 
 1. Select an approved separate managed Supabase staging project and inspect existing tables, auth/storage settings, logs and advisors before changes.
 2. Review migration diff and permissions; back up existing staging data if applicable. Apply versioned migrations using the reviewed CLI/connector workflow. Record migration versions and rollback plan.
-3. Disable public/anonymous signup. Set exact staging site and implemented invitation/recovery callback URLs. Configure MFA and session settings; verify active-user/capability/AAL2 enforcement in actual Data API calls.
+3. Disable public/anonymous signup. Set exact staging site and implemented invitation/recovery callback URLs. Disable all MFA methods and verify password-only sessions plus active-user/capability enforcement in actual Data API calls.
 4. Configure approved transactional SMTP with server-only credentials and approved sender/domain. Review deliverability/rate limits, DE/EN templates and minimal notification contents. Send only authorised test messages.
-5. Seed fictional staging fixtures only. Bootstrap the first administrator through a controlled server-side process, verify MFA, then audit granted capabilities. No browser role self-assignment.
+5. Seed fictional staging fixtures only. Bootstrap the first administrator through a controlled server-side process, then audit granted capabilities. No browser role self-assignment.
 6. Build frontend with staging public values. Run source, DB/RLS/concurrency, actual browser and accessibility tests. Record stage-specific differences, not merely localhost results.
 7. Review all remaining product/security/privacy acceptance, document actual storage limits/scanning, monitoring, backups and recovery before presenting a production candidate.
 
 <a id="section-deployment-runbook-invitation-function-controls-and-recovery"></a>
 ## Invitation function controls and recovery
 
-The `invite-lecturer` Edge Function is disabled unless its server environment explicitly enables invitations with `PORTAL_INVITES_ENABLED=true`, sets `PORTAL_APP_ORIGIN`, and includes that origin in `PORTAL_ALLOWED_ORIGINS`. Configure exact approved origins; do not use a wildcard. Supabase server-only URL/anon/service credentials are read in the function runtime, not bundled in the frontend. The browser requires a current Auth session, AAL2 and `users.manage`; requested roles are not accepted from callers.
+The `invite-lecturer` Edge Function is disabled unless its server environment explicitly enables invitations with `PORTAL_INVITES_ENABLED=true`, sets `PORTAL_APP_ORIGIN`, and includes that origin in `PORTAL_ALLOWED_ORIGINS`. Configure exact approved origins; do not use a wildcard. Supabase server-only URL/anon/service credentials are read in the function runtime, not bundled in the frontend. The browser requires a current Auth session and `users.manage`; requested roles are not accepted from callers.
 
 A database reservation precedes email send. Idempotent retries and a unique normalised email prevent duplicate sends, with five new invitations per inviter per fifteen minutes. A result of `in_progress` or `failed` is not proof that no email was sent. If delivery or DB completion is uncertain, stop automatic resend: inspect the scoped invitation/audit row, local mail capture or approved provider delivery record, and actual Auth user/role state. An authorised operator must reconcile the specific request before any recovery send or completion. Do not invent success or clear reservations blindly. Full resend/expiry/deactivation administration remains follow-up scope.
 
@@ -79,7 +79,7 @@ All of the following require evidence before requesting final production approva
 - A specific reviewed commit/build artifact and visible staging demonstration, with implemented/remaining scope stated honestly.
 - Passing relevant tests, migration/RLS and fifty-way concurrency results, dependency/advisory review and resolved material findings.
 - Actual DE/EN, accessibility, supported mobile/browser/PWA and offline-sensitive-cache checks.
-- Approved production project/hosting/DNS/auth/SMTP settings, initial administrator/MFA and privacy/legal/retention review.
+- Approved production project/hosting/DNS/auth/SMTP settings, initial administrator and privacy/legal/retention review. Configure password-only Auth with all MFA methods disabled.
 - A consistent backup of PostgreSQL **and actual Storage file objects**, successful isolated restore drill and tested rollback.
 
 Request approval for the concrete release and its migration/hosting changes. The initial development request does not authorise production publishing, real invitations, purchases or marketing-site changes.
@@ -117,7 +117,7 @@ Customers are configurable organisation records; no named customer is a required
 
 `organisations` contains business identity, industry, city, country/time zone, tags and a reversible archive timestamp. Private notes are in separate `organisation_private_details`; contact names, business email/phone and private notes are in `organisation_contacts`.
 
-- All writes require the database capability `organisations.manage`, a currently active actor and AAL2. RLS and column/table grants prevent direct caller writes.
+- All writes require the database capability `organisations.manage` and a currently active actor. RLS and column/table grants prevent direct caller writes.
 - Organisation identities can be visible through an authorised course. Contact and note tables have their own capability-restricted SELECT policies, including when a lecturer knows the organisation ID from a public course.
 - `save_organisation(p_id,p_payload)` and `save_organisation_contact(p_id,p_organisation_id,p_payload)` create or update records atomically, with bounded text/arrays, email validation, valid time zones and audit metadata. A null ID creates a new row.
 - Archiving is reversible and does not delete accepted assignments or historical course links. Contact mailto/tel actions open the user's own client; development does not send real emails.
@@ -127,7 +127,7 @@ Customers are configurable organisation records; no named customer is a required
 
 Reusable `course_templates` hold title, description, syllabus, prerequisites, archive state and dynamic `course_template_topics`. Actual `course_runs` hold the template/customer links, IANA time zone, delivery mode/venue, publication/archive state and `course_sessions` instants.
 
-- Creation/editing requires `courses.manage` plus active actor/AAL2. Admins use `save_course_template` and `save_course_run`, passing validated explicit UTC/offset instants. Run session replacement is one transaction: malformed/overlapping input rolls back the whole schedule change.
+- Creation/editing requires `courses.manage` plus an active actor. Admins use `save_course_template` and `save_course_run`, passing validated explicit UTC/offset instants. Run session replacement is one transaction: malformed/overlapping input rolls back the whole schedule change.
 - A run's schedule is protected as soon as any job references it, including a draft job. Its linked session records are not silently deleted or retimed. Templates used by published/filled jobs are also protected. The UI reports `course_locked` with a safe-copy instruction.
 - `set_course_visibility` changes publication/archive state. A run with published/filled jobs cannot be archived through this workflow. Assigned lecturers retain legitimate course access through their confirmed assignment even if general publication is withdrawn.
 - Lecturers browse published non-archived runs or their own assigned runs. Participants receive course data only through explicit membership of that run's participant course channel. Removing that membership revokes course reads immediately. This does not grant participants access to the commercial job/claim tables.
@@ -195,7 +195,7 @@ On the server, `/opt/luminovia-portal/source` holds the initial source snapshot 
 
 Caddy mounts the stable `/opt/luminovia-portal/www` directory read-only at `/srv`. `/srv/current` is a symlink to a release below `www/releases`; it supplies the SPA shell and ordinary public files. Hashed assets are served from the shared `www/assets` directory and Workbox bundles from `www`, so a client with an older loaded shell can still fetch its immutable assets after the current release changes. Do not bind-mount a changing symlink target as the document root. `www/maintenance.enabled` is the explicit reversible API maintenance flag: while present, the public `/backend` route returns 503 with `Retry-After: 60`; it is absent in the accepted running state. Mail templates have a separate read-only mount. Private configuration, source, database files and backups never belong in `www`.
 
-The local ignored `.local/hostinger` directory contains restricted server/build configuration, bootstrap account credentials and deployment/backup evidence. Never copy it into Git or a document root. `ACCOUNTS.txt` is the private handoff for the three fictional development accounts. The primary administrator has no pre-enrolled MFA factor so its owner can enroll through the application.
+The local ignored `.local/hostinger` directory contains restricted server/build configuration, bootstrap account credentials and deployment/backup evidence. Never copy it into Git or a document root. `ACCOUNTS.txt` is the private handoff for the three fictional development accounts. MFA is not supported; accounts use passwords and server-side active-account, role, resource-scope and RLS checks.
 
 The safe generator in `deploy/hostinger/selfhost/generate-env.mjs` creates new configuration once and refuses overwrite. **Do not rerun it to change domains**: preserve the existing keys/passwords and update only endpoint fields. The self-host README documents each server variable. The frontend receives only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; server/database/JWT keys never enter its build.
 
@@ -210,7 +210,7 @@ The actual running engine reports PostgreSQL 17.12. The earlier 17.6 image remai
 <a id="section-hostinger-development-development-auth-and-storage"></a>
 ## Development Auth and storage
 
-Public and anonymous signup, phone signup and phone MFA are disabled. Admin changes still require database capabilities and TOTP/AAL2. Auth redirects, invitation/recovery templates and Edge allowed origins use the exact CMS origin and `/backend` API prefix.
+Public and anonymous signup and phone signup are disabled. TOTP, phone MFA and WebAuthn enrollment and verification are disabled. Admin changes require current database capabilities and resource scopes, with no MFA/AAL2 gate. Auth redirects, invitation/recovery templates and Edge allowed origins use the exact CMS origin and `/backend` API prefix.
 
 SMTP points to private **Mailpit**, not a real mail recipient/provider. Invitations and recovery messages are captured on the VM; nothing is sent to real people. This is deliberate development configuration and must be replaced with separately approved transactional mail settings before real onboarding.
 
@@ -488,7 +488,7 @@ acceptance of new source.
 
 | Boundary                             | Maintained source and guide                                                                                                             | Required evidence                                                                                                                              |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Authentication and account authority | `supabase/functions/accounts/`, migrations; [delegated roles](GUIDE.md#section-delegated-roles-pricing)                                               | Separate active/suspended accounts, subordinate-role restrictions, current MFA, invitation idempotency and rejected escalation                 |
+| Authentication and account authority | `supabase/functions/accounts/`, migrations; [delegated roles](GUIDE.md#section-delegated-roles-pricing)                                               | Separate active/suspended accounts, subordinate-role restrictions, password-only sessions, invitation idempotency and rejected escalation                 |
 | Database API                         | Public RPC wrappers, private implementations, RLS and explicit grants; [architecture](DEVELOPMENT.md#section-architecture), [API](API_REFERENCE.md)         | Fresh and retained-data replay, effective privileges, invoker boundary, direct table/column denial and actual HTTP requests                    |
 | Claims and accepted agreements       | [job lifecycle](GUIDE.md#section-job-lifecycle), commercial security, [replacement marketplace](GUIDE.md#section-replacement-marketplace) | Real competing claims, complete-session atomicity, conflicts, retry identity, role-bound consent and immutable financial/session history       |
 | Private resources                    | chat security, [files](GUIDE.md#section-files), course document privacy                             | Allowed and foreign actors, current membership, revocation with an existing session, exact-version bytes and direct Storage denial             |
@@ -509,7 +509,7 @@ accept a future production installation.
 <a id="section-security-privacy-checklist-verify-every-changed-permission-boundary"></a>
 ## Verify every changed permission boundary
 
-- [ ] Use trusted current database roles, activity, resource membership and MFA.
+- [ ] Use trusted current database roles, activity and resource membership; this product has no MFA.
       Editable Auth metadata, a hidden button or a caller-supplied role never
       authorises a request.
 - [ ] Check effective table, column and function grants as well as RLS. Public
@@ -532,7 +532,7 @@ accept a future production installation.
 ## Verify configuration and artifacts
 
 - [ ] Public builds contain only the public Supabase URL/key configuration.
-      Service-role keys, passwords, JWTs, MFA QR codes and private traces stay out
+      Service-role keys, passwords, JWTs and private traces stay out
       of browser code, Git, screenshots and published artifacts.
 - [ ] Test with fictional records and disposable owned resources. Preserve normal
       local/hosted data and foreign processes; raw `.local` data is private.

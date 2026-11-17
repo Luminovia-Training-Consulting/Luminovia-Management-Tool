@@ -7,7 +7,7 @@ import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 
-await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
+await withApiFixture(async ({ service, actor, passwordOnly, sql, defer, checked }) => {
   const admin = await actor("course-admin", "admin"),
     manager = await actor("course-manager", "management"),
     teacher = await actor("course-teacher", "lecturer"),
@@ -73,8 +73,8 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
       })
     ).error,
   );
-  await mfa(admin.client);
-  await mfa(manager.client);
+  await passwordOnly(admin.client);
+  await passwordOnly(manager.client);
   const org = await checked(
     admin.client.rpc("save_organisation", {
       p_id: null,
@@ -390,6 +390,6 @@ await withApiFixture(async ({ service, actor, mfa, sql, defer, checked }) => {
   );
   assert.deepEqual(await checked(client.client.rpc("client_requests")), []);
   console.log(
-    "PASS: actual Auth/TOTP/REST course building-block catalogue, exact PDF provenance, stale-source denial, run/session identity, gross/net isolation, idempotency/atomic competing offers, real whole-block claim, source freeze, scoped learner/client revocation and suspension.",
+    "PASS: actual Auth/password-only authentication/REST course building-block catalogue, exact PDF provenance, stale-source denial, run/session identity, gross/net isolation, idempotency/atomic competing offers, real whole-block claim, source freeze, scoped learner/client revocation and suspension.",
   );
 });

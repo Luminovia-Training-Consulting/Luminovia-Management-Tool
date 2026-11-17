@@ -39,9 +39,9 @@ await withTestDatabase("workbench_test", async ({ sql, actor }) => {
       first = await create();
       assert.equal((await rpc(owner, "work_tasks")).items.length, 1);
       assert.deepEqual((await rpc(peer, "work_tasks")).items, []);
-      assert.deepEqual((await rpc(admin, "work_tasks", [], "aal2")).items, []);
+      assert.deepEqual((await rpc(admin, "work_tasks", [], "aal1")).items, []);
       await assert.rejects(
-        actor(admin, "select * from private.work_tasks", "aal2"),
+        actor(admin, "select * from private.work_tasks", "aal1"),
         /permission denied/,
       );
       await assert.rejects(
@@ -126,7 +126,7 @@ await withTestDatabase("workbench_test", async ({ sql, actor }) => {
     },
   );
   await check(
-    "Operations delegation needs current management MFA; assignee can change status only",
+    "Operations delegation needs current management permission; assignee can change status only",
     async () => {
       await assert.rejects(
         create(owner, payload({ scope: "operations", assignee_id: peer })),
@@ -145,7 +145,7 @@ await withTestDatabase("workbench_test", async ({ sql, actor }) => {
           0,
           q(randomUUID()),
         ],
-        "aal2",
+        "aal1",
       );
       assert.equal((await rpc(peer, "work_tasks")).items[0].id, operation.id);
       await assert.rejects(
@@ -209,7 +209,7 @@ await withTestDatabase("workbench_test", async ({ sql, actor }) => {
             0,
             q(randomUUID()),
           ],
-          "aal2",
+          "aal1",
         ),
         /42501/,
       );
@@ -383,7 +383,7 @@ await withTestDatabase("workbench_test", async ({ sql, actor }) => {
       );
       assert.equal(await rpc(peer, "work_task_detail", [q(first.id)]), null);
       assert.equal(
-        await rpc(admin, "work_task_detail", [q(first.id)], "aal2"),
+        await rpc(admin, "work_task_detail", [q(first.id)], "aal1"),
         null,
       );
       assert.equal(

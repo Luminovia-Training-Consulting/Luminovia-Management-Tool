@@ -448,7 +448,7 @@ try {
     PORTAL_DB_CONTAINER: `supabase_db_${project}`,
   });
   await step(
-    "Real stop/start persistence including Auth/MFA/Storage",
+    "Real stop/start persistence including password Auth, profiles and Storage",
     process.execPath,
     ["scripts/runtime-persistence-check.mjs"],
   );
@@ -601,9 +601,13 @@ try {
       recursive: true,
     });
   if (phase.browser && existsSync(join(scratch, ".local/screenshots")))
-    cpSync(join(scratch, ".local/screenshots"), join(artifacts, "screenshots"), {
-      recursive: true,
-    });
+    cpSync(
+      join(scratch, ".local/screenshots"),
+      join(artifacts, "screenshots"),
+      {
+        recursive: true,
+      },
+    );
   if (existsSync(join(scratch, ".local/runtime.log")))
     cpSync(join(scratch, ".local/runtime.log"), join(artifacts, "runtime.log"));
   rmSync(scratch, { recursive: true, force: true });

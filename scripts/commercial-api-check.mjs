@@ -3,8 +3,9 @@
  * Separate fictional identities verify actual API results and denied access; responses are not browser mocks.
  */
 import assert from "node:assert/strict";
-import { createHash, createHmac, randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { assertPasswordOnly } from "./testing/password-only.mjs";
 process.loadEnvFile(".env.test.local");
 const url = process.env.SUPABASE_URL;
 assert.ok(
@@ -65,25 +66,6 @@ async function fixture(name, role) {
     "Actual Auth sign-in",
   );
   return { client, id: auth.user.id };
-}
-/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
-function totp(secret) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const bits = [...secret.replace(/=+$/, "").toUpperCase()]
-    .map((char) => alphabet.indexOf(char).toString(2).padStart(5, "0"))
-    .join("");
-  const key = Buffer.from(
-    bits.match(/.{8}/g).map((byte) => Number.parseInt(byte, 2)),
-  );
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000)));
-  const digest = createHmac("sha1", key).update(counter).digest();
-  return (
-    (digest.readUInt32BE(digest[digest.length - 1] & 15) & 0x7fffffff) %
-    1_000_000
-  )
-    .toString()
-    .padStart(6, "0");
 }
 /** Creates synthetic PDF bytes for the real file-validation path without personal source documents. */
 function pdf(label) {
@@ -197,11 +179,12 @@ try {
   const a = await fixture("lecturer", "lecturer"),
     b = await fixture("other", "senior_lecturer"),
     admin = await fixture("manager", "admin");
+  await assertPasswordOnly(admin.client);
   assert.ok(
     (await admin.client.rpc("contract_records", { p_all: true })).error,
   );
-  // Password-only sessions see themselves; current management MFA unlocks a names-only picker.
-  for (const who of [a, b, admin])
+  // Lecturers see themselves; management can use the bounded names-only picker with password-only Auth.
+  for (const who of [a, b])
     assert.deepEqual(
       (
         await checked(
@@ -211,6 +194,12 @@ try {
       ).map((person) => person.id),
       [who.id],
     );
+  assert.ok(
+    (await checked(admin.client.rpc("commercial_people"))).some(
+      (person) => person.id === a.id,
+    ),
+    "Password-only admin can use the bounded names-only picker",
+  );
   // Use a canonical active taxonomy entry, then select expertise through the lecturer's actual REST grant.
   const topic = (
     await checked(
@@ -229,33 +218,14 @@ try {
     p_valid_until: new Date(Date.now() + 365 * 86400000).toISOString(),
   };
   assert.equal(
-    (await admin.client.rpc("verify_lecturer_topic", verification)).error?.code,
-    "42501",
-    "Password-only manager cannot attest eligibility",
-  );
-  assert.equal(
     (await b.client.rpc("verify_lecturer_topic", verification)).error?.code,
     "42501",
     "Senior lecturer cannot attest another lecturer",
   );
 
-  const factor = await checked(
-    admin.client.auth.mfa.enroll({
-      factorType: "totp",
-      friendlyName: "Commercial QA",
-    }),
-    "Enroll real management TOTP",
-  );
-  await checked(
-    admin.client.auth.mfa.challengeAndVerify({
-      factorId: factor.id,
-      code: totp(factor.totp.secret),
-    }),
-    "Verify real management TOTP",
-  );
   const people = await checked(
     admin.client.rpc("commercial_people"),
-    "Actual MFA commercial actor directory",
+    "Actual password-only authentication commercial actor directory",
   );
   assert.ok(
     [a.id, b.id, admin.id].every((id) =>
@@ -274,7 +244,7 @@ try {
     (await download(admin, contractDoc.id, contractDoc.current_version_id))
       .status,
     403,
-    "MFA manager cannot download another lecturer's contract",
+    "password-only authentication manager cannot download another lecturer's contract",
   );
   const ownerBytes = await download(
     a,
@@ -411,7 +381,7 @@ try {
     }
     await checked(
       admin.client.rpc("verify_lecturer_topic", verification),
-      "Attest qualification with actual current MFA",
+      "Attest qualification with actual current password-only authentication",
     );
     const ownExpertise = await checked(
       a.client
@@ -443,7 +413,7 @@ try {
           p_contract_id: contract,
           p_status: "expired",
         }),
-        "MFA manager expires actual executed contract",
+        "password-only authentication manager expires actual executed contract",
       );
       assert.equal(
         (
@@ -469,7 +439,7 @@ try {
           p_contract_id: contract,
           p_status: "active",
         }),
-        "MFA manager reactivates still-date-valid executed agreement",
+        "password-only authentication manager reactivates still-date-valid executed agreement",
       );
     }
     const result = await checked(
@@ -484,7 +454,7 @@ try {
           ...verification,
           p_verified: false,
         }),
-        "MFA manager revokes future qualification eligibility",
+        "password-only authentication manager revokes future qualification eligibility",
       );
       const revoked = await checked(
         a.client
@@ -547,7 +517,7 @@ try {
       p_status: "approved",
       p_note: "Fictional local QA review",
     }),
-    "Approve with real MFA",
+    "Approve with real password-only authentication",
   );
   const paidAt = new Date(Date.now() - 1000).toISOString(),
     paymentKey = randomUUID();
@@ -644,7 +614,7 @@ try {
     "Linked executed evidence cannot be hidden by ordinary file deletion",
   );
   console.log(
-    "PASS: actual Auth, real MFA, Storage/ClamAV-scanned PDF versions: externally executed contract registration, exact-hash receipt-not-signature, names-only commercial directory/MFA isolation, qualification verification/expiry/revocation and contract status-gated claims, original-fee invoice derivation/idempotency/privacy, MFA partial/full payment+audited correction and immutable old-version download after replacement.",
+    "PASS: actual Auth, real password-only authentication, Storage/ClamAV-scanned PDF versions: externally executed contract registration, exact-hash receipt-not-signature, names-only commercial directory/password-only authentication isolation, qualification verification/expiry/revocation and contract status-gated claims, original-fee invoice derivation/idempotency/privacy, password-only authentication partial/full payment+audited correction and immutable old-version download after replacement.",
   );
 } finally {
   for (const client of clients) await client.removeAllChannels();

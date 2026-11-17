@@ -22,7 +22,7 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
     sql(
       `begin;set local role service_role;set local request.jwt.claims='{"role":"service_role"}';${statement};commit;`,
     );
-  const call = (who, name, args = "", aal = "aal2") =>
+  const call = (who, name, args = "", aal = "aal1") =>
     actor(who, `select public.${name}(${args})`, aal).then(JSON.parse);
   const worker = (name, args) =>
     service(`select public._deletion_${name}(${args})`).then(JSON.parse);
@@ -89,11 +89,11 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
     },
   );
   await check(
-    "Private registry and service work stay inaccessible; AAL2 and exact ownership are authoritative",
+    "Private registry and service work stay inaccessible; live permissions and exact ownership are authoritative",
     async () => {
-      assert.deepEqual(
-        (await call(owner, "deletion_access", "", "aal1")).kinds,
-        [],
+      assert.ok(
+        (await call(owner, "deletion_access")).kinds.includes("document"),
+        "An active password session with the owning role sees its authorized deletion kinds",
       );
       await expectCode(plan("document", document.document_id, other), "42501");
       await expectCode(
@@ -943,7 +943,7 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
       const payment = await actor(
         admin,
         `select public.record_invoice_payment(${q(invoice)},40,now(),'Fictional partial payment',${q(randomUUID())})`,
-        "aal2",
+        "aal1",
       );
       const financialState = () =>
         sql(
@@ -963,7 +963,7 @@ await withTestDatabase("permanent_deletion", async ({ sql, actor }) => {
       await actor(
         admin,
         `select public.void_invoice_payment(${q(payment)},'Fictional corrected tracking entry')`,
-        "aal2",
+        "aal1",
       );
       const after = await financialState();
       assert.equal(Number(after.paid_amount), 0);

@@ -218,7 +218,7 @@ async function stop() {
     await removeLoopbackNetwork(projectConfig().id);
   }
   console.log(
-    "Local portal stopped. Database, Auth, passwords, MFA and Storage are preserved.",
+    "Local portal stopped. Database, password Auth and Storage data are preserved.",
   );
 }
 try {

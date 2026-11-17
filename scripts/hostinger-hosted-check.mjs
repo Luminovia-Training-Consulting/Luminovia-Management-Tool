@@ -3,7 +3,7 @@
  * Uses real private credentials and temporary test data; do not run it as an ordinary offline test.
  */
 import assert from "node:assert/strict";
-import { createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
   chmodSync,
   existsSync,
@@ -13,6 +13,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import { assertPasswordOnly } from "./testing/password-only.mjs";
 import { root } from "./runtime-lib.mjs";
 import {
   hostedDownloadRequest,
@@ -365,8 +366,8 @@ privateWrite(
     "Luminovia – confidential, entirely fictional Hostinger development accounts",
     `Sign in: ${target}`,
     "Not a production system. No real people. Auth emails remain in private Mailpit.",
-    "The administrator sets up their own MFA on first browser access.",
-    "Existing passwords, MFA and profiles are not reset by repeated checks.",
+    "Administration uses the configured password and database role; MFA is not enabled.",
+    "Existing passwords and profiles are not reset by repeated checks.",
     "",
     ...bootstrapDefinitions.flatMap(([name]) => [
       `${name}: ${state.accounts[name].email}`,
@@ -411,7 +412,6 @@ const run = {
   eventId: null,
   documentClientIds: [],
   documentIds: [],
-  temporaryAdmin: null,
   invitedEmail: null,
   invitedUserId: null,
   invitationKey: null,
@@ -421,24 +421,6 @@ state.lastRun = run;
 save();
 const cleanupFailures = [];
 let failure;
-/** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
-function totp(secret) {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-  const bits = [...secret.replace(/=+$/, "").toUpperCase()]
-    .map((character) =>
-      alphabet.indexOf(character).toString(2).padStart(5, "0"),
-    )
-    .join("");
-  const key = Buffer.from(
-    bits.match(/.{8}/g).map((byte) => Number.parseInt(byte, 2)),
-  );
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000)));
-  const digest = createHmac("sha1", key).update(counter).digest();
-  return ((digest.readUInt32BE(digest.at(-1) & 15) & 0x7fffffff) % 1000000)
-    .toString()
-    .padStart(6, "0");
-}
 /** Reads the test actor's current session token for actual authenticated gateway requests. */
 async function headers(actor) {
   const { session } = await checked(
@@ -864,7 +846,7 @@ async function verifyRealtime() {
       "Hosted Realtime check or scoped cleanup failed",
     );
   console.log(
-    "Realtime test group/messages/notifications removed; sockets and new sessions closed. Existing profiles/passwords/MFA/private files unchanged; no files or private account ledgers written.",
+    "Realtime test group/messages/notifications removed; sockets and new sessions closed. Existing profiles/passwords/private files unchanged; no files or private account ledgers written.",
   );
 }
 /** Reads only the explicitly configured private Mailpit tunnel, not a real recipient mailbox. */
@@ -966,7 +948,7 @@ try {
   const lecturer = await signIn(state.accounts.lecturer);
   const peer = await signIn(state.accounts.peer);
   await check(
-    "actual public hosted sign-in and AAL1 management gate",
+    "actual public hosted password-only management authorization",
     async () => {
       const profiles = await checked(
         lecturer.client
@@ -977,55 +959,20 @@ try {
         "Read authenticated own profile",
       );
       assert.equal(profiles.active, true);
-      assert(
-        (await admin.client.rpc("create_job", { p_payload: {} })).error,
-        "Password-only admin cannot perform a management write",
+      const permissions = await checked(
+        admin.client.rpc("get_my_permissions"),
+        "Read current capabilities",
       );
-      assert.deepEqual(
-        await checked(
-          admin.client.rpc("get_my_permissions"),
-          "Read AAL1 capabilities",
-        ),
-        [],
-      );
+      assert(permissions.includes("users.manage"));
     },
   );
-  let mfaAdmin;
   await check(
-    "real TOTP raises a separate fictional manager to AAL2",
+    "password-only administrator retains database-authorized management capabilities",
     async () => {
-      const email = `hosted-mfa-${run.tag}@example.invalid`;
-      const password = `QA!${randomBytes(24).toString("base64url")}Aa9`;
-      const created = await checked(
-        service.auth.admin.createUser({ email, password, email_confirm: true }),
-        "Create scoped MFA actor",
-      );
-      run.temporaryAdmin = created.user.id;
-      save();
-      await checked(
-        service
-          .from("user_roles")
-          .insert({ user_id: run.temporaryAdmin, role: "admin" }),
-        "Grant scoped MFA role server-side",
-      );
-      mfaAdmin = await signIn({ id: run.temporaryAdmin, email, password });
-      const factor = await checked(
-        mfaAdmin.client.auth.mfa.enroll({
-          factorType: "totp",
-          friendlyName: "Fictional hosted QA",
-        }),
-        "Enroll actual hosted TOTP",
-      );
-      await checked(
-        mfaAdmin.client.auth.mfa.challengeAndVerify({
-          factorId: factor.id,
-          code: totp(factor.totp.secret),
-        }),
-        "Verify actual hosted TOTP",
-      );
+      await assertPasswordOnly(admin.client);
       const permissions = await checked(
-        mfaAdmin.client.rpc("get_my_permissions"),
-        "Read actual AAL2 management capabilities",
+        admin.client.rpc("get_my_permissions"),
+        "Read current database capabilities",
       );
       assert(permissions.includes("users.manage"));
     },
@@ -1047,7 +994,7 @@ try {
           const response = await fetch(api + "/functions/v1/invite-lecturer", {
             method: "POST",
             headers: {
-              ...(await headers(mfaAdmin)),
+              ...(await headers(admin)),
               "Content-Type": "application/json",
             },
             body: JSON.stringify(body),
@@ -1216,7 +1163,7 @@ try {
       );
       run.eventId = event.id;
       save();
-      for (const actor of [peer, mfaAdmin])
+      for (const actor of [peer, admin])
         assert.deepEqual(
           await checked(
             actor.client
@@ -1313,7 +1260,7 @@ try {
       const own = await download(lecturer, clean.body.document.id);
       assert.equal(own.status, 200);
       assert.deepEqual(new Uint8Array(await own.arrayBuffer()), bytes);
-      for (const actor of [peer, mfaAdmin]) {
+      for (const actor of [peer, admin]) {
         assert.deepEqual(
           await checked(
             actor.client
@@ -1631,7 +1578,7 @@ try {
         service
           .from("invitation_requests")
           .delete()
-          .eq("actor_id", run.temporaryAdmin)
+          .eq("actor_id", state.accounts.admin.id)
           .eq("email", run.invitedEmail)
           .eq("idempotency_key", run.invitationKey),
         "Remove only owned development invitation reservation",
@@ -1648,20 +1595,6 @@ try {
           service.auth.admin.deleteUser(invited.id),
           "Remove owned fictional invited account",
         );
-    });
-  if (run.temporaryAdmin)
-    await cleanup(async () => {
-      await checked(
-        service
-          .from("audit_events")
-          .delete()
-          .eq("actor_id", run.temporaryAdmin),
-        "Remove only the temporary QA manager's fixture audit rows",
-      );
-      await checked(
-        service.auth.admin.deleteUser(run.temporaryAdmin),
-        "Remove owned temporary MFA account/factors",
-      );
     });
   run.status = cleanupFailures.length ? "cleanup_failed" : "cleaned";
   run.checksPassed = passes;
@@ -1680,6 +1613,6 @@ if (failure || cleanupFailures.length) {
   process.exitCode = 1;
 } else {
   console.log(
-    `${passes} hosted development checks passed; owned test rows/objects/MFA actor cleaned. Three fictional development accounts remain; credentials are private (0600).`,
+    `${passes} hosted development checks passed; owned test rows/objects cleaned. Three fictional development accounts remain; credentials are private (0600).`,
   );
 }

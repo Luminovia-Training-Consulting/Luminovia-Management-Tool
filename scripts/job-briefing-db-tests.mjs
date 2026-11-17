@@ -50,11 +50,11 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
     return actor(
       admin,
       `select public.create_job(${q(JSON.stringify(payload))}::jsonb)`,
-      "aal2",
+      "aal1",
     );
   };
   /** Read only the public invoker projection under the selected actual SQL actor. */
-  const get = async (job, who = admin, aal = "aal2") =>
+  const get = async (job, who = admin, aal = "aal1") =>
     JSON.parse(await actor(who, `select public.job_briefing(${q(job)})`, aal));
   /** Bind the complete reviewed payload, expected version and request key. */
   const save = async (
@@ -63,7 +63,7 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
     version = 0,
     key = randomUUID(),
     who = admin,
-    aal = "aal2",
+    aal = "aal1",
   ) =>
     JSON.parse(
       await actor(
@@ -114,7 +114,7 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
   );
 
   await check(
-    "Only active current job managers with MFA save; forged fields and malformed versions fail without rows",
+    "Only active current job managers with permission save; forged fields and malformed versions fail without rows",
     async () => {
       const job = await create();
       for (const who of [
@@ -133,7 +133,7 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
       }
       for (const who of [teacher, learner, client, guest])
         await assert.rejects(
-          save(job, payload, 0, randomUUID(), who, "aal2"),
+          save(job, payload, 0, randomUUID(), who, "aal1"),
           /42501/,
         );
       for (const extra of [
@@ -161,7 +161,7 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
   );
 
   await check(
-    "Authorized references preserve authored text while after-claim contacts are absent from peer and AAL1 manager responses",
+    "Authorized references preserve authored text while after-claim contacts are absent from peer and administrator responses",
     async () => {
       const job = await create();
       const saved = await save(job, payload);
@@ -230,12 +230,12 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
       const job = await create();
       await save(job, payload);
       const state = JSON.parse(
-        await actor(admin, `select public.job_lifecycle(${q(job)})`, "aal2"),
+        await actor(admin, `select public.job_lifecycle(${q(job)})`, "aal1"),
       );
       const copy = await actor(
         admin,
         `select public.manage_job_offer(${q(job)},'duplicate',${state.version},${q(randomUUID())},'{"title":"Fictional separately reviewed copy"}'::jsonb)`,
-        "aal2",
+        "aal1",
       );
       assert.notEqual(copy, job);
       const copied = await get(copy);
@@ -338,7 +338,7 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
              'description_bytes', octet_length(value->>'reference_description'),
              'description_exact', convert_to(value->>'reference_description','UTF8')=decode(${q(Buffer.from(unicode.reference_description).toString("base64"))},'base64')
            ) from saved`,
-          "aal2",
+          "aal1",
         ),
       );
       assert.deepEqual(exactUnicode, {
@@ -567,7 +567,7 @@ await withTestDatabase("job_briefing", async ({ sql, actor }) => {
             );
         }
         await assert.rejects(
-          actor(admin, `select * from private.${table}`, "aal2"),
+          actor(admin, `select * from private.${table}`, "aal1"),
           /42501/,
         );
       }

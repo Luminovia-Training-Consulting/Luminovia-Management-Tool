@@ -1,10 +1,10 @@
-/** Actual Auth/MFA/REST time evidence and stable permissioned printable facts. */
+/** Actual Auth/password-only authentication/REST time evidence and stable permissioned printable facts. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 
-await withApiFixture(async ({ actor, service, checked, sql, defer, mfa }) => {
+await withApiFixture(async ({ actor, service, checked, sql, defer, passwordOnly }) => {
   const owner = await actor("timesheet-owner", "lecturer"),
     peer = await actor("timesheet-peer", "lecturer"),
     manager = await actor("timesheet-reviewer", "management");
@@ -159,7 +159,7 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, mfa }) => {
     (await manager.client.rpc("manage_timesheet", review)).error?.code,
     "42501",
   );
-  await mfa(manager.client);
+  await passwordOnly(manager.client);
   current = await checked(manager.client.rpc("manage_timesheet", review));
   assert.equal(current.state, "approved");
   assert.equal(
@@ -275,6 +275,6 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, mfa }) => {
     "42501",
   );
   console.log(
-    "PASS real Auth/REST/MFA own completed time, exact fields and CAS, idempotent submit, current financial review, immutable approval/history, stable owned facts/hash, unchanged compensation, original-currency/gross separation and active-token revocation.",
+    "PASS real Auth/REST/password-only authentication own completed time, exact fields and CAS, idempotent submit, current financial review, immutable approval/history, stable owned facts/hash, unchanged compensation, original-currency/gross separation and active-token revocation.",
   );
 });

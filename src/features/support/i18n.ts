@@ -5,7 +5,7 @@ const en = {
   description:
     "Ask for help and follow your requests. Only authorised support staff can see other people's tickets.",
   privacy:
-    "Describe the issue and the expected result. Never include passwords, keys, MFA codes, private messages or unrelated personal records.",
+    "Describe the issue and the expected result. Never include passwords, keys, private messages or unrelated personal records.",
   new: "Create support ticket",
   titleLabel: "Subject",
   category: "Category",
@@ -50,7 +50,7 @@ const en = {
   send: "Send reply",
   internal: "Restricted internal note",
   internalHint:
-    "Visible only to currently authorised support staff with MFA. The requester receives no notification of this note.",
+    "Visible only to currently authorised support staff. The requester receives no notification of this note.",
   internal_note: "Internal note added",
   note: "Save internal note",
   changeStatus: "Change status",
@@ -92,7 +92,7 @@ const en = {
   resolution: "Average resolution (hours)",
   noReport: "No support history yet.",
   denied:
-    "This ticket is unavailable or your current account does not have access. Support administration requires MFA.",
+    "This ticket is unavailable or your current account does not have access. Support administration requires current permission.",
   conflict:
     "This ticket changed. Reload the confirmed state, review it and apply your change again.",
   rateLimit: "Too many requests. Please wait before trying again.",
@@ -104,7 +104,7 @@ const de: typeof en = {
   description:
     "Stelle Fragen und verfolge deine Anliegen. Nur berechtigtes Supportpersonal sieht Tickets anderer Personen.",
   privacy:
-    "Beschreibe das Problem und das erwartete Ergebnis. Nenne niemals Passwörter, Schlüssel, MFA-Codes, private Nachrichten oder unbeteiligte personenbezogene Daten.",
+    "Beschreibe das Problem und das erwartete Ergebnis. Nenne niemals Passwörter, Schlüssel, private Nachrichten oder unbeteiligte personenbezogene Daten.",
   new: "Supportticket erstellen",
   titleLabel: "Betreff",
   category: "Kategorie",
@@ -149,7 +149,7 @@ const de: typeof en = {
   send: "Antwort senden",
   internal: "Vertrauliche interne Notiz",
   internalHint:
-    "Nur aktuell berechtigtes Supportpersonal mit MFA sieht diese Notiz. Die anfragende Person erhält dazu keine Benachrichtigung.",
+    "Nur aktuell berechtigtes Supportpersonal sieht diese Notiz. Die anfragende Person erhält dazu keine Benachrichtigung.",
   internal_note: "Interne Notiz hinzugefügt",
   note: "Interne Notiz speichern",
   changeStatus: "Status ändern",
@@ -191,7 +191,7 @@ const de: typeof en = {
   resolution: "Mittlere Lösungszeit (Stunden)",
   noReport: "Noch kein Supportverlauf vorhanden.",
   denied:
-    "Dieses Ticket ist nicht verfügbar oder dein aktuelles Konto hat keinen Zugriff. Die Supportverwaltung erfordert MFA.",
+    "Dieses Ticket ist nicht verfügbar oder dein aktuelles Konto hat keinen Zugriff. Die Supportverwaltung erfordert eine aktuelle Berechtigung.",
   conflict:
     "Dieses Ticket wurde geändert. Lade den bestätigten Stand neu, prüfe ihn und wende deine Änderung erneut an.",
   rateLimit: "Zu viele Anfragen. Bitte warte vor dem nächsten Versuch.",

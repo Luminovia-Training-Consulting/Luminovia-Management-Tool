@@ -1,8 +1,14 @@
-/** Canonical real-Auth calendar workflows: preserve instants/zones, exercise actual CRUD and keep private appointments isolated even from a genuine MFA administrator. Only disposable fixtures are mutated. */
+/** Canonical real-Auth calendar workflows: preserve instants/zones, exercise actual CRUD and keep private appointments isolated even from a password-only administrator. Only disposable fixtures are mutated. */
 import { expect, test, type Page } from "@playwright/test";
 import { DateTime } from "luxon";
 import { randomUUID } from "node:crypto";
-import { actor, api, checked, code, login } from "./helpers/accounts-support";
+import {
+  actor,
+  api,
+  checked,
+  login,
+  assertPasswordOnly,
+} from "./helpers/accounts-support";
 
 test.skip(
   process.env.PORTAL_TEST_MODE !== "1",
@@ -32,7 +38,7 @@ async function eventDialog(page: Page, title: string) {
   return dialog;
 }
 
-test("calendar rejects invalid DST intervals, persists create/edit/delete and preserves privacy against lecturers and an MFA administrator", async ({
+test("calendar rejects invalid DST intervals, persists create/edit/delete and preserves privacy against lecturers and an administrator", async ({
   page,
   context,
 }) => {
@@ -223,22 +229,7 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
     editedStart.toUTC().toISO(),
   );
   const manager = await signedIn(admin);
-  const factor = await checked(
-    manager.auth.mfa.enroll({
-      factorType: "totp",
-      friendlyName: "Calendar privacy QA",
-    }),
-  );
-  await checked(
-    manager.auth.mfa.challengeAndVerify({
-      factorId: factor!.id,
-      code: code(factor!.totp.secret),
-    }),
-  );
-  expect(
-    (await manager.auth.mfa.getAuthenticatorAssuranceLevel()).data
-      ?.currentLevel,
-  ).toBe("aal2");
+  await assertPasswordOnly(manager);
   for (const client of [await signedIn(stranger), manager]) {
     expect(
       await checked(

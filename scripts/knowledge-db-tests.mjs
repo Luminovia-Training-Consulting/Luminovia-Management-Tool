@@ -206,15 +206,11 @@ try {
     },
   );
   await check(
-    "Publishing requires the distinct manager capability and MFA; code stays exact authored text",
+    "Publishing requires the distinct manager capability and permission; code stays exact authored text",
     async () => {
       await assert.rejects(
-        save(a, page, "Published wiki", rich, "published", 1, "aal2"),
-        /publishing and MFA/,
-      );
-      await assert.rejects(
-        save(admin, page, "Published wiki", rich, "published", 1),
-        /publishing and MFA/,
+        save(a, page, "Published wiki", rich, "published", 1, "aal1"),
+        /publishing.*required/i,
       );
       const result = await save(
         admin,
@@ -223,7 +219,7 @@ try {
         rich,
         "published",
         1,
-        "aal2",
+        "aal1",
       );
       assert.equal(result.version, 2);
       assert.equal(result.published_version, 2);
@@ -325,16 +321,16 @@ try {
     },
   );
   await check(
-    "Category management is capability/MFA scoped; staff cannot forge table writes",
+    "Category management is capability/permission scoped; staff cannot forge table writes",
     async () => {
       await assert.rejects(
         value(
           a,
           "save_knowledge_category",
           [null, "wiki", "forged", "Falsch", "Forged", false],
-          "aal2",
+          "aal1",
         ),
-        /management and MFA/,
+        /management and permission/,
       );
       await assert.rejects(
         actor(a, `insert into public.wiki_pages(owner_id) values('${a}')`),
@@ -344,7 +340,7 @@ try {
         admin,
         "save_knowledge_category",
         [null, "wiki", "approved-category", "Geprüft", "Approved", false],
-        "aal2",
+        "aal1",
       );
       assert.ok(
         (await rows(a, "knowledge_categories", ["wiki"])).some(
@@ -429,17 +425,13 @@ try {
     },
   );
   await check(
-    "Moderator MFA gates pin/lock/archive and locked discussions reject ordinary posting/editing",
+    "Moderator permission gates pin/lock/archive and locked discussions reject ordinary posting/editing",
     async () => {
-      await assert.rejects(
-        value(admin, "moderate_forum_thread", [thread, true, true, null]),
-        /moderation and MFA/,
-      );
       await value(
         admin,
         "moderate_forum_thread",
         [thread, true, true, null],
-        "aal2",
+        "aal1",
       );
       await assert.rejects(
         value(b, "add_forum_post", [
@@ -461,7 +453,7 @@ try {
         admin,
         "moderate_forum_thread",
         [thread, false, null, null],
-        "aal2",
+        "aal1",
       );
     },
   );
@@ -515,7 +507,7 @@ try {
     },
   );
   await check(
-    "Reports are private to reporter/moderator, idempotent and resolvable only with MFA",
+    "Reports are private to reporter/moderator, idempotent and resolvable only with permission",
     async () => {
       const post = (await rows(b, "forum_posts", [thread])).find(
         (p) => p.author_id === a,
@@ -532,12 +524,8 @@ try {
         report,
       );
       assert.deepEqual(await rows(a, "forum_reports"), []);
-      assert.equal((await rows(admin, "forum_reports", [], "aal2")).length, 1);
-      await assert.rejects(
-        value(admin, "resolve_forum_report", [report, true]),
-        /moderation and MFA/,
-      );
-      await value(admin, "resolve_forum_report", [report, true], "aal2");
+      assert.equal((await rows(admin, "forum_reports", [], "aal1")).length, 1);
+      await value(admin, "resolve_forum_report", [report, true], "aal1");
       assert.equal((await rows(b, "forum_reports"))[0].status, "resolved");
     },
   );
@@ -545,7 +533,7 @@ try {
     "Archived wiki/discussions are hidden from peers and reversible by authorised management",
     async () => {
       const current = JSON.parse(
-        await value(admin, "wiki_page", [page], "aal2"),
+        await value(admin, "wiki_page", [page], "aal1"),
       );
       await save(
         admin,
@@ -554,7 +542,7 @@ try {
         doc("Archive body"),
         "archived",
         current.version,
-        "aal2",
+        "aal1",
       );
       await assert.rejects(value(b, "wiki_page", [page]), /access denied/);
       assert.equal(
@@ -565,14 +553,14 @@ try {
         admin,
         "moderate_forum_thread",
         [thread, null, null, true],
-        "aal2",
+        "aal1",
       );
       await assert.rejects(value(b, "forum_thread", [thread]), /access denied/);
       await value(
         admin,
         "moderate_forum_thread",
         [thread, null, null, false],
-        "aal2",
+        "aal1",
       );
       assert.equal(
         JSON.parse(await value(b, "forum_thread", [thread])).archived,

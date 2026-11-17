@@ -1,10 +1,10 @@
-/** Actual Auth/MFA/REST delivery, independent review and customer isolation. */
+/** Actual Auth/password-only authentication/REST delivery, independent review and customer isolation. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 
-await withApiFixture(async ({ actor, mfa, checked, sql, defer, service }) => {
+await withApiFixture(async ({ actor, passwordOnly, checked, sql, defer, service }) => {
   const teacher = await actor("delivery-teacher", "lecturer"),
     peer = await actor("delivery-peer", "lecturer"),
     manager = await actor("delivery-manager", "admin"),
@@ -88,7 +88,7 @@ await withApiFixture(async ({ actor, mfa, checked, sql, defer, service }) => {
     (await manager.client.rpc("review_delivery", decision)).error?.code,
     "42501",
   );
-  await mfa(manager.client);
+  await passwordOnly(manager.client);
   const results = await Promise.all([
     manager.client.rpc("review_delivery", decision),
     manager.client.rpc("review_delivery", {
@@ -182,6 +182,6 @@ await withApiFixture(async ({ actor, mfa, checked, sql, defer, service }) => {
     "42501",
   );
   console.log(
-    "PASS actual Auth/REST delivery: own sessions, persisted partial draft, idempotent submit, independent MFA/concurrent review, isolated client confirmation, immutable correction history, preserved AUD agreement and suspended-token denial.",
+    "PASS actual Auth/REST delivery: own sessions, persisted partial draft, idempotent submit, independent password-only authentication/concurrent review, isolated client confirmation, immutable correction history, preserved AUD agreement and suspended-token denial.",
   );
 });

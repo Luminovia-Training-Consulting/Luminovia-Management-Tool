@@ -172,8 +172,6 @@ export async function refreshAfterDeletion(client: QueryClient) {
 export function deletionDenied(error: unknown) {
   return (
     error instanceof Error &&
-    ["permission_or_mfa_required", "authentication_required"].includes(
-      error.message,
-    )
+    ["permission_required", "authentication_required"].includes(error.message)
   );
 }

@@ -124,7 +124,7 @@ await withTestDatabase(
           false,
         );
         await assert.rejects(
-          actor(admin, "select * from private.job_waitlist", "aal2"),
+          actor(admin, "select * from private.job_waitlist", "aal1"),
           /permission denied/,
         );
         await assert.rejects(
@@ -174,7 +174,7 @@ await withTestDatabase(
             q(randomUUID()),
             q('{"reason":"Fictional reopened whole block"}'),
           ],
-          "aal2",
+          "aal1",
         );
         const ids = JSON.parse(
           await sql(
@@ -201,7 +201,7 @@ await withTestDatabase(
       },
     );
     await check(
-      "Only source assignee or current MFA management proposes; candidate projection exposes no private calendars",
+      "Only source assignee or current permission management proposes; candidate projection exposes no private calendars",
       async () => {
         const f = await make();
         const candidates = await rpc(teacher, "substitution_candidates", [
@@ -216,7 +216,7 @@ await withTestDatabase(
         );
         for (const who of [peer, admin, participant])
           await assert.rejects(propose(f, replacement, who), /42501/);
-        const id = await propose(f, replacement, admin, randomUUID(), "aal2");
+        const id = await propose(f, replacement, admin, randomUUID(), "aal1");
         assert.equal(
           (await offers(replacement)).find((x) => x.id === id).can_accept,
           true,
