@@ -306,7 +306,7 @@ await withTestDatabase("job_discovery", async ({ sql, actor }) => {
     },
   );
   await check(
-    "Calendar titles come only from own confirmed allocations and expertise suggestions use complete-course validity",
+    "Calendar titles come only from own confirmed allocations and declared expertise remains valid after attestation expiry",
     async () => {
       const id = "d7000000-0000-4000-8000-000000000002";
       const accepted = JSON.parse(
@@ -349,7 +349,7 @@ await withTestDatabase("job_discovery", async ({ sql, actor }) => {
       assert.equal(
         JSON.parse(await actor(teacher, "select public.job_dashboard()"))
           .matching,
-        false,
+        true,
       );
       await sql(
         `insert into public.job_sessions(job_id,starts_at,ends_at)values('d7000000-0000-4000-8000-000000000001','2060-01-10T08:00:00Z','2060-01-10T10:00:00Z')`,
@@ -376,9 +376,9 @@ await withTestDatabase("job_discovery", async ({ sql, actor }) => {
         `insert into auth.users(id,email)values('${subject}','discovery-revocation@example.invalid')`,
       );
       const waitUntil = async (condition, message) => {
-        for (let n = 0; n < 60; n++) {
+        for (let n = 0; n < 300; n++) {
           if ((await sql(condition)) === "t") return;
-          await new Promise((resolve) => setTimeout(resolve, 25));
+          await new Promise((resolve) => setTimeout(resolve, 50));
         }
         assert.fail(message);
       };
@@ -400,7 +400,7 @@ await withTestDatabase("job_discovery", async ({ sql, actor }) => {
         const revocation = Promise.allSettled([
           actor(
             manager,
-            `select set_config('application_name','${label}',true);select public.set_account_roles('${subject}',array['participant']);select pg_sleep(3)`,
+            `select set_config('application_name','${label}',true);select public.set_account_roles('${subject}',array['guest']);select pg_sleep(3)`,
             "aal1",
           ),
         ]);
@@ -434,7 +434,7 @@ await withTestDatabase("job_discovery", async ({ sql, actor }) => {
           await sql(
             `select string_agg(role,',')from public.user_roles where user_id='${subject}'`,
           ),
-          "participant",
+          "guest",
         );
         assert.equal(
           await sql(

@@ -57,7 +57,7 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
   /** Calls the actual claim RPC; only the database result confirms whole-block allocation. */
   const claim = async (job, who, key = randomUUID()) => {
     const version = await sql(
-      `select case when exists(select 1 from private.job_commission_offers where job_id='${job}' and pricing_mode='role_split') then terms_version*10+1 else terms_version end from public.jobs where id='${job}'`,
+      `select case when exists(select 1 from private.job_commission_offers where job_id='${job}' and pricing_mode='role_split') then private.role_quote_version(terms_version,'${who}') else terms_version end from public.jobs where id='${job}'`,
     );
     return JSON.parse(
       await actor(who, `select public.claim_job('${job}','${key}',${version})`),
