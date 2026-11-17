@@ -370,6 +370,11 @@ const pairs: Record<string, [string, string]> = {
     "Deinen Anzeigenamen änderst du unten im Profil. Die Anmeldung erfolgt mit deiner E-Mail-Adresse.",
     "Change your display name in your profile below. Sign in with your email address.",
   ],
+  aboutMe: ["Über mich", "About me"],
+  manageExpertise: [
+    "Expertise-Labels hinzufügen und verwalten",
+    "Add and manage expertise labels",
+  ],
   bioDe: ["Über mich (Deutsch)", "About me (German)"],
   bioEn: ["About me (English)", "About me (English)"],
   phone: ["Telefon", "Phone"],

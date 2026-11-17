@@ -90,7 +90,9 @@ export function AccountSettings({ email }: { email: string }) {
         )}
       </form>
       <p>
-        <Link to="/auth/password">{t("setPassword")}</Link>
+        <Link className="text-link" to="/auth/password">
+          {t("setPassword")}
+        </Link>
       </p>
       <p>{t("accountNameHelp")}</p>
     </section>

@@ -158,3 +158,43 @@
     padding: 22px;
   }
 }
+
+/* Course catalogue cards use the same alternating pastel accents as the design board. */
+.operations-course {
+  --course-accent: var(--mint);
+  border-top: 5px solid var(--course-accent);
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--course-accent) 22%, var(--surface)),
+    var(--surface) 50%
+  );
+  min-width: 0;
+}
+.operations-course:nth-child(4n + 2) {
+  --course-accent: var(--peach);
+}
+.operations-course:nth-child(4n + 3) {
+  --course-accent: var(--lilac);
+}
+.operations-course:nth-child(4n) {
+  --course-accent: var(--coral);
+}
+.operations-course .tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.operations-course .tags .badge {
+  background: color-mix(in srgb, var(--course-accent) 55%, var(--surface));
+  color: var(--ink);
+  border-color: transparent;
+  padding: 4px 9px;
+}
+.operations-course .section-heading > svg {
+  box-sizing: content-box;
+  padding: 9px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--course-accent) 45%, var(--surface));
+  color: var(--ink);
+  flex-shrink: 0;
+}

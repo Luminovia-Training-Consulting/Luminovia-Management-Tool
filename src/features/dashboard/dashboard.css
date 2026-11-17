@@ -147,3 +147,34 @@
     transform: none;
   }
 }
+
+/* Pastel summary cards follow the supplied design while retaining actual counts. */
+.dashboard-metric {
+  min-height: 104px;
+  border: 5px solid var(--surface);
+  outline: 1px solid var(--line);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+}
+.dashboard-metric--mint {
+  background: color-mix(in srgb, var(--mint) 65%, var(--surface));
+}
+.dashboard-metric--peach {
+  background: color-mix(in srgb, var(--peach) 50%, var(--surface));
+}
+.dashboard-metric--yellow {
+  background: color-mix(in srgb, var(--yellow) 50%, var(--surface));
+}
+.dashboard-metric--lilac {
+  background: color-mix(in srgb, var(--lilac) 75%, var(--surface));
+}
+[data-theme="dark"] .dashboard-metric {
+  color: var(--ink);
+}
+.dashboard-metric-arrow {
+  padding: 3px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface) 75%, transparent);
+}

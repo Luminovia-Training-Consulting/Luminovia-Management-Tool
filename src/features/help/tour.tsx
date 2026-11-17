@@ -115,7 +115,7 @@ export function PortalTour({
     if (active) heading.current?.focus();
     else if (ready && retryRequested.current) launcher.current?.focus();
     if (ready) retryRequested.current = false;
-  }, [active, ready, state.step]);
+  }, [active, ready, state.step, location.pathname]);
   useEffect(() => {
     if (!active) return;
     const onEscape = (event: KeyboardEvent) => {
@@ -128,11 +128,13 @@ export function PortalTour({
       const paused: TourState = { status: "paused", step: state.step };
       setState(paused);
       storeTour(actor, paused);
-      launcher.current?.focus();
+      retryRequested.current = true;
+      navigate("/settings");
     };
     window.addEventListener("keydown", onEscape);
     return () => window.removeEventListener("keydown", onEscape);
-  }, [active, actor, state.step]);
+  }, [active, actor, state.step, navigate]);
+  if (!active && location.pathname !== "/settings") return <>{children}</>;
   return (
     <>
       {!active && children}
@@ -234,7 +236,8 @@ export function PortalTour({
                 onClick={() => {
                   if (index + 1 === modules.length) {
                     update({ status: "completed", step: step.id });
-                    launcher.current?.focus();
+                    retryRequested.current = true;
+                    navigate("/settings");
                   } else visit(index + 1);
                 }}
               >
@@ -244,7 +247,8 @@ export function PortalTour({
                 variant="ghost"
                 onClick={() => {
                   update({ status: "paused", step: step.id });
-                  launcher.current?.focus();
+                  retryRequested.current = true;
+                  navigate("/settings");
                 }}
               >
                 {text.pause}
@@ -253,7 +257,8 @@ export function PortalTour({
                 variant="ghost"
                 onClick={() => {
                   update(initialTour);
-                  launcher.current?.focus();
+                  retryRequested.current = true;
+                  navigate("/settings");
                 }}
               >
                 {text.close}

@@ -25,7 +25,7 @@ function mount(
   actor = "fictional",
 ) {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={["/settings"]}>
       <PortalTour
         key={actor}
         actor={actor}
@@ -76,7 +76,7 @@ describe("live portal guidance", () => {
     const select = screen.getByRole("combobox", { name: "Choose a section" });
     select.focus();
     await user.keyboard("{Escape}");
-    expect(screen.getByRole("button", { name: "Resume tour" })).toHaveFocus();
+    expect(screen.getByLabelText("route")).toHaveTextContent("/settings");
     await user.click(screen.getByRole("button", { name: "Resume tour" }));
     const modules = permittedTourModules(["lecturer"], []);
     await user.selectOptions(
@@ -84,7 +84,7 @@ describe("live portal guidance", () => {
       modules.at(-1)!.id,
     );
     await user.click(screen.getByRole("button", { name: "Finish tour" }));
-    expect(screen.getByRole("button", { name: "Portal tour" })).toHaveFocus();
+    expect(screen.getByLabelText("route")).toHaveTextContent("/settings");
     expect(
       within(screen.getByRole("region", { name: "Portal tour" })).getByRole(
         "status",
@@ -104,7 +104,7 @@ describe("live portal guidance", () => {
       screen.getByRole("button", { name: "Portal-Rundgang" }),
     ).toBeDisabled();
     page.rerender(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={["/settings"]}>
         <PortalTour
           actor="fictional"
           roles={["admin"]}
@@ -123,7 +123,7 @@ describe("live portal guidance", () => {
       audit.id,
     );
     page.rerender(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={["/settings"]}>
         <PortalTour
           actor="fictional"
           roles={["participant"]}
@@ -144,7 +144,7 @@ describe("live portal guidance", () => {
   it("shows automatic onboarding only while the live tour is inactive and restores it on pause", async () => {
     const user = userEvent.setup();
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={["/settings"]}>
         <PortalTour
           actor="fictional"
           roles={["lecturer"]}
@@ -176,7 +176,6 @@ describe("live portal guidance", () => {
     "keeps an explicit manual guide at %s free of a resumed tour panel",
     async (path) => {
       storeTour("fictional", { status: "active", step: "profile" });
-      const user = userEvent.setup();
       render(
         <MemoryRouter initialEntries={[path]}>
           <PortalTour
@@ -202,11 +201,8 @@ describe("live portal guidance", () => {
         status: "active",
         step: "profile",
       });
-      await user.click(screen.getByRole("button", { name: "Portal-Rundgang" }));
-      expect(screen.getByLabelText("route")).toHaveTextContent("/");
-      expect(screen.getByRole("button", { name: "Weiter" })).toBeVisible();
       expect(
-        screen.queryByText("Retained manual welcome content"),
+        screen.queryByRole("button", { name: "Portal-Rundgang" }),
       ).not.toBeInTheDocument();
     },
   );
@@ -235,7 +231,7 @@ describe("live portal guidance", () => {
     const user = userEvent.setup();
     const retry = vi.fn();
     const view = (ready: boolean, failed: boolean, retrying = false) => (
-      <MemoryRouter>
+      <MemoryRouter initialEntries={["/settings"]}>
         <PortalTour
           actor="recovery"
           roles={["lecturer"]}

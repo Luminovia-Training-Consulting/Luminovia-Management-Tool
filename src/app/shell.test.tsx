@@ -97,6 +97,7 @@ function setup(path = "/", initiallyCollapsed = true) {
         <Routes>
           <Route element={<Shell />}>
             <Route index element={<p>Private workspace</p>} />
+            <Route path="settings" element={<NavigationTarget />} />
             <Route path="files" element={<NavigationTarget />} />
             <Route path="search" element={<NavigationTarget />} />
           </Route>
@@ -159,7 +160,7 @@ describe("server-confirmed logout", () => {
 describe("tour access recovery", () => {
   it("explains an actual permission query failure and retries both owning queries", async () => {
     access.failed = true;
-    const { user, client } = setup();
+    const { user, client } = setup("/settings");
     const tour = within(
       screen.getByRole("region", { name: "Portal-Rundgang" }),
     );
@@ -282,56 +283,22 @@ describe("native mobile More navigation", () => {
 });
 
 describe("Royal workspace sidebar preference", () => {
-  it("keeps global search and notifications in the sidebar and mobile navigation", async () => {
+  it("keeps search and notifications in the top bar when the rail is collapsed", async () => {
     const { user } = setup();
     const sidebar = screen.getByRole("complementary");
-    expect(within(sidebar).getByRole("search")).toBeInTheDocument();
-    expect(
-      screen
-        .getByRole("banner")
-        .querySelector(".global-search:not(.mobile-global-search)"),
-    ).toBeNull();
-
-    await user.click(
-      within(sidebar).getByRole("button", { name: "Stellen durchsuchen" }),
-    );
-    const desktopInput = within(sidebar).getByRole("textbox", {
-      name: "Stellen durchsuchen",
+    expect(within(sidebar).queryByRole("search")).not.toBeInTheDocument();
+    const banner = screen.getByRole("banner");
+    const input = within(banner).getByRole("textbox", {
+      name: "Im Portal suchen",
     });
-    await user.type(desktopInput, "Fictional files");
+    await user.type(input, "Fictional files");
     await user.keyboard("{Enter}");
     expect(await screen.findByLabelText("Fixture location")).toHaveTextContent(
       "/search?q=Fictional%20files",
     );
     expect(
-      within(sidebar).getByRole("button", { name: "Stellen durchsuchen" }),
-    ).toHaveFocus();
-
-    const summary = screen.getByLabelText("Mehr");
-    await user.click(summary);
-    const menu = summary.closest("details")!;
-    expect(within(menu).getByRole("search")).toBeInTheDocument();
-    expect(
-      menu.querySelector(".notification-menu summary"),
+      banner.querySelector(".notification-menu summary"),
     ).toBeInTheDocument();
-  });
-
-  it("returns focus to the collapsed search button when its close control is used", async () => {
-    const { user } = setup();
-    const sidebar = screen.getByRole("complementary");
-    const button = within(sidebar).getByRole("button", {
-      name: "Stellen durchsuchen",
-    });
-    await user.click(button);
-    expect(
-      within(sidebar).getByRole("textbox", { name: "Stellen durchsuchen" }),
-    ).toHaveFocus();
-    await user.click(
-      within(sidebar).getByRole("button", { name: "Schließen" }),
-    );
-    expect(
-      within(sidebar).getByRole("button", { name: "Stellen durchsuchen" }),
-    ).toHaveFocus();
   });
 
   it("shows the collapsed rail toggle hint on keyboard focus", async () => {
