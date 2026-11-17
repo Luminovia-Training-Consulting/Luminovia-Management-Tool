@@ -21,11 +21,15 @@ await withTestDatabase("staff_contact", async ({ sql, actor }) => {
   await check(
     "Directory contact defaults remain private even for administrators",
     async () => {
-      for (const who of [owner, peer, admin, participant, client])
+      for (const who of [owner, peer, admin, client])
         assert.deepEqual(await rpc(who, "person_contact", [q(owner)]), {
           email: null,
           phone: null,
         });
+      await assert.rejects(
+        rpc(participant, "person_contact", [q(owner)]),
+        /Active account required/,
+      );
       const own = await rpc(owner, "contact_visibility_preferences");
       assert.equal(own.email_visible, false);
       assert.equal(own.phone_visible, false);
@@ -56,11 +60,15 @@ await withTestDatabase("staff_contact", async ({ sql, actor }) => {
           email: owner + "@example.invalid",
           phone: null,
         });
-      for (const who of [participant, client])
+      for (const who of [client])
         assert.deepEqual(await rpc(who, "person_contact", [q(owner)]), {
           email: null,
           phone: null,
         });
+      await assert.rejects(
+        rpc(participant, "person_contact", [q(owner)]),
+        /Active account required/,
+      );
       assert.equal(
         (await rpc(peer, "contact_visibility_preferences")).email_visible,
         false,
@@ -187,9 +195,9 @@ await withTestDatabase("staff_contact", async ({ sql, actor }) => {
           ]),
           /42501/,
         );
-      assert.equal(
-        (await rpc(participant, "contact_visibility_preferences")).can_share,
-        false,
+      await assert.rejects(
+        rpc(participant, "contact_visibility_preferences"),
+        /Active account required/,
       );
     },
   );
