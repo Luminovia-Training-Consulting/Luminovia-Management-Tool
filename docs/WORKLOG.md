@@ -2304,3 +2304,7 @@ The following isolated branch checkpoints are historical evidence. Current fourt
 ## 17 November 2026 — PR35 candidate diagnostic lint fix
 
 GitHub Lint failed on PR35 because the selfhost candidate's post-failure Auth/database log filter called an undefined `redact`. Replaced that call with the existing `redactCandidateDiagnostic(logs, secrets)` helper, preserving the registered-secret/JWT/key redaction boundary before filtering and truncation. No execution, migration, service or acceptance behavior changed. Executed `npx eslint deploy/hostinger/maintenance/selfhost-candidate-check.mjs --max-warnings 0`, `npm run lint`, `node --test deploy/hostinger/maintenance/selfhost-candidate-check.test.mjs` (26/26), and `git diff --check`: all passed. This documents the observed CI lint correction only; other in-progress PR checks remain separate.
+
+### PR #37 current-head CI repair — 2026-11-17
+
+Run `44024696923` on head `992150e` passed fast checks but failed both `verify` and PR SQL before the database fixture: `deletion-upgrade-composition-db-tests.mjs` required the three deletion migrations to be the complete migration-list suffix. The participant chat-origin migration now validly follows them. Narrowed the guard to assert the three target deletion migrations remain contiguous and ordered after the accepted prefix; the composition fixture still replays the full accepted prefix before the three deletion migrations. Local `node --check` and `git diff --check` passed. Exact-head GitHub CI remains required before merge.
