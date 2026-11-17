@@ -52,7 +52,7 @@ test("cancelling a running child waits for actual termination rather than leavin
     process.execPath,
     [
       "-e",
-      "process.on('SIGTERM',()=>{});require('node:fs').writeFileSync(process.argv[1],JSON.stringify({pid:process.pid}));setTimeout(()=>process.exit(0),2500)",
+      "process.on('SIGTERM',()=>{});const fs=require('node:fs');fs.writeFileSync(process.argv[1]+'.tmp',JSON.stringify({pid:process.pid}));fs.renameSync(process.argv[1]+'.tmp',process.argv[1]);setTimeout(()=>process.exit(0),2500)",
       marker,
     ],
     {

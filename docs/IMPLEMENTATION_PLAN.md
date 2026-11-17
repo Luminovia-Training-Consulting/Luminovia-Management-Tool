@@ -9,6 +9,71 @@
 - [ ] Complete combined exact-head CI and integrate current `main` before any permitted merge.
 - [ ] Recheck the current local preview after its fixed ports become available. The overall product and release requirements below remain open.
 
+## PR35 private-document acceptance follow-up — 17 November 2026
+
+- [x] Trace both current exact-head CI failures to the stale native fixture: an administrator attempted to preview another actor's private personal document after the accepted migration removed that bypass.
+- [x] Update real Auth/Storage acceptance to assert the MFA administrator is denied and the MFA owner confirms, polls and retries deletion; keep the privacy boundary unchanged.
+- [ ] Pass focused checks and fresh full exact-head/current-base CI, including local system, browser, selfhost retained-data, security and preview gates; merge PR35 only when all required checks pass.
+
+PR 35 follow-up: cancellation-marker publication and the announcement quiet-window fixture have focused passing local checks; rerun the complete required CI on the integrated head and address remaining failures before merge. The full product scope below remains unchanged.
+
+PR 35 review corrected the administrator-wide private-document deletion bypass; the 27-group disposable SQL suite passed. Full integrated CI remains required before merge.
+
+## PR35 integration after PR31 — 17 November 2026
+
+- [x] Preserve the 70 accepted migration sources and replay the three unpublished deletion migrations after the accepted job briefing migration.
+- [x] Include job-owned briefing and request rows in the reviewed deletion scope, with bilingual impact labels; test changed-scope detection and physical deletion.
+- [ ] Complete exact-head full CI and merge under current rules; native Auth/Storage and browser acceptance are not established by the SQL fixture.
+
+## PR35 native diagnostics and accepted main38 — 17 November 2026
+
+- [x] Inspect native CI43903652814; distinguish secondary Auth/REST cleanup errors from its truncated primary failure, without claiming an unproved root cause.
+- [x] Replay exact be81819 in a separate owned native stack:72migrations,50API/invitation suites,TLS/WebSockets,retained data,50claims and checked cleanup pass; no OOM kill/restart is observed.
+- [x] Preserve bounded primary/final failure context after existing secret redaction; real failing-child regression and13candidate/lint/format guards pass.
+- [x] Integrate accepted main38 documentation/browser source, preserving user-required ledgers and all69immutable SQL bodies; retain no root changelog.
+- [x] Regenerate the complete 72-migration API with the accepted improved generator (265 functions), pass combined source checks (704 cases/92 files), 4 actual upgrade groups and 16 candidate/documentation guards; remove the exact owned SQL fixture.
+- [ ] Complete the owned canonical full-phase `d0a16dfe` snapshot (started before the documentation-only results update), push the signed integration and require fresh current-head complete CI before the authorised PR35 merge.
+
+## PR35 integration after accepted PR25 — 17 November 2026
+
+- [x] Preserve actually merged PR25/main `4f7f6c0`, all69published SQL blobs and the existing PR35 fixes through normal ancestry; resolve all three documentation conflicts without dropping ledgers or contracts.
+- [x] Upgrade the real composition fixture from the accepted69file baseline; combined72file replay passes upgrade4/deletion25/company8/support16/API6/enquiries17groups and regenerates265public API functions.
+- [x] Pass704frontend cases,173runtime and92Edge cases,29candidate/TLS and3documentation checks plus existing source/coverage/build gates. The full local command remains refused before startup by a foreign-owned shared QA lock.
+- [ ] Publish the signed integration, inspect complete fresh current-head system/browser/native/security/package CI, fix any failures and merge PR35 under existing repository rules. No production/publication operation belongs to this work.
+
+## PR35 mergeability repair — 17 November 2026
+
+- [x] Reproduce the current SQL blocker and trace the fresh-account browser blocker to accepted request-revision and profile-preference dependencies.
+- [x] Add a forward-only private deletion-scope integration; preserve released SQL, granular permissions, shared evidence, accepted commercial history and uncertain external delivery barriers.
+- [x] Place all3unaccepted deletion migrations after the accepted prefix; preserve all69current accepted sources, exact support/qualification/enquiry helper composition and4actual upgrade groups.
+- [x] Reproduce planner-dependent snapshot reordering and order both catalogue walks; retain exact protected-dependency and concurrent-change assertions.
+- [x] Pass8company and25permanent-deletion PostgreSQL groups with ownership/preservation/delivery regressions and bilingual impact labels.
+- [x] Pass integrated `./portal check`:704frontend cases/92files, coverage floors, types/lint/format/compiler and production/PWA build.
+- [ ] Finish current-head full required CI, including native Auth/Storage/browser acceptance; canonical local invocation initially refused a foreign-owned shared QA lock.
+- [ ] Merge only PR35 after current checks pass and repository rules permit; no release publication or production operation is authorised by this repair.
+
+The complete target and all unrelated pending work remain below.
+
+## All-open-PR merge continuation — permanent deletion
+
+- [x] Preserve actual accepted main `7fbdb956`, both additive ledgers and all released migration bytes; the latest direct user request supersedes earlier PR35-only merge sequencing.
+- [ ] Pass current integrated-source checks, then let the single coordinator perform the protected PR35 merge after every required current-head gate succeeds. No publication or deployment belongs to this request.
+
+## Confirmed permanent deletion — current user extension
+
+- [x] Record the latest direct decision: permanent confirmed deletion, no trash; companies only own jobs; this task does not merge unrelated PRs.
+- [x] Audit actual account/Storage/job/company/FK behavior on main1de544d; define the bounded [execution contract](PERMANENT_DELETION.md).
+- [x] Implement typed administrative deletion plans, current authority/MFA, dependency handling, irreversible fences and truthful completion;25new real SQL groups and reduced-content/executor recovery review pass.
+- [x] Implement server-only native Auth hard deletion and exact all-version Storage cleanup, upload leases/path fences and failure/retry orchestration;62Edge unit cases pass. Actual native byte/Auth/race acceptance remains pending below.
+- [x] Close inherited company job/history/attachment bypasses and expose only own-company deletion targets;7real company SQL groups pass.
+- [x] Implement bilingual admin/context confirmation UI with pending/error/success and server receipt recovery; retain archive separately;535frontend cases and actual source/build checks pass.
+- [ ] Execute targeted real SQL/Auth/Storage and browser checks in owned fictional fixtures, then complete the reserved local acceptance and current-head CI.
+- [x] Deliver signed commits and pushed [draft PR35](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/35), with actual checks and native/CI gaps stated.
+- [x] Correct actual SQL-lint failure, protected payment history, assignment room/file revocation, retained business audit visibility and full lifecycle budget contract;21deletion+8company SQL groups,64Edge cases and real PL/pgSQL checking pass.
+- [ ] Complete the reserved actual native/full local acceptance and fresh required CI, then merge only PR35 under the user's latest explicit instruction. No other PR merge or production operation is authorised.
+- [x] Pass complete canonical local acceptance on signed67b749d:29native API suites,116application+2PWA browsers, all SQL/source checks and actual cleanup. Keep this evidence source-bound.
+- [x] Close remaining company history/earnings/calendar/raw-RLS paths and pass8expanded SQL groups; improve reviewed impact clarity and pass23focused deletion cases.
+- [ ] Verify the final follow-up with native company deletion/revocation and new screenshots; integrate only actual accepted main and replay the final migration order before current required CI and the authorised PR35 merge.
 PR40 browser acceptance repair: single shared preferences and visible mobile sign-out are implemented; 25 focused component tests, TypeScript and ESLint pass locally. The complete exact-head GitHub/browser/native gates remain pending.
 
 ## PR31 after accepted documentation main — 17 November 2026
@@ -61,6 +126,7 @@ All complete product and seven-module ledgers below remain required. Prior coord
 - [x] Pass combined source/build/coverage checks with 515 frontend/65 files and all 144 runtime cases without skips, including real-controller phase/source/browser/privacy/cancellation regressions; formatting/actionlint/diff checks pass. Preserve exact6ff's separately completed 15-gate/120+2/91-stage full checkpoint as history.
 - [ ] Preserve the parallel remote Main36 reconciliation in ordinary ancestry, publish the signed final source and require fresh full-profile system AND browser reports plus native/security/preview success on the current base.
 - [ ] Merge and verify PR12 normally, then release the temporary review-state hold where still applicable. No renewed merge approval, unaccepted feature collection or production dispatch.
+
 ## Current all-PR merge continuation — PR12
 
 - [x] Integrate actually accepted PR36/main `7fbdb956` through normal ancestry; preserve both ledgers, phase isolation, strict browser evidence and all 36 released migration files.
@@ -123,6 +189,7 @@ Earlier checkpoint evidence and the complete product scope below remain unchange
 - [x] Pass combined local source/build acceptance with254frontend cases/52files,102runtime cases,23maintenance guards and16focused publication/GitHub/documentation guards; workflow/diff checks pass. No new full PC/native pass is inferred.
 - [ ] Complete the coordinated full PC slot naturally, preserve actual logs/exit/cleanup, and integrate PR27's actual main plus any required newer main before final exact-head15-check acceptance.
 - [ ] Keep PR12's temporary draft state and no-auto-merge instruction until its reserved merge is released; no source/QA work waits for a larger collected branch.
+
 ## Actual Main17 integration — final PR24 current-head acceptance
 
 PR17 has actually merged as main `4cc20874edc1f865b71106b7bb1299e16fec5aad`. Its 62 published SQL files remain byte-identical; six pending operational additions make 68 files in PR24. Application, SQL, E2E specifications, database helper, generated API inventory and package/lock bytes remain identical to the complete local `2c850fc488165e37887807a74e92414e4fa0a25e` pass. The newer executor combines accepted Main36 system/browser phase routing with Main17’s 30-minute aggregate browser budget; individual tests, assertions and retries are unchanged.
@@ -463,6 +530,7 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [ ] Push one necessary signed integration, pass all15current exact-head required gates and merge the completed functional PR according to the direct user instruction. No release/preview-publication dispatch belongs to this task.
 
 Other proposed PR21/22/26 group work remains separate from this frozen functional scope. The complete outstanding product/platform requirements below remain required.
+
 ## Smart operations extension — current user request
 
 **Current delivery priority:** PR10 alone owns the next main merge/shared PC QA slot. Keep PR17 draft with no auto-merge or merge watcher. Own58-source code and focused evidence are committed; full current-main acceptance is pending. After PR10, integrate actual main e88df84 or newer (including local publication controls/customer-neutral catalogue and the final canonical core), reconcile only undelivered own migration versions with byte-identical SQL, and repeat complete local/native/current-head CI before advancing PR17. The server's automatic mail/Push workers remain uninstalled.
@@ -531,6 +599,7 @@ The current required-check policy has 15 contexts. Older 14-check readbacks belo
 > Historical PR21 acceptance notes follow. PR18 and PR21 have since merged; they do not impose a current merge hold. The active joint integration is recorded above.
 
 - [x] Translate the remaining general guides, forms, security policy and 30 label descriptions into English, preserving bilingual application behaviour, authored content and the verbatim specification.
+- [x] Add a [documentation index](README.md), discoverable [roadmap](../ROADMAP.md), changelog (historical changelog removed) and [decision notes](decisions/README.md); correct stale M6-pending prose using recorded accepted evidence.
 - [x] Add a [documentation index](README.md), discoverable [roadmap](../ROADMAP.md), changelog and [decision notes](decisions/README.md); correct stale M6-pending prose using recorded accepted evidence.
 - [x] Read back all three active rules after concurrent02:33UTC activation; synchronize source JSON without changing live settings. Maintain/Admin review exceptions are PR-only; all 14 strict current-base checks apply without human bypass. Preserve separate maintenance-App promotion/source-delivery work. This current snapshot supersedes earlier dormant-rule/governance descriptions below.
 - [x] Read back all eleven existing PRs, including active #10; every PR already has one type, one risk and at least one area label. Preserve classifications and the nine original labels.
@@ -702,6 +771,7 @@ No new application migration, production deployment or reduction of the remainin
 The user requests English general documentation, detailed contribution/issue/PR instructions, an explicit roadmap and useful notes, current/historical labels, protected main and continued direct merge authority. Work is isolated on `codex/english-documentation-governance` from accepted main `1341b16`; concurrent role/welcome-tour changes in the original checkout are preserved.
 
 - [x] Translate the remaining general guides, forms, security policy and 30 label descriptions into English, preserving bilingual application behaviour, authored content and the verbatim specification.
+- [x] Add a [documentation index](README.md), discoverable [roadmap](../ROADMAP.md), changelog (historical changelog removed) and [decision notes](decisions/README.md); correct stale M6-pending prose using recorded accepted evidence.
 - [x] Add a [documentation index](README.md), discoverable [roadmap](../ROADMAP.md), changelog and [decision notes](decisions/README.md); correct stale M6-pending prose using recorded accepted evidence.
 - [x] Read back all three active rules after concurrent02:33UTC activation; synchronize source JSON without changing live settings. Maintain/Admin review exceptions are PR-only; all 14 strict current-base checks apply without human bypass. Preserve separate maintenance-App promotion/source-delivery work. This current snapshot supersedes earlier dormant-rule/governance descriptions below.
 - [x] Read back all eleven existing PRs, including active #10; every PR already has one type, one risk and at least one area label. Preserve classifications and the nine original labels.
@@ -791,6 +861,7 @@ The incoming PR17 history recorded the following earlier pending instruction whe
 The user requests English general documentation, detailed contribution/issue/PR instructions, an explicit roadmap and useful notes, current/historical labels, protected main and continued direct merge authority. Work is isolated on `codex/english-documentation-governance` from accepted main `1341b16`; concurrent role/welcome-tour changes in the original checkout are preserved.
 
 - [x] Translate the remaining general guides, forms, security policy and 30 label descriptions into English, preserving bilingual application behaviour, authored content and the verbatim specification.
+- [x] Add a [documentation index](README.md), discoverable [roadmap](../ROADMAP.md), changelog (historical changelog removed) and [decision notes](decisions/README.md); correct stale M6-pending prose using recorded accepted evidence.
 - [x] Add a [documentation index](README.md), discoverable [roadmap](../ROADMAP.md), changelog and [decision notes](decisions/README.md); correct stale M6-pending prose using recorded accepted evidence.
 - [x] Read back all three active rules after concurrent02:33UTC activation; synchronize source JSON without changing live settings. Maintain/Admin review exceptions are PR-only; all 14 strict current-base checks apply without human bypass. Preserve separate maintenance-App promotion/source-delivery work. This current snapshot supersedes earlier dormant-rule/governance descriptions below.
 - [x] Read back all eleven existing PRs, including active #10; every PR already has one type, one risk and at least one area label. Preserve classifications and the nine original labels.
