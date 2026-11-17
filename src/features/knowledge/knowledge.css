@@ -204,6 +204,66 @@
   color: var(--muted);
   margin-bottom: 25px;
 }
+/* Royal UI Link source: kw-landingpage c6205c2, catalog/registry.ts and
+   app/components/ui/link/KwLink.vue. Use React Router's existing Link binding
+   for the same quiet underlined destination while preserving portal routing. */
+.knowledge-course-templates {
+  min-width: 0;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.knowledge-course-templates > h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+.knowledge-course-templates > p {
+  color: var(--muted);
+  font-size: 12px;
+}
+.knowledge-course-templates ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+}
+.knowledge-course-templates li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-width: 0;
+}
+.knowledge-course-template-link {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 1px;
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 600;
+}
+.knowledge-course-template-link:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+.knowledge-course-template-add {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+.knowledge-course-template-add .field {
+  flex: 1 1 240px;
+  max-width: 560px;
+  margin: 0;
+}
+.knowledge-course-template-add .button {
+  min-height: 42px;
+}
 /* Keep the editor frame/toolbar separate from normalized authored content. */
 .knowledge-editor {
   border: 1px solid var(--line);

@@ -46,6 +46,7 @@ import { CategoryManager } from "./categories";
 import "./i18n";
 import "./knowledge.css";
 import { WikiAttachments } from "./wiki-attachments";
+import { WikiCourseTemplates } from "./wiki-course-templates";
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const metadata = z.object({
   title: z.string().trim().min(1).max(200),
@@ -316,6 +317,11 @@ function WikiArticle({
         readOnly
       />
       <WikiAttachments
+        actor={actor}
+        page={record}
+        canEdit={record.owner_id === actor || canPublish}
+      />
+      <WikiCourseTemplates
         actor={actor}
         page={record}
         canEdit={record.owner_id === actor || canPublish}

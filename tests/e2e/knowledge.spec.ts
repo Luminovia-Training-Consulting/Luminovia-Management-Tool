@@ -191,6 +191,104 @@ test("wiki draft, password-only publishing, code preservation and unpublished re
   }
 });
 
+test("wiki template references preserve publication revisions and current template access", async ({
+  page,
+  browser,
+}, testInfo) => {
+  test.setTimeout(100_000);
+  const editor = await account("admin", "TemplateLinkEditor");
+  const reader = await account("lecturer", "TemplateLinkReader");
+  const templateResult = await service()
+    .from("course_templates")
+    .select("id,title")
+    .is("archived_at", null)
+    .order("title")
+    .limit(1)
+    .single();
+  expect(templateResult.error).toBeNull();
+  const template = templateResult.data as { id: string; title: string };
+  await login(page, editor);
+  await page.goto("/wiki");
+  await page
+    .getByRole("button", { name: "Artikel schreiben", exact: true })
+    .click();
+  const title = `Fictional template reference ${randomUUID().slice(0, 8)}`;
+  await page.getByLabel("Titel", { exact: true }).fill(title);
+  await page.getByRole("textbox", { name: "Inhalt", exact: true }).click();
+  await page.keyboard.insertText("Customer-neutral course reference test.");
+  await page
+    .getByRole("button", { name: "Veröffentlichen", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: title, exact: true }),
+  ).toBeVisible();
+  const id = new URL(page.url()).searchParams.get("page");
+  expect(id).toBeTruthy();
+
+  // A new editable revision is required; this does not change the published snapshot.
+  await page.getByRole("button", { name: "Bearbeiten", exact: true }).click();
+  await page
+    .locator(".knowledge-write")
+    .getByRole("button", { name: "Entwurf speichern", exact: true })
+    .click();
+  const references = page.getByRole("region", { name: "Kursvorlagen" });
+  await page
+    .getByLabel("Lesbare Kursvorlage auswählen", { exact: true })
+    .selectOption(template.id);
+  await references
+    .getByRole("button", { name: "Verknüpfung hinzufügen", exact: true })
+    .click();
+  const templateLink = references.getByRole("link", {
+    name: template.title,
+    exact: true,
+  });
+  await expect(templateLink).toHaveAttribute(
+    "href",
+    `/courses?template=${template.id}`,
+  );
+  await templateLink.click();
+  await expect(page).toHaveURL(
+    new RegExp(`/courses\\?template=${template.id}`),
+  );
+  await expect(
+    page.getByRole("heading", { name: template.title, exact: true }),
+  ).toBeVisible();
+
+  // Publishing carries the reference with that revision; the lecturer's wiki access does not
+  // grant a new course-template permission, so the protected projection omits the link.
+  await page.goto(`/wiki?page=${id}`);
+  await page.getByRole("button", { name: "Bearbeiten", exact: true }).click();
+  await page
+    .locator(".knowledge-write")
+    .getByRole("button", { name: "Veröffentlichen", exact: true })
+    .click();
+  const learnerContext = await browser.newContext({
+    baseURL: process.env.E2E_BASE_URL!,
+    viewport: testInfo.project.use.viewport,
+    isMobile: testInfo.project.use.isMobile,
+    hasTouch: testInfo.project.use.hasTouch,
+  });
+  try {
+    const learner = await learnerContext.newPage();
+    await login(learner, reader);
+    await learner.goto(`/wiki?page=${id}`);
+    await expect(
+      learner.getByRole("heading", { name: title, exact: true }),
+    ).toBeVisible();
+    await expect(
+      learner.getByRole("link", { name: template.title, exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      learner.getByText("Customer-neutral course reference test.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await a11y(learner);
+  } finally {
+    await learnerContext.close();
+  }
+});
+
 test("forum supports real rich-text discussion, accepted answers, reports and role-authorized moderation", async ({
   page,
   browser,
