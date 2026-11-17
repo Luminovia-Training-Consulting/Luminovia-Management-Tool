@@ -59,7 +59,7 @@ await withTestDatabase("api_surface", async ({ sql }) => {
   );
   assert.equal(
     await sql(
-      "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private') and has_function_privilege('anon',p.oid,'EXECUTE') and p.oid <> to_regprocedure('public.require_portal_access()')",
+      "select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private') and has_function_privilege('anon',p.oid,'EXECUTE') and p.oid not in (to_regprocedure('public.require_portal_access()'),to_regprocedure('private.require_portal_access()'))",
     ),
     "0",
     "Anonymous actors cannot execute the invitation-only application API or its private implementations",

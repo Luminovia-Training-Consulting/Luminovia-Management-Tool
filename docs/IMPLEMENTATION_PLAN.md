@@ -12,7 +12,7 @@
 - [x] Push current expertise, job capacity-token, current guest-role concurrency fixture and admin handover-permission expectations directly to `main` (`cb4570d3`, `e0c2f3c4`). The local capacity SQL suite passed 8/8; the hosted exact-head run later passed job discovery 9/9.
 - [x] Add forward password-only request-boundary corrections and remove stale MFA wording from active SQL denial messages without restoring any factor gate (`b3de63a5`, `f0f3f6aa`).
 - [ ] Rerun focused local PostgreSQL and native Auth/API checks, regenerate the migration-counted API inventory, then complete full isolated system/browser acceptance and inspect current-head `Portal checks` to completion.
-- [ ] Do not report CI green until `verify` and the retained-data self-host candidate pass on the same `main` SHA. On `b87a4e04`, fast gates passed; full verification found a public definer hook after the pre-request repair, and withdrawal acceptance exposed an assertion that reviewed the same fixture twice. The new migration restores the public invoker/private definer boundary, and the test now checks permission access without prematurely deciding its pending request.
+- [ ] Do not report CI green until `verify` and the retained-data self-host candidate pass on the same `main` SHA. On `4554e39e`, fast gates passed; full verification confirmed the public invoker/private definer boundary, then found that anonymous requests need schema USAGE to call the no-op pre-request helper. The new narrow schema grant and updated anonymous-grant regression exceptions are pending validation.
 
 ## Current delivered-feature API parity — 18 November 2026
 
