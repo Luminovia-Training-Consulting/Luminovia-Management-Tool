@@ -415,9 +415,10 @@ try {
     !memberEvents.some((m) => m.id === suspended),
     "A subscribed suspended account receives no later persisted event",
   );
-  assert.deepEqual(
-    await checked(b.client.rpc("chat_rooms_list"), "Suspended room list"),
-    [],
+  assert.equal(
+    (await b.client.rpc("chat_rooms_list")).error?.code,
+    "42501",
+    "Suspended accounts cannot enumerate operational chat rooms",
   );
   assert.equal(
     (await b.client.rpc("chat_room_members", { p_room_id: group })).error?.code,
