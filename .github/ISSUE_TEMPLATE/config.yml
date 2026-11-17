@@ -4,7 +4,7 @@ contact_links:
     url: https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/CONTRIBUTING.md
     about: Getting started, local commands, branches, tests and the workflow through to merge.
   - name: Questions and support
-    url: https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/docs/ISSUE_GUIDE.md
+    url: https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/DEVELOPMENT.md#section-issue-guide
     about: Read the issue guide for questions, classification and useful evidence.
   - name: Report a security vulnerability privately
     url: https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/security/advisories/new

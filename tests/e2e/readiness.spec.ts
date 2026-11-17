@@ -223,7 +223,7 @@ test("management preparation and assigned lecturer acknowledgements update actua
     ).toBeVisible();
     await accessible(page);
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-readiness-dark-en.png`,
+      path: `.local/screenshots/${testInfo.project.name}-readiness-dark-en.png`,
       fullPage: true,
     });
     await lecturerContext.setOffline(true);

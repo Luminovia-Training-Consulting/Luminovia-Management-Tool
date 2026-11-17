@@ -224,7 +224,7 @@ test("own labels connect searchable profiles, real course history, enrolled revi
     expect(await page.locator(".people-review-list script").count()).toBe(0);
     await a11y(page);
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-person-profile.png`,
+      path: `.local/screenshots/${testInfo.project.name}-person-profile.png`,
       fullPage: true,
     });
     await manager.goto(`/people/${teacher.id}`);

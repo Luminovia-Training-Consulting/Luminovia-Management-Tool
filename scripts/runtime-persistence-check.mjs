@@ -144,7 +144,7 @@ try {
     service
       .from("profiles")
       .update({
-        display_name: `Fiktive Persistenzprüfung ${id}`,
+        display_name: `Fictional persistence check ${id}`,
         bio_de: payload,
         bio_en: "Fictional persistence probe",
         time_zone: "Australia/Brisbane",

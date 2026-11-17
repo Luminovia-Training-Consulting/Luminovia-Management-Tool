@@ -32,7 +32,7 @@ test("a legacy occupied port fails before startup and its existing listener surv
   try {
     await assert.rejects(
       assertTestPortsAvailable([port]),
-      new RegExp(`Testport ${port}`),
+      new RegExp(`Test port ${port}`),
     );
     assert(listener.listening, "the unrelated listener must remain running");
   } finally {
@@ -59,7 +59,7 @@ test("different checkout identities cannot hold the shared QA ports concurrently
     });
     assert.throws(
       () => acquireTestLock({ directory, checkout: "/fictional/checkout-two" }),
-      /anderen Checkout/,
+      /another checkout/,
     );
     assert.equal(statSync(directory).mode & 0o777, 0o700);
     assert.equal(statSync(join(directory, "active.lock")).mode & 0o777, 0o600);
@@ -98,7 +98,7 @@ test("the kernel releases a dead holder without trusting stale PID metadata", as
     const deadline = Date.now() + 2000;
     while (!existsSync(marker) && Date.now() < deadline) await delay(10);
     assert(existsSync(marker), "the real lock holder must be ready");
-    assert.throws(() => acquireTestLock({ directory }), /anderen Checkout/);
+    assert.throws(() => acquireTestLock({ directory }), /another checkout/);
     child.kill("SIGKILL");
     await exited;
     // A reused/current PID written into old metadata cannot keep a dead lock.

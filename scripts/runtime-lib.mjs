@@ -197,7 +197,7 @@ export async function command(
       if (spawnError)
         reject(
           new Error(
-            `Programm ${file} konnte nicht gestartet werden. Prüfe Installation und Ausführungsrechte.`,
+            `Could not start program ${file}. Check installation and execution permissions.`,
             { cause: spawnError },
           ),
         );
@@ -284,7 +284,7 @@ export async function ensureDependencies() {
         existsSync(join(root, "node_modules", name, "package.json")),
     );
   if (!valid) {
-    console.log("Installiere exakt gesperrte Abhängigkeiten …");
+    console.log("Installing locked dependencies …");
     await command("npm", ["ci"]);
   }
   privateDirectory();
@@ -350,7 +350,7 @@ export function migrationDigest(cwd = root) {
         .trim()
     )
       throw new Error(
-        `Migration ${name} ist noch leer. Erst fertigstellen, dann starten.`,
+        `Migration ${name} is empty. Complete it before starting.`,
       );
     hash.update(name);
     hash.update(source);

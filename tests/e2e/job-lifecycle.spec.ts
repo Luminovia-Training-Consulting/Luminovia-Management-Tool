@@ -295,7 +295,7 @@ test("reasoned cancellation, explicit reopening, same-page reclaim and safe copy
       ),
     ).toBe(true);
     await page.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-job-lifecycle.png`,
+      path: `.local/screenshots/${testInfo.project.name}-job-lifecycle.png`,
       fullPage: true,
     });
   } finally {

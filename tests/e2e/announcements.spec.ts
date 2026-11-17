@@ -180,7 +180,7 @@ test("MFA administration publishes bilingual revisions; saved drafts stay privat
     ).toBeVisible();
     await a11y(viewer);
     await viewer.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-announcements.png`,
+      path: `.local/screenshots/${testInfo.project.name}-announcements.png`,
       fullPage: true,
     });
     await row.getByRole("button", { name: "Archivieren", exact: true }).click();

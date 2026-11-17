@@ -145,7 +145,7 @@ test("optional external reference and contact are saved, shown after claim and h
     .analyze();
   expect(managementScan.violations.map((issue) => issue.id)).toEqual([]);
   await page.screenshot({
-    path: `docs/screenshots/${testInfo.project.name}-job-briefing-management-de-light.png`,
+    path: `.local/screenshots/${testInfo.project.name}-job-briefing-management-de-light.png`,
     fullPage: true,
   });
   // A second account needs an independent session, but must retain the current
@@ -232,7 +232,7 @@ test("optional external reference and contact are saved, shown after claim and h
       ),
     ).toBe(true);
     await lecturer.screenshot({
-      path: `docs/screenshots/${testInfo.project.name}-job-briefing.png`,
+      path: `.local/screenshots/${testInfo.project.name}-job-briefing.png`,
       fullPage: true,
     });
     await testInfo.attach("optional-reference-contact", {
