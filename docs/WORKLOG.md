@@ -1,5 +1,9 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — post-upload discovery race
+
+An initial document discovery request may still be pending when a successful upload commits. Invalidation alone can reuse that pre-commit request, blocking completion and omitting the new file. Upload success now cancels document list, exact-document and version-history queries before invalidating them, matching the broader safeguard in PR35. A controlled component regression failed without the fix and passed with it; the three original version/upload component tests and TypeScript passed locally; the regression also covers the three query prefixes. This race is a plausible contributor to the mobile CI file failures, but their precise cause is not established; the full browser and native gates must run again on the integrated revision.
+
 ## 17 November 2026 — PR31 reconciled with accepted documentation main
 
 Accepted PR38/main `bcba673` updates documentation and the generated API format. Resolved the integration conflicts while preserving the briefing contract and the user-required work log and plan. Regenerated the API reference from an isolated actual 70-migration replay: 254 public application functions, excluding extension-owned functions. The owned database/container were verified removed. The existing 69→70 upgrade, briefing12 and lifecycle12 database proof remains source-bound; SQL bodies did not change.
