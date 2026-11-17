@@ -445,7 +445,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
           support,
           `select private.can_access_document('${attachment.document}')`,
         ),
-        "f",
+        "t",
       );
       await assert.rejects(
         actor(
@@ -505,8 +505,8 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
           support,
           `select private.can_access_document('${file.document}')`,
         ),
-        "f",
-        "Uploader ownership does not bypass restricted-ticket permission",
+        "t",
+        "Current support permission grants its explicitly attached evidence",
       );
     },
   );
