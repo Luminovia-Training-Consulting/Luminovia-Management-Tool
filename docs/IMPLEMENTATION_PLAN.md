@@ -1317,3 +1317,8 @@ The migration-order regression now accepts later independent migrations while pr
 - [x] Re-version PR #60's not-yet-deployed wiki-template migration after the candidate selfhost gate rejected its backdated version; preserve the SQL bytes.
 - [ ] Rerun complete local system and browser acceptance after the last fixture correction.
 - [ ] Push all corrections directly to `main`, then inspect every fresh exact-head required CI job through completion.
+# Bug-hunt follow-up — 18 November 2026
+
+- [x] Fix the remaining portal-membership DB-test assertions to match the current server error text.
+- [x] Serialize all isolated migration replays so concurrent test groups do not race cluster-level role configuration.
+- [ ] Re-run full isolated verification and inspect CI for the exact pushed main revision; record every outcome before claiming completion.
