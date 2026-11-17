@@ -584,7 +584,7 @@ try {
     },
   );
   await check(
-    "Participant course channel uses password-only manager permission and a real course; separates commercial channels",
+    "Course channels require active portal members and stay separate from commercial channels",
     async () => {
       const start = new Date(Date.now() + 90 * 86400000).toISOString(),
         end = new Date(Date.now() + 90 * 86400000 + 3600000).toISOString();
@@ -612,24 +612,17 @@ try {
       const room = await value(
         admin,
         "create_chat_group",
-        ["Participants", `{${participant},${a}}`, "participant_course", job],
+        ["Fictional course channel", `{${a},${b}}`, "participant_course", job],
         "aal1",
       );
-      const pmsg = await msg(participant, room, "Participant question");
-      assert.ok(pmsg);
-      assert.ok(
-        (await rows(participant, "chat_contacts")).some((x) => x.id === a),
-      );
-      assert.ok(
-        !(await rows(participant, "chat_contacts")).some(
-          (x) => x.id === outsider,
+      await assert.rejects(msg(participant, room, "Participant question"));
+      assert.equal(
+        await sql(
+          `select count(*) from public.chat_members where room_id=${quote(room)} and user_id=${quote(participant)}`,
         ),
+        "0",
       );
-      await assert.rejects(
-        value(participant, "create_dm", [outsider]),
-        /Contact is not available/,
-      );
-      assert.ok(await value(participant, "create_dm", [a]));
+      await assert.rejects(value(participant, "create_dm", [outsider]));
       const claimed = JSON.parse(
         await actor(a, `select public.claim_job('${job}','${randomUUID()}',1)`),
       );
@@ -639,10 +632,7 @@ try {
       );
       assert.equal(commercial.kind, "lecturer_course");
       assert.equal(commercial.owner_id, a);
-      await assert.rejects(
-        rows(participant, "chat_messages", [commercial.id]),
-        /access denied/,
-      );
+      await assert.rejects(rows(participant, "chat_messages", [commercial.id]));
       await assert.rejects(
         value(a, "manage_chat_member", [commercial.id, participant, false]),
         /Invalid group member/,
