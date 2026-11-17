@@ -143,7 +143,7 @@ jobs:
           if test "$GITHUB_EVENT_NAME" = pull_request; then
             node scripts/runtime-test.mjs --phase system --external-gates quality,coverage
           else
-            ./portal test
+            node scripts/runtime-test.mjs --phase all --external-gates quality,coverage
           fi
       - name: Preserve actual functional and integration acceptance
         if: always() && (steps.application.outcome == 'success' || steps.application.outcome == 'failure' || steps.application.outcome == 'cancelled')

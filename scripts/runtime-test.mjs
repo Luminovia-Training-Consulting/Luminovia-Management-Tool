@@ -595,10 +595,10 @@ evidence.completedAt = new Date().toISOString();
 saveEvidence();
 privateWrite(
   join(artifacts, "RESULT.txt"),
-  `PASS\nPhase: ${phase.phase}\nStages: ${phase.stages.join(", ")}\n${phase.externalGates.length ? `Delegated required gates: ${phase.externalGates.join(", ")}\n` : ""}${phase.phase === "system" ? "Browser/build/PWA acceptance was not run in this phase.\n" : phase.phase === "browser" ? "System SQL/API/Edge/operational acceptance was not run in this phase.\n" : "Complete local acceptance.\n"}Project: ${project}\nCompleted: ${new Date().toISOString()}\nDevelopment database and object volumes were not targeted.\n`,
+  `PASS\nPhase: ${phase.phase}\nStages: ${phase.stages.join(", ")}\n${phase.externalGates.length ? `Delegated required gates: ${phase.externalGates.join(", ")}\n` : ""}${phase.phase === "system" ? "Browser/build/PWA acceptance was not run in this phase.\n" : phase.phase === "browser" ? "System SQL/API/Edge/operational acceptance was not run in this phase.\n" : phase.externalGates.length ? "Selected phase acceptance passed; delegated CI gates are listed above.\n" : "Complete local acceptance.\n"}Project: ${project}\nCompleted: ${new Date().toISOString()}\nDevelopment database and object volumes were not targeted.\n`,
 );
 console.log(
-  phase.phase === "all"
+  phase.phase === "all" && phase.externalGates.length === 0
     ? `\nAlle isolierten Prüfungen und Aufräumen bestanden. Bericht: .local/tests/${run}/RESULT.txt`
-    : `\nIsolated ${phase.phase} phase and cleanup passed; other acceptance phases are not claimed. Report: .local/tests/${run}/RESULT.txt`,
+    : `\nIsolated ${phase.phase} acceptance and cleanup passed${phase.externalGates.length ? `; delegated required gates: ${phase.externalGates.join(", ")}` : "; other acceptance phases are not claimed"}. Report: .local/tests/${run}/RESULT.txt`,
 );

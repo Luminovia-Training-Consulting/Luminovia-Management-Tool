@@ -51,13 +51,13 @@ export function runtimeTestPhasePlan(args = []) {
           ["all", "system", "browser"].includes(args[1])) ||
         (args.length === 4 &&
           args[0] === "--phase" &&
-          args[1] === "system" &&
+          ["all", "system"].includes(args[1]) &&
           args[2] === "--external-gates" &&
           args[3] === "quality,coverage")
       ))
   )
     throw new Error(
-      "Use no arguments, --phase all|system|browser, or --phase system --external-gates quality,coverage.",
+      "Use no arguments, --phase all|system|browser, or --phase all|system --external-gates quality,coverage.",
     );
   const phase = args.length ? args[1] : "all";
   const externalGates = args.length === 4 ? ["quality", "coverage"] : [];
