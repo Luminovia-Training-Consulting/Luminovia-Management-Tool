@@ -6,8 +6,9 @@
 - [x] Split shell-only announcements/notification components from their full pages and lazy-load those pages on direct routes as well as section hubs.
 - [x] Pass all 867 frontend tests, targeted UI tests, typecheck, lint and public-config production/PWA build; confirm ineffective dynamic-import warnings are gone and route chunks are emitted.
 - [x] Align stale SQL assertions with accepted self-declared expertise behavior; pass 25 PostgreSQL groups including 50 parallel claims, and pass the focused owned-cascade SQL suite after adding an explicit `oid[]` initializer migration.
-- [ ] Run the complete isolated SQL/API/desktop/mobile/PWA acceptance after the other checkout releases the shared test lock. The latest `./portal test` retry stopped safely before startup due to that lock; an earlier exact full run reached and diagnosed the SQL/lint failures now addressed.
-- [ ] Push signed branch through the repository PR workflow, monitor exact-head checks and merge when required checks pass.
+- [x] Resolve advisor warnings from redundant permissive guest-profile/role policies using a forward migration; `npm run test:db` passes all 25 groups, schema lint and database advisors (“No issues found”).
+- [ ] Complete canonical isolated SQL/API/desktop/mobile/PWA acceptance; the most recent full run passed through persistence and all 25 SQL groups before the now-fixed advisor warning, while the next retry stopped before startup because another checkout owns the shared lock.
+- [ ] Push the current signed branch through the repository PR workflow, monitor exact-head checks and merge when required checks pass.
 
 ## Workspace clarity, account creation and manual planning — 17 November 2026
 
