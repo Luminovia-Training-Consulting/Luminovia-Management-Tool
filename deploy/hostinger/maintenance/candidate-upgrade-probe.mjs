@@ -27,6 +27,10 @@ async function checked(promise) {
   assert.equal(result.error, null);
   return result.data;
 }
+// Verify every pre-upgrade private event field and the explicitly added defaults.
+export function assertRetainedPrivateEvent(before, after) {
+  assert.deepEqual(after, { description: "", meeting_url: "", ...before });
+}
 // Calculate a time-based code for the MFA factor created only for this probe.
 function totp(secret) {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -945,7 +949,8 @@ export async function runUpgradeProbe(mode) {
       ),
       probe.roles,
     );
-    assert.deepEqual(
+    assertRetainedPrivateEvent(
+      probe.event,
       await checked(
         client
           .from("personal_events")
@@ -953,7 +958,6 @@ export async function runUpgradeProbe(mode) {
           .eq("id", probe.event.id)
           .single(),
       ),
-      probe.event,
     );
     const { session } = await checked(client.auth.getSession());
     const download = (token) =>

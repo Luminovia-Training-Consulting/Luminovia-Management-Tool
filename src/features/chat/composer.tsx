@@ -26,9 +26,15 @@ const acceptedFiles = ".pdf,.png,.jpg,.jpeg,.webp,.txt,.docx,.xlsx,.pptx";
 export function MessageComposer({
   actor,
   room,
+  replyId,
+  replyTarget,
+  onCancelReply,
 }: {
   actor: string;
   room: string;
+  replyId?: string | null;
+  replyTarget?: import("./types").ChatMessage;
+  onCancelReply?: () => void;
 }) {
   const { t } = useTranslation("chat");
   const online = useOnline();
@@ -94,16 +100,22 @@ export function MessageComposer({
         body,
         attachment?.id ?? null,
         ids,
+        replyId ?? null,
       ]);
       if (!retry.current || retry.current.signature !== signature)
         retry.current = { signature, key: crypto.randomUUID() };
-      const { data, error } = await db().rpc("send_message_with_mentions", {
+      if (replyId && (!replyTarget || replyTarget.deleted_at))
+        throw new Error("reply_unavailable");
+      const args = {
         p_room_id: room,
         p_body: body,
         p_client_id: retry.current.key,
         p_document_id: attachment?.id ?? null,
         p_mention_ids: ids,
-      });
+      };
+      const { data, error } = replyId
+        ? await db().rpc("send_chat_reply", { ...args, p_reply_to_id: replyId })
+        : await db().rpc("send_message_with_mentions", args);
       if (error || !data) throw error ?? new Error("unconfirmed");
       return data;
     },
@@ -112,6 +124,7 @@ export function MessageComposer({
       form.reset();
       setAttachment(null);
       setMentions([]);
+      onCancelReply?.();
       upload.reset();
       await Promise.all([
         client.invalidateQueries({ queryKey: chatKeys.messages(actor, room) }),
@@ -150,6 +163,28 @@ export function MessageComposer({
       noValidate
       onSubmit={form.handleSubmit((values) => send.mutate(values))}
     >
+      {replyId && (
+        <div className="chat-reply-draft">
+          <span>
+            {replyTarget && !replyTarget.deleted_at
+              ? t("replyingTo", { name: replyTarget.sender_name })
+              : t("replyUnavailable")}
+          </span>
+          {replyTarget && !replyTarget.deleted_at && (
+            <p>{replyTarget.body.slice(0, 200)}</p>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={t("cancelReply")}
+            disabled={busy}
+            onClick={onCancelReply}
+          >
+            <X size={16} />
+          </Button>
+        </div>
+      )}
       <Field
         id="chat-message-body"
         label={t("message")}
@@ -225,7 +260,13 @@ export function MessageComposer({
           {t("attachment")}
         </Button>
         <small>{online ? t("attachmentHint") : t("onlineOnly")}</small>
-        <Button disabled={!online || busy}>
+        <Button
+          disabled={
+            !online ||
+            busy ||
+            Boolean(replyId && (!replyTarget || replyTarget.deleted_at))
+          }
+        >
           <Send size={17} />
           {t(send.isPending ? "sending" : "send")}
         </Button>

@@ -40,7 +40,8 @@ it("pins only after server confirmation, persists across re-fetch and preserves 
   let pinned: string[] = [];
   let confirm!: (result: unknown) => void;
   fake.rpc.mockImplementation(async (name: string) => {
-    if (name === "chat_rooms_list") return { data: rooms, error: null };
+    if (name === "chat_rooms_with_manual_unread")
+      return { data: rooms, error: null };
     if (name === "chat_pinned_rooms") return { data: pinned, error: null };
     if (name === "set_chat_pin")
       return new Promise((resolve) => {
@@ -85,7 +86,7 @@ it("pins only after server confirmation, persists across re-fetch and preserves 
 it("reports failure without presenting an unconfirmed pin", async () => {
   await i18n.changeLanguage("en");
   fake.rpc.mockImplementation(async (name: string) => ({
-    data: name === "chat_rooms_list" ? rooms : [],
+    data: name === "chat_rooms_with_manual_unread" ? rooms : [],
     error: name === "set_chat_pin" ? { code: "42501" } : null,
   }));
   const client = new QueryClient({
@@ -117,7 +118,8 @@ it("reorders only after confirmation and binds the reviewed order", async () => 
   let pinned = ["room-a", "room-b"];
   let finish!: (result: unknown) => void;
   fake.rpc.mockImplementation(async (name: string) => {
-    if (name === "chat_rooms_list") return { data: rooms, error: null };
+    if (name === "chat_rooms_with_manual_unread")
+      return { data: rooms, error: null };
     if (name === "chat_pinned_rooms") return { data: pinned, error: null };
     if (name === "move_chat_pin")
       return new Promise((resolve) => {

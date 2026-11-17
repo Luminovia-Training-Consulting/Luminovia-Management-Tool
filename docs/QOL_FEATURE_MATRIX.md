@@ -63,7 +63,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Unarchive conversations | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Hide conversations from their personal list | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Mark conversations as read | Partial | `src/features/chat/thread.tsx`; `supabase/migrations/20261115121922_secure_chat_collaboration.sql`; read occurs when the visible thread is observed. |
-| COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Mark conversations as unread | Not yet assessed | Pending |
+| COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Mark conversations as unread | Partial; isolated tests passed | `supabase/migrations/20261117120011_personal_chat_unread.sql` and `src/features/chat/room-unread.tsx`; integrated E2E pending. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Search conversations | Source present; acceptance pending | `src/features/chat/chat.tsx`; `supabase/migrations/20261115121922_secure_chat_collaboration.sql`. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Filter conversations | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Display unread message counts | Source present; acceptance pending | `src/features/chat/chat.tsx`; `supabase/migrations/20261115121922_secure_chat_collaboration.sql`. |
@@ -76,7 +76,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.5 Message functionality | Links and safe link previews where feasible | Partial | `src/features/chat/message.tsx` converts HTTP(S) text into safe external links; preview support not established. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.5 Message functionality | Emoji | Source present; acceptance pending | `src/features/chat/composer.tsx`; `src/features/chat/mentions.test.tsx` includes send retry coverage. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.5 Message functionality | Reactions | Source present; acceptance pending | `src/features/chat/message.tsx`; `supabase/migrations/20261116080730_chat_structured_mentions.sql`. |
-| COMPLETE CHAT & MESSAGING SYSTEM / 2.5 Message functionality | Replies to individual messages | Not yet assessed | Pending |
+| COMPLETE CHAT & MESSAGING SYSTEM / 2.5 Message functionality | Replies to individual messages | Partial; isolated tests passed | `supabase/migrations/20261117120010_chat_replies.sql`, `src/features/chat/composer.tsx`; integrated E2E pending. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.5 Message functionality | Optional threaded replies | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.5 Message functionality | Mentions | Partial | `src/features/chat/mentions.tsx`; `src/features/chat/composer.tsx`; explicit selection rather than typed-name autocomplete. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.5 Message functionality | Copying message text | Partial; component tests passed | `src/features/chat/message.tsx`; `src/features/chat/mentions.test.tsx` passed success/failure/tombstone cases; `tests/e2e/chat.spec.ts` added, execution pending. |
@@ -292,7 +292,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | DOCUMENTS, WIKI AND FORUM / Forum | Create discussion | Partial | `src/features/knowledge/forum.tsx`; server RPC and role details require full acceptance. |
 | DOCUMENTS, WIKI AND FORUM / Forum | Edit own discussion | Not yet assessed | Pending |
 | DOCUMENTS, WIKI AND FORUM / Forum | Reply | Partial | `src/features/knowledge/forum.tsx`; server RPC and role details require full acceptance. |
-| DOCUMENTS, WIKI AND FORUM / Forum | Quote | Not yet assessed | Pending |
+| DOCUMENTS, WIKI AND FORUM / Forum | Quote | Partial; component tests passed | `src/features/knowledge/forum.tsx`; isolated browser test prepared but not run. |
 | DOCUMENTS, WIKI AND FORUM / Forum | Subscribe | Partial | `src/features/knowledge/forum.tsx`; server RPC and role details require full acceptance. |
 | DOCUMENTS, WIKI AND FORUM / Forum | Unsubscribe | Partial | `src/features/knowledge/forum.tsx`; server RPC and role details require full acceptance. |
 | DOCUMENTS, WIKI AND FORUM / Forum | Pin where authorised | Partial | `src/features/knowledge/forum.tsx`; server RPC and role details require full acceptance. |
@@ -388,7 +388,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS | Pin/unpin | Not yet assessed | Pending |
 | UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS | Mute/unmute | Not yet assessed | Pending |
 | UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS / Forms | Save drafts | Not yet assessed | Pending |
-| UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS / Forms | Protect unsaved changes | Not yet assessed | Pending |
+| UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS / Forms | Protect unsaved changes | In progress | A local calendar guard is being integrated; history/programmatic SPA navigation and other forms remain open. |
 | UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS / Forms | Preserve input after validation errors | Not yet assessed | Pending |
 | UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS / Forms | Show clear validation messages | Not yet assessed | Pending |
 | UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS / Forms | Disable duplicate submissions | Not yet assessed | Pending |

@@ -9,7 +9,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Copy, EyeOff, Pencil, SmilePlus, Trash2 } from "lucide-react";
+import { Copy, EyeOff, Pencil, Reply, SmilePlus, Trash2 } from "lucide-react";
 import { db } from "../../lib/supabase";
 import { requireOnline, useOnline } from "../../lib/online";
 import { Field, Notice } from "../../components/common";
@@ -60,12 +60,14 @@ export function MessageBubble({
   zone,
   attachment,
   now,
+  onReply,
 }: {
   message: ChatMessage;
   actor: string;
   zone: string;
   attachment?: ReactNode;
   now: number;
+  onReply?: (message: ChatMessage) => void;
 }) {
   const { t, i18n } = useTranslation("chat");
   const common = useTranslation().t;
@@ -203,6 +205,18 @@ export function MessageBubble({
           <p className="chat-tombstone">{t("deleted")}</p>
         ) : (
           <>
+            {message.reply !== undefined && (
+              <blockquote className="chat-reply-preview">
+                {message.reply ? (
+                  <>
+                    <strong>{message.reply.sender_name}</strong>
+                    <span>{message.reply.body}</span>
+                  </>
+                ) : (
+                  t("replyUnavailable")
+                )}
+              </blockquote>
+            )}
             <p className="chat-message-body">
               <MessageText body={message.body} />
             </p>
@@ -248,6 +262,17 @@ export function MessageBubble({
                 aria-label={t("messageActions")}
               >
                 <TaskFromMessageAction messageId={message.id} />
+                {onReply && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("replyAction")}
+                    disabled={!online}
+                    onClick={() => onReply(message)}
+                  >
+                    <Reply size={15} />
+                  </Button>
+                )}
                 {message.body && (
                   <Button
                     variant="ghost"

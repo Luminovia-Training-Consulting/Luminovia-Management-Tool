@@ -966,3 +966,18 @@
   outline: 2px solid var(--brand);
   outline-offset: -3px;
 }
+.chat-reply-preview,
+.chat-reply-draft {
+  border-inline-start: 3px solid var(--brand);
+  background: var(--surface);
+  padding: 0.5rem 0.75rem;
+  overflow-wrap: anywhere;
+}
+.chat-reply-preview strong,
+.chat-reply-preview span {
+  display: block;
+}
+.chat-reply-draft p {
+  white-space: pre-wrap;
+  margin: 0.25rem 0;
+}

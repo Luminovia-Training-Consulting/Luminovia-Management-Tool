@@ -217,6 +217,13 @@ const pairs: Record<string, [string, string]> = {
     "Der Inhalt wird durch einen Löschhinweis ersetzt. Die Bearbeitung bleibt nachvollziehbar.",
     "The content will be replaced by a deletion notice. The action remains recorded.",
   ],
+  replyAction: ["Auf Nachricht antworten", "Reply to message"],
+  replyingTo: ["Antwort an {{name}}", "Replying to {{name}}"],
+  cancelReply: ["Antwort abbrechen", "Cancel reply"],
+  replyUnavailable: [
+    "Die ursprüngliche Nachricht ist nicht verfügbar.",
+    "The original message is unavailable.",
+  ],
   messageActions: ["Nachrichtenaktionen", "Message actions"],
   copyMessage: ["Nachrichtentext kopieren", "Copy message text"],
   copySuccess: ["Nachrichtentext kopiert.", "Message text copied."],

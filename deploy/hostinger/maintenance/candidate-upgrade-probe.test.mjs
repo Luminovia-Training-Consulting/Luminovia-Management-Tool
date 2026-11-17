@@ -24,6 +24,7 @@ import { readPrivateJson } from "../../../scripts/testing/private-state.mjs";
 import {
   assertFinancialWitness,
   assertRetainedFinancialWitness,
+  assertRetainedPrivateEvent,
   canonicalProbeUuid,
   createFinancialWitness,
   financialProbePdf,
@@ -51,6 +52,51 @@ function ledgerFixture(t) {
     },
   };
 }
+
+test("retained private event requires exact old fields and explicit safe defaults", () => {
+  const before = {
+    id: id(1),
+    title: "Fictional appointment",
+    time_zone: "Europe/Berlin",
+  };
+  assertRetainedPrivateEvent(before, {
+    ...before,
+    description: "",
+    meeting_url: "",
+  });
+  const newer = {
+    ...before,
+    description: "Existing note",
+    meeting_url: "https://example.invalid/meeting",
+  };
+  assertRetainedPrivateEvent(newer, { ...newer });
+  assert.throws(() =>
+    assertRetainedPrivateEvent(before, {
+      ...before,
+      title: "Changed",
+      description: "",
+      meeting_url: "",
+    }),
+  );
+  assert.throws(() =>
+    assertRetainedPrivateEvent(before, {
+      ...before,
+      description: "Invented",
+      meeting_url: "",
+    }),
+  );
+  assert.throws(() =>
+    assertRetainedPrivateEvent(newer, { ...newer, meeting_url: "" }),
+  );
+  assert.throws(() =>
+    assertRetainedPrivateEvent(before, {
+      ...before,
+      description: "",
+      meeting_url: "",
+      extra: true,
+    }),
+  );
+});
 
 test("document IDs accept exact UUID values and reject arbitrary file or HTTP strings without exposing them", () => {
   for (const value of [

@@ -2,7 +2,7 @@
  * Forum threads, replies, accepted answers, subscriptions and visible moderation. Wait for
  * server confirmation and invalidate only the affected query scopes.
  */
-import { useRef, useState } from "react";
+import { useImperativeHandle, useRef, useState, type Ref } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -168,15 +168,62 @@ function CreateThread({
   );
 }
 /** Keep reply content local until the server confirms posting. */
-function ReplyForm({ actor, thread }: { actor: string; thread: ForumThread }) {
+function ReplyForm({
+  actor,
+  thread,
+  ref,
+  quoting,
+  onReplyPending,
+}: {
+  actor: string;
+  thread: ForumThread;
+  ref: Ref<{ append: (text: string) => void }>;
+  quoting: boolean;
+  onReplyPending: (pending: boolean) => void;
+}) {
   const { t } = useTranslation("knowledge");
   const online = useOnline();
   const client = useQueryClient();
   const [content, setContent] = useState<JSONContent>(emptyDocument);
   const [contentError, setContentError] = useState(false);
   const [generation, setGeneration] = useState(0);
+  const [quoteLimit, setQuoteLimit] = useState(false);
+  const contentRef = useRef<JSONContent>(emptyDocument);
+  useImperativeHandle(
+    ref,
+    () => ({
+      append: (text) => {
+        const candidate: JSONContent = {
+          type: "doc",
+          content: [
+            ...(contentRef.current.content ?? []),
+            {
+              type: "blockquote",
+              content: [
+                { type: "paragraph", content: [{ type: "text", text }] },
+              ],
+            },
+            { type: "paragraph" },
+          ],
+        };
+        const nodes = (value: JSONContent): number =>
+          1 + (value.content ?? []).reduce((n, child) => n + nodes(child), 0);
+        if (!contentIsValid(candidate) || nodes(candidate) > 1500) {
+          setQuoteLimit(true);
+          return;
+        }
+        contentRef.current = candidate;
+        setQuoteLimit(false);
+        setContent(candidate);
+        setGeneration((value) => value + 1);
+      },
+    }),
+    [],
+  );
   const retry = useRef<{ signature: string; key: string } | null>(null);
   const reply = useMutation({
+    onMutate: () => onReplyPending(true),
+    onSettled: () => onReplyPending(false),
     mutationFn: async () => {
       requireOnline();
       setContentError(false);
@@ -196,6 +243,7 @@ function ReplyForm({ actor, thread }: { actor: string; thread: ForumThread }) {
     },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: knowledgeKeys.forum(actor) });
+      contentRef.current = emptyDocument;
       setContent(emptyDocument);
       setGeneration((value) => value + 1);
       retry.current = null;
@@ -206,24 +254,29 @@ function ReplyForm({ actor, thread }: { actor: string; thread: ForumThread }) {
       className="knowledge-reply panel"
       onSubmit={(event) => {
         event.preventDefault();
-        reply.mutate();
+        if (!quoting && !reply.isPending) reply.mutate();
       }}
     >
       <h3>{t("reply")}</h3>
       <KnowledgeEditor
         key={generation}
         value={content}
-        onChange={setContent}
+        onChange={(value) => {
+          contentRef.current = value;
+          setContent(value);
+        }}
         label={t("reply")}
-        disabled={reply.isPending}
+        disabled={reply.isPending || quoting}
       />
       <div className="form-actions">
-        <Button disabled={!online || reply.isPending}>
+        <Button disabled={!online || reply.isPending || quoting}>
           {t(reply.isPending ? "replying" : "postReply")}
         </Button>
       </div>
       {reply.isSuccess && <Notice>{t("replySent")}</Notice>}
-      {contentError && <Notice kind="error">{t("contentLimit")}</Notice>}
+      {(contentError || quoteLimit) && (
+        <Notice kind="error">{t("contentLimit")}</Notice>
+      )}
       {reply.isError && !contentError && (
         <Notice kind="error">{t("replyFailed")}</Notice>
       )}
@@ -238,6 +291,8 @@ function ForumPostView({
   index,
   canModerate,
   zone,
+  onQuote,
+  quoteDisabled,
 }: {
   actor: string;
   thread: ForumThread;
@@ -245,6 +300,8 @@ function ForumPostView({
   index: number;
   canModerate: boolean;
   zone: string;
+  onQuote: (id: string) => void;
+  quoteDisabled: boolean;
 }) {
   const { t, i18n } = useTranslation("knowledge");
   const common = useTranslation().t;
@@ -365,6 +422,17 @@ function ForumPostView({
         />
       )}
       <div className="forum-post-actions">
+        {!post.deleted_at && !thread.locked && !thread.archived && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={!online || quoteDisabled}
+            onClick={() => onQuote(post.id)}
+          >
+            {t("quoteReply")}
+          </Button>
+        )}
         {index > 0 &&
           !post.deleted_at &&
           (thread.owner_id === actor || canModerate) && (
@@ -545,6 +613,26 @@ function ForumThreadView({
   });
   const profile = useQuery(profileQuery(actor));
   const [moderating, setModerating] = useState(false);
+  const [replyPending, setReplyPending] = useState(false);
+  const replyRef = useRef<{ append: (text: string) => void }>(null);
+  const quote = useMutation({
+    mutationFn: async (postId: string) => {
+      requireOnline();
+      const { data, error } = await db().rpc("forum_posts", {
+        p_thread_id: id,
+      });
+      if (error || !Array.isArray(data))
+        throw error ?? new Error("unavailable");
+      const current = (data as ForumPost[]).find(
+        (post) => post.id === postId && !post.deleted_at,
+      );
+      if (!current) throw new Error("unavailable");
+      const text = documentText(current.content).trim();
+      if (!text) throw new Error("unavailable");
+      return text;
+    },
+    onSuccess: (text) => replyRef.current?.append(text),
+  });
   const subscription = useMutation({
     mutationFn: async () => {
       requireOnline();
@@ -649,15 +737,24 @@ function ForumThreadView({
             index={index}
             canModerate={canModerate}
             zone={profile.data?.time_zone ?? "Europe/Berlin"}
+            onQuote={(postId) => quote.mutate(postId)}
+            quoteDisabled={quote.isPending || replyPending}
           />
         ))}
       </div>
+      {quote.isError && <Notice kind="error">{t("quoteUnavailable")}</Notice>}
       {value.archived ? (
         <Notice>{t("archivedHint")}</Notice>
       ) : value.locked ? (
         <Notice>{t("closedHint")}</Notice>
       ) : (
-        <ReplyForm actor={actor} thread={value} />
+        <ReplyForm
+          actor={actor}
+          thread={value}
+          ref={replyRef}
+          quoting={quote.isPending}
+          onReplyPending={setReplyPending}
+        />
       )}
       <Dialog
         open={moderating}

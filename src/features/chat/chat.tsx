@@ -36,6 +36,8 @@ import { chatKeys, chatRoomsQuery } from "./api";
 import { ContactPicker, CreateGroup, RoomIcon } from "./manage";
 import { ChatThread } from "./thread";
 import { RoomActivity } from "./room-activity";
+import { RoomUnread } from "./room-unread";
+import "./room-unread-i18n";
 import "./i18n";
 import "./pins-i18n";
 import "./chat.css";
@@ -272,11 +274,27 @@ export function ChatPage() {
                           {room.unread_count}
                         </span>
                       )}
+                      {room.manual_unread && (
+                        <span
+                          className="chat-unread"
+                          aria-label={i18n.t("marked", {
+                            ns: "chatRoomUnread",
+                          })}
+                          title={i18n.t("marked", { ns: "chatRoomUnread" })}
+                        >
+                          ●
+                        </span>
+                      )}
                       {room.muted && (
                         <BellOff size={13} aria-label={t("muted")} />
                       )}
                     </span>
                   </button>
+                  <RoomUnread
+                    actor={actor}
+                    room={room}
+                    selected={room.id === selectedId}
+                  />
                   <Button
                     variant="ghost"
                     size="icon"

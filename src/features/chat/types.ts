@@ -16,6 +16,7 @@ export interface ChatRoom {
   job_id: string | null;
   owner_id: string | null;
   unread_count: number;
+  manual_unread?: boolean;
   last_message_at: string | null;
   muted: boolean;
   pinned?: boolean;
@@ -53,6 +54,8 @@ export interface ChatMessage {
   content_version?: number;
   mentions?: ChatMention[];
   can_moderate?: boolean;
+  /** Null means the referenced message is no longer visible to this actor. */
+  reply?: { id: string; sender_name: string; body: string } | null;
 }
 /** History continuation using the last timestamp/ID pair. */
 export interface MessageCursor {

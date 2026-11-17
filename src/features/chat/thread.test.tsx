@@ -204,3 +204,201 @@ it("marks a message received in a hidden tab only after the tab becomes visible"
   await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
   client.clear();
 });
+
+it("clears only the manual flag for an empty visible room and retries an unconfirmed clear", async () => {
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  rpc
+    .mockResolvedValueOnce({ data: null, error: { message: "Network error" } })
+    .mockResolvedValue({ data: null, error: null });
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: Infinity },
+      mutations: { retry: false },
+    },
+  });
+  client.setQueryData(["profile", "actor"], { time_zone: "Europe/Berlin" });
+  client.setQueryData(["chat-messages", "actor", "empty-room", ""], {
+    pages: [[]],
+    pageParams: [null],
+  });
+  const room: ChatRoom = {
+    id: "empty-room",
+    kind: "topic",
+    title: "Fictional empty room",
+    job_id: null,
+    owner_id: "peer",
+    unread_count: 0,
+    last_message_at: null,
+    muted: false,
+    manual_unread: true,
+  };
+  const view = render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <ChatThread
+          actor="actor"
+          room={room}
+          canManageCourses={false}
+          onBack={() => undefined}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("alert");
+  expect(rpc).toHaveBeenCalledTimes(1);
+  expect(rpc).toHaveBeenLastCalledWith("clear_chat_manual_unread", {
+    p_room_id: "empty-room",
+  });
+  await userEvent
+    .setup()
+    .click(screen.getByRole("button", { name: "Erneut versuchen" }));
+  await waitFor(() => expect(rpc).toHaveBeenCalledTimes(2));
+  expect(rpc).toHaveBeenLastCalledWith("clear_chat_manual_unread", {
+    p_room_id: "empty-room",
+  });
+  view.unmount();
+  client.clear();
+});
+
+it("does not clear an empty unread room in a hidden tab", async () => {
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: Infinity },
+      mutations: { retry: false },
+    },
+  });
+  client.setQueryData(["profile", "actor"], { time_zone: "Europe/Berlin" });
+  client.setQueryData(["chat-messages", "actor", "empty-room", ""], {
+    pages: [[]],
+    pageParams: [null],
+  });
+  const room: ChatRoom = {
+    id: "empty-room",
+    kind: "topic",
+    title: "Fictional empty room",
+    job_id: null,
+    owner_id: "peer",
+    unread_count: 0,
+    last_message_at: null,
+    muted: false,
+    manual_unread: true,
+  };
+  const view = render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <ChatThread
+          actor="actor"
+          room={room}
+          canManageCourses={false}
+          onBack={() => undefined}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(rpc).not.toHaveBeenCalled();
+  view.unmount();
+  client.clear();
+});
+
+it("does not clear an empty unread room offline and retries when connectivity returns", async () => {
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  let online = false;
+  vi.spyOn(navigator, "onLine", "get").mockImplementation(() => online);
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: Infinity },
+      mutations: { retry: false },
+    },
+  });
+  client.setQueryData(["profile", "actor"], { time_zone: "Europe/Berlin" });
+  client.setQueryData(["chat-messages", "actor", "empty-room", ""], {
+    pages: [[]],
+    pageParams: [null],
+  });
+  const room: ChatRoom = {
+    id: "empty-room",
+    kind: "topic",
+    title: "Fictional empty room",
+    job_id: null,
+    owner_id: "peer",
+    unread_count: 0,
+    last_message_at: null,
+    muted: false,
+    manual_unread: true,
+  };
+  const view = render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <ChatThread
+          actor="actor"
+          room={room}
+          canManageCourses={false}
+          onBack={() => undefined}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(rpc).not.toHaveBeenCalled();
+  await act(async () => {
+    online = true;
+    window.dispatchEvent(new Event("online"));
+  });
+  await waitFor(() =>
+    expect(rpc).toHaveBeenCalledWith("clear_chat_manual_unread", {
+      p_room_id: "empty-room",
+    }),
+  );
+  view.unmount();
+  client.clear();
+});
+
+it("hides the retained reply target when a refreshed history page is rejected as stale", async () => {
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+  rpc.mockImplementation(async (name: string) => {
+    if (name === "chat_messages_with_mentions")
+      return {
+        data: [
+          {
+            id: "latest",
+            room_id: "room",
+            sender_id: "peer",
+            sender_name: "Fictional Peer",
+            body: "Confirmed fictional message",
+            created_at: "2026-01-01T08:00:00Z",
+            edited_at: null,
+            deleted_at: null,
+            document_id: null,
+            reactions: [],
+            content_version: 1,
+          },
+        ],
+        error: null,
+      };
+    if (name === "chat_reply_previews")
+      return { data: null, error: { code: "40001" } };
+    return { data: null, error: null };
+  });
+  const { client, view } = populatedThread();
+  await userEvent
+    .setup()
+    .click(screen.getByRole("button", { name: "Auf Nachricht antworten" }));
+  expect(screen.getAllByText("Confirmed fictional message")).toHaveLength(2);
+  await act(async () => {
+    await client.refetchQueries({
+      queryKey: ["chat-messages", "actor", "room", ""],
+    });
+  });
+  await screen.findByRole("alert");
+  expect(
+    screen.queryByText("Confirmed fictional message"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByText("Die ursprüngliche Nachricht ist nicht verfügbar."),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Nachricht senden" }),
+  ).toBeDisabled();
+  view.unmount();
+  client.clear();
+});

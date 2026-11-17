@@ -63,6 +63,7 @@ export function ChatThread({
     return () => clearInterval(timer);
   }, []);
   const [searchInput, setSearchInput] = useState("");
+  const [replyId, setReplyId] = useState<string | null>(null);
   const [membersOpen, setMembersOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { status, revoked } = useChatRealtime(actor, room.id);
@@ -84,13 +85,16 @@ export function ChatThread({
       (canManageCourses &&
         ["lecturer_course", "participant_course"].includes(room.kind)));
   const read = useMutation({
-    mutationFn: async (messageId: string) => {
+    mutationFn: async (messageId: string | null) => {
       requireOnline();
-      const { error } = await db().rpc("mark_chat_read", {
-        p_room_id: room.id,
-        p_message_id: messageId,
-        p_muted: null,
-      });
+      const { error } =
+        messageId === null
+          ? await db().rpc("clear_chat_manual_unread", { p_room_id: room.id })
+          : await db().rpc("mark_chat_read", {
+              p_room_id: room.id,
+              p_message_id: messageId,
+              p_muted: null,
+            });
       if (error) throw error;
     },
     onSuccess: () =>
@@ -98,7 +102,7 @@ export function ChatThread({
     onError: (_error, messageId) => {
       // The guard prevents duplicate in-flight receipts, not a permanent local
       // acknowledgement. An uncertain request must remain retryable.
-      if (marked.current === messageId) marked.current = "";
+      if (marked.current === (messageId ?? "empty")) marked.current = "";
     },
   });
   const mark = read.mutate;
@@ -106,22 +110,32 @@ export function ChatThread({
     // Search results or an invisible tab do not confirm that new messages were read.
     // The ref prevents concurrent duplicates only; onError allows an uncertain receipt to retry.
     const observeRead = () => {
+      const emptyMarked = messages.isSuccess && !latest && room.manual_unread;
+      const target = latest?.id ?? (emptyMarked ? "empty" : "");
       if (
-        !latest ||
+        !target ||
         search ||
         revoked ||
         !online ||
         document.visibilityState !== "visible" ||
-        marked.current === latest.id
+        marked.current === target
       )
         return;
-      marked.current = latest.id;
-      mark(latest.id);
+      marked.current = target;
+      mark(latest?.id ?? null);
     };
     observeRead();
     document.addEventListener("visibilitychange", observeRead);
     return () => document.removeEventListener("visibilitychange", observeRead);
-  }, [latest, search, revoked, online, mark]);
+  }, [
+    latest,
+    messages.isSuccess,
+    room.manual_unread,
+    search,
+    revoked,
+    online,
+    mark,
+  ]);
   const previousLatest = useRef("");
   useEffect(() => {
     if (!latest || latest.id === previousLatest.current || search) return;
@@ -318,6 +332,7 @@ export function ChatThread({
                       )}
                       <MessageBubble
                         message={message}
+                        onReply={(target) => setReplyId(target.id)}
                         actor={actor}
                         now={now}
                         zone={zone}
@@ -342,10 +357,10 @@ export function ChatThread({
       {read.isError && (
         <ErrorState
           retry={
-            online && latest
+            online && (latest || (messages.isSuccess && room.manual_unread))
               ? () => {
-                  marked.current = latest.id;
-                  mark(latest.id);
+                  marked.current = latest?.id ?? "empty";
+                  mark(latest?.id ?? null);
                 }
               : undefined
           }
@@ -360,6 +375,13 @@ export function ChatThread({
         key={`composer:${room.id}`}
         actor={actor}
         room={room.id}
+        replyId={replyId}
+        replyTarget={
+          messages.isError
+            ? undefined
+            : ordered.find((item) => item.id === replyId)
+        }
+        onCancelReply={() => setReplyId(null)}
       />
       {settingsOpen && (
         <GroupSettings

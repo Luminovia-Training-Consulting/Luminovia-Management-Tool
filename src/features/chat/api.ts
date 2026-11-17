@@ -26,7 +26,7 @@ export const chatRoomsQuery = (actor: string) =>
     queryKey: chatKeys.rooms(actor),
     queryFn: async () => {
       const [rooms, pins] = await Promise.all([
-        db().rpc("chat_rooms_list"),
+        db().rpc("chat_rooms_with_manual_unread"),
         db().rpc("chat_pinned_rooms"),
       ]);
       if (rooms.error) throw rooms.error;
@@ -82,7 +82,23 @@ export const chatMessagesQuery = (
         p_limit: 40,
       });
       if (error) throw error;
-      return (data ?? []) as ChatMessage[];
+      const page = (data ?? []) as ChatMessage[];
+      if (!page.length) return page;
+      const previews = await db().rpc("chat_reply_previews", {
+        p_room_id: room,
+        p_message_ids: page.map((item) => item.id),
+        p_versions: page.map((item) => item.content_version ?? 1),
+      });
+      if (previews.error) throw previews.error;
+      const lookup = (previews.data ?? {}) as Record<
+        string,
+        ChatMessage["reply"]
+      >;
+      return page.map((item) =>
+        Object.hasOwn(lookup, item.id)
+          ? { ...item, reply: lookup[item.id] }
+          : item,
+      );
     },
     getNextPageParam: (page): MessageCursor | undefined => {
       const last = page[page.length - 1];
