@@ -583,6 +583,12 @@ test("pre-upgrade creation uses scanned evidence, real business callers and the 
     "collect",
   ]);
   assert.equal(
+    trace.find((row) => row.name === "upload" && row.kind === "contract")
+      .actor,
+    "lecturer",
+    "personal contract evidence must be uploaded by its owner",
+  );
+  assert.equal(
     trace.find((row) => row.name === "register_executed_contract").actor,
     "manager",
   );
