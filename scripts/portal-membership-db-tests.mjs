@@ -16,7 +16,7 @@ await withTestDatabase("portal_membership", async ({ sql, actor }) => {
   );
   await assert.rejects(
     actor(participant, "select public.require_portal_access()"),
-    /Portal access requires/,
+    /42501/,
   );
   assert.equal(await actor(lecturer, "select public.portal_access()"), "t");
   await actor(lecturer, "select public.require_portal_access()");
