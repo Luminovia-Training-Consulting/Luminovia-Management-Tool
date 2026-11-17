@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
-import { mapBoundedSettled } from "./testing/run-bounded.mjs";
 
 await withApiFixture(
   async ({ service, actor, mfa, sql, defer, checked, suffix }) => {
@@ -282,11 +281,12 @@ await withApiFixture(
         p_terms_version: offer.terms_version,
       },
     }));
-    // Keep ten actual requests in flight: this still exceeds the three-slot
-    // limit by over 3x while avoiding a 50-connection spike in small selfhost
-    // Postgres containers. Every HTTP result settles before fixture cleanup.
-    const settled = await mapBoundedSettled(attempts, 10, ({ who, args }) =>
-      checked(who.client.rpc("claim_job", args), "One of fifty HTTP claims"),
+    // Exercise all fifty HTTP calls concurrently. Wait for every result before
+    // cleanup so no in-flight claimant can outlive its fixture.
+    const settled = await Promise.allSettled(
+      attempts.map(({ who, args }) =>
+        checked(who.client.rpc("claim_job", args), "One of fifty HTTP claims"),
+      ),
     );
     // Even a failed HTTP response must settle before cleanup can delete an
     // offer that another in-flight claim is still trying to lock.

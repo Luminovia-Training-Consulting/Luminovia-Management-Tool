@@ -1,5 +1,9 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — preserve capacity stress coverage
+
+The captured native CI logs establish PostgreSQL recovery but do not identify why its process crashed. The later ten-request concurrency cap reduced the existing capacity-three test's 50-way HTTP race without a demonstrated cause, so the test again starts all fifty requests together and waits for every result before cleanup. The separate bounded SQL/CI worker scheduler remains unchanged. Exact-head selfhost CI is required; the earlier crash is not described as resolved.
+
 ## 17 November 2026 — browser test runtime
 
 The user clarified that the browser tests themselves need to run faster. The initial two-worker Playwright experiment failed under concurrent fixture-account cleanup, so the current configuration is back to one worker. Both desktop/mobile projects, ordered specs, all assertions and zero retries remain. Replaced the lifecycle test's 16-second wall-clock wait with Playwright's virtual clock for the 15-second stale-query boundary. Reduced the file-idle observation from 12 to 10.1 seconds, still beyond the 10-second prior polling interval. Exact-head browser CI after the correction is pending; no speedup is claimed until measured.
