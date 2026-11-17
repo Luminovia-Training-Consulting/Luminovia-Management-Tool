@@ -2587,3 +2587,5 @@ Exact-head CI follow-up: the commercial API suite still denied an administrator'
 Exact-head CI follow-up: the newly permissioned all-contract read succeeds and includes the isolated database's pre-existing fictional contract fixtures. The API test now verifies a successful array response without incorrectly assuming an empty database; source authorization remains `contracts.manage`/`contracts.read`.
 
 Exact-head CI follow-up: an admin with `finance.gross.read` was still expected to be blocked by the retired MFA/AAL gate. The commission API test now requires that privileged role to receive a typed report under password-only Auth, while management, lecturers and senior lecturers remain denied; editable metadata is still explicitly ignored.
+
+The initial migration-version repair was incomplete because the old profile migration path was absent in the working checkout before rebasing. Corrected the actual source tree: restored the previously shipped profile migration path and moved the new deletion migration to `20261118172000`.
