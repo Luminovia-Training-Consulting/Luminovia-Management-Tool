@@ -7,6 +7,13 @@
 - [x] Replace the active root license and current README/contribution/status references; remove the superseded `LICENSE.proposed` draft. Keep historical GPLv3 grants and third-party licenses intact.
 - [ ] Review the final text and exact licensor identity with qualified counsel for the applicable jurisdiction.
 
+## Direct-main CI repair — 18 November 2026
+
+- [x] Push current expertise, job capacity-token, current guest-role concurrency fixture and admin handover-permission expectations directly to `main` (`cb4570d3`, `e0c2f3c4`). The local capacity SQL suite passed 8/8; the hosted exact-head run later passed job discovery 9/9.
+- [x] Add forward password-only request-boundary corrections and remove stale MFA wording from active SQL denial messages without restoring any factor gate (`b3de63a5`, `f0f3f6aa`).
+- [ ] Rerun focused local PostgreSQL and native Auth/API checks, regenerate the migration-counted API inventory, then complete full isolated system/browser acceptance and inspect current-head `Portal checks` to completion.
+- [ ] Do not report CI green until `verify` and the retained-data self-host candidate pass on the same `main` SHA. On `f15ffef2`, fast gates passed; documentation acceptance needed the two newly reviewed records added to its allowlist, and withdrawal acceptance still expected admin/management `jobs.manage` access to be MFA-gated. The self-host candidate completed upgrade, retained-data, handover and service-role checks before that stale withdrawal assertion failed.
+
 ## Current delivered-feature API parity — 18 November 2026
 
 - [x] Compare implemented frontend RPCs and direct Data API relations with the latest replayed inventory; no missing business endpoint or grant was found.

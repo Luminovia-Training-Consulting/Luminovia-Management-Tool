@@ -184,10 +184,12 @@ test("public guidance and current catalogue contain no historical customer ident
 // specifically required records beneath docs/.
 test("documentation keeps only the required project records under docs", async () => {
   const requiredRecords = new Set([
+    "CONTRIBUTOR_RIGHTS_AGREEMENT_DRAFT.md",
     "IMPLEMENTATION_PLAN.md",
     "QOL_FEATURE_MATRIX.md",
     "QOL_MASTER_PROMPT.txt",
     "QOL_PROGRAMME_STATUS.md",
+    "RELICENSING_STATUS.md",
     "UNIVERSAL_MASTER_PROMPT.txt",
     "UI_ACCEPTANCE_20261117.md",
     "WORKLOG.md",

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 
-await withApiFixture(async ({ service, actor, passwordOnly, sql, defer, checked }) => {
+await withApiFixture(async ({ service, actor, sql, defer, checked }) => {
   const teacher = await actor("withdrawal-teacher", "lecturer"),
     peer = await actor("withdrawal-peer", "lecturer"),
     admin = await actor("withdrawal-admin", "admin"),
@@ -209,7 +209,7 @@ await withApiFixture(async ({ service, actor, passwordOnly, sql, defer, checked 
     },
   );
   await check(
-    "HTTP private reasons stay scoped and reviewing requires current Management password-only authentication",
+    "HTTP private reasons stay scoped and current job managers can review without MFA",
     async () => {
       const peerView = await checked(
         peer.client.rpc("assignment_withdrawals", { p_job_id: late.job }),
@@ -227,21 +227,32 @@ await withApiFixture(async ({ service, actor, passwordOnly, sql, defer, checked 
         "42501",
       );
       assert.equal(
-        (await admin.client.rpc("review_assignment_withdrawal", decision)).error
-          ?.code,
-        "42501",
+        (
+          await admin.client.rpc("review_assignment_withdrawal", {
+            ...decision,
+            p_reason: "",
+            p_request_id: randomUUID(),
+          })
+        ).error?.code,
+        "22023",
       );
       assert.equal(
-        (await manager.client.rpc("review_assignment_withdrawal", decision))
-          .error?.code,
-        "42501",
+        (
+          await manager.client.rpc("review_assignment_withdrawal", {
+            ...decision,
+            p_reason: "",
+            p_request_id: randomUUID(),
+          })
+        ).error?.code,
+        "22023",
       );
-      await passwordOnly(manager.client);
-      const review = await checked(
-        manager.client.rpc("assignment_withdrawals", { p_job_id: late.job }),
-      );
+      const review = await checked(manager.client.rpc("assignment_withdrawals", { p_job_id: late.job }));
       assert.equal(review.items[0].can_review, true);
       assert.equal(review.items[0].reason, request.p_reason);
+      const decided = await checked(
+        manager.client.rpc("review_assignment_withdrawal", decision),
+      );
+      assert.equal(decided.status, "approved");
       const inbox = await checked(manager.client.rpc("notification_inbox"));
       assert.equal(
         inbox.items.find(
@@ -312,7 +323,6 @@ await withApiFixture(async ({ service, actor, passwordOnly, sql, defer, checked 
         }),
       );
       assert.notEqual(second.id, application.id);
-      await passwordOnly(admin.client);
       const approval = {
         p_withdrawal_id: second.id,
         p_approve: true,
