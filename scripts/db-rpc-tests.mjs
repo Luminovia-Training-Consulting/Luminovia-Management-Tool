@@ -22,7 +22,7 @@ function command(args, input = "") {
     p.stdout.on("data", (d) => (out += d));
     p.stderr.on("data", (d) => (err += d));
     p.on("error", reject);
-    p.on("exit", (code) =>
+    p.on("close", (code) =>
       code === 0 ? resolve(out.trim()) : reject(new Error(err || out)),
     );
     p.stdin.end(input);
