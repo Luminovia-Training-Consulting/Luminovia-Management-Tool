@@ -51,7 +51,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Automatically update access after assignment changes | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Revoke access after lecturer replacement or account suspension | Partial | `supabase/migrations/20261116173907_deletion_smart_operations_dependencies.sql`; `supabase/migrations/20261115121922_secure_chat_collaboration.sql`; exact replacement/suspension acceptance pending. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Public/discoverable groups | Not yet assessed | Pending |
-| COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Private invitation-only groups | Partial | Topic-group invites require consent, but direct owner additions remain possible; no strict invitation-only setting. |
+| COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Private invitation-only groups | Partial; isolated SQL and component coverage passed | Topic groups support owner-managed consent-only mode; direct adds are rejected by server checks. E2E is prepared, not run. Other room kinds remain open. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | System-managed course groups | Source present; acceptance pending | `supabase/migrations/20261115210814_job_capacity_and_board.sql`; `src/features/chat/types.ts`. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.3 Group membership lifecycle | Restricted management groups | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Pin conversations | Partial; component tests passed | `src/features/chat/chat.tsx`; `supabase/migrations/20261117130002_chat_personal_pins.sql`; `src/features/chat/pins.test.tsx` passed in this worktree; end-to-end pending. |
@@ -63,7 +63,7 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Unarchive conversations | Partial; isolated tests passed | `supabase/migrations/20261117130015_chat_personal_archive.sql` and `src/features/chat/chat.tsx` support own DM/topic rooms; course/system rooms excluded. E2E pending. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Hide conversations from their personal list | Partial | Personal archive hides own DM/topic conversations from the active list; a distinct hide preference remains unimplemented. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Mark conversations as read | Partial | `src/features/chat/thread.tsx`; `supabase/migrations/20261115121922_secure_chat_collaboration.sql`; read occurs when the visible thread is observed. |
-| COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Mark conversations as unread | Partial; isolated tests passed | `supabase/migrations/20261117130011_personal_chat_unread.sql` and `src/features/chat/room-unread.tsx`; integrated E2E pending. |
+| COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Mark conversations as unread | Partial; isolated tests passed | `supabase/migrations/20261117130011_personal_chat_unread.sql` and `src/features/chat/room-unread.tsx`; an empty-room recovery clears only an older marker and preserves cursor/races. Integrated E2E pending. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Search conversations | Source present; acceptance pending | `src/features/chat/chat.tsx`; `supabase/migrations/20261115121922_secure_chat_collaboration.sql`. |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Filter conversations | Not yet assessed | Pending |
 | COMPLETE CHAT & MESSAGING SYSTEM / 2.4 Conversation list management | Display unread message counts | Source present; acceptance pending | `src/features/chat/chat.tsx`; `supabase/migrations/20261115121922_secure_chat_collaboration.sql`. |
@@ -384,11 +384,11 @@ This checklist extracts requested actions and criteria from [the user prompt](QO
 | UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS | View details | Not yet assessed | Pending |
 | UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS | Confirm | Not yet assessed | Pending |
 | UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS | Reject | Not yet assessed | Pending |
-| UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS | Mark read/unread | Not yet assessed | Pending |
+| UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS | Mark read/unread | Partial | Chat manual read/unread and unread counts have isolated tests; notification bulk/read state and full cross-module browser acceptance remain open. |
 | UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS | Pin/unpin | Not yet assessed | Pending |
 | UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS | Mute/unmute | Not yet assessed | Pending |
 | UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS / Forms | Save drafts | Not yet assessed | Pending |
-| UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS / Forms | Protect unsaved changes | In progress | A local calendar guard is being integrated; history/programmatic SPA navigation and other forms remain open. |
+| UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS / Forms | Protect unsaved changes | Partial; calendar unit coverage passed | Calendar drafts now guard links, browser history and programmatic SPA navigation plus unload; other forms and actual browser acceptance remain open. |
 | UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS / Forms | Preserve input after validation errors | Not yet assessed | Pending |
 | UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS / Forms | Show clear validation messages | Not yet assessed | Pending |
 | UNIVERSAL APPLICATION QUALITY-OF-LIFE IMPROVEMENTS / Forms | Disable duplicate submissions | Not yet assessed | Pending |
