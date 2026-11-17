@@ -92,7 +92,9 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
     await expect(
       quietSettings.getByText("Quiet hours saved.", { exact: true }),
     ).toBeVisible();
-    const bell = page.locator(".notification-menu > summary");
+    const bell = page
+      .getByRole("banner")
+      .locator(".notification-menu > summary");
     await expect(bell).toHaveAttribute(
       "aria-label",
       /3 important unread updates.*Quiet hours active.*20 unread in total/,
