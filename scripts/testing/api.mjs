@@ -8,6 +8,7 @@ import { randomUUID, createHmac } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
+import { collectUtf8 } from "./utf8-stream.mjs";
 
 /** Computes the current six-digit TOTP from the fictional MFA secret; never log the code or secret. */
 function totp(secret) {
@@ -93,16 +94,15 @@ export async function withApiFixture(run) {
         ],
         { stdio: ["pipe", "pipe", "pipe"] },
       );
-      let out = "",
-        error = "";
-      child.stdout.on("data", (value) => (out += value));
-      child.stderr.on("data", (value) => (error += value));
+      const stdout = collectUtf8(child.stdout);
+      const stderr = collectUtf8(child.stderr);
       child.on("error", reject);
-      child.on("close", (code) =>
-        code === 0
-          ? resolve(out.trim())
-          : reject(new Error(error || "Isolated SQL failed")),
-      );
+      child.on("close", (code) => {
+        const out = stdout();
+        const error = stderr();
+        if (code === 0) resolve(out.trim());
+        else reject(new Error(error || "Isolated SQL failed"));
+      });
       child.stdin.end(text);
     });
   /** Creates a fictional Auth identity, assigns its fixture role and signs in a separate nonpersistent client. */

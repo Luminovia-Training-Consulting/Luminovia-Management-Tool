@@ -184,11 +184,17 @@ jobs:
           if-no-files-found: error
           retention-days: 14
   verify-browser:
-    name: Isolated browser acceptance
+    name: Isolated browser acceptance (${{ matrix.browser-project }})
     needs: scope
     if: always() && !cancelled() && github.event_name == 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        browser-project: [desktop-chromium, mobile-chromium]
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      PORTAL_BROWSER_PROJECT: ${{ matrix.browser-project }}
     steps:
       - name: Require a successful recognized scope
         env:
@@ -213,7 +219,7 @@ jobs:
           cache: npm
       - if: needs.scope.outputs.profile == 'full'
         run: npm ci
-      - name: Complete isolated desktop, mobile and built-PWA acceptance
+      - name: Complete isolated browser acceptance
         id: browser
         if: needs.scope.outputs.profile == 'full'
         run: node scripts/runtime-test.mjs --phase browser
@@ -221,7 +227,7 @@ jobs:
         if: always() && (steps.browser.outcome == 'success' || steps.browser.outcome == 'failure' || steps.browser.outcome == 'cancelled')
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: portal-functional-acceptance-browser-${{ github.run_id }}-${{ github.run_attempt }}
+          name: portal-functional-acceptance-browser-${{ matrix.browser-project }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: .local/tests/*/acceptance.json
           include-hidden-files: true
           if-no-files-found: error
@@ -233,7 +239,7 @@ jobs:
         if: always() && (steps.browser.outcome == 'success' || steps.browser.outcome == 'failure')
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: portal-course-building-blocks-${{ github.run_id }}-${{ github.run_attempt }}
+          name: portal-course-building-blocks-${{ matrix.browser-project }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: .local/tests/*/screenshots/*-course-building-blocks-*.png
           include-hidden-files: true
           if-no-files-found: error

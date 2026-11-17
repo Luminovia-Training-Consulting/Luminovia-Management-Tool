@@ -1025,6 +1025,8 @@ export async function checkCandidate({
     );
     adaptStagedCandidateApiFixture(scratch, { project, apiPort: ports.api });
     const suites = candidateApiSuites(scratch);
+    // The candidate shares one Supabase Auth service; concurrent fixture
+    // deletion can fail inside GoTrue despite unique account IDs.
     for (const suite of suites) {
       await owned("supabase_db_" + project);
       await owned("portal_scanner_" + project);

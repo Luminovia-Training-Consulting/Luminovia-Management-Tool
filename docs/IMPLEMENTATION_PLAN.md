@@ -1,6 +1,14 @@
 # Persistent implementation plan
 
-PR40 browser acceptance repair: single shared preferences and visible mobile sign-out are implemented; 25 focused component tests, TypeScript and ESLint pass locally. The complete exact-head GitHub/browser/native gates remain pending.
+## Browser test runtime — 17 November 2026
+
+- [x] Keep both Chromium projects, every browser scenario/assertion, per-file ordering and zero retries. Restore one browser worker: the first parallel run reproduced shared Supabase Auth account-deletion failures.
+- [x] Use Playwright's virtual clock for the 15-second stale-query behavior and shorten the idle observation only to 10.1 seconds, beyond the prior 10-second polling boundary.
+- [x] Baseline exact-head timings from the last green main-based CI: browser cases 20m34s; system verify 35m32s. About 17 minutes came from separate SQL/API suites run serially.
+- [x] Use a bounded pool for independent SQL suites (up to four isolated databases); retain stop-on-failure and wait-for-in-flight cleanup semantics. API suites stay sequential because they share one GoTrue service and parallel cleanup failed in CI.
+- [x] Scale independent PR SQL shards to at most four isolated workers; keep retained selfhost API suites sequential after the same GoTrue cleanup failure. Retain real migration/restart/image, auth, browser, concurrency, and cleanup proofs.
+- [x] Replay migrations once per isolated PostgreSQL worker into an owned ephemeral template and clone a fresh database per SQL suite; keep main migration acceptance and every historical-bound migration check unchanged. Exact-head SQL/template suites passed.
+- [ ] Complete exact-head CI with serial browser/API fixtures and collect successful per-job timings before claiming the final speedup. Do not trim coverage.
 
 ## PR31 after accepted documentation main — 17 November 2026
 
@@ -52,6 +60,7 @@ All complete product and seven-module ledgers below remain required. Prior coord
 - [x] Pass combined source/build/coverage checks with 515 frontend/65 files and all 144 runtime cases without skips, including real-controller phase/source/browser/privacy/cancellation regressions; formatting/actionlint/diff checks pass. Preserve exact6ff's separately completed 15-gate/120+2/91-stage full checkpoint as history.
 - [ ] Preserve the parallel remote Main36 reconciliation in ordinary ancestry, publish the signed final source and require fresh full-profile system AND browser reports plus native/security/preview success on the current base.
 - [ ] Merge and verify PR12 normally, then release the temporary review-state hold where still applicable. No renewed merge approval, unaccepted feature collection or production dispatch.
+
 ## Current all-PR merge continuation — PR12
 
 - [x] Integrate actually accepted PR36/main `7fbdb956` through normal ancestry; preserve both ledgers, phase isolation, strict browser evidence and all 36 released migration files.
@@ -114,6 +123,7 @@ Earlier checkpoint evidence and the complete product scope below remain unchange
 - [x] Pass combined local source/build acceptance with254frontend cases/52files,102runtime cases,23maintenance guards and16focused publication/GitHub/documentation guards; workflow/diff checks pass. No new full PC/native pass is inferred.
 - [ ] Complete the coordinated full PC slot naturally, preserve actual logs/exit/cleanup, and integrate PR27's actual main plus any required newer main before final exact-head15-check acceptance.
 - [ ] Keep PR12's temporary draft state and no-auto-merge instruction until its reserved merge is released; no source/QA work waits for a larger collected branch.
+
 ## Actual Main17 integration — final PR24 current-head acceptance
 
 PR17 has actually merged as main `4cc20874edc1f865b71106b7bb1299e16fec5aad`. Its 62 published SQL files remain byte-identical; six pending operational additions make 68 files in PR24. Application, SQL, E2E specifications, database helper, generated API inventory and package/lock bytes remain identical to the complete local `2c850fc488165e37887807a74e92414e4fa0a25e` pass. The newer executor combines accepted Main36 system/browser phase routing with Main17’s 30-minute aggregate browser budget; individual tests, assertions and retries are unchanged.
@@ -454,6 +464,7 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [ ] Push one necessary signed integration, pass all15current exact-head required gates and merge the completed functional PR according to the direct user instruction. No release/preview-publication dispatch belongs to this task.
 
 Other proposed PR21/22/26 group work remains separate from this frozen functional scope. The complete outstanding product/platform requirements below remain required.
+
 ## Smart operations extension — current user request
 
 **Current delivery priority:** PR10 alone owns the next main merge/shared PC QA slot. Keep PR17 draft with no auto-merge or merge watcher. Own58-source code and focused evidence are committed; full current-main acceptance is pending. After PR10, integrate actual main e88df84 or newer (including local publication controls/customer-neutral catalogue and the final canonical core), reconcile only undelivered own migration versions with byte-identical SQL, and repeat complete local/native/current-head CI before advancing PR17. The server's automatic mail/Push workers remain uninstalled.
@@ -955,6 +966,16 @@ These are remaining implementation candidates, not delivered functions or extra 
 6. **Financial documents:** scoped period statements and accepted assignment confirmations based on immutable server records, with actual PDF rendering/content checks and original-currency/privacy assertions. Do not invent historical snapshots, legal signatures, banking or tax functionality.
 
 ## Current acceptance and next continuation actions
+
+### CI test throughput follow-up — 2026-11-17
+
+PR #42's failed run `44012150083` exposed concurrent Supabase Auth fixture cleanup returning `Database error deleting user` in both application verification and native selfhost acceptance; the same run's unit/coverage job passed. Fix the shared-service contention by keeping Auth-backed API suites sequential while independent database suites use separate clones of one migrated template. Retain every current SQL, API, browser and native acceptance assertion.
+
+The browser lane now uses a two-entry desktop/mobile matrix. Each entry runs all existing browser specs in exactly one Chromium project on its own isolated stack; together they still require every existing app and PWA workflow for both layouts. The preview package's existing dependency gate requires both matrix entries. The first post-serialization full rerun no longer reported the Auth deletion failure; it then failed the job-briefing SQL check while comparing a 4,000-emoji database result. The SQL subprocess helpers now preserve UTF-8 characters split across output chunks, with a dedicated regression test; the large-text acceptance also uses an exact compact server-side byte proof. Full current-head CI must pass before calling these optimizations accepted. Potential follow-up is limited to evidence-backed runtime changes that retain exact API, migration, desktop/mobile and built-PWA coverage.
+
+The first CI run of the new matrix failed two local workflow-policy assertions because they still expected the old single job name. Those now verify both matrix projects and the pull-request-only browser gate. The next exact-head run passed them and found the acceptance-report artifact test still expected one browser filename. That expectation now includes the matrix project; all 17 workflow-scope tests pass locally. The native SQL rerun confirmed Unicode character/byte limits but exposed PostgreSQL's Base64 line wrapping; compare the actual stored UTF-8 bytes directly to decoded expected bytes, retaining API response equality. Complete CI on the corrected commit.
+
+PR #42 is stacked on PR #43 because full acceptance uses Deno Edge checks and clean `npm ci` must install the exact pinned Deno toolchain. The #42 branch includes the #43 head as its base, so its own diff contains only speedup/test changes while its CI exercises the required installer fix. Validate/merge #43 before treating #42 as independently ready.
 
 1. Preserve all normal persistent records and prior verified ledgers. Last recorded hosted application acceptance is `bb322746`, exact-main CI43753910114 plus automatic installation/post-checks and the schema18complete restore. PR6/PR7 merges and M6 source are distinct. Recheck actual hosted/main state on continuation; no later source/documentation change proves installation.
 2. M3 was merged through [PR #3](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/pull/3), then integrated with the authorised self-hosted development and automatic-release path. No merge remains pending for that application slice. The system now consumes tested main releases without manual cloning; destructive/backdated/major migrations remain reviewed operations. Production deployment is separate.

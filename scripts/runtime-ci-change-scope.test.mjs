@@ -536,7 +536,7 @@ test("independent acceptance phases upload distinct safe evidence only after act
   const runSuffix = "${{ github.run_id }}-${{ github.run_attempt }}";
   for (const [jobName, stepId, suffix] of [
     ["verify", "application", "verify"],
-    ["verify-browser", "browser", "browser"],
+    ["verify-browser", "browser", "browser-${{ matrix.browser-project }}"],
   ]) {
     const job = jobs.get(jobName);
     assert.ok(job, `Inspect the actual ${jobName} job`);

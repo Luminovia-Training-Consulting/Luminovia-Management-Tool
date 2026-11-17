@@ -11,11 +11,13 @@ import {
   browserPlan,
   browserAcceptance,
   browserFailure,
+  browserProjectSelection,
 } from "./testing/browser-evidence.mjs";
 import {
   runtimeTestArguments,
   runtimeTestPhasePlan,
 } from "./runtime-test-phase.mjs";
+import { runBounded } from "./testing/run-bounded.mjs";
 
 const source = readFileSync(
   new URL("./runtime-test.mjs", import.meta.url),
@@ -155,15 +157,18 @@ async function runFixture({
     join,
     basename,
     randomBytes,
+    availableParallelism: () => 4,
     createHash,
     browserPlan,
     browserAcceptance,
     browserFailure,
+    browserProjectSelection,
     tmpdir: () => "/owned-qa/tmp",
     root: "/owned-qa/source",
     runtimeDir: "/owned-qa/reports",
     runtimeSnapshotSource: () => true,
     runtimeTestPhasePlan,
+    runBounded,
     runtimeTestArguments,
     acquireTestLock() {
       locks++;

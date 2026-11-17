@@ -16,10 +16,12 @@ import {
 import { join, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { createHash, randomBytes } from "node:crypto";
+import { availableParallelism } from "node:os";
 import {
   browserPlan,
   browserAcceptance,
   browserFailure,
+  browserProjectSelection,
 } from "./testing/browser-evidence.mjs";
 import { runtimeSnapshotSource } from "./runtime-snapshot.mjs";
 import {
@@ -30,6 +32,7 @@ import {
   acquireTestLock,
   assertTestPortsAvailable,
 } from "./runtime-test-lock.mjs";
+import { runBounded } from "./testing/run-bounded.mjs";
 import {
   root,
   runtimeDir,
@@ -43,6 +46,11 @@ import {
 // Parse before acquiring a lock, copying source or reaching a Docker engine.
 // Without explicit CLI arguments the canonical command always runs everything.
 const phase = runtimeTestPhasePlan(runtimeTestArguments(process.argv, root));
+const browserProjects = browserProjectSelection(
+  process.env.PORTAL_BROWSER_PROJECT,
+);
+const browserProjectArgs =
+  browserProjects.length === 1 ? ["--project", browserProjects[0]] : [];
 const run = randomBytes(4).toString("hex");
 const project = `luminovia-portal-test-${run}`;
 const artifacts = join(runtimeDir, "tests", run);
@@ -224,6 +232,7 @@ try {
         "playwright",
         "test",
         ...args,
+        ...browserProjectArgs,
         "--list",
         "--reporter=json",
       ],
@@ -231,7 +240,7 @@ try {
     );
     const planned = browserPlan(JSON.parse(readFileSync(planPath, "utf8")), {
       files: expectedFiles,
-      projects: ["desktop-chromium", "mobile-chromium"],
+      projects: browserProjects,
     });
     evidence.browsers[stage] = {
       status: "planned",
@@ -243,7 +252,7 @@ try {
       await step(
         label,
         "npx",
-        ["--no-install", "playwright", "test", ...args],
+        ["--no-install", "playwright", "test", ...args, ...browserProjectArgs],
         stageEnv,
         timeoutMs,
       );
@@ -457,15 +466,30 @@ try {
       "run",
       "test:db",
     ]);
-    for (const script of readdirSync(join(scratch, "scripts"))
+    env.PORTAL_TEST_DB_TEMPLATE = `portal_test_template_${run}`;
+    await step(
+      "Einmaligen isolierten Migrations-Snapshot für SQL-Fixtures erstellen",
+      process.execPath,
+      ["scripts/testing/prepare-database-template.mjs"],
+    );
+    const databaseSuites = readdirSync(join(scratch, "scripts"))
       .filter((name) => name.endsWith("-db-tests.mjs"))
-      .sort())
-      await step(`Weitere SQL-Sicherheitsfälle ${script}`, process.execPath, [
+      .sort();
+    // Each suite creates and drops its own randomly named PostgreSQL database;
+    // bounded parallelism reduces repeated migration replay without sharing fixtures.
+    const suiteWorkers = Math.max(1, Math.min(4, availableParallelism()));
+    await runBounded(databaseSuites, suiteWorkers, (script) =>
+      step(`Weitere SQL-Sicherheitsfälle ${script}`, process.execPath, [
         `scripts/${script}`,
-      ]);
-    for (const script of readdirSync(join(scratch, "scripts"))
+      ]),
+    );
+    const apiSuites = readdirSync(join(scratch, "scripts"))
       .filter((name) => name.endsWith("-api-check.mjs"))
-      .sort())
+      .sort();
+    // These suites share one Supabase Auth service. Concurrent account
+    // deletion can fail inside GoTrue even with unique fixtures, so keep API
+    // lifecycle checks sequential while SQL suites use isolated DB clones.
+    for (const script of apiSuites)
       await step(`Echte API ${script}`, process.execPath, [
         `scripts/${script}`,
       ]);
@@ -512,6 +536,17 @@ try {
   );
 } finally {
   if (localDockerReady) {
+    if (env.PORTAL_TEST_DB_TEMPLATE) {
+      try {
+        await command(
+          process.execPath,
+          ["scripts/testing/prepare-database-template.mjs", "--drop"],
+          { cwd: scratch, env, quiet: true, timeoutMs: 30000 },
+        );
+      } catch (error) {
+        failure ??= error;
+      }
+    }
     if (phase.browser) {
       try {
         await command(
