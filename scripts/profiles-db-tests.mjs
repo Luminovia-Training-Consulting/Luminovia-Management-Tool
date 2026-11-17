@@ -227,16 +227,20 @@ try {
   await check(
     "Client visibility is limited to their organisation assigned lecturers and course history",
     async () => {
+      const directory = async (stage) => {
+        try {
+          return await rpc(client, "people_directory", ["", "", null]);
+        } catch (error) {
+          throw new Error(`${stage}: ${error.message}`, { cause: error });
+        }
+      };
       assert.equal(await actor(client, "select private.actor_active()"), "t");
-      assert.deepEqual(
-        await rpc(client, "people_directory", ["", "", null]),
-        [],
-      );
+      assert.deepEqual(await directory("without organisation membership"), []);
       await sql(
         `insert into public.client_organisation_memberships(user_id,organisation_id) values('${client}','${org}');`,
       );
       assert.equal(await actor(client, "select private.actor_active()"), "t");
-      const people = await rpc(client, "people_directory", ["", "", null]);
+      const people = await directory("with organisation membership");
       assert.deepEqual(
         people.map((x) => x.id),
         [lecturer],
@@ -251,7 +255,7 @@ try {
       );
       assert.equal(await actor(client, "select private.actor_active()"), "t");
       assert.deepEqual(
-        await rpc(client, "people_directory", ["", "", null]),
+        await directory("after organisation membership removal"),
         [],
       );
     },
