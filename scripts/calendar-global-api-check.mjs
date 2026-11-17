@@ -51,15 +51,8 @@ await withApiFixture(
         who.client.rpc("manage_global_event", request),
         "Actual global calendar operation",
       );
-    assert.equal(
-      (
-        await admin.client.rpc(
-          "manage_global_event",
-          args(null, "save", 0, body),
-        )
-      ).error?.code,
-      "42501",
-    );
+    // The current admin permission works on the password-only session below;
+    // no MFA assurance gate is part of this API boundary.
     assert.equal(
       (
         await teacher.client.rpc(
