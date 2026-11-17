@@ -1,0 +1,7 @@
+# Proprietary-license transition status
+
+The root [LICENSE](../LICENSE) is currently GNU GPL version 3, which permits use, modification and distribution, including commercial use, on its terms. [LICENSE.proposed](../LICENSE.proposed) is a **non-effective draft**, not a replacement or a second license for the current code. The current application includes substantial merged contributions by an external author (commits `31080250` and `1f1f86af`). Luminovia has not confirmed written proprietary relicensing rights for those contributions. Therefore the Project cannot truthfully be described as wholly Luminovia-owned or solely proprietary today.
+
+Before replacing the root license, identify the actual legal licensor, obtain the external author's express written permission or independently replace the affected contribution, review other contributor/employer and third-party rights, and have the final license and contribution agreement checked for the applicable jurisdiction. Then update the root `LICENSE`, [README](../README.md), [CONTRIBUTING](../CONTRIBUTING.md), notices and release guidance together. Older GPL grants remain in force for copies already received under GPLv3.
+
+Future external contributions intended for proprietary releases need an individually agreed rights grant before merge. The [proposed agreement](CONTRIBUTOR_RIGHTS_AGREEMENT_DRAFT.md) is a review template, not an executed grant. Merely submitting code, having contact with Luminovia or appearing in the contributor list does not assign ownership or create a personal Project-use license.
