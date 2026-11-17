@@ -88,6 +88,9 @@ const evidence = {
   version: 1,
   // A passed selected phase is not a claim that the other phase ran.
   phase: phase.phase,
+  // PR CI may delegate only gates that run independently and are required by
+  // the final preview gate; the canonical local command never sets these.
+  externalGates: phase.externalGates,
   stagePlan: phase.stages,
   project,
   startedAt: new Date().toISOString(),
@@ -267,9 +270,11 @@ try {
     }
   };
   if (phase.system) {
-    await step("Lint", "npm", ["run", "lint"]);
-    await step("TypeScript", "npm", ["run", "typecheck"]);
-    await step("Formatierung", "npm", ["run", "format:check"]);
+    if (!phase.externalGates.includes("quality")) {
+      await step("Lint", "npm", ["run", "lint"]);
+      await step("TypeScript", "npm", ["run", "typecheck"]);
+      await step("Formatierung", "npm", ["run", "format:check"]);
+    }
     const runtimeTests = readdirSync(join(scratch, "scripts"))
       .filter(
         (name) => name.startsWith("runtime-") && name.endsWith(".test.mjs"),
@@ -280,10 +285,11 @@ try {
         "--test",
         ...runtimeTests,
       ]);
-    await step("Unit-/Komponententests und Coverage", "npm", [
-      "run",
-      "test:coverage",
-    ]);
+    if (!phase.externalGates.includes("coverage"))
+      await step("Unit-/Komponententests und Coverage", "npm", [
+        "run",
+        "test:coverage",
+      ]);
     await step("Produktionsabhängigkeiten", "npm", [
       "audit",
       "--omit=dev",
@@ -484,7 +490,8 @@ try {
       {},
       1800000,
     );
-    await step("Produktions-Build", "npm", ["run", "build"]);
+    // The required parallel Typecheck gate covers these exact source bytes.
+    await step("Produktions-Build", "npx", ["--no-install", "vite", "build"]);
     // The test supervisor serves the built artifact from a separate, owned preview.
     await step("Gebautes PWA starten", process.execPath, [
       "scripts/runtime-test-preview.mjs",
@@ -589,10 +596,10 @@ evidence.completedAt = new Date().toISOString();
 saveEvidence();
 privateWrite(
   join(artifacts, "RESULT.txt"),
-  `PASS\nPhase: ${phase.phase}\nStages: ${phase.stages.join(", ")}\n${phase.phase === "system" ? "Browser/build/PWA acceptance was not run in this phase.\n" : phase.phase === "browser" ? "System SQL/API/Edge/operational acceptance was not run in this phase.\n" : "Complete local acceptance.\n"}Project: ${project}\nCompleted: ${new Date().toISOString()}\nDevelopment database and object volumes were not targeted.\n`,
+  `PASS\nPhase: ${phase.phase}\nStages: ${phase.stages.join(", ")}\n${phase.externalGates.length ? `Delegated required gates: ${phase.externalGates.join(", ")}\n` : ""}${phase.phase === "system" ? "Browser/build/PWA acceptance was not run in this phase.\n" : phase.phase === "browser" ? "System SQL/API/Edge/operational acceptance was not run in this phase.\n" : phase.externalGates.length ? "Selected phase acceptance passed; delegated CI gates are listed above.\n" : "Complete local acceptance.\n"}Project: ${project}\nCompleted: ${new Date().toISOString()}\nDevelopment database and object volumes were not targeted.\n`,
 );
 console.log(
-  phase.phase === "all"
+  phase.phase === "all" && phase.externalGates.length === 0
     ? `\nAlle isolierten Prüfungen und Aufräumen bestanden. Bericht: .local/tests/${run}/RESULT.txt`
-    : `\nIsolated ${phase.phase} phase and cleanup passed; other acceptance phases are not claimed. Report: .local/tests/${run}/RESULT.txt`,
+    : `\nIsolated ${phase.phase} acceptance and cleanup passed${phase.externalGates.length ? `; delegated required gates: ${phase.externalGates.join(", ")}` : "; other acceptance phases are not claimed"}. Report: .local/tests/${run}/RESULT.txt`,
 );
