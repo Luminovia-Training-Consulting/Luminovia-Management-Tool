@@ -1,5 +1,13 @@
 # Persistent implementation plan
 
+## Bug hunt — lazy route bundle correction (17 November 2026)
+
+- [x] Inspect clean published `main` independently of the dirty feature checkout and identify a measurable production build defect.
+- [x] Split shell-only announcements/notification components from their full pages and lazy-load those pages on direct routes as well as section hubs.
+- [x] Pass all 867 frontend tests, targeted UI tests, typecheck, lint and public-config production/PWA build; confirm ineffective dynamic-import warnings are gone and route chunks are emitted.
+- [ ] Run the complete isolated SQL/API/desktop/mobile/PWA acceptance after the other checkout releases the shared test lock. The `./portal test` attempt stopped safely before startup due to that lock.
+- [ ] Push signed branch through the repository PR workflow, monitor exact-head checks and merge when required checks pass.
+
 ## Workspace clarity, account creation and manual planning — 17 November 2026
 
 The latest user revision explicitly restores restricted guest accounts; participants remain retired. Individual lecturer defaults replace role-based price defaults for new commissioned offers without rewriting accepted snapshots.

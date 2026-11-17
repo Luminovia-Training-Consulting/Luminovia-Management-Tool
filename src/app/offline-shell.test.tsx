@@ -29,10 +29,10 @@ vi.mock("../features/auth/auth-context", () => ({
   }),
 }));
 vi.mock("../features/profile/avatar", () => ({ Avatar: () => null }));
-vi.mock("../features/notifications/notifications", () => ({
+vi.mock("../features/notifications/notifications-menu", () => ({
   NotificationsMenu: () => null,
 }));
-vi.mock("../features/announcements/announcements", () => ({
+vi.mock("../features/announcements/announcement-banners", () => ({
   AnnouncementBanners: () => null,
 }));
 vi.mock("../features/help/tour", () => ({ PortalTour: () => null }));

@@ -13,7 +13,8 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DateTime } from "luxon";
 import i18n from "../../lib/i18n";
-import { AnnouncementBanners, AnnouncementsPage } from "./announcements";
+import { AnnouncementBanners } from "./announcement-banners";
+import { AnnouncementsPage } from "./announcements";
 import { AdminAnnouncementsPage } from "./admin";
 import {
   announcementPayload,
