@@ -110,6 +110,7 @@ try {
 
   await sql(`insert into auth.users(id) values ${[lecturer, peer, admin, student, stranger, client].map((id) => `('${id}')`).join(",")};
  insert into public.user_roles(user_id,role) values('${lecturer}','lecturer'),('${peer}','lecturer'),('${admin}','admin'),('${student}','participant'),('${stranger}','participant'),('${client}','client');
+ update public.profiles set active=true where id='${client}';
  update public.profiles set display_name=case id when '${lecturer}' then 'Fictional Teacher' when '${student}' then 'Private Student Identity' else 'Fictional Other' end,bio_de='Öffentliche Biografie',phone='Private phone';
  insert into public.organisations(id,name) values('${org}','Fictional Academy');
  insert into public.course_templates(id,title) values('${template}','Fictional completed course');
@@ -226,6 +227,7 @@ try {
   await check(
     "Client visibility is limited to their organisation assigned lecturers and course history",
     async () => {
+      assert.equal(await actor(client, "select private.actor_active()"), "t");
       assert.deepEqual(
         await rpc(client, "people_directory", ["", "", null]),
         [],
