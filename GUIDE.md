@@ -613,7 +613,6 @@ Focused commands:
 ```bash
 npx vitest run src/features/jobs src/features/dashboard/dashboard.test.tsx src/features/calendar/calendar.test.tsx
 PORTAL_DB_CONTAINER=<owned-test-container> node scripts/job-discovery-db-tests.mjs
-PORTAL_DB_CONTAINER=<owned-test-container> node scripts/role-aware-job-discovery-db-tests.mjs
 PORTAL_DB_CONTAINER=<owned-test-container> node scripts/api-surface-db-tests.mjs
 ./portal test
 ```
@@ -622,7 +621,7 @@ The SQL suite uses only owned temporary UUID databases. It checks more than 1,00
 
 `job-discovery-api-check.mjs` adds actual Auth/REST acceptance, including the old 1,000-row limit and signing in through a new session. `job-discovery.spec.ts` covers desktop/mobile, actual subsequent pages, saved views surviving reload, private account boundaries, DE/EN, dark mode and axe. Existing claim/lifecycle browser tests retain actual booking and snapshot checks; their detail refresh now waits for the precise new detail API. Authored tests alone do not constitute passed native acceptance.
 
-The [role-aware database suite](scripts/role-aware-job-discovery-db-tests.mjs) covers captured regular/senior quotes, original-currency monetary ordering and paging, restricted manager prices, consistent detail/dashboard versions, stale tier/policy cursors and helper access boundaries. [role-aware-job-discovery-api-check.mjs](scripts/role-aware-job-discovery-api-check.mjs) supplies the corresponding native Auth/REST entry point. The [DTO](src/features/jobs/discovery-api.test.ts), [card](src/features/jobs/card.test.tsx), [detail](src/features/jobs/jobs.test.tsx) and [discovery](src/features/jobs/discovery.test.tsx) component regressions cover nullable values without coercion, genuine numeric zero, restricted rendering, changed-quote consent and resetting observed-role pages. These links identify existing tests; they do not claim that this documentation update reran SQL, API, browser or retained-data acceptance. Use the exact-source results in the relevant pull request checks.
+Current compensation is configured per lecturer and remains independent of role changes. The [job-discovery SQL suite](scripts/job-discovery-db-tests.mjs), [delegated-pricing SQL suite](scripts/delegated-pricing-db-tests.mjs), and [replacement handover SQL suite](scripts/replacement-directed-handover-db-tests.mjs) cover current pricing, authorised discovery, quote privacy, replacements and immutable accepted snapshots. The older [role-percentage probes](scripts/role-aware-job-discovery.archived.mjs) are historical references only. The [DTO](src/features/jobs/discovery-api.test.ts), [card](src/features/jobs/card.test.tsx), [detail](src/features/jobs/jobs.test.tsx) and [discovery](src/features/jobs/discovery.test.tsx) component regressions cover nullable values without coercion, genuine numeric zero, restricted rendering, changed-quote consent and resetting observed pages.
 
 
 <a id="section-job-lifecycle"></a>
@@ -2911,7 +2910,7 @@ node --test scripts/runtime-documentation.test.mjs
 
 Run mutating [delegated-pricing SQL checks](scripts/delegated-pricing-db-tests.mjs), [commission API checks](scripts/commission-api-check.mjs) and [role/pricing browser journeys](tests/e2e/roles-pricing.spec.ts) only through the owned isolated acceptance environment described in [LOCAL_DEVELOPMENT](DEVELOPMENT.md#section-local-development), normally `./portal test`. The SQL, actual Auth/REST/browser and native retained-data stages are distinct evidence. This documentation lists their entry points without asserting a new execution, operational policy setup, deployment or complete security/legal certification.
 
-The [role-aware discovery SQL suite](scripts/role-aware-job-discovery-db-tests.mjs) and [native API suite](scripts/role-aware-job-discovery-api-check.mjs) cover current regular/senior quotes, monetary filters and keyset order, unknown management prices, matching detail/dashboard versions, stale role/policy cursors and current-access/helper ACLs. [Discovery DTO regressions](src/features/jobs/discovery-api.test.ts) and [card regressions](src/features/jobs/card.test.tsx) cover strict nullable values and restricted rendering. These delivered entry points complement the original pricing checks; exact executed outcomes belong in the relevant pull request checks, rather than being inferred from a merge or a test inventory.
+The current [job-discovery SQL suite](scripts/job-discovery-db-tests.mjs) checks authorised search and paging; [delegated-pricing SQL tests](scripts/delegated-pricing-db-tests.mjs) check individual quotes, privacy and immutable claim snapshots. The older [role-percentage discovery probe](scripts/role-aware-job-discovery.archived.mjs) documents the superseded model and is not part of current acceptance. [Discovery DTO regressions](src/features/jobs/discovery-api.test.ts) and [card regressions](src/features/jobs/card.test.tsx) cover strict nullable values and restricted rendering. Exact executed results are reported from the current source run.
 
 
 <a id="section-permanent-deletion"></a>

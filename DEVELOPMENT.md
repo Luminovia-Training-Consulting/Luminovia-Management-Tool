@@ -2016,7 +2016,7 @@ Price bounds and sorting use those authorized amounts instead of the raw public 
 
 The cursor fingerprint binds canonical filters to the current actor, lecturer eligibility/tier marker and global policy version. A cursor from a different such context is rejected; other permission changes are enforced by current read checks rather than by hashing every permission. A newer global policy does not rewrite an existing offer's captured quote. Observed role changes also reset the client's infinite-page query key; unobserved changes remain subject to server cursor validation. The TypeScript DTO preserves null without coercion, cards/detail render restricted prices honestly, and the detail checkbox captures all displayed quote fields before submitting the quoted terms version to the original claim transaction. Management `max_net_budget` remains the separate migration-25 projection. Paging remains bounded and provides neither a frozen cross-request snapshot nor confirmed eligibility/reservation.
 
-Test entry points: [role-aware-job-discovery-db-tests.mjs](scripts/role-aware-job-discovery-db-tests.mjs), [role-aware-job-discovery-api-check.mjs](scripts/role-aware-job-discovery-api-check.mjs) and [job-discovery-db-tests.mjs](scripts/job-discovery-db-tests.mjs). Their presence is not a claim that the final integrated native checks have passed. See [JOB_DISCOVERY](GUIDE.md#section-job-discovery) and [DELEGATED_ROLES_PRICING](GUIDE.md#section-delegated-roles-pricing).
+Test entry points: [role-aware-job-discovery-db-tests.mjs](scripts/role-aware-job-discovery.archived.mjs), [role-aware-job-discovery-api-check.mjs](scripts/role-aware-job-discovery-api-check.mjs) and [job-discovery-db-tests.mjs](scripts/job-discovery-db-tests.mjs). Their presence is not a claim that the final integrated native checks have passed. See [JOB_DISCOVERY](GUIDE.md#section-job-discovery) and [DELEGATED_ROLES_PRICING](GUIDE.md#section-delegated-roles-pricing).
 
 <a id="section-migration-guide-37-private-email-preferences-and-committed-event-outbox"></a>
 ### 37. Private email preferences and committed-event outbox
@@ -2160,7 +2160,7 @@ Source: [20261116091025_role_aware_handover_and_forecast.sql](supabase/migration
 
 Captures the recipient's own private role-pricing context and net quote. Acceptance rechecks that context under the existing locks, then independently verifies the inserted claim and revenue snapshot. Original accepted fees and customer gross remain immutable. Other lecturers and ordinary management cannot inspect the recipient's fee/hash. Role-dependent prospective costs remain unknown (`null`) with an explicit count rather than presenting the raw privacy sentinel as a zero cost.
 
-Test entry points: [role-aware-handover-db-tests.mjs](scripts/role-aware-handover-db-tests.mjs), [role-aware-handover-api-check.mjs](scripts/role-aware-handover-api-check.mjs).
+Test entry points: [role-aware-handover-db-tests.mjs](scripts/role-aware-handover.archived.mjs), [role-aware-handover-api-check.mjs](scripts/role-aware-handover-api-check.mjs).
 
 <a id="section-migration-guide-53-withdrawal-authority-after-concurrent-role-edits"></a>
 ### 53. Withdrawal authority after concurrent role edits
@@ -2169,7 +2169,7 @@ Source: [20261116091026_substitution_withdrawal_permission_recheck.sql](supabase
 
 Rechecks current manager withdrawal capability after the profile, schedule, job, claim and offer locks. A request queued behind a role edit cannot use its former permission. Immutable proposer/source ownership remains a separate active-account right. No released substitution implementation is edited.
 
-Test entry point: [role-aware-handover-db-tests.mjs](scripts/role-aware-handover-db-tests.mjs), including an observed blocked-session negative-control regression.
+Test entry point: [role-aware-handover-db-tests.mjs](scripts/role-aware-handover.archived.mjs), including an observed blocked-session negative-control regression.
 
 <a id="section-migration-guide-54-current-course-context-in-the-own-teaching-day"></a>
 ### 54. Current course context in the own Teaching Day
@@ -2187,7 +2187,7 @@ Source: [20261116091029_substitution_receipt_current_status.sql](supabase/migrat
 
 An exact accepted-offer retry reads the resulting claim's current owner, job and status under the existing locks. A subsequently cancelled assignment returns `cancelled`, without new reservations, notifications or audit events. Exact quote hash and explicit terms consent remain mandatory. Historical accepted-offer state alone no longer fabricates a current confirmation.
 
-Test entry points: [role-aware-handover-db-tests.mjs](scripts/role-aware-handover-db-tests.mjs), [role-aware-handover-api-check.mjs](scripts/role-aware-handover-api-check.mjs).
+Test entry points: [role-aware-handover-db-tests.mjs](scripts/role-aware-handover.archived.mjs), [role-aware-handover-api-check.mjs](scripts/role-aware-handover-api-check.mjs).
 
 <a id="section-migration-guide-56-current-lecturer-authority-on-accepted-retries"></a>
 ### 56. Current lecturer authority on accepted retries
@@ -2196,7 +2196,7 @@ Source: [20261116091030_substitution_retry_current_lecturer_authority.sql](supab
 
 After the existing profile/workflow locks and exact consent checks, accepted retries require current lecturer authority. An active account that lost its teaching role receives `not_eligible`; a suspended account is denied. Tests observe both role and activation mutations holding the profile lock, then verify the waiting request uses the newly committed authority without changing business history or creating notices.
 
-Test entry points: [role-aware-handover-db-tests.mjs](scripts/role-aware-handover-db-tests.mjs), [role-aware-handover-api-check.mjs](scripts/role-aware-handover-api-check.mjs). The vulnerable52910-only negative control fails the new role-revocation regression.
+Test entry points: [role-aware-handover-db-tests.mjs](scripts/role-aware-handover.archived.mjs), [role-aware-handover-api-check.mjs](scripts/role-aware-handover-api-check.mjs). The vulnerable52910-only negative control fails the new role-revocation regression.
 
 <a id="section-migration-guide-57-explicit-plpgsql-initializer-types-and-quiz-index"></a>
 ### 57. Explicit PL/pgSQL initializer types and quiz index
