@@ -141,7 +141,7 @@ jobs:
         if: needs.scope.outputs.profile == 'full'
         run: |
           if test "$GITHUB_EVENT_NAME" = pull_request; then
-            node scripts/runtime-test.mjs --phase system
+            node scripts/runtime-test.mjs --phase system --external-gates quality,coverage
           else
             ./portal test
           fi

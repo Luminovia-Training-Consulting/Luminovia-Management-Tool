@@ -45,22 +45,34 @@ export function runtimeTestPhasePlan(args = []) {
   if (
     !Array.isArray(args) ||
     (args.length !== 0 &&
-      (args.length !== 2 ||
-        args[0] !== "--phase" ||
-        !["all", "system", "browser"].includes(args[1])))
+      !(
+        (args.length === 2 &&
+          args[0] === "--phase" &&
+          ["all", "system", "browser"].includes(args[1])) ||
+        (args.length === 4 &&
+          args[0] === "--phase" &&
+          args[1] === "system" &&
+          args[2] === "--external-gates" &&
+          args[3] === "quality,coverage")
+      ))
   )
-    throw new Error("Use no arguments, or --phase all|system|browser.");
+    throw new Error(
+      "Use no arguments, --phase all|system|browser, or --phase system --external-gates quality,coverage.",
+    );
   const phase = args.length ? args[1] : "all";
+  const externalGates = args.length === 4 ? ["quality", "coverage"] : [];
   return Object.freeze({
     phase,
     system: phase !== "browser",
     browser: phase !== "system",
+    externalGates: Object.freeze(externalGates),
     stages: Object.freeze(
       stages
         .filter(
           ([, group]) =>
             phase === "all" || group === "shared" || group === phase,
         )
+        .filter(([name]) => !externalGates.includes(name))
         .map(([name]) => name),
     ),
   });
