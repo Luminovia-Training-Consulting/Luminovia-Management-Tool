@@ -362,15 +362,15 @@ for (const [name, email, displayName, role] of bootstrapDefinitions) {
 privateWrite(
   join(directory, "ACCOUNTS.txt"),
   [
-    "Luminovia – vertrauliche, ausschließlich fiktive Hostinger-Entwicklungskonten",
-    `Anmeldung: ${target}`,
-    "Kein Produktivsystem. Keine echten Personen. Auth-E-Mails bleiben in privatem Mailpit.",
-    "Die Verwaltung richtet beim ersten Browserzugriff ihre eigene MFA ein.",
-    "Vorhandene Passwörter/MFA/Profile werden durch erneute Prüfungen nicht zurückgesetzt.",
+    "Luminovia – confidential, entirely fictional Hostinger development accounts",
+    `Sign in: ${target}`,
+    "Not a production system. No real people. Auth emails remain in private Mailpit.",
+    "The administrator sets up their own MFA on first browser access.",
+    "Existing passwords, MFA and profiles are not reset by repeated checks.",
     "",
     ...bootstrapDefinitions.flatMap(([name]) => [
       `${name}: ${state.accounts[name].email}`,
-      `Passwort: ${state.accounts[name].password}`,
+      `Password: ${state.accounts[name].password}`,
       "",
     ]),
   ].join("\n") + "\n",
@@ -495,7 +495,7 @@ async function persistenceProbe(createMissing) {
       "Persistence fixture metadata is missing; refusing to invent restore evidence",
     );
     const bytes = new TextEncoder().encode(
-      `Fiktive Luminovia-Installationsprüfung. Keine echten Personendaten. Marker ${randomUUID()}.\n`,
+      `Fictional Luminovia installation check. No real personal data. Marker ${randomUUID()}.\n`,
     );
     probe = {
       version: 1,

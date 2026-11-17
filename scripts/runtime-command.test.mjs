@@ -112,7 +112,7 @@ test("already cancelled commands do not execute and missing executables reject c
     assert(!existsSync(marker));
     await assert.rejects(
       command(join(directory, "missing-executable"), [], { quiet: true }),
-      /konnte nicht gestartet werden/,
+      /Could not start program/,
     );
   } finally {
     rmSync(directory, { recursive: true, force: true });

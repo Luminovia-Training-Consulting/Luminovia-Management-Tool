@@ -77,8 +77,8 @@ privateWrite(
 );
 privateWrite(
   ".local/ACCOUNTS.txt",
-  `Lokale Luminovia-Testkonten – vertraulich, nicht teilen oder in Git speichern.\n\nAdmin: admin@example.invalid\nPlattformleitung (Carina-Demo): carina@example.invalid\nAuftraggeber-Demo: client@example.invalid\nDozierende: lecturer01@example.invalid bis lecturer11@example.invalid\nTeilnahme: participant@example.invalid\n\n${password ? `Ursprüngliches lokales Testpasswort: ${password}\nEigene später geänderte Passwörter und MFA bleiben bei jedem Neustart erhalten.\n` : "Die frühere Passwortdatei fehlt. Vorhandene Passwörter wurden NICHT verändert. Verwende dein bekanntes Passwort oder die lokale Mailpit-Wiederherstellung.\n"}\nMailpit: http://127.0.0.1:${config.mail}\n`,
+  `Local Luminovia test accounts – confidential; do not share or commit to Git.\n\nAdmin: admin@example.invalid\nPlatform lead (demo): carina@example.invalid\nClient demo: client@example.invalid\nLecturers: lecturer01@example.invalid through lecturer11@example.invalid\nParticipant: participant@example.invalid\n\n${password ? `Original local test password: ${password}\nPasswords changed later and MFA remain intact across restarts.\n` : "The previous password file is missing. Existing passwords were NOT changed. Use your known password or local Mailpit recovery.\n"}\nMailpit: http://127.0.0.1:${config.mail}\n`,
 );
 console.log(
-  "Lokale Konfiguration aktualisiert; vorhandene Passwörter bleiben erhalten. Zugangsdaten: .local/ACCOUNTS.txt",
+  "Local configuration updated; existing passwords are preserved. Credentials: .local/ACCOUNTS.txt",
 );

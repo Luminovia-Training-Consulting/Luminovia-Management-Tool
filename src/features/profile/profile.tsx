@@ -10,6 +10,7 @@ import { AvatarEditor } from "./avatar";
 import { OwnContactVisibility } from "./contact-visibility";
 import { OwnQualificationPassport } from "../qualifications/passport";
 import { OwnProfileDetails } from "../people/profile-details";
+import { AccountSettings } from "./account-settings";
 import { ProfileEvidence } from "../files/profile-evidence";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -167,6 +168,7 @@ export function ProfilePage() {
     <>
       <PageHeading title={t("profile")} description={session!.user.email} />
       <AvatarEditor name={profile.data.display_name} />
+      <AccountSettings email={session!.user.email ?? ""} />
       <div className="profile-layout">
         <ProfileForm profile={profile.data} />
         <section className="panel">

@@ -40,7 +40,7 @@ import {
 const action = process.argv[2] ?? "start";
 if (process.platform !== "linux" && !["help", "--help", "-h"].includes(action))
   throw new Error(
-    "Der lokale Launcher ist derzeit für Linux geprüft. Siehe DEVELOPMENT.md.",
+    "The local launcher is currently tested on Linux. See DEVELOPMENT.md.",
   );
 /** Serialises this checkout's runtime mutations and releases its own lock on failure as well. */
 async function locked(operation) {
@@ -71,7 +71,7 @@ async function locked(operation) {
       }
       if (Date.now() >= deadline)
         throw new Error(
-          "Ein anderer Laufzeitbefehl ist noch aktiv. Prüfe .local/runtime.lock.",
+          "Another runtime command is still active. Check .local/runtime.lock.",
           { cause: error },
         );
       await delay(500);
@@ -90,24 +90,24 @@ async function locked(operation) {
 /** Describes only commands actually offered and their local data storage. */
 function help() {
   console.log(
-    `Luminovia Portal – lokale vollständige Laufzeit\n\n  ./portal start        Alle lokalen Dienste starten (Hintergrund)\n  ./portal up           Starten; Ctrl+C stoppt datenerhaltend\n  ./portal restart      Datenerhaltend neu starten\n  ./portal status       Dienststatus und lokale URLs\n  ./portal stop         Eigene Dienste stoppen; Daten bleiben erhalten\n  ./portal check        Lokale Quellcode-/Test-/Build-Prüfung ohne Docker\n  ./portal test         Vollständige Tests in isolierter Umgebung\n  ./portal credentials  Lokales ursprüngliches Testpasswort anzeigen\n  ./portal github       Neuesten GitHub-main separat lokal ausprobieren\n  ./portal github test  Neuesten GitHub-main vollständig isoliert testen\n\nNode.js >=22.12 und npm werden benötigt; Dienste und Volltests zusätzlich mit Docker.\nKeine Produktion, keine echten E-Mails, kein Reset beim Start.`,
+    `Luminovia Portal – complete local runtime\n\n  ./portal start        Start all local services in the background\n  ./portal up           Start; Ctrl+C stops services while preserving data\n  ./portal restart      Restart while preserving data\n  ./portal status       Service status and local URLs\n  ./portal stop         Stop owned services while preserving data\n  ./portal check        Check source, tests and build without Docker\n  ./portal test         Run complete tests in an isolated environment\n  ./portal credentials  Show the original local test password\n  ./portal github       Try the latest GitHub main in a separate local preview\n  ./portal github test  Fully test the latest GitHub main in isolation\n\nNode.js >=22.12 and npm are required; services and full tests also require Docker.\nNo production, real email, or reset on startup.`,
   );
 }
 /** Shows service status and local URLs without exposing private keys. */
 function printStatus(state = readState()) {
   const config = projectConfig();
   const alive = processIsOurs(state);
-  console.log(`Luminovia Portal: ${alive ? state.phase : "gestoppt"}`);
+  console.log(`Luminovia Portal: ${alive ? state.phase : "stopped"}`);
   if (alive) console.log(state.message ?? "");
   console.log(
-    `Portal: ${config.site}\nSupabase API: http://127.0.0.1:${config.api}\nLokale E-Mails: http://127.0.0.1:${config.mail}\nZugang: admin@example.invalid oder lecturer01@example.invalid\nPasswort anzeigen: ./portal credentials\nPrivates Protokoll: .local/runtime.log`,
+    `Portal: ${config.site}\nSupabase API: http://127.0.0.1:${config.api}\nLocal email: http://127.0.0.1:${config.mail}\nSign in: admin@example.invalid or lecturer01@example.invalid\nShow password: ./portal credentials\nPrivate log: .local/runtime.log`,
   );
 }
 /** Starts or adopts the owned supervisor and confirms success only after its ready state. */
 async function start() {
   const [major, minor] = process.versions.node.split(".").map(Number);
   if (major < 22 || (major === 22 && minor < 12))
-    throw new Error("Node.js >=22.12 ist erforderlich.");
+    throw new Error("Node.js >=22.12 is required.");
   await ensureDependencies();
   const dockerHost = await assertLocalDocker();
   const existing = readState();
@@ -118,7 +118,7 @@ async function start() {
         (existing.migrations && existing.migrations !== migrationDigest())
       ) {
         console.log(
-          "Neue Laufzeitkonfiguration oder Migrationen erkannt; starte datenerhaltend neu …",
+          "New runtime configuration or migrations detected; restarting while preserving data …",
         );
         await stop();
         return await start();
@@ -130,7 +130,7 @@ async function start() {
       printStatus(existing);
       return;
     }
-    console.log("Ein lokaler Start läuft bereits …");
+    console.log("Local startup is already in progress …");
   } else {
     privateDirectory();
     const session = randomUUID();
@@ -152,7 +152,7 @@ async function start() {
       session,
       phase: "starting",
       startedAt: new Date().toISOString(),
-      message: "Starte lokale Laufzeit …",
+      message: "Starting local runtime …",
     });
   }
   let last = "";
@@ -173,12 +173,12 @@ async function start() {
       !processIsOurs(state)
     )
       throw new Error(
-        "Lokaler Start fehlgeschlagen. Siehe .local/runtime.log (keine Zugangsdaten veröffentlichen).",
+        "Local startup failed. See .local/runtime.log (do not share credentials).",
       );
     await delay(500);
   }
   throw new Error(
-    "Lokaler Start dauert zu lange. ./portal status zeigt den aktuellen Stand.",
+    "Local startup timed out. Run ./portal status to check progress.",
   );
 }
 /** Stops only the owned service group and requires a cleanup acknowledgement matching its session. */
@@ -191,7 +191,7 @@ async function stop() {
     while (processIsOurs(state) && Date.now() < deadline) await delay(500);
     if (processIsOurs(state))
       throw new Error(
-        "Datenerhaltender Stopp dauert zu lange; .local/runtime.log prüfen.",
+        "Data-preserving shutdown timed out; check .local/runtime.log.",
       );
     const stopped = readState();
     // A vanished PID alone does not prove that container/network cleanup ran.
@@ -202,7 +202,7 @@ async function stop() {
       stopped?.phase !== "stopped"
     )
       throw new Error(
-        "Datenerhaltender Stopp wurde nicht bestätigt; .local/runtime.log prüfen.",
+        "Data-preserving shutdown was not confirmed; check .local/runtime.log.",
       );
   } else {
     await ensureDependencies();
@@ -218,7 +218,7 @@ async function stop() {
     await removeLoopbackNetwork(projectConfig().id);
   }
   console.log(
-    "Lokales Portal gestoppt. Datenbank, Auth, Passwörter, MFA und Storage bleiben erhalten.",
+    "Local portal stopped. Database, Auth, passwords, MFA and Storage are preserved.",
   );
 }
 try {
@@ -233,7 +233,7 @@ try {
       break;
     case "up":
       await locked(start);
-      console.log("Ctrl+C stoppt die lokalen Dienste ohne Datenverlust.");
+      console.log("Ctrl+C stops local services without data loss.");
       await new Promise((resolve) => {
         process.once("SIGINT", resolve);
         process.once("SIGTERM", resolve);
@@ -255,7 +255,7 @@ try {
     case "credentials":
       if (!existsSync(join(runtimeDir, "ACCOUNTS.txt")))
         throw new Error(
-          "Noch keine lokale Zugangsdaten-Datei. Zuerst ./portal start ausführen.",
+          "No local credentials file yet. Run ./portal start first.",
         );
       process.stdout.write(
         readFileSync(join(runtimeDir, "ACCOUNTS.txt"), "utf8"),
