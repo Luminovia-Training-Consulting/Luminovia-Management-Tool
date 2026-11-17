@@ -98,20 +98,13 @@ verification; a successful check or merge is not a publication request.
 
 All 15 existing server-required contexts remain mandatory before a PR can merge. The additional browser phase is enforced through the required preview gate, which rejects a failed, skipped, cancelled or missing browser result; no repository rule is weakened. The strict rule also requires the PR to be up to date with `main`. Neither maintainers, administrators nor the maintenance App can bypass these checks.
 
-The release job runs only for an authorised manual `Portal checks` dispatch on
-`main` with `publish_release=true` and the exact current `main` SHA supplied as
-`expected_commit`. Pushes, ordinary manual verification and daily-maintenance
-verification do not publish releases. The fast quality gates and both complete
-application/selfhost gates remain required; failed checks do not produce a
-publication package. VPS automation still verifies that the entire CI run
-for the exact main commit succeeded. The existing five-minute VPS polling timer
-is unchanged; changing publication policy does not claim a hosted timer change.
+The existing manual release job still requires an authorised exact-main `Portal checks` dispatch. A separate user-authorised automatic publisher waits for successful push runs of both complete Portal checks and Security analysis on exact current main, then rechecks main before publishing. Failed, missing or superseded checks block it. The VPS independently checks exact-main CI, immutable release content and its migration/backup/health policy. Source changes do not establish that a hosted release or installation occurred.
 
 The `PR preview deployments` workflow is manual-only. The verified downloadable
 PR package remains an artifact, independent of optional deployment metadata.
 See [PR_PREVIEWS](PR_PREVIEWS.md) for that explicit publication and cleanup path.
 
-[CodeQL](../.github/workflows/security.yml) additionally analyses JavaScript/TypeScript, Python and GitHub Actions on PRs/main and on Mondays at 05:23 UTC (15:23 Brisbane). This is static security analysis, not a replacement for real RLS/auth/file-access tests. Findings appear under GitHub Security/Code scanning; a successfully completed scan does not by itself mean there are no warnings. Its three language analyses, Dependency review and the generated CodeQL finding result are mandatory PR checks. Fourteen contexts are bound to GitHub Actions integration `15368`, and generated CodeQL to `57789`. This separate Security workflow is currently not an additional release `needs` gate; publication conditions are explicitly defined in `ci.yml`.
+[CodeQL](../.github/workflows/security.yml) additionally analyses JavaScript/TypeScript, Python and GitHub Actions on PRs/main and on Mondays at 05:23 UTC (15:23 Brisbane). This is static security analysis, not a replacement for real RLS/auth/file-access tests. Findings appear under GitHub Security/Code scanning; a successfully completed scan does not by itself mean there are no warnings. Its three language analyses, Dependency review and the generated CodeQL finding result are mandatory PR checks. Fourteen contexts are bound to GitHub Actions integration `15368`, and generated CodeQL to `57789`. The automatic publisher also verifies this separate Security workflow succeeded on the exact main push. The manual release job keeps its existing dependencies.
 
 ## Interpreting source and integration evidence
 

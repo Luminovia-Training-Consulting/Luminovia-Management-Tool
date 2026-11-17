@@ -2,15 +2,7 @@
 
 Configured environment: authorised self-hosted development at **https://cms.luminovia.org** on the existing **Hostinger KVM 1**. The user explicitly requested that frontend, Supabase and files run together at Hostinger and declined a paid upgrade during setup. Follow [HOSTINGER_DEVELOPMENT](HOSTINGER_DEVELOPMENT.md) for this instance's exact configuration, Compose commands, backup/restore checks and limits. The managed-backend steps below are retained reference from the earlier architecture, not the current target. Full production acceptance remains separate. Do not change the public Luminovia marketing website.
 
-Current workflow: develop and test on the local PC with `./portal check` for
-fast feedback and `./portal test` for complete isolated acceptance. Automatic
-GitHub quality/security checks remain, but pushes and merges no longer publish
-CMS releases or PR deployment records. An authorised CMS publication requires a
-manual `Portal checks` dispatch on `main`, `publish_release=true`, the exact
-current `main` SHA in `expected_commit` and all verification gates. PR deployment
-metadata has a separate manual-only action; see [PR_PREVIEWS](PR_PREVIEWS.md).
-The existing five-minute VPS updater timer has not been changed. It may consume
-an explicitly published release through its existing guarded installation path.
+Current workflow: run `./portal check` and `./portal test` for local acceptance. After the exact-current-main push passes both Portal checks and Security analysis, the trusted automatic workflow may publish an immutable development release. The separate manual exact-SHA publication remains available. PR deployment metadata is manual-only; see [PR_PREVIEWS](PR_PREVIEWS.md). The existing five-minute VPS updater independently checks the release, migrations, backup and health; a published release is not proof of installation.
 
 ## Configuration boundaries
 
