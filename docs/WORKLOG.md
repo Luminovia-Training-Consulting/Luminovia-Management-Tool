@@ -2201,6 +2201,8 @@ The first matrix CI run correctly caught stale workflow-policy fixtures that sti
 
 The next exact-head run passed those policy fixtures and then caught the acceptance-report artifact test still expecting the old single browser filename. The expectation now includes `${{ matrix.browser-project }}` so each lane uploads distinct evidence; its 17 local workflow-scope tests pass.
 
+The native SQL rerun confirmed the Unicode limits but PostgreSQL wrapped the expected Base64 text, making a string comparison false. The test now compares stored UTF-8 bytes (`bytea`) directly against decoded expected bytes, while retaining the full API response equality and explicit character/byte counts.
+
 ## Imported PR15 and PR20 delivery history
 
 The following isolated branch checkpoints are historical evidence. Current fourteen-check, signature and review-only policy is recorded above and in GITHUB_WORKFLOW; older always/disabled descriptions do not change it. These branch-only checks do not establish combined32 acceptance.
