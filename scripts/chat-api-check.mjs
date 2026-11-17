@@ -178,7 +178,7 @@ try {
     ).length,
     1,
   );
-  for (const actor of [outsider, admin, participant]) {
+  for (const actor of [outsider, admin]) {
     assert.equal(
       (
         await checked(
@@ -207,6 +207,32 @@ try {
       ).error,
     );
   }
+  assert.equal(
+    (await participant.client.from("messages").select("id").eq("room_id", dm))
+      .error?.code,
+    "42501",
+    "Retired participant access is denied at the operational portal boundary",
+  );
+  assert.equal(
+    (await participant.client.rpc("chat_room_members", { p_room_id: dm })).error
+      ?.code,
+    "42501",
+  );
+  assert.equal(
+    (await participant.client.rpc("chat_messages", { p_room_id: dm })).error
+      ?.code,
+    "42501",
+  );
+  assert.equal(
+    (
+      await participant.client.rpc("send_message", {
+        p_room_id: dm,
+        p_body: "Forged",
+        p_client_id: randomUUID(),
+      })
+    ).error?.code,
+    "42501",
+  );
   assert.ok((await participant.client.rpc("ensure_general_chat")).error);
   assert.ok(
     (
