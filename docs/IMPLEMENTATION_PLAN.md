@@ -2,6 +2,11 @@
 
 **17 November QoL programme:** The user requests one integrated PR covering the supplied QoL prompt. Scope/status and gaps are tracked in [QOL_PROGRAMME_STATUS](QOL_PROGRAMME_STATUS.md), and every prompt criterion is enumerated in [QOL_FEATURE_MATRIX](QOL_FEATURE_MATRIX.md). The programme remains incomplete. The current branch has chat, calendar, contacts, wiki, restore and job-navigation slices; an integrated SQL replay passed, while exact-head full CI, browser/PWA/native acceptance and substantial feature inventory remain open. Preserve the full requested scope and report incomplete criteria honestly.
 
+## Main migration-version collision — 17 November 2026
+
+- [x] Give `remove_mfa_and_assurance_gates` a unique migration version (`20261117130021`) and update its SQL-test path. The previous version duplicated `company_lecturer_decisions` and prevented clean Supabase migration replay.
+- [x] Verify all migration versions are unique, apply the complete migration set in a fresh isolated local stack, confirm the renamed version is recorded, and receive HTTP 200 from `/login`.
+
 ## QoL continuation after current main integration — 17 November 2026
 
 - [x] Merge current `main` through `cc6218e` normally; retain the consolidated root documentation and the user-required project ledgers and verbatim prompt under `docs/`.

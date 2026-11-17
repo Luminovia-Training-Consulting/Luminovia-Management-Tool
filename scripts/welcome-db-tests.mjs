@@ -208,7 +208,7 @@ await withTestDatabase(
     );
     const migration = await readFile(
       new URL(
-        "../supabase/migrations/20261117130000_remove_mfa_and_assurance_gates.sql",
+        "../supabase/migrations/20261117130021_remove_mfa_and_assurance_gates.sql",
         import.meta.url,
       ),
       "utf8",
