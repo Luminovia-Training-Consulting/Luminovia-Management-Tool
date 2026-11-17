@@ -7,8 +7,8 @@ const pairs: Record<string, [string, string]> = {
     "Take over a complete assignment. The original commitment remains until the handover is confirmed.",
   ],
   boundary: [
-    "Begonnene oder bereits abgerechnete Einsätze benötigen eine gesonderte vertragliche Klärung. Warteliste und geordnete Benachrichtigungen sind noch nicht verfügbar.",
-    "Started or invoiced assignments require a separate contractual amendment. Waitlists and ordered notifications are not available yet.",
+    "Bei weniger als sieben Tagen bis zum ersten Termin beantragst du den Rücktritt im zugewiesenen Auftrag; Administration oder Management muss zustimmen oder selbst eine Vertretung einleiten. Begonnene oder bereits abgerechnete Einsätze benötigen eine gesonderte vertragliche Klärung. Warteliste und geordnete Benachrichtigungen sind noch nicht verfügbar.",
+    "With less than seven days before the first session, request withdrawal in the assigned job; Administration or Management must approve or initiate a replacement themselves. Started or invoiced assignments require a separate contractual amendment. Waitlists and ordered notifications are not available yet.",
   ],
   request: ["Ersatz suchen", "Find a replacement"],
   assignment: ["Bestätigter Einsatz", "Confirmed assignment"],

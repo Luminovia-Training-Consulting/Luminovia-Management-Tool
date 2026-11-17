@@ -137,17 +137,21 @@ test("Draft checks are bounded while ready events and main/manual retain complet
     /else\s+node scripts\/runtime-test\.mjs --phase all --external-gates quality,coverage\s+fi/,
   );
   const browserJob = ci.jobs["verify-browser"];
-  assert.equal(browserJob.name, "Isolated browser acceptance");
+  assert.equal(
+    browserJob.name,
+    "Isolated browser acceptance (${{ matrix.browser-project }})",
+  );
+  assert.deepEqual(browserJob.strategy.matrix["browser-project"], [
+    "desktop-chromium",
+    "mobile-chromium",
+  ]);
   assert.equal(browserJob.needs, "scope");
   assert.equal(
     browserJob.if,
     "always() && !cancelled() && github.event_name == 'pull_request'",
   );
   const browser = browserJob.steps.find((step) => step.id === "browser");
-  assert.equal(
-    browser.name,
-    "Complete isolated desktop, mobile and built-PWA acceptance",
-  );
+  assert.equal(browser.name, "Complete isolated browser acceptance");
   assert.equal(browser.run, "node scripts/runtime-test.mjs --phase browser");
   assert.equal(browser.if, "needs.scope.outputs.profile == 'full'");
   const guards = ci.jobs.verify.steps.find(
@@ -396,11 +400,11 @@ test("PR deployment metadata is manual and runs only trusted main metadata code"
 // Exercise the maintained shell gate: a fast ready/main/manual classification must
 // independently fail even if a future classifier regresses.
 test("scope shell preflight rejects fast ready profiles and accepts only explicit Draft fast paths", () => {
-  for (const job of [
-    workflow("ci").jobs.verify,
-    workflow("ci").jobs["verify-selfhost"],
-    workflow("ci").jobs["verify-browser"],
-  ]) {
+  for (const [key, job] of Object.entries({
+    verify: workflow("ci").jobs.verify,
+    selfhost: workflow("ci").jobs["verify-selfhost"],
+    browser: workflow("ci").jobs["verify-browser"],
+  })) {
     const preflight = job.steps[0].run;
     for (const [event, profile, result, draft, action, allowed] of [
       ["pull_request", "docs", "success", "true", "synchronize", true],
@@ -448,9 +452,7 @@ test("scope shell preflight rejects fast ready profiles and accepts only explici
       assert.ifError(execution.error);
       assert.equal(
         execution.status === 0,
-        job.name === "Isolated browser acceptance" && event !== "pull_request"
-          ? false
-          : allowed,
+        key === "browser" && event !== "pull_request" ? false : allowed,
         `${event}/${profile}/${result}/${draft}/${action}`,
       );
     }

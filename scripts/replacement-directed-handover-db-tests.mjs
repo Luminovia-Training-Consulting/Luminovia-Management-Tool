@@ -402,8 +402,8 @@ await withTestDatabase(
           await sql(
             `select exists(select 1 from public.chat_members where room_id=${q(room.id)} and user_id=${q(original)} and removed_at is null)`,
           ),
-          "f",
-          `${room.kind}: original has no independent retained entitlement`,
+          room.kind === "participant_course" ? "t" : "f",
+          `${room.kind}: explicit participant-room membership is retained`,
         );
         assert.equal(
           await sql(
@@ -434,8 +434,8 @@ await withTestDatabase(
         );
         assert.equal(
           originalRooms.includes(room.id),
-          false,
-          `${room.kind}: public projection revokes the source`,
+          room.kind === "participant_course",
+          `${room.kind}: public projection retains only explicit membership`,
         );
         assert.equal(
           losingRooms.includes(room.id),
@@ -473,6 +473,24 @@ await withTestDatabase(
         q("Fictional explicit later cancellation"),
         q(randomUUID()),
       ]);
+      const participant = f.rooms.find(
+        (room) => room.kind === "participant_course",
+      );
+      assert.ok(participant);
+      assert.equal(
+        await sql(
+          `select exists(select 1 from public.chat_members where room_id=${q(participant.id)} and user_id=${q(recipient)} and removed_at is null)`,
+        ),
+        "f",
+        "Cancellation removes the successor's assignment-only participant access",
+      );
+      assert.equal(
+        await sql(
+          `select exists(select 1 from public.chat_members where room_id=${q(participant.id)} and user_id=${q(original)} and removed_at is null)`,
+        ),
+        "t",
+        "Original explicitly invited member remains",
+      );
       const replay = await call[winner]();
       assert.equal(
         replay.status,

@@ -99,6 +99,9 @@
   font-size: 0.8rem;
   color: var(--muted);
 }
+.demo-navigation-hint {
+  display: none;
+}
 .demo-sidebar nav {
   display: flex;
   flex-direction: column;
@@ -294,6 +297,11 @@
   }
   .demo-sidebar {
     width: 100%;
+  }
+  .demo-navigation-hint {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted);
   }
   .demo-sidebar nav {
     flex-direction: row;

@@ -474,7 +474,9 @@ await withTestDatabase("replacement_test", async ({ sql, actor }) => {
       await sql(
         `update public.job_sessions set starts_at=${q(start)},ends_at=${q(start)}::timestamptz+interval '1 hour' where job_id='${c.job}' and starts_at=${q(old)};update public.assignment_sessions set starts_at=${q(start)},ends_at=${q(start)}::timestamptz+interval '1 hour' where claim_id='${c.claim}' and starts_at=${q(old)};update public.course_sessions set starts_at=${q(start)},ends_at=${q(start)}::timestamptz+interval '1 hour' where course_run_id=(select course_run_id from public.jobs where id='${c.job}') and starts_at=${q(old)}`,
       );
-      const offer = await request(c.claim),
+      // Short-notice replacement needs an independent management decision;
+      // the post-lock teaching-start refusal remains the behavior under test.
+      const offer = await request(c.claim, manager),
         name = "replacement-lock-" + randomUUID();
       const blocker = sql(
         `begin;set local application_name=${q(name)};select id from public.jobs where id='${c.job}' for update;select pg_sleep(3);commit;`,

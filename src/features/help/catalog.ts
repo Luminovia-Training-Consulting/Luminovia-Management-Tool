@@ -162,11 +162,13 @@ export const guideModules: GuideModule[] = [
         "Filtere offene Aufträge und öffne die Details.",
         "Prüfe alle Termine, Zeitzone, Vergütung, Anforderungen und Vertragsbedingungen.",
         "Bestätige die Bedingungen und übernimm online. Erst die erfolgreiche Datenbankbestätigung bedeutet eine Zuteilung des gesamten Blocks.",
+        "Zum Rücktritt öffnest du den übernommenen Auftrag. Bei weniger als sieben Tagen bis zum ersten Termin stellst du einen begründeten Rücktrittsantrag; die Zuweisung bleibt bis zur Genehmigung durch Administration oder Management verbindlich. Die Entscheidung steht im Posteingang.",
       ],
       en: [
         "Filter open jobs and open their details.",
         "Review every session, time zone, fee, requirement and contractual term.",
         "Accept the terms and claim online. Only successful database confirmation allocates the complete block.",
+        "To withdraw, open the assigned job. With less than seven days before its first session, submit a reasoned withdrawal request; the assignment remains binding until Administration or Management approves. Read the decision in your inbox.",
       ],
     },
     problem: {
@@ -187,6 +189,8 @@ export const guideModules: GuideModule[] = [
       "auftrag",
       "job",
       "claim",
+      "rücktritt",
+      "withdrawal",
       "übernehmen",
       "conflict",
       "konflikt",
