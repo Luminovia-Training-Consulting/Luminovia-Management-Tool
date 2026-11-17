@@ -1,6 +1,7 @@
 /** Real browser workflows on the owned QA stack, isolated from development data. */
 import { defineConfig, devices } from "@playwright/test";
 import { existsSync } from "node:fs";
+import { availableParallelism } from "node:os";
 
 // The launcher creates this private per-environment file; it must stay out of Git.
 if (existsSync(".env.test.local")) process.loadEnvFile(".env.test.local");
@@ -21,7 +22,7 @@ export default defineConfig({
   // Tests within each spec stay ordered, while independent spec files use two
   // workers. Fixtures create unique records in the owned QA database.
   fullyParallel: false,
-  workers: 2,
+  workers: Math.max(2, Math.min(4, availableParallelism() - 1)),
   retries: 0,
   forbidOnly: true,
   failOnFlakyTests: true,

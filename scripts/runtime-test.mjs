@@ -16,6 +16,7 @@ import {
 import { join, basename } from "node:path";
 import { tmpdir } from "node:os";
 import { createHash, randomBytes } from "node:crypto";
+import { availableParallelism } from "node:os";
 import {
   browserPlan,
   browserAcceptance,
@@ -30,6 +31,7 @@ import {
   acquireTestLock,
   assertTestPortsAvailable,
 } from "./runtime-test-lock.mjs";
+import { runBounded } from "./testing/run-bounded.mjs";
 import {
   root,
   runtimeDir,
@@ -457,18 +459,24 @@ try {
       "run",
       "test:db",
     ]);
-    for (const script of readdirSync(join(scratch, "scripts"))
+    const databaseSuites = readdirSync(join(scratch, "scripts"))
       .filter((name) => name.endsWith("-db-tests.mjs"))
-      .sort())
-      await step(`Weitere SQL-Sicherheitsfälle ${script}`, process.execPath, [
+      .sort();
+    // Each suite creates and drops its own randomly named PostgreSQL database;
+    // bounded parallelism reduces repeated migration replay without sharing fixtures.
+    const suiteWorkers = Math.max(1, Math.min(4, availableParallelism()));
+    await runBounded(databaseSuites, suiteWorkers, (script) =>
+      step(`Weitere SQL-Sicherheitsfälle ${script}`, process.execPath, [
         `scripts/${script}`,
-      ]);
-    for (const script of readdirSync(join(scratch, "scripts"))
+      ]),
+    );
+    const apiSuites = readdirSync(join(scratch, "scripts"))
       .filter((name) => name.endsWith("-api-check.mjs"))
-      .sort())
-      await step(`Echte API ${script}`, process.execPath, [
-        `scripts/${script}`,
-      ]);
+      .sort();
+    // API suites provision unique fictional accounts and scope cleanup to them.
+    await runBounded(apiSuites, suiteWorkers, (script) =>
+      step(`Echte API ${script}`, process.execPath, [`scripts/${script}`]),
+    );
     await step("Echte Edge-Einladung und Mailpit", process.execPath, [
       "scripts/local-invite-check.mjs",
     ]);

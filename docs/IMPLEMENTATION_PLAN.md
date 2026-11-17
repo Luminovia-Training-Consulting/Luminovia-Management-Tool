@@ -4,7 +4,9 @@
 
 - [x] Keep both Chromium projects, every browser scenario/assertion, per-file ordering and zero retries; allow two independent spec files to run concurrently.
 - [x] Use Playwright's virtual clock for the 15-second stale-query behavior and shorten the idle observation only to 10.1 seconds, beyond the prior 10-second polling boundary.
-- [ ] Check formatting/type and browser inventory, then publish a signed PR and measure a fresh full browser CI run. Adjust worker count only if actual CI shows resource contention or no improvement; do not trim coverage.
+- [x] Baseline exact-head timings from the last green main-based CI: browser cases 20m34s; system verify 35m32s. About 17 minutes came from separate SQL/API suites run serially.
+- [ ] Validate bounded concurrency four for independent SQL/API suites with distinct fixtures, including stop-on-failure and wait-for-in-flight cleanup semantics; measure actual full CI before retaining it.
+- [ ] Complete focused formatting/type/browser inventory and full CI, then adjust browser workers based on actual runtime and runner contention. Do not trim coverage.
 
 ## PR31 after accepted documentation main — 17 November 2026
 
@@ -56,6 +58,7 @@ All complete product and seven-module ledgers below remain required. Prior coord
 - [x] Pass combined source/build/coverage checks with 515 frontend/65 files and all 144 runtime cases without skips, including real-controller phase/source/browser/privacy/cancellation regressions; formatting/actionlint/diff checks pass. Preserve exact6ff's separately completed 15-gate/120+2/91-stage full checkpoint as history.
 - [ ] Preserve the parallel remote Main36 reconciliation in ordinary ancestry, publish the signed final source and require fresh full-profile system AND browser reports plus native/security/preview success on the current base.
 - [ ] Merge and verify PR12 normally, then release the temporary review-state hold where still applicable. No renewed merge approval, unaccepted feature collection or production dispatch.
+
 ## Current all-PR merge continuation — PR12
 
 - [x] Integrate actually accepted PR36/main `7fbdb956` through normal ancestry; preserve both ledgers, phase isolation, strict browser evidence and all 36 released migration files.
@@ -118,6 +121,7 @@ Earlier checkpoint evidence and the complete product scope below remain unchange
 - [x] Pass combined local source/build acceptance with254frontend cases/52files,102runtime cases,23maintenance guards and16focused publication/GitHub/documentation guards; workflow/diff checks pass. No new full PC/native pass is inferred.
 - [ ] Complete the coordinated full PC slot naturally, preserve actual logs/exit/cleanup, and integrate PR27's actual main plus any required newer main before final exact-head15-check acceptance.
 - [ ] Keep PR12's temporary draft state and no-auto-merge instruction until its reserved merge is released; no source/QA work waits for a larger collected branch.
+
 ## Actual Main17 integration — final PR24 current-head acceptance
 
 PR17 has actually merged as main `4cc20874edc1f865b71106b7bb1299e16fec5aad`. Its 62 published SQL files remain byte-identical; six pending operational additions make 68 files in PR24. Application, SQL, E2E specifications, database helper, generated API inventory and package/lock bytes remain identical to the complete local `2c850fc488165e37887807a74e92414e4fa0a25e` pass. The newer executor combines accepted Main36 system/browser phase routing with Main17’s 30-minute aggregate browser budget; individual tests, assertions and retries are unchanged.
@@ -458,6 +462,7 @@ Updated: 16 November 2026 (Australia/Brisbane). On continuation read [WORKLOG](W
 - [ ] Push one necessary signed integration, pass all15current exact-head required gates and merge the completed functional PR according to the direct user instruction. No release/preview-publication dispatch belongs to this task.
 
 Other proposed PR21/22/26 group work remains separate from this frozen functional scope. The complete outstanding product/platform requirements below remain required.
+
 ## Smart operations extension — current user request
 
 **Current delivery priority:** PR10 alone owns the next main merge/shared PC QA slot. Keep PR17 draft with no auto-merge or merge watcher. Own58-source code and focused evidence are committed; full current-main acceptance is pending. After PR10, integrate actual main e88df84 or newer (including local publication controls/customer-neutral catalogue and the final canonical core), reconcile only undelivered own migration versions with byte-identical SQL, and repeat complete local/native/current-head CI before advancing PR17. The server's automatic mail/Push workers remain uninstalled.
