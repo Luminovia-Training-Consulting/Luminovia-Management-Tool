@@ -247,7 +247,7 @@ await withTestDatabase("calendar_global", async ({ sql, actor }) => {
       const revoke = Promise.allSettled([
         actor(
           admin,
-          `select set_config('application_name','${label}',true);select public.set_account_roles('${manager}',array['participant']);select pg_sleep(2)`,
+          `select set_config('application_name','${label}',true);select public.set_account_roles('${manager}',array['guest']);select pg_sleep(2)`,
           "aal1",
         ),
       ]);
