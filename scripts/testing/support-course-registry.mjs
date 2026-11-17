@@ -254,7 +254,7 @@ export async function runSupportCourseAbsenceChecks(fixture) {
       f.manager,
       `select private.can_access_document(${q(item.document)})`,
     ),
-    "f",
+    "t",
   );
   assert.equal(
     JSON.parse(
