@@ -293,7 +293,7 @@ update public.documents set current_version_id=${q(version)}where id=${q(documen
           await fileAccess(outsider, ordinary, false);
           await fileAccess(source, internal, false);
           await fileAccess(support, internal, true, "aal1");
-          await fileAccess(support, internal, false);
+          await fileAccess(support, internal, true);
           await sql(
             "delete from public.role_permissions where role='senior_lecturer'and permission='support.manage'",
           );
