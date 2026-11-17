@@ -22,10 +22,7 @@ for complete isolated acceptance of the working source before delivery; `./porta
 local QA checkout, and `./portal github` starts its persistent preview. The full
 runner holds a shared host-wide QA lock: coordinate concurrent agents and leave
 foreign services untouched. No self-hosted GitHub Actions runner is required.
-Automatic GitHub quality/security checks continue, but pushes and merges do not
-publish CMS releases or PR deployment records. See
-[manual publication](PR_PREVIEWS.md#github-deployments-and-permissions) and
-[release gates](CI_QUALITY.md).
+After exact-main push runs of both application and security checks succeed, the automatic CMS publisher may create an immutable development release. PR deployment metadata remains manual. See [development publication](PR_PREVIEWS.md#hosted-previews-and-existing-releases) and [release gates](CI_QUALITY.md).
 
 The normal environment contains only fictional development data unless you later add your own records. Startup does not overwrite passwords/MFA, profiles, roles, suspensions or accepted assignments. `./portal credentials` deliberately displays the original local bootstrap password in your own terminal; it does not reset passwords. Invitations and recovery messages are captured locally in Mailpit. Production publication, real email and real payment instructions are separate operations.
 

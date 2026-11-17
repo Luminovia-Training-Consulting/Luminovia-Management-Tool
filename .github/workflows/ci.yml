@@ -357,6 +357,10 @@ jobs:
     # ordinary verification and daily maintenance cannot enable this gate.
     # The exact reviewed SHA still passes every application gate in this run.
     name: Publish tested CMS update
+    # Share the publication lock with automatic releases for the same SHA.
+    concurrency:
+      group: cms-release-${{ github.sha }}
+      cancel-in-progress: false
     needs: [quality, coverage, verify, verify-selfhost]
     if: github.event_name == 'workflow_dispatch' && inputs.publish_release == true && github.ref == 'refs/heads/main' && inputs.expected_commit == github.sha
     runs-on: ubuntu-latest

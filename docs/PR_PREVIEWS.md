@@ -68,15 +68,7 @@ Record actual publication/cleanup evidence separately from local test results.
 
 ## Hosted previews and existing releases
 
-The existing development installation at `cms.luminovia.org` remains a separate
-environment with persistent data. An authorised maintainer must manually dispatch
-`Portal checks` on `main` with `publish_release=true` and the exact current main
-SHA in `expected_commit` before its gated release job can publish a CMS package.
-Pushes, merges, ordinary manual verification and daily-maintenance verification
-do not publish releases. The existing VPS updater polling timer is unchanged;
-this source change does not claim a hosted timer modification. Independent
-quality/security/metadata checks stay in place, and the local PR package receives
-neither production keys nor access to hosted data.
+The development installation at `cms.luminovia.org` remains separate and holds persistent data. After exact-current-main push runs of both Portal checks and Security analysis succeed, the automatic CMS workflow may publish a verified immutable release for the existing VPS poller. The manual exact-SHA release path also remains available. Migrations, backups, health and rollback are still checked by the server updater; a successful workflow alone does not establish an installation. PR metadata publication remains separate and manual. The local PR package receives neither server keys nor hosted data.
 
 A persistently browser-accessible portal for each PR requires a separately configured preview host with isolated Auth, database, Storage and email environments, plus controlled cleanup. A static frontend copy with an invented backend would not provide working login and business workflows. This implementation registers no such service and claims no public PR URL.
 
