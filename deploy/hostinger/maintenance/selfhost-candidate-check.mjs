@@ -65,6 +65,32 @@ function redactCandidateDiagnostic(value, secrets) {
     .replace(/\bsb_(?:secret|publishable)_[A-Za-z0-9_-]+\b/g, "[redacted key]");
 }
 
+/** Keep a few sanitized PostgreSQL crash signals before later recovery errors.
+ * Never publish the original LOG line: it can contain query or account data. */
+export function candidateServiceDiagnostics(service, logs, secrets) {
+  const lines = redactCandidateDiagnostic(logs, secrets).split("\n");
+  const crash =
+    /\bLOG:\s+server process \(PID \d+\) was terminated by signal (\d{1,3})(?::|$)/i;
+  const signals =
+    service === "db"
+      ? lines
+          .flatMap((line) => {
+            const match = line.match(crash);
+            return match
+              ? [`PostgreSQL server process terminated by signal ${match[1]}`]
+              : [];
+          })
+          .slice(-4)
+      : [];
+  const errors = lines
+    .filter(
+      (line) => !crash.test(line) && /\b(error|fatal|panic)\b/i.test(line),
+    )
+    .slice(-(20 - signals.length))
+    .map((line) => line.slice(0, 500));
+  return [...signals, ...errors];
+}
+
 /** Preserve the primary failure and final cleanup context within the same
  * bounded diagnostic budget. Registered secrets/JWTs/keys are removed first;
  * truncating raw credentials could otherwise leave an unredactable fragment. */
@@ -1097,15 +1123,11 @@ export async function checkCandidate({
         const id = await compose(["ps", "-q", service]);
         if (!id) continue;
         await owned(id);
-        const logs = await docker(["logs", "--tail", "200", id], {
+        const logs = await docker(["logs", "--tail", "2000", id], {
           includeStderr: true,
           timeout: 10000,
         });
-        const errors = redactCandidateDiagnostic(logs, secrets)
-          .split("\n")
-          .filter((line) => /\b(error|fatal|panic)\b/i.test(line))
-          .slice(-20)
-          .map((line) => line.slice(0, 500));
+        const errors = candidateServiceDiagnostics(service, logs, secrets);
         console.error(
           `Candidate ${service} diagnostic: ${JSON.stringify(errors)}`,
         );
