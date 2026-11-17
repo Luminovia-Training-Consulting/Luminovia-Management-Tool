@@ -162,6 +162,29 @@ test("real private upload is scanned, downloaded, versioned and archived through
     .getByRole("button", { name: "Archivieren", exact: true })
     .click();
   await expect(page.getByText(renamed, { exact: true })).toHaveCount(0);
+  await page
+    .getByRole("button", {
+      name: "Archivierte eigene Materialien",
+      exact: true,
+    })
+    .click();
+  const archive = page.getByRole("dialog", {
+    name: "Archivierte eigene Materialien",
+  });
+  await archive
+    .getByRole("button", { name: `${renamed} wiederherstellen`, exact: true })
+    .click();
+  const confirmation = page.getByRole("dialog", {
+    name: "Material wiederherstellen?",
+  });
+  await confirmation
+    .getByRole("button", { name: `${renamed} wiederherstellen`, exact: true })
+    .click();
+  await expect(archive.getByRole("status")).toHaveText(
+    "Material wiederhergestellt.",
+  );
+  await archive.getByRole("button", { name: "Schließen", exact: true }).click();
+  await expect(page.getByText(renamed, { exact: true })).toBeVisible();
 });
 test("a clean private image preview loads authenticated bytes without caching a public URL", async ({
   page,

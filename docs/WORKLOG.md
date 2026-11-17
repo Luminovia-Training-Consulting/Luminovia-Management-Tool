@@ -1,5 +1,11 @@
 # Luminovia Portal — development work log
 
+## 17 November 2026 — further everyday workflows (integration pending)
+
+Implemented private calendar draft confirmation (dialog, internal links, beforeunload; browser history/programmatic SPA navigation remains unguarded), forum quoting from a fresh authorised post, message replies with current membership/version rechecks, and per-member unread markers with a separately protected read cursor. Independent review reproduced and corrected a stale composer preview; targeted component and isolated SQL race tests passed. Test specs exist for real browsers but are not yet accepted on this source.
+
+Own archived personal clean materials can be restored through a server-only-authorised action with current ACL, dedicated-registry and permanent-deletion fences; room/job/evidence restoration remains out of scope. Job detail can link only to current authorised course/chat targets; calendar navigation selects only the actor's confirmed assignment sessions. Both slices passed focused UI and isolated PostgreSQL tests before main's latest contract-privacy migration; the integrated replay and browser acceptance are required. No real customer data, hosting or production services were touched.
+
 ## 17 November 2026 — continued acceptance and next workflows
 
 The user confirmed the same prompt byte-for-byte and requested all remaining work in the single draft PR. The earlier isolated baseline finished `PASS`, including 164 browser and four PWA cases; it predates the main integration and new features. PR source `3180775` local full-acceptance attempts failed before completion: first `/tmp` had insufficient free space; a temporary directory within the checkout was rejected by the snapshot self-copy guard; a long path exceeded the Unix socket limit; a dotted path was rejected by selfhost path validation; finally a short disk-backed path advanced to actual database checks but Docker/runc itself failed writing to a 100%-full shared `/tmp`. These are recorded failures, not passes; foreign worktrees and shared caches were not removed. The independently owned SQL replay of 86 migrations and focused chat/search/wiki/deletion cases passed before subsequent race corrections, and must be repeated for the final source. GitHub checks remain source/head-specific.

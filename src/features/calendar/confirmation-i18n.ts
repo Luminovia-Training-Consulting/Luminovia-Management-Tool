@@ -1,6 +1,16 @@
 import i18n from "../../lib/i18n";
 
 const entries = {
+  discardTitle: [
+    "Ungespeicherte Änderungen verwerfen?",
+    "Discard unsaved changes?",
+  ],
+  discardDescription: [
+    "Deine Änderungen am privaten Termin wurden noch nicht gespeichert.",
+    "Your private appointment changes have not been saved.",
+  ],
+  keepDraft: ["Entwurf behalten", "Keep draft"],
+  discardDraft: ["Änderungen verwerfen", "Discard changes"],
   deleteTitle: ["Privaten Termin löschen?", "Delete private appointment?"],
   deleteDescription: [
     "Der private Termin wird gelöscht und blockiert deine Verfügbarkeit nicht mehr.",

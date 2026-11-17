@@ -5,10 +5,17 @@
  */
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useEffect } from "react";
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { CalendarPage } from "./calendar";
 import i18n from "../../lib/i18n";
 const state = vi.hoisted(() => ({
@@ -19,6 +26,7 @@ const state = vi.hoisted(() => ({
   rpc: vi.fn(),
   datesSetOnLocale: false,
   callbacks: [] as unknown[],
+  initialDate: undefined as string | undefined,
 }));
 // The real subscription panel remains mounted. Its independent metadata read
 // must not be mistaken for a global-range crawl or marketplace-title request.
@@ -95,6 +103,7 @@ vi.mock("@fullcalendar/react", () => ({
     datesSet,
     eventClick,
     locale,
+    initialDate,
   }: {
     events: {
       id: string;
@@ -108,8 +117,10 @@ vi.mock("@fullcalendar/react", () => ({
       jsEvent: { preventDefault: () => void };
     }) => void;
     locale: unknown;
+    initialDate?: string;
   }) {
     state.callbacks.push(datesSet);
+    state.initialDate = initialDate;
     // FullCalendar rebuilds its DateProfile when locale options change and may
     // deliver datesSet again even though the visible instants remain identical.
     useEffect(() => {
@@ -156,6 +167,7 @@ beforeEach(async () => {
   await i18n.changeLanguage("de");
   state.datesSetOnLocale = false;
   state.callbacks = [];
+  state.initialDate = undefined;
 });
 afterEach(() => {
   cleanup();
@@ -555,5 +567,177 @@ it("validates meeting links, preserves the private note on rejection, and saves 
     }),
   );
   expect(await screen.findByText("Termin gespeichert.")).toBeVisible();
+  client.clear();
+});
+
+it.each([
+  [
+    "de",
+    "Privaten Termin hinzufügen",
+    "Titel",
+    "Ungespeicherte Änderungen verwerfen?",
+    "Entwurf behalten",
+    "Änderungen verwerfen",
+    "Schließen",
+  ],
+  [
+    "en",
+    "Add private appointment",
+    "Title",
+    "Discard unsaved changes?",
+    "Keep draft",
+    "Discard changes",
+    "Close",
+  ],
+])(
+  "preserves a dirty private appointment on escape or close until explicit discard (%s)",
+  async (language, add, field, prompt, keep, discard, close) => {
+    await i18n.changeLanguage(language);
+    state.rpc.mockImplementation(() => {
+      const result = Promise.resolve({ data: [], error: null });
+      return Object.assign(result, { abortSignal: () => result });
+    });
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <CalendarPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: add }));
+    const dialog = screen.getByRole("dialog", { name: add });
+    await user.type(
+      within(dialog).getByLabelText(field),
+      "Fictional unsaved event",
+    );
+    const unload = new Event("beforeunload", { cancelable: true });
+    expect(window.dispatchEvent(unload)).toBe(false);
+    await user.keyboard("{Escape}");
+    let confirmation = screen.getByRole("dialog", { name: prompt });
+    await user.click(within(confirmation).getByRole("button", { name: keep }));
+    expect(within(dialog).getByLabelText(field)).toHaveValue(
+      "Fictional unsaved event",
+    );
+    await user.click(within(dialog).getByRole("button", { name: close }));
+    confirmation = screen.getByRole("dialog", { name: prompt });
+    await user.click(
+      within(confirmation).getByRole("button", { name: discard }),
+    );
+    expect(screen.queryByRole("dialog", { name: add })).not.toBeInTheDocument();
+    expect(
+      window.dispatchEvent(new Event("beforeunload", { cancelable: true })),
+    ).toBe(true);
+    expect(state.saveEvent).not.toHaveBeenCalled();
+    client.clear();
+  },
+);
+
+it("blocks an internal navigation until the dirty appointment is explicitly discarded", async () => {
+  state.rpc.mockImplementation(() => {
+    const result = Promise.resolve({ data: [], error: null });
+    return Object.assign(result, { abortSignal: () => result });
+  });
+  function Location() {
+    return <output aria-label="current route">{useLocation().pathname}</output>;
+  }
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <CalendarPage />
+        <Location />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  const nav = await screen.findByRole("link", {
+    name: "Verfügbarkeit & Sperrzeiten",
+  });
+  await user.click(
+    screen.getByRole("button", { name: "Privaten Termin hinzufügen" }),
+  );
+  const form = screen.getByRole("dialog", {
+    name: "Privaten Termin hinzufügen",
+  });
+  await user.type(within(form).getByLabelText("Titel"), "Fictional draft");
+  fireEvent.click(nav, { button: 0 });
+  let confirm = screen.getByRole("dialog", {
+    name: "Ungespeicherte Änderungen verwerfen?",
+  });
+  await user.click(
+    within(confirm).getByRole("button", { name: "Entwurf behalten" }),
+  );
+  expect(screen.getByLabelText("current route")).toHaveTextContent("/");
+  expect(within(form).getByLabelText("Titel")).toHaveValue("Fictional draft");
+  fireEvent.click(nav, { button: 0 });
+  confirm = screen.getByRole("dialog", {
+    name: "Ungespeicherte Änderungen verwerfen?",
+  });
+  await user.click(
+    within(confirm).getByRole("button", { name: "Änderungen verwerfen" }),
+  );
+  expect(screen.getByLabelText("current route")).toHaveTextContent(
+    "/availability",
+  );
+  client.clear();
+});
+
+it("centres a job deep link only on an own confirmed assignment session", async () => {
+  const jobID = "d7000000-0000-4000-8000-000000000001";
+  state.claims = [
+    {
+      id: "claim",
+      job_id: jobID,
+      assignment_sessions: [
+        {
+          id: "session",
+          starts_at: "2060-01-01T08:00:00Z",
+          ends_at: "2060-01-01T10:00:00Z",
+        },
+      ],
+    },
+  ];
+  state.rpc.mockImplementation((name) => {
+    const result = Promise.resolve({
+      data:
+        name === "my_calendar_subscriptions"
+          ? []
+          : [{ id: jobID, title: "Fictional own job" }],
+      error: null,
+    });
+    return Object.assign(result, { abortSignal: () => result });
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const view = render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[`/calendar?assignment=${jobID}`]}>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("link", { name: "Fictional own job" });
+  expect(state.initialDate).toBe("2060-01-01T08:00:00Z");
+  view.unmount();
+  state.initialDate = undefined;
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={["/calendar?assignment=unrelated"]}>
+        <CalendarPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("link", { name: "Fictional own job" });
+  expect(state.initialDate).toBeUndefined();
   client.clear();
 });

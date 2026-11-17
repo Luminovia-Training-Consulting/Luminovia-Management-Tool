@@ -3,11 +3,11 @@
  * and course sessions. Visible ranges bound global discovery; each source keeps
  * its own ACL. Private form times become instants before server-confirmed writes.
  */
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import "../availability/i18n";
 import { assignmentJobTitlesQuery } from "../jobs/discovery-api";
 import { runsQuery, templatesQuery } from "../operations/data";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { DatesSetArg } from "@fullcalendar/core";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -78,12 +78,14 @@ function EventForm({
   event,
   onDone,
   onBusyChange,
+  onDirtyChange,
 }: {
   userId: string;
   zone: string;
   event?: PersonalEvent;
   onDone: (deleted?: boolean) => void;
   onBusyChange: (busy: boolean) => void;
+  onDirtyChange: (dirty: boolean) => void;
 }) {
   const { t } = useTranslation();
   const confirmText = useTranslation("calendarConfirmation").t;
@@ -95,12 +97,13 @@ function EventForm({
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
     defaultValues: event
       ? {
-          ...event,
+          title: event.title,
+          time_zone: event.time_zone,
           description: event.description ?? "",
           meeting_url: event.meeting_url ?? "",
           starts_at: DateTime.fromISO(event.starts_at)
@@ -119,6 +122,7 @@ function EventForm({
           time_zone: zone,
         },
   });
+  useEffect(() => onDirtyChange(isDirty), [isDirty, onDirtyChange]);
   const save = useMutation({
     onMutate: () => onBusyChange(true),
     onSettled: () => onBusyChange(false),
@@ -311,6 +315,9 @@ function EventForm({
 export function CalendarPage() {
   const { t, i18n } = useTranslation();
   const availabilityText = useTranslation("availability").t;
+  const confirmText = useTranslation("calendarConfirmation").t;
+  const navigate = useNavigate();
+  const [calendarParams] = useSearchParams();
   const { session } = useAuth();
   const profile = useQuery(profileQuery(session!.user.id));
   const claims = useQuery(claimsQuery(session!.user.id));
@@ -368,10 +375,85 @@ export function CalendarPage() {
   const activeGlobal = globalRows.find((event) => event.id === globalID);
   const [open, setOpen] = useState(false);
   const [eventBusy, setEventBusy] = useState(false);
+  const [eventDirty, setEventDirty] = useState(false);
+  const [eventFormEpoch, setEventFormEpoch] = useState(0);
+  const [discardAction, setDiscardAction] = useState<
+    | { kind: "close" }
+    | { kind: "event"; event: PersonalEvent | undefined }
+    | { kind: "navigate"; path: string }
+    | null
+  >(null);
+  const applyDiscardAction = () => {
+    if (!discardAction || eventBusy) return;
+    const action = discardAction;
+    setDiscardAction(null);
+    setEventDirty(false);
+    if (action.kind === "event") {
+      setEventFormEpoch((value) => value + 1);
+      setSelected(action.event);
+      setOpen(true);
+    } else {
+      setOpen(false);
+      if (action.kind === "navigate") navigate(action.path);
+    }
+  };
+  useEffect(() => {
+    if (!open || (!eventDirty && !eventBusy)) return;
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    const guardLink = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      )
+        return;
+      const element = event.target instanceof Element ? event.target : null;
+      const link = element?.closest("a[href]");
+      if (
+        !(link instanceof HTMLAnchorElement) ||
+        (link.target && link.target !== "_self") ||
+        link.hasAttribute("download")
+      )
+        return;
+      const destination = new URL(link.href, window.location.href);
+      if (
+        destination.origin !== window.location.origin ||
+        !["http:", "https:"].includes(destination.protocol)
+      )
+        return;
+      const path = destination.pathname + destination.search + destination.hash;
+      if (
+        path ===
+        window.location.pathname + window.location.search + window.location.hash
+      )
+        return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (!eventBusy) setDiscardAction({ kind: "navigate", path });
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    document.addEventListener("click", guardLink, true);
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+      document.removeEventListener("click", guardLink, true);
+    };
+  }, [open, eventDirty, eventBusy]);
   const [selected, setSelected] = useState<PersonalEvent | undefined>();
   const [message, setMessage] = useState("");
   const online = useOnline();
   const zone = profile.data?.time_zone ?? "Europe/Berlin";
+  const assignment = calendarParams.get("assignment");
+  const assignmentStart = claims.data
+    ?.find((claim) => claim.job_id === assignment)
+    ?.assignment_sessions.map((session) => session.starts_at)
+    .filter((value) => Number.isFinite(Date.parse(value)))
+    .sort()[0];
   if (
     claims.isPending ||
     personal.isPending ||
@@ -485,8 +567,13 @@ export function CalendarPage() {
         action={
           <Button
             onClick={() => {
-              setSelected(undefined);
-              setOpen(true);
+              if (open && eventDirty)
+                setDiscardAction({ kind: "event", event: undefined });
+              else if (!eventBusy) {
+                setSelected(undefined);
+                setEventDirty(false);
+                setOpen(true);
+              }
             }}
             disabled={!online}
           >
@@ -543,6 +630,7 @@ export function CalendarPage() {
           locale={i18n.language === "de" ? deLocale : enLocale}
           timeZone={zone}
           initialView={window.innerWidth < 700 ? "listMonth" : "dayGridMonth"}
+          initialDate={assignmentStart}
           headerToolbar={{
             left: "prev,next today",
             center: "title",
@@ -562,8 +650,14 @@ export function CalendarPage() {
               setGlobalID(info.event.id);
             }
             if (info.event.extendedProps.kind === "private") {
-              setSelected(personal.data.find((e) => e.id === info.event.id));
-              setOpen(true);
+              const next = personal.data.find((e) => e.id === info.event.id);
+              if (open && eventDirty)
+                setDiscardAction({ kind: "event", event: next });
+              else if (!eventBusy) {
+                setSelected(next);
+                setEventDirty(false);
+                setOpen(true);
+              }
             }
           }}
         />
@@ -619,22 +713,48 @@ export function CalendarPage() {
       <Dialog
         open={open}
         onOpenChange={(next) => {
-          if (!eventBusy) setOpen(next);
+          if (eventBusy) return;
+          if (!next && eventDirty) setDiscardAction({ kind: "close" });
+          else setOpen(next);
         }}
         title={t(selected ? "privateEvent" : "addEvent")}
         description={t("eventHelp")}
       >
         <EventForm
-          key={selected?.id ?? "new"}
+          key={`${selected?.id ?? "new"}:${eventFormEpoch}`}
           userId={session!.user.id}
           zone={zone}
           event={selected}
           onBusyChange={setEventBusy}
+          onDirtyChange={setEventDirty}
           onDone={(deleted) => {
+            setEventDirty(false);
+            setDiscardAction(null);
             setOpen(false);
             setMessage(t(deleted ? "eventDeleted" : "eventSaved"));
           }}
         />
+        <Dialog
+          open={discardAction !== null}
+          onOpenChange={(next) => {
+            if (!next) setDiscardAction(null);
+          }}
+          title={confirmText("discardTitle")}
+          description={confirmText("discardDescription")}
+        >
+          <div className="form-actions">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setDiscardAction(null)}
+            >
+              {confirmText("keepDraft")}
+            </Button>
+            <Button type="button" variant="danger" onClick={applyDiscardAction}>
+              {confirmText("discardDraft")}
+            </Button>
+          </div>
+        </Dialog>
       </Dialog>
     </>
   );

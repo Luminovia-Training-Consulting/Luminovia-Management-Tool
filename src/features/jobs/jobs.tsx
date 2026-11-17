@@ -7,6 +7,7 @@ import { JobPricingPanel } from "../commercial/pricing";
 import { JobLifecyclePanel } from "./lifecycle";
 import { JobWithdrawalPanel } from "./withdrawal";
 import { JobBriefing } from "./briefing";
+import { JobRelatedNavigation } from "./related-navigation";
 import { JobSubstitutionPanel, JobWaitlist } from "./lifecycle-extra";
 import { refreshJobState } from "./lifecycle-api";
 import { JobDiscovery } from "./discovery";
@@ -151,6 +152,7 @@ export function JobDetail() {
       {permissions.data?.includes("jobs.manage") && (
         <JobPricingPanel job={job} />
       )}
+      <JobRelatedNavigation actor={session!.user.id} jobId={job.id} />
       <JobLifecyclePanel job={job} />
       <JobWithdrawalPanel key={job.id} jobId={job.id} zone={job.time_zone} />
       <JobWaitlist jobId={job.id} />
@@ -297,7 +299,9 @@ export function JobDetail() {
           )}
           {ownClaim && (
             <Button variant="secondary" asChild>
-              <Link to="/calendar">{t("viewCalendar")}</Link>
+              <Link to={`/calendar?assignment=${encodeURIComponent(job.id)}`}>
+                {t("viewCalendar")}
+              </Link>
             </Button>
           )}
         </aside>

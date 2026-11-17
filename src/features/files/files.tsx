@@ -20,6 +20,7 @@ import {
   Tags,
   Trash2,
 } from "lucide-react";
+import { ArchivedPersonalMaterials } from "./archived-personal";
 import { deletionAccessQuery } from "../deletions/api";
 import { PermanentDeleteAction } from "../deletions/deletions";
 import { useAuth } from "../auth/auth-context";
@@ -851,6 +852,7 @@ export function FilesPage() {
         }
       />
       <section className="panel">
+        <ArchivedPersonalMaterials actor={session!.user.id} />
         <DocumentExplorer key={session!.user.id} actor={session!.user.id}>
           {(rows, pending, epoch, renewalEpoch) => (
             <DocumentList

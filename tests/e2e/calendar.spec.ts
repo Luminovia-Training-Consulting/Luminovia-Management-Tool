@@ -164,6 +164,36 @@ test("calendar rejects invalid DST intervals, persists create/edit/delete and pr
   await dialog
     .getByLabel("Ende", { exact: true })
     .fill(local(editedStart.plus({ hours: 1 })));
+  await page.keyboard.press("Escape");
+  let discardDialog = page.getByRole("dialog", {
+    name: "Ungespeicherte Änderungen verwerfen?",
+    exact: true,
+  });
+  await expect(discardDialog).toBeVisible();
+  await discardDialog
+    .getByRole("button", { name: "Entwurf behalten", exact: true })
+    .click();
+  await expect(dialog.getByLabel("Titel", { exact: true })).toHaveValue(
+    editedTitle,
+  );
+  expect(writes, "Keeping a draft does not write an appointment").toBe(1);
+  await dialog.getByRole("button", { name: "Schließen", exact: true }).click();
+  discardDialog = page.getByRole("dialog", {
+    name: "Ungespeicherte Änderungen verwerfen?",
+    exact: true,
+  });
+  await discardDialog
+    .getByRole("button", { name: "Änderungen verwerfen", exact: true })
+    .click();
+  await expect(dialog).toBeHidden();
+  expect(writes, "Discarding a draft does not write an appointment").toBe(1);
+  dialog = await eventDialog(page, title);
+  await expect(dialog.getByLabel("Titel", { exact: true })).toHaveValue(title);
+  await dialog.getByLabel("Titel", { exact: true }).fill(editedTitle);
+  await dialog.getByLabel("Beginn", { exact: true }).fill(local(editedStart));
+  await dialog
+    .getByLabel("Ende", { exact: true })
+    .fill(local(editedStart.plus({ hours: 1 })));
   await context.setOffline(true);
   await expect(
     dialog.getByRole("button", { name: "Termin speichern", exact: true }),
