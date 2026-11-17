@@ -8,7 +8,7 @@
 - [x] Add A–N feature/API/settings entry points and concrete recent operation contracts to the generated reference. Correct current authentication, participant, account, calendar and publication guidance in the leading product, user, development and roadmap sections.
 - [x] Fast source check passed (`./portal check`), the generated 329-function reference replay passed, API-surface PostgreSQL checks passed 6/6, calendar-import/inbox PostgreSQL groups passed 4/4, and documentation tests passed 5/5 in an owned disposable container.
 - [x] Fix two stale full-SQL claim fixture expectations discovered by PR #58: missing declared expertise still fails; expired/withdrawn attestation no longer blocks a declared topic. All 25 PostgreSQL claim/RLS/concurrency groups pass against the full migrated schema, including 50 parallel claims. No business authorization was relaxed.
-- [x] Align forecast fixture with the actual accepted individual lecturer quote and explicit zero-percent setting; current-source forecast groups pass 5/5. Type the owned-deletion scope's empty `oid[]` in a guarded forward migration; strict `plpgsql_check` reports no issues, owned-cascade groups pass 2/2. Replace retired participant-role lock fixture with restricted guest; global-calendar groups pass 9/9. Regenerate the API reference from 115 migrations and validate all A–N matrix RPC names against the inventory.
+- [x] Align forecast fixture with the actual accepted individual lecturer quote and explicit zero-percent setting; current-source forecast groups pass 5/5. Main's guarded forward migration types the owned-deletion scope's empty `oid[]`; strict `plpgsql_check` reports no issues, owned-cascade groups pass 2/2. Replace retired participant-role lock fixture with restricted guest; global-calendar groups pass 9/9. Regenerate the API reference from the merged 117 migrations and validate all A–N matrix RPC names against the inventory.
 - [ ] Run complete isolated Auth/HTTP/browser/PWA acceptance on this exact revision and observe the PR's required CI before merging. The first `./portal test` attempt exited before startup because another checkout holds the shared QA lock; no foreign service was stopped. The focused tests do not prove an installed host or production readiness.
 - [ ] Complete the still-missing product/API configuration in the roadmap, including brand and permission-matrix settings, retention controls and other unfinished module paths; an API inventory cannot make unimplemented features available.
 
@@ -1259,3 +1259,13 @@ The corrected migration passed through candidate setup, retained-data upgrade an
 ### PR #37 merge gate — 2026-11-17
 
 The migration-order regression now accepts later independent migrations while preserving the ordered deletion-upgrade composition test. Push the signed repair, then require exact-head application, SQL, browser, selfhost and governance checks before merging PR #37.
+
+### CI acceptance findings — 17 November 2026
+
+- [x] Inspect failing exact-main runs 44079667738 and 44086512022; preserve full CI scope.
+- [x] Align password-only role/API fixtures, administrator wiki draft review, and declared-expertise claim expectations with current migrations.
+- [x] Fix runtime schema-lint warnings with forward-only migrations; released SQL bytes remain unchanged.
+- [x] Make the amendment forecast fixture explicitly select the individual rate being tested.
+- [x] Move the calendar import implementation behind a private-schema function and retain an invoker-only public RPC wrapper.
+- [ ] Rerun complete local system and browser acceptance after the last fixture correction.
+- [ ] Push all corrections directly to `main`, then inspect every fresh exact-head required CI job through completion.
