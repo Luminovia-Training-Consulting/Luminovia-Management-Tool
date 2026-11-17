@@ -75,11 +75,33 @@ A lost-response retry retains its original key.
 
 ## Cancellation and replacement
 
-An active lecturer can cancel their own future assignment. A manager with
-`jobs.manage` and MFA can cancel an authorized assignment. The reason is required
-(5–1000 characters), and the whole block is cancelled together. Started blocks and
-**any** invoice-item history are refused and require a separate financial review.
-This workflow records no bank payment, refund or credit note.
+A lecturer uses **Withdraw from this assignment** in the job detail. At least
+seven days (168 elapsed hours) before the first session, the server confirms a
+direct whole-block withdrawal; a reason is optional. With less than 168 hours
+remaining, a 5–1000-character reason is mandatory and creates a pending application.
+Exactly seven days belongs to the direct path. The server checks the actual first
+start instant again when submitting, independent of browser time or display zone.
+
+Administration or Management with current `jobs.manage` and verified MFA reviews
+the application from its inbox link to the job. Both approval and rejection require
+a 5–1000-character decision note. The author cannot review their own request, even
+with a management role. A pending or rejected request retains every confirmed
+session and course-chat membership. Approval releases the complete assignment;
+rejection keeps it binding and the lecturer may submit a new reasoned application.
+The lecturer receives the decision in their personal inbox and sees the reason in
+the job detail. Request reasons stay in private storage, accessible only to the
+author and current authorized job managers, and are absent from notice payloads.
+
+A manager can still perform reasoned administrative cancellation of another
+lecturer's assignment. The legacy cancellation RPC also enforces the short-notice
+rule for an actor's own assignment, so a direct API call cannot bypass review.
+Started blocks and **any** invoice-item history are refused and require separate
+financial review. These workflows record no bank payment, refund or credit note.
+Directed and marketplace replacement paths likewise refuse short-notice
+self-initiated transfers; a distinct current authorized manager can explicitly
+initiate a replacement. Offers created earlier do not bypass the policy by aging
+into the protected window. See [withdrawal operations](ASSIGNMENT_WITHDRAWALS.md) for the RPC, retry and
+migration boundaries.
 
 Cancellation:
 
