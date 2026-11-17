@@ -2,6 +2,8 @@
 
 The existing preview cards can be hidden, shown and ordered for the current account using labelled up/down controls. The five saved areas are teaching day, activity, own contract receipts, recent files and follow-ups. Current role/resource permissions still determine which areas may load data; presentation preferences never grant access. The greeting, navigation, financial overview, offer suggestions and calendar remain separate areas.
 
+The dashboard now presents the existing metrics, financial cards, offer suggestions, calendar preview and readiness widget in a compact workspace layout. It removes the oversized introductory hero from the authenticated dashboard; the sign-in/onboarding experience remains the branded welcome surface. This is presentation-only and does not change the dashboard query or its permission boundaries.
+
 `private.dashboard_preferences` is accessed through current-identity `dashboard_preferences` and `save_dashboard_preferences` RPCs. No administrator can edit another account's layout. CAS versions prevent silent overwrites; failed saves retain the draft and explicit reload lets the user review current state. The UI confirms the layout only after the server response.
 
 <a id="mein-unterrichtstag"></a>
