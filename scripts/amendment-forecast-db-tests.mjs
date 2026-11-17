@@ -158,6 +158,11 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
         );
       const fixture = await make();
       const immutableBefore = await original(fixture);
+      // Current source uses the lecturer's individual default; historical
+      // install-order modes deliberately retain their older role-policy quote.
+      // In every mode, the accepted claim snapshot is the forecast authority.
+      const acceptedCost = fixture.total;
+      const acceptedMargin = 200 - acceptedCost;
 
       await check(
         "original accepted fee, currency and original customer charge remain the fallback",
@@ -166,9 +171,9 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
             january = result.months.find(
               (row) => row.month === "2058-01-01" && row.currency === "AUD",
             );
-          assert.equal(january.accepted_lecturer_cost, 74);
+          assert.equal(january.accepted_lecturer_cost, acceptedCost);
           assert.equal(january.accepted_gross_known, 200);
-          assert.equal(january.accepted_margin_known, 126);
+          assert.equal(january.accepted_margin_known, acceptedMargin);
           assert.equal(
             result.payment_basis,
             "lecturer_invoice_payment_records",
@@ -186,11 +191,11 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
             );
           assert.equal(adminResult.gross_authorized, true);
           assert.equal(adminRow.accepted_gross_known, 200);
-          assert.equal(adminRow.accepted_margin_known, 126);
+          assert.equal(adminRow.accepted_margin_known, acceptedMargin);
           const result = await forecast(manager),
             row = result.months.find((item) => item.currency === "AUD");
           assert.equal(result.gross_authorized, false);
-          assert.equal(row.accepted_lecturer_cost, 74);
+          assert.equal(row.accepted_lecturer_cost, acceptedCost);
           assert.equal(row.accepted_gross_known, null);
           assert.equal(row.accepted_margin_known, null);
           for (const role of ["anon", "authenticated", "service_role"])
@@ -382,6 +387,15 @@ insert into public.organisations(id,name)values(${q(org)},'Fictional effective f
             "public.configure_compensation_policy(0,61,1)",
             "aal1",
           );
+          // The current source prices new commissioned offers from the
+          // lecturer's own setting; historical install-order fixtures still
+          // use the then-authoritative role policy above.
+          if (mode === "current_source")
+            await call(
+              admin,
+              `public.save_lecturer_compensation(${q(teacher)},'percent',0,200,'EUR',1)`,
+              "aal1",
+            );
           const zero = await make({ day: 25 });
           assert.equal(zero.total, 0);
           const captured = await original(zero);

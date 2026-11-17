@@ -568,8 +568,8 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
       const rolePriced = await job({ runOrg: org, commissionOrg: org }),
         legacy = await job();
       // These deliberately fictional captured tiers differ from every global or
-      // requesting user's quote. The budget is the per-position senior ceiling,
-      // rounded to cents before multiplication, as in the accepted main contract.
+      // requesting user's quote. Personal compensation can reach the full gross
+      // amount, so that is the current per-position maximum-net ceiling.
       await sql(`update public.jobs set status='published',capacity=3,capacity_basis='per_position' where id in(${q(rolePriced)},${q(legacy)});
       update public.jobs set amount=91.37,total_amount=91.37 where id=${q(legacy)};
       update private.job_commission_offers set pricing_mode='role_split',gross_amount=100.01,gross_total_amount=100.01,
@@ -603,7 +603,7 @@ await withTestDatabase("company_job_deletion", async ({ sql, actor }) => {
         assert.deepEqual(Object.keys(current).sort(), fields);
         assert.equal(current.capacity, 3);
         assert.equal(current.gross_budget, privileged ? 300.03 : null);
-        assert.equal(current.max_net_budget, privileged ? 219.03 : null);
+        assert.equal(current.max_net_budget, privileged ? 300.03 : null);
         assert.deepEqual(current.claims, []);
         // Exact legacy net totals already belong to this authorized offer's
         // commercial contract; adding company isolation must not reinterpret them.

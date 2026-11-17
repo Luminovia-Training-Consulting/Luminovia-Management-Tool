@@ -647,7 +647,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
         await sql(
           `select gross_total_amount||','||lecturer_net_total_amount from private.claim_revenue_ledger where claim_id=${q(claim.claim_id)}`,
         ),
-        "200.02,62.01",
+        "200.02,100.01",
       );
       await sql(
         `update public.jobs set amount=7,total_amount=14 where id=${q(job)}`,
@@ -656,7 +656,7 @@ await withTestDatabase("course_test", async ({ sql, actor }) => {
         await sql(
           `select total_amount from public.job_claims where id=${q(claim.claim_id)}`,
         ),
-        "62.01",
+        "100.01",
       );
       await assert.rejects(
         rpc("admin", "set_job_commission", [job, 900, 1800, null], "aal1"),

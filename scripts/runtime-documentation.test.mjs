@@ -229,3 +229,22 @@ test("account HTTP reference covers the published OpenAPI routes", async () => {
   ].map((match) => `${match[1]} ${match[2].trim()}`);
   assert.deepEqual(actual, expected);
 });
+
+// The A–N summary is maintained prose, but every RPC name it recommends must
+// exist in the same freshly replayed inventory. This prevents a guide-only
+// feature label from appearing to be an executable API.
+test("feature and settings guide names only inventoried public RPCs", async () => {
+  const reference = await readFile("API_REFERENCE.md", "utf8");
+  const matrix = reference
+    .split("## Implemented feature and configuration entry points")[1]
+    .split("### Recent settings and action contracts")[0];
+  const inventory = reference
+    .split("## Replayed public function inventory")[1]
+    .split("## Files and printable documents")[0];
+  const available = new Set(
+    [...inventory.matchAll(/^\| ([a-z_]+)\s+\|/gm)].map((match) => match[1]),
+  );
+  const named = [...matrix.matchAll(/`([a-z][a-z_]+)`/g)].map((match) => match[1]);
+  assert.ok(named.length > 45, "Check all product areas, not a small sample");
+  assert.deepEqual(named.filter((name) => !available.has(name)), []);
+});

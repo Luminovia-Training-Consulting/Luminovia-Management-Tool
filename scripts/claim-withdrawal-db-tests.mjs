@@ -752,7 +752,7 @@ await withTestDatabase(
       const writeTag = `withdrawal_write_${randomUUID().replaceAll("-", "")}`;
       const revoker = actor(
         admin,
-        `set local application_name=${q(revokeTag)};select public.set_account_roles(${q(who)},array['participant']);select pg_sleep(2)`,
+        `set local application_name=${q(revokeTag)};select public.set_account_roles(${q(who)},array['guest']);select pg_sleep(2)`,
         "aal1",
       );
       let writer;
@@ -979,7 +979,7 @@ await withTestDatabase(
         );
         await actor(
           admin,
-          `select public.set_account_roles(${q(manager)},array['participant'])`,
+          `select public.set_account_roles(${q(manager)},array['guest'])`,
           "aal1",
         );
         try {
@@ -1006,7 +1006,7 @@ await withTestDatabase(
         const before = await handoverSnapshot(fixture);
         await actor(
           admin,
-          `select public.set_account_roles(${q(manager)},array['participant'])`,
+          `select public.set_account_roles(${q(manager)},array['guest'])`,
           "aal1",
         );
         try {
@@ -1035,7 +1035,7 @@ await withTestDatabase(
         const writeTag = `substitute_accept_${randomUUID().replaceAll("-", "")}`;
         const revoker = actor(
           admin,
-          `set local application_name=${q(revokeTag)};select public.set_account_roles(${q(manager)},array['participant']);select pg_sleep(2)`,
+          `set local application_name=${q(revokeTag)};select public.set_account_roles(${q(manager)},array['guest']);select pg_sleep(2)`,
           "aal1",
         );
         let writer;
@@ -1143,7 +1143,7 @@ await withTestDatabase(
         const before = await handoverSnapshot(fixture);
         await actor(
           admin,
-          `select public.set_account_roles(${q(manager)},array['participant'])`,
+          `select public.set_account_roles(${q(manager)},array['guest'])`,
           "aal1",
         );
         try {
@@ -1163,7 +1163,7 @@ await withTestDatabase(
         const writeTag = `market_claim_${randomUUID().replaceAll("-", "")}`;
         const revoker = actor(
           admin,
-          `set local application_name=${q(revokeTag)};select public.set_account_roles(${q(manager)},array['participant']);select pg_sleep(2)`,
+          `set local application_name=${q(revokeTag)};select public.set_account_roles(${q(manager)},array['guest']);select pg_sleep(2)`,
           "aal1",
         );
         let writer;
