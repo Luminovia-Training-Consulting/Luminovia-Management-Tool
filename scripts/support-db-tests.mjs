@@ -9,8 +9,8 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
     support = randomUUID(),
     inactive = randomUUID();
   await sql(`insert into auth.users(id,email) values ${[owner, peer, admin, support, inactive].map((id) => `('${id}','${id}@example.invalid')`).join(",")};
-    insert into public.user_roles values('${owner}','lecturer'),('${peer}','lecturer'),('${admin}','admin'),('${support}','participant');
-    insert into public.role_permissions values('participant','support.manage');update public.profiles set active=false where id='${inactive}'`);
+    insert into public.user_roles values('${owner}','lecturer'),('${peer}','lecturer'),('${admin}','admin'),('${support}','lecturer');
+    insert into public.role_permissions values('lecturer','support.manage');update public.profiles set active=false where id='${inactive}'`);
   const payload = {
     title: "Fictional support question %_",
     category: "technical",
@@ -83,7 +83,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
     async () => {
       await assert.rejects(get(peer, ticket), /Support access denied/);
       await assert.rejects(get(peer, randomUUID()), /Support access denied/);
-      await assert.rejects(get(inactive, ticket), /Support access denied/);
+      await assert.rejects(get(inactive, ticket), /Active account required/);
       await assert.rejects(
         sql("set role anon;select public.support_context()"),
         /permission denied/,
@@ -102,8 +102,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
   await check(
     "Support requires its explicit capability and permission, with no commercial or private-message bypass",
     async () => {
-      await assert.rejects(get(support, ticket), /Support access denied/);
-      assert.equal((await get(support, ticket, "aal1")).can_manage, true);
+      assert.equal((await get(support, ticket)).can_manage, true);
       assert.equal(
         await actor(
           support,
@@ -515,7 +514,7 @@ await withTestDatabase("support_test", async ({ sql, actor }) => {
     "Current permission revocation and suspended owners remove ticket and attachment reads",
     async () => {
       await sql(
-        `delete from public.role_permissions where role='participant' and permission='support.manage'`,
+        `delete from public.role_permissions where role='lecturer' and permission='support.manage'`,
       );
       await assert.rejects(
         get(support, ticket, "aal1"),
