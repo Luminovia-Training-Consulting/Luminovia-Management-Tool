@@ -83,7 +83,7 @@ const reserve = async (
   JSON.parse(
     await actor(
       who,
-      `select public.reserve_document(${quote(name)},'application/pdf',${size},'personal','contract',null,null,${quote(key)},${replace ? quote(replace) : "null"},${quote(subject)})`,
+      `select public.reserve_document(${quote(name)},'application/pdf',${size},'personal','invoice',null,null,${quote(key)},${replace ? quote(replace) : "null"},${quote(subject)})`,
       aal,
     ),
   );
