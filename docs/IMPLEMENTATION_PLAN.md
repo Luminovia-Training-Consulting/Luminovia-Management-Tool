@@ -1267,5 +1267,6 @@ The migration-order regression now accepts later independent migrations while pr
 - [x] Fix runtime schema-lint warnings with forward-only migrations; released SQL bytes remain unchanged.
 - [x] Make the amendment forecast fixture explicitly select the individual rate being tested.
 - [x] Move the calendar import implementation behind a private-schema function and retain an invoker-only public RPC wrapper.
+- [x] Update retired-participant API expectations, enlarge the local Deno startup window and make the calendar role-revocation barrier robust to slow test scheduling.
 - [ ] Rerun complete local system and browser acceptance after the last fixture correction.
 - [ ] Push all corrections directly to `main`, then inspect every fresh exact-head required CI job through completion.

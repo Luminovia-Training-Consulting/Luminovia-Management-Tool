@@ -37,8 +37,8 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, passwordOnly 
     delete from public.topics where id=${q(topic)};`);
   });
   // A harmless repeated leave must not become a service-definer job-title or
-  // existence oracle. Prove both actual JWT roles have no underlying RLS row
-  // and receive exactly the same minimal receipt for private and unknown IDs.
+  // existence oracle. Operational lecturers receive the same minimal receipt
+  // for private and unknown IDs; retired participants have no API access.
   await checked(
     service.from("jobs").insert({
       id: privateJob,
@@ -55,31 +55,44 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, passwordOnly 
       requires_contract: false,
     }),
   );
-  for (const viewer of [peer, participant]) {
+  assert.deepEqual(
+    await checked(
+      peer.client.from("jobs").select("id,title").eq("id", privateJob),
+    ),
+    [],
+  );
+  for (const id of [privateJob, randomUUID()]) {
     assert.deepEqual(
       await checked(
-        viewer.client.from("jobs").select("id,title").eq("id", privateJob),
+        peer.client.rpc("set_job_waitlist", {
+          p_job_id: id,
+          p_join: false,
+        }),
       ),
-      [],
+      {
+        job_id: id,
+        title: "",
+        joined: false,
+        can_join: false,
+        available: false,
+      },
     );
-    for (const id of [privateJob, randomUUID()]) {
-      assert.deepEqual(
-        await checked(
-          viewer.client.rpc("set_job_waitlist", {
-            p_job_id: id,
-            p_join: false,
-          }),
-        ),
-        {
-          job_id: id,
-          title: "",
-          joined: false,
-          can_join: false,
-          available: false,
-        },
-      );
-    }
+    assert.equal(
+      (
+        await participant.client.rpc("set_job_waitlist", {
+          p_job_id: id,
+          p_join: false,
+        })
+      ).error?.code,
+      "42501",
+    );
   }
+  assert.equal(
+    (
+      await participant.client.from("jobs").select("id,title").eq("id", privateJob)
+    ).error?.code,
+    "42501",
+  );
   await checked(
     service.from("topics").insert({
       id: topic,

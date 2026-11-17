@@ -88,7 +88,7 @@ async function listenerFixture(t, changes = {}, options = {}) {
     const timeout = setTimeout(() => {
       child.kill("SIGKILL");
       reject(Error("Fictional listener did not finish startup"));
-    }, 10000);
+    }, 30000);
     child.on("error", reject);
     child.stdout.on("data", (data) => {
       output += data;
