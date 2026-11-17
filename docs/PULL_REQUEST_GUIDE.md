@@ -91,9 +91,7 @@ Use `./portal github test` for an independent test of current `main`. `./portal 
 
 ## Review rules for `main`
 
-The repository contribution policy requires a pull request and at least one approval from another authorised person. Self-approval does not count as independent review; new changes dismiss old approvals. Approval of the latest push must come from someone other than its pusher. Resolve review conversations before merging and address feedback against current code.
-
-Only `CarinaSchoppe` (`User:29256704`) has a personal `pull_request` exception on the review rule. She may merge a PR, including her own, without an independent approval. This exception does not allow direct pushes to `main` or bypass the separate required-check or history/signature rules. The exception follows the person acting, so another maintainer, administrator, bot or App gains none from a PR's author. GitHub may require an explicit bypass action for Carina. The [GitHub workflow guide](GITHUB_WORKFLOW.md#active-rule-layers) records the exact review conditions.
+Every change to `main` requires a pull request. Only CarinaSchoppe's immutable personal account (`User:29256704`, `bypass_mode: pull_request`) has a review exception. Every other user, including maintainers and administrators, and every App needs at least one independent approval, approval of the latest push and resolved review conversations. Self-approval does not count; new changes dismiss stale approvals. The exception follows the executing Carina account; PR authorship, pusher identity and repository roles transfer no authority. Nobody may push directly to `main` or bypass mandatory checks or signatures.
 
 All fifteen required checks must pass against the current base:
 
@@ -108,7 +106,7 @@ All fifteen required checks must pass against the current base:
 
 Fourteen statuses are bound to GitHub Actions integration `15368`; the generated `CodeQL` status is bound to integration `57789`. All fifteen are required for merging. See [CI_QUALITY](CI_QUALITY.md).
 
-If main changes, update the PR as required and wait for checks against the current base. The required-check and history/signature rulesets have no bypass actors. The review ruleset grants only `CarinaSchoppe` (`User:29256704`) the personal PR-only exception within that layer. No App has a review or required-check exception. Historical App-token tests grant no current merge authority; see the [current rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
+If main changes, update the PR as required and wait for checks against the current base. The required-check and history/signature rulesets have no bypass actors. The reviewed source ruleset grants only `CarinaSchoppe` (`User:29256704`) the personal PR-only exception within that layer. No App has a review or required-check exception. Historical App-token tests grant no current merge authority; see the [current rule configuration](GITHUB_WORKFLOW.md#active-rule-layers).
 
 The prepared [verified native controller](AUTO_MERGE.md) requires independent current-head approval and GitHub's native `clean` state for **all** candidates. A human author's role grants the App no exemption. The reviewer must have current writer/admin authority and be independent of the author and any proven source pusher. Actual source pushes are bound to the exact CI check suite; a workflow actor, retry/reopen event or commit email is not push authority. Missing push evidence grants no exemption; contradictory evidence blocks the candidate.
 
@@ -120,11 +118,7 @@ Daily maintenance follows the same protected PR process: a signed separate branc
 
 ## Merge and publication
 
-Use GitHub's native PR merge path after the applicable review, current-base checks and signature requirements pass. The controller submits the expected head SHA and `merge_method: merge`; it does not PATCH the main ref or force an update. Native merging may create a commit different from the synthetic test merge, so there is no exact-test-merge-SHA guarantee. A refused or unconfirmed merge must not be described as completed.
-
-The controller requests missing current-main verification separately. It does not publish a release, install a package, change hosting or authorise production, real data, SMTP, DNS or risky maintenance. Follow the separate owning workflows and deployment runbook, and claim publication or installation only from actual evidence. This documentation change does not claim that release or installation switches have been changed.
-
-Only `CarinaSchoppe` (`User:29256704`) may merge a PR without an independent approval through her personal PR-only exception, including for her own PR, once the fifteen required checks and current-base requirement are satisfied. Other merge actors must satisfy the normal review requirements. Check the description, labels, tests and unresolved conversations first. Pending operational approvals remain separate from repository merge eligibility.
+Review the description, labels, tests and open conversations before merging. Use the regular PR merge operation or native auto-merge. GitHub enforces all mandatory checks and signatures. The contribution workflow requires PRs and the reviewed personal-only approval policy; verify the actual review-layer activation described above rather than assuming that committing its snapshot activates it.
 
 The separate Security outcomes are required for PR merge eligibility. Release publication still follows the explicit dependencies in `ci.yml`; the ruleset does not add them as release-job dependencies.
 
