@@ -72,7 +72,7 @@ async function available(port) {
     server.once("error", () =>
       reject(
         new Error(
-          `Port ${port} ist bereits belegt; fremde Prozesse werden nicht beendet.`,
+          `Port ${port} is already in use; unrelated processes will not be stopped.`,
         ),
       ),
     );
@@ -84,7 +84,7 @@ async function stop(exitCode = 0) {
   if (stopping) return;
   stopping = true;
   phase = "stopping";
-  state({ message: "Lokale Dienste werden datenerhaltend gestoppt." });
+  state({ message: "Stopping local services while preserving data." });
   for (const child of children) {
     try {
       child.kill("SIGTERM");
@@ -123,8 +123,8 @@ async function stop(exitCode = 0) {
   phase = exitCode ? "failed" : "stopped";
   state({
     message: exitCode
-      ? "Start oder Stopp fehlgeschlagen; privates Laufzeitprotokoll prüfen."
-      : "Gestoppt. Datenbank, Auth und Storage bleiben erhalten.",
+      ? "Startup or shutdown failed; check the private runtime log."
+      : "Stopped. Database, Auth and Storage are preserved.",
   });
   process.exit(exitCode);
 }
@@ -146,21 +146,21 @@ function background(file, args, env) {
   });
   child.on("exit", (code) => {
     if (!stopping) {
-      log(`Dienst ${args[0]} ist unerwartet beendet (${code}).\n`);
+      log(`Service ${args[0]} exited unexpectedly (${code}).\n`);
       void stop(1);
     }
   });
   return child;
 }
 try {
-  state({ message: "Starte lokale Supabase-Dienste …" });
+  state({ message: "Starting local Supabase services …" });
   await available(Number(new URL(config.site).port));
-  stage("Starte PostgreSQL, Auth, Storage, Realtime und lokales Mailpit …");
+  stage("Starting PostgreSQL, Auth, Storage, Realtime and local Mailpit …");
   migrations = migrationDigest();
   network = await ensureLoopbackNetwork(config.id);
   if (await stackNeedsNetworkMigration(config.id)) {
     stage(
-      "Stelle vorhandene lokale Dienste datenerhaltend auf Loopback-Bindung um …",
+      "Switching existing local services to loopback binding while preserving data …",
     );
     if (existsSync(join(root, "scripts/local-scanner.mjs")))
       await command(process.execPath, ["scripts/local-scanner.mjs", "stop"], {
@@ -186,7 +186,7 @@ try {
     { quiet: true, log, timeoutMs: 300000 },
   );
   await verifyLoopbackBindings(config.id);
-  stage("Wende neue lokale Migrationen ohne Reset an …");
+  stage("Applying new local migrations without resetting data …");
   await supabase(["db", "push", "--yes"], { quiet: true, log });
   await command(process.execPath, ["scripts/local-env.mjs"], {
     quiet: true,
@@ -203,11 +203,10 @@ try {
         },
       },
     );
-    if (!response.ok)
-      throw new Error("Lokale Konten konnten nicht geprüft werden.");
+    if (!response.ok) throw new Error("Could not check local accounts.");
     const accounts = await response.json();
     if (!accounts.users?.length) {
-      stage("Initialisiere elf fiktive Dozierende und lokale Beispieldaten …");
+      stage("Initialising eleven fictional lecturers and local sample data …");
       await command(process.execPath, ["scripts/local-seed.mjs"], {
         quiet: true,
         log,
@@ -227,7 +226,7 @@ try {
     await ensurePreviewAdmin(root);
   }
   if (existsSync(join(root, "scripts/local-scanner.mjs"))) {
-    stage("Starte lokalen Malware-Scanner für Datei-Uploads …");
+    stage("Starting the local malware scanner for file uploads …");
     scannerTouched = true;
     await command(process.execPath, ["scripts/local-scanner.mjs", "start"], {
       quiet: true,
@@ -248,7 +247,7 @@ try {
       .map(([k, v]) => `${k}=${v}`)
       .join("\n") + "\n",
   );
-  stage("Starte lokale Edge Functions …");
+  stage("Starting local Edge Functions …");
   background(
     join(root, "node_modules/.bin/supabase"),
     [
@@ -270,7 +269,7 @@ try {
     scanner: scannerTouched,
     edge: true,
   });
-  stage("Starte React/Vite …");
+  stage("Starting React/Vite …");
   const publicEnv = readEnvFile(join(root, ".env.local"));
   background(
     join(root, "node_modules/.bin/vite"),
@@ -280,10 +279,9 @@ try {
   await waitForHttp(`${origin}/login`);
   phase = "ready";
   state({
-    message:
-      "Bereit. Änderungen werden dauerhaft in lokalen Docker-Volumes gespeichert.",
+    message: "Ready. Changes are stored persistently in local Docker volumes.",
   });
 } catch (error) {
-  log(`FEHLER: ${error.message}\n`);
+  log(`ERROR: ${error.message}\n`);
   await stop(1);
 }

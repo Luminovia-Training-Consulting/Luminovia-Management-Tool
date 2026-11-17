@@ -174,9 +174,9 @@ export class GitHubPreview {
         checkout: this.checkout,
       });
     } catch (error) {
-      if (error.message.includes("Ein isolierter Portal-Test läuft bereits"))
+      if (error.message.includes("An isolated Portal test is already running"))
         throw new Error(
-          "Ein GitHub-Vorschaubefehl läuft bereits; warte auf dessen Abschluss.",
+          "A GitHub preview command is already running; wait for it to finish.",
           { cause: error },
         );
       throw error;
@@ -502,7 +502,7 @@ export class GitHubPreview {
       unlinkSync(join(this.base, "transition.json"));
     }
     console.log(
-      `GitHub main: ${plan.sha}\nVorschau: http://127.0.0.1:5373\nEigenes Projekt: ${this.project}`,
+      `GitHub main: ${plan.sha}\nPreview: http://127.0.0.1:5373\nOwned project: ${this.project}`,
     );
     await this.runtime("start");
   }
@@ -541,16 +541,16 @@ export class GitHubPreview {
         "Managed test checkout was changed; refusing to overwrite it.",
       );
     console.log(
-      `Teste exakten GitHub-Stand ${plan.sha}; Vorschau und Entwicklungsdaten bleiben erhalten.`,
+      `Testing exact GitHub revision ${plan.sha}; preview and development data are preserved.`,
     );
     await this.runtime("test", directory);
-    console.log(`Testprotokolle: ${directory}/.local/tests/`);
+    console.log(`Test logs: ${directory}/.local/tests/`);
   }
   /** Shows the recorded source revision and only an actual supervisor state matching this session. */
   status() {
     this.initialise();
     const source = this.state();
-    let phase = "nicht gestartet";
+    let phase = "not started";
     if (source) {
       const path = join(this.source, ".local/runtime.json");
       if (existsSync(path)) {
@@ -568,14 +568,14 @@ export class GitHubPreview {
               join(this.source, "scripts/runtime-supervisor.mjs"),
             ) && args.includes(state.session)
               ? state.phase
-              : "gestoppt";
+              : "stopped";
         } catch {
-          phase = "gestoppt";
+          phase = "stopped";
         }
       }
     }
     console.log(
-      `GitHub-Vorschau: ${phase}\nCommit: ${source?.sha ?? "noch keiner"}\nPortal: http://127.0.0.1:5373\nSupabase: http://127.0.0.1:56321\nMailpit: http://127.0.0.1:56324\nQuelle/Protokolle: ${this.source}`,
+      `GitHub preview: ${phase}\nCommit: ${source?.sha ?? "none yet"}\nPortal: http://127.0.0.1:5373\nSupabase: http://127.0.0.1:56321\nMailpit: http://127.0.0.1:56324\nSource/logs: ${this.source}`,
     );
   }
 }
@@ -602,7 +602,7 @@ export async function githubPreviewCommand(args = []) {
     (args.length > 1 && !(action === "update" && accepted))
   )
     throw new Error(
-      "Verwendung: ./portal github [start|update|test|plan|status|stop|credentials]; nur update akzeptiert --accept-migration-plan SHA256.",
+      "Usage: ./portal github [start|update|test|plan|status|stop|credentials]; only update accepts --accept-migration-plan SHA256.",
     );
   const preview = new GitHubPreview();
   if (action === "status") return preview.status();
@@ -612,9 +612,9 @@ export async function githubPreviewCommand(args = []) {
       if (!preview.state()) {
         if (action === "stop")
           return console.log(
-            "GitHub-Vorschau ist bereits gestoppt; keine Dienste verändert.",
+            "GitHub preview is already stopped; no services were changed.",
           );
-        throw new Error("Noch keine GitHub-Vorschau angelegt.");
+        throw new Error("No GitHub preview has been created yet.");
       }
       return await preview.runtime(action);
     }

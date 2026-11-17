@@ -15,6 +15,13 @@
 - [x] Recover an interrupted first-account creation using a private identity marker and atomic finalization; process-kill and unchanged-password regressions pass.
 - [ ] Verify actual first login, administrator MFA, stop/restart and existing-password preservation with a separately owned real preview once the shared fixed ports and system resources are available. Complete exact-head CI remains required.
 
+
+## English repository output — 17 November 2026
+
+- [x] Audit tracked documentation, scripts, CI, test names and backend diagnostics; translate operational output and the remaining German staff-contact guide, retaining intentional DE/EN product content and immutable history.
+- [x] Verify English launcher help and 321 runtime tests; preserve message-dependent lock behavior.
+- [ ] Complete the fresh canonical isolated acceptance and current-head CI; record actual results before merging. External services and production remain untouched.
+
 PR43 correction: retain the full 50-way simultaneous HTTP capacity race; the preceding ten-in-flight experiment is superseded because the native PostgreSQL crash cause is not yet established. The existing complete cleanup and current-head native CI remain required.
 
 ## Browser test runtime — 17 November 2026

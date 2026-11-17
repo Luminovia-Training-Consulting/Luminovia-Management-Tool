@@ -16,6 +16,13 @@ A dedicated fictional preview administrator accepts `admin` / `admin` only on th
 
 Executed: isolated login/component tests 8/8; runtime GitHub/local-preview ownership tests 22/22; TypeScript, targeted ESLint, source formatting and compiler graph/exports passed. PostgreSQL's installed `extensions.crypt` and `gen_salt` were read-only verified on the local preview service. **Not tested:** genuine new-preview Auth/MFA login and restart; the fixed preview port belongs to another active checkout and local swap is nearly full. No foreign services were stopped. Complete exact-head browser, native and security CI remain required.
 
+
+## 17 November 2026 — English operational output and documentation
+
+Audited the current repository documentation, CI, scripts, launcher, tests and backend diagnostics for German operational text. The launcher, local supervisor, test stages and reports, GitHub preview, hosted-check account instructions and generated PR preview guidance now use English. The staff contact guide is translated; an obsolete conflicting reminder/web-push paragraph was removed. Bilingual product strings, intentional locale test data, authored course content, the verbatim master prompt, upstream code and released migrations remain intact. Message-dependent lock handling and its tests were updated together.
+
+Actual checks: `node --test scripts/runtime-*.test.mjs` passed 321 tests without skips. `./portal --help` displayed English. An initial canonical `./portal test` was externally interrupted during frontend coverage after passing lint, typecheck, formatting and runtime checks; no services had started. The exited process's own stale lock was removed after verifying its PID had gone and no test containers existed. A retry with TMPDIR inside the checkout correctly failed before startup because a checkout cannot be copied into itself; the next run uses a separate private temporary directory. `./portal check` passed typecheck, lint, formatting, code integrity, 752 frontend tests/96 files with coverage and the production/PWA build. A fresh canonical run is underway; its result and current-head CI must be observed before acceptance. No production or normal development data was changed.
+
 ## 17 November 2026 — preserve capacity stress coverage
 
 The captured native CI logs establish PostgreSQL recovery but do not identify why its process crashed. The later ten-request concurrency cap reduced the existing capacity-three test's 50-way HTTP race without a demonstrated cause, so the test again starts all fifty requests together and waits for every result before cleanup. The separate bounded SQL/CI worker scheduler remains unchanged. Exact-head selfhost CI is required; the earlier crash is not described as resolved.
