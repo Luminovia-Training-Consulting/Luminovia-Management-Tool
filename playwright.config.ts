@@ -18,8 +18,9 @@ const reportRoot = stage ? `.local/browser/${stage}` : undefined;
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  // Scenarios mutate real fictional records. Sequential execution keeps resource
-  // ownership traceable; failed cases are not hidden with retries.
+  // The shared isolated Supabase Auth service returns database errors when
+  // multiple browser specs delete their fictional accounts concurrently.
+  // Keep lifecycle-heavy journeys sequential; retain all desktop/mobile cases.
   fullyParallel: false,
   workers: 1,
   retries: 0,
