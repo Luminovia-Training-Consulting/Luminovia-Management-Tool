@@ -57,6 +57,11 @@ test("push device consent is private, removable, bilingual and online-confirmed"
     );
     await login(page, owner.email);
     await page.goto("/settings");
+    const delivery = page
+      .locator("details.settings-section")
+      .filter({ hasText: "Ruhezeiten & Zustellung" });
+    await delivery.locator("summary").click();
+    await expect(delivery).toHaveJSProperty("open", true);
     const panel = page.locator("section").filter({
       has: page.getByRole("heading", {
         name: /Push auf deinen Geräten|Push on your devices/,

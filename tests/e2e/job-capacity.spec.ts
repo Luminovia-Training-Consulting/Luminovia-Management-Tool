@@ -45,7 +45,7 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
     ),
   );
   await adminLogin(page, manager);
-  await page.goto("/admin");
+  await page.goto("/admin?create=job");
   const title = `Fictional capacity UI ${testInfo.project.name}`;
   await page.getByLabel("Titel", { exact: true }).fill(title);
   await page
@@ -62,10 +62,10 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
     page.getByText(/Maximales Auftraggeberbudget:.*300,03/),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Stelle speichern", exact: true })
+    .getByRole("button", { name: "Auftrag speichern", exact: true })
     .click();
   await expect(
-    page.getByText("Stelle gespeichert.", { exact: true }),
+    page.getByText("Auftrag gespeichert.", { exact: true }),
   ).toBeVisible();
   const created = await checked(
     service

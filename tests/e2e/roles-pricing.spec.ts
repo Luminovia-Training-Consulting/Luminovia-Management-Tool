@@ -123,7 +123,10 @@ test("management assigns only subordinate roles while only administration sees a
     expect("policy_version" in reduced).toBe(false);
     await page.goto("/admin");
     await expect(
-      page.getByRole("heading", { name: "Verwaltung", exact: true }),
+      page.getByRole("heading", {
+        name: "Kurse & Aufträge verwalten",
+        exact: true,
+      }),
     ).toBeVisible();
     await expect(
       page.getByRole("region", { name: "Vergütungsregeln", exact: true }),

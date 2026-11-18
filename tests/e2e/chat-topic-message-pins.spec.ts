@@ -95,6 +95,12 @@ test("topic owners pin and unpin live; deletion removes the pinned context", asy
     await login(page, owner.email, room.data);
     const other = await context.newPage();
     await login(other, member.email, room.data);
+    await page
+      .getByText("Suche, angeheftete Nachrichten & Hinweise", { exact: true })
+      .click();
+    await other
+      .getByText("Suche, angeheftete Nachrichten & Hinweise", { exact: true })
+      .click();
     const row = page.locator(".chat-message").filter({ hasText: body });
     await row
       .getByRole("button", { name: "Nachricht in Gruppe anheften" })

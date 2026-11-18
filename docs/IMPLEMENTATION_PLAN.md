@@ -6,7 +6,10 @@
 - [x] Keep the other unmerged bug-hunt branch out of `main` after confirming its only additional source diff was the same calendar fix; its remaining differences were historical test/documentation work already superseded by current `main`.
 - [x] Split main/manual/full-PR verification into an independent required system/API gate and parallel complete desktop/mobile browser jobs. Preserve both browser projects and PWA checks; make exact-main CMS publication require both browser results. Local workflow/phase regressions passed 25/25.
 - [x] Fix the policy-test lint error discovered by exact-head CI on `4726bd44`; rerun lint and workflow/phase regressions (25/25), plus shell/dashboard focused tests (30/30) and typecheck.
-- [ ] Push the lint and observed accessibility fixes directly to `main`, finish the desktop-only browser rerun (97 selected tests), and inspect all exact-head CI jobs/artifacts. The prior complete local system pass was on `76c6e495`; neither it nor targeted source tests prove the new exact head green.
+- [x] Push the lint and accessibility fixes directly to `main` (`d108d361`); exact-head fast CI gates and retained-data selfhost image compatibility passed.
+- [x] Restore the secret calendar-subscription feature removed by a prior calendar simplification, defer its list query until disclosure expansion, and update observed stale/collapsed browser interactions. Focused related suites pass 80/80; local typecheck, lint, formatting and whitespace checks pass.
+- [x] Inspect exact-head `d108d361`: system/API verification, retained-data selfhost and all fast gates passed; mobile browser passed 61/97 and reported 36 failures, while desktop was cancelled before acceptance.
+- [ ] Push the targeted UI, fixture and current-label corrections directly to `main`; rerun exact-head desktop/mobile and all system gates, then fix any remaining failures. Full current-head browser acceptance remains unverified; the local browser attempt used a stale snapshot and stopped at 84/97.
 
 ## Proprietary source-available license (18 November 2026)
 

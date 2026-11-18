@@ -114,7 +114,10 @@ test("fictional job outcomes never reserve real work, and language changes retai
   for (const [outcome, explanation] of [
     ["filled", "Ein anderer Dozent war schneller"],
     ["conflict", "Ein Termin überschneidet sich"],
-    ["qualification", "Eine geprüfte Qualifikation"],
+    [
+      "qualification",
+      "Ein erforderliches Thema im Profil oder ein gültiger Vertrag fehlt",
+    ],
     ["offline", "Ohne Verbindung wird keine Übernahme bestätigt"],
   ]) {
     await page
@@ -361,6 +364,7 @@ test("the guided demo visits every actual portal area, pauses and restarts in ei
       "/admin/accounts",
       "/admin/people",
       "/admin/audit",
+      "/auth/password",
       "/search",
     ]
       .map((path) => `/demo${path}`)

@@ -213,11 +213,8 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
       .click();
     dialog = ownerPage.getByRole("dialog");
     await expect(
-      dialog.getByRole("heading", { name: "Dozent:in · 31%", exact: true }),
-    ).toBeVisible();
-    await expect(
       dialog.getByRole("heading", {
-        name: "Senior-Dozent:in · 73%",
+        name: "Standardhonorar bei 50 % Anteil",
         exact: true,
       }),
     ).toBeVisible();

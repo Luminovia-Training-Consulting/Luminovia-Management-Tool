@@ -6,6 +6,12 @@ The previous full `Portal checks` attempt on `76c6e495` was cancelled by the sub
 
 On `4726bd44`, the split jobs both started successfully, but CI found one lint regression in the updated workflow-policy test (an unused loop key); fixed it locally and reran lint plus policy/phase tests (25/25). The first desktop-only local browser rerun is executing 97 tests. Prior interrupted browser evidence found real contrast/target-size and accessible-name defects, plus one stale account-role expectation. Corrected those UI sources and changed that expectation to match the current assignable guest-role policy. Focused shell/dashboard tests pass 30/30 and typecheck passed; the exact-head CI rerun is pending.
 
+# 18 November 2026 — browser acceptance follow-up
+
+On `d108d361`, all fast CI gates (typecheck, unit/coverage, code quality, formatting, build, change scope and lint), system/API verification, and retained-data selfhost image compatibility passed. Mobile Chromium completed 61/97 and exposed 36 test failures; desktop Chromium was cancelled before reporting acceptance. The earlier local desktop attempt used a stale source snapshot and stopped at test 84/97 after 22 minutes, so its later failures are not evidence against current source.
+
+Fixed the confirmed stale browser interactions: open collapsed quiet-hours/chat-pin/dashboard sections, route through the active Overview page in calendar history, use current accessible row scoping and job button names, and generate a future global-event fixture date. Restored the deleted secret calendar-subscription UI/API from its last implementation; its query is lazy until the disclosure opens. The focused calendar, subscription, notification, chat, shell and dashboard unit suites pass 80/80; typecheck, lint, Prettier and `git diff --check` pass locally. The first correction batch is local and awaiting a new exact-head run; no deployment occurred.
+
 # 18 November 2026 — proprietary source-available license
 
 The user confirmed a written rights agreement is now available for the external contributions in this release. Replaced the root GPL text with proprietary source-available terms, removed `LICENSE.proposed`, and aligned current README, contribution and license-status guidance. The license preserves prior GPL grants and separate dependency/font/brand/upstream terms. This records the user's confirmation, not an independent review of the private agreement or a legal opinion; professional review for the applicable law remains pending. No deployment or external contact occurred.

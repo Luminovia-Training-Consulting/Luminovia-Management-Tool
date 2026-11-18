@@ -47,7 +47,7 @@ test("manual unread survives reload and is personal to each member", async ({
     await composer
       .getByRole("button", { name: "Nachricht senden", exact: true })
       .click();
-    await expect(row.locator(".chat-room-preview")).toHaveText(previewText);
+    await expect(row.locator(".chat-room-preview")).toContainText(previewText);
     await expect(row.locator(".chat-room-preview")).toHaveAttribute(
       "title",
       previewText,

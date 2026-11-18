@@ -75,8 +75,8 @@ test("personal cards and teaching preparation persist in the real account across
     suffix = randomUUID().slice(0, 8);
   const starts = DateTime.now()
     .setZone("Europe/Berlin")
-    .startOf("day")
-    .plus({ hours: 9 });
+    .plus({ minutes: 30 })
+    .set({ second: 0, millisecond: 0 });
   await checked(
     service
       .from("organisations")
@@ -151,6 +151,9 @@ test("personal cards and teaching preparation persist in the real account across
     }),
   );
   await login(page, teacher.email);
+  const teachingDisclosure = page.locator(".dashboard-teaching-details");
+  await teachingDisclosure.locator("summary").click();
+  await expect(teachingDisclosure).toHaveJSProperty("open", true);
   let teaching = page.getByRole("region", {
     name: "Mein Unterrichtstag",
     exact: true,
@@ -212,6 +215,7 @@ test("personal cards and teaching preparation persist in the real account across
     page.getByRole("button", { name: "Dashboard speichern", exact: true }),
   ).toHaveCount(0);
   await page.reload();
+  await teachingDisclosure.locator("summary").click();
   teaching = page.getByRole("region", {
     name: "Mein Unterrichtstag",
     exact: true,

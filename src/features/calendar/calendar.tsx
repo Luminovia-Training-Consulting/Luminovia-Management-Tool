@@ -20,6 +20,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { Plus, X } from "lucide-react";
 import { CalendarExport } from "./export";
+import { CalendarSubscriptions } from "./subscriptions";
 import { CalendarImport } from "./import";
 import { OfflineSchedule } from "./offline";
 import FullCalendar from "@fullcalendar/react";
@@ -463,6 +464,11 @@ export function CalendarPage() {
     return (
       <>
         <PageHeading title={t("calendar")} description={t("privateNote")} />
+        <CalendarSubscriptions
+          key={`subscriptions-${session!.user.id}`}
+          actor={session!.user.id}
+          zone={zone}
+        />
         <OfflineSchedule
           key={`offline-${session!.user.id}`}
           actor={session!.user.id}
@@ -479,6 +485,11 @@ export function CalendarPage() {
     return (
       <>
         <PageHeading title={t("calendar")} description={t("privateNote")} />
+        <CalendarSubscriptions
+          key={`subscriptions-${session!.user.id}`}
+          actor={session!.user.id}
+          zone={zone}
+        />
         <OfflineSchedule
           key={`offline-${session!.user.id}`}
           actor={session!.user.id}
@@ -640,6 +651,11 @@ export function CalendarPage() {
             {t("addEvent")}
           </Button>
         }
+      />
+      <CalendarSubscriptions
+        key={`subscriptions-${session!.user.id}`}
+        actor={session!.user.id}
+        zone={zone}
       />
       <div className="calendar-controls">
         <div className="segmented">

@@ -47,7 +47,7 @@ test("thread owner changes the title and the server persists it", async ({
   await dialog.getByRole("button", { name: "Speichern" }).click();
   await expect(dialog).toBeHidden();
   await expect(
-    page.getByText(`${title} revised`, { exact: true }),
+    page.getByRole("heading", { name: `${title} revised`, exact: true }),
   ).toBeVisible();
   const current = await checked(client.rpc("forum_thread", { p_id: thread }), {
     requireData: true,

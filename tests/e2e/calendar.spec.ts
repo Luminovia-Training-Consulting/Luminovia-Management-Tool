@@ -413,9 +413,9 @@ test("browser history preserves a personal draft until explicitly discarded", as
 }) => {
   const owner = await actor("Fictional history calendar owner", "lecturer");
   await login(page, owner.email);
+  // Create a real prior history entry without depending on desktop-only nav.
+  await page.goto("/");
   await page.goto("/calendar");
-  // Add a real in-app history entry; browser back must target the preceding route.
-  await page.getByRole("link", { name: "Verfügbarkeit & Sperrzeiten" }).click();
   await page.goBack();
   await expect(page).toHaveURL(/\/calendar/);
   await page
@@ -437,7 +437,7 @@ test("browser history preserves a personal draft until explicitly discarded", as
   });
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "Änderungen verwerfen" }).click();
-  await expect(page).toHaveURL(/\/availability/);
+  await expect(page).toHaveURL(/\/$/);
 });
 
 test("calendar search and event type filter the current user's loaded events", async ({

@@ -64,12 +64,12 @@ test('lecturer signs in, edits bilingual profile and persists it on reload', asy
   await page.screenshot({ path: `.local/screenshots/${testInfo.project.name}-dashboard.png`, fullPage: true });
   await page.goto('/profile');
   const text = `Lokale QA ${testInfo.project.name}`;
-  await page.getByLabel('Über mich (Deutsch)', { exact: true }).fill(text);
+  await page.getByLabel('Über mich', { exact: true }).fill(text);
   await page.getByLabel('About me (English)', { exact: true }).fill(`Local QA ${testInfo.project.name}`);
   await page.getByRole('button', { name: 'Profil speichern', exact: true }).click();
   await expect(page.getByRole('status')).toContainText(/gespeichert/i);
   await page.reload();
-  await expect(page.getByLabel('Über mich (Deutsch)', { exact: true })).toHaveValue(text);
+  await expect(page.getByLabel('Über mich', { exact: true })).toHaveValue(text);
   await expect(page.getByLabel('About me (English)', { exact: true })).toHaveValue(`Local QA ${testInfo.project.name}`);
   await a11y(page);
 });
@@ -168,9 +168,9 @@ test('language changes preserve input, themes render accessibly, offline mutatio
   await login(page);
   await page.goto('/profile');
   const draft = `Ungespeicherter Sprachtest ${randomUUID().slice(0, 8)}`;
-  await page.getByLabel('Über mich (Deutsch)', { exact: true }).fill(draft);
+  await page.getByLabel('Über mich', { exact: true }).fill(draft);
   await page.getByLabel('Sprache', { exact: true }).selectOption('en');
-  await expect(page.getByLabel('About me (German)', { exact: true })).toHaveValue(draft);
+  await expect(page.getByLabel('About me', { exact: true })).toHaveValue(draft);
   await page.getByLabel('Theme', { exact: true }).selectOption('dark');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await a11y(page);
@@ -197,7 +197,7 @@ async function adminSession(page: Page) {
 
 test('admin uses password-only access and publishes a five-session job through the UI', async ({ page }, testInfo) => {
   await adminSession(page);
-  await page.goto('/admin');
+  await page.goto('/admin?create=job');
   const title = `QA Verwaltung ${testInfo.project.name} ${randomUUID().slice(0, 8)}`;
   await page.getByLabel('Titel', { exact: true }).fill(title);
   await page.getByLabel('Beschreibung', { exact: true }).fill('Fiktiver über die echte Adminoberfläche angelegter Testauftrag.');

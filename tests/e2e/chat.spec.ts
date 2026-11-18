@@ -144,7 +144,11 @@ test("real private DM persists, delivers realtime, edits/deletes safely and deni
     await connected(page);
     const initial = `Hallo ${b.name}, dies ist eine echte private Nachricht.`;
     await send(page, initial);
-    await receiver.getByRole("button", { name: new RegExp(a.name) }).click();
+    await receiver
+      .locator(".chat-room-row")
+      .filter({ hasText: a.name })
+      .locator(".chat-room-button")
+      .click();
     await expect(receiver.getByText(initial, { exact: true })).toBeVisible();
     await connected(receiver);
     const text = `Realtime ${randomUUID().slice(0, 8)} <script>alert(1)</script>`;
@@ -292,7 +296,11 @@ test("group owner removal revokes an already connected member and clears private
       .getByRole("button", { name: "Gruppe erstellen", exact: true })
       .click();
     await connected(page);
-    await other.getByRole("button", { name: new RegExp(title) }).click();
+    await other
+      .locator(".chat-room-row")
+      .filter({ hasText: title })
+      .locator(".chat-room-button")
+      .click();
     await connected(other);
     const before = `Gemeinsame Nachricht ${randomUUID().slice(0, 8)}`;
     await send(page, before);

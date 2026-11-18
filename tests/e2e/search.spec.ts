@@ -176,10 +176,9 @@ test("real portal search combines authorized sources, excludes foreign private r
   await upload(peerSession.session!.access_token, hiddenFileName);
 
   await login(page, owner.email);
-  const searchLink = page.getByRole("link", {
-    name: "Im Portal suchen",
-    exact: true,
-  });
+  const searchLink = page
+    .getByRole("link", { name: "Im Portal suchen", exact: true })
+    .filter({ visible: true });
   const more = page.getByLabel("Mehr", { exact: true });
   // The Auth redirect can precede the shell. Wait for its actual responsive
   // navigation before deciding whether the mobile disclosure is needed.

@@ -28,7 +28,10 @@ test("password-only authentication global publication, descriptions/HTTPS links,
   const viewerContext = await browser.newContext(),
     viewer = await viewerContext.newPage();
   const now = new Date(),
-    day = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-15`,
+    eventDate = new Date(now);
+  eventDate.setUTCDate(15);
+  if (eventDate <= now) eventDate.setUTCMonth(eventDate.getUTCMonth() + 1, 15);
+  const day = `${eventDate.getUTCFullYear()}-${String(eventDate.getUTCMonth() + 1).padStart(2, "0")}-15`,
     start = `${day}T12:00`,
     end = `${day}T14:00`;
   try {

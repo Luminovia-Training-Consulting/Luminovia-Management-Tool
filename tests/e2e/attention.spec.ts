@@ -59,8 +59,13 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
   try {
     await login(page, owner.email);
     await page.goto("/settings");
-    // Use the actual named attention region; the email channel has an equally
-    // valid "Quiet hours time zone" field with an independent server contract.
+    // Quiet-hours and email-delivery controls live inside this collapsed
+    // settings section; open it before targeting the actual attention region.
+    const delivery = page
+      .locator("details.settings-section")
+      .filter({ hasText: "Ruhezeiten & Zustellung" });
+    await delivery.locator("summary").click();
+    await expect(delivery).toHaveJSProperty("open", true);
     const quietSettings = page.getByRole("region", {
       name: /^(Ruhezeiten|Quiet hours)$/,
     });
@@ -76,7 +81,9 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
     await quietSettings
       .getByLabel("Zeitzone der Ruhezeit", { exact: true })
       .fill("UTC");
-    await page.getByLabel("Sprache", { exact: true }).selectOption("en");
+    await page
+      .locator(".settings-section .preferences select[aria-label='Sprache']")
+      .selectOption("en");
     await expect(
       quietSettings.getByLabel("Quiet hours start", { exact: true }),
     ).toHaveValue(start);

@@ -10,6 +10,7 @@ test("a new account follows a bilingual welcome guide with persistent pause, res
   const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
   try {
     await login(page, user.email);
+    await page.goto("/welcome");
     const guide = page.getByRole("region", {
       name: "Willkommen bei Luminovia",
       exact: true,

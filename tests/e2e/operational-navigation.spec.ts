@@ -7,7 +7,7 @@ test("retired module links reach current operational pages and header search wor
   page,
 }) => {
   await withApiFixture(async ({ actor }) => {
-    const teacher = await actor("Fictional operational navigation", "lecturer");
+    const teacher = await actor("fictional-operational-navigation", "lecturer");
     await login(page, teacher.email);
     for (const [retired, destination] of [
       ["/availability", "/calendar"],

@@ -198,15 +198,16 @@ test("wiki template references preserve publication revisions and current templa
   test.setTimeout(100_000);
   const editor = await account("admin", "TemplateLinkEditor");
   const reader = await account("lecturer", "TemplateLinkReader");
+  // Use a fresh unrun template. The current catalogue may contain published
+  // runs a lecturer can already read, which would not test wiki grant leakage.
+  const template = {
+    id: randomUUID(),
+    title: `Fictional unpublished template ${randomUUID().slice(0, 8)}`,
+  };
   const templateResult = await service()
     .from("course_templates")
-    .select("id,title")
-    .is("archived_at", null)
-    .order("title")
-    .limit(1)
-    .single();
+    .insert(template);
   expect(templateResult.error).toBeNull();
-  const template = templateResult.data as { id: string; title: string };
   await login(page, editor);
   await page.goto("/wiki");
   await page

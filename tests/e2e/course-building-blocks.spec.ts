@@ -184,7 +184,7 @@ test("Course source template plans ten real sessions and one linked net-only tea
     .getByLabel("Gültiger Rahmenvertrag erforderlich", { exact: true })
     .uncheck();
   await page
-    .getByRole("button", { name: "Stelle speichern", exact: true })
+    .getByRole("button", { name: "Auftrag speichern", exact: true })
     .click();
   await expect(
     page.getByRole("link", { name: "Erstellten Auftrag öffnen", exact: true }),

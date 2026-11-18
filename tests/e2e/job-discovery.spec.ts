@@ -178,6 +178,7 @@ test("bounded server discovery, saved-view persistence and private actor boundar
       .click();
     await expect(dialog).not.toBeVisible();
     await page.reload();
+    await page.getByText("Filter & Ansichten", { exact: true }).click();
     await expect(
       page.getByLabel("Choose a view", { exact: true }),
     ).toBeVisible();

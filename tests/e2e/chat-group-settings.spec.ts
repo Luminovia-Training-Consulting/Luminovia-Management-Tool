@@ -117,7 +117,11 @@ test("group owner changes information and a member can only read it", async ({
       .getByRole("button", { name: "Schließen", exact: true })
       .click();
     await expect(page.getByRole("heading", { name: updated })).toBeVisible();
-    await other.getByRole("button", { name: new RegExp(updated) }).click();
+    await other
+      .locator(".chat-room-row")
+      .filter({ hasText: updated })
+      .locator(".chat-room-button")
+      .click();
     await other
       .getByRole("button", { name: "Gruppeninformationen", exact: true })
       .click();

@@ -84,10 +84,9 @@ test("real private upload exposes authorized scan and current-version details, d
     .getByRole("button", { name: "Umbenennen", exact: true })
     .click();
   await expect(page.getByText(renamed, { exact: true })).toBeVisible();
-  const searchLink = page.getByRole("link", {
-    name: "Im Portal suchen",
-    exact: true,
-  });
+  const searchLink = page
+    .getByRole("link", { name: "Im Portal suchen", exact: true })
+    .filter({ visible: true });
   if (!(await searchLink.isVisible()))
     await page.getByLabel("Mehr", { exact: true }).click();
   await searchLink.click();

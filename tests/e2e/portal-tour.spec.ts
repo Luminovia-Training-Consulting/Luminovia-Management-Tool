@@ -11,7 +11,7 @@ test("a real lecturer follows the permission-aware portal tour without changing 
   page,
 }) => {
   const teacher = await actor("Fictional guided portal lecturer", "lecturer");
-  const accessEndpoint = "**/rest/v1/rpc/get_my_permissions";
+  const accessEndpoint = "**/rpc/get_my_permissions**";
   await page.route(accessEndpoint, (route) => route.abort("failed"));
   await login(page, teacher.email);
   const guide = page.getByRole("region", {

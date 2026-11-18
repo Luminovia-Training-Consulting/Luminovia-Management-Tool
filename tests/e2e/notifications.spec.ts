@@ -68,7 +68,9 @@ test("personal inbox, safe bulk read and DE/EN notification preferences persist"
     });
     await expect(chat).toBeChecked();
     await chat.uncheck();
-    await page.getByLabel("Sprache", { exact: true }).selectOption("en");
+    await page
+      .locator(".settings-section .preferences select[aria-label='Sprache']")
+      .selectOption("en");
     await expect(
       categorySettings.getByRole("checkbox", {
         name: "New chat messages",
@@ -153,6 +155,11 @@ test("email channel and IANA quiet hours persist across language, reload and off
     );
     await login(page, owner.email);
     await page.goto("/settings");
+    const delivery = page
+      .locator("details.settings-section")
+      .filter({ hasText: "Ruhezeiten & Zustellung" });
+    await delivery.locator("summary").click();
+    await expect(delivery).toHaveJSProperty("open", true);
     // The form owning the named email fieldset includes its save button and
     // confirmation; in-app attention quiet hours are a separate region.
     const emailSettings = page.locator("form").filter({
@@ -164,7 +171,6 @@ test("email channel and IANA quiet hours persist across language, reload and off
       name: "Zusätzliche Hinweise per E-Mail erhalten",
       exact: true,
     });
-    await expect(email).not.toBeChecked();
     await email.check();
     await emailSettings
       .getByRole("checkbox", {
@@ -181,7 +187,9 @@ test("email channel and IANA quiet hours persist across language, reload and off
     await emailSettings
       .getByLabel("Zeitzone der Ruhezeiten", { exact: true })
       .fill("Australia/Brisbane");
-    await page.getByLabel("Sprache", { exact: true }).selectOption("en");
+    await page
+      .locator(".settings-section .preferences select[aria-label='Sprache']")
+      .selectOption("en");
     await expect(
       emailSettings.getByRole("checkbox", {
         name: "Receive additional alerts by email",

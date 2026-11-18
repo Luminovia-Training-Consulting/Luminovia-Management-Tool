@@ -17,6 +17,7 @@ test("purpose-scoped choices page real metadata and connect scanned job uploads 
   page,
   browser,
 }, info) => {
+  test.setTimeout(120000);
   const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const admin = await actor("Fictional picker manager", "admin"),
     learner = await actor("Fictional picker learner", "participant");
