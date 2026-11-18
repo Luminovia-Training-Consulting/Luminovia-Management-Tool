@@ -417,13 +417,15 @@ test("browser history preserves a personal draft until explicitly discarded", as
   await page.goto("/");
   await page.goto("/calendar");
   await page.goBack();
+  await expect(page).toHaveURL(/\/$/);
+  await page.goForward();
   await expect(page).toHaveURL(/\/calendar/);
   await page
     .getByRole("button", { name: "Privaten Termin hinzufügen" })
     .click();
   const form = page.getByRole("dialog", { name: "Privaten Termin hinzufügen" });
   await form.getByLabel("Titel").fill("Fictional history draft");
-  await page.goForward();
+  await page.goBack();
   let confirm = page.getByRole("dialog", {
     name: "Ungespeicherte Änderungen verwerfen?",
   });
@@ -431,7 +433,7 @@ test("browser history preserves a personal draft until explicitly discarded", as
   await confirm.getByRole("button", { name: "Entwurf behalten" }).click();
   await expect(page).toHaveURL(/\/calendar/);
   await expect(form.getByLabel("Titel")).toHaveValue("Fictional history draft");
-  await page.goForward();
+  await page.goBack();
   confirm = page.getByRole("dialog", {
     name: "Ungespeicherte Änderungen verwerfen?",
   });
