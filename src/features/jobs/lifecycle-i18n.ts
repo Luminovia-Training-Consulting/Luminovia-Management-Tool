@@ -58,7 +58,7 @@ const en = {
   terms: "Assignment terms",
   deadline: "Claim deadline",
   deadlineZone:
-    "Deadline uses the offer's displayed time zone. Leave blank for no deadline.",
+    "Deadline uses the offer's displayed time zone. Leave blank for no deadline. New or changed times must be unambiguous; an unchanged existing deadline keeps its exact instant.",
   duplicate: "Duplicate as draft",
   duplicateHelp:
     "Creates an unpublished copy with its own course run and dates. Assignments, invoices, documents and chat membership are not copied.",
@@ -134,7 +134,7 @@ const de: typeof en = {
   terms: "Auftragsbedingungen",
   deadline: "Übernahmefrist",
   deadlineZone:
-    "Die Frist verwendet die angezeigte Zeitzone des Auftrags. Leer bedeutet keine Frist.",
+    "Die Frist verwendet die angezeigte Zeitzone des Auftrags. Leer bedeutet keine Frist. Neue oder geänderte Zeiten müssen eindeutig sein; eine unveränderte bestehende Frist behält ihren exakten Zeitpunkt.",
   duplicate: "Als Entwurf kopieren",
   duplicateHelp:
     "Erstellt eine unveröffentlichte Kopie mit eigenem Kursdurchlauf und eigenen Terminen. Zuweisungen, Rechnungen, Dokumente und Chatmitglieder werden nicht kopiert.",

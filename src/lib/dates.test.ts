@@ -3,7 +3,7 @@
  * not establish database scheduling behavior.
  */
 import { describe, expect, it } from "vitest";
-import { dateTime, money, zonedInstant } from "./dates";
+import { dateTime, money, zonedInstant, zonedInstantForEdit } from "./dates";
 describe("calendar instants and DST safety", () => {
   it("maps the same Berlin teaching time across winter and summer offsets", () => {
     expect(zonedInstant("2027-01-18T09:00", "Europe/Berlin")).toBe(
@@ -26,6 +26,28 @@ describe("calendar instants and DST safety", () => {
   });
   it("rejects ambiguous fall-back times rather than choosing an offset silently", () => {
     expect(zonedInstant("2027-10-31T02:30", "Europe/Berlin")).toBeNull();
+  });
+  it("preserves an unchanged ambiguous deadline's exact instant while keeping edits strict", () => {
+    const original = "2026-10-25T00:30:00Z";
+    expect(
+      zonedInstantForEdit(
+        "2026-10-25T02:30",
+        "Europe/Berlin",
+        "2026-10-25T02:30",
+        original,
+      ),
+    ).toBe(original);
+    expect(
+      zonedInstantForEdit(
+        "2026-10-25T02:45",
+        "Europe/Berlin",
+        "2026-10-25T02:30",
+        original,
+      ),
+    ).toBeNull();
+    expect(
+      zonedInstantForEdit("", "Europe/Berlin", "2026-10-25T02:30", original),
+    ).toBeNull();
   });
   it("rejects invalid zones and dates", () => {
     expect(zonedInstant("2027-02-31T09:00", "Europe/Berlin")).toBeNull();
