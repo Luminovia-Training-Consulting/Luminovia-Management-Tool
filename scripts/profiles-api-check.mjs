@@ -81,6 +81,10 @@ try {
     student = await fixture("Student", "participant"),
     outsider = await fixture("Outsider", "participant"),
     admin = await fixture("Administrator", "admin");
+  await checked(
+    service.from("user_roles").insert({ user_id: student.id, role: "client" }),
+    "Give enrolled learner an operational portal role",
+  );
   await assertPasswordOnly(admin.client);
   await checked(
     teacher.client.rpc("save_profile_details", {
@@ -104,12 +108,10 @@ try {
   assert.equal(listing[0].id, teacher.id);
   assert.equal("phone" in listing[0], false);
   assert.equal("email" in listing[0], false);
-  assert.deepEqual(
-    await checked(
-      outsider.client.rpc("people_directory"),
-      "Unenrolled participant directory",
-    ),
-    [],
+  assert.equal(
+    (await outsider.client.rpc("people_directory")).error?.code,
+    "42501",
+    "Retired participant has no operational directory access",
   );
   assert.ok(
     (
@@ -218,12 +220,12 @@ try {
     "Own enrolled course",
   );
   assert.equal(ownCourses.length, 1);
-  assert.deepEqual(
-    await checked(
-      outsider.client.from("course_runs").select("id").eq("id", run),
-      "Other participant course denial",
-    ),
-    [],
+  assert.equal(
+    (
+      await outsider.client.from("course_runs").select("id").eq("id", run)
+    ).error?.code,
+    "42501",
+    "Retired participant cannot query another enrolment",
   );
   const tasks = await checked(
     student.client.rpc("reviewable_courses"),
