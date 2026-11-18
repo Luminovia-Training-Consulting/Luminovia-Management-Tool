@@ -274,7 +274,7 @@ commit;`);
       await checked(
         admin.client.rpc("set_account_roles", {
           p_user_id: target.id,
-          p_roles: ["participant"],
+          p_roles: ["guest"],
         }),
         `Demote replacement recipient; role state: ${roleState}`,
       );
