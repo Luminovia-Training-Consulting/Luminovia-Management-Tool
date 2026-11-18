@@ -87,7 +87,7 @@ const headers = {
   "Content-Type": "application/json",
   Origin: process.env.PORTAL_APP_ORIGIN ?? "http://127.0.0.1:5173",
   apikey: process.env.SUPABASE_ANON_KEY,
-  Authorization: `Bearer ${session.session.access_token}`,
+  Authorization: `Bearer ${session.access_token}`,
 };
 const inviteUrl = `${url}/functions/v1/invite-lecturer`;
 const options = await fetch(inviteUrl, {
