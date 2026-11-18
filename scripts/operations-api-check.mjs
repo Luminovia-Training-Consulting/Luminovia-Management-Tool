@@ -73,6 +73,10 @@ try {
   const admin = await fixture("admin"),
     lecturer = await fixture("lecturer"),
     participant = await fixture("participant");
+  await checked(
+    service.from("user_roles").insert({ user_id: participant.id, role: "client" }),
+    "Give enrolled learner a current operational portal role",
+  );
   await assertPasswordOnly(admin.client);
   const base = {
     name: `Fictional operations ${tag}`,
