@@ -4,6 +4,8 @@ The user confirmed a written rights agreement is now available for the external 
 
 # 18 November 2026 — bug-hunt verification follow-up
 
+The current exact-head CI run (`943139fb`) passed the isolated data upgrade, migration replay and API suites through course-building-blocks, then failed in `course-workspace-api-check.mjs`: its enrolled learner fixture had only the retired `participant` role and was rejected by `require_portal_access` before the workspace RPC. Updated the fixture to retain participant history alongside an active `client` role and bind that account to the fictional organisation, matching the current company-contact model. Syntax and whitespace checks pass locally; the next exact-head self-host run must confirm this and expose any further failures. No production data or deployment changed.
+
 The dual-role enrolment path passed, including the 0/1/0 catalogue visibility check. The same API suite then caught a stale suspension assertion: a suspended lecturer is rejected by the shared authenticated-request hook (`42501`) before building-block RLS can return an empty array. The test now asserts that early denial.
 
 The enrolled building-block test then hit a real fixture-model mismatch: it used only a retired participant role for an intended enrolled-user RLS visibility sequence, so the shared auth boundary correctly rejected it even after enrollment. The fixture now uses an unlinked client account with a retained participant role: the active client role passes the current boundary, the secondary participant role lets management record historical enrolment, and assertions verify 0 catalogue rows before enrolment, 1 while enrolled, and 0 after removal.

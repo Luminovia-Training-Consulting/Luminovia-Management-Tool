@@ -7,9 +7,16 @@ await withApiFixture(
   async ({ actor, passwordOnly, checked, service, sql, defer, url }) => {
     const admin = await actor("course-workspace-admin", "admin"),
       teacher = await actor("course-workspace-teacher", "lecturer"),
-      learner = await actor("course-workspace-learner", "participant"),
+      learner = await actor("course-workspace-learner", "client"),
       peer = await actor("course-workspace-peer", "participant"),
       client = await actor("course-workspace-client", "client");
+    // Keep a historical participant enrolment on an active company account:
+    // standalone participant accounts are retired at the REST boundary.
+    await checked(
+      service
+        .from("user_roles")
+        .insert({ user_id: learner.id, role: "participant" }),
+    );
     await passwordOnly(admin.client);
     await checked(
       service
@@ -61,6 +68,13 @@ await withApiFixture(
     await checked(
       admin.client.rpc("manage_client_organisation", {
         p_user_id: client.id,
+        p_organisation_id: org,
+        p_remove: false,
+      }),
+    );
+    await checked(
+      admin.client.rpc("manage_client_organisation", {
+        p_user_id: learner.id,
         p_organisation_id: org,
         p_remove: false,
       }),

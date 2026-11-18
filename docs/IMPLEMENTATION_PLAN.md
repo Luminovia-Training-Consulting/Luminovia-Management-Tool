@@ -16,6 +16,9 @@
 
 ## Bug hunt verification follow-up — 18 November 2026
 
+- [x] Correct the course-workspace API fixture caught by exact-head CI: enrolled participant history now belongs to an active, organisation-bound client account, so the current REST access boundary and workspace enrolment check are both exercised.
+- [ ] Re-run exact-head self-host acceptance; local syntax and diff checks pass, but remaining API suites and final CI are still pending.
+
 - [x] Split shell announcement/notification affordances from page modules so those routes genuinely lazy-load; current production chunks no longer show ineffective dynamic-import warnings.
 - [x] Pass 871 frontend tests, 334 runtime tests, 100 Edge tests, 148 packaging/release tests, zero production dependency vulnerabilities, local persistent Auth/profile/calendar/Storage restart, 25 primary PostgreSQL groups including 50 concurrent claims, schema lint and database advisors. Coverage: 73.63% statements, 68.14% branches, 65.04% functions, 76.21% lines.
 - [x] Align the knowledge permission assertion with the actual forward-migrated `permission required` denial text; no duplicate migration is needed.
