@@ -4,7 +4,16 @@ import { randomUUID, createHash } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 await withApiFixture(
-  async ({ service, actor, passwordOnly, sql, defer, checked, suffix, url }) => {
+  async ({
+    service,
+    actor,
+    passwordOnly,
+    sql,
+    defer,
+    checked,
+    suffix,
+    url,
+  }) => {
     const manager = await actor("qualification-manager", "management"),
       teacher = await actor("qualification-teacher", "lecturer"),
       peer = await actor("qualification-peer", "lecturer");
@@ -143,15 +152,14 @@ await withApiFixture(
       versions.items[0].sha256,
       createHash("sha256").update(bytes).digest("hex"),
     );
-    assert.equal(
-      (
-        await manager.client.rpc("qualification_review", {
-          p_user_id: teacher.id,
-          p_topic_id: topic,
-        })
-      ).error?.code,
-      "42501",
+    const unlinkedReview = await checked(
+      manager.client.rpc("qualification_review", {
+        p_user_id: teacher.id,
+        p_topic_id: topic,
+      }),
     );
+    assert.equal(unlinkedReview.evidence, null);
+    assert.equal(unlinkedReview.verified, false);
     await passwordOnly(manager.client);
     assert.equal(
       (
