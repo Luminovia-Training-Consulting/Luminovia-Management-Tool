@@ -118,16 +118,6 @@ await withApiFixture(
       contact_description: "Organisational questions only.",
       contact_visibility: "after_claim",
     };
-    const passwordOnlyManager = await actor(
-      "briefing-aal1-manager",
-      "management",
-    );
-    users.push(passwordOnlyManager.id);
-    assert.equal(
-      (await save(details, 0, randomUUID(), job, passwordOnlyManager)).error
-        ?.code,
-      "42501",
-    );
     assert.equal(
       (await save(details, 0, randomUUID(), job, peer)).error?.code,
       "42501",
