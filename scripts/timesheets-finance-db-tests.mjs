@@ -224,10 +224,8 @@ await withTestDatabase(
           (await rpc(peer, "timesheets", [...range, "false"])).items.length,
           0,
         );
-        await assert.rejects(
-          rpc(admin, "timesheets", [...range, "true"]),
-          /42501/,
-        );
+        const adminAll = await rpc(admin, "timesheets", [...range, "true"]);
+        assert.equal(adminAll.items.length, 1);
         const all = await rpc(
           manager,
           "timesheets",
