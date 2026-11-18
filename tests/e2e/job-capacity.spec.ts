@@ -82,7 +82,7 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
   });
   // Saving keeps the creation route open so another offer can be entered.
   // Open the board explicitly before asserting and operating on its card.
-  await page.goto("/admin");
+  await page.goto("/admin?view=jobs");
   const board = page.getByRole("region", {
     name: "Auftragsboard",
     exact: true,

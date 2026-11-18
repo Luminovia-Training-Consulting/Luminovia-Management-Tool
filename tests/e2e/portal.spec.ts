@@ -378,6 +378,8 @@ test("admin uses password-only access and publishes a five-session job through t
   expect(jobError).toBeNull();
   expect(job!.status).toBe("published");
   expect(job!.job_sessions).toHaveLength(5);
+  // Account invitations live on their own current-authority administration page.
+  await page.goto("/admin/accounts");
   const email = `ui-invite-${randomUUID()}@example.invalid`;
   await page.getByLabel("E-Mail", { exact: true }).fill(email);
   await page

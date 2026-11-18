@@ -7,7 +7,10 @@
 export function githubPreviewConfig(source, project) {
   if (!/^luminovia-portal-github-[a-f0-9]{12}$/.test(project))
     throw new Error("Invalid owned GitHub preview project.");
-  return previewConfig(source, project, 2000, 5373);
+  // Keep the persistent preview outside the canonical (54xxx), PR (57xxx),
+  // and older managed preview (61xxx) stacks. The previous 56xxx overlay
+  // overlapped live PR previews and made first startup fail with EADDRINUSE.
+  return previewConfig(source, project, 10000, 5373);
 }
 
 /** PR packages have their own volumes AND ports, separate from normal

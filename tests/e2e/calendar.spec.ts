@@ -413,10 +413,17 @@ test("browser history preserves a personal draft until explicitly discarded", as
 }) => {
   const owner = await actor("Fictional history calendar owner", "lecturer");
   await login(page, owner.email);
-  // Enter through a real history navigation. Mobile navigation links are
-  // intentionally inside the closed "Mehr" disclosure and aren't actionable
-  // until the user opens that menu.
-  await page.goto("/calendar");
+  // Use the portal's SPA navigation so React Router can block the real
+  // browser-history transition while the event form contains a draft. On
+  // narrow screens the route is inside the collapsed "Mehr" disclosure.
+  const calendarLink = page.getByRole("link", {
+    name: "Kalender",
+    exact: true,
+  });
+  if (!(await calendarLink.isVisible())) {
+    await page.getByText("Mehr", { exact: true }).click();
+  }
+  await calendarLink.click();
   await expect(page).toHaveURL(/\/calendar/);
   await page
     .getByRole("button", { name: "Privaten Termin hinzufügen" })

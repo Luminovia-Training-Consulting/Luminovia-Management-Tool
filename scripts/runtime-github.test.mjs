@@ -75,10 +75,10 @@ const action=process.argv[2];mkdirSync('.local',{recursive:true,mode:0o700});
 assert.equal(process.env.GH_TOKEN,undefined);assert.equal(process.env.SUPABASE_SERVICE_ROLE_KEY,undefined);
 appendFileSync('.local/calls',action+'\\n');
 if(action==='start'){
- const config=readFileSync('supabase/config.toml','utf8');assert.match(config,/site_url = "http:\\/\\/127.0.0.1:5373"/);assert.match(config,/port = 56321/);
+ const config=readFileSync('supabase/config.toml','utf8');assert.match(config,/site_url = "http:\\/\\/127.0.0.1:5373"/);assert.match(config,/port = 64321/);
  if(!existsSync('.local/password'))writeFileSync('.local/password','fictional-private-password');
  if(!existsSync('.local/object.bin'))writeFileSync('.local/object.bin',Buffer.from([0,1,255,42]));
- writeFileSync('.env.local','VITE_SUPABASE_URL=http://127.0.0.1:56321\\n');
+ writeFileSync('.env.local','VITE_SUPABASE_URL=http://127.0.0.1:64321\\n');
 }
 if(action==='test'){
  assert.match(readFileSync('supabase/config.toml','utf8'),/site_url = "http:\\/\\/127.0.0.1:5173"/);
@@ -643,9 +643,9 @@ test("preview config has independent loopback identities and fails on incompatib
     "luminovia-portal-github-aabbccddeeff",
   );
   assert.match(result, /site_url = "http:\/\/127.0.0.1:5373"/);
-  assert.match(result, /shadow_port = 56320/);
-  assert.match(result, /port = 56321/);
-  assert.match(result, /inspector_port = 56383/);
+  assert.match(result, /shadow_port = 64320/);
+  assert.match(result, /port = 64321/);
+  assert.match(result, /inspector_port = 64383/);
   assert.throws(
     () => githubPreviewConfig(source, "../../other"),
     /Invalid owned/,
@@ -682,7 +682,7 @@ test("recorded interruption between checkout and config write recovers without r
     assert(!existsSync(join(f.preview.base, "transition.json")));
     assert.match(
       readFileSync(join(f.preview.source, "supabase/config.toml"), "utf8"),
-      /port = 56321/,
+      /port = 64321/,
     );
     assert.equal(
       readFileSync(join(f.preview.source, ".local/password"), "utf8"),
