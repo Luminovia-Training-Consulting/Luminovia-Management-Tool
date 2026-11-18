@@ -101,12 +101,12 @@ try {
     ),
     { can_author: true, can_publish_wiki: false, can_moderate_forum: false },
   );
-  assert.deepEqual(
-    await checked(
-      participant.client.rpc("knowledge_access"),
-      "Actual participant has no knowledge capabilities",
-    ),
-    { can_author: false, can_publish_wiki: false, can_moderate_forum: false },
+  assert.equal(
+    (
+      await participant.client.rpc("knowledge_access")
+    ).error?.code,
+    "42501",
+    "Retired participant has no operational portal access",
   );
   assert.deepEqual(
     await checked(
@@ -756,12 +756,10 @@ try {
     null,
   );
   for (const rpc of ["wiki_pages_list", "forum_threads_list"])
-    assert.deepEqual(
-      await checked(
-        participant.client.rpc(rpc),
-        "Participant knowledge exclusion",
-      ),
-      [],
+    assert.equal(
+      (await participant.client.rpc(rpc)).error?.code,
+      "42501",
+      `Retired participant cannot call ${rpc}`,
     );
   assert.ok(
     (await participant.client.rpc("forum_posts", { p_thread_id: thread }))
