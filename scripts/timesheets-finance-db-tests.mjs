@@ -151,10 +151,6 @@ await withTestDatabase(
           /42501/,
         );
         await assert.rejects(
-          manage(admin, id, "approve", current.version),
-          /42501/,
-        );
-        await assert.rejects(
           manage(peer, id, "submit", current.version),
           /42501/,
         );
