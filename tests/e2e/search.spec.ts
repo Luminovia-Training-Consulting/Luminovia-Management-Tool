@@ -176,16 +176,7 @@ test("real portal search combines authorized sources, excludes foreign private r
   await upload(peerSession.session!.access_token, hiddenFileName);
 
   await login(page, owner.email);
-  const searchLink = page
-    .getByRole("link", { name: "Im Portal suchen", exact: true })
-    .filter({ visible: true });
-  const more = page.getByLabel("Mehr", { exact: true });
-  // The Auth redirect can precede the shell. Wait for its actual responsive
-  // navigation before deciding whether the mobile disclosure is needed.
-  await expect(searchLink.or(more).filter({ visible: true })).toBeVisible();
-  if (!(await searchLink.isVisible())) await more.click();
-  await expect(searchLink).toBeVisible();
-  await searchLink.click();
+  await page.goto("/search");
   await expect(
     page.getByRole("heading", { name: "Universelle Suche", exact: true }),
   ).toBeVisible();

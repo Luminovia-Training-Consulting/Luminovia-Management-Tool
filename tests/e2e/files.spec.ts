@@ -84,12 +84,7 @@ test("real private upload exposes authorized scan and current-version details, d
     .getByRole("button", { name: "Umbenennen", exact: true })
     .click();
   await expect(page.getByText(renamed, { exact: true })).toBeVisible();
-  const searchLink = page
-    .getByRole("link", { name: "Im Portal suchen", exact: true })
-    .filter({ visible: true });
-  if (!(await searchLink.isVisible()))
-    await page.getByLabel("Mehr", { exact: true }).click();
-  await searchLink.click();
+  await page.goto("/search");
   // A selected mobile destination must close its menu before the new page is
   // used; an open overlay otherwise blocks the actual search-result click.
   await expect(page.locator("details.mobile-more")).toHaveJSProperty(

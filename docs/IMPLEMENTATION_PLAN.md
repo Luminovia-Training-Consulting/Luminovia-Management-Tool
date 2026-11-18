@@ -4,7 +4,7 @@
 
 - [x] Confirm only `main` is published and work from the clean local `main` checkout; do not recreate or push bug-hunt branches.
 - [x] Fix both commission browser fixtures to configure their expected 31% individual lecturer quote through the authorized RPC.
-- [x] Correct the visible responsive bell selector, make the browser-history journey follow actual back/forward semantics, and scope the group-chat room selector. Retain only short-lived synthetic DOM failure context/screenshots for diagnosis; do not upload browser traces.
+- [x] Correct the visible responsive bell selector, make the browser-history journey follow actual back/forward semantics, and scope the group-chat room selector. Integrate date, direct-route, preferences, current-profile-label and individual-compensation UI fixes for eight other journeys. Retain only short-lived synthetic DOM failure context/screenshots for diagnosis; do not upload browser traces.
 - [ ] Resolve any remaining common desktop/mobile browser failures and complete browser acceptance on the updated main commit. The `504fff95` run passed fast gates, system verification and retained-data self-host compatibility; it did not pass browser acceptance.
 
 ## Direct-main CI continuation — 18 November 2026

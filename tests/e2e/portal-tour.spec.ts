@@ -14,6 +14,7 @@ test("a real lecturer follows the permission-aware portal tour without changing 
   const accessEndpoint = "**/rpc/get_my_permissions**";
   await page.route(accessEndpoint, (route) => route.abort("failed"));
   await login(page, teacher.email);
+  await page.goto("/settings");
   const guide = page.getByRole("region", {
     name: "Portal-Rundgang",
     exact: true,

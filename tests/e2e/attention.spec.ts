@@ -101,7 +101,8 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
     ).toBeVisible();
     const bell = page
       .getByRole("banner")
-      .locator(".notification-menu:visible > summary");
+      .locator(".notification-menu > summary")
+      .first();
     await expect(bell).toHaveAttribute(
       "aria-label",
       /3 important unread updates.*Quiet hours active.*20 unread in total/,

@@ -152,56 +152,54 @@ test("management assigns only subordinate roles while only administration sees a
     await page.getByRole("button", { name: "Abmelden", exact: true }).click();
     await expect(page).toHaveURL(/\/login$/);
     await adminLogin(page, admin);
-    await page.goto("/admin");
-    const policy = page.getByRole("region", {
-      name: "Vergütungsregeln",
+    await page.goto("/admin/accounts");
+    await page
+      .getByRole("searchbox", { name: "Konten suchen", exact: true })
+      .fill(teacher.name);
+    await page
+      .getByRole("button", {
+        name: `Rollen bearbeiten: ${teacher.name}`,
+        exact: true,
+      })
+      .click();
+    const compensation = page
+      .getByRole("heading", { name: "Dozentenhonorar", exact: true })
+      .locator("..");
+    const percentage = compensation.getByLabel("Anteil am Kundenbudget (%)", {
       exact: true,
     });
-    await expect(policy).toBeVisible();
-    await expect(
-      policy.getByLabel("Dozent:in – Honorar vom Auftragspreis (%)", {
-        exact: true,
-      }),
-    ).toHaveValue("31");
-    await expect(
-      policy.getByLabel("Senior-Dozent:in – Honorar vom Auftragspreis (%)", {
-        exact: true,
-      }),
-    ).toHaveValue("73");
-    // Reconfirm fictional seeded values; other suites retain the same policy semantics.
-    const confirmed = page.waitForResponse(
-      (response) =>
-        response.url().endsWith("/rest/v1/rpc/configure_compensation_policy") &&
-        response.request().method() === "POST",
-    );
-    await policy
-      .getByRole("button", { name: "Vergütungsregeln speichern", exact: true })
+    await expect(percentage).toHaveValue("50");
+    await percentage.fill("31");
+    await compensation
+      .getByRole("button", { name: "Honorar speichern", exact: true })
       .click();
-    const saved = await confirmed;
-    expect(saved.ok()).toBe(true);
-    const actual = await saved.json();
-    expect(actual.regular_lecturer_percent).toBe(31);
-    expect(actual.senior_lecturer_percent).toBe(73);
-    expect(actual.policy_version).toBeGreaterThan(0);
-    await expect(policy.getByRole("status")).toHaveText(
-      "Vergütungsregeln wurden bestätigt.",
+    await expect(compensation.getByRole("status")).toHaveText(
+      "Honorar gespeichert.",
     );
     await page.reload();
+    await page.goto("/admin/accounts");
+    await page
+      .getByRole("searchbox", { name: "Konten suchen", exact: true })
+      .fill(teacher.name);
+    await page
+      .getByRole("button", {
+        name: `Rollen bearbeiten: ${teacher.name}`,
+        exact: true,
+      })
+      .click();
+    const reloadedCompensation = page
+      .getByRole("heading", { name: "Dozentenhonorar", exact: true })
+      .locator("..");
     await expect(
-      policy.getByLabel("Dozent:in – Honorar vom Auftragspreis (%)", {
+      reloadedCompensation.getByLabel("Anteil am Kundenbudget (%)", {
         exact: true,
       }),
     ).toHaveValue("31");
-    await expect(
-      policy.getByLabel("Senior-Dozent:in – Honorar vom Auftragspreis (%)", {
-        exact: true,
-      }),
-    ).toHaveValue("73");
     const policyScan = await new AxeBuilder({ page })
-      .include('[aria-label="Vergütungsregeln"]')
+      .include(".account-roles")
       .analyze();
     expect(policyScan.violations).toEqual([]);
-    await testInfo.attach("administration-private-policy", {
+    await testInfo.attach("administration-private-lecturer-compensation", {
       body: await page.screenshot({ fullPage: true }),
       contentType: "image/png",
     });

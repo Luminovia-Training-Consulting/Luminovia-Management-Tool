@@ -27,11 +27,8 @@ test("password-only authentication global publication, descriptions/HTTPS links,
     description = "Fictional <script> lesson description stays text.";
   const viewerContext = await browser.newContext(),
     viewer = await viewerContext.newPage();
-  const now = new Date(),
-    eventDate = new Date(now);
-  eventDate.setUTCDate(15);
-  if (eventDate <= now) eventDate.setUTCMonth(eventDate.getUTCMonth() + 1, 15);
-  const day = `${eventDate.getUTCFullYear()}-${String(eventDate.getUTCMonth() + 1).padStart(2, "0")}-15`,
+  const eventDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+  const day = `${eventDate.getUTCFullYear()}-${String(eventDate.getUTCMonth() + 1).padStart(2, "0")}-${String(eventDate.getUTCDate()).padStart(2, "0")}`,
     start = `${day}T12:00`,
     end = `${day}T14:00`;
   try {

@@ -93,7 +93,9 @@ test("personal inbox, safe bulk read and DE/EN notification preferences persist"
     expect((await checked(reader.rpc("notification_preferences"))).chat).toBe(
       false,
     );
-    await page.getByLabel("Theme", { exact: true }).selectOption("dark");
+    await page
+      .locator(".settings-section .preferences select[aria-label='Theme']")
+      .selectOption("dark");
     await page.evaluate(() => document.fonts.ready);
     expect(
       (

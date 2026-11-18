@@ -73,7 +73,9 @@ test("push device consent is private, removable, bilingual and online-confirmed"
     await expect(
       panel.getByText("PRIVATE FOREIGN DEVICE", { exact: true }),
     ).toHaveCount(0);
-    await page.getByLabel("Sprache", { exact: true }).selectOption("en");
+    await page
+      .locator(".settings-section .preferences select[aria-label='Sprache']")
+      .selectOption("en");
     await expect(
       page.getByRole("heading", { name: "Push on your devices", exact: true }),
     ).toBeVisible();
