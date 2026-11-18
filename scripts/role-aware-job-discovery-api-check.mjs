@@ -39,7 +39,14 @@ await withApiFixture(
         p_cursor: cursor,
         p_limit: limit,
       });
-    assert.equal((await detail(regular, a)).amount, 200);
+    const roleState = await sql(
+      `select concat('regular=',coalesce((select string_agg(role,',' order by role)from public.user_roles where user_id=${q(regular.id)}),'none'),'; senior=',coalesce((select string_agg(role,',' order by role)from public.user_roles where user_id=${q(senior.id)}),'none'))`,
+    );
+    assert.equal(
+      (await detail(regular, a)).amount,
+      200,
+      `Regular lecturer quote mismatch; fixture roles: ${roleState}`,
+    );
     assert.equal((await detail(senior, a)).amount, 500);
     assert.equal((await detail(regular, a)).terms_version, 31);
     assert.equal((await detail(senior, a)).terms_version, 32);
