@@ -268,11 +268,15 @@ commit;`);
       const before = await snapshot();
       // The same genuinely issued Auth token must obey current DB roles and
       // activation, even when it already obtained a successful receipt.
+      const roleState = await sql(
+        `select jsonb_build_object('manager_authority',private.account_authority(${q(admin.id)}),'target_authority',private.account_authority(${q(target.id)}),'target_roles',(select jsonb_agg(role order by role)from public.user_roles where user_id=${q(target.id)}),'target_active',(select active from public.profiles where id=${q(target.id)}))`,
+      );
       await checked(
         admin.client.rpc("set_account_roles", {
           p_user_id: target.id,
           p_roles: ["participant"],
         }),
+        `Demote replacement recipient; role state: ${roleState}`,
       );
       assert.deepEqual(await accept(target, offer, request), {
         status: "not_eligible",
