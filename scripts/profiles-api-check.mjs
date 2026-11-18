@@ -379,7 +379,6 @@ try {
       service
         .from("client_organisation_memberships")
         .delete()
-        .eq("user_id", student.id)
         .eq("organisation_id", org),
       "Clean scoped course customer membership",
     );
