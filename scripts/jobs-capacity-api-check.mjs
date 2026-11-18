@@ -143,13 +143,13 @@ await withApiFixture(
       checks++;
       console.log(`PASS ${message}`);
     };
+    await passwordOnly(admin.client);
     assert.equal(
       (await admin.client.rpc("create_capacity_job", createArgs)).error?.code,
-      "42501",
-      "A signed-in administrator still needs actual password-only authentication",
+      "22023",
+      "The permissioned password-only admin reaches validation; gross pricing requires an organisation",
     );
-    assert.equal((await admin.client.rpc("job_board")).error?.code, "42501");
-    await passwordOnly(admin.client);
+    assert.ok(Array.isArray((await admin.client.rpc("job_board")).data));
     for (const capacity of [0, 21])
       assert.equal(
         (
