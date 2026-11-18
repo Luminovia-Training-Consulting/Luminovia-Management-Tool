@@ -169,7 +169,7 @@ await withTestDatabase("wiki_attachments", async ({ sql, actor }) => {
       "aal2",
     ),
   );
-  assert.equal(plan.can_confirm, false);
+  assert.equal(plan.can_confirm, false, JSON.stringify(plan));
   assert.ok(
     plan.blockers.some(
       (item) =>
