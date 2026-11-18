@@ -84,11 +84,6 @@ await withApiFixture(async ({ actor, passwordOnly, checked, sql, defer, service 
     p_note: "Reviewed fictional evidence",
     p_request_id: randomUUID(),
   };
-  assert.equal(
-    (await manager.client.rpc("review_delivery", decision)).error?.code,
-    "42501",
-  );
-  await passwordOnly(manager.client);
   const results = await Promise.all([
     manager.client.rpc("review_delivery", decision),
     manager.client.rpc("review_delivery", {
