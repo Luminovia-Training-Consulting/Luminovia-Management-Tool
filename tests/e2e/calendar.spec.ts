@@ -413,12 +413,9 @@ test("browser history preserves a personal draft until explicitly discarded", as
 }) => {
   const owner = await actor("Fictional history calendar owner", "lecturer");
   await login(page, owner.email);
-  // Create a real prior history entry without depending on desktop-only nav.
-  await page.goto("/");
-  await page.goto("/calendar");
-  await page.goBack();
-  await expect(page).toHaveURL(/\/$/);
-  await page.goForward();
+  // Use the portal's SPA navigation so React Router can block the real
+  // browser-history transition while the event form contains a draft.
+  await page.getByRole("link", { name: "Kalender", exact: true }).click();
   await expect(page).toHaveURL(/\/calendar/);
   await page
     .getByRole("button", { name: "Privaten Termin hinzufügen" })

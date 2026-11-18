@@ -68,6 +68,10 @@ test("manual unread survives reload and is personal to each member", async ({
       }),
     ).toBeVisible();
     await expect(otherRow.getByLabel("Als ungelesen markiert")).toHaveCount(0);
+    // The owner is still viewing this room after reload. Leave and reopen it so
+    // the test exercises the actual manual-unread clearing transition.
+    await page.goto("/");
+    await page.goto("/chats");
     const cleared = page.waitForResponse(
       (response) =>
         response.url().includes("/rpc/clear_chat_manual_unread") &&

@@ -108,6 +108,8 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
       /3 important unread updates.*Quiet hours active.*20 unread in total/,
     );
     await page.reload();
+    await delivery.locator("summary").click();
+    await expect(delivery).toHaveJSProperty("open", true);
     await expect(
       quietSettings.getByLabel("Enable daily quiet hours", { exact: true }),
     ).toBeChecked();
@@ -134,7 +136,9 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
       .getByLabel("Enable daily quiet hours", { exact: true })
       .check();
     await context.setOffline(false);
-    await page.getByLabel("Theme", { exact: true }).selectOption("dark");
+    await page
+      .locator(".settings-section .preferences select[aria-label='Theme']")
+      .selectOption("dark");
     await page.goto("/notifications");
     await expect(page.locator(".inbox-list > li")).toHaveCount(20);
     await expect(
@@ -191,6 +195,8 @@ test("saved quiet hours preserve20unread updates while the bell counts3critical 
       /3 important unread updates.*20 unread in total/,
     );
     await page.goto("/settings");
+    await delivery.locator("summary").click();
+    await expect(delivery).toHaveJSProperty("open", true);
     await quietSettings
       .getByLabel("Enable daily quiet hours", { exact: true })
       .uncheck();

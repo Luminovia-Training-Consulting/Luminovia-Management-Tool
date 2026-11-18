@@ -216,6 +216,8 @@ test("email channel and IANA quiet hours persist across language, reload and off
       version: 2,
     });
     await page.reload();
+    await delivery.locator("summary").click();
+    await expect(delivery).toHaveJSProperty("open", true);
     await expect(
       emailSettings.getByRole("checkbox", {
         name: "Receive additional alerts by email",
