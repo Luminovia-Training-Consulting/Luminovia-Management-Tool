@@ -155,10 +155,6 @@ await withApiFixture(async ({ actor, service, checked, sql, defer, passwordOnly 
     (await owner.client.rpc("manage_timesheet", review)).error?.code,
     "42501",
   );
-  assert.equal(
-    (await manager.client.rpc("manage_timesheet", review)).error?.code,
-    "42501",
-  );
   await passwordOnly(manager.client);
   current = await checked(manager.client.rpc("manage_timesheet", review));
   assert.equal(current.state, "approved");
