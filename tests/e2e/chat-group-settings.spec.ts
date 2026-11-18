@@ -173,6 +173,13 @@ test("group owner changes information and a member can only read it", async ({
       .click();
     await expect(page.getByRole("heading", { name: updated })).toHaveCount(0);
     await other.reload();
+    // On narrow screens a selected conversation hides the directory until
+    // the explicit back control returns to the room list.
+    const backToRooms = other.getByRole("button", {
+      name: /^(Unterhaltungen|Conversations)$/,
+      exact: true,
+    });
+    if (await backToRooms.isVisible()) await backToRooms.click();
     await other
       .locator(".chat-room-row")
       .filter({ hasText: updated })
