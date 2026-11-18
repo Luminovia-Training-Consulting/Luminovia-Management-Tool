@@ -1382,5 +1382,7 @@ The migration-order regression now accepts later independent migrations while pr
 - [x] On `main`, correct four browser acceptance assumptions exposed by exact-head run `44309193437`; local lint, typecheck, formatting and whitespace checks pass.
 - [x] Review the supplied last browser report (`e5ce64f3`) and correct the search test to enter `/search` directly after authentication rather than waiting for responsive shell navigation.
 - [x] Move the persistent local GitHub preview out of the occupied `56xxx` API range; its config/runtime tests pass 19/19.
-- [ ] Update and verify the local-preview administrator fence and displayed endpoints for the new `64xxx` ports.
-- [ ] Start the exact pushed main locally, then continue fixing desktop/mobile and system CI failures until exact-head required checks pass.
+- [x] Update and verify the local-preview administrator fence and displayed endpoints for the new `64xxx` ports; focused preview/bootstrap tests pass 24/24.
+- [x] Start exact pushed main `3c7b4101` locally with HTTP 200 portal and healthy Auth checks.
+- [x] Align global-calendar browser viewer fixture with active-role access after local E2E showed retired participant-only accounts cannot sign in to portal pages.
+- [ ] Complete local desktop/mobile browser phase and the current exact-head CI run; fix all new failures and repeat on the newest main SHA.

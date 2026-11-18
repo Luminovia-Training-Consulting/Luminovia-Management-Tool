@@ -19,7 +19,9 @@ test("password-only authentication global publication, descriptions/HTTPS links,
 }, testInfo) => {
   test.setTimeout(120000);
   const admin = await actor("Fictional global calendar admin", "admin"),
-    reader = await actor("Fictional global calendar reader", "participant"),
+    // Participant-only accounts no longer have portal access; use an active
+    // non-management account to exercise the public published-event view.
+    reader = await actor("Fictional global calendar reader", "lecturer"),
     service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!),
     prefix = `Calendar-${randomUUID().slice(0, 8)}`,
     title = `${prefix} initial`,
