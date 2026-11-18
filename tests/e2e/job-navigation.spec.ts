@@ -107,7 +107,9 @@ test("opens only the assigned course, member chat and own assignment calendar", 
   await page.goto(`/jobs/${job}`);
   await page.getByRole("link", { name: "Zum Kalender", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/calendar\\?assignment=${job}`));
-  await expect(page.locator(".fc-toolbar-title")).toContainText("2051");
+  await expect(
+    page.getByRole("grid").getByRole("link", { name: new RegExp(title) }),
+  ).toBeVisible();
   await page.goto(`/jobs/${job}`);
   await checked(
     service
