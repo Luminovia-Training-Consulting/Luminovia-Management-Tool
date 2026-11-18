@@ -27,7 +27,7 @@
 - [x] Trace the next cleanup failure to a blocking `notifications_user_id_fkey`; add a forward cascade for recipient-owned notifications and an account database regression covering Auth-user/profile/inbox deletion.
 - [ ] Validate the notification-cascade migration and account regression in fresh PostgreSQL replay, then complete all current-head CI and retained-data self-host acceptance.
 - [x] Align the company-course Auth/API fixture with current roles: use an active lecturer for enrolled-user deadline/success checks, and keep a separate retired participant to assert request-boundary denial (`42501`).
-- [x] Use an active unlinked client for the course-enrolment building-block RLS sequence: no rows before enrolment, the linked block while enrolled, and no rows after removal. Retired participant API denials remain covered by the dedicated account/course checks.
+- [x] Use an unlinked client with a retained participant role for the course-enrolment RLS sequence: the active role passes request authorization, while enrolment is 0/1/0 scoped. Retired participant-only API denial remains covered separately.
 - [x] Configure the fictional lecturer's individual 31% rate in the building-block API fixture so offer rounding follows the current compensation model rather than role-wide defaults.
 
 ## Current delivered-feature API parity — 18 November 2026

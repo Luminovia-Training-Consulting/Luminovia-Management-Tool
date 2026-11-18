@@ -17,6 +17,13 @@ await withApiFixture(
     const runs = [],
       templates = [],
       orgs = [];
+    // Keep the retired enrolment marker as secondary history while the active
+    // client role authorizes this account at the current request boundary.
+    await checked(
+      service
+        .from("user_roles")
+        .insert({ user_id: learner.id, role: "participant" }),
+    );
     // Cleanup is scoped to the IDs created below; canonical catalogue rows and
     // unrelated fixtures are retained. Auth deletion follows dependency cleanup.
     defer(async () => {
