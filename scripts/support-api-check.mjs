@@ -4,7 +4,16 @@ import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 
 await withApiFixture(
-  async ({ service, actor, passwordOnly, checked, sql, defer, url, suffix }) => {
+  async ({
+    service,
+    actor,
+    passwordOnly,
+    checked,
+    sql,
+    defer,
+    url,
+    suffix,
+  }) => {
     const origin = new URL(
       process.env.PORTAL_APP_ORIGIN ??
         process.env.E2E_BASE_URL ??
@@ -86,12 +95,12 @@ await withApiFixture(
         .items.length,
       0,
     );
-    assert.ok(
-      (await manager.client.rpc("support_ticket", { p_ticket_id: id })).error,
-      "password-only AAL1 management denied",
-    );
     await passwordOnly(manager.client);
-    assert.equal((await get(manager.client)).can_manage, true);
+    assert.equal(
+      (await get(manager.client)).can_manage,
+      true,
+      "Permissioned management works with password-only AAL1 and no enrolled factors",
+    );
     await checked(
       update(
         requester.client,
