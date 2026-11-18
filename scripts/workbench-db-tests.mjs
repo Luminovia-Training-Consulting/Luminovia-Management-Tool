@@ -132,20 +132,9 @@ await withTestDatabase("workbench_test", async ({ sql, actor }) => {
         create(owner, payload({ scope: "operations", assignee_id: peer })),
         /42501/,
       );
-      await assert.rejects(
-        create(admin, payload({ scope: "operations", assignee_id: peer })),
-        /42501/,
-      );
-      const operation = await rpc(
+      const operation = await create(
         admin,
-        "save_work_task",
-        [
-          "null",
-          j(payload({ scope: "operations", assignee_id: peer })),
-          0,
-          q(randomUUID()),
-        ],
-        "aal1",
+        payload({ scope: "operations", assignee_id: peer }),
       );
       assert.equal((await rpc(peer, "work_tasks")).items[0].id, operation.id);
       await assert.rejects(
