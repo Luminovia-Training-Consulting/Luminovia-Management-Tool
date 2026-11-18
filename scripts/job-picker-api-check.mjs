@@ -110,10 +110,13 @@ await withApiFixture(
       "Create exact course schedule metadata",
     );
     for (const purpose of ["job_attachment", "participant_course"]) {
-      assert.equal(
-        (await admin.client.rpc("job_picker", { p_purpose: purpose })).error
-          ?.code,
-        "42501",
+      assert.ok(
+        Array.isArray(
+          (
+            await admin.client.rpc("job_picker", { p_purpose: purpose })
+          ).data?.items,
+        ),
+        `Current admin permission authorizes the ${purpose} picker`,
       );
       for (const who of [teacher, learner, client])
         assert.equal(
