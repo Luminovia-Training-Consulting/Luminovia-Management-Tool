@@ -410,10 +410,13 @@ await withTestDatabase(
           rpc(teacher, "finance_forecast", [...range, "0.5"]),
           /42501/,
         );
-        await assert.rejects(
-          rpc(admin, "finance_forecast", [...range, "0.5"]),
-          /42501/,
+        const adminForecast = await rpc(
+          admin,
+          "finance_forecast",
+          [...range, "0.5"],
+          "aal1",
         );
+        assert.equal(adminForecast.gross_authorized, true);
         const limited = await rpc(
           manager,
           "finance_forecast",
@@ -448,7 +451,9 @@ await withTestDatabase(
    (${q(privateTask)},${q(peer)},${q(peer)},'private','PRIVATE peer calendar-derived task','open','2020-01-15T10:00:00Z',${q(randomUUID())},'{}'),
    (${q(shared)},${q(manager)},${q(manager)},'operations','Fictional shared overdue task','open','2020-01-15T10:00:00Z',${q(randomUUID())},'{}');`);
         await assert.rejects(rpc(teacher, "control_center", range), /42501/);
-        await assert.rejects(rpc(admin, "control_center", range), /42501/);
+        const adminCenter = await rpc(admin, "control_center", range, "aal1");
+        assert.ok(Array.isArray(adminCenter.overdue_tasks));
+        assert.ok(!JSON.stringify(adminCenter).includes(privateTask));
         const center = await rpc(manager, "control_center", range, "aal1");
         assert.ok(center.overdue_tasks.some((t) => t.id === shared));
         assert.ok(!JSON.stringify(center).includes(privateTask));
