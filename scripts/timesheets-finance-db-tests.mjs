@@ -259,9 +259,11 @@ await withTestDatabase(
           rpc(peer, "assignment_confirmation", [q(first.claim)]),
           /42501/,
         );
-        await assert.rejects(
-          rpc(admin, "assignment_confirmation", [q(first.claim)]),
-          /42501/,
+        assert.equal(
+          (
+            await rpc(admin, "assignment_confirmation", [q(first.claim)])
+          ).hash,
+          confirmation.hash,
         );
         assert.equal(
           (
