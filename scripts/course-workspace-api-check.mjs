@@ -8,7 +8,7 @@ await withApiFixture(
     const admin = await actor("course-workspace-admin", "admin"),
       teacher = await actor("course-workspace-teacher", "lecturer"),
       learner = await actor("course-workspace-learner", "client"),
-      peer = await actor("course-workspace-peer", "participant"),
+      peer = await actor("course-workspace-peer", "lecturer"),
       client = await actor("course-workspace-client", "client");
     // Keep a historical participant enrolment on an active company account:
     // standalone participant accounts are retired at the REST boundary.
