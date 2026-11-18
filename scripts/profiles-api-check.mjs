@@ -315,10 +315,18 @@ try {
     ),
     [],
   );
+  await checked(
+    service
+      .from("client_organisation_memberships")
+      .update({ removed_at: new Date().toISOString() })
+      .eq("user_id", student.id)
+      .eq("organisation_id", org),
+    "Revoke scoped customer profile access",
+  );
   assert.deepEqual(
     await checked(
       student.client.rpc("people_directory"),
-      "No staff profile after revoke",
+      "No staff profile after company membership revocation",
     ),
     [],
   );
