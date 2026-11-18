@@ -315,6 +315,12 @@ try {
     ),
     [],
   );
+  const companyDirectory = await checked(
+    student.client.rpc("people_directory"),
+    "Company staff directory after course removal",
+  );
+  assert.equal(companyDirectory.length, 1);
+  assert.equal(companyDirectory[0].id, teacher.id);
   await checked(
     service
       .from("client_organisation_memberships")
@@ -326,7 +332,7 @@ try {
   assert.deepEqual(
     await checked(
       student.client.rpc("people_directory"),
-      "No staff profile after company membership revocation",
+      "Directory denied after company membership revocation",
     ),
     [],
   );
