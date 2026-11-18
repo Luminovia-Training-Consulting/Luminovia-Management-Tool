@@ -506,7 +506,7 @@ test("PR deployment metadata is manual and runs only trusted main metadata code"
 // Exercise the maintained shell gate: a fast ready/main/manual classification must
 // independently fail even if a future classifier regresses.
 test("scope shell preflight rejects fast ready profiles and accepts only explicit Draft fast paths", () => {
-  for (const [key, job] of Object.entries({
+  for (const job of Object.values({
     verify: workflow("ci").jobs.verify,
     selfhost: workflow("ci").jobs["verify-selfhost"],
     browser: workflow("ci").jobs["verify-browser"],

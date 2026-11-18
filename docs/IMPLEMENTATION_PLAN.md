@@ -1359,3 +1359,10 @@ The migration-order regression now accepts later independent migrations while pr
 
 - [x] Preserve the already-deployed profile-directory migration version and move only the new owned-deletion forward migration to unique version `20261118172000` after selfhost replay detected the duplicate key.
 - [ ] Re-run current-head migration replay, system verification and selfhost compatibility on the corrected migration chain.
+
+### Current-main CI follow-up — 18 November 2026
+
+- [x] Review the stale remote bug-hunt branches; current main now contains the shifted recurring ICS and ambiguous DST deadline fixes with regression coverage.
+- [x] Split full system verification and browser acceptance into separate CI jobs so the full suite can complete within the workflow timeout.
+- [x] Fix the one unused loop binding reported by lint; eight focused Node policy tests, full ESLint and formatting pass locally.
+- [ ] Push the lint repair and work-log update directly to `main`; require green exact-head system, selfhost, browser, security and fast checks before closing this follow-up.

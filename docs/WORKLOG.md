@@ -2612,3 +2612,9 @@ Exact-head CI follow-up: the newly permissioned all-contract read succeeds and i
 Exact-head CI follow-up: an admin with `finance.gross.read` was still expected to be blocked by the retired MFA/AAL gate. The commission API test now requires that privileged role to receive a typed report under password-only Auth, while management, lecturers and senior lecturers remain denied; editable metadata is still explicitly ignored.
 
 The initial migration-version repair was incomplete because the old profile migration path was absent in the working checkout before rebasing. Corrected the actual source tree: restored the previously shipped profile migration path and moved the new deletion migration to `20261118172000`.
+
+## 18 November 2026 — current-main CI and branch cleanup follow-up
+
+The two bug-hunt branches were reviewed against current `main`; the uncovered recurring-ICS and ambiguous-DST deadline fixes were automatically merged in `427de191` with their regression coverage. No PR was open. A later main change `4726bd44` split full system verification from browser acceptance after earlier full runs were canceled while the combined verify step was still running.
+
+The exact-head run for `4726bd44` passed tests/coverage, formatting, code quality, build and typecheck, and Security analysis. Lint found one unused loop key in `scripts/runtime-local-delivery-policy.test.mjs`; removing the unused binding passes all eight focused Node policy tests, full ESLint, source formatting and `git diff --check` locally. The lint repair and this log update still need a direct `main` push, followed by complete exact-head system, selfhost and browser CI. No production deployment or data change occurred.
