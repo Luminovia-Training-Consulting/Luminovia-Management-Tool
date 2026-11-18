@@ -130,6 +130,19 @@ test("client full-fee request becomes a net-only lecturer assignment with immuta
   const outsider = await account("client", "OtherCustomer");
   const lecturer = await account("lecturer", "Teacher");
   const owner = await account("admin", "Owner");
+  const ownerApi = await signedIn(owner);
+  expect(
+    (
+      await ownerApi.rpc("save_lecturer_compensation", {
+        p_user_id: lecturer.id,
+        p_mode: "percent",
+        p_percent: 31,
+        p_daily_rate: 200,
+        p_currency: "EUR",
+        p_expected_version: 1,
+      })
+    ).error,
+  ).toBeNull();
   const orgName = `Client QA ${randomUUID().slice(0, 8)}`;
   const org = await service()
     .from("organisations")

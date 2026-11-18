@@ -46,6 +46,25 @@ test("Course source template plans ten real sessions and one linked net-only tea
   const tag = randomUUID().slice(0, 8),
     admin = await actor(`Course Administration ${tag}`, "admin"),
     teacher = await actor(`Course Lecturer ${tag}`, "lecturer");
+  const adminApi = api(process.env.SUPABASE_ANON_KEY!);
+  expect(
+    (
+      await adminApi.auth.signInWithPassword({
+        email: admin.email,
+        password: process.env.E2E_PASSWORD!,
+      })
+    ).error,
+  ).toBeNull();
+  await checked(
+    adminApi.rpc("save_lecturer_compensation", {
+      p_user_id: teacher.id,
+      p_mode: "percent",
+      p_percent: 31,
+      p_daily_rate: 200,
+      p_currency: "EUR",
+      p_expected_version: 1,
+    }),
+  );
   const service = api(process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const block = await checked(
     service
