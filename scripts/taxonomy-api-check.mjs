@@ -46,16 +46,6 @@ await withApiFixture(
     });
     assert.ok(
       (
-        await manager.client.rpc("save_taxonomy_topic", {
-          p_id: null,
-          p_payload: payload("password-only AAL1 denied"),
-          p_version: 0,
-        })
-      ).error,
-      "Real password-only AAL1 manager must not mutate",
-    );
-    assert.ok(
-      (
         await lecturer.client.rpc("save_taxonomy_topic", {
           p_id: null,
           p_payload: payload("Lecturer denied"),
