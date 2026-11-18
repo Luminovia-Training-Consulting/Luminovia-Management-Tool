@@ -180,6 +180,7 @@ try {
       job_id: job,
       lecturer_id: teacher.id,
       idempotency_key: randomUUID(),
+      status: "confirmed",
       amount: 100,
       total_amount: 100,
       currency: "EUR",
