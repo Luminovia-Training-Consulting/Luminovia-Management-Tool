@@ -10,6 +10,11 @@ await withApiFixture(
       peer = await actor("passport-peer", "lecturer"),
       admin = await actor("passport-admin", "admin"),
       learner = await actor("passport-learner", "participant");
+    await checked(
+      service
+        .from("user_roles")
+        .insert({ user_id: learner.id, role: "client" }),
+    );
     const topic = randomUUID();
     defer(async () => {
       await sql(
@@ -17,14 +22,12 @@ await withApiFixture(
       );
     });
     await checked(
-      service
-        .from("topics")
-        .insert({
-          id: topic,
-          label_de: "Fictional Pass Fachgebiet",
-          label_en: "Fictional passport topic",
-          kind: "topic",
-        }),
+      service.from("topics").insert({
+        id: topic,
+        label_de: "Fictional Pass Fachgebiet",
+        label_en: "Fictional passport topic",
+        kind: "topic",
+      }),
     );
     await checked(
       teacher.client
