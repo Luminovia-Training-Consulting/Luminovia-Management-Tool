@@ -159,7 +159,7 @@ test("email channel and IANA quiet hours persist across language, reload and off
     await page.goto("/settings");
     const delivery = page
       .locator("details.settings-section")
-      .filter({ hasText: "Ruhezeiten & Zustellung" });
+      .filter({ hasText: /Ruhezeiten & Zustellung|Quiet hours & delivery/ });
     await delivery.locator("summary").click();
     await expect(delivery).toHaveJSProperty("open", true);
     // The form owning the named email fieldset includes its save button and

@@ -66,7 +66,9 @@ test("a real lecturer follows the permission-aware portal tour without changing 
   await expect(
     guide.getByRole("combobox", { name: "Bereich auswählen", exact: true }),
   ).toHaveValue("jobs");
-  await page.getByLabel("Sprache", { exact: true }).selectOption("en");
+  await page
+    .locator(".topbar-actions .preferences select[aria-label='Sprache']")
+    .selectOption("en");
   const englishGuide = page.getByRole("region", {
     name: "Portal tour",
     exact: true,

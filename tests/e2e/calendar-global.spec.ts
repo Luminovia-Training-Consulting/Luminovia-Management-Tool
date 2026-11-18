@@ -35,7 +35,7 @@ test("password-only authentication global publication, descriptions/HTTPS links,
     await adminLogin(page, admin);
     await page.goto("/calendar");
     await page
-      .getByRole("button", { name: "Globale Termine", exact: true })
+      .getByRole("button", { name: /^(Globale Termine|Global events)$/ })
       .click();
     const management = page.getByRole("region", {
       name: "Globale Termine verwalten",
@@ -65,11 +65,11 @@ test("password-only authentication global publication, descriptions/HTTPS links,
     let row = management
       .getByRole("article")
       .filter({ has: page.getByRole("heading", { name: title, exact: true }) });
-    await expect(row.getByText("Entwurf", { exact: true })).toBeVisible();
+    await expect(row.getByText(/^(Entwurf|Draft)$/)).toBeVisible();
     await login(viewer, reader.email);
     await viewer.goto("/calendar");
     await viewer
-      .getByRole("button", { name: "Globale Termine", exact: true })
+      .getByRole("button", { name: /^(Globale Termine|Global events)$/ })
       .click();
     await expect(viewer.locator(".global-event-public-status>p")).toBeVisible();
     await expect(viewer.getByText(title, { exact: true })).toHaveCount(0);
@@ -84,7 +84,7 @@ test("password-only authentication global publication, descriptions/HTTPS links,
     ).toBeVisible();
     await viewer.reload();
     await viewer
-      .getByRole("button", { name: "Globale Termine", exact: true })
+      .getByRole("button", { name: /^(Globale Termine|Global events)$/ })
       .click();
     await viewer
       .locator(".calendar-panel")

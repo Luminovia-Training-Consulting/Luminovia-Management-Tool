@@ -80,7 +80,6 @@ test("per-position creation, authorized keyboard/pointer board and partial accep
     capacity_basis: "per_position",
     status: "draft",
   });
-  await page.goto("/jobs");
   const board = page.getByRole("region", {
     name: "Auftragsboard",
     exact: true,

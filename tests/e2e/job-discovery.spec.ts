@@ -53,7 +53,7 @@ test("bounded server discovery, saved-view persistence and private actor boundar
     await expect(
       page.locator(".discovery-filter-disclosure"),
     ).not.toHaveAttribute("open");
-    await page.getByText("Filter & Ansichten", { exact: true }).click();
+    await page.getByText(/^(Filter & Ansichten|Filters & views)$/).click();
     await expect(page.locator(".jobs-grid")).toBeVisible();
     const initialRequests: number[] = [];
     const listener = (request: { url: () => string }) => {
@@ -178,7 +178,7 @@ test("bounded server discovery, saved-view persistence and private actor boundar
       .click();
     await expect(dialog).not.toBeVisible();
     await page.reload();
-    await page.getByText("Filter & Ansichten", { exact: true }).click();
+    await page.getByText(/^(Filter & Ansichten|Filters & views)$/).click();
     await expect(
       page.getByLabel("Choose a view", { exact: true }),
     ).toBeVisible();

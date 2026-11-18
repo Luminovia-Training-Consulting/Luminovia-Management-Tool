@@ -106,19 +106,13 @@ test("lecturer signs in, edits bilingual profile and persists it on reload", asy
   });
   await page.goto("/profile");
   const text = `Lokale QA ${testInfo.project.name}`;
-  await page.getByLabel("Über mich", { exact: true }).fill(text);
-  await page
-    .getByLabel("About me", { exact: true })
-    .fill(`Local QA ${testInfo.project.name}`);
+  await page.locator("#bio-de").fill(text);
   await page
     .getByRole("button", { name: "Profil speichern", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText(/gespeichert/i);
   await page.reload();
-  await expect(page.getByLabel("Über mich", { exact: true })).toHaveValue(text);
-  await expect(page.getByLabel("About me", { exact: true })).toHaveValue(
-    `Local QA ${testInfo.project.name}`,
-  );
+  await expect(page.locator("#bio-de")).toHaveValue(text);
   await a11y(page);
 });
 

@@ -63,7 +63,15 @@ export const lifecycleQuery = (actor: string, job: string) =>
         .rpc("job_lifecycle", { p_job_id: job })
         .abortSignal(signal);
       if (error) throw error;
-      return data as JobLifecycle;
+      const lifecycle = data as JobLifecycle;
+      return {
+        ...lifecycle,
+        claims: lifecycle.claims.map((claim) => ({
+          ...claim,
+          sessions: claim.sessions ?? [],
+          events: claim.events ?? [],
+        })),
+      };
     },
   });
 

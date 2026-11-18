@@ -159,13 +159,33 @@ describe("server-confirmed job lifecycle operations", () => {
 
 describe("lifecycle reads and connected cache refresh", () => {
   it("separates actors and jobs and forwards the actual cancellation signal", async () => {
-    const data = { version: 3, can_manage: false, claims: [] };
+    const data = {
+      version: 3,
+      can_manage: false,
+      can_edit: false,
+      can_duplicate: false,
+      claims: [
+        {
+          id: "claim-a",
+          lecturer_id: "lecturer-a",
+          lecturer_name: "Fictional lecturer",
+          status: "confirmed" as const,
+          created_at: "2030-01-01T00:00:00Z",
+          can_cancel: false,
+          sessions: null,
+          events: null,
+        },
+      ],
+    };
     const abortSignal = vi.fn().mockResolvedValue({ data, error: null });
     rpc.mockReturnValue({ abortSignal });
     const cache = client();
     await expect(
       cache.fetchQuery(lifecycleQuery("actor-a", "job-a")),
-    ).resolves.toBe(data);
+    ).resolves.toMatchObject({
+      ...data,
+      claims: [{ ...data.claims[0], sessions: [], events: [] }],
+    });
     expect(rpc).toHaveBeenCalledExactlyOnceWith("job_lifecycle", {
       p_job_id: "job-a",
     });
