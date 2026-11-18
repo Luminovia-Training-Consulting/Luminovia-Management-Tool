@@ -216,7 +216,15 @@ test("email channel and IANA quiet hours persist across language, reload and off
       version: 2,
     });
     await page.reload();
-    await delivery.locator("summary").click();
+    // Browsers may restore a <details> disclosure's prior state across reload.
+    // Ensure it is open instead of blindly toggling it closed.
+    if (
+      !(await delivery.evaluate(
+        (element) => (element as HTMLDetailsElement).open,
+      ))
+    ) {
+      await delivery.locator("summary").click();
+    }
     await expect(delivery).toHaveJSProperty("open", true);
     await expect(
       emailSettings.getByRole("checkbox", {

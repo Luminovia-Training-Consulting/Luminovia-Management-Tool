@@ -1377,3 +1377,7 @@ The migration-order regression now accepts later independent migrations while pr
 - [x] Split full system verification and browser acceptance into separate CI jobs so the full suite can complete within the workflow timeout.
 - [x] Fix the one unused loop binding reported by lint; eight focused Node policy tests, full ESLint and formatting pass locally.
 - [ ] Push the lint repair and work-log update directly to `main`; require green exact-head system, selfhost, browser, security and fast checks before closing this follow-up.
+
+- [x] Confirm there are no open PRs or extra remote branches; PR #59's lazy-route bug-hunt work is already merged into `main`.
+- [x] On `main`, correct four browser acceptance assumptions exposed by exact-head run `44309193437`; local lint, typecheck, formatting and whitespace checks pass.
+- [ ] Continue fixing the remaining desktop/mobile browser failures from `44309193437`, then push to `main` and verify every required exact-head CI job is green.

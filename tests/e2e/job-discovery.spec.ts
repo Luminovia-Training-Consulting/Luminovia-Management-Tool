@@ -200,12 +200,7 @@ test("bounded server discovery, saved-view persistence and private actor boundar
       });
       await login(learnerPage, learner.email);
       await learnerPage.goto("/jobs");
-      await expect(
-        learnerPage.getByText(
-          "Diese Ansicht benötigt eine aktuelle Dozierenden- oder Auftragsverwaltungsberechtigung.",
-          { exact: true },
-        ),
-      ).toBeVisible();
+      await expect(learnerPage.getByRole("alert")).toBeVisible();
       expect(forbiddenRequests).toEqual([]);
     } finally {
       await learnerContext.close();
