@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 
-await withApiFixture(async ({ actor, passwordOnly, checked, sql, defer, service }) => {
+await withApiFixture(async ({ actor, checked, sql, defer, service }) => {
   const teacher = await actor("delivery-teacher", "lecturer"),
     peer = await actor("delivery-peer", "lecturer"),
     manager = await actor("delivery-manager", "admin"),
