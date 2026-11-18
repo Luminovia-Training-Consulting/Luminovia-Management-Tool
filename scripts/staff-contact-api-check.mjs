@@ -37,7 +37,11 @@ await withApiFixture(async ({ actor, checked, service }) => {
     phone: "+49 40 123456",
   });
   for (const who of [learner, client])
-    assert.deepEqual(await contact(who), { email: null, phone: null });
+    assert.equal(
+      (await who.client.rpc("person_contact", { p_user_id: owner.id })).error
+        ?.code,
+      "42501",
+    );
   assert.equal(
     (
       await owner.client.rpc("save_contact_visibility_preferences", {
