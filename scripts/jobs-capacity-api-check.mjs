@@ -267,8 +267,8 @@ await withApiFixture(
         })),
       "Read actual lecturer-visible net offer",
     );
-    assert.equal(Number(offer.amount), 31);
-    assert.equal(Number(offer.total_amount), 31);
+    assert.equal(Number(offer.amount), 50.01);
+    assert.equal(Number(offer.total_amount), 50.01);
     assert.equal(offer.capacity, 3);
     assert.ok(
       !Object.keys(offer).some((key) => /gross|platform|commission/.test(key)),
@@ -326,7 +326,7 @@ await withApiFixture(
       );
       assert.equal(own.length, 1);
       assert.equal(own[0].id, winner.result.claim_id);
-      assert.equal(Number(own[0].total_amount), 31);
+      assert.equal(Number(own[0].total_amount), 50.01);
       assert.equal(own[0].terms, offer.terms);
       assert.equal(own[0].terms_version, Math.floor(offer.terms_version / 10));
       assert.ok(
@@ -457,10 +457,10 @@ await withApiFixture(
           assert.equal(row.capacity, 3);
           assert.equal(row.pricing_model, "commission");
           assert.equal(Number(row.gross_total_amount), 100.01);
-          assert.equal(Number(row.platform_percent), 69);
-          // Residual conservation follows the fictional test policy.
-          assert.equal(Number(row.platform_total_amount), 69.01);
-          assert.equal(Number(row.lecturer_net_total_amount), 31);
+          assert.equal(Number(row.platform_percent), 50);
+          // The personal default applies; the residual remains exact in cents.
+          assert.equal(Number(row.platform_total_amount), 50);
+          assert.equal(Number(row.lecturer_net_total_amount), 50.01);
         }
         return rows;
       };
@@ -489,7 +489,7 @@ await withApiFixture(
       "22023",
     );
     pass(
-      "capacity-three gross budget stays300.03, each accepted net stays31.00 and the client counts one course",
+      "capacity-three gross budget stays300.03, each accepted personal-default net stays50.01 and the client counts one course",
     );
 
     const cancelled = winners[0],
