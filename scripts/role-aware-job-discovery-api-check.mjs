@@ -7,13 +7,29 @@ await withApiFixture(
   async ({ actor, passwordOnly, checked, sql, defer, service, suffix }) => {
     const regular = await actor("discovery-role-regular", "lecturer"),
       senior = await actor("discovery-role-senior", "senior_lecturer"),
-      manager = await actor("discovery-role-manager", "management");
+      manager = await actor("discovery-role-manager", "management"),
+      admin = await actor("discovery-role-admin", "admin");
     await passwordOnly(manager.client);
+    await passwordOnly(admin.client);
+    for (const [lecturer, percent] of [
+      [regular, 20],
+      [senior, 50],
+    ])
+      await checked(
+        admin.client.rpc("save_lecturer_compensation", {
+          p_user_id: lecturer.id,
+          p_mode: "percent",
+          p_percent: percent,
+          p_daily_rate: 200,
+          p_currency: "EUR",
+          p_expected_version: 1,
+        }),
+      );
     const org = randomUUID(),
       a = randomUUID(),
       b = randomUUID(),
       customer = `Fictional role discovery ${suffix}`,
-      users = [regular.id, senior.id, manager.id];
+      users = [regular.id, senior.id, manager.id, admin.id];
     // Only these fixture identities/IDs are removed; no global policy is installed or changed.
     defer(async () => {
       await sql(
@@ -48,11 +64,11 @@ await withApiFixture(
       `Regular lecturer quote mismatch; fixture roles: ${roleState}`,
     );
     assert.equal((await detail(senior, a)).amount, 500);
-    assert.equal((await detail(regular, a)).terms_version, 31);
-    assert.equal((await detail(senior, a)).terms_version, 32);
+    assert.equal((await detail(regular, a)).terms_version, 2000031);
+    assert.equal((await detail(senior, a)).terms_version, 2000032);
     const first = await checked(page(regular, null, 1)),
       next = await checked(page(regular, first.next_cursor, 1));
-    assert.deepEqual([first.items[0].id, next.items[0].id], [a, b]);
+    assert.deepEqual([first.items[0].id, next.items[0].id], [b, a]);
     assert.deepEqual(
       (await checked(page(senior))).items.map((i) => i.id),
       [b, a],
@@ -66,14 +82,14 @@ await withApiFixture(
     );
     const narrowed = await checked(
       regular.client.rpc("job_discovery", {
-        p_filters: { ...filter, min_total: 250 },
+        p_filters: { ...filter, min_total: 150 },
         p_cursor: null,
         p_limit: 50,
       }),
     );
     assert.deepEqual(
       narrowed.items.map((i) => i.id),
-      [b],
+      [a],
     );
     await checked(
       service
@@ -84,13 +100,13 @@ await withApiFixture(
       (await page(regular, first.next_cursor, 1)).error.code,
       "22023",
     );
-    assert.equal((await detail(regular, a)).terms_version, 32);
-    assert.equal((await detail(regular, a)).amount, 500);
+    assert.equal((await detail(regular, a)).terms_version, 2000032);
+    assert.equal((await detail(regular, a)).amount, 200);
     const stale = await checked(
       regular.client.rpc("claim_job", {
         p_job_id: a,
         p_idempotency_key: randomUUID(),
-        p_terms_version: 31,
+        p_terms_version: 2000031,
       }),
     );
     assert.equal(stale.status, "terms_changed");
