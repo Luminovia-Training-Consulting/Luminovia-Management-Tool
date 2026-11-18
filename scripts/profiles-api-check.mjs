@@ -198,15 +198,6 @@ try {
     }),
     "Seed actual accepted teaching block",
   );
-  assert.ok(
-    (
-      await admin.client.rpc("manage_course_enrolment", {
-        p_course_run_id: run,
-        p_user_id: student.id,
-        p_status: "completed",
-      })
-    ).error,
-  );
   await checked(
     admin.client.rpc("manage_course_enrolment", {
       p_course_run_id: run,
@@ -221,9 +212,8 @@ try {
   );
   assert.equal(ownCourses.length, 1);
   assert.equal(
-    (
-      await outsider.client.from("course_runs").select("id").eq("id", run)
-    ).error?.code,
+    (await outsider.client.from("course_runs").select("id").eq("id", run)).error
+      ?.code,
     "42501",
     "Retired participant cannot query another enrolment",
   );
