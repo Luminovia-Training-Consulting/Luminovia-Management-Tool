@@ -77,6 +77,17 @@ await withApiFixture(
     );
     await passwordOnly(admin.client);
     await passwordOnly(manager.client);
+    await checked(
+      admin.client.rpc("save_lecturer_compensation", {
+        p_user_id: teacher.id,
+        p_mode: "percent",
+        p_percent: 31,
+        p_daily_rate: 200,
+        p_currency: "EUR",
+        p_expected_version: 1,
+      }),
+      "Set fictional course-building-block lecturer quote",
+    );
     const org = await checked(
       admin.client.rpc("save_organisation", {
         p_id: null,
