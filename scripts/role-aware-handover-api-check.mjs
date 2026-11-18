@@ -278,9 +278,18 @@ commit;`);
         }),
         `Demote replacement recipient; role state: ${roleState}`,
       );
-      assert.deepEqual(await accept(target, offer, request), {
-        status: "not_eligible",
-      });
+      assert.equal(
+        (
+          await target.client.rpc("respond_job_substitution", {
+            p_offer_id: offer.id,
+            p_action: "accept",
+            p_quote_hash: offer.quote_hash,
+            p_request_id: request,
+            p_accept_terms: true,
+          })
+        ).error?.code,
+        "42501",
+      );
       assert.equal(await snapshot(), before);
       await checked(
         admin.client.rpc("set_account_roles", {
