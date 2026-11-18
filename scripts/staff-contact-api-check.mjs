@@ -36,12 +36,13 @@ await withApiFixture(async ({ actor, checked, service }) => {
     email: owner.email,
     phone: "+49 40 123456",
   });
-  for (const who of [learner, client])
-    assert.equal(
-      (await who.client.rpc("person_contact", { p_user_id: owner.id })).error
-        ?.code,
-      "42501",
-    );
+  assert.equal(
+    (await learner.client.rpc("person_contact", { p_user_id: owner.id })).error
+      ?.code,
+    "42501",
+    "Retired participant has no operational contact API access",
+  );
+  assert.deepEqual(await contact(client), { email: null, phone: null });
   assert.equal(
     (
       await owner.client.rpc("save_contact_visibility_preferences", {
