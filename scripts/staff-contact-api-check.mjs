@@ -71,7 +71,12 @@ await withApiFixture(async ({ actor, checked, service }) => {
     }),
   );
   await checked(service.from("user_roles").delete().eq("user_id", peer.id));
-  assert.deepEqual(await contact(peer), { email: null, phone: null });
+  assert.equal(
+    (await peer.client.rpc("person_contact", { p_user_id: owner.id })).error
+      ?.code,
+    "42501",
+    "Revoked staff role loses access through the operational REST boundary",
+  );
   await checked(
     service.from("profiles").update({ active: false }).eq("id", owner.id),
   );
