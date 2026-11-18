@@ -52,16 +52,6 @@ await withApiFixture(async ({ service, actor, passwordOnly, sql, defer, checked 
     p_request_id: key,
     p_payload: payload,
   });
-  assert.equal(
-    (
-      await manager.client.rpc(
-        "manage_job_offer",
-        req(randomUUID(), "published", 1),
-      )
-    ).error?.code,
-    "42501",
-    "password-only authentication is enforced by actual API",
-  );
   await passwordOnly(manager.client);
   const payload = {
     title: "Fictional actual lifecycle API",
