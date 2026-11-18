@@ -1381,5 +1381,6 @@ The migration-order regression now accepts later independent migrations while pr
 - [x] Confirm there are no open PRs or extra remote branches; PR #59's lazy-route bug-hunt work is already merged into `main`.
 - [x] On `main`, correct four browser acceptance assumptions exposed by exact-head run `44309193437`; local lint, typecheck, formatting and whitespace checks pass.
 - [x] Review the supplied last browser report (`e5ce64f3`) and correct the search test to enter `/search` directly after authentication rather than waiting for responsive shell navigation.
-- [x] Move the persistent local GitHub preview out of the occupied `56xxx` API range; its focused config/runtime tests pass 19/19.
-- [ ] Push the current browser and preview-port corrections to `main`, start the exact pushed main locally, and continue fixing desktop/mobile and system CI failures until exact-head required checks pass.
+- [x] Move the persistent local GitHub preview out of the occupied `56xxx` API range; its config/runtime tests pass 19/19.
+- [ ] Update and verify the local-preview administrator fence and displayed endpoints for the new `64xxx` ports.
+- [ ] Start the exact pushed main locally, then continue fixing desktop/mobile and system CI failures until exact-head required checks pass.

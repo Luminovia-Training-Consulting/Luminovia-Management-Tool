@@ -37,10 +37,10 @@ export function previewIdentity(cwd, config, owner, api, labels) {
     owner.repository !==
       "https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool.git" ||
     config.id !== expected ||
-    config.api !== 56321 ||
-    config.database !== 56322 ||
+    config.api !== 64321 ||
+    config.database !== 64322 ||
     config.site !== "http://127.0.0.1:5373" ||
-    endpoint.origin !== "http://127.0.0.1:56321" ||
+    endpoint.origin !== "http://127.0.0.1:64321" ||
     endpoint.pathname !== "/" ||
     endpoint.search ||
     endpoint.hash ||

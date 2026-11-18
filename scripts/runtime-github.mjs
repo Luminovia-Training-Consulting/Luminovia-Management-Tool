@@ -575,7 +575,7 @@ export class GitHubPreview {
       }
     }
     console.log(
-      `GitHub preview: ${phase}\nCommit: ${source?.sha ?? "none yet"}\nPortal: http://127.0.0.1:5373\nSupabase: http://127.0.0.1:56321\nMailpit: http://127.0.0.1:56324\nSource/logs: ${this.source}`,
+      `GitHub preview: ${phase}\nCommit: ${source?.sha ?? "none yet"}\nPortal: http://127.0.0.1:5373\nSupabase: http://127.0.0.1:64321\nMailpit: http://127.0.0.1:64324\nSource/logs: ${this.source}`,
     );
   }
 }

@@ -29,8 +29,8 @@ test("weak local account is fenced to the registered preview and exact loopback 
     const id = `luminovia-portal-github-${createHash("sha256").update(checkout).digest("hex").slice(0, 12)}`;
     const config = {
       id,
-      api: 56321,
-      database: 56322,
+      api: 64321,
+      database: 64322,
       site: "http://127.0.0.1:5373",
     };
     const owner = {
@@ -45,27 +45,27 @@ test("weak local account is fenced to the registered preview and exact loopback 
       "com.supabase.cli.workdir": source,
     };
     assert.equal(
-      previewIdentity(source, config, owner, "http://127.0.0.1:56321", labels),
+      previewIdentity(source, config, owner, "http://127.0.0.1:64321", labels),
       id,
     );
     for (const [cfg, own, url, lab] of [
       [
         { ...config, id: "luminovia-portal" },
         owner,
-        "http://127.0.0.1:56321",
+        "http://127.0.0.1:64321",
         labels,
       ],
       [config, owner, "https://cms.luminovia.org/backend", labels],
       [
         config,
         { ...owner, checkout: "/tmp/other" },
-        "http://127.0.0.1:56321",
+        "http://127.0.0.1:64321",
         labels,
       ],
       [
         config,
         owner,
-        "http://127.0.0.1:56321",
+        "http://127.0.0.1:64321",
         { ...labels, "com.supabase.cli.workdir": "/tmp/other" },
       ],
     ])
