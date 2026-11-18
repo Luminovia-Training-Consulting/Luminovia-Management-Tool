@@ -185,13 +185,9 @@ const permissions = await checked(
 );
 assert.deepEqual(permissions, []);
 assert.equal(
-  (
-    await checked(
-      participant.client.from("jobs").select("id"),
-      "Participant job visibility",
-    )
-  ).length,
-  0,
+  (await participant.client.from("jobs").select("id")).error?.code,
+  "42501",
+  "Retired participant has no job or operational portal access",
 );
 const anon = await anonymous.from("jobs").select("id");
 assert.ok(
