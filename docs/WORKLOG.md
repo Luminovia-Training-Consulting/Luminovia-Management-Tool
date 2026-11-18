@@ -4,6 +4,8 @@ The user confirmed a written rights agreement is now available for the external 
 
 # 18 November 2026 — bug-hunt verification follow-up
 
+The dual-role enrolment path passed, including the 0/1/0 catalogue visibility check. The same API suite then caught a stale suspension assertion: a suspended lecturer is rejected by the shared authenticated-request hook (`42501`) before building-block RLS can return an empty array. The test now asserts that early denial.
+
 The enrolled building-block test then hit a real fixture-model mismatch: it used only a retired participant role for an intended enrolled-user RLS visibility sequence, so the shared auth boundary correctly rejected it even after enrollment. The fixture now uses an unlinked client account with a retained participant role: the active client role passes the current boundary, the secondary participant role lets management record historical enrolment, and assertions verify 0 catalogue rows before enrolment, 1 while enrolled, and 0 after removal.
 
 The retained-data upgrade and all API suites through the company-course flow now pass. The subsequent building-block API suite still expected the retired role-wide 31% quote after individual lecturer defaults changed to 50%. It now sets the fictional teacher's rate through the authorized `save_lecturer_compensation` API before constructing the offer; the 31%/rounded amount expectation then tests the current behavior explicitly.

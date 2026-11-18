@@ -410,9 +410,11 @@ await withApiFixture(
       ).error,
     );
     assert.equal(
-      (await checked(teacher.client.from("building_blocks").select("id")))
-        .length,
-      0,
+      (
+        await teacher.client.from("building_blocks").select("id")
+      ).error?.code,
+      "42501",
+      "Suspended staff are denied at the authenticated request boundary",
     );
     await checked(
       admin.client.rpc("manage_client_organisation", {

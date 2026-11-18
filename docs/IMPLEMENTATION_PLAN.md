@@ -28,6 +28,7 @@
 - [ ] Validate the notification-cascade migration and account regression in fresh PostgreSQL replay, then complete all current-head CI and retained-data self-host acceptance.
 - [x] Align the company-course Auth/API fixture with current roles: use an active lecturer for enrolled-user deadline/success checks, and keep a separate retired participant to assert request-boundary denial (`42501`).
 - [x] Use an unlinked client with a retained participant role for the course-enrolment RLS sequence: the active role passes request authorization, while enrolment is 0/1/0 scoped. Retired participant-only API denial remains covered separately.
+- [x] Assert that suspended-staff Data API calls are denied at the request boundary (`42501`) rather than treated as empty RLS results.
 - [x] Configure the fictional lecturer's individual 31% rate in the building-block API fixture so offer rounding follows the current compensation model rather than role-wide defaults.
 
 ## Current delivered-feature API parity — 18 November 2026
