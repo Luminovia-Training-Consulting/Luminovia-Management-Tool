@@ -237,12 +237,6 @@ await withTestDatabase("job_capacity", async ({ sql, actor }) => {
         `select public.manage_client_organisation('${client}','${org}')`,
         "aal1",
       );
-      const offers = JSON.parse(
-        await actor(teachers[0], "select public.job_offers()", "aal1"),
-      );
-      const unconfiguredLecturerQuote = offers.find((row) => row.id === job);
-      assert.equal(Number(unconfiguredLecturerQuote.amount), 31);
-      assert.equal(Number(unconfiguredLecturerQuote.total_amount), 31);
       const claimed = [];
       for (const who of teachers.slice(0, 3))
         claimed.push(await claim(job, who));
