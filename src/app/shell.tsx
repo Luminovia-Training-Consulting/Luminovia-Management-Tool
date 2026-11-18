@@ -266,11 +266,10 @@ export function Shell() {
         {t("skip")}
       </a>
       <aside className="sidebar" aria-label={t("menu")}>
-        <NavLink className="sidebar-brand" to="/" aria-label="Luminovia Portal">
+        <NavLink className="sidebar-brand" to="/">
           <img src="/brand/luminovia-logo-mark-160.webp" alt="" />
           <span>
-            Luminovia
-            <small>Portal</small>
+            Luminovia <small>Portal</small>
           </span>
         </NavLink>
         <Button
@@ -402,7 +401,7 @@ export function Shell() {
             )}
             <Preferences onSave={saveUiPreferences} />
             <details className="account-menu" ref={accountMenu}>
-              <summary aria-label={t("profile")} title={t("profile")}>
+              <summary title={t("profile")}>
                 {guestOnly ? (
                   <span className="profile-avatar" aria-hidden="true">
                     {profile.data?.display_name?.slice(0, 1) || "G"}

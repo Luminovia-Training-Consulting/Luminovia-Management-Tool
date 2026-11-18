@@ -3145,10 +3145,7 @@ body {
 .button {
   border-radius: 9px;
   font-weight: 600;
-  transition:
-    background-color 120ms ease,
-    border-color 120ms ease,
-    transform 120ms ease;
+  transition: transform 120ms ease;
 }
 .button-primary {
   background: #0758e8;
@@ -3539,6 +3536,8 @@ summary:focus-visible {
   display: flex;
   align-items: center;
   gap: 0.65rem;
+  min-width: 44px;
+  min-height: 44px;
   padding: 0.25rem 0.5rem;
   border-radius: 1rem;
   cursor: pointer;
@@ -3589,10 +3588,11 @@ summary:focus-visible {
   background: var(--blue-soft);
 }
 @media (max-width: 900px) {
-  .account-menu summary > span {
+  .account-menu summary > span:not(.profile-avatar) {
     display: none;
   }
   .account-menu summary {
+    justify-content: center;
     padding: 0.2rem;
   }
 }

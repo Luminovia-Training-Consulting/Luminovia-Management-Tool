@@ -171,6 +171,18 @@
 [data-theme="dark"] .dashboard-metric {
   color: var(--ink);
 }
+[data-theme="dark"] .dashboard-metric--mint {
+  background: color-mix(in srgb, var(--mint) 14%, var(--surface));
+}
+[data-theme="dark"] .dashboard-metric--peach {
+  background: color-mix(in srgb, var(--peach) 14%, var(--surface));
+}
+[data-theme="dark"] .dashboard-metric--yellow {
+  background: color-mix(in srgb, var(--yellow) 14%, var(--surface));
+}
+[data-theme="dark"] .dashboard-metric--lilac {
+  background: color-mix(in srgb, var(--lilac) 14%, var(--surface));
+}
 .dashboard-metric-arrow {
   padding: 3px;
   width: 26px;

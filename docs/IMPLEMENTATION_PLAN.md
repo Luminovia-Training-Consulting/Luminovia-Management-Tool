@@ -5,7 +5,8 @@
 - [x] Merge the verified recurring-calendar import and exact existing DST-deadline preservation fixes from the unmerged bug-hunt branch into `main` (`427de191`); focused tests passed 27/27.
 - [x] Keep the other unmerged bug-hunt branch out of `main` after confirming its only additional source diff was the same calendar fix; its remaining differences were historical test/documentation work already superseded by current `main`.
 - [x] Split main/manual/full-PR verification into an independent required system/API gate and parallel complete desktop/mobile browser jobs. Preserve both browser projects and PWA checks; make exact-main CMS publication require both browser results. Local workflow/phase regressions passed 25/25.
-- [ ] Push and verify this workflow change on an exact `main` SHA. Inspect all required jobs and artifacts; address actual UI/browser failures without weakening coverage. The prior complete local system pass was on `76c6e495`, and the targeted source pass on `427de191`; neither proves the new exact head green.
+- [x] Fix the policy-test lint error discovered by exact-head CI on `4726bd44`; rerun lint and workflow/phase regressions (25/25), plus shell/dashboard focused tests (30/30) and typecheck.
+- [ ] Push the lint and observed accessibility fixes directly to `main`, finish the desktop-only browser rerun (97 selected tests), and inspect all exact-head CI jobs/artifacts. The prior complete local system pass was on `76c6e495`; neither it nor targeted source tests prove the new exact head green.
 
 ## Proprietary source-available license (18 November 2026)
 

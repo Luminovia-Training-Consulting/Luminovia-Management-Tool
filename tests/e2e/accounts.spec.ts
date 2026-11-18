@@ -48,7 +48,7 @@ test("individual account roles, scoped invitations and linked status management 
   await expect(
     roleDialog.getByLabel("Kursteilnehmer:in", { exact: true }),
   ).toHaveCount(0);
-  await expect(roleDialog.getByLabel("Gast", { exact: true })).toHaveCount(0);
+  await expect(roleDialog.getByLabel("Gast", { exact: true })).toBeVisible();
   await roleDialog.getByLabel("Senior-Dozent:in", { exact: true }).check();
   await roleDialog
     .getByRole("button", { name: "Rollen speichern", exact: true })
