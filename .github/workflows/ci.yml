@@ -158,11 +158,7 @@ jobs:
         id: application
         if: needs.scope.outputs.profile == 'full'
         run: |
-          if test "$GITHUB_EVENT_NAME" = pull_request; then
-            node scripts/runtime-test.mjs --phase system --external-gates quality,coverage
-          else
-            node scripts/runtime-test.mjs --phase all --external-gates quality,coverage
-          fi
+          node scripts/runtime-test.mjs --phase system --external-gates quality,coverage
       - name: Preserve actual functional and integration acceptance
         if: always() && (steps.application.outcome == 'success' || steps.application.outcome == 'failure' || steps.application.outcome == 'cancelled')
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -172,25 +168,10 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
-      - name: Upload fictional course-building-block screenshots
-        if: always() && github.event_name != 'pull_request' && (steps.application.outcome == 'success' || steps.application.outcome == 'failure')
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: portal-course-building-blocks-${{ github.run_id }}-${{ github.run_attempt }}
-          # Exact feature allowlist only: no traces, credentials or other reports.
-          path: |
-            .local/tests/*/screenshots/*-course-building-blocks-*.png
-            .local/tests/*/screenshots/*-withdrawal-*.png
-          # The parent .local directory is hidden; the PNG allowlist remains exact.
-          include-hidden-files: true
-          # An earlier integration failure can stop before screenshot capture.
-          # Preserve that original failure without adding a secondary artifact error.
-          if-no-files-found: ignore
-          retention-days: 14
   verify-browser:
     name: Isolated browser acceptance (${{ matrix.browser-project }})
     needs: scope
-    if: always() && !cancelled() && github.event_name == 'pull_request'
+    if: always() && !cancelled()
     strategy:
       fail-fast: false
       matrix:
@@ -209,9 +190,11 @@ jobs:
           PROFILE: ${{ needs.scope.outputs.profile }}
         run: |
           test "$SCOPE_RESULT" = success
-          test "$EVENT_NAME" = pull_request
           case "$PROFILE" in docs|standard|full) ;; *) exit 1 ;; esac
-          if test "$PR_DRAFT" != true || test "$PR_ACTION" = ready_for_review; then test "$PROFILE" = full; fi
+          if test "$EVENT_NAME" != pull_request; then test "$PROFILE" = full; fi
+          if test "$EVENT_NAME" = pull_request; then
+            if test "$PR_DRAFT" != true || test "$PR_ACTION" = ready_for_review; then test "$PROFILE" = full; fi
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: needs.scope.outputs.profile == 'full'
         with:
@@ -244,9 +227,11 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: portal-course-building-blocks-${{ matrix.browser-project }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: .local/tests/*/screenshots/*-course-building-blocks-*.png
+          path: |
+            .local/tests/*/screenshots/*-course-building-blocks-*.png
+            .local/tests/*/screenshots/*-withdrawal-*.png
           include-hidden-files: true
-          if-no-files-found: error
+          if-no-files-found: ignore
           retention-days: 14
   verify-selfhost:
     # Two PR SQL workers own separate pinned networkless clusters; docs-only
@@ -363,7 +348,7 @@ jobs:
     concurrency:
       group: cms-release-${{ github.sha }}
       cancel-in-progress: false
-    needs: [quality, coverage, verify, verify-selfhost]
+    needs: [quality, coverage, verify, verify-selfhost, verify-browser]
     if: github.event_name == 'workflow_dispatch' && inputs.publish_release == true && github.ref == 'refs/heads/main' && inputs.expected_commit == github.sha
     runs-on: ubuntu-latest
     timeout-minutes: 15

@@ -140,10 +140,7 @@ test("Draft checks are bounded while ready events and main/manual retain complet
     application.run,
     /node scripts\/runtime-test\.mjs --phase system/,
   );
-  assert.match(
-    application.run,
-    /else\s+node scripts\/runtime-test\.mjs --phase all --external-gates quality,coverage\s+fi/,
-  );
+  assert.doesNotMatch(application.run, /--phase all/);
   const browserJob = ci.jobs["verify-browser"];
   assert.equal(
     browserJob.name,
@@ -154,10 +151,7 @@ test("Draft checks are bounded while ready events and main/manual retain complet
     "mobile-chromium",
   ]);
   assert.equal(browserJob.needs, "scope");
-  assert.equal(
-    browserJob.if,
-    "always() && !cancelled() && github.event_name == 'pull_request'",
-  );
+  assert.equal(browserJob.if, "always() && !cancelled()");
   const browser = browserJob.steps.find((step) => step.id === "browser");
   assert.equal(browser.name, "Complete isolated browser acceptance");
   assert.equal(browser.run, "node scripts/runtime-test.mjs --phase browser");
@@ -272,6 +266,7 @@ test("only an explicitly requested exact-main release passes the delivery gate",
     "coverage",
     "verify",
     "verify-selfhost",
+    "verify-browser",
   ]);
   const sha = "a".repeat(40);
   const github = {
@@ -563,7 +558,7 @@ test("scope shell preflight rejects fast ready profiles and accepts only explici
       assert.ifError(execution.error);
       assert.equal(
         execution.status === 0,
-        key === "browser" && event !== "pull_request" ? false : allowed,
+        allowed,
         `${event}/${profile}/${result}/${draft}/${action}`,
       );
     }
@@ -601,14 +596,14 @@ test("preview shell preflight rejects every failed skipped canceled or missing p
       assert.equal(execute({ [name]: status }), false, `${name}/${status}`);
 });
 
-test("browser scope preflight accepts only an exact successful PR profile", () => {
+test("browser scope preflight accepts exact successful full profiles on every event", () => {
   const preflight = workflow("ci").jobs["verify-browser"].steps[0].run;
   for (const [event, profile, scopeResult, allowed] of [
     ["pull_request", "docs", "success", true],
     ["pull_request", "standard", "success", true],
     ["pull_request", "full", "success", true],
-    ["push", "full", "success", false],
-    ["workflow_dispatch", "full", "success", false],
+    ["push", "full", "success", true],
+    ["workflow_dispatch", "full", "success", true],
     ["pull_request", "full", "failure", false],
     ["pull_request", "full", "skipped", false],
     ["pull_request", "full", "cancelled", false],

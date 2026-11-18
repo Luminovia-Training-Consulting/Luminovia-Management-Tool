@@ -1,5 +1,12 @@
 # Persistent implementation plan
 
+## Direct-main CI continuation — 18 November 2026
+
+- [x] Merge the verified recurring-calendar import and exact existing DST-deadline preservation fixes from the unmerged bug-hunt branch into `main` (`427de191`); focused tests passed 27/27.
+- [x] Keep the other unmerged bug-hunt branch out of `main` after confirming its only additional source diff was the same calendar fix; its remaining differences were historical test/documentation work already superseded by current `main`.
+- [x] Split main/manual/full-PR verification into an independent required system/API gate and parallel complete desktop/mobile browser jobs. Preserve both browser projects and PWA checks; make exact-main CMS publication require both browser results. Local workflow/phase regressions passed 25/25.
+- [ ] Push and verify this workflow change on an exact `main` SHA. Inspect all required jobs and artifacts; address actual UI/browser failures without weakening coverage. The prior complete local system pass was on `76c6e495`, and the targeted source pass on `427de191`; neither proves the new exact head green.
+
 ## Proprietary source-available license (18 November 2026)
 
 - [x] Check current GPLv3 license, contributor history and separate bundled asset/upstream notices.
@@ -1328,6 +1335,7 @@ The migration-order regression now accepts later independent migrations while pr
 - [x] Re-version PR #60's not-yet-deployed wiki-template migration after the candidate selfhost gate rejected its backdated version; preserve the SQL bytes.
 - [ ] Rerun complete local system and browser acceptance after the last fixture correction.
 - [ ] Push all corrections directly to `main`, then inspect every fresh exact-head required CI job through completion.
+
 # Bug-hunt follow-up — 18 November 2026
 
 - [x] Fix the remaining portal-membership DB-test assertions to match the current server error text.
