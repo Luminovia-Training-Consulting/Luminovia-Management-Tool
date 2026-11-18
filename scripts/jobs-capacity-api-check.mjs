@@ -328,7 +328,10 @@ await withApiFixture(
       assert.equal(own[0].id, winner.result.claim_id);
       assert.equal(Number(own[0].total_amount), 50.01);
       assert.equal(own[0].terms, offer.terms);
-      assert.equal(own[0].terms_version, Math.floor(offer.terms_version / 10));
+      assert.equal(
+        own[0].terms_version,
+        Math.floor((offer.terms_version % 1_000_000) / 10),
+      );
       assert.ok(
         !Object.keys(own[0]).some((key) =>
           /gross|platform|commission/.test(key),
