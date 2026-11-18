@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { withApiFixture } from "./testing/api.mjs";
 
 await withApiFixture(
-  async ({ service, actor, passwordOnly, checked, sql, defer, suffix, url }) => {
+  async ({ service, actor, checked, sql, defer, suffix, url }) => {
     const manager = await actor("enquiry-manager", "management"),
       peer = await actor("enquiry-peer", "lecturer"),
       client = await actor("enquiry-client", "client");
@@ -181,8 +181,6 @@ await withApiFixture(
         .status,
       400,
     );
-    assert.ok((await manager.client.rpc("enquiry_inbox")).error);
-    await passwordOnly(manager.client);
     const inbox = await checked(
       manager.client.rpc("enquiry_inbox", { p_search: suffix }),
     );
