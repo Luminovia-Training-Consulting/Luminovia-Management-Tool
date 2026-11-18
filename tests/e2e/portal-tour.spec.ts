@@ -86,7 +86,7 @@ test("a real lecturer follows the permission-aware portal tour without changing 
       exact: true,
     }),
   ).toHaveAttribute("href", "/help?topic=calendar");
-  await englishSection.focus();
+  await englishGuide.locator("h2").focus();
   await page.keyboard.press("Escape");
   await expect(
     englishGuide.getByRole("button", { name: "Resume tour", exact: true }),

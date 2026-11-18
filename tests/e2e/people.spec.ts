@@ -88,6 +88,14 @@ test("authored staff profiles connect real course history, company reviews and a
       .insert({ course_run_id: run, starts_at: start, ends_at: end }),
   );
   await checked(
+    service.from("course_enrolments").insert({
+      course_run_id: run,
+      user_id: customer.id,
+      status: "completed",
+      enrolled_by: customer.id,
+    }),
+  );
+  await checked(
     service.from("jobs").insert({
       id: job,
       course_run_id: run,

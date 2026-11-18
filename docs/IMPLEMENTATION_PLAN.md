@@ -1386,4 +1386,5 @@ The migration-order regression now accepts later independent migrations while pr
 - [x] Start exact pushed main `3c7b4101` locally with HTTP 200 portal and healthy Auth checks.
 - [x] Align global-calendar browser viewer fixture with active-role access after local E2E showed retired participant-only accounts cannot sign in to portal pages.
 - [x] Replace the obsolete FullCalendar toolbar selector with an assertion on the visible assigned event; leave a group chat before marking it manually unread.
+- [x] Update password-recovery, completed-course-review, tour-focus, scoped-picker and post-reload email-preference fixtures to current server/UI contracts based on the local browser trace.
 - [ ] Complete local desktop/mobile browser phase and the current exact-head CI run; fix all new failures and repeat on the newest main SHA.

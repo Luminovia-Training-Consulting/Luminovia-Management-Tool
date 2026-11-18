@@ -95,6 +95,11 @@ test("real browser password recovery consumes a Mailpit email and keeps the PKCE
   });
   expect(error).toBeNull();
   expect(data.user).toBeTruthy();
+  await checked(
+    service
+      .from("user_roles")
+      .insert({ user_id: data.user!.id, role: "lecturer" }),
+  );
   await page.goto("/login");
   await page
     .getByRole("button", { name: "Passwort vergessen?", exact: true })
