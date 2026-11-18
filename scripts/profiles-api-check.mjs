@@ -130,6 +130,12 @@ try {
   );
   await checked(
     service
+      .from("client_organisation_memberships")
+      .insert({ user_id: student.id, organisation_id: org }),
+    "Give enrolled learner scoped customer access",
+  );
+  await checked(
+    service
       .from("course_templates")
       .insert({ id: template, title: `Fictional past course ${suffix}` }),
     "Seed scoped template",
@@ -368,6 +374,14 @@ try {
     await checked(
       service.from("course_templates").delete().eq("id", template),
       "Clean scoped template",
+    );
+    await checked(
+      service
+        .from("client_organisation_memberships")
+        .delete()
+        .eq("user_id", student.id)
+        .eq("organisation_id", org),
+      "Clean scoped course customer membership",
     );
     await checked(
       service.from("organisations").delete().eq("id", org),
