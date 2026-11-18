@@ -4,6 +4,8 @@ The user confirmed a written rights agreement is now available for the external 
 
 # 18 November 2026 — bug-hunt verification follow-up
 
+The enrolled building-block test then hit a real fixture-model mismatch: it used a retired participant role for an intended enrolled-user RLS visibility sequence, so the shared auth boundary correctly rejected it even after enrollment. The fixture now uses an active, unlinked client account; assertions verify 0 catalogue rows before enrolment, 1 while enrolled, and 0 after removal. This exercises scoped resource visibility through a currently supported actor and leaves the separate retired-role denial checks intact.
+
 The retained-data upgrade and all API suites through the company-course flow now pass. The subsequent building-block API suite still expected the retired role-wide 31% quote after individual lecturer defaults changed to 50%. It now sets the fictional teacher's rate through the authorized `save_lecturer_compensation` API before constructing the offer; the 31%/rounded amount expectation then tests the current behavior explicitly.
 
 After the company-course fixture was corrected, the candidate passed that API suite and then found one more stale participant assertion: querying the operational course catalogue as a retired participant now correctly fails at the shared REST request boundary (`42501`) instead of returning an empty RLS result. The course-building-block API check now explicitly verifies denial.

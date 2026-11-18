@@ -12,7 +12,7 @@ await withApiFixture(
     const admin = await actor("course-admin", "admin"),
       manager = await actor("course-manager", "management"),
       teacher = await actor("course-teacher", "lecturer"),
-      learner = await actor("course-learner", "participant"),
+      learner = await actor("course-enrolled-client", "client"),
       client = await actor("course-client", "client");
     const runs = [],
       templates = [],
@@ -64,9 +64,11 @@ await withApiFixture(
       primary = block.building_block_sources.find((row) => row.is_primary);
     assert.equal(primary.file_name, "Bausteinbeschreibung-LPIC3.pdf");
     assert.equal(
-      (await learner.client.from("building_blocks").select("id")).error?.code,
-      "42501",
-      "Retired participant accounts cannot query the operational REST API",
+      (
+        await checked(learner.client.from("building_blocks").select("id"))
+      ).length,
+      0,
+      "An unlinked client sees no building blocks before course enrolment",
     );
     assert.ok(
       (
