@@ -779,19 +779,15 @@ try {
     "Suspend temporary QA reader",
   );
   assert.ok((await b.client.rpc("wiki_page", { p_id: page })).error);
-  assert.deepEqual(
-    await checked(
-      b.client.rpc("forum_threads_list"),
-      "Suspended token loses forum access",
-    ),
-    [],
+  assert.equal(
+    (await b.client.rpc("forum_threads_list")).error?.code,
+    "42501",
+    "Suspended token loses forum access",
   );
-  assert.deepEqual(
-    await checked(
-      b.client.rpc("knowledge_access"),
-      "Suspension removes existing-session knowledge capabilities",
-    ),
-    { can_author: false, can_publish_wiki: false, can_moderate_forum: false },
+  assert.equal(
+    (await b.client.rpc("knowledge_access")).error?.code,
+    "42501",
+    "Suspension removes existing-session knowledge access",
   );
   console.log(
     "PASS: actual password-only Auth/REST: private drafts, bilingual category archive/recovery, combined permission-aware wiki filters, published code preservation, independent unpublished corrections/history RLS, version conflicts and unsafe-content rejection, durable/idempotent forum replies and notices, subscription/unsubscription and current links, own versioned edits/restricted revisions/current-body search, accepted answers, role-scoped pin/lock/report moderation and archive recovery, tombstones, participant and suspended-token denial.",
