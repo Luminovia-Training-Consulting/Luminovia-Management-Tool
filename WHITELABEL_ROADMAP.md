@@ -16,6 +16,7 @@ The product must be **customer branded end to end**, use an authentic course/par
 
 ### Not part of the first white-label release
 
+- The Luminovia-branded public `/demo` route. **This remains part of Luminovia Internal Edition and must be retained and redesigned under `ROADMAP.md`**; it is simply excluded from distributed customer white-label installations. White-label onboarding/help and developer QA may use isolated fictitious data without exposing the public demo.
 - A new learning platform built in parallel to the existing one; reuse the completed LMS modules.
 - Turning an ordinary company record into a trusted infrastructure tenant merely by giving it an admin role.
 - Public access to Supabase service-role credentials, unrestricted SQL, private cross-company data or vendor account administration through Swagger UI.
@@ -49,6 +50,7 @@ The product must be **customer branded end to end**, use an authentic course/par
 | Branding | Luminovia | Customer name/logo/domain and theme | Customer name/logo/domain and theme |
 | General LMS | Premium company entitlement ON/OFF (main roadmap) | **Included and enabled** | **Included and enabled** |
 | Company-level Premium red/green switch | Admin-only, confirmed | **Not shown and not needed** | **Not shown and not needed** |
+| Public Luminovia demo (`/demo`) | **Retained and redesigned** to look/behave like authentic Luminovia Portal | **Excluded**: no public demo route/UI/API | **Excluded**: use branded onboarding instead |
 | Local academy administration | Luminovia admins + scoped company roles | Customer instance administrators | Customer administrators scoped to the academy; vendor handles agreed managed operations |
 | Courses, lecturers, participants, chat, exams, attendance | Per existing permissions | Included | Included |
 | Global job marketplace / multiple commissioning companies | Available internally | Disabled unless separate explicitly licensed, customer-owned module | Disabled unless separately agreed |
@@ -102,7 +104,7 @@ Implement role/capability checks at both **installation AND resource** scope. In
 | Courses, plans, enrolment, materials, exams, attendance, completion, calendar, chat | **Included** | Reuse the finished LMS's authoritative modules and adapt labels/permissions |
 | Personal calendars and private DMs | **Supported as applicable** | Preserve individual privacy boundaries, with scope-specific teacher/participant views |
 | Knowledge/wiki/forum, notifications, support, search | **Included if relevant** | Academy-scoped content and edition-specific navigation |
-| Luminovia public demo view | **Removed** per latest owner decision | Local fictional QA fixtures remain; optional secure onboarding guide and preview use real interface components |
+| Luminovia public demo view (`/demo`) | **NOT bundled in customer white-label editions; fully retained and redesigned in Luminovia Internal Edition** | White-label direct `/demo` must be unavailable, without affecting internal Luminovia `/demo`. Retain isolated fictional test fixtures and customer-specific real-UI onboarding/help without a public sandbox. |
 | Existing public & private REST/RPC operations | **Scope-filtered** | Expose only explicitly allowed customer product API operations |
 
 **Customer-owned lecturer settings:** An academy admin may optionally configure teacher daily/hourly/fixed rates, approved agreements, payment terms and tracked amounts for their *own teachers*. This optional module MUST NOT expose a Luminovia commission, double-book company revenue, count vendor margins as customer fees, or become a prerequisite for creating courses. If disabled, no lecturer cost/invoicing pages or API actions are available. Keep `EUR`, `AUD` and other supported currencies explicitly configured with correct rounding; do not invent taxes, transfers or legal employment status.
@@ -306,7 +308,7 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 
 ### WL-09 — Final product acceptance (P0)
 
-- [ ] All `WL-T01–WL-T40` tests below implemented and passing on actual target edition(s) with all required repo application/security CI green on the exact release commit.
+- [ ] All `WL-T01–WL-T41` tests below implemented and passing on actual target edition(s) with all required repo application/security CI green on the exact release commit.
 - [ ] Real customer-neutral staging installer, independent upgrade + restore drill, verified licence and module gates, accurate docs, complete UI/API security, domain/TLS/SMTP/PWA and onboarding/offboarding acceptance.
 - [ ] Commercial distribution only after written licensing/support/legal and operational approval. No premature customer rollout.
 
@@ -356,6 +358,7 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 | WL-T38 | Customer data export/offboarding | Authorised own course/participant/file data export and no cross-instance data in package |
 | WL-T39 | Vendor support opt-in | Support access requires current customer authorisation, expiry, audit; no default blanket private access |
 | WL-T40 | Final release verification | All required application+security CI green for exact customer artifact; independent signoff and documented risks |
+| WL-T41 | Demo retained internally, excluded commercially | Luminovia Internal `/demo` remains redesigned, functional and safely fictional; both white-label editions return not found/controlled redirect for `/demo`, contain no public demo navigation or bundled demo data, while their production onboarding/help and isolated QA fixtures still work |
 
 ## 15. Definition of Done / release gate
 
@@ -363,9 +366,10 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 - [ ] Internal edition passes all existing regression tests after edition extraction; no lost contracts, invoices, permissions or job claims.
 - [ ] Customer product creates/operates courses, exams, attendance, participants, group chat, materials and APIs without global Luminovia brokerage.
 - [ ] Customer administrator configures own name/logo/favicon/PWA/domain/themes/email and permitted local controls; Luminovia/vendor business settings hidden AND server-denied.
+- [ ] Luminovia Internal Edition retains the completely redesigned `/demo` from the main roadmap. Customer white-label editions do not expose Luminovia's public `/demo` via navigation, URLs, API, PWA cache or downloadable packages; local QA examples and customer-specific onboarding remain supported.
 - [ ] Username OR email + password login and short-lived API tokens verified. OpenAPI + Swagger UI covers every supported edition action and matches reality.
 - [ ] Customer installations have independently protected data, keys, backup/recovery, software licensing, updates and offboarding.
-- [ ] `WL-T01–WL-T40` are passing on the actual exact release commit and targeted hosting scenario. CI cannot be bypassed; no test is claimed run without evidence.
+- [ ] `WL-T01–WL-T41` are passing on the actual exact release commit and targeted hosting scenario. CI cannot be bypassed; no test is claimed run without evidence.
 - [ ] Third-party rights and customer licence, security/privacy, production operating responsibilities and service contract reviewed and approved.
 
 **Implementation-agent rules:** Read `AGENTS.md`, `ROADMAP.md`, `PRODUCT.md`, `DEVELOPMENT.md`, `OPERATIONS.md`, relevant owning code/migrations/tests, and this file. Check source/main/PRs/CI before touching code. Allocate a focused PR per reviewed workstream, document exact code/tests/risks, keep existing migration bytes immutable, do not wipe real data or prematurely publish hosted services. Maintain one coherent codebase with explicit edition boundaries. Do not mark a checklist item complete merely because documentation or source for it exists.
