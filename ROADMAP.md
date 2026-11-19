@@ -1,14 +1,14 @@
 # Luminovia Portal — Complete Roadmap
 
-**Repository:** [Luminovia Management Tool](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool) · **Existing roadmap on GitHub:** [ROADMAP.md](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/ROADMAP.md) · **Source:** `Changes CMS Plattform(1).txt` and the subsequent explicit Premium LMS decisions.
+**Repository:** [Luminovia Management Tool](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool) · **Existing roadmap on GitHub:** [ROADMAP.md](https://github.com/Luminovia-Training-Consulting/Luminovia-Management-Tool/blob/main/ROADMAP.md) · **Source:** `Changes CMS Plattform(1).txt`, the subsequent Premium LMS decisions, and the latest owner clarifications on the retained demo, username/email login, complete API and Swagger/OpenAPI.
 
 **Single-file edition:** This document is designed to replace `ROADMAP.md` directly and contains the complete roadmap: current-source coverage, all requested general changes, complete Premium LMS scope, acceptance tests, release gates and AI-agent guidance. No second roadmap or external Premium specification is required.
 
-**Planning baseline:** 19 November 2026 · **Desired real-user launch:** Tuesday, 1 December 2026 · **Status:** proposed roadmap update, **not** evidence of implementation, CI success or production approval.
+**Revised planning baseline:** 19 November 2026 · **Desired real-user launch:** Tuesday, 1 December 2026 · **Status:** proposed roadmap update, **not** evidence of implementation, CI success or production approval.
 
-**Authority and reading order:** Read the current implementation and tests, then the [product specification](PRODUCT.md), [original product brief](PRODUCT_BRIEF.txt), [operational extension](OPERATIONS_BRIEF.txt), and the **complete requested feature backlog (Section 9)** and **Premium LMS specification (Section 8)** included below in this same file. The latest explicit product decisions **in Sections 8 and 9 of this document** supersede contradictory older product targets once adopted and implemented; older descriptions of current source behaviour remain historical evidence, not an implementation of the new target. Keep historical product decisions in their original records; update the current summary rather than silently rewriting history. Development evidence belongs in `docs/WORKLOG.md` and relevant QA/PR artifacts.
+**Authority and reading order:** Read the current implementation and tests, then the [product specification](PRODUCT.md), [original product brief](PRODUCT_BRIEF.txt), [operational extension](OPERATIONS_BRIEF.txt), the **Premium LMS specification (Section 8)**, the **complete feature backlog (Section 9)** and the **full API/Swagger specification (Section 10)** included below in this same file. The latest explicit product decisions **in Sections 8–10** supersede contradictory older product targets once adopted and implemented; older descriptions of current source behaviour remain historical evidence, not an implementation of the new target. Keep historical product decisions in their original records; update the current summary rather than silently rewriting history. Development evidence belongs in `docs/WORKLOG.md` and relevant QA/PR artifacts.
 
-This roadmap **distinguishes source that already exists from requested work and required acceptance**. Never mark a feature complete only because an implementation file, migration or test is present. The existing `cms.luminovia.org` Hostinger KVM deployment is documented as development; a successful development release is not a production sign-off.
+This is the **Luminovia core platform roadmap**, NOT the commercial white-label roadmap. Independent white-label packaging, branding and customer installations are tracked separately in [`WHITELABEL_ROADMAP.md`](WHITELABEL_ROADMAP.md) and follow only after the core platform is accepted. This roadmap **distinguishes source that already exists from requested work and required acceptance**. Never mark a feature complete only because an implementation file, migration or test is present. The existing `cms.luminovia.org` Hostinger KVM deployment is documented as development; a successful development release is not a production sign-off.
 
 ## 1. Product direction and non-negotiable decisions
 
@@ -21,6 +21,8 @@ This roadmap **distinguishes source that already exists from requested work and 
 - A lecturer and an authorised company may both configure whether a Premium course requires an exam. Clean student-facing exam PDFs become visible to enrolled learners immediately after successful upload/scanning **when exams are enabled**. With exams disabled, participants have no exam area or direct file access; retained documents/answer keys remain protected.
 - Attendance is recorded per course session/day and participant (`present`, `absent`, `excused`, optional arrival time/notes) and/or attached as scanned evidence. Only authorised lecturer/company/staff can view the class register; participants cannot see it.
 - Reuse current authoritative course workspace, `participant_course` chats, file scanner, account facade, existing attendance and learning modules. Re-enable retired participant-only access deliberately; never build duplicate competing systems.
+- **Keep the Luminovia public demo (`/demo`); completely redesign its presentation** to reflect the authentic current Luminovia Portal in layout, seven-colour brand system, light/dark themes, typographic hierarchy, spacing, mobile layout and realistic role-based navigation. Demo actions must remain fictional, isolated and visibly non-production; do not remove the demo.
+- Support **username OR email plus password** to sign into the same existing Auth identity; minimum password length is **8** characters, without resetting existing passwords or weakening abuse protection. Every supported portal business action must have a documented, permission-controlled API equivalent and a full interactive **Swagger UI / OpenAPI** reference (see Section 10).
 
 ## 2. Source coverage and planned change areas
 
@@ -28,8 +30,8 @@ The following summary preserves the A–N structure of the original roadmap whil
 
 | Area | Existing source/reference | Remaining scope and acceptance |
 |---|---|---|
-| A — Dashboard/navigation | Role-aware shell, personalised dashboards, Teaching Day, search | FC-01–13: unified demo appearance, improved dark theme, accessible layout fixes, role-specific Courses and preview modes, practical calendar menu |
-| B — Accounts/profiles | Auth, invitation/account facade, roles, profile/expertise and qualification evidence | FC-16–20, FC-24: 8-char minimum, admin-only elevated role assignment, self-selected expertise, stable public User IDs, secure participant-only account reinstatement |
+| A — Dashboard/navigation | Role-aware shell, personalised dashboards, Teaching Day, fictional `/demo` and search | FC-01–13: **retain and redesign the actual demo** in native portal style, improve dark theme, fix accessible layouts, role-specific Courses and preview modes, compact calendar controls |
+| B — Accounts/profiles | Supabase Auth, invitation/account facade, roles, profile/expertise and qualification evidence | FC-16–20, FC-24 and API-01–API-04: minimum eight-character passwords, **username/email sign-in to the same account**, admin-only elevated roles, self-selected expertise, stable User IDs and safe participant reinstatement |
 | C — Taxonomy | DE/EN topic hierarchy and permissioned catalogue | FC-18–19, FC-25: directly selectable competencies and multi-checkbox job filters; retain explicit verified-qualification gate where mandatory |
 | D — Organisations | Organisation membership, contacts, company requests, scoped workspaces | FC-20, FC-38–44: fictional demo companies; per-company Premium, verified participant linking, multiple-company membership, company-created participant-only accounts |
 | E — Courses/workspaces | Course runs/sessions, readiness, private course workspaces, learning materials | FC-11, FC-32, FC-44, FC-47: role-specific courses, welcome content, participant dashboard, safe return of participant access |
@@ -44,7 +46,8 @@ The following summary preserves the A–N structure of the original roadmap whil
 | N — Administration/operations | Permissions, account/role tools, audit, Control Center, migration, backup, updater | FC-10, FC-13, FC-17, FC-23, FC-38–40, FC-55–58: admin-only toggle with confirmation and audit; UI role previews, current green CI, production readiness |
 | O — Premium LMS / participants **NEW** | Historical learner workspace/rooms/attendance source exists; participant-only role intentionally retired in current baseline | **LMS-01–LMS-07, LMS-10:** safe participant reinstatement, global public IDs, multi-company memberships, admin-only company flag, invitations, enrolments, dashboard, welcome content, chat/files and server-wide gating |
 | P — Exams, daily attendance and learning **NEW** | Existing quiz/completion, document and attendance building blocks | **LMS-08–LMS-09:** exam-required switch, instant clean PDF publication, staff-only answer keys, per-session attendance, notes/arrival times, scanned/uploaded rosters, authorised company reporting |
-| Q — QA, deployment and release **NEW** | GitHub required checks, isolated tests, migration controller, Hostinger dev updater and backups | **LMS-11, FC-55–58:** exhaustive automated and manual acceptance, retained-data migration rehearsal, real SMTP/backup restore, current-main green CI and separate production approval |
+| Q — QA, deployment and release **NEW** | GitHub required checks, isolated tests, migration controller, Hostinger dev updater and backups | **LMS-11, FC-55–58, API-T01–API-T20:** exhaustive automated and manual acceptance, preserved database, real SMTP/backup restore, full API contract verification, green exact-main CI and separate production approval |
+| R — Complete platform API & Swagger **NEW** | Existing account HTTP API with OpenAPI 3.1 and business RPC/document gateway references; complete product API and interactive Swagger UI NOT yet evidenced | **API-01–API-08:** username/email Auth, token access, all supported functionality, documented permission-safe endpoints, Swagger UI, integration keys, webhook/events, API versioning and integration regression tests |
 
 The earlier unfinished **formal change-request/contract-amendment workflow**, validated accounting interoperability (including applicable electronic invoice formats) and public Website-to-Portal enquiry integration remain on the roadmap. Existing work on client requests, CSV and lifecycle actions does not independently complete them. Do not silently remove these requirements.
 
@@ -75,15 +78,23 @@ The original roadmap also retains **formal assignment change requests/amendments
 - [ ] FC-34–35: invoices only after course completion (according to explicit business rules), confirmed PDF ownership, management review and real payment-record statuses.
 - [ ] FC-04–07: no blocked workflows or overlapping essential controls at supported mobile and desktop sizes.
 - [ ] FC-55–57: existing required GitHub CI/security checks, full persistence/migrations/backup/recovery and actual scoped customer privacy tested.
+- [ ] API-01–API-04: username **or** email/password login and secure token-based API authentication, password minimum eight characters, existing Auth accounts preserved; deny password-as-static-API-key shortcuts.
 - [ ] Activate and prove real authorised transactional email on the intended production target; staging Mailpit does not count as external delivery.
 
 ### R2 — General product/UX completion (`P1/P2`, parallel, but without jeopardising P0)
 
-- [ ] FC-01–03, FC-08–13: website footer translation (separate approval), coherent demo/dark design, references to Forum/Contracts, role-specific Courses and safe preview switch.
-- [ ] FC-18, FC-20–21: expertise UX, fictional demo customers on **development-only** bootstrap, direct contract file picker/drag-drop.
+- [ ] FC-01–03, FC-08–13: separate website footer translation approval; **keep and comprehensively redesign `/demo` to match the real portal**, improve dark colour composition while protecting light theme, improve Forum/Contracts links, role-specific Courses and safe preview switch.
+- [ ] FC-18, FC-20–21: expertise UX, fictional demo customers and demo courses inside the **fictional, isolated demo and development/test bootstrap only**, direct contract file picker/drag-drop. Never seed real production records.
 - [ ] FC-25, FC-27, FC-30–33: accessible topic filters, chronological jobs, archive toggles, customer calendar colours, role-scope course sections and finance trends.
 - [ ] FC-36–37: default 30-day payment term, true due-date sorting and accessible green/amber/red/purple status logic.
 - [ ] Validate every page in DE/EN, both themes, keyboard, 390/768/1280/1920px, Safari/Firefox where required and installed PWA behaviour.
+
+### R2.1 — Complete product API, Swagger and integration tooling (`P1`, with security-critical parts `P0`)
+
+- [ ] Implement API-01–API-08 from Section 10 using existing Auth/RPC/Edge/File integrations. Publish a complete versioned operation catalogue, with explicit permissions and authenticated request/response/error schemas.
+- [ ] Add a fully navigable Swagger UI and downloadable OpenAPI 3.1 definition for the real installed edition; interactive requests use short-lived caller tokens and remain subject to RLS.
+- [ ] Add named, scoped, revocable integration credentials and event/webhook support where approved. No permanent password-as-key API; no elevated service credentials in the browser.
+- [ ] Implement API-T01–API-T20 in the canonical CI suite; validate API parity, authenticated files, Premium OFF denial, versioning, concurrent actions and backward compatibility.
 
 ### R3 — Premium LMS foundation (`P1`, blocking any Premium customer activation)
 
@@ -110,6 +121,7 @@ The original roadmap also retains **formal assignment change requests/amendments
 ### R6 — Integrated acceptance and release (`P0 for real users; P1-specific gates for Premium ON`)
 
 - [ ] **LMS-10–LMS-11:** complete DE/EN, security, permissions, migration, API, file, chat, notification, unit, component, SQL/RLS, integration and browser test matrix in Section 8.12 (Premium LMS test matrix below).
+- [ ] **API-T01–API-T20:** complete login/API/Swagger/integration test matrix from Section 10; verify that every supported UI action has an authorised API mapping and that the OpenAPI contract agrees with actual responses.
 - [ ] Execute retained-data upgrade on a restored fixture including old user UUIDs, contracts, payment snapshots, chat, invoices and actual Storage bytes; test full Premium OFF→ON→OFF→ON behaviour for two companies sharing one participant.
 - [ ] Require all current required **application + security CI checks green on the exact release commit**; no red, skipped critical jobs, waived permissions, stale status or silently accepted failed UI test.
 - [ ] Verify on Hostinger the precise deployed revision, health checks, backup freshness, isolated recovery, migrations, external SMTP, monitoring, file scanner and supported clients. Do not assume automatic development publication is production.
@@ -121,15 +133,15 @@ The original roadmap also retains **formal assignment change requests/amendments
 |---|---|
 | Unit and component | Business logic, switches, validation, dates, role-specific layouts and interaction state |
 | PostgreSQL/RLS | Exact permissions, cross-company isolation, concurrency/idempotency, immutable accepted contract/financial snapshots |
-| HTTP/API/Auth | Real authenticated sessions, account invitations/role restrictions, boundaries for premium OFF, state conflicts |
+| HTTP/API/Auth | Real username/email password sign-in, short-lived tokens, existing Auth accounts, documented operation parity, role and resource grants, Premium OFF boundaries and conflict handling |
 | Storage/malware | Actual clean/quarantined/invalid files, exact version and bytes, forbidden downloads, controlled ownership |
 | Realtime/notifications | Course chat membership revocation, no stale delivery, no duplicate email/Push after changed state |
-| Browser E2E | Lecturer/company/participant/management/admin/outsider journeys, desktop and mobile, DE/EN |
+| Browser E2E | Lecturer/company/participant/management/admin/outsider journeys, redesigned fictional `/demo`, full Swagger UI and both sign-in methods; desktop/mobile, DE/EN |
 | Accessibility and visual | Keyboard, screen reader labels, switch has colour **and** state text, contrast, spacing and responsive layout |
 | Migration/persistence | Additive migration replay protection; restart and retained accounts, sessions, documents, payments, memberships |
 | Operational | Current-main CI green, immutable release identity, actual Hostinger installation, rollback limits and verified backup restore |
 
-**Mandatory Premium test IDs:** LMS-T01–LMS-T34 in **Section 8.12 below**. These are not optional merely because historical code contains a learner workspace. Add relevant tests to the repository's **existing** canonical test commands/protected CI rules; avoid separate test scripts that CI never runs.
+**Mandatory Premium test IDs:** LMS-T01–LMS-T34 in **Section 8.12 below**. **Mandatory API test IDs:** API-T01–API-T20 in **Section 10 below**. These are not optional merely because historical code contains a learner workspace. Add relevant tests to the repository's **existing** canonical test commands/protected CI rules; avoid separate test scripts that CI never runs.
 
 ## 5. Launch planning — target 1 December 2026 (conditional)
 
@@ -150,6 +162,7 @@ The target is ambitious given the reintroduced participant scope. Treat dates as
 - Authorised public-website enquiry transport into the portal, anti-abuse controls and separate marketing-site deployment approval.
 - Richer global calendar invitations and external provider/device acceptance; additional company reporting and forecasting after baseline correctness.
 - Optional future LMS: online exam submission/grading, question banks, certificates beyond existing verified completion documents and richer learning content. **Not included solely by uploading exam PDFs.**
+- White-label commercial editions are a **separate, subsequent product** in [`WHITELABEL_ROADMAP.md`](WHITELABEL_ROADMAP.md), not an alternative demo or part of this main platform release. The Luminovia demo remains here; it is not automatically included in customer installations.
 - Complete business privacy/retention/erasure procedures, off-site backup retention and realistic production-capacity acceptance before scale-up.
 
 ## 7. Completion policy
@@ -376,7 +389,7 @@ A development agent must implement actual automated tests, not only describe the
 | ID | Priority | Clear requirement | Acceptance criterion |
 |---|---|---|---|
 | FC-01 | P2 | German/English site footer: translate `Jobs` and `LinkedIn` references appropriately and keep their links functional on the **separate public Luminovia website**. | Locale-based browser test in both languages; no changes deployed to marketing site without separate approval. |
-| FC-02 | P1 | Make the demo view visually and structurally match the actual Luminovia Portal, avoiding a disconnected mock design. Use only fictional/safe data. | Desktop/mobile visual comparisons; interactive demo uses same design components and cannot mutate real records. |
+| FC-02 | P1 | **Retain `/demo` and completely redesign its layout and visual composition to match the genuine Luminovia Portal.** Reuse the same component library, native navigation architecture, current typography, branded colour palette, responsive spacing, light/dark themes, icons, realistic course/role presentations and interaction patterns. Use only fictional and explicitly labelled demonstration data. **Do not remove or replace the demo with a disconnected presentation.** | Pixel/structure-based desktop/mobile visual regression against real portal components; DE/EN and themes checked; no demo control mutates real accounts, assignments, invoices, messages or files. |
 | FC-03 | P1 | Improve dark-theme colour composition while preserving the successful colourful light theme. | Theme acceptance screenshots, contrast checks, DE/EN, readable focus/hover/disabled states. |
 | FC-04 | P0 | Conduct end-to-end intuitive-workflow checks across onboarding, course assignment, calendar, contract upload, invoicing, company area and Premium LMS. | Role-based usability scripts complete without unexplained dead ends; all blocking accessibility issues resolved. |
 | FC-05 | P0 | Fix overlapping tiles, forms, dialog actions and buttons across desktop/tablet/mobile. | Automated layout assertions and screenshots at 390/768/1280/1920px; no clipped critical controls. |
@@ -389,13 +402,28 @@ A development agent must implement actual automated tests, not only describe the
 | FC-12 | P1 | Collapse ICS import, calendar export and offline schedule download into a compact expandable menu so calendar stays visually central. | Hidden initially; accessible open/close and intact actions on mobile/desktop. |
 | FC-13 | P1 | Offer management/admin a header view-mode switch (Management / Lecturer / Company) to simulate relevant navigation and scoped content for testing. | UI preview cannot elevate backend permissions or silently impersonate another identity; role-specific E2E. |
 
+### A.1. Retained Luminovia demo — mandatory redesign and acceptance
+
+**Final user decision:** The demo stays. Any earlier instruction proposing to delete the demo is superseded. The user likes the actual colourful light portal and wants a demonstration that looks, feels and navigates like the real software—not an unrelated landing page or decorative mock-up.
+
+- **Maintain a clearly discoverable, safe `/demo` experience** in the Luminovia Internal Edition. Do not remove the route. The public demo remains optional for visitors and is separate from authenticated production accounts; an administrator may use the same role-preview patterns without granting extra rights.
+- **Authentic visual reuse:** share the real portal's UI design system, panels/cards, header/sidebar/sidebar collapse, responsive grids, spacing scale, fonts/icons, rounded elements, animations, hover/focus treatments, language switching and navigation architecture. Do not create a stand-alone second design that departs from the platform.
+- **Light theme:** retain the vibrant, harmonious and approved original light appearance. **Dark theme:** substantially revise the currently disliked colour composition; derive a coherent dark palette that honours the same brand identity and meets accessible contrast. Any brand/theme decision should be reviewed in the actual portal as well as demo.
+- **Realistic roles and content:** demo profiles for lecturer, management/admin, customer/company and eligible participant as appropriate; include fictional course cards, schedules, job marketplace examples, learner dashboard, group chat and file/exam/attendance illustrations where already implemented. Do not claim a not-yet-built feature works. Use complete demo navigation instead of dead links.
+- **Functional but harmless simulation:** permit demonstration of filtering, sorting, selecting, opening dialogs and switching between sample perspectives. A simulated contract upload, job claim, invoice submission, email/notification or chat message must never write to the real database, send real messages, trigger a real financial action, or be confused with completed transactions. Explicitly label any simulated actions.
+- **Isolation:** prefer a typed fictional in-memory dataset and reusable presentational components. No copied customer records, real lecturer documents, Auth secrets, private file URLs or production emails. Demo session state is transient; demo cannot grant roles or open private routes, and account/login flows remain authoritative.
+- **Polish and accessibility:** check keyboard interaction, focus, error/empty/loading states, WCAG 2.2 AA contrast, 390/768/1280/1920px layouts, German and English UI, browser history and light/dark screenshot comparisons.
+- **Technical tests:** component/visual/E2E tests must ensure route availability, faithful layout, functional simulated workflows, safe link destinations and no Supabase business mutations. Preserve fictional development/test fixtures and example course data used by isolated testing; those fixtures must never seed real production automatically.
+
+**White-label distinction:** Customer white-label editions will *not* ship this Luminovia public demo. That packaging rule belongs to the separate commercial roadmap; it never removes the Luminovia demo from the core edition.
+
 ### B. Accounts, pricing, roles and contracts
 
 | ID | Priority | Clear requirement | Acceptance criterion |
 |---|---|---|---|
 | FC-14 | P0 | Management/admin may configure an individual lecturer fee as fixed rate/period or percentage under a restricted profile setting. | Real accepted quote uses applicable saved setting, only permitted staff can see/change it; history remains immutable. |
 | FC-15 | P0 | Distinguish lecturer from senior lecturer for pricing/offer logic, and allow individual overrides. | Correct quote for each role; current settings never retroactively change accepted assignments/invoices. |
-| FC-16 | P0 | Minimum password length becomes **8** rather than 12, with safe rate limiting, recovery and breached-password checks where available. | 7 rejected, 8 accepted in all creation/reset paths; no auth security regression. |
+| FC-16 | P0 | Minimum password length becomes **8** rather than 12, with safe rate limiting, account recovery, and breached-password checks where supported. The same account must support **username OR email plus password** using current Supabase Auth identities. | 7 rejected and 8 accepted in creation, invite activation and reset; both sign-in identifiers reach the same user UUID/permissions; legacy email-only login works without a password reset. |
 | FC-17 | P0 | Only an authorised admin can assign `admin` or `management`. Management may grant other roles within its permissible scope. | Direct API/RLS tests reject unauthorised privileged role assignment, including self-escalation and owner/last-admin abuse. |
 | FC-18 | P1 | Lecturers can directly add/select their expertise through their profile. | Save/reload/search test; qualification evidence remains separately tracked where necessary. |
 | FC-19 | P0 | Ordinary self-selected expertise does not need explicit management verification simply to appear as a skill. Preserve *verified qualification* requirements where an assignment independently mandates them. | Skill visible immediately; regulated/explicit verification gates cannot be bypassed. |
@@ -474,19 +502,135 @@ The authoritative detailed implementation and security contract is [LMS_PREMIUM_
 
 ---
 
-## 10. Implementation instructions for AI coding agents
+## 10. Complete Platform API, Swagger / OpenAPI and username-or-email authentication
+
+**Status:** Target requirements for the regular Luminovia Portal and Premium LMS (not claims of implementation). All APIs must use the existing Supabase/PostgreSQL business rules, row-level security, Auth, course/file gateways and audit mechanisms. An API must expose authorised **product operations**, not direct superuser access to every database table. The later white-label product inherits this tested API foundation but has its own edition-specific permissions and packaging in `WHITELABEL_ROADMAP.md`.
+
+### 10.1. Acceptance scope and existing technical foundation
+
+| Existing source | Current evidence | Required addition |
+|---|---|---|
+| `supabase/functions/accounts/openapi.ts` and the account handler | Account-focused versioned HTTP API with OpenAPI 3.1 | Reuse, extend and generate a complete contract across every supported domain |
+| `API_REFERENCE.md`, public PostgreSQL RPCs and the Edge gateways | Domain RPC surface, documentation and private file access patterns | Stable external-facing API inventory, request/response schemas, error semantics and version support |
+| Supabase Auth and current account/role permissions | Email/password accounts and JWT-backed, database-authorised actions | Safe username login alias, authenticated API sign-in, integration credential management and permission checks |
+| PWA, existing routes and demo | Portal UI and test/browser framework | Interactive Swagger UI, complete API parity, real role tests and non-production examples |
+
+**Mandatory operational definition:** for each supported action exposed by the authenticated portal UI, provide a documented API action for the same resource and actor **or** an explicitly documented justified exception where exposing an operation would be inappropriate. A fake endpoint or a Swagger button without server-side implementation is not accepted.
+
+### 10.2. API-01 — Login by username OR email and password
+
+- Support a single login field labelled **Username or email** (DE: **Benutzername oder E-Mail**) with password in the web app, installed PWA and supported API authentication flow. Preserve password reset, invitation acceptance, recovery, account deactivation and logout.
+- Maintain **one authoritative Supabase Auth account and password** for each person. Username is an alias, **not** a new account, role, credential store or Luminovia public User ID. Existing email-only users continue signing in with unchanged identities/passwords/roles.
+- Add username choice/change/normalisation with a documented uniqueness boundary, case-insensitive collision protection, reserved-name/impersonation rules, minimum and maximum lengths, safe character validation, versioned updates and clean conflict feedback. Legacy users may add a username without forcing account migration.
+- Resolve username to the same existing Auth identity in a protected server operation that does not leak private email addresses, UUIDs or existence status. Never expose a public reverse-lookup endpoint; apply rate limiting and generic invalid-credential responses for unknown usernames/emails and bad passwords.
+- Enforce **minimum 8 characters** (not 12) for new/changed passwords in the authoritative backend and UI across invitations, account creation, resets and administrator-assisted onboarding. Do not weaken password hashing, refresh-token handling, account suspension, recovery expiry, logging redaction, brute-force defences or optional breached-password screening.
+- Passwords may be provided to a protected sign-in endpoint over TLS but must not be written into URLs, API logs, analytics, Swagger examples, webhooks or stored client integration configuration.
+
+### 10.3. API-02 — Full token-based authenticated API access
+
+- A human user may authenticate through username/email + password; successful login issues or establishes the existing secure, short-lived access-token session. Subsequent API calls use scoped bearer access tokens, **not a permanent username/email+password API key** or a Supabase service-role secret.
+- Respect session expiry/refresh, logout, disabled accounts, changed roles, revoked memberships, current lecturer contract/qualification eligibility, company Premium ON/OFF state and per-resource permissions on **every operation**.
+- Support controlled non-browser clients under documented CORS, CSRF (where applicable), Origin, TLS, request-size and anti-abuse policies. Protect downloads and uploads equally; a browser-specific Origin policy must not prevent legitimate authorised integration use without an intentionally designed alternative.
+- Provide named, explicitly permissioned, revocable **integration/service identities** for server-to-server automation that never require sharing a personal admin password. Enforce credential expiry/rotation, least privilege, usage monitoring and audit. Service keys are never distributed through the browser.
+
+### 10.4. API-03 — Complete versioned product API and UI/API parity
+
+Document an intentional versioned route scheme (for example `/api/v1/*` as a **proposed** design, not an existing URL). Preserve existing compatible `/functions/v1/accounts/v1`, domain RPCs and protected file services as trusted business implementations. Do not generate unsafe CRUD endpoints by publicly exposing database tables.
+
+| API domain | Supported actions to catalogue and implement within real roles |
+|---|---|
+| Identity, profile and expertise | Account login/session, profile and username, user-ID lookup under permission, qualifications, roles, invitations, account lifecycle |
+| Organisations and company memberships | Authorised contacts, organisational membership, company settings, participant linking and tenant boundaries |
+| Courses and scheduling | Templates, course runs, sessions/time zones, course readiness, delivery, teacher assignment, welcome content and scoped course management |
+| Job marketplace (when authorised) | Open offers, filters/saved views, terms/quotes, atomic complete claims, cancellations/replacements, notifications and contract prerequisites |
+| Participant Premium LMS | Per-company entitlement status, admin-only toggles, participant invitations/enrolments, learner dashboards and permitted learning actions |
+| Course materials and protected files | Upload reservation, scan/quarantine outcome, version metadata, staff-only materials, permissioned exact file bytes, download and authorised removal |
+| Examinations and quizzes | Per-course exam-required toggle, participant-visible clean exam PDFs, protected answer keys, existing quizzes and assessed completion functions |
+| Daily attendance | Authorised class roster, present/absent/excused/late state, arrival/notes, corrections, scanned evidence and restricted imports/exports |
+| Chats and collaboration | Private and group chats subject to memberships, course rooms, moderation, unread/message functions, file attachments and safe realtime subscriptions |
+| Calendar and availability | Own schedule, published global events, ICS/import-export and permissioned subscriptions |
+| Knowledge, communications and support | Wiki/forum operations, announcements, notification preferences, user support and auditable event information |
+| Contracts and finance | Executed contracts, own statements/invoices/PDFs, authorised payment records, business reports and original-currency figures |
+| Administration and analytics | Permissioned admin controls, company course activity, audit/event exports, user management, company and scoped analytics |
+
+- Always enforce company, role, edition (where applicable), course, owner and file-version checks in authoritative server code; API access cannot bypass the same constraints as the UI.
+- Handle validated dates (IANA zones), original currency and immutable accepted teaching and commercial snapshots. No API action silently invents financial records, transfers funds or electronically signs an agreement.
+- Define bounded pagination/filtering/sorting, stable cursor behaviour, schema validation, explicit error codes, optimistic concurrency and idempotency for retryable operations; long-running scans/exports/imports must expose processing state.
+- API parity includes security-sensitive **denials**: unauthorised actors must never call Premium OFF features, reveal private attendance, forge contracts, escalate roles, inspect other organisations, or access Luminovia-only administrative actions.
+
+### 10.5. API-04 — Full OpenAPI 3.1 and interactive Swagger UI
+
+- Publish a **complete machine-readable OpenAPI 3.1** document (JSON or YAML) describing every supported public API path/method, operation ID, role/scope, request and response schemas, content types, status codes, validation failures, error envelope, examples, cursor rules, upload/download flows, token requirements and API limits.
+- Provide an **interactive Swagger UI** with a discoverable link in Help/Integrations for permitted administrators and developers. Example candidate routes are `/api/docs` and `/api/openapi.json`—**not assertions of existing routes**. Swagger must use the **same version and capabilities** as the running implementation.
+- Provide searchable tags and DE/EN helper content, actionable fake-data examples, tested `curl`, Python and TypeScript samples, API changelog and concrete authorisation/error guidance.
+- Swagger `Authorize` must authenticate a user safely and use that caller's token. Restricted try-it-out actions must not run without the required permission. Demo/sandbox examples must be isolated fictional data; no production account passwords, server service-role keys or private documents in static docs.
+- Generate/validate schemas against live endpoints and actual response samples during CI. Unsupported or disabled operations must not be presented as usable and must fail closed server-side; provide a clear availability/permission reason.
+
+### 10.6. API-05 — Integrations, keys, events and webhooks
+
+- Add an authorised **Integrations / API Management** page: named integration identities, fine-grained scopes, creation, rotation/revocation, expiration, audit/use history, rate limits, webhook subscriptions, delivery status and version documentation.
+- Events should cover committed milestones where supported: participant enrolment, company course creation/reschedule, assignment allocation/reopening, exam publication, verified attendance, completion document issuance/revocation, permitted file readiness and invoice/payment status changes.
+- Webhooks must be event-ID based, signed, permission-filtered, bounded in retries, safe under duplicate/out-of-order delivery and revoked when integration or resource access ends. Delivery must not disclose staff-only answers, private DMs or other companies' information.
+- Preserve user and integration separation: a customer's scoped integration is never equivalent to a Luminovia admin or infrastructure operator, and an integration does not acquire every action merely because its owner has an admin screen.
+
+### 10.7. API-06 — Developer experience and support
+
+- Document setup, token issuance/expiry, service-account credential provisioning, request signing (for webhooks), errors, version compatibility, page limits, file scan phases, event retries and practical integration walkthroughs.
+- Ensure `/help` and safe administrative settings link to the running edition's Swagger; never hide documentation behind an unimplemented route or rely solely on an outdated Markdown API inventory.
+- Provide exact-version development sandbox or fictional staging and a copyable code sample for each principal workflow, including account invitation, course creation, enrolment and permitted attendance/report retrieval.
+- Publish a supported compatibility/deprecation policy and migration guide for future breaking API changes; new releases must keep older supported integrations working unless explicitly versioned and documented.
+
+### 10.8. API-07 — Security, performance and operational policies
+
+- Rate limit authentication, key generation, reporting, exports and file operations. Defend against role elevation, broken object-level permissions, stale tokens, double-claim races and cross-company file/message exposure.
+- Enforce the current app's privacy constraints across REST, Edge, Realtime, Storage and any new public API facade. Treat policy changes and revocation as immediately effective on new requests, even when existing tokens remain valid until expiry.
+- Distinguish transient network/provider failures from confirmed success, log safe correlation IDs/aggregate diagnostics, and avoid raw secrets, personal document content, passwords and access tokens in logs.
+- Keep overhead bounded for the original Hostinger KVM development instance; production and externally exposed API capacity require separate acceptance and monitoring.
+
+### 10.9. API-08 — CI integration and Definition of Done
+
+All new tests must be executable as part of the existing `./portal test`, GitHub application/security workflows and appropriate deployed acceptance. The complete API scope may be implemented in reviewable vertical slices but **cannot be claimed complete** until every supported domain and documented operation passes the tests below.
+
+| Test | Automated acceptance / observable behaviour |
+|---|---|
+| API-T01 | Email + password logs into an existing account without password reset or identity change; correct Auth UUID and roles |
+| API-T02 | Username + password logs into the same account; unique alias and no duplicated Auth user/password table |
+| API-T03 | Unknown username/email, wrong password, disabled account and brute-force attempts do not leak user existence or bypass throttling |
+| API-T04 | Seven-character new password rejected and eight-character password accepted by server and UI, including invite and recovery paths |
+| API-T05 | Human login yields short-lived user access token, and subsequent API requests use token rather than reusable login password |
+| API-T06 | Expired/revoked tokens and changed roles/memberships are denied, including stale UI and cached sessions |
+| API-T07 | Each supported portal UI business operation has a documented permitted API action or justified security exception |
+| API-T08 | OpenAPI path/response/error schemas agree with real handlers and samples for the exact release; incompatible changes fail CI |
+| API-T09 | Swagger loads with correct search/tags/authentication and can execute allowed actions using the current actor without leaking keys |
+| API-T10 | Direct API requests by lecturer, participant, company member, management, admin and stranger return correct resource-level permissions |
+| API-T11 | Valid, invalid, oversized and malware-flagged file upload flows protect metadata, exact bytes and clean-version visibility |
+| API-T12 | Duplicate enrolment/assignment/mutation requests and stale-version edits are idempotent or reject with appropriate conflicts |
+| API-T13 | Pagination, sorting, filtering, rate-limit violations and structured validation errors follow documented bounded contracts |
+| API-T14 | Signed webhook, duplicate, retry, reordering, credential rotation and membership revocation behave correctly without leaks |
+| API-T15 | Tested `curl`, Python and TypeScript quick-start clients work against isolated fictional fixtures with no hard-coded secrets |
+| API-T16 | Supported integration survives compatible database/API upgrades; breaking changes require documented version transition |
+| API-T17 | Premium company OFF and participant A/OFF–B/ON deny only A's API/LMS/chat/files while preserving B's permitted access |
+| API-T18 | API account role escalation, Luminovia admin-only Premium toggle, foreign-company record and staff-only exam/attendance access are denied |
+| API-T19 | Full API/Swagger flow in DE/EN, dark/light and mobile/desktop; keyboard, accessibility and safe failure states pass |
+| API-T20 | Exact GitHub release CI and API contract/security gates pass, and deployed target matches documented API version and source SHA |
+
+**Completion evidence:** Code, OpenAPI contract, HTTP/RLS/Storage tests, full browser/Swagger workflows, CI run IDs, deployed revision and known limits must be recorded. Passing tests for the existing account OpenAPI alone do not satisfy **full API coverage**.
+
+---
+
+## 11. Implementation instructions for AI coding agents
 
 Repository: `Luminovia-Training-Consulting/Luminovia-Management-Tool`.
 Target: retain a green, protected CI pipeline and prepare for a *conditional* real-user release on 1 December 2026. No source changes or deployment are authorised by this brief alone.
 
-**Start by reading** `AGENTS.md`, `PRODUCT.md`, `ROADMAP.md`, Sections 8 and 9 of this ROADMAP.md, `DEVELOPMENT.md`, `OPERATIONS.md`, the current migration guide and the relevant source/tests. Inspect current `main`, active branches/PRs, required CI jobs and actual Hostinger development installation before planning. Record a feature ownership matrix mapping FC-01–FC-58 and LMS-01–LMS-11 to `present / partial / missing / blocked / accepted`, source paths, owner PR and required automated tests. Do not duplicate code already owned by another workstream or silently erase older product requirements.
+**Start by reading** `AGENTS.md`, `PRODUCT.md`, `ROADMAP.md`, Sections 8–10 of this ROADMAP.md, `DEVELOPMENT.md`, `OPERATIONS.md`, the current migration guide and the relevant source/tests. Inspect current `main`, active branches/PRs, required CI jobs and actual Hostinger development installation before planning. Record a feature ownership matrix mapping FC-01–FC-58, LMS-01–LMS-11 and API-01–API-08 to `present / partial / missing / blocked / accepted`, source paths, owner PR and required automated tests. Do not duplicate code already owned by another workstream or silently erase older product requirements.
 
 **Implement the exact updated decisions:** Only an active **admin** account may switch a company's Premium LMS ON/OFF. Display a green/red labelled accessible switch and ask for confirmation in both directions. The whole company-scoped LMS is hidden and server-denied when OFF, without deleting data. Participants with membership in another Premium-enabled company retain their other course access. Every account keeps its existing UUID and gets a stable public Luminovia User ID; companies may create/invite/link **participant-only** accounts through verified association, never grant elevated roles. Administration can inspect and audit all LMS company/course content, group chats, exams, attendance and retained history; unrelated private DMs and personal notes remain separately protected. Reuse existing course workspace, rooms, file-scanning and attendance features; safely reintroduce previously retired participant-only access. Lecturer and authorised company may both set `Exam required`, upload student-visible exam PDFs that publish immediately after clean scanning, and manage day/session attendance with present/absent/excused, arrival time, notes and protected uploaded registers. Student exam UI is absent when not required; student attendance roster is never visible.
 
-**Implement the remaining agreed general features** according to FC-01–FC-58, especially role security, job assignment correctness, contracts, post-course invoicing, original-currency integrity, SMTP delivery, responsive UI and user-facing DE/EN controls. Preserve previously agreed immutable contracts, fees, file versions, messages and records. An ID/link/visible button never grants permissions by itself.
+**Implement the remaining agreed general features** according to FC-01–FC-58, especially **retaining and redesigning the native-style public demo**, role security, job assignment correctness, contracts, post-course invoicing, original-currency integrity, SMTP delivery, responsive UI and user-facing DE/EN controls. Implement **API-01–API-08**: username/email+password to the same Auth identity, eight-character minimum, token-based API access, full UI/API parity, complete OpenAPI 3.1, interactive Swagger, scoped integrations and safe webhooks. Preserve previously agreed immutable contracts, fees, file versions, messages and records. An ID/link/visible button never grants permissions by itself.
 
 **Mandatory engineering safeguards:** Only additive reviewed SQL migrations, untouched released migration bytes, full retained-data rehearsal and independently recoverable database/Auth/Storage backup. Do not run resets, destructive re-seeding, `docker compose down -v`, production writes or an unapproved Hostinger/DNS change. The existing immutable release/update system should be extended, not replaced.
 
-**Mandatory verification:** Unit, component, PostgreSQL constraints/RLS, Auth/API, file-byte/scanning, realtime/chat, notification, integration, concurrency, complete desktop/mobile Playwright E2E, bilingual/accessible visual checks and migration/recovery tests. Implement and pass all LMS-T01–LMS-T34. Add tests to the **existing canonical CI runners**, not an unconnected test suite. Run the full required application **and** security CI on the exact release commit. Do not call an old, skipped, failed, cancelled or manually waived check green. Report actual passing/failing evidence and the first blocking problem.
+**Mandatory verification:** Unit, component, PostgreSQL constraints/RLS, Auth/API, file-byte/scanning, realtime/chat, notification, integration, concurrency, complete desktop/mobile Playwright E2E, bilingual/accessible visual checks and migration/recovery tests. Implement and pass all LMS-T01–LMS-T34 **and API-T01–API-T20**, with a corresponding full API/Swagger contract test suite. Add tests to the **existing canonical CI runners**, not an unconnected test suite. Run the full required application **and** security CI on the exact release commit. Do not call an old, skipped, failed, cancelled or manually waived check green. Report actual passing/failing evidence and the first blocking problem.
 
 **Delivery:** Produce small reviewable PRs with ownership, migrations, tests, documentation updates and precise evidence. Keep production and the existing CMS development instance distinct. The Premium flag must default OFF and may only be enabled for real companies after its own integrated acceptance succeeds. On 30 November, provide an honest go/no-go decision for the 1 December launch; incomplete critical security/data/financial requirements block real-user release.
