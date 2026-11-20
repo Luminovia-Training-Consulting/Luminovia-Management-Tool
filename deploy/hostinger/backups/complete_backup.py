@@ -13,7 +13,6 @@ import hashlib
 import io
 import json
 import os
-from pathlib import Path
 import re
 import shutil
 import signal
@@ -24,6 +23,7 @@ import tarfile
 import threading
 import time
 import uuid
+from pathlib import Path
 
 FORMAT = "luminovia-complete-backup-v1"
 ROOT = Path("/opt/luminovia-portal")
@@ -299,7 +299,7 @@ class CompleteBackup:
     def inspect(self):
         containers = []
         for project, expected in SERVICES.items():
-            names = run(["docker", "ps", "-a", "--filter", "label=com.docker.compose.project=" + project, "--format", "{{.Names}}"] ).decode().splitlines()
+            names = run(["docker", "ps", "-a", "--filter", "label=com.docker.compose.project=" + project, "--format", "{{.Names}}"]).decode().splitlines()
             rows = json.loads(run(["docker", "inspect", *names])) if names else []
             actual = {row["Config"]["Labels"]["com.docker.compose.service"] for row in rows}
             if actual != expected:
@@ -494,15 +494,18 @@ class CompleteBackup:
                             # Hash and archive the same opened bytes; detect changes
                             # despite quiescence instead of accepting mixed snapshots.
                             h = hashlib.sha256()
+
                             # Feed file bytes into tar and hash the same opened content.
                             class Reader:
                                 # Hold only the already opened source stream for this archive entry.
                                 def __init__(self, stream): self.stream = stream
+
                                 # Hash the plaintext bytes actually consumed by tar for later comparison.
                                 def read(self, size=-1):
                                     value = self.stream.read(size)
                                     h.update(value)
                                     return value
+
                             with source.open("rb") as stream:
                                 tar.addfile(info, Reader(stream))
                             item["sha256"] = h.hexdigest()
@@ -556,6 +559,7 @@ class CompleteBackup:
         try:
             def timed_out(_signal, _frame):
                 raise BackupError("quiescence_time_budget_exceeded")
+
             signal.signal(signal.SIGALRM, timed_out)
             signal.setitimer(signal.ITIMER_REAL, 180)
             self.quiesce()
@@ -690,10 +694,12 @@ def main():
             raise BackupError("fresh_complete_backup_required")
     if os.geteuid() != 0:
         raise BackupError("root_required_for_named_vps_backup")
+
     # A termination signal still enters the recovery finally block.
     # Route an interrupt into this backup's controlled cleanup/resumption path.
     def interrupt(_signal, _frame):
         raise BackupError("backup_interrupted")
+
     signal.signal(signal.SIGTERM, interrupt)
     signal.signal(signal.SIGINT, interrupt)
     return backup.execute()

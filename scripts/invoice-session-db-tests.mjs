@@ -61,10 +61,31 @@ await withTestDatabase("invoice_session_test", async ({sql, actor}) => {
         partialEndB: new Date(Date.now() - 2 * 86400000 + 3600000).toISOString(),
     };
     await sql(
-        `insert into public.jobs(id,title,customer_name,delivery_type,status,amount,total_amount,currency,rate_unit,terms,created_by) values('${futureJob}','Future invoice fixture','Fictional academy','online','filled',200,200,'EUR','fixed_total','Accepted terms','${manager}'),('${completedJob}','Completed invoice fixture','Fictional academy','online','filled',200,200,'EUR','fixed_total','Accepted terms','${manager}'),('${partialJob}','Partial invoice fixture','Fictional academy','online','filled',400,400,'EUR','fixed_total','Accepted terms','${manager}'),('${cancelledJob}','Cancelled invoice fixture','Fictional academy','online','draft',200,200,'EUR','fixed_total','Accepted terms','${manager}'),('${otherJob}','Other invoice fixture','Fictional academy','online','filled',200,200,'EUR','fixed_total','Accepted terms','${manager}');
-     insert into public.job_sessions(id,job_id,starts_at,ends_at) values('${futureSession}','${futureJob}','${dates.futureStart}','${dates.futureEnd}'),('${completedSession}','${completedJob}','${dates.pastStart}','${dates.pastEnd}'),('${partialSessionA}','${partialJob}','${dates.partialStartA}','${dates.partialEndA}'),('${partialSessionB}','${partialJob}','${dates.partialStartB}','${dates.partialEndB}'),('${cancelledSession}','${cancelledJob}','${dates.pastStart}','${dates.pastEnd}'),('${otherSession}','${otherJob}','${dates.pastStart}','${dates.pastEnd}');
-     insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,status,amount,currency,rate_unit,total_amount,terms,terms_version) values('${futureClaim}','${futureJob}', '${lecturer}','${randomUUID()}','confirmed',200,'EUR','fixed_total',200,'Accepted terms',1),('${completedClaim}','${completedJob}','${lecturer}','${randomUUID()}','confirmed',200,'EUR','fixed_total',200,'Accepted terms',1),('${partialClaim}','${partialJob}','${lecturer}','${randomUUID()}','confirmed',400,'EUR','fixed_total',400,'Accepted terms',1),('${cancelledClaim}','${cancelledJob}','${lecturer}','${randomUUID()}','cancelled',200,'EUR','fixed_total',200,'Accepted terms',1),('${otherClaim}','${otherJob}','${otherLecturer}','${randomUUID()}','confirmed',200,'EUR','fixed_total',200,'Accepted terms',1);
-     insert into public.assignment_sessions(id,claim_id,lecturer_id,starts_at,ends_at,released_at) values('${futureSession}','${futureClaim}','${lecturer}','${dates.futureStart}','${dates.futureEnd}',null),('${completedSession}','${completedClaim}','${lecturer}','${dates.pastStart}','${dates.pastEnd}',null),('${partialSessionA}','${partialClaim}','${lecturer}','${dates.partialStartA}','${dates.partialEndA}',null),('${partialSessionB}','${partialClaim}','${lecturer}','${dates.partialStartB}','${dates.partialEndB}',now()),('${otherSession}','${otherClaim}','${otherLecturer}','${dates.pastStart}','${dates.pastEnd}',null);`,
+        `insert into public.jobs(id, title, customer_name, delivery_type, status, amount, total_amount, currency, rate_unit, terms, created_by)
+         values ('${futureJob}', 'Future invoice fixture', 'Fictional academy', 'online', 'filled', 200, 200, 'EUR', 'fixed_total', 'Accepted terms', '${manager}'),
+                ('${completedJob}', 'Completed invoice fixture', 'Fictional academy', 'online', 'filled', 200, 200, 'EUR', 'fixed_total', 'Accepted terms', '${manager}'),
+                ('${partialJob}', 'Partial invoice fixture', 'Fictional academy', 'online', 'filled', 400, 400, 'EUR', 'fixed_total', 'Accepted terms', '${manager}'),
+                ('${cancelledJob}', 'Cancelled invoice fixture', 'Fictional academy', 'online', 'draft', 200, 200, 'EUR', 'fixed_total', 'Accepted terms', '${manager}'),
+                ('${otherJob}', 'Other invoice fixture', 'Fictional academy', 'online', 'filled', 200, 200, 'EUR', 'fixed_total', 'Accepted terms', '${manager}');
+        insert into public.job_sessions(id, job_id, starts_at, ends_at)
+        values ('${futureSession}', '${futureJob}', '${dates.futureStart}', '${dates.futureEnd}'),
+               ('${completedSession}', '${completedJob}', '${dates.pastStart}', '${dates.pastEnd}'),
+               ('${partialSessionA}', '${partialJob}', '${dates.partialStartA}', '${dates.partialEndA}'),
+               ('${partialSessionB}', '${partialJob}', '${dates.partialStartB}', '${dates.partialEndB}'),
+               ('${cancelledSession}', '${cancelledJob}', '${dates.pastStart}', '${dates.pastEnd}'),
+               ('${otherSession}', '${otherJob}', '${dates.pastStart}', '${dates.pastEnd}');
+        insert into public.job_claims(id, job_id, lecturer_id, idempotency_key, status, amount, currency, rate_unit, total_amount, terms, terms_version)
+        values ('${futureClaim}', '${futureJob}', '${lecturer}', '${randomUUID()}', 'confirmed', 200, 'EUR', 'fixed_total', 200, 'Accepted terms', 1),
+               ('${completedClaim}', '${completedJob}', '${lecturer}', '${randomUUID()}', 'confirmed', 200, 'EUR', 'fixed_total', 200, 'Accepted terms', 1),
+               ('${partialClaim}', '${partialJob}', '${lecturer}', '${randomUUID()}', 'confirmed', 400, 'EUR', 'fixed_total', 400, 'Accepted terms', 1),
+               ('${cancelledClaim}', '${cancelledJob}', '${lecturer}', '${randomUUID()}', 'cancelled', 200, 'EUR', 'fixed_total', 200, 'Accepted terms', 1),
+               ('${otherClaim}', '${otherJob}', '${otherLecturer}', '${randomUUID()}', 'confirmed', 200, 'EUR', 'fixed_total', 200, 'Accepted terms', 1);
+        insert into public.assignment_sessions(id, claim_id, lecturer_id, starts_at, ends_at, released_at)
+        values ('${futureSession}', '${futureClaim}', '${lecturer}', '${dates.futureStart}', '${dates.futureEnd}', null),
+               ('${completedSession}', '${completedClaim}', '${lecturer}', '${dates.pastStart}', '${dates.pastEnd}', null),
+               ('${partialSessionA}', '${partialClaim}', '${lecturer}', '${dates.partialStartA}', '${dates.partialEndA}', null),
+               ('${partialSessionB}', '${partialClaim}', '${lecturer}', '${dates.partialStartB}', '${dates.partialEndB}', now()),
+               ('${otherSession}', '${otherClaim}', '${otherLecturer}', '${dates.pastStart}', '${dates.pastEnd}', null);`,
     );
     const document = randomUUID(), version = randomUUID(), client = randomUUID();
     await sql(

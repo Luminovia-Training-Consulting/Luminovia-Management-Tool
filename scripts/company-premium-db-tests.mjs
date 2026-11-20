@@ -22,18 +22,47 @@ await withTestDatabase("company_premium_test", async ({sql, actor}) => {
         roomA = randomUUID(), roomB = randomUUID(),
         membershipA = randomUUID(), membershipB = randomUUID();
     await sql(
-        `insert into auth.users(id,email) values${[admin, secondAdmin, manager, lecturer, participant, client, owner].map((id) => `(${q(id)},${q(`${id}@example.invalid`)})`).join(",")};update auth.users set email_confirmed_at=now() where id=${q(participant)};
-     insert into public.user_roles(user_id,role) values(${q(admin)},'admin'),(${q(secondAdmin)},'admin'),(${q(manager)},'management'),(${q(lecturer)},'lecturer'),(${q(participant)},'participant'),(${q(client)},'client'),(${q(owner)},'owner');
-     insert into public.organisations(id,name) values(${q(companyA)},'Fictional Premium Academy A'),(${q(companyB)},'Fictional Premium Academy B');
-     insert into public.client_organisation_memberships(user_id,organisation_id) values(${q(client)},${q(companyA)});
-     insert into public.course_templates(id,title,syllabus) values(${q(template)},'Fictional retained LMS course','Fictional course syllabus');
-     insert into public.course_runs(id,template_id,organisation_id) values(${q(runA)},${q(template)},${q(companyA)}),(${q(runB)},${q(template)},${q(companyB)});
-     insert into public.course_sessions(id,course_run_id,starts_at,ends_at) values(${q(sessionA)},${q(runA)},now()+interval '2 days',now()+interval '2 days 1 hour'),(${q(sessionB)},${q(runB)},now()+interval '3 days',now()+interval '3 days 1 hour');
-     insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by) values(${q(runA)},${q(participant)},'enrolled',${q(admin)}),(${q(runB)},${q(participant)},'enrolled',${q(admin)});
-     insert into public.chat_rooms(id,kind,title,owner_id,course_run_id) values(${q(roomA)},'participant_course','Fictional company A room',${q(admin)},${q(runA)}),(${q(roomB)},'participant_course','Fictional company B room',${q(admin)},${q(runB)});
-     insert into public.chat_members(room_id,user_id) values(${q(roomA)},${q(participant)}),(${q(roomB)},${q(participant)});
-     insert into private.company_participant_link_requests(id,organisation_id,requested_by,request_id,luminovia_user_id,target_user_id,status,expires_at) values('${membershipA}','${companyA}','${admin}','${randomUUID()}',(select luminovia_user_id from public.profiles where id='${participant}'),'${participant}','accepted',now()+interval '14 days'),('${membershipB}','${companyB}','${admin}','${randomUUID()}',(select luminovia_user_id from public.profiles where id='${participant}'),'${participant}','accepted',now()+interval '14 days');
-     insert into private.company_participant_memberships(organisation_id,user_id,status,link_request_id,invited_by,joined_at,version) values('${companyA}','${participant}','active','${membershipA}','${admin}',now(),1),('${companyB}','${participant}','active','${membershipB}','${admin}',now(),1);`,
+        `insert into auth.users(id, email)
+         values ${[admin, secondAdmin, manager, lecturer, participant, client, owner].map((id) => `(${q(id)},${q(`${id}@example.invalid`)})`).join(",")};
+        update auth.users
+        set email_confirmed_at=now()
+        where id = ${q(participant)};
+        insert into public.user_roles(user_id, role)
+        values (${q(admin)}, 'admin'),
+               (${q(secondAdmin)}, 'admin'),
+               (${q(manager)}, 'management'),
+               (${q(lecturer)}, 'lecturer'),
+               (${q(participant)}, 'participant'),
+               (${q(client)}, 'client'),
+               (${q(owner)}, 'owner');
+        insert into public.organisations(id, name)
+        values (${q(companyA)}, 'Fictional Premium Academy A'),
+               (${q(companyB)}, 'Fictional Premium Academy B');
+        insert into public.client_organisation_memberships(user_id, organisation_id)
+        values (${q(client)}, ${q(companyA)});
+        insert into public.course_templates(id, title, syllabus)
+        values (${q(template)}, 'Fictional retained LMS course', 'Fictional course syllabus');
+        insert into public.course_runs(id, template_id, organisation_id)
+        values (${q(runA)}, ${q(template)}, ${q(companyA)}),
+               (${q(runB)}, ${q(template)}, ${q(companyB)});
+        insert into public.course_sessions(id, course_run_id, starts_at, ends_at)
+        values (${q(sessionA)}, ${q(runA)}, now() + interval '2 days', now() + interval '2 days 1 hour'),
+               (${q(sessionB)}, ${q(runB)}, now() + interval '3 days', now() + interval '3 days 1 hour');
+        insert into public.course_enrolments(course_run_id, user_id, status, enrolled_by)
+        values (${q(runA)}, ${q(participant)}, 'enrolled', ${q(admin)}),
+               (${q(runB)}, ${q(participant)}, 'enrolled', ${q(admin)});
+        insert into public.chat_rooms(id, kind, title, owner_id, course_run_id)
+        values (${q(roomA)}, 'participant_course', 'Fictional company A room', ${q(admin)}, ${q(runA)}),
+               (${q(roomB)}, 'participant_course', 'Fictional company B room', ${q(admin)}, ${q(runB)});
+        insert into public.chat_members(room_id, user_id)
+        values (${q(roomA)}, ${q(participant)}),
+               (${q(roomB)}, ${q(participant)});
+        insert into private.company_participant_link_requests(id, organisation_id, requested_by, request_id, luminovia_user_id, target_user_id, status, expires_at)
+        values ('${membershipA}', '${companyA}', '${admin}', '${randomUUID()}', (select luminovia_user_id from public.profiles where id = '${participant}'), '${participant}', 'accepted', now() + interval '14 days'),
+               ('${membershipB}', '${companyB}', '${admin}', '${randomUUID()}', (select luminovia_user_id from public.profiles where id = '${participant}'), '${participant}', 'accepted', now() + interval '14 days');
+        insert into private.company_participant_memberships(organisation_id, user_id, status, link_request_id, invited_by, joined_at, version)
+        values ('${companyA}', '${participant}', 'active', '${membershipA}', '${admin}', now(), 1),
+               ('${companyB}', '${participant}', 'active', '${membershipB}', '${admin}', now(), 1);`,
     );
     /** Invoke one public RPC with an authenticated fixture identity. */
     const rpc = (who, name, args = []) =>

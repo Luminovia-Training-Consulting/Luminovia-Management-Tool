@@ -4,7 +4,7 @@
  */
 import {useState} from "react";
 import {Link, useParams} from "react-router-dom";
-import {useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {useTranslation} from "react-i18next";
 import {MessageCircle, Star} from "lucide-react";
 import {UnavailablePerson} from "../accounts/unavailable-person";
@@ -14,24 +14,11 @@ import {PersonContact} from "./person-contact";
 import {useAuth} from "../auth/auth-context";
 import {topicsQuery} from "../../lib/queries";
 import {dateTime} from "../../lib/dates";
-import {useOnline, requireOnline} from "../../lib/online";
+import {requireOnline, useOnline} from "../../lib/online";
 import {Button} from "../../components/ui/button";
 import {Dialog} from "../../components/ui/dialog";
-import {
-    Field,
-    Loading,
-    ErrorState,
-    Notice,
-    PageHeading,
-} from "../../components/common";
-import {
-    peopleDirectoryQuery,
-    personQuery,
-    profileCoursesQuery,
-    reviewsQuery,
-    peopleRpc,
-    type CourseReview,
-} from "./api";
+import {ErrorState, Field, Loading, Notice, PageHeading,} from "../../components/common";
+import {type CourseReview, peopleDirectoryQuery, peopleRpc, personQuery, profileCoursesQuery, reviewsQuery,} from "./api";
 import "./i18n";
 import "./people.css";
 

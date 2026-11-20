@@ -6,7 +6,10 @@
   "source_status": "uncommitted source reviewed locally",
   "source_file": "supabase/migrations/20261116055529_enquiry_requirement_documents.sql",
   "source_sha256": "e4f30f48c8e908ee625d1c80751a0d4888b20e78d8e8d87f737a30441bca74c4",
-  "excerpt_lines": [68, 117],
+  "excerpt_lines": [
+    68,
+    117
+  ],
   "excerpt_sha256": "ede226a2c702ad1fc88cf9d3cd11629efc4742883cee00d648e7e80cc72afcaf",
   "fixture_sha256": "c02b1d131bbf9bcebcc203eab6175300189e6e1c1f1ed2e9f28ff8e5cbb6ef5d",
   "fixture_adjustments": [
@@ -23,7 +26,10 @@
       "source_status": "uncommitted local primary source inspected; no full-module acceptance inferred",
       "source_file": "supabase/migrations/20261116034757_internal_support_desk.sql",
       "source_sha256": "877e00bdcf3561b14bdbb7367b87e1ec8d4c94d690af4a8ff5af9b128b57af78",
-      "table_lines": [57, 65],
+      "table_lines": [
+        57,
+        65
+      ],
       "table_sha256": "d709d2f84ce847cc326a45aa8980eae34d2415b89a0df969b0f6efa92bb60e1b",
       "fixture_contract": "Only document_id FK identity is represented for Support/accounting; enquiry adds the fields required by the unchanged public registration RPC."
     },
@@ -35,7 +41,10 @@
       "source_status": "uncommitted local primary source inspected; no full-module acceptance inferred",
       "source_file": "supabase/migrations/20261116055529_enquiry_requirement_documents.sql",
       "source_sha256": "e4f30f48c8e908ee625d1c80751a0d4888b20e78d8e8d87f737a30441bca74c4",
-      "table_lines": [5, 13],
+      "table_lines": [
+        5,
+        13
+      ],
       "table_sha256": "ef67963066dc6435afe485908225a40704ea3d49e88c4acf1c8637665137d131",
       "fixture_contract": "Only document_id FK identity is represented for Support/accounting; enquiry adds the fields required by the unchanged public registration RPC."
     },
@@ -47,7 +56,10 @@
       "source_status": "uncommitted local primary source inspected; no full-module acceptance inferred",
       "source_file": "supabase/migrations/20261116055506_accounting_interoperability.sql",
       "source_sha256": "3e03c4c64dd9beb13bbd5d448f4bbcfa0f792470979e960b8a0a3a873db70520",
-      "table_lines": [5, 14],
+      "table_lines": [
+        5,
+        14
+      ],
       "table_sha256": "dbbbfd23c0b059dd180d730fd12e0532e9d3a9e877a1751c47023357242957b8",
       "fixture_contract": "Only document_id FK identity is represented for Support/accounting; enquiry adds the fields required by the unchanged public registration RPC."
     }

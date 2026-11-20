@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
-import {withTestDatabase, quoteSql as q} from "./testing/database.mjs";
+import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 
 await withTestDatabase("course_workspace", async ({sql, actor}) => {
     const [admin, teacher, learner, second, third, client, foreign] = Array.from(
@@ -35,18 +35,39 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         membershipB,
         membershipCurrent,
     ] = Array.from({length: 14}, randomUUID);
-    await sql(`insert into public.organisations(id,name)values(${q(org)},'Fictional course customer'),(${q(otherorg)},'Other private customer');
- insert into public.organisation_contacts(id,organisation_id,name,email,phone,notes)values(${q(contact)},${q(org)},'Fictional course contact','course@example.invalid','+49 40 123','Never expose internal notes'),(${q(wrongcontact)},${q(otherorg)},'Foreign private contact','foreign@example.invalid','','');
- insert into public.client_organisation_memberships(user_id,organisation_id)values(${q(client)},${q(org)});
- insert into public.course_templates(id,title,syllabus)values(${q(template)},'Fictional practical Linux','Practise safe commands');
- insert into public.course_runs(id,template_id,organisation_id)values(${q(run)},${q(template)},${q(org)}),(${q(current)},${q(template)},${q(org)});
- update public.course_runs set venue='https://example.invalid/fictional-course' where id=${q(run)};
- insert into public.course_sessions(id,course_run_id,starts_at,ends_at)values(${q(session)},${q(run)},now()-interval '2 days 1 hour',now()-interval '2 days'),(${q(currentSession)},${q(current)},now()-interval '30 minutes',now()+interval '30 minutes');
- insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms)values(${q(job)},${q(run)},'Fictional assigned course','Fictional customer','online','filled',100,'EUR','fixed_total',100,'Fictional terms');
- insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,currency,rate_unit,total_amount,terms,terms_version)values(${q(claim)},${q(job)},${q(teacher)},${q(randomUUID())},100,'EUR','fixed_total',100,'Fictional terms',1);
- insert into public.course_enrolments(course_run_id,user_id,status,enrolled_by)values ${[learner, second, third].map((id) => `(${q(run)},${q(id)},'completed',${q(admin)})`).join(",")},(${q(current)},${q(learner)},'enrolled',${q(admin)});
- insert into private.company_participant_link_requests(id,organisation_id,requested_by,request_id,luminovia_user_id,target_user_id,status,expires_at) values('${membershipA}','${org}','${admin}','${randomUUID()}',(select luminovia_user_id from public.profiles where id='${learner}'),'${learner}','accepted',now()+interval '14 days'),('${membershipB}','${org}','${admin}','${randomUUID()}',(select luminovia_user_id from public.profiles where id='${second}'),'${second}','accepted',now()+interval '14 days'),('${membershipCurrent}','${org}','${admin}','${randomUUID()}',(select luminovia_user_id from public.profiles where id='${third}'),'${third}','accepted',now()+interval '14 days');
- insert into private.company_participant_memberships(organisation_id,user_id,status,link_request_id,invited_by,joined_at,version) values('${org}','${learner}','active','${membershipA}','${admin}',now(),1),('${org}','${second}','active','${membershipB}','${admin}',now(),1),('${org}','${third}','active','${membershipCurrent}','${admin}',now(),1);`);
+    await sql(`insert into public.organisations(id, name)
+               values (${q(org)}, 'Fictional course customer'),
+                      (${q(otherorg)}, 'Other private customer');
+    insert into public.organisation_contacts(id, organisation_id, name, email, phone, notes)
+    values (${q(contact)}, ${q(org)}, 'Fictional course contact', 'course@example.invalid', '+49 40 123', 'Never expose internal notes'),
+           (${q(wrongcontact)}, ${q(otherorg)}, 'Foreign private contact', 'foreign@example.invalid', '', '');
+    insert into public.client_organisation_memberships(user_id, organisation_id)
+    values (${q(client)}, ${q(org)});
+    insert into public.course_templates(id, title, syllabus)
+    values (${q(template)}, 'Fictional practical Linux', 'Practise safe commands');
+    insert into public.course_runs(id, template_id, organisation_id)
+    values (${q(run)}, ${q(template)}, ${q(org)}),
+           (${q(current)}, ${q(template)}, ${q(org)});
+    update public.course_runs
+    set venue='https://example.invalid/fictional-course'
+    where id = ${q(run)};
+    insert into public.course_sessions(id, course_run_id, starts_at, ends_at)
+    values (${q(session)}, ${q(run)}, now() - interval '2 days 1 hour', now() - interval '2 days'),
+           (${q(currentSession)}, ${q(current)}, now() - interval '30 minutes', now() + interval '30 minutes');
+    insert into public.jobs(id, course_run_id, title, customer_name, delivery_type, status, amount, currency, rate_unit, total_amount, terms)
+    values (${q(job)}, ${q(run)}, 'Fictional assigned course', 'Fictional customer', 'online', 'filled', 100, 'EUR', 'fixed_total', 100, 'Fictional terms');
+    insert into public.job_claims(id, job_id, lecturer_id, idempotency_key, amount, currency, rate_unit, total_amount, terms, terms_version)
+    values (${q(claim)}, ${q(job)}, ${q(teacher)}, ${q(randomUUID())}, 100, 'EUR', 'fixed_total', 100, 'Fictional terms', 1);
+    insert into public.course_enrolments(course_run_id, user_id, status, enrolled_by)
+    values ${[learner, second, third].map((id) => `(${q(run)},${q(id)},'completed',${q(admin)})`).join(",")}, (${q(current)}, ${q(learner)}, 'enrolled', ${q(admin)});
+    insert into private.company_participant_link_requests(id, organisation_id, requested_by, request_id, luminovia_user_id, target_user_id, status, expires_at)
+    values ('${membershipA}', '${org}', '${admin}', '${randomUUID()}', (select luminovia_user_id from public.profiles where id = '${learner}'), '${learner}', 'accepted', now() + interval '14 days'),
+           ('${membershipB}', '${org}', '${admin}', '${randomUUID()}', (select luminovia_user_id from public.profiles where id = '${second}'), '${second}', 'accepted', now() + interval '14 days'),
+           ('${membershipCurrent}', '${org}', '${admin}', '${randomUUID()}', (select luminovia_user_id from public.profiles where id = '${third}'), '${third}', 'accepted', now() + interval '14 days');
+    insert into private.company_participant_memberships(organisation_id, user_id, status, link_request_id, invited_by, joined_at, version)
+    values ('${org}', '${learner}', 'active', '${membershipA}', '${admin}', now(), 1),
+           ('${org}', '${second}', 'active', '${membershipB}', '${admin}', now(), 1),
+           ('${org}', '${third}', 'active', '${membershipCurrent}', '${admin}', now(), 1);`);
     const rpc = async (who, name, args = []) =>
         JSON.parse(
             await actor(
@@ -155,8 +176,13 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
         async () => {
             const doc = randomUUID();
             versionId = randomUUID();
-            await sql(`insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id)values(${q(doc)},${q(admin)},${q(admin)},'personal','material','Agreed.pdf','application/pdf',10,'clean',${q(randomUUID())});
-   insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256)values(${q(versionId)},${q(doc)},${q(admin)},${q(randomUUID())},1,'fictional/agreed.pdf','Agreed.pdf','application/pdf',10,'clean',${q("a".repeat(64))});update public.documents set current_version_id=${q(versionId)} where id=${q(doc)};`);
+            await sql(`insert into public.documents(id, owner_id, uploaded_by, scope, kind, original_name, mime_type, size_bytes, status, client_id)
+                       values (${q(doc)}, ${q(admin)}, ${q(admin)}, 'personal', 'material', 'Agreed.pdf', 'application/pdf', 10, 'clean', ${q(randomUUID())});
+            insert into public.document_versions(id, document_id, uploaded_by, client_id, version, object_path, original_name, mime_type, size_bytes, status, sha256)
+            values (${q(versionId)}, ${q(doc)}, ${q(admin)}, ${q(randomUUID())}, 1, 'fictional/agreed.pdf', 'Agreed.pdf', 'application/pdf', 10, 'clean', ${q("a".repeat(64))});
+            update public.documents
+            set current_version_id=${q(versionId)}
+            where id = ${q(doc)};`);
             resource = (
                 await action(admin, "resource_share", {
                     version_id: versionId,
@@ -463,7 +489,10 @@ await withTestDatabase("course_workspace", async ({sql, actor}) => {
                 rate_unit: "fixed_total",
             };
             await sql(
-                `insert into public.job_sessions(job_id,starts_at,ends_at)values(${q(job)},now()-interval '2 days 1 hour',now()-interval '2 days');insert into private.client_course_requests(id,organisation_id,requested_by,client_id,payload,status,job_id)values(${q(original)},${q(org)},${q(client)},${q(randomUUID())},${q(JSON.stringify(payload))},'published',${q(job)});`,
+                `insert into public.job_sessions(job_id, starts_at, ends_at)
+                 values (${q(job)}, now() - interval '2 days 1 hour', now() - interval '2 days');
+                insert into private.client_course_requests(id, organisation_id, requested_by, client_id, payload, status, job_id)
+                values (${q(original)}, ${q(org)}, ${q(client)}, ${q(randomUUID())}, ${q(JSON.stringify(payload))}, 'published', ${q(job)});`,
             );
             const sessions = [
                 {

@@ -15,7 +15,7 @@
 <!-- Include the command, result and relevant scope. Explicitly identify checks that failed or were not run. A written test is not a passed test run. -->
 
 | Check or command | Result and scope |
-| ---------------- | ---------------- |
+|------------------|------------------|
 |                  |                  |
 
 ## UI and other significant effects

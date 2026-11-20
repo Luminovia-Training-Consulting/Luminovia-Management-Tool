@@ -44,19 +44,32 @@ await withApiFixture(async ({actor, sql, defer, checked}) => {
       delete from public.client_organisation_memberships where user_id in(${q(company.id)},${q(outsider.id)});
       delete from public.organisations where id in(${q(org)},${q(foreignOrg)});`);
     });
-    await sql(`insert into public.organisations(id,name) values(${q(org)},'Fictional integration company'),(${q(foreignOrg)},'Fictional other company');
-    insert into public.client_organisation_memberships(user_id,organisation_id) values(${q(company.id)},${q(org)}),(${q(outsider.id)},${q(foreignOrg)});
-    insert into public.course_templates(id,title) values(${q(template)},'Fictional integration course');
-    insert into public.course_runs(id,template_id,organisation_id) values(${q(early)},${q(template)},${q(org)}),(${q(late)},${q(template)},${q(org)});
-    insert into public.course_sessions(course_run_id,starts_at,ends_at) values
-      (${q(early)},now()+interval '8 days',now()+interval '8 days 1 hour'),
-      (${q(early)},now()+interval '9 days',now()+interval '9 days 1 hour'),
-      (${q(late)},now()+interval '6 days',now()+interval '6 days 1 hour');
-    insert into public.course_enrolments(course_run_id,user_id,enrolled_by) values(${q(early)},${q(learner.id)},${q(manager.id)}),(${q(late)},${q(learner.id)},${q(manager.id)});
-    insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms) values(${q(job)},${q(early)},'Fictional integration assignment','Fictional integration company','online','filled',100,'EUR','fixed_total',100,'Fictional immutable terms');
-    insert into public.job_sessions(job_id,starts_at,ends_at) values(${q(job)},now()+interval '8 days',now()+interval '8 days 1 hour');
-    insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,currency,rate_unit,total_amount,terms,terms_version,created_at) values(${q(claim)},${q(job)},${q(teacher.id)},${q(randomUUID())},100,'EUR','fixed_total',100,'Fictional immutable terms',1,now()-interval '73 hours');
-    insert into public.assignment_sessions(claim_id,lecturer_id,starts_at,ends_at) values(${q(claim)},${q(teacher.id)},now()+interval '8 days',now()+interval '8 days 1 hour');`);
+    await sql(`insert into public.organisations(id, name)
+               values (${q(org)}, 'Fictional integration company'),
+                      (${q(foreignOrg)}, 'Fictional other company');
+    insert into public.client_organisation_memberships(user_id, organisation_id)
+    values (${q(company.id)}, ${q(org)}),
+           (${q(outsider.id)}, ${q(foreignOrg)});
+    insert into public.course_templates(id, title)
+    values (${q(template)}, 'Fictional integration course');
+    insert into public.course_runs(id, template_id, organisation_id)
+    values (${q(early)}, ${q(template)}, ${q(org)}),
+           (${q(late)}, ${q(template)}, ${q(org)});
+    insert into public.course_sessions(course_run_id, starts_at, ends_at)
+    values (${q(early)}, now() + interval '8 days', now() + interval '8 days 1 hour'),
+           (${q(early)}, now() + interval '9 days', now() + interval '9 days 1 hour'),
+           (${q(late)}, now() + interval '6 days', now() + interval '6 days 1 hour');
+    insert into public.course_enrolments(course_run_id, user_id, enrolled_by)
+    values (${q(early)}, ${q(learner.id)}, ${q(manager.id)}),
+           (${q(late)}, ${q(learner.id)}, ${q(manager.id)});
+    insert into public.jobs(id, course_run_id, title, customer_name, delivery_type, status, amount, currency, rate_unit, total_amount, terms)
+    values (${q(job)}, ${q(early)}, 'Fictional integration assignment', 'Fictional integration company', 'online', 'filled', 100, 'EUR', 'fixed_total', 100, 'Fictional immutable terms');
+    insert into public.job_sessions(job_id, starts_at, ends_at)
+    values (${q(job)}, now() + interval '8 days', now() + interval '8 days 1 hour');
+    insert into public.job_claims(id, job_id, lecturer_id, idempotency_key, amount, currency, rate_unit, total_amount, terms, terms_version, created_at)
+    values (${q(claim)}, ${q(job)}, ${q(teacher.id)}, ${q(randomUUID())}, 100, 'EUR', 'fixed_total', 100, 'Fictional immutable terms', 1, now() - interval '73 hours');
+    insert into public.assignment_sessions(claim_id, lecturer_id, starts_at, ends_at)
+    values (${q(claim)}, ${q(teacher.id)}, now() + interval '8 days', now() + interval '8 days 1 hour');`);
 
     await checked(
         manager.client.rpc("set_company_premium", {

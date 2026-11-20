@@ -2,7 +2,7 @@
  * Browser checks for the built public offline shell without private API caches.
  * Service-worker behaviour is exercised in Chromium; physical PWA installation remains separate acceptance.
  */
-import {test, expect} from "@playwright/test";
+import {expect, test} from "@playwright/test";
 import {randomUUID} from "node:crypto";
 import {actor, api, checked, login} from "./helpers/accounts-support";
 

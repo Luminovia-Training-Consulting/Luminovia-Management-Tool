@@ -1,14 +1,8 @@
 /** Administrator-only SMTP/IMAP settings; secret values are write-only and tests run through the private relay. */
-import {useEffect, useState, type FormEvent} from "react";
+import {type FormEvent, useEffect, useState} from "react";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {useTranslation} from "react-i18next";
-import {
-    ErrorState,
-    Field,
-    Loading,
-    Notice,
-    PageHeading,
-} from "../../components/common";
+import {ErrorState, Field, Loading, Notice, PageHeading,} from "../../components/common";
 import {Button} from "../../components/ui/button";
 import {requireOnline, useOnline} from "../../lib/online";
 import {db} from "../../lib/supabase";

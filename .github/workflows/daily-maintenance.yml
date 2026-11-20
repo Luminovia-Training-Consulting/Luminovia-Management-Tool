@@ -157,7 +157,7 @@ jobs:
   combined:
     # Individual passes do not prove combined compatibility; verify the union again.
     if: always() && needs.discover.result == 'success'
-    needs: [discover, candidates]
+    needs: [ discover, candidates ]
     runs-on: ubuntu-latest
     timeout-minutes: 75
     outputs:
@@ -218,7 +218,7 @@ jobs:
     # If the combined candidate fails, assemble another set from the existing
     # plan and verify it again. Never relabel failed results as passes.
     if: always() && needs.discover.result == 'success' && needs.combined.result == 'failure'
-    needs: [discover, candidates, combined]
+    needs: [ discover, candidates, combined ]
     runs-on: ubuntu-latest
     timeout-minutes: 75
     outputs:
@@ -277,7 +277,7 @@ jobs:
           retention-days: 14
           if-no-files-found: error
   promote:
-    needs: [discover, combined, fallback]
+    needs: [ discover, combined, fallback ]
     # A no-change scan needs neither a privileged token nor another main CI run.
     if: always() && github.repository == 'Luminovia-Training-Consulting/Luminovia-Management-Tool' && github.ref == 'refs/heads/main' && needs.discover.result == 'success' && ((needs.combined.result == 'success' && needs.combined.outputs.changed == 'true') || (needs.combined.result == 'failure' && needs.fallback.result == 'success' && needs.fallback.outputs.changed == 'true'))
     environment: maintenance-signing

@@ -5,38 +5,11 @@
 import {useEffect, useMemo, useRef, useState} from "react";
 import {Link, useLocation, useNavigate} from "react-router-dom";
 import {useTranslation} from "react-i18next";
-import {
-    ArrowLeft,
-    ArrowRight,
-    Bell,
-    BriefcaseBusiness,
-    Building2,
-    CalendarDays,
-    BookOpen,
-    Compass,
-    FileCheck2,
-    FlaskConical,
-    FolderOpen,
-    GraduationCap,
-    Home,
-    Menu,
-    MessageCircle,
-    MessagesSquare,
-    Receipt,
-    RotateCcw,
-    Settings2,
-    UserRound,
-    Users,
-    Wallet,
-    type LucideIcon,
-} from "lucide-react";
+import {ArrowLeft, ArrowRight, Bell, BookOpen, BriefcaseBusiness, Building2, CalendarDays, Compass, FileCheck2, FlaskConical, FolderOpen, GraduationCap, Home, type LucideIcon, Menu, MessageCircle, MessagesSquare, Receipt, RotateCcw, Settings2, UserRound, Users, Wallet,} from "lucide-react";
 import {Button} from "../../components/ui/button";
 import {PageHeading} from "../../components/common";
 import {Preferences} from "../../components/preferences";
-import {
-    PortalNavigation,
-    type PortalNavigationItem,
-} from "../../components/portal-navigation";
+import {PortalNavigation, type PortalNavigationItem,} from "../../components/portal-navigation";
 import {guideModules, guideText} from "../help/catalog";
 import "./i18n";
 import "./demo.css";

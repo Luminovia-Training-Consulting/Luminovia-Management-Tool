@@ -3,69 +3,82 @@
  * surface variables.
  */
 .resource-comments {
-  margin-top: 1.5rem;
+    margin-top: 1.5rem;
 }
+
 .resource-comments h2,
 .comment-heading,
 .comment-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
 }
+
 .comment-heading,
 .comment-actions {
-  flex-wrap: wrap;
+    flex-wrap: wrap;
 }
+
 .comment-heading {
-  justify-content: space-between;
+    justify-content: space-between;
 }
+
 .comment-heading time,
 .resource-comment small {
-  color: var(--muted);
-  font-size: 0.78rem;
+    color: var(--muted);
+    font-size: 0.78rem;
 }
+
 /* Chronological comment rows disclose moderation explicitly. */
 .comment-list {
-  list-style: none;
-  margin: 1.5rem 0 0;
-  padding: 0;
-  display: grid;
-  gap: 1rem;
+    list-style: none;
+    margin: 1.5rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 1rem;
 }
+
 .resource-comment {
-  border: 1px solid var(--line);
-  border-radius: 1rem;
-  padding: 1rem;
-  min-width: 0;
-  overflow-wrap: anywhere;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    padding: 1rem;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
+
 .resource-comment p {
-  white-space: pre-wrap;
+    white-space: pre-wrap;
 }
+
 .resource-comment-hidden {
-  border-style: dashed;
+    border-style: dashed;
 }
+
 .comment-empty {
-  padding: 1.25rem 0;
-  color: var(--muted);
+    padding: 1.25rem 0;
+    color: var(--muted);
 }
+
 /* Keep drafts/actions with their resource instead of a global comment modal state. */
 .resource-comments form {
-  margin: 1rem 0;
+    margin: 1rem 0;
 }
+
 .comment-actions {
-  margin-top: 0.6rem;
+    margin-top: 0.6rem;
 }
 
 @media (max-width: 600px) {
-  .resource-comments h2 {
-    align-items: start;
-  }
-  .comment-heading {
-    align-items: start;
-  }
-  .comment-actions button {
-    max-width: 100%;
-    white-space: normal;
-  }
+    .resource-comments h2 {
+        align-items: start;
+    }
+
+    .comment-heading {
+        align-items: start;
+    }
+
+    .comment-actions button {
+        max-width: 100%;
+        white-space: normal;
+    }
 }

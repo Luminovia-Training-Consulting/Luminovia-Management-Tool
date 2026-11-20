@@ -16,24 +16,18 @@ import {ResourceComments} from "../comments/comments";
 import {JobBuildingBlockReference} from "../operations/building-blocks";
 import "../commercial/platform-i18n";
 import {JobDocuments} from "../files/files";
-import {permissionsQuery} from "../../lib/queries";
+import {claimsQuery, permissionsQuery, profileQuery, topicsQuery} from "../../lib/queries";
 import {useRef, useState} from "react";
 import {Link, useParams} from "react-router-dom";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {useTranslation} from "react-i18next";
 import {CalendarDays, CheckCircle2, MapPin} from "lucide-react";
 import {useAuth} from "../auth/auth-context";
-import {claimsQuery, profileQuery, topicsQuery} from "../../lib/queries";
 import {db} from "../../lib/supabase";
 import {dateTime, money} from "../../lib/dates";
 import {requireOnline, useOnline} from "../../lib/online";
 import {Button} from "../../components/ui/button";
-import {
-    ErrorState,
-    Loading,
-    Notice,
-    PageHeading,
-} from "../../components/common";
+import {ErrorState, Loading, Notice, PageHeading,} from "../../components/common";
 import {BackLink} from "../../app/shell";
 
 export {JobCard} from "./card";

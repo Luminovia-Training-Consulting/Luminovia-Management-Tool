@@ -400,12 +400,12 @@ await withTestDatabase(
                 const [otherJob, otherClaim] = Array.from({length: 2}, randomUUID);
                 // The second real confirmed claim shares this run; its future allocation
                 // is separate, so both withdrawals still use the public release path.
-                await sql(`insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms)
-       values(${q(otherJob)},${q(run)},'Fictional second assignment','Fictional academy','online','published',100,'EUR','per_day',100,'Fictional terms');
-       insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,currency,rate_unit,total_amount,terms,terms_version)
-       values(${q(otherClaim)},${q(otherJob)},${q(teacher)},${q(randomUUID())},100,'EUR','per_day',100,'Fictional terms',1);
-       insert into public.assignment_sessions(claim_id,lecturer_id,starts_at,ends_at)
-       values(${q(otherClaim)},${q(teacher)},now()+interval '40 days',now()+interval '40 days 1 hour');`);
+                await sql(`insert into public.jobs(id, course_run_id, title, customer_name, delivery_type, status, amount, currency, rate_unit, total_amount, terms)
+                           values (${q(otherJob)}, ${q(run)}, 'Fictional second assignment', 'Fictional academy', 'online', 'published', 100, 'EUR', 'per_day', 100, 'Fictional terms');
+                insert into public.job_claims(id, job_id, lecturer_id, idempotency_key, amount, currency, rate_unit, total_amount, terms, terms_version)
+                values (${q(otherClaim)}, ${q(otherJob)}, ${q(teacher)}, ${q(randomUUID())}, 100, 'EUR', 'per_day', 100, 'Fictional terms', 1);
+                insert into public.assignment_sessions(claim_id, lecturer_id, starts_at, ends_at)
+                values (${q(otherClaim)}, ${q(teacher)}, now() + interval '40 days', now() + interval '40 days 1 hour');`);
                 assert.equal((await request(fixture, "")).status, "withdrawn");
                 assert.equal(await isMember(room), "t");
                 assert.equal(
@@ -945,9 +945,19 @@ await withTestDatabase(
                 // A coherent historical fixture models time passing since a proposal was
                 // originally made outside the window. Its unchanged quote exactly equals
                 // the current canonical quote, so stale terms cannot explain the denial.
-                await sql(`insert into private.job_substitutions(id,original_claim_id,job_id,target_user_id,proposed_by,request_id,reason,quote,quote_hash,pricing_context,expires_at,created_at)
-        select ${q(id)},${q(fixture.claim)},${q(fixture.job)},${q(peer)},${q(teacher)},${q(randomUUID())},'Fictional historical source proposal',quote,encode(sha256(convert_to(quote::text,'UTF8')),'hex'),private.substitution_pricing_context(${q(fixture.claim)},${q(peer)}),clock_timestamp()+interval '2 days',clock_timestamp()-interval '5 days'
-        from(select private.substitution_target_quote(${q(fixture.claim)},${q(peer)})quote)canonical`);
+                await sql(`insert into private.job_substitutions(id, original_claim_id, job_id, target_user_id, proposed_by, request_id, reason, quote, quote_hash, pricing_context, expires_at, created_at)
+                           select ${q(id)},
+                                  ${q(fixture.claim)},
+                                  ${q(fixture.job)},
+                                  ${q(peer)},
+                                  ${q(teacher)},
+                                  ${q(randomUUID())},
+                                  'Fictional historical source proposal',
+                                  quote,
+                                  encode(sha256(convert_to(quote::text, 'UTF8')), 'hex'),
+                                  private.substitution_pricing_context(${q(fixture.claim)}, ${q(peer)}),
+                                  clock_timestamp() + interval '2 days', clock_timestamp()- interval '5 days'
+                           from (select private.substitution_target_quote(${q(fixture.claim)}, ${q(peer)}) quote) canonical`);
                 const offer = await targetOffer(id);
                 assert.equal(
                     await sql(

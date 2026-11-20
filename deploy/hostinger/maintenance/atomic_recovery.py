@@ -12,11 +12,10 @@ import datetime as dt
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import stat
 import uuid
-
+from pathlib import Path
 
 FORMAT = "luminovia-atomic-runtime-checkpoint-v1"
 WRITERS = ("auth", "rest", "realtime", "storage", "api-gw", "functions")

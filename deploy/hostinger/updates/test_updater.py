@@ -6,15 +6,14 @@ import hashlib
 import io
 import json
 import os
-from pathlib import Path
 import shutil
 import tarfile
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import updater as u
-
 
 COMMIT = "a" * 40
 OLD = "b" * 40
@@ -86,11 +85,13 @@ def installed_runtime(root, files):
 def network_candidate(updater, archive, manifest):
     u.atomic_json(updater.state_file, {"bootstrapApproved": True})
     updater.candidate = lambda: {"status": "candidate", "commit": COMMIT, "assets": {"cms-release.json": "manifest", "cms-release.tar.gz": "archive"}}
+
     def download(url, destination, limit):
         if url == "manifest":
             Path(destination).write_text(json.dumps(manifest))
         else:
             shutil.copy2(archive, destination)
+
     updater.download = download
 
 
@@ -268,6 +269,7 @@ class ReleaseTests(unittest.TestCase):
             release = {"tag_name": tag, "immutable": True, "assets": [{"name": name, "state": "uploaded", "browser_download_url": "https://github.com/" + u.REPOSITORY + "/releases/download/" + tag + "/" + name} for name in ("cms-release.tar.gz", "cms-release.json")]}
             run = {"head_sha": COMMIT, "head_branch": "main", "event": "push", "status": "completed", "conclusion": "success", "path": ".github/workflows/ci.yml"}
             calls = []
+
             def api(path, *, missing_ok=False):
                 calls.append(path)
                 if path.startswith("/releases/tags/"):
@@ -277,6 +279,7 @@ class ReleaseTests(unittest.TestCase):
                 if path.startswith("/git/ref"):
                     return {"object": {"type": "commit", "sha": COMMIT}}
                 return {"workflow_runs": [run]}
+
             updater.api = api
             self.assertEqual(updater.candidate()["status"], "candidate")
             self.assertEqual(len(calls), 4)
@@ -310,6 +313,7 @@ class ReleaseTests(unittest.TestCase):
             current = releases[1]
             current["assets"] = [{"name": name, "state": "uploaded", "browser_download_url": "https://github.com/" + u.REPOSITORY + "/releases/download/" + current["tag_name"] + "/" + name} for name in ("cms-release.tar.gz", "cms-release.json")]
             calls = []
+
             def api(path, *, missing_ok=False):
                 calls.append(path)
                 if path == "/branches/main":
@@ -321,6 +325,7 @@ class ReleaseTests(unittest.TestCase):
                 if path.startswith("/git/ref"):
                     return {"object": {"type": "commit", "sha": COMMIT}}
                 return {"workflow_runs": [{"head_sha": COMMIT, "head_branch": "main", "event": "push", "status": "completed", "conclusion": "success", "path": ".github/workflows/ci.yml"}]}
+
             updater.api = api
             self.assertEqual(updater.candidate()["commit"], COMMIT)
             self.assertNotIn("/releases?per_page=5", calls)
@@ -352,6 +357,7 @@ class InstallationTests(unittest.TestCase):
                 network_candidate(updater, archive, manifest)
                 original_compose = updater.compose
                 unavailable = True
+
                 def compose(kind, arguments, *, tree=None):
                     nonlocal unavailable
                     result = original_compose(kind, arguments, tree=tree)
@@ -359,6 +365,7 @@ class InstallationTests(unittest.TestCase):
                         unavailable = False
                         raise u.UpdateError("subprocess_docker_failed")
                     return result
+
                 updater.compose = compose
                 with patch.object(updater, "prepare_site", wraps=updater.prepare_site) as prepare:
                     self.assertEqual(updater.once()["status"], "waiting_for_network_retry")
@@ -396,16 +403,19 @@ class InstallationTests(unittest.TestCase):
                 if failure == "config":
                     def bad_config(tree, candidate):
                         raise u.UpdateError("subprocess_docker_failed")
+
                     updater.verify_runtime = bad_config
                 else:
                     original_health = updater.health
                     unavailable = True
+
                     def late_failure(env, expected_index=None, *, private_api=False):
                         nonlocal unavailable
                         if unavailable:
                             unavailable = False
                             raise u.RuntimeImagePullError("runtime_image_pull_failed")
                         return original_health(env, expected_index, private_api=private_api)
+
                     updater.health = late_failure
                 with self.assertRaises(u.UpdateError) as error:
                     updater.once()
@@ -428,9 +438,11 @@ class InstallationTests(unittest.TestCase):
             u.atomic_json(updater.state_file, {"bootstrapApproved": True})
             updater.candidate = lambda: {"status": "candidate", "commit": COMMIT, "assets": {"cms-release.json": "manifest", "cms-release.tar.gz": "archive"}}
             downloads = []
+
             def unavailable(url, destination, limit):
                 downloads.append(url)
                 raise u.UpdateError("release_download_failed")
+
             updater.download = unavailable
             self.assertEqual(updater.once()["status"], "waiting_for_network_retry")
             self.assertIsNone(json.loads(updater.state_file.read_text()).get("failedCommit"))
@@ -439,11 +451,13 @@ class InstallationTests(unittest.TestCase):
             state = json.loads(updater.state_file.read_text())
             state["nextNetworkRetryAt"] = "2000-01-01T00:00:00+00:00"
             u.atomic_json(updater.state_file, state)
+
             def available(url, destination, limit):
                 if url == "manifest":
                     Path(destination).write_text(json.dumps(manifest))
                 else:
                     shutil.copy2(archive, destination)
+
             updater.download = available
             self.assertEqual(updater.once()["status"], "updated")
             state = json.loads(updater.state_file.read_text())
@@ -460,11 +474,14 @@ class InstallationTests(unittest.TestCase):
                 if failure == "github":
                     def unavailable():
                         raise u.UpdateError("github_request_failed")
+
                     updater.candidate = unavailable
                 else:
                     updater.candidate = lambda: {"status": "candidate", "commit": COMMIT, "assets": {"cms-release.json": "manifest", "cms-release.tar.gz": "archive"}}
+
                     def corrupted(url, destination, limit):
                         Path(destination).write_text(json.dumps(manifest) if url == "manifest" else "truncated archive")
+
                     updater.download = corrupted
                 self.assertEqual(updater.once()["status"], "waiting_for_network_retry")
                 state = json.loads(updater.state_file.read_text())
@@ -489,9 +506,11 @@ class InstallationTests(unittest.TestCase):
             updater.state = {"currentCommit": OLD, "lastBackup": "previous-private-backup"}
             # Real runtime consistency checks remain enabled on the fast path.
             image = manifest["runtime"]["images"][0]["image"]
+
             def images(tree):
                 updater.calls.append(("backend", ("config", "--format", "json")))
                 return {"db": image}
+
             updater.rendered_images = images
             updater.verify_runtime = lambda tree, value: u.Updater.verify_runtime(updater, tree, value)
             result = updater.apply(archive, manifest)
@@ -639,11 +658,13 @@ class InstallationTests(unittest.TestCase):
             self.assertEqual(updater.once()["status"], "not_initialized")
             u.atomic_json(updater.state_file, {"bootstrapApproved": True})
             updater.candidate = lambda: {"status": "candidate", "commit": COMMIT, "assets": {"cms-release.json": "manifest", "cms-release.tar.gz": "archive"}}
+
             def download(url, destination, limit):
                 if url == "manifest":
                     Path(destination).write_text(json.dumps(manifest))
                 else:
                     shutil.copy2(archive, destination)
+
             updater.download = download
             self.assertEqual(updater.once()["status"], "updated")
             self.assertFalse(json.loads(updater.state_file.read_text())["bootstrapApproved"])
@@ -710,10 +731,12 @@ class InstallationTests(unittest.TestCase):
             updater.fail_public_health = True
             gate_during_static_rollback = []
             promote = updater.promote
+
             def observed_promotion(target):
                 if target == "releases/bootstrap":
                     gate_during_static_rollback.append(updater.maintenance.exists())
                 promote(target)
+
             updater.promote = observed_promotion
             with self.assertRaisesRegex(u.UpdateError, "public_api_health_failed"):
                 updater.apply(archive, manifest)
@@ -729,8 +752,10 @@ class InstallationTests(unittest.TestCase):
             installed_runtime(root, files)
             (root / "source/deploy/hostinger/selfhost/compose.yml").write_bytes(b"older backend config")
             updater = FakeUpdater(root)
+
             def failed_checkpoint(tree, *, include_clamav):
                 raise u.UpdateError("recovery_original_services_resume_failed")
+
             updater.create_checkpoint = failed_checkpoint
             with self.assertRaisesRegex(u.UpdateError, "original_services_resume_failed"):
                 updater.apply(archive, manifest)
@@ -782,14 +807,17 @@ class InstallationTests(unittest.TestCase):
             updater = u.Updater(instance(directory))
             env = {"SUPABASE_PUBLIC_URL": "https://cms.luminovia.org/backend", "SUPABASE_PUBLISHABLE_KEY": KEY, "PORTAL_APP_ORIGIN": "https://cms.luminovia.org"}
             address = "172.19.0.5"
+
             # Run the supplied process without a shell and preserve a real failure status.
             def command(arguments):
                 if arguments[-2] == "{{json .State}}":
                     return json.dumps({"Running": True, "Paused": False, "OOMKilled": False, "Health": {"Status": "healthy"}}).encode()
                 self.assertEqual(arguments[-1], "luminovia-supabase-api-gw-1")
                 return json.dumps({"luminovia-portal-backend": {"IPAddress": address}}).encode()
+
             updater.command = command
             urls = []
+
             def request(value, timeout):
                 urls.append(value.full_url)
                 if value.full_url.endswith("jwks.json"):
@@ -800,6 +828,7 @@ class InstallationTests(unittest.TestCase):
                     response = io.BytesIO(b"healthy")
                 response.status = 200
                 return response
+
             with patch.object(u.urllib.request, "urlopen", side_effect=request):
                 updater.health(env, b"exact candidate index", private_api=True)
             self.assertEqual(urls, ["http://172.19.0.5:8000/auth/v1/health", "http://172.19.0.5:8000/auth/v1/.well-known/jwks.json", "https://cms.luminovia.org"])
@@ -814,11 +843,13 @@ class InstallationTests(unittest.TestCase):
             updater = FakeUpdater(root)
             updater.image_change = True
             compose = updater.compose
+
             def partial_stop(kind, arguments, *, tree=None):
                 result = compose(kind, arguments, tree=tree)
                 if arguments[0] == "stop":
                     raise u.UpdateError("partial_writer_stop_failed")
                 return result
+
             updater.compose = partial_stop
             with self.assertRaisesRegex(u.UpdateError, "partial_writer_stop_failed"):
                 updater.apply(archive, manifest)
@@ -867,9 +898,11 @@ class InstallationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             updater = u.Updater(instance(directory))
             commands = []
+
             def sql(command, **kwargs):
                 commands.append(command)
                 return json.dumps([{"name": "postgres", "allow": True, "template": False}])
+
             updater.sql = sql
             with self.assertRaisesRegex(u.UpdateError, "collation_rebuild_requires"):
                 updater.collation_guard({"runtime": {"postgresMajor": 17, "reviewed": True}})

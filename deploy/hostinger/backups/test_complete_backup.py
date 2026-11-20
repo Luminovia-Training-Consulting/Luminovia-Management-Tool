@@ -6,7 +6,6 @@ import importlib.util
 import io
 import json
 import os
-from pathlib import Path
 import shutil
 import stat
 import subprocess
@@ -14,6 +13,7 @@ import sys
 import tarfile
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 HERE = Path(__file__).parent
@@ -22,6 +22,7 @@ b = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(b)
 sys.modules.setdefault("complete_backup", b)
 import unpack_complete as recovery
+
 AGE = os.environ.get("AGE_TEST_BINARY") or shutil.which("age")
 KEYGEN = os.environ.get("AGE_KEYGEN_TEST_BINARY") or shutil.which("age-keygen")
 
@@ -246,11 +247,13 @@ class BackupSafetyTests(unittest.TestCase):
     def test_only_previously_running_services_are_stopped_and_resumed(self):
         self.backup.containers = [{"Name": "/" + b.DB, "State": {"Running": True}}, {"Name": "/luminovia-supabase-auth-1", "State": {"Running": True}}, {"Name": "/luminovia-supabase-rest-1", "State": {"Running": False}}]
         commands = []
+
         def fake(arguments, **_kwargs):
             commands.append(arguments)
             if arguments[:2] == ["docker", "inspect"]:
                 return json.dumps([{"State": {"Running": True, "Health": {"Status": "healthy"}}}]).encode()
             return b""
+
         with patch.object(b, "run", fake), patch.object(self.backup, "sql", return_value="[]"):
             self.backup.quiesce()
             self.assertTrue(self.backup.flag_owned)
@@ -283,10 +286,12 @@ class BackupSafetyTests(unittest.TestCase):
         (self.backup.control / "recipient.txt").write_text("age1" + "a" * 58)
         (self.backup.control / "recipient.txt").chmod(0o600)
         resumed = []
+
         def fake_sql(query, **_kwargs):
             if "json_agg(json_build_object('name'" in query:
                 return json.dumps([{"name": n} for n in ["postgres", "_supabase", "template1"]])
             return "0"
+
         with patch.object(self.backup, "inspect", return_value=next(iter(b.LEGACY_IMAGES))), patch.object(self.backup, "paths", return_value=([], [], [])), patch.object(self.backup, "sql", fake_sql), patch.object(self.backup, "quiesce", side_effect=b.BackupError("controlled_failure")), patch.object(self.backup, "resume", side_effect=lambda: resumed.append(True)):
             with self.assertRaisesRegex(b.BackupError, "controlled_failure"):
                 self.backup.create()
@@ -375,7 +380,9 @@ class NativeEncryptionTests(unittest.TestCase):
         self.assertNotIn(content, path.read_bytes())
         self.assertEqual(subprocess.check_output([AGE, "-d", "-i", str(self.identity), str(path)], stderr=subprocess.DEVNULL), content)
         self.assertEqual({p.name for p in self.root.iterdir()}, {"test.agekey", "globals.sql.age"})
-        data = bytearray(path.read_bytes());data[-1] ^= 1;path.write_bytes(data)
+        data = bytearray(path.read_bytes());
+        data[-1] ^= 1;
+        path.write_bytes(data)
         result = subprocess.run([AGE, "-d", "-i", str(self.identity), str(path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.assertNotEqual(result.returncode, 0)
 
@@ -386,8 +393,11 @@ class NativeEncryptionTests(unittest.TestCase):
         self.assertFalse(path.exists() or Path(str(path) + ".partial").exists())
 
     def test_file_archive_preserves_bytes_modes_links_and_secret_hashes(self):
-        source = self.root / "files";source.mkdir()
-        secret = source / "selfhost.env";secret.write_bytes(b"FICTIONAL_SECRET=never-print-this\n");secret.chmod(0o600)
+        source = self.root / "files";
+        source.mkdir()
+        secret = source / "selfhost.env";
+        secret.write_bytes(b"FICTIONAL_SECRET=never-print-this\n");
+        secret.chmod(0o600)
         (source / "link").symlink_to("selfhost.env")
         os.link(secret, source / "hardlink")
         backup = b.CompleteBackup(self.root / "portal", self.root / "backups", age=AGE, reserve=0, host_root=self.root / "host")

@@ -1,7 +1,7 @@
 name: Suggest a feature
 description: Describe a problem and a verifiable improvement for the Luminovia Portal.
 title: "[Feature]: "
-labels: ["type:feature"]
+labels: [ "type:feature" ]
 body:
   - type: markdown
     attributes:

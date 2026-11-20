@@ -1,9 +1,6 @@
 /** Deno handler regressions use fictional tokens and mocked boundaries; no real relay or account is contacted. */
 import {assert, assertEquals, assertFalse} from "jsr:@std/assert@1.0.14";
-import {
-    createMailAdminHandler,
-    type MailAdminDependencies,
-} from "./handler.ts";
+import {createMailAdminHandler, type MailAdminDependencies,} from "./handler.ts";
 
 const origin = "https://portal.example.invalid";
 const token = "fictional.user.jwt.token.with.enough.length";

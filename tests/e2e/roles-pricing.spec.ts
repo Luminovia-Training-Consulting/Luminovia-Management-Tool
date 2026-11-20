@@ -1,7 +1,7 @@
-import {test, expect} from "@playwright/test";
+import {expect, test} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {randomUUID} from "node:crypto";
-import {actor, api, checked, adminLogin} from "./helpers/accounts-support";
+import {actor, adminLogin, api, checked} from "./helpers/accounts-support";
 
 test.skip(
     process.env.PORTAL_TEST_MODE !== "1",

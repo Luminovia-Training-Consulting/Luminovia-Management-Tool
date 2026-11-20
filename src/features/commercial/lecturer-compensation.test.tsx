@@ -1,5 +1,5 @@
 import {afterEach, beforeEach, expect, it, vi} from "vitest";
-import {cleanup, render, screen, act, waitFor} from "@testing-library/react";
+import {act, cleanup, render, screen, waitFor} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {LecturerCompensation} from "./lecturer-compensation";

@@ -6,7 +6,8 @@ Parties: **Luminovia Training & Consulting** (identify the actual contracting pe
 
 Covered contribution: **[identify commit(s), pull request(s), files and any employer/co-author interests]**. The contributor confirms that they can grant the rights below and lists all third-party code, assets and licenses in the contribution.
 
-The contributor grants Luminovia, for the covered contribution and to the extent permitted by applicable law, an **exclusive, worldwide, perpetual, transferable and sublicensable right of use** for all expressly identified known forms of exploitation needed for the Project, including reproduction, modification, combination, hosting, public availability, distribution and commercial licensing in source and object form. Any rights for unknown future forms of use, remuneration and statutory author protections must be addressed separately in accordance with applicable law. The author's attribution and non-waivable moral rights remain intact.
+The contributor grants Luminovia, for the covered contribution and to the extent permitted by applicable law, an **exclusive, worldwide, perpetual, transferable and sublicensable right of use** for all expressly identified known forms of exploitation needed for the Project, including reproduction, modification, combination, hosting, public availability, distribution and commercial licensing in source and object form. Any rights for unknown future forms of use, remuneration and statutory author
+protections must be addressed separately in accordance with applicable law. The author's attribution and non-waivable moral rights remain intact.
 
 The parties specify compensation and any retained use rights here: **[agreed compensation]**; **[any contributor use license, its scope and term, or “none”]**. Participation or acceptance alone gives no use right. Neither party may incorporate third-party material beyond the rights it actually holds.
 

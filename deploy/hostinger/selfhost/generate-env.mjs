@@ -6,23 +6,8 @@
  * Generate a NEW private self-host configuration. Never prints credential values.
  * Key formats match the vendored official generate-keys/add-new-auth-keys scripts.
  */
-import {
-    createHash,
-    createHmac,
-    generateKeyPairSync,
-    randomBytes,
-    randomUUID,
-    sign,
-} from "node:crypto";
-import {
-    chmodSync,
-    existsSync,
-    mkdirSync,
-    openSync,
-    closeSync,
-    unlinkSync,
-    writeFileSync,
-} from "node:fs";
+import {createHash, createHmac, generateKeyPairSync, randomBytes, randomUUID, sign,} from "node:crypto";
+import {chmodSync, closeSync, existsSync, mkdirSync, openSync, unlinkSync, writeFileSync,} from "node:fs";
 import {dirname, isAbsolute, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 

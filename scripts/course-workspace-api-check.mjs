@@ -116,7 +116,20 @@ await withApiFixture(
             }
         });
         await sql(
-            `insert into public.organisations(id,name)values(${q(org)},'Fictional workspace academy');insert into public.organisation_contacts(id,organisation_id,name,email,phone,notes)values(${q(contact)},${q(org)},'Agreed course contact','course@example.invalid','+49 40 123','Private customer note');insert into public.course_templates(id,title)values(${q(template)},'Fictional Linux completion');insert into public.course_runs(id,template_id,organisation_id,time_zone,venue)values(${q(run)},${q(template)},${q(org)},'Europe/Berlin','https://example.invalid/teaching');insert into public.course_sessions(id,course_run_id,starts_at,ends_at)values(${q(session)},${q(run)},now()-interval '2 days 1 hour',now()-interval '2 days');insert into public.jobs(id,course_run_id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms)values(${q(job)},${q(run)},'Fictional workspace job','Fictional workspace academy','online','filled',100,'EUR','fixed_total',100,'Fictional accepted terms');insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,currency,rate_unit,total_amount,terms,terms_version)values(${q(claim)},${q(job)},${q(teacher.id)},${q(randomUUID())},100,'EUR','fixed_total',100,'Fictional accepted terms',1);`,
+            `insert into public.organisations(id, name)
+             values (${q(org)}, 'Fictional workspace academy');
+            insert into public.organisation_contacts(id, organisation_id, name, email, phone, notes)
+            values (${q(contact)}, ${q(org)}, 'Agreed course contact', 'course@example.invalid', '+49 40 123', 'Private customer note');
+            insert into public.course_templates(id, title)
+            values (${q(template)}, 'Fictional Linux completion');
+            insert into public.course_runs(id, template_id, organisation_id, time_zone, venue)
+            values (${q(run)}, ${q(template)}, ${q(org)}, 'Europe/Berlin', 'https://example.invalid/teaching');
+            insert into public.course_sessions(id, course_run_id, starts_at, ends_at)
+            values (${q(session)}, ${q(run)}, now() - interval '2 days 1 hour', now() - interval '2 days');
+            insert into public.jobs(id, course_run_id, title, customer_name, delivery_type, status, amount, currency, rate_unit, total_amount, terms)
+            values (${q(job)}, ${q(run)}, 'Fictional workspace job', 'Fictional workspace academy', 'online', 'filled', 100, 'EUR', 'fixed_total', 100, 'Fictional accepted terms');
+            insert into public.job_claims(id, job_id, lecturer_id, idempotency_key, amount, currency, rate_unit, total_amount, terms, terms_version)
+            values (${q(claim)}, ${q(job)}, ${q(teacher.id)}, ${q(randomUUID())}, 100, 'EUR', 'fixed_total', 100, 'Fictional accepted terms', 1);`,
         );
         await checked(
             admin.client.rpc("set_company_premium", {

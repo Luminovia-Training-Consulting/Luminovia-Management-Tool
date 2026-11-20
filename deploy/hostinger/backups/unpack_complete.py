@@ -5,11 +5,11 @@ import argparse
 import hashlib
 import json
 import os
-from pathlib import Path, PurePosixPath
 import shutil
 import stat
 import subprocess
 import sys
+from pathlib import Path, PurePosixPath
 
 from complete_backup import BackupError, FORMAT, digest, private_dir, private_file, verify_complete, write_json
 
@@ -68,6 +68,7 @@ def unpack(backup, identity, output, *, age="age"):
         process = subprocess.Popen([age, "--decrypt", "--identity", str(identity), str(backup / "files.tar.gz.age")], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         content_hash = hashlib.sha256()
         plaintext_bytes = 0
+
         # Bind the decrypted archive stream to the expected plaintext digest.
         class Reader:
             # Update the hash/count for decrypted archive bytes actually consumed.
@@ -77,6 +78,7 @@ def unpack(backup, identity, output, *, age="age"):
                 content_hash.update(content)
                 plaintext_bytes += len(content)
                 return content
+
         reader = Reader()
         seen = set()
         filesystem = output / "filesystem"
@@ -106,7 +108,9 @@ def unpack(backup, identity, output, *, age="age"):
                         count = 0
                         with os.fdopen(fd, "wb") as out, tar.extractfile(member) as data:
                             for chunk in iter(lambda: data.read(1024 * 1024), b""):
-                                out.write(chunk);h.update(chunk);count += len(chunk)
+                                out.write(chunk);
+                                h.update(chunk);
+                                count += len(chunk)
                         if count != item["bytes"] or h.hexdigest() != item["sha256"]:
                             raise BackupError("restored_file_hash_differs")
                         restored_files += 1
@@ -132,7 +136,9 @@ def unpack(backup, identity, output, *, age="age"):
             if process.wait(timeout=120):
                 raise BackupError("file_archive_authenticated_decryption_failed")
         except Exception:
-            process.kill();process.wait(timeout=10);process.stdout.close()
+            process.kill();
+            process.wait(timeout=10);
+            process.stdout.close()
             raise
         expected = catalog["parts"]["files.tar.gz.age"]
         if seen != set(inventory) or plaintext_bytes != expected["plaintextBytes"] or content_hash.hexdigest() != expected["plaintextSha256"]:

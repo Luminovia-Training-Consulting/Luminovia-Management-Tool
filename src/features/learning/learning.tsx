@@ -10,24 +10,10 @@ import {useOnline} from "../../lib/online";
 import {userRolesQuery} from "../../lib/queries";
 import {dateTime, zonedInstant} from "../../lib/dates";
 import {Button} from "../../components/ui/button";
-import {
-    ErrorState,
-    Loading,
-    Notice,
-    PageHeading,
-    Field,
-} from "../../components/common";
+import {ErrorState, Field, Loading, Notice, PageHeading,} from "../../components/common";
 import {contactEmailLink, contactPhoneLink} from "../profile/contact-api";
 import {teachingLink} from "../dashboard/personal-api";
-import {
-    courseAction,
-    courseHubQuery,
-    courseWorkspaceKey,
-    courseWorkspaceQuery,
-    downloadCourseDocument,
-    repeatCourse,
-    type CourseWorkspace,
-} from "./api";
+import {courseAction, courseHubQuery, type CourseWorkspace, courseWorkspaceKey, courseWorkspaceQuery, downloadCourseDocument, repeatCourse,} from "./api";
 import "./i18n";
 import "./learning.css";
 import {CourseDestinations} from "./destinations";

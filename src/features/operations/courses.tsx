@@ -10,12 +10,12 @@ import {Link, useSearchParams} from "react-router-dom";
 import "../learning/i18n";
 import {courseWorkspaceEntitlementQuery} from "../learning/api";
 import {ResourceComments} from "../comments/comments";
-import {useForm, useFieldArray, useWatch} from "react-hook-form";
+import {useFieldArray, useForm, useWatch} from "react-hook-form";
 import {z} from "zod";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {useTranslation} from "react-i18next";
-import {Plus, CalendarDays, Copy, BookOpen, Trash2} from "lucide-react";
+import {BookOpen, CalendarDays, Copy, Plus, Trash2} from "lucide-react";
 import {DateTime} from "luxon";
 import "./i18n";
 import "./styles.css";
@@ -26,29 +26,9 @@ import {dateTime, validZone, zonedInstant} from "../../lib/dates";
 import {requireOnline, useOnline} from "../../lib/online";
 import {Button} from "../../components/ui/button";
 import {Dialog} from "../../components/ui/dialog";
-import {
-    Field,
-    Notice,
-    PageHeading,
-    Loading,
-    ErrorState,
-} from "../../components/common";
-import {
-    orgQuery,
-    templatesQuery,
-    runsQuery,
-    buildingBlocksQuery,
-    type Template,
-    type CourseRun,
-    type Organisation,
-    type BuildingBlock,
-} from "./data";
-import {
-    BuildingBlockCards,
-    BuildingBlockReference,
-    BuildingBlockSources,
-    CourseRunOfferLink,
-} from "./building-blocks";
+import {ErrorState, Field, Loading, Notice, PageHeading,} from "../../components/common";
+import {type BuildingBlock, buildingBlocksQuery, type CourseRun, type Organisation, orgQuery, runsQuery, type Template, templatesQuery,} from "./data";
+import {BuildingBlockCards, BuildingBlockReference, BuildingBlockSources, CourseRunOfferLink,} from "./building-blocks";
 import {weekdaySessions} from "./schedule";
 
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */

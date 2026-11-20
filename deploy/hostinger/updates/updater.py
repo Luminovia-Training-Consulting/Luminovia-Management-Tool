@@ -14,7 +14,6 @@ import importlib.util
 import ipaddress
 import json
 import os
-from pathlib import Path, PurePosixPath
 import re
 import shutil
 import stat
@@ -26,6 +25,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from pathlib import Path, PurePosixPath
 
 REPOSITORY = "Luminovia-Training-Consulting/Luminovia-Management-Tool"
 BRANCH = "main"
@@ -659,6 +659,7 @@ class Updater:
                 info = os.fstat(stream.fileno())
                 if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o600 or info.st_uid != REVIEWED_ROOT_UID or info.st_nlink != 1 or not 1 <= info.st_size <= 2 * 1024 * 1024:
                     raise UpdateError("unsafe_reviewed_plan_file")
+
                 def unique_object(pairs):
                     result = {}
                     for key, value in pairs:
@@ -666,8 +667,10 @@ class Updater:
                             raise ValueError("duplicate key")
                         result[key] = value
                     return result
+
                 def finite_constant(_value):
                     raise ValueError("nonfinite value")
+
                 plan = json.loads(stream.read(2 * 1024 * 1024 + 1), object_pairs_hook=unique_object, parse_constant=finite_constant)
         except (OSError, ValueError, UnicodeError) as error:
             raise UpdateError("unsafe_or_invalid_reviewed_plan") from error
@@ -1179,7 +1182,8 @@ class Updater:
             self.health(env, (stage / "site/index.html").read_bytes())
             if controller_changed:
                 self.install_controller(stage)
-            self.state.update({"status": "updated", "currentCommit": commit, "previousCommit": self.state.get("currentCommit"), "lastSuccessAt": now(), "failedCommit": None, "failureCode": None, "manualRecoveryRequired": False, "bootstrapApproved": False, "appliedMigrationVersions": [item[0] for item in pending], "lastUpdateMode": mode, "lastAttemptMode": mode, "backupCreatedForCurrentUpdate": mode == "full", "installedRuntimeFiles": runtime_files, "networkRetryAttempts": 0, "nextNetworkRetryAt": None})
+            self.state.update(
+                {"status": "updated", "currentCommit": commit, "previousCommit": self.state.get("currentCommit"), "lastSuccessAt": now(), "failedCommit": None, "failureCode": None, "manualRecoveryRequired": False, "bootstrapApproved": False, "appliedMigrationVersions": [item[0] for item in pending], "lastUpdateMode": mode, "lastAttemptMode": mode, "backupCreatedForCurrentUpdate": mode == "full", "installedRuntimeFiles": runtime_files, "networkRetryAttempts": 0, "nextNetworkRetryAt": None})
             atomic_json(self.state_file, self.state)
             return {"status": "updated", "commit": commit, "mode": mode}
         except Exception as error:
@@ -1198,11 +1202,13 @@ class Updater:
             if stopped and checkpoint is not None and not public_unblocked:
                 try:
                     self.rollback_runtime(original, rollback)
+
                     # Restore the previous runtime in dependency order while public writers remain fenced.
                     def restart_old_runtime():
                         self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "db", "mailpit"])
                         self.compose("backend", ["up", "-d", "--wait", "--force-recreate", "--no-deps", *WRITERS])
                         self.compose("web", ["up", "-d", "--wait", "--force-recreate", "--no-deps", "web", *(("clamav",) if "clamav" in getattr(self, "changed_image_services", set()) or "deploy/hostinger/clamd.conf" in changed else ())])
+
                     self.restore_checkpoint(stage, checkpoint, public_unblocked=False, restart_old_runtime=restart_old_runtime, verify_health=lambda: self.health(env, private_api=True))
                     self.maintenance.unlink(missing_ok=True)
                     self.health(env)

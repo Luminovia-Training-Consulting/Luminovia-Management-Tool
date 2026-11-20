@@ -1,12 +1,9 @@
 """Real loopback HTTP/SMTP and deterministic failure tests; no external mail."""
 
 import contextlib
-from dataclasses import replace
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import importlib.util
 import io
 import json
-from pathlib import Path
 import smtplib
 import socketserver
 import ssl
@@ -14,8 +11,10 @@ import sys
 import threading
 import time
 import unittest
+from dataclasses import replace
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from unittest.mock import Mock, patch
-
 
 spec = importlib.util.spec_from_file_location(
     "notification_mail_worker", Path(__file__).with_name("notification-mail-worker.py")
@@ -163,13 +162,13 @@ class ConfigurationTests(unittest.TestCase):
 
     def test_reject_missing_credentials_and_plain_smtp(self):
         for change in (
-            {"PORTAL_NOTIFICATION_SERVICE_KEY": ""},
-            {"PORTAL_NOTIFICATION_SERVICE_KEY": "key\nheader"},
-            {"PORTAL_NOTIFICATION_SMTP_PASSWORD": ""},
-            {"PORTAL_NOTIFICATION_SMTP_PORT": "25"},
-            {"PORTAL_NOTIFICATION_SMTP_USERNAME": "Name <address@example.invalid>"},
-            {"PORTAL_NOTIFICATION_BATCH": "21"},
-            {"PORTAL_NOTIFICATION_TIMEOUT_SECONDS": "21"},
+                {"PORTAL_NOTIFICATION_SERVICE_KEY": ""},
+                {"PORTAL_NOTIFICATION_SERVICE_KEY": "key\nheader"},
+                {"PORTAL_NOTIFICATION_SMTP_PASSWORD": ""},
+                {"PORTAL_NOTIFICATION_SMTP_PORT": "25"},
+                {"PORTAL_NOTIFICATION_SMTP_USERNAME": "Name <address@example.invalid>"},
+                {"PORTAL_NOTIFICATION_BATCH": "21"},
+                {"PORTAL_NOTIFICATION_TIMEOUT_SECONDS": "21"},
         ):
             with self.subTest(change=change), self.assertRaises(worker.ConfigurationError):
                 worker.Config.from_env({**ENV, **change})
@@ -181,11 +180,11 @@ class ConfigurationTests(unittest.TestCase):
 
     def test_reject_untrusted_urls_and_credentials(self):
         for url in (
-            "http://api.example.invalid", "http://127.0.0.1.evil.invalid",
-            "https://key:secret@api.example.invalid", "https://api.example.invalid?secret=x",
-            "https://api.example.invalid#secret", "https://api.example.invalid/other",
-            "https://api.example.invalid/\\other", "https://api.example.invalid\nsecret",
-            "https://[broken", "https://api.example.invalid:bad", "",
+                "http://api.example.invalid", "http://127.0.0.1.evil.invalid",
+                "https://key:secret@api.example.invalid", "https://api.example.invalid?secret=x",
+                "https://api.example.invalid#secret", "https://api.example.invalid/other",
+                "https://api.example.invalid/\\other", "https://api.example.invalid\nsecret",
+                "https://[broken", "https://api.example.invalid:bad", "",
         ):
             with self.subTest(url=url), self.assertRaises(worker.ConfigurationError):
                 worker.checked_url(url)
@@ -316,11 +315,11 @@ class OutboxTests(unittest.TestCase):
 
     def test_invalid_recipient_token_and_message_id_never_send(self):
         for change in (
-            {"recipient": "victim@example.invalid\r\nBcc: other@example.invalid"},
-            {"recipient": "One <one@example.invalid>"},
-            {"lease_token": IDENTITY},
-            {"message_id": "<spoof@example.invalid>"},
-            {"locale": "other"},
+                {"recipient": "victim@example.invalid\r\nBcc: other@example.invalid"},
+                {"recipient": "One <one@example.invalid>"},
+                {"lease_token": IDENTITY},
+                {"message_id": "<spoof@example.invalid>"},
+                {"locale": "other"},
         ):
             rpc, sender = Mock(), Mock()
             rpc.call.side_effect = [0, [LEASE], {**DELIVERY, **change}, True]

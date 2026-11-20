@@ -46,7 +46,9 @@ await withTestDatabase("notification_test", async ({sql, actor}) => {
     const own = randomUUID(),
         foreign = randomUUID();
     await sql(
-        `insert into public.notifications(id,user_id,kind,resource_id) values(${q(own)},${q(teacher)},'activity',${q(randomUUID())}),(${q(foreign)},${q(peer)},'activity',${q(randomUUID())});`,
+        `insert into public.notifications(id, user_id, kind, resource_id)
+         values (${q(own)}, ${q(teacher)}, 'activity', ${q(randomUUID())}),
+                (${q(foreign)}, ${q(peer)}, 'activity', ${q(randomUUID())});`,
     );
     await check(
         "Inbox and administrator stay scoped to the current account",
@@ -97,7 +99,8 @@ await withTestDatabase("notification_test", async ({sql, actor}) => {
             const snapshot = await rpc(teacher, "notification_inbox");
             const later = randomUUID();
             await sql(
-                `insert into public.notifications(id,user_id,kind,resource_id) values(${q(later)},${q(teacher)},'activity',${q(randomUUID())});`,
+                `insert into public.notifications(id, user_id, kind, resource_id)
+                 values (${q(later)}, ${q(teacher)}, 'activity', ${q(randomUUID())});`,
             );
             await rpc(teacher, "mark_notifications", [
                 "null",
@@ -165,7 +168,8 @@ await withTestDatabase("notification_test", async ({sql, actor}) => {
                 "claim_cancelled",
             ])
                 await sql(
-                    `insert into public.notifications(user_id,kind,resource_id) values(${q(teacher)},${q(kind)},${q(randomUUID())})`,
+                    `insert into public.notifications(user_id, kind, resource_id)
+                     values (${q(teacher)}, ${q(kind)}, ${q(randomUUID())})`,
                 );
             const kinds = (await rpc(teacher, "notification_inbox")).items.map(
                 (item) => item.kind,
@@ -278,7 +282,12 @@ await withTestDatabase("notification_test", async ({sql, actor}) => {
                 const job = randomUUID(),
                     claim = randomUUID();
                 await sql(
-                    `insert into public.jobs(id,title,customer_name,delivery_type,status,amount,currency,rate_unit,total_amount,terms) values(${q(job)},'Fictional reminder course','Fictional reminder client','online','filled',100,'EUR','fixed_total',100,'Fictional reminder terms');insert into public.job_claims(id,job_id,lecturer_id,idempotency_key,amount,currency,rate_unit,total_amount,terms,terms_version) values(${q(claim)},${q(job)},${q(who)},${q(randomUUID())},100,'EUR','fixed_total',100,'Fictional reminder terms',1);insert into public.assignment_sessions(id,claim_id,lecturer_id,starts_at,ends_at,released_at) values(${q(id)},${q(claim)},${q(who)},${start},${end},${released ? "now()" : "null"})`,
+                    `insert into public.jobs(id, title, customer_name, delivery_type, status, amount, currency, rate_unit, total_amount, terms)
+                     values (${q(job)}, 'Fictional reminder course', 'Fictional reminder client', 'online', 'filled', 100, 'EUR', 'fixed_total', 100, 'Fictional reminder terms');
+                    insert into public.job_claims(id, job_id, lecturer_id, idempotency_key, amount, currency, rate_unit, total_amount, terms, terms_version)
+                    values (${q(claim)}, ${q(job)}, ${q(who)}, ${q(randomUUID())}, 100, 'EUR', 'fixed_total', 100, 'Fictional reminder terms', 1);
+                    insert into public.assignment_sessions(id, claim_id, lecturer_id, starts_at, ends_at, released_at)
+                    values (${q(id)}, ${q(claim)}, ${q(who)}, ${start}, ${end}, ${released ? "now()" : "null"})`,
                 );
             };
             await seedSession(
@@ -313,7 +322,12 @@ await withTestDatabase("notification_test", async ({sql, actor}) => {
                 "now()+interval '3 hours'",
             );
             await sql(
-                `insert into public.contracts(id,user_id,status,effective_from,expires_at,version,title,revoked_at) values(${q(dueContract)},${q(teacher)},'active',now()-interval '1 day',now()+interval '29 days',1,'PRIVATE fictional expiring agreement',null),(${q(randomUUID())},${q(teacher)},'active',now()-interval '1 day',now()+interval '31 days',2,'Outside horizon',null),(${q(randomUUID())},${q(teacher)},'active',now()-interval '1 day',now()+interval '10 days',3,'Revoked agreement',now()),(${q(randomUUID())},${q(teacher)},'active',now()+interval '1 day',now()+interval '10 days',4,'Future agreement',null),(${q(randomUUID())},${q(peer)},'active',now()-interval '1 day',now()+interval '5 days',1,'Peer private agreement',null)`,
+                `insert into public.contracts(id, user_id, status, effective_from, expires_at, version, title, revoked_at)
+                 values (${q(dueContract)}, ${q(teacher)}, 'active', now() - interval '1 day', now() + interval '29 days', 1, 'PRIVATE fictional expiring agreement', null),
+                        (${q(randomUUID())}, ${q(teacher)}, 'active', now() - interval '1 day', now() + interval '31 days', 2, 'Outside horizon', null),
+                        (${q(randomUUID())}, ${q(teacher)}, 'active', now() - interval '1 day', now() + interval '10 days', 3, 'Revoked agreement', now()),
+                        (${q(randomUUID())}, ${q(teacher)}, 'active', now() + interval '1 day', now() + interval '10 days', 4, 'Future agreement', null),
+                        (${q(randomUUID())}, ${q(peer)}, 'active', now() - interval '1 day', now() + interval '5 days', 1, 'Peer private agreement', null)`,
             );
             assert.equal(await rpc(teacher, "refresh_my_notifications"), 2);
             const reminders = (await rpc(teacher, "notification_inbox")).items.filter(

@@ -7,11 +7,7 @@ import {Button} from "../../components/ui/button";
 import {ErrorState, Field, Loading, Notice} from "../../components/common";
 import {requireOnline, useOnline} from "../../lib/online";
 import {db} from "../../lib/supabase";
-import {
-    commercialKeys,
-    invoiceReviewCandidatesQuery,
-    invoiceReviewCasesQuery,
-} from "./api";
+import {commercialKeys, invoiceReviewCandidatesQuery, invoiceReviewCasesQuery,} from "./api";
 import type {InvoiceReviewCandidate, InvoiceReviewCase} from "./types";
 
 /** Translate the closed database reason enum without rendering provider/database messages. */

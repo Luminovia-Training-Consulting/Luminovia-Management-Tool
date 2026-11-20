@@ -3,7 +3,7 @@ import {SectionHub} from "./section-hubs";
  * SPA routes, global error boundary and PWA notices. Public Auth, demo and help routes stay
  * outside the protected user-keyed subtree; feature pages load on demand.
  */
-import {Component, lazy, Suspense, type ReactNode} from "react";
+import {Component, lazy, type ReactNode, Suspense} from "react";
 import {Navigate, Outlet, Route, Routes, useParams} from "react-router-dom";
 import {useTranslation} from "react-i18next";
 import {useRegisterSW} from "virtual:pwa-register/react";
@@ -13,14 +13,14 @@ import {AuthCallback} from "../features/auth/callback";
 import {Login} from "../features/auth/login";
 import {Password} from "../features/auth/password";
 import {AdminNavigation} from "../features/admin/navigation";
-import {Shell, Preferences} from "./shell";
-import {Loading, ErrorState, Notice} from "../components/common";
+import {Preferences, Shell} from "./shell";
+import {ErrorState, Loading, Notice} from "../components/common";
 import {isConfigured} from "../lib/supabase";
 import {useOnline} from "../lib/online";
 import {Button} from "../components/ui/button";
 import {Dashboard} from "../features/dashboard/dashboard";
 import {WelcomeGuidePage} from "../features/onboarding/welcome";
-import {Jobs, JobDetail} from "../features/jobs/jobs";
+import {JobDetail, Jobs} from "../features/jobs/jobs";
 import {ProfilePage} from "../features/profile/profile";
 // Job/profile widgets already load this module; another lazy wrapper only adds
 // a loading boundary and cannot produce an independent route chunk.

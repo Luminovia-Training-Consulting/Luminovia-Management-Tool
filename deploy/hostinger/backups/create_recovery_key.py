@@ -4,10 +4,10 @@
 import argparse
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
+from pathlib import Path
 
 from complete_backup import BackupError, private_dir, private_file
 

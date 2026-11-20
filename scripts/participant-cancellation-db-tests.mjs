@@ -17,24 +17,41 @@ await withTestDatabase("participant_cancel", async ({sql, actor}) => {
         manualRoom,
         derivedRoom,
     ] = Array.from({length: 11}, randomUUID);
-    await sql(`insert into auth.users(id,email) values ${[admin, learner, other].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};
-  update auth.users set email_confirmed_at=now() where id=${q(learner)};
-  insert into public.user_roles(user_id,role) values(${q(admin)},'admin'),(${q(learner)},'participant'),(${q(other)},'lecturer');
-  insert into public.organisations(id,name) values(${q(organisation)},'Fictional participant course company');
-  insert into public.course_templates(id,title) values(${q(template)},'Fictional course');
-  insert into public.course_runs(id,template_id,organisation_id) values(${q(early)},${q(template)},${q(organisation)}),(${q(late)},${q(template)},${q(organisation)}),(${q(unscheduled)},${q(template)},${q(organisation)});
-  insert into public.course_sessions(course_run_id,starts_at,ends_at) values
-   (${q(early)},clock_timestamp()+interval '8 days',clock_timestamp()+interval '8 days 1 hour'),
-   (${q(early)},clock_timestamp()+interval '9 days',clock_timestamp()+interval '9 days 1 hour'),
-   (${q(late)},clock_timestamp()+interval '6 days',clock_timestamp()+interval '6 days 1 hour');
-  insert into public.course_enrolments(course_run_id,user_id,enrolled_by) values
-   (${q(early)},${q(learner)},${q(admin)}),(${q(late)},${q(learner)},${q(admin)}),(${q(unscheduled)},${q(learner)},${q(admin)});
-  insert into private.company_participant_link_requests(id,organisation_id,requested_by,request_id,luminovia_user_id,target_user_id,status,expires_at) values(${q(membershipLink)},${q(organisation)},${q(admin)},${q(randomUUID())},(select luminovia_user_id from public.profiles where id=${q(learner)}),${q(learner)},'accepted',now()+interval '14 days');
-  insert into private.company_participant_memberships(organisation_id,user_id,status,link_request_id,invited_by,joined_at,version) values(${q(organisation)},${q(learner)},'active',${q(membershipLink)},${q(admin)},now(),1);
-  insert into public.chat_rooms(id,kind,course_run_id,owner_id,title) values
-   (${q(manualRoom)},'participant_course',${q(early)},${q(admin)},'Fictional course room');
-  insert into public.chat_members(room_id,user_id) values(${q(manualRoom)},${q(learner)});
-  insert into private.participant_chat_origins(room_id,user_id,manual) values(${q(manualRoom)},${q(learner)},true);`);
+    await sql(`insert into auth.users(id, email)
+               values ${[admin, learner, other].map((id) => `(${q(id)},${q(id + "@example.invalid")})`).join(",")};
+    update auth.users
+    set email_confirmed_at=now()
+    where id = ${q(learner)};
+    insert into public.user_roles(user_id, role)
+    values (${q(admin)}, 'admin'),
+           (${q(learner)}, 'participant'),
+           (${q(other)}, 'lecturer');
+    insert into public.organisations(id, name)
+    values (${q(organisation)}, 'Fictional participant course company');
+    insert into public.course_templates(id, title)
+    values (${q(template)}, 'Fictional course');
+    insert into public.course_runs(id, template_id, organisation_id)
+    values (${q(early)}, ${q(template)}, ${q(organisation)}),
+           (${q(late)}, ${q(template)}, ${q(organisation)}),
+           (${q(unscheduled)}, ${q(template)}, ${q(organisation)});
+    insert into public.course_sessions(course_run_id, starts_at, ends_at)
+    values (${q(early)}, clock_timestamp() + interval '8 days', clock_timestamp() + interval '8 days 1 hour'),
+           (${q(early)}, clock_timestamp() + interval '9 days', clock_timestamp() + interval '9 days 1 hour'),
+           (${q(late)}, clock_timestamp() + interval '6 days', clock_timestamp() + interval '6 days 1 hour');
+    insert into public.course_enrolments(course_run_id, user_id, enrolled_by)
+    values (${q(early)}, ${q(learner)}, ${q(admin)}),
+           (${q(late)}, ${q(learner)}, ${q(admin)}),
+           (${q(unscheduled)}, ${q(learner)}, ${q(admin)});
+    insert into private.company_participant_link_requests(id, organisation_id, requested_by, request_id, luminovia_user_id, target_user_id, status, expires_at)
+    values (${q(membershipLink)}, ${q(organisation)}, ${q(admin)}, ${q(randomUUID())}, (select luminovia_user_id from public.profiles where id = ${q(learner)}), ${q(learner)}, 'accepted', now() + interval '14 days');
+    insert into private.company_participant_memberships(organisation_id, user_id, status, link_request_id, invited_by, joined_at, version)
+    values (${q(organisation)}, ${q(learner)}, 'active', ${q(membershipLink)}, ${q(admin)}, now(), 1);
+    insert into public.chat_rooms(id, kind, course_run_id, owner_id, title)
+    values (${q(manualRoom)}, 'participant_course', ${q(early)}, ${q(admin)}, 'Fictional course room');
+    insert into public.chat_members(room_id, user_id)
+    values (${q(manualRoom)}, ${q(learner)});
+    insert into private.participant_chat_origins(room_id, user_id, manual)
+    values (${q(manualRoom)}, ${q(learner)}, true);`);
     await actor(
         admin,
         `select public.set_company_premium(${q(organisation)},true,0,${q(randomUUID())})`,

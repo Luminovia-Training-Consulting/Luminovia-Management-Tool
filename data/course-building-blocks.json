@@ -23,7 +23,10 @@
           "file_name": "Bausteinbeschreibung_BVMM1.pdf",
           "sha256": "4509f97e1f45c66e393415d1b09cb42557a4b8a518200d8c4e5963a9ce2f6449",
           "page_count": 2,
-          "content_pages": [1, 2],
+          "content_pages": [
+            1,
+            2
+          ],
           "created_on": "2023-04-19",
           "revision_on": "2026-02-27",
           "is_primary": true
@@ -50,7 +53,9 @@
           "file_name": "Bausteinbeschreibung_CIS2.pdf",
           "sha256": "46033b7c9db36c1884ffa1beb4258306a0ceefd2838808566035edcf462043c3",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2022-12-09",
           "revision_on": "2025-12-16",
           "is_primary": true
@@ -77,7 +82,9 @@
           "file_name": "Bausteinbeschreibung_CIS3.pdf",
           "sha256": "fe611db684e753034d926e4b2818933727d17cf0b9d6f19dd0ebd921d4f05064",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2022-12-09",
           "revision_on": "2026-02-16",
           "is_primary": true
@@ -104,7 +111,9 @@
           "file_name": "Bausteinbeschreibung_CIS4.pdf",
           "sha256": "ae9d71cb9b9ba3ccec93619518dceed6d5421da9ab4c76073414ebf6c8915bbc",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2022-12-09",
           "revision_on": "2026-02-16",
           "is_primary": true
@@ -131,7 +140,9 @@
           "file_name": "Bausteinbeschreibung_CIS5.pdf",
           "sha256": "2ebc8ff42a1a73fc323c4dd7491df14be71e3a45230f300d3c534e2c7647a97e",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2023-01-24",
           "revision_on": "2026-02-16",
           "is_primary": true
@@ -158,7 +169,10 @@
           "file_name": "Bausteinbeschreibung_COS1.pdf",
           "sha256": "e5fce42836a7147eec5e368402780323be229794c85b6d610b04856e23ec077b",
           "page_count": 3,
-          "content_pages": [1, 2],
+          "content_pages": [
+            1,
+            2
+          ],
           "created_on": "2022-12-08",
           "revision_on": "2026-01-16",
           "is_primary": true
@@ -185,7 +199,10 @@
           "file_name": "Bausteinbeschreibung_COS2.pdf",
           "sha256": "a0d7189fb977098f855f24ac72217c27b99daba8f684699632e4699216ddc631",
           "page_count": 2,
-          "content_pages": [1, 2],
+          "content_pages": [
+            1,
+            2
+          ],
           "created_on": "2022-12-08",
           "revision_on": "2026-05-13",
           "is_primary": true
@@ -212,7 +229,9 @@
           "file_name": "Bausteinbeschreibung_DLO2.pdf",
           "sha256": "39e57889c19b8225f9f52736f46f775b7c62e62750f9b1d88822ebe6fa93e48a",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2023-02-13",
           "revision_on": "2025-09-17",
           "is_primary": true
@@ -239,7 +258,10 @@
           "file_name": "Bausteinbeschreibung_EAA1.pdf",
           "sha256": "0bb412b458710d8f6c24270a394904ca1ba5b7b77a2326780f760d6dd6f3f4ca",
           "page_count": 3,
-          "content_pages": [1, 2],
+          "content_pages": [
+            1,
+            2
+          ],
           "created_on": "2023-04-19",
           "revision_on": "2025-09-25",
           "is_primary": true
@@ -266,7 +288,10 @@
           "file_name": "Bausteinbeschreibung_EAA2.pdf",
           "sha256": "b10de78d7f8cac55c81d6f7860bef86df8adb821202c8ba233eea261dd2b5273",
           "page_count": 3,
-          "content_pages": [1, 2],
+          "content_pages": [
+            1,
+            2
+          ],
           "created_on": "2023-04-20",
           "revision_on": "2025-09-25",
           "is_primary": true
@@ -293,7 +318,12 @@
           "file_name": "Bausteinbeschreibung_GLCC.pdf",
           "sha256": "ccf3b023abae78612862b67400f40f2545e65ca14fb0fe90672a582f58f735fe",
           "page_count": 5,
-          "content_pages": [1, 2, 3, 4],
+          "content_pages": [
+            1,
+            2,
+            3,
+            4
+          ],
           "created_on": "2026-07-29",
           "revision_on": "2026-08-12",
           "is_primary": true
@@ -320,7 +350,9 @@
           "file_name": "Bausteinbeschreibung_GRDB.pdf",
           "sha256": "16abbcaf74a06e352815e6b17860bd3159db040a23029d0151f0be7e275e50b4",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2022-12-09",
           "revision_on": "2025-09-05",
           "is_primary": true
@@ -347,7 +379,9 @@
           "file_name": "Bausteinbeschreibung_ITE1.pdf",
           "sha256": "fe15c21bec6cd3513ecee92125fea63fa330bfeb2a02bb72b627de84799a3f66",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2022-12-08",
           "revision_on": "2025-09-04",
           "is_primary": true
@@ -374,7 +408,9 @@
           "file_name": "Bausteinbeschreibung_KIE1.pdf",
           "sha256": "47dbb864dfdbbf4262dbe333f17207664d2691833bcad8dfbd8c8f7b8597f52d",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2024-11-15",
           "revision_on": "2025-10-13",
           "is_primary": true
@@ -401,7 +437,9 @@
           "file_name": "Bausteinbeschreibung_LPC1.pdf",
           "sha256": "09fb63bbcd269b7f89758f9e36ac668629bd912ecb64dc08e73be1a086d18d23",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2022-12-09",
           "revision_on": "2025-09-05",
           "is_primary": true
@@ -428,7 +466,9 @@
           "file_name": "Bausteinbeschreibung_LPC2.pdf",
           "sha256": "db3332621695c8e00976fcf58b58b060af173222b73dcebbc91887c51a612edc",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2023-01-24",
           "revision_on": "2025-09-05",
           "is_primary": true
@@ -455,7 +495,9 @@
           "file_name": "Bausteinbeschreibung-LPIC3.pdf",
           "sha256": "74d66bbfb71b63543d634fd2f27e516ce5eb46fbb2273c72dbe26fb0adac0eec",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2022-12-09",
           "revision_on": "2026-09-09",
           "is_primary": true
@@ -465,7 +507,9 @@
           "file_name": "Bausteinbeschreibung_LPC3.pdf",
           "sha256": "ab9e04985085e0eda7d2c7414a62bf0c32be06f983c7e884011bc216b3e2773d",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2022-12-09",
           "revision_on": "2025-09-05",
           "is_primary": false
@@ -492,7 +536,9 @@
           "file_name": "Bausteinbeschreibung-LPIC4.pdf",
           "sha256": "76748b9b079eaa6c16493d4f809ac8205ec534e1a0211e2fec80892176821a0e",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2023-01-24",
           "revision_on": "2026-09-09",
           "is_primary": true
@@ -502,7 +548,9 @@
           "file_name": "Bausteinbeschreibung_LPC4.pdf",
           "sha256": "7210d89a43e0bca3e4e04f3acf17053e783a0ac9bcb9b77bdd8dfab9f73e52ed",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2023-01-24",
           "revision_on": "2025-09-05",
           "is_primary": false
@@ -529,7 +577,9 @@
           "file_name": "Bausteinbeschreibung_MASL1.pdf",
           "sha256": "a20b8a5f51819318cb024222a7d03e8f00f749869b307ca0d4a8d44e09f78ed3",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2022-12-09",
           "revision_on": "2026-02-12",
           "is_primary": true
@@ -556,7 +606,10 @@
           "file_name": "Bausteinbeschreibung_MASL2.pdf",
           "sha256": "df9497aaa98a9a363f12077db55365674e12520bf99989ca6ce8ebe2b2a1ebbf",
           "page_count": 2,
-          "content_pages": [1, 2],
+          "content_pages": [
+            1,
+            2
+          ],
           "created_on": "2022-12-09",
           "revision_on": "2026-02-12",
           "is_primary": true
@@ -583,7 +636,9 @@
           "file_name": "Bausteinbeschreibung_PTE1.pdf",
           "sha256": "ecbdaf5e63354b530097f2b2f95e5768965eaa80c1a0adb033c7cdabcc219a7e",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2022-12-09",
           "revision_on": "2026-01-16",
           "is_primary": true
@@ -610,7 +665,9 @@
           "file_name": "Bausteinbeschreibung_PTE2.pdf",
           "sha256": "c787d13d886e6517155b8d1120299c033f7feeaa846263f0faf25378ae0a2197",
           "page_count": 2,
-          "content_pages": [1],
+          "content_pages": [
+            1
+          ],
           "created_on": "2023-08-11",
           "revision_on": "2026-01-29",
           "is_primary": true

@@ -1,146 +1,174 @@
 /** Layout and visible workflow states for support, using the existing theme and brand tokens across responsive sizes. */
 .support-filters {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  gap: 16px;
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 16px;
 }
+
 .support-actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  align-items: center;
-  margin: 18px 0;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin: 18px 0;
 }
+
 .support-filters .support-actions {
-  grid-column: 1/-1;
-  margin: 0;
+    grid-column: 1/-1;
+    margin: 0;
 }
+
 .support-ticket-list,
 .support-thread,
 .support-history,
 .support-files {
-  list-style: none;
-  margin: 20px 0;
-  padding: 0;
-  display: grid;
-  gap: 16px;
+    list-style: none;
+    margin: 20px 0;
+    padding: 0;
+    display: grid;
+    gap: 16px;
 }
+
 .support-ticket-card {
-  border-left: 5px solid #b8edd9;
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(140px, 1fr);
-  gap: 20px;
+    border-left: 5px solid #b8edd9;
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(140px, 1fr);
+    gap: 20px;
 }
+
 .support-ticket-card:nth-child(3n + 2) {
-  border-left-color: #ffc68e;
+    border-left-color: #ffc68e;
 }
+
 .support-ticket-card:nth-child(3n) {
-  border-left-color: #7d88d8;
+    border-left-color: #7d88d8;
 }
+
 .support-ticket-card h2 {
-  font-size: 1.2rem;
-  margin: 12px 0;
+    font-size: 1.2rem;
+    margin: 12px 0;
 }
+
 .support-ticket-card h2 a {
-  color: var(--ink);
-  overflow-wrap: anywhere;
+    color: var(--ink);
+    overflow-wrap: anywhere;
 }
+
 .support-ticket-card time,
 .support-thread time,
 .support-history span {
-  color: var(--muted);
-  font-size: 0.85rem;
+    color: var(--muted);
+    font-size: 0.85rem;
 }
+
 .support-ticket-card dl,
 .support-overview dl,
 .support-report dl {
-  margin: 0;
+    margin: 0;
 }
+
 .support-ticket-card dt,
 .support-overview dt,
 .support-report dt {
-  color: var(--muted);
-  font-size: 0.85rem;
+    color: var(--muted);
+    font-size: 0.85rem;
 }
+
 .support-ticket-card dd,
 .support-overview dd,
 .support-report dd {
-  margin: 3px 0 12px;
-  overflow-wrap: anywhere;
+    margin: 3px 0 12px;
+    overflow-wrap: anywhere;
 }
+
 .support-related {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 16px;
-  margin: 18px 0;
-  min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px;
+    margin: 18px 0;
+    min-width: 0;
 }
+
 .support-overview {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 18px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 18px;
 }
+
 .support-overview p {
-  margin-top: 0;
+    margin-top: 0;
 }
+
 .support-thread > li,
 .support-history > li {
-  padding: 18px 0;
-  border-bottom: 1px solid var(--line);
-  min-width: 0;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--line);
+    min-width: 0;
 }
+
 .support-thread > li > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: space-between;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: space-between;
 }
+
 .support-thread .support-internal {
-  border-left: 4px solid #ffdb76;
-  padding: 18px;
-  background: var(--surface);
+    border-left: 4px solid #ffdb76;
+    padding: 18px;
+    background: var(--surface);
 }
+
 .support-thread p,
 .support-history p,
 .support-overview p {
-  overflow-wrap: anywhere;
+    overflow-wrap: anywhere;
 }
+
 .support-history span {
-  display: block;
-  margin-top: 5px;
+    display: block;
+    margin-top: 5px;
 }
+
 .support-files > li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
+
 .support-files > li > span {
-  overflow-wrap: anywhere;
-  min-width: 0;
+    overflow-wrap: anywhere;
+    min-width: 0;
 }
+
 .support-upload .checkbox-label {
-  margin-bottom: 12px;
+    margin-bottom: 12px;
 }
+
 .support-report {
-  margin-top: 28px;
+    margin-top: 28px;
 }
+
 .support-report-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
 }
+
 .support-report-grid article {
-  border-left: 4px solid #ded2fa;
-  padding-left: 16px;
+    border-left: 4px solid #ded2fa;
+    padding-left: 16px;
 }
+
 @media (max-width: 650px) {
-  .support-filters,
-  .support-ticket-card {
-    grid-template-columns: 1fr;
-  }
-  .support-overview {
-    grid-template-columns: 1fr;
-  }
+    .support-filters,
+    .support-ticket-card {
+        grid-template-columns: 1fr;
+    }
+
+    .support-overview {
+        grid-template-columns: 1fr;
+    }
 }

@@ -1,33 +1,39 @@
 .qualification-evidence {
-  display: grid;
-  gap: 1rem;
-  margin-block: 1rem;
+    display: grid;
+    gap: 1rem;
+    margin-block: 1rem;
 }
+
 .qualification-evidence section,
 .qualification-list li {
-  display: grid;
-  gap: 0.65rem;
+    display: grid;
+    gap: 0.65rem;
 }
+
 .qualification-list {
-  display: grid;
-  gap: 1rem;
-  padding-inline-start: 1.25rem;
+    display: grid;
+    gap: 1rem;
+    padding-inline-start: 1.25rem;
 }
+
 .qualification-evidence code,
 .qualification-list code {
-  overflow-wrap: anywhere;
-  font-size: 0.8rem;
+    overflow-wrap: anywhere;
+    font-size: 0.8rem;
 }
+
 .qualification-evidence .checkbox-field {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.65rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
 }
+
 .qualification-evidence .checkbox-field input {
-  width: auto;
-  flex: none;
-  margin-block-start: 0.25rem;
+    width: auto;
+    flex: none;
+    margin-block-start: 0.25rem;
 }
+
 .qualification-evidence small {
-  color: var(--muted);
+    color: var(--muted);
 }

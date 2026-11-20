@@ -2,15 +2,14 @@
 # Build a synthetic complete backup for native recovery testing. The subclass replaces real installation inventory/path access with owned fixtures.
 """Test fixture only: accepts an owned networkless recovery container, never VPS."""
 import argparse
-import importlib.util
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
+from pathlib import Path
 
-from complete_backup import CompleteBackup, private_dir
 import complete_backup as module
+from complete_backup import CompleteBackup, private_dir
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--container', required=True)
@@ -38,12 +37,16 @@ for name, data in fixtures.items():
 module.DB = args.container
 original_run = module.run
 
+
 # Run the supplied process without a shell and preserve a real failure status.
 def command(arguments, **kwargs):
     if arguments[0] in ['dpkg-query', 'apt-mark', 'systemctl']:
         return b'fictional reconstructible inventory\n'
     return original_run(arguments, **kwargs)
+
+
 module.run = command
+
 
 # Replace deployment inventories with isolated synthetic recovery sources.
 class FixtureBackup(CompleteBackup):
@@ -51,9 +54,11 @@ class FixtureBackup(CompleteBackup):
     def inspect(self):
         self.containers = [row]
         return row['Config']['Image']
+
     # Limit backup sources to file trees created for this drill.
     def paths(self):
         return [portal], [], []
+
 
 result = FixtureBackup(portal, args.directory / 'sets', age=args.age, reserve=0, host_root=args.directory / 'unrelated-host').create()
 print(json.dumps({'status': result['status'], 'backup': str(args.directory / 'sets' / result['backup'])}))

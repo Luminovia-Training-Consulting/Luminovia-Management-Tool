@@ -1,13 +1,13 @@
 /** Administrators maintain future recipient-specific terms; accepted agreements remain snapshots. */
 import {useState} from "react";
-import {useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {useTranslation} from "react-i18next";
 import {useAuth} from "../auth/auth-context";
 import {permissionsQuery} from "../../lib/queries";
 import {db} from "../../lib/supabase";
 import {requireOnline, useOnline} from "../../lib/online";
 import {Button} from "../../components/ui/button";
-import {Field, ErrorState, Loading, Notice} from "../../components/common";
+import {ErrorState, Field, Loading, Notice} from "../../components/common";
 
 interface Compensation {
     mode: "percent" | "daily";

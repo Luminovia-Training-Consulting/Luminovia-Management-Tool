@@ -1,54 +1,64 @@
 /* Optional references/contact stay compact and wrap long authored URLs on mobile. */
 .job-briefing {
-  margin-block: 1.25rem;
-  scroll-margin-top: 1.5rem;
+    margin-block: 1.25rem;
+    scroll-margin-top: 1.5rem;
 }
+
 .job-briefing-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
 }
+
 .job-briefing-heading h2 {
-  margin-block: 0 0.4rem;
+    margin-block: 0 0.4rem;
 }
+
 .job-briefing-block {
-  padding-block: 0.8rem;
-  border-top: 1px solid var(--line);
-  overflow-wrap: anywhere;
+    padding-block: 0.8rem;
+    border-top: 1px solid var(--line);
+    overflow-wrap: anywhere;
 }
+
 .job-briefing-block h3 {
-  margin-block: 0 0.6rem;
+    margin-block: 0 0.6rem;
 }
+
 .job-briefing-block a {
-  color: var(--brand);
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
+    color: var(--brand);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
 }
+
 .job-briefing-contact {
-  display: grid;
-  gap: 0.45rem;
-  margin-block: 0.5rem;
+    display: grid;
+    gap: 0.45rem;
+    margin-block: 0.5rem;
 }
+
 .job-briefing-form {
-  display: grid;
-  gap: 1rem;
-  margin-top: 1.25rem;
+    display: grid;
+    gap: 1rem;
+    margin-top: 1.25rem;
 }
+
 .job-briefing-form fieldset {
-  min-width: 0;
-  padding: 1rem;
-  border: 1px solid var(--line);
-  border-radius: 1rem;
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
 }
+
 .job-briefing-form legend {
-  padding-inline: 0.4rem;
-  font-weight: 700;
+    padding-inline: 0.4rem;
+    font-weight: 700;
 }
+
 .job-briefing-actions {
-  display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-  align-items: center;
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    align-items: center;
 }

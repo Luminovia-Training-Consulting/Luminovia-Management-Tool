@@ -9,10 +9,6 @@ ambiguous DATA/finish failures are fenced as uncertain, never blindly resent.
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
-from email.message import EmailMessage
-from email.policy import SMTP
-from email.utils import formatdate
 import ipaddress
 import json
 import os
@@ -22,6 +18,10 @@ import smtplib
 import ssl
 import sys
 import time
+from dataclasses import dataclass
+from email.message import EmailMessage
+from email.policy import SMTP
+from email.utils import formatdate
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
@@ -50,16 +50,16 @@ def checked_url(value: str, *, allow_backend_path: bool = False) -> str:
     try:
         port = url.port
         if (
-            not url.hostname
-            or url.username is not None
-            or url.password is not None
-            or url.query
-            or url.fragment
-            or any(ord(char) <= 32 or ord(char) == 127 for char in value)
-            or "\\" in value
-            or (url.scheme != "https" and not (url.scheme == "http" and local))
-            or (url.path.rstrip("/") not in (["", "/backend"] if allow_backend_path else [""]))
-            or (port is not None and not 1 <= port <= 65535)
+                not url.hostname
+                or url.username is not None
+                or url.password is not None
+                or url.query
+                or url.fragment
+                or any(ord(char) <= 32 or ord(char) == 127 for char in value)
+                or "\\" in value
+                or (url.scheme != "https" and not (url.scheme == "http" and local))
+                or (url.path.rstrip("/") not in (["", "/backend"] if allow_backend_path else [""]))
+                or (port is not None and not 1 <= port <= 65535)
         ):
             raise ConfigurationError("invalid_url")
     except (ValueError, UnboundLocalError):
@@ -69,10 +69,10 @@ def checked_url(value: str, *, allow_backend_path: bool = False) -> str:
 
 def valid_email(value: Any) -> bool:
     return (
-        isinstance(value, str)
-        and len(value) <= 254
-        and re.fullmatch(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,63}", value) is not None
-        and ".." not in value
+            isinstance(value, str)
+            and len(value) <= 254
+            and re.fullmatch(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,63}", value) is not None
+            and ".." not in value
     )
 
 
@@ -104,13 +104,13 @@ class Config:
         username = env.get("PORTAL_NOTIFICATION_SMTP_USERNAME", "relay@example.invalid")
         password = env.get("PORTAL_NOTIFICATION_SMTP_PASSWORD", "")
         if (
-            not service_key
-            or len(service_key) > 8192
-            or any(char.isspace() for char in service_key)
-            or not valid_email(username)
-            or not password
-            or len(password) > 1024
-            or "\x00" in password
+                not service_key
+                or len(service_key) > 8192
+                or any(char.isspace() for char in service_key)
+                or not valid_email(username)
+                or not password
+                or len(password) > 1024
+                or "\x00" in password
         ):
             raise ConfigurationError("missing_or_invalid_credentials")
         port = integer(env, "PORTAL_NOTIFICATION_SMTP_PORT", 2526, 1, 65535)
@@ -181,20 +181,20 @@ def canonical_uuid(value: Any) -> bool:
 
 def lease_valid(value: Any) -> bool:
     return (
-        isinstance(value, dict)
-        and canonical_uuid(value.get("id"))
-        and canonical_uuid(value.get("lease_token"))
+            isinstance(value, dict)
+            and canonical_uuid(value.get("id"))
+            and canonical_uuid(value.get("lease_token"))
     )
 
 
 def prepared_valid(value: Any, lease: dict[str, str]) -> bool:
     return (
-        lease_valid(value)
-        and value["id"] == lease["id"]
-        and value["lease_token"] == lease["lease_token"]
-        and valid_email(value.get("recipient"))
-        and value.get("locale") in ("de", "en")
-        and value.get("message_id") == f"<luminovia-notification.{lease['id']}@luminovia.org>"
+            lease_valid(value)
+            and value["id"] == lease["id"]
+            and value["lease_token"] == lease["lease_token"]
+            and valid_email(value.get("recipient"))
+            and value.get("locale") in ("de", "en")
+            and value.get("message_id") == f"<luminovia-notification.{lease['id']}@luminovia.org>"
     )
 
 

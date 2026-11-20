@@ -2,18 +2,7 @@
 /** Add relay credentials to an existing private self-host env without replacing retained database/Auth secrets. */
 import assert from "node:assert/strict";
 import {randomBytes} from "node:crypto";
-import {
-    chmodSync,
-    closeSync,
-    existsSync,
-    fsyncSync,
-    lstatSync,
-    openSync,
-    readFileSync,
-    renameSync,
-    unlinkSync,
-    writeFileSync,
-} from "node:fs";
+import {chmodSync, closeSync, existsSync, fsyncSync, lstatSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync,} from "node:fs";
 import {dirname, resolve} from "node:path";
 
 const relayKeys = [

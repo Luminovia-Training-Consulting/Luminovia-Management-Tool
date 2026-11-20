@@ -3,88 +3,103 @@
  * surface variables.
  */
 .taxonomy-filters {
-  display: grid;
-  grid-template-columns: minmax(180px, 2fr) minmax(150px, 1fr);
-  gap: 18px;
-  margin-bottom: 22px;
-  align-items: end;
+    display: grid;
+    grid-template-columns: minmax(180px, 2fr) minmax(150px, 1fr);
+    gap: 18px;
+    margin-bottom: 22px;
+    align-items: end;
 }
+
 .taxonomy-toolbar,
 .taxonomy-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
 }
+
 .taxonomy-toolbar {
-  justify-content: space-between;
-  margin-bottom: 18px;
+    justify-content: space-between;
+    margin-bottom: 18px;
 }
+
 .taxonomy-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
-  gap: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+    gap: 20px;
 }
+
 .taxonomy-card {
-  min-width: 0;
-  border-top: 5px solid var(--mint, #b8edd9);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+    min-width: 0;
+    border-top: 5px solid var(--mint, #b8edd9);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
+
 .taxonomy-card:nth-child(3n + 2) {
-  border-top-color: #ffc68e;
+    border-top-color: #ffc68e;
 }
+
 .taxonomy-card:nth-child(3n) {
-  border-top-color: #7d88d8;
+    border-top-color: #7d88d8;
 }
+
 .taxonomy-card h2 {
-  margin: 0;
-  font-size: 23px;
-  overflow-wrap: anywhere;
+    margin: 0;
+    font-size: 23px;
+    overflow-wrap: anywhere;
 }
+
 .taxonomy-card p {
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
+
 .taxonomy-card ul {
-  margin: 0;
-  padding-left: 20px;
-  overflow-wrap: anywhere;
+    margin: 0;
+    padding-left: 20px;
+    overflow-wrap: anywhere;
 }
+
 .taxonomy-aliases {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
+
 .taxonomy-aliases span {
-  padding: 3px 9px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  overflow-wrap: anywhere;
-  max-width: 100%;
+    padding: 3px 9px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    overflow-wrap: anywhere;
+    max-width: 100%;
 }
+
 .taxonomy-meta {
-  color: var(--muted);
-  font-size: 0.9rem;
+    color: var(--muted);
+    font-size: 0.9rem;
 }
+
 .taxonomy-editor {
-  display: grid;
-  gap: 16px;
+    display: grid;
+    gap: 16px;
 }
+
 .taxonomy-editor-pair {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
 }
+
 .taxonomy-editor textarea {
-  min-height: 110px;
+    min-height: 110px;
 }
 
 @media (max-width: 640px) {
-  .taxonomy-filters,
-  .taxonomy-editor-pair {
-    grid-template-columns: 1fr;
-  }
+    .taxonomy-filters,
+    .taxonomy-editor-pair {
+        grid-template-columns: 1fr;
+    }
 }

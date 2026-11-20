@@ -4,11 +4,11 @@
 import datetime as dt
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import atomic_recovery as recovery
@@ -119,14 +119,17 @@ class AtomicRecoveryTests(unittest.TestCase):
                 (path / "state.bin").write_bytes(b"failed candidate data")
                 (path / "candidate-only.bin").write_bytes(b"preserve this private failure evidence")
             calls = []
+
             def restart():
                 calls.append("restart")
                 updater.restart_old()
+
             def healthy():
                 self.assertEqual(calls, ["restart"])
                 for name, path in updater.paths.items():
                     self.assertEqual(recovery.tree_fingerprint(path), initial[name])
                 calls.append("health")
+
             result = recovery.restore_checkpoint(updater, checkpoint, public_unblocked=False, restart_old_runtime=restart, verify_health=healthy)
             self.assertEqual(result["status"], "restored")
             self.assertEqual(calls, ["restart", "health"])
@@ -217,12 +220,14 @@ class AtomicRecoveryTests(unittest.TestCase):
                     (path / "state.bin").write_bytes(b"preserve failed candidate")
             original_rename = os.rename
             failed_once = False
+
             def injected(source, destination):
                 nonlocal failed_once
                 if Path(source) == checkpoint / "restore-prepared/storage" and not failed_once:
                     failed_once = True
                     raise OSError("fictional swap failure")
                 return original_rename(source, destination)
+
             with patch.object(recovery.os, "rename", side_effect=injected), self.assertRaisesRegex(recovery.RecoveryError, "restore_swap_failed"):
                 recovery.restore_checkpoint(updater, checkpoint, public_unblocked=False, restart_old_runtime=lambda: self.fail("must not restart partial swap"), verify_health=lambda: self.fail("must not verify partial swap"))
             for name, path in updater.paths.items():

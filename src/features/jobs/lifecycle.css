@@ -3,103 +3,123 @@
  * surface variables.
  */
 .job-lifecycle {
-  margin-block: 1.5rem;
+    margin-block: 1.5rem;
 }
+
 .job-life-actions,
 .job-life-history-head {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.65rem;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.65rem;
 }
+
 /* Expose capacity and free/accepted positions as a distinct, checkable administrative section. */
 .job-life-capacity {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.6rem 1rem;
-  padding: 0.85rem;
-  border-radius: 1rem;
-  background: var(--blue-soft);
-  color: var(--ink);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1rem;
+    padding: 0.85rem;
+    border-radius: 1rem;
+    background: var(--blue-soft);
+    color: var(--ink);
 }
+
 .job-life-actions {
-  margin-block: 1rem;
+    margin-block: 1rem;
 }
+
 .job-life-form {
-  display: grid;
-  gap: 1rem;
-  margin-block: 1rem;
+    display: grid;
+    gap: 1rem;
+    margin-block: 1rem;
 }
+
 .job-life-form > button {
-  justify-self: start;
+    justify-self: start;
 }
+
 /* Keep past claims/releases visible as history instead of removing them from the offer. */
 .job-life-history {
-  display: grid;
-  gap: 1rem;
-  list-style: none;
-  padding: 0;
+    display: grid;
+    gap: 1rem;
+    list-style: none;
+    padding: 0;
 }
+
 .job-life-history > li {
-  border: 1px solid var(--line);
-  border-radius: 1rem;
-  padding: 1rem;
-  min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    padding: 1rem;
+    min-width: 0;
 }
+
 .job-life-history ul {
-  padding-inline-start: 1.1rem;
-  overflow-wrap: anywhere;
+    padding-inline-start: 1.1rem;
+    overflow-wrap: anywhere;
 }
+
 .job-life-history .badge {
-  margin-inline-start: 0.4rem;
+    margin-inline-start: 0.4rem;
 }
+
 .job-life-history p {
-  overflow-wrap: anywhere;
+    overflow-wrap: anywhere;
 }
 
 /* Keep destructive administration apart from capacity facts and lifecycle actions. */
 .job-life-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px 24px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px 24px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
 }
+
 .job-life-heading > div:first-child {
-  min-width: 0;
-  flex: 1 1 260px;
+    min-width: 0;
+    flex: 1 1 260px;
 }
+
 .job-life-heading h2 {
-  margin: 0 0 8px;
+    margin: 0 0 8px;
 }
+
 .job-life-heading p {
-  margin: 0;
-  line-height: 1.6;
+    margin: 0;
+    line-height: 1.6;
 }
+
 .job-life-heading > button {
-  flex-shrink: 0;
+    flex-shrink: 0;
 }
+
 .job-lifecycle .job-life-capacity {
-  margin-bottom: 18px;
+    margin-bottom: 18px;
 }
+
 .job-lifecycle > .job-life-actions {
-  gap: 12px;
-  padding-block: 8px;
-}
-.job-life-actions .field {
-  min-width: 160px;
-  margin-bottom: 0;
-}
-@media (max-width: 600px) {
-  .job-life-heading {
     gap: 12px;
-  }
-  .job-life-heading > div:first-child {
-    flex-basis: 100%;
-  }
-  .job-life-actions .field {
-    width: 100%;
-  }
+    padding-block: 8px;
+}
+
+.job-life-actions .field {
+    min-width: 160px;
+    margin-bottom: 0;
+}
+
+@media (max-width: 600px) {
+    .job-life-heading {
+        gap: 12px;
+    }
+
+    .job-life-heading > div:first-child {
+        flex-basis: 100%;
+    }
+
+    .job-life-actions .field {
+        width: 100%;
+    }
 }

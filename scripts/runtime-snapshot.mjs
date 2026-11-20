@@ -2,18 +2,18 @@
  * Filters the source snapshot for isolated complete acceptance.
  * Nested secrets, runtime remnants and symlink aliases are excluded as well.
  */
-import { lstatSync } from "node:fs";
-import { isAbsolute, relative } from "node:path";
+import {lstatSync} from "node:fs";
+import {isAbsolute, relative} from "node:path";
 
 const generatedDirectories = new Set([
-  ".git",
-  ".local",
-  "node_modules",
-  "dist",
-  "coverage",
-  "test-results",
-  "playwright-report",
-  "__pycache__",
+    ".git",
+    ".local",
+    "node_modules",
+    "dist",
+    "coverage",
+    "test-results",
+    "playwright-report",
+    "__pycache__",
 ]);
 
 /** fs.cpSync filter for the disposable QA source snapshot. Credentials and
@@ -22,28 +22,28 @@ const generatedDirectories = new Set([
  * by the supervisor, never followed/copied from an arbitrary source path. */
 
 export function runtimeSnapshotSource(source, sourceRoot) {
-  const path = relative(sourceRoot, source);
-  if (!path) return true;
-  const parts = path.split(/[\\/]/);
-  if (isAbsolute(path) || parts.includes("..")) return false;
-  if (
-    parts.some(
-      (part) =>
-        generatedDirectories.has(part) ||
-        (part.startsWith(".env") && part !== ".env.example") ||
-        part.endsWith(".tsbuildinfo") ||
-        part.endsWith(".pyc"),
-    )
-  )
-    return false;
-  if (parts[0] === "supabase" && [".temp", ".branches"].includes(parts[1]))
-    return false;
-  if (parts[0] === "deploy" && parts[1] === "hostinger") {
+    const path = relative(sourceRoot, source);
+    if (!path) return true;
+    const parts = path.split(/[\\/]/);
+    if (isAbsolute(path) || parts.includes("..")) return false;
     if (
-      parts.slice(2).some((part) => part === "private" || part === "site") ||
-      parts.at(-1).endsWith(".env")
+        parts.some(
+            (part) =>
+                generatedDirectories.has(part) ||
+                (part.startsWith(".env") && part !== ".env.example") ||
+                part.endsWith(".tsbuildinfo") ||
+                part.endsWith(".pyc"),
+        )
     )
-      return false;
-  }
-  return !lstatSync(source).isSymbolicLink();
+        return false;
+    if (parts[0] === "supabase" && [".temp", ".branches"].includes(parts[1]))
+        return false;
+    if (parts[0] === "deploy" && parts[1] === "hostinger") {
+        if (
+            parts.slice(2).some((part) => part === "private" || part === "site") ||
+            parts.at(-1).endsWith(".env")
+        )
+            return false;
+    }
+    return !lstatSync(source).isSymbolicLink();
 }

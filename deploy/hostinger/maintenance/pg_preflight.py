@@ -13,12 +13,12 @@ import datetime as dt
 import hashlib
 import json
 import os
-from pathlib import Path
 import re
 import shutil
 import tempfile
 import time
 import uuid
+from pathlib import Path
 
 IMAGE = re.compile(r"supabase/postgres:17\.[A-Za-z0-9._-]+@sha256:[a-f0-9]{64}\Z")
 DB = "luminovia-supabase-db-1"
@@ -110,9 +110,9 @@ def run_preflight(updater, tree, candidate_image):
     assert_plain_tree(data)
     assert_plain_tree(config)
     size = sum(p.stat().st_size for p in data.rglob("*") if p.is_file())
-    if size > 1024**3:
+    if size > 1024 ** 3:
         raise PreflightError("postgres_preflight_development_size_limit")
-    if shutil.disk_usage(root).free < 2 * size + 2 * 1024**3:
+    if shutil.disk_usage(root).free < 2 * size + 2 * 1024 ** 3:
         raise PreflightError("insufficient_space_for_postgres_preflight")
 
     databases = json.loads(updater.sql("SELECT json_agg(datname ORDER BY datname)::text FROM pg_database WHERE datallowconn;", user="supabase_admin"))
@@ -135,7 +135,8 @@ def run_preflight(updater, tree, candidate_image):
     temporary = Path(tempfile.mkdtemp(prefix="candidate-", dir=private))
     try:
         clone_data, clone_config = temporary / "data", temporary / "config"
-        clone_data.mkdir(mode=0o700); clone_config.mkdir(mode=0o700)
+        clone_data.mkdir(mode=0o700);
+        clone_config.mkdir(mode=0o700)
         try:
             old_stopped = True
             updater.compose("backend", ["stop", "db"])
@@ -150,11 +151,11 @@ def run_preflight(updater, tree, candidate_image):
         with os.fdopen(fd, "w") as stream:
             stream.write("".join(key + "=" + str(value) + "\n" for key, value in environment.items()))
         updater.command(["docker", "create", "--name", name, "--label", LABEL + "=" + name,
-            "--network", "none", "--log-driver", "none", "--memory", "384m", "--pids-limit", "256",
-            "--security-opt", "no-new-privileges:true", "--env-file", str(env_file),
-            "--mount", "type=bind,source=" + str(clone_data) + ",target=/var/lib/postgresql/data",
-            "--mount", "type=bind,source=" + str(clone_config) + ",target=/etc/postgresql-custom",
-            candidate_image, *settings.get("command", [])], timeout=120)
+                         "--network", "none", "--log-driver", "none", "--memory", "384m", "--pids-limit", "256",
+                         "--security-opt", "no-new-privileges:true", "--env-file", str(env_file),
+                         "--mount", "type=bind,source=" + str(clone_data) + ",target=/var/lib/postgresql/data",
+                         "--mount", "type=bind,source=" + str(clone_config) + ",target=/etc/postgresql-custom",
+                         candidate_image, *settings.get("command", [])], timeout=120)
         created = True
         updater.command(["docker", "start", name])
         ready = False
@@ -171,7 +172,7 @@ def run_preflight(updater, tree, candidate_image):
         # Query only the owned candidate container with a timeout and ON_ERROR_STOP.
         def sql(query, database="postgres"):
             raw = updater.command(["docker", "exec", "-i", name, "psql", "-U", "supabase_admin", "-d", database,
-                "-X", "-qAt", "-v", "ON_ERROR_STOP=1"], data=query.encode(), timeout=120).decode().strip()
+                                   "-X", "-qAt", "-v", "ON_ERROR_STOP=1"], data=query.encode(), timeout=120).decode().strip()
             return raw
 
         version = sql("SHOW server_version_num;")

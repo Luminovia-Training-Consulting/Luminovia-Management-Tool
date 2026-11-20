@@ -10,7 +10,8 @@
 
 ### Goals
 
-Create an independently sellable and supportable complete LMS. Customers can either (1) purchase a licence and operate their own instance, or (2) buy a managed branded academy that Luminovia hosts and maintains. The existing Luminovia business edition remains functional and unchanged for its own customers. A customer who buys the white-label edition receives full **local** administration over their academy, not control of Luminovia's other customers, operating margins, vendor licence issuer or servers.
+Create an independently sellable and supportable complete LMS. Customers can either (1) purchase a licence and operate their own instance, or (2) buy a managed branded academy that Luminovia hosts and maintains. The existing Luminovia business edition remains functional and unchanged for its own customers. A customer who buys the white-label edition receives full **local** administration over their academy, not control of Luminovia's other customers, operating margins, vendor licence issuer or
+servers.
 
 The product must be **customer branded end to end**, use an authentic course/participant experience, support management of employees/lecturers and students, have a complete published **Swagger/OpenAPI** integration contract, permit **username OR email + password login**, and permit customers to run courses without any Luminovia broker/marketplace/commission dependency.
 
@@ -26,39 +27,40 @@ The product must be **customer branded end to end**, use an authentic course/par
 
 ### Source status versus requested behaviour
 
-| Current repository capability (source observed) | Reusable foundation | White-label gap to implement |
-|---|---|---|
-| React + TypeScript + Vite + PWA + DE/EN + light/dark | Browser application and course UI | Runtime company branding; domain-specific PWA, title, logo, favicon, styles and templates; edition-aware navigation |
-| Supabase Auth, PostgreSQL, RLS, RPC and Edge functions | Accounts and resource permissions | First-admin provisioning per instance, username login alias, local installation roles and enforced edition policies |
-| Course templates, sessions, workspace, readiness/learning modules | LMS foundation after main roadmap completion | Academy-centric workflow that can run courses **without job marketplace or Luminovia framework agreements** |
-| Participant group chats, scanned file gateways, attendance, quiz/feedback/completion source | Shared teaching functions | Reuse these and complete the main-roadmap Premium LMS before white-label release |
-| Internal customer organisations and lecturer marketplace/claims | Useful in **Luminovia Internal Edition** | Replace brokerage-centric UI with local company course/lecturer administration; intermediary actions disabled server-side |
-| Lecturer commission/rate quote, contracts, invoices and forecasts | Valuable internally; optional independent billing features | Separate customer-owned local instructor-fee configuration, not Luminovia margins or splits |
-| Versioned Accounts API + OpenAPI 3.1 document and business RPC reference | Authentication and domain API base | Complete customer-facing v1 API, accurate schemas, Swagger UI, scoped integration keys, webhooks and compatibility guarantees |
-| Self-hosted Supabase Compose, private secrets, updater, checksums and backup/recovery | Deployment patterns | Parameterised, customer-neutral installer/packages; independent keys, domains, backups and exact-version customer upgrades |
-| Current proprietary source-available licence, historic GPLv3 versions | Licence notices/documented source ownership | Commercial end-user licence, customer distribution rights, third-party obligations and support contracts |
+| Current repository capability (source observed)                                             | Reusable foundation                                        | White-label gap to implement                                                                                                  |
+|---------------------------------------------------------------------------------------------|------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| React + TypeScript + Vite + PWA + DE/EN + light/dark                                        | Browser application and course UI                          | Runtime company branding; domain-specific PWA, title, logo, favicon, styles and templates; edition-aware navigation           |
+| Supabase Auth, PostgreSQL, RLS, RPC and Edge functions                                      | Accounts and resource permissions                          | First-admin provisioning per instance, username login alias, local installation roles and enforced edition policies           |
+| Course templates, sessions, workspace, readiness/learning modules                           | LMS foundation after main roadmap completion               | Academy-centric workflow that can run courses **without job marketplace or Luminovia framework agreements**                   |
+| Participant group chats, scanned file gateways, attendance, quiz/feedback/completion source | Shared teaching functions                                  | Reuse these and complete the main-roadmap Premium LMS before white-label release                                              |
+| Internal customer organisations and lecturer marketplace/claims                             | Useful in **Luminovia Internal Edition**                   | Replace brokerage-centric UI with local company course/lecturer administration; intermediary actions disabled server-side     |
+| Lecturer commission/rate quote, contracts, invoices and forecasts                           | Valuable internally; optional independent billing features | Separate customer-owned local instructor-fee configuration, not Luminovia margins or splits                                   |
+| Versioned Accounts API + OpenAPI 3.1 document and business RPC reference                    | Authentication and domain API base                         | Complete customer-facing v1 API, accurate schemas, Swagger UI, scoped integration keys, webhooks and compatibility guarantees |
+| Self-hosted Supabase Compose, private secrets, updater, checksums and backup/recovery       | Deployment patterns                                        | Parameterised, customer-neutral installer/packages; independent keys, domains, backups and exact-version customer upgrades    |
+| Current proprietary source-available licence, historic GPLv3 versions                       | Licence notices/documented source ownership                | Commercial end-user licence, customer distribution rights, third-party obligations and support contracts                      |
 
-**Audit evidence / implementation starting points:** [`README.md`](README.md), [`ROADMAP.md`](ROADMAP.md), [`PRODUCT.md`](PRODUCT.md), [`API_REFERENCE.md`](API_REFERENCE.md), [`AGENTS.md`](AGENTS.md), [`src/app/shell.tsx`](src/app/shell.tsx), [`src/app/app.tsx`](src/app/app.tsx), [`src/features/learning/`](src/features/learning/), [`supabase/functions/accounts/openapi.ts`](supabase/functions/accounts/openapi.ts), [`vite.config.ts`](vite.config.ts), [`deploy/hostinger/selfhost/generate-env.mjs`](deploy/hostinger/selfhost/generate-env.mjs), [`deploy/hostinger/updates/package.mjs`](deploy/hostinger/updates/package.mjs), [`deploy/hostinger/updates/updater.py`](deploy/hostinger/updates/updater.py), [`deploy/hostinger/backups/README.md`](deploy/hostinger/backups/README.md), [`LICENSE`](LICENSE).
+**Audit evidence / implementation starting points:** [`README.md`](README.md), [`ROADMAP.md`](ROADMAP.md), [`PRODUCT.md`](PRODUCT.md), [`API_REFERENCE.md`](API_REFERENCE.md), [`AGENTS.md`](AGENTS.md), [`src/app/shell.tsx`](src/app/shell.tsx), [`src/app/app.tsx`](src/app/app.tsx), [`src/features/learning/`](src/features/learning/), [`supabase/functions/accounts/openapi.ts`](supabase/functions/accounts/openapi.ts), [`vite.config.ts`](vite.config.ts), [
+`deploy/hostinger/selfhost/generate-env.mjs`](deploy/hostinger/selfhost/generate-env.mjs), [`deploy/hostinger/updates/package.mjs`](deploy/hostinger/updates/package.mjs), [`deploy/hostinger/updates/updater.py`](deploy/hostinger/updates/updater.py), [`deploy/hostinger/backups/README.md`](deploy/hostinger/backups/README.md), [`LICENSE`](LICENSE).
 
 **Observed concrete hard-codings requiring review:** the current shell uses Luminovia imagery/name; the Vite PWA manifest has Luminovia-specific names/icons; self-host development instance metadata is tied to `cms.luminovia.org`; and the current release builder validates a CMS-specific API URL. These are expected to change or gain installation-specific configuration for commercial builds. Their presence does **not** imply white-label source is already implemented.
 
 ## 1. Product editions and packaging
 
-| Capability | Luminovia Internal Edition | Customer Self-Hosted LMS | Luminovia-Managed Branded Academy |
-|---|---|---|---|
-| Hosting / database | Luminovia-controlled | Dedicated customer-operated instance | Dedicated Luminovia-managed customer instance initially |
-| Branding | Luminovia | Customer name/logo/domain and theme | Customer name/logo/domain and theme |
-| General LMS | Premium company entitlement ON/OFF (main roadmap) | **Included and enabled** | **Included and enabled** |
-| Company-level Premium red/green switch | Admin-only, confirmed | **Not shown and not needed** | **Not shown and not needed** |
-| Public Luminovia demo (`/demo`) | **Retained and redesigned** to look/behave like authentic Luminovia Portal | **Excluded**: no public demo route/UI/API | **Excluded**: use branded onboarding instead |
-| Local academy administration | Luminovia admins + scoped company roles | Customer instance administrators | Customer administrators scoped to the academy; vendor handles agreed managed operations |
-| Courses, lecturers, participants, chat, exams, attendance | Per existing permissions | Included | Included |
-| Global job marketplace / multiple commissioning companies | Available internally | Disabled unless separate explicitly licensed, customer-owned module | Disabled unless separately agreed |
-| Luminovia fee split/margin/broker rates | Internal authorised views | **Never visible or callable** | **Never visible or callable** |
-| Customer-owned lecturer payments | Internal business module | Optional customer-owned module | Optional customer-owned module |
-| Customer API and Swagger | Scoped existing/extended API | Included full local LMS API | Included scoped LMS API |
-| Licence and upgrades | Internal operations | Per-installation software licence | Managed service contract and deployments |
-| Vendor billing / issuing licences | Vendor-only | Never exposed through academy UI/API | Never exposed through academy UI/API |
+| Capability                                                | Luminovia Internal Edition                                                 | Customer Self-Hosted LMS                                            | Luminovia-Managed Branded Academy                                                       |
+|-----------------------------------------------------------|----------------------------------------------------------------------------|---------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| Hosting / database                                        | Luminovia-controlled                                                       | Dedicated customer-operated instance                                | Dedicated Luminovia-managed customer instance initially                                 |
+| Branding                                                  | Luminovia                                                                  | Customer name/logo/domain and theme                                 | Customer name/logo/domain and theme                                                     |
+| General LMS                                               | Premium company entitlement ON/OFF (main roadmap)                          | **Included and enabled**                                            | **Included and enabled**                                                                |
+| Company-level Premium red/green switch                    | Admin-only, confirmed                                                      | **Not shown and not needed**                                        | **Not shown and not needed**                                                            |
+| Public Luminovia demo (`/demo`)                           | **Retained and redesigned** to look/behave like authentic Luminovia Portal | **Excluded**: no public demo route/UI/API                           | **Excluded**: use branded onboarding instead                                            |
+| Local academy administration                              | Luminovia admins + scoped company roles                                    | Customer instance administrators                                    | Customer administrators scoped to the academy; vendor handles agreed managed operations |
+| Courses, lecturers, participants, chat, exams, attendance | Per existing permissions                                                   | Included                                                            | Included                                                                                |
+| Global job marketplace / multiple commissioning companies | Available internally                                                       | Disabled unless separate explicitly licensed, customer-owned module | Disabled unless separately agreed                                                       |
+| Luminovia fee split/margin/broker rates                   | Internal authorised views                                                  | **Never visible or callable**                                       | **Never visible or callable**                                                           |
+| Customer-owned lecturer payments                          | Internal business module                                                   | Optional customer-owned module                                      | Optional customer-owned module                                                          |
+| Customer API and Swagger                                  | Scoped existing/extended API                                               | Included full local LMS API                                         | Included scoped LMS API                                                                 |
+| Licence and upgrades                                      | Internal operations                                                        | Per-installation software licence                                   | Managed service contract and deployments                                                |
+| Vendor billing / issuing licences                         | Vendor-only                                                                | Never exposed through academy UI/API                                | Never exposed through academy UI/API                                                    |
 
 **An edition is a server-authoritative installation setting/licence entitlement, NOT an editable local user role or merely a React feature flag.** The academy administrator cannot promote their account into Luminovia vendor administration by changing edition metadata.
 
@@ -76,38 +78,39 @@ Implement role/capability checks at both **installation AND resource** scope. In
 
 ### Admin-permission examples
 
-| Operation | Vendor admin | Customer installation admin | Customer course manager | Lecturer | Participant |
-|---|---|---|---|---|---|
-| Issue software licence, change signed edition | Yes | No | No | No | No |
-| Configure own academy brand/domain settings | Only via authorised provisioning/support | Yes | Optional delegation | No | No |
-| Create users and grant local management roles | No automatic cross-instance scope | Yes | Restricted subordinate roles | No | No |
-| Create course and enrol learners | No automatic cross-instance scope | Yes | Yes | Per course policy | No |
-| Upload public exam / edit exam-required | No automatic cross-instance scope | Yes | Yes | Assigned course | No |
-| See class attendance / staff notes | No blanket access | Own academy | Own courses | Assigned courses | No |
-| Configure customer-owned lecturer fees | No | If module licensed | If delegated | No | No |
-| View Luminovia broker profit and platform commission | Vendor business authority only | **No** | No | No | No |
-| Rotate a local API key / manage local integrations | No automatic access | Yes | If delegated | No | No |
-| Access another installation's data | Never by local role | No | No | No | No |
+| Operation                                            | Vendor admin                             | Customer installation admin | Customer course manager      | Lecturer          | Participant |
+|------------------------------------------------------|------------------------------------------|-----------------------------|------------------------------|-------------------|-------------|
+| Issue software licence, change signed edition        | Yes                                      | No                          | No                           | No                | No          |
+| Configure own academy brand/domain settings          | Only via authorised provisioning/support | Yes                         | Optional delegation          | No                | No          |
+| Create users and grant local management roles        | No automatic cross-instance scope        | Yes                         | Restricted subordinate roles | No                | No          |
+| Create course and enrol learners                     | No automatic cross-instance scope        | Yes                         | Yes                          | Per course policy | No          |
+| Upload public exam / edit exam-required              | No automatic cross-instance scope        | Yes                         | Yes                          | Assigned course   | No          |
+| See class attendance / staff notes                   | No blanket access                        | Own academy                 | Own courses                  | Assigned courses  | No          |
+| Configure customer-owned lecturer fees               | No                                       | If module licensed          | If delegated                 | No                | No          |
+| View Luminovia broker profit and platform commission | Vendor business authority only           | **No**                      | No                           | No                | No          |
+| Rotate a local API key / manage local integrations   | No automatic access                      | Yes                         | If delegated                 | No                | No          |
+| Access another installation's data                   | Never by local role                      | No                          | No                           | No                | No          |
 
 ## 3. Product-specific module removal, replacement and reuse
 
 **Never delete historical financial/assignment records merely because an edition no longer exposes them.** Replace hard-coded business assumptions with explicit, tested edition policies and new customer-owned flows. Existing data remains in the Luminovia edition.
 
-| Existing module | Customer edition decision | Customer-specific replacement / preservation |
-|---|---|---|
-| Global Jobs marketplace and first-come-first-served lecturer claims | **Disabled / absent** by default | Direct course creation, internal lecturer assignment and optional company-owned staffing queue; no dependence on third-party job posting |
-| Multiple external customer/company lead directory | **Disabled** as Luminovia sales tool | Customer's own departments/groups/locations and local organisational units, if relevant |
-| Luminovia commission and gross/platform/net split | **Disabled and server-denied** | Optional local lecturer-cost configuration, kept separate from vendor billing |
-| Luminovia contract prerequisite for accepting jobs | **Disabled** for ordinary customer-managed lecturer assignment | Optional customer-authored lecturer terms/contracts, independent of Luminovia legal forms |
-| Vendor-owned customer invoice/payment administration | **Disabled** | Customer's own internal reports; optional local invoice/payment tracking if licensed |
-| Cross-company job brokerage notifications/replacements | **Disabled** | Internal course staffing and attendee alerts; optional internal replacement workflow |
-| Courses, plans, enrolment, materials, exams, attendance, completion, calendar, chat | **Included** | Reuse the finished LMS's authoritative modules and adapt labels/permissions |
-| Personal calendars and private DMs | **Supported as applicable** | Preserve individual privacy boundaries, with scope-specific teacher/participant views |
-| Knowledge/wiki/forum, notifications, support, search | **Included if relevant** | Academy-scoped content and edition-specific navigation |
-| Luminovia public demo view (`/demo`) | **NOT bundled in customer white-label editions; fully retained and redesigned in Luminovia Internal Edition** | White-label direct `/demo` must be unavailable, without affecting internal Luminovia `/demo`. Retain isolated fictional test fixtures and customer-specific real-UI onboarding/help without a public sandbox. |
-| Existing public & private REST/RPC operations | **Scope-filtered** | Expose only explicitly allowed customer product API operations |
+| Existing module                                                                     | Customer edition decision                                                                                     | Customer-specific replacement / preservation                                                                                                                                                                  |
+|-------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Global Jobs marketplace and first-come-first-served lecturer claims                 | **Disabled / absent** by default                                                                              | Direct course creation, internal lecturer assignment and optional company-owned staffing queue; no dependence on third-party job posting                                                                      |
+| Multiple external customer/company lead directory                                   | **Disabled** as Luminovia sales tool                                                                          | Customer's own departments/groups/locations and local organisational units, if relevant                                                                                                                       |
+| Luminovia commission and gross/platform/net split                                   | **Disabled and server-denied**                                                                                | Optional local lecturer-cost configuration, kept separate from vendor billing                                                                                                                                 |
+| Luminovia contract prerequisite for accepting jobs                                  | **Disabled** for ordinary customer-managed lecturer assignment                                                | Optional customer-authored lecturer terms/contracts, independent of Luminovia legal forms                                                                                                                     |
+| Vendor-owned customer invoice/payment administration                                | **Disabled**                                                                                                  | Customer's own internal reports; optional local invoice/payment tracking if licensed                                                                                                                          |
+| Cross-company job brokerage notifications/replacements                              | **Disabled**                                                                                                  | Internal course staffing and attendee alerts; optional internal replacement workflow                                                                                                                          |
+| Courses, plans, enrolment, materials, exams, attendance, completion, calendar, chat | **Included**                                                                                                  | Reuse the finished LMS's authoritative modules and adapt labels/permissions                                                                                                                                   |
+| Personal calendars and private DMs                                                  | **Supported as applicable**                                                                                   | Preserve individual privacy boundaries, with scope-specific teacher/participant views                                                                                                                         |
+| Knowledge/wiki/forum, notifications, support, search                                | **Included if relevant**                                                                                      | Academy-scoped content and edition-specific navigation                                                                                                                                                        |
+| Luminovia public demo view (`/demo`)                                                | **NOT bundled in customer white-label editions; fully retained and redesigned in Luminovia Internal Edition** | White-label direct `/demo` must be unavailable, without affecting internal Luminovia `/demo`. Retain isolated fictional test fixtures and customer-specific real-UI onboarding/help without a public sandbox. |
+| Existing public & private REST/RPC operations                                       | **Scope-filtered**                                                                                            | Expose only explicitly allowed customer product API operations                                                                                                                                                |
 
-**Customer-owned lecturer settings:** An academy admin may optionally configure teacher daily/hourly/fixed rates, approved agreements, payment terms and tracked amounts for their *own teachers*. This optional module MUST NOT expose a Luminovia commission, double-book company revenue, count vendor margins as customer fees, or become a prerequisite for creating courses. If disabled, no lecturer cost/invoicing pages or API actions are available. Keep `EUR`, `AUD` and other supported currencies explicitly configured with correct rounding; do not invent taxes, transfers or legal employment status.
+**Customer-owned lecturer settings:** An academy admin may optionally configure teacher daily/hourly/fixed rates, approved agreements, payment terms and tracked amounts for their *own teachers*. This optional module MUST NOT expose a Luminovia commission, double-book company revenue, count vendor margins as customer fees, or become a prerequisite for creating courses. If disabled, no lecturer cost/invoicing pages or API actions are available. Keep `EUR`, `AUD` and other supported currencies
+explicitly configured with correct rounding; do not invent taxes, transfers or legal employment status.
 
 ## 4. Brand and domain management — fully white-labelled
 
@@ -164,20 +167,20 @@ For self-hosted and dedicated hosted editions, normally **one primary customer b
 
 ### 8.1 Supported API surface
 
-| Domain | Examples of versioned API operations |
-|---|---|
-| Identity and accounts | Sign-in/auth token, current identity/roles, username/email settings, profiles, invitations, suspend/deactivate, scoped user lookup |
-| Academy settings | Branding, local administrators, feature/module licence status, locale, roles, support contact and allowed configurations |
-| Courses | Templates, course run creation, sessions, publishing, internal teacher assignment, readiness, joining instructions and welcome content |
-| Learners | Company memberships, participant invitations, enrolment/cancellation, learner dashboard, allowed completion history |
-| Course content | Resources, upload/scan/version/share/removal, learner acknowledgements, staff-only files, private downloadable records |
-| Exams and quizzes | Exam-required setting, student-facing PDF publication, protected solutions/drafts, existing quiz/feedback/completion operations |
-| Attendance | Authorised per-session roster, present/absent/excused, arrival/notes, correction, import/export and scanned evidence |
-| Communication | Scoped course groups/messages, announcements, notification preferences and event subscriptions |
-| Calendars | Own/permitted events, sessions, timetable, subscriptions and timezone-correct information |
-| Knowledge/support | Authored wiki/forum and course support interactions, under applicable access policies |
-| Reports/analytics | Only installed and permissioned course/activity/attendance reports, exports and job status |
-| Optional modules | Internal lecturer costs/payments, optional job staffing, licensing metadata appropriate to the actor; no vendor margin access |
+| Domain                | Examples of versioned API operations                                                                                                   |
+|-----------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| Identity and accounts | Sign-in/auth token, current identity/roles, username/email settings, profiles, invitations, suspend/deactivate, scoped user lookup     |
+| Academy settings      | Branding, local administrators, feature/module licence status, locale, roles, support contact and allowed configurations               |
+| Courses               | Templates, course run creation, sessions, publishing, internal teacher assignment, readiness, joining instructions and welcome content |
+| Learners              | Company memberships, participant invitations, enrolment/cancellation, learner dashboard, allowed completion history                    |
+| Course content        | Resources, upload/scan/version/share/removal, learner acknowledgements, staff-only files, private downloadable records                 |
+| Exams and quizzes     | Exam-required setting, student-facing PDF publication, protected solutions/drafts, existing quiz/feedback/completion operations        |
+| Attendance            | Authorised per-session roster, present/absent/excused, arrival/notes, correction, import/export and scanned evidence                   |
+| Communication         | Scoped course groups/messages, announcements, notification preferences and event subscriptions                                         |
+| Calendars             | Own/permitted events, sessions, timetable, subscriptions and timezone-correct information                                              |
+| Knowledge/support     | Authored wiki/forum and course support interactions, under applicable access policies                                                  |
+| Reports/analytics     | Only installed and permissioned course/activity/attendance reports, exports and job status                                             |
+| Optional modules      | Internal lecturer costs/payments, optional job staffing, licensing metadata appropriate to the actor; no vendor margin access          |
 
 ### 8.2 API contract, documentation and developer experience
 
@@ -215,7 +218,8 @@ A hosted Luminovia-managed academy uses the same business workflow but its actua
 
 ## 10. Managed hosted academies and future commercial services
 
-For dedicated managed hosting, implement vendor-side provisioning for an isolated customer's server/database/Auth/Storage/SMTP/domain/backup assets and customer admin handover. Maintain an inventory of customer installations and versions without centralising private student content by default. Monitor uptime, storage, failed scan jobs, queued mail, backup freshness and migration status per installation. Define named support access grants, incident communication, contracted service limits, capacity planning and offboarding/data portability.
+For dedicated managed hosting, implement vendor-side provisioning for an isolated customer's server/database/Auth/Storage/SMTP/domain/backup assets and customer admin handover. Maintain an inventory of customer installations and versions without centralising private student content by default. Monitor uptime, storage, failed scan jobs, queued mail, backup freshness and migration status per installation. Define named support access grants, incident communication, contracted service limits,
+capacity planning and offboarding/data portability.
 
 A future **hosted shared SaaS** edition requires a distinct design and security project: tenant identity/control plane, per-table policies, correct company/tenant FK propagation, isolation of Storage, Auth, notifications, Realtime, search, API keys, backups, metering, per-tenant encryption/key strategy, recovery blast radius and actual adversarial multi-tenant tests. The fact that an account can belong to more than one company does **not** prove this architecture is safe.
 
@@ -316,49 +320,49 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 
 **All checked tests must be executable in canonical CI or a documented, independently reviewable operational test.** Preserve the existing `./portal check`, `./portal test`, migration, API and Playwright stacks; add edition matrix rather than replacing their current checks. Run exact-release commit verification for both internal and white-label configurations.
 
-| Test ID | Test scenario | Required assertion |
-|---|---|---|
-| WL-T01 | Internal edition upgrade regression | Existing Luminovia marketplace, Premium admin-only switch, contract and finance behaviour preserved |
-| WL-T02 | White-label edition provisioning | LMS included, company Premium switch absent, licence/edition trusted at server |
-| WL-T03 | Disable broker features | Job marketplace, global company procurement and Luminovia commission APIs denied, not only hidden |
-| WL-T04 | Direct customer course creation | Customer admin can create/run a course without marketplace offer or Luminovia framework agreement |
-| WL-T05 | Direct local lecturer assignment | Existing course/session membership and permission recalculated, no brokerage claim required |
-| WL-T06 | Optional customer lecturer payments | Own rates visible when enabled and hidden/denied when disabled; vendor margin always inaccessible |
-| WL-T07 | Vendor billing and licence boundary | Local customer admin cannot issue licence, alter signed edition, access vendor invoices or another instance |
-| WL-T08 | Unique customer identities/data | No copied Auth accounts, SQL records, Storage objects, server keys or Luminovia production secrets |
-| WL-T09 | Customer first admin invitation | Valid signed customer invitation and safe password setup; no permanent demo password |
-| WL-T10 | Internal and external role escalation | Company managers and integration identities cannot impersonate vendor or installation superuser |
-| WL-T11 | Username/email login parity | Both identifiers authenticate the same authorised Auth account, existing email-only users unaffected |
-| WL-T12 | Password policy and brute-force | 7 rejected; 8 accepted; throttling, recovery and nonenumeration tests pass |
-| WL-T13 | Username conflict/rename | Case-normalised uniqueness, reserved names and concurrent conflicts handled |
-| WL-T14 | API token flow and expiry | Password exchanged for short-lived token; expired/revoked token denied; no password-as-key reuse |
-| WL-T15 | Scoped integration credentials | Separate service identity permissions, key rotation/revocation and audit working |
-| WL-T16 | Complete API operation inventory | Every supported edition UI business action has correct documented API or justified exception |
-| WL-T17 | OpenAPI contract accuracy | Schemas, methods, status and error responses match live handlers; version checks fail on drift |
-| WL-T18 | Swagger UI interactive use | Correct edition/API version, Authorize, try-it-out with permission; no visible secrets |
-| WL-T19 | API across roles | Learner, lecturer, manager, customer admin, unauthorised actor get exact permitted/denied responses |
-| WL-T20 | API idempotency & concurrency | Duplicate enrolments/creates and stale writes prevented; bounded pagination/rate limit/errors correct |
-| WL-T21 | API file scanning & exact bytes | Only clean, current, permitted course documents accessible; malware/bad MIME quarantined |
-| WL-T22 | API webhooks | Signed/deduplicated/revocable scoped delivery; retries and reordering have defined safe outcomes |
-| WL-T23 | Academy logo/name/favicon/PWA | Branded shell, title, icon, install name and both themes in actual browsers |
-| WL-T24 | Branding across PDFs, email, help, Swagger | Customer assets/labels shown correctly and required legal credits retained |
-| WL-T25 | Customer custom domain/TLS | Verified ownership, correct certificate, Auth callbacks, CORS, cookies and origin checks |
-| WL-T26 | Brand asset upload safety | Invalid/malicious assets fail; versions, scan, size limits and cache invalidation enforced |
-| WL-T27 | Standalone course chat | Eligible memberships, revocation, chat files and private-DM boundary enforce current permissions |
-| WL-T28 | Course exams/attendance | Teacher/company file visibility, student solution denial and roster privacy remain correct |
-| WL-T29 | Cross-instance isolation | Account IDs/API keys/Storage paths/search/WebSocket cannot read another customer's data |
-| WL-T30 | Multi-company participant rules where supported | Exact owned course scope preserved, one company disabling access does not disable another's unrelated access |
-| WL-T31 | Installation retries/failures | Provisioning is idempotent, partial failures safe, no orphaned active instance or secret disclosure |
-| WL-T32 | Customer backup/restore | Independent PostgreSQL/Auth/Storage/secrets restore with matching hashes and permissions |
-| WL-T33 | Customer updater and migrations | Exact signed release, forward migrations once, retained database, rollback boundary documented |
-| WL-T34 | Unsupported licence/expiry/grace | Server module enforcement follows documented policy without deleting customer data |
-| WL-T35 | Branding/privacy accessibility | DE/EN, desktop/mobile, keyboard, screen reader, colour contrast and dark/light themes pass |
-| WL-T36 | First installer/hosted operations | Health, SMTP, scanner, Storage, monitoring, quotas, backups and actual deployed revision verified |
-| WL-T37 | API backward compatibility | Existing supported SDKs/integrations survive nonbreaking update; deliberate breaks versioned/documented |
-| WL-T38 | Customer data export/offboarding | Authorised own course/participant/file data export and no cross-instance data in package |
-| WL-T39 | Vendor support opt-in | Support access requires current customer authorisation, expiry, audit; no default blanket private access |
-| WL-T40 | Final release verification | All required application+security CI green for exact customer artifact; independent signoff and documented risks |
-| WL-T41 | Demo retained internally, excluded commercially | Luminovia Internal `/demo` remains redesigned, functional and safely fictional; both white-label editions return not found/controlled redirect for `/demo`, contain no public demo navigation or bundled demo data, while their production onboarding/help and isolated QA fixtures still work |
+| Test ID | Test scenario                                   | Required assertion                                                                                                                                                                                                                                                                             |
+|---------|-------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| WL-T01  | Internal edition upgrade regression             | Existing Luminovia marketplace, Premium admin-only switch, contract and finance behaviour preserved                                                                                                                                                                                            |
+| WL-T02  | White-label edition provisioning                | LMS included, company Premium switch absent, licence/edition trusted at server                                                                                                                                                                                                                 |
+| WL-T03  | Disable broker features                         | Job marketplace, global company procurement and Luminovia commission APIs denied, not only hidden                                                                                                                                                                                              |
+| WL-T04  | Direct customer course creation                 | Customer admin can create/run a course without marketplace offer or Luminovia framework agreement                                                                                                                                                                                              |
+| WL-T05  | Direct local lecturer assignment                | Existing course/session membership and permission recalculated, no brokerage claim required                                                                                                                                                                                                    |
+| WL-T06  | Optional customer lecturer payments             | Own rates visible when enabled and hidden/denied when disabled; vendor margin always inaccessible                                                                                                                                                                                              |
+| WL-T07  | Vendor billing and licence boundary             | Local customer admin cannot issue licence, alter signed edition, access vendor invoices or another instance                                                                                                                                                                                    |
+| WL-T08  | Unique customer identities/data                 | No copied Auth accounts, SQL records, Storage objects, server keys or Luminovia production secrets                                                                                                                                                                                             |
+| WL-T09  | Customer first admin invitation                 | Valid signed customer invitation and safe password setup; no permanent demo password                                                                                                                                                                                                           |
+| WL-T10  | Internal and external role escalation           | Company managers and integration identities cannot impersonate vendor or installation superuser                                                                                                                                                                                                |
+| WL-T11  | Username/email login parity                     | Both identifiers authenticate the same authorised Auth account, existing email-only users unaffected                                                                                                                                                                                           |
+| WL-T12  | Password policy and brute-force                 | 7 rejected; 8 accepted; throttling, recovery and nonenumeration tests pass                                                                                                                                                                                                                     |
+| WL-T13  | Username conflict/rename                        | Case-normalised uniqueness, reserved names and concurrent conflicts handled                                                                                                                                                                                                                    |
+| WL-T14  | API token flow and expiry                       | Password exchanged for short-lived token; expired/revoked token denied; no password-as-key reuse                                                                                                                                                                                               |
+| WL-T15  | Scoped integration credentials                  | Separate service identity permissions, key rotation/revocation and audit working                                                                                                                                                                                                               |
+| WL-T16  | Complete API operation inventory                | Every supported edition UI business action has correct documented API or justified exception                                                                                                                                                                                                   |
+| WL-T17  | OpenAPI contract accuracy                       | Schemas, methods, status and error responses match live handlers; version checks fail on drift                                                                                                                                                                                                 |
+| WL-T18  | Swagger UI interactive use                      | Correct edition/API version, Authorize, try-it-out with permission; no visible secrets                                                                                                                                                                                                         |
+| WL-T19  | API across roles                                | Learner, lecturer, manager, customer admin, unauthorised actor get exact permitted/denied responses                                                                                                                                                                                            |
+| WL-T20  | API idempotency & concurrency                   | Duplicate enrolments/creates and stale writes prevented; bounded pagination/rate limit/errors correct                                                                                                                                                                                          |
+| WL-T21  | API file scanning & exact bytes                 | Only clean, current, permitted course documents accessible; malware/bad MIME quarantined                                                                                                                                                                                                       |
+| WL-T22  | API webhooks                                    | Signed/deduplicated/revocable scoped delivery; retries and reordering have defined safe outcomes                                                                                                                                                                                               |
+| WL-T23  | Academy logo/name/favicon/PWA                   | Branded shell, title, icon, install name and both themes in actual browsers                                                                                                                                                                                                                    |
+| WL-T24  | Branding across PDFs, email, help, Swagger      | Customer assets/labels shown correctly and required legal credits retained                                                                                                                                                                                                                     |
+| WL-T25  | Customer custom domain/TLS                      | Verified ownership, correct certificate, Auth callbacks, CORS, cookies and origin checks                                                                                                                                                                                                       |
+| WL-T26  | Brand asset upload safety                       | Invalid/malicious assets fail; versions, scan, size limits and cache invalidation enforced                                                                                                                                                                                                     |
+| WL-T27  | Standalone course chat                          | Eligible memberships, revocation, chat files and private-DM boundary enforce current permissions                                                                                                                                                                                               |
+| WL-T28  | Course exams/attendance                         | Teacher/company file visibility, student solution denial and roster privacy remain correct                                                                                                                                                                                                     |
+| WL-T29  | Cross-instance isolation                        | Account IDs/API keys/Storage paths/search/WebSocket cannot read another customer's data                                                                                                                                                                                                        |
+| WL-T30  | Multi-company participant rules where supported | Exact owned course scope preserved, one company disabling access does not disable another's unrelated access                                                                                                                                                                                   |
+| WL-T31  | Installation retries/failures                   | Provisioning is idempotent, partial failures safe, no orphaned active instance or secret disclosure                                                                                                                                                                                            |
+| WL-T32  | Customer backup/restore                         | Independent PostgreSQL/Auth/Storage/secrets restore with matching hashes and permissions                                                                                                                                                                                                       |
+| WL-T33  | Customer updater and migrations                 | Exact signed release, forward migrations once, retained database, rollback boundary documented                                                                                                                                                                                                 |
+| WL-T34  | Unsupported licence/expiry/grace                | Server module enforcement follows documented policy without deleting customer data                                                                                                                                                                                                             |
+| WL-T35  | Branding/privacy accessibility                  | DE/EN, desktop/mobile, keyboard, screen reader, colour contrast and dark/light themes pass                                                                                                                                                                                                     |
+| WL-T36  | First installer/hosted operations               | Health, SMTP, scanner, Storage, monitoring, quotas, backups and actual deployed revision verified                                                                                                                                                                                              |
+| WL-T37  | API backward compatibility                      | Existing supported SDKs/integrations survive nonbreaking update; deliberate breaks versioned/documented                                                                                                                                                                                        |
+| WL-T38  | Customer data export/offboarding                | Authorised own course/participant/file data export and no cross-instance data in package                                                                                                                                                                                                       |
+| WL-T39  | Vendor support opt-in                           | Support access requires current customer authorisation, expiry, audit; no default blanket private access                                                                                                                                                                                       |
+| WL-T40  | Final release verification                      | All required application+security CI green for exact customer artifact; independent signoff and documented risks                                                                                                                                                                               |
+| WL-T41  | Demo retained internally, excluded commercially | Luminovia Internal `/demo` remains redesigned, functional and safely fictional; both white-label editions return not found/controlled redirect for `/demo`, contain no public demo navigation or bundled demo data, while their production onboarding/help and isolated QA fixtures still work |
 
 ## 15. Definition of Done / release gate
 
@@ -372,4 +376,5 @@ Each milestone is a separate reviewable, fully tested piece. No percentage-compl
 - [ ] `WL-T01–WL-T41` are passing on the actual exact release commit and targeted hosting scenario. CI cannot be bypassed; no test is claimed run without evidence.
 - [ ] Third-party rights and customer licence, security/privacy, production operating responsibilities and service contract reviewed and approved.
 
-**Implementation-agent rules:** Read `AGENTS.md`, `ROADMAP.md`, `PRODUCT.md`, `DEVELOPMENT.md`, `OPERATIONS.md`, relevant owning code/migrations/tests, and this file. Check source/main/PRs/CI before touching code. Allocate a focused PR per reviewed workstream, document exact code/tests/risks, keep existing migration bytes immutable, do not wipe real data or prematurely publish hosted services. Maintain one coherent codebase with explicit edition boundaries. Do not mark a checklist item complete merely because documentation or source for it exists.
+**Implementation-agent rules:** Read `AGENTS.md`, `ROADMAP.md`, `PRODUCT.md`, `DEVELOPMENT.md`, `OPERATIONS.md`, relevant owning code/migrations/tests, and this file. Check source/main/PRs/CI before touching code. Allocate a focused PR per reviewed workstream, document exact code/tests/risks, keep existing migration bytes immutable, do not wipe real data or prematurely publish hosted services. Maintain one coherent codebase with explicit edition boundaries. Do not mark a checklist item complete
+merely because documentation or source for it exists.

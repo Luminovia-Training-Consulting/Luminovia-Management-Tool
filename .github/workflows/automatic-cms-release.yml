@@ -4,8 +4,8 @@
 name: Automatic verified CMS release
 on:
   workflow_run:
-    workflows: [Portal checks, Security analysis]
-    types: [completed]
+    workflows: [ Portal checks, Security analysis ]
+    types: [ completed ]
 permissions:
   contents: read
   actions: read

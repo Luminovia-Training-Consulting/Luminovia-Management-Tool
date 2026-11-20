@@ -1,11 +1,6 @@
 /** Verify the staff role-preview switch renders only fictional content and never calls business APIs while active. */
 import {expect, test} from "@playwright/test";
-import {
-    actor,
-    api,
-    checked,
-    login,
-} from "./helpers/accounts-support";
+import {actor, api, checked, login,} from "./helpers/accounts-support";
 
 test.skip(
     process.env.PORTAL_TEST_MODE !== "1",

@@ -1,24 +1,21 @@
 /** Disposable 14→17 review rehearsal. Auth is a four-row id/email stub; this is
  * not a live backup, native password/permission or Storage-binary preservation claim. */
 import assert from "node:assert/strict";
-import { quoteSql, withTestDatabase } from "./testing/database.mjs";
-import {
-  loadM4ReviewContext,
-  validateM4History,
-} from "../deploy/hostinger/reviewed-m4-plan.mjs";
+import {quoteSql, withTestDatabase} from "./testing/database.mjs";
+import {loadM4ReviewContext, validateM4History,} from "../deploy/hostinger/reviewed-m4-plan.mjs";
 
 const context = await loadM4ReviewContext();
 const historyQuery =
-  "select coalesce(json_agg(json_build_object('version',version,'source',statements[1]) order by version),'[]'::json)::text from supabase_migrations.schema_migrations";
+    "select coalesce(json_agg(json_build_object('version',version,'source',statements[1]) order by version),'[]'::json)::text from supabase_migrations.schema_migrations";
 /** Renders the rehearsal fixture's actual migration history without rewriting existing source files. */
 const historyInsert = (entry) =>
-  `insert into supabase_migrations.schema_migrations(version,name,statements) values(${quoteSql(entry.version)},${quoteSql(entry.file.slice(15, -4))},array[${quoteSql(entry.source)}]);`;
+    `insert into supabase_migrations.schema_migrations(version,name,statements) values(${quoteSql(entry.version)},${quoteSql(entry.file.slice(15, -4))},array[${quoteSql(entry.source)}]);`;
 /** Creates reproducible fictional UUIDs for deliberately prepared historical data. */
 const id = (n) => `f4000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const roleColumns =
-  "oid,rolname,rolsuper,rolinherit,rolcreaterole,rolcreatedb,rolcanlogin,rolreplication,rolconnlimit,rolvaliduntil,rolbypassrls,rolconfig";
+    "oid,rolname,rolsuper,rolinherit,rolcreaterole,rolcreatedb,rolcanlogin,rolreplication,rolconnlimit,rolvaliduntil,rolbypassrls,rolconfig";
 const memberColumns =
-  "roleid,member,grantor,admin_option,inherit_option,set_option";
+    "roleid,member,grantor,admin_option,inherit_option,set_option";
 
 const snapshotSQL = `
 create temporary table m4_old_rows(schema_name text,table_name text,column_names text,before_rows jsonb);
@@ -48,28 +45,28 @@ end;$preserved$;
 // Only these three source-hash-verified bodies are joined inside this temporary
 // database test. The production review-plan tool exposes no apply operation.
 const atomicRehearsal = (poison = "") =>
-  "begin;\n" +
-  snapshotSQL +
-  context.pending
-    .map(
-      (entry) =>
-        entry.source
-          .replace(/^\s*begin;\s*/i, "")
-          .replace(/\s*commit;\s*$/i, "") +
-        "\n" +
-        historyInsert(entry),
-    )
-    .join("\n") +
-  "\n" +
-  poison +
-  "\n" +
-  preservationSQL +
-  "\ncommit;";
+    "begin;\n" +
+    snapshotSQL +
+    context.pending
+        .map(
+            (entry) =>
+                entry.source
+                    .replace(/^\s*begin;\s*/i, "")
+                    .replace(/\s*commit;\s*$/i, "") +
+                "\n" +
+                historyInsert(entry),
+        )
+        .join("\n") +
+    "\n" +
+    poison +
+    "\n" +
+    preservationSQL +
+    "\ncommit;";
 
 await withTestDatabase(
-  "review_preservation",
-  async ({ sql }) => {
-    await sql(`
+    "review_preservation",
+    async ({sql}) => {
+        await sql(`
  create schema supabase_migrations;create table supabase_migrations.schema_migrations(version text primary key,name text,statements text[]);
  ${context.baseline.map(historyInsert).join("\n")}
  insert into auth.users(id,email) values
@@ -101,67 +98,67 @@ await withTestDatabase(
  insert into public.payment_records(invoice_id,amount,currency,paid_at,reference,recorded_by,client_id) values('${id(24)}',2250,'EUR','2026-01-04','Prior tracked payment','${id(1)}','${id(26)}');
  update private.document_storage_limits set total_quota_bytes=11811160064,owner_quota_bytes=2147483648 where singleton;
  `);
-    const before = JSON.parse(await sql(historyQuery));
-    assert.equal(validateM4History(before, context), false);
-    console.log(
-      "PASS Exact 14 baseline with fictional profiles/roles, edited course, accepted fees, invoice/payment/file metadata, private event and custom quotas is loaded",
-    );
-    await assert.rejects(
-      sql(
-        atomicRehearsal(
-          `update public.profiles set display_name='Deliberate preservation failure' where id='${id(2)}';`,
-        ),
-      ),
-      /M4 old row changed/,
-    );
-    assert.equal(
-      await sql("select count(*) from supabase_migrations.schema_migrations"),
-      "14",
-    );
-    assert.equal(
-      await sql(
-        "select coalesce(to_regclass('public.profile_avatars')::text,'')",
-      ),
-      "",
-    );
-    assert.equal(
-      await sql(`select display_name from public.profiles where id='${id(2)}'`),
-      "Preserved teacher",
-    );
-    console.log(
-      "PASS Deliberate old-row mutation aborts all 3 migrations atomically, retaining 14 history entries and old data",
-    );
-    await sql(atomicRehearsal());
-    const after = JSON.parse(await sql(historyQuery));
-    assert.equal(validateM4History(after, context), true);
-    assert.equal(
-      await sql("select count(*) from public.building_blocks"),
-      "22",
-    );
-    assert.equal(
-      await sql("select count(*) from public.building_block_sources"),
-      "24",
-    );
-    assert.equal(
-      await sql("select count(*) from public.course_templates"),
-      "23",
-    );
-    assert.equal(
-      await sql(
-        "select total_quota_bytes||'/'||owner_quota_bytes from private.document_storage_limits",
-      ),
-      "11811160064/2147483648",
-    );
-    console.log(
-      "PASS Exact reviewed 14→17 rehearsal preserves every old column/row/ID, role flags/memberships and custom quotas while adding only 22 templates/24 sources",
-    );
-    assert.equal(validateM4History(after, context), true);
-    console.log(
-      "PASS Completed 17 history validates without offering another application; native Auth passwords/permission and Storage bytes are outside this stub rehearsal",
-    );
-    console.log(
-      "\n4 M4 preservation PostgreSQL checks passed (temporary database only).",
-    );
-  },
-  { migrationsThrough: "20261115142130" },
+        const before = JSON.parse(await sql(historyQuery));
+        assert.equal(validateM4History(before, context), false);
+        console.log(
+            "PASS Exact 14 baseline with fictional profiles/roles, edited course, accepted fees, invoice/payment/file metadata, private event and custom quotas is loaded",
+        );
+        await assert.rejects(
+            sql(
+                atomicRehearsal(
+                    `update public.profiles set display_name='Deliberate preservation failure' where id='${id(2)}';`,
+                ),
+            ),
+            /M4 old row changed/,
+        );
+        assert.equal(
+            await sql("select count(*) from supabase_migrations.schema_migrations"),
+            "14",
+        );
+        assert.equal(
+            await sql(
+                "select coalesce(to_regclass('public.profile_avatars')::text,'')",
+            ),
+            "",
+        );
+        assert.equal(
+            await sql(`select display_name from public.profiles where id='${id(2)}'`),
+            "Preserved teacher",
+        );
+        console.log(
+            "PASS Deliberate old-row mutation aborts all 3 migrations atomically, retaining 14 history entries and old data",
+        );
+        await sql(atomicRehearsal());
+        const after = JSON.parse(await sql(historyQuery));
+        assert.equal(validateM4History(after, context), true);
+        assert.equal(
+            await sql("select count(*) from public.building_blocks"),
+            "22",
+        );
+        assert.equal(
+            await sql("select count(*) from public.building_block_sources"),
+            "24",
+        );
+        assert.equal(
+            await sql("select count(*) from public.course_templates"),
+            "23",
+        );
+        assert.equal(
+            await sql(
+                "select total_quota_bytes||'/'||owner_quota_bytes from private.document_storage_limits",
+            ),
+            "11811160064/2147483648",
+        );
+        console.log(
+            "PASS Exact reviewed 14→17 rehearsal preserves every old column/row/ID, role flags/memberships and custom quotas while adding only 22 templates/24 sources",
+        );
+        assert.equal(validateM4History(after, context), true);
+        console.log(
+            "PASS Completed 17 history validates without offering another application; native Auth passwords/permission and Storage bytes are outside this stub rehearsal",
+        );
+        console.log(
+            "\n4 M4 preservation PostgreSQL checks passed (temporary database only).",
+        );
+    },
+    {migrationsThrough: "20261115142130"},
 );

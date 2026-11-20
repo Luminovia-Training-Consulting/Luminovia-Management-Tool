@@ -232,7 +232,7 @@ The private portal and fictional public demo share accessible presentation witho
 - Prüfungen für Rollenvorschau, unverändertes helles Theme, responsive Darstellung und Schreibfreiheit der öffentlichen Demo für die Abschlussabnahme implementieren.
 - Track task 42 independently as the permission-gated separate-Website footer deliverable; do not make it a portal release dependency.
 
-###   * Step 4: Deliver the gated Premium LMS
+###       * Step 4: Deliver the gated Premium LMS
 
 Enabled companies receive scoped learning features while OFF companies retain data without granting operational access.
 

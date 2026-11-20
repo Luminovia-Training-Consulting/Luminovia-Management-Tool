@@ -17,20 +17,8 @@ import {db} from "../../lib/supabase";
 import {requireOnline, useOnline} from "../../lib/online";
 import {Button} from "../../components/ui/button";
 import {Dialog} from "../../components/ui/dialog";
-import {
-    ErrorState,
-    Field,
-    Loading,
-    Notice,
-    PageHeading,
-} from "../../components/common";
-import {
-    accountListQuery,
-    accountRequest,
-    accountRoleCatalogQuery,
-    type AccountPerson,
-    type AccountRole,
-} from "./api";
+import {ErrorState, Field, Loading, Notice, PageHeading,} from "../../components/common";
+import {accountListQuery, type AccountPerson, accountRequest, type AccountRole, accountRoleCatalogQuery,} from "./api";
 import "./i18n";
 
 /** Keep search/page drafts and confirmed account changes scoped to the current actor. */

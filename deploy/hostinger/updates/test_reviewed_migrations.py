@@ -11,11 +11,11 @@ import datetime as dt
 import io
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import updater as u
@@ -246,18 +246,22 @@ class ReviewedLifecycleTests(unittest.TestCase):
     def test_plan_expiring_during_final_network_check_cannot_be_consumed(self):
         with reviewed_fixture() as (updater, archive, _manifest, path, plan, manifest_path), contextlib.ExitStack() as cleanup:
             expired = dt.datetime.fromisoformat(plan["expiresAt"]) + dt.timedelta(seconds=1)
+
             class ExpiredClock(dt.datetime):
                 @classmethod
                 def now(cls, tz=None):
                     return expired if tz else expired.replace(tzinfo=None)
+
             original = updater.verify_reviewed_release_identity
             calls = 0
+
             def slow_network(manifest):
                 nonlocal calls
                 original(manifest)
                 calls += 1
                 if calls == 2:
                     cleanup.enter_context(patch.object(u.dt, "datetime", ExpiredClock))
+
             updater.verify_reviewed_release_identity = slow_network
             with self.assertRaisesRegex(u.UpdateError, "expired_or_invalid_time"):
                 updater.once(package=archive, manifest_path=manifest_path, reviewed_migration_plan=path)
@@ -330,10 +334,12 @@ class ReviewedLifecycleTests(unittest.TestCase):
     def test_consumption_persistence_failure_never_reaches_sql_and_cannot_replay(self):
         with reviewed_fixture() as (updater, archive, _manifest, path, _plan, manifest_path):
             persist = u.fsync_directory
+
             def interrupted(directory):
                 if Path(directory).name == "used":
                     raise OSError("fictional fsync failure")
                 persist(directory)
+
             with patch.object(u, "fsync_directory", side_effect=interrupted), self.assertRaisesRegex(u.UpdateError, "unexpected_update_failure"):
                 updater.once(package=archive, manifest_path=manifest_path, reviewed_migration_plan=path)
             self.assertEqual(updater.sql_sources, [])
@@ -352,6 +358,7 @@ class ReviewedLifecycleTests(unittest.TestCase):
                     else:
                         changed = dict(plan, id=str(u.uuid.uuid4()))
                         path.write_text(json.dumps(changed), encoding="utf8")
+
                 updater.after_checkpoint = change
                 with self.assertRaises(u.UpdateError):
                     updater.once(package=archive, manifest_path=manifest_path, reviewed_migration_plan=path)

@@ -155,7 +155,7 @@ resources:
         interval: 5s
         unhealthy_threshold: 3
         healthy_threshold: 2
-        tcp_health_check: {}
+        tcp_health_check: { }
     circuit_breakers:
       thresholds:
         - priority: DEFAULT

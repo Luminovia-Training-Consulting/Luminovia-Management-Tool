@@ -125,7 +125,8 @@ Run the offline check:
 
 It verifies actual HMAC/ECDSA signatures and opaque-key checksums, /backend mail URL resolution, public-secret separation, exclusive 0600 writes, Compose bind sources and the no-public-backend-port/Auth configuration. It does not start containers or contact Supabase Cloud.
 
-Historical hosted acceptance on this development instance included TOTP/AAL2 before the product changed to password-only authentication. That record does not verify the current no-MFA configuration or current release. Re-run the current hosted acceptance after its forward migration and reviewed release. Earlier evidence, including private invitations, RLS rejection, malware scans, complete job claims, file persistence and WSS revocation, remains historical and is documented in [HOSTINGER_DEVELOPMENT](../../../OPERATIONS.md#section-hostinger-development).
+Historical hosted acceptance on this development instance included TOTP/AAL2 before the product changed to password-only authentication. That record does not verify the current no-MFA configuration or current release. Re-run the current hosted acceptance after its forward migration and reviewed release. Earlier evidence, including private invitations, RLS rejection, malware scans, complete job claims, file persistence and WSS revocation, remains historical and is documented
+in [HOSTINGER_DEVELOPMENT](../../../OPERATIONS.md#section-hostinger-development).
 
 The real off-site database plus object backup passed an isolated restore with exact roles/membership grantors/options, RLS, counts, quotas and private object SHA-256. A separate candidate restore into 17.12 also matched all eleven migration SQL sources. Neither drill overwrote the VPS. Backup/restore helpers accept only reviewed immutable 17.6/17.12 images and default recovery to the backup's own image. Secrets and Vault encryption material require their separate protected recovery source.
 

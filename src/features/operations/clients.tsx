@@ -9,7 +9,7 @@ import {z} from "zod";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {useTranslation} from "react-i18next";
-import {Plus, Building2, Mail, Phone} from "lucide-react";
+import {Building2, Mail, Phone, Plus} from "lucide-react";
 import "./i18n";
 import "./styles.css";
 import {useAuth} from "../auth/auth-context";
@@ -19,21 +19,8 @@ import {db} from "../../lib/supabase";
 import {requireOnline, useOnline} from "../../lib/online";
 import {Button} from "../../components/ui/button";
 import {Dialog} from "../../components/ui/dialog";
-import {
-    Field,
-    Notice,
-    PageHeading,
-    Loading,
-    ErrorState,
-} from "../../components/common";
-import {
-    orgQuery,
-    contactsQuery,
-    companyPremiumSettingsQuery,
-    notesQuery,
-    type Organisation,
-    type Contact,
-} from "./data";
+import {ErrorState, Field, Loading, Notice, PageHeading,} from "../../components/common";
+import {companyPremiumSettingsQuery, type Contact, contactsQuery, notesQuery, type Organisation, orgQuery,} from "./data";
 import {CompanyPremiumControl} from "./company-premium";
 import {CompanyParticipantsPanel} from "./company-participants";
 

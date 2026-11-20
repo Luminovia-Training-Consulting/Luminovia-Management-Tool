@@ -685,7 +685,8 @@ try {
             await assert.rejects(
                 actor(
                     a,
-                    `insert into public.messages(room_id,sender_id,client_id,request_hash,body) values('${dm}','${b}','${randomUUID()}','forged','forged')`,
+                    `insert into public.messages(room_id, sender_id, client_id, request_hash, body)
+                     values ('${dm}', '${b}', '${randomUUID()}', 'forged', 'forged')`,
                 ),
                 /permission denied/,
             );

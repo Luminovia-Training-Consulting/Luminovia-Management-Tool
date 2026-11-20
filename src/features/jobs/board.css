@@ -3,87 +3,101 @@
  * and surface variables.
  */
 .offer-board-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
-  align-items: start;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: start;
 }
+
 .offer-column {
-  min-width: 0;
-  min-height: 12rem;
-  padding: 0.75rem;
-  border: 2px solid var(--line);
-  border-radius: 1rem;
-  background: var(--surface);
+    min-width: 0;
+    min-height: 12rem;
+    padding: 0.75rem;
+    border: 2px solid var(--line);
+    border-radius: 1rem;
+    background: var(--surface);
 }
+
 .offer-column h3 {
-  margin: 0 0 0.75rem;
-  padding: 0.65rem;
-  border-radius: 0.65rem;
-  color: #172a46;
-  background: var(--blue-soft);
+    margin: 0 0 0.75rem;
+    padding: 0.65rem;
+    border-radius: 0.65rem;
+    color: #172a46;
+    background: var(--blue-soft);
 }
+
 .offer-column-draft h3 {
-  background: var(--peach);
+    background: var(--peach);
 }
+
 .offer-column-published h3 {
-  background: var(--mint);
+    background: var(--mint);
 }
+
 .offer-column-filled h3 {
-  background: var(--lilac);
+    background: var(--lilac);
 }
+
 .offer-column-archived h3 {
-  background: var(--coral);
+    background: var(--coral);
 }
+
 /* Highlight only an allowed drop destination; persistence follows the server response. */
 .offer-column-target {
-  border-color: var(--brand);
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
+    border-color: var(--brand);
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
 }
+
 /* Keep the detail link separate from the explicit drag/keyboard handle. */
 .offer-card {
-  padding: 0.8rem;
-  margin-bottom: 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 0.7rem;
-  background: var(--surface-raised, var(--surface));
-  overflow-wrap: anywhere;
+    padding: 0.8rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 0.7rem;
+    background: var(--surface-raised, var(--surface));
+    overflow-wrap: anywhere;
 }
+
 .offer-card-heading {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 0.25rem;
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 0.25rem;
 }
+
 .offer-card-heading a {
-  font-weight: 700;
-  min-width: 0;
+    font-weight: 700;
+    min-width: 0;
 }
+
 .offer-card-heading button {
-  flex: none;
-  touch-action: none;
-  cursor: grab;
+    flex: none;
+    touch-action: none;
+    cursor: grab;
 }
+
 .offer-card select {
-  width: 100%;
-  min-height: 2.75rem;
+    width: 100%;
+    min-height: 2.75rem;
 }
+
 .offer-card p {
-  font-size: 0.85rem;
+    font-size: 0.85rem;
 }
+
 .offer-card-dragging {
-  opacity: 0.6;
+    opacity: 0.6;
 }
 
 @media (max-width: 1000px) {
-  .offer-board-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+    .offer-board-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 640px) {
-  .offer-board-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
+    .offer-board-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }

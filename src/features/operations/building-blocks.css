@@ -5,101 +5,121 @@
 /* Source references remain readable on narrow screens without shortening the
    byte hash or silently turning a local filename into a broken public link. */
 .building-block-reference {
-  margin: 24px 0;
-  padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--paper);
+    margin: 24px 0;
+    padding: 20px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--paper);
 }
+
 .building-block-reference h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
+
 .building-block-reference p {
-  font-size: 13px;
-  line-height: 1.7;
+    font-size: 13px;
+    line-height: 1.7;
 }
+
 /* Keep source filenames/full hashes readable; local filenames do not become invented public links. */
 .building-block-sources {
-  display: grid;
-  gap: 14px;
-  padding: 0;
-  list-style: none;
+    display: grid;
+    gap: 14px;
+    padding: 0;
+    list-style: none;
 }
+
 .building-block-sources li {
-  padding: 15px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  overflow-wrap: anywhere;
+    padding: 15px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    overflow-wrap: anywhere;
 }
+
 .building-block-sources strong {
-  display: block;
-  margin-bottom: 8px;
+    display: block;
+    margin-bottom: 8px;
 }
+
 .building-block-sources code {
-  display: block;
-  margin-top: 10px;
-  overflow-wrap: anywhere;
-  white-space: normal;
-  font-size: 12px;
+    display: block;
+    margin-top: 10px;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    font-size: 12px;
 }
+
 .building-block-sources summary {
-  cursor: pointer;
-  font-size: 13px;
+    cursor: pointer;
+    font-size: 13px;
 }
+
 .curriculum-syllabus {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  line-height: 1.75;
-  font-size: 14px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.75;
+    font-size: 14px;
 }
+
 /* Keep weekday suggestions in an explicit planning section before creating actual session instants. */
 .operations-schedule-planner {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 18px;
-  margin: 20px 0;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px;
+    margin: 20px 0;
 }
+
 .operations-schedule-planner legend {
-  padding: 0 6px;
+    padding: 0 6px;
 }
+
 .operations-schedule-planner p {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.7;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
 }
+
 .building-block-cards .operations-course {
-  border-top: 5px solid var(--brand);
+    border-top: 5px solid var(--brand);
 }
+
 .building-block-cards .operations-course:nth-child(7n + 1) {
-  border-top-color: var(--coral);
+    border-top-color: var(--coral);
 }
+
 .building-block-cards .operations-course:nth-child(7n + 2) {
-  border-top-color: var(--peach);
+    border-top-color: var(--peach);
 }
+
 .building-block-cards .operations-course:nth-child(7n + 3) {
-  border-top-color: var(--yellow);
+    border-top-color: var(--yellow);
 }
+
 .building-block-cards .operations-course:nth-child(7n + 4) {
-  border-top-color: var(--mint);
+    border-top-color: var(--mint);
 }
+
 .building-block-cards .operations-course:nth-child(7n + 6) {
-  border-top-color: var(--indigo);
+    border-top-color: var(--indigo);
 }
+
 .building-block-cards .operations-course:nth-child(7n + 7) {
-  border-top-color: var(--lilac);
+    border-top-color: var(--lilac);
 }
+
 .building-block-cards h2 {
-  overflow-wrap: anywhere;
+    overflow-wrap: anywhere;
 }
 
 @media (max-width: 650px) {
-  .building-block-reference {
-    padding: 15px;
-  }
-  .building-block-sources li {
-    padding: 12px;
-  }
+    .building-block-reference {
+        padding: 15px;
+    }
+
+    .building-block-sources li {
+        padding: 12px;
+    }
 }

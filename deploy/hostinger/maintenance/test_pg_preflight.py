@@ -1,10 +1,10 @@
 # Controlled process/Compose fixtures check prerequisites and private-cluster probe ordering. These unit cases do not replace the separate native image/data test.
 import datetime as dt
 import json
-from pathlib import Path
 import shutil
 import tempfile
 import unittest
+from pathlib import Path
 
 import pg_preflight as pg
 

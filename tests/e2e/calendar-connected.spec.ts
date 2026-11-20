@@ -1,4 +1,4 @@
-import {test, expect} from "@playwright/test";
+import {expect, test} from "@playwright/test";
 import {randomUUID} from "node:crypto";
 import {actor, api, checked, login} from "./helpers/accounts-support";
 

@@ -1,7 +1,7 @@
 /** Bounded actual PostgreSQL discovery, private calendar checks and saved-view CAS. */
 import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
-import {withTestDatabase, quoteSql as q} from "./testing/database.mjs";
+import {quoteSql as q, withTestDatabase} from "./testing/database.mjs";
 
 let checks = 0;
 await withTestDatabase("job_discovery", async ({sql, actor}) => {

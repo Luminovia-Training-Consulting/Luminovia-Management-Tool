@@ -1,9 +1,6 @@
 import {CompanyJobDeletions} from "../deletions/deletions";
 import {CompanyParticipantsPanel} from "../operations/company-participants";
-import {
-    AdditionalCompanyDecisions,
-    CompanyDecisions,
-} from "./company-decisions";
+import {AdditionalCompanyDecisions, CompanyDecisions,} from "./company-decisions";
 /**
  * Organization-scoped course requests and client spending views. Membership limits available
  * organizations; publication and lecturer allocation remain separate server operations.
@@ -11,20 +8,13 @@ import {
 import {useRef, useState} from "react";
 import {Link} from "react-router-dom";
 import "../learning/i18n";
-import {useForm, useFieldArray} from "react-hook-form";
+import {useFieldArray, useForm} from "react-hook-form";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {z} from "zod";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {useTranslation} from "react-i18next";
 import {DateTime} from "luxon";
-import {
-    Building2,
-    CalendarDays,
-    Plus,
-    Search,
-    Trash2,
-    UserRound,
-} from "lucide-react";
+import {Building2, CalendarDays, Plus, Search, Trash2, UserRound,} from "lucide-react";
 import {useAuth} from "../auth/auth-context";
 import {profileQuery, topicsQuery} from "../../lib/queries";
 import {db} from "../../lib/supabase";
@@ -32,29 +22,11 @@ import {dateTime, money, validZone, zonedInstant} from "../../lib/dates";
 import {requireOnline, useOnline} from "../../lib/online";
 import {Button} from "../../components/ui/button";
 import {Dialog} from "../../components/ui/dialog";
-import {
-    ErrorState,
-    Field,
-    Loading,
-    Notice,
-    PageHeading,
-} from "../../components/common";
-import {
-    clientOrganisationsQuery,
-    clientRequestsQuery,
-    clientSpendQuery,
-    commissionAccessQuery,
-    commissionKeys,
-    type ClientOrganisation,
-    type ClientRequest,
-} from "./commission-api";
+import {ErrorState, Field, Loading, Notice, PageHeading,} from "../../components/common";
+import {type ClientOrganisation, clientOrganisationsQuery, type ClientRequest, clientRequestsQuery, clientSpendQuery, commissionAccessQuery, commissionKeys,} from "./commission-api";
 import {PublishClientRequest} from "./pricing";
 import {RequestBriefFields, RequestBriefPanel} from "./request-brief";
-import {
-    cleanRequestBrief,
-    initialRequestBrief,
-    validRequestBrief,
-} from "./request-brief-api";
+import {cleanRequestBrief, initialRequestBrief, validRequestBrief,} from "./request-brief-api";
 import "./platform-i18n";
 import "./platform.css";
 

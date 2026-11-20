@@ -25,33 +25,33 @@ Agent assistance does not transfer that responsibility.
 
 ## Where things are
 
-| Path                                                                            | Responsibility and entry point                                                                                           |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `src/main.tsx`                                                                  | React entry point and shared providers.                                                                                  |
-| `src/app/app.tsx`, `src/app/shell.tsx`                                          | Router, protected identity boundary, navigation, search, language, theme and sign-out.                                   |
-| `src/features/auth/`                                                            | Supabase session, invitation/recovery and password; MFA is not part of this product.                                    |
-| `src/features/jobs/`, `src/features/admin/`                                     | Offers, claim UI, lifecycle/Kanban, publication and invitations.                                                         |
-| `src/features/operations/`, `src/features/taxonomy/`                            | Organisations, templates, runs/sessions and the topic catalogue.                                                         |
-| `src/features/profile/`, `src/features/people/`, `src/features/accounts/`       | Profiles/evidence, people directory, roles and account administration.                                                   |
-| `src/features/calendar/`, `src/features/availability/`                          | Private events, confirmed assignments, published events and explicitly shared availability.                              |
-| `src/features/chat/`, `src/features/comments/`                                  | Membership-scoped messages, realtime and resource discussions.                                                           |
-| `src/features/files/`                                                           | Upload, scan status, exact versions, preview/download and attachments.                                                   |
-| `src/features/knowledge/`, `src/features/search/`                               | Wiki/forum, safe editor content and permission-filtered discovery.                                                       |
-| `src/features/commercial/`                                                      | Contracts, invoices, original currencies and client/platform/lecturer shares.                                            |
-| `src/features/dashboard/`, `src/features/notifications/`, `src/features/audit/` | Personal summaries, own inbox/preferences and reduced administrative audit projection.                                   |
-| `src/lib/`                                                                      | Types, query keys, browser client, dates/time zones and localisation.                                                    |
-| `src/components/`, `src/styles.css`                                             | UI primitives, shared fields/states and global styles; feature styles live beside their modules.                         |
+| Path                                                                            | Responsibility and entry point                                                                                  |
+|---------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| `src/main.tsx`                                                                  | React entry point and shared providers.                                                                         |
+| `src/app/app.tsx`, `src/app/shell.tsx`                                          | Router, protected identity boundary, navigation, search, language, theme and sign-out.                          |
+| `src/features/auth/`                                                            | Supabase session, invitation/recovery and password; MFA is not part of this product.                            |
+| `src/features/jobs/`, `src/features/admin/`                                     | Offers, claim UI, lifecycle/Kanban, publication and invitations.                                                |
+| `src/features/operations/`, `src/features/taxonomy/`                            | Organisations, templates, runs/sessions and the topic catalogue.                                                |
+| `src/features/profile/`, `src/features/people/`, `src/features/accounts/`       | Profiles/evidence, people directory, roles and account administration.                                          |
+| `src/features/calendar/`, `src/features/availability/`                          | Private events, confirmed assignments, published events and explicitly shared availability.                     |
+| `src/features/chat/`, `src/features/comments/`                                  | Membership-scoped messages, realtime and resource discussions.                                                  |
+| `src/features/files/`                                                           | Upload, scan status, exact versions, preview/download and attachments.                                          |
+| `src/features/knowledge/`, `src/features/search/`                               | Wiki/forum, safe editor content and permission-filtered discovery.                                              |
+| `src/features/commercial/`                                                      | Contracts, invoices, original currencies and client/platform/lecturer shares.                                   |
+| `src/features/dashboard/`, `src/features/notifications/`, `src/features/audit/` | Personal summaries, own inbox/preferences and reduced administrative audit projection.                          |
+| `src/lib/`                                                                      | Types, query keys, browser client, dates/time zones and localisation.                                           |
+| `src/components/`, `src/styles.css`                                             | UI primitives, shared fields/states and global styles; feature styles live beside their modules.                |
 | `supabase/migrations/`                                                          | Released SQL history: schema, constraints, RLS, grants, transactions and RPCs. [Reading guide](DEVELOPMENT.md). |
-| `supabase/functions/`                                                           | File/avatar gateway, account HTTP API and invitation handling.                                                           |
-| `supabase/config.toml`, `supabase/templates/`                                   | Local service/Auth configuration and bilingual authentication emails.                                                    |
-| `portal`, `scripts/runtime-*.mjs`                                               | Local startup, process/network ownership, persistent GitHub preview and isolated verification.                           |
-| `scripts/*-db-tests.mjs`, `scripts/*-api-check.mjs`, `scripts/testing/`         | Actual PostgreSQL/Auth/REST/Storage/Realtime fixtures and checked cleanup.                                               |
-| `tests/e2e/`, `src/**/*.test.*`                                                 | Real desktop/mobile browser journeys and unit/component regressions.                                                     |
-| `deploy/hostinger/`                                                             | Selfhost development, scanner, update packages, backups and recovery.                                                    |
-| `deploy/hostinger/supabase/upstream/`                                           | Provenance-bound upstream source; not an ordinary local editing surface.                                                 |
-| `.github/`                                                                      | CI/security, daily component maintenance, Dependabot, PR/issue templates and governance sources.                         |
-| `public/brand/`, `data/`                                                        | Official brand assets/provenance and versioned catalogue data.                                                           |
-| `.local/`                                                                       | Ignored private runtime/QA state and credentials. Never publish it.                                                      |
+| `supabase/functions/`                                                           | File/avatar gateway, account HTTP API and invitation handling.                                                  |
+| `supabase/config.toml`, `supabase/templates/`                                   | Local service/Auth configuration and bilingual authentication emails.                                           |
+| `portal`, `scripts/runtime-*.mjs`                                               | Local startup, process/network ownership, persistent GitHub preview and isolated verification.                  |
+| `scripts/*-db-tests.mjs`, `scripts/*-api-check.mjs`, `scripts/testing/`         | Actual PostgreSQL/Auth/REST/Storage/Realtime fixtures and checked cleanup.                                      |
+| `tests/e2e/`, `src/**/*.test.*`                                                 | Real desktop/mobile browser journeys and unit/component regressions.                                            |
+| `deploy/hostinger/`                                                             | Selfhost development, scanner, update packages, backups and recovery.                                           |
+| `deploy/hostinger/supabase/upstream/`                                           | Provenance-bound upstream source; not an ordinary local editing surface.                                        |
+| `.github/`                                                                      | CI/security, daily component maintenance, Dependabot, PR/issue templates and governance sources.                |
+| `public/brand/`, `data/`                                                        | Official brand assets/provenance and versioned catalogue data.                                                  |
+| `.local/`                                                                       | Ignored private runtime/QA state and credentials. Never publish it.                                             |
 
 The public fictional demo and practical help live in `src/features/demo/` and
 `src/features/help/`; shared preference controls live in `src/components/preferences.tsx`.

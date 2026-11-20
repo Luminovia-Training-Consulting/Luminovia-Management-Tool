@@ -5,16 +5,7 @@
  */
 import {queryOptions} from "@tanstack/react-query";
 import {db} from "../../lib/supabase";
-import type {
-    CommercialAccess,
-    CommercialPerson,
-    ContractRecord,
-    EarningRecord,
-    InvoiceReviewCandidate,
-    InvoiceReviewCase,
-    InvoicePayment,
-    InvoiceRecord,
-} from "./types";
+import type {CommercialAccess, CommercialPerson, ContractRecord, EarningRecord, InvoicePayment, InvoiceRecord, InvoiceReviewCandidate, InvoiceReviewCase,} from "./types";
 
 /** Shared actor-scoped commercial query prefixes for targeted invalidation. */
 export const commercialKeys = {

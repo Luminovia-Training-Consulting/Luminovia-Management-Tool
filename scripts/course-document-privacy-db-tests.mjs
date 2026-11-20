@@ -84,19 +84,19 @@ for (const moduleFirst of [false, true]) {
             );
             await sql(
                 `insert into auth.users(id, email)
-           values (${q(manager)}, 'manager@example.invalid'),
-                  (${q(learner)}, 'learner@example.invalid');
-          insert into public.user_roles
-          values (${q(manager)}, 'admin'),
-                 (${q(learner)}, 'participant');
-          insert into public.organisations(id, name)
-          values (${q(org)}, 'Fictional privacy academy');
-          insert into public.course_templates(id, title)
-          values (${q(template)}, 'Fictional privacy course');
-          insert into public.course_runs(id, template_id, organisation_id)
-          values (${q(run)}, ${q(template)}, ${q(org)});
-          insert into public.course_enrolments(course_run_id, user_id, status, enrolled_by)
-          values (${q(run)}, ${q(learner)}, 'enrolled', ${q(manager)});`,
+                 values (${q(manager)}, 'manager@example.invalid'),
+                        (${q(learner)}, 'learner@example.invalid');
+                insert into public.user_roles
+                values (${q(manager)}, 'admin'),
+                       (${q(learner)}, 'participant');
+                insert into public.organisations(id, name)
+                values (${q(org)}, 'Fictional privacy academy');
+                insert into public.course_templates(id, title)
+                values (${q(template)}, 'Fictional privacy course');
+                insert into public.course_runs(id, template_id, organisation_id)
+                values (${q(run)}, ${q(template)}, ${q(org)});
+                insert into public.course_enrolments(course_run_id, user_id, status, enrolled_by)
+                values (${q(run)}, ${q(learner)}, 'enrolled', ${q(manager)});`,
             );
             const rpc = async (who, name, args) =>
                 JSON.parse(
@@ -144,7 +144,13 @@ for (const moduleFirst of [false, true]) {
             const createDocument = async () => {
                 const [id, version] = [randomUUID(), randomUUID()];
                 await sql(
-                    `insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id)values(${q(id)},${q(manager)},${q(manager)},'personal','material','Fictional.pdf','application/pdf',10,'clean',${q(randomUUID())});insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256)values(${q(version)},${q(id)},${q(manager)},${q(randomUUID())},1,${q("fictional/" + version)},'Fictional.pdf','application/pdf',10,'clean',${q("a".repeat(64))});update public.documents set current_version_id=${q(version)} where id=${q(id)};`,
+                    `insert into public.documents(id, owner_id, uploaded_by, scope, kind, original_name, mime_type, size_bytes, status, client_id)
+                     values (${q(id)}, ${q(manager)}, ${q(manager)}, 'personal', 'material', 'Fictional.pdf', 'application/pdf', 10, 'clean', ${q(randomUUID())});
+                    insert into public.document_versions(id, document_id, uploaded_by, client_id, version, object_path, original_name, mime_type, size_bytes, status, sha256)
+                    values (${q(version)}, ${q(id)}, ${q(manager)}, ${q(randomUUID())}, 1, ${q("fictional/" + version)}, 'Fictional.pdf', 'application/pdf', 10, 'clean', ${q("a".repeat(64))});
+                    update public.documents
+                    set current_version_id=${q(version)}
+                    where id = ${q(id)};`,
                 );
                 return {id, version};
             };
@@ -157,7 +163,9 @@ for (const moduleFirst of [false, true]) {
                     assert.equal(
                         await actor(
                             learner,
-                            `select count(*)from public.documents where id=${q(doc.id)}`,
+                            `select count(*)
+                             from public.documents
+                             where id = ${q(doc.id)}`,
                         ),
                         "0",
                     );
@@ -170,7 +178,8 @@ for (const moduleFirst of [false, true]) {
             );
             if (!moduleFirst) await sql(fixture);
             await sql(
-                `insert into private.website_enquiries(id)values(${q(enquiry)})`,
+                `insert into private.website_enquiries(id)
+                 values (${q(enquiry)})`,
             );
             const attach = (doc, expected = 1, tag = "") =>
                 actor(
@@ -192,8 +201,10 @@ for (const moduleFirst of [false, true]) {
                         // it deliberately does not claim a public domain registration permits it.
                         await sql(
                             registry === "website_enquiry_attachments"
-                                ? `insert into private.${registry}(enquiry_id,document_id,version_id,label,attached_by)values(${q(enquiry)},${q(doc.id)},${q(doc.version)},'Legacy fixture',${q(manager)})`
-                                : `insert into private.${registry}(document_id)values(${q(doc.id)})`,
+                                ? `insert into private.${registry}(enquiry_id, document_id, version_id, label, attached_by)
+                                   values (${q(enquiry)}, ${q(doc.id)}, ${q(doc.version)}, 'Legacy fixture', ${q(manager)})`
+                                : `insert into private.${registry}(document_id)
+                                   values (${q(doc.id)})`,
                         );
                         assert.ok(
                             !(await workspace()).share_options.some(
@@ -209,7 +220,8 @@ for (const moduleFirst of [false, true]) {
                         await assert.rejects(access(resource), /42501/);
                         await assert.rejects(
                             sql(
-                                `insert into private.course_resources(run_id,version_id,audience,category,created_by)values(${q(run)},${q(doc.version)},'all','material',${q(manager)})`,
+                                `insert into private.course_resources(run_id, version_id, audience, category, created_by)
+                                 values (${q(run)}, ${q(doc.version)}, 'all', 'material', ${q(manager)})`,
                             ),
                             /42501/,
                         );
@@ -218,7 +230,9 @@ for (const moduleFirst of [false, true]) {
                         await remove(resource);
                         await assert.rejects(
                             sql(
-                                `update private.course_resources set removed_at=null where id=${q(resource)}`,
+                                `update private.course_resources
+                                 set removed_at=null
+                                 where id = ${q(resource)}`,
                             ),
                             /42501/,
                         );
@@ -235,7 +249,9 @@ for (const moduleFirst of [false, true]) {
                         await assert.rejects(attach(doc), /42501/);
                         assert.equal(
                             await sql(
-                                `select count(*)from private.website_enquiry_attachments where document_id=${q(doc.id)}`,
+                                `select count(*)
+                                 from private.website_enquiry_attachments
+                                 where document_id = ${q(doc.id)}`,
                             ),
                             "0",
                         );
@@ -259,7 +275,7 @@ for (const moduleFirst of [false, true]) {
                 for (let n = 0; n < 100; n++) {
                     if (
                         (await sql(
-                            `select exists(select 1 from pg_stat_activity where datname=current_database()and application_name=${q(tag)}and ${condition})`,
+                            `select exists(select 1 from pg_stat_activity where datname = current_database() and application_name = ${q(tag)}and ${condition})`,
                         )) === "t"
                     )
                         return;
@@ -307,7 +323,9 @@ for (const moduleFirst of [false, true]) {
                     assert.match(result.reason.message, /42501/);
                     assert.equal(
                         await sql(
-                            `select count(*)from private.course_resources where version_id=${q(other.version)}`,
+                            `select count(*)
+                             from private.course_resources
+                             where version_id = ${q(other.version)}`,
                         ),
                         "0",
                     );
@@ -341,7 +359,9 @@ for (const moduleFirst of [false, true]) {
                     assert.match(result.reason.message, /42501/);
                     assert.equal(
                         await sql(
-                            `select count(*)from private.website_enquiry_attachments where document_id=${q(doc.id)}`,
+                            `select count(*)
+                             from private.website_enquiry_attachments
+                             where document_id = ${q(doc.id)}`,
                         ),
                         "0",
                     );
@@ -360,7 +380,9 @@ for (const moduleFirst of [false, true]) {
                     );
                     assert.equal((await workspace()).access.manager, true);
                     await sql(
-                        `update public.profiles set active=false where id=${q(manager)}`,
+                        `update public.profiles
+                         set active= false
+                         where id = ${q(manager)}`,
                     );
                     await assert.rejects(workspace(), /42501/);
                 },

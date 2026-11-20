@@ -2,42 +2,49 @@
  * Generates API references from real replayed PostgreSQL migrations.
  * Documented signatures and grants come from the temporary database catalogue.
  */
-import { readFile, readdir, writeFile } from "node:fs/promises";
-import { createHash } from "node:crypto";
-import { format } from "prettier";
+import {readdir, readFile, writeFile} from "node:fs/promises";
+import {createHash} from "node:crypto";
+import {format} from "prettier";
 import ts from "typescript";
-import { withTestDatabase } from "./testing/database.mjs";
+import {withTestDatabase} from "./testing/database.mjs";
+
 /** Load the actual published account contract without maintaining a second route list. */
 async function accountOperations() {
-  const source = await readFile(
-    new URL("../supabase/functions/accounts/openapi.ts", import.meta.url),
-    "utf8",
-  );
-  const compiled = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ES2022,
-    },
-  }).outputText;
-  const { accountOpenApi } = await import(
-    `data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`
-  );
-  return Object.entries(accountOpenApi.paths).flatMap(([path, methods]) =>
-    Object.entries(methods).map(([method, operation]) => ({
-      method: method.toUpperCase(),
-      path: path.replace(/^\/v1/, "") || "/",
-      purpose: operation.summary,
-    })),
-  );
+    const source = await readFile(
+        new URL("../supabase/functions/accounts/openapi.ts", import.meta.url),
+        "utf8",
+    );
+    const compiled = ts.transpileModule(source, {
+        compilerOptions: {
+            module: ts.ModuleKind.ESNext,
+            target: ts.ScriptTarget.ES2022,
+        },
+    }).outputText;
+    const {accountOpenApi} = await import(
+        `data:text/javascript;base64,${Buffer.from(compiled).toString("base64")}`
+        );
+    return Object.entries(accountOpenApi.paths).flatMap(([path, methods]) =>
+        Object.entries(methods).map(([method, operation]) => ({
+            method: method.toUpperCase(),
+            path: path.replace(/^\/v1/, "") || "/",
+            purpose: operation.summary,
+        })),
+    );
 }
-await withTestDatabase("api_reference", async ({ sql }) => {
-  const rows = JSON.parse(
-    await sql(
-      `select jsonb_agg(jsonb_build_object('name',p.proname,'args',pg_get_function_arguments(p.oid),'result',pg_get_function_result(p.oid),'authenticated',has_function_privilege('authenticated',p.oid,'EXECUTE'),'anon',has_function_privilege('anon',p.oid,'EXECUTE'),'service',has_function_privilege('service_role',p.oid,'EXECUTE'),'definer',p.prosecdef) order by p.proname,pg_get_function_identity_arguments(p.oid)) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prokind='f' and not exists(select 1 from pg_depend d where d.classid='pg_proc'::regclass and d.objid=p.oid and d.deptype='e')`,
-    ),
-  );
-  const restRows = JSON.parse(
-    await sql(`select coalesce(jsonb_agg(jsonb_build_object(
+
+await withTestDatabase("api_reference", async ({sql}) => {
+    const rows = JSON.parse(
+        await sql(
+            `select jsonb_agg(jsonb_build_object('name', p.proname, 'args', pg_get_function_arguments(p.oid), 'result', pg_get_function_result(p.oid), 'authenticated', has_function_privilege('authenticated', p.oid, 'EXECUTE'), 'anon', has_function_privilege('anon', p.oid, 'EXECUTE'), 'service', has_function_privilege('service_role', p.oid, 'EXECUTE'), 'definer', p.prosecdef) order by p.proname, pg_get_function_identity_arguments(p.oid))
+             from pg_proc p
+                      join pg_namespace n on n.oid = p.pronamespace
+             where n.nspname = 'public'
+               and p.prokind = 'f'
+               and not exists(select 1 from pg_depend d where d.classid = 'pg_proc'::regclass and d.objid = p.oid and d.deptype = 'e')`,
+        ),
+    );
+    const restRows = JSON.parse(
+        await sql(`select coalesce(jsonb_agg(jsonb_build_object(
       'name',c.relname,
       'kind',case when c.relkind in ('v','m') then 'view' else 'table' end,
       'rls',c.relrowsecurity,
@@ -56,41 +63,41 @@ await withTestDatabase("api_reference", async ({ sql }) => {
       and not exists(select 1 from pg_depend d where d.classid='pg_class'::regclass and d.objid=c.oid and d.deptype='e')
       and (has_table_privilege('authenticated',c.oid,'SELECT,INSERT,UPDATE,DELETE')
         or has_any_column_privilege('authenticated',c.oid,'SELECT,INSERT,UPDATE'))`),
-  );
-  const migrations = (
-    await readdir(new URL("../supabase/migrations/", import.meta.url))
-  )
-    .filter((name) => name.endsWith(".sql"))
-    .sort();
-  // Bind the inventory to actual source bytes without republishing historical customer filenames.
-  const sources = await Promise.all(
-    migrations.map(async (name) => ({
-      version: name.slice(0, 14),
-      sha256: createHash("sha256")
-        .update(
-          await readFile(
-            new URL(`../supabase/migrations/${name}`, import.meta.url),
-          ),
-        )
-        .digest("hex"),
-    })),
-  );
-  const fingerprint = createHash("sha256")
-    .update(JSON.stringify(sources))
-    .digest("hex");
-  const accountRoutes = await accountOperations();
-  // Defaults are PostgreSQL expressions; escape table delimiters rather than changing signatures.
-  const cell = (value) =>
-    String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
-  const grant = (row) =>
-    [
-      row.authenticated && "authenticated",
-      row.anon && "anon",
-      row.service && "service_role",
-    ]
-      .filter(Boolean)
-      .join(", ") || "No listed API role";
-  const text = `# Platform API reference
+    );
+    const migrations = (
+        await readdir(new URL("../supabase/migrations/", import.meta.url))
+    )
+        .filter((name) => name.endsWith(".sql"))
+        .sort();
+    // Bind the inventory to actual source bytes without republishing historical customer filenames.
+    const sources = await Promise.all(
+        migrations.map(async (name) => ({
+            version: name.slice(0, 14),
+            sha256: createHash("sha256")
+                .update(
+                    await readFile(
+                        new URL(`../supabase/migrations/${name}`, import.meta.url),
+                    ),
+                )
+                .digest("hex"),
+        })),
+    );
+    const fingerprint = createHash("sha256")
+        .update(JSON.stringify(sources))
+        .digest("hex");
+    const accountRoutes = await accountOperations();
+    // Defaults are PostgreSQL expressions; escape table delimiters rather than changing signatures.
+    const cell = (value) =>
+        String(value).replaceAll("|", "\\|").replaceAll("\n", " ");
+    const grant = (row) =>
+        [
+            row.authenticated && "authenticated",
+            row.anon && "anon",
+            row.service && "service_role",
+        ]
+            .filter(Boolean)
+            .join(", ") || "No listed API role";
+    const text = `# Platform API reference
 
 This reference describes the current repository API. It is generated from a disposable replay of **${migrations.length} migration files** through version **${sources.at(-1).version}**, containing **${rows.length} application public functions** and **${restRows.length} authenticated REST relations**. It excludes extension-owned functions and relations. Source fingerprint (SHA-256 of the ordered JSON version/source-hash list): \`${fingerprint}\`.
 
@@ -108,7 +115,7 @@ Base: \`/functions/v1/accounts/v1\`. Machine-readable OpenAPI: \`/functions/v1/a
 
 | Method | Path relative to facade base | Purpose |
 | --- | --- | --- |
-${accountRoutes.map(({ method, path, purpose }) => `| ${cell(method)} | ${cell(path)} | ${cell(purpose)} |`).join("\n")}
+${accountRoutes.map(({method, path, purpose}) => `| ${cell(method)} | ${cell(path)} | ${cell(purpose)} |`).join("\n")}
 
 The facade permits allowlisted browser Origins; authenticated non-browser clients may omit Origin. This exception does **not** apply to all Edge Functions: files and course-documents require an exact approved Origin. The account handler returns safe errors and checks request bodies before forwarding caller-scoped RPCs. Role editing, activation, deletion and own-account changes have distinct current-authority guards; consult the operation schema and owning handler. A send timeout retains its invitation reservation for reconciliation; it does not imply delivery or authorise an automatic resend.
 
@@ -229,12 +236,12 @@ The current lecturer invitation screen also calls the compatibility \`POST /func
 
 Course-run job publication binds a trusted source revision and exact session references; stale previews reject rather than silently changing the teaching block. [Course building blocks](GUIDE.md#section-course-building-blocks) and [staff comments](GUIDE.md#section-resource-comments) explain their separate resource rights. Client or learner access does not grant staff discussion access. [Architecture](DEVELOPMENT.md#section-architecture) records the explicit opt-in minimal own offline teaching snapshot; generic authenticated responses and private file bytes are not cached offline.
 `;
-  // Use the pinned repository formatter so regeneration reproduces the committed bytes.
-  await writeFile(
-    "API_REFERENCE.md",
-    await format(text, { parser: "markdown" }),
-  );
-  console.log(
-    `Generated authenticated API reference from ${rows.length} migrated public functions; no user data or credentials included.`,
-  );
+    // Use the pinned repository formatter so regeneration reproduces the committed bytes.
+    await writeFile(
+        "API_REFERENCE.md",
+        await format(text, {parser: "markdown"}),
+    );
+    console.log(
+        `Generated authenticated API reference from ${rows.length} migrated public functions; no user data or credentials included.`,
+    );
 });
