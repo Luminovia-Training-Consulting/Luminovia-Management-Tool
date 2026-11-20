@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import {
   type AccountDependencies,
   createAccountHandler,
+    parseCompanyParticipantInvitation,
   parseInvitation,
 } from "./handler.ts";
 import { accountOpenApi } from "./openapi.ts";
@@ -220,10 +221,16 @@ function fixture(overrides: Partial<AccountDependencies> = {}) {
         data:
           name === "reserve_account_invitation"
             ? { status: "reserved", invitation_id: id }
+              : name === "reserve_company_participant_invitation"
+                  ? {status: "requested", request_id: key}
             : { ok: true },
         error: null,
       };
     },
+      privilegedRpc: async (name) => {
+          calls.push(`privileged:${name}`);
+          return {data: {deliver: false}, error: null};
+      },
     sendInvitation: async () => {
       calls.push("send");
       return id;
@@ -299,6 +306,92 @@ Deno.test(
     );
   },
 );
+Deno.test("company invite parser fixes the role to participant and its organization", () => {
+    const parsed = parseCompanyParticipantInvitation({
+        email: " Person@example.invalid ",
+        display_name: " Fictional participant ",
+        organisation_id: id,
+        idempotency_key: key,
+    });
+    assertEquals(parsed, {
+        email: "person@example.invalid",
+        display_name: "Fictional participant",
+        role: "participant",
+        organisation_id: id,
+        idempotency_key: key,
+    });
+    assertEquals(
+        parseCompanyParticipantInvitation({
+            email: "person@example.invalid",
+            display_name: "Fictional participant",
+            organisation_id: id,
+            idempotency_key: key,
+            role: "admin",
+        }),
+        null,
+    );
+});
+Deno.test("company invitation response is generic when no email delivery is reserved", async () => {
+    const f = fixture();
+    const response = await f.handler(
+        f.request("v1/company-participant-invitations", "POST", {
+            email: "existing@example.invalid",
+            display_name: "Fictional existing person",
+            organisation_id: id,
+            idempotency_key: key,
+        }),
+    );
+    assertEquals(response.status, 202);
+    assertEquals(await response.json(), {status: "requested"});
+    assertEquals(f.calls, [
+        "authenticate",
+        "reserve_company_participant_invitation",
+        "privileged:claim_company_participant_invitation",
+    ]);
+    assertEquals(f.calls.includes("send"), false);
+});
+Deno.test("company participant invitation delivery stays service-only and returns no account details", async () => {
+    const privilegedCalls: string[] = [];
+    const f = fixture({
+        privilegedRpc: async (name, args) => {
+            privilegedCalls.push(name);
+            if (name === "claim_company_participant_invitation") {
+                assertEquals(args, {p_request_id: key});
+                return {
+                    data: {
+                        deliver: true,
+                        request_id: key,
+                        invitation_id: id,
+                        email: "person@example.invalid",
+                        display_name: "Fictional participant",
+                        role: "participant",
+                        organisation_id: key,
+                        idempotency_key: id,
+                    },
+                    error: null,
+                };
+            }
+            assertEquals(args, {p_request_id: key, p_success: true});
+            return {data: null, error: null};
+        },
+    });
+    const response = await f.handler(
+        f.request("v1/company-participant-invitations", "POST", {
+            email: "person@example.invalid",
+            display_name: "Fictional participant",
+            organisation_id: key,
+            idempotency_key: id,
+        }),
+    );
+    assertEquals(response.status, 202);
+    assertEquals(await response.json(), {status: "requested"});
+    assertEquals(privilegedCalls, [
+        "claim_company_participant_invitation",
+        "finish_company_participant_invitation",
+    ]);
+    assertEquals(f.calls.includes("send"), true);
+    assertEquals(f.calls.includes("complete"), true);
+});
 Deno.test(
   "valid bearer CLI requests work without Origin; foreign origins fail before auth",
   async () => {

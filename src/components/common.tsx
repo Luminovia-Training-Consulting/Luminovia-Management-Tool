@@ -7,6 +7,7 @@ import {
   cloneElement,
   isValidElement,
   type AriaAttributes,
+    type Ref,
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -109,17 +110,21 @@ export function PageHeading({
   title,
   description,
   action,
+                                headingRef,
+                                headingTabIndex,
 }: {
   eyebrow?: string;
   title: string;
   description?: string;
   action?: ReactNode;
+    headingRef?: Ref<HTMLHeadingElement>;
+    headingTabIndex?: number;
 }) {
   return (
     <div className="page-heading">
       <div>
         {eyebrow && <div className="eyebrow">{eyebrow}</div>}
-        <h1>{title}</h1>
+          <h1 ref={headingRef} tabIndex={headingTabIndex}>{title}</h1>
         {description && <p>{description}</p>}
       </div>
       {action}

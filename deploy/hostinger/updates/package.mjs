@@ -3,33 +3,15 @@
  * allowed paths, exact file/migration hashes, public build values and pinned
  * images; worker artifacts retain locked dependencies and license evidence.
  */
-import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import {
-  closeSync,
-  constants,
-  existsSync,
-  fchmodSync,
-  lstatSync,
-  fstatSync,
-  fsyncSync,
-  linkSync,
-  mkdirSync,
-  mkdtempSync,
-  openSync,
-  readFileSync,
-  readSync,
-  readdirSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
-import { isBuiltin } from "node:module";
+import {execFileSync} from "node:child_process";
+import {createHash} from "node:crypto";
+import {closeSync, constants, existsSync, fchmodSync, fstatSync, fsyncSync, linkSync, lstatSync, mkdirSync, mkdtempSync, openSync, readdirSync, readFileSync, readSync, realpathSync, rmSync, writeFileSync,} from "node:fs";
+import {dirname, join, relative, resolve, sep} from "node:path";
+import {fileURLToPath} from "node:url";
+import {isBuiltin} from "node:module";
 
 export const REPOSITORY =
-  "Luminovia-Training-Consulting/Luminovia-Management-Tool";
+    "Luminovia-Training-Consulting/Luminovia-Management-Tool";
 export const API_URL = "https://cms.luminovia.org/backend";
 const SHA = /^[0-9a-f]{40}$/;
 const IMMUTABLE_IMAGE = /^[a-z0-9][a-z0-9._/:+-]*@sha256:[0-9a-f]{64}$/;
@@ -38,38 +20,40 @@ const MAX_TOTAL_BYTES = 512 * 1024 * 1024;
 const PG_PROOF = "deploy/hostinger/selfhost/postgres-candidate-proof.json";
 const PG_IMAGE = /^supabase\/postgres:17\.\d+\.\d+\.\d+@sha256:[a-f0-9]{64}$/;
 const SKIP_SOURCE =
-  /(?:^|\/)(?:tests?|__tests__|fixtures|node_modules|\.git|\.local|private)(?:\/|$)|(?:_test\.ts|\.test\.[cm]?[jt]sx?)$/;
+    /(?:^|\/)(?:tests?|__tests__|fixtures|node_modules|\.git|\.local|private)(?:\/|$)|(?:_test\.ts|\.test\.[cm]?[jt]sx?)$/;
 const REQUIRED_FILES = [
-  "deploy/hostinger/Caddyfile",
-  "deploy/hostinger/compose.yml",
-  "deploy/hostinger/clamd.conf",
-  "deploy/hostinger/instance.json",
-  "deploy/hostinger/selfhost/compose.yml",
-  "deploy/hostinger/selfhost/postgres-upgrade-provenance.json",
-  "deploy/hostinger/supabase/images.lock.json",
-  "deploy/hostinger/supabase/upstream-provenance.json",
-  "deploy/hostinger/supabase/UPSTREAM_LICENSE",
-  "deploy/hostinger/supabase/upstream/volumes/functions/deno.jsonc",
-  "deploy/hostinger/updates/updater.py",
-  "deploy/hostinger/updates/luminovia-update.service",
-  "deploy/hostinger/maintenance/pg_preflight.py",
-  "deploy/hostinger/maintenance/atomic_recovery.py",
-  "deploy/hostinger/maintenance/configure-os-daily.sh",
-  "deploy/hostinger/backups/complete_backup.py",
-  "deploy/hostinger/backups/database-summary.sql",
-  "deploy/hostinger/backups/extension-recovery.json",
+    "deploy/hostinger/Caddyfile",
+    "deploy/hostinger/compose.yml",
+    "deploy/hostinger/clamd.conf",
+    "deploy/hostinger/instance.json",
+    "deploy/hostinger/selfhost/compose.yml",
+    "deploy/hostinger/selfhost/migrate-mail-relay-env.mjs",
+    "deploy/hostinger/selfhost/postgres-upgrade-provenance.json",
+    "scripts/mail-relay.py",
+    "deploy/hostinger/supabase/images.lock.json",
+    "deploy/hostinger/supabase/upstream-provenance.json",
+    "deploy/hostinger/supabase/UPSTREAM_LICENSE",
+    "deploy/hostinger/supabase/upstream/volumes/functions/deno.jsonc",
+    "deploy/hostinger/updates/updater.py",
+    "deploy/hostinger/updates/luminovia-update.service",
+    "deploy/hostinger/maintenance/pg_preflight.py",
+    "deploy/hostinger/maintenance/atomic_recovery.py",
+    "deploy/hostinger/maintenance/configure-os-daily.sh",
+    "deploy/hostinger/backups/complete_backup.py",
+    "deploy/hostinger/backups/database-summary.sql",
+    "deploy/hostinger/backups/extension-recovery.json",
 ];
 const OPTIONAL_FILES = [
-  PG_PROOF,
-  "deploy/hostinger/backups/luminovia-complete-backup.service",
-  "deploy/hostinger/backups/luminovia-complete-backup.timer",
+    PG_PROOF,
+    "deploy/hostinger/backups/luminovia-complete-backup.service",
+    "deploy/hostinger/backups/luminovia-complete-backup.timer",
 ];
 const WORKER_FILES = [
-  ...["notification-mail", "notification-push"].flatMap((kind) => [
-    `deploy/hostinger/${kind}/luminovia-${kind}.service`,
-    `deploy/hostinger/${kind}/luminovia-${kind}.timer`,
-    `deploy/hostinger/${kind}/worker.env.example`,
-  ]),
+    ...["notification-mail", "notification-push"].flatMap((kind) => [
+        `deploy/hostinger/${kind}/luminovia-${kind}.service`,
+        `deploy/hostinger/${kind}/luminovia-${kind}.timer`,
+        `deploy/hostinger/${kind}/worker.env.example`,
+    ]),
 ];
 
 // The finite worker has no proxy option. Excluding an unused optional proxy
@@ -86,207 +70,208 @@ try{const result=await bundle.generate({format:'esm',codeSplitting:false,comment
  * the finite read and post-read metadata check reject replacement/in-place edits.
  */
 function readWorkerInput(path) {
-  if (
-    !Number.isInteger(constants.O_NOFOLLOW) ||
-    !Number.isInteger(constants.O_NONBLOCK)
-  )
-    throw new Error("Secure worker input descriptor flags are unavailable.");
-  const descriptor = openSync(
-    path,
-    constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
-  );
-  try {
-    const before = fstatSync(descriptor, { bigint: true });
-    if (!before.isFile() || before.size > BigInt(MAX_FILE_BYTES))
-      throw new Error("Worker input must be a bounded regular file.");
-    const size = Number(before.size);
-    const bytes = Buffer.alloc(size + 1);
-    let count = 0;
-    while (count < bytes.length) {
-      const received = readSync(
-        descriptor,
-        bytes,
-        count,
-        bytes.length - count,
-        null,
-      );
-      if (!received) break;
-      count += received;
-    }
-    const after = fstatSync(descriptor, { bigint: true });
     if (
-      count !== size ||
-      after.size !== before.size ||
-      after.mtimeNs !== before.mtimeNs ||
-      after.ctimeNs !== before.ctimeNs
+        !Number.isInteger(constants.O_NOFOLLOW) ||
+        !Number.isInteger(constants.O_NONBLOCK)
     )
-      throw new Error("Worker input changed while reading.");
-    return bytes.subarray(0, count);
-  } finally {
-    closeSync(descriptor);
-  }
+        throw new Error("Secure worker input descriptor flags are unavailable.");
+    const descriptor = openSync(
+        path,
+        constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+    );
+    try {
+        const before = fstatSync(descriptor, {bigint: true});
+        if (!before.isFile() || before.size > BigInt(MAX_FILE_BYTES))
+            throw new Error("Worker input must be a bounded regular file.");
+        const size = Number(before.size);
+        const bytes = Buffer.alloc(size + 1);
+        let count = 0;
+        while (count < bytes.length) {
+            const received = readSync(
+                descriptor,
+                bytes,
+                count,
+                bytes.length - count,
+                null,
+            );
+            if (!received) break;
+            count += received;
+        }
+        const after = fstatSync(descriptor, {bigint: true});
+        if (
+            count !== size ||
+            after.size !== before.size ||
+            after.mtimeNs !== before.mtimeNs ||
+            after.ctimeNs !== before.ctimeNs
+        )
+            throw new Error("Worker input changed while reading.");
+        return bytes.subarray(0, count);
+    } finally {
+        closeSync(descriptor);
+    }
 }
 
 /** Bundle only reviewed worker paths; runtime imports and provenance fail closed. */
 function workerArtifacts(sourceRoot, tracked) {
-  const sourceNames = [
-    "scripts/notification-push-worker.mjs",
-    "scripts/notification-mail-worker.py",
-    "package-lock.json",
-    "package.json",
-  ];
-  const sources = sourceNames.map((path) => {
-    plainFile(join(sourceRoot, path), sourceRoot);
-    if (tracked && !tracked.has(path))
-      throw new Error("Worker source is not tracked by release commit.");
-    return { path, sha256: hash(readWorkerInput(join(sourceRoot, path))) };
-  });
-  const lock = JSON.parse(
-    readWorkerInput(join(sourceRoot, "package-lock.json")).toString("utf8"),
-  );
-  if (lock.packages?.["node_modules/web-push"]?.version !== "4.0.0")
-    throw new Error("Reviewed exact web-push lock version required.");
-  const generated = JSON.parse(
-    execFileSync(process.execPath, ["--input-type=module", "-e", BUILD_PUSH], {
-      cwd: sourceRoot,
-      stdio: ["ignore", "pipe", "pipe"],
-      maxBuffer: MAX_FILE_BYTES,
-      timeout: 60000,
-    }).toString(),
-  );
-  if (
-    !generated.code ||
-    generated.imports.some((name) => !isBuiltin(name)) ||
-    generated.dynamicImports.length
-  )
-    throw new Error("Push worker must be standalone with Node builtins only.");
-  const artifacts = new Map();
-  const dependencies = new Map();
-  for (const module of generated.modules) {
-    if (module.startsWith("\0")) continue;
-    const normalized = module.split(sep).join("/");
-    const marker = normalized.lastIndexOf("/node_modules/");
-    if (marker < 0) {
-      if (
-        realpathSync(module) !==
-        realpathSync(join(sourceRoot, "scripts/notification-push-worker.mjs"))
-      )
-        throw new Error("Unexpected worker source module.");
-      continue;
-    }
-    const suffix = normalized.slice(marker + 14),
-      segments = suffix.split("/"),
-      name = segments[0].startsWith("@")
-        ? segments.slice(0, 2).join("/")
-        : segments[0];
-    const packageRoot = normalized.slice(0, marker + 14) + name;
-    const metadata = JSON.parse(
-      readWorkerInput(join(packageRoot, "package.json")).toString("utf8"),
+    const sourceNames = [
+        "scripts/notification-push-worker.mjs",
+        "scripts/notification-mail-worker.py",
+        "scripts/mail-relay.py",
+        "package-lock.json",
+        "package.json",
+    ];
+    const sources = sourceNames.map((path) => {
+        plainFile(join(sourceRoot, path), sourceRoot);
+        if (tracked && !tracked.has(path))
+            throw new Error("Worker source is not tracked by release commit.");
+        return {path, sha256: hash(readWorkerInput(join(sourceRoot, path)))};
+    });
+    const lock = JSON.parse(
+        readWorkerInput(join(sourceRoot, "package-lock.json")).toString("utf8"),
     );
-    const candidates = Object.entries(lock.packages ?? {}).filter(
-      ([path, value]) =>
-        (path === `node_modules/${name}` ||
-          path.endsWith(`/node_modules/${name}`)) &&
-        value.version === metadata.version,
+    if (lock.packages?.["node_modules/web-push"]?.version !== "4.0.0")
+        throw new Error("Reviewed exact web-push lock version required.");
+    const generated = JSON.parse(
+        execFileSync(process.execPath, ["--input-type=module", "-e", BUILD_PUSH], {
+            cwd: sourceRoot,
+            stdio: ["ignore", "pipe", "pipe"],
+            maxBuffer: MAX_FILE_BYTES,
+            timeout: 60000,
+        }).toString(),
     );
     if (
-      metadata.name !== name ||
-      !candidates.length ||
-      !candidates[0][1].integrity ||
-      new Set(candidates.map(([, item]) => item.integrity)).size !== 1
+        !generated.code ||
+        generated.imports.some((name) => !isBuiltin(name)) ||
+        generated.dynamicImports.length
     )
-      throw new Error("Worker dependency is missing exact lock integrity.");
-    let record = dependencies.get(name);
-    if (!record) {
-      record = {
-        name,
-        version: metadata.version,
-        integrity: candidates[0][1].integrity,
-        license: metadata.license,
-        modules: [],
-      };
-      dependencies.set(name, record);
-      const licenses = readdirSync(packageRoot).filter((file) =>
-        /^(?:licen[cs]e|copying|copyright)(?:[.-].*)?$/i.test(file),
-      );
-      if (!licenses.length && name === "http_ece") {
-        const fallback =
-          "deploy/hostinger/notification-push/licenses/http_ece-LICENSE.txt";
-        plainFile(join(sourceRoot, fallback), sourceRoot);
-        if (tracked && !tracked.has(fallback))
-          throw new Error("Worker license fallback is not tracked.");
-        const bytes = readWorkerInput(join(sourceRoot, fallback));
-        if (
-          hash(bytes) !==
-          "717363ac0c7f0883042868db171cfed1f4b423119249eac9bce5131291017ea8"
-        )
-          throw new Error("Reviewed http_ece license source differs.");
-        artifacts.set(fallback, bytes);
-        record.licenseSource =
-          "https://raw.githubusercontent.com/martinthomson/encrypted-content-encoding/v1.2.1/LICENSE";
-      } else if (!licenses.length)
-        throw new Error("Worker dependency license is missing.");
-      for (const file of licenses) {
-        const licensePath = join(packageRoot, file);
-        artifacts.set(
-          `deploy/hostinger/notification-push/licenses/${name.replaceAll("/", "_")}-${file.replaceAll(" ", "_")}`,
-          readWorkerInput(licensePath),
+        throw new Error("Push worker must be standalone with Node builtins only.");
+    const artifacts = new Map();
+    const dependencies = new Map();
+    for (const module of generated.modules) {
+        if (module.startsWith("\0")) continue;
+        const normalized = module.split(sep).join("/");
+        const marker = normalized.lastIndexOf("/node_modules/");
+        if (marker < 0) {
+            if (
+                realpathSync(module) !==
+                realpathSync(join(sourceRoot, "scripts/notification-push-worker.mjs"))
+            )
+                throw new Error("Unexpected worker source module.");
+            continue;
+        }
+        const suffix = normalized.slice(marker + 14),
+            segments = suffix.split("/"),
+            name = segments[0].startsWith("@")
+                ? segments.slice(0, 2).join("/")
+                : segments[0];
+        const packageRoot = normalized.slice(0, marker + 14) + name;
+        const metadata = JSON.parse(
+            readWorkerInput(join(packageRoot, "package.json")).toString("utf8"),
         );
-      }
+        const candidates = Object.entries(lock.packages ?? {}).filter(
+            ([path, value]) =>
+                (path === `node_modules/${name}` ||
+                    path.endsWith(`/node_modules/${name}`)) &&
+                value.version === metadata.version,
+        );
+        if (
+            metadata.name !== name ||
+            !candidates.length ||
+            !candidates[0][1].integrity ||
+            new Set(candidates.map(([, item]) => item.integrity)).size !== 1
+        )
+            throw new Error("Worker dependency is missing exact lock integrity.");
+        let record = dependencies.get(name);
+        if (!record) {
+            record = {
+                name,
+                version: metadata.version,
+                integrity: candidates[0][1].integrity,
+                license: metadata.license,
+                modules: [],
+            };
+            dependencies.set(name, record);
+            const licenses = readdirSync(packageRoot).filter((file) =>
+                /^(?:licen[cs]e|copying|copyright)(?:[.-].*)?$/i.test(file),
+            );
+            if (!licenses.length && name === "http_ece") {
+                const fallback =
+                    "deploy/hostinger/notification-push/licenses/http_ece-LICENSE.txt";
+                plainFile(join(sourceRoot, fallback), sourceRoot);
+                if (tracked && !tracked.has(fallback))
+                    throw new Error("Worker license fallback is not tracked.");
+                const bytes = readWorkerInput(join(sourceRoot, fallback));
+                if (
+                    hash(bytes) !==
+                    "717363ac0c7f0883042868db171cfed1f4b423119249eac9bce5131291017ea8"
+                )
+                    throw new Error("Reviewed http_ece license source differs.");
+                artifacts.set(fallback, bytes);
+                record.licenseSource =
+                    "https://raw.githubusercontent.com/martinthomson/encrypted-content-encoding/v1.2.1/LICENSE";
+            } else if (!licenses.length)
+                throw new Error("Worker dependency license is missing.");
+            for (const file of licenses) {
+                const licensePath = join(packageRoot, file);
+                artifacts.set(
+                    `deploy/hostinger/notification-push/licenses/${name.replaceAll("/", "_")}-${file.replaceAll(" ", "_")}`,
+                    readWorkerInput(licensePath),
+                );
+            }
+        }
+        record.modules.push({
+            path: relative(packageRoot, module).split(sep).join("/"),
+            sha256: hash(readWorkerInput(module)),
+        });
     }
-    record.modules.push({
-      path: relative(packageRoot, module).split(sep).join("/"),
-      sha256: hash(readWorkerInput(module)),
-    });
-  }
-  const toolRoot = realpathSync(join(sourceRoot, "node_modules/rolldown"));
-  const tool = JSON.parse(
-    readWorkerInput(join(toolRoot, "package.json")).toString("utf8"),
-  );
-  if (tool.version !== lock.packages?.["node_modules/rolldown"]?.version)
-    throw new Error("Worker bundler differs from lockfile.");
-  artifacts.set(
-    "deploy/hostinger/notification-push/licenses/rolldown-LICENSE",
-    readWorkerInput(join(toolRoot, "LICENSE")),
-  );
-  artifacts.set(
-    "deploy/hostinger/notification-push/worker.mjs",
-    Buffer.from(generated.code),
-  );
-  artifacts.set(
-    "deploy/hostinger/notification-push/provenance.json",
-    Buffer.from(
-      JSON.stringify(
-        {
-          schemaVersion: 1,
-          format: "luminovia-standalone-push-worker-v1",
-          sources,
-          tool: {
-            name: tool.name,
-            version: tool.version,
-            integrity: lock.packages["node_modules/rolldown"].integrity,
-          },
-          proxySupport: false,
-          imports: generated.imports,
-          dependencies: [...dependencies.values()]
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .map((record) => ({
-              ...record,
-              modules: record.modules.sort((a, b) =>
-                a.path.localeCompare(b.path),
-              ),
-            })),
-          bundleSha256: hash(Buffer.from(generated.code)),
-        },
-        null,
-        2,
-      ) + "\n",
-    ),
-  );
-  for (const source of sources)
-    if (hash(readWorkerInput(join(sourceRoot, source.path))) !== source.sha256)
-      throw new Error("Worker source changed during packaging.");
-  return artifacts;
+    const toolRoot = realpathSync(join(sourceRoot, "node_modules/rolldown"));
+    const tool = JSON.parse(
+        readWorkerInput(join(toolRoot, "package.json")).toString("utf8"),
+    );
+    if (tool.version !== lock.packages?.["node_modules/rolldown"]?.version)
+        throw new Error("Worker bundler differs from lockfile.");
+    artifacts.set(
+        "deploy/hostinger/notification-push/licenses/rolldown-LICENSE",
+        readWorkerInput(join(toolRoot, "LICENSE")),
+    );
+    artifacts.set(
+        "deploy/hostinger/notification-push/worker.mjs",
+        Buffer.from(generated.code),
+    );
+    artifacts.set(
+        "deploy/hostinger/notification-push/provenance.json",
+        Buffer.from(
+            JSON.stringify(
+                {
+                    schemaVersion: 1,
+                    format: "luminovia-standalone-push-worker-v1",
+                    sources,
+                    tool: {
+                        name: tool.name,
+                        version: tool.version,
+                        integrity: lock.packages["node_modules/rolldown"].integrity,
+                    },
+                    proxySupport: false,
+                    imports: generated.imports,
+                    dependencies: [...dependencies.values()]
+                        .sort((a, b) => a.name.localeCompare(b.name))
+                        .map((record) => ({
+                            ...record,
+                            modules: record.modules.sort((a, b) =>
+                                a.path.localeCompare(b.path),
+                            ),
+                        })),
+                    bundleSha256: hash(Buffer.from(generated.code)),
+                },
+                null,
+                2,
+            ) + "\n",
+        ),
+    );
+    for (const source of sources)
+        if (hash(readWorkerInput(join(sourceRoot, source.path))) !== source.sha256)
+            throw new Error("Worker source changed during packaging.");
+    return artifacts;
 }
 
 // Compute a stable SHA-256 digest for the source/artifact comparison.
@@ -296,643 +281,643 @@ const hash = (data) => createHash("sha256").update(data).digest("hex");
  * current offset, so a path reopen or a current-offset read would be incorrect.
  */
 function archiveDigest(descriptor) {
-  const digest = createHash("sha256");
-  const buffer = Buffer.alloc(64 * 1024);
-  let position = 0;
-  for (;;) {
-    const count = readSync(descriptor, buffer, 0, buffer.length, position);
-    if (!count) return digest.digest("hex");
-    digest.update(buffer.subarray(0, count));
-    position += count;
-  }
+    const digest = createHash("sha256");
+    const buffer = Buffer.alloc(64 * 1024);
+    let position = 0;
+    for (; ;) {
+        const count = readSync(descriptor, buffer, 0, buffer.length, position);
+        if (!count) return digest.digest("hex");
+        digest.update(buffer.subarray(0, count));
+        position += count;
+    }
 }
 
 // Limit archive paths to the fixed app allowlist; reject traversal and private checkout paths.
 function safePath(name) {
-  if (
-    !name ||
-    name.length > 250 ||
-    name.includes("\\") ||
-    Array.from(name).some(
-      (character) =>
-        character.charCodeAt(0) <= 32 || character.charCodeAt(0) === 127,
-    ) ||
-    name.startsWith("/") ||
-    name.split("/").some((part) => !part || part === "." || part === "..") ||
-    name.split("/").some((part) => part.startsWith(".env")) ||
-    /(?:^|\/)(?:private|\.local|\.git|node_modules)(?:\/|$)/.test(name)
-  )
-    throw new Error("Unsafe release path.");
-  if (
-    !/^(?:site\/|supabase\/(?:functions|migrations)\/|deploy\/hostinger\/)/.test(
-      name,
+    if (
+        !name ||
+        name.length > 250 ||
+        name.includes("\\") ||
+        Array.from(name).some(
+            (character) =>
+                character.charCodeAt(0) <= 32 || character.charCodeAt(0) === 127,
+        ) ||
+        name.startsWith("/") ||
+        name.split("/").some((part) => !part || part === "." || part === "..") ||
+        name.split("/").some((part) => part.startsWith(".env")) ||
+        /(?:^|\/)(?:private|\.local|\.git|node_modules)(?:\/|$)/.test(name)
     )
-  ) {
-    throw new Error("Release path is outside the application allowlist.");
-  }
+        throw new Error("Unsafe release path.");
+    if (
+        name !== "scripts/mail-relay.py" &&
+        !/^(?:site\/|supabase\/(?:functions|migrations)\/|deploy\/hostinger\/)/.test(name)
+    ) {
+        throw new Error("Release path is outside the application allowlist.");
+    }
 }
 
 // Check path components for symlinks and require a regular source file within its size limit.
 function plainFile(path, sourceRoot) {
-  const rel = relative(sourceRoot, path);
-  if (rel === ".." || rel.startsWith(".." + sep) || rel.startsWith(sep)) {
-    throw new Error("Source path escapes the checkout.");
-  }
-  let current = sourceRoot;
-  for (const part of rel.split(sep)) {
-    current = join(current, part);
-    if (lstatSync(current).isSymbolicLink())
-      throw new Error("Release source contains a symbolic link.");
-  }
-  const info = lstatSync(path);
-  if (!info.isFile() || info.size > MAX_FILE_BYTES)
-    throw new Error("Invalid release file.");
-  return info;
+    const rel = relative(sourceRoot, path);
+    if (rel === ".." || rel.startsWith(".." + sep) || rel.startsWith(sep)) {
+        throw new Error("Source path escapes the checkout.");
+    }
+    let current = sourceRoot;
+    for (const part of rel.split(sep)) {
+        current = join(current, part);
+        if (lstatSync(current).isSymbolicLink())
+            throw new Error("Release source contains a symbolic link.");
+    }
+    const info = lstatSync(path);
+    if (!info.isFile() || info.size > MAX_FILE_BYTES)
+        throw new Error("Invalid release file.");
+    return info;
 }
 
 // Collect only allowed files from an approved source tree and reject duplicate archive destinations.
 function collectTree(
-  sourceRoot,
-  sourceDirectory,
-  targetDirectory,
-  collected,
-  skipTests = false,
+    sourceRoot,
+    sourceDirectory,
+    targetDirectory,
+    collected,
+    skipTests = false,
 ) {
-  const directory = join(sourceRoot, sourceDirectory);
-  if (!existsSync(directory))
-    throw new Error("Required release source directory is missing.");
-  if (lstatSync(directory).isSymbolicLink())
-    throw new Error("Release source directory is a symbolic link.");
-  const visit = (path, suffix) => {
-    const info = lstatSync(path);
-    if (info.isSymbolicLink())
-      throw new Error("Release source contains a symbolic link.");
-    if (skipTests && SKIP_SOURCE.test(suffix)) return;
-    if (info.isDirectory()) {
-      for (const item of readdirSync(path).sort())
-        visit(join(path, item), suffix ? suffix + "/" + item : item);
-      return;
-    }
-    const target = targetDirectory + "/" + suffix;
-    safePath(target);
-    plainFile(path, sourceRoot);
-    if (collected.has(target)) throw new Error("Duplicate release path.");
-    collected.set(target, path);
-  };
-  visit(directory, "");
+    const directory = join(sourceRoot, sourceDirectory);
+    if (!existsSync(directory))
+        throw new Error("Required release source directory is missing.");
+    if (lstatSync(directory).isSymbolicLink())
+        throw new Error("Release source directory is a symbolic link.");
+    const visit = (path, suffix) => {
+        const info = lstatSync(path);
+        if (info.isSymbolicLink())
+            throw new Error("Release source contains a symbolic link.");
+        if (skipTests && SKIP_SOURCE.test(suffix)) return;
+        if (info.isDirectory()) {
+            for (const item of readdirSync(path).sort())
+                visit(join(path, item), suffix ? suffix + "/" + item : item);
+            return;
+        }
+        const target = targetDirectory + "/" + suffix;
+        safePath(target);
+        plainFile(path, sourceRoot);
+        if (collected.has(target)) throw new Error("Duplicate release path.");
+        collected.set(target, path);
+    };
+    visit(directory, "");
 }
 
 // Read each Compose service's immutable digest pin from actual source.
 function serviceImages(text) {
-  const result = [];
-  let service;
-  for (const line of text.split("\n")) {
-    const key = /^ {2}([a-z][a-z0-9-]*):\s*$/.exec(line);
-    if (key) service = key[1];
-    const image = /^ {4}image:\s*([^#]+?)\s*$/.exec(line);
-    if (image) {
-      const value = image[1].replace(/^["']|["']$/g, "");
-      if (!service || !IMMUTABLE_IMAGE.test(value))
-        throw new Error("Runtime images require immutable digest pins.");
-      result.push({ service, image: value });
+    const result = [];
+    let service;
+    for (const line of text.split("\n")) {
+        const key = /^ {2}([a-z][a-z0-9-]*):\s*$/.exec(line);
+        if (key) service = key[1];
+        const image = /^ {4}image:\s*([^#]+?)\s*$/.exec(line);
+        if (image) {
+            const value = image[1].replace(/^["']|["']$/g, "");
+            if (!service || !IMMUTABLE_IMAGE.test(value))
+                throw new Error("Runtime images require immutable digest pins.");
+            result.push({service, image: value});
+        }
     }
-  }
-  return result;
+    return result;
 }
 
 // Bind the expected service inventory and PostgreSQL proof to exact release migrations.
 function runtimeMetadata(sourceRoot, migrations) {
-  const images = [
-    ...serviceImages(
-      readFileSync(
-        join(sourceRoot, "deploy/hostinger/selfhost/compose.yml"),
-        "utf8",
-      ),
-    ),
-    ...serviceImages(
-      readFileSync(join(sourceRoot, "deploy/hostinger/compose.yml"), "utf8"),
-    ),
-  ].sort((a, b) => a.service.localeCompare(b.service));
-  const expected = [
-    "api-gw",
-    "auth",
-    "clamav",
-    "db",
-    "functions",
-    "mailpit",
-    "realtime",
-    "rest",
-    "storage",
-    "web",
-  ].sort();
-  if (
-    JSON.stringify(images.map((item) => item.service).sort()) !==
-    JSON.stringify(expected)
-  ) {
-    throw new Error("The reviewed runtime service set changed.");
-  }
-  const database = images.find((item) => item.service === "db").image;
-  const major = /^supabase\/postgres:(\d+)\./.exec(database)?.[1];
-  if (major !== "17")
-    throw new Error(
-      "PostgreSQL major upgrades require a separate reviewed procedure.",
+    const images = [
+        ...serviceImages(
+            readFileSync(
+                join(sourceRoot, "deploy/hostinger/selfhost/compose.yml"),
+                "utf8",
+            ),
+        ),
+        ...serviceImages(
+            readFileSync(join(sourceRoot, "deploy/hostinger/compose.yml"), "utf8"),
+        ),
+    ].sort((a, b) => a.service.localeCompare(b.service));
+    const expected = [
+        "api-gw",
+        "auth",
+        "clamav",
+        "db",
+        "functions",
+        "mail-relay",
+        "mailpit",
+        "realtime",
+        "rest",
+        "storage",
+        "web",
+    ].sort();
+    if (
+        JSON.stringify(images.map((item) => item.service).sort()) !==
+        JSON.stringify(expected)
+    ) {
+        throw new Error("The reviewed runtime service set changed.");
+    }
+    const database = images.find((item) => item.service === "db").image;
+    const major = /^supabase\/postgres:(\d+)\./.exec(database)?.[1];
+    if (major !== "17")
+        throw new Error(
+            "PostgreSQL major upgrades require a separate reviewed procedure.",
+        );
+    const provenance = JSON.parse(
+        readFileSync(
+            join(
+                sourceRoot,
+                "deploy/hostinger/selfhost/postgres-upgrade-provenance.json",
+            ),
+            "utf8",
+        ),
     );
-  const provenance = JSON.parse(
-    readFileSync(
-      join(
-        sourceRoot,
-        "deploy/hostinger/selfhost/postgres-upgrade-provenance.json",
-      ),
-      "utf8",
-    ),
-  );
-  const required = [
-    "candidateRestorePassed",
-    "migrationSourcesExact",
-    "roleAndMembershipExact",
-    "persistentFilesExact",
-  ];
-  const manual =
-    provenance.schemaVersion === 1 &&
-    provenance.reviewed === true &&
-    provenance.targetImage === database &&
-    provenance.validation?.helperSelfTestPassed === true &&
-    required.every((field) => provenance[field] === true);
-  let generated = false;
-  if (existsSync(join(sourceRoot, PG_PROOF))) {
-    const proof = JSON.parse(readFileSync(join(sourceRoot, PG_PROOF), "utf8"));
-    const inventory = migrations
-      .map(({ path, sha256 }) => ({ path, sha256 }))
-      .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
-    // A completed image-upgrade proof remains valid when later application
-    // migrations append to its byte-exact history. Fresh image promotion still
-    // requires a proof of the complete candidate inventory.
-    const proven = proof.migrationInventory;
-    const unchangedPrefix =
-      Array.isArray(proven) &&
-      proven.length > 0 &&
-      proven.length <= inventory.length &&
-      proven.every(
-        (entry, index) =>
-          entry !== null &&
-          typeof entry === "object" &&
-          JSON.stringify(Object.keys(entry).sort()) ===
-            JSON.stringify(["path", "sha256"]) &&
-          entry.path === inventory[index].path &&
-          entry.sha256 === inventory[index].sha256,
-      );
-    generated =
-      proof.schemaVersion === 1 &&
-      proof.postgresMajor === 17 &&
-      proof.requiresLiveDataPreflight === true &&
-      typeof proof.sourceCommit === "string" &&
-      SHA.test(proof.sourceCommit) &&
-      PG_IMAGE.test(proof.sourceImage ?? "") &&
-      PG_IMAGE.test(proof.targetImage ?? "") &&
-      proof.sourceImage !== proof.targetImage &&
-      proof.targetImage === database &&
-      unchangedPrefix &&
-      proof.migrationInventorySha256 === hash(JSON.stringify(proven)) &&
-      proof.validation?.kind === "isolated-selfhost-upgrade-fixture" &&
-      [
-        "passed",
+    const required = [
+        "candidateRestorePassed",
         "migrationSourcesExact",
-        "existingCredentialsAndFileExact",
         "roleAndMembershipExact",
-      ].every((field) => proof.validation[field] === true);
-    if (!generated)
-      throw new Error(
-        "PostgreSQL candidate proof lacks exact completed compatibility evidence.",
-      );
-  }
-  if (!manual && !generated)
-    throw new Error(
-      "Database image lacks matching completed compatibility evidence.",
-    );
-  return {
-    postgresMajor: 17,
-    reviewed: true,
-    images,
-    ...(generated
-      ? { requiresLiveDataPreflight: true, postgresCandidateProof: PG_PROOF }
-      : {}),
-  };
+        "persistentFilesExact",
+    ];
+    const manual =
+        provenance.schemaVersion === 1 &&
+        provenance.reviewed === true &&
+        provenance.targetImage === database &&
+        provenance.validation?.helperSelfTestPassed === true &&
+        required.every((field) => provenance[field] === true);
+    let generated = false;
+    if (existsSync(join(sourceRoot, PG_PROOF))) {
+        const proof = JSON.parse(readFileSync(join(sourceRoot, PG_PROOF), "utf8"));
+        const inventory = migrations
+            .map(({path, sha256}) => ({path, sha256}))
+            .sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+        // A completed image-upgrade proof remains valid when later application
+        // migrations append to its byte-exact history. Fresh image promotion still
+        // requires a proof of the complete candidate inventory.
+        const proven = proof.migrationInventory;
+        const unchangedPrefix =
+            Array.isArray(proven) &&
+            proven.length > 0 &&
+            proven.length <= inventory.length &&
+            proven.every(
+                (entry, index) =>
+                    entry !== null &&
+                    typeof entry === "object" &&
+                    JSON.stringify(Object.keys(entry).sort()) ===
+                    JSON.stringify(["path", "sha256"]) &&
+                    entry.path === inventory[index].path &&
+                    entry.sha256 === inventory[index].sha256,
+            );
+        generated =
+            proof.schemaVersion === 1 &&
+            proof.postgresMajor === 17 &&
+            proof.requiresLiveDataPreflight === true &&
+            typeof proof.sourceCommit === "string" &&
+            SHA.test(proof.sourceCommit) &&
+            PG_IMAGE.test(proof.sourceImage ?? "") &&
+            PG_IMAGE.test(proof.targetImage ?? "") &&
+            proof.sourceImage !== proof.targetImage &&
+            proof.targetImage === database &&
+            unchangedPrefix &&
+            proof.migrationInventorySha256 === hash(JSON.stringify(proven)) &&
+            proof.validation?.kind === "isolated-selfhost-upgrade-fixture" &&
+            [
+                "passed",
+                "migrationSourcesExact",
+                "existingCredentialsAndFileExact",
+                "roleAndMembershipExact",
+            ].every((field) => proof.validation[field] === true);
+        if (!generated)
+            throw new Error(
+                "PostgreSQL candidate proof lacks exact completed compatibility evidence.",
+            );
+    }
+    if (!manual && !generated)
+        throw new Error(
+            "Database image lacks matching completed compatibility evidence.",
+        );
+    return {
+        postgresMajor: 17,
+        reviewed: true,
+        images,
+        ...(generated
+            ? {requiresLiveDataPreflight: true, postgresCandidateProof: PG_PROOF}
+            : {}),
+    };
 }
 
 // Reject known server-secret patterns before including content in a distributable release.
 function assertNoCredentials(data, source, publicKey, forbiddenValues) {
-  const text = data.toString("utf8");
-  if (
-    forbiddenValues.some((value) => value && data.includes(Buffer.from(value)))
-  ) {
-    throw new Error("A private credential value appears in release content.");
-  }
-  if (
-    /sb_secret_[A-Za-z0-9_-]{16,}/.test(text) ||
-    /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/.test(text)
-  ) {
-    throw new Error("Release content contains a secret-key value.");
-  }
-  for (const assignment of text.matchAll(
-    /(?:SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY|POSTGRES_PASSWORD|JWT_SECRET)["']?\s*[:=]\s*["']([^"']+)["']/g,
-  )) {
-    if (assignment[1].length >= 12 && !assignment[1].startsWith("${")) {
-      throw new Error(
-        "Release content contains a literal server credential assignment.",
-      );
+    const text = data.toString("utf8");
+    if (
+        forbiddenValues.some((value) => value && data.includes(Buffer.from(value)))
+    ) {
+        throw new Error("A private credential value appears in release content.");
     }
-  }
-  for (const match of text.matchAll(
-    /eyJ[A-Za-z0-9_-]+\.([A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+/g,
-  )) {
-    let payload;
-    try {
-      payload = JSON.parse(Buffer.from(match[1], "base64url").toString());
-    } catch {
-      continue;
+    if (
+        /sb_secret_[A-Za-z0-9_-]{16,}/.test(text) ||
+        /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/.test(text)
+    ) {
+        throw new Error("Release content contains a secret-key value.");
     }
-    if (payload.role === "service_role")
-      throw new Error("Release content contains a service-role token.");
-  }
-  if (
-    source.startsWith("site/") &&
-    text.includes("VITE_SUPABASE_PUBLISHABLE_KEY=")
-  ) {
-    throw new Error("Frontend output contains an environment file.");
-  }
-  if (source.startsWith("site/") && publicKey.startsWith("sb_secret_"))
-    throw new Error("Secret key cannot be public build configuration.");
+    for (const assignment of text.matchAll(
+        /(?:SUPABASE_SERVICE_ROLE_KEY|SUPABASE_SECRET_KEY|POSTGRES_PASSWORD|JWT_SECRET)["']?\s*[:=]\s*["']([^"']+)["']/g,
+    )) {
+        if (assignment[1].length >= 12 && !assignment[1].startsWith("${")) {
+            throw new Error(
+                "Release content contains a literal server credential assignment.",
+            );
+        }
+    }
+    for (const match of text.matchAll(
+        /eyJ[A-Za-z0-9_-]+\.([A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+/g,
+    )) {
+        let payload;
+        try {
+            payload = JSON.parse(Buffer.from(match[1], "base64url").toString());
+        } catch {
+            continue;
+        }
+        if (payload.role === "service_role")
+            throw new Error("Release content contains a service-role token.");
+    }
+    if (
+        source.startsWith("site/") &&
+        text.includes("VITE_SUPABASE_PUBLISHABLE_KEY=")
+    ) {
+        throw new Error("Frontend output contains an environment file.");
+    }
+    if (source.startsWith("site/") && publicKey.startsWith("sb_secret_"))
+        throw new Error("Secret key cannot be public build configuration.");
 }
 
 // Validate build configuration, source inventory and runtime contract before creating the manifest/archive.
 export function createRelease(options) {
-  const sourceRoot = realpathSync(resolve(options.sourceRoot ?? "."));
-  const output = resolve(options.outputDirectory);
-  const commit = options.commit;
-  const publicKey = options.publicConfig?.publishableKey;
-  if (!SHA.test(commit ?? ""))
-    throw new Error("Expected an exact lowercase 40-character source commit.");
-  if (
-    options.publicConfig?.apiUrl !== API_URL ||
-    typeof publicKey !== "string" ||
-    !/^sb_publishable_[A-Za-z0-9_-]{20,}$/.test(publicKey)
-  ) {
-    throw new Error(
-      "Expected the CMS public API URL and a publishable browser key.",
-    );
-  }
-  const verifyCheckout = () => {
-    if (options.verifyGit === false) return;
-    const actual = execFileSync("git", ["rev-parse", "HEAD"], {
-      cwd: sourceRoot,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    }).trim();
-    if (actual !== commit)
-      throw new Error("Release commit does not match the checked-out source.");
-    const dirty = execFileSync(
-      "git",
-      ["status", "--porcelain", "--untracked-files=no"],
-      { cwd: sourceRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-    );
-    if (dirty)
-      throw new Error("Release source has uncommitted tracked changes.");
-  };
-  verifyCheckout();
-  const tracked =
-    options.verifyGit === false
-      ? null
-      : new Set(
-          execFileSync("git", ["ls-files", "-z"], {
+    const sourceRoot = realpathSync(resolve(options.sourceRoot ?? "."));
+    const output = resolve(options.outputDirectory);
+    const commit = options.commit;
+    const publicKey = options.publicConfig?.publishableKey;
+    if (!SHA.test(commit ?? ""))
+        throw new Error("Expected an exact lowercase 40-character source commit.");
+    if (
+        options.publicConfig?.apiUrl !== API_URL ||
+        typeof publicKey !== "string" ||
+        !/^sb_publishable_[A-Za-z0-9_-]{20,}$/.test(publicKey)
+    ) {
+        throw new Error(
+            "Expected the CMS public API URL and a publishable browser key.",
+        );
+    }
+    const verifyCheckout = () => {
+        if (options.verifyGit === false) return;
+        const actual = execFileSync("git", ["rev-parse", "HEAD"], {
             cwd: sourceRoot,
             encoding: "utf8",
             stdio: ["ignore", "pipe", "pipe"],
-          }).split("\0"),
+        }).trim();
+        if (actual !== commit)
+            throw new Error("Release commit does not match the checked-out source.");
+        const dirty = execFileSync(
+            "git",
+            ["status", "--porcelain", "--untracked-files=no"],
+            {cwd: sourceRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"]},
         );
-  const collected = new Map();
-  collectTree(sourceRoot, "dist", "site", collected);
-  collectTree(
-    sourceRoot,
-    "supabase/functions",
-    "supabase/functions",
-    collected,
-    true,
-  );
-  collectTree(
-    sourceRoot,
-    "supabase/migrations",
-    "supabase/migrations",
-    collected,
-  );
-  collectTree(
-    sourceRoot,
-    "deploy/hostinger/selfhost/runtime",
-    "deploy/hostinger/selfhost/runtime",
-    collected,
-  );
-  collectTree(
-    sourceRoot,
-    "deploy/hostinger/selfhost/envoy",
-    "deploy/hostinger/selfhost/envoy",
-    collected,
-  );
-  collectTree(
-    sourceRoot,
-    "deploy/hostinger/supabase/upstream/volumes/db",
-    "deploy/hostinger/supabase/upstream/volumes/db",
-    collected,
-    true,
-  );
-  collectTree(
-    sourceRoot,
-    "deploy/hostinger/supabase/upstream/volumes/api/envoy",
-    "deploy/hostinger/supabase/upstream/volumes/api/envoy",
-    collected,
-  );
-  for (const file of REQUIRED_FILES) {
-    plainFile(join(sourceRoot, file), sourceRoot);
-    safePath(file);
-    collected.set(file, join(sourceRoot, file));
-  }
-  for (const file of OPTIONAL_FILES) {
-    if (!existsSync(join(sourceRoot, file))) continue;
-    plainFile(join(sourceRoot, file), sourceRoot);
-    safePath(file);
-    collected.set(file, join(sourceRoot, file));
-  }
-  for (const kind of ["invite", "recovery"]) {
-    const source = join(sourceRoot, "supabase/templates/" + kind + ".html");
-    plainFile(source, sourceRoot);
-    collected.set("deploy/hostinger/mail-templates/" + kind + ".html", source);
-  }
-  const forbiddenValues = options.forbiddenValues ?? [];
-  if (
-    !Array.isArray(forbiddenValues) ||
-    forbiddenValues.some(
-      (value) => typeof value !== "string" || value.length < 8,
-    )
-  ) {
-    throw new Error("Invalid private-value exclusion configuration.");
-  }
-  mkdirSync(output, { recursive: true, mode: 0o700 });
-  const archivePath = join(output, "cms-release.tar.gz");
-  const manifestPath = join(output, "cms-release.json");
-  if (
-    process.platform !== "linux" ||
-    !Number.isInteger(constants.O_DIRECTORY) ||
-    !Number.isInteger(constants.O_NOFOLLOW)
-  )
-    throw new Error("Secure release output requires Linux descriptor flags.");
-  // Bind publication to this directory without following a supplied leaf link.
-  // Existing safe directories (including unrelated files) remain supported;
-  // never silently chmod a caller's existing directory into a different policy.
-  const outputDescriptor = openSync(
-    output,
-    constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
-  );
-  let stage;
-  let stageEntry;
-  let stageDescriptor;
-  let archiveDescriptor;
-  const files = [];
-  let total = 0;
-  let configuredBundle = false;
-  try {
-    const directory = fstatSync(outputDescriptor);
-    if (
-      !directory.isDirectory() ||
-      directory.uid !== process.getuid() ||
-      directory.mode & 0o022
-    )
-      throw new Error(
-        "Release output must be an owned directory without shared write access.",
-      );
-    const target = `/proc/self/fd/${outputDescriptor}`;
-    // Preserve the early refusal for existing artifacts. This is only a
-    // convenience check: exclusive publication remains authoritative if another
-    // writer creates either name while this attempt is generating its package.
-    if (
-      existsSync(join(target, "cms-release.tar.gz")) ||
-      existsSync(join(target, "cms-release.json"))
-    )
-      throw new Error("Refusing to overwrite an existing release artifact.");
-    // A private attempt lives on the output filesystem so exclusive hard-link
-    // publication is possible. Neither tar nor failure cleanup uses final names.
-    stageEntry = mkdtempSync(join(target, ".luminovia-release-"));
-    stageDescriptor = openSync(
-      stageEntry,
-      constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
-    );
-    // The child reads through the still-running parent's pinned directory FD;
-    // its own close-on-exec descriptor table cannot reinterpret this path.
-    stage = `/proc/${process.pid}/fd/${stageDescriptor}`;
-    const stagedArchive = join(stage, "cms-release.tar.gz");
-    const stagedManifest = join(stage, "cms-release.json");
-    for (const file of WORKER_FILES) {
-      plainFile(join(sourceRoot, file), sourceRoot);
-      collected.set(file, join(sourceRoot, file));
-    }
-    collected.set(
-      "deploy/hostinger/notification-mail/worker.py",
-      join(sourceRoot, "scripts/notification-mail-worker.py"),
-    );
-    const generated = workerArtifacts(sourceRoot, tracked);
-    for (const [name, path] of [
-      ...collected,
-      ...[...generated.keys()].map((name) => [name, null]),
-    ].sort(([a], [b]) => a.localeCompare(b))) {
-      safePath(name);
-      const info =
-        path === null
-          ? { size: generated.get(name).length, mode: 0o644 }
-          : plainFile(path, sourceRoot);
-      if (
-        tracked &&
-        path !== null &&
-        !name.startsWith("site/") &&
-        !tracked.has(relative(sourceRoot, path).split(sep).join("/"))
-      ) {
-        throw new Error(
-          "Runtime input is not tracked by the release source commit.",
-        );
-      }
-      const data = path === null ? generated.get(name) : readFileSync(path);
-      total += data.length;
-      if (total > MAX_TOTAL_BYTES || data.length !== info.size)
-        throw new Error("Release input changed or exceeded its size bound.");
-      assertNoCredentials(data, name, publicKey, forbiddenValues);
-      if (
-        name.startsWith("site/") &&
-        name.endsWith(".js") &&
-        data.includes(Buffer.from(API_URL)) &&
-        data.includes(Buffer.from(publicKey))
-      )
-        configuredBundle = true;
-      const destination = join(stage, name);
-      mkdirSync(dirname(destination), { recursive: true, mode: 0o755 });
-      writeFileSync(destination, data, {
-        flag: "wx",
-        mode: info.mode & 0o111 ? 0o755 : 0o644,
-      });
-      files.push({ path: name, sha256: hash(data), size: data.length });
-    }
-    if (
-      !files.some((file) => file.path === "site/index.html") ||
-      !configuredBundle
-    )
-      throw new Error(
-        "Frontend build is missing its CMS public configuration.",
-      );
-    verifyCheckout();
-    const migrations = files
-      .filter((file) => file.path.startsWith("supabase/migrations/"))
-      .map((file) => {
-        const match = /^supabase\/migrations\/(\d{14})_([a-z0-9_]+)\.sql$/.exec(
-          file.path,
-        );
-        if (!match) throw new Error("Unexpected migration path.");
-        return { version: match[1], path: file.path, sha256: file.sha256 };
-      })
-      .sort((a, b) => a.version.localeCompare(b.version));
-    if (
-      !migrations.length ||
-      new Set(migrations.map((item) => item.version)).size !== migrations.length
-    )
-      throw new Error("Invalid migration inventory.");
-    // Verify proof inventories against the exact staged bytes entering the tar.
-    const runtime = runtimeMetadata(stage, migrations);
-    const list = join(stage, "release-files.list");
-    writeFileSync(list, files.map((file) => file.path).join("\0") + "\0", {
-      mode: 0o600,
-    });
-    archiveDescriptor = openSync(
-      stagedArchive,
-      constants.O_RDWR |
-        constants.O_CREAT |
-        constants.O_EXCL |
-        constants.O_NOFOLLOW,
-      0o600,
-    );
-    fchmodSync(archiveDescriptor, 0o600);
-    execFileSync(
-      "tar",
-      [
-        "--format=ustar",
-        "--sort=name",
-        "--mtime=@0",
-        "--owner=0",
-        "--group=0",
-        "--numeric-owner",
-        "-czf",
-        "-",
-        "--null",
-        "--verbatim-files-from",
-        "--files-from",
-        list,
-      ],
-      {
-        cwd: stage,
-        stdio: ["ignore", archiveDescriptor, "pipe"],
-      },
-    );
-    fsyncSync(archiveDescriptor);
-    const manifest = {
-      schemaVersion: 1,
-      repository: REPOSITORY,
-      branch: "main",
-      commit,
-      archiveSha256: archiveDigest(archiveDescriptor),
-      siteEntry: "site/index.html",
-      publicBuild: { apiUrl: API_URL, publishableKeySha256: hash(publicKey) },
-      files,
-      migrations,
-      runtime,
+        if (dirty)
+            throw new Error("Release source has uncommitted tracked changes.");
     };
-    closeSync(archiveDescriptor);
-    archiveDescriptor = undefined;
-    writeFileSync(stagedManifest, JSON.stringify(manifest, null, 2) + "\n", {
-      flag: "wx",
-      mode: 0o600,
-    });
-    try {
-      linkSync(stagedArchive, join(target, "cms-release.tar.gz"));
-      linkSync(stagedManifest, join(target, "cms-release.json"));
-      fsyncSync(outputDescriptor);
-    } catch {
-      // Two fixed names cannot be published as an atomic pair. A late collision
-      // or I/O failure may leave an unpaired archive: fail and require operator
-      // inspection. Unlinking a final name could destroy another writer's leaf.
-      throw new Error(
-        "Release publication failed; refusing to overwrite existing artifacts. Inspect the output before retrying.",
-      );
+    verifyCheckout();
+    const tracked =
+        options.verifyGit === false
+            ? null
+            : new Set(
+                execFileSync("git", ["ls-files", "-z"], {
+                    cwd: sourceRoot,
+                    encoding: "utf8",
+                    stdio: ["ignore", "pipe", "pipe"],
+                }).split("\0"),
+            );
+    const collected = new Map();
+    collectTree(sourceRoot, "dist", "site", collected);
+    collectTree(
+        sourceRoot,
+        "supabase/functions",
+        "supabase/functions",
+        collected,
+        true,
+    );
+    collectTree(
+        sourceRoot,
+        "supabase/migrations",
+        "supabase/migrations",
+        collected,
+    );
+    collectTree(
+        sourceRoot,
+        "deploy/hostinger/selfhost/runtime",
+        "deploy/hostinger/selfhost/runtime",
+        collected,
+    );
+    collectTree(
+        sourceRoot,
+        "deploy/hostinger/selfhost/envoy",
+        "deploy/hostinger/selfhost/envoy",
+        collected,
+    );
+    collectTree(
+        sourceRoot,
+        "deploy/hostinger/supabase/upstream/volumes/db",
+        "deploy/hostinger/supabase/upstream/volumes/db",
+        collected,
+        true,
+    );
+    collectTree(
+        sourceRoot,
+        "deploy/hostinger/supabase/upstream/volumes/api/envoy",
+        "deploy/hostinger/supabase/upstream/volumes/api/envoy",
+        collected,
+    );
+    for (const file of REQUIRED_FILES) {
+        plainFile(join(sourceRoot, file), sourceRoot);
+        safePath(file);
+        collected.set(file, join(sourceRoot, file));
     }
-    return { archivePath, manifestPath, manifest };
-  } finally {
+    for (const file of OPTIONAL_FILES) {
+        if (!existsSync(join(sourceRoot, file))) continue;
+        plainFile(join(sourceRoot, file), sourceRoot);
+        safePath(file);
+        collected.set(file, join(sourceRoot, file));
+    }
+    for (const kind of ["invite", "recovery"]) {
+        const source = join(sourceRoot, "supabase/templates/" + kind + ".html");
+        plainFile(source, sourceRoot);
+        collected.set("deploy/hostinger/mail-templates/" + kind + ".html", source);
+    }
+    const forbiddenValues = options.forbiddenValues ?? [];
+    if (
+        !Array.isArray(forbiddenValues) ||
+        forbiddenValues.some(
+            (value) => typeof value !== "string" || value.length < 8,
+        )
+    ) {
+        throw new Error("Invalid private-value exclusion configuration.");
+    }
+    mkdirSync(output, {recursive: true, mode: 0o700});
+    const archivePath = join(output, "cms-release.tar.gz");
+    const manifestPath = join(output, "cms-release.json");
+    if (
+        process.platform !== "linux" ||
+        !Number.isInteger(constants.O_DIRECTORY) ||
+        !Number.isInteger(constants.O_NOFOLLOW)
+    )
+        throw new Error("Secure release output requires Linux descriptor flags.");
+    // Bind publication to this directory without following a supplied leaf link.
+    // Existing safe directories (including unrelated files) remain supported;
+    // never silently chmod a caller's existing directory into a different policy.
+    const outputDescriptor = openSync(
+        output,
+        constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
+    );
+    let stage;
+    let stageEntry;
+    let stageDescriptor;
+    let archiveDescriptor;
+    const files = [];
+    let total = 0;
+    let configuredBundle = false;
     try {
-      if (archiveDescriptor !== undefined) closeSync(archiveDescriptor);
-    } finally {
-      try {
-        if (stageEntry !== undefined)
-          rmSync(stageEntry, { recursive: true, force: true });
-      } finally {
-        try {
-          if (stageDescriptor !== undefined) closeSync(stageDescriptor);
-        } finally {
-          closeSync(outputDescriptor);
+        const directory = fstatSync(outputDescriptor);
+        if (
+            !directory.isDirectory() ||
+            directory.uid !== process.getuid() ||
+            directory.mode & 0o022
+        )
+            throw new Error(
+                "Release output must be an owned directory without shared write access.",
+            );
+        const target = `/proc/self/fd/${outputDescriptor}`;
+        // Preserve the early refusal for existing artifacts. This is only a
+        // convenience check: exclusive publication remains authoritative if another
+        // writer creates either name while this attempt is generating its package.
+        if (
+            existsSync(join(target, "cms-release.tar.gz")) ||
+            existsSync(join(target, "cms-release.json"))
+        )
+            throw new Error("Refusing to overwrite an existing release artifact.");
+        // A private attempt lives on the output filesystem so exclusive hard-link
+        // publication is possible. Neither tar nor failure cleanup uses final names.
+        stageEntry = mkdtempSync(join(target, ".luminovia-release-"));
+        stageDescriptor = openSync(
+            stageEntry,
+            constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
+        );
+        // The child reads through the still-running parent's pinned directory FD;
+        // its own close-on-exec descriptor table cannot reinterpret this path.
+        stage = `/proc/${process.pid}/fd/${stageDescriptor}`;
+        const stagedArchive = join(stage, "cms-release.tar.gz");
+        const stagedManifest = join(stage, "cms-release.json");
+        for (const file of WORKER_FILES) {
+            plainFile(join(sourceRoot, file), sourceRoot);
+            collected.set(file, join(sourceRoot, file));
         }
-      }
+        collected.set(
+            "deploy/hostinger/notification-mail/worker.py",
+            join(sourceRoot, "scripts/notification-mail-worker.py"),
+        );
+        const generated = workerArtifacts(sourceRoot, tracked);
+        for (const [name, path] of [
+            ...collected,
+            ...[...generated.keys()].map((name) => [name, null]),
+        ].sort(([a], [b]) => a.localeCompare(b))) {
+            safePath(name);
+            const info =
+                path === null
+                    ? {size: generated.get(name).length, mode: 0o644}
+                    : plainFile(path, sourceRoot);
+            if (
+                tracked &&
+                path !== null &&
+                !name.startsWith("site/") &&
+                !tracked.has(relative(sourceRoot, path).split(sep).join("/"))
+            ) {
+                throw new Error(
+                    "Runtime input is not tracked by the release source commit.",
+                );
+            }
+            const data = path === null ? generated.get(name) : readFileSync(path);
+            total += data.length;
+            if (total > MAX_TOTAL_BYTES || data.length !== info.size)
+                throw new Error("Release input changed or exceeded its size bound.");
+            assertNoCredentials(data, name, publicKey, forbiddenValues);
+            if (
+                name.startsWith("site/") &&
+                name.endsWith(".js") &&
+                data.includes(Buffer.from(API_URL)) &&
+                data.includes(Buffer.from(publicKey))
+            )
+                configuredBundle = true;
+            const destination = join(stage, name);
+            mkdirSync(dirname(destination), {recursive: true, mode: 0o755});
+            writeFileSync(destination, data, {
+                flag: "wx",
+                mode: info.mode & 0o111 ? 0o755 : 0o644,
+            });
+            files.push({path: name, sha256: hash(data), size: data.length});
+        }
+        if (
+            !files.some((file) => file.path === "site/index.html") ||
+            !configuredBundle
+        )
+            throw new Error(
+                "Frontend build is missing its CMS public configuration.",
+            );
+        verifyCheckout();
+        const migrations = files
+            .filter((file) => file.path.startsWith("supabase/migrations/"))
+            .map((file) => {
+                const match = /^supabase\/migrations\/(\d{14})_([a-z0-9_]+)\.sql$/.exec(
+                    file.path,
+                );
+                if (!match) throw new Error("Unexpected migration path.");
+                return {version: match[1], path: file.path, sha256: file.sha256};
+            })
+            .sort((a, b) => a.version.localeCompare(b.version));
+        if (
+            !migrations.length ||
+            new Set(migrations.map((item) => item.version)).size !== migrations.length
+        )
+            throw new Error("Invalid migration inventory.");
+        // Verify proof inventories against the exact staged bytes entering the tar.
+        const runtime = runtimeMetadata(stage, migrations);
+        const list = join(stage, "release-files.list");
+        writeFileSync(list, files.map((file) => file.path).join("\0") + "\0", {
+            mode: 0o600,
+        });
+        archiveDescriptor = openSync(
+            stagedArchive,
+            constants.O_RDWR |
+            constants.O_CREAT |
+            constants.O_EXCL |
+            constants.O_NOFOLLOW,
+            0o600,
+        );
+        fchmodSync(archiveDescriptor, 0o600);
+        execFileSync(
+            "tar",
+            [
+                "--format=ustar",
+                "--sort=name",
+                "--mtime=@0",
+                "--owner=0",
+                "--group=0",
+                "--numeric-owner",
+                "-czf",
+                "-",
+                "--null",
+                "--verbatim-files-from",
+                "--files-from",
+                list,
+            ],
+            {
+                cwd: stage,
+                stdio: ["ignore", archiveDescriptor, "pipe"],
+            },
+        );
+        fsyncSync(archiveDescriptor);
+        const manifest = {
+            schemaVersion: 1,
+            repository: REPOSITORY,
+            branch: "main",
+            commit,
+            archiveSha256: archiveDigest(archiveDescriptor),
+            siteEntry: "site/index.html",
+            publicBuild: {apiUrl: API_URL, publishableKeySha256: hash(publicKey)},
+            files,
+            migrations,
+            runtime,
+        };
+        closeSync(archiveDescriptor);
+        archiveDescriptor = undefined;
+        writeFileSync(stagedManifest, JSON.stringify(manifest, null, 2) + "\n", {
+            flag: "wx",
+            mode: 0o600,
+        });
+        try {
+            linkSync(stagedArchive, join(target, "cms-release.tar.gz"));
+            linkSync(stagedManifest, join(target, "cms-release.json"));
+            fsyncSync(outputDescriptor);
+        } catch {
+            // Two fixed names cannot be published as an atomic pair. A late collision
+            // or I/O failure may leave an unpaired archive: fail and require operator
+            // inspection. Unlinking a final name could destroy another writer's leaf.
+            throw new Error(
+                "Release publication failed; refusing to overwrite existing artifacts. Inspect the output before retrying.",
+            );
+        }
+        return {archivePath, manifestPath, manifest};
+    } finally {
+        try {
+            if (archiveDescriptor !== undefined) closeSync(archiveDescriptor);
+        } finally {
+            try {
+                if (stageEntry !== undefined)
+                    rmSync(stageEntry, {recursive: true, force: true});
+            } finally {
+                try {
+                    if (stageDescriptor !== undefined) closeSync(stageDescriptor);
+                } finally {
+                    closeSync(outputDescriptor);
+                }
+            }
+        }
     }
-  }
 }
 
 if (
-  process.argv[1] &&
-  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+    process.argv[1] &&
+    resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
-  try {
-    const args = process.argv.slice(2);
-    const flags = {};
-    if (args.length % 2) throw new Error("Arguments require explicit values.");
-    for (let index = 0; index < args.length; index += 2) {
-      if (
-        !["--commit", "--output", "--source-root"].includes(args[index]) ||
-        flags[args[index]]
-      )
-        throw new Error("Unknown or repeated release argument.");
-      flags[args[index]] = args[index + 1];
+    try {
+        const args = process.argv.slice(2);
+        const flags = {};
+        if (args.length % 2) throw new Error("Arguments require explicit values.");
+        for (let index = 0; index < args.length; index += 2) {
+            if (
+                !["--commit", "--output", "--source-root"].includes(args[index]) ||
+                flags[args[index]]
+            )
+                throw new Error("Unknown or repeated release argument.");
+            flags[args[index]] = args[index + 1];
+        }
+        if (!flags["--output"])
+            throw new Error("A release output directory is required.");
+        const excluded = [
+            "SUPABASE_SERVICE_ROLE_KEY",
+            "SUPABASE_SECRET_KEY",
+            "POSTGRES_PASSWORD",
+            "JWT_SECRET",
+            "SMTP_PASS",
+            "PORTAL_NOTIFICATION_SMTP_PASSWORD",
+            "PORTAL_NOTIFICATION_SERVICE_KEY",
+            "PORTAL_PUSH_SERVICE_KEY",
+            "PORTAL_PUSH_VAPID_PRIVATE_KEY",
+        ]
+            .map((key) => process.env[key])
+            .filter(Boolean);
+        createRelease({
+            commit: flags["--commit"],
+            sourceRoot: flags["--source-root"] ?? ".",
+            outputDirectory: flags["--output"],
+            publicConfig: {
+                apiUrl: process.env.VITE_SUPABASE_URL,
+                publishableKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            },
+            forbiddenValues: excluded,
+        });
+        console.log(
+            "Created immutable CMS release archive and hash manifest; no credential values printed.",
+        );
+    } catch {
+        console.error(
+            "CMS release packaging failed; verify source, public build configuration and reviewed runtime provenance. Inspect output artifacts before retrying: failed publication may leave an unpaired artifact.",
+        );
+        process.exitCode = 1;
     }
-    if (!flags["--output"])
-      throw new Error("A release output directory is required.");
-    const excluded = [
-      "SUPABASE_SERVICE_ROLE_KEY",
-      "SUPABASE_SECRET_KEY",
-      "POSTGRES_PASSWORD",
-      "JWT_SECRET",
-      "SMTP_PASS",
-      "PORTAL_NOTIFICATION_SMTP_PASSWORD",
-      "PORTAL_NOTIFICATION_SERVICE_KEY",
-      "PORTAL_PUSH_SERVICE_KEY",
-      "PORTAL_PUSH_VAPID_PRIVATE_KEY",
-    ]
-      .map((key) => process.env[key])
-      .filter(Boolean);
-    createRelease({
-      commit: flags["--commit"],
-      sourceRoot: flags["--source-root"] ?? ".",
-      outputDirectory: flags["--output"],
-      publicConfig: {
-        apiUrl: process.env.VITE_SUPABASE_URL,
-        publishableKey: process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      },
-      forbiddenValues: excluded,
-    });
-    console.log(
-      "Created immutable CMS release archive and hash manifest; no credential values printed.",
-    );
-  } catch {
-    console.error(
-      "CMS release packaging failed; verify source, public build configuration and reviewed runtime provenance. Inspect output artifacts before retrying: failed publication may leave an unpaired artifact.",
-    );
-    process.exitCode = 1;
-  }
 }

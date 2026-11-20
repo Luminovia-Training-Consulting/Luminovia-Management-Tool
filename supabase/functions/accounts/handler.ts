@@ -15,10 +15,10 @@ export const roles = [
 // Allowed target roles are input values, not evidence of the caller's authority.
 export type AccountRole = (typeof roles)[number];
 // Validated invitation request with a durable retry key and optional organization binding.
-export interface Invitation {
+export interface Invitation<Role = AccountRole> {
   email: string;
   display_name: string;
-  role: AccountRole;
+    role: Role;
   organisation_id: string | null;
   idempotency_key: string;
 }
@@ -38,7 +38,14 @@ export interface AccountDependencies {
     name: string,
     args?: Record<string, unknown>,
   ) => Promise<RpcResult>;
-  sendInvitation: (invitation: Invitation, redirect: string) => Promise<string>;
+    privilegedRpc?: (
+        name: string,
+        args?: Record<string, unknown>,
+    ) => Promise<RpcResult>;
+    sendInvitation: (
+        invitation: Invitation<AccountRole | "participant">,
+        redirect: string,
+    ) => Promise<string>;
   createAccount?: (
     account: Invitation & { password: string },
   ) => Promise<string>;
@@ -111,6 +118,39 @@ export function parseInvitation(value: unknown): Invitation | null {
     role: role as AccountRole,
     organisation_id: organisation_id as string | null,
     idempotency_key,
+  };
+}
+
+/** Accept only the company-scoped participant invitation contract; role is fixed server-side. */
+export function parseCompanyParticipantInvitation(
+    value: unknown,
+): Invitation<"participant"> | null {
+    if (
+        !object(value) ||
+        Object.keys(value).some(
+            (key) =>
+                !["email", "display_name", "organisation_id", "idempotency_key"].includes(key),
+        )
+    )
+        return null;
+    const {email, display_name, organisation_id, idempotency_key} = value;
+    if (
+        typeof email !== "string" ||
+        email.trim().length > 254 ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
+        typeof display_name !== "string" ||
+        display_name.trim().length < 1 ||
+        display_name.trim().length > 120 ||
+        !uuid(organisation_id) ||
+        !uuid(idempotency_key)
+    )
+        return null;
+    return {
+        email: email.trim().toLowerCase(),
+        display_name: display_name.trim(),
+        role: "participant",
+        organisation_id,
+        idempotency_key,
   };
 }
 // Bound actual JSON bytes independently of Content-Length and reject invalid UTF-8.
@@ -394,8 +434,12 @@ export function createAccountHandler(deps: AccountDependencies) {
         if (
           !object(payload) ||
           typeof payload.password !== "string" ||
-          payload.password.length < 12 ||
+            payload.password.length < 8 ||
           payload.password.length > 128 ||
+            !/[A-Z]/.test(payload.password) ||
+            !/[a-z]/.test(payload.password) ||
+            !/[0-9]/.test(payload.password) ||
+            !/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?\/]/.test(payload.password) ||
           /[\x00-\x1f\x7f]/.test(payload.password)
         )
           return response(400, { error: "invalid_request" });
@@ -544,6 +588,107 @@ export function createAccountHandler(deps: AccountDependencies) {
           p_active: payload.active,
         });
       }
+        if (
+            path === "/v1/company-participant-invitations" &&
+            request.method === "POST"
+        ) {
+            if (
+                !deps.invitationsEnabled ||
+                !deps.privilegedRpc ||
+                !deps.completeInvitation
+            )
+                return response(503, {error: "invitations_disabled"});
+            const invitation = parseCompanyParticipantInvitation(await body(request));
+            if (!invitation) return response(400, {error: "invalid_request"});
+            const reservation = await deps.rpc(
+                token,
+                "reserve_company_participant_invitation",
+                {
+                    p_organisation_id: invitation.organisation_id,
+                    p_email: invitation.email,
+                    p_display_name: invitation.display_name,
+                    p_request_id: invitation.idempotency_key,
+                },
+            );
+            if (reservation.error)
+                return response(
+                    reservation.error.code === "42501"
+                        ? 403
+                        : reservation.error.code === "40001"
+                            ? 409
+                            : 400,
+                    {
+                        error:
+                            reservation.error.code === "42501"
+                                ? "permission_required"
+                                : "invalid_request",
+                    },
+                );
+            const requestId = object(reservation.data)
+                ? reservation.data.request_id
+                : null;
+            if (!uuid(requestId)) return response(202, {status: "requested"});
+            const claimed = await deps.privilegedRpc(
+                "claim_company_participant_invitation",
+                {p_request_id: requestId},
+            );
+            const delivery = object(claimed.data) ? claimed.data : null;
+            if (
+                claimed.error ||
+                !delivery ||
+                delivery.deliver !== true ||
+                !uuid(delivery.invitation_id) ||
+                !uuid(delivery.organisation_id) ||
+                typeof delivery.email !== "string" ||
+                typeof delivery.display_name !== "string" ||
+                typeof delivery.idempotency_key !== "string" ||
+                delivery.role !== "participant"
+            )
+                return response(202, {status: "requested"});
+            const reservedInvitation: Invitation<"participant"> = {
+                email: delivery.email,
+                display_name: delivery.display_name,
+                role: "participant",
+                organisation_id: delivery.organisation_id,
+                idempotency_key: delivery.idempotency_key,
+            };
+            try {
+                const userId = await deps.sendInvitation(
+                    reservedInvitation,
+                    `${deps.appOrigin}/auth/callback?type=invite`,
+                );
+                await deps.completeInvitation(
+                    delivery.invitation_id,
+                    userId,
+                    delivery.display_name,
+                    true,
+                );
+                await deps.privilegedRpc("finish_company_participant_invitation", {
+                    p_request_id: requestId,
+                    p_success: true,
+                });
+            } catch {
+                try {
+                    await deps.completeInvitation(
+                        delivery.invitation_id,
+                        null,
+                        delivery.display_name,
+                        false,
+                    );
+                } catch {
+                    // Never turn delivery diagnostics into account-existence evidence.
+                }
+                try {
+                    await deps.privilegedRpc("finish_company_participant_invitation", {
+                        p_request_id: requestId,
+                        p_success: false,
+                    });
+                } catch {
+                    // The service queue remains private and can be reconciled by operations.
+                }
+            }
+            return response(202, {status: "requested"});
+        }
       if (path === "/v1/invitations" && request.method === "POST") {
         if (!deps.invitationsEnabled) {
           return response(503, { error: "invitations_disabled" });

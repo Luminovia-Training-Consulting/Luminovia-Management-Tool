@@ -181,8 +181,8 @@ enable_signup = false
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
-# Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 12
+# New passwords require at least eight characters; Auth also enforces the configured character classes below.
+minimum_password_length = 8
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
 password_requirements = "lower_upper_letters_digits_symbols"
@@ -401,6 +401,9 @@ policy = "per_worker"
 inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
+
+[functions.mail-admin]
+verify_jwt = true
 
 [functions.calendar-feed]
 # Owner-issued revocable capability; the handler performs its own live checks.

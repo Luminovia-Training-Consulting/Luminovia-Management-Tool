@@ -14,6 +14,7 @@ import userEvent from "@testing-library/user-event";
 import { AccountsPage } from "./accounts";
 import { accountRoles } from "./api";
 const fake = vi.hoisted(() => ({
+    adminCatalog: false,
   capabilities: [] as string[],
   companyAccess: false,
   invoke: vi.fn(),
@@ -68,6 +69,7 @@ beforeEach(() => {
       mutations: { retry: false },
     },
   });
+    fake.adminCatalog = false;
   fake.capabilities = [];
   fake.companyAccess = false;
   fake.invoke.mockReset();
@@ -87,6 +89,7 @@ beforeEach(() => {
           role,
           permissions: [],
           assignable: [
+              ...(fake.adminCatalog ? ["admin", "management"] : []),
             "lecturer",
             "senior_lecturer",
             "client",
@@ -101,6 +104,7 @@ beforeEach(() => {
         items: [
           {
             id: "teacher-id",
+              luminovia_user_id: "LV-ABCD-1234-5678-9ABC-DEF0",
             display_name: "Anna",
             email: "anna@example.invalid",
             active: true,
@@ -161,12 +165,15 @@ describe("Account administration", () => {
       ).toBe(true),
     );
     expect(await screen.findByText("anna@example.invalid")).toBeVisible();
+      expect(
+          screen.getByText("LV-ABCD-1234-5678-9ABC-DEF0", {exact: true}),
+      ).toBeVisible();
   });
   it("offers only server-approved subordinate roles in editing and invitations", async () => {
     fake.capabilities = ["users.manage", "users.roles.manage"];
     page();
     const edit = await screen.findByRole("button", {
-      name: "Rollen bearbeiten: Anna",
+        name: "Rollen bearbeiten",
     });
     await waitFor(() => expect(edit).toBeEnabled());
     await userEvent.click(edit);
@@ -188,11 +195,30 @@ describe("Account administration", () => {
       screen.queryByRole("option", { name: "Management" }),
     ).not.toBeInTheDocument();
   });
+    it("offers management and administrative roles when the server catalog authorizes an admin", async () => {
+        fake.capabilities = ["users.manage", "users.roles.manage"];
+        fake.adminCatalog = true;
+        page();
+        const edit = await screen.findByRole("button", {
+            name: "Rollen bearbeiten",
+        });
+        await waitFor(() => expect(edit).toBeEnabled());
+        await userEvent.click(edit);
+        expect(
+            await screen.findByRole("checkbox", {name: "Administration"}),
+        ).toBeVisible();
+        expect(screen.getByRole("checkbox", {name: "Management"})).toBeVisible();
+        expect(
+            screen.queryByRole("checkbox", {
+                name: "Inhaberin / Plattformleitung",
+            }),
+        ).not.toBeInTheDocument();
+    });
   it("requires an authorised organisation before converting a lecturer to a company", async () => {
     fake.capabilities = ["users.manage", "users.roles.manage"];
     page();
     const edit = await screen.findByRole("button", {
-      name: "Rollen bearbeiten: Anna",
+        name: "Rollen bearbeiten",
     });
     await waitFor(() => expect(edit).toBeEnabled());
     await userEvent.click(edit);
@@ -219,7 +245,7 @@ describe("Account administration", () => {
     fake.companyAccess = true;
     page();
     const edit = await screen.findByRole("button", {
-      name: "Rollen bearbeiten: Anna",
+        name: "Rollen bearbeiten",
     });
     await waitFor(() => expect(edit).toBeEnabled());
     await userEvent.click(edit);
@@ -262,7 +288,7 @@ describe("Account administration", () => {
     });
     page();
     const edit = await screen.findByRole("button", {
-      name: "Rollen bearbeiten: Anna",
+        name: "Rollen bearbeiten",
     });
     await waitFor(() => expect(edit).toBeEnabled());
     await userEvent.click(edit);
@@ -282,7 +308,9 @@ describe("Account administration", () => {
     page();
     await screen.findByText("anna@example.invalid");
     expect(
-      screen.queryByRole("button", { name: "Rollen bearbeiten: Anna" }),
+        screen.queryByRole("button", {
+            name: "Rollen bearbeiten",
+        }),
     ).not.toBeInTheDocument();
   });
 });

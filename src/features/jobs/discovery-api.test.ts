@@ -103,11 +103,14 @@ describe("discovery data contracts", () => {
         .queryKey,
     );
   });
-  it("round trips deep links with combined original currency/unit/date/topic filters", () => {
+    it("round trips deep links with OR topics and explicit history opt-in", () => {
     const filters = jobFiltersSchema.parse({
       q: "literal %_ <script>",
       customer: "Fictional [office]",
-      topic_ids: ["d7000000-0000-4000-8000-000000000001"],
+        topic_ids: [
+            "d7000000-0000-4000-8000-000000000001",
+            "d7000000-0000-4000-8000-000000000002",
+        ],
       from: "2060-01-02",
       to: "2060-01-10",
       zone: "Australia/Brisbane",
@@ -117,12 +120,25 @@ describe("discovery data contracts", () => {
       max_total: 100,
       sort: "rate_desc",
       available_only: true,
+        include_history: true,
     });
-    expect(filtersFromParams(filterParams(filters))).toMatchObject({
+        const params = filterParams(filters);
+        expect(params.getAll("topic")).toEqual(filters.topic_ids);
+        expect(params.get("history")).toBe("1");
+        expect(filtersFromParams(params)).toMatchObject({
       success: true,
       data: filters,
     });
   });
+    it("defaults the open marketplace to upcoming offers without historical records", () => {
+        expect(jobFiltersSchema.parse({})).toMatchObject({
+            sort: "soonest",
+            include_history: false,
+        });
+        expect(defaultJobFilters.sort).toBe("soonest");
+        expect(defaultJobFilters.include_history).toBe(false);
+        expect(filterParams(defaultJobFilters).has("history")).toBe(false);
+    });
   it("supports old minimum-total URLs only with explicit currency and rejects invalid meaningful combinations", () => {
     expect(filterDraftFromParams(new URLSearchParams("min=100"))).toMatchObject(
       { min_total: 100, currency: "" },

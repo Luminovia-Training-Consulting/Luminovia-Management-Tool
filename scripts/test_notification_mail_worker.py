@@ -199,10 +199,8 @@ class DeliveryTests(unittest.TestCase):
         server = SmtpServer(mode)
         original = smtplib.SMTP
 
-        def connect(host, port, *, timeout, context):
-            self.assertEqual((host, port), ("smtp.hostinger.com", 465))
-            self.assertTrue(context.check_hostname)
-            self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+        def connect(host, port, *, timeout):
+            self.assertEqual((host, port), ("127.0.0.1", 2526))
             return original("127.0.0.1", server.server_address[1], timeout=timeout)
 
         return server, connect
@@ -212,7 +210,7 @@ class DeliveryTests(unittest.TestCase):
         http = ThreadingHTTPServer(("127.0.0.1", 0), CaptureRpcHandler)
         http.requests = []
         config = replace(self.config, api_url=f"http://127.0.0.1:{http.server_port}")
-        with server_context(server), server_context(http), patch.object(smtplib, "SMTP_SSL", connect):
+        with server_context(server), server_context(http), patch.object(smtplib, "SMTP", connect):
             result = worker.run(config)
         self.assertEqual(result["accepted"], 1)
         self.assertEqual(result["rpc_errors"], 0)
@@ -227,67 +225,55 @@ class DeliveryTests(unittest.TestCase):
 
     def test_actual_temporary_recipient_failure_is_safe_retry(self):
         server, connect = self.captured_smtp("temporary_recipient")
-        with server_context(server), patch.object(smtplib, "SMTP_SSL", connect):
+        with server_context(server), patch.object(smtplib, "SMTP", connect):
             outcome = worker.smtp_delivery(self.config, DELIVERY)
         self.assertEqual(outcome, ("retry", "smtp_recipient_rejected"))
         self.assertEqual(server.messages, [])
 
     def test_actual_permanent_recipient_failure_does_not_retry(self):
         server, connect = self.captured_smtp("permanent_recipient")
-        with server_context(server), patch.object(smtplib, "SMTP_SSL", connect):
+        with server_context(server), patch.object(smtplib, "SMTP", connect):
             outcome = worker.smtp_delivery(self.config, DELIVERY)
         self.assertEqual(outcome, ("failed", "smtp_recipient_rejected"))
         self.assertEqual(server.messages, [])
 
     def test_actual_explicit_data_rejection_is_safe_retry(self):
         server, connect = self.captured_smtp("temporary_data")
-        with server_context(server), patch.object(smtplib, "SMTP_SSL", connect):
+        with server_context(server), patch.object(smtplib, "SMTP", connect):
             outcome = worker.smtp_delivery(self.config, DELIVERY)
         self.assertEqual(outcome, ("retry", "smtp_data_rejected"))
         self.assertEqual(len(server.messages), 1)
 
     def test_actual_lost_final_data_response_becomes_uncertain(self):
         server, connect = self.captured_smtp("ambiguous_data")
-        with server_context(server), patch.object(smtplib, "SMTP_SSL", connect):
+        with server_context(server), patch.object(smtplib, "SMTP", connect):
             outcome = worker.smtp_delivery(self.config, DELIVERY)
         self.assertEqual(outcome, ("uncertain", "smtp_ambiguous"))
         self.assertEqual(len(server.messages), 1)
 
-    def test_587_requires_starttls_before_authentication(self):
-        connection = Mock()
-        connection.mail.return_value = (250, b"OK")
-        connection.rcpt.return_value = (250, b"OK")
-        connection.data.return_value = (250, b"OK")
-        with patch.object(smtplib, "SMTP", return_value=connection) as constructor:
-            self.assertEqual(worker.smtp_delivery(replace(self.config, smtp_port=587), DELIVERY), ("accepted", None))
-        constructor.assert_called_once_with("smtp.hostinger.com", 587, timeout=self.config.timeout)
-        self.assertEqual([call[0] for call in connection.mock_calls[:4]], ["ehlo", "starttls", "ehlo", "login"])
-        context = connection.starttls.call_args.kwargs["context"]
-        self.assertTrue(context.check_hostname)
-        self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
-
-    def test_starttls_failure_never_authenticates_or_sends(self):
-        connection = Mock()
-        connection.starttls.side_effect = smtplib.SMTPNotSupportedError("secret server response")
-        with patch.object(smtplib, "SMTP", return_value=connection):
-            result = worker.smtp_delivery(replace(self.config, smtp_port=587), DELIVERY)
-        self.assertEqual(result, ("retry", "smtp_connection"))
-        connection.login.assert_not_called()
-        connection.data.assert_not_called()
-
-    def test_certificate_failure_is_permanent_before_data(self):
-        with patch.object(smtplib, "SMTP_SSL", side_effect=ssl.SSLCertVerificationError("secret")):
-            self.assertEqual(worker.smtp_delivery(self.config, DELIVERY), ("failed", "smtp_tls"))
+    def test_worker_rejects_non_loopback_relays_before_network_access(self):
+        with patch.object(smtplib, "SMTP") as connect:
+            self.assertEqual(
+                worker.smtp_delivery(
+                    replace(self.config, smtp_host="smtp.hostinger.com"), DELIVERY
+                ),
+                ("failed", "smtp_relay_config"),
+            )
+            self.assertEqual(
+                worker.smtp_delivery(replace(self.config, smtp_port=465), DELIVERY),
+                ("failed", "smtp_relay_config"),
+            )
+        connect.assert_not_called()
 
     def test_connection_timeout_before_data_is_safe_retry(self):
-        with patch.object(smtplib, "SMTP_SSL", side_effect=TimeoutError("secret")):
+        with patch.object(smtplib, "SMTP", side_effect=TimeoutError("secret")):
             self.assertEqual(worker.smtp_delivery(self.config, DELIVERY), ("retry", "smtp_connection"))
 
     def test_close_failure_after_acceptance_does_not_resend(self):
         connection = Mock()
         connection.mail.return_value = connection.rcpt.return_value = connection.data.return_value = (250, b"OK")
         connection.close.side_effect = OSError("secret")
-        with patch.object(smtplib, "SMTP_SSL", return_value=connection):
+        with patch.object(smtplib, "SMTP", return_value=connection):
             self.assertEqual(worker.smtp_delivery(self.config, DELIVERY), ("accepted", None))
         connection.data.assert_called_once()
 
@@ -399,7 +385,7 @@ class OutboxTests(unittest.TestCase):
     def test_wall_deadline_before_data_finishes_known_safe_retry(self):
         rpc = Mock()
         rpc.call.side_effect = [0, [LEASE], DELIVERY, True]
-        with patch.object(smtplib, "SMTP_SSL", side_effect=lambda *_args, **_kwargs: time.sleep(0.1)):
+        with patch.object(smtplib, "SMTP", side_effect=lambda *_args, **_kwargs: time.sleep(0.1)):
             result = worker.run(self.config, rpc, budget_seconds=0.02)
         self.assertEqual(result["retry"], 1)
         self.assertEqual(rpc.call.call_args.args[1]["p_outcome"], "retry")
@@ -411,7 +397,7 @@ class OutboxTests(unittest.TestCase):
         connection = Mock()
         connection.mail.return_value = connection.rcpt.return_value = (250, b"OK")
         connection.data.side_effect = lambda *_args: time.sleep(0.1)
-        with patch.object(worker.ssl, "create_default_context", return_value=Mock()), patch.object(smtplib, "SMTP_SSL", return_value=connection):
+        with patch.object(smtplib, "SMTP", return_value=connection):
             result = worker.run(self.config, rpc, budget_seconds=0.02)
         self.assertEqual(result["uncertain"], 1)
         self.assertEqual(rpc.call.call_args.args[1]["p_outcome"], "uncertain")
@@ -434,7 +420,7 @@ class OutboxTests(unittest.TestCase):
         connection = Mock()
         connection.mail.return_value = connection.rcpt.return_value = (250, b"OK")
         connection.data.side_effect = lambda *_args: time.sleep(0.1)
-        with patch.object(worker.ssl, "create_default_context", return_value=Mock()), patch.object(smtplib, "SMTP_SSL", return_value=connection):
+        with patch.object(smtplib, "SMTP", return_value=connection):
             result = worker.run(replace(self.config, timeout=0.02), rpc, budget_seconds=0.02)
         self.assertEqual(result["uncertain"], 1)
         self.assertEqual(result["rpc_errors"], 1)

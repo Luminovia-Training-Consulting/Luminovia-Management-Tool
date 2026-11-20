@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import i18n from "../../lib/i18n";
+import type {Topic} from "../../lib/types";
 import { JobDiscovery } from "./discovery";
 import { defaultJobFilters } from "./discovery-api";
 const state = vi.hoisted(() => ({
@@ -88,6 +89,7 @@ function setup({
     }),
   views = [] as unknown[],
   readViews,
+                   topics = [] as Topic[],
   queryRetry = false,
   expandFilters = true,
 }: {
@@ -97,6 +99,7 @@ function setup({
   ) => Promise<{ data: unknown; error: unknown }>;
   views?: unknown[];
   readViews?: () => Promise<{ data: unknown; error: unknown }>;
+    topics?: Topic[];
   queryRetry?: boolean | number;
   expandFilters?: boolean;
 } = {}) {
@@ -141,7 +144,7 @@ function setup({
   });
   clients.push(client);
   client.setQueryData(["user-roles", state.actor], [role]);
-  client.setQueryData(["topics"], []);
+    client.setQueryData(["topics"], topics);
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
@@ -197,6 +200,53 @@ it("submits combined filters once instead of requesting every typed character an
   expect(
     state.rpc.mock.calls.filter(([n]) => n === "job_discovery"),
   ).toHaveLength(3);
+});
+it("matches any selected subject, combines other filters, and keeps history opt-in", async () => {
+    const topics: Topic[] = [
+        {
+            id: "d7000000-0000-4000-8000-000000000101",
+            label_de: "Fictional topic A",
+            label_en: "Fictional topic A",
+            kind: "topic",
+        },
+        {
+            id: "d7000000-0000-4000-8000-000000000102",
+            label_de: "Fictional topic B",
+            label_en: "Fictional topic B",
+            kind: "topic",
+        },
+    ];
+    setup({topics});
+    const user = userEvent.setup();
+    const topicA = screen.getByRole("checkbox", {name: "Fictional topic A"}),
+        topicB = screen.getByRole("checkbox", {name: "Fictional topic B"});
+    await user.click(topicA);
+    await user.click(topicB);
+    await user.click(
+        screen.getByLabelText(
+            "Vergangene, abgelaufene und belegte Aufträge einbeziehen",
+        ),
+    );
+    await user.click(screen.getByRole("button", {name: "Filter anwenden"}));
+    await waitFor(() =>
+        expect(
+            state.rpc.mock.calls.filter(([name]) => name === "job_discovery"),
+        ).toHaveLength(2),
+    );
+    const latest = state.rpc.mock.calls
+            .filter(([name]) => name === "job_discovery")
+            .at(-1)![1].p_filters,
+        filters = latest as { topic_ids: string[]; include_history: boolean; sort: string };
+    expect(filters).toMatchObject({
+        topic_ids: topics.map((topic) => topic.id),
+        include_history: true,
+        sort: "soonest",
+    });
+    const params = new URLSearchParams(
+        screen.getByLabelText("route").textContent ?? "",
+    );
+    expect(params.getAll("topic")).toEqual(topics.map((topic) => topic.id));
+    expect(params.get("history")).toBe("1");
 });
 it("hides old quote pages immediately after an observed role change and starts without their cursor", async () => {
   const client = setup();

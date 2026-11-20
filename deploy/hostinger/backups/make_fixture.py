@@ -27,6 +27,7 @@ portal = args.directory / 'fictional-portal'
 for name in ['source', 'www', 'control', 'private/backups', 'data/storage', 'data/mailpit', 'postgres-custom', 'caddy-tls']:
     private_dir(portal / name)
 fixtures = {'private/selfhost.env': b'FICTIONAL_AUTH_KEY=never-log-this\n', 'data/storage/private-fixture.txt': b'Fictional private object\x00\xff\n', 'data/mailpit/mailpit.db': b'Fictional stopped mail capture', 'postgres-custom/vault-key': b'Fictional encryption key', 'caddy-tls/private.key': b'Fictional TLS key'}
+fixtures['private/selfhost.env.notification.env'] = b"PORTAL_NOTIFICATION_MAIL_ENABLED='false'\nPORTAL_NOTIFICATION_SERVICE_KEY='FICTIONAL_SERVICE_KEY'\nPORTAL_NOTIFICATION_SMTP_PASSWORD='FICTIONAL_RELAY_PASSWORD'\n"
 for name, data in fixtures.items():
     path = portal / name
     path.write_bytes(data)

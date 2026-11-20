@@ -10,7 +10,7 @@ const payload = {
   role: "admin",
   organisation_id: null,
   idempotency_key: requestId,
-  password: "Fictional!Password123",
+    password: "Aa1!aaaa",
 };
 function fixture(overrides: Partial<AccountDependencies> = {}) {
   const calls: string[] = [];
@@ -82,6 +82,9 @@ Deno.test(
       { ...payload, role: "participant" },
       { ...payload, role: "client" },
       { ...payload, password: "short" },
+        {...payload, password: "Aa1!aaa"},
+        {...payload, password: "Aa1 aaaa"},
+        {...payload, password: "Password123"},
       { ...payload, actor_id: userId },
       { ...payload, password: "Secret\nInjected123" },
     ]) {

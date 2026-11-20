@@ -2,384 +2,462 @@
  * Published OpenAPI contract for the account HTTP API. Schemas describe input/output; handlers and current database functions still enforce permissions.
  */
 // Define a JSON response for the published HTTP contract.
-const jsonResponse = (schema: unknown = { type: "object" }) => ({
-  description: "Confirmed server result",
-  content: { "application/json": { schema } },
+const jsonResponse = (schema: unknown = {type: "object"}) => ({
+    description: "Confirmed server result",
+    content: {"application/json": {schema}},
 });
 const errors = {
-  "400": { description: "Invalid request" },
-  "401": { description: "Valid active account required" },
-  "403": {
-    description: "Current database capability or resource scope required",
-  },
-  "503": { description: "Unavailable; no success is implied" },
+    "400": {description: "Invalid request"},
+    "401": {description: "Valid active account required"},
+    "403": {
+        description: "Current database capability or resource scope required",
+    },
+    "503": {description: "Unavailable; no success is implied"},
 };
 // Describe a required JSON request body without implying runtime authorization.
 const jsonBody = (schema: unknown) => ({
-  required: true,
-  content: { "application/json": { schema } },
+    required: true,
+    content: {"application/json": {schema}},
 });
 const userId = [
-  {
-    name: "id",
-    in: "path",
-    required: true,
-    schema: { type: "string", format: "uuid" },
-  },
+    {
+        name: "id",
+        in: "path",
+        required: true,
+        schema: {type: "string", format: "uuid"},
+    },
 ];
 const role = {
-  type: "string",
-  enum: [
-    "admin",
-    "management",
-    "senior_lecturer",
-    "lecturer",
-    "client",
-    "guest",
-  ],
+    type: "string",
+    enum: [
+        "admin",
+        "management",
+        "senior_lecturer",
+        "lecturer",
+        "client",
+        "guest",
+    ],
 };
 export const accountOpenApi = {
-  openapi: "3.1.0",
-  info: {
-    title: "Luminovia Account API",
-    version: "1.0.0",
-    description:
-      "Bearer-authenticated account API. Admin operations require current database capabilities and active-account status. Course/job/chat/wiki/files/reviews/finance use the same JWT through Supabase /rest/v1/rpc and the authenticated files function; see API_REFERENCE.md. Payments are tracking records and do not transfer money.",
-  },
-  servers: [{ url: "/functions/v1/accounts" }],
-  security: [{ bearerAuth: [], publicApiKey: [] }],
-  components: {
-    securitySchemes: {
-      bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
-      publicApiKey: {
-        type: "apiKey",
-        in: "header",
-        name: "apikey",
-        description: "Public Supabase key; never service-role credentials",
-      },
-    },
-  },
-  paths: {
-    "/v1/deletions/access": {
-      get: {
-        operationId: "deletionAccess",
-        summary:
-          "Current typed permanent-deletion capabilities; no private content",
-        responses: { "200": jsonResponse(), ...errors },
-      },
-    },
-    "/v1/deletions/resources": {
-      get: {
-        operationId: "deletionResources",
-        summary:
-          "Authorised metadata targets; companies see only current own jobs",
-        parameters: [
-          {
-            name: "kind",
-            in: "query",
-            required: true,
-            schema: { type: "string", pattern: "^[a-z_]{1,40}$" },
-          },
-          {
-            name: "q",
-            in: "query",
-            schema: { type: "string", maxLength: 120 },
-          },
-          {
-            name: "cursor",
-            in: "query",
-            schema: { type: "string", format: "uuid" },
-          },
-          {
-            name: "limit",
-            in: "query",
-            schema: { type: "integer", minimum: 1, maximum: 100, default: 25 },
-          },
-        ],
-        responses: { "200": jsonResponse(), ...errors },
-      },
-    },
-    "/v1/deletions/preview": {
-      post: {
-        operationId: "deletionPreview",
-        summary:
-          "Review exact target, dependency counts and blockers before irreversible confirmation",
-        requestBody: jsonBody({
-          type: "object",
-          additionalProperties: false,
-          required: ["kind", "id"],
-          properties: {
-            kind: { type: "string", pattern: "^[a-z_]{1,40}$" },
-            id: { type: "string", format: "uuid" },
-          },
-        }),
-        responses: {
-          "200": jsonResponse(),
-          "409": { description: "Target or dependency conflict" },
-          ...errors,
-        },
-      },
-    },
-    "/v1/deletions/confirm": {
-      post: {
-        operationId: "deletionConfirm",
-        summary:
-          "Confirm an unexpired actor-bound plan; no trash, undo or optimistic success",
-        requestBody: jsonBody({
-          type: "object",
-          additionalProperties: false,
-          required: ["plan_id", "request_id", "confirmation"],
-          properties: {
-            plan_id: { type: "string", format: "uuid" },
-            request_id: { type: "string", format: "uuid" },
-            confirmation: { const: "DELETE" },
-          },
-        }),
-        responses: {
-          "200": jsonResponse(),
-          "202": {
-            description:
-              "Irreversible deletion is still pending; not completed",
-          },
-          "409": {
-            description: "Plan expired, scope changed or dependencies conflict",
-          },
-          ...errors,
-        },
-      },
-    },
-    "/v1/deletions/operations": {
-      get: {
-        operationId: "deletionOperations",
-        summary:
-          "Recover currently authorised incomplete deletion receipts after reload",
-        responses: { "200": jsonResponse(), ...errors },
-      },
-    },
-    "/v1/deletions/operations/{id}": {
-      post: {
-        operationId: "deletionResume",
-        summary:
-          "Resume a confirmed operation under current caller permissions and assurance",
-        parameters: userId,
-        requestBody: jsonBody({ type: "object", additionalProperties: false }),
-        responses: {
-          "200": jsonResponse(),
-          "202": {
-            description: "Pending; active writers or external work remain",
-          },
-          "409": { description: "Dependency conflict" },
-          ...errors,
-        },
-      },
-    },
-    "/v1/me": {
-      get: {
-        operationId: "accountMe",
-        summary: "Own profile, roles and permissions",
-        responses: { "200": jsonResponse(), ...errors },
-      },
-      patch: {
-        operationId: "saveOwnAccount",
-        summary: "Edit own non-privileged profile fields",
-        requestBody: jsonBody({
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            display_name: { type: "string", minLength: 1, maxLength: 120 },
-            bio_de: { type: "string", maxLength: 4000 },
-            bio_en: { type: "string", maxLength: 4000 },
-            phone: { type: ["string", "null"], maxLength: 50 },
-            time_zone: { type: "string" },
-            locale: { enum: ["de", "en"] },
-          },
-        }),
-        responses: { "200": jsonResponse(), ...errors },
-      },
-    },
-    "/v1/users": {
-      post: {
-        summary: "Create an individual account without sending email",
+    openapi: "3.1.0",
+    info: {
+        title: "Luminovia Account API",
+        version: "1.0.0",
         description:
-          "Requires current account/role administration. Company accounts require an organisation. Owner and retired participant roles cannot be assigned. The password is transient and is never returned or stored in the creation request.",
-        requestBody: jsonBody({
-          type: "object",
-          additionalProperties: false,
-          required: [
-            "email",
-            "display_name",
-            "password",
-            "role",
-            "idempotency_key",
-          ],
-          properties: {
-            email: { type: "string", format: "email", maxLength: 254 },
-            display_name: { type: "string", minLength: 1, maxLength: 120 },
-            password: {
-              type: "string",
-              minLength: 12,
-              maxLength: 128,
-              writeOnly: true,
+            "Bearer-authenticated account API. Admin operations require current database capabilities and active-account status. Course/job/chat/wiki/files/reviews/finance use the same JWT through Supabase /rest/v1/rpc and the authenticated files function; see API_REFERENCE.md. Payments are tracking records and do not transfer money.",
+    },
+    servers: [{url: "/functions/v1/accounts"}],
+    security: [{bearerAuth: [], publicApiKey: []}],
+    components: {
+        securitySchemes: {
+            bearerAuth: {type: "http", scheme: "bearer", bearerFormat: "JWT"},
+            publicApiKey: {
+                type: "apiKey",
+                in: "header",
+                name: "apikey",
+                description: "Public Supabase key; never service-role credentials",
             },
-            role,
-            organisation_id: { type: ["string", "null"], format: "uuid" },
-            idempotency_key: { type: "string", format: "uuid" },
-          },
-        }),
-        responses: {
-          "201": jsonResponse(),
-          "200": jsonResponse(),
-          "409": {
-            description:
-              "A previous creation request is still running or failed",
-          },
-          "502": {
-            description:
-              "Account creation was not confirmed; no invitation was sent",
-          },
-          ...errors,
         },
-      },
-      get: {
-        operationId: "listAccounts",
-        summary: "Capability-authorised account directory",
-        parameters: [
-          {
-            name: "q",
-            in: "query",
-            schema: { type: "string", maxLength: 120 },
-          },
-          {
-            name: "limit",
-            in: "query",
-            schema: { type: "integer", minimum: 1, maximum: 100, default: 50 },
-          },
-          {
-            name: "offset",
-            in: "query",
-            schema: {
-              type: "integer",
-              minimum: 0,
-              maximum: 100000,
-              default: 0,
-            },
-          },
-        ],
-        responses: { "200": jsonResponse(), ...errors },
-      },
     },
-    "/v1/roles": {
-      get: {
-        operationId: "accountRoleCatalog",
-        summary: "Read available roles and current database capabilities",
-        responses: {
-          "200": jsonResponse({ type: "array", items: { type: "object" } }),
-          ...errors,
+    paths: {
+        "/v1/deletions/access": {
+            get: {
+                operationId: "deletionAccess",
+                summary:
+                    "Current typed permanent-deletion capabilities; no private content",
+                responses: {"200": jsonResponse(), ...errors},
+            },
         },
-      },
-    },
-    "/v1/users/{id}/roles": {
-      put: {
-        operationId: "setAccountRoles",
-        summary: "Audited role assignment; self/last-admin protection",
-        parameters: userId,
-        requestBody: jsonBody({
-          type: "object",
-          additionalProperties: false,
-          required: ["roles"],
-          properties: {
-            roles: { type: "array", minItems: 1, maxItems: 7, items: role },
-            organisation_id: {
-              type: "string",
-              format: "uuid",
-              description:
-                "For company conversion, atomically assign the client role and this authorised organisation.",
+        "/v1/deletions/resources": {
+            get: {
+                operationId: "deletionResources",
+                summary:
+                    "Authorised metadata targets; companies see only current own jobs",
+                parameters: [
+                    {
+                        name: "kind",
+                        in: "query",
+                        required: true,
+                        schema: {type: "string", pattern: "^[a-z_]{1,40}$"},
+                    },
+                    {
+                        name: "q",
+                        in: "query",
+                        schema: {type: "string", maxLength: 120},
+                    },
+                    {
+                        name: "cursor",
+                        in: "query",
+                        schema: {type: "string", format: "uuid"},
+                    },
+                    {
+                        name: "limit",
+                        in: "query",
+                        schema: {type: "integer", minimum: 1, maximum: 100, default: 25},
+                    },
+                ],
+                responses: {"200": jsonResponse(), ...errors},
             },
-          },
-        }),
-        responses: { "200": jsonResponse(), ...errors },
-      },
-    },
-    "/v1/users/{id}/status": {
-      patch: {
-        operationId: "setAccountStatus",
-        summary: "Reversible activation/suspension; self/last-admin protection",
-        parameters: userId,
-        requestBody: jsonBody({
-          type: "object",
-          additionalProperties: false,
-          required: ["active"],
-          properties: { active: { type: "boolean" } },
-        }),
-        responses: { "200": jsonResponse({ type: "null" }), ...errors },
-      },
-    },
-    "/v1/users/{id}/organisations/{organisationId}": {
-      put: {
-        operationId: "assignClientOrganisation",
-        summary:
-          "Grant an existing client scoped organisation access; admin/owner capability required",
-        parameters: [
-          ...userId,
-          {
-            name: "organisationId",
-            in: "path",
-            required: true,
-            schema: { type: "string", format: "uuid" },
-          },
-        ],
-        responses: { "200": jsonResponse(), ...errors },
-      },
-      delete: {
-        operationId: "revokeClientOrganisation",
-        summary:
-          "Revoke organisation access immediately without deleting historical records",
-        parameters: [
-          ...userId,
-          {
-            name: "organisationId",
-            in: "path",
-            required: true,
-            schema: { type: "string", format: "uuid" },
-          },
-        ],
-        responses: { "200": jsonResponse(), ...errors },
-      },
-    },
-    "/v1/invitations": {
-      post: {
-        operationId: "inviteAccount",
-        summary:
-          "Idempotent captured/approved email invitation; authoritative role and optional client organisation",
-        requestBody: jsonBody({
-          type: "object",
-          additionalProperties: false,
-          required: ["email", "role", "idempotency_key"],
-          properties: {
-            email: { type: "string", format: "email", maxLength: 254 },
-            display_name: { type: "string", maxLength: 120 },
-            role,
-            organisation_id: {
-              type: ["string", "null"],
-              format: "uuid",
-              description: "Required exactly for client role",
-            },
-            idempotency_key: { type: "string", format: "uuid" },
-          },
-        }),
-        responses: {
-          "200": jsonResponse(),
-          "409": {
-            description: "Request identity reused for a different invitation",
-          },
-          "429": { description: "Durable invitation rate limit reached" },
-          "502": {
-            description:
-              "Uncertain email send; reservation retained for reconciliation",
-          },
-          ...errors,
         },
-      },
+        "/v1/deletions/preview": {
+            post: {
+                operationId: "deletionPreview",
+                summary:
+                    "Review exact target, dependency counts and blockers before irreversible confirmation",
+                requestBody: jsonBody({
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["kind", "id"],
+                    properties: {
+                        kind: {type: "string", pattern: "^[a-z_]{1,40}$"},
+                        id: {type: "string", format: "uuid"},
+                    },
+                }),
+                responses: {
+                    "200": jsonResponse(),
+                    "409": {description: "Target or dependency conflict"},
+                    ...errors,
+                },
+            },
+        },
+        "/v1/deletions/confirm": {
+            post: {
+                operationId: "deletionConfirm",
+                summary:
+                    "Confirm an unexpired actor-bound plan; no trash, undo or optimistic success",
+                requestBody: jsonBody({
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["plan_id", "request_id", "confirmation"],
+                    properties: {
+                        plan_id: {type: "string", format: "uuid"},
+                        request_id: {type: "string", format: "uuid"},
+                        confirmation: {const: "DELETE"},
+                    },
+                }),
+                responses: {
+                    "200": jsonResponse(),
+                    "202": {
+                        description:
+                            "Irreversible deletion is still pending; not completed",
+                    },
+                    "409": {
+                        description: "Plan expired, scope changed or dependencies conflict",
+                    },
+                    ...errors,
+                },
+            },
+        },
+        "/v1/deletions/operations": {
+            get: {
+                operationId: "deletionOperations",
+                summary:
+                    "Recover currently authorised incomplete deletion receipts after reload",
+                responses: {"200": jsonResponse(), ...errors},
+            },
+        },
+        "/v1/deletions/operations/{id}": {
+            post: {
+                operationId: "deletionResume",
+                summary:
+                    "Resume a confirmed operation under current caller permissions and assurance",
+                parameters: userId,
+                requestBody: jsonBody({type: "object", additionalProperties: false}),
+                responses: {
+                    "200": jsonResponse(),
+                    "202": {
+                        description: "Pending; active writers or external work remain",
+                    },
+                    "409": {description: "Dependency conflict"},
+                    ...errors,
+                },
+            },
+        },
+        "/v1/me": {
+            get: {
+                operationId: "accountMe",
+                summary: "Own profile, roles and permissions",
+                responses: {"200": jsonResponse(), ...errors},
+            },
+            patch: {
+                operationId: "saveOwnAccount",
+                summary: "Edit own non-privileged profile fields",
+                requestBody: jsonBody({
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                        display_name: {type: "string", minLength: 1, maxLength: 120},
+                        bio_de: {type: "string", maxLength: 4000},
+                        bio_en: {type: "string", maxLength: 4000},
+                        phone: {type: ["string", "null"], maxLength: 50},
+                        time_zone: {type: "string"},
+                        locale: {enum: ["de", "en"]},
+                    },
+                }),
+                responses: {"200": jsonResponse(), ...errors},
+            },
+        },
+        "/v1/users": {
+            post: {
+                summary: "Create an individual account without sending email",
+                description:
+                    "Requires current account/role administration. Company accounts require an organisation. Owner and retired participant roles cannot be assigned. Passwords must contain 8–128 characters, including uppercase and lowercase letters, a digit and one of the symbols configured by Supabase Auth. The password is transient and is never returned or stored in the creation request.",
+                requestBody: jsonBody({
+                    type: "object",
+                    additionalProperties: false,
+                    required: [
+                        "email",
+                        "display_name",
+                        "password",
+                        "role",
+                        "idempotency_key",
+                    ],
+                    properties: {
+                        email: {type: "string", format: "email", maxLength: 254},
+                        display_name: {type: "string", minLength: 1, maxLength: 120},
+                        password: {
+                            type: "string",
+                            minLength: 8,
+                            maxLength: 128,
+                            pattern:
+                                "^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\\-=\\[\\]{}|;:,.<>?/]).+$",
+                            writeOnly: true,
+                        },
+                        role,
+                        organisation_id: {type: ["string", "null"], format: "uuid"},
+                        idempotency_key: {type: "string", format: "uuid"},
+                    },
+                }),
+                responses: {
+                    "201": jsonResponse(),
+                    "200": jsonResponse(),
+                    "409": {
+                        description:
+                            "A previous creation request is still running or failed",
+                    },
+                    "502": {
+                        description:
+                            "Account creation was not confirmed; no invitation was sent",
+                    },
+                    ...errors,
+                },
+            },
+            get: {
+                operationId: "listAccounts",
+                summary: "Capability-authorised account directory",
+                description:
+                    "Requires the current users.manage capability and returns a bounded account projection. Every row includes a stable Luminovia User ID for display; that ID is not a lookup credential or proof of identity or permission.",
+                parameters: [
+                    {
+                        name: "q",
+                        in: "query",
+                        schema: {type: "string", maxLength: 120},
+                    },
+                    {
+                        name: "limit",
+                        in: "query",
+                        schema: {type: "integer", minimum: 1, maximum: 100, default: 50},
+                    },
+                    {
+                        name: "offset",
+                        in: "query",
+                        schema: {
+                            type: "integer",
+                            minimum: 0,
+                            maximum: 100000,
+                            default: 0,
+                        },
+                    },
+                ],
+                responses: {
+                    "200": jsonResponse({
+                        type: "object",
+                        required: ["items", "total", "limit", "offset"],
+                        properties: {
+                            items: {
+                                type: "array",
+                                items: {
+                                    type: "object",
+                                    required: [
+                                        "id",
+                                        "luminovia_user_id",
+                                        "display_name",
+                                        "email",
+                                        "active",
+                                        "locale",
+                                        "time_zone",
+                                        "created_at",
+                                        "can_assign_roles",
+                                        "can_change_active",
+                                        "roles",
+                                    ],
+                                    properties: {
+                                        id: {type: "string", format: "uuid"},
+                                        luminovia_user_id: {
+                                            type: "string",
+                                            pattern: "^LV-[0-9A-F]{4}(?:-[0-9A-F]{4}){4}$",
+                                            description:
+                                                "Stable display reference; not an account lookup or authorization credential.",
+                                        },
+                                        display_name: {type: "string"},
+                                        email: {type: "string", format: "email"},
+                                        active: {type: "boolean"},
+                                        locale: {type: "string"},
+                                        time_zone: {type: "string"},
+                                        created_at: {type: "string", format: "date-time"},
+                                        can_assign_roles: {type: "boolean"},
+                                        can_change_active: {type: "boolean"},
+                                        roles: {type: "array", items: role},
+                                    },
+                                },
+                            },
+                            total: {type: "integer", minimum: 0},
+                            limit: {type: "integer", minimum: 1, maximum: 100},
+                            offset: {type: "integer", minimum: 0},
+                        },
+                    }),
+                    ...errors,
+                },
+            },
+        },
+        "/v1/roles": {
+            get: {
+                operationId: "accountRoleCatalog",
+                summary: "Read available roles and current database capabilities",
+                responses: {
+                    "200": jsonResponse({type: "array", items: {type: "object"}}),
+                    ...errors,
+                },
+            },
+        },
+        "/v1/users/{id}/roles": {
+            put: {
+                operationId: "setAccountRoles",
+                summary: "Audited role assignment; self/last-admin protection",
+                parameters: userId,
+                requestBody: jsonBody({
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["roles"],
+                    properties: {
+                        roles: {type: "array", minItems: 1, maxItems: 7, items: role},
+                        organisation_id: {
+                            type: "string",
+                            format: "uuid",
+                            description:
+                                "For company conversion, atomically assign the client role and this authorised organisation.",
+                        },
+                    },
+                }),
+                responses: {"200": jsonResponse(), ...errors},
+            },
+        },
+        "/v1/users/{id}/status": {
+            patch: {
+                operationId: "setAccountStatus",
+                summary: "Reversible activation/suspension; self/last-admin protection",
+                parameters: userId,
+                requestBody: jsonBody({
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["active"],
+                    properties: {active: {type: "boolean"}},
+                }),
+                responses: {"200": jsonResponse({type: "null"}), ...errors},
+            },
+        },
+        "/v1/users/{id}/organisations/{organisationId}": {
+            put: {
+                operationId: "assignClientOrganisation",
+                summary:
+                    "Grant an existing client scoped organisation access; admin/owner capability required",
+                parameters: [
+                    ...userId,
+                    {
+                        name: "organisationId",
+                        in: "path",
+                        required: true,
+                        schema: {type: "string", format: "uuid"},
+                    },
+                ],
+                responses: {"200": jsonResponse(), ...errors},
+            },
+            delete: {
+                operationId: "revokeClientOrganisation",
+                summary:
+                    "Revoke organisation access immediately without deleting historical records",
+                parameters: [
+                    ...userId,
+                    {
+                        name: "organisationId",
+                        in: "path",
+                        required: true,
+                        schema: {type: "string", format: "uuid"},
+                    },
+                ],
+                responses: {"200": jsonResponse(), ...errors},
+            },
+        },
+        "/v1/invitations": {
+            post: {
+                operationId: "inviteAccount",
+                summary:
+                    "Idempotent captured/approved email invitation; authoritative role and optional client organisation",
+                requestBody: jsonBody({
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["email", "role", "idempotency_key"],
+                    properties: {
+                        email: {type: "string", format: "email", maxLength: 254},
+                        display_name: {type: "string", maxLength: 120},
+                        role,
+                        organisation_id: {
+                            type: ["string", "null"],
+                            format: "uuid",
+                            description: "Required exactly for client role",
+                        },
+                        idempotency_key: {type: "string", format: "uuid"},
+                    },
+                }),
+                responses: {
+                    "200": jsonResponse(),
+                    "409": {
+                        description: "Request identity reused for a different invitation",
+                    },
+                    "429": {description: "Durable invitation rate limit reached"},
+                    "502": {
+                        description:
+                            "Uncertain email send; reservation retained for reconciliation",
+                    },
+                    ...errors,
+                },
+            },
+        },
+        "/v1/company-participant-invitations": {
+            post: {
+                operationId: "inviteCompanyParticipant",
+                summary: "Request a company-scoped participant-only invitation; no role or account lookup is exposed",
+                requestBody: jsonBody({
+                    type: "object",
+                    additionalProperties: false,
+                    required: ["email", "display_name", "organisation_id", "idempotency_key"],
+                    properties: {
+                        email: {type: "string", format: "email", maxLength: 254},
+                        display_name: {type: "string", minLength: 1, maxLength: 120},
+                        organisation_id: {type: "string", format: "uuid"},
+                        idempotency_key: {type: "string", format: "uuid"},
+                    },
+                }),
+                responses: {
+                    "202": jsonResponse({
+                        type: "object",
+                        properties: {
+                            status: {const: "requested"},
+                        },
+                    }),
+                    ...errors,
+                },
+            },
+        },
     },
-  },
 };

@@ -10,17 +10,20 @@ Base release: self-hosted/v0.8.4, commit 189adda99d1b56da55fc5a6ee3f849354aaea92
 
 The vendor snapshot is retained as historical provenance. The active PostgreSQL image is the separately reviewed patch `supabase/postgres:17.12.0.000@sha256:8630950b489ecc70563300180287a98c192a4a48f5ae00b4febdaeea1abe85de`; actual engine 17.12, candidate restore and subsequent CMS acceptance are recorded in [postgres-upgrade-provenance.json](postgres-upgrade-provenance.json). The earlier 17.6 image is only a historical approved backup/restore source.
 
-This composition retains PostgreSQL, Auth, PostgREST, Realtime, Storage, Edge Runtime and Envoy; it omits Studio, postgres-meta, Supavisor, imgproxy, Analytics/Vector and external S3 services. Private Mailpit captures development emails without sending them to recipients. Its immutable Supabase-distributed image digest was independently inspected locally; its /mailpit readyz health command matches the image metadata.
+This composition retains PostgreSQL, Auth, PostgREST, Realtime, Storage, Edge Runtime and Envoy; it omits Studio, postgres-meta, Supavisor, imgproxy, Analytics/Vector and external S3 services. A pinned, app-owned private SMTP relay serves Auth and the host notification worker; its upstream SMTP/optional IMAP credentials are stored in Supabase Vault and remain unset until an administrator configures them. Mailpit remains the capture sink for local and isolated candidate Auth mail, never for real
+recipients.
 
-The local Envoy files preserve upstream API-key translation, JWT enforcement and function-owned CORS. Removed routes include Studio, metadata/SQL, GraphQL and Realtime administration. Only the three reviewed application Edge functions (`files`, `invite-lecturer`, `accounts`) are routed; slash boundaries allow account API subpaths while similarly named/unknown paths return 404. No gateway access logger is configured, so authentication query strings do not enter an access log. The official Envoy bootstrap and internal cluster definitions are retained, with only the five required API clusters.
+The local Envoy files preserve upstream API-key translation, JWT enforcement and function-owned CORS. Removed routes include Studio, metadata/SQL, GraphQL and Realtime administration. Only the reviewed application Edge functions (`files`, `invite-lecturer`, `accounts`, `course-documents`, `calendar-feed`, `website-enquiries`, `mail-admin`) are routed; slash boundaries allow account API subpaths while similarly named/unknown paths return 404. `mail-admin` requires JWT verification and a live SQL
+mail-administration permission on every request. No gateway access logger is configured, so authentication query strings do not enter an access log. The official Envoy bootstrap and internal cluster definitions are retained, with only the required API clusters.
 
-runtime/index.ts and memory-pressure.ts derive from the pinned official main function router. Local adaptations are the explicit three-worker allowlist and worker memory ceiling: files 1024 MiB, other functions 128 MiB. The container default ceiling is 1280 MiB, shared by the main worker and all workers. These are limits, not preallocated RAM. The small machine can still run out of memory; future large-file processing has no acceptance claim. Root deployment owns host swap and actual resource observations.
+runtime/index.ts and memory-pressure.ts derive from the pinned official main function router. Local adaptations are the explicit seven-worker allowlist and worker memory ceiling: files 1024 MiB, other functions 128 MiB. The container default ceiling is 1280 MiB, shared by the main worker and all workers. These are limits, not preallocated RAM. The small machine can still run out of memory; future large-file processing has no acceptance claim. Root deployment owns host swap and actual resource
+observations.
 
 ## Host/network agreement
 
 The external Docker network is luminovia-portal-backend by default. Create it before starting either Compose project. Caddy and ClamAV join this same network. Caddy mounts `/opt/luminovia-portal/www` at `/srv`, follows `/srv/current` for the active release, and serves shared immutable assets from `/srv/assets`. Keep that parent mount stable when switching releases; never put secrets or data under it.
 
-Caddy proxies the public API prefix /backend/ to api:8000 while stripping /backend. Envoy's service has aliases api, api-gw, envoy and kong. All backend service ports stay inside Docker. The sole host-bound port is Mailpit's web/API on 127.0.0.1:8025 for operator inspection or an SSH tunnel; there is no public mailbox UI and no published SMTP listener.
+Caddy proxies the public API prefix /backend/ to api:8000 while stripping /backend. Envoy's service has aliases api, api-gw, envoy and kong. All backend service ports stay inside Docker except the worker SMTP port, which is published only as `127.0.0.1:2526`; Mailpit's web/API is likewise loopback-only on `127.0.0.1:8025`. There is no public mailbox UI, SMTP listener or mail-relay control endpoint.
 
 Caddy must allow only the intended Auth, REST, Realtime WebSocket, Storage and named Functions API routes. In particular, block Auth administration from the public Caddy route; the application Edge functions can still use Auth's administrator API over the internal gateway. Do not expose Studio, SQL, metadata or private files through another Caddy route.
 
@@ -36,7 +39,17 @@ Run from the repository root, using an ignored private output path:
       --api-origin https://cms.luminovia.org/backend \
       --data-dir /opt/luminovia-portal/data
 
-The command creates the private server file and a separate .public.env file containing only VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY. Both files have mode 0600. Existing files are never overwritten. Credential values are never printed. Do not copy the complete server file into a frontend build or static document root.
+The command creates three mode-0600 files: the private server file, `<server-env>.notification.env` for the disabled worker, and a `.public.env` containing only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. The notification file has only its own service-role key and generated internal relay credential; provider mail passwords remain in Vault. Existing files are never overwritten. Credential values are never printed. Do not copy either private file into a frontend build or static
+document root.
+
+For an installation that already has a private server environment, first inspect the dry run, then use the additive migration only after the normal backup/change review:
+
+    node deploy/hostinger/selfhost/migrate-mail-relay-env.mjs \
+      --env-file /opt/luminovia-portal/private/selfhost.env
+    sudo node deploy/hostinger/selfhost/migrate-mail-relay-env.mjs \
+      --env-file /opt/luminovia-portal/private/selfhost.env --apply
+
+`--apply` requires root, writes a 0600 `.pre-mail-relay` copy before atomically updating the SMTP endpoint, and creates the disabled `.notification.env`. It does not import prior provider credentials into Vault; an administrator must configure and test the upstream under Administration > Mail before Auth email delivery is enabled. Do not run the apply command against a production installation without its separately authorized upgrade and recovery procedure.
 
 All server variable names are listed in .env.example. The safe generator implements the key formats from official generate-keys.sh and add-new-auth-keys.sh without their credential-bearing terminal output. It generates:
 
@@ -45,6 +58,7 @@ All server variable names are listed in .env.example. The safe generator impleme
 - New opaque publishable/secret API keys with the upstream checksum format.
 - Internal ES256 anon/service-role translation tokens.
 - Realtime encryption and secret-key-base material, unused dashboard protection and Storage S3-protocol access credentials.
+- Independent random internal SMTP-relay login/password and control token; the notification-worker file is generated disabled by default.
 
 JWKS includes a legacy symmetric verification key and is therefore itself server-secret configuration; never publish the entire JWKS environment value. The Auth JWKS HTTP endpoint is responsible for returning the appropriate public signing information.
 
@@ -68,7 +82,8 @@ Exact frontend redirect URLs are /auth/callback and /auth/password at the select
 
 Auth templates are loaded from the selected frontend origin's /mail-templates/invite.html and /mail-templates/recovery.html. Root must serve the existing repository templates there before accepting invitations/recovery. CLI content_path configuration does not install self-hosted mail templates. Keep the invitation token-hash callback and recovery ConfirmationURL/PKCE flows unchanged.
 
-Development SMTP points only at private Mailpit port 1025, with a fictional no-reply@example.invalid sender and no outbound SMTP relay. Application invitations are enabled for this captured development workflow. Do not replace SMTP configuration with a real sender or use real recipients without authorization.
+Self-host Auth points to the private relay and fails closed for outbound delivery until an admin saves and verifies provider credentials under Administration > Mail transport. SMTP checks perform TLS/login/NOOP without sending a test message; optional IMAP checks do not read mailbox content. The isolated candidate overrides Auth SMTP to Mailpit port 1025, and ordinary local Supabase development retains its own Mailpit configuration. These are fictional capture paths; do not configure real
+recipients or enable the separate notification worker without authorization.
 
 ## Exact Compose command and source layout
 
@@ -78,6 +93,7 @@ Set task-specific absolute shell variables and use explicit project/env paths:
 
     portal_repo=/opt/luminovia-portal/source
     portal_env=/opt/luminovia-portal/private/selfhost.env
+    portal_notification_env=/opt/luminovia-portal/private/selfhost.env.notification.env
     docker compose \
       --project-name luminovia-supabase \
       --project-directory "$portal_repo/deploy/hostinger/selfhost" \
@@ -85,13 +101,15 @@ Set task-specific absolute shell variables and use explicit project/env paths:
       -f "$portal_repo/deploy/hostinger/selfhost/compose.yml" \
       config --quiet
 
+The separate notification timer reads `portal_notification_env` through its systemd `EnvironmentFile`; the generated setting is disabled. Do not enable the timer until a reviewed relay configuration and notification policy are in place.
+
 For actual authorized startup, use the same flags with up -d --wait. Do not run down -v or an upstream reset script. Recreating containers preserves the bind-mounted PostgreSQL/Storage/Mailpit data and named PostgreSQL custom-key/Edge cache volumes.
 
 PORTAL_DATA_DIR is an absolute root-owned persistent-data directory outside the source checkout. PostgreSQL's bootstrap manages its own PGDATA ownership/permissions. Inspect effective owner access for Storage and Mailpit at startup; do not grant broad host permissions to make an error disappear.
 
 ## Migration and readiness order
 
-The Compose dependency chain waits for PostgreSQL, Auth, PostgREST, Storage and the API gateway. Mailpit is ready before Auth. Edge Functions use the reviewed router plus real application files, invite-lecturer and accounts source. No fictional fixtures or development account files are seeded automatically.
+The Compose dependency chain waits for PostgreSQL, Auth, PostgREST, Storage and the API gateway; Auth waits for the internal relay process. The relay connects to PostgREST only when forwarding mail or consuming a version-bound connection check. Candidate Auth mail is directed to Mailpit instead of the provider relay. Edge Functions use the reviewed router plus the current application source. No fictional fixtures or development account files are seeded automatically.
 
 Before applying application migrations, verify Auth and Storage have completed their own migrations: auth.users, storage.buckets and storage.objects must exist. Verify the supabase_realtime publication exists. The existing app document/chat migrations conditionally skip missing external-service schemas/publications, so SQL success alone would not prove integration if applied prematurely.
 

@@ -93,14 +93,15 @@ class Config:
     portal_url: str
     smtp_username: str
     smtp_password: str
-    smtp_port: int = 465
+    smtp_host: str = "127.0.0.1"
+    smtp_port: int = 2526
     batch: int = 10
     timeout: int = 15
 
     @classmethod
     def from_env(cls, env: dict[str, str]) -> "Config":
         service_key = env.get("PORTAL_NOTIFICATION_SERVICE_KEY", "")
-        username = env.get("PORTAL_NOTIFICATION_SMTP_USERNAME", "info@luminovia.org")
+        username = env.get("PORTAL_NOTIFICATION_SMTP_USERNAME", "relay@example.invalid")
         password = env.get("PORTAL_NOTIFICATION_SMTP_PASSWORD", "")
         if (
             not service_key
@@ -112,15 +113,16 @@ class Config:
             or "\x00" in password
         ):
             raise ConfigurationError("missing_or_invalid_credentials")
-        port = integer(env, "PORTAL_NOTIFICATION_SMTP_PORT", 465, 1, 65535)
-        if port not in (465, 587):
-            raise ConfigurationError("smtp_tls_port_required")
+        port = integer(env, "PORTAL_NOTIFICATION_SMTP_PORT", 2526, 1, 65535)
+        if port != 2526:
+            raise ConfigurationError("smtp_relay_port_required")
         return cls(
             api_url=checked_url(env.get("PORTAL_NOTIFICATION_API_URL", ""), allow_backend_path=True),
             service_key=service_key,
             portal_url=checked_url(env.get("PORTAL_NOTIFICATION_APP_ORIGIN", "")),
             smtp_username=username,
             smtp_password=password,
+            smtp_host="127.0.0.1",
             smtp_port=port,
             batch=integer(env, "PORTAL_NOTIFICATION_BATCH", 10, 1, 20),
             timeout=integer(env, "PORTAL_NOTIFICATION_TIMEOUT_SECONDS", 15, 1, 20),
@@ -217,20 +219,14 @@ def make_message(config: Config, delivery: dict[str, Any]) -> EmailMessage:
 
 
 def smtp_delivery(config: Config, delivery: dict[str, Any]) -> tuple[str, str | None]:
-    """Return accepted/retry/failed/uncertain, without any sensitive SMTP text."""
+    """Submit to the loopback-only relay and preserve uncertainty after the DATA boundary."""
+    if config.smtp_host != "127.0.0.1" or config.smtp_port != 2526:
+        return "failed", "smtp_relay_config"
     connection = None
     data_started = False
     try:
-        context = ssl.create_default_context()
-        if config.smtp_port == 465:
-            connection = smtplib.SMTP_SSL(
-                "smtp.hostinger.com", 465, timeout=config.timeout, context=context
-            )
-        else:
-            connection = smtplib.SMTP("smtp.hostinger.com", 587, timeout=config.timeout)
-            connection.ehlo()
-            connection.starttls(context=context)
-            connection.ehlo()
+        connection = smtplib.SMTP(config.smtp_host, config.smtp_port, timeout=config.timeout)
+        connection.ehlo()
         connection.login(config.smtp_username, config.smtp_password)
         code, _ = connection.mail(config.smtp_username)
         if code != 250:

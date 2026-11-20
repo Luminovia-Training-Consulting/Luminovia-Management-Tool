@@ -12,8 +12,8 @@ import { ClientsPage } from "./clients";
 vi.mock("../auth/auth-context", () => ({
   useAuth: () => ({ session: { user: { id: "actor" } } }),
 }));
-const { from } = vi.hoisted(() => ({ from: vi.fn() }));
-vi.mock("../../lib/supabase", () => ({ db: () => ({ from }) }));
+const {from, rpc} = vi.hoisted(() => ({from: vi.fn(), rpc: vi.fn()}));
+vi.mock("../../lib/supabase", () => ({db: () => ({from, rpc})}));
 vi.mock("../deletions/deletions", () => ({
   PermanentDeleteAction: ({
     kind,
@@ -39,6 +39,7 @@ describe("private client directory capability boundary", () => {
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },
     });
     client.setQueryData(["permissions", "actor"], []);
+      client.setQueryData(["user-roles", "actor"], []);
     render(
       <QueryClientProvider client={client}>
         <MemoryRouter>
@@ -59,6 +60,8 @@ describe("private client directory capability boundary", () => {
       defaultOptions: { queries: { retry: false, staleTime: Infinity } },
     });
     client.setQueryData(["permissions", "actor"], ["organisations.manage"]);
+      client.setQueryData(["user-roles", "actor"], ["management"]);
+      client.setQueryData(["operations", "company-premium", "actor"], []);
     client.setQueryData(
       ["operations", "organisations", "actor"],
       [

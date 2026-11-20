@@ -155,10 +155,6 @@ try {
         /required/i,
       );
       await assert.rejects(
-        reserve(manager, { subject: owner }, "aal1"),
-        /Only the owner/,
-      );
-      await assert.rejects(
         actor(
           manager,
           `select private.reserve_document_before_contract_owner('x.pdf','application/pdf',1,'personal','contract',null,null,'${randomUUID()}',null,'${owner}')`,
@@ -170,7 +166,7 @@ try {
         legacyVersion = randomUUID(),
         client = randomUUID();
       await sql(
-        `insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id) values('${legacy}','${owner}','${manager}','personal','contract','Legacy.pdf','application/pdf',1,'clean','${client}');insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256) values('${legacyVersion}','${legacy}','${manager}','${client}',1,'${owner}/${legacyVersion}','Legacy.pdf','application/pdf',1,'clean','${"b".repeat(64)}');update public.documents set current_version_id='${legacyVersion}' where id='${legacy}'`,
+          `insert into public.documents(id,owner_id,uploaded_by,scope,kind,original_name,mime_type,size_bytes,status,client_id) values('${legacy}','${owner}','${manager2}','personal','contract','Legacy.pdf','application/pdf',1,'clean','${client}');insert into public.document_versions(id,document_id,uploaded_by,client_id,version,object_path,original_name,mime_type,size_bytes,status,sha256) values('${legacyVersion}','${legacy}','${manager2}','${client}',1,'${owner}/${legacyVersion}','Legacy.pdf','application/pdf',1,'clean','${"b".repeat(64)}');update public.documents set current_version_id='${legacyVersion}' where id='${legacy}'`,
       );
       assert.equal(
         await actor(
@@ -225,6 +221,85 @@ try {
         ),
         /permission denied/,
       );
+        const adminUpload = await reserve(
+            manager,
+            {subject: owner, name: "Fictional admin uploaded.pdf", size: 512},
+            "aal1",
+        );
+        const managementUpload = await reserve(
+            manager2,
+            {subject: owner, name: "Fictional management uploaded.pdf", size: 768},
+            "aal1",
+        );
+        await sql(
+            `update public.document_versions set status='clean',sha256='${"c".repeat(64)}' where id='${adminUpload.version_id}';update public.documents set status='clean' where id='${adminUpload.document_id}';update public.document_versions set status='clean',sha256='${"d".repeat(64)}' where id='${managementUpload.version_id}';update public.documents set status='clean' where id='${managementUpload.document_id}'`,
+        );
+        assert.equal(
+            await actor(
+                manager,
+                `select count(*) from public.documents where id='${adminUpload.document_id}'`,
+                "aal1",
+            ),
+            "1",
+        );
+        assert.equal(
+            await actor(
+                manager2,
+                `select count(*) from public.documents where id='${adminUpload.document_id}'`,
+                "aal1",
+            ),
+            "0",
+        );
+        assert.equal(
+            await actor(
+                manager2,
+                `select count(*) from public.documents where id='${managementUpload.document_id}'`,
+                "aal1",
+            ),
+            "1",
+        );
+        assert.equal(
+            await actor(
+                owner,
+                `select count(*) from public.document_versions where id='${adminUpload.version_id}' or id='${managementUpload.version_id}'`,
+                "aal1",
+            ),
+            "2",
+        );
+        assert.equal(
+            await actor(
+                otherOwner,
+                `select count(*) from public.documents where id in ('${adminUpload.document_id}','${managementUpload.document_id}')`,
+                "aal1",
+            ),
+            "0",
+        );
+        assert.equal(
+            await actor(
+                manager,
+                `select count(*) from public.contract_registration_candidates('${owner}') where version_id='${adminUpload.version_id}' or version_id='${managementUpload.version_id}'`,
+                "aal1",
+            ),
+            "2",
+        );
+        await assert.rejects(
+            reserve(otherOwner, {subject: owner}, "aal1"),
+            /Contract management required/,
+        );
+        const registered = await actor(
+            manager,
+            `select public.register_executed_contract('${owner}','Fictional agreement registered by staff','${adminUpload.version_id}',timestamptz '2026-01-01 00:00:00+00',null,'master',null,'${randomUUID()}')`,
+            "aal1",
+        );
+        assert.match(registered, /^[0-9a-f-]{36}$/i);
+        const registeredOwner = await sql(
+            `select user_id from public.contracts where id='${registered}' and document_version_id='${adminUpload.version_id}' and registered_by='${manager}'`,
+        );
+        assert.equal(registeredOwner, owner);
+        const onBehalfAudit = await sql(
+            `select count(*) from public.audit_events where actor_id='${manager}' and action='document.contract_uploaded_on_behalf' and resource_id='${adminUpload.document_id}'`,
+        );
+        assert.equal(onBehalfAudit, "1");
     },
   );
   console.log(`\n${checks} contract privacy database checks passed.`);

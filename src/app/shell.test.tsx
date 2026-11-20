@@ -103,6 +103,7 @@ function setup(path = "/", initiallyCollapsed = true) {
             <Route path="settings" element={<NavigationTarget />} />
             <Route path="profile" element={<NavigationTarget />} />
             <Route path="files" element={<NavigationTarget />} />
+              <Route path="courses" element={<p>Live courses route</p>}/>
             <Route path="search" element={<NavigationTarget />} />
           </Route>
           <Route path="/login" element={<p>Login screen</p>} />
@@ -189,6 +190,35 @@ it("guest-only navigation exposes own profile/settings/help and no operational c
     within(sidebar).getByRole("link", { name: "Mein Profil" }),
   ).toBeInTheDocument();
   expect(document.querySelector(".portal-tour")).toBeNull();
+});
+it("previews management views with fictional cards without mounting the live route or changing identity", async () => {
+    access.roles = ["admin"];
+    const {user} = setup("/", false);
+    const mode = await screen.findByRole("combobox", {
+        name: "Navigationsvorschau",
+    });
+    await user.selectOptions(mode, "lecturer");
+    await expect(
+        screen.findByRole("heading", {name: "Beispielansicht: Dozent:in"}),
+    ).resolves.toBeVisible();
+    expect(screen.getByText("Fiktiver Unterrichtsplan mit bestätigten Terminen.")).toBeVisible();
+    expect(screen.queryByText("Private workspace")).not.toBeInTheDocument();
+    expect(screen.queryByRole("search")).not.toBeInTheDocument();
+    expect(document.querySelector(".notification-menu")).toBeNull();
+    expect(screen.getByText("Fictional User")).toBeVisible();
+
+    await user.click(
+        within(screen.getByRole("complementary")).getByRole("link", {
+            name: "Meine Kurse",
+        }),
+    );
+    expect(screen.getByRole("heading", {name: "Beispielansicht: Dozent:in"})).toBeVisible();
+    expect(screen.getByText(/Aktiver Beispielbereich/)).toBeVisible();
+    expect(screen.queryByText("Live courses route")).not.toBeInTheDocument();
+    expect(access.roles).toEqual(["admin"]);
+
+    await user.selectOptions(mode, "live");
+    expect(await screen.findByText("Live courses route")).toBeVisible();
 });
 
 /** Observe real router transitions; the history action is outside the More disclosure. */

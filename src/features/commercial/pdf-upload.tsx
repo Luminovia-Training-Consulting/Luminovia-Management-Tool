@@ -2,7 +2,7 @@
  * Shared commercial PDF upload. Return only a clean, concrete document version to the parent
  * form; a filename or selected local bytes alone is insufficient.
  */
-import { useEffect, useRef, useState } from "react";
+import {useEffect, useRef, useState, type DragEvent} from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { FileCheck2, LoaderCircle, Upload } from "lucide-react";
@@ -31,6 +31,7 @@ export function CommercialPdfUpload({
   const retry = useRef<{ signature: string; key: string } | null>(null);
   const [progress, setProgress] = useState(0);
   const [name, setName] = useState("");
+    const [dragging, setDragging] = useState(false);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -69,8 +70,34 @@ export function CommercialPdfUpload({
       onDocument(document);
     },
   });
+
+    /** Route dropped PDFs through the same owner, retry and scanner-reservation path as the picker. */
+    function onDrop(event: DragEvent<HTMLDivElement>) {
+        event.preventDefault();
+        setDragging(false);
+        if (!online || disabled || upload.isPending || !ownerId) return;
+        const file = event.dataTransfer.files[0];
+        if (file) upload.mutate(file);
+    }
   return (
-    <div className="commercial-upload">
+      <div
+          className={`commercial-upload${dragging ? " is-dragging" : ""}`}
+          onDragOver={(event) => {
+              event.preventDefault();
+              if (
+                  online &&
+                  !disabled &&
+                  !upload.isPending &&
+                  ownerId &&
+                  event.dataTransfer.types.includes("Files")
+              ) {
+                  event.dataTransfer.dropEffect = "copy";
+                  setDragging(true);
+              }
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+      >
       <input
         ref={input}
         type="file"
@@ -94,6 +121,7 @@ export function CommercialPdfUpload({
         {label}
       </Button>
       <small>{t("pdfHint")}</small>
+          <p className="commercial-upload-drop">{t("dropPdf")}</p>
       {upload.isPending && (
         <p role="status">
           <LoaderCircle size={16} className="spin" />

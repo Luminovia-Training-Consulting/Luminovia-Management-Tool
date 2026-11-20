@@ -30,9 +30,15 @@ export function AdminNavigation() {
         {permissions.data?.includes("users.manage") && (
           <NavLink to="/admin/accounts">{t("accounts")}</NavLink>
         )}
+          {permissions.data?.includes("organisations.manage") && (
+              <NavLink to="/admin/clients">{t("companies")}</NavLink>
+          )}
         {permissions.data?.includes("audit.read") && (
           <NavLink to="/admin/audit">{t("auditLog")}</NavLink>
         )}
+          {permissions.data?.includes("mail.settings.manage") && (
+              <NavLink to="/admin/mail">{t("mailSettings")}</NavLink>
+          )}
         {permissions.data?.includes("announcements.manage") && (
           <NavLink to="/admin/announcements">{t("announcements")}</NavLink>
         )}

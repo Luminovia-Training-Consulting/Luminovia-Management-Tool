@@ -38,26 +38,41 @@ export function RoleFeePreview({
   access: CommissionAccess | undefined;
 }) {
   const { i18n } = useTranslation();
-  const de = i18n.language.startsWith("de");
+    const de = i18n.language.startsWith("de"),
+        regularPercent = access?.regular_lecturer_percent ?? 50,
+        seniorPercent = access?.senior_lecturer_percent ?? 50;
   if (!access?.can_manage_gross || !Number.isFinite(gross) || gross < 0)
     return null;
   return (
     <section>
       <h3>
-        {de
-          ? "Standardhonorar bei 50 % Anteil"
-          : "Default compensation at a 50% share"}
+          {de ? "Dozent:in – Standardanteil" : "Lecturer — default share"} (
+          {regularPercent.toLocaleString(i18n.language, {
+              maximumFractionDigits: 2,
+          })}
+          %)
       </h3>
       <FeeSplitPreview
         gross={gross}
-        percent={50}
-        lecturerAmount={Math.round(gross * 50) / 100}
+        percent={regularPercent}
+        currency={currency}
+      />
+        <h3>
+            {de ? "Senior-Dozent:in – Standardanteil" : "Senior lecturer — default share"} (
+            {seniorPercent.toLocaleString(i18n.language, {
+                maximumFractionDigits: 2,
+            })}
+            %)
+        </h3>
+        <FeeSplitPreview
+            gross={gross}
+            percent={seniorPercent}
         currency={currency}
       />
       <p className="muted">
         {de
-          ? "Individuelle Prozentsätze oder Tagessätze werden im Dozentenprofil gepflegt. Die Zuweisung zeigt das tatsächlich berechnete Honorar."
-          : "Individual percentages or daily rates are maintained on the lecturer profile. Assignment shows the actual calculated compensation."}
+            ? "Die Standardanteile werden beim Veröffentlichen im Angebot gespeichert. Individuelle Prozentsätze oder Tagessätze werden im Dozentenprofil gepflegt; angenommene Honorare bleiben unverändert."
+            : "Default shares are captured when an offer is published. Individual percentages or daily rates are maintained on the lecturer profile; accepted compensation remains unchanged."}
       </p>
     </section>
   );

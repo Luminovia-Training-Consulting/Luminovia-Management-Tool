@@ -1,252 +1,285 @@
 /** Permission-scoped course DTOs and online mutation/download boundaries for the learning workspace. */
-import { queryOptions } from "@tanstack/react-query";
-import { db } from "../../lib/supabase";
-import { requireOnline } from "../../lib/online";
+import {queryOptions} from "@tanstack/react-query";
+import {db} from "../../lib/supabase";
+import {requireOnline} from "../../lib/online";
+
 export interface CourseOverview {
-  id: string;
-  title: string;
-  time_zone: string;
-  venue: string;
-  delivery_type: string;
-  starts_at: string | null;
-  ends_at: string | null;
-  participant: boolean;
+    id: string;
+    title: string;
+    description: string;
+    syllabus: string;
+    time_zone: string;
+    venue: string;
+    delivery_type: string;
+    lms_enabled: boolean;
+    starts_at: string | null;
+    ends_at: string | null;
+    participant: boolean;
 }
+
 export interface CourseSession {
-  id: string;
-  starts_at: string;
-  ends_at: string;
-  attendance: string | null;
-  minutes: number | null;
-  version: number;
-  can_check_in: boolean;
-  can_verify: boolean;
+    id: string;
+    starts_at: string;
+    ends_at: string;
+    attendance: string | null;
+    minutes: number | null;
+    version: number;
+    can_check_in: boolean;
+    can_verify: boolean;
 }
+
 export interface PreparationItem {
-  id: string;
-  label: string;
-  done: boolean;
-  client_visible: boolean;
-  version: number;
+    id: string;
+    label: string;
+    done: boolean;
+    client_visible: boolean;
+    version: number;
 }
+
 export interface CourseResource {
-  id: string;
-  name: string;
-  version_id: string;
-  version: number;
-  sha256: string;
-  category: string;
-  audience: string;
-  acknowledged: boolean;
-}
-export interface QuizQuestion {
-  prompt: string;
-  options: string[];
-  correct?: number;
-}
-export interface CourseWorkspace {
-  id: string;
-  title: string;
-  description: string;
-  syllabus: string;
-  time_zone: string;
-  venue: string;
-  delivery_type: string;
-  ended: boolean;
-  access: {
-    manager: boolean;
-    teacher: boolean;
-    learner: boolean;
-    client: boolean;
-    staff: boolean;
-  };
-  settings_version: number;
-  contact: { name: string; email: string; phone: string } | null;
-  contact_options: { id: string; name: string }[];
-  sessions: CourseSession[];
-  preparation: PreparationItem[];
-  resources: CourseResource[];
-  share_options: { id: string; name: string; version: number }[];
-  questions: {
     id: string;
-    body: string;
-    answer: string;
-    version: number;
-    mine: boolean;
-  }[];
-  notebook: { body: string; version: number };
-  feedback: { rating: number; comment: string; version: number } | null;
-  feedback_summary: {
-    count: number;
-    average: number | null;
-    comments: string[] | null;
-  } | null;
-  quiz: {
-    version: number;
-    published: boolean;
-    pass_percent: number;
-    max_attempts: number;
-    questions: QuizQuestion[];
-    attempts: number;
-    passed: boolean;
-    last_score: number | null;
-  } | null;
-  completion: { id: string; created_at: string } | null;
-  roster: {
-    user_id: string;
     name: string;
-    status: string;
-    completion_id: string | null;
-    sessions: {
-      session_id: string;
-      state: string | null;
-      minutes: number | null;
-      version: number;
-    }[];
-  }[];
-  attendance_history: {
-    id: string;
-    user_id: string;
-    session_id: string;
-    reason: string;
-    old_state: unknown;
-    new_state: { state: string; minutes: number };
-    created_at: string;
-  }[];
-  repeat_request: {
-    id: string;
-    sessions: { starts_at: string; ends_at: string }[];
-  } | null;
+    version_id: string;
+    version: number;
+    sha256: string;
+    category: string;
+    audience: string;
+    acknowledged: boolean;
 }
+
+export interface QuizQuestion {
+    prompt: string;
+    options: string[];
+    correct?: number;
+}
+
+export interface CourseWorkspace {
+    id: string;
+    title: string;
+    description: string;
+    syllabus: string;
+    time_zone: string;
+    venue: string;
+    delivery_type: string;
+    ended: boolean;
+    lms_enabled: boolean;
+    access: {
+        manager: boolean;
+        teacher: boolean;
+        learner: boolean;
+        client: boolean;
+        staff: boolean;
+        lms_enabled: boolean;
+    };
+    settings_version: number;
+    contact: { name: string; email: string; phone: string } | null;
+    contact_options: { id: string; name: string }[];
+    sessions: CourseSession[];
+    preparation: PreparationItem[];
+    resources: CourseResource[];
+    share_options: { id: string; name: string; version: number }[];
+    questions: {
+        id: string;
+        body: string;
+        answer: string;
+        version: number;
+        mine: boolean;
+    }[];
+    notebook: { body: string; version: number } | null;
+    feedback: { rating: number; comment: string; version: number } | null;
+    feedback_summary: {
+        count: number;
+        average: number | null;
+        comments: string[] | null;
+    } | null;
+    quiz: {
+        version: number;
+        published: boolean;
+        pass_percent: number;
+        max_attempts: number;
+        questions: QuizQuestion[];
+        attempts: number;
+        passed: boolean;
+        last_score: number | null;
+    } | null;
+    completion: { id: string; created_at: string } | null;
+    roster: {
+        user_id: string;
+        name: string;
+        status: string;
+        completion_id: string | null;
+        sessions: {
+            session_id: string;
+            state: string | null;
+            minutes: number | null;
+            version: number;
+        }[];
+    }[];
+    attendance_history: {
+        id: string;
+        user_id: string;
+        session_id: string;
+        reason: string;
+        old_state: unknown;
+        new_state: { state: string; minutes: number };
+        created_at: string;
+    }[];
+    repeat_request: {
+        id: string;
+        sessions: { starts_at: string; ends_at: string }[];
+    } | null;
+}
+
 export const courseWorkspaceKey = (actor: string, run: string) =>
-  ["course-workspace", actor, run] as const;
+    ["course-workspace", actor, run] as const;
 /** Own current memberships determine this hub; its actor key prevents cache reuse across accounts. */
 export const courseHubQuery = (actor: string) =>
-  queryOptions({
-    queryKey: ["course-workspaces", actor],
-    queryFn: async ({ signal }) => {
-      const { data, error } = await db()
-        .rpc("my_course_workspaces")
-        .abortSignal(signal);
-      if (error) throw error;
-      return data as CourseOverview[];
-    },
-    staleTime: 15000,
-  });
+    queryOptions({
+        queryKey: ["course-workspaces", actor],
+        queryFn: async ({signal}) => {
+            const {data, error} = await db()
+                .rpc("my_course_workspaces")
+                .abortSignal(signal);
+            if (error) throw error;
+            return data as CourseOverview[];
+        },
+        staleTime: 15000,
+    });
 /** Requests one currently authorized course and aborts reads when navigation changes. */
 export const courseWorkspaceQuery = (actor: string, run: string) =>
-  queryOptions({
-    queryKey: courseWorkspaceKey(actor, run),
-    queryFn: async ({ signal }) => {
-      const { data, error } = await db()
-        .rpc("course_workspace", { p_run_id: run })
-        .abortSignal(signal);
-      if (error) throw error;
-      return data as CourseWorkspace;
-    },
-    staleTime: 15000,
-    retry: false,
-  });
+    queryOptions({
+        queryKey: courseWorkspaceKey(actor, run),
+        queryFn: async ({signal}) => {
+            const {data, error} = await db()
+                .rpc("course_workspace", {p_run_id: run})
+                .abortSignal(signal);
+            if (error) throw error;
+            return data as CourseWorkspace;
+        },
+        staleTime: 15000,
+        retry: false,
+    });
+/** Recheck only the caller-scoped Premium link state for a selected base course row. */
+export const courseWorkspaceEntitlementQuery = (
+    actor: string,
+    courseRunId: string,
+) =>
+    queryOptions({
+        queryKey: ["course-workspace-entitlement", actor, courseRunId],
+        queryFn: async () => {
+            const {data, error} = await db().rpc("course_workspace_entitlement", {
+                p_run_id: courseRunId,
+            });
+            if (error) throw error;
+            return data as { lms_enabled: boolean };
+        },
+        staleTime: 0,
+    });
+
 /** All attendance, quiz and checklist mutations await the database; no optimistic confirmation. */
 export async function courseAction(
-  run: string,
-  action: string,
-  payload: Record<string, unknown>,
-  version = 0,
+    run: string,
+    action: string,
+    payload: Record<string, unknown>,
+    version = 0,
 ) {
-  requireOnline();
-  const { data, error } = await db().rpc("course_workspace_action", {
-    p_run_id: run,
-    p_action: action,
-    p_payload: payload,
-    p_expected_version: version,
-  });
-  if (error) throw error;
-  return data as {
-    id: string | null;
-    saved?: boolean;
-    score?: number;
-    passed?: boolean;
-  };
+    requireOnline();
+    const {data, error} = await db().rpc("course_workspace_action", {
+        p_run_id: run,
+        p_action: action,
+        p_payload: payload,
+        p_expected_version: version,
+    });
+    if (error) throw error;
+    return data as {
+        id: string | null;
+        saved?: boolean;
+        score?: number;
+        passed?: boolean;
+    };
 }
+
 /** Requests a fresh future booking; it copies the authorized brief, never an allocation or learner record. */
 export async function repeatCourse(
-  request: string,
-  sessions: { starts_at: string; ends_at: string }[],
-  key: string,
+    request: string,
+    sessions: { starts_at: string; ends_at: string }[],
+    key: string,
 ) {
-  requireOnline();
-  const { data, error } = await db().rpc("repeat_client_request", {
-    p_request_id: request,
-    p_sessions: sessions,
-    p_client_id: key,
-  });
-  if (error) throw error;
-  return data as string;
+    requireOnline();
+    const {data, error} = await db().rpc("repeat_client_request", {
+        p_request_id: request,
+        p_sessions: sessions,
+        p_client_id: key,
+    });
+    if (error) throw error;
+    return data as string;
 }
+
 export type PortalDocumentRequest =
-  | {
-      kind:
+    | {
+    kind:
         | "resource"
         | "wiki_resource"
         | "attendance"
         | "completion"
         | "assignment_confirmation";
-      id: string;
-    }
-  | { kind: "request_resource"; id: string; request_id: string }
-  | { kind: "qualification_passport"; locale: "de" | "en" }
-  | { kind: "earnings_statement"; from: string; until: string; all?: boolean };
+    id: string;
+}
+    | { kind: "request_resource"; id: string; request_id: string }
+    | { kind: "qualification_passport"; locale: "de" | "en" }
+    | { kind: "earnings_statement"; from: string; until: string; all?: boolean };
+
 /** Downloads protected exact facts/bytes and checks the current identity again before releasing a Blob. */
 export async function downloadPortalDocument(
-  request: PortalDocumentRequest,
-  name: string,
-  signal?: AbortSignal,
+    request: PortalDocumentRequest,
+    name: string,
+    signal?: AbortSignal,
 ) {
-  requireOnline();
-  const client = db();
-  const before = (await client.auth.getSession()).data.session;
-  if (!before) throw new Error("authentication_required");
-  const response = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/course-documents`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${before.access_token}`,
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(request),
-      cache: "no-store",
-      signal,
-    },
-  );
-  if (!response.ok) {
-    const failure = await response.json().catch(() => null);
-    throw new Error(
-      failure?.error === "unsupported_glyph"
-        ? "unsupported_glyph"
-        : "course_document_unavailable",
+    requireOnline();
+    const client = db();
+    const before = (await client.auth.getSession()).data.session;
+    if (!before) throw new Error("authentication_required");
+    const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/course-documents`,
+        {
+            method: "POST",
+            headers: {
+                Authorization: `Bearer ${before.access_token}`,
+                apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(request),
+            cache: "no-store",
+            signal,
+        },
     );
-  }
-  const blob = await response.blob();
-  const after = (await client.auth.getSession()).data.session;
-  if (signal?.aborted || after?.user.id !== before.user.id)
-    throw new Error("account_changed");
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = name.replace(/[\\/]/g, "-").slice(0, 160);
-  link.rel = "noopener";
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+    if (!response.ok) {
+        const failure = await response.json().catch(() => null);
+        throw new Error(
+            failure?.error === "unsupported_glyph"
+                ? "unsupported_glyph"
+                : "course_document_unavailable",
+        );
+    }
+    const blob = await response.blob();
+    const after = (await client.auth.getSession()).data.session;
+    if (signal?.aborted || after?.user.id !== before.user.id)
+        throw new Error("account_changed");
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name.replace(/[\\/]/g, "-").slice(0, 160);
+    link.rel = "noopener";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
 /** Adapts course document kinds to the common protected download boundary. */
 export async function downloadCourseDocument(
-  kind: "resource" | "attendance" | "completion",
-  id: string,
-  name: string,
-  signal?: AbortSignal,
+    kind: "resource" | "attendance" | "completion",
+    id: string,
+    name: string,
+    signal?: AbortSignal,
 ) {
-  return await downloadPortalDocument({ kind, id }, name, signal);
+    return await downloadPortalDocument({kind, id}, name, signal);
 }

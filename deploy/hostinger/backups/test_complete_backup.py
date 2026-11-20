@@ -271,6 +271,11 @@ class BackupSafetyTests(unittest.TestCase):
         self.assertTrue(self.backup.excluded(self.portal / "private/backups/recovery.agekey"))
         self.assertFalse(self.backup.excluded(self.portal / "data/storage/legitimate-document.zip"))
         self.assertFalse(self.backup.excluded(self.portal / "private/selfhost.env"))
+        self.assertFalse(
+            self.backup.excluded(
+                self.portal / "private/selfhost.env.notification.env"
+            )
+        )
 
     def test_failed_quiescence_resumes_and_preserves_existing_valid_backup(self):
         valid = synthetic_set(self.destination, 1)

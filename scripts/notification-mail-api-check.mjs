@@ -6,8 +6,8 @@ import { withApiFixture } from "./testing/api.mjs";
 import { quoteSql as q } from "./testing/database.mjs";
 
 // This code is fixed source, never constructed from a user value. Credentials
-// enter only via the child environment, and all SMTP connectors are replaced
-// before worker.run. The actual SMTP dialogue stays on a new loopback socket.
+// enter only via the child environment, and the worker connects only to its
+// fixed loopback relay endpoint. The captured SMTP dialogue stays local.
 const capture = `
 import json, smtplib, sys
 from pathlib import Path
@@ -15,14 +15,12 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path("scripts").resolve()))
 import test_notification_mail_worker as fixture
 worker = fixture.worker
-config = worker.Config.from_env(dict(__import__("os").environ))
 server = fixture.SmtpServer(sys.argv[1])
 original_smtp = smtplib.SMTP
-def connect(host, port, *, timeout, context):
-    assert (host, port) == ("smtp.hostinger.com", 465)
-    assert context.check_hostname
+def connect(host, port, *, timeout):
+    assert (host, port) == ("127.0.0.1", 2526)
     return original_smtp("127.0.0.1", server.server_address[1], timeout=timeout)
-with fixture.server_context(server), patch.object(smtplib, "SMTP_SSL", connect):
+with fixture.server_context(server), patch.object(smtplib, "SMTP", connect):
     result = worker.run(config)
 messages = [__import__("email").message_from_bytes(message) for message in server.messages]
 print(json.dumps({"counts":result,"messages":len(messages),"ids":[message["Message-ID"] for message in messages],"recipients":[message["To"] for message in messages]}))
@@ -40,7 +38,7 @@ function runWorker(url, mode = "accepted") {
         PORTAL_NOTIFICATION_SERVICE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
         PORTAL_NOTIFICATION_SMTP_USERNAME: "info@example.invalid",
         PORTAL_NOTIFICATION_SMTP_PASSWORD: "fictional-smtp-fixture",
-        PORTAL_NOTIFICATION_SMTP_PORT: "465",
+          PORTAL_NOTIFICATION_SMTP_PORT: "2526",
         PORTAL_NOTIFICATION_TIMEOUT_SECONDS: "5",
         PORTAL_NOTIFICATION_BATCH: "10",
       },

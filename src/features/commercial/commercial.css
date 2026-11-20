@@ -3,338 +3,546 @@
  * variables.
  */
 .commercial-contract-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));
-  gap: 1.2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));
+    gap: 1.2rem;
 }
+
 .commercial-card-heading {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.9rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
 }
+
 .commercial-card-heading h2,
 .commercial-card-heading h3 {
-  margin: 0.3rem 0;
-  overflow-wrap: anywhere;
+    margin: 0.3rem 0;
+    overflow-wrap: anywhere;
 }
+
 .commercial-card-heading p {
-  margin: 0.25rem 0;
-  color: var(--muted);
+    margin: 0.25rem 0;
+    color: var(--muted);
 }
+
 .commercial-card-heading > .badge {
-  margin-left: auto;
-  flex-shrink: 0;
+    margin-left: auto;
+    flex-shrink: 0;
 }
+
 .commercial-document-icon {
-  background: var(--lilac);
-  color: var(--navy);
-  padding: 0.75rem;
-  border-radius: 1rem;
-  display: flex;
+    background: var(--lilac);
+    color: var(--navy);
+    padding: 0.75rem;
+    border-radius: 1rem;
+    display: flex;
 }
+
 .commercial-contract-card,
 .commercial-invoice-card {
-  min-width: 0;
-  padding: 1.4rem;
+    min-width: 0;
+    padding: 1.4rem;
 }
+
 /* Term/value pairs keep contract/invoice metadata readable even with long identifiers. */
 .commercial-facts {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.65rem 1rem;
-  margin: 1.5rem 0;
-  font-size: 0.9rem;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.65rem 1rem;
+    margin: 1.5rem 0;
+    font-size: 0.9rem;
 }
+
 .commercial-facts dt {
-  color: var(--muted);
+    color: var(--muted);
 }
+
 .commercial-facts dd {
-  margin: 0;
-  text-align: right;
-  overflow-wrap: anywhere;
+    margin: 0;
+    text-align: right;
+    overflow-wrap: anywhere;
 }
+
 .commercial-checksum {
-  margin: 1rem 0;
-  font-size: 0.8rem;
+    margin: 1rem 0;
+    font-size: 0.8rem;
 }
+
 .commercial-checksum summary {
-  cursor: pointer;
-  color: var(--muted);
+    cursor: pointer;
+    color: var(--muted);
 }
+
 .commercial-checksum code {
-  display: block;
-  word-break: break-all;
-  padding: 0.7rem;
-  background: var(--paper);
-  border-radius: 0.5rem;
-  margin-top: 0.5rem;
+    display: block;
+    word-break: break-all;
+    padding: 0.7rem;
+    background: var(--paper);
+    border-radius: 0.5rem;
+    margin-top: 0.5rem;
 }
+
 .commercial-receipt {
-  border-top: 1px solid var(--line);
-  margin-top: 1rem;
-  padding-top: 1rem;
+    border-top: 1px solid var(--line);
+    margin-top: 1rem;
+    padding-top: 1rem;
 }
+
 .commercial-receipt p,
 .commercial-upload p {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
+
 .commercial-receipt small {
-  display: block;
-  color: var(--muted);
-  margin: 0.5rem 0 1rem;
+    display: block;
+    color: var(--muted);
+    margin: 0.5rem 0 1rem;
 }
+
 .commercial-small {
-  font-size: 0.84rem;
-  line-height: 1.6;
+    font-size: 0.84rem;
+    line-height: 1.6;
 }
+
 .commercial-empty {
-  text-align: center;
-  padding: 2.5rem;
-  color: var(--muted);
+    text-align: center;
+    padding: 2.5rem;
+    color: var(--muted);
 }
+
 .commercial-empty > svg {
-  margin: 0 auto;
+    margin: 0 auto;
 }
+
 .commercial-search {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin: 1.25rem 0;
-  padding: 0.6rem 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1.25rem 0;
+    padding: 0.6rem 1.2rem;
 }
+
 .commercial-search .field {
-  flex: 1;
-  margin: 0;
+    flex: 1;
+    margin: 0;
 }
+
 .commercial-search label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
 }
+
 .commercial-search input {
-  border: 0;
-  box-shadow: none;
-  background: transparent;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
 }
+
 /* Keep upload/scanning feedback next to the commercial document being used. */
 .commercial-upload {
-  padding: 1rem;
-  border: 1px dashed var(--line);
-  border-radius: 1rem;
-  margin: 1rem 0;
+    padding: 1rem;
+    border: 1px dashed var(--line);
+    border-radius: 1rem;
+    margin: 1rem 0;
 }
+
+.commercial-upload.is-dragging {
+    border-color: var(--brand);
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+}
+
+.commercial-upload-drop {
+    color: var(--muted);
+}
+
+.invoice-review-request-list,
+.invoice-review-queue {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.invoice-review-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    align-items: end;
+    gap: 1rem;
+    min-width: 0;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+}
+
+.invoice-review-row > * {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.finance-trends {
+    min-width: 0;
+}
+
+.finance-trend-currencies {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+    gap: 1.25rem;
+}
+
+.finance-trend-currency,
+.finance-trend-currency ol {
+    min-width: 0;
+}
+
+.finance-trend-currency ol {
+    display: grid;
+    gap: 0.8rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.finance-trend-row {
+    display: grid;
+    grid-template-columns: minmax(5rem, 8rem) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.4rem 0.8rem;
+    min-width: 0;
+}
+
+.finance-trend-row > time,
+.finance-trend-row > strong {
+    overflow-wrap: anywhere;
+}
+
+.finance-trend-row progress {
+    width: 100%;
+    min-width: 0;
+    accent-color: var(--brand);
+}
+
+.finance-trend-row > small {
+    grid-column: 2 / -1;
+    overflow-wrap: anywhere;
+}
+
 .commercial-upload > small {
-  display: block;
-  margin-top: 0.6rem;
-  color: var(--muted);
+    display: block;
+    margin-top: 0.6rem;
+    color: var(--muted);
 }
+
 .commercial-file-ready {
-  color: var(--navy);
-  overflow-wrap: anywhere;
+    color: var(--navy);
+    overflow-wrap: anywhere;
 }
-.commercial-status-active,
+
+.commercial-status-active {
+    background: #dce9da;
+    color: #254a32;
+}
+
 .commercial-status-paid {
-  background: #dce9da;
-  color: #254a32;
+    background: #e6e0f0;
+    color: #4d3868;
 }
+
 .commercial-status-expired,
 .commercial-status-cancelled,
 .commercial-status-rejected {
-  background: #eee7e2;
-  color: #55453b;
+    background: #eee7e2;
+    color: #55453b;
 }
+
 .commercial-status-approved,
 .commercial-status-completed {
-  background: #e6e0f0;
-  color: #51456c;
+    background: #e6e0f0;
+    color: #51456c;
 }
+
+.invoice-due-status {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0.75rem 0;
+    padding: 0.45rem 0.7rem;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+}
+
+.invoice-due-early {
+    background: #dce9da;
+    color: #254a32;
+}
+
+.invoice-due-half_term,
+.invoice-due-due_soon {
+    background: #fff0c5;
+    color: #5a4500;
+}
+
+.invoice-due-overdue {
+    background: #f7dada;
+    color: #711c1c;
+}
+
+.invoice-due-paid {
+    background: #e6e0f0;
+    color: #4d3868;
+}
+
+[data-theme="dark"] .commercial-status-active,
+[data-theme="dark"] .invoice-due-early {
+    background: #203d38;
+    color: #c8f5e2;
+}
+
+[data-theme="dark"] .commercial-status-paid,
+[data-theme="dark"] .invoice-due-paid {
+    background: #392d4d;
+    color: #e6ddff;
+}
+
+[data-theme="dark"] .invoice-due-half_term,
+[data-theme="dark"] .invoice-due-due_soon {
+    background: #453b20;
+    color: #fff0c5;
+}
+
+[data-theme="dark"] .invoice-due-overdue {
+    background: #472c35;
+    color: #ffdad5;
+}
+
 .commercial-status-expected,
 .commercial-status-submitted {
-  background: #f3e6c8;
-  color: #68521e;
+    background: #f3e6c8;
+    color: #68521e;
 }
+
 .commercial-status-invoiced {
-  background: #dde8ef;
-  color: #35546d;
+    background: #dde8ef;
+    color: #35546d;
 }
+
 .commercial-currency-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));
-  gap: 1.2rem;
-  margin: 1.5rem 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));
+    gap: 1.2rem;
+    margin: 1.5rem 0;
 }
+
 .commercial-currency {
-  padding: 1.4rem;
+    padding: 1.4rem;
 }
+
 .commercial-currency dl {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.4rem;
-  margin: 1.3rem 0 0.3rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.4rem;
+    margin: 1.3rem 0 0.3rem;
 }
+
 .commercial-currency dt {
-  color: var(--muted);
-  font-size: 0.82rem;
+    color: var(--muted);
+    font-size: 0.82rem;
 }
+
 .commercial-currency dd {
-  font-size: 1.35rem;
-  font-weight: 650;
-  margin: 0.3rem 0 0;
-  font-variant-numeric: tabular-nums;
+    font-size: 1.35rem;
+    font-weight: 650;
+    margin: 0.3rem 0 0;
+    font-variant-numeric: tabular-nums;
 }
+
 .commercial-section {
-  margin: 1.6rem 0;
+    margin: 1.6rem 0;
 }
+
 .panel.commercial-section {
-  padding: 1.25rem;
+    padding: 1.25rem;
 }
+
 .commercial-section-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
 }
+
 .commercial-section-heading h2 {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  margin: 0;
-  font-size: 1.2rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 0;
+    font-size: 1.2rem;
 }
+
 .commercial-table-scroll {
-  overflow-x: auto;
-  margin-top: 1rem;
+    overflow-x: auto;
+    margin-top: 1rem;
 }
+
 .commercial-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.86rem;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
 }
+
 .commercial-table th {
-  text-align: left;
-  font-size: 0.75rem;
-  color: var(--muted);
-  padding: 0.7rem;
-  white-space: nowrap;
+    text-align: left;
+    font-size: 0.75rem;
+    color: var(--muted);
+    padding: 0.7rem;
+    white-space: nowrap;
 }
+
 .commercial-table td {
-  border-top: 1px solid var(--line);
-  padding: 0.9rem 0.7rem;
-  vertical-align: top;
+    border-top: 1px solid var(--line);
+    padding: 0.9rem 0.7rem;
+    vertical-align: top;
 }
+
 .commercial-table td small {
-  display: block;
-  color: var(--muted);
-  font-size: 0.78rem;
-  margin-top: 0.35rem;
+    display: block;
+    color: var(--muted);
+    font-size: 0.78rem;
+    margin-top: 0.35rem;
 }
+
 .commercial-table td:nth-last-child(2) {
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
 }
+
 .commercial-claim-picker {
-  border: 1px solid var(--line);
-  padding: 0.9rem;
-  border-radius: 0.8rem;
-  margin: 1rem 0;
-  max-height: 24rem;
-  overflow-y: auto;
+    border: 1px solid var(--line);
+    padding: 0.9rem;
+    border-radius: 0.8rem;
+    margin: 1rem 0;
+    max-height: 24rem;
+    overflow-y: auto;
 }
+
 .commercial-claim-picker legend {
-  font-weight: 600;
-  padding: 0 0.3rem;
+    font-weight: 600;
+    padding: 0 0.3rem;
 }
+
 .commercial-claim {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.9rem 0;
-  border-top: 1px solid var(--line);
-  font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.9rem 0;
+    border-top: 1px solid var(--line);
+    font-size: 0.85rem;
 }
+
 .commercial-claim input {
-  flex-shrink: 0;
+    flex-shrink: 0;
 }
+
 .commercial-claim > span {
-  flex: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
+
 .commercial-claim small {
-  display: block;
-  color: var(--muted);
-  margin-top: 0.3rem;
+    display: block;
+    color: var(--muted);
+    margin-top: 0.3rem;
 }
+
 .commercial-claim strong {
-  white-space: nowrap;
+    white-space: nowrap;
 }
+
 .commercial-selected-total {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
 }
+
 .commercial-note {
-  padding: 0.8rem;
-  border-radius: 0.7rem;
-  background: var(--paper);
-  font-size: 0.85rem;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+    padding: 0.8rem;
+    border-radius: 0.7rem;
+    background: var(--paper);
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
 }
+
 .commercial-payments {
-  list-style: none;
-  padding: 0;
+    list-style: none;
+    padding: 0;
 }
+
 .commercial-payments li {
-  border-top: 1px solid var(--line);
-  padding: 1rem 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.7rem;
+    border-top: 1px solid var(--line);
+    padding: 1rem 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.7rem;
 }
+
 .commercial-payments span,
 .commercial-payments small {
-  display: block;
-  color: var(--muted);
-  margin-top: 0.3rem;
-  font-size: 0.8rem;
+    display: block;
+    color: var(--muted);
+    margin-top: 0.3rem;
+    font-size: 0.8rem;
 }
+
 .commercial-payments p {
-  font-size: 0.85rem;
-  overflow-wrap: anywhere;
+    font-size: 0.85rem;
+    overflow-wrap: anywhere;
 }
+
 .commercial-voided strong {
-  text-decoration: line-through;
+    text-decoration: line-through;
 }
 
 @media (max-width: 600px) {
-  .commercial-contract-card,
-  .commercial-invoice-card {
-    padding: 1rem;
-  }
-  .commercial-document-icon {
-    padding: 0.5rem;
-  }
-  .commercial-card-heading {
-    gap: 0.6rem;
-    flex-wrap: wrap;
-  }
-  .commercial-currency dd {
-    font-size: 1.2rem;
-  }
-  .commercial-payments li {
-    flex-direction: column;
-  }
-  .commercial-claim {
-    flex-wrap: wrap;
-  }
-  .commercial-claim strong {
-    margin-left: auto;
-  }
+    .commercial-contract-card,
+    .commercial-invoice-card {
+        padding: 1rem;
+    }
+
+    .commercial-document-icon {
+        padding: 0.5rem;
+    }
+
+    .commercial-card-heading {
+        gap: 0.6rem;
+        flex-wrap: wrap;
+    }
+
+    .commercial-currency dd {
+        font-size: 1.2rem;
+    }
+
+    .commercial-payments li {
+        flex-direction: column;
+    }
+
+    .commercial-claim {
+        flex-wrap: wrap;
+    }
+
+    .commercial-claim strong {
+        margin-left: auto;
+    }
 }

@@ -13,7 +13,14 @@ import { Field, Notice, PageHeading } from "../../components/common";
 import { useOnline } from "../../lib/online";
 /** Validate form input locally; the server independently enforces permissions, references and business-state constraints. */
 const schema = z.object({
-  password: z.string().min(12).regex(/[A-Z]/).regex(/[a-z]/).regex(/[0-9]/),
+    password: z
+        .string()
+        .min(8)
+        .max(128)
+        .regex(/[A-Z]/)
+        .regex(/[a-z]/)
+        .regex(/[0-9]/)
+        .regex(/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?\/]/),
 });
 /** Change the current session's password and confirm only the successful SDK response. */
 export function Password() {
@@ -53,6 +60,8 @@ export function Password() {
           <input
             id="new-password"
             type="password"
+            minLength={8}
+            maxLength={128}
             autoComplete="new-password"
             {...register("password")}
           />
