@@ -185,6 +185,10 @@ const pairs: Record<string, [string, string]> = {
     unassigned: ["Noch keine Lehrkraft zugeteilt", "No lecturer assigned yet"],
     requestVolume: ["Angefragtes Auftragsvolumen", "Requested assignment volume"],
     confirmedSpend: ["Bestätigte Auftragssumme", "Confirmed assignment spend"],
+    monthlyAcceptedSpending: ["Angenommene Auftragssummen pro Monat", "Accepted assignment fees by month"],
+    monthlyAcceptedSpendingHint: ["Die letzten zwölf Monate aus unveränderlichen, angenommenen Bruttopreisen in der jeweiligen Originalwährung und Unternehmenszeitzone. Historische Stornierungen bleiben in den Annahmen enthalten; dies ist keine Zahlungsübersicht.", "The last twelve months of immutable accepted gross fees, in each original currency and company time zone. Historical cancellations remain in accepted totals; this is not a payment report."],
+    noAcceptedSpending: ["Noch keine angenommenen Aufträge mit bekanntem Bruttopreis.", "No accepted assignments with a known gross fee yet."],
+    acceptedAssignmentsCount: ["{{count}} angenommene Aufträge", "{{count}} accepted assignments"],
     teachers: ["Zugewiesene Lehrkräfte", "Assigned lecturers"],
     revenue: [
         "Auftragsvolumen & Plattformerlöse",

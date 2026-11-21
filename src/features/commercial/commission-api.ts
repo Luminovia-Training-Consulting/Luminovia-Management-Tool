@@ -81,6 +81,17 @@ export interface ClientSpend {
     teachers: { id: string; display_name: string }[];
 }
 
+/** Historical accepted customer-fee totals; the server deliberately omits internal shares. */
+export interface CompanyMonthlySpending {
+    organisation_id: string;
+    organisation_name: string;
+    time_zone: string;
+    currency: "EUR" | "AUD";
+    month_start: string;
+    gross_amount: number;
+    claim_count: number;
+}
+
 /** Separate cache scopes for access, organizations, requests, revenue and client spending. */
 export const commissionKeys = {
     access: (actor: string) => ["commission-access", actor] as const,
@@ -88,6 +99,8 @@ export const commissionKeys = {
     requests: (actor: string) => ["client-requests", actor] as const,
     report: (actor: string) => ["commission-report", actor] as const,
     spend: (actor: string) => ["client-spend", actor] as const,
+    monthlySpending: (actor: string, organisation: string | null) =>
+        ["company-monthly-spending", actor, organisation] as const,
 };
 /** Read the commission_access server projection, propagate RPC errors and scope cached data to the actor and requested resource. */
 export const commissionAccessQuery = (actor: string) =>
@@ -167,6 +180,21 @@ export const clientSpendQuery = (actor: string) =>
             if (error) throw error;
             return (data ?? []) as ClientSpend[];
         },
+    });
+
+/** Accepted ledger snapshots only, filtered again by current company membership in PostgreSQL. */
+export const companyMonthlySpendingQuery = (actor: string, organisation: string | null) =>
+    queryOptions({
+        queryKey: commissionKeys.monthlySpending(actor, organisation),
+        queryFn: async () => {
+            const {data, error} = await db().rpc("company_monthly_accepted_spending", {
+                p_organisation_id: organisation,
+            });
+            if (error) throw error;
+            return (data ?? []) as CompanyMonthlySpending[];
+        },
+        staleTime: 15000,
+        refetchInterval: 15000,
     });
 
 /** Platform share rounds to cents first; the lecturer receives the exact remainder. */
