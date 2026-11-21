@@ -6,6 +6,8 @@ The private Mailpit override points GoTrue invitation and recovery mail at the l
 
 Both built licence panels passed in Chromium at 1,440, Pixel 7 and 320 pixels with native Auth and REST. The browser verified active and grace status, current occupancy, a German dark layout and removal of the licence panel after an administrator lost authority. The signed 1.21 catalogue now has 44 scoped operations. Exact application revision `0a169f60` passed 1,235 frontend tests, 135 SQL suites, 133 Edge cases and 27 package/licence/runtime cases. Both editions passed the native Caddy/Envoy TLS test with 102 signed static files each, a Realtime WebSocket handshake and the exact 75-request allowance.
 
+The canonical PostgreSQL check also uses an emulated Auth table. Its hosted failure identified the same missing `auth.users.created_at` field corrected in the extended fixtures. The fixture now supplies the real provider's creation timestamp so the seat-ownership migration can replay in the core suite too.
+
 # 21 November 2026 — Signed API allowance and private database target
 
 The dedicated ingress profile translates the signed per-installation API allowance into a local Envoy bucket. Browser files and internal health, Auth and database communication remain outside that public quota. The image-pinned Caddy 2.11.9 and Envoy 1.40.2 accepted the same check for both exact compiled `74f23362` browser releases. All 102 static files per edition matched their signed SHA-256. With a 75-request fictional licence the next public API request returned HTTP 429 and `Retry-After`, while the browser shell and maintenance fence stayed reachable.
