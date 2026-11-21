@@ -3,7 +3,8 @@
  * Only the matching project owner may stop or replace it; signature data remain persistent.
  */
 import {execFileSync} from "node:child_process";
-import {existsSync, mkdirSync, readFileSync, writeFileSync} from "node:fs";
+import {randomUUID} from "node:crypto";
+import {closeSync, constants, fchmodSync, fstatSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync,} from "node:fs";
 import {resolve} from "node:path";
 import {setTimeout as delay} from "node:timers/promises";
 import {networkName} from "./runtime-network.mjs";
@@ -40,6 +41,53 @@ const inspect = () => {
     const raw = docker(["inspect", container], true);
     return raw ? JSON.parse(raw)[0] : null;
 };
+
+/** Preserve unrelated service entries from the verified file descriptor. */
+function readServices(path) {
+    let descriptor;
+    try {
+        descriptor = openSync(
+            path,
+            constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK,
+        );
+    } catch (error) {
+        if (error.code === "ENOENT") return [];
+        throw error;
+    }
+    try {
+        const info = fstatSync(descriptor);
+        if (!info.isFile() || info.uid !== process.getuid() || info.nlink !== 1)
+            throw new Error("Scanner services must be an owned regular file.");
+        return readFileSync(descriptor, "utf8")
+            .split("\n")
+            .filter((line) => line && !line.startsWith("PORTAL_CLAMAV_"));
+    } finally {
+        closeSync(descriptor);
+    }
+}
+
+/** Replace the directory entry atomically after writing an exclusive temporary file. */
+function writeScannerFile(path, content, mode) {
+    const temporary = `${path}.${randomUUID()}.tmp`;
+    const descriptor = openSync(
+        temporary,
+        constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+        mode,
+    );
+    try {
+        try {
+            fchmodSync(descriptor, mode);
+            writeFileSync(descriptor, content);
+        } finally {
+            closeSync(descriptor);
+        }
+        renameSync(temporary, path);
+    } catch (error) {
+        unlinkSync(temporary);
+        throw error;
+    }
+}
+
 const action = process.argv[2] ?? "status";
 if (action === "status") {
     const state = inspect();
@@ -59,6 +107,21 @@ if (action === "status") {
     console.log("Scanner stopped; signature database is preserved.");
 } else if (action === "start") {
     mkdirSync(".local", {recursive: true, mode: 0o700});
+    const directory = openSync(
+        ".local",
+        constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW,
+    );
+    try {
+        if (fstatSync(directory).uid !== process.getuid())
+            throw new Error("Scanner state directory must belong to the current user.");
+        fchmodSync(directory, 0o700);
+        await start(`/proc/self/fd/${directory}`);
+    } finally {
+        closeSync(directory);
+    }
+} else throw new Error("Use local-scanner.mjs start, status or stop.");
+
+async function start(runtime) {
     let state = inspect();
     if (state && state.Config.Labels?.["org.luminovia.portal"] !== project)
         throw new Error("Scanner container name belongs to another service.");
@@ -83,7 +146,7 @@ if (action === "status") {
         // Foreground output goes to Docker logs. A log file survives a same-container
         // restart with entrypoint-dependent ownership and can prevent clamd startup.
         const config = `Foreground yes\nUser clamav\nLocalSocket /tmp/clamd.sock\nTCPSocket 3310\nTCPAddr 0.0.0.0\nDatabaseDirectory /var/lib/clamav\nLogTime yes\nStreamMaxLength 100M\nMaxScanSize 300M\nMaxFileSize 100M\nMaxRecursion 10\nMaxFiles 1000\nAlertExceedsMax yes\nAlertEncryptedArchive yes\nAlertEncryptedDoc yes\nHeuristicAlerts yes\nScanArchive yes\nScanPDF yes\nScanOLE2 yes\nScanXMLDOCS yes\n`;
-        writeFileSync(".local/clamd.conf", config, {mode: 0o644});
+        writeScannerFile(`${runtime}/clamd.conf`, config, 0o644);
         docker(["volume", "create", `portal_clamav_${project}`]);
         console.log(
             "Preparing the pinned ClamAV image and persistent signatures (first start can take a few minutes).",
@@ -148,13 +211,9 @@ if (action === "status") {
         throw new Error(
             "ClamAV is not ready. Files remain quarantined. Inspect the scanner container logs.",
         );
-    const envPath = ".local/services.env";
-    const previous = existsSync(envPath)
-        ? readFileSync(envPath, "utf8")
-            .split("\n")
-            .filter((line) => line && !line.startsWith("PORTAL_CLAMAV_"))
-        : [];
-    writeFileSync(
+    const envPath = `${runtime}/services.env`;
+    const previous = readServices(envPath);
+    writeScannerFile(
         envPath,
         [
             ...previous,
@@ -162,9 +221,9 @@ if (action === "status") {
             "PORTAL_CLAMAV_PORT=3310",
             "",
         ].join("\n"),
-        {mode: 0o600},
+        0o600,
     );
     console.log(
         "ClamAV is ready. Its TCP endpoint is not published to the host.",
     );
-} else throw new Error("Use local-scanner.mjs start, status or stop.");
+}
