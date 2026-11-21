@@ -413,6 +413,10 @@ verify_jwt = false
 # Password verification and rate limits are enforced by the credential handler/Auth.
 verify_jwt = false
 
+[functions.human-recovery]
+# Public recovery requires an allowed browser origin and server-side alias/rate checks.
+verify_jwt = false
+
 [functions.course-documents]
 static_files = ["./functions/course-documents/assets/DejaVuSans.ttf"]
 

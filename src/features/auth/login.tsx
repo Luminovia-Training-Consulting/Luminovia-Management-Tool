@@ -66,15 +66,18 @@ export function Login() {
         if (!online || recovering) return;
         setMessage("");
         setFailed(false);
-        const email = getValues("email");
-        if (!z.email().safeParse(email).success) {
+        const identifier = getValues("email").trim().toLowerCase();
+        const valid = identifier.includes("@")
+            ? z.email().safeParse(identifier).success
+            : /^[a-z][a-z0-9._-]{1,30}[a-z0-9]$/.test(identifier);
+        if (!valid) {
             setFailed(true);
             setMessage("validation");
             return;
         }
         setRecovering(true);
         try {
-            const {error} = await db().auth.resetPasswordForEmail(email, {
+            const {error} = await db().auth.resetPasswordForEmail(identifier, {
                 redirectTo: `${window.location.origin}/auth/callback`,
             });
             setFailed(Boolean(error));
@@ -132,12 +135,12 @@ export function Login() {
                         >
                             <Field
                                 id="email"
-                                label={t(recover ? "email" : "usernameOrEmail")}
+                                label={t("usernameOrEmail")}
                                 error={Boolean(errors.email)}
                             >
                                 <input
                                     id="email"
-                                    type={recover ? "email" : "text"}
+                                    type="text"
                                     autoComplete="username"
                                     {...register("email")}
                                     aria-invalid={Boolean(errors.email)}

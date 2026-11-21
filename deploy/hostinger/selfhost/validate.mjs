@@ -256,6 +256,7 @@ try {
         "course-documents",
         "calendar-feed",
         "human-login",
+        "human-recovery",
         "company-integration",
         "website-enquiries",
         "mail-admin",

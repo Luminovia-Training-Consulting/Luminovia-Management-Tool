@@ -75,10 +75,19 @@ describe("recoverable Auth request failures", () => {
             </MemoryRouter>,
         );
         expect(screen.getByRole("status")).toHaveTextContent("en:recoverSent");
-        expect(screen.getByLabelText("en:email")).toHaveValue(
+        expect(screen.getByLabelText("en:usernameOrEmail")).toHaveValue(
             "person@example.invalid",
         );
         expect(fake.resetPasswordForEmail).toHaveBeenCalledTimes(1);
+    });
+    it("accepts a username for the native SDK recovery flow", async () => {
+        view(<Login />);
+        await userEvent.type(screen.getByLabelText("usernameOrEmail"), "Course.Lead");
+        await userEvent.click(screen.getByRole("button", {name: "forgot"}));
+        await userEvent.click(screen.getByRole("button", {name: "recover"}));
+        await waitFor(() => expect(fake.resetPasswordForEmail).toHaveBeenCalledWith(
+            "course.lead", {redirectTo: `${window.location.origin}/auth/callback`},
+        ));
     });
     it("translates the saved-password notice after language switching without repeating the mutation", async () => {
         const page = view(<Password />);
@@ -167,7 +176,7 @@ describe("recoverable Auth request failures", () => {
             "person@example.invalid",
         );
         await userEvent.click(screen.getByRole("button", {name: "forgot"}));
-        await userEvent.type(screen.getByLabelText("email"), "{Enter}");
+        await userEvent.type(screen.getByLabelText("usernameOrEmail"), "{Enter}");
         await waitFor(() =>
             expect(fake.resetPasswordForEmail).toHaveBeenCalledWith(
                 "person@example.invalid",
